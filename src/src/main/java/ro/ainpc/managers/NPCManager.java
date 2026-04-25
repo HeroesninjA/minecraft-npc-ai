@@ -1664,11 +1664,12 @@ public class NPCManager {
      */
     public List<AINPC> getNPCsNear(Location location, double radius) {
         List<AINPC> nearby = new ArrayList<>();
+        double radiusSquared = radius * radius;
 
         for (AINPC npc : npcsByUuid.values()) {
             Location npcLoc = npc.getLocation();
             if (npcLoc != null && npcLoc.getWorld().equals(location.getWorld())) {
-                if (npcLoc.distance(location) <= radius) {
+                if (npcLoc.distanceSquared(location) <= radiusSquared) {
                     nearby.add(npc);
                 }
             }
@@ -1679,6 +1680,7 @@ public class NPCManager {
 
     public List<AINPC> getActiveNPCsNear(Location location, double radius) {
         List<AINPC> nearby = new ArrayList<>();
+        double radiusSquared = radius * radius;
 
         for (AINPC npc : npcsByUuid.values()) {
             if (!npc.isSpawned()) {
@@ -1687,7 +1689,7 @@ public class NPCManager {
 
             Location npcLoc = npc.getLocation();
             if (npcLoc != null && npcLoc.getWorld().equals(location.getWorld())) {
-                if (npcLoc.distance(location) <= radius) {
+                if (npcLoc.distanceSquared(location) <= radiusSquared) {
                     nearby.add(npc);
                 }
             }

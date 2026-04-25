@@ -198,7 +198,7 @@ public class AINPC {
         if (!isSpawned()) return false;
         
         double maxDistance = plugin.getConfig().getDouble("npc.interaction_distance", 5.0);
-        return bukkitEntity.getLocation().distance(player.getLocation()) <= maxDistance;
+        return bukkitEntity.getLocation().distanceSquared(player.getLocation()) <= maxDistance * maxDistance;
     }
 
     /**

@@ -93,7 +93,7 @@ public class NPCChatListener extends AbstractPluginListener {
 
         AINPC nearest = nearby.get(0);
         double directRadius = plugin.getConfig().getDouble("dialog.auto_engage_radius", 4.0);
-        if (nearest.getLocation().distance(player.getLocation()) <= directRadius) {
+        if (nearest.getLocation().distanceSquared(player.getLocation()) <= directRadius * directRadius) {
             return buildTarget(player, nearest, false, false, "nearest_npc", nearby.size());
         }
 
@@ -125,7 +125,11 @@ public class NPCChatListener extends AbstractPluginListener {
         }
 
         if (!target.explicitConversation()) {
-            beginConversationSession(player, npc);
+            beginConversationSession(player, npc).exceptionally(ex -> {
+                plugin.getLogger().warning("Nu am putut initializa sesiunea de conversatie pentru "
+                    + npc.getName() + ": " + ex.getMessage());
+                return false;
+            });
         } else {
             refreshConversationSession(player);
         }

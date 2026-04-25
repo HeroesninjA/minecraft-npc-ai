@@ -32,24 +32,31 @@ public class PlayerJoinListener extends AbstractPluginListener {
         List<AINPC> nearbyNPCs = plugin.getNpcManager().getActiveNPCsNear(player.getLocation(), 20);
         
         for (AINPC npc : nearbyNPCs) {
-            // Verifica daca NPC-ul are amintiri despre jucator
-            if (plugin.getMemoryManager().hasMemoriesOf(npc, player)) {
-                int memoryCount = plugin.getMemoryManager().getMemoryCount(npc, player);
-                double emotionalImpact = plugin.getMemoryManager().getTotalEmotionalImpact(npc, player);
-                
-                // Daca are multe amintiri sau impact emotional semnificativ, reactioneaza
-                if (memoryCount >= 5 || Math.abs(emotionalImpact) > 0.3) {
-                    // Face NPC-ul sa se uite la jucator
-                    npc.lookAt(player);
-                    
-                    // Aplica efectul emotional
-                    if (emotionalImpact > 0) {
-                        plugin.getEmotionManager().applyEmotion(npc, "happiness", 0.1);
-                    } else if (emotionalImpact < -0.2) {
-                        plugin.getEmotionManager().applyEmotion(npc, "anger", 0.1);
-                    }
-                }
-            }
+            plugin.getMemoryManager().getPlayerMemoryStatsAsync(npc, player)
+                .thenAccept(stats -> runSync(() -> applyRecognition(player, npc, stats)))
+                .exceptionally(ex -> {
+                    plugin.getLogger().warning("Nu am putut evalua recunoasterea pentru NPC-ul " + npc.getName()
+                        + ": " + ex.getMessage());
+                    return null;
+                });
+        }
+    }
+
+    private void applyRecognition(Player player, AINPC npc, ro.ainpc.managers.MemoryManager.MemoryStats stats) {
+        if (!stats.hasMemories()) {
+            return;
+        }
+
+        if (stats.memoryCount() < 5 && Math.abs(stats.emotionalImpact()) <= 0.3) {
+            return;
+        }
+
+        npc.lookAt(player);
+
+        if (stats.emotionalImpact() > 0) {
+            plugin.getEmotionManager().applyEmotion(npc, "happiness", 0.1);
+        } else if (stats.emotionalImpact() < -0.2) {
+            plugin.getEmotionManager().applyEmotion(npc, "anger", 0.1);
         }
     }
 }

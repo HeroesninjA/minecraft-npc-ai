@@ -168,14 +168,14 @@ public class AINPCPlugin extends JavaPlugin {
         }, 20L * 60, 20L * 60);
         
         // Task pentru curatarea amintirilor vechi (la fiecare ora)
-        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-            memoryManager.cleanOldMemories();
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            databaseManager.runAsync(() -> memoryManager.cleanOldMemories());
         }, 20L * 60 * 60, 20L * 60 * 60);
         
         // Sincronizeaza mai intai starea entitatilor, apoi persista asincron in DB
         getServer().getScheduler().runTaskTimer(this, () -> {
             npcManager.syncAllNPCEntityState();
-            getServer().getScheduler().runTaskAsynchronously(this, () -> {
+            databaseManager.runAsync(() -> {
                 npcManager.saveAllNPCs(false);
                 if (getConfig().getBoolean("debug")) {
                     getLogger().info("[Debug] Salvare automata completata.");
