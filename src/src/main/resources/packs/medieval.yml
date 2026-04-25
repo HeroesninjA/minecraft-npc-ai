@@ -6,6 +6,12 @@
 id: medieval
 name: "Medieval"
 description: "Pachet de caracteristici pentru lumi medievale si fantastice"
+addon:
+  type: "scenario"
+  version: "1.0.0"
+  primary_scenario: true
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["traits", "professions", "dialogues", "topology", "scenarios"]
 
 # ==================== TRAITS ====================
 traits:
@@ -296,6 +302,57 @@ professions:
       - "Ai o rana? Lasa-ma sa vad."
       - "Aceasta potiune va calma durerea."
       - "Ierburile din padure sunt cele mai puternice."
+
+# ==================== TOPOLOGII ====================
+topologies:
+  village_center:
+    name: "Sat deschis"
+    category: "PLAINS"
+    biomes:
+      - "PLAINS"
+      - "MEADOW"
+      - "SUNFLOWER_PLAINS"
+      - "CHERRY_GROVE"
+    description: "Asezare rurala activa, cu munca, schimb social si viata comunitara constanta."
+    dialogue_hints:
+      - "vorbeste despre recolta, targ si vecini"
+      - "foloseste un ton practic si comunitar"
+      - "adu in discutie zvonuri locale sau nevoi ale satului"
+    suggested_traits:
+      - "friendly"
+      - "hardworking"
+      - "gossiper"
+
+  forest_edge:
+    name: "Margine de padure"
+    category: "FOREST"
+    biomes:
+      - "FOREST"
+      - "BIRCH_FOREST"
+      - "OLD_GROWTH_BIRCH_FOREST"
+      - "DARK_FOREST"
+    description: "Zona de tranzitie intre sat si salbaticie, buna pentru avertismente si povesti."
+    dialogue_hints:
+      - "accent pe prudenta, vanatoare si drumuri nesigure"
+      - "discuta despre lemnari, animale si creaturi ascunse"
+    suggested_traits:
+      - "brave"
+      - "suspicious"
+
+  highland_watch:
+    name: "Inaltime de veghe"
+    category: "MOUNTAIN"
+    biomes:
+      - "WINDSWEPT_HILLS"
+      - "JAGGED_PEAKS"
+      - "STONY_PEAKS"
+    description: "Loc inalt, bun pentru observatie, paza si reactii rapide la pericole."
+    dialogue_hints:
+      - "vorbeste despre vizibilitate, patrule si atacuri din departare"
+      - "pastreaza un ton sobru si atent"
+    suggested_traits:
+      - "brave"
+      - "wise"
 
 # ==================== DIALOGURI GENERALE ====================
 dialogues:

@@ -2,6 +2,7 @@ package ro.ainpc.ai;
 
 import org.bukkit.entity.Player;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.engine.DialogueEngine;
 import ro.ainpc.npc.AINPC;
 
 import java.sql.PreparedStatement;
@@ -27,10 +28,27 @@ public class DialogManager {
     /**
      * Proceseaza un mesaj de la jucator catre NPC
      */
-    public CompletableFuture<String> processMessage(AINPC npc, Player player, String message) {
+    public CompletableFuture<DialogResult> processMessage(AINPC npc, Player player, String message) {
+        return processMessage(new DialogRequest(
+            npc,
+            player,
+            message,
+            true,
+            true,
+            "explicit_interaction",
+            1,
+            0.0
+        ));
+    }
+
+    public CompletableFuture<DialogResult> processMessage(DialogRequest request) {
+        AINPC npc = request.npc();
+        Player player = request.player();
+        String message = request.message();
+
         // Verifica cooldown
         if (isOnCooldown(player.getUniqueId(), npc.getUuid())) {
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(DialogResult.cooldown());
         }
 
         // Seteaza cooldown
@@ -38,47 +56,74 @@ public class DialogManager {
 
         return CompletableFuture.supplyAsync(() -> {
             // Obtine istoricul conversatiei
-            List<OllamaService.DialogHistory> history = getRecentHistory(npc, player, 5);
+            List<OpenAIService.DialogHistory> history = getRecentHistory(npc, player, 5);
             
             // Obtine amintiri relevante
             List<String> memories = plugin.getMemoryManager().getRelevantMemories(npc, player, message, 5);
+            int totalMemoryCount = plugin.getMemoryManager().getMemoryCount(npc, player);
+            double weightedMemoryImpact = plugin.getMemoryManager().getTotalEmotionalImpact(npc, player);
             
             // Obtine relatia
-            OllamaService.NPCRelationship relationship = getRelationship(npc, player);
+            OpenAIService.NPCRelationship relationship = getRelationship(npc, player);
             
-            return new DialogContext(history, memories, relationship);
+            return new DialogContext(
+                history,
+                memories,
+                relationship,
+                new PromptDbContext(totalMemoryCount, weightedMemoryImpact)
+            );
             
         }).thenCompose(context -> {
-            // Genereaza raspunsul
-            return plugin.getOllamaService().generateResponse(
-                npc, player, message,
+            DialogueEngine dialogueEngine = plugin.getDialogueEngine();
+            if (dialogueEngine != null) {
+                return dialogueEngine.generateResponse(
+                    request,
+                    context.history,
+                    context.memories,
+                    context.relationship,
+                    context.dbContext
+                );
+            }
+
+            return plugin.getOpenAIService().generateResponse(
+                request,
                 context.history,
                 context.memories,
-                context.relationship
+                context.relationship,
+                context.dbContext
             );
             
         }).thenApply(response -> {
+            if (response == null || response.isBlank()) {
+                return DialogResult.error();
+            }
+
+            String sentiment = plugin.getOpenAIService().analyzeSentimentFast(message);
+
             // Salveaza dialogul in istoric
             saveDialog(npc, player, message, response);
             
             // Actualizeaza relatia
-            updateRelationship(npc, player, message, response);
+            updateRelationship(npc, player, sentiment);
             
             // Creeaza amintire daca e important
-            createMemoryIfImportant(npc, player, message, response);
+            createMemoryIfImportant(npc, player, message, sentiment);
             
             // Actualizeaza emotiile bazat pe interactiune
-            updateEmotions(npc, player, message);
+            updateEmotions(npc, player, sentiment);
             
-            return response;
+            return DialogResult.success(response);
+        }).exceptionally(ex -> {
+            plugin.getLogger().warning("Eroare in procesarea dialogului: " + ex.getMessage());
+            return DialogResult.error();
         });
     }
 
     /**
      * Obtine istoricul recent al conversatiei
      */
-    public List<OllamaService.DialogHistory> getRecentHistory(AINPC npc, Player player, int limit) {
-        List<OllamaService.DialogHistory> history = new ArrayList<>();
+    public List<OpenAIService.DialogHistory> getRecentHistory(AINPC npc, Player player, int limit) {
+        List<OpenAIService.DialogHistory> history = new ArrayList<>();
         
         String sql = """
             SELECT player_message, npc_response, created_at
@@ -95,7 +140,7 @@ public class DialogManager {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    history.add(new OllamaService.DialogHistory(
+                    history.add(new OpenAIService.DialogHistory(
                         rs.getString("player_message"),
                         rs.getString("npc_response"),
                         rs.getTimestamp("created_at").getTime()
@@ -135,7 +180,7 @@ public class DialogManager {
     /**
      * Obtine relatia dintre NPC si jucator
      */
-    public OllamaService.NPCRelationship getRelationship(AINPC npc, Player player) {
+    public OpenAIService.NPCRelationship getRelationship(AINPC npc, Player player) {
         String sql = """
             SELECT affection, trust, respect, familiarity, interaction_count, relationship_type
             FROM npc_relationships
@@ -148,7 +193,7 @@ public class DialogManager {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    OllamaService.NPCRelationship rel = new OllamaService.NPCRelationship();
+                    OpenAIService.NPCRelationship rel = new OpenAIService.NPCRelationship();
                     rel.setAffection(rs.getDouble("affection"));
                     rel.setTrust(rs.getDouble("trust"));
                     rel.setRespect(rs.getDouble("respect"));
@@ -168,132 +213,129 @@ public class DialogManager {
     /**
      * Actualizeaza relatia dupa o interactiune
      */
-    private void updateRelationship(AINPC npc, Player player, String playerMessage, String response) {
-        plugin.getOllamaService().analyzeSentiment(playerMessage).thenAccept(sentiment -> {
-            double affectionChange = 0;
-            double trustChange = 0;
-            double respectChange = 0;
+    private void updateRelationship(AINPC npc, Player player, String sentiment) {
+        double affectionChange = 0;
+        double trustChange = 0;
+        double respectChange = 0;
 
-            switch (sentiment) {
-                case "positive", "compliment" -> {
-                    affectionChange = 0.05;
-                    trustChange = 0.03;
-                }
-                case "greeting" -> {
-                    affectionChange = 0.02;
-                    trustChange = 0.01;
-                }
-                case "negative", "insult" -> {
-                    affectionChange = -0.1;
-                    trustChange = -0.05;
-                    respectChange = -0.05;
-                }
-                case "threat" -> {
-                    affectionChange = -0.15;
-                    trustChange = -0.2;
-                    respectChange = -0.1;
-                }
+        switch (sentiment) {
+            case "positive", "compliment" -> {
+                affectionChange = 0.05;
+                trustChange = 0.03;
             }
-
-            // Aplica modificarile in baza de date
-            String sql = """
-                INSERT INTO npc_relationships 
-                (npc_id, player_uuid, player_name, affection, trust, respect, familiarity, interaction_count, last_interaction, relationship_type)
-                VALUES (?, ?, ?, ?, ?, ?, 0.1, 1, CURRENT_TIMESTAMP, 'acquaintance')
-                ON CONFLICT(npc_id, player_uuid) DO UPDATE SET
-                    affection = MIN(1.0, MAX(-1.0, affection + ?)),
-                    trust = MIN(1.0, MAX(-1.0, trust + ?)),
-                    respect = MIN(1.0, MAX(-1.0, respect + ?)),
-                    familiarity = MIN(1.0, familiarity + 0.01),
-                    interaction_count = interaction_count + 1,
-                    last_interaction = CURRENT_TIMESTAMP,
-                    relationship_type = CASE
-                        WHEN affection + ? > 0.7 THEN 'close_friend'
-                        WHEN affection + ? > 0.4 THEN 'friend'
-                        WHEN affection + ? > 0.1 THEN 'acquaintance'
-                        WHEN affection + ? < -0.5 THEN 'enemy'
-                        WHEN affection + ? < -0.2 THEN 'rival'
-                        ELSE 'stranger'
-                    END
-            """;
-
-            try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-                stmt.setInt(1, npc.getDatabaseId());
-                stmt.setString(2, player.getUniqueId().toString());
-                stmt.setString(3, player.getName());
-                stmt.setDouble(4, affectionChange);
-                stmt.setDouble(5, trustChange);
-                stmt.setDouble(6, respectChange);
-                stmt.setDouble(7, affectionChange);
-                stmt.setDouble(8, trustChange);
-                stmt.setDouble(9, respectChange);
-                stmt.setDouble(10, affectionChange);
-                stmt.setDouble(11, affectionChange);
-                stmt.setDouble(12, affectionChange);
-                stmt.setDouble(13, affectionChange);
-                stmt.setDouble(14, affectionChange);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                plugin.getLogger().warning("Eroare la actualizarea relatiei: " + e.getMessage());
+            case "greeting" -> {
+                affectionChange = 0.02;
+                trustChange = 0.01;
             }
-        });
+            case "negative", "insult" -> {
+                affectionChange = -0.1;
+                trustChange = -0.05;
+                respectChange = -0.05;
+            }
+            case "threat" -> {
+                affectionChange = -0.15;
+                trustChange = -0.2;
+                respectChange = -0.1;
+            }
+        }
+
+        // Aplica modificarile in baza de date
+        String sql = """
+            INSERT INTO npc_relationships 
+            (npc_id, player_uuid, player_name, affection, trust, respect, familiarity, interaction_count, last_interaction, relationship_type)
+            VALUES (?, ?, ?, ?, ?, ?, 0.1, 1, CURRENT_TIMESTAMP, 'acquaintance')
+            ON CONFLICT(npc_id, player_uuid) DO UPDATE SET
+                affection = MIN(1.0, MAX(-1.0, affection + ?)),
+                trust = MIN(1.0, MAX(-1.0, trust + ?)),
+                respect = MIN(1.0, MAX(-1.0, respect + ?)),
+                familiarity = MIN(1.0, familiarity + 0.01),
+                interaction_count = interaction_count + 1,
+                last_interaction = CURRENT_TIMESTAMP,
+                relationship_type = CASE
+                    WHEN affection + ? > 0.7 THEN 'close_friend'
+                    WHEN affection + ? > 0.4 THEN 'friend'
+                    WHEN affection + ? > 0.1 THEN 'acquaintance'
+                    WHEN affection + ? < -0.5 THEN 'enemy'
+                    WHEN affection + ? < -0.2 THEN 'rival'
+                    ELSE 'stranger'
+                END
+        """;
+
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setInt(1, npc.getDatabaseId());
+            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(3, player.getName());
+            stmt.setDouble(4, affectionChange);
+            stmt.setDouble(5, trustChange);
+            stmt.setDouble(6, respectChange);
+            stmt.setDouble(7, affectionChange);
+            stmt.setDouble(8, trustChange);
+            stmt.setDouble(9, respectChange);
+            stmt.setDouble(10, affectionChange);
+            stmt.setDouble(11, affectionChange);
+            stmt.setDouble(12, affectionChange);
+            stmt.setDouble(13, affectionChange);
+            stmt.setDouble(14, affectionChange);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Eroare la actualizarea relatiei: " + e.getMessage());
+        }
     }
 
     /**
      * Creeaza o amintire daca interactiunea este importanta
      */
-    private void createMemoryIfImportant(AINPC npc, Player player, String playerMessage, String response) {
-        plugin.getOllamaService().analyzeSentiment(playerMessage).thenAccept(sentiment -> {
-            // Determina importanta
-            int importance = switch (sentiment) {
-                case "insult", "threat" -> 4;
-                case "compliment" -> 3;
-                case "positive", "negative" -> 2;
-                default -> 1;
-            };
+    private void createMemoryIfImportant(AINPC npc, Player player, String playerMessage, String sentiment) {
+        int importance = switch (sentiment) {
+            case "insult", "threat" -> 4;
+            case "compliment" -> 3;
+            case "positive", "negative" -> 2;
+            default -> 1;
+        };
 
-            // Creeaza amintire doar pentru interactiuni importante
-            if (importance >= 2) {
-                String content = "Jucatorul " + player.getName() + " mi-a spus: \"" + 
-                    truncate(playerMessage, 100) + "\" (sentiment: " + sentiment + ")";
-                
-                plugin.getMemoryManager().createMemory(
-                    npc, player, 
-                    "dialog", 
-                    content, 
-                    sentimentToEmotionalImpact(sentiment),
-                    importance
-                );
-            }
-        });
+        // Creeaza amintire doar pentru interactiuni importante
+        if (importance >= 2) {
+            String content = "Jucatorul " + player.getName() + " mi-a spus: \"" +
+                truncate(playerMessage, 100) + "\" (sentiment: " + sentiment + ")";
+
+            plugin.getMemoryManager().createMemory(
+                npc, player,
+                "dialog",
+                content,
+                sentimentToEmotionalImpact(sentiment),
+                importance
+            );
+        }
     }
 
     /**
      * Actualizeaza emotiile NPC-ului bazat pe mesaj
      */
-    private void updateEmotions(AINPC npc, Player player, String message) {
-        plugin.getOllamaService().analyzeSentiment(message).thenAccept(sentiment -> {
-            // Obtine multiplicatorul bazat pe relatie
-            OllamaService.NPCRelationship rel = getRelationship(npc, player);
-            double multiplier = rel != null ? (0.5 + rel.getFamiliarity() * 0.5) : 0.5;
-            
-            // Aplica efectul emotional
-            String interactionType = switch (sentiment) {
-                case "positive" -> "compliment";
-                case "negative" -> "insult";
-                case "greeting" -> "greeting";
-                case "threat" -> "threat";
-                case "compliment" -> "compliment";
-                case "insult" -> "insult";
-                default -> "greeting";
-            };
-            
-            npc.getEmotions().applyInteractionEffect(interactionType, multiplier);
-            npc.updateDisplayName();
-            
-            // Salveaza emotiile
-            plugin.getNpcManager().saveEmotions(npc);
-        });
+    private void updateEmotions(AINPC npc, Player player, String sentiment) {
+        // Obtine multiplicatorul bazat pe relatie
+        OpenAIService.NPCRelationship rel = getRelationship(npc, player);
+        double multiplier = rel != null ? (0.5 + rel.getFamiliarity() * 0.5) : 0.5;
+
+        // Aplica efectul emotional
+        String interactionType = switch (sentiment) {
+            case "positive" -> "compliment";
+            case "negative" -> "insult";
+            case "greeting" -> "greeting";
+            case "threat" -> "threat";
+            case "compliment" -> "compliment";
+            case "insult" -> "insult";
+            default -> "greeting";
+        };
+
+        npc.getEmotions().applyInteractionEffect(interactionType, multiplier);
+        npc.updateDisplayName();
+
+        // Salveaza emotiile
+        plugin.getNpcManager().saveEmotions(npc);
+    }
+
+    public boolean isOnCooldown(Player player, AINPC npc) {
+        return isOnCooldown(player.getUniqueId(), npc.getUuid());
     }
 
     // Cooldown methods
@@ -334,16 +376,77 @@ public class DialogManager {
 
     // Context holder class
     private static class DialogContext {
-        final List<OllamaService.DialogHistory> history;
+        final List<OpenAIService.DialogHistory> history;
         final List<String> memories;
-        final OllamaService.NPCRelationship relationship;
+        final OpenAIService.NPCRelationship relationship;
+        final PromptDbContext dbContext;
 
-        DialogContext(List<OllamaService.DialogHistory> history, 
-                     List<String> memories, 
-                     OllamaService.NPCRelationship relationship) {
+        DialogContext(List<OpenAIService.DialogHistory> history, 
+                     List<String> memories,
+                     OpenAIService.NPCRelationship relationship,
+                     PromptDbContext dbContext) {
             this.history = history;
             this.memories = memories;
             this.relationship = relationship;
+            this.dbContext = dbContext;
         }
+    }
+
+    public record PromptDbContext(
+        int totalMemoryCount,
+        double weightedMemoryImpact
+    ) {
+    }
+
+    public static class DialogResult {
+        private final DialogStatus status;
+        private final String response;
+
+        private DialogResult(DialogStatus status, String response) {
+            this.status = status;
+            this.response = response;
+        }
+
+        public static DialogResult success(String response) {
+            return new DialogResult(DialogStatus.SUCCESS, response);
+        }
+
+        public static DialogResult cooldown() {
+            return new DialogResult(DialogStatus.COOLDOWN, null);
+        }
+
+        public static DialogResult error() {
+            return new DialogResult(DialogStatus.ERROR, null);
+        }
+
+        public DialogStatus getStatus() {
+            return status;
+        }
+
+        public String getResponse() {
+            return response;
+        }
+
+        public boolean isSuccess() {
+            return status == DialogStatus.SUCCESS;
+        }
+    }
+
+    public enum DialogStatus {
+        SUCCESS,
+        COOLDOWN,
+        ERROR
+    }
+
+    public record DialogRequest(
+        AINPC npc,
+        Player player,
+        String message,
+        boolean directAddress,
+        boolean explicitConversation,
+        String triggerReason,
+        int nearbyNpcCount,
+        double distanceToNpc
+    ) {
     }
 }

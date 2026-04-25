@@ -2,8 +2,9 @@ package ro.ainpc.engine;
 
 import org.bukkit.entity.Player;
 import ro.ainpc.AINPCPlugin;
-import ro.ainpc.ai.OllamaService;
-import ro.ainpc.managers.MemoryManager;
+import ro.ainpc.ai.DialogManager;
+import ro.ainpc.ai.NpcFactResolver;
+import ro.ainpc.ai.OpenAIService;
 import ro.ainpc.npc.*;
 
 import java.util.*;
@@ -17,8 +18,7 @@ import java.util.concurrent.CompletableFuture;
 public class DialogueEngine {
 
     private final AINPCPlugin plugin;
-    private final OllamaService ollamaService;
-    private final MemoryManager memoryManager;
+    private final OpenAIService openAIService;
     
     // Template-uri de dialog pe categorii
     private final Map<DialogueIntent, List<String>> templates;
@@ -26,10 +26,9 @@ public class DialogueEngine {
     // Cache pentru raspunsuri recente (evita repetitii)
     private final Map<UUID, List<String>> recentResponses;
 
-    public DialogueEngine(AINPCPlugin plugin, OllamaService ollamaService, MemoryManager memoryManager) {
+    public DialogueEngine(AINPCPlugin plugin, OpenAIService openAIService) {
         this.plugin = plugin;
-        this.ollamaService = ollamaService;
-        this.memoryManager = memoryManager;
+        this.openAIService = openAIService;
         this.templates = new EnumMap<>(DialogueIntent.class);
         this.recentResponses = new HashMap<>();
         
@@ -334,9 +333,51 @@ public class DialogueEngine {
     }
 
     /**
+     * Fluxul runtime real pentru raspunsurile NPC-urilor.
+     */
+    public CompletableFuture<String> generateResponse(DialogManager.DialogRequest request,
+                                                      List<OpenAIService.DialogHistory> recentHistory,
+                                                      List<String> relevantMemories,
+                                                      OpenAIService.NPCRelationship relationship,
+                                                      DialogManager.PromptDbContext dbContext) {
+        AINPC npc = request.npc();
+        NPCContext context = npc.getContext() != null ? npc.getContext() : new NPCContext(npc);
+
+        if (request.player() != null && context.getInteractingPlayer() == null) {
+            context.setInteractingPlayer(request.player());
+        }
+        context.setLastPlayerMessage(request.message());
+
+        String factResponse = resolveFactResponse(npc, context, request.message());
+        if (factResponse != null) {
+            return CompletableFuture.completedFuture(factResponse);
+        }
+
+        DialogueIntent intent = selectIntent(npc, context, request.message());
+        String template = selectTemplate(npc, intent);
+        String processed = processTemplate(template, npc, context);
+
+        if (!shouldUseContextualAI(intent, context, request, recentHistory, relevantMemories, relationship)) {
+            return CompletableFuture.completedFuture(processed);
+        }
+
+        return openAIService.generateResponse(request, recentHistory, relevantMemories, relationship, dbContext)
+            .thenApply(response -> response == null || response.isBlank() ? processed : response)
+            .exceptionally(ex -> {
+                plugin.debug("Eroare in pipeline-ul contextual de dialog: " + ex.getMessage());
+                return processed;
+            });
+    }
+
+    /**
      * Genereaza raspuns de dialog
      */
     public CompletableFuture<String> generateResponse(AINPC npc, NPCContext context, String playerMessage) {
+        String factResponse = resolveFactResponse(npc, context, playerMessage);
+        if (factResponse != null) {
+            return CompletableFuture.completedFuture(factResponse);
+        }
+
         DialogueIntent intent = selectIntent(npc, context, playerMessage);
         
         // Selecteaza template
@@ -348,12 +389,25 @@ public class DialogueEngine {
         // Decide daca trimitem la AI pentru reformulare
         boolean useAI = shouldUseAI(intent, context);
         
-        if (useAI && ollamaService.isAvailable()) {
+        if (useAI && openAIService.isAvailable()) {
             return reformulateWithAI(npc, context, intent, processed, playerMessage);
         }
         
         // Returneaza template-ul procesat
         return CompletableFuture.completedFuture(processed);
+    }
+
+    private String resolveFactResponse(AINPC npc, NPCContext context, String playerMessage) {
+        NpcFactResolver.NpcFacts facts = new NpcFactResolver.NpcFacts(
+            npc.getName(),
+            npc.getOccupation(),
+            npc.getEmotions() != null ? npc.getEmotions().getShortDescription() : "",
+            npc.getCurrentState() != null ? npc.getCurrentState().getDisplayName() : "",
+            NpcFactResolver.describeCurrentActivity(npc.getOccupation(), npc.getCurrentState()),
+            NpcFactResolver.describeLocation(npc, context)
+        );
+
+        return NpcFactResolver.resolve(playerMessage, facts).orElse(null);
     }
 
     /**
@@ -464,6 +518,36 @@ public class DialogueEngine {
         return members[new Random().nextInt(members.length)];
     }
 
+    private boolean shouldUseContextualAI(DialogueIntent intent,
+                                          NPCContext context,
+                                          DialogManager.DialogRequest request,
+                                          List<OpenAIService.DialogHistory> recentHistory,
+                                          List<String> relevantMemories,
+                                          OpenAIService.NPCRelationship relationship) {
+        if (!openAIService.isAvailable()) {
+            return false;
+        }
+
+        if (shouldUseAI(intent, context)) {
+            return true;
+        }
+
+        if (relevantMemories != null && !relevantMemories.isEmpty()) {
+            return true;
+        }
+
+        if (recentHistory != null && recentHistory.size() >= 2) {
+            return true;
+        }
+
+        if (relationship != null && relationship.getInteractionCount() >= 3) {
+            return true;
+        }
+
+        String message = request.message() == null ? "" : request.message().trim();
+        return request.explicitConversation() && message.length() > 8;
+    }
+
     /**
      * Decide daca sa folosim AI pentru reformulare
      */
@@ -493,7 +577,7 @@ public class DialogueEngine {
         prompt.append("\nReformuleaza template-ul pastrand sensul dar facandu-l mai natural si specific personajului.");
         prompt.append(" Raspunde DOAR cu replica NPC-ului, maxim 2 propozitii, in romana.");
         
-        return ollamaService.generateAsync(prompt.toString())
+        return openAIService.generateAsync(prompt.toString())
             .thenApply(response -> {
                 if (response == null || response.isEmpty()) {
                     return template;

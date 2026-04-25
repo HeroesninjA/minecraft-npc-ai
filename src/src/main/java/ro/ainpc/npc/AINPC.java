@@ -43,6 +43,11 @@ public class AINPC {
     private String occupation;
     private int age;
     private String gender;
+    private String profileSource;
+    private String profileSummary;
+    private String profileDataJson;
+    private int profileVersion;
+    private boolean profileCreated;
     
     // Componente
     private NPCPersonality personality;
@@ -68,6 +73,11 @@ public class AINPC {
         this.spawned = false;
         this.age = 30;
         this.gender = "male";
+        this.profileSource = "manual";
+        this.profileSummary = "";
+        this.profileDataJson = "{}";
+        this.profileVersion = 1;
+        this.profileCreated = false;
     }
 
     /**
@@ -81,26 +91,45 @@ public class AINPC {
         }
 
         Location location = new Location(world, x, y, z, yaw, pitch);
-        
+
         // Folosim Villager ca baza pentru NPC
-        bukkitEntity = world.spawn(location, Villager.class, villager -> {
-            villager.customName(getColoredDisplayNameComponent());
-            villager.setCustomNameVisible(true);
-            villager.setAI(false);
-            villager.setInvulnerable(true);
-            villager.setSilent(true);
-            villager.setCollidable(false);
-            villager.setPersistent(true);
-            villager.setRemoveWhenFarAway(false);
-            
-            // Seteaza profesia bazata pe ocupatie
-            villager.setProfession(getVillagerProfession());
-            villager.setVillagerType(Villager.Type.PLAINS);
+        Villager villager = world.spawn(location, Villager.class, spawnedVillager -> {
+            spawnedVillager.setProfession(getVillagerProfession());
+            spawnedVillager.setVillagerType(Villager.Type.PLAINS);
+            spawnedVillager.setAI(false);
+            spawnedVillager.setInvulnerable(true);
+            spawnedVillager.setSilent(true);
+            spawnedVillager.setCollidable(false);
+            spawnedVillager.setPersistent(true);
+            spawnedVillager.setRemoveWhenFarAway(false);
         });
 
-        spawned = true;
+        attachToVillager(villager);
         plugin.debug("NPC '" + name + "' spawnat la " + location);
         return true;
+    }
+
+    /**
+     * Leaga NPC-ul de un villager deja existent in lume.
+     */
+    public void attachToVillager(Villager villager) {
+        if (villager == null) {
+            return;
+        }
+
+        this.bukkitEntity = villager;
+        this.spawned = villager.isValid();
+        this.uuid = villager.getUniqueId();
+        syncLocation(villager.getLocation());
+
+        villager.customName(getColoredDisplayNameComponent());
+        villager.setCustomNameVisible(true);
+        villager.setPersistent(true);
+        villager.setRemoveWhenFarAway(false);
+
+        if (occupation != null && !occupation.isBlank() && shouldApplyProfessionToVillager(villager)) {
+            villager.setProfession(getVillagerProfession());
+        }
     }
 
     /**
@@ -116,15 +145,21 @@ public class AINPC {
     }
 
     /**
+     * Marcheaza NPC-ul ca ramas fara entitate activa in lume, fara sa-i stearga datele.
+     */
+    public void markEntityUnavailable() {
+        if (bukkitEntity != null && bukkitEntity.isValid()) {
+            syncLocation(bukkitEntity.getLocation());
+        }
+        bukkitEntity = null;
+        spawned = false;
+    }
+
+    /**
      * Teleporteaza NPC-ul la o noua locatie
      */
     public void teleport(Location location) {
-        this.worldName = location.getWorld().getName();
-        this.x = location.getX();
-        this.y = location.getY();
-        this.z = location.getZ();
-        this.yaw = location.getYaw();
-        this.pitch = location.getPitch();
+        syncLocation(location);
 
         if (spawned && bukkitEntity != null) {
             bukkitEntity.teleport(location);
@@ -135,7 +170,7 @@ public class AINPC {
      * Face NPC-ul sa se uite la un jucator
      */
     public void lookAt(Player player) {
-        if (bukkitEntity == null || !spawned) return;
+        if (!isSpawned()) return;
 
         Location npcLoc = bukkitEntity.getLocation();
         Location playerLoc = player.getLocation();
@@ -153,15 +188,14 @@ public class AINPC {
         newLoc.setPitch(pitch);
 
         bukkitEntity.teleport(newLoc);
-        this.yaw = yaw;
-        this.pitch = pitch;
+        syncLocation(newLoc);
     }
 
     /**
      * Verifica daca un jucator este in raza de interactiune
      */
     public boolean isInRange(Player player) {
-        if (!spawned || bukkitEntity == null) return false;
+        if (!isSpawned()) return false;
         
         double maxDistance = plugin.getConfig().getDouble("npc.interaction_distance", 5.0);
         return bukkitEntity.getLocation().distance(player.getLocation()) <= maxDistance;
@@ -171,7 +205,8 @@ public class AINPC {
      * Obtine locatia curenta
      */
     public Location getLocation() {
-        if (bukkitEntity != null && spawned) {
+        if (isSpawned()) {
+            syncLocationFromEntity();
             return bukkitEntity.getLocation();
         }
         World world = Bukkit.getWorld(worldName);
@@ -188,21 +223,36 @@ public class AINPC {
         if (occupation == null) return Villager.Profession.NONE;
         
         return switch (occupation.toLowerCase()) {
+            case "locuitor", "villager", "resident" -> Villager.Profession.NONE;
+            case "localnic", "nitwit" -> Villager.Profession.NITWIT;
             case "fermier", "farmer" -> Villager.Profession.FARMER;
             case "bibliotecar", "librarian" -> Villager.Profession.LIBRARIAN;
             case "preot", "cleric" -> Villager.Profession.CLERIC;
+            case "vindecator", "healer", "alchimist", "brewer" -> Villager.Profession.CLERIC;
             case "fierar", "blacksmith", "armorer" -> Villager.Profession.ARMORER;
             case "macelar", "butcher" -> Villager.Profession.BUTCHER;
             case "pescar", "fisherman" -> Villager.Profession.FISHERMAN;
             case "cartograf", "cartographer" -> Villager.Profession.CARTOGRAPHER;
             case "pietrar", "mason" -> Villager.Profession.MASON;
             case "tamplar", "fletcher" -> Villager.Profession.FLETCHER;
-            case "alchimist", "brewer" -> Villager.Profession.CLERIC;
-            case "soldat", "soldier", "guard" -> Villager.Profession.WEAPONSMITH;
+            case "soldat", "soldier", "guard", "garda" -> Villager.Profession.WEAPONSMITH;
+            case "hangiu", "innkeeper", "hangiul" -> Villager.Profession.BUTCHER;
             case "miner" -> Villager.Profession.TOOLSMITH;
             case "negustor", "merchant" -> Villager.Profession.MASON;
-            default -> Villager.Profession.NITWIT;
+            default -> Villager.Profession.NONE;
         };
+    }
+
+    private boolean shouldApplyProfessionToVillager(Villager villager) {
+        if (villager == null) {
+            return false;
+        }
+
+        if ("auto".equalsIgnoreCase(profileSource) && villager.hasAI()) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -222,8 +272,20 @@ public class AINPC {
      * Actualizeaza numele afisat bazat pe emotie
      */
     public void updateDisplayName() {
-        if (bukkitEntity != null && spawned) {
+        if (isSpawned()) {
             bukkitEntity.customName(getColoredDisplayNameComponent());
+        }
+    }
+
+    /**
+     * Actualizeaza coordonatele salvate din entitatea curenta.
+     */
+    public void syncLocationFromEntity() {
+        if (bukkitEntity != null && bukkitEntity.isValid()) {
+            syncLocation(bukkitEntity.getLocation());
+            spawned = true;
+        } else if (bukkitEntity != null) {
+            markEntityUnavailable();
         }
     }
 
@@ -250,7 +312,7 @@ public class AINPC {
      * Actualizeaza contextul NPC-ului
      */
     public void updateContext() {
-        if (bukkitEntity != null && spawned) {
+        if (isSpawned()) {
             context.updateFromWorld(bukkitEntity.getWorld(), bukkitEntity.getLocation());
         }
     }
@@ -441,6 +503,46 @@ public class AINPC {
         this.gender = gender;
     }
 
+    public String getProfileSource() {
+        return profileSource;
+    }
+
+    public void setProfileSource(String profileSource) {
+        this.profileSource = profileSource == null || profileSource.isBlank() ? "manual" : profileSource;
+    }
+
+    public String getProfileSummary() {
+        return profileSummary;
+    }
+
+    public void setProfileSummary(String profileSummary) {
+        this.profileSummary = profileSummary == null ? "" : profileSummary;
+    }
+
+    public String getProfileDataJson() {
+        return profileDataJson;
+    }
+
+    public void setProfileDataJson(String profileDataJson) {
+        this.profileDataJson = profileDataJson == null || profileDataJson.isBlank() ? "{}" : profileDataJson;
+    }
+
+    public int getProfileVersion() {
+        return profileVersion;
+    }
+
+    public void setProfileVersion(int profileVersion) {
+        this.profileVersion = Math.max(1, profileVersion);
+    }
+
+    public boolean isProfileCreated() {
+        return profileCreated;
+    }
+
+    public void setProfileCreated(boolean profileCreated) {
+        this.profileCreated = profileCreated;
+    }
+
     public NPCPersonality getPersonality() {
         return personality;
     }
@@ -474,7 +576,7 @@ public class AINPC {
     }
 
     public void setTraits(List<String> traits) {
-        this.traits = traits;
+        this.traits = traits == null ? new ArrayList<>() : new ArrayList<>(traits);
     }
 
     public Entity getBukkitEntity() {
@@ -482,7 +584,16 @@ public class AINPC {
     }
 
     public boolean isSpawned() {
-        return spawned;
+        if (!spawned) {
+            return false;
+        }
+
+        if (bukkitEntity == null || !bukkitEntity.isValid()) {
+            markEntityUnavailable();
+            return false;
+        }
+
+        return true;
     }
 
     public void setLocation(String worldName, double x, double y, double z, float yaw, float pitch) {
@@ -492,5 +603,18 @@ public class AINPC {
         this.z = z;
         this.yaw = yaw;
         this.pitch = pitch;
+    }
+
+    private void syncLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return;
+        }
+
+        this.worldName = location.getWorld().getName();
+        this.x = location.getX();
+        this.y = location.getY();
+        this.z = location.getZ();
+        this.yaw = location.getYaw();
+        this.pitch = location.getPitch();
     }
 }

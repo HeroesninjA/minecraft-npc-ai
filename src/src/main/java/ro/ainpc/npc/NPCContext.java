@@ -3,6 +3,7 @@ package ro.ainpc.npc;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import ro.ainpc.topology.TopologyCategory;
 
 import java.util.*;
 
@@ -20,6 +21,7 @@ public class NPCContext {
     private String timeOfDay; // MORNING, AFTERNOON, EVENING, NIGHT
     private String weather; // CLEAR, RAIN, THUNDER, SNOW
     private String biome;
+    private TopologyCategory topologyCategory;
     private boolean isIndoors;
     
     // Entitati din apropiere
@@ -64,6 +66,7 @@ public class NPCContext {
         this.healthPercent = 100.0;
         this.hungerLevel = 100;
         this.relationshipStatus = "STRANGER";
+        this.topologyCategory = TopologyCategory.UNKNOWN;
     }
 
     /**
@@ -88,6 +91,7 @@ public class NPCContext {
         
         // Verifica daca e in interior (simplificat)
         this.isIndoors = npcLocation.getBlock().getLightFromSky() < 10;
+        this.topologyCategory = TopologyCategory.fromBiome(this.biome, this.isIndoors);
         
         // Entitati din apropiere
         updateNearbyEntities(npcLocation);
@@ -175,9 +179,10 @@ public class NPCContext {
         
         // Locatie
         if (isIndoors) {
-            sb.append("Sunt in interior.\n");
+            sb.append("Sunt in interior, intr-un mediu de tip ").append(getTopologyDescription()).append(".\n");
         } else {
-            sb.append("Sunt afara, in ").append(getBiomeDescription()).append(".\n");
+            sb.append("Sunt afara, intr-o zona de tip ").append(getTopologyDescription())
+                .append(" (").append(getBiomeDescription()).append(").\n");
         }
         
         // Entitati din apropiere
@@ -246,23 +251,34 @@ public class NPCContext {
 
     private String getBiomeDescription() {
         if (biome == null) return "loc necunoscut";
-        
-        return switch (biome) {
-            case "PLAINS" -> "campie";
-            case "FOREST" -> "padure";
-            case "DARK_FOREST" -> "padure intunecata";
-            case "DESERT" -> "desert";
-            case "MOUNTAINS", "WINDSWEPT_HILLS" -> "munti";
-            case "SWAMP" -> "mlastina";
-            case "TAIGA" -> "taiga";
-            case "SNOWY_PLAINS" -> "campie inzapezita";
-            case "JUNGLE" -> "jungla";
-            case "BEACH" -> "plaja";
-            case "RIVER" -> "langa rau";
-            case "OCEAN" -> "langa ocean";
-            case "VILLAGE" -> "sat";
-            default -> biome.toLowerCase().replace("_", " ");
+
+        return switch (topologyCategory) {
+            case INTERIOR -> "spatiu interior";
+            case PLAINS -> "camp deschis";
+            case FOREST -> "padure";
+            case DARK_FOREST -> "padure intunecata";
+            case DESERT -> "zona arida";
+            case MOUNTAIN -> "munte";
+            case SWAMP -> "mlastina";
+            case TAIGA -> "taiga";
+            case SNOW -> "tinut rece";
+            case JUNGLE -> "jungla";
+            case COAST -> "coasta";
+            case RIVER -> "mal de rau";
+            case OCEAN -> "margine de ocean";
+            case UNDERGROUND -> "zona subterana";
+            case NETHER -> "nether";
+            case END -> "end";
+            case UNKNOWN -> biome.toLowerCase(Locale.ROOT).replace("_", " ");
         };
+    }
+
+    private String getTopologyDescription() {
+        if (topologyCategory == null || topologyCategory == TopologyCategory.UNKNOWN) {
+            return "topologie necunoscuta";
+        }
+
+        return topologyCategory.getDisplayName().toLowerCase(Locale.ROOT);
     }
 
     private String getRelationshipDescription() {
@@ -298,6 +314,10 @@ public class NPCContext {
 
     public String getBiome() {
         return biome;
+    }
+
+    public TopologyCategory getTopologyCategory() {
+        return topologyCategory;
     }
 
     public boolean isIndoors() {

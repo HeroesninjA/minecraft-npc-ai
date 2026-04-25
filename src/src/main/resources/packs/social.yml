@@ -6,6 +6,11 @@
 id: social
 name: "Social"
 description: "Pachet de trasaturi si comportamente sociale"
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["traits", "dialogues"]
 
 # ==================== TRAITS ====================
 traits:

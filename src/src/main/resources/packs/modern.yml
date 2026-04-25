@@ -6,6 +6,12 @@
 id: modern
 name: "Modern"
 description: "Pachet de caracteristici pentru lumi moderne sau post-apocaliptice"
+addon:
+  type: "scenario"
+  version: "1.0.0"
+  primary_scenario: false
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["traits", "professions", "dialogues", "topology", "scenarios"]
 
 # ==================== TRAITS ====================
 traits:
@@ -137,6 +143,50 @@ professions:
       - "Ce ai de oferit in schimb?"
       - "Am primit marfa rara de la sud."
       - "Preturile cresc, resursele sunt tot mai putine."
+
+# ==================== TOPOLOGII ====================
+topologies:
+  shelter_interior:
+    name: "Adapost interior"
+    category: "INTERIOR"
+    biomes: []
+    description: "Spatiu inchis, improvizat si functional, orientat spre supravietuire si ordine."
+    dialogue_hints:
+      - "vorbeste despre stocuri, disciplina si siguranta"
+      - "accent pe resurse limitate si reguli ale adapostului"
+    suggested_traits:
+      - "resourceful"
+      - "leader"
+
+  ruined_outskirts:
+    name: "Periferie ruinata"
+    category: "PLAINS"
+    biomes:
+      - "PLAINS"
+      - "SUNFLOWER_PLAINS"
+      - "MEADOW"
+    description: "Zona expusa, cu structuri partial abandonate si risc constant."
+    dialogue_hints:
+      - "discuta despre trasee sigure, scouteri si schimb de resurse"
+      - "pastreaza un ton vigilent si pragmatic"
+    suggested_traits:
+      - "survivor"
+      - "paranoid"
+
+  service_tunnels:
+    name: "Tuneluri de serviciu"
+    category: "UNDERGROUND"
+    biomes:
+      - "LUSH_CAVES"
+      - "DRIPSTONE_CAVES"
+      - "DEEP_DARK"
+    description: "Retea subterana de trecere si ascundere, buna pentru secrete si tensiune."
+    dialogue_hints:
+      - "vorbeste despre ecou, intuneric si miscari ascunse"
+      - "foloseste replici mai scurte si prudente"
+    suggested_traits:
+      - "paranoid"
+      - "tech_savvy"
 
 # ==================== DIALOGURI GENERALE ====================
 dialogues:

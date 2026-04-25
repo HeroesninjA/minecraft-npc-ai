@@ -2,23 +2,19 @@ package ro.ainpc.listeners;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.npc.AINPC;
 
 import java.util.List;
 
 /**
- * Listener pentru evenimente de conectare/deconectare jucatori
+ * Listener pentru evenimente de intrare si recunoastere a jucatorului.
  */
-public class PlayerJoinListener implements Listener {
-
-    private final AINPCPlugin plugin;
+public class PlayerJoinListener extends AbstractPluginListener {
 
     public PlayerJoinListener(AINPCPlugin plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @EventHandler
@@ -26,22 +22,14 @@ public class PlayerJoinListener implements Listener {
         Player player = event.getPlayer();
         
         // Verifica daca sunt NPC-uri in apropiere care il recunosc pe jucator
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            checkNearbyNPCsRecognition(player);
-        }, 40L); // 2 secunde dupa join
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        // Curata conversatiile active (daca exista)
-        // Aceasta se face automat prin timeout, dar e bine sa curatam
+        runLater(() -> checkNearbyNPCsRecognition(player), 40L);
     }
 
     /**
      * Verifica daca NPC-urile din apropiere recunosc jucatorul
      */
     private void checkNearbyNPCsRecognition(Player player) {
-        List<AINPC> nearbyNPCs = plugin.getNpcManager().getNPCsNear(player.getLocation(), 20);
+        List<AINPC> nearbyNPCs = plugin.getNpcManager().getActiveNPCsNear(player.getLocation(), 20);
         
         for (AINPC npc : nearbyNPCs) {
             // Verifica daca NPC-ul are amintiri despre jucator

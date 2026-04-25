@@ -1,8 +1,8 @@
 package ro.ainpc.managers;
 
 import ro.ainpc.AINPCPlugin;
-import ro.ainpc.ai.OllamaService.FamilyMember;
 import ro.ainpc.npc.AINPC;
+import ro.ainpc.utils.NPCNameGenerator;
 
 import java.sql.*;
 import java.util.*;
@@ -14,21 +14,6 @@ public class FamilyManager {
 
     private final AINPCPlugin plugin;
     private final Random random;
-    
-    // Liste de nume pentru generare
-    private static final String[] MALE_NAMES = {
-        "Ion", "Andrei", "Mihai", "Alexandru", "Stefan", "Cristian", "Adrian", "Florin",
-        "Gheorghe", "Vasile", "Dumitru", "Nicolae", "Marin", "Constantin", "Petru",
-        "Radu", "Vlad", "Tudor", "Bogdan", "Catalin", "Daniel", "Gabriel", "Ionut",
-        "Lucian", "Marcel", "Ovidiu", "Paul", "Robert", "Sergiu", "Victor"
-    };
-    
-    private static final String[] FEMALE_NAMES = {
-        "Maria", "Ana", "Elena", "Ioana", "Andreea", "Cristina", "Alexandra", "Daniela",
-        "Gabriela", "Laura", "Mihaela", "Monica", "Raluca", "Simona", "Valentina",
-        "Adriana", "Alina", "Carmen", "Diana", "Eva", "Florina", "Irina", "Julia",
-        "Larisa", "Madalina", "Nicoleta", "Oana", "Paula", "Roxana", "Teodora"
-    };
 
     public FamilyManager(AINPCPlugin plugin) {
         this.plugin = plugin;
@@ -178,8 +163,8 @@ public class FamilyManager {
     /**
      * Obtine familia unui NPC
      */
-    public List<FamilyMember> getFamily(AINPC npc) {
-        List<FamilyMember> family = new ArrayList<>();
+    public List<FamilyMemberRecord> getFamily(AINPC npc) {
+        List<FamilyMemberRecord> family = new ArrayList<>();
 
         String sql = """
             SELECT related_name, relation_type, is_alive, related_npc_id, backstory
@@ -206,7 +191,7 @@ public class FamilyManager {
                     Integer relatedNpcId = rs.getInt("related_npc_id");
                     if (rs.wasNull()) relatedNpcId = null;
                     
-                    family.add(new FamilyMember(
+                    family.add(new FamilyMemberRecord(
                         rs.getString("related_name"),
                         rs.getString("relation_type"),
                         rs.getInt("is_alive") == 1,
@@ -247,7 +232,7 @@ public class FamilyManager {
      */
     public String getFamilyReport(AINPC npc) {
         StringBuilder sb = new StringBuilder();
-        List<FamilyMember> family = getFamily(npc);
+        List<FamilyMemberRecord> family = getFamily(npc);
 
         sb.append("&6=== Familia lui ").append(npc.getName()).append(" ===\n\n");
 
@@ -257,18 +242,18 @@ public class FamilyManager {
         }
 
         // Grupeaza dupa tip
-        Map<String, List<FamilyMember>> grouped = new LinkedHashMap<>();
-        for (FamilyMember member : family) {
-            grouped.computeIfAbsent(member.getRelationType(), k -> new ArrayList<>()).add(member);
+        Map<String, List<FamilyMemberRecord>> grouped = new LinkedHashMap<>();
+        for (FamilyMemberRecord member : family) {
+            grouped.computeIfAbsent(member.relationType(), k -> new ArrayList<>()).add(member);
         }
 
-        for (Map.Entry<String, List<FamilyMember>> entry : grouped.entrySet()) {
+        for (Map.Entry<String, List<FamilyMemberRecord>> entry : grouped.entrySet()) {
             String relationName = getRelationNameRomanian(entry.getKey());
             sb.append("&e").append(relationName).append(":\n");
             
-            for (FamilyMember member : entry.getValue()) {
-                sb.append("  &f- ").append(member.getName());
-                if (!member.isAlive()) {
+            for (FamilyMemberRecord member : entry.getValue()) {
+                sb.append("  &f- ").append(member.name());
+                if (!member.alive()) {
                     sb.append(" &8(decedat)");
                 }
                 sb.append("\n");
@@ -305,8 +290,7 @@ public class FamilyManager {
     // Helper methods pentru generare
 
     private String generateName(String gender) {
-        String[] names = gender.equals("male") ? MALE_NAMES : FEMALE_NAMES;
-        return names[random.nextInt(names.length)];
+        return NPCNameGenerator.randomName(gender, random);
     }
 
     private String getRandomOccupation() {

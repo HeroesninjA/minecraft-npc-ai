@@ -6,7 +6,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ro.ainpc.AINPCPlugin;
-import ro.ainpc.ai.OllamaService.FamilyMember;
 import ro.ainpc.npc.AINPC;
 
 import java.util.List;
@@ -157,6 +156,8 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
+        npc.updateContext();
+
         // Afiseaza informatii
         plugin.getMessageUtils().send(sender, "&6=== Informatii NPC ===");
         plugin.getMessageUtils().send(sender, "&eNume: &f" + npc.getName());
@@ -169,9 +170,18 @@ public class AINPCCommand implements CommandExecutor {
         }
         
         plugin.getMessageUtils().send(sender, "&eLocatie: &f" + formatLocation(npc.getLocation()));
+        if (npc.getContext() != null && npc.getContext().getTopologyCategory() != null) {
+            plugin.getMessageUtils().send(sender,
+                "&eTopologie: &f" + npc.getContext().getTopologyCategory().getDisplayName());
+        }
         plugin.getMessageUtils().send(sender, "");
         plugin.getMessageUtils().send(sender, "&ePersonalitate: &f" + npc.getPersonality().getDominantTraits());
         plugin.getMessageUtils().send(sender, "&eEmotie: &f" + npc.getEmotions().getShortDescription());
+        plugin.getMessageUtils().send(sender, "&eProfil creat: &f" + (npc.isProfileCreated() ? "da" : "nu"));
+        plugin.getMessageUtils().send(sender, "&eSursa profil: &f" + npc.getProfileSource());
+        if (npc.getProfileSummary() != null && !npc.getProfileSummary().isBlank()) {
+            plugin.getMessageUtils().send(sender, "&eRezumat profil: &f" + npc.getProfileSummary());
+        }
         
         if (npc.getBackstory() != null) {
             plugin.getMessageUtils().send(sender, "");
@@ -324,7 +334,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     /**
-     * /ainpc test - testeaza conexiunea Ollama
+     * /ainpc test - testeaza conexiunea OpenAI
      */
     private boolean handleTest(CommandSender sender) {
         if (!sender.hasPermission("ainpc.admin")) {
@@ -332,14 +342,27 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
-        plugin.getMessageUtils().send(sender, "&7Testare conexiune Ollama...");
+        plugin.getMessageUtils().send(sender, "&7Testare conexiune OpenAI...");
 
-        plugin.getOllamaService().checkConnection().thenAccept(connected -> {
+        plugin.getOpenAIService().diagnoseConnection(true).thenAccept(status -> {
             plugin.getServer().getScheduler().runTask(plugin, () -> {
-                if (connected) {
-                    plugin.getMessageUtils().send(sender, "&aOllama este conectat si functional!");
+                if (status.isReachable() && status.isModelAvailable()) {
+                    plugin.getMessageUtils().send(sender, "&aOpenAI este conectat si functional pe &f"
+                        + status.getRespondingUrl());
                 } else {
-                    plugin.getMessageUtils().send(sender, "&cOllama nu este disponibil! Verifica daca serverul Ollama ruleaza.");
+                    plugin.getMessageUtils().send(sender, "&c" + status.getSummary());
+                }
+
+                if (status.isReachable() && !status.isModelAvailable()) {
+                    plugin.getMessageUtils().send(sender, "&eModele raportate: &f"
+                        + (status.getAvailableModels().isEmpty()
+                            ? "<niciun model>"
+                            : String.join(", ", status.getAvailableModels())));
+                }
+
+                if (!status.getErrors().isEmpty()) {
+                    plugin.getMessageUtils().send(sender, "&7Probe: &f"
+                        + String.join(" &7| &f", status.getErrors()));
                 }
             });
         });
@@ -367,7 +390,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc tp <nume>");
         plugin.getMessageUtils().send(sender, "&7  Teleporteaza-te la un NPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc test");
-        plugin.getMessageUtils().send(sender, "&7  Testeaza conexiunea Ollama");
+        plugin.getMessageUtils().send(sender, "&7  Testeaza conexiunea OpenAI");
         plugin.getMessageUtils().send(sender, "&e/ainpc reload");
         plugin.getMessageUtils().send(sender, "&7  Reincarca configuratia");
     }

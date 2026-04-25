@@ -28,6 +28,7 @@ public class DatabaseManager {
             // Conectare la baza de date SQLite
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            enableForeignKeys();
             
             // Creaza tabelele
             createTables();
@@ -97,6 +98,31 @@ public class DatabaseManager {
                     trust REAL DEFAULT 0.5,
                     anticipation REAL DEFAULT 0.3,
                     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
+                )
+            """);
+
+            // Tabel profiluri persistente pentru NPC-uri
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS npc_profiles (
+                    npc_id INTEGER PRIMARY KEY,
+                    profile_source TEXT NOT NULL DEFAULT 'manual',
+                    profile_version INTEGER NOT NULL DEFAULT 1,
+                    profile_summary TEXT,
+                    profile_data TEXT NOT NULL DEFAULT '{}',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
+                )
+            """);
+
+            // Tabel traits asociate NPC-urilor
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS npc_traits (
+                    npc_id INTEGER NOT NULL,
+                    trait_id TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (npc_id, trait_id),
                     FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
                 )
             """);
@@ -177,8 +203,24 @@ public class DatabaseManager {
                 CREATE INDEX IF NOT EXISTS idx_dialog_npc_player 
                 ON dialog_history(npc_id, player_uuid, created_at DESC)
             """);
+
+            // Backfill pentru baze de date vechi, astfel incat fiecare NPC existent sa aiba toate datele de profil.
+            stmt.executeUpdate("""
+                INSERT OR IGNORE INTO npc_personality (npc_id)
+                SELECT id FROM npcs
+            """);
+            stmt.executeUpdate("""
+                INSERT OR IGNORE INTO npc_emotions (npc_id)
+                SELECT id FROM npcs
+            """);
             
             plugin.debug("Toate tabelele au fost create/verificate.");
+        }
+    }
+
+    private void enableForeignKeys() throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON");
         }
     }
 
