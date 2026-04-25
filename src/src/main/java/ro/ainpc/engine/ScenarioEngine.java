@@ -1,7 +1,10 @@
 package ro.ainpc.engine;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCEmotions;
@@ -29,11 +32,13 @@ public class ScenarioEngine {
     private final AINPCPlugin plugin;
     private final Map<UUID, ActiveScenario> activeScenarios;
     private final Map<ScenarioType, ScenarioTemplate> scenarioTemplates;
+    private final Map<UUID, PlayerQuestProgress> playerQuestProgress;
 
     public ScenarioEngine(AINPCPlugin plugin) {
         this.plugin = plugin;
         this.activeScenarios = new ConcurrentHashMap<>();
         this.scenarioTemplates = new EnumMap<>(ScenarioType.class);
+        this.playerQuestProgress = new ConcurrentHashMap<>();
 
         loadScenarioTemplates();
     }
@@ -175,6 +180,10 @@ public class ScenarioEngine {
                 template.setRequiresPlayer(definition.isRequiresPlayer());
                 template.setPreferredTopologies(definition.getPreferredTopologies());
                 template.setNarrativeHints(definition.getNarrativeHints());
+                template.setQuestCode(definition.getQuestCode());
+                template.setQuestGiverProfession(definition.getQuestGiverProfession());
+                template.setObjectives(definition.getObjectives());
+                template.setRewards(definition.getRewards());
 
                 for (FeaturePackLoader.ScenarioRoleDefinition roleDefinition : definition.getRoles().values()) {
                     ScenarioRoleRule role = new ScenarioRoleRule(
@@ -183,6 +192,7 @@ public class ScenarioEngine {
                         roleDefinition.isPlayerRole(),
                         roleDefinition.isOptional()
                     );
+                    role.setRequiredProfessions(roleDefinition.getRequiredProfessions());
                     role.setPreferredProfessions(roleDefinition.getPreferredProfessions());
                     role.setRequiredTraits(roleDefinition.getRequiredTraits());
                     role.setPreferredTraits(roleDefinition.getPreferredTraits());
@@ -204,6 +214,326 @@ public class ScenarioEngine {
                 }
             }
         }
+    }
+
+    public QuestInteractionResult handleQuestInteraction(Player player, AINPC npc) {
+        if (player == null || npc == null) {
+            return QuestInteractionResult.notHandled();
+        }
+
+        ScenarioTemplate template = findQuestTemplateForNpc(npc);
+        if (template == null || !template.hasQuestBriefing()) {
+            return QuestInteractionResult.notHandled();
+        }
+
+        PlayerQuestProgress currentProgress = playerQuestProgress.get(player.getUniqueId());
+        if (currentProgress != null
+            && !currentProgress.templateId().equals(template.getTemplateId())
+            && !currentProgress.completed()) {
+            return QuestInteractionResult.handled(
+                true,
+                List.of("Ai deja o alta misiune in desfasurare. Termina intai ce ai inceput."),
+                List.of("&cAi deja o alta misiune activa.")
+            );
+        }
+
+        if (currentProgress != null
+            && currentProgress.templateId().equals(template.getTemplateId())
+            && currentProgress.completed()) {
+            return QuestInteractionResult.handled(
+                true,
+                List.of("Ti-am dat deja recompensa pentru " + resolveQuestTitle(template) + ". Foloseste sabia cu cap."),
+                List.of("&7Quest deja completat: &f" + resolveQuestTitle(template))
+            );
+        }
+
+        if (currentProgress == null || !currentProgress.templateId().equals(template.getTemplateId())) {
+            playerQuestProgress.put(
+                player.getUniqueId(),
+                new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), false, System.currentTimeMillis())
+            );
+
+            List<String> npcMessages = List.of(
+                "Am o treaba pentru tine.",
+                buildQuestOfferMessage(template)
+            );
+            return QuestInteractionResult.handled(true, npcMessages, buildQuestBriefingMessages(template));
+        }
+
+        QuestInventoryCheck inventoryCheck = inspectQuestInventory(player.getInventory(), template.getObjectives());
+        if (!inventoryCheck.complete()) {
+            List<String> systemMessages = new ArrayList<>();
+            systemMessages.add("&6[Quest] &f" + resolveQuestTitle(template));
+            systemMessages.add("&eIti mai lipsesc:");
+            for (String missingItem : inventoryCheck.missingItems()) {
+                systemMessages.add("&7- &f" + missingItem);
+            }
+
+            return QuestInteractionResult.handled(
+                true,
+                List.of("Inca nu ai adus tot ce ti-am cerut. Intoarce-te cand ai toate materialele."),
+                systemMessages
+            );
+        }
+
+        consumeQuestObjectives(player.getInventory(), template.getObjectives());
+        List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
+        player.updateInventory();
+
+        playerQuestProgress.put(
+            player.getUniqueId(),
+            new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), true, System.currentTimeMillis())
+        );
+
+        List<String> systemMessages = new ArrayList<>();
+        systemMessages.add("&aQuest completat: &f" + resolveQuestTitle(template));
+        systemMessages.add("&aRecompense primite:");
+        for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
+            systemMessages.add("&7- &f" + formatQuestEntry(reward));
+        }
+        systemMessages.addAll(rewardNotes);
+
+        return QuestInteractionResult.handled(
+            true,
+            List.of("Perfect. Exact materialele de care aveam nevoie.", "Poftim sabia promisa. Sa-ti fie de folos."),
+            systemMessages
+        );
+    }
+
+    private ScenarioTemplate findQuestTemplateForNpc(AINPC npc) {
+        return scenarioTemplates.values().stream()
+            .filter(template -> template.getType() == ScenarioType.QUEST)
+            .filter(ScenarioTemplate::hasQuestBriefing)
+            .filter(template -> matchesQuestGiver(npc, template))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean matchesQuestGiver(AINPC npc, ScenarioTemplate template) {
+        if (npc == null || template == null) {
+            return false;
+        }
+
+        if (!template.getQuestGiverProfession().isBlank()
+            && !matchesProfessionReference(npc, List.of(template.getQuestGiverProfession()))) {
+            return false;
+        }
+
+        ScenarioRoleRule questGiverRole = template.getRoles().get("QUEST_GIVER");
+        if (questGiverRole == null) {
+            return true;
+        }
+
+        if (!questGiverRole.getRequiredProfessions().isEmpty()
+            && !matchesProfessionReference(npc, questGiverRole.getRequiredProfessions())) {
+            return false;
+        }
+
+        return questGiverRole.getPreferredProfessions().isEmpty()
+            || matchesProfessionReference(npc, questGiverRole.getPreferredProfessions());
+    }
+
+    private boolean matchesProfessionReference(AINPC npc, List<String> references) {
+        if (npc == null || references == null || references.isEmpty()) {
+            return false;
+        }
+
+        String occupation = npc.getOccupation();
+        if (occupation == null || occupation.isBlank()) {
+            return false;
+        }
+
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        for (String reference : references) {
+            if (reference == null || reference.isBlank()) {
+                continue;
+            }
+
+            if (loader != null && loader.matchesProfession(occupation, reference)) {
+                return true;
+            }
+
+            if (normalize(occupation).equals(normalize(reference))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private List<String> buildQuestBriefingMessages(ScenarioTemplate template) {
+        List<String> lines = new ArrayList<>();
+        lines.add("&6[Quest] &f" + resolveQuestTitle(template));
+
+        String questGiver = resolveProfessionName(template.getQuestGiverProfession());
+        if (!questGiver.isBlank()) {
+            lines.add("&7Misiune de la: &f" + questGiver);
+        }
+
+        if (!template.getObjectives().isEmpty()) {
+            lines.add("&eObiective:");
+            for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
+                lines.add("&7- &f" + formatQuestEntry(objective));
+            }
+        }
+
+        if (!template.getRewards().isEmpty()) {
+            lines.add("&aRecompensa:");
+            for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
+                lines.add("&7- &f" + formatQuestEntry(reward));
+            }
+        }
+
+        return lines;
+    }
+
+    private String buildQuestOfferMessage(ScenarioTemplate template) {
+        List<String> objectives = template.getObjectives().stream()
+            .map(objective -> {
+                Material material = resolveQuestMaterial(objective);
+                return material != null
+                    ? formatQuestAmount(objective.getAmount(), material)
+                    : formatQuestEntry(objective);
+            })
+            .toList();
+        if (objectives.isEmpty()) {
+            return template.getDescription().isBlank()
+                ? "Am nevoie de ajutorul tau."
+                : template.getDescription();
+        }
+
+        return "Adu-mi " + joinNaturally(objectives) + " si te rasplatesc cum se cuvine.";
+    }
+
+    private QuestInventoryCheck inspectQuestInventory(PlayerInventory inventory,
+                                                      List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        List<String> missingItems = new ArrayList<>();
+
+        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
+            Material material = resolveQuestMaterial(objective);
+            if (material == null) {
+                missingItems.add(formatQuestEntry(objective));
+                continue;
+            }
+
+            int currentAmount = countMaterial(inventory, material);
+            if (currentAmount < objective.getAmount()) {
+                int missingAmount = objective.getAmount() - currentAmount;
+                missingItems.add(formatQuestAmount(missingAmount, material));
+            }
+        }
+
+        return new QuestInventoryCheck(missingItems.isEmpty(), missingItems);
+    }
+
+    private void consumeQuestObjectives(PlayerInventory inventory,
+                                        List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
+            Material material = resolveQuestMaterial(objective);
+            if (material == null) {
+                continue;
+            }
+            removeMaterial(inventory, material, objective.getAmount());
+        }
+    }
+
+    private List<String> grantQuestRewards(Player player, List<FeaturePackLoader.QuestEntryDefinition> rewards) {
+        List<String> notes = new ArrayList<>();
+        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
+            Material material = resolveQuestMaterial(reward);
+            if (material == null) {
+                notes.add("&cRecompensa invalida in configuratie: &f" + reward.getItemId());
+                continue;
+            }
+
+            ItemStack rewardStack = new ItemStack(material, reward.getAmount());
+            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(rewardStack);
+            if (!leftovers.isEmpty()) {
+                leftovers.values().forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
+                notes.add("&eInventarul era plin. Recompensa a fost lasata pe jos langa tine.");
+            }
+        }
+
+        return notes;
+    }
+
+    private Material resolveQuestMaterial(FeaturePackLoader.QuestEntryDefinition entry) {
+        if (entry == null || entry.getItemId() == null || entry.getItemId().isBlank()) {
+            return null;
+        }
+
+        return Material.matchMaterial(entry.getItemId());
+    }
+
+    private int countMaterial(PlayerInventory inventory, Material material) {
+        if (inventory == null || material == null) {
+            return 0;
+        }
+
+        int total = 0;
+        for (ItemStack stack : inventory.getStorageContents()) {
+            if (stack != null && stack.getType() == material) {
+                total += stack.getAmount();
+            }
+        }
+        return total;
+    }
+
+    private void removeMaterial(PlayerInventory inventory, Material material, int amount) {
+        if (inventory == null || material == null || amount <= 0) {
+            return;
+        }
+
+        ItemStack[] contents = inventory.getStorageContents();
+        int remaining = amount;
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null || stack.getType() != material) {
+                continue;
+            }
+
+            if (stack.getAmount() <= remaining) {
+                remaining -= stack.getAmount();
+                contents[i] = null;
+            } else {
+                stack.setAmount(stack.getAmount() - remaining);
+                remaining = 0;
+            }
+        }
+
+        inventory.setStorageContents(contents);
+    }
+
+    private String formatQuestAmount(int amount, Material material) {
+        String itemName = material == null ? "item" : humanizeItemId(material.name());
+        return amount > 1 ? amount + "x " + itemName : itemName;
+    }
+
+    private String resolveQuestTitle(ScenarioTemplate template) {
+        if (template == null) {
+            return "";
+        }
+
+        return template.getQuestCode().isBlank()
+            ? template.getDisplayName()
+            : template.getQuestCode() + " - " + template.getDisplayName();
+    }
+
+    private String joinNaturally(List<String> parts) {
+        if (parts == null || parts.isEmpty()) {
+            return "";
+        }
+
+        if (parts.size() == 1) {
+            return parts.get(0);
+        }
+
+        if (parts.size() == 2) {
+            return parts.get(0) + " si " + parts.get(1);
+        }
+
+        String last = parts.get(parts.size() - 1);
+        return String.join(", ", parts.subList(0, parts.size() - 1)) + " si " + last;
     }
 
     /**
@@ -242,11 +572,45 @@ public class ScenarioEngine {
             return false;
         }
 
+        if (!canAssignMandatoryRoles(template, npcs, players)) {
+            return false;
+        }
+
         return switch (template.getType()) {
             case ROMANCE -> hasMixedGenders(npcs);
             case CONFLICT -> hasConflictingPersonalities(npcs);
             default -> true;
         };
+    }
+
+    private boolean canAssignMandatoryRoles(ScenarioTemplate template, List<AINPC> npcs, List<Player> players) {
+        long requiredPlayers = template.getPlayerRoles().stream()
+            .filter(role -> !role.isOptional())
+            .count();
+        if (players.size() < requiredPlayers) {
+            return false;
+        }
+
+        List<AINPC> availableNpcs = new ArrayList<>(npcs);
+        for (ScenarioRoleRule role : template.getNpcRoles()) {
+            if (role.isOptional()) {
+                continue;
+            }
+
+            AINPC selected = selectBestNpcForRole(availableNpcs, role);
+            if (selected != null) {
+                availableNpcs.remove(selected);
+                continue;
+            }
+
+            if (availableNpcs.isEmpty() || role.hasHardRequirements()) {
+                return false;
+            }
+
+            availableNpcs.remove(0);
+        }
+
+        return true;
     }
 
     private boolean hasMixedGenders(List<AINPC> npcs) {
@@ -287,7 +651,10 @@ public class ScenarioEngine {
         UUID scenarioId = UUID.randomUUID();
         ActiveScenario scenario = new ActiveScenario(scenarioId, template);
 
-        assignRoles(scenario, template, npcs, players);
+        if (!assignRoles(scenario, template, npcs, players)) {
+            plugin.debug("Scenariul " + template.getDisplayName() + " nu a putut asigna toate rolurile obligatorii.");
+            return;
+        }
 
         if (!template.getPhases().isEmpty()) {
             scenario.setCurrentPhase(template.getPhases().get(0));
@@ -304,10 +671,10 @@ public class ScenarioEngine {
     /**
      * Asigneaza roluri NPC-urilor si jucatorilor.
      */
-    private void assignRoles(ActiveScenario scenario,
-                             ScenarioTemplate template,
-                             List<AINPC> npcs,
-                             List<Player> players) {
+    private boolean assignRoles(ActiveScenario scenario,
+                                ScenarioTemplate template,
+                                List<AINPC> npcs,
+                                List<Player> players) {
         List<AINPC> availableNpcs = new ArrayList<>(npcs);
         List<Player> availablePlayers = new ArrayList<>(players);
         Random random = new Random();
@@ -316,6 +683,7 @@ public class ScenarioEngine {
             if (availablePlayers.isEmpty()) {
                 if (!role.isOptional()) {
                     plugin.debug("Scenariul " + template.getDisplayName() + " nu are jucator pentru rolul " + role.getId());
+                    return false;
                 }
                 continue;
             }
@@ -342,22 +710,42 @@ public class ScenarioEngine {
             }
         }
 
-        assignFallbackRoles(scenario, mandatoryFallback, availableNpcs, random);
-        assignFallbackRoles(scenario, optionalFallback, availableNpcs, random);
+        if (!assignFallbackRoles(scenario, mandatoryFallback, availableNpcs, random, true)) {
+            return false;
+        }
+        assignFallbackRoles(scenario, optionalFallback, availableNpcs, random, false);
+        return true;
     }
 
-    private void assignFallbackRoles(ActiveScenario scenario,
-                                     List<ScenarioRoleRule> roles,
-                                     List<AINPC> availableNpcs,
-                                     Random random) {
+    private boolean assignFallbackRoles(ActiveScenario scenario,
+                                        List<ScenarioRoleRule> roles,
+                                        List<AINPC> availableNpcs,
+                                        Random random,
+                                        boolean mandatory) {
         for (ScenarioRoleRule role : roles) {
             if (availableNpcs.isEmpty()) {
-                return;
+                return !mandatory;
+            }
+
+            if (role.hasHardRequirements()) {
+                AINPC selected = selectBestNpcForRole(availableNpcs, role);
+                if (selected == null) {
+                    if (mandatory) {
+                        return false;
+                    }
+                    continue;
+                }
+
+                scenario.assignNPCRole(selected.getUuid(), role.getId());
+                availableNpcs.remove(selected);
+                continue;
             }
 
             AINPC randomNpc = availableNpcs.remove(random.nextInt(availableNpcs.size()));
             scenario.assignNPCRole(randomNpc.getUuid(), role.getId());
         }
+
+        return true;
     }
 
     private AINPC selectBestNpcForRole(List<AINPC> candidates, ScenarioRoleRule role) {
@@ -380,6 +768,10 @@ public class ScenarioEngine {
     }
 
     private int scoreNpcForRole(AINPC npc, ScenarioRoleRule role) {
+        if (!hasRequiredProfessions(npc, role.getRequiredProfessions())) {
+            return Integer.MIN_VALUE;
+        }
+
         if (!hasRequiredTraits(npc, role.getRequiredTraits())) {
             return Integer.MIN_VALUE;
         }
@@ -400,6 +792,30 @@ public class ScenarioEngine {
         }
 
         return score;
+    }
+
+    private boolean hasRequiredProfessions(AINPC npc, List<String> requiredProfessions) {
+        if (requiredProfessions == null || requiredProfessions.isEmpty()) {
+            return true;
+        }
+
+        String occupation = npc.getOccupation();
+        if (occupation == null || occupation.isBlank()) {
+            return false;
+        }
+
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        for (String requiredProfession : requiredProfessions) {
+            if (loader != null && loader.matchesProfession(occupation, requiredProfession)) {
+                return true;
+            }
+
+            if (normalize(occupation).equals(normalize(requiredProfession))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean hasRequiredTraits(AINPC npc, List<String> requiredTraits) {
@@ -497,6 +913,9 @@ public class ScenarioEngine {
             Player player = Bukkit.getPlayer(entry.getKey());
             if (player != null) {
                 sendScenarioHint(player, scenario);
+                if (scenario.hasQuestBriefing()) {
+                    sendQuestBriefing(player, scenario);
+                }
             }
         }
     }
@@ -552,6 +971,69 @@ public class ScenarioEngine {
     /**
      * Avanseaza un scenariu la urmatoarea faza.
      */
+    private void sendQuestBriefing(Player player, ActiveScenario scenario) {
+        String questTitle = scenario.getQuestCode().isBlank()
+            ? scenario.getDisplayName()
+            : scenario.getQuestCode() + " - " + scenario.getDisplayName();
+        player.sendMessage("\u00A76[Quest] \u00A7f" + questTitle);
+
+        String questGiver = resolveProfessionName(scenario.getQuestGiverProfession());
+        if (!questGiver.isBlank()) {
+            player.sendMessage("\u00A77Misiune de la: \u00A7f" + questGiver);
+        }
+
+        if (!scenario.getObjectives().isEmpty()) {
+            player.sendMessage("\u00A7eObiective:");
+            for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
+                player.sendMessage("\u00A77- \u00A7f" + formatQuestEntry(objective));
+            }
+        }
+
+        if (!scenario.getRewards().isEmpty()) {
+            player.sendMessage("\u00A7aRecompensa:");
+            for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+                player.sendMessage("\u00A77- \u00A7f" + formatQuestEntry(reward));
+            }
+        }
+    }
+
+    private String resolveProfessionName(String professionReference) {
+        if (professionReference == null || professionReference.isBlank()) {
+            return "";
+        }
+
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader != null) {
+            FeaturePackLoader.ProfessionDefinition definition = loader.findProfessionDefinition(professionReference);
+            if (definition != null && definition.getName() != null && !definition.getName().isBlank()) {
+                return definition.getName();
+            }
+        }
+
+        return professionReference;
+    }
+
+    private String formatQuestEntry(FeaturePackLoader.QuestEntryDefinition entry) {
+        if (entry == null) {
+            return "";
+        }
+
+        if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
+            return entry.getDescription();
+        }
+
+        String itemName = humanizeItemId(entry.getItemId());
+        return entry.getAmount() > 1 ? entry.getAmount() + "x " + itemName : itemName;
+    }
+
+    private String humanizeItemId(String itemId) {
+        if (itemId == null || itemId.isBlank()) {
+            return "item";
+        }
+
+        return itemId.toLowerCase(Locale.ROOT).replace('_', ' ');
+    }
+
     public void advanceScenario(UUID scenarioId) {
         ActiveScenario scenario = activeScenarios.get(scenarioId);
         if (scenario == null) {
@@ -662,6 +1144,10 @@ public class ScenarioEngine {
         private String hint;
         private List<String> preferredTopologies;
         private List<String> narrativeHints;
+        private String questCode;
+        private String questGiverProfession;
+        private List<FeaturePackLoader.QuestEntryDefinition> objectives;
+        private List<FeaturePackLoader.QuestEntryDefinition> rewards;
         private double triggerProbability;
         private int minimumNpcCount;
         private boolean requiresPlayer;
@@ -677,6 +1163,10 @@ public class ScenarioEngine {
             this.hint = "";
             this.preferredTopologies = new ArrayList<>();
             this.narrativeHints = new ArrayList<>();
+            this.questCode = "";
+            this.questGiverProfession = "";
+            this.objectives = new ArrayList<>();
+            this.rewards = new ArrayList<>();
             this.triggerProbability = 0.05;
             this.minimumNpcCount = 2;
             this.requiresPlayer = false;
@@ -729,11 +1219,30 @@ public class ScenarioEngine {
         public void setNarrativeHints(List<String> narrativeHints) {
             this.narrativeHints = narrativeHints != null ? narrativeHints : new ArrayList<>();
         }
+        public String getQuestCode() { return questCode; }
+        public void setQuestCode(String questCode) { this.questCode = questCode == null ? "" : questCode; }
+        public String getQuestGiverProfession() { return questGiverProfession; }
+        public void setQuestGiverProfession(String questGiverProfession) {
+            this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
+        }
+        public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
+        public void setObjectives(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+            this.objectives = objectives != null ? new ArrayList<>(objectives) : new ArrayList<>();
+        }
+        public List<FeaturePackLoader.QuestEntryDefinition> getRewards() { return rewards; }
+        public void setRewards(List<FeaturePackLoader.QuestEntryDefinition> rewards) {
+            this.rewards = rewards != null ? new ArrayList<>(rewards) : new ArrayList<>();
+        }
+        public boolean hasQuestBriefing() {
+            return !questCode.isBlank() || !objectives.isEmpty() || !rewards.isEmpty();
+        }
 
         public List<ScenarioRoleRule> getNpcRoles() {
             return roles.values().stream()
                 .filter(role -> !role.isPlayerRole())
-                .sorted(Comparator.comparing(ScenarioRoleRule::isOptional))
+                .sorted(Comparator.comparing(ScenarioRoleRule::isOptional)
+                    .thenComparing(role -> !role.hasHardRequirements())
+                    .thenComparing(ScenarioRoleRule::getId))
                 .toList();
         }
 
@@ -749,6 +1258,7 @@ public class ScenarioEngine {
         private final String description;
         private final boolean playerRole;
         private final boolean optional;
+        private List<String> requiredProfessions;
         private List<String> preferredProfessions;
         private List<String> requiredTraits;
         private List<String> preferredTraits;
@@ -758,6 +1268,7 @@ public class ScenarioEngine {
             this.description = description;
             this.playerRole = playerRole;
             this.optional = optional;
+            this.requiredProfessions = new ArrayList<>();
             this.preferredProfessions = new ArrayList<>();
             this.requiredTraits = new ArrayList<>();
             this.preferredTraits = new ArrayList<>();
@@ -767,6 +1278,10 @@ public class ScenarioEngine {
         public String getDescription() { return description; }
         public boolean isPlayerRole() { return playerRole; }
         public boolean isOptional() { return optional; }
+        public List<String> getRequiredProfessions() { return requiredProfessions; }
+        public void setRequiredProfessions(List<String> requiredProfessions) {
+            this.requiredProfessions = requiredProfessions != null ? requiredProfessions : Collections.emptyList();
+        }
         public List<String> getPreferredProfessions() { return preferredProfessions; }
         public void setPreferredProfessions(List<String> preferredProfessions) {
             this.preferredProfessions = preferredProfessions != null ? preferredProfessions : Collections.emptyList();
@@ -779,6 +1294,9 @@ public class ScenarioEngine {
         public void setPreferredTraits(List<String> preferredTraits) {
             this.preferredTraits = preferredTraits != null ? preferredTraits : Collections.emptyList();
         }
+        public boolean hasHardRequirements() {
+            return !requiredProfessions.isEmpty() || !requiredTraits.isEmpty();
+        }
     }
 
     public static class ActiveScenario {
@@ -787,6 +1305,10 @@ public class ScenarioEngine {
         private final String templateId;
         private final String displayName;
         private final String hint;
+        private final String questCode;
+        private final String questGiverProfession;
+        private final List<FeaturePackLoader.QuestEntryDefinition> objectives;
+        private final List<FeaturePackLoader.QuestEntryDefinition> rewards;
         private final Map<UUID, String> npcRoles;
         private final Map<UUID, String> playerRoles;
         private String currentPhase;
@@ -798,6 +1320,10 @@ public class ScenarioEngine {
             this.templateId = template.getTemplateId();
             this.displayName = template.getDisplayName();
             this.hint = template.getHint();
+            this.questCode = template.getQuestCode();
+            this.questGiverProfession = template.getQuestGiverProfession();
+            this.objectives = new ArrayList<>(template.getObjectives());
+            this.rewards = new ArrayList<>(template.getRewards());
             this.npcRoles = new HashMap<>();
             this.playerRoles = new HashMap<>();
             this.startTime = System.currentTimeMillis();
@@ -820,10 +1346,63 @@ public class ScenarioEngine {
         public String getTemplateId() { return templateId; }
         public String getDisplayName() { return displayName; }
         public String getHint() { return hint; }
+        public String getQuestCode() { return questCode; }
+        public String getQuestGiverProfession() { return questGiverProfession; }
+        public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
+        public List<FeaturePackLoader.QuestEntryDefinition> getRewards() { return rewards; }
+        public boolean hasQuestBriefing() {
+            return !questCode.isBlank() || !objectives.isEmpty() || !rewards.isEmpty();
+        }
         public Map<UUID, String> getNpcRoles() { return npcRoles; }
         public Map<UUID, String> getPlayerRoles() { return playerRoles; }
         public String getCurrentPhase() { return currentPhase; }
         public void setCurrentPhase(String currentPhase) { this.currentPhase = currentPhase; }
         public long getStartTime() { return startTime; }
+    }
+
+    private record PlayerQuestProgress(
+        String templateId,
+        String questCode,
+        boolean completed,
+        long updatedAt
+    ) {
+    }
+
+    private record QuestInventoryCheck(
+        boolean complete,
+        List<String> missingItems
+    ) {
+    }
+
+    public static class QuestInteractionResult {
+        private final boolean handled;
+        private final boolean openConversation;
+        private final List<String> npcMessages;
+        private final List<String> systemMessages;
+
+        private QuestInteractionResult(boolean handled,
+                                       boolean openConversation,
+                                       List<String> npcMessages,
+                                       List<String> systemMessages) {
+            this.handled = handled;
+            this.openConversation = openConversation;
+            this.npcMessages = npcMessages != null ? List.copyOf(npcMessages) : List.of();
+            this.systemMessages = systemMessages != null ? List.copyOf(systemMessages) : List.of();
+        }
+
+        public static QuestInteractionResult notHandled() {
+            return new QuestInteractionResult(false, false, List.of(), List.of());
+        }
+
+        public static QuestInteractionResult handled(boolean openConversation,
+                                                     List<String> npcMessages,
+                                                     List<String> systemMessages) {
+            return new QuestInteractionResult(true, openConversation, npcMessages, systemMessages);
+        }
+
+        public boolean isHandled() { return handled; }
+        public boolean shouldOpenConversation() { return openConversation; }
+        public List<String> getNpcMessages() { return npcMessages; }
+        public List<String> getSystemMessages() { return systemMessages; }
     }
 }

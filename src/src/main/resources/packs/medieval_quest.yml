@@ -220,82 +220,73 @@ professions:
 
 dialogues:
   quest_hooks:
-    - "Satul are nevoie de cineva destul de curajos sa cerceteze ruinele."
-    - "Am auzit iarasi zvonuri despre relicva pierduta a capelei."
-    - "Cineva trebuie sa afle cine rascoleste noaptea mormintele vechi."
+    - "Fierarul cauta pe cineva care sa-i aduca materiale pentru o sabie buna."
+    - "Daca vrei de lucru, treci pe la forja. Fierarul are nevoie de ajutor."
+    - "Prin sat se spune ca fierarul pregateste o prima misiune pentru un ucenic curajos."
 
 scenarios:
-  village_relic_hunt:
-    name: "Medieval Quest"
-    description: "Un localnic cheama jucatorul intr-o misiune despre o relicva veche, drumuri periculoase si interese ascunse."
+  Q01:
+    name: "Quest Beginer"
+    description: "Fierarul din sat ii ofera jucatorului prima misiune: sa aduca 3 lingouri de fier si o scandura din lemn pentru a primi o sabie."
     base_type: "QUEST"
     trigger_probability: 0.12
-    min_npcs: 3
+    min_npcs: 1
     requires_player: true
     replace_base_type: true
-    hint: "Cativa localnici par sa te masoare din priviri, ca si cum ar avea nevoie de un aventurier."
+    hint: "Fierarul te priveste atent, ca si cum ar avea de oferit o prima misiune."
     preferred_topologies:
       - "village_center"
-      - "forest_edge"
-      - "highland_watch"
+      - "interior"
     narrative_hints:
-      - "vorbeste despre relicve, drumuri uitate, datorie si rasplata"
-      - "pastreaza tonul medieval, practic si usor misterios"
-      - "satul pare mic, dar fiecare martor stie cate un detaliu util"
+      - "este o misiune simpla de inceput, data direct de fierar"
+      - "obiectivul este sa aduci 3 lingouri de fier si 1 scandura din lemn"
+      - "recompensa finala este o sabie oferita de fierar"
     phases:
-      INTRODUCTION: "Un NPC deschide discutia si explica pericolul sau lipsa relicvei."
-      ACCEPTANCE: "Jucatorul este rugat sa accepte misiunea si primeste primele indicii."
-      JOURNEY: "Ajutoarele ofera provizii, arme, zvonuri sau avertismente."
-      COMPLICATION: "Apare un martor contradictoriu ori un antagonist cu interese proprii."
-      COMPLETION: "Satul primeste o concluzie: relicva recuperata, ascunsa sau declarata periculoasa."
+      INTRODUCTION: "Fierarul explica ce materiale ii lipsesc."
+      ACCEPTANCE: "Jucatorul accepta cererea si porneste sa stranga materialele."
+      GATHERING: "Jucatorul strange cele 3 lingouri de fier si scandura."
+      RETURN: "Jucatorul revine la fierar cu materialele cerute."
+      COMPLETION: "Fierarul faureste si ofera sabia ca recompensa."
+    quest:
+      code: "Q01"
+      giver_profession: "blacksmith"
+      objectives:
+        iron_ingots:
+          type: "collect_item"
+          item: "IRON_INGOT"
+          amount: 3
+          description: "Adu 3 lingouri de fier."
+        wooden_plank:
+          type: "collect_item"
+          item: "OAK_PLANKS"
+          amount: 1
+          description: "Adu 1 scandura din lemn."
+      rewards:
+        iron_sword:
+          type: "item"
+          item: "IRON_SWORD"
+          amount: 1
+          description: "Primesti 1 sabie de fier."
     roles:
       QUEST_GIVER:
-        description: "Patronul misiunii sau vocea satului."
+        description: "Fierarul care da prima misiune."
+        required_professions:
+          - "blacksmith"
         preferred_professions:
-          - "priest"
-          - "innkeeper"
-          - "merchant"
           - "blacksmith"
         preferred_traits:
-          - "wise"
-          - "friendly"
+          - "hardworking"
           - "honorable"
-          - "charismatic"
-          - "devout"
       HERO:
-        description: "Jucatorul care preia misiunea."
+        description: "Jucatorul care accepta prima misiune."
         player_role: true
       HELPER:
-        description: "Sprijin local pentru aventura."
-        preferred_professions:
-          - "guard"
-          - "healer"
-          - "blacksmith"
-          - "farmer"
-        preferred_traits:
-          - "brave"
-          - "loyal"
-          - "hardworking"
-          - "duty_bound"
-      ANTAGONIST:
-        description: "Persoana care ascunde, vinde sau manipuleaza adevarul."
+        description: "Un localnic care poate indruma jucatorul spre resurse."
         optional: true
         preferred_professions:
+          - "farmer"
+          - "guard"
           - "merchant"
-          - "guard"
         preferred_traits:
-          - "greedy"
-          - "cunning"
-          - "suspicious"
-          - "aggressive"
-      WITNESS:
-        description: "Martor care a vazut ceva util."
-        optional: true
-        preferred_professions:
-          - "innkeeper"
-          - "farmer"
-          - "healer"
-        preferred_traits:
-          - "gossiper"
           - "friendly"
-          - "wise"
+          - "loyal"

@@ -8,6 +8,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.ai.DialogManager;
+import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 
 /**
@@ -53,6 +54,26 @@ public class NPCInteractionListener extends AbstractPluginListener {
         npc.lookAt(player);
         npc.updateContext();
         npc.getContext().setInteractingPlayer(player);
+
+        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().handleQuestInteraction(player, npc);
+        if (questInteraction.isHandled()) {
+            if (questInteraction.shouldOpenConversation()) {
+                openOrRefreshConversation(player, npc);
+            }
+
+            for (String npcMessage : questInteraction.getNpcMessages()) {
+                messages().sendNPCMessage(player, npc.getName(), npcMessage);
+            }
+            for (String systemMessage : questInteraction.getSystemMessages()) {
+                messages().send(player, systemMessage);
+            }
+            if (questInteraction.shouldOpenConversation()) {
+                messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.getName() + ". Scrie 'pa' pentru a termina conversatia.)");
+            }
+
+            plugin.getEmotionManager().processEvent(npc, "player_approach", 1.0);
+            return;
+        }
         
         // Activeaza conversatia
         startConversation(player, npc);
@@ -77,6 +98,16 @@ public class NPCInteractionListener extends AbstractPluginListener {
         
         // Aplica efectul emotional de intalnire
         plugin.getEmotionManager().processEvent(npc, "player_approach", 1.0);
+    }
+
+    private void openOrRefreshConversation(Player player, AINPC npc) {
+        AINPC currentPartner = conversations().getConversationPartner(player);
+        if (currentPartner != null && currentPartner.getUuid().equals(npc.getUuid())) {
+            refreshConversationSession(player);
+            return;
+        }
+
+        beginConversationSession(player, npc);
     }
 
     private String getFirstMeetingGreeting(AINPC npc) {
