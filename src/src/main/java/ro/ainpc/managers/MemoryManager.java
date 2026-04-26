@@ -6,9 +6,10 @@ import ro.ainpc.npc.AINPC;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Manager pentru sistemul de amintiri al NPC-urilor
@@ -26,6 +27,11 @@ public class MemoryManager {
      */
     public void createMemory(AINPC npc, Player player, String memoryType, 
                             String content, double emotionalImpact, int importance) {
+        createMemory(npc, player.getUniqueId(), player.getName(), memoryType, content, emotionalImpact, importance);
+    }
+
+    public void createMemory(AINPC npc, UUID playerUuid, String playerName, String memoryType,
+                             String content, double emotionalImpact, int importance) {
         // Calculeaza data de expirare bazat pe importanta
         int decayDays = plugin.getConfig().getInt("npc.memory_decay_days", 30);
         int expirationDays = decayDays * importance; // Amintirile importante dureaza mai mult
@@ -38,8 +44,8 @@ public class MemoryManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
-            stmt.setString(3, player.getName());
+            stmt.setString(2, playerUuid.toString());
+            stmt.setString(3, playerName);
             stmt.setString(4, memoryType);
             stmt.setString(5, content);
             stmt.setDouble(6, emotionalImpact);
@@ -47,10 +53,10 @@ public class MemoryManager {
             stmt.setInt(8, expirationDays);
             stmt.executeUpdate();
 
-            plugin.debug("Amintire creata pentru " + npc.getName() + " despre " + player.getName());
+            plugin.debug("Amintire creata pentru " + npc.getName() + " despre " + playerName);
 
             // Verifica si curata amintirile daca sunt prea multe
-            cleanExcessMemories(npc, player);
+            cleanExcessMemories(npc, playerUuid);
 
         } catch (SQLException e) {
             plugin.getLogger().warning("Eroare la crearea amintirii: " + e.getMessage());
@@ -61,6 +67,10 @@ public class MemoryManager {
      * Obtine amintiri relevante pentru un context
      */
     public List<String> getRelevantMemories(AINPC npc, Player player, String context, int limit) {
+        return getRelevantMemories(npc, player.getUniqueId(), context, limit);
+    }
+
+    public List<String> getRelevantMemories(AINPC npc, UUID playerUuid, String context, int limit) {
         List<String> memories = new ArrayList<>();
 
         // Obtine cele mai importante si recente amintiri
@@ -74,7 +84,7 @@ public class MemoryManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
             stmt.setInt(3, limit);
 
             try (ResultSet rs = stmt.executeQuery()) {
@@ -94,6 +104,10 @@ public class MemoryManager {
      * Obtine toate amintirile despre un jucator
      */
     public List<Memory> getAllMemories(AINPC npc, Player player) {
+        return getAllMemories(npc, player.getUniqueId());
+    }
+
+    public List<Memory> getAllMemories(AINPC npc, UUID playerUuid) {
         List<Memory> memories = new ArrayList<>();
 
         String sql = """
@@ -105,7 +119,7 @@ public class MemoryManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -150,6 +164,10 @@ public class MemoryManager {
      * Curata amintirile in exces pentru un jucator
      */
     private void cleanExcessMemories(AINPC npc, Player player) {
+        cleanExcessMemories(npc, player.getUniqueId());
+    }
+
+    private void cleanExcessMemories(AINPC npc, UUID playerUuid) {
         int maxMemories = plugin.getConfig().getInt("npc.max_memories_per_player", 50);
 
         // Pastreaza doar cele mai importante amintiri
@@ -168,9 +186,9 @@ public class MemoryManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
             stmt.setInt(3, npc.getDatabaseId());
-            stmt.setString(4, player.getUniqueId().toString());
+            stmt.setString(4, playerUuid.toString());
             stmt.setInt(5, maxMemories);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -182,8 +200,12 @@ public class MemoryManager {
      * Creeaza o amintire de prima intalnire
      */
     public void createFirstMeetingMemory(AINPC npc, Player player) {
-        String content = "L-am intalnit pe " + player.getName() + " pentru prima data.";
-        createMemory(npc, player, "first_meeting", content, 0.3, 3);
+        createFirstMeetingMemory(npc, player.getUniqueId(), player.getName());
+    }
+
+    public void createFirstMeetingMemory(AINPC npc, UUID playerUuid, String playerName) {
+        String content = "L-am intalnit pe " + playerName + " pentru prima data.";
+        createMemory(npc, playerUuid, playerName, "first_meeting", content, 0.3, 3);
     }
 
     /**
@@ -240,11 +262,15 @@ public class MemoryManager {
      * Verifica daca NPC-ul are amintiri despre un jucator
      */
     public boolean hasMemoriesOf(AINPC npc, Player player) {
+        return hasMemoriesOf(npc, player.getUniqueId());
+    }
+
+    public boolean hasMemoriesOf(AINPC npc, UUID playerUuid) {
         String sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ?";
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -262,11 +288,15 @@ public class MemoryManager {
      * Obtine numarul de amintiri despre un jucator
      */
     public int getMemoryCount(AINPC npc, Player player) {
+        return getMemoryCount(npc, player.getUniqueId());
+    }
+
+    public int getMemoryCount(AINPC npc, UUID playerUuid) {
         String sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ?";
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -284,6 +314,10 @@ public class MemoryManager {
      * Obtine suma impactului emotional al amintirilor
      */
     public double getTotalEmotionalImpact(AINPC npc, Player player) {
+        return getTotalEmotionalImpact(npc, player.getUniqueId());
+    }
+
+    public double getTotalEmotionalImpact(AINPC npc, UUID playerUuid) {
         String sql = """
             SELECT SUM(emotional_impact * importance) / SUM(importance) as weighted_avg
             FROM npc_memories
@@ -292,7 +326,7 @@ public class MemoryManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -304,6 +338,30 @@ public class MemoryManager {
         }
 
         return 0.0;
+    }
+
+    public CompletableFuture<Boolean> ensureFirstMeetingMemoryAsync(AINPC npc, Player player) {
+        UUID playerUuid = player.getUniqueId();
+        String playerName = player.getName();
+        return plugin.getDatabaseManager().supplyAsync(() -> {
+            boolean hasMemories = hasMemoriesOf(npc, playerUuid);
+            if (!hasMemories) {
+                createFirstMeetingMemory(npc, playerUuid, playerName);
+            }
+            return !hasMemories;
+        });
+    }
+
+    public CompletableFuture<MemoryStats> getPlayerMemoryStatsAsync(AINPC npc, Player player) {
+        UUID playerUuid = player.getUniqueId();
+        return plugin.getDatabaseManager().supplyAsync(() -> new MemoryStats(
+            hasMemoriesOf(npc, playerUuid),
+            getMemoryCount(npc, playerUuid),
+            getTotalEmotionalImpact(npc, playerUuid)
+        ));
+    }
+
+    public record MemoryStats(boolean hasMemories, int memoryCount, double emotionalImpact) {
     }
 
     // Clasa pentru reprezentarea unei amintiri

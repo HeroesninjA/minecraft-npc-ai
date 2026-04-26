@@ -59,6 +59,30 @@ public class DecisionEngine {
         return bestAction;
     }
 
+    public void runLifeSimulationTick(AINPC npc) {
+        if (npc == null) {
+            return;
+        }
+
+        LocationWrapper location = LocationWrapper.fromNpc(npc);
+        if (location == null) {
+            return;
+        }
+
+        NPCContext context = npc.getContext();
+        context.updateFromWorld(location.world(), location.location());
+
+        String scheduledActivity = resolveScheduledActivity(npc, context);
+        npc.setPlannedRoutineActivity(scheduledActivity);
+
+        updateNeeds(npc, context);
+        context.syncSimulationState(location.location());
+
+        NPCAction action = decideAction(npc, context);
+        applySimulationOutcome(npc, context, action);
+        context.syncSimulationState(location.location());
+    }
+
     /**
      * Calculeaza scorurile pentru toate actiunile posibile
      */
@@ -94,6 +118,10 @@ public class DecisionEngine {
         
         // Modificator de context (situatie curenta)
         score += getContextModifier(context, action);
+
+        // Modificator bazat pe nevoi si rutina curenta
+        score += getNeedModifier(context, action);
+        score += getRoutineModifier(npc, context, action);
         
         // Random mic pentru variatie (0-10)
         score += new Random().nextInt(11);
@@ -313,6 +341,60 @@ public class DecisionEngine {
         return modifier;
     }
 
+    private int getNeedModifier(NPCContext context, NPCAction action) {
+        int modifier = 0;
+
+        if (context.getHungerLevel() < 35) {
+            if (action == NPCAction.EAT) modifier += 45;
+            if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 12;
+        }
+
+        if (context.getEnergyLevel() < 35) {
+            if (action == NPCAction.SLEEP) modifier += 50;
+            if (action == NPCAction.REST) modifier += 35;
+            if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 18;
+            if (action == NPCAction.INVESTIGATE) modifier -= 10;
+        }
+
+        if (context.getSocialNeedLevel() < 40) {
+            if (action == NPCAction.SOCIALIZE || action == NPCAction.GREET || action == NPCAction.TALK) {
+                modifier += 28;
+            }
+        }
+
+        if (context.getComfortLevel() < 40) {
+            if (action == NPCAction.REST || action == NPCAction.SLEEP) modifier += 22;
+            if (action == NPCAction.HIDE) modifier += 14;
+        }
+
+        if (context.getSafetyLevel() < 40) {
+            if (action == NPCAction.FLEE || action == NPCAction.HIDE || action == NPCAction.CALL_HELP) {
+                modifier += 30;
+            }
+            if (action.isAggressive()) {
+                modifier -= 10;
+            }
+        }
+
+        return modifier;
+    }
+
+    private int getRoutineModifier(AINPC npc, NPCContext context, NPCAction action) {
+        String activity = context.getPlannedRoutineActivity();
+        RoutineFocus focus = inferRoutineFocus(activity);
+
+        return switch (focus) {
+            case WORK -> action.getCategory() == NPCAction.ActionCategory.WORK ? 26 : 0;
+            case REST -> (action == NPCAction.SLEEP || action == NPCAction.REST || action == NPCAction.EAT) ? 28 : 0;
+            case SOCIAL -> (action == NPCAction.SOCIALIZE || action == NPCAction.TALK || action == NPCAction.GREET
+                || action == NPCAction.SHARE_NEWS) ? 22 : 0;
+            case GUARD -> (action == NPCAction.OBSERVE || action == NPCAction.WARN || action == NPCAction.DEFEND
+                || action == NPCAction.CALL_HELP) ? 24 : 0;
+            case OBSERVE -> (action == NPCAction.OBSERVE || action == NPCAction.INVESTIGATE) ? 18 : 0;
+            case IDLE -> action == NPCAction.WALK_RANDOM || action == NPCAction.OBSERVE ? 8 : 0;
+        };
+    }
+
     /**
      * Filtreaza actiunile bazat pe starea curenta
      */
@@ -393,5 +475,191 @@ public class DecisionEngine {
      */
     public int getActionScore(AINPC npc, NPCContext context, NPCAction action) {
         return calculateActionScore(npc, context, action);
+    }
+
+    private void updateNeeds(AINPC npc, NPCContext context) {
+        long now = System.currentTimeMillis();
+        long previousTick = npc.getLastSimulationTickAt();
+        npc.setLastSimulationTickAt(now);
+
+        if (previousTick <= 0L) {
+            return;
+        }
+
+        double tickFactor = Math.max(0.5D, Math.min(4.0D, (now - previousTick) / 30_000.0D));
+        double hungerDecay = plugin.getConfig().getDouble("simulation.needs.hunger_decay", 1.5D) * tickFactor;
+        double energyDecay = plugin.getConfig().getDouble("simulation.needs.energy_decay", 1.2D) * tickFactor;
+        double socialDecay = plugin.getConfig().getDouble("simulation.needs.social_decay", 0.8D) * tickFactor;
+        double comfortDecay = plugin.getConfig().getDouble("simulation.needs.comfort_decay", 0.6D) * tickFactor;
+        double safetyRecovery = plugin.getConfig().getDouble("simulation.needs.safety_recovery", 1.0D) * tickFactor;
+
+        npc.setHungerLevel(npc.getHungerLevel() - (int) Math.round(hungerDecay + (npc.getCurrentState().isWorkState() ? 0.7D : 0.0D)));
+
+        if (npc.getCurrentState() == NPCState.SLEEPING) {
+            npc.setEnergyLevel(npc.getEnergyLevel() + (int) Math.round(3.5D * tickFactor));
+        } else if (npc.getCurrentState() == NPCState.RESTING || context.isAtHome()) {
+            npc.setEnergyLevel(npc.getEnergyLevel() + (int) Math.round(1.6D * tickFactor));
+        } else {
+            npc.setEnergyLevel(npc.getEnergyLevel() - (int) Math.round(energyDecay + (context.isAtWork() ? 0.5D : 0.0D)));
+        }
+
+        if (context.getInteractingPlayer() != null || context.isFriendsNearby() || npc.getCurrentState().isSocialState()) {
+            npc.setSocialNeedLevel(npc.getSocialNeedLevel() + (int) Math.round(2.4D * tickFactor));
+        } else {
+            npc.setSocialNeedLevel(npc.getSocialNeedLevel() - (int) Math.round(socialDecay));
+        }
+
+        if (context.isAtHome() || context.isIndoors()) {
+            npc.setComfortLevel(npc.getComfortLevel() + (int) Math.round(1.8D * tickFactor));
+        } else {
+            double weatherPenalty = ("RAIN".equals(context.getWeather()) || "THUNDER".equals(context.getWeather())) ? 1.2D : 0.0D;
+            npc.setComfortLevel(npc.getComfortLevel() - (int) Math.round(comfortDecay + weatherPenalty));
+        }
+
+        if (context.isInDanger()) {
+            npc.setSafetyLevel(npc.getSafetyLevel() - (int) Math.round(4.0D * tickFactor));
+        } else if (context.isAtHome()) {
+            npc.setSafetyLevel(npc.getSafetyLevel() + (int) Math.round(1.8D * tickFactor));
+        } else {
+            npc.setSafetyLevel(npc.getSafetyLevel() + (int) Math.round(safetyRecovery));
+        }
+    }
+
+    private void applySimulationOutcome(AINPC npc, NPCContext context, NPCAction action) {
+        NPCState targetState = mapActionToState(action, context);
+        npc.setCurrentState(targetState);
+        npc.setCurrentGoal(resolveGoal(action, npc, context));
+    }
+
+    private NPCState mapActionToState(NPCAction action, NPCContext context) {
+        return switch (action) {
+            case START_WORK, CONTINUE_WORK -> context.isAtWork() ? NPCState.WORKING : NPCState.WALKING;
+            case CRAFT -> context.isAtWork() ? NPCState.CRAFTING : NPCState.WALKING;
+            case FARM -> context.isAtWork() ? NPCState.FARMING : NPCState.WALKING;
+            case MINE -> context.isAtWork() ? NPCState.MINING : NPCState.WALKING;
+            case FISH -> context.isAtWork() ? NPCState.FISHING : NPCState.WALKING;
+            case EAT -> context.isAtHome() ? NPCState.EATING : NPCState.WALKING;
+            case SLEEP -> context.isAtHome() ? NPCState.SLEEPING : NPCState.WALKING;
+            case REST -> context.isAtHome() ? NPCState.RESTING : NPCState.WALKING;
+            case SOCIALIZE -> context.isAtSocialSpot() ? NPCState.SOCIALIZING : NPCState.WALKING;
+            case TALK, LISTEN, GREET, SHARE_NEWS, TELL_STORY, GOSSIP -> NPCState.TALKING;
+            case FLEE -> NPCState.FLEEING;
+            case HIDE -> NPCState.HIDING;
+            case ATTACK, DEFEND -> NPCState.COMBAT;
+            case CALL_HELP, WARN -> NPCState.GUARDING;
+            case OBSERVE, INVESTIGATE -> NPCState.CURIOUS;
+            case WALK_RANDOM, WALK_TO_TARGET -> NPCState.WALKING;
+            case RUN_TO_TARGET -> NPCState.RUNNING;
+            case PRAY -> NPCState.PRAYING;
+            default -> NPCState.IDLE;
+        };
+    }
+
+    private String resolveGoal(NPCAction action, AINPC npc, NPCContext context) {
+        return switch (action) {
+            case START_WORK, CONTINUE_WORK, CRAFT, FARM, MINE, FISH -> context.isAtWork()
+                ? defaultGoal(context.getPlannedRoutineActivity(), "sa isi faca treaba")
+                : "ajunga la " + describeAnchor(npc.getWorkAnchor(), "locul de munca");
+            case EAT -> context.isAtHome()
+                ? "isi recapete fortele la masa"
+                : "ajunga acasa pentru a manca";
+            case SLEEP -> context.isAtHome()
+                ? "se odihneasca in siguranta"
+                : "se intoarca acasa pentru somn";
+            case REST -> context.isAtHome()
+                ? "isi revina dupa efort"
+                : "gaseasca un loc linistit de odihna";
+            case SOCIALIZE, TALK, GREET, SHARE_NEWS, TELL_STORY, GOSSIP -> context.isAtSocialSpot()
+                ? "petreaca timp cu ceilalti localnici"
+                : "ajunga la " + describeAnchor(npc.getSocialAnchor(), "locul de intalnire");
+            case FLEE, HIDE -> "gaseasca adapost si sa evite pericolul";
+            case DEFEND, CALL_HELP, WARN -> "protejeze zona si sa ramana atent";
+            case OBSERVE, INVESTIGATE -> "inteleaga ce se petrece in jur";
+            case WALK_RANDOM -> defaultGoal(context.getPlannedRoutineActivity(), "mai vada ce se intampla prin sat");
+            default -> defaultGoal(context.getPlannedRoutineActivity(), "isi urmeze rutina");
+        };
+    }
+
+    private String resolveScheduledActivity(AINPC npc, NPCContext context) {
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader != null) {
+            FeaturePackLoader.ProfessionDefinition profession = loader.findPrimaryScenarioProfession(npc.getOccupation());
+            if (profession != null) {
+                String activity = profession.getSchedule().get(context.getTimeOfDay());
+                if (activity != null && !activity.isBlank()) {
+                    return activity;
+                }
+            }
+        }
+
+        return switch (context.getTimeOfDay()) {
+            case "MORNING" -> "se pregateste pentru zi si isi verifica treburile";
+            case "AFTERNOON" -> "lucreaza sau isi rezolva datoriile";
+            case "EVENING" -> "inchide treburile zilei si cauta companie";
+            case "NIGHT" -> "doarme si se tine departe de pericole";
+            default -> "isi urmeaza rutina obisnuita";
+        };
+    }
+
+    private RoutineFocus inferRoutineFocus(String activity) {
+        String normalized = activity == null ? "" : activity.toLowerCase(Locale.ROOT);
+        if (containsAny(normalized, "doarme", "somn", "odih", "masa", "mananca", "bea", "inchide")) {
+            return RoutineFocus.REST;
+        }
+        if (containsAny(normalized, "patrule", "paz", "poarta", "garda")) {
+            return RoutineFocus.GUARD;
+        }
+        if (containsAny(normalized, "social", "vorbeste", "barfa", "piata", "companie", "saluta")) {
+            return RoutineFocus.SOCIAL;
+        }
+        if (containsAny(normalized, "observ", "cauta", "verifica", "inspect")) {
+            return RoutineFocus.OBSERVE;
+        }
+        if (containsAny(normalized, "lucreaza", "forjeaza", "atelier", "camp", "recolta", "hraneste", "mestesug", "patruleaza")) {
+            return RoutineFocus.WORK;
+        }
+        return RoutineFocus.IDLE;
+    }
+
+    private boolean containsAny(String text, String... fragments) {
+        for (String fragment : fragments) {
+            if (text.contains(fragment)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String describeAnchor(AINPC.OwnedLocation anchor, String fallback) {
+        if (anchor == null || anchor.label() == null || anchor.label().isBlank()) {
+            return fallback;
+        }
+        return anchor.label();
+    }
+
+    private String defaultGoal(String plannedActivity, String fallback) {
+        if (plannedActivity == null || plannedActivity.isBlank()) {
+            return fallback;
+        }
+        return plannedActivity.toLowerCase(Locale.ROOT);
+    }
+
+    private record LocationWrapper(org.bukkit.World world, org.bukkit.Location location) {
+        private static LocationWrapper fromNpc(AINPC npc) {
+            org.bukkit.Location location = npc.getLocation();
+            if (location == null || location.getWorld() == null) {
+                return null;
+            }
+            return new LocationWrapper(location.getWorld(), location);
+        }
+    }
+
+    private enum RoutineFocus {
+        WORK,
+        REST,
+        SOCIAL,
+        GUARD,
+        OBSERVE,
+        IDLE
     }
 }

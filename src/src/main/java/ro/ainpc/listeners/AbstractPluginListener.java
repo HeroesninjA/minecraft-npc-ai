@@ -28,13 +28,9 @@ public abstract class AbstractPluginListener implements Listener {
         return plugin.getConversationSessionManager();
     }
 
-    protected boolean beginConversationSession(Player player, AINPC npc) {
-        boolean firstMeeting = !plugin.getMemoryManager().hasMemoriesOf(npc, player);
+    protected CompletableFuture<Boolean> beginConversationSession(Player player, AINPC npc) {
         conversations().startConversation(player, npc);
-        if (firstMeeting) {
-            plugin.getMemoryManager().createFirstMeetingMemory(npc, player);
-        }
-        return firstMeeting;
+        return plugin.getMemoryManager().ensureFirstMeetingMemoryAsync(npc, player);
     }
 
     protected void refreshConversationSession(Player player) {

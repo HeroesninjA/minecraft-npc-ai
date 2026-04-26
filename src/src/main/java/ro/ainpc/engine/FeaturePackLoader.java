@@ -12,6 +12,7 @@ import ro.ainpc.topology.TopologyConsensus;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Incarca Feature Packs din fisiere YAML
@@ -344,6 +345,7 @@ public class FeaturePackLoader {
                     );
                     role.setPlayerRole(roleSection.getBoolean("player_role", false));
                     role.setOptional(roleSection.getBoolean("optional", false));
+                    role.setRequiredProfessions(roleSection.getStringList("required_professions"));
                     role.setPreferredProfessions(roleSection.getStringList("preferred_professions"));
                     role.setRequiredTraits(roleSection.getStringList("required_traits"));
                     role.setPreferredTraits(roleSection.getStringList("preferred_traits"));
@@ -360,12 +362,47 @@ public class FeaturePackLoader {
                 scenario.setPhases(scenarioSection.getStringList("phases"));
             }
 
+            ConfigurationSection questSection = scenarioSection.getConfigurationSection("quest");
+            if (questSection != null) {
+                scenario.setQuestCode(questSection.getString("code", scenarioId));
+                scenario.setQuestGiverProfession(questSection.getString("giver_profession", ""));
+
+                loadQuestEntries(
+                    questSection.getConfigurationSection("objectives"),
+                    scenario::addObjective
+                );
+                loadQuestEntries(
+                    questSection.getConfigurationSection("rewards"),
+                    scenario::addReward
+                );
+            }
+
             pack.addScenario(scenario);
             allScenarios.put(pack.getId() + ":" + scenarioId, scenario);
         }
 
         if (!pack.getScenarios().isEmpty()) {
             pack.markHasScenarioDefinitions();
+        }
+    }
+
+    private void loadQuestEntries(ConfigurationSection section, Consumer<QuestEntryDefinition> consumer) {
+        if (section == null || consumer == null) {
+            return;
+        }
+
+        for (String entryId : section.getKeys(false)) {
+            ConfigurationSection entrySection = section.getConfigurationSection(entryId);
+            if (entrySection == null) {
+                continue;
+            }
+
+            consumer.accept(new QuestEntryDefinition(
+                entrySection.getString("type", "item"),
+                entrySection.getString("item", entryId),
+                Math.max(1, entrySection.getInt("amount", 1)),
+                entrySection.getString("description", "")
+            ));
         }
     }
 
@@ -1022,6 +1059,8 @@ public class FeaturePackLoader {
         private final String description;
         private final ScenarioEngine.ScenarioType baseType;
         private final Map<String, ScenarioRoleDefinition> roles;
+        private final List<QuestEntryDefinition> objectives;
+        private final List<QuestEntryDefinition> rewards;
         private List<String> phases;
         private List<String> preferredTopologies;
         private List<String> narrativeHints;
@@ -1030,6 +1069,8 @@ public class FeaturePackLoader {
         private boolean requiresPlayer;
         private boolean replaceBaseType;
         private String hint;
+        private String questCode;
+        private String questGiverProfession;
 
         public ScenarioDefinition(String packId,
                                   String id,
@@ -1042,6 +1083,8 @@ public class FeaturePackLoader {
             this.description = description;
             this.baseType = baseType;
             this.roles = new LinkedHashMap<>();
+            this.objectives = new ArrayList<>();
+            this.rewards = new ArrayList<>();
             this.phases = new ArrayList<>();
             this.preferredTopologies = new ArrayList<>();
             this.narrativeHints = new ArrayList<>();
@@ -1050,6 +1093,8 @@ public class FeaturePackLoader {
             this.requiresPlayer = false;
             this.replaceBaseType = false;
             this.hint = "";
+            this.questCode = "";
+            this.questGiverProfession = "";
         }
 
         public void addRole(ScenarioRoleDefinition role) {
@@ -1062,12 +1107,26 @@ public class FeaturePackLoader {
             }
         }
 
+        public void addObjective(QuestEntryDefinition objective) {
+            if (objective != null) {
+                objectives.add(objective);
+            }
+        }
+
+        public void addReward(QuestEntryDefinition reward) {
+            if (reward != null) {
+                rewards.add(reward);
+            }
+        }
+
         public String getPackId() { return packId; }
         public String getId() { return id; }
         public String getName() { return name; }
         public String getDescription() { return description; }
         public ScenarioEngine.ScenarioType getBaseType() { return baseType; }
         public Map<String, ScenarioRoleDefinition> getRoles() { return roles; }
+        public List<QuestEntryDefinition> getObjectives() { return objectives; }
+        public List<QuestEntryDefinition> getRewards() { return rewards; }
         public List<String> getPhases() { return phases; }
         public void setPhases(List<String> phases) { this.phases = phases != null ? phases : new ArrayList<>(); }
         public List<String> getPreferredTopologies() { return preferredTopologies; }
@@ -1088,6 +1147,12 @@ public class FeaturePackLoader {
         public void setReplaceBaseType(boolean replaceBaseType) { this.replaceBaseType = replaceBaseType; }
         public String getHint() { return hint; }
         public void setHint(String hint) { this.hint = hint == null ? "" : hint; }
+        public String getQuestCode() { return questCode; }
+        public void setQuestCode(String questCode) { this.questCode = questCode == null ? "" : questCode; }
+        public String getQuestGiverProfession() { return questGiverProfession; }
+        public void setQuestGiverProfession(String questGiverProfession) {
+            this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
+        }
     }
 
     public static class ScenarioRoleDefinition {
@@ -1095,6 +1160,7 @@ public class FeaturePackLoader {
         private final String description;
         private boolean playerRole;
         private boolean optional;
+        private List<String> requiredProfessions;
         private List<String> preferredProfessions;
         private List<String> requiredTraits;
         private List<String> preferredTraits;
@@ -1104,6 +1170,7 @@ public class FeaturePackLoader {
             this.description = description;
             this.playerRole = false;
             this.optional = false;
+            this.requiredProfessions = new ArrayList<>();
             this.preferredProfessions = new ArrayList<>();
             this.requiredTraits = new ArrayList<>();
             this.preferredTraits = new ArrayList<>();
@@ -1115,6 +1182,10 @@ public class FeaturePackLoader {
         public void setPlayerRole(boolean playerRole) { this.playerRole = playerRole; }
         public boolean isOptional() { return optional; }
         public void setOptional(boolean optional) { this.optional = optional; }
+        public List<String> getRequiredProfessions() { return requiredProfessions; }
+        public void setRequiredProfessions(List<String> requiredProfessions) {
+            this.requiredProfessions = requiredProfessions != null ? requiredProfessions : new ArrayList<>();
+        }
         public List<String> getPreferredProfessions() { return preferredProfessions; }
         public void setPreferredProfessions(List<String> preferredProfessions) {
             this.preferredProfessions = preferredProfessions != null ? preferredProfessions : new ArrayList<>();
@@ -1127,6 +1198,25 @@ public class FeaturePackLoader {
         public void setPreferredTraits(List<String> preferredTraits) {
             this.preferredTraits = preferredTraits != null ? preferredTraits : new ArrayList<>();
         }
+    }
+
+    public static class QuestEntryDefinition {
+        private final String type;
+        private final String itemId;
+        private final int amount;
+        private final String description;
+
+        public QuestEntryDefinition(String type, String itemId, int amount, String description) {
+            this.type = type == null ? "item" : type;
+            this.itemId = itemId == null ? "" : itemId;
+            this.amount = Math.max(1, amount);
+            this.description = description == null ? "" : description;
+        }
+
+        public String getType() { return type; }
+        public String getItemId() { return itemId; }
+        public int getAmount() { return amount; }
+        public String getDescription() { return description; }
     }
 
 }

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/resources/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/AINPCPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/AINPCPlugin.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInventoryCheck.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInventoryCheck.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$ResolvedDialogTarget.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$ResolvedDialogTarget.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/original-AINPCPlugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/original-AINPCPlugin-1.0.0.jar" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="73" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;HeroesninjA&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/HeroesninjA/minecraft-npc-ai.git&quot;,
+    &quot;accountId&quot;: &quot;2c5a98a0-3c85-4314-aa61-affbbf73747f&quot;
+  }
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3Cfxe64oDGZP10ErCbiNrRlrKED" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Maven.Build.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;test&quot;,
+    &quot;git.auto.fetch.suggestion.counter&quot;: &quot;1&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/HeroesninjA/IdeaProjects/test&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Problems&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AcpAgentsConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\HeroesninjA\IdeaProjects\test" />
+      <recent name="C:\Users\HeroesninjA\IdeaProjects\test\src" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="Build" type="MavenRunConfiguration" factoryName="Maven">
+      <MavenSettings>
+        <option name="myGeneralSettings">
+          <MavenGeneralSettings>
+            <option name="alwaysUpdateSnapshots" value="false" />
+            <option name="checksumPolicy" value="NOT_SET" />
+            <option name="customMavenHome" />
+            <option name="emulateTerminal" value="false" />
+            <option name="failureBehavior" value="NOT_SET" />
+            <option name="localRepository" value="" />
+            <option name="mavenHome" value="Bundled (Maven 3)" />
+            <option name="mavenHomeTypeForPersistence" value="BUNDLED3" />
+            <option name="nonRecursive" value="false" />
+            <option name="outputLevel" value="INFO" />
+            <option name="printErrorStackTraces" value="false" />
+            <option name="showDialogWithAdvancedSettings" value="false" />
+            <option name="threads" />
+            <option name="useMavenConfig" value="true" />
+            <option name="userSettingsFile" value="" />
+            <option name="workOffline" value="false" />
+          </MavenGeneralSettings>
+        </option>
+        <option name="myRunnerSettings">
+          <MavenRunnerSettings>
+            <option name="delegateBuildToMaven" value="false" />
+            <option name="environmentProperties">
+              <map />
+            </option>
+            <option name="jreName" value="#USE_PROJECT_JDK" />
+            <option name="mavenProperties">
+              <map />
+            </option>
+            <option name="passParentEnv" value="true" />
+            <option name="skipTests" value="false" />
+            <option name="vmOptions" value="" />
+          </MavenRunnerSettings>
+        </option>
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="package" />
+              </list>
+            </option>
+            <option name="multimoduleDir" />
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map />
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="C:\Users\HeroesninjA\IdeaProjects\test" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="" />
+      <created>1776790522227</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1776790522227</updated>
+      <workItem from="1776790523285" duration="1163000" />
+      <workItem from="1776791805544" duration="2526000" />
+      <workItem from="1776797918868" duration="884000" />
+      <workItem from="1776868747248" duration="13663000" />
+      <workItem from="1776956492061" duration="5511000" />
+      <workItem from="1776964464484" duration="30000" />
+      <workItem from="1776964769045" duration="101000" />
+      <workItem from="1777040683828" duration="3353000" />
+      <workItem from="1777044560346" duration="3209000" />
+      <workItem from="1777110058067" duration="10199000" />
+      <workItem from="1777121733259" duration="3188000" />
+      <workItem from="1777124944023" duration="168000" />
+      <workItem from="1777125370750" duration="13531000" />
+      <workItem from="1777187752655" duration="3155000" />
+    </task>
+    <task id="LOCAL-00001" summary="test">
+      <option name="closed" value="true" />
+      <created>1777128393753</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1777128393753</updated>
+    </task>
+    <task id="LOCAL-00002" summary="test">
+      <option name="closed" value="true" />
+      <created>1777130126260</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1777130126260</updated>
+    </task>
+    <task id="LOCAL-00003" summary="test">
+      <option name="closed" value="true" />
+      <created>1777187777064</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1777187777064</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="test" />
+    <option name="LAST_COMMIT_MESSAGE" value="test" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

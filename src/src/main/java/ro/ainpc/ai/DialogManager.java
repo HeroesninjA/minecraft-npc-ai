@@ -45,26 +45,28 @@ public class DialogManager {
         AINPC npc = request.npc();
         Player player = request.player();
         String message = request.message();
+        UUID playerUuid = player.getUniqueId();
+        String playerName = player.getName();
 
         // Verifica cooldown
-        if (isOnCooldown(player.getUniqueId(), npc.getUuid())) {
+        if (isOnCooldown(playerUuid, npc.getUuid())) {
             return CompletableFuture.completedFuture(DialogResult.cooldown());
         }
 
         // Seteaza cooldown
-        setCooldown(player.getUniqueId(), npc.getUuid());
+        setCooldown(playerUuid, npc.getUuid());
 
-        return CompletableFuture.supplyAsync(() -> {
+        return plugin.getDatabaseManager().supplyAsync(() -> {
             // Obtine istoricul conversatiei
-            List<OpenAIService.DialogHistory> history = getRecentHistory(npc, player, 5);
+            List<OpenAIService.DialogHistory> history = getRecentHistory(npc, playerUuid, 5);
             
             // Obtine amintiri relevante
-            List<String> memories = plugin.getMemoryManager().getRelevantMemories(npc, player, message, 5);
-            int totalMemoryCount = plugin.getMemoryManager().getMemoryCount(npc, player);
-            double weightedMemoryImpact = plugin.getMemoryManager().getTotalEmotionalImpact(npc, player);
+            List<String> memories = plugin.getMemoryManager().getRelevantMemories(npc, playerUuid, message, 5);
+            int totalMemoryCount = plugin.getMemoryManager().getMemoryCount(npc, playerUuid);
+            double weightedMemoryImpact = plugin.getMemoryManager().getTotalEmotionalImpact(npc, playerUuid);
             
             // Obtine relatia
-            OpenAIService.NPCRelationship relationship = getRelationship(npc, player);
+            OpenAIService.NPCRelationship relationship = getRelationship(npc, playerUuid);
             
             return new DialogContext(
                 history,
@@ -75,8 +77,17 @@ public class DialogManager {
             
         }).thenCompose(context -> {
             DialogueEngine dialogueEngine = plugin.getDialogueEngine();
+            CompletableFuture<String> responseFuture;
             if (dialogueEngine != null) {
-                return dialogueEngine.generateResponse(
+                responseFuture = dialogueEngine.generateResponse(
+                    request,
+                    context.history,
+                    context.memories,
+                    context.relationship,
+                    context.dbContext
+                );
+            } else {
+                responseFuture = plugin.getOpenAIService().generateResponse(
                     request,
                     context.history,
                     context.memories,
@@ -85,34 +96,23 @@ public class DialogManager {
                 );
             }
 
-            return plugin.getOpenAIService().generateResponse(
-                request,
-                context.history,
-                context.memories,
-                context.relationship,
-                context.dbContext
-            );
-            
-        }).thenApply(response -> {
-            if (response == null || response.isBlank()) {
-                return DialogResult.error();
+            return responseFuture.thenApply(response -> new GeneratedDialog(response, context.relationship));
+        }).thenCompose(generated -> {
+            if (generated.response() == null || generated.response().isBlank()) {
+                return CompletableFuture.completedFuture(DialogResult.error());
             }
 
             String sentiment = plugin.getOpenAIService().analyzeSentimentFast(message);
 
-            // Salveaza dialogul in istoric
-            saveDialog(npc, player, message, response);
-            
-            // Actualizeaza relatia
-            updateRelationship(npc, player, sentiment);
-            
-            // Creeaza amintire daca e important
-            createMemoryIfImportant(npc, player, message, sentiment);
-            
-            // Actualizeaza emotiile bazat pe interactiune
-            updateEmotions(npc, player, sentiment);
-            
-            return DialogResult.success(response);
+            return plugin.getDatabaseManager().supplyAsync(() -> {
+                saveDialog(npc, playerUuid, message, generated.response());
+                updateRelationship(npc, playerUuid, playerName, sentiment);
+                createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment);
+                return new PostProcessResult(generated.response(), sentiment, generated.relationship());
+            }).thenApply(postProcess -> {
+                updateEmotions(npc, postProcess.relationship(), postProcess.sentiment());
+                return DialogResult.success(postProcess.response());
+            });
         }).exceptionally(ex -> {
             plugin.getLogger().warning("Eroare in procesarea dialogului: " + ex.getMessage());
             return DialogResult.error();
@@ -123,6 +123,10 @@ public class DialogManager {
      * Obtine istoricul recent al conversatiei
      */
     public List<OpenAIService.DialogHistory> getRecentHistory(AINPC npc, Player player, int limit) {
+        return getRecentHistory(npc, player.getUniqueId(), limit);
+    }
+
+    public List<OpenAIService.DialogHistory> getRecentHistory(AINPC npc, UUID playerUuid, int limit) {
         List<OpenAIService.DialogHistory> history = new ArrayList<>();
         
         String sql = """
@@ -135,7 +139,7 @@ public class DialogManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
             stmt.setInt(3, limit);
 
             try (ResultSet rs = stmt.executeQuery()) {
@@ -160,6 +164,10 @@ public class DialogManager {
      * Salveaza un dialog in baza de date
      */
     public void saveDialog(AINPC npc, Player player, String playerMessage, String npcResponse) {
+        saveDialog(npc, player.getUniqueId(), playerMessage, npcResponse);
+    }
+
+    public void saveDialog(AINPC npc, UUID playerUuid, String playerMessage, String npcResponse) {
         String sql = """
             INSERT INTO dialog_history (npc_id, player_uuid, player_message, npc_response, emotion_state)
             VALUES (?, ?, ?, ?, ?)
@@ -167,7 +175,7 @@ public class DialogManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
             stmt.setString(3, playerMessage);
             stmt.setString(4, npcResponse);
             stmt.setString(5, npc.getEmotions().getDominantEmotion());
@@ -181,6 +189,10 @@ public class DialogManager {
      * Obtine relatia dintre NPC si jucator
      */
     public OpenAIService.NPCRelationship getRelationship(AINPC npc, Player player) {
+        return getRelationship(npc, player.getUniqueId());
+    }
+
+    public OpenAIService.NPCRelationship getRelationship(AINPC npc, UUID playerUuid) {
         String sql = """
             SELECT affection, trust, respect, familiarity, interaction_count, relationship_type
             FROM npc_relationships
@@ -189,7 +201,7 @@ public class DialogManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
+            stmt.setString(2, playerUuid.toString());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -210,10 +222,15 @@ public class DialogManager {
         return null; // Prima intalnire
     }
 
+    public CompletableFuture<OpenAIService.NPCRelationship> getRelationshipAsync(AINPC npc, Player player) {
+        UUID playerUuid = player.getUniqueId();
+        return plugin.getDatabaseManager().supplyAsync(() -> getRelationship(npc, playerUuid));
+    }
+
     /**
      * Actualizeaza relatia dupa o interactiune
      */
-    private void updateRelationship(AINPC npc, Player player, String sentiment) {
+    private void updateRelationship(AINPC npc, UUID playerUuid, String playerName, String sentiment) {
         double affectionChange = 0;
         double trustChange = 0;
         double respectChange = 0;
@@ -263,8 +280,8 @@ public class DialogManager {
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
             stmt.setInt(1, npc.getDatabaseId());
-            stmt.setString(2, player.getUniqueId().toString());
-            stmt.setString(3, player.getName());
+            stmt.setString(2, playerUuid.toString());
+            stmt.setString(3, playerName);
             stmt.setDouble(4, affectionChange);
             stmt.setDouble(5, trustChange);
             stmt.setDouble(6, respectChange);
@@ -285,7 +302,8 @@ public class DialogManager {
     /**
      * Creeaza o amintire daca interactiunea este importanta
      */
-    private void createMemoryIfImportant(AINPC npc, Player player, String playerMessage, String sentiment) {
+    private void createMemoryIfImportant(AINPC npc, UUID playerUuid, String playerName,
+                                         String playerMessage, String sentiment) {
         int importance = switch (sentiment) {
             case "insult", "threat" -> 4;
             case "compliment" -> 3;
@@ -295,11 +313,11 @@ public class DialogManager {
 
         // Creeaza amintire doar pentru interactiuni importante
         if (importance >= 2) {
-            String content = "Jucatorul " + player.getName() + " mi-a spus: \"" +
+            String content = "Jucatorul " + playerName + " mi-a spus: \"" +
                 truncate(playerMessage, 100) + "\" (sentiment: " + sentiment + ")";
 
             plugin.getMemoryManager().createMemory(
-                npc, player,
+                npc, playerUuid, playerName,
                 "dialog",
                 content,
                 sentimentToEmotionalImpact(sentiment),
@@ -311,10 +329,9 @@ public class DialogManager {
     /**
      * Actualizeaza emotiile NPC-ului bazat pe mesaj
      */
-    private void updateEmotions(AINPC npc, Player player, String sentiment) {
-        // Obtine multiplicatorul bazat pe relatie
-        OpenAIService.NPCRelationship rel = getRelationship(npc, player);
-        double multiplier = rel != null ? (0.5 + rel.getFamiliarity() * 0.5) : 0.5;
+    private void updateEmotions(AINPC npc, OpenAIService.NPCRelationship relationship, String sentiment) {
+        double familiarity = relationship != null ? relationship.getFamiliarity() : 0.0;
+        double multiplier = 0.5 + familiarity * 0.5;
 
         // Aplica efectul emotional
         String interactionType = switch (sentiment) {
@@ -327,11 +344,7 @@ public class DialogManager {
             default -> "greeting";
         };
 
-        npc.getEmotions().applyInteractionEffect(interactionType, multiplier);
-        npc.updateDisplayName();
-
-        // Salveaza emotiile
-        plugin.getNpcManager().saveEmotions(npc);
+        plugin.getEmotionManager().applyInteractionEffect(npc, interactionType, multiplier);
     }
 
     public boolean isOnCooldown(Player player, AINPC npc) {
@@ -390,6 +403,19 @@ public class DialogManager {
             this.relationship = relationship;
             this.dbContext = dbContext;
         }
+    }
+
+    private record GeneratedDialog(
+        String response,
+        OpenAIService.NPCRelationship relationship
+    ) {
+    }
+
+    private record PostProcessResult(
+        String response,
+        String sentiment,
+        OpenAIService.NPCRelationship relationship
+    ) {
     }
 
     public record PromptDbContext(

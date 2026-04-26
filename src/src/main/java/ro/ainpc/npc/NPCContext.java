@@ -39,12 +39,17 @@ public class NPCContext {
     // Stare fizica
     private double healthPercent;
     private int hungerLevel;
+    private int energyLevel;
+    private int socialNeedLevel;
+    private int comfortLevel;
+    private int safetyLevel;
     private boolean isHurt;
     private boolean isInDanger;
     
     // Stare sociala
     private boolean isAtHome;
     private boolean isAtWork;
+    private boolean isAtSocialSpot;
     private boolean isFamilyNearby;
     private boolean isFriendsNearby;
     
@@ -56,6 +61,8 @@ public class NPCContext {
     private int relationshipLevel;
     private String relationshipStatus; // STRANGER, ACQUAINTANCE, FRIEND, CLOSE_FRIEND, ENEMY
     private List<String> sharedMemories;
+    private String plannedRoutineActivity;
+    private String currentGoal;
 
     public NPCContext(AINPC npc) {
         this.npc = npc;
@@ -64,9 +71,15 @@ public class NPCContext {
         this.recentEvents = new ArrayList<>();
         this.sharedMemories = new ArrayList<>();
         this.healthPercent = 100.0;
-        this.hungerLevel = 100;
+        this.hungerLevel = npc.getHungerLevel();
+        this.energyLevel = npc.getEnergyLevel();
+        this.socialNeedLevel = npc.getSocialNeedLevel();
+        this.comfortLevel = npc.getComfortLevel();
+        this.safetyLevel = npc.getSafetyLevel();
         this.relationshipStatus = "STRANGER";
         this.topologyCategory = TopologyCategory.UNKNOWN;
+        this.plannedRoutineActivity = "";
+        this.currentGoal = "";
     }
 
     /**
@@ -92,6 +105,7 @@ public class NPCContext {
         // Verifica daca e in interior (simplificat)
         this.isIndoors = npcLocation.getBlock().getLightFromSky() < 10;
         this.topologyCategory = TopologyCategory.fromBiome(this.biome, this.isIndoors);
+        syncSimulationState(npcLocation);
         
         // Entitati din apropiere
         updateNearbyEntities(npcLocation);
@@ -113,8 +127,10 @@ public class NPCContext {
      */
     private void updateNearbyEntities(Location location) {
         nearbyPlayers.clear();
+        nearbyNPCs.clear();
         nearbyHostileMobs = 0;
         nearbyPassiveMobs = 0;
+        pruneStaleInteraction();
         
         double range = 20.0;
         
@@ -125,11 +141,46 @@ public class NPCContext {
                 nearbyHostileMobs++;
             } else if (isPassiveMob(entity.getType().name())) {
                 nearbyPassiveMobs++;
+            } else {
+                AINPC nearbyNpc = npc.getPlugin().getNpcManager().getNPCByEntity(entity);
+                if (nearbyNpc != null && !nearbyNpc.getUuid().equals(npc.getUuid())) {
+                    nearbyNPCs.add(nearbyNpc);
+                }
             }
         });
         
         // Actualizeaza starea de pericol
-        this.isInDanger = nearbyHostileMobs > 0 || isHurt;
+        this.isFriendsNearby = !nearbyNPCs.isEmpty();
+        this.isInDanger = nearbyHostileMobs > 0 || isHurt || safetyLevel < 35;
+    }
+
+    public void syncSimulationState(Location npcLocation) {
+        this.hungerLevel = npc.getHungerLevel();
+        this.energyLevel = npc.getEnergyLevel();
+        this.socialNeedLevel = npc.getSocialNeedLevel();
+        this.comfortLevel = npc.getComfortLevel();
+        this.safetyLevel = npc.getSafetyLevel();
+        this.plannedRoutineActivity = npc.getPlannedRoutineActivity();
+        this.currentGoal = npc.getCurrentGoal();
+        this.isAtHome = npc.getHomeAnchor() != null && npc.getHomeAnchor().isNear(npcLocation, 5.5);
+        this.isAtWork = npc.getWorkAnchor() != null && npc.getWorkAnchor().isNear(npcLocation, 6.5);
+        this.isAtSocialSpot = npc.getSocialAnchor() != null && npc.getSocialAnchor().isNear(npcLocation, 6.5);
+        if (npcLocation != null && npcLocation.getWorld() != null) {
+            this.healthPercent = 100.0;
+        }
+        this.isInDanger = nearbyHostileMobs > 0 || isHurt || safetyLevel < 35;
+    }
+
+    private void pruneStaleInteraction() {
+        if (interactingPlayer == null) {
+            return;
+        }
+
+        boolean expired = System.currentTimeMillis() - lastInteractionTime > 120_000L;
+        if (expired || !interactingPlayer.isOnline()) {
+            interactingPlayer = null;
+            lastPlayerMessage = null;
+        }
     }
 
     private boolean isHostileMob(String type) {
@@ -201,6 +252,15 @@ public class NPCContext {
         if (hungerLevel < 30) {
             sb.append("Mi-e foame.\n");
         }
+        if (energyLevel < 35) {
+            sb.append("Sunt obosit(a) si am nevoie de odihna.\n");
+        }
+        if (comfortLevel < 35) {
+            sb.append("Nu ma simt prea confortabil in locul acesta.\n");
+        }
+        if (safetyLevel < 35) {
+            sb.append("Ma simt nesigur(a) si prudenta mea este ridicata.\n");
+        }
         
         // Stare sociala
         if (isFamilyNearby) {
@@ -210,6 +270,15 @@ public class NPCContext {
             sb.append("Sunt la munca.\n");
         } else if (isAtHome) {
             sb.append("Sunt acasa.\n");
+        } else if (isAtSocialSpot) {
+            sb.append("Ma aflu intr-un loc social cunoscut.\n");
+        }
+
+        if (plannedRoutineActivity != null && !plannedRoutineActivity.isBlank()) {
+            sb.append("Conform rutinei mele, acum ar trebui sa: ").append(plannedRoutineActivity).append(".\n");
+        }
+        if (currentGoal != null && !currentGoal.isBlank()) {
+            sb.append("Obiectivul meu imediat este sa ").append(currentGoal).append(".\n");
         }
         
         // Relatie cu jucatorul
@@ -384,6 +453,38 @@ public class NPCContext {
         this.hungerLevel = hungerLevel;
     }
 
+    public int getEnergyLevel() {
+        return energyLevel;
+    }
+
+    public void setEnergyLevel(int energyLevel) {
+        this.energyLevel = energyLevel;
+    }
+
+    public int getSocialNeedLevel() {
+        return socialNeedLevel;
+    }
+
+    public void setSocialNeedLevel(int socialNeedLevel) {
+        this.socialNeedLevel = socialNeedLevel;
+    }
+
+    public int getComfortLevel() {
+        return comfortLevel;
+    }
+
+    public void setComfortLevel(int comfortLevel) {
+        this.comfortLevel = comfortLevel;
+    }
+
+    public int getSafetyLevel() {
+        return safetyLevel;
+    }
+
+    public void setSafetyLevel(int safetyLevel) {
+        this.safetyLevel = safetyLevel;
+    }
+
     public boolean isHurt() {
         return isHurt;
     }
@@ -414,6 +515,14 @@ public class NPCContext {
 
     public void setAtWork(boolean atWork) {
         isAtWork = atWork;
+    }
+
+    public boolean isAtSocialSpot() {
+        return isAtSocialSpot;
+    }
+
+    public void setAtSocialSpot(boolean atSocialSpot) {
+        isAtSocialSpot = atSocialSpot;
     }
 
     public boolean isFamilyNearby() {
@@ -469,5 +578,21 @@ public class NPCContext {
 
     public void setSharedMemories(List<String> sharedMemories) {
         this.sharedMemories = sharedMemories;
+    }
+
+    public String getPlannedRoutineActivity() {
+        return plannedRoutineActivity;
+    }
+
+    public void setPlannedRoutineActivity(String plannedRoutineActivity) {
+        this.plannedRoutineActivity = plannedRoutineActivity;
+    }
+
+    public String getCurrentGoal() {
+        return currentGoal;
+    }
+
+    public void setCurrentGoal(String currentGoal) {
+        this.currentGoal = currentGoal;
     }
 }

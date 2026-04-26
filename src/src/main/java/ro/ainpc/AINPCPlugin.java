@@ -1,5 +1,7 @@
 package ro.ainpc;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.command.PluginCommand;
 import ro.ainpc.ai.DialogManager;
@@ -20,6 +22,7 @@ import ro.ainpc.managers.NPCManager;
 import ro.ainpc.platform.AINPCPlatform;
 import ro.ainpc.utils.MessageUtils;
 
+import java.io.File;
 import java.util.logging.Level;
 
 public class AINPCPlugin extends JavaPlugin {
@@ -37,6 +40,8 @@ public class AINPCPlugin extends JavaPlugin {
     private MessageUtils messageUtils;
     private AINPCPlatform platform;
     private ListenerRegistry listenerRegistry;
+    private File questConfigFile;
+    private FileConfiguration questConfig;
     
     // Motoare AI
     private DecisionEngine decisionEngine;
@@ -52,6 +57,7 @@ public class AINPCPlugin extends JavaPlugin {
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        loadQuestConfig();
         
         // Initializeaza utilitarele
         messageUtils = new MessageUtils(this);
@@ -111,6 +117,14 @@ public class AINPCPlugin extends JavaPlugin {
         }
         ainpcCommand.setExecutor(command);
         ainpcCommand.setTabCompleter(new AINPCTabCompleter(this));
+
+        PluginCommand npcQuestCommand = getCommand("npcquest");
+        if (npcQuestCommand != null) {
+            npcQuestCommand.setExecutor(command);
+            npcQuestCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'npcquest' nu a fost gasita in plugin.yml.");
+        }
         
         // Inregistreaza listenerele
         getLogger().info("Inregistrare listenere...");
@@ -162,20 +176,28 @@ public class AINPCPlugin extends JavaPlugin {
     }
     
     private void startScheduledTasks() {
+        int simulationTickSeconds = Math.max(10, getConfig().getInt("simulation.tick_seconds", 30));
+
+        if (getConfig().getBoolean("simulation.enabled", true)) {
+            getServer().getScheduler().runTaskTimer(this, () -> {
+                npcManager.runLifeSimulationTick();
+            }, 20L * 15, 20L * simulationTickSeconds);
+        }
+
         // Task Bukkit: updateaza nume/particule si trebuie sa ruleze pe thread-ul principal
         getServer().getScheduler().runTaskTimer(this, () -> {
             emotionManager.decayEmotions();
         }, 20L * 60, 20L * 60);
         
         // Task pentru curatarea amintirilor vechi (la fiecare ora)
-        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-            memoryManager.cleanOldMemories();
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            databaseManager.runAsync(() -> memoryManager.cleanOldMemories());
         }, 20L * 60 * 60, 20L * 60 * 60);
         
         // Sincronizeaza mai intai starea entitatilor, apoi persista asincron in DB
         getServer().getScheduler().runTaskTimer(this, () -> {
             npcManager.syncAllNPCEntityState();
-            getServer().getScheduler().runTaskAsynchronously(this, () -> {
+            databaseManager.runAsync(() -> {
                 npcManager.saveAllNPCs(false);
                 if (getConfig().getBoolean("debug")) {
                     getLogger().info("[Debug] Salvare automata completata.");
@@ -192,6 +214,7 @@ public class AINPCPlugin extends JavaPlugin {
         reloadConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        loadQuestConfig();
         messageUtils = new MessageUtils(this);
         if (platform != null) {
             platform.reloadFromConfig();
@@ -211,6 +234,19 @@ public class AINPCPlugin extends JavaPlugin {
             npcManager.ensureAllNPCsHaveProfiles();
         }
         getLogger().info("Configuratie reincarcata!");
+    }
+
+    private void loadQuestConfig() {
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
+
+        questConfigFile = new File(getDataFolder(), "quests.yml");
+        if (!questConfigFile.exists()) {
+            saveResource("quests.yml", false);
+        }
+
+        questConfig = YamlConfiguration.loadConfiguration(questConfigFile);
     }
 
     // Getters
@@ -272,6 +308,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public FeaturePackLoader getFeaturePackLoader() {
         return featurePackLoader;
+    }
+
+    public FileConfiguration getQuestConfig() {
+        return questConfig;
     }
     
     public void debug(String message) {

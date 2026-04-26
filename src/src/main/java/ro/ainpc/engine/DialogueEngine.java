@@ -9,6 +9,8 @@ import ro.ainpc.npc.*;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Motor de dialog pentru NPC-uri
@@ -30,7 +32,7 @@ public class DialogueEngine {
         this.plugin = plugin;
         this.openAIService = openAIService;
         this.templates = new EnumMap<>(DialogueIntent.class);
-        this.recentResponses = new HashMap<>();
+        this.recentResponses = new ConcurrentHashMap<>();
         
         loadTemplates();
     }
@@ -419,25 +421,28 @@ public class DialogueEngine {
             intentTemplates = templates.get(DialogueIntent.GREET);
         }
         
-        List<String> recent = recentResponses.computeIfAbsent(npc.getUuid(), k -> new ArrayList<>());
-        
-        // Filtreaza template-urile folosite recent
-        List<String> available = intentTemplates.stream()
-            .filter(t -> !recent.contains(t))
-            .toList();
-        
-        if (available.isEmpty()) {
-            recent.clear();
-            available = intentTemplates;
-        }
-        
-        // Selecteaza random
-        String selected = available.get(new Random().nextInt(available.size()));
-        
-        // Adauga la recente
-        recent.add(selected);
-        if (recent.size() > 5) {
-            recent.remove(0);
+        List<String> recent = recentResponses.computeIfAbsent(
+            npc.getUuid(),
+            ignored -> Collections.synchronizedList(new ArrayList<>())
+        );
+        List<String> available;
+        String selected;
+
+        synchronized (recent) {
+            available = intentTemplates.stream()
+                .filter(template -> !recent.contains(template))
+                .toList();
+
+            if (available.isEmpty()) {
+                recent.clear();
+                available = intentTemplates;
+            }
+
+            selected = available.get(ThreadLocalRandom.current().nextInt(available.size()));
+            recent.add(selected);
+            if (recent.size() > 5) {
+                recent.remove(0);
+            }
         }
         
         return selected;

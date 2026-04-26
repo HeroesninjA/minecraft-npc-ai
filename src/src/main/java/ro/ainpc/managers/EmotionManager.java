@@ -1,5 +1,6 @@
 package ro.ainpc.managers;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -23,18 +24,17 @@ public class EmotionManager {
      * Aplica o emotie unui NPC
      */
     public void applyEmotion(AINPC npc, String emotion, double intensity) {
-        npc.getEmotions().applyEmotion(emotion, intensity);
-        npc.updateDisplayName();
-        
-        // Afiseaza particule daca e activat
-        if (plugin.getConfig().getBoolean("emotions.show_particles", true)) {
-            showEmotionParticles(npc, emotion, intensity);
-        }
-        
-        // Salveaza in baza de date
-        plugin.getNpcManager().saveEmotions(npc);
-        
-        plugin.debug("Emotie aplicata pentru " + npc.getName() + ": " + emotion + " (" + intensity + ")");
+        runEmotionUpdate(() -> {
+            npc.getEmotions().applyEmotion(emotion, intensity);
+            npc.updateDisplayName();
+
+            if (plugin.getConfig().getBoolean("emotions.show_particles", true)) {
+                showEmotionParticles(npc, emotion, intensity);
+            }
+
+            persistEmotionsAsync(npc);
+            plugin.debug("Emotie aplicata pentru " + npc.getName() + ": " + emotion + " (" + intensity + ")");
+        });
     }
 
     /**
@@ -49,6 +49,14 @@ public class EmotionManager {
         }
         
         plugin.debug("Decay emotii aplicat pentru toate NPC-urile.");
+    }
+
+    public void applyInteractionEffect(AINPC npc, String interactionType, double multiplier) {
+        runEmotionUpdate(() -> {
+            npc.getEmotions().applyInteractionEffect(interactionType, multiplier);
+            npc.updateDisplayName();
+            persistEmotionsAsync(npc);
+        });
     }
 
     /**
@@ -219,23 +227,37 @@ public class EmotionManager {
      * Seteaza emotia dominanta direct
      */
     public void setMood(AINPC npc, String emotion, double intensity) {
-        // Reseteaza toate emotiile
-        NPCEmotions emotions = npc.getEmotions();
-        emotions.setHappiness(emotion.equals("happiness") ? intensity : 0.3);
-        emotions.setSadness(emotion.equals("sadness") ? intensity : 0.0);
-        emotions.setAnger(emotion.equals("anger") ? intensity : 0.0);
-        emotions.setFear(emotion.equals("fear") ? intensity : 0.0);
-        emotions.setSurprise(emotion.equals("surprise") ? intensity : 0.0);
-        emotions.setDisgust(emotion.equals("disgust") ? intensity : 0.0);
-        emotions.setTrust(emotion.equals("trust") ? intensity : 0.5);
-        emotions.setAnticipation(emotion.equals("anticipation") ? intensity : 0.3);
-        
-        npc.updateDisplayName();
-        showEmotionParticles(npc, emotion, intensity);
-        plugin.getNpcManager().saveEmotions(npc);
+        runEmotionUpdate(() -> {
+            NPCEmotions emotions = npc.getEmotions();
+            emotions.setHappiness(emotion.equals("happiness") ? intensity : 0.3);
+            emotions.setSadness(emotion.equals("sadness") ? intensity : 0.0);
+            emotions.setAnger(emotion.equals("anger") ? intensity : 0.0);
+            emotions.setFear(emotion.equals("fear") ? intensity : 0.0);
+            emotions.setSurprise(emotion.equals("surprise") ? intensity : 0.0);
+            emotions.setDisgust(emotion.equals("disgust") ? intensity : 0.0);
+            emotions.setTrust(emotion.equals("trust") ? intensity : 0.5);
+            emotions.setAnticipation(emotion.equals("anticipation") ? intensity : 0.3);
+
+            npc.updateDisplayName();
+            showEmotionParticles(npc, emotion, intensity);
+            persistEmotionsAsync(npc);
+        });
     }
 
     // Helper methods
+
+    private void runEmotionUpdate(Runnable task) {
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+            return;
+        }
+
+        plugin.getServer().getScheduler().runTask(plugin, task);
+    }
+
+    private void persistEmotionsAsync(AINPC npc) {
+        plugin.getDatabaseManager().runAsync(() -> plugin.getNpcManager().saveEmotions(npc));
+    }
 
     private String getEmotionNameRomanian(String emotion) {
         return switch (emotion.toLowerCase()) {

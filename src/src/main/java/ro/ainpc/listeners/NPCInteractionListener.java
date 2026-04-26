@@ -8,6 +8,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.ai.DialogManager;
+import ro.ainpc.ai.OpenAIService;
+import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 
 /**
@@ -37,6 +39,10 @@ public class NPCInteractionListener extends AbstractPluginListener {
             npc = plugin.getNpcManager().ensureVillagerIsNPC((Villager) entity);
         }
         if (npc == null) return;
+
+        plugin.getNpcManager().refreshVillagerProfile((Villager) entity);
+        npc = plugin.getNpcManager().getNPCByEntity(entity);
+        if (npc == null) return;
         
         // Anuleaza interactiunea default
         event.setCancelled(true);
@@ -53,6 +59,26 @@ public class NPCInteractionListener extends AbstractPluginListener {
         npc.lookAt(player);
         npc.updateContext();
         npc.getContext().setInteractingPlayer(player);
+
+        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().handleQuestInteraction(player, npc);
+        if (questInteraction.isHandled()) {
+            if (questInteraction.shouldOpenConversation()) {
+                openOrRefreshConversation(player, npc);
+            }
+
+            for (String npcMessage : questInteraction.getNpcMessages()) {
+                messages().sendNPCMessage(player, npc.getName(), npcMessage);
+            }
+            for (String systemMessage : questInteraction.getSystemMessages()) {
+                messages().send(player, systemMessage);
+            }
+            if (questInteraction.shouldOpenConversation()) {
+                messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.getName() + ". Scrie 'pa' pentru a termina conversatia.)");
+            }
+
+            plugin.getEmotionManager().processEvent(npc, "player_approach", 1.0);
+            return;
+        }
         
         // Activeaza conversatia
         startConversation(player, npc);
@@ -62,21 +88,40 @@ public class NPCInteractionListener extends AbstractPluginListener {
      * Incepe o conversatie cu un NPC
      */
     private void startConversation(Player player, AINPC npc) {
-        boolean firstMeeting = beginConversationSession(player, npc);
-        
-        // Mesaj de inceput
-        String greeting;
-        if (firstMeeting) {
-            greeting = getFirstMeetingGreeting(npc);
-        } else {
-            greeting = getReturningGreeting(npc, player);
+        beginConversationSession(player, npc)
+            .thenCompose(firstMeeting -> {
+                if (firstMeeting) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(getFirstMeetingGreeting(npc));
+                }
+                return dialogManager.getRelationshipAsync(npc, player)
+                    .thenApply(relationship -> getReturningGreeting(npc, player, relationship));
+            })
+            .thenAccept(greeting -> runSync(() -> {
+                messages().sendNPCMessage(player, npc.getName(), greeting);
+                messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.getName() + ". Scrie 'pa' pentru a termina conversatia.)");
+                plugin.getEmotionManager().processEvent(npc, "player_approach", 1.0);
+            }))
+            .exceptionally(ex -> {
+                runSync(() -> {
+                    plugin.getLogger().warning("Nu am putut initializa conversatia cu " + npc.getName() + ": " + ex.getMessage());
+                    messages().sendMessage(player, "ai_error");
+                });
+                return null;
+            });
+    }
+
+    private void openOrRefreshConversation(Player player, AINPC npc) {
+        AINPC currentPartner = conversations().getConversationPartner(player);
+        if (currentPartner != null && currentPartner.getUuid().equals(npc.getUuid())) {
+            refreshConversationSession(player);
+            return;
         }
-        
-        messages().sendNPCMessage(player, npc.getName(), greeting);
-        messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.getName() + ". Scrie 'pa' pentru a termina conversatia.)");
-        
-        // Aplica efectul emotional de intalnire
-        plugin.getEmotionManager().processEvent(npc, "player_approach", 1.0);
+
+        beginConversationSession(player, npc).exceptionally(ex -> {
+            plugin.getLogger().warning("Nu am putut reactualiza sesiunea pentru " + npc.getName()
+                + ": " + ex.getMessage());
+            return false;
+        });
     }
 
     private String getFirstMeetingGreeting(AINPC npc) {
@@ -91,9 +136,8 @@ public class NPCInteractionListener extends AbstractPluginListener {
         }
     }
 
-    private String getReturningGreeting(AINPC npc, Player player) {
+    private String getReturningGreeting(AINPC npc, Player player, OpenAIService.NPCRelationship relationship) {
         double affection = 0;
-        var relationship = dialogManager.getRelationship(npc, player);
         if (relationship != null) {
             affection = relationship.getAffection();
         }
