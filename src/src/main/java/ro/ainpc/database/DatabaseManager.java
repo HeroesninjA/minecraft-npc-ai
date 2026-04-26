@@ -228,10 +228,16 @@ public class DatabaseManager {
                     status TEXT NOT NULL,
                     started_at INTEGER,
                     completed_at INTEGER,
+                    current_phase TEXT NOT NULL DEFAULT '',
+                    objective_progress TEXT NOT NULL DEFAULT '{}',
+                    quest_variables TEXT NOT NULL DEFAULT '{}',
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY (player_uuid, template_id)
                 )
             """);
+            ensureColumnExists("player_quests", "current_phase", "TEXT NOT NULL DEFAULT ''");
+            ensureColumnExists("player_quests", "objective_progress", "TEXT NOT NULL DEFAULT '{}'");
+            ensureColumnExists("player_quests", "quest_variables", "TEXT NOT NULL DEFAULT '{}'");
             stmt.execute("""
                 CREATE INDEX IF NOT EXISTS idx_player_quests_player_status
                 ON player_quests(player_uuid, status)
@@ -249,6 +255,30 @@ public class DatabaseManager {
             
             plugin.debug("Toate tabelele au fost create/verificate.");
         }
+    }
+
+    private void ensureColumnExists(String tableName, String columnName, String definition) throws SQLException {
+        if (hasColumn(tableName, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + definition);
+        }
+        plugin.debug("Coloana DB adaugata automat: " + tableName + "." + columnName);
+    }
+
+    private boolean hasColumn(String tableName, String columnName) throws SQLException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ")")) {
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private void enableForeignKeys() throws SQLException {

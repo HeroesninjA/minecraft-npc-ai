@@ -2,10 +2,12 @@ package ro.ainpc;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.command.PluginCommand;
 import ro.ainpc.ai.DialogManager;
 import ro.ainpc.ai.OpenAIService;
+import ro.ainpc.api.AINPCPlatformApi;
 import ro.ainpc.commands.AINPCCommand;
 import ro.ainpc.commands.AINPCTabCompleter;
 import ro.ainpc.database.DatabaseManager;
@@ -144,13 +146,14 @@ public class AINPCPlugin extends JavaPlugin {
         
         // Porneste task-urile periodice
         startScheduledTasks();
+        getServer().getServicesManager().register(AINPCPlatformApi.class, platform, this, ServicePriority.Normal);
         
         getLogger().info("========================================");
         getLogger().info("AI NPC Plugin v" + getPluginMeta().getVersion() + " activat!");
         getLogger().info("NPC-uri incarcate: " + npcManager.getNPCCount());
         getLogger().info("Addonuri inregistrate: " + platform.getAddonRegistry().size());
-        getLogger().info("World admin: " + platform.getWorldAdminService().getRegions().size() + " regiuni / "
-            + platform.getWorldAdminService().getNodeCount() + " noduri");
+        getLogger().info("World admin: " + platform.getWorldAdmin().getRegionCount() + " regiuni / "
+            + platform.getWorldAdmin().getNodeCount() + " noduri");
         getLogger().info("========================================");
     }
 
@@ -171,6 +174,7 @@ public class AINPCPlugin extends JavaPlugin {
         if (platform != null) {
             platform.shutdown();
         }
+        getServer().getServicesManager().unregisterAll(this);
         
         getLogger().info("AI NPC Plugin dezactivat!");
     }
@@ -224,6 +228,11 @@ public class AINPCPlugin extends JavaPlugin {
         if (memoryManager != null) {
             dialogueEngine = new DialogueEngine(this, openAIService);
         }
+        reloadContent();
+        getLogger().info("Configuratie reincarcata!");
+    }
+
+    public void reloadContent() {
         if (featurePackLoader != null) {
             featurePackLoader.loadAllPacks();
         }
@@ -233,7 +242,6 @@ public class AINPCPlugin extends JavaPlugin {
         if (npcManager != null) {
             npcManager.ensureAllNPCsHaveProfiles();
         }
-        getLogger().info("Configuratie reincarcata!");
     }
 
     private void loadQuestConfig() {

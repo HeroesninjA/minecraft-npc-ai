@@ -59,6 +59,7 @@ public class NPCInteractionListener extends AbstractPluginListener {
         npc.lookAt(player);
         npc.updateContext();
         npc.getContext().setInteractingPlayer(player);
+        plugin.getScenarioEngine().recordNpcConversation(player, npc);
 
         ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().handleQuestInteraction(player, npc);
         if (questInteraction.isHandled()) {

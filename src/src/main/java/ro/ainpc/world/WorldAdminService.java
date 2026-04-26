@@ -3,6 +3,7 @@ package ro.ainpc.world;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.platform.PlatformProfile;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class WorldAdminService {
+public class WorldAdminService implements WorldAdminApi {
 
     private final AINPCPlugin plugin;
     private final Map<String, WorldRegion> regionsById;
@@ -153,10 +154,17 @@ public class WorldAdminService {
         return enabled;
     }
 
+    @Override
     public WorldMode getWorldMode() {
         return worldMode;
     }
 
+    @Override
+    public int getRegionCount() {
+        return regionsById.size();
+    }
+
+    @Override
     public int getNodeCount() {
         return nodesByRegion.values().stream().mapToInt(List::size).sum();
     }

@@ -1,0 +1,142 @@
+# ========================================
+# Quest-uri fallback si preconfigurari implicite
+# ========================================
+
+# Daca este activ, NPC-urile fara quest definit in pack-uri ofera un quest simplu
+# in functie de profesia lor.
+simple_for_all_npcs: true
+
+# Configurare per profesie pentru quest-urile fallback.
+# Placeholdere disponibile:
+# {npc}, {profession}, {objective}, {reward}
+profession_fallbacks:
+  default:
+    title: "Ajutor rapid"
+    objective:
+      item: "OAK_PLANKS"
+      amount: 3
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "EMERALD"
+      amount: 1
+    hint: "{npc} are nevoie de ajutor cu treburi obisnuite de {profession}."
+
+  blacksmith:
+    title: "Provizii pentru fierarie"
+    objective:
+      item: "IRON_INGOT"
+      amount: 3
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "IRON_SWORD"
+      amount: 1
+    hint: "{npc} are nevoie de {objective} pentru o arma noua."
+
+  farmer:
+    title: "Recolta de dimineata"
+    objective:
+      item: "WHEAT"
+      amount: 10
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "BREAD"
+      amount: 4
+    hint: "{npc} are nevoie de provizii pentru hambar."
+
+  guard:
+    title: "Provizii pentru garda"
+    objective:
+      item: "ARROW"
+      amount: 8
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "SHIELD"
+      amount: 1
+    hint: "{npc} isi pregateste echipamentul pentru patrula."
+
+  merchant:
+    title: "Marfa pentru taraba"
+    objective:
+      item: "PAPER"
+      amount: 6
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "EMERALD"
+      amount: 2
+    hint: "{npc} vrea sa-si completeze registrele si ofertele."
+
+  innkeeper:
+    title: "Provizii pentru han"
+    objective:
+      item: "WHEAT"
+      amount: 6
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "COOKED_BEEF"
+      amount: 3
+    hint: "{npc} pregateste mesele pentru calatorii din han."
+
+  priest:
+    title: "Pregatiri pentru altar"
+    objective:
+      item: "CANDLE"
+      amount: 4
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "EXPERIENCE_BOTTLE"
+      amount: 2
+    hint: "{npc} are nevoie de lumina pentru altar."
+
+  healer:
+    title: "Ierburi pentru leacuri"
+    objective:
+      item: "DANDELION"
+      amount: 6
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "HONEY_BOTTLE"
+      amount: 2
+    hint: "{npc} pregateste leacuri si ii lipsesc plantele."
+
+  scavenger:
+    title: "Provizii din ruine"
+    objective:
+      item: "IRON_NUGGET"
+      amount: 12
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "COOKED_CHICKEN"
+      amount: 3
+    hint: "{npc} cauta resurse utile si are nevoie de materiale recuperate."
+
+  medic:
+    title: "Trusa pentru infirmerie"
+    objective:
+      item: "PAPER"
+      amount: 6
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "HONEY_BOTTLE"
+      amount: 2
+    hint: "{npc} pregateste tratamente si ii lipsesc consumabilele."
+
+  trader:
+    title: "Stoc pentru schimb"
+    objective:
+      item: "LEATHER"
+      amount: 5
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "EMERALD"
+      amount: 3
+    hint: "{npc} are nevoie de marfa noua pentru urmatorul schimb."
+
+# Fallback generic final, folosit daca lipseste o profesie din lista de mai sus.
+simple:
+  title: "Ajutor rapid"
+  objective:
+    item: "OAK_PLANKS"
+    amount: 3
+  reward:
+    item: "EMERALD"
+    amount: 1

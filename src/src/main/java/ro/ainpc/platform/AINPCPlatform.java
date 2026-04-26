@@ -5,10 +5,13 @@ import ro.ainpc.addons.AddonDescriptor;
 import ro.ainpc.addons.AddonRegistry;
 import ro.ainpc.addons.AddonType;
 import ro.ainpc.api.AINPCPlatformApi;
+import ro.ainpc.api.AddonRegistryApi;
+import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.world.StoryMode;
 import ro.ainpc.world.WorldAdminService;
 import ro.ainpc.world.WorldMode;
 
+import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -21,7 +24,7 @@ public class AINPCPlatform implements AINPCPlatformApi {
 
     public AINPCPlatform(AINPCPlugin plugin) {
         this.plugin = plugin;
-        this.addonRegistry = new AddonRegistry();
+        this.addonRegistry = new AddonRegistry(this);
         this.worldAdminService = new WorldAdminService(plugin);
         this.profile = PlatformProfile.fromConfig(plugin.getConfig());
     }
@@ -67,11 +70,30 @@ public class AINPCPlatform implements AINPCPlatformApi {
     }
 
     @Override
-    public AddonRegistry getAddonRegistry() {
+    public AddonRegistryApi getAddonRegistry() {
         return addonRegistry;
     }
 
     @Override
+    public WorldAdminApi getWorldAdmin() {
+        return worldAdminService;
+    }
+
+    @Override
+    public Path getDataDirectory() {
+        return plugin.getDataFolder().toPath();
+    }
+
+    @Override
+    public Path getPackDirectory() {
+        return getDataDirectory().resolve("packs");
+    }
+
+    @Override
+    public void reloadContent() {
+        plugin.reloadContent();
+    }
+
     public WorldAdminService getWorldAdminService() {
         return worldAdminService;
     }
@@ -81,6 +103,6 @@ public class AINPCPlatform implements AINPCPlatformApi {
     }
 
     public void shutdown() {
-        addonRegistry.shutdown(plugin);
+        addonRegistry.shutdown();
     }
 }

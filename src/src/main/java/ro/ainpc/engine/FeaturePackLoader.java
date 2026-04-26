@@ -76,12 +76,11 @@ public class FeaturePackLoader {
         saveDefaultPacks();
         
         // Incarca fiecare fisier YAML
-        File[] files = packsFolder.listFiles((dir, name) -> name.endsWith(".yml") || name.endsWith(".yaml"));
-        if (files != null) {
-            Arrays.sort(files, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
-            for (File file : files) {
-                loadPack(file);
-            }
+        List<File> files = new ArrayList<>();
+        collectPackFiles(packsFolder, files);
+        files.sort(Comparator.comparing(file -> relativizePackPath(packsFolder, file), String.CASE_INSENSITIVE_ORDER));
+        for (File file : files) {
+            loadPack(file);
         }
         
         // Incarca pachetul medieval default din resurse daca nu exista niciunul
@@ -104,7 +103,6 @@ public class FeaturePackLoader {
      */
     private void saveDefaultPacks() {
         saveResource("packs/medieval.yml");
-        saveResource("packs/medieval_quest.yml");
         saveResource("packs/modern.yml");
         saveResource("packs/social.yml");
     }
@@ -121,6 +119,30 @@ public class FeaturePackLoader {
         } catch (Exception e) {
             plugin.debug("Nu s-a putut salva resursa: " + resourcePath);
         }
+    }
+
+    private void collectPackFiles(File folder, List<File> files) {
+        File[] entries = folder.listFiles();
+        if (entries == null) {
+            return;
+        }
+
+        Arrays.sort(entries, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                collectPackFiles(entry, files);
+                continue;
+            }
+
+            String fileName = entry.getName().toLowerCase(Locale.ROOT);
+            if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
+                files.add(entry);
+            }
+        }
+    }
+
+    private String relativizePackPath(File root, File file) {
+        return root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/');
     }
 
     /**

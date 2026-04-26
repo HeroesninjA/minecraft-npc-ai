@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/ainpc-core-plugin/ainpc-core-plugin.iml" filepath="$PROJECT_DIR$/ainpc-core-plugin/ainpc-core-plugin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ainpc-scenario-medieval/ainpc-scenario-medieval.iml" filepath="$PROJECT_DIR$/ainpc-scenario-medieval/ainpc-scenario-medieval.iml" />
       <module fileurl="file://$PROJECT_DIR$/test.iml" filepath="$PROJECT_DIR$/test.iml" />
     </modules>
   </component>

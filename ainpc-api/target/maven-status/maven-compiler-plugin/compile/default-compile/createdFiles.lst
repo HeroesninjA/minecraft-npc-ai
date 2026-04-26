@@ -1,0 +1,9 @@
+ro\ainpc\addons\AddonDescriptor.class
+ro\ainpc\addons\AINPCAddon.class
+ro\ainpc\api\WorldAdminApi.class
+ro\ainpc\world\WorldMode.class
+ro\ainpc\platform\RuntimeMode.class
+ro\ainpc\world\StoryMode.class
+ro\ainpc\addons\AddonType.class
+ro\ainpc\api\AINPCPlatformApi.class
+ro\ainpc\api\AddonRegistryApi.class
