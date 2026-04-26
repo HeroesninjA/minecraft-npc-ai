@@ -6,6 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mapping.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/questuri-avansate.md" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -237,7 +240,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777213992368</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="test">
+      <option name="closed" value="true" />
+      <created>1777216260970</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1777216260970</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
