@@ -141,7 +141,7 @@ public class NPCChatListener extends AbstractPluginListener {
         npc.getContext().setInteractingPlayer(player);
         npc.getContext().setLastPlayerMessage(message);
 
-        if (handleQuestTriggerFromMessage(player, npc, message)) {
+        if (handleQuestInteractionFromMessage(player, npc, message)) {
             return;
         }
 
@@ -186,14 +186,29 @@ public class NPCChatListener extends AbstractPluginListener {
         });
     }
 
-    private boolean handleQuestTriggerFromMessage(Player player, AINPC npc, String message) {
-        if (!containsQuestKeyword(message)) {
+    private boolean handleQuestInteractionFromMessage(Player player, AINPC npc, String message) {
+        if (!containsQuestKeyword(message)
+            && !containsQuestAcceptKeyword(message)
+            && !containsQuestDeclineKeyword(message)
+            && !containsQuestAbandonKeyword(message)
+            && !containsQuestStatusKeyword(message)
+            && !containsQuestCompletionKeyword(message)) {
             return false;
         }
 
         AINPC questNpc = refreshQuestNpc(npc);
-        ScenarioEngine.QuestInteractionResult questInteraction =
-            plugin.getScenarioEngine().handleQuestInteraction(player, questNpc);
+        ScenarioEngine.QuestInteractionResult questInteraction;
+        if (containsQuestDeclineKeyword(message)) {
+            questInteraction = plugin.getScenarioEngine().declineQuest(player, questNpc);
+        } else if (containsQuestAbandonKeyword(message)) {
+            questInteraction = plugin.getScenarioEngine().abandonQuest(player, questNpc);
+        } else if (containsQuestAcceptKeyword(message)) {
+            questInteraction = plugin.getScenarioEngine().acceptQuest(player, questNpc);
+        } else if (containsQuestStatusKeyword(message)) {
+            questInteraction = plugin.getScenarioEngine().getQuestStatus(player, questNpc);
+        } else {
+            questInteraction = plugin.getScenarioEngine().handleQuestInteraction(player, questNpc);
+        }
         if (!questInteraction.isHandled()) {
             return false;
         }
@@ -238,6 +253,40 @@ public class NPCChatListener extends AbstractPluginListener {
             || containsWord(normalizedMessage, "quests");
     }
 
+    private boolean containsQuestAcceptKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "accept")
+            || containsWord(normalizedMessage, "accepta");
+    }
+
+    private boolean containsQuestDeclineKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "refuz")
+            || containsWord(normalizedMessage, "refuza")
+            || normalizedMessage.contains("nu accept");
+    }
+
+    private boolean containsQuestAbandonKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "renunt")
+            || containsWord(normalizedMessage, "abandonez")
+            || containsWord(normalizedMessage, "abandon");
+    }
+
+    private boolean containsQuestStatusKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "status")
+            || containsWord(normalizedMessage, "progres");
+    }
+
+    private boolean containsQuestCompletionKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "gata")
+            || containsWord(normalizedMessage, "terminat")
+            || containsWord(normalizedMessage, "finalizat")
+            || normalizedMessage.contains("am adus");
+    }
+
     private boolean containsWord(String normalizedMessage, String token) {
         if (normalizedMessage == null || normalizedMessage.isBlank() || token == null || token.isBlank()) {
             return false;
@@ -276,7 +325,7 @@ public class NPCChatListener extends AbstractPluginListener {
         String lower = message.toLowerCase().trim();
         return lower.equals("pa") || lower.equals("la revedere") || lower.equals("bye") ||
                lower.equals("adio") || lower.equals("exit") || lower.equals("quit") ||
-               lower.startsWith("pa ") || lower.equals("gata");
+               lower.startsWith("pa ");
     }
 
     private String getGoodbyeMessage(AINPC npc) {

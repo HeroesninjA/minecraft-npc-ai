@@ -219,6 +219,24 @@ public class DatabaseManager {
                 ON dialog_history(npc_id, player_uuid, created_at DESC)
             """);
 
+            // Tabel progres quest per jucator
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS player_quests (
+                    player_uuid TEXT NOT NULL,
+                    template_id TEXT NOT NULL,
+                    quest_code TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL,
+                    started_at INTEGER,
+                    completed_at INTEGER,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (player_uuid, template_id)
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_player_quests_player_status
+                ON player_quests(player_uuid, status)
+            """);
+
             // Backfill pentru baze de date vechi, astfel incat fiecare NPC existent sa aiba toate datele de profil.
             stmt.executeUpdate("""
                 INSERT OR IGNORE INTO npc_personality (npc_id)

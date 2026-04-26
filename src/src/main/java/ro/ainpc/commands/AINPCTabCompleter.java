@@ -21,7 +21,9 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> SUBCOMMANDS = Arrays.asList(
         "create", "delete", "info", "quest", "list", "family", "mood", "tp", "reload", "test"
     );
-    private static final List<String> QUEST_MODES = Arrays.asList("nearest", "reset", "complete");
+    private static final List<String> QUEST_MODES = Arrays.asList(
+        "nearest", "accept", "decline", "abandon", "status", "reset", "complete"
+    );
     
     private static final List<String> OCCUPATIONS = Arrays.asList(
         "fermier", "fierar", "pescar", "negustor", "miner", "tamplar",
@@ -103,7 +105,10 @@ public class AINPCTabCompleter implements TabCompleter {
             }
             case 2 -> {
                 String questMode = questArgs[0].toLowerCase();
-                if (questMode.equals("reset") || questMode.equals("complete")) {
+                if (questMode.equals("reset") || questMode.equals("complete")
+                    || questMode.equals("accept") || questMode.equals("decline")
+                    || questMode.equals("abandon") || questMode.equals("status")) {
+                    completions.addAll(filterStartsWith(List.of("nearest"), questArgs[1]));
                     completions.addAll(getNPCNames(questArgs[1]));
                 } else {
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
@@ -111,7 +116,9 @@ public class AINPCTabCompleter implements TabCompleter {
             }
             case 3 -> {
                 String questMode = questArgs[0].toLowerCase();
-                if (questMode.equals("reset") || questMode.equals("complete")) {
+                if (questMode.equals("reset") || questMode.equals("complete")
+                    || questMode.equals("accept") || questMode.equals("decline")
+                    || questMode.equals("abandon") || questMode.equals("status")) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
                 }
             }

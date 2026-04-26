@@ -7,6 +7,7 @@ ro\ainpc\engine\DialogueEngine$DialogueIntent.class
 ro\ainpc\npc\NPCContext.class
 ro\ainpc\database\DatabaseManager$DatabaseThreadFactory.class
 ro\ainpc\listeners\NPCChatListener.class
+ro\ainpc\engine\ScenarioEngine$QuestStatus.class
 ro\ainpc\engine\FeaturePackLoader$ScenarioRoleDefinition.class
 ro\ainpc\engine\ScenarioEngine$PlayerQuestProgress.class
 ro\ainpc\world\StoryMode.class
@@ -27,6 +28,7 @@ ro\ainpc\npc\NPCEmotions.class
 ro\ainpc\managers\MemoryManager.class
 ro\ainpc\addons\AddonType.class
 ro\ainpc\AINPCPlugin.class
+ro\ainpc\engine\ScenarioEngine$SimpleQuestProfile.class
 ro\ainpc\ai\DialogManager$GeneratedDialog.class
 ro\ainpc\listeners\ListenerRegistry.class
 ro\ainpc\utils\MessageUtils.class

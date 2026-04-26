@@ -69,18 +69,7 @@ simulation:
     # Ritmul in care siguranta isi revine cand nu exista pericol.
     safety_recovery: 1.0
 
-# Quest simplu pentru testare
-quests:
-  # Daca este activ, orice NPC ofera un quest simplu de tip "adu materiale -> primesti recompensa".
-  simple_for_all_npcs: true
-  simple:
-    title: "Ajutor rapid"
-    objective:
-      item: "OAK_PLANKS"
-      amount: 3
-    reward:
-      item: "EMERALD"
-      amount: 1
+# Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
 
 # Setari emotii
 emotions:

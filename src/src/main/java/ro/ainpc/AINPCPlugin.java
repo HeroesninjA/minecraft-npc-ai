@@ -1,5 +1,7 @@
 package ro.ainpc;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.command.PluginCommand;
 import ro.ainpc.ai.DialogManager;
@@ -20,6 +22,7 @@ import ro.ainpc.managers.NPCManager;
 import ro.ainpc.platform.AINPCPlatform;
 import ro.ainpc.utils.MessageUtils;
 
+import java.io.File;
 import java.util.logging.Level;
 
 public class AINPCPlugin extends JavaPlugin {
@@ -37,6 +40,8 @@ public class AINPCPlugin extends JavaPlugin {
     private MessageUtils messageUtils;
     private AINPCPlatform platform;
     private ListenerRegistry listenerRegistry;
+    private File questConfigFile;
+    private FileConfiguration questConfig;
     
     // Motoare AI
     private DecisionEngine decisionEngine;
@@ -52,6 +57,7 @@ public class AINPCPlugin extends JavaPlugin {
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        loadQuestConfig();
         
         // Initializeaza utilitarele
         messageUtils = new MessageUtils(this);
@@ -208,6 +214,7 @@ public class AINPCPlugin extends JavaPlugin {
         reloadConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        loadQuestConfig();
         messageUtils = new MessageUtils(this);
         if (platform != null) {
             platform.reloadFromConfig();
@@ -227,6 +234,19 @@ public class AINPCPlugin extends JavaPlugin {
             npcManager.ensureAllNPCsHaveProfiles();
         }
         getLogger().info("Configuratie reincarcata!");
+    }
+
+    private void loadQuestConfig() {
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
+
+        questConfigFile = new File(getDataFolder(), "quests.yml");
+        if (!questConfigFile.exists()) {
+            saveResource("quests.yml", false);
+        }
+
+        questConfig = YamlConfiguration.loadConfiguration(questConfigFile);
     }
 
     // Getters
@@ -288,6 +308,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public FeaturePackLoader getFeaturePackLoader() {
         return featurePackLoader;
+    }
+
+    public FileConfiguration getQuestConfig() {
+        return questConfig;
     }
     
     public void debug(String message) {
