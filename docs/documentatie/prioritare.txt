@@ -1,0 +1,40 @@
+Ordinea bună, pe ce ai acum, este asta:
+1.
+Modelul de progres Acesta e primul blocaj real. Acum ai deja stări bune în ScenarioEngine.java, dar progresul persistat în PlayerQuestProgress ține doar status și timestamps. Aș adăuga current_phase, objective_progress, quest_variables. Fără asta, orice pas următor o să fie workaround.
+2.
+Objective handlers Acum motorul finalizează practic doar questuri de tip item-delivery, prin verificare și consum în ScenarioEngine.java și ScenarioEngine.java. Aici aș introduce handlere pentru collect_item, talk_to_npc, visit_region, kill_mob, deliver_to_npc. Asta transformă sistemul din “quest de adus materiale” în quest engine.
+3.
+Quest log pentru jucător Abia după ce progresul e real merită UI/UX. Acum jucătorul depinde mult de dialog/comenzi, iar comenzile sunt încă orientate admin în AINPCCommand.java și permisiuni în plugin.yml. Aș face /quest, track, status clar, eventual bossbar/actionbar.
+4.
+Varianta de conținut După ce ai progres + handlers, extinzi quests.yml sau addon packs cu mai multe questuri per profesie, nu doar un fallback fix per profesie ca în quests.yml. Aici intră weighted pools, prerequisites, cooldowns, repeatable.
+5.
+Main quest + side quests Abia aici aș relaxa regula actuală de un singur quest activ, impusă în ScenarioEngine.java. Dacă faci asta mai devreme, complici inutil persistența și UX-ul.
+6.
+Reputație și consecințe După ce questurile merg bine, adaugi reputation, npc relationship, branching outcomes, fail conditions. Asta e valoare mare pentru gameplay, dar nu trebuie făcut înainte de fundație.
+7.
+Refactor arhitectural La final scoți questurile din ScenarioEngine într-un QuestService separat. Nu aș începe cu asta, pentru că riști să refactorezi de două ori înainte să stabilizezi modelul.
+Ce aș evita acum:
+•
+să faci mai întâi GUI fancy
+•
+să faci mai întâi branching complex
+•
+să faci mai întâi multi-quest simultan
+•
+să refactorezi agresiv înainte să fixezi modelul de progres
+Dacă vrei o ordine de implementare concretă pe pași mici, eu aș face:
+1.
+objective_progress + current_phase în DB
+2.
+collect_item și talk_to_npc
+3.
+/quest log și track
+4.
+cooldown/repeatable/prerequisites
+5.
+side quests
+6.
+reputație
+7.
+extragere QuestService
+Dacă vrei, pot începe direct cu pasul 1 și 2, care sunt cele mai importante.
