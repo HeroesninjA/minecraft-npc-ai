@@ -5,29 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/addons/AINPCAddon.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/addons/AddonDescriptor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/addons/AddonRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/addons/AddonRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/addons/AddonType.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/api/AINPCPlatformApi.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/ListenerRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/ListenerRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCInteractionListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCInteractionListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/platform/AINPCPlatform.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/platform/AINPCPlatform.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/platform/RuntimeMode.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/StoryMode.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldAdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldMode.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/resources/packs/medieval_quest.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/ainpc-api-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/ainpc-api-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0-shaded.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0-shaded.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +18,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="73" />
+    <option name="cachedIndexableFilesCount" value="85" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -51,22 +34,22 @@
     &quot;assignee&quot;: &quot;HeroesninjA&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/HeroesninjA/minecraft-npc-ai.git",
-    "accountId": "2c5a98a0-3c85-4314-aa61-affbbf73747f"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/HeroesninjA/minecraft-npc-ai.git&quot;,
+    &quot;accountId&quot;: &quot;2c5a98a0-3c85-4314-aa61-affbbf73747f&quot;
   },
-  "recentNewPullRequestHead": {
-    "server": {
-      "useHttp": false,
-      "host": "github.com",
-      "port": null,
-      "suffix": null
+  &quot;recentNewPullRequestHead&quot;: {
+    &quot;server&quot;: {
+      &quot;useHttp&quot;: false,
+      &quot;host&quot;: &quot;github.com&quot;,
+      &quot;port&quot;: null,
+      &quot;suffix&quot;: null
     },
-    "owner": "HeroesninjA",
-    "repository": "minecraft-npc-ai"
+    &quot;owner&quot;: &quot;HeroesninjA&quot;,
+    &quot;repository&quot;: &quot;minecraft-npc-ai&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -91,7 +74,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "core-+-addon-",
+    "git-widget-placeholder": "test2",
     "git.auto.fetch.suggestion.counter": "1",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
