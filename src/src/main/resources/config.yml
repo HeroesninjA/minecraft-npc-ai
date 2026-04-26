@@ -54,6 +54,34 @@ npc:
   # Durata pana cand NPC-ul "uita" o amintire minora (zile)
   memory_decay_days: 30
 
+# Simulare de viata
+simulation:
+  # Daca este activ, NPC-urile isi actualizeaza rutina si nevoile de baza periodic.
+  enabled: true
+  # La cate secunde ruleaza un tick de simulare.
+  tick_seconds: 30
+  needs:
+    # Cu cat scaderea este mai mare, cu atat NPC-urile simt mai repede nevoia respectiva.
+    hunger_decay: 1.5
+    energy_decay: 1.2
+    social_decay: 0.8
+    comfort_decay: 0.6
+    # Ritmul in care siguranta isi revine cand nu exista pericol.
+    safety_recovery: 1.0
+
+# Quest simplu pentru testare
+quests:
+  # Daca este activ, orice NPC ofera un quest simplu de tip "adu materiale -> primesti recompensa".
+  simple_for_all_npcs: true
+  simple:
+    title: "Ajutor rapid"
+    objective:
+      item: "OAK_PLANKS"
+      amount: 3
+    reward:
+      item: "EMERALD"
+      amount: 1
+
 # Setari emotii
 emotions:
   # Cat de repede se schimba emotiile (0.0-1.0)

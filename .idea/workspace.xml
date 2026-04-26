@@ -5,41 +5,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/ai/DialogManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/ai/DialogManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/database/DatabaseManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/DialogueEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/DialogueEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/AbstractPluginListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/AbstractPluginListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/DecisionEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/DecisionEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCChatListener.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCInteractionListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/NPCInteractionListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/PlayerJoinListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/listeners/PlayerJoinListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/EmotionManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/EmotionManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/MemoryManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/MemoryManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/NPCManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/managers/NPCManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/npc/AINPC.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/npc/AINPC.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/npc/NPCContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/npc/NPCContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/resources/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/resources/plugin.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0-shaded.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/plugin.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/AINPCPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/AINPCPlugin.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogContext.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogContext.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogRequest.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogResult.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogStatus.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogStatus.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$PromptDbContext.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$PromptDbContext.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/database/DatabaseManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/database/DatabaseManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine$DialogueIntent.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine$DialogueIntent.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/AbstractPluginListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/AbstractPluginListener.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DecisionEngine$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DecisionEngine$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DecisionEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DecisionEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInventoryCheck.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInventoryCheck.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$ResolvedDialogTarget.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$ResolvedDialogTarget.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCInteractionListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCInteractionListener.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/PlayerJoinListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/PlayerJoinListener.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/EmotionManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/EmotionManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager$Memory.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager$Memory.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager$VillageSnapshot.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager$VillageSnapshot.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/AINPC.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/AINPC.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCContext$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCContext$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCContext.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCContext.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/original-AINPCPlugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/original-AINPCPlugin-1.0.0.jar" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -197,7 +203,7 @@
       <workItem from="1777110058067" duration="10199000" />
       <workItem from="1777121733259" duration="3188000" />
       <workItem from="1777124944023" duration="168000" />
-      <workItem from="1777125370750" duration="3449000" />
+      <workItem from="1777125370750" duration="13531000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -207,7 +213,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777128393753</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="test">
+      <option name="closed" value="true" />
+      <created>1777130126260</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1777130126260</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

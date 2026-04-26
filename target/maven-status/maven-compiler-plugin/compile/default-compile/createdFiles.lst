@@ -49,6 +49,7 @@ ro\ainpc\ai\OpenAIService$PromptSnapshot.class
 ro\ainpc\engine\FeaturePackLoader$TraitDefinition.class
 ro\ainpc\world\WorldMode.class
 ro\ainpc\platform\PlatformProfile.class
+ro\ainpc\engine\DecisionEngine$LocationWrapper.class
 ro\ainpc\engine\FeaturePackLoader$ProfessionDefinition.class
 ro\ainpc\api\AINPCPlatformApi.class
 ro\ainpc\ai\OpenAIService$FamilyMemberSnapshot.class
@@ -63,6 +64,7 @@ ro\ainpc\engine\DialogueEngine.class
 ro\ainpc\npc\NPCPersonality.class
 ro\ainpc\ai\OpenAIService.class
 ro\ainpc\listeners\PlayerJoinListener.class
+ro\ainpc\npc\AINPC$OwnedLocation.class
 ro\ainpc\ai\OpenAIService$NPCRelationship.class
 ro\ainpc\ai\NpcFactResolver$FactIntent.class
 ro\ainpc\engine\FeaturePackLoader$FeaturePack.class
@@ -75,6 +77,7 @@ ro\ainpc\npc\AINPC.class
 ro\ainpc\addons\AINPCAddon.class
 ro\ainpc\platform\RuntimeMode.class
 ro\ainpc\engine\ScenarioEngine$ActiveScenario.class
+ro\ainpc\engine\DecisionEngine$RoutineFocus.class
 ro\ainpc\addons\AddonRegistry.class
 ro\ainpc\managers\NPCManager$VillageSnapshot.class
 ro\ainpc\commands\AINPCCommand.class

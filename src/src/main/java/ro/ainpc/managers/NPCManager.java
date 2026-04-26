@@ -2,6 +2,7 @@ package ro.ainpc.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -243,6 +244,7 @@ public class NPCManager {
         }
 
         applyThemeDefaults(npc);
+        ensureSimulationAnchors(npc, villager.getLocation());
 
         if (occupationChanged) {
             saveNPC(npc, false);
@@ -299,8 +301,57 @@ public class NPCManager {
         emotions.setTrust(rs.getDouble("trust"));
         emotions.setAnticipation(rs.getDouble("anticipation"));
         npc.setEmotions(emotions);
+        hydrateProfileRuntimeData(npc);
 
         return npc;
+    }
+
+    private void hydrateProfileRuntimeData(AINPC npc) {
+        String profileData = npc.getProfileDataJson();
+        if (profileData == null || profileData.isBlank()) {
+            return;
+        }
+
+        try {
+            JsonObject json = gson.fromJson(profileData, JsonObject.class);
+            if (json == null) {
+                return;
+            }
+
+            String currentState = readString(json, "current_state", "");
+            if (!currentState.isBlank()) {
+                try {
+                    npc.setCurrentState(ro.ainpc.npc.NPCState.valueOf(currentState));
+                } catch (IllegalArgumentException ignored) {
+                    plugin.debug("Stare necunoscuta in profilul NPC-ului " + npc.getName() + ": " + currentState);
+                }
+            }
+
+            JsonObject simulation = json.has("simulation") && json.get("simulation").isJsonObject()
+                ? json.getAsJsonObject("simulation")
+                : null;
+            if (simulation != null) {
+                npc.setHungerLevel(readInt(simulation, "hunger_level", npc.getHungerLevel()));
+                npc.setEnergyLevel(readInt(simulation, "energy_level", npc.getEnergyLevel()));
+                npc.setSocialNeedLevel(readInt(simulation, "social_need_level", npc.getSocialNeedLevel()));
+                npc.setComfortLevel(readInt(simulation, "comfort_level", npc.getComfortLevel()));
+                npc.setSafetyLevel(readInt(simulation, "safety_level", npc.getSafetyLevel()));
+                npc.setCurrentGoal(readString(simulation, "current_goal", npc.getCurrentGoal()));
+                npc.setPlannedRoutineActivity(readString(simulation, "planned_routine_activity", npc.getPlannedRoutineActivity()));
+                npc.setLastSimulationTickAt(readLong(simulation, "last_simulation_tick_at", npc.getLastSimulationTickAt()));
+            }
+
+            JsonObject ownedLocations = json.has("owned_locations") && json.get("owned_locations").isJsonObject()
+                ? json.getAsJsonObject("owned_locations")
+                : null;
+            if (ownedLocations != null) {
+                npc.setHomeAnchor(readOwnedLocation(ownedLocations, "home"));
+                npc.setWorkAnchor(readOwnedLocation(ownedLocations, "work"));
+                npc.setSocialAnchor(readOwnedLocation(ownedLocations, "social"));
+            }
+        } catch (Exception e) {
+            plugin.debug("Nu am putut hidrata profilul runtime pentru NPC-ul " + npc.getName() + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -343,6 +394,8 @@ public class NPCManager {
         if (!npc.spawn()) {
             return null;
         }
+
+        ensureSimulationAnchors(npc, location);
 
         if (saveNPC(npc)) {
             registerNPC(npc);
@@ -602,6 +655,7 @@ public class NPCManager {
 
         for (AINPC npc : npcsByUuid.values()) {
             applyThemeDefaults(npc);
+            ensureSimulationAnchors(npc);
             boolean missingProfile = !npc.isProfileCreated();
             if (persistProfileData(npc) && missingProfile) {
                 backfilledProfiles++;
@@ -630,6 +684,16 @@ public class NPCManager {
     public void syncAllNPCEntityState() {
         for (AINPC npc : npcsByUuid.values()) {
             npc.syncLocationFromEntity();
+        }
+    }
+
+    public void runLifeSimulationTick() {
+        for (AINPC npc : npcsByUuid.values()) {
+            if (!npc.isSpawned()) {
+                continue;
+            }
+            ensureSimulationAnchors(npc);
+            plugin.getDecisionEngine().runLifeSimulationTick(npc);
         }
     }
 
@@ -1199,6 +1263,7 @@ public class NPCManager {
         AINPC npc = new AINPC(plugin);
         applyAutoProfile(npc, villager);
         npc.attachToVillager(villager);
+        ensureSimulationAnchors(npc, villager.getLocation());
 
         if (!saveNPC(npc)) {
             return null;
@@ -1274,11 +1339,16 @@ public class NPCManager {
 
     private String resolveOccupationForVillager(Villager villager, Random random) {
         String mappedOccupation = mapProfessionToOccupation(villager.getProfession());
+        String inferredOccupation = inferOccupationFromEnvironment(villager);
+
+        if (shouldPreferEnvironmentOccupation(villager.getProfession(), mappedOccupation, inferredOccupation)) {
+            return inferredOccupation;
+        }
+
         if (!isGenericOccupation(mappedOccupation)) {
             return mappedOccupation;
         }
 
-        String inferredOccupation = inferOccupationFromEnvironment(villager);
         if (inferredOccupation != null && !inferredOccupation.isBlank()) {
             return inferredOccupation;
         }
@@ -1289,6 +1359,30 @@ public class NPCManager {
         }
 
         return mappedOccupation;
+    }
+
+    private boolean shouldPreferEnvironmentOccupation(Villager.Profession profession,
+                                                      String mappedOccupation,
+                                                      String inferredOccupation) {
+        if (inferredOccupation == null || inferredOccupation.isBlank()) {
+            return false;
+        }
+
+        if (isGenericOccupation(mappedOccupation)) {
+            return true;
+        }
+
+        if (mappedOccupation != null && mappedOccupation.equalsIgnoreCase(inferredOccupation)) {
+            return true;
+        }
+
+        if ("fierar".equalsIgnoreCase(inferredOccupation)) {
+            return profession == Villager.Profession.ARMORER
+                || profession == Villager.Profession.TOOLSMITH
+                || profession == Villager.Profession.WEAPONSMITH;
+        }
+
+        return false;
     }
 
     private String inferOccupationFromEnvironment(Villager villager) {
@@ -1359,6 +1453,163 @@ public class NPCManager {
             || material == Material.FLETCHING_TABLE
             || material == Material.BELL
             || material == Material.CHEST;
+    }
+
+    public void ensureSimulationAnchors(AINPC npc) {
+        ensureSimulationAnchors(npc, npc != null ? npc.getLocation() : null);
+    }
+
+    private void ensureSimulationAnchors(AINPC npc, Location center) {
+        if (npc == null || center == null || center.getWorld() == null) {
+            return;
+        }
+
+        if (npc.getHomeAnchor() == null) {
+            npc.setHomeAnchor(findNearestHomeAnchor(center));
+        }
+
+        if (npc.getWorkAnchor() == null) {
+            npc.setWorkAnchor(findNearestWorkAnchor(center, npc.getOccupation()));
+        }
+
+        if (npc.getSocialAnchor() == null) {
+            npc.setSocialAnchor(findNearestSocialAnchor(center));
+        }
+    }
+
+    private AINPC.OwnedLocation findNearestHomeAnchor(Location center) {
+        Block bed = findNearestBlock(center, 8, 4, block -> {
+            if (!Tag.BEDS.isTagged(block.getType())) {
+                return false;
+            }
+            BlockData blockData = block.getBlockData();
+            return !(blockData instanceof Bed bedData) || bedData.getPart() == Bed.Part.HEAD;
+        });
+
+        if (bed == null) {
+            return null;
+        }
+
+        return new AINPC.OwnedLocation(
+            "home",
+            "casa de langa pat",
+            bed.getWorld().getName(),
+            bed.getX() + 0.5D,
+            bed.getY(),
+            bed.getZ() + 0.5D
+        );
+    }
+
+    private AINPC.OwnedLocation findNearestWorkAnchor(Location center, String occupation) {
+        Block workstation = findNearestBlock(center, 6, 3, block -> matchesOccupationWorkstation(occupation, block.getType()));
+        if (workstation == null) {
+            workstation = findNearestBlock(center, 6, 3, block -> isWorkstation(block.getType()));
+        }
+        if (workstation == null) {
+            return null;
+        }
+
+        return new AINPC.OwnedLocation(
+            "work",
+            describeWorkAnchor(occupation, workstation.getType()),
+            workstation.getWorld().getName(),
+            workstation.getX() + 0.5D,
+            workstation.getY(),
+            workstation.getZ() + 0.5D
+        );
+    }
+
+    private AINPC.OwnedLocation findNearestSocialAnchor(Location center) {
+        Block socialSpot = findNearestBlock(center, 12, 4, block -> block.getType() == Material.BELL);
+        if (socialSpot == null) {
+            return null;
+        }
+
+        return new AINPC.OwnedLocation(
+            "social",
+            "piata satului",
+            socialSpot.getWorld().getName(),
+            socialSpot.getX() + 0.5D,
+            socialSpot.getY(),
+            socialSpot.getZ() + 0.5D
+        );
+    }
+
+    private Block findNearestBlock(Location center, int horizontalRadius, int verticalRadius,
+                                   java.util.function.Predicate<Block> predicate) {
+        if (center == null || center.getWorld() == null) {
+            return null;
+        }
+
+        Block bestBlock = null;
+        double bestDistanceSquared = Double.MAX_VALUE;
+        int centerX = floorToBlock(center.getX());
+        int centerY = floorToBlock(center.getY());
+        int centerZ = floorToBlock(center.getZ());
+
+        for (int dx = -horizontalRadius; dx <= horizontalRadius; dx++) {
+            for (int dy = -verticalRadius; dy <= verticalRadius; dy++) {
+                for (int dz = -horizontalRadius; dz <= horizontalRadius; dz++) {
+                    Block block = center.getWorld().getBlockAt(centerX + dx, centerY + dy, centerZ + dz);
+                    if (!predicate.test(block)) {
+                        continue;
+                    }
+
+                    double distanceSquared = block.getLocation().distanceSquared(center);
+                    if (distanceSquared < bestDistanceSquared) {
+                        bestDistanceSquared = distanceSquared;
+                        bestBlock = block;
+                    }
+                }
+            }
+        }
+
+        return bestBlock;
+    }
+
+    private boolean matchesOccupationWorkstation(String occupation, Material material) {
+        if (occupation == null || occupation.isBlank()) {
+            return false;
+        }
+
+        return switch (occupation.toLowerCase(Locale.ROOT)) {
+            case "fermier", "pastor" -> material == Material.COMPOSTER;
+            case "fierar", "soldat", "miner" -> material == Material.BLAST_FURNACE
+                || material == Material.SMITHING_TABLE
+                || material == Material.ANVIL
+                || material == Material.CHIPPED_ANVIL
+                || material == Material.DAMAGED_ANVIL
+                || material == Material.GRINDSTONE;
+            case "hangiu", "negustor" -> material == Material.BARREL
+                || material == Material.SMOKER
+                || material == Material.CAMPFIRE
+                || material == Material.CHEST
+                || material == Material.BELL;
+            case "preot", "bibliotecar" -> material == Material.LECTERN;
+            case "vindecator" -> material == Material.BREWING_STAND || material == Material.CAULDRON;
+            case "cartograf" -> material == Material.CARTOGRAPHY_TABLE;
+            case "pietrar" -> material == Material.STONECUTTER;
+            case "tamplar" -> material == Material.FLETCHING_TABLE;
+            default -> false;
+        };
+    }
+
+    private String describeWorkAnchor(String occupation, Material material) {
+        if (occupation != null && !occupation.isBlank()) {
+            return switch (occupation.toLowerCase(Locale.ROOT)) {
+                case "fermier", "pastor" -> "campul de lucru";
+                case "fierar", "soldat", "miner" -> "atelierul";
+                case "hangiu", "negustor" -> "taraba sau hanul";
+                case "preot", "bibliotecar" -> "lecternul si masa de lucru";
+                case "vindecator" -> "laboratorul de leacuri";
+                case "cartograf" -> "masa de cartografie";
+                case "pietrar" -> "atelierul de piatra";
+                case "tamplar" -> "bancul de tamplarie";
+                default -> material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+            };
+        }
+
+        return material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
     }
 
     private String inferOccupationFromPrimaryScenario(Random random) {
@@ -1588,7 +1839,80 @@ public class NPCManager {
         }
         profile.add("emotions", emotions);
 
+        JsonObject simulation = new JsonObject();
+        simulation.addProperty("hunger_level", npc.getHungerLevel());
+        simulation.addProperty("energy_level", npc.getEnergyLevel());
+        simulation.addProperty("social_need_level", npc.getSocialNeedLevel());
+        simulation.addProperty("comfort_level", npc.getComfortLevel());
+        simulation.addProperty("safety_level", npc.getSafetyLevel());
+        simulation.addProperty("current_goal", npc.getCurrentGoal());
+        simulation.addProperty("planned_routine_activity", npc.getPlannedRoutineActivity());
+        simulation.addProperty("last_simulation_tick_at", npc.getLastSimulationTickAt());
+        profile.add("simulation", simulation);
+
+        JsonObject ownedLocations = new JsonObject();
+        writeOwnedLocation(ownedLocations, "home", npc.getHomeAnchor());
+        writeOwnedLocation(ownedLocations, "work", npc.getWorkAnchor());
+        writeOwnedLocation(ownedLocations, "social", npc.getSocialAnchor());
+        profile.add("owned_locations", ownedLocations);
+
         return gson.toJson(profile);
+    }
+
+    private void writeOwnedLocation(JsonObject root, String key, AINPC.OwnedLocation anchor) {
+        if (anchor == null) {
+            return;
+        }
+
+        JsonObject anchorJson = new JsonObject();
+        anchorJson.addProperty("type", anchor.type());
+        anchorJson.addProperty("label", anchor.label());
+        anchorJson.addProperty("world", anchor.worldName());
+        anchorJson.addProperty("x", anchor.x());
+        anchorJson.addProperty("y", anchor.y());
+        anchorJson.addProperty("z", anchor.z());
+        root.add(key, anchorJson);
+    }
+
+    private AINPC.OwnedLocation readOwnedLocation(JsonObject root, String key) {
+        if (root == null || !root.has(key) || !root.get(key).isJsonObject()) {
+            return null;
+        }
+
+        JsonObject anchorJson = root.getAsJsonObject(key);
+        String world = readString(anchorJson, "world", "");
+        if (world.isBlank()) {
+            return null;
+        }
+
+        return new AINPC.OwnedLocation(
+            readString(anchorJson, "type", key),
+            readString(anchorJson, "label", key),
+            world,
+            readDouble(anchorJson, "x", 0.0D),
+            readDouble(anchorJson, "y", 0.0D),
+            readDouble(anchorJson, "z", 0.0D)
+        );
+    }
+
+    private int readInt(JsonObject json, String key, int fallback) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() ? element.getAsInt() : fallback;
+    }
+
+    private long readLong(JsonObject json, String key, long fallback) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() ? element.getAsLong() : fallback;
+    }
+
+    private double readDouble(JsonObject json, String key, double fallback) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() ? element.getAsDouble() : fallback;
+    }
+
+    private String readString(JsonObject json, String key, String fallback) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() ? element.getAsString() : fallback;
     }
 
     private String truncateProfileText(String text, int maxLength) {

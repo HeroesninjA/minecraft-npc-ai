@@ -9,9 +9,12 @@ website: https://v0.dev
 commands:
   ainpc:
     description: Comanda principala pentru gestionarea NPC-urilor AI
-    usage: /ainpc <create|delete|info|family|mood|list|tp|reload|test>
-    permission: ainpc.admin
+    usage: /ainpc <create|delete|info|quest|family|mood|list|tp|reload|test>
     aliases: [npc, ai]
+  npcquest:
+    description: Comanda rapida pentru quest-urile NPC
+    usage: /npcquest <numeNpc|nearest|reset|complete> [jucator]
+    aliases: [npcq]
 
 permissions:
   ainpc.admin:
@@ -23,3 +26,6 @@ permissions:
   ainpc.info:
     description: Permite vizualizarea informatiilor despre NPC-uri
     default: true
+  ainpc.quest:
+    description: Permite declansarea si administrarea quest-urilor NPC
+    default: op

@@ -111,6 +111,14 @@ public class AINPCPlugin extends JavaPlugin {
         }
         ainpcCommand.setExecutor(command);
         ainpcCommand.setTabCompleter(new AINPCTabCompleter(this));
+
+        PluginCommand npcQuestCommand = getCommand("npcquest");
+        if (npcQuestCommand != null) {
+            npcQuestCommand.setExecutor(command);
+            npcQuestCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'npcquest' nu a fost gasita in plugin.yml.");
+        }
         
         // Inregistreaza listenerele
         getLogger().info("Inregistrare listenere...");
@@ -162,6 +170,14 @@ public class AINPCPlugin extends JavaPlugin {
     }
     
     private void startScheduledTasks() {
+        int simulationTickSeconds = Math.max(10, getConfig().getInt("simulation.tick_seconds", 30));
+
+        if (getConfig().getBoolean("simulation.enabled", true)) {
+            getServer().getScheduler().runTaskTimer(this, () -> {
+                npcManager.runLifeSimulationTick();
+            }, 20L * 15, 20L * simulationTickSeconds);
+        }
+
         // Task Bukkit: updateaza nume/particule si trebuie sa ruleze pe thread-ul principal
         getServer().getScheduler().runTaskTimer(this, () -> {
             emotionManager.decayEmotions();

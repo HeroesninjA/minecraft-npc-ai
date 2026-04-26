@@ -218,18 +218,36 @@ public class ScenarioEngine {
 
     public QuestInteractionResult handleQuestInteraction(Player player, AINPC npc) {
         if (player == null || npc == null) {
+            plugin.debug("[QuestEngine] handleQuestInteraction oprit: player sau npc este null.");
             return QuestInteractionResult.notHandled();
         }
 
+        plugin.debug("[QuestEngine] handleQuestInteraction player=" + player.getName()
+            + " npc=" + npc.getName()
+            + " ocupatie=" + npc.getOccupation());
         ScenarioTemplate template = findQuestTemplateForNpc(npc);
         if (template == null || !template.hasQuestBriefing()) {
+            plugin.debug("[QuestEngine] Nu exista template de quest pentru npc=" + npc.getName());
             return QuestInteractionResult.notHandled();
         }
 
+        plugin.debug("[QuestEngine] Template gasit pentru npc=" + npc.getName()
+            + " templateId=" + template.getTemplateId()
+            + " title=" + resolveQuestTitle(template));
+
         PlayerQuestProgress currentProgress = playerQuestProgress.get(player.getUniqueId());
+        if (currentProgress != null) {
+            plugin.debug("[QuestEngine] Progres curent pentru player=" + player.getName()
+                + " templateId=" + currentProgress.templateId()
+                + " completed=" + currentProgress.completed());
+        } else {
+            plugin.debug("[QuestEngine] Player=" + player.getName() + " nu are progres de quest inregistrat.");
+        }
         if (currentProgress != null
             && !currentProgress.templateId().equals(template.getTemplateId())
             && !currentProgress.completed()) {
+            plugin.debug("[QuestEngine] Player=" + player.getName()
+                + " are deja alt quest activ: " + currentProgress.templateId());
             return QuestInteractionResult.handled(
                 true,
                 List.of("Ai deja o alta misiune in desfasurare. Termina intai ce ai inceput."),
@@ -240,6 +258,8 @@ public class ScenarioEngine {
         if (currentProgress != null
             && currentProgress.templateId().equals(template.getTemplateId())
             && currentProgress.completed()) {
+            plugin.debug("[QuestEngine] Quest deja completat pentru player=" + player.getName()
+                + " templateId=" + template.getTemplateId());
             return QuestInteractionResult.handled(
                 true,
                 List.of("Ti-am dat deja recompensa pentru " + resolveQuestTitle(template) + ". Foloseste sabia cu cap."),
@@ -252,6 +272,8 @@ public class ScenarioEngine {
                 player.getUniqueId(),
                 new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), false, System.currentTimeMillis())
             );
+            plugin.debug("[QuestEngine] Quest pornit pentru player=" + player.getName()
+                + " templateId=" + template.getTemplateId());
 
             List<String> npcMessages = List.of(
                 "Am o treaba pentru tine.",
@@ -262,6 +284,8 @@ public class ScenarioEngine {
 
         QuestInventoryCheck inventoryCheck = inspectQuestInventory(player.getInventory(), template.getObjectives());
         if (!inventoryCheck.complete()) {
+            plugin.debug("[QuestEngine] Quest incomplet pentru player=" + player.getName()
+                + " lipsesc=" + String.join(", ", inventoryCheck.missingItems()));
             List<String> systemMessages = new ArrayList<>();
             systemMessages.add("&6[Quest] &f" + resolveQuestTitle(template));
             systemMessages.add("&eIti mai lipsesc:");
@@ -284,6 +308,8 @@ public class ScenarioEngine {
             player.getUniqueId(),
             new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), true, System.currentTimeMillis())
         );
+        plugin.debug("[QuestEngine] Quest completat pentru player=" + player.getName()
+            + " templateId=" + template.getTemplateId());
 
         List<String> systemMessages = new ArrayList<>();
         systemMessages.add("&aQuest completat: &f" + resolveQuestTitle(template));
@@ -300,13 +326,178 @@ public class ScenarioEngine {
         );
     }
 
+    public QuestInteractionResult startQuestManually(Player player, AINPC npc) {
+        if (player == null || npc == null) {
+            plugin.debug("[QuestEngine] startQuestManually oprit: player sau npc este null.");
+            return QuestInteractionResult.notHandled();
+        }
+
+        ScenarioTemplate template = findQuestTemplateForNpc(npc);
+        if (template == null || !template.hasQuestBriefing()) {
+            plugin.debug("[QuestEngine] startQuestManually fara template pentru npc=" + npc.getName());
+            return QuestInteractionResult.notHandled();
+        }
+
+        playerQuestProgress.put(
+            player.getUniqueId(),
+            new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), false, System.currentTimeMillis())
+        );
+        plugin.debug("[QuestEngine] startQuestManually a setat questul pentru player=" + player.getName()
+            + " templateId=" + template.getTemplateId());
+
+        List<String> npcMessages = List.of(
+            "Am o treaba pentru tine.",
+            buildQuestOfferMessage(template)
+        );
+        return QuestInteractionResult.handled(true, npcMessages, buildQuestBriefingMessages(template));
+    }
+
+    public boolean resetQuestProgress(Player player, AINPC npc) {
+        if (player == null || npc == null) {
+            plugin.debug("[QuestEngine] resetQuestProgress oprit: player sau npc este null.");
+            return false;
+        }
+
+        ScenarioTemplate template = findQuestTemplateForNpc(npc);
+        if (template == null || !template.hasQuestBriefing()) {
+            plugin.debug("[QuestEngine] resetQuestProgress fara template pentru npc=" + npc.getName());
+            return false;
+        }
+
+        PlayerQuestProgress currentProgress = playerQuestProgress.get(player.getUniqueId());
+        if (currentProgress == null || !currentProgress.templateId().equals(template.getTemplateId())) {
+            plugin.debug("[QuestEngine] resetQuestProgress fara progres potrivit pentru player="
+                + player.getName() + " templateId=" + template.getTemplateId());
+            return false;
+        }
+
+        playerQuestProgress.remove(player.getUniqueId());
+        plugin.debug("[QuestEngine] resetQuestProgress reusit pentru player=" + player.getName()
+            + " templateId=" + template.getTemplateId());
+        return true;
+    }
+
+    public QuestInteractionResult forceCompleteQuest(Player player, AINPC npc) {
+        if (player == null || npc == null) {
+            plugin.debug("[QuestEngine] forceCompleteQuest oprit: player sau npc este null.");
+            return QuestInteractionResult.notHandled();
+        }
+
+        ScenarioTemplate template = findQuestTemplateForNpc(npc);
+        if (template == null || !template.hasQuestBriefing()) {
+            plugin.debug("[QuestEngine] forceCompleteQuest fara template pentru npc=" + npc.getName());
+            return QuestInteractionResult.notHandled();
+        }
+
+        plugin.debug("[QuestEngine] forceCompleteQuest pentru player=" + player.getName()
+            + " templateId=" + template.getTemplateId());
+
+        List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
+        player.updateInventory();
+
+        playerQuestProgress.put(
+            player.getUniqueId(),
+            new PlayerQuestProgress(template.getTemplateId(), template.getQuestCode(), true, System.currentTimeMillis())
+        );
+        plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
+            + player.getName() + " templateId=" + template.getTemplateId());
+
+        List<String> systemMessages = new ArrayList<>();
+        systemMessages.add("&aQuest marcat manual ca finalizat: &f" + resolveQuestTitle(template));
+        if (!template.getRewards().isEmpty()) {
+            systemMessages.add("&aRecompense acordate:");
+            for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
+                systemMessages.add("&7- &f" + formatQuestEntry(reward));
+            }
+        }
+        systemMessages.addAll(rewardNotes);
+
+        return QuestInteractionResult.handled(
+            false,
+            List.of("In regula. Consider misiunea terminata.", "Poftim rasplata promisa."),
+            systemMessages
+        );
+    }
+
+    public String getQuestTitle(AINPC npc) {
+        ScenarioTemplate template = findQuestTemplateForNpc(npc);
+        if (template == null || !template.hasQuestBriefing()) {
+            return "";
+        }
+        return resolveQuestTitle(template);
+    }
+
     private ScenarioTemplate findQuestTemplateForNpc(AINPC npc) {
+        if (shouldUseSimpleQuestForAllNpcs()) {
+            return buildSimpleQuestTemplate(npc);
+        }
+
         return scenarioTemplates.values().stream()
             .filter(template -> template.getType() == ScenarioType.QUEST)
             .filter(ScenarioTemplate::hasQuestBriefing)
             .filter(template -> matchesQuestGiver(npc, template))
             .findFirst()
             .orElse(null);
+    }
+
+    private boolean shouldUseSimpleQuestForAllNpcs() {
+        return plugin.getConfig().getBoolean("quests.simple_for_all_npcs", true);
+    }
+
+    private ScenarioTemplate buildSimpleQuestTemplate(AINPC npc) {
+        if (npc == null) {
+            return null;
+        }
+
+        Material objectiveMaterial = resolveConfiguredQuestMaterial(
+            "quests.simple.objective.item",
+            Material.OAK_PLANKS
+        );
+        int objectiveAmount = Math.max(1, plugin.getConfig().getInt("quests.simple.objective.amount", 3));
+
+        Material rewardMaterial = resolveConfiguredQuestMaterial(
+            "quests.simple.reward.item",
+            Material.EMERALD
+        );
+        int rewardAmount = Math.max(1, plugin.getConfig().getInt("quests.simple.reward.amount", 1));
+
+        String title = plugin.getConfig().getString("quests.simple.title", "Ajutor rapid");
+        String npcIdentifier = npc.getDatabaseId() > 0
+            ? String.valueOf(npc.getDatabaseId())
+            : npc.getUuid().toString();
+
+        ScenarioTemplate template = new ScenarioTemplate(ScenarioType.QUEST);
+        template.setTemplateId("simple_npc_quest:" + npcIdentifier);
+        template.setDisplayName(title + " - " + npc.getName());
+        template.setDescription("Adu-mi " + formatQuestAmount(objectiveAmount, objectiveMaterial)
+            + " si iti dau " + formatQuestAmount(rewardAmount, rewardMaterial) + ".");
+        template.setHint(npc.getName() + " pare sa aiba nevoie de cateva materiale.");
+        template.setQuestGiverProfession(npc.getOccupation());
+        template.setRequiresPlayer(true);
+        template.setMinimumNpcCount(1);
+        template.setObjectives(List.of(new FeaturePackLoader.QuestEntryDefinition(
+            "collect_item",
+            objectiveMaterial.name(),
+            objectiveAmount,
+            "Adu " + formatQuestAmount(objectiveAmount, objectiveMaterial) + "."
+        )));
+        template.setRewards(List.of(new FeaturePackLoader.QuestEntryDefinition(
+            "item",
+            rewardMaterial.name(),
+            rewardAmount,
+            "Primesti " + formatQuestAmount(rewardAmount, rewardMaterial) + "."
+        )));
+        return template;
+    }
+
+    private Material resolveConfiguredQuestMaterial(String path, Material fallback) {
+        String configuredValue = plugin.getConfig().getString(path, fallback.name());
+        if (configuredValue == null || configuredValue.isBlank()) {
+            return fallback;
+        }
+
+        Material material = Material.matchMaterial(configuredValue.trim().toUpperCase(Locale.ROOT));
+        return material != null ? material : fallback;
     }
 
     private boolean matchesQuestGiver(AINPC npc, ScenarioTemplate template) {

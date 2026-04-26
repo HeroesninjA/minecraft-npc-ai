@@ -48,6 +48,19 @@ public class AINPC {
     private String profileDataJson;
     private int profileVersion;
     private boolean profileCreated;
+
+    // Simulare de viata
+    private int hungerLevel;
+    private int energyLevel;
+    private int socialNeedLevel;
+    private int comfortLevel;
+    private int safetyLevel;
+    private String currentGoal;
+    private String plannedRoutineActivity;
+    private long lastSimulationTickAt;
+    private OwnedLocation homeAnchor;
+    private OwnedLocation workAnchor;
+    private OwnedLocation socialAnchor;
     
     // Componente
     private NPCPersonality personality;
@@ -78,6 +91,14 @@ public class AINPC {
         this.profileDataJson = "{}";
         this.profileVersion = 1;
         this.profileCreated = false;
+        this.hungerLevel = 82;
+        this.energyLevel = 78;
+        this.socialNeedLevel = 72;
+        this.comfortLevel = 70;
+        this.safetyLevel = 84;
+        this.currentGoal = "";
+        this.plannedRoutineActivity = "";
+        this.lastSimulationTickAt = 0L;
     }
 
     /**
@@ -365,12 +386,39 @@ public class AINPC {
         sb.append(emotions.getDescription()).append("\n");
         
         sb.append("\nStare curenta: ").append(currentState.getDisplayName()).append("\n");
+        if (plannedRoutineActivity != null && !plannedRoutineActivity.isBlank()) {
+            sb.append("Rutina actuala: ").append(plannedRoutineActivity).append("\n");
+        }
+        if (currentGoal != null && !currentGoal.isBlank()) {
+            sb.append("Obiectiv imediat: ").append(currentGoal).append("\n");
+        }
+        sb.append("Nevoi: satietate ").append(hungerLevel)
+            .append("/100, energie ").append(energyLevel)
+            .append("/100, social ").append(socialNeedLevel)
+            .append("/100, confort ").append(comfortLevel)
+            .append("/100, siguranta ").append(safetyLevel)
+            .append("/100\n");
+
+        appendOwnedLocation(sb, "Casa", homeAnchor);
+        appendOwnedLocation(sb, "Loc de munca", workAnchor);
+        appendOwnedLocation(sb, "Loc social", socialAnchor);
         
         if (!traits.isEmpty()) {
             sb.append("\nTrasaturi speciale: ").append(String.join(", ", traits)).append("\n");
         }
         
         return sb.toString();
+    }
+
+    private void appendOwnedLocation(StringBuilder sb, String label, OwnedLocation anchor) {
+        if (anchor == null) {
+            return;
+        }
+        sb.append(label).append(": ").append(anchor.label()).append(" (")
+            .append(anchor.worldName()).append(" ")
+            .append((int) Math.floor(anchor.x())).append(",")
+            .append((int) Math.floor(anchor.y())).append(",")
+            .append((int) Math.floor(anchor.z())).append(")\n");
     }
 
     // Getters si Setters
@@ -543,6 +591,94 @@ public class AINPC {
         this.profileCreated = profileCreated;
     }
 
+    public int getHungerLevel() {
+        return hungerLevel;
+    }
+
+    public void setHungerLevel(int hungerLevel) {
+        this.hungerLevel = clampNeed(hungerLevel);
+    }
+
+    public int getEnergyLevel() {
+        return energyLevel;
+    }
+
+    public void setEnergyLevel(int energyLevel) {
+        this.energyLevel = clampNeed(energyLevel);
+    }
+
+    public int getSocialNeedLevel() {
+        return socialNeedLevel;
+    }
+
+    public void setSocialNeedLevel(int socialNeedLevel) {
+        this.socialNeedLevel = clampNeed(socialNeedLevel);
+    }
+
+    public int getComfortLevel() {
+        return comfortLevel;
+    }
+
+    public void setComfortLevel(int comfortLevel) {
+        this.comfortLevel = clampNeed(comfortLevel);
+    }
+
+    public int getSafetyLevel() {
+        return safetyLevel;
+    }
+
+    public void setSafetyLevel(int safetyLevel) {
+        this.safetyLevel = clampNeed(safetyLevel);
+    }
+
+    public String getCurrentGoal() {
+        return currentGoal;
+    }
+
+    public void setCurrentGoal(String currentGoal) {
+        this.currentGoal = currentGoal == null ? "" : currentGoal;
+    }
+
+    public String getPlannedRoutineActivity() {
+        return plannedRoutineActivity;
+    }
+
+    public void setPlannedRoutineActivity(String plannedRoutineActivity) {
+        this.plannedRoutineActivity = plannedRoutineActivity == null ? "" : plannedRoutineActivity;
+    }
+
+    public long getLastSimulationTickAt() {
+        return lastSimulationTickAt;
+    }
+
+    public void setLastSimulationTickAt(long lastSimulationTickAt) {
+        this.lastSimulationTickAt = Math.max(0L, lastSimulationTickAt);
+    }
+
+    public OwnedLocation getHomeAnchor() {
+        return homeAnchor;
+    }
+
+    public void setHomeAnchor(OwnedLocation homeAnchor) {
+        this.homeAnchor = homeAnchor;
+    }
+
+    public OwnedLocation getWorkAnchor() {
+        return workAnchor;
+    }
+
+    public void setWorkAnchor(OwnedLocation workAnchor) {
+        this.workAnchor = workAnchor;
+    }
+
+    public OwnedLocation getSocialAnchor() {
+        return socialAnchor;
+    }
+
+    public void setSocialAnchor(OwnedLocation socialAnchor) {
+        this.socialAnchor = socialAnchor;
+    }
+
     public NPCPersonality getPersonality() {
         return personality;
     }
@@ -561,6 +697,10 @@ public class AINPC {
 
     public NPCContext getContext() {
         return context;
+    }
+
+    public AINPCPlugin getPlugin() {
+        return plugin;
     }
 
     public NPCState getCurrentState() {
@@ -616,5 +756,40 @@ public class AINPC {
         this.z = location.getZ();
         this.yaw = location.getYaw();
         this.pitch = location.getPitch();
+    }
+
+    private int clampNeed(int value) {
+        return Math.max(0, Math.min(100, value));
+    }
+
+    public record OwnedLocation(
+        String type,
+        String label,
+        String worldName,
+        double x,
+        double y,
+        double z
+    ) {
+        public Location toLocation() {
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) {
+                return null;
+            }
+            return new Location(world, x, y, z);
+        }
+
+        public boolean isNear(Location location, double radius) {
+            if (location == null || location.getWorld() == null || worldName == null) {
+                return false;
+            }
+            if (!location.getWorld().getName().equals(worldName)) {
+                return false;
+            }
+            Location anchor = toLocation();
+            if (anchor == null) {
+                return false;
+            }
+            return anchor.distanceSquared(location) <= radius * radius;
+        }
     }
 }

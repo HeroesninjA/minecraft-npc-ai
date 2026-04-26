@@ -3,11 +3,13 @@ package ro.ainpc.listeners;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerQuitEvent;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.ai.DialogManager;
+import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 
 import java.util.Comparator;
@@ -139,6 +141,10 @@ public class NPCChatListener extends AbstractPluginListener {
         npc.getContext().setInteractingPlayer(player);
         npc.getContext().setLastPlayerMessage(message);
 
+        if (handleQuestTriggerFromMessage(player, npc, message)) {
+            return;
+        }
+
         if (dialogManager.isOnCooldown(player, npc)) {
             messages().sendMessage(player, "cooldown");
             return;
@@ -180,9 +186,70 @@ public class NPCChatListener extends AbstractPluginListener {
         });
     }
 
+    private boolean handleQuestTriggerFromMessage(Player player, AINPC npc, String message) {
+        if (!containsQuestKeyword(message)) {
+            return false;
+        }
+
+        AINPC questNpc = refreshQuestNpc(npc);
+        ScenarioEngine.QuestInteractionResult questInteraction =
+            plugin.getScenarioEngine().handleQuestInteraction(player, questNpc);
+        if (!questInteraction.isHandled()) {
+            return false;
+        }
+
+        messages().send(player, "&7Tu: &f" + message);
+        for (String npcMessage : questInteraction.getNpcMessages()) {
+            messages().sendNPCMessage(player, questNpc.getName(), npcMessage);
+        }
+        for (String systemMessage : questInteraction.getSystemMessages()) {
+            messages().send(player, systemMessage);
+        }
+
+        return true;
+    }
+
+    private AINPC refreshQuestNpc(AINPC npc) {
+        if (npc == null) {
+            return null;
+        }
+
+        if (npc.getBukkitEntity() instanceof Villager villager) {
+            plugin.getNpcManager().refreshVillagerProfile(villager);
+            AINPC refreshedNpc = plugin.getNpcManager().getNPCByEntity(villager);
+            if (refreshedNpc != null) {
+                return refreshedNpc;
+            }
+        }
+
+        return npc;
+    }
+
     private boolean mentionsNpc(String message, AINPC npc) {
         String normalizedMessage = normalize(message);
         return containsNpcName(normalizedMessage, npc.getName()) || containsNpcName(normalizedMessage, npc.getDisplayName());
+    }
+
+    private boolean containsQuestKeyword(String message) {
+        String normalizedMessage = normalize(message);
+        return containsWord(normalizedMessage, "misiune")
+            || containsWord(normalizedMessage, "misiuni")
+            || containsWord(normalizedMessage, "quest")
+            || containsWord(normalizedMessage, "quests");
+    }
+
+    private boolean containsWord(String normalizedMessage, String token) {
+        if (normalizedMessage == null || normalizedMessage.isBlank() || token == null || token.isBlank()) {
+            return false;
+        }
+
+        for (String word : normalizedMessage.split(" ")) {
+            if (word.equals(token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean containsNpcName(String normalizedMessage, String npcName) {

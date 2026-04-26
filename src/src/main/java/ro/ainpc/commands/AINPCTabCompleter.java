@@ -19,8 +19,9 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "list", "family", "mood", "tp", "reload", "test"
+        "create", "delete", "info", "quest", "list", "family", "mood", "tp", "reload", "test"
     );
+    private static final List<String> QUEST_MODES = Arrays.asList("nearest", "reset", "complete");
     
     private static final List<String> OCCUPATIONS = Arrays.asList(
         "fermier", "fierar", "pescar", "negustor", "miner", "tamplar",
@@ -46,6 +47,10 @@ public class AINPCTabCompleter implements TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if ("npcquest".equalsIgnoreCase(command.getName())) {
+            return completeQuestArgs(args);
+        }
+
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
@@ -69,6 +74,9 @@ public class AINPCTabCompleter implements TabCompleter {
                         completions.addAll(getNPCNames(args[1]));
                     }
                 }
+                case "quest" -> {
+                    completions.addAll(completeQuestArgs(sliceQuestArgs(args)));
+                }
                 case "mood", "emotion" -> {
                     switch (args.length) {
                         case 2 -> completions.addAll(getNPCNames(args[1]));
@@ -82,12 +90,59 @@ public class AINPCTabCompleter implements TabCompleter {
         return completions;
     }
 
+    private List<String> completeQuestArgs(String[] questArgs) {
+        List<String> completions = new ArrayList<>();
+        if (questArgs.length == 0) {
+            return completions;
+        }
+
+        switch (questArgs.length) {
+            case 1 -> {
+                completions.addAll(filterStartsWith(QUEST_MODES, questArgs[0]));
+                completions.addAll(getNPCNames(questArgs[0]));
+            }
+            case 2 -> {
+                String questMode = questArgs[0].toLowerCase();
+                if (questMode.equals("reset") || questMode.equals("complete")) {
+                    completions.addAll(getNPCNames(questArgs[1]));
+                } else {
+                    completions.addAll(getOnlinePlayerNames(questArgs[1]));
+                }
+            }
+            case 3 -> {
+                String questMode = questArgs[0].toLowerCase();
+                if (questMode.equals("reset") || questMode.equals("complete")) {
+                    completions.addAll(getOnlinePlayerNames(questArgs[2]));
+                }
+            }
+        }
+
+        return completions;
+    }
+
+    private String[] sliceQuestArgs(String[] args) {
+        if (args.length <= 1) {
+            return new String[0];
+        }
+
+        String[] sliced = new String[args.length - 1];
+        System.arraycopy(args, 1, sliced, 0, sliced.length);
+        return sliced;
+    }
+
     /**
      * Obtine numele tuturor NPC-urilor care incep cu prefixul dat
      */
     private List<String> getNPCNames(String prefix) {
         return plugin.getNpcManager().getAllNPCs().stream()
             .map(AINPC::getName)
+            .filter(name -> name.toLowerCase().startsWith(prefix.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+
+    private List<String> getOnlinePlayerNames(String prefix) {
+        return plugin.getServer().getOnlinePlayers().stream()
+            .map(sender -> sender.getName())
             .filter(name -> name.toLowerCase().startsWith(prefix.toLowerCase()))
             .collect(Collectors.toList());
     }

@@ -39,6 +39,10 @@ public class NPCInteractionListener extends AbstractPluginListener {
             npc = plugin.getNpcManager().ensureVillagerIsNPC((Villager) entity);
         }
         if (npc == null) return;
+
+        plugin.getNpcManager().refreshVillagerProfile((Villager) entity);
+        npc = plugin.getNpcManager().getNPCByEntity(entity);
+        if (npc == null) return;
         
         // Anuleaza interactiunea default
         event.setCancelled(true);
