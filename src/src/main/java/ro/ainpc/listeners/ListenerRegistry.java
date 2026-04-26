@@ -17,6 +17,7 @@ public class ListenerRegistry {
     public void registerAll() {
         register(new NPCInteractionListener(plugin));
         register(new NPCChatListener(plugin));
+        register(new QuestObjectiveListener(plugin));
         register(new PlayerJoinListener(plugin));
         register(new VillagerLifecycleListener(plugin));
     }

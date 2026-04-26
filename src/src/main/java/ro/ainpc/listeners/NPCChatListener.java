@@ -140,6 +140,7 @@ public class NPCChatListener extends AbstractPluginListener {
         npc.updateContext();
         npc.getContext().setInteractingPlayer(player);
         npc.getContext().setLastPlayerMessage(message);
+        plugin.getScenarioEngine().recordNpcConversation(player, npc);
 
         if (handleQuestInteractionFromMessage(player, npc, message)) {
             return;
