@@ -6,39 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/WorldAdminApi.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/WorldAdminApi.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/ainpc-api-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/ainpc-api-1.0.0.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/WorldAdminApi.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/WorldAdminApi.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0-shaded.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0-shaded.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/config.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/AINPCPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/AINPCPlugin.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/platform/AINPCPlatform.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/platform/AINPCPlatform.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldAdminService.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldAdminService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldNode.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldNode.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldRegion.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/world/WorldRegion.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/original-ainpc-core-plugin-1.0.0.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/platform/AINPCPlatform.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/platform/AINPCPlatform.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldAdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldNode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldRegion.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/java/ro/ainpc/world/WorldRegion.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/resources/config.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/main/resources/plugin.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/AINPCPlugin-1.0.0.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/original-AINPCPlugin-1.0.0.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/mapping.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mapping.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,9 +15,10 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="98" />
+    <option name="cachedIndexableFilesCount" value="107" />
   </component>
   <component name="Git.Settings">
+    <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
         <entry key="$PROJECT_DIR$" value="test" />
@@ -213,7 +183,9 @@
       <workItem from="1777124944023" duration="168000" />
       <workItem from="1777125370750" duration="13531000" />
       <workItem from="1777187752655" duration="11898000" />
-      <workItem from="1777268177017" duration="8866000" />
+      <workItem from="1777268177017" duration="11554000" />
+      <workItem from="1777308250057" duration="30000" />
+      <workItem from="1777308360369" duration="2317000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -303,7 +275,23 @@
       <option name="project" value="LOCAL" />
       <updated>1777221061736</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="test">
+      <option name="closed" value="true" />
+      <created>1777304660730</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1777304660730</updated>
+    </task>
+    <task id="LOCAL-00013" summary="test">
+      <option name="closed" value="true" />
+      <created>1777304684034</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1777304684034</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
