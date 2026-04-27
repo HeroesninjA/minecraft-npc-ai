@@ -1,0 +1,94 @@
+ 210: 
+ 211: 
+ 212: 
+ 213: 
+ 214: 
+ 215: 
+ 216: 
+ 217: 
+ 218: 
+ 219: 
+ 220: 
+
+   1: name: AINPCPlugin
+   2: version: ${project.version}
+   3: main: ro.ainpc.AINPCPlugin
+   4: api-version: '1.21'
+   5: authors: [v0]
+   6: description: Plugin Minecraft cu NPC-uri AI care au poveste, emotii, amintiri si dialog realist
+   7: website: https://v0.dev
+   8: 
+   9: commands:
+  10:   ainpc:
+  11:     description: Comanda principala pentru gestionarea NPC-urilor AI
+  12:     usage: /ainpc <create|delete|info|quest|family|mood|list|tp|reload|test>
+  13:     aliases: [npc
+… 255 chars omitted, open in editor for full output …
+on: Permite accesul la toate comenzile admin
+  22:     default: op
+  23:   ainpc.talk:
+  24:     description: Permite jucatorilor sa vorbeasca cu NPC-urile
+  25:     default: true
+  26:   ainpc.info:
+  27:     description: Permite vizualizarea informatiilor despre NPC-uri
+  28:     default: true
+  29:   ainpc.quest:
+  30:     description: Permite declansarea si administrarea quest-urilor NPC
+  31:     default: op
+  32: 
+  33: 
+  34: 
+  35: 
+  36: 
+  37: 
+  38: 
+  39: 
+  40: 
+
+ 180:         ).exceptionally(ex -> {
+ 181:             runSync(() -> {
+ 182:                 plugin.getLogger().warning("Eroare la procesarea mesajului: " + ex.getMessage());
+ 183:                 messages().sendMessage(player, "ai_error");
+ 184:             });
+ 185:             return null;
+ 186:         });
+ 187:     }
+ 188: 
+ 189:     private boolean handleQuestInteractionFromMessage(Player player, AINPC npc, String message) {
+ 190:         if (!containsQuestKeyword(message)
+ 191
+… 1.8K chars omitted, open in editor for full output …
+:         }
+ 223: 
+ 224:         return true;
+ 225:     }
+ 226: 
+ 227:     private AINPC refreshQuestNpc(AINPC npc) {
+ 228:         if (npc == null) {
+ 229:             return null;
+ 230:         }
+ 231: 
+ 232:         if (npc.getBukkitEntity() instanceof Villager villager) {
+ 233:             plugin.getNpcManager().refreshVillagerProfile(villager);
+ 234:             AINPC refreshedNpc = plugin.getNpcManager().getNPCByEntity(villager);
+ 235:             if (refreshedNpc != null) {
+
+Da. Pe ce ai acum, eu aș prioritiza astea:
+•
+Fază + progres pe obiective, nu doar status global. Acum ScenarioEngine.java persistă doar templateId, questCode, status și timestamps, deși scenariile au deja ideea de phases și currentPhase în runtime în ScenarioEngine.java. Aș adăuga current_phase, objective_progress și quest_variables în DB. Asta îți deschide quest chains reale, resume corect după restart și dialoguri dependente de progres.
+•
+Obiective tipizate, nu doar delivery de iteme. În config ai deja type pe objective, dar runtime-ul verifică și consumă efectiv doar inventarul la turn-in în ScenarioEngine.java și ScenarioEngine.java. Următorul pas mare e să ai handlere pentru collect_item, talk_to_npc, visit_region, kill_mob, deliver_to_npc, wait_until, craft_item.
+•
+Main quest + side quests. Acum sistemul blochează alt quest dacă jucătorul are deja unul activ în ScenarioEngine.java. Pentru un RPG e prea rigid. Aș păstra 1 main quest activ, dar aș permite 2-3 side quests sau 1 per NPC/faction/category.
+•
+UX de jucător, nu doar comenzi de admin și keyword-uri în chat. Comenzile quest sunt filtrate ca admin/quest în AINPCCommand.java, iar permisiunea ainpc.quest e op în plugin.yml. Chat-ul merge deja în NPCChatListener.java, dar eu aș adăuga și un quest log clar: /quest, /quest track, bossbar/actionbar, poate un GUI/book.
+•
+Repeatable, cooldown, fail rules. Ai deja FAILED în ScenarioEngine.java, dar practic fail-ul acum e mai mult abandon. Aș adăuga repeatable, cooldown_hours, expires_after, fail_on_npc_death, fail_on_world_state_change. Asta face lumea mai vie și oprește farm-ul brut.
+•
+Variante per profesie, nu un singur fallback fix. În quests.yml ai acum câte un template fallback per profesie. Aș trece la pool-uri weighted, cu 3-5 questuri per profesie, plus prerequisites, min_reputation, season, biome, time_of_day, ca să nu devină repetitiv după 20 minute.
+•
+Reputație și consecințe. Questurile tale au deja profesii, NPC-uri și scenarii, deci merită să introduci reputation_by_profession, faction_trust, npc_relationship_delta. Accept/refuz/abandon/completare ar trebui să schimbe felul în care satul reacționează, nu doar să dea iteme.
+•
+Separarea modelului de quest de ScenarioEngine. Momentan questurile sunt încă destul de înghesuite în ScenarioEngine.java. Pe termen mediu aș scoate un QuestService, QuestDefinition, ObjectiveHandler, RewardHandler, QuestRepository. Asta o să-ți facă addonurile mult mai ușor de scris.
+Dacă ar fi să aleg ordinea de implementare, eu aș face așa: 1. objective handlers, 2. progress per objective/phase, 3. player quest log, 4. main+side quests, 5. reputation/branching.
+Dacă vrei, pot să încep direct cu varianta cea mai utilă acum: objective handlers + progress per objective, fiindcă de acolo sistemul începe să semene cu un quest engine adevărat.
