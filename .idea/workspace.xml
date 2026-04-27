@@ -5,9 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/mapping.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mapping.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/PlaceType.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/PlaceType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldNodeInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldNodeInfo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldPlaceInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldPlaceInfo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldRegionInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldRegionInfo.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -185,7 +186,7 @@
       <workItem from="1777187752655" duration="11898000" />
       <workItem from="1777268177017" duration="11554000" />
       <workItem from="1777308250057" duration="30000" />
-      <workItem from="1777308360369" duration="2317000" />
+      <workItem from="1777308360369" duration="3130000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -291,7 +292,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777304684034</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="test">
+      <option name="closed" value="true" />
+      <created>1777312025081</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1777312025081</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
