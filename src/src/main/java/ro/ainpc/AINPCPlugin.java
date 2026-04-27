@@ -153,6 +153,7 @@ public class AINPCPlugin extends JavaPlugin {
         getLogger().info("NPC-uri incarcate: " + npcManager.getNPCCount());
         getLogger().info("Addonuri inregistrate: " + platform.getAddonRegistry().size());
         getLogger().info("World admin: " + platform.getWorldAdmin().getRegionCount() + " regiuni / "
+            + platform.getWorldAdmin().getPlaceCount() + " places / "
             + platform.getWorldAdmin().getNodeCount() + " noduri");
         getLogger().info("========================================");
     }

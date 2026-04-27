@@ -42,6 +42,7 @@ ro\ainpc\database\DatabaseManager.class
 ro\ainpc\listeners\NPCChatListener$ResolvedDialogTarget.class
 ro\ainpc\managers\NPCManager$1.class
 ro\ainpc\ai\OpenAIService$ConnectionStatus.class
+ro\ainpc\world\WorldPlace.class
 ro\ainpc\listeners\NPCInteractionListener.class
 ro\ainpc\platform\AINPCPlatform.class
 ro\ainpc\listeners\AbstractPluginListener.class

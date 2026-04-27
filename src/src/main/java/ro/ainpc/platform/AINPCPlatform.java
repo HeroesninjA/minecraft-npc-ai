@@ -49,7 +49,7 @@ public class AINPCPlatform implements AINPCPlatformApi {
             AddonType.CORE,
             false,
             EnumSet.allOf(RuntimeMode.class),
-            List.of("ai-engine", "context-system", "dialog-system", "world-admin-api", "addon-api"),
+            List.of("ai-engine", "context-system", "dialog-system", "world-admin-api", "world-place-api", "addon-api"),
             List.of()
         ));
     }

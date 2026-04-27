@@ -135,7 +135,7 @@ database:
 # World Admin
 world_admin:
   enabled: true
-  # Regiunile si nodurile sunt definite manual pentru harti preconstruite.
+  # Regiunile, places si nodurile sunt definite manual pentru harti preconstruite.
   regions: {}
 
 # Mesaje personalizate

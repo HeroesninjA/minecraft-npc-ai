@@ -8,6 +8,7 @@ public class WorldNode {
 
     private final String id;
     private final String regionId;
+    private final String placeId;
     private final WorldNodeType type;
     private final String worldName;
     private final double x;
@@ -18,6 +19,7 @@ public class WorldNode {
 
     public WorldNode(String id,
                      String regionId,
+                     String placeId,
                      WorldNodeType type,
                      String worldName,
                      double x,
@@ -26,6 +28,7 @@ public class WorldNode {
                      double radius) {
         this.id = id;
         this.regionId = regionId;
+        this.placeId = placeId;
         this.type = type;
         this.worldName = worldName;
         this.x = x;
@@ -41,6 +44,10 @@ public class WorldNode {
 
     public String getRegionId() {
         return regionId;
+    }
+
+    public String getPlaceId() {
+        return placeId;
     }
 
     public WorldNodeType getType() {

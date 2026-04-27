@@ -1520,7 +1520,7 @@ public class ScenarioEngine {
             return null;
         }
 
-        return plugin.getPlatform().getWorldAdminService().findRegion(
+        return plugin.getPlatform().getWorldAdminService().findRegionAt(
             location.getWorld().getName(),
             location.getBlockX(),
             location.getBlockY(),

@@ -18,6 +18,37 @@ Actualizat: 2026-04-26
 - [ ] Incarcare curata a scenariilor ca module separate
 - [ ] World admin pentru regiuni, noduri si control de zona
 
+## Componente lipsa confirmate in cod
+
+- [ ] Runtime extensibil pentru scenarii:
+- [ ] `ScenarioActionRegistry`
+- [ ] `ScenarioConditionRegistry`
+- [ ] `ScenarioTriggerRegistry`
+- [ ] `ScenarioExecutionContext`
+- [ ] `ScenarioVariableProvider`
+- [ ] `ScenarioValidationReport`
+- [ ] Validator pentru addonuri si feature pack-uri:
+- [ ] verificare `dependencies`
+- [ ] verificare `capabilities`
+- [ ] verificare compatibilitate cu `RuntimeMode`
+- [ ] mesaje clare la load pentru incompatibilitati
+- [ ] Multi-quest runtime matur pe jucator, nu doar un singur quest activ
+- [ ] Sistem semantic de `places` peste world admin:
+- [ ] locuri de tip `fierarie`, `taverna`, `casa_fierarului`
+- [ ] API public pentru interogarea acestor locuri
+- [ ] Sistem extins de reward:
+- [ ] reputatie
+- [ ] economie / monede
+- [ ] progresie jucator
+- [ ] factiuni sau afiliere regionala
+- [ ] Comenzi de debug si inspectie pentru:
+- [ ] prompt AI
+- [ ] scenarii active
+- [ ] quest progress
+- [ ] validare pack-uri si addonuri
+- [ ] Suita de teste automate pentru questuri, world admin si addon registry
+- [ ] Mutarea finala a surselor core din folderul legacy `src/src` in `ainpc-core-plugin/src`
+
 ## NPC-uri
 
 - [ ] Rutine zilnice mai clare pentru fiecare NPC

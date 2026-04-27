@@ -3,8 +3,14 @@ package ro.ainpc.commands;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.npc.AINPC;
+import ro.ainpc.world.PlaceType;
+import ro.ainpc.world.RegionType;
+import ro.ainpc.world.WorldPlaceInfo;
+import ro.ainpc.world.WorldRegionInfo;
+import ro.ainpc.world.WorldNodeType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,11 +25,27 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "quest", "list", "family", "mood", "tp", "reload", "test"
+        "create", "delete", "info", "quest", "world", "list", "family", "mood", "tp", "reload", "test"
     );
     private static final List<String> QUEST_MODES = Arrays.asList(
         "nearest", "accept", "decline", "abandon", "status", "reset", "complete"
     );
+    private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "save");
+    private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
+    private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
+    private static final List<String> NODE_ACTIONS = Arrays.asList("create");
+    private static final List<String> REGION_TYPES = Arrays.stream(RegionType.values())
+        .map(RegionType::getId)
+        .sorted()
+        .toList();
+    private static final List<String> PLACE_TYPES = Arrays.stream(PlaceType.values())
+        .map(PlaceType::getId)
+        .sorted()
+        .toList();
+    private static final List<String> NODE_TYPES = Arrays.stream(WorldNodeType.values())
+        .map(WorldNodeType::getId)
+        .sorted()
+        .toList();
     
     private static final List<String> OCCUPATIONS = Arrays.asList(
         "fermier", "fierar", "pescar", "negustor", "miner", "tamplar",
@@ -79,12 +101,89 @@ public class AINPCTabCompleter implements TabCompleter {
                 case "quest" -> {
                     completions.addAll(completeQuestArgs(sliceQuestArgs(args)));
                 }
+                case "world" -> {
+                    completions.addAll(completeWorldArgs(sender, args));
+                }
                 case "mood", "emotion" -> {
                     switch (args.length) {
                         case 2 -> completions.addAll(getNPCNames(args[1]));
                         case 3 -> completions.addAll(filterStartsWith(EMOTIONS, args[2]));
                         case 4 -> completions.addAll(Arrays.asList("0.3", "0.5", "0.7", "1.0"));
                     }
+                }
+            }
+        }
+
+        return completions;
+    }
+
+    private List<String> completeWorldArgs(CommandSender sender, String[] args) {
+        List<String> completions = new ArrayList<>();
+        if (args.length == 2) {
+            completions.addAll(filterStartsWith(WORLD_MODES, args[1]));
+            return completions;
+        }
+
+        String worldMode = args[1].toLowerCase();
+        switch (worldMode) {
+            case "whereami" -> {
+                if (args.length == 3) {
+                    completions.addAll(getOnlinePlayerNames(args[2]));
+                }
+            }
+            case "places" -> {
+                if (args.length == 3) {
+                    completions.addAll(getRegionIds(args[2]));
+                }
+            }
+            case "region" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(REGION_ACTIONS, args[2]));
+                } else if (args.length == 4) {
+                    if ("info".equalsIgnoreCase(args[2])) {
+                        completions.addAll(getRegionIds(args[3]));
+                    } else if ("create".equalsIgnoreCase(args[2])) {
+                        completions.add("<id>");
+                    }
+                } else if (args.length == 5 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(REGION_TYPES, args[4]));
+                } else if (args.length >= 6 && args.length <= 11 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getCoordinateSuggestions(sender, args[args.length - 1]));
+                }
+            }
+            case "place" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(PLACE_ACTIONS, args[2]));
+                } else if (args.length == 4) {
+                    if ("info".equalsIgnoreCase(args[2])) {
+                        completions.addAll(getPlaceIds(args[3]));
+                    } else if ("create".equalsIgnoreCase(args[2])) {
+                        completions.addAll(getRegionIds(args[3]));
+                    }
+                } else if (args.length == 5 && "create".equalsIgnoreCase(args[2])) {
+                    completions.add("<id>");
+                } else if (args.length == 6 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(PLACE_TYPES, args[5]));
+                } else if (args.length >= 7 && args.length <= 12 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getCoordinateSuggestions(sender, args[args.length - 1]));
+                }
+            }
+            case "node" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(NODE_ACTIONS, args[2]));
+                } else if (args.length == 4 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getRegionIds(args[3]));
+                } else if (args.length == 5 && "create".equalsIgnoreCase(args[2])) {
+                    completions.add("-");
+                    completions.addAll(getPlaceIdsForRegion(args[3], args[4]));
+                } else if (args.length == 6 && "create".equalsIgnoreCase(args[2])) {
+                    completions.add("<id>");
+                } else if (args.length == 7 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(NODE_TYPES, args[6]));
+                } else if (args.length >= 8 && args.length <= 10 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getCoordinateSuggestions(sender, args[args.length - 1]));
+                } else if (args.length == 11 && "create".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(Arrays.asList("1.5", "2.5", "4.0", "6.0"), args[10]));
                 }
             }
         }
@@ -152,6 +251,45 @@ public class AINPCTabCompleter implements TabCompleter {
             .map(sender -> sender.getName())
             .filter(name -> name.toLowerCase().startsWith(prefix.toLowerCase()))
             .collect(Collectors.toList());
+    }
+
+    private List<String> getRegionIds(String prefix) {
+        return plugin.getPlatform().getWorldAdmin().getRegions().stream()
+            .map(WorldRegionInfo::id)
+            .filter(id -> id.toLowerCase().startsWith(prefix.toLowerCase()))
+            .sorted()
+            .collect(Collectors.toList());
+    }
+
+    private List<String> getPlaceIds(String prefix) {
+        return plugin.getPlatform().getWorldAdmin().getPlaces().stream()
+            .map(WorldPlaceInfo::id)
+            .filter(id -> id.toLowerCase().startsWith(prefix.toLowerCase()))
+            .sorted()
+            .collect(Collectors.toList());
+    }
+
+    private List<String> getPlaceIdsForRegion(String regionSelector, String prefix) {
+        return plugin.getPlatform().getWorldAdmin().getPlaces().stream()
+            .filter(place -> place.regionId().equalsIgnoreCase(regionSelector)
+                || place.id().toLowerCase().startsWith(regionSelector.toLowerCase() + ":"))
+            .map(WorldPlaceInfo::id)
+            .filter(id -> id.toLowerCase().startsWith(prefix.toLowerCase()))
+            .sorted()
+            .collect(Collectors.toList());
+    }
+
+    private List<String> getCoordinateSuggestions(CommandSender sender, String prefix) {
+        if (!(sender instanceof Player player)) {
+            return List.of();
+        }
+
+        List<String> values = List.of(
+            String.valueOf(player.getLocation().getBlockX()),
+            String.valueOf(player.getLocation().getBlockY()),
+            String.valueOf(player.getLocation().getBlockZ())
+        );
+        return filterStartsWith(values, prefix);
     }
 
     /**
