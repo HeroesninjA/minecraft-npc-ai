@@ -7,9 +7,18 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
+import ro.ainpc.world.PlaceType;
+import ro.ainpc.world.RegionType;
+import ro.ainpc.world.WorldAdminService;
+import ro.ainpc.world.WorldNodeInfo;
+import ro.ainpc.world.WorldNodeType;
+import ro.ainpc.world.WorldPlaceInfo;
+import ro.ainpc.world.WorldRegionInfo;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +55,7 @@ public class AINPCCommand implements CommandExecutor {
             case "delete", "remove" -> handleDelete(sender, args);
             case "info" -> handleInfo(sender, args);
             case "quest" -> handleQuest(sender, args);
+            case "world" -> handleWorld(sender, args);
             case "list" -> handleList(sender, args);
             case "family" -> handleFamily(sender, args);
             case "mood", "emotion" -> handleMood(sender, args);
@@ -571,6 +581,501 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
     }
 
+    private boolean handleWorld(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        if (args.length < 2) {
+            sendWorldUsage(sender);
+            return true;
+        }
+
+        String worldMode = args[1].toLowerCase();
+        return switch (worldMode) {
+            case "whereami" -> handleWorldWhereAmI(sender, args);
+            case "places" -> handleWorldPlaces(sender, args);
+            case "region" -> handleWorldRegion(sender, args);
+            case "place" -> handleWorldPlace(sender, args);
+            case "node" -> handleWorldNode(sender, args);
+            case "save" -> handleWorldSave(sender);
+            default -> {
+                sendWorldUsage(sender);
+                yield true;
+            }
+        };
+    }
+
+    private boolean handleWorldWhereAmI(CommandSender sender, String[] args) {
+        Player targetPlayer = resolveQuestTargetPlayer(
+            sender,
+            args,
+            2,
+            "&cUtilizare: /ainpc world whereami [jucator]"
+        );
+        if (targetPlayer == null) {
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        Location location = targetPlayer.getLocation();
+        WorldRegionInfo region = worldAdmin.findRegion(
+            location.getWorld().getName(),
+            location.getBlockX(),
+            location.getBlockY(),
+            location.getBlockZ()
+        );
+        WorldPlaceInfo place = worldAdmin.findPlace(
+            location.getWorld().getName(),
+            location.getBlockX(),
+            location.getBlockY(),
+            location.getBlockZ()
+        );
+        List<WorldNodeInfo> nearbyNodes = findNodesAtLocation(worldAdmin, location);
+
+        plugin.getMessageUtils().send(sender, "&6=== World Mapping: whereami ===");
+        plugin.getMessageUtils().send(sender, "&eJucator: &f" + targetPlayer.getName());
+        plugin.getMessageUtils().send(sender, "&eLocatie: &f" + formatLocation(location));
+
+        if (region != null) {
+            plugin.getMessageUtils().send(sender, "&eRegiune: &f" + region.id() + " &7(" + region.name() + ")");
+            plugin.getMessageUtils().send(sender, "&eTip regiune: &f" + region.typeId());
+        } else {
+            plugin.getMessageUtils().send(sender, "&eRegiune: &cNiciuna");
+        }
+
+        if (place != null) {
+            plugin.getMessageUtils().send(sender, "&ePlace: &f" + place.id() + " &7(" + place.displayName() + ")");
+            plugin.getMessageUtils().send(sender, "&eTip place: &f" + place.placeType().getId());
+            plugin.getMessageUtils().send(sender, "&eTag-uri place: &f" + formatList(place.tags()));
+        } else {
+            plugin.getMessageUtils().send(sender, "&ePlace: &cNiciunul");
+        }
+
+        if (nearbyNodes.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&eNodes active aici: &7niciunul");
+        } else {
+            plugin.getMessageUtils().send(sender, "&eNodes active aici: &f" + formatList(
+                nearbyNodes.stream().map(WorldNodeInfo::id).toList()
+            ));
+        }
+
+        return true;
+    }
+
+    private boolean handleWorldPlaces(CommandSender sender, String[] args) {
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        String regionFilter = args.length > 2 ? args[2] : null;
+        List<WorldPlaceInfo> places = (regionFilter == null
+            ? worldAdmin.getPlaces()
+            : worldAdmin.getPlaces(regionFilter))
+            .stream()
+            .sorted(Comparator.comparing(WorldPlaceInfo::id))
+            .toList();
+
+        if (places.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                regionFilter == null
+                    ? "&7Nu exista places configurate."
+                    : "&7Nu exista places configurate pentru regiunea &f" + regionFilter + "&7.");
+            return true;
+        }
+
+        plugin.getMessageUtils().send(sender, "&6=== Places (" + places.size() + ") ===");
+        if (regionFilter != null) {
+            plugin.getMessageUtils().send(sender, "&7Filtru regiune: &f" + regionFilter);
+        }
+
+        for (WorldPlaceInfo place : places) {
+            plugin.getMessageUtils().send(sender,
+                "&e" + place.id() + " &7- &f" + place.displayName()
+                    + " &8[" + place.placeType().getId() + "]"
+                    + " &7regiune=&f" + place.regionId());
+        }
+
+        return true;
+    }
+
+    private boolean handleWorldRegion(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world region <info|create> ...");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        String action = args[2].toLowerCase();
+        if ("create".equals(action)) {
+            return handleWorldRegionCreate(sender, args);
+        }
+        if (!"info".equals(action) || args.length < 4) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world region info <regionId>");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+            return true;
+        }
+
+        List<WorldRegionInfo> matches = findRegionMatches(worldAdmin, args[3]);
+        if (matches.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cRegiunea &e" + args[3] + " &cnu a fost gasita.");
+            return true;
+        }
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru regiune. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(matches.stream().map(WorldRegionInfo::id).toList()));
+            return true;
+        }
+
+        WorldRegionInfo region = matches.get(0);
+        List<WorldPlaceInfo> places = worldAdmin.getPlaces(region.id()).stream()
+            .sorted(Comparator.comparing(WorldPlaceInfo::id))
+            .toList();
+        List<WorldNodeInfo> nodes = worldAdmin.getNodes(region.id()).stream()
+            .sorted(Comparator.comparing(WorldNodeInfo::id))
+            .toList();
+
+        plugin.getMessageUtils().send(sender, "&6=== World Region Info ===");
+        plugin.getMessageUtils().send(sender, "&eID: &f" + region.id());
+        plugin.getMessageUtils().send(sender, "&eNume: &f" + region.name());
+        plugin.getMessageUtils().send(sender, "&eLume: &f" + region.worldName());
+        plugin.getMessageUtils().send(sender, "&eTip: &f" + region.typeId());
+        plugin.getMessageUtils().send(sender, "&eBounds: &f" + formatBounds(region.minX(), region.minY(), region.minZ(),
+            region.maxX(), region.maxY(), region.maxZ()));
+        plugin.getMessageUtils().send(sender, "&eTag-uri: &f" + formatList(region.tags()));
+        plugin.getMessageUtils().send(sender, "&eStory mode: &f" + region.storyMode().getId());
+        plugin.getMessageUtils().send(sender, "&eStory state: &f" + region.storyStateKey());
+        plugin.getMessageUtils().send(sender, "&eStory pool: &f" + formatList(region.storyPool()));
+        plugin.getMessageUtils().send(sender, "&ePlaces: &f" + places.size());
+        plugin.getMessageUtils().send(sender, "&eNodes: &f" + nodes.size());
+        if (!places.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&ePlace IDs: &f" + formatList(places.stream().map(WorldPlaceInfo::id).toList()));
+        }
+
+        return true;
+    }
+
+    private boolean handleWorldPlace(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world place <info|create> ...");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        String action = args[2].toLowerCase();
+        if ("create".equals(action)) {
+            return handleWorldPlaceCreate(sender, args);
+        }
+        if (!"info".equals(action) || args.length < 4) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world place info <placeId>");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+            return true;
+        }
+
+        List<WorldPlaceInfo> matches = findPlaceMatches(worldAdmin, args[3]);
+        if (matches.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cPlace-ul &e" + args[3] + " &cnu a fost gasit.");
+            return true;
+        }
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru place. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(matches.stream().map(WorldPlaceInfo::id).toList()));
+            return true;
+        }
+
+        WorldPlaceInfo place = matches.get(0);
+        List<WorldNodeInfo> nodes = worldAdmin.getNodesForPlace(place.id()).stream()
+            .sorted(Comparator.comparing(WorldNodeInfo::id))
+            .toList();
+
+        plugin.getMessageUtils().send(sender, "&6=== World Place Info ===");
+        plugin.getMessageUtils().send(sender, "&eID: &f" + place.id());
+        plugin.getMessageUtils().send(sender, "&eNume: &f" + place.displayName());
+        plugin.getMessageUtils().send(sender, "&eRegiune: &f" + place.regionId());
+        plugin.getMessageUtils().send(sender, "&eLume: &f" + place.worldName());
+        plugin.getMessageUtils().send(sender, "&eTip: &f" + place.placeType().getId());
+        plugin.getMessageUtils().send(sender, "&eBounds: &f" + formatBounds(place.minX(), place.minY(), place.minZ(),
+            place.maxX(), place.maxY(), place.maxZ()));
+        plugin.getMessageUtils().send(sender, "&eTag-uri: &f" + formatList(place.tags()));
+        plugin.getMessageUtils().send(sender, "&eOwner NPC: &f" + formatOptional(place.ownerNpcId()));
+        plugin.getMessageUtils().send(sender, "&ePublic access: &f" + (place.publicAccess() ? "da" : "nu"));
+        plugin.getMessageUtils().send(sender, "&eMetadata: &f" + formatMap(place.metadata()));
+        plugin.getMessageUtils().send(sender, "&eNodes: &f" + nodes.size());
+        if (!nodes.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&eNode IDs: &f" + formatList(nodes.stream().map(WorldNodeInfo::id).toList()));
+        }
+
+        return true;
+    }
+
+    private boolean handleWorldNode(CommandSender sender, String[] args) {
+        if (args.length < 3 || !"create".equalsIgnoreCase(args[2])) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        return handleWorldNodeCreate(sender, args);
+    }
+
+    private boolean handleWorldSave(CommandSender sender) {
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        if (!worldAdmin.hasUnsavedChanges()) {
+            plugin.getMessageUtils().send(sender, "&7Nu exista modificari runtime de salvat.");
+            return true;
+        }
+
+        worldAdmin.saveToConfig(plugin.getConfig());
+        plugin.saveConfig();
+        plugin.getMessageUtils().send(sender,
+            "&aWorld admin salvat in config.yml: &f"
+                + worldAdmin.getRegionCount() + " regiuni, "
+                + worldAdmin.getPlaceCount() + " places, "
+                + worldAdmin.getNodeCount() + " noduri&a.");
+        return true;
+    }
+
+    private boolean handleWorldRegionCreate(CommandSender sender, String[] args) {
+        if (args.length != 11) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+            return true;
+        }
+
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+
+        RegionType regionType = parseRegionTypeStrict(args[4]);
+        if (regionType == null) {
+            plugin.getMessageUtils().send(sender, "&cTip de regiune invalid: &e" + args[4] + "&c.");
+            return true;
+        }
+
+        Integer minX = parseIntegerStrict(args[5]);
+        Integer minY = parseIntegerStrict(args[6]);
+        Integer minZ = parseIntegerStrict(args[7]);
+        Integer maxX = parseIntegerStrict(args[8]);
+        Integer maxY = parseIntegerStrict(args[9]);
+        Integer maxZ = parseIntegerStrict(args[10]);
+        if (minX == null || minY == null || minZ == null || maxX == null || maxY == null || maxZ == null) {
+            plugin.getMessageUtils().send(sender, "&cCoordonatele regiunii trebuie sa fie numere intregi.");
+            return true;
+        }
+
+        try {
+            WorldRegionInfo regionInfo = toRegionInfo(plugin.getPlatform().getWorldAdminService().createRegion(
+                args[3],
+                null,
+                player.getWorld().getName(),
+                regionType,
+                minX,
+                minY,
+                minZ,
+                maxX,
+                maxY,
+                maxZ
+            ));
+            plugin.getMessageUtils().send(sender,
+                "&aRegiune creata: &f" + regionInfo.id() + " &7(" + regionInfo.name() + ")");
+            plugin.getMessageUtils().send(sender,
+                "&7Lume: &f" + regionInfo.worldName() + " &7| Bounds: &f"
+                    + formatBounds(regionInfo.minX(), regionInfo.minY(), regionInfo.minZ(),
+                    regionInfo.maxX(), regionInfo.maxY(), regionInfo.maxZ()));
+            plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.");
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldPlaceCreate(CommandSender sender, String[] args) {
+        if (args.length != 12) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        List<WorldRegionInfo> regionMatches = findRegionMatches(worldAdmin, args[3]);
+        if (regionMatches.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cRegiunea &e" + args[3] + " &cnu a fost gasita.");
+            return true;
+        }
+        if (regionMatches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru regiune. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(regionMatches.stream().map(WorldRegionInfo::id).toList()));
+            return true;
+        }
+
+        PlaceType placeType = parsePlaceTypeStrict(args[5]);
+        if (placeType == null) {
+            plugin.getMessageUtils().send(sender, "&cTip de place invalid: &e" + args[5] + "&c.");
+            return true;
+        }
+
+        Integer minX = parseIntegerStrict(args[6]);
+        Integer minY = parseIntegerStrict(args[7]);
+        Integer minZ = parseIntegerStrict(args[8]);
+        Integer maxX = parseIntegerStrict(args[9]);
+        Integer maxY = parseIntegerStrict(args[10]);
+        Integer maxZ = parseIntegerStrict(args[11]);
+        if (minX == null || minY == null || minZ == null || maxX == null || maxY == null || maxZ == null) {
+            plugin.getMessageUtils().send(sender, "&cCoordonatele place-ului trebuie sa fie numere intregi.");
+            return true;
+        }
+
+        WorldRegionInfo region = regionMatches.get(0);
+        try {
+            WorldPlaceInfo placeInfo = toPlaceInfo(plugin.getPlatform().getWorldAdminService().createPlace(
+                region.id(),
+                args[4],
+                null,
+                region.worldName(),
+                placeType,
+                minX,
+                minY,
+                minZ,
+                maxX,
+                maxY,
+                maxZ
+            ));
+            plugin.getMessageUtils().send(sender,
+                "&aPlace creat: &f" + placeInfo.id() + " &7(" + placeInfo.displayName() + ")");
+            plugin.getMessageUtils().send(sender,
+                "&7Regiune: &f" + placeInfo.regionId() + " &7| Bounds: &f"
+                    + formatBounds(placeInfo.minX(), placeInfo.minY(), placeInfo.minZ(),
+                    placeInfo.maxX(), placeInfo.maxY(), placeInfo.maxZ()));
+            plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.");
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldNodeCreate(CommandSender sender, String[] args) {
+        if (args.length < 10 || args.length > 11) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        List<WorldRegionInfo> regionMatches = findRegionMatches(worldAdmin, args[3]);
+        if (regionMatches.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cRegiunea &e" + args[3] + " &cnu a fost gasita.");
+            return true;
+        }
+        if (regionMatches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru regiune. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(regionMatches.stream().map(WorldRegionInfo::id).toList()));
+            return true;
+        }
+
+        WorldNodeType nodeType = parseNodeTypeStrict(args[6]);
+        if (nodeType == null) {
+            plugin.getMessageUtils().send(sender, "&cTip de node invalid: &e" + args[6] + "&c.");
+            return true;
+        }
+
+        Double x = parseDoubleStrict(args[7]);
+        Double y = parseDoubleStrict(args[8]);
+        Double z = parseDoubleStrict(args[9]);
+        Double radius = args.length == 11 ? parseDoubleStrict(args[10]) : 2.5D;
+        if (x == null || y == null || z == null || radius == null) {
+            plugin.getMessageUtils().send(sender, "&cCoordonatele node-ului si raza trebuie sa fie numere.");
+            return true;
+        }
+
+        WorldRegionInfo region = regionMatches.get(0);
+        String placeSelector = args[4];
+        String resolvedPlaceId = null;
+        WorldPlaceInfo place = null;
+        if (!isNoneSelector(placeSelector)) {
+            List<WorldPlaceInfo> placeMatches = findPlaceMatches(worldAdmin, region.id(), placeSelector);
+            if (placeMatches.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&cPlace-ul &e" + placeSelector + " &cnu a fost gasit in regiunea &f" + region.id() + "&c.");
+                return true;
+            }
+            if (placeMatches.size() > 1) {
+                plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru place. Foloseste ID-ul complet.");
+                plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(placeMatches.stream().map(WorldPlaceInfo::id).toList()));
+                return true;
+            }
+            place = placeMatches.get(0);
+            resolvedPlaceId = place.id();
+        }
+
+        try {
+            WorldNodeInfo nodeInfo = toNodeInfo(plugin.getPlatform().getWorldAdminService().createNode(
+                region.id(),
+                resolvedPlaceId,
+                args[5],
+                nodeType,
+                place != null ? place.worldName() : region.worldName(),
+                x,
+                y,
+                z,
+                radius
+            ));
+            plugin.getMessageUtils().send(sender,
+                "&aNode creat: &f" + nodeInfo.id() + " &7[" + nodeInfo.typeId() + "]");
+            plugin.getMessageUtils().send(sender,
+                "&7Regiune: &f" + nodeInfo.regionId()
+                    + " &7| Place: &f" + formatOptional(nodeInfo.placeId())
+                    + " &7| Pozitie: &f"
+                    + String.format("%.1f, %.1f, %.1f", nodeInfo.x(), nodeInfo.y(), nodeInfo.z()));
+            plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.");
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private void sendWorldUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world whereami [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world places [regionId]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world region info <regionId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world place info <placeId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world save");
+    }
+
     /**
      * /ainpc delete <nume>
      */
@@ -870,6 +1375,22 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa");
         plugin.getMessageUtils().send(sender, "&e/ainpc list");
         plugin.getMessageUtils().send(sender, "&7  Lista toate NPC-urile");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world whereami [jucator]");
+        plugin.getMessageUtils().send(sender, "&7  Arata regiunea, place-ul si node-urile active pentru o locatie");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world places [regionId]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza place-urile mapate");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world region info <regionId>");
+        plugin.getMessageUtils().send(sender, "&7  Arata detalii despre o regiune mapata");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza o regiune noua in lumea jucatorului");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world place info <placeId>");
+        plugin.getMessageUtils().send(sender, "&7  Arata detalii despre un place mapat");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza un place nou in interiorul unei regiuni");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza un node de regiune sau de place");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world save");
+        plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
         plugin.getMessageUtils().send(sender, "&e/ainpc family <nume>");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza familia unui NPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc mood <nume> <emotie> [intensitate]");
@@ -904,6 +1425,189 @@ public class AINPCCommand implements CommandExecutor {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    private Integer parseIntegerStrict(String value) {
+        try {
+            return Integer.valueOf(value);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private Double parseDoubleStrict(String value) {
+        try {
+            return Double.valueOf(value);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private Player requirePlayerSender(CommandSender sender) {
+        if (sender instanceof Player player) {
+            return player;
+        }
+
+        plugin.getMessageUtils().send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.");
+        return null;
+    }
+
+    private List<WorldNodeInfo> findNodesAtLocation(WorldAdminApi worldAdmin, Location location) {
+        return worldAdmin.getNodes().stream()
+            .filter(node -> node.worldName().equalsIgnoreCase(location.getWorld().getName()))
+            .filter(node -> {
+                double dx = node.x() - location.getX();
+                double dy = node.y() - location.getY();
+                double dz = node.z() - location.getZ();
+                double radius = Math.max(0.0, node.radius());
+                return dx * dx + dy * dy + dz * dz <= radius * radius;
+            })
+            .sorted(Comparator.comparing(WorldNodeInfo::id))
+            .toList();
+    }
+
+    private List<WorldRegionInfo> findRegionMatches(WorldAdminApi worldAdmin, String selector) {
+        if (selector == null || selector.isBlank()) {
+            return List.of();
+        }
+
+        String normalizedSelector = selector.trim();
+        return worldAdmin.getRegions().stream()
+            .filter(region -> region.id().equalsIgnoreCase(normalizedSelector)
+                || region.name().equalsIgnoreCase(normalizedSelector))
+            .sorted(Comparator.comparing(WorldRegionInfo::id))
+            .toList();
+    }
+
+    private List<WorldPlaceInfo> findPlaceMatches(WorldAdminApi worldAdmin, String selector) {
+        if (selector == null || selector.isBlank()) {
+            return List.of();
+        }
+
+        String normalizedSelector = selector.trim();
+        String idSuffix = ":" + normalizedSelector;
+        return worldAdmin.getPlaces().stream()
+            .filter(place -> place.id().equalsIgnoreCase(normalizedSelector)
+                || place.displayName().equalsIgnoreCase(normalizedSelector)
+                || place.id().toLowerCase().endsWith(idSuffix.toLowerCase()))
+            .sorted(Comparator.comparing(WorldPlaceInfo::id))
+            .toList();
+    }
+
+    private List<WorldPlaceInfo> findPlaceMatches(WorldAdminApi worldAdmin, String regionId, String selector) {
+        return findPlaceMatches(worldAdmin, selector).stream()
+            .filter(place -> place.regionId().equalsIgnoreCase(regionId))
+            .sorted(Comparator.comparing(WorldPlaceInfo::id))
+            .toList();
+    }
+
+    private RegionType parseRegionTypeStrict(String value) {
+        RegionType type = RegionType.fromId(value);
+        if (type == RegionType.CUSTOM && !"custom".equalsIgnoreCase(value)) {
+            return null;
+        }
+        return type;
+    }
+
+    private PlaceType parsePlaceTypeStrict(String value) {
+        PlaceType type = PlaceType.fromId(value);
+        if (type == PlaceType.CUSTOM && !"custom".equalsIgnoreCase(value)) {
+            return null;
+        }
+        return type;
+    }
+
+    private WorldNodeType parseNodeTypeStrict(String value) {
+        WorldNodeType type = WorldNodeType.fromId(value);
+        if (type == WorldNodeType.CUSTOM && !"custom".equalsIgnoreCase(value)) {
+            return null;
+        }
+        return type;
+    }
+
+    private boolean isNoneSelector(String value) {
+        return value == null || value.isBlank()
+            || "-".equals(value)
+            || "none".equalsIgnoreCase(value)
+            || "null".equalsIgnoreCase(value);
+    }
+
+    private WorldRegionInfo toRegionInfo(ro.ainpc.world.WorldRegion region) {
+        return new WorldRegionInfo(
+            region.getId(),
+            region.getName(),
+            region.getWorldName(),
+            region.getType() != null ? region.getType().getId() : "custom",
+            region.getMinX(),
+            region.getMinY(),
+            region.getMinZ(),
+            region.getMaxX(),
+            region.getMaxY(),
+            region.getMaxZ(),
+            region.getTags(),
+            region.getStoryState() != null ? region.getStoryState().getMode() : ro.ainpc.world.StoryMode.EVOLUTIVE,
+            region.getStoryState() != null ? region.getStoryState().getStateKey() : "default",
+            region.getStoryState() != null ? region.getStoryState().getStoryPool() : List.of()
+        );
+    }
+
+    private WorldPlaceInfo toPlaceInfo(ro.ainpc.world.WorldPlace place) {
+        return new WorldPlaceInfo(
+            place.getId(),
+            place.getRegionId(),
+            place.getDisplayName(),
+            place.getWorldName(),
+            place.getPlaceType(),
+            place.getMinX(),
+            place.getMinY(),
+            place.getMinZ(),
+            place.getMaxX(),
+            place.getMaxY(),
+            place.getMaxZ(),
+            place.getTags(),
+            place.getOwnerNpcId(),
+            place.isPublicAccess(),
+            place.getMetadata()
+        );
+    }
+
+    private WorldNodeInfo toNodeInfo(ro.ainpc.world.WorldNode node) {
+        return new WorldNodeInfo(
+            node.getId(),
+            node.getRegionId(),
+            node.getPlaceId(),
+            node.getType() != null ? node.getType().getId() : "custom",
+            node.getWorldName(),
+            node.getX(),
+            node.getY(),
+            node.getZ(),
+            node.getRadius(),
+            node.getMetadata()
+        );
+    }
+
+    private String formatBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        return minX + "," + minY + "," + minZ + " -> " + maxX + "," + maxY + "," + maxZ;
+    }
+
+    private String formatList(Collection<String> values) {
+        return values == null || values.isEmpty() ? "<gol>" : String.join(", ", values);
+    }
+
+    private String formatMap(Map<String, String> values) {
+        if (values == null || values.isEmpty()) {
+            return "<gol>";
+        }
+
+        return values.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + "=" + entry.getValue())
+            .reduce((left, right) -> left + ", " + right)
+            .orElse("<gol>");
+    }
+
+    private String formatOptional(String value) {
+        return value == null || value.isBlank() ? "<nesetat>" : value;
     }
 
     private AINPC refreshQuestNpc(AINPC npc) {
