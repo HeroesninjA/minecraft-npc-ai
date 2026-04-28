@@ -68,6 +68,7 @@ Sistemul este incarcat si servit prin:
 
 - `WorldAdminService`
 - `WorldAdminApi`
+- `MappingIndex` intern pentru lookup rapid dupa locatie
 
 Capabilitati publice disponibile acum:
 
@@ -78,6 +79,42 @@ Capabilitati publice disponibile acum:
 - `findPlace(...)`
 - `findPlacesByTag(...)`
 - citire count-uri pentru regiuni, places si nodes
+
+### Indexare automata
+
+Mapping-ul construieste automat un index intern pe chunk-uri pentru:
+
+- `regions`
+- `places`
+- `nodes`
+
+Indexul este folosit pentru cautarile dupa locatie:
+
+- `findRegion(...)`
+- `findPlace(...)`
+
+Pentru `nodes`, indexarea exista deja intern ca fundatie pentru lookup-uri viitoare de tip `findNodesNear(...)`, `inspect_node` sau trigger-e de scenariu.
+
+Indexarea este activata implicit.
+
+Configurare:
+
+```yml
+world_admin:
+  enabled: true
+  auto_index:
+    enabled: true
+```
+
+Dezactivare:
+
+```yml
+world_admin:
+  auto_index:
+    enabled: false
+```
+
+Cand `auto_index.enabled` este `false`, sistemul nu construieste indexul si revine la cautarea liniara peste listele de regiuni si places. Comportamentul functional ramane acelasi, doar performanta lookup-ului poate fi mai slaba pe harti mari.
 
 ### Configurare
 
@@ -93,6 +130,8 @@ Exemplu:
 ```yml
 world_admin:
   enabled: true
+  auto_index:
+    enabled: true
   regions:
     satul_central:
       name: "Satul Central"

@@ -135,6 +135,10 @@ database:
 # World Admin
 world_admin:
   enabled: true
+  auto_index:
+    # Daca este activ, mapping-ul construieste automat un index intern pe chunk-uri pentru cautari rapide dupa locatie.
+    # Daca este dezactivat, sistemul foloseste cautarea liniara peste regions/places.
+    enabled: true
   # Regiunile, places si nodurile sunt definite manual pentru harti preconstruite.
   regions: {}
 

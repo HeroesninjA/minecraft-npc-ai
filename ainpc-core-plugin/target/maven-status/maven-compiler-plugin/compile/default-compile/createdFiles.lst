@@ -11,6 +11,7 @@ ro\ainpc\listeners\NPCChatListener.class
 ro\ainpc\engine\ScenarioEngine$QuestStatus.class
 ro\ainpc\engine\FeaturePackLoader$ScenarioRoleDefinition.class
 ro\ainpc\engine\ScenarioEngine$PlayerQuestProgress.class
+ro\ainpc\commands\AINPCCommand$AuditReport.class
 ro\ainpc\engine\DecisionEngine.class
 ro\ainpc\engine\FeaturePackLoader$TopologyDefinition.class
 ro\ainpc\engine\FeaturePackLoader$ScenarioDefinition.class
@@ -53,8 +54,10 @@ ro\ainpc\engine\FeaturePackLoader$TraitDefinition.class
 ro\ainpc\platform\PlatformProfile.class
 ro\ainpc\engine\DecisionEngine$LocationWrapper.class
 ro\ainpc\engine\FeaturePackLoader$ProfessionDefinition.class
+ro\ainpc\bootstrap\SchedulerCoordinator.class
 ro\ainpc\ai\OpenAIService$FamilyMemberSnapshot.class
 ro\ainpc\listeners\VillagerLifecycleListener.class
+ro\ainpc\world\MappingIndex$ChunkKey.class
 ro\ainpc\managers\MemoryManager$Memory.class
 ro\ainpc\world\WorldRegion.class
 ro\ainpc\world\WorldNode.class
@@ -82,6 +85,7 @@ ro\ainpc\engine\DecisionEngine$RoutineFocus.class
 ro\ainpc\addons\AddonRegistry.class
 ro\ainpc\managers\NPCManager$VillageSnapshot.class
 ro\ainpc\commands\AINPCCommand.class
+ro\ainpc\world\MappingIndex.class
 ro\ainpc\managers\ConversationSessionManager.class
 ro\ainpc\ai\NpcFactResolver.class
 ro\ainpc\engine\ScenarioEngine$QuestInventoryCheck.class
@@ -90,5 +94,6 @@ ro\ainpc\engine\FeaturePackLoader.class
 ro\ainpc\world\WorldAdminService.class
 ro\ainpc\listeners\NPCChatListener$1.class
 ro\ainpc\engine\ScenarioEngine$QuestInteractionResult.class
+ro\ainpc\world\MappingIndex$ChunkConsumer.class
 ro\ainpc\topology\TopologyCategory.class
 ro\ainpc\world\WorldNodeType.class

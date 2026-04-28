@@ -15,10 +15,9 @@
     <name>AINPC Core Plugin</name>
 
     <build>
-        <sourceDirectory>${project.basedir}/../src/src/main/java</sourceDirectory>
         <resources>
             <resource>
-                <directory>${project.basedir}/../src/src/main/resources</directory>
+                <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
         </resources>
