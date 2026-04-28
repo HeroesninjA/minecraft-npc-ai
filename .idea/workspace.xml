@@ -5,10 +5,85 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="test">
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/PlaceType.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/PlaceType.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldNodeInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldNodeInfo.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldPlaceInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldPlaceInfo.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldRegionInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/world/WorldRegionInfo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/AINPCPlugin.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/addons/AddonRegistry.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogContext.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogRequest.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogResult.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$DialogStatus.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager$PromptDbContext.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/DialogManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/NpcFactResolver$FactIntent.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/NpcFactResolver$NpcFacts.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/NpcFactResolver.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService$ConnectionStatus.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService$DialogHistory.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService$FamilyMemberSnapshot.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService$NPCRelationship.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService$PromptSnapshot.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/ai/OpenAIService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCCommand.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/database/DatabaseManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DecisionEngine.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine$DialogueIntent.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/DialogueEngine.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$FeaturePack.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$ProfessionDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$QuestEntryDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioRoleDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$TopologyDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader$TraitDefinition.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/FeaturePackLoader.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInventoryCheck.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/AbstractPluginListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/ListenerRegistry.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener$ResolvedDialogTarget.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCChatListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/NPCInteractionListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/PlayerJoinListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/listeners/VillagerLifecycleListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/ConversationSessionManager$ConversationSession.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/ConversationSessionManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/EmotionManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/FamilyManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/FamilyMemberRecord.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager$Memory.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/MemoryManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager$VillageSnapshot.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/managers/NPCManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/AINPC.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCAction$ActionCategory.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCAction.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCContext.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCEmotions.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCPersonality.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/npc/NPCState.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/platform/AINPCPlatform.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/platform/PlatformProfile.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/topology/TopologyCategory.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/topology/TopologyConsensus.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/utils/MessageUtils.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/utils/NPCNameGenerator.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/RegionType.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/StoryState.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/WorldAdminService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/WorldNode.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/WorldNodeType.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ro/ainpc/world/WorldRegion.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-archiver/pom.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -186,7 +261,9 @@
       <workItem from="1777187752655" duration="11898000" />
       <workItem from="1777268177017" duration="11554000" />
       <workItem from="1777308250057" duration="30000" />
-      <workItem from="1777308360369" duration="3130000" />
+      <workItem from="1777308360369" duration="3755000" />
+      <workItem from="1777349458040" duration="1009000" />
+      <workItem from="1777385709177" duration="1647000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -300,7 +377,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777312025081</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="test">
+      <option name="closed" value="true" />
+      <created>1777317518024</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1777317518024</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
