@@ -19,9 +19,9 @@ Stare actuala vs directie
 - Componente ca quest system complet, world admin complet, economie extinsa, reputatie globala si API public de addonuri trebuie tratate ca tinta arhitecturala pana cand sunt livrate explicit in cod.
 
 Puncte de intrare
-- Clasa principala: src/src/main/java/ro/ainpc/AINPCPlugin.java
-- Descriptor plugin: src/src/main/resources/plugin.yml
-- Configurare principala: src/src/main/resources/config.yml
+- Clasa principala: ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java
+- Descriptor plugin: ainpc-core-plugin/src/main/resources/plugin.yml
+- Configurare principala: ainpc-core-plugin/src/main/resources/config.yml
 
 Flux general
 1. Pluginul porneste si incarca configuratia.
@@ -175,11 +175,11 @@ Configurare importanta
 - debug: activeaza logurile de debug.
 
 Resurse runtime
-- src/src/main/resources/plugin.yml
-- src/src/main/resources/config.yml
-- src/src/main/resources/packs/medieval.yml
-- src/src/main/resources/packs/modern.yml
-- src/src/main/resources/packs/social.yml
+- ainpc-core-plugin/src/main/resources/plugin.yml
+- ainpc-core-plugin/src/main/resources/config.yml
+- ainpc-core-plugin/src/main/resources/packs/medieval.yml
+- ainpc-core-plugin/src/main/resources/packs/modern.yml
+- ainpc-core-plugin/src/main/resources/packs/social.yml
 
 Comanda principala
 - /ainpc

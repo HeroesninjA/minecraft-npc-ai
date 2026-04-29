@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-04-26
+Actualizat: 2026-04-28
 
 ## Exista deja
 
@@ -10,6 +10,10 @@ Actualizat: 2026-04-26
 - [x] Pachete tematice configurabile prin YAML
 - [x] Modularizare initiala in `ainpc-api`, `ainpc-core-plugin` si `ainpc-scenario-medieval`
 - [x] Scenariu medieval separat ca addon de continut
+- [x] Sursele si resursele core sunt mutate in `ainpc-core-plugin/src/main`
+- [x] Task-urile programate au fost extrase din `AINPCPlugin` in `SchedulerCoordinator`
+- [x] Folderul legacy `src/src` a fost eliminat dupa migrarea surselor in modulul core
+- [x] Mapping-ul are auto-indexare interna dezactivabila prin `world_admin.auto_index.enabled`
 
 ## Prioritate curenta
 
@@ -47,7 +51,8 @@ Actualizat: 2026-04-26
 - [ ] quest progress
 - [ ] validare pack-uri si addonuri
 - [ ] Suita de teste automate pentru questuri, world admin si addon registry
-- [ ] Mutarea finala a surselor core din folderul legacy `src/src` in `ainpc-core-plugin/src`
+- [x] Build-ul core foloseste sursele din `ainpc-core-plugin/src/main`, nu din `src/src`
+- [x] Curatarea sau arhivarea folderului legacy `src/src` dupa validarea tuturor referintelor istorice
 
 ## NPC-uri
 

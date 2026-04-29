@@ -72,10 +72,14 @@ class WorldAdminServiceTest {
             """), profile());
 
         assertTrue(service.isEnabled());
+        assertTrue(service.isAutoIndexEnabled());
         assertEquals(WorldMode.FINITE_DYNAMIC, service.getWorldMode());
         assertEquals(1, service.getRegionCount());
         assertEquals(1, service.getPlaceCount());
         assertEquals(2, service.getNodeCount());
+        assertTrue(service.getIndexedRegionChunkCount() > 0);
+        assertTrue(service.getIndexedPlaceChunkCount() > 0);
+        assertTrue(service.getIndexedNodeChunkCount() > 0);
 
         WorldRegionInfo region = service.getRegion("satul_central");
         assertNotNull(region);
@@ -146,6 +150,42 @@ class WorldAdminServiceTest {
     }
 
     @Test
+    void autoIndexCanBeDisabledAndLookupStillWorks() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              auto_index:
+                enabled: false
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 60, z: 0 }
+                  max: { x: 64, y: 90, z: 64 }
+                  places:
+                    piata:
+                      name: "Piata"
+                      type: "market"
+                      min: { x: 10, y: 61, z: 10 }
+                      max: { x: 20, y: 70, z: 20 }
+            """), profile());
+
+        assertFalse(service.isAutoIndexEnabled());
+        assertEquals(0, service.getIndexedRegionChunkCount());
+        assertEquals(0, service.getIndexedPlaceChunkCount());
+        assertEquals(0, service.getIndexedNodeChunkCount());
+
+        WorldRegionInfo region = service.findRegion("world", 12, 65, 12);
+        WorldPlaceInfo place = service.findPlace("world", 12, 65, 12);
+
+        assertNotNull(region);
+        assertEquals("satul_central", region.id());
+        assertNotNull(place);
+        assertEquals("satul_central:piata", place.id());
+    }
+
+    @Test
     void idsAreQualifiedToAvoidCollisions() throws Exception {
         service.reloadFromConfig(loadConfig("""
             world_admin:
@@ -191,10 +231,14 @@ class WorldAdminServiceTest {
             WorldNodeType.INTERACTION, "world", 144, 65, 149, 2.0);
 
         assertTrue(service.hasUnsavedChanges());
+        assertTrue(service.isAutoIndexEnabled());
+        assertNotNull(service.findRegion("world", 144, 65, 149));
+        assertNotNull(service.findPlace("world", 144, 65, 149));
 
         YamlConfiguration savedConfiguration = new YamlConfiguration();
         service.saveToConfig(savedConfiguration);
         assertFalse(service.hasUnsavedChanges());
+        assertTrue(savedConfiguration.getBoolean("world_admin.auto_index.enabled"));
 
         WorldAdminService reloadedService = new WorldAdminService(message -> { }, Logger.getLogger("WorldAdminReloadedTest"));
         reloadedService.reloadFromConfig(savedConfiguration, profile());

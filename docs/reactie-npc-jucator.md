@@ -72,7 +72,7 @@ De aceea este recomandat un serviciu dedicat.
 ### Serviciu nou
 
 Pachet recomandat:
-- `src/src/main/java/ro/ainpc/reactions/`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/reactions/`
 
 Clase recomandate:
 - `PlayerReactionService`

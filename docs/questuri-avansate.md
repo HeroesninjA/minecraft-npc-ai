@@ -13,10 +13,10 @@ Documentul are 2 obiective:
 ## Ce exista deja in proiect
 
 Fisiere relevante:
-- `src/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
-- `src/src/main/java/ro/ainpc/engine/FeaturePackLoader.java`
-- `src/src/main/java/ro/ainpc/listeners/QuestObjectiveListener.java`
-- `src/src/main/resources/quests.yml`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/listeners/QuestObjectiveListener.java`
+- `ainpc-core-plugin/src/main/resources/quests.yml`
 - `ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml`
 
 Capabilitati actuale:
@@ -487,7 +487,7 @@ Asta inseamna ca recompensa trebuie procesata de un `RewardResolver`, nu direct 
 ### 1. Extinderea parserului
 
 Fisier:
-- `src/src/main/java/ro/ainpc/engine/FeaturePackLoader.java`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java`
 
 De facut:
 - extinde `QuestEntryDefinition` sau inlocuieste-l cu un model mai bogat
@@ -503,7 +503,7 @@ De facut:
 ### 2. Separarea runtime-ului de definitie
 
 Fisier:
-- `src/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
 
 De facut:
 - separa definitia questului de progresul runtime

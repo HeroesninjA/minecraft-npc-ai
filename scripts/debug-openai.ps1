@@ -17,7 +17,7 @@ $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-    $ConfigPath = Join-Path $repoRoot "src\src\main\resources\config.yml"
+    $ConfigPath = Join-Path $repoRoot "ainpc-core-plugin\src\main\resources\config.yml"
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {

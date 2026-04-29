@@ -1,6 +1,6 @@
 # Documentatie API
 
-Actualizat: 2026-04-26
+Actualizat: 2026-04-28
 
 ## Scop
 
@@ -29,10 +29,10 @@ API-ul exista si este deja utilizabil pentru:
 - descoperirea platformei prin Bukkit Services
 - citirea profilului de runtime
 - acces la registry-ul de addonuri
-- acces la world admin la nivel de baza
+- acces read-only la world admin pentru regiuni, places si nodes
 - cererea unui `reloadContent()`
 
-API-ul actual este util, dar inca mic.
+API-ul actual este util pentru integrare si inspectie, dar nu este inca un runtime complet de extensii.
 
 Ce inseamna asta:
 
@@ -119,8 +119,10 @@ Aici se fac:
 Ofera acces la contractul public pentru world admin.
 
 Atentie:
-- in prezent API-ul public de world admin este minimal
-- ofera date agregate, nu acces complet la modelul intern
+- API-ul public este read-only
+- expune regiuni, places si nodes prin modele info stabile
+- nu ofera inca metode publice de creare, stergere sau modificare
+- scrierea se face momentan prin comenzi admin si implementarea interna din core
 
 ### `getDataDirectory()`
 
@@ -349,19 +351,42 @@ Interfata publica actuala este:
 
 - `isEnabled()`
 - `getWorldMode()`
+- `getRegions()`
+- `getRegion(String regionId)`
+- `findRegion(String worldName, int x, int y, int z)`
+- `getPlaces()`
+- `getPlaces(String regionId)`
+- `getPlace(String placeId)`
+- `findPlace(String worldName, int x, int y, int z)`
+- `findPlacesByTag(String regionId, String tag)`
+- `getNodes()`
+- `getNodes(String regionId)`
+- `getNodesForPlace(String placeId)`
+- `getNode(String nodeId)`
 - `getRegionCount()`
+- `getPlaceCount()`
 - `getNodeCount()`
 
-Aceasta suprafata este intentionat mica.
+Aceasta suprafata este intentionat read-only.
 
 Ce inseamna asta:
 
 - addonurile pot afla daca world admin este activ
-- pot face validari simple
-- pot afisa statistici
-- nu se pot baza inca pe acces semantic complet la regiuni, locuri si noduri
+- pot citi regiuni, places si nodes
+- pot face lookup dupa coordonate pentru regiune si place
+- pot face validari simple si afisa statistici
+- pot cauta places dupa tag
+- pot conecta continut extern la semantica lumii fara sa importe clase interne din core
 
-Pe viitor, daca vrei addonuri de scenariu serioase, `WorldAdminApi` va trebui extins.
+Ce nu face inca:
+
+- nu creeaza regiuni, places sau nodes
+- nu sterge sau modifica mapping-ul
+- nu expune evenimente de modificare a mapping-ului
+- nu expune lookup public pentru nodes apropiate de o locatie
+- nu ofera inca legaturi directe de tip `NPC -> homePlaceId/workPlaceId`
+
+Pe viitor, pentru addonuri de scenariu serioase, `WorldAdminApi` trebuie extins cu write API controlat, event API si query-uri mai bogate.
 
 ## Enum-uri publice
 
@@ -451,12 +476,15 @@ Pentru faza 2 si 3 vor trebui adaugate contracte noi, de exemplu:
 - `ScenarioExecutionContext`
 - `ScenarioVariableProvider`
 - `ScenarioValidationReport`
-- `Place`-level world API
+- write API controlat pentru `WorldAdmin`
+- event API pentru schimbari de mapping
+- query API pentru nodes apropiate si places disponibile
 
 Fara acestea:
 
 - addonurile pot instala continut
-- dar nu pot extinde curat runtime-ul de scenarii
+- pot citi mapping-ul semantic
+- dar nu pot extinde curat runtime-ul de scenarii si nu pot modifica lumea semantic prin API public
 
 ## Reguli de compatibilitate recomandate
 
@@ -501,6 +529,7 @@ El permite deja:
 - instalarea si descrierea addonurilor
 - sincronizarea pack-urilor
 - consultarea profilului de runtime si lume
+- citirea mapping-ului semantic prin regiuni, places si nodes
 
 Dar pentru un ecosistem real de scenarii extensibile, API-ul trebuie extins mai ales in zona:
 
