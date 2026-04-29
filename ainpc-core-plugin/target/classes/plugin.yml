@@ -9,7 +9,7 @@ website: https://v0.dev
 commands:
   ainpc:
     description: Comanda principala pentru gestionarea NPC-urilor AI
-    usage: /ainpc <create|delete|info|quest|world|audit|family|mood|list|tp|reload|test>
+    usage: /ainpc <create|delete|info|quest|world|audit|debugdump|family|routine|mood|list|tp|reload|test>
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC

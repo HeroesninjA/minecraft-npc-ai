@@ -1,9 +1,9 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-04-26
+Actualizat: 2026-04-29
 
 Status verificat:
-- build-ul multi-module trece cu `mvn -q -DskipTests package`
+- build-ul multi-module trece cu `mvn test`
 - informatiile din acest fisier sunt bazate pe codul actual, nu pe viziunea de produs
 
 ## Module existente
@@ -14,7 +14,8 @@ Proiectul este impartit in 3 module Maven:
   - API public pentru runtime mode, world mode, addon registry si world admin
 - `ainpc-core-plugin`
   - modulul de build pentru pluginul principal
-  - in acest moment compileaza sursele din vechiul folder `src/`
+  - detine sursele reale in `ainpc-core-plugin/src/main/java`
+  - detine resursele reale in `ainpc-core-plugin/src/main/resources`
 - `ainpc-scenario-medieval`
   - addon plugin separat pentru scenariul medieval
   - livreaza si sincronizeaza pack-ul `medieval_quest.yml`
@@ -36,6 +37,7 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 - initializeaza motoarele de decizie, dialog si scenarii
 - inregistreaza comenzile si listener-ele
 - porneste task-urile periodice de simulare, decay si autosave
+- porneste task-ul periodic de rutina NPC, daca `routine.enabled` este activ
 
 ## NPC-uri
 
@@ -52,6 +54,10 @@ Sistemul de NPC-uri are deja implementate:
 - cautare NPC dupa nume, UUID, entity si proximitate
 - afisare info despre NPC
 - teleport la NPC
+- completare automata pentru `homeAnchor` si `workAnchor`
+- completare automata pentru `socialAnchor`
+- selectie de ancora din `WorldPlace`, bloc fizic apropiat sau fallback la pozitia NPC-ului
+- evitare de nume duplicate pentru NPC-urile generate automat in viitor
 
 Capabilitati suplimentare existente in model:
 - personalitate
@@ -117,6 +123,10 @@ Exista deja infrastructura pentru familie:
 - tabel `npc_family`
 - `FamilyManager`
 - comanda `family`
+- `FamilyBindingPlan`
+- `FamilyBindingResult`
+- bind initial pentru familii spawnate dupa ce toti membrii au ID DB valid
+- relatii reciproce inferate din roluri precum father, mother, son, daughter, brother si sister
 
 Acest lucru inseamna ca sistemul de relatii familiale este deja prezent la nivel de baza de date si runtime, chiar daca nu reprezinta inca un gameplay extins.
 
@@ -135,6 +145,35 @@ Exista deja un sistem de simulare periodica pentru NPC-uri:
 - verificare stare `isAtHome`, `isAtWork`, `isAtSocialSpot`
 - rebalansare a satelor incarcate
 - repopulare automata de villageri in jurul paturilor disponibile
+
+## Rutine NPC
+
+Exista deja o implementare initiala de rutina zilnica:
+
+- `RoutineEngine`
+- `RoutineService`
+- `RoutineAssignment`
+- `RoutineTickSummary`
+- sloturi de rutina:
+  - `HOME`
+  - `WORK`
+  - `SOCIAL`
+  - `IDLE`
+- scheduler periodic configurabil prin `routine.tick_seconds`
+- fallback daca lipseste ancora de munca
+- evitarea intreruperii NPC-urilor aflate in interactiuni importante
+- comanda `/ainpc routine tick`
+- comanda `/ainpc routine status [numeNpc]`
+
+Rutina foloseste ancorele existente:
+
+- `homeAnchor`
+- `workAnchor`
+- `socialAnchor`
+
+Limitare actuala:
+
+- pentru MVP, mutarea este facuta prin teleport controlat, deoarece villagerii AINPC au AI dezactivat
 
 ## Questuri
 
@@ -237,7 +276,7 @@ Capabilitati deja implementate:
 
 ## World admin
 
-World admin-ul exista deja la nivel de regiuni si noduri.
+World admin-ul exista deja la nivel de regiuni, places si noduri.
 
 Capabilitati implementate:
 - activare/dezactivare din config
@@ -245,19 +284,50 @@ Capabilitati implementate:
 - tip de regiune
 - tag-uri pe regiune
 - `StoryState` per regiune
+- definire de `WorldPlace` per regiune
+- tip semantic pentru place: casa, shop, forge, tavern, farm, market, camp si custom
+- `ownerNpcId`, `publicAccess`, tag-uri si metadata pe place
 - definire de `WorldNode` per regiune
+- definire de `WorldNode` sub un `WorldPlace`
 - metadata pe nod
 - cautare a regiunii curente dupa coordonate
-- expunere a numarului de regiuni si noduri prin API
+- cautare a place-ului curent dupa coordonate
+- listare si cautare de places dupa tag
+- auto-index intern pentru regiuni, places si nodes
+- expunere a numarului de regiuni, places si noduri prin API
+- comenzi admin pentru inspectie si creare manuala
+- audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
+- scanare vanilla initiala prin `/ainpc world scan village`
+- import semantic initial prin `/ainpc world scan village <radius> import [regionId]`
+
+Scannerul vanilla detecteaza:
+
+- clopote
+- paturi
+- workstation-uri
+- usi
+- farmland
+
+Mapperul semantic poate crea runtime:
+
+- `WorldRegion` de tip settlement
+- `WorldPlace` pentru case
+- `WorldPlace` pentru ferme
+- `WorldPlace` pentru locuri de munca detectate
+- `WorldNode` pentru `bed`, `home`, `entrance`, `workstation`, `work` si `meeting_point`
 
 Tipuri deja prezente:
 - `RegionType`
+- `PlaceType`
 - `WorldNodeType`
 - `StoryMode`
 - `WorldMode`
 
-Limitare actuala:
-- sistemul de `places` semantice precum `fierarie`, `magazin`, `casa_fierarului` nu este inca implementat
+Limitari actuale:
+- mapping-ul este functional, dar serverul de test poate avea inca `0` regiuni, `0` places si `0` nodes pana cand sunt definite in config sau prin comenzi
+- NPC-urile salveaza ancore de locatie, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
+- questurile nu au inca obiective native `visit_place` sau `inspect_node`
+- scannerul vanilla si mapperul semantic exista initial, dar generatorul complet de sate/cladiri si patch-uri native nu este inca implementat ca pipeline complet
 
 ## Comenzi existente
 
@@ -266,8 +336,12 @@ Comenzi principale disponibile:
 - `/ainpc delete`
 - `/ainpc info`
 - `/ainpc quest`
+- `/ainpc world`
+- `/ainpc audit`
+- `/ainpc debugdump`
 - `/ainpc list`
 - `/ainpc family`
+- `/ainpc routine`
 - `/ainpc mood`
 - `/ainpc tp`
 - `/ainpc reload`
@@ -328,7 +402,10 @@ Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 
 Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul actual:
 
-- sistem semantic complet de `places`
+- legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
+- obiective de quest bazate pe `visit_place` si `inspect_node`
+- generator complet de sate, case si cladiri de meserii
+- integrare optionala cu WorldEdit API
 - questuri cu etape reale si branching avansat
 - economie functionala
 - reputatie globala pe factiuni sau regiuni
@@ -349,7 +426,11 @@ Proiectul are deja implementate:
 - questuri functionale cu progres persistent
 - feature packs si scenarii YAML
 - API si registry pentru addonuri
-- world admin la nivel de regiuni si noduri
+- world admin la nivel de regiuni, places si noduri
+- scanare vanilla initiala si import semantic pentru world mapping
+- rutina zilnica initiala peste `home/work/social anchors`
+- audit read-only pentru NPC, world mapping, DB si spawn order
+- debug dump avansat in `plugins/AINPC/debug-dumps/`
 - addon medieval separat care se integreaza cu core-ul
 
 Pe scurt:

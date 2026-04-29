@@ -1,6 +1,6 @@
 # Roadmap Orientativ
 
-Actualizat: 2026-04-26
+Actualizat: 2026-04-29
 
 ## Scop
 
@@ -43,7 +43,14 @@ Proiectul are deja:
 - feature packs YAML
 - API public initial
 - addon medieval separat
-- world admin la nivel de regiuni si noduri
+- world admin la nivel de regiuni, places si noduri
+- audit read-only pentru NPC, world mapping si DB
+- debug dump avansat pentru colectarea contextului de investigatie
+- ancore automate pentru casa si locul de munca al NPC-urilor
+- scanner vanilla initial pentru sate
+- mapper semantic initial catre `WorldRegion`, `WorldPlace` si `WorldNode`
+- rutina zilnica initiala pentru NPC-uri pe `home/work/social anchors`
+- audit de spawn order pentru case, rezidenti, ancore si relatii familiale reciproce
 
 Asta inseamna ca proiectul este deja peste stadiul de prototip simplu.
 
@@ -102,13 +109,14 @@ Obiectiv:
 - `3-5 questuri` cap-coada
 - persistenta stabila pentru NPC-uri si questuri
 - fallback acceptabil cand AI-ul raspunde slab sau deloc
-- comenzi admin suficiente pentru create, info, tp, reload
+- comenzi admin suficiente pentru create, info, tp, reload, world, audit si debugdump
 - documentatie de instalare si testare
 
 ## Should have
 
-- cateva rutine zilnice mai clare
-- world admin curat pe regiuni si noduri
+- extinderea rutinei zilnice initiale cu pathfinding/pasi intermediari si evenimente sociale probabilistice
+- mapping demo populat cu regiune, case, locuri de munca, piata si nodes
+- world admin stabilizat pe regiuni, places si noduri
 - mai multe mesaje de debug pentru probleme de config
 - reward-uri mai clare si mai consistente
 
@@ -179,7 +187,7 @@ Obiectiv:
 
 ## Puternic recomandat in aceasta faza
 
-- `places` semantice in world admin
+- consum complet al `places` semantice in NPCContext, questuri si scenarii
 - questuri pe etape reale
 - NPC-uri temporare de quest
 - reactie NPC-jucator mai structurata
@@ -311,7 +319,8 @@ Focus:
 Focus:
 - runtime de scenarii extensibil
 - questuri mai avansate
-- `places` si NPC-uri temporare
+- obiective `visit_place` si `inspect_node`
+- NPC-uri temporare
 
 ### `v0.4`
 
@@ -340,8 +349,11 @@ Daca alegi doar urmatoarele directii pentru perioada imediata, ele sunt cele mai
 
 1. `first playable release`
 2. stabilitate si debug
-3. API si modularizare curate
-4. runtime extensibil pentru scenarii
+3. conectarea `HouseAllocation` la `NpcSpawnPlan`
+4. popularea unui mapping demo real cu scannerul vanilla si import semantic
+5. evenimente sociale probabilistice peste rutina
+6. API si modularizare curate
+7. runtime extensibil pentru scenarii
 
 Nu recomand sa intri acum direct in:
 

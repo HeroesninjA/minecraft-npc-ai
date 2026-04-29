@@ -1,6 +1,6 @@
 # Generare AI si Constructie Automata
 
-Actualizat: 2026-04-27
+Actualizat: 2026-04-28
 
 ## Scop
 
@@ -21,6 +21,8 @@ Scopul real este sa ai un pipeline controlat, modular si sigur, care poate fi fo
 - scenarii
 - world admin
 - generatie asistata de AI
+
+Pentru designul specific de generare sate cu WorldEdit, asociere NPC, locuitori per casa, locuri de munca si decoratii, vezi `docs/generare-sate-worldedit-si-npc.md`.
 
 ## Intrebarea de baza
 
@@ -409,8 +411,8 @@ Fara aceasta mapare, AI-ul si questurile nu pot intelege ce s-a construit.
 Dupa constructie, sistemul trebuie sa poata:
 
 - asocia o cladire cu un NPC owner
-- seta `homePlaceId`
-- seta `workPlaceId`
+- seta `homeAnchor` si `workAnchor` in starea actuala
+- seta ulterior `homePlaceId` si `workPlaceId`, dupa ce aceste campuri devin parte din model
 - crea questuri locale
 - lega dialogul de cladirea generata
 

@@ -1,6 +1,6 @@
 # Mapping
 
-Actualizat: 2026-04-27
+Actualizat: 2026-04-29
 
 ## Scop
 
@@ -31,6 +31,24 @@ Ideea de baza ramane:
 - mapping-ul spune ce este acel loc
 
 ## Ce exista implementat
+
+### Stare observata pe server
+
+Auditul rulat pe server la 2026-04-28 a raportat:
+
+- `0` erori
+- `14` warning-uri
+- `31` NPC-uri incarcate
+- `31` randuri in `npcs`
+- `31` randuri in `npc_profiles`
+- `0` regiuni, `0` places si `0` nodes in world mapping
+
+Interpretare:
+
+- persistenta NPC si profilurile sunt functionale
+- world mapping-ul este activabil si implementat, dar nu este inca populat in serverul testat
+- warning-urile observate sunt in principal nume duplicate normalizate, de exemplu mai multi NPC cu numele `ion`, `gabriel` sau `madalina`
+- duplicatele existente nu sunt redenumite automat, dar generarea automata noua incearca sa evite nume duplicate
 
 ### Model intern
 
@@ -184,7 +202,11 @@ Sunt disponibile deja:
 - `/ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>`
 - `/ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>`
 - `/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]`
+- `/ainpc world scan village [radius]`
+- `/ainpc world scan village [radius] import [regionId]`
 - `/ainpc world save`
+- `/ainpc audit [all|npc|world|db|spawn]`
+- `/ainpc debugdump [all|npc|world|quest|openai]`
 
 ## Ce valideaza sistemul acum
 
@@ -203,19 +225,118 @@ In acest moment, mapping-ul este folosit in principal pentru:
 - inspectie administrativa
 - cautare semantica de `region` si `place`
 - baza pentru obiectivele existente de tip `visit_region`
-- fundatie pentru viitoarele integrari cu questuri, NPC-uri si generare
+- rezolvarea automata a unor ancore NPC (`homeAnchor`, `workAnchor`) din `WorldPlace`
+- rezolvarea initiala a `socialAnchor` din noduri sau locuri sociale
+- rutina zilnica initiala a NPC-urilor
+- import semantic initial peste sate vanilla scanate
+- audit si debugging pentru inconsistenta intre NPC-uri, places si nodes
+- fundatie pentru viitoarele integrari mai complete cu questuri, scenarii si generare
 
-Pe scurt: infrastructura este prezenta, dar integrarea completa in gameplay nu este inca terminata.
+Pe scurt: infrastructura este prezenta si este consumata partial de NPC-uri, dar integrarea completa in gameplay nu este inca terminata.
+
+## Integrare actuala cu NPC-uri
+
+NPC-urile au deja ancore runtime/persistente:
+
+- `homeAnchor`
+- `workAnchor`
+- `socialAnchor`
+
+Pentru NPC-urile create sau profilate automat, sistemul incearca sa completeze casa si locul de munca in aceasta ordine:
+
+1. cauta `WorldPlace` semantic in `WorldAdmin`
+2. cauta blocuri fizice apropiate, precum pat sau workstation
+3. foloseste fallback la locatia curenta a NPC-ului
+
+Pentru case, mapping-ul recunoaste:
+
+- `PlaceType.HOUSE`
+- tag `home`
+- tag `house`
+- metadata `role: home`
+- metadata `purpose: home`
+
+Pentru locuri de munca, mapping-ul recunoaste:
+
+- tag `work`
+- tag `workplace`
+- tag `job`
+- metadata `role: work`
+- metadata `purpose: work`
+- tipuri precum `forge`, `shop`, `farm`, `market`, `tavern`
+
+Important:
+
+- NPC-ul salveaza acum coordonata si label-ul ancorei in `npc_profiles.profile_data`
+- `WorldPlace` poate avea `owner_npc_id`
+- nu exista inca un camp persistent explicit `homePlaceId` sau `workPlaceId` pe NPC
+- asocierea inversa completa `place -> npc -> place` trebuie inca standardizata
 
 ## Ce nu este inca legat complet
 
 Sistemul de mapping exista, dar urmatoarele piese nu sunt inca conectate complet:
 
-- NPC-urile nu folosesc inca `homePlaceId`, `workPlaceId`, `socialPlaceId`
+- NPC-urile folosesc ancore de locatie, dar nu au inca `homePlaceId`, `workPlaceId`, `socialPlaceId`
 - `NPCContext` nu expune inca complet `currentPlaceId` si semantica locului
 - questurile nu au inca obiective precum `visit_place` sau `inspect_node`
 - `places` nu au stare dinamica de tip `open`, `closed`, `under_attack`
 - persistenta este in `config.yml`, nu in baza de date
+
+## Audit si debug pentru mapping
+
+Exista audit read-only prin:
+
+```text
+/ainpc audit
+/ainpc audit world
+```
+
+Auditul verifica:
+
+- world admin activ dar fara regiuni
+- regiuni, places si nodes inexistente sau inconsistente
+- `place` in afara regiunii
+- `node` in afara containerului
+- case fara `owner_npc_id`
+- locuri de munca fara nodes de interactiune
+- owner NPC care nu se potriveste cu NPC-uri incarcate
+- places suprapuse
+- spawn order pentru case, rezidenti, ancore NPC si relatii familiale prin `/ainpc audit spawn`
+
+Exista si dump avansat prin:
+
+```text
+/ainpc debugdump world
+/ainpc debugdump all
+```
+
+Acesta exporta:
+
+- `world-mapping.json`
+- `audit.txt`
+- `config-sanitized.yml`
+- `recent-server-log.txt`
+- sumar despre NPC-uri si contextul serverului
+
+## Starea observata daca mapping-ul este gol
+
+Daca auditul raporteaza:
+
+```text
+World mapping: 0 regiuni, 0 places, 0 nodes.
+```
+
+atunci pluginul poate functiona in continuare, dar pierde contextul semantic.
+
+Efecte:
+
+- NPC-urile folosesc fallback-uri pentru casa si loc de munca
+- `/ainpc world whereami` nu poate explica locatia semantic
+- questurile nu pot tinti places sau nodes
+- generarea viitoare nu are inca un strat persistent de continut semantic
+
+Acesta nu este un crash si nu este coruptie de date.
+Este o lipsa de continut world admin.
 
 ## Rolul actual in arhitectura
 
@@ -250,10 +371,13 @@ Ce era inainte doar propunere a devenit acum infrastructura reala:
 - creare runtime
 - salvare in `config.yml`
 - comenzi admin de inspectie si creare
+- scanare vanilla initiala si import semantic runtime
+- audit read-only
+- debug dump pentru exportarea starii
 
-Pasii urmatori nu mai tin de "daca exista mapping", ci de legarea lui efectiva cu:
+Pasii urmatori nu mai tin de "daca exista mapping", ci de completarea legaturii cu:
 
-- NPC-uri
+- NPC-uri la nivel de `homePlaceId`, `workPlaceId`, `socialPlaceId`
 - questuri
 - scenarii
 - generare automata
