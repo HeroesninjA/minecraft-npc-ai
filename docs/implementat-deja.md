@@ -35,6 +35,7 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 - descopera villagerii existenti din lumi
 - verifica si completeaza profilurile lipsa
 - initializeaza motoarele de decizie, dialog si scenarii
+- initializeaza `StoryContextService` read-only
 - inregistreaza comenzile si listener-ele
 - porneste task-urile periodice de simulare, decay si autosave
 - porneste task-ul periodic de rutina NPC, daca `routine.enabled` este activ
@@ -194,6 +195,7 @@ Ce este implementat:
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
 - audit read-only `/ainpc audit quest`
+- context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres
 - finalizare cu recompensa
 - arhivare pentru questuri completate sau esuate
@@ -235,6 +237,23 @@ Interactiunea cu questurile functioneaza prin:
 
 Limitare actuala importanta:
 - modelul runtime este orientat in principal pe un singur quest curent per jucator
+
+## Context story si AI
+
+Exista deja un strat initial read-only pentru context narativ:
+
+- `StoryContextService`
+- `StoryContextSnapshot`
+- integrare in `NPCContext` pentru sectiunea `STORY_CONTEXT`
+- comanda admin `/ainpc story context [jucator] [numeNpc|nearest]`
+- incarcare de quest anchors active din `quest_anchor_bindings`
+- semnale story din regiune, place metadata, node-uri relevante si quest anchors
+
+Limitari actuale:
+
+- nu exista inca tabele dedicate pentru `region_story_state`, `place_story_state` sau `story_events`
+- serviciul nu genereaza questuri si nu scrie in DB
+- contextul este util doar cat mapping-ul si quest anchors sunt suficient populate
 
 ## Feature packs si scenarii
 
@@ -309,6 +328,7 @@ Capabilitati implementate:
 - auto-index intern pentru regiuni, places si nodes
 - expunere a numarului de regiuni, places si noduri prin API
 - `WorldContextSnapshot` initial pentru context semantic in `NPCContext` si prompt AI
+- `StoryContextService` initial pentru context narativ peste mapping si quest anchors
 - comenzi admin pentru inspectie si creare manuala
 - audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
 - scanare vanilla initiala prin `/ainpc world scan village`
@@ -353,6 +373,7 @@ Comenzi principale disponibile:
 - `/ainpc info`
 - `/ainpc quest`
 - `/ainpc world`
+- `/ainpc story`
 - `/ainpc audit`
 - `/ainpc debugdump`
 - `/ainpc list`
@@ -449,6 +470,7 @@ Proiectul are deja implementate:
 - `WorldContextSnapshot` initial pentru context AI/NPC peste mapping
 - obiective native initiale `visit_place` si `inspect_node`
 - `QuestAnchorResolver` initial cu ancore persistate in `quest_anchor_bindings`
+- `StoryContextService` initial cu `/ainpc story context`
 - scanare vanilla initiala si import semantic pentru world mapping
 - rutina zilnica initiala peste `home/work/social anchors`
 - `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic

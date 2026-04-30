@@ -15,6 +15,7 @@ import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.routine.RoutineAssignment;
 import ro.ainpc.routine.RoutineTickSummary;
+import ro.ainpc.story.StoryContextSnapshot;
 import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.RegionType;
 import ro.ainpc.world.WorldAdminService;
@@ -55,6 +56,9 @@ public class AINPCCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    private record StoryContextTarget(Player player, String npcSelector) {
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if ("npcquest".equalsIgnoreCase(command.getName())) {
@@ -77,6 +81,7 @@ public class AINPCCommand implements CommandExecutor {
             case "info" -> handleInfo(sender, args);
             case "quest" -> handleQuest(sender, args);
             case "world" -> handleWorld(sender, args);
+            case "story" -> handleStory(sender, args);
             case "audit" -> handleAudit(sender, args);
             case "debugdump" -> handleDebugDump(sender, args);
             case "list" -> handleList(sender, args);
@@ -742,6 +747,129 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc quest reset <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
+    }
+
+    private boolean handleStory(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        if (args.length < 2) {
+            sendStoryUsage(sender);
+            return true;
+        }
+
+        String storyMode = args[1].toLowerCase();
+        return switch (storyMode) {
+            case "context" -> handleStoryContext(sender, args);
+            default -> {
+                sendStoryUsage(sender);
+                yield true;
+            }
+        };
+    }
+
+    private boolean handleStoryContext(CommandSender sender, String[] args) {
+        if (plugin.getStoryContextService() == null) {
+            plugin.getMessageUtils().send(sender, "&cStoryContextService nu este initializat.");
+            return true;
+        }
+
+        StoryContextTarget target = resolveStoryContextTarget(sender, args);
+        if (target == null) {
+            return true;
+        }
+
+        AINPC npc = resolveStoryContextNpc(sender, target.npcSelector(), target.player());
+        if (npc == null && target.npcSelector() != null && !target.npcSelector().isBlank()) {
+            return true;
+        }
+
+        StoryContextSnapshot snapshot = npc != null
+            ? plugin.getStoryContextService().buildForNpc(npc, target.player())
+            : plugin.getStoryContextService().buildForPlayer(target.player());
+
+        plugin.getMessageUtils().send(sender, "&6=== Story Context ===");
+        plugin.getMessageUtils().send(sender, "&eJucator: &f" + target.player().getName());
+        plugin.getMessageUtils().send(sender, "&eNPC: &f" + (npc != null ? npc.getName() : "<fara NPC tinta>"));
+
+        String promptBlock = snapshot.toPromptBlock();
+        if (promptBlock.isBlank()) {
+            plugin.getMessageUtils().send(sender, "&7Nu exista context story relevant pentru tinta curenta.");
+            return true;
+        }
+
+        for (String line : promptBlock.split("\\R")) {
+            if (!line.isBlank()) {
+                plugin.getMessageUtils().send(sender, "&7" + line);
+            }
+        }
+        return true;
+    }
+
+    private StoryContextTarget resolveStoryContextTarget(CommandSender sender, String[] args) {
+        if (args.length > 2) {
+            Player explicitPlayer = findOnlinePlayer(args[2]);
+            if (explicitPlayer != null) {
+                String npcSelector = args.length > 3 ? args[3] : "";
+                return new StoryContextTarget(explicitPlayer, npcSelector);
+            }
+
+            if (sender instanceof Player player) {
+                return new StoryContextTarget(player, args[2]);
+            }
+
+            plugin.getMessageUtils().send(sender, "&cJucatorul &e" + args[2] + " &cnu este online.");
+            plugin.getMessageUtils().send(sender, "&cUtilizare consola: /ainpc story context <jucator> [numeNpc|nearest]");
+            return null;
+        }
+
+        if (sender instanceof Player player) {
+            return new StoryContextTarget(player, "");
+        }
+
+        plugin.getMessageUtils().send(sender, "&cDin consola trebuie sa specifici si jucatorul.");
+        plugin.getMessageUtils().send(sender, "&cUtilizare consola: /ainpc story context <jucator> [numeNpc|nearest]");
+        return null;
+    }
+
+    private Player findOnlinePlayer(String playerName) {
+        if (playerName == null || playerName.isBlank()) {
+            return null;
+        }
+
+        Player targetPlayer = plugin.getServer().getPlayerExact(playerName);
+        if (targetPlayer == null) {
+            targetPlayer = plugin.getServer().getPlayer(playerName);
+        }
+        return targetPlayer;
+    }
+
+    private AINPC resolveStoryContextNpc(CommandSender sender, String npcSelector, Player targetPlayer) {
+        if (npcSelector == null || npcSelector.isBlank()) {
+            return null;
+        }
+
+        if ("nearest".equalsIgnoreCase(npcSelector)) {
+            AINPC nearestNpc = findNearestQuestNpc(targetPlayer);
+            if (nearestNpc == null) {
+                plugin.getMessageUtils().send(sender, "&cNu exista NPC-uri active in apropierea jucatorului.");
+            }
+            return nearestNpc;
+        }
+
+        AINPC npc = plugin.getNpcManager().getNPCByName(npcSelector);
+        if (npc == null) {
+            plugin.getMessageUtils().sendMessage(sender, "npc_not_found");
+        }
+        return npc;
+    }
+
+    private void sendStoryUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
+        plugin.getMessageUtils().send(sender, "&7Fara NPC tinta, contextul este construit pentru locatia jucatorului.");
     }
 
     private boolean handleWorld(CommandSender sender, String[] args) {
@@ -2687,6 +2815,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Scaneaza sat vanilla si poate importa mapping semantic AINPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
         plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
+        plugin.getMessageUtils().send(sender, "&7  Afiseaza contextul narativ curent din mapping si quest anchors");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]");
         plugin.getMessageUtils().send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date");
         plugin.getMessageUtils().send(sender, "&e/ainpc debugdump [all|npc|world|quest|openai]");

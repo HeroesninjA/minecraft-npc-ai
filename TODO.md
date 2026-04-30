@@ -20,11 +20,13 @@ Actualizat: 2026-04-30
 - [x] `QuestAnchorResolver` initial cu ancore persistate si reflectate in `questVariables`
 - [x] Persistenta dedicata `quest_anchor_bindings` pentru ancore semantice de quest
 - [x] Audit si comanda admin read-only pentru `quest_anchor_bindings`
+- [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `HouseAllocation` initial pentru case cu mai multi rezidenti si conversie catre `NpcSpawnPlan`
 - [x] Dry-run si spawn batch initial pentru household, cu rollback practic daca spawn-ul esueaza la mijloc
 
 ## Prioritate curenta
 
+- [ ] Story state persistent pe regiune/place si `story_events`
 - [ ] Questuri complete pe NPC, cu obiective clare si progres persistent
 - [ ] Export/debugdump complet pentru `quest_anchor_bindings`
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes
@@ -78,6 +80,7 @@ Actualizat: 2026-04-30
 - [ ] Recompense configurabile pe scenariu
 - [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
 - [x] Quest anchors persistente pe `regionId`, `placeId`, `nodeId` si `npcId`
+- [x] Context narativ read-only peste mapping si quest anchors
 - [ ] Story state pe regiune, pentru lumi care evolueaza in timp
 
 ## Lume si gameplay

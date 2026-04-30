@@ -25,7 +25,7 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "quest", "world", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "info", "quest", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
     private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
     private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "openai");
@@ -34,6 +34,7 @@ public class AINPCTabCompleter implements TabCompleter {
         "nearest", "accept", "decline", "abandon", "status", "reset", "complete", "anchors"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "save");
+    private static final List<String> STORY_MODES = Arrays.asList("context");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> NODE_ACTIONS = Arrays.asList("create");
@@ -108,6 +109,9 @@ public class AINPCTabCompleter implements TabCompleter {
                 case "world" -> {
                     completions.addAll(completeWorldArgs(sender, args));
                 }
+                case "story" -> {
+                    completions.addAll(completeStoryArgs(args));
+                }
                 case "audit" -> {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(AUDIT_MODES, args[1]));
@@ -135,6 +139,21 @@ public class AINPCTabCompleter implements TabCompleter {
             }
         }
 
+        return completions;
+    }
+
+    private List<String> completeStoryArgs(String[] args) {
+        List<String> completions = new ArrayList<>();
+        if (args.length == 2) {
+            completions.addAll(filterStartsWith(STORY_MODES, args[1]));
+        } else if (args.length == 3 && "context".equalsIgnoreCase(args[1])) {
+            completions.addAll(getOnlinePlayerNames(args[2]));
+            completions.addAll(filterStartsWith(List.of("nearest"), args[2]));
+            completions.addAll(getNPCNames(args[2]));
+        } else if (args.length == 4 && "context".equalsIgnoreCase(args[1])) {
+            completions.addAll(filterStartsWith(List.of("nearest"), args[3]));
+            completions.addAll(getNPCNames(args[3]));
+        }
         return completions;
     }
 

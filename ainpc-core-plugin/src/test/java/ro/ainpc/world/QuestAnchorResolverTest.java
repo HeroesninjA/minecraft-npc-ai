@@ -1,0 +1,112 @@
+package ro.ainpc.world;
+
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import ro.ainpc.engine.FeaturePackLoader;
+import ro.ainpc.engine.QuestAnchorResolver;
+import ro.ainpc.engine.ScenarioEngine;
+import ro.ainpc.platform.PlatformProfile;
+import ro.ainpc.platform.RuntimeMode;
+
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class QuestAnchorResolverTest {
+
+    private WorldAdminService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new WorldAdminService(message -> { }, Logger.getLogger("QuestAnchorResolverTest"));
+    }
+
+    @Test
+    void resolvesPlaceAndNodeAnchorsFromQuestObjectives() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 50, z: 0 }
+                  max: { x: 100, y: 90, z: 100 }
+                  places:
+                    fierarie:
+                      name: "Fierarie"
+                      type: "forge"
+                      min: { x: 20, y: 60, z: 20 }
+                      max: { x: 40, y: 75, z: 40 }
+                      tags: [blacksmith, workplace]
+                      nodes:
+                        anvil:
+                          type: "interaction"
+                          x: 30
+                          y: 65
+                          z: 30
+                          radius: 2.0
+                          metadata:
+                            role: "inspect"
+            """), profile());
+
+        ScenarioEngine.ScenarioTemplate template = new ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST);
+        template.setObjectives(List.of(
+            new FeaturePackLoader.QuestEntryDefinition("visit_place", "tag:blacksmith", 1, ""),
+            new FeaturePackLoader.QuestEntryDefinition("inspect_node", "node:satul_central:fierarie:anvil", 1, "")
+        ));
+
+        QuestAnchorResolver.ResolvedQuestAnchors result = new QuestAnchorResolver(service, List.of())
+            .resolve(template, null, null);
+
+        assertTrue(result.valid());
+        Map<String, String> variables = result.toQuestVariables();
+        assertEquals("2", variables.get("quest_anchor_count"));
+        assertEquals("satul_central:fierarie", variables.get("anchor.visit_place:tag:blacksmith:0.id"));
+        assertEquals("satul_central:fierarie:anvil", variables.get("anchor.inspect_node:node:satul_central:fierarie:anvil:1.id"));
+    }
+
+    @Test
+    void reportsMissingSemanticAnchor() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 50, z: 0 }
+                  max: { x: 100, y: 90, z: 100 }
+            """), profile());
+
+        ScenarioEngine.ScenarioTemplate template = new ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST);
+        template.setObjectives(List.of(
+            new FeaturePackLoader.QuestEntryDefinition("visit_place", "tag:blacksmith", 1, "")
+        ));
+
+        QuestAnchorResolver.ResolvedQuestAnchors result = new QuestAnchorResolver(service, List.of())
+            .resolve(template, null, null);
+
+        assertFalse(result.valid());
+        assertEquals(1, result.issues().size());
+        assertEquals("place", result.issues().get(0).anchorType());
+    }
+
+    private PlatformProfile profile() {
+        return new PlatformProfile(RuntimeMode.STANDALONE, WorldMode.FINITE_DYNAMIC, StoryMode.EVOLUTIVE);
+    }
+
+    private YamlConfiguration loadConfig(String content) throws InvalidConfigurationException {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.loadFromString(content);
+        return configuration;
+    }
+}

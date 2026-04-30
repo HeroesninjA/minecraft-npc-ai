@@ -21,7 +21,9 @@ ro\ainpc\commands\AINPCCommand$AuditReport.class
 ro\ainpc\engine\DecisionEngine.class
 ro\ainpc\engine\FeaturePackLoader$TopologyDefinition.class
 ro\ainpc\spawn\HouseholdSpawnResult.class
+ro\ainpc\story\StoryContextSnapshot.class
 ro\ainpc\engine\FeaturePackLoader$ScenarioDefinition.class
+ro\ainpc\commands\AINPCCommand$StoryContextTarget.class
 ro\ainpc\engine\FeaturePackLoader$QuestEntryDefinition.class
 ro\ainpc\commands\AINPCTabCompleter.class
 ro\ainpc\engine\ScenarioEngine.class
@@ -58,6 +60,7 @@ ro\ainpc\engine\QuestAnchorResolver$ResolvedQuestAnchor.class
 ro\ainpc\managers\EmotionManager.class
 ro\ainpc\database\DatabaseManager.class
 ro\ainpc\commands\AINPCCommand$QuestAnchorBindingRow.class
+ro\ainpc\story\StoryContextSnapshot$QuestAnchorSnapshot.class
 ro\ainpc\listeners\NPCChatListener$ResolvedDialogTarget.class
 ro\ainpc\managers\NPCManager$1.class
 ro\ainpc\ai\OpenAIService$ConnectionStatus.class
@@ -111,6 +114,7 @@ ro\ainpc\ai\OpenAIService$DialogHistory.class
 ro\ainpc\engine\ScenarioEngine$2.class
 ro\ainpc\ai\DialogManager$DialogContext.class
 ro\ainpc\ai\DialogManager$PostProcessResult.class
+ro\ainpc\story\StoryContextService.class
 ro\ainpc\ai\DialogManager$PromptDbContext.class
 ro\ainpc\npc\NPCAction$ActionCategory.class
 ro\ainpc\spawn\HouseAllocation$ResidentPlan.class

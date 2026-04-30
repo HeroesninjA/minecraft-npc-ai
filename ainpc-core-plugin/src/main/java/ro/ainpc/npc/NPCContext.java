@@ -3,6 +3,7 @@ package ro.ainpc.npc;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import ro.ainpc.story.StoryContextSnapshot;
 import ro.ainpc.topology.TopologyCategory;
 import ro.ainpc.world.WorldContextSnapshot;
 import ro.ainpc.world.WorldContextSnapshotBuilder;
@@ -254,6 +255,16 @@ public class NPCContext {
 
         if (worldContextSnapshot != null && !worldContextSnapshot.isEmpty()) {
             sb.append(worldContextSnapshot.toPromptBlock()).append("\n");
+        }
+
+        if (interactingPlayer != null
+            && npc.getPlugin() != null
+            && npc.getPlugin().getStoryContextService() != null) {
+            StoryContextSnapshot storyContext = npc.getPlugin().getStoryContextService()
+                .buildForNpc(npc, interactingPlayer);
+            if (!storyContext.isEmpty()) {
+                sb.append(storyContext.toPromptBlock()).append("\n");
+            }
         }
         
         // Entitati din apropiere

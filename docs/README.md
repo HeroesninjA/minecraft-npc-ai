@@ -12,8 +12,9 @@ Ordinea recomandata pentru orientare:
 2. `faze-observatii-avertizari.md`
 3. `ordine-spawn-npc-cladiri-region-node.md`
 4. `story-si-context-ai.md`
-5. `roadmap-orientativ.md`
-6. `debugging-si-testare.md`
+5. `story-context-service.md`
+6. `roadmap-orientativ.md`
+7. `debugging-si-testare.md`
 
 ## Navigare pe categorii
 
@@ -38,7 +39,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 |---|---|---|---|
 | 0 | Baseline, audit si verificare stare curenta | `implementat-deja.md`, `audit.md`, `debugging-si-testare.md`, `analiza-erori-si-plan-rezolvare.md` | Functional initial; necesita resincronizare dupa schimbari mari |
 | 1 | World mapping si spawn order MVP | `mapping.md`, `ordine-spawn-npc-cladiri-region-node.md`, `rutine-npc-si-timeline.md` | Nucleu implementat initial; generatorul complet lipseste |
-| 2 | First playable release | `roadmap-orientativ.md`, `questuri-avansate.md`, `story-si-context-ai.md`, `reactie-npc-jucator.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Directie de produs; necesita continut demo jucabil |
+| 2 | First playable release | `roadmap-orientativ.md`, `questuri-avansate.md`, `story-si-context-ai.md`, `story-context-service.md`, `reactie-npc-jucator.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Directie de produs; story context read-only exista, continutul demo jucabil lipseste |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
 | 4 | Runtime scenarii extensibil | `questuri-avansate.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping-pentru-implementari-ulterioare.md` | Design partial; necesita registri actiuni/conditii/trigger |
 | 5 | Generare sate si authoring asistat | `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper initial exista; generarea completa ramane viitoare |
@@ -71,6 +72,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `refactorizare-si-impartire-pe-module.md` | 3 | Migrare si spargere pe module/clase | Refactorizarea trebuie facuta incremental, cu teste dupa fiecare pas |
 | `roadmap-orientativ.md` | toate | Roadmap produs si versiuni orientative | Roadmap-ul este prioritate de produs, nu promisiune ca totul este implementat |
 | `rutine-npc-si-timeline.md` | 1, 4 | Rutine zilnice, timeline si hook-uri | Rutina actuala e MVP cu teleport controlat, nu pathfinding real |
+| `story-context-service.md` | 2, 4 | Context narativ read-only peste mapping si quest anchors | Implementat initial; nu persista inca story state sau evenimente |
 | `story-si-context-ai.md` | 2, 4, 5 | Design pentru story, context AI, mapping semantic si quest anchors | AI-ul trebuie sa consume context validat si limitat, nu coordonate brute sau toata harta |
 | `strategie-plugin-modular-si-scenarii-programabile.md` | 3, 4 | Strategie addonuri si scenarii programabile | Registrii de scenarii trebuie introdusi inainte de authoring AI matur |
 | `surse-inspiratie-plugin-ainpc.md` | toate | Surse de inspiratie si comparatii | Foloseste-l pentru directie, nu ca specificatie de implementare |

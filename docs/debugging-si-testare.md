@@ -163,6 +163,8 @@ Comenzi utile in joc:
 /ainpc world places <regionId>
 /ainpc world region info <regionId>
 /ainpc world place info <placeId>
+/ainpc story context
+/ainpc story context <jucator> nearest
 ```
 
 Pentru creare manuala:
@@ -184,6 +186,7 @@ Ce verifici:
 - place-ul are `owner_npc_id` daca este casa sau cladire privata
 - node-ul este in interiorul regiunii sau place-ului
 - `auto_index.enabled` nu este cauza diferentelor de lookup
+- `StoryContextService` vede aceeasi regiune/place ca `world whereami`
 
 Test rapid pentru indexare:
 
@@ -389,12 +392,15 @@ Pentru quest anchors, prefera intai comenzile read-only din joc:
 /ainpc quest anchors <jucator>
 /ainpc quest anchors all <templateId>
 /ainpc audit quest
+/ainpc story context <jucator> nearest
 ```
 
 Tabele relevante:
 
 - `player_quests`
 - `quest_anchor_bindings`
+
+`/ainpc story context` este util cand vrei sa vezi ce ajunge in prompt ca `STORY_CONTEXT`, fara sa pornesti manual o generatie AI.
 
 Atentie:
 
