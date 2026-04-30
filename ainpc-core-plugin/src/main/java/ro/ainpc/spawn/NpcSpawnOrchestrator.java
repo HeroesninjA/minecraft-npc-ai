@@ -12,6 +12,7 @@ import ro.ainpc.world.WorldPlaceInfo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -20,9 +21,11 @@ import java.util.Objects;
 public class NpcSpawnOrchestrator {
 
     private final AINPCPlugin plugin;
+    private final HouseAllocationValidator houseAllocationValidator;
 
     public NpcSpawnOrchestrator(AINPCPlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.houseAllocationValidator = new HouseAllocationValidator();
     }
 
     public NpcSpawnResult spawn(NpcSpawnPlan plan) {
@@ -44,6 +47,114 @@ public class NpcSpawnOrchestrator {
 
     public FamilyBindingResult bindFamily(FamilyBindingPlan plan) {
         return plugin.getFamilyManager().bindSpawnedFamily(plan);
+    }
+
+    public HouseAllocationValidationResult validateHouseAllocation(HouseAllocation allocation) {
+        List<String> errors = new ArrayList<>();
+        WorldAdminApi worldAdmin = getWorldAdmin(errors);
+        if (worldAdmin == null) {
+            return new HouseAllocationValidationResult(false, errors, List.of());
+        }
+
+        return houseAllocationValidator.validate(allocation, worldAdmin);
+    }
+
+    public HouseholdSpawnResult dryRunHouseAllocation(HouseAllocation allocation) {
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<NpcSpawnPlan> spawnPlans = prepareHouseholdPlans(allocation, errors, warnings);
+        if (!errors.isEmpty()) {
+            return HouseholdSpawnResult.failed(true, false, spawnPlans, List.of(), null, errors, warnings);
+        }
+
+        return HouseholdSpawnResult.dryRunSuccess(spawnPlans, warnings);
+    }
+
+    public HouseholdSpawnResult spawnHousehold(HouseAllocation allocation) {
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<NpcSpawnPlan> spawnPlans = prepareHouseholdPlans(allocation, errors, warnings);
+        if (!errors.isEmpty()) {
+            return HouseholdSpawnResult.failed(false, false, spawnPlans, List.of(), null, errors, warnings);
+        }
+
+        List<NpcSpawnResult> spawnResults = new ArrayList<>();
+        List<AINPC> spawnedNpcs = new ArrayList<>();
+        Map<String, AINPC> spawnedNpcsByKey = new LinkedHashMap<>();
+
+        for (NpcSpawnPlan spawnPlan : spawnPlans) {
+            NpcSpawnResult spawnResult = spawn(spawnPlan);
+            spawnResults.add(spawnResult);
+            warnings.addAll(spawnResult.warnings());
+            if (!spawnResult.success()) {
+                errors.addAll(spawnResult.errors());
+                boolean rolledBack = rollbackSpawnedNpcs(spawnedNpcs, warnings);
+                return HouseholdSpawnResult.failed(false, rolledBack, spawnPlans, spawnResults, null, errors, warnings);
+            }
+
+            spawnedNpcs.add(spawnResult.npc());
+            spawnedNpcsByKey.put(normalizeToken(spawnPlan.npcKey()), spawnResult.npc());
+        }
+
+        FamilyBindingResult familyBindingResult = null;
+        if (allocation != null && !allocation.familyId().isBlank() && spawnedNpcs.size() >= 2) {
+            familyBindingResult = bindFamily(allocation.toFamilyBindingPlan(spawnedNpcsByKey));
+            warnings.addAll(familyBindingResult.warnings());
+            if (!familyBindingResult.success()) {
+                errors.addAll(familyBindingResult.errors());
+                boolean rolledBack = rollbackSpawnedNpcs(spawnedNpcs, warnings);
+                return HouseholdSpawnResult.failed(
+                    false,
+                    rolledBack,
+                    spawnPlans,
+                    spawnResults,
+                    familyBindingResult,
+                    errors,
+                    warnings
+                );
+            }
+        }
+
+        return HouseholdSpawnResult.success(spawnPlans, spawnResults, familyBindingResult, warnings);
+    }
+
+    private List<NpcSpawnPlan> prepareHouseholdPlans(HouseAllocation allocation,
+                                                    List<String> errors,
+                                                    List<String> warnings) {
+        WorldAdminApi worldAdmin = getWorldAdmin(errors);
+        if (worldAdmin == null) {
+            return List.of();
+        }
+
+        HouseAllocationValidationResult validationResult = houseAllocationValidator.validate(allocation, worldAdmin);
+        errors.addAll(validationResult.errors());
+        warnings.addAll(validationResult.warnings());
+        if (!errors.isEmpty()) {
+            return allocation != null ? allocation.toNpcSpawnPlans() : List.of();
+        }
+
+        List<NpcSpawnPlan> spawnPlans = allocation.toNpcSpawnPlans();
+        for (NpcSpawnPlan spawnPlan : spawnPlans) {
+            resolve(spawnPlan, errors, warnings);
+        }
+        return spawnPlans;
+    }
+
+    private boolean rollbackSpawnedNpcs(List<AINPC> spawnedNpcs, List<String> warnings) {
+        boolean rollbackComplete = true;
+        for (int i = spawnedNpcs.size() - 1; i >= 0; i--) {
+            AINPC npc = spawnedNpcs.get(i);
+            if (npc == null) {
+                continue;
+            }
+
+            if (!plugin.getNpcManager().deleteNPC(npc)) {
+                rollbackComplete = false;
+                warnings.add("Rollback incomplet: NPC-ul " + npc.getName()
+                    + "#" + npc.getDatabaseId() + " nu a putut fi sters.");
+            }
+        }
+        return rollbackComplete;
     }
 
     public ResolvedNpcSpawnPlan resolve(NpcSpawnPlan plan, List<String> errors, List<String> warnings) {

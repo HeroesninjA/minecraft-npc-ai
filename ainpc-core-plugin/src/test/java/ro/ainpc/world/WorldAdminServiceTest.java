@@ -150,6 +150,53 @@ class WorldAdminServiceTest {
     }
 
     @Test
+    void nodeLookupMethodsResolveCurrentAndNearbyNodes() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 50, z: 0 }
+                  max: { x: 100, y: 90, z: 100 }
+                  places:
+                    fierarie:
+                      name: "Fierarie"
+                      type: "forge"
+                      min: { x: 20, y: 60, z: 20 }
+                      max: { x: 40, y: 75, z: 40 }
+                      nodes:
+                        anvil:
+                          type: "interaction"
+                          x: 30
+                          y: 65
+                          z: 30
+                          radius: 2.0
+                        counter:
+                          type: "interaction"
+                          x: 35
+                          y: 65
+                          z: 35
+                          radius: 1.0
+            """), profile());
+
+        WorldNodeInfo currentNode = service.findNode("world", 31, 65, 30);
+        assertNotNull(currentNode);
+        assertEquals("satul_central:fierarie:anvil", currentNode.id());
+
+        List<String> nearbyNodeIds = service.findNodesNear("world", 32, 65, 32, 8.0, 10)
+            .stream()
+            .map(WorldNodeInfo::id)
+            .toList();
+        assertEquals(List.of("satul_central:fierarie:anvil", "satul_central:fierarie:counter"), nearbyNodeIds);
+
+        assertTrue(service.findNodesNear("world", 32, 65, 32, 8.0, 1).size() == 1);
+        assertNull(service.findNode("world", 80, 65, 80));
+    }
+
+    @Test
     void autoIndexCanBeDisabledAndLookupStillWorks() throws Exception {
         service.reloadFromConfig(loadConfig("""
             world_admin:

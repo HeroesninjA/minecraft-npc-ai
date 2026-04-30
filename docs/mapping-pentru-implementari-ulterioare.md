@@ -202,6 +202,9 @@ Ce inseamna asta:
 - mapping-ul devine selectie de context
 - mapping-ul devine filtru de validare pentru scenarii
 
+Pentru designul complet al stratului `mapping -> indexare -> quest -> story`, vezi `story-si-context-ai.md`.
+Mapping-ul trebuie sa alimenteze un context semantic scurt pentru AI, nu un dump complet al lumii.
+
 ### 6. Admin si debugging
 
 Mapping-ul trebuie sa fie baza pentru operare si debug, nu doar pentru runtime.
@@ -546,12 +549,13 @@ Exemple:
 
 1. leaga NPC-urile si `NPCContext` de `placeId`
 2. adauga obiective `visit_place` si `inspect_node`
-3. adauga evenimente de mapping
-4. standardizeaza `tags` si metadata
-5. introdu stare dinamica pentru `places`
-6. adauga relatii intre `places`
-7. adauga editor si unelte vizuale
-8. leaga mapping-ul de generare automata si template-uri
+3. introdu `WorldContextSnapshot` pentru AI, questuri si story
+4. adauga evenimente de mapping
+5. standardizeaza `tags` si metadata
+6. introdu stare dinamica pentru `places`
+7. adauga relatii intre `places`
+8. adauga editor si unelte vizuale
+9. leaga mapping-ul de generare automata si template-uri
 
 ## Concluzie
 

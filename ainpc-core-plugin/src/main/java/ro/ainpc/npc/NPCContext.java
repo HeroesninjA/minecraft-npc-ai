@@ -4,6 +4,8 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import ro.ainpc.topology.TopologyCategory;
+import ro.ainpc.world.WorldContextSnapshot;
+import ro.ainpc.world.WorldContextSnapshotBuilder;
 
 import java.util.*;
 
@@ -63,6 +65,7 @@ public class NPCContext {
     private List<String> sharedMemories;
     private String plannedRoutineActivity;
     private String currentGoal;
+    private WorldContextSnapshot worldContextSnapshot;
 
     public NPCContext(AINPC npc) {
         this.npc = npc;
@@ -80,6 +83,7 @@ public class NPCContext {
         this.topologyCategory = TopologyCategory.UNKNOWN;
         this.plannedRoutineActivity = "";
         this.currentGoal = "";
+        this.worldContextSnapshot = WorldContextSnapshot.empty();
     }
 
     /**
@@ -109,6 +113,7 @@ public class NPCContext {
         
         // Entitati din apropiere
         updateNearbyEntities(npcLocation);
+        updateWorldContextSnapshot(npcLocation);
     }
 
     /**
@@ -152,6 +157,17 @@ public class NPCContext {
         // Actualizeaza starea de pericol
         this.isFriendsNearby = !nearbyNPCs.isEmpty();
         this.isInDanger = nearbyHostileMobs > 0 || isHurt || safetyLevel < 35;
+    }
+
+    private void updateWorldContextSnapshot(Location npcLocation) {
+        if (npcLocation == null || npc == null || npc.getPlugin() == null || npc.getPlugin().getPlatform() == null) {
+            this.worldContextSnapshot = WorldContextSnapshot.empty();
+            return;
+        }
+
+        this.worldContextSnapshot = new WorldContextSnapshotBuilder(
+            npc.getPlugin().getPlatform().getWorldAdminService()
+        ).build(npcLocation, npc, nearbyNPCs);
     }
 
     public void syncSimulationState(Location npcLocation) {
@@ -234,6 +250,10 @@ public class NPCContext {
         } else {
             sb.append("Sunt afara, intr-o zona de tip ").append(getTopologyDescription())
                 .append(" (").append(getBiomeDescription()).append(").\n");
+        }
+
+        if (worldContextSnapshot != null && !worldContextSnapshot.isEmpty()) {
+            sb.append(worldContextSnapshot.toPromptBlock()).append("\n");
         }
         
         // Entitati din apropiere
@@ -387,6 +407,10 @@ public class NPCContext {
 
     public TopologyCategory getTopologyCategory() {
         return topologyCategory;
+    }
+
+    public WorldContextSnapshot getWorldContextSnapshot() {
+        return worldContextSnapshot;
     }
 
     public boolean isIndoors() {

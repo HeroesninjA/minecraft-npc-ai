@@ -27,11 +27,11 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> SUBCOMMANDS = Arrays.asList(
         "create", "delete", "info", "quest", "world", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
-    private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn");
+    private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
     private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "openai");
     private static final List<String> ROUTINE_ACTIONS = Arrays.asList("tick", "status");
     private static final List<String> QUEST_MODES = Arrays.asList(
-        "nearest", "accept", "decline", "abandon", "status", "reset", "complete"
+        "nearest", "accept", "decline", "abandon", "status", "reset", "complete", "anchors"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "save");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
@@ -242,6 +242,9 @@ public class AINPCTabCompleter implements TabCompleter {
                     || questMode.equals("abandon") || questMode.equals("status")) {
                     completions.addAll(filterStartsWith(List.of("nearest"), questArgs[1]));
                     completions.addAll(getNPCNames(questArgs[1]));
+                } else if (questMode.equals("anchors")) {
+                    completions.addAll(filterStartsWith(List.of("all"), questArgs[1]));
+                    completions.addAll(getOnlinePlayerNames(questArgs[1]));
                 } else {
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
                 }
@@ -252,6 +255,8 @@ public class AINPCTabCompleter implements TabCompleter {
                     || questMode.equals("accept") || questMode.equals("decline")
                     || questMode.equals("abandon") || questMode.equals("status")) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
+                } else if (questMode.equals("anchors")) {
+                    completions.add("<templateId>");
                 }
             }
         }

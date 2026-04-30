@@ -460,6 +460,32 @@ public class WorldAdminService implements WorldAdminApi {
             .orElse(null);
     }
 
+    public WorldNode findNodeAt(String worldName, double x, double y, double z) {
+        if (autoIndexEnabled) {
+            return mappingIndex.findNode(worldName, x, y, z);
+        }
+        return nodesById.values().stream()
+            .filter(node -> node.contains(worldName, x, y, z))
+            .findFirst()
+            .orElse(null);
+    }
+
+    public List<WorldNode> findNodeModelsNear(String worldName, double x, double y, double z, double radius, int limit) {
+        if (worldName == null || worldName.isBlank() || radius < 0.0 || limit == 0) {
+            return List.of();
+        }
+
+        if (autoIndexEnabled) {
+            return mappingIndex.findNodesNear(worldName, x, y, z, radius, limit);
+        }
+
+        return nodesById.values().stream()
+            .filter(node -> node.isNear(worldName, x, y, z, radius + node.getRadius()))
+            .sorted(Comparator.comparingDouble(node -> node.distanceSquared(worldName, x, y, z)))
+            .limit(limit > 0 ? limit : Long.MAX_VALUE)
+            .toList();
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -577,6 +603,20 @@ public class WorldAdminService implements WorldAdminApi {
     @Override
     public WorldNodeInfo getNode(String nodeId) {
         return toNodeInfo(nodesById.get(nodeId));
+    }
+
+    @Override
+    public WorldNodeInfo findNode(String worldName, int x, int y, int z) {
+        return toNodeInfo(findNodeAt(worldName, x, y, z));
+    }
+
+    @Override
+    public Collection<WorldNodeInfo> findNodesNear(String worldName, double x, double y, double z, double radius, int limit) {
+        return Collections.unmodifiableList(
+            findNodeModelsNear(worldName, x, y, z, radius, limit).stream()
+                .map(this::toNodeInfo)
+                .toList()
+        );
     }
 
     @Override

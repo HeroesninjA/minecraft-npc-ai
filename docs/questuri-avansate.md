@@ -1,6 +1,6 @@
 # Questuri Avansate - Documentatie de implementare
 
-Actualizat: 2026-04-26
+Actualizat: 2026-04-30
 
 ## Scop
 
@@ -23,6 +23,9 @@ Capabilitati actuale:
 - questurile sunt definite prin `scenarios` cu `base_type: "QUEST"`
 - questul poate avea `quest.code`, `giver_profession`, `objectives`, `rewards`
 - exista progres persistent in tabela `player_quests`
+- exista `QuestAnchorResolver` initial pentru ancore semantice de mapping
+- ancorele rezolvate sunt persistate in `quest_anchor_bindings`
+- `questVariables` este hidratat din binding-uri pentru compatibilitate runtime
 - exista stari de baza:
   - `NOT_STARTED`
   - `OFFERED`
@@ -43,6 +46,8 @@ Tipuri de obiective suportate in acest moment:
 - `deliver_to_npc`
 - `talk_to_npc`
 - `visit_region`
+- `visit_place`
+- `inspect_node`
 - `kill_mob`
 
 Limitari actuale:
@@ -50,6 +55,7 @@ Limitari actuale:
 - recompensele sunt in practica doar iteme
 - questul este inca tratat ca subtip de `Scenario`
 - progresul curent este gandit in principal pentru un singur quest activ per jucator
+- auditul si inspectia admin pentru ancore sunt initiale; lipseste export complet si validare schema stricta
 - nu exista inca etape reale separate, branching sau obiective conditionale
 
 ## Fluxul actual
@@ -61,7 +67,7 @@ Fluxul actual este bun pentru un MVP:
 3. Jucatorul il accepta si intra in `ACTIVE`
 4. Evenimentele actualizeaza progresul:
    - conversatie cu NPC
-   - miscare intre regiuni
+   - miscare intre regiuni, places si nodes
    - ucidere de mob
    - verificare inventar pentru iteme
 5. Jucatorul revine la NPC
@@ -345,6 +351,9 @@ Exemple:
 
 De aceea, `visit_place` si `inspect_node` sunt extensii naturale peste sistemul din `mapping.md`.
 
+Pentru legatura completa dintre mapping, indexare, AI context si story state, vezi si `story-si-context-ai.md`.
+Questurile generate sau alese dinamic trebuie sa treaca printr-un resolver de ancore semantice, nu sa porneasca direct din text AI sau coordonate brute.
+
 ## YAML recomandat pentru questuri avansate
 
 Format propus:
@@ -419,7 +428,7 @@ Observatie importanta:
 
 ## Persistenta recomandata
 
-In prezent exista deja persistenta in `player_quests`, ceea ce este foarte bine.
+In prezent exista deja persistenta in `player_quests` si `quest_anchor_bindings`, ceea ce este foarte bine.
 
 Pentru nivel avansat, progresul trebuie sa stocheze:
 - `quest_id`
@@ -432,9 +441,18 @@ Pentru nivel avansat, progresul trebuie sa stocheze:
 - `updated_at`
 - `completed_at`
 
+Pentru ancore semantice, `quest_anchor_bindings` salveaza deja:
+
+- `objective_key`
+- `objective_type`
+- `reference`
+- `anchor_type`
+- `anchor_id`
+- `anchor_label`
+
 Important:
 - `objective_progress` trebuie indexat logic dupa `objectiveId`, nu doar dupa combinatie generata din tip si item
-- `questVariables` trebuie folosit pentru decizii, ramificari si legaturi runtime
+- `questVariables` trebuie folosit pentru decizii si cache runtime, nu ca singura sursa de audit pentru ancore
 
 ## Evenimente si tracking
 

@@ -13,7 +13,7 @@ commands:
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC
-    usage: /npcquest <numeNpc|nearest|reset|complete> [jucator]
+    usage: /npcquest <numeNpc|nearest|reset|complete|anchors> [jucator]
     aliases: [npcq]
 
 permissions:

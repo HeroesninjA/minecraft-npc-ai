@@ -1,6 +1,6 @@
 # Roadmap Orientativ
 
-Actualizat: 2026-04-29
+Actualizat: 2026-04-30
 
 ## Scop
 
@@ -264,6 +264,7 @@ Da:
 - registri maturi de actiuni si conditii
 - documentatie API buna
 - context semantic despre lume, NPC-uri si questuri
+- `WorldContextSnapshot` si story state validabil peste mapping semantic
 
 ## De facut
 
@@ -349,11 +350,13 @@ Daca alegi doar urmatoarele directii pentru perioada imediata, ele sunt cele mai
 
 1. `first playable release`
 2. stabilitate si debug
-3. conectarea `HouseAllocation` la `NpcSpawnPlan`
+3. generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
 4. popularea unui mapping demo real cu scannerul vanilla si import semantic
-5. evenimente sociale probabilistice peste rutina
-6. API si modularizare curate
-7. runtime extensibil pentru scenarii
+5. `WorldContextSnapshot` pentru NPCContext, questuri si story
+6. comenzi admin pentru validare/dry-run planuri serializate
+7. evenimente sociale probabilistice peste rutina
+8. API si modularizare curate
+9. runtime extensibil pentru scenarii
 
 Nu recomand sa intri acum direct in:
 

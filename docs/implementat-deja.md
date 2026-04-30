@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-04-29
+Actualizat: 2026-04-30
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -125,6 +125,9 @@ Exista deja infrastructura pentru familie:
 - comanda `family`
 - `FamilyBindingPlan`
 - `FamilyBindingResult`
+- `HouseAllocation`
+- `HouseAllocationValidator`
+- conversie `HouseAllocation -> NpcSpawnPlan`
 - bind initial pentru familii spawnate dupa ce toti membrii au ID DB valid
 - relatii reciproce inferate din roluri precum father, mother, son, daughter, brother si sister
 
@@ -186,6 +189,11 @@ Ce este implementat:
 - asociere quest cu profesia NPC-ului
 - oferire, acceptare, refuz, abandon, status, reset si completare fortata
 - progres persistent per jucator in tabela `player_quests`
+- rezolvare initiala de ancore semantice prin `QuestAnchorResolver`
+- persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
+- reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
+- comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
+- audit read-only `/ainpc audit quest`
 - mesaje de briefing si progres
 - finalizare cu recompensa
 - arhivare pentru questuri completate sau esuate
@@ -202,13 +210,16 @@ Tipuri de obiective implementate:
 - `deliver_to_npc`
 - `talk_to_npc`
 - `visit_region`
+- `visit_place`
+- `inspect_node`
 - `kill_mob`
 
 Tracking implementat deja:
 - conversatie cu NPC
-- miscare intre blocuri pentru `visit_region`
+- miscare intre blocuri pentru `visit_region`, `visit_place` si `inspect_node`
 - ucidere de entitati pentru `kill_mob`
 - verificare inventar pentru obiective bazate pe iteme
+- progresul `visit_place` si `inspect_node` respecta ancora rezolvata si persistata
 
 Interactiunea cu questurile functioneaza prin:
 - comenzi admin/jucator
@@ -292,13 +303,17 @@ Capabilitati implementate:
 - metadata pe nod
 - cautare a regiunii curente dupa coordonate
 - cautare a place-ului curent dupa coordonate
+- cautare a node-ului curent dupa coordonate si radius
+- cautare de node-uri apropiate prin `findNodesNear(...)`
 - listare si cautare de places dupa tag
 - auto-index intern pentru regiuni, places si nodes
 - expunere a numarului de regiuni, places si noduri prin API
+- `WorldContextSnapshot` initial pentru context semantic in `NPCContext` si prompt AI
 - comenzi admin pentru inspectie si creare manuala
 - audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
 - scanare vanilla initiala prin `/ainpc world scan village`
 - import semantic initial prin `/ainpc world scan village <radius> import [regionId]`
+- validare initiala pentru alocarea rezidentilor intr-o casa inainte de spawn batch
 
 Scannerul vanilla detecteaza:
 
@@ -326,8 +341,9 @@ Tipuri deja prezente:
 Limitari actuale:
 - mapping-ul este functional, dar serverul de test poate avea inca `0` regiuni, `0` places si `0` nodes pana cand sunt definite in config sau prin comenzi
 - NPC-urile salveaza ancore de locatie, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
-- questurile nu au inca obiective native `visit_place` sau `inspect_node`
+- `visit_place` si `inspect_node` exista initial cu `QuestAnchorResolver` si persistenta dedicata `quest_anchor_bindings`
 - scannerul vanilla si mapperul semantic exista initial, dar generatorul complet de sate/cladiri si patch-uri native nu este inca implementat ca pipeline complet
+- exista `HouseAllocation` ca model intern, dar generatorul complet nu il produce inca automat dintr-un `SettlementPlan`
 
 ## Comenzi existente
 
@@ -385,6 +401,7 @@ Tabele deja create si folosite:
 - `npc_family`
 - `dialog_history`
 - `player_quests`
+- `quest_anchor_bindings`
 
 Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 - NPC-uri
@@ -397,13 +414,15 @@ Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 - familie
 - dialog
 - progres de quest
+- ancore semantice pentru obiective de quest
 
 ## Ce nu este inca implementat complet
 
 Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul actual:
 
 - legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
-- obiective de quest bazate pe `visit_place` si `inspect_node`
+- export/debugdump complet pentru `quest_anchor_bindings`
+- story state persistent pe regiune/place si evenimente story
 - generator complet de sate, case si cladiri de meserii
 - integrare optionala cu WorldEdit API
 - questuri cu etape reale si branching avansat
@@ -427,8 +446,12 @@ Proiectul are deja implementate:
 - feature packs si scenarii YAML
 - API si registry pentru addonuri
 - world admin la nivel de regiuni, places si noduri
+- `WorldContextSnapshot` initial pentru context AI/NPC peste mapping
+- obiective native initiale `visit_place` si `inspect_node`
+- `QuestAnchorResolver` initial cu ancore persistate in `quest_anchor_bindings`
 - scanare vanilla initiala si import semantic pentru world mapping
 - rutina zilnica initiala peste `home/work/social anchors`
+- `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic
 - audit read-only pentru NPC, world mapping, DB si spawn order
 - debug dump avansat in `plugins/AINPC/debug-dumps/`
 - addon medieval separat care se integreaza cu core-ul

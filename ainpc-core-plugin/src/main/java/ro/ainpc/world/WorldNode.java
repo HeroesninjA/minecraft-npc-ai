@@ -81,4 +81,31 @@ public class WorldNode {
     public void putMetadata(String key, String value) {
         metadata.put(key, value);
     }
+
+    public boolean contains(String worldName, double x, double y, double z) {
+        return isNear(worldName, x, y, z, radius);
+    }
+
+    public boolean isNear(String worldName, double x, double y, double z, double searchRadius) {
+        if (worldName == null || !this.worldName.equalsIgnoreCase(worldName)) {
+            return false;
+        }
+
+        double effectiveRadius = Math.max(0.0, searchRadius);
+        double dx = this.x - x;
+        double dy = this.y - y;
+        double dz = this.z - z;
+        return dx * dx + dy * dy + dz * dz <= effectiveRadius * effectiveRadius;
+    }
+
+    public double distanceSquared(String worldName, double x, double y, double z) {
+        if (worldName == null || !this.worldName.equalsIgnoreCase(worldName)) {
+            return Double.MAX_VALUE;
+        }
+
+        double dx = this.x - x;
+        double dy = this.y - y;
+        double dz = this.z - z;
+        return dx * dx + dy * dy + dz * dz;
+    }
 }

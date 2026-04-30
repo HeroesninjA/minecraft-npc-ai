@@ -1,6 +1,6 @@
 # Debugging si Testare
 
-Actualizat: 2026-04-29
+Actualizat: 2026-04-30
 
 ## Scop
 
@@ -270,6 +270,7 @@ Subcomenzi:
 /ainpc audit world
 /ainpc audit db
 /ainpc audit spawn
+/ainpc audit quest
 ```
 
 Ce verifica:
@@ -288,6 +289,9 @@ Ce verifica:
 - `homeAnchor` in afara casei
 - relatii familiale fara reciproc
 - duplicate exacte in `npc_family`
+- `quest_anchor_bindings` fara progres parinte
+- quest anchors catre regiuni, places sau nodes inexistente
+- incompatibilitati intre `objective_type` si `anchor_type`
 
 Comanda este read-only.
 Nu modifica NPC-uri, DB sau config.
@@ -377,6 +381,20 @@ SELECT npc_id, profile_source, profile_version, profile_summary FROM npc_profile
 ```sql
 SELECT profile_data FROM npc_profiles WHERE npc_id = 1;
 ```
+
+Pentru quest anchors, prefera intai comenzile read-only din joc:
+
+```text
+/ainpc quest anchors
+/ainpc quest anchors <jucator>
+/ainpc quest anchors all <templateId>
+/ainpc audit quest
+```
+
+Tabele relevante:
+
+- `player_quests`
+- `quest_anchor_bindings`
 
 Atentie:
 

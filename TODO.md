@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-04-28
+Actualizat: 2026-04-30
 
 ## Exista deja
 
@@ -14,10 +14,19 @@ Actualizat: 2026-04-28
 - [x] Task-urile programate au fost extrase din `AINPCPlugin` in `SchedulerCoordinator`
 - [x] Folderul legacy `src/src` a fost eliminat dupa migrarea surselor in modulul core
 - [x] Mapping-ul are auto-indexare interna dezactivabila prin `world_admin.auto_index.enabled`
+- [x] Mapping-ul are lookup initial pentru `findNode(...)` si `findNodesNear(...)`
+- [x] `WorldContextSnapshot` initial pentru legatura mapping -> NPCContext -> prompt AI
+- [x] Obiective quest initiale `visit_place` si `inspect_node`
+- [x] `QuestAnchorResolver` initial cu ancore persistate si reflectate in `questVariables`
+- [x] Persistenta dedicata `quest_anchor_bindings` pentru ancore semantice de quest
+- [x] Audit si comanda admin read-only pentru `quest_anchor_bindings`
+- [x] `HouseAllocation` initial pentru case cu mai multi rezidenti si conversie catre `NpcSpawnPlan`
+- [x] Dry-run si spawn batch initial pentru household, cu rollback practic daca spawn-ul esueaza la mijloc
 
 ## Prioritate curenta
 
 - [ ] Questuri complete pe NPC, cu obiective clare si progres persistent
+- [ ] Export/debugdump complet pentru `quest_anchor_bindings`
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes
 - [ ] Incarcare curata a scenariilor ca module separate
 - [ ] World admin pentru regiuni, noduri si control de zona
@@ -68,12 +77,14 @@ Actualizat: 2026-04-28
 - [ ] Obiective cu stari: inceput, progres, completat, esuat
 - [ ] Recompense configurabile pe scenariu
 - [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
+- [x] Quest anchors persistente pe `regionId`, `placeId`, `nodeId` si `npcId`
 - [ ] Story state pe regiune, pentru lumi care evolueaza in timp
 
 ## Lume si gameplay
 
 - [ ] Regiuni cu identitate proprie: sat, castel, pestera, dungeon
 - [ ] Spawn si comportament diferit pe tipuri de zona
+- [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
 - [ ] Economie de baza: monede, tranzactii, roluri comerciale
 - [ ] Reputatie pe sat, regiune sau factiune
 - [ ] Sistem de progres pentru jucator: nivel, skill-uri sau experienta

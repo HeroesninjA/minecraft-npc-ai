@@ -1,6 +1,6 @@
 # Mapping
 
-Actualizat: 2026-04-29
+Actualizat: 2026-04-30
 
 ## Scop
 
@@ -95,6 +95,8 @@ Capabilitati publice disponibile acum:
 - listare nodes
 - `findRegion(...)`
 - `findPlace(...)`
+- `findNode(...)`
+- `findNodesNear(...)`
 - `findPlacesByTag(...)`
 - citire count-uri pentru regiuni, places si nodes
 
@@ -110,8 +112,10 @@ Indexul este folosit pentru cautarile dupa locatie:
 
 - `findRegion(...)`
 - `findPlace(...)`
+- `findNode(...)`
+- `findNodesNear(...)`
 
-Pentru `nodes`, indexarea exista deja intern ca fundatie pentru lookup-uri viitoare de tip `findNodesNear(...)`, `inspect_node` sau trigger-e de scenariu.
+Pentru `nodes`, indexarea este folosita deja pentru lookup-uri de tip `findNode(...)`, `findNodesNear(...)` si obiective initiale `inspect_node`.
 
 Indexarea este activata implicit.
 
@@ -224,9 +228,13 @@ In acest moment, mapping-ul este folosit in principal pentru:
 
 - inspectie administrativa
 - cautare semantica de `region` si `place`
+- cautare semantica de `node` curent si node-uri apropiate
 - baza pentru obiectivele existente de tip `visit_region`
+- baza pentru obiectivele initiale `visit_place` si `inspect_node`
+- `QuestAnchorResolver` initial pentru validarea si bind-uirea ancorelor in `quest_anchor_bindings`
 - rezolvarea automata a unor ancore NPC (`homeAnchor`, `workAnchor`) din `WorldPlace`
 - rezolvarea initiala a `socialAnchor` din noduri sau locuri sociale
+- `WorldContextSnapshot` in `NPCContext`, inclusiv `WORLD_CONTEXT` pentru promptul AI
 - rutina zilnica initiala a NPC-urilor
 - import semantic initial peste sate vanilla scanate
 - audit si debugging pentru inconsistenta intre NPC-uri, places si nodes
@@ -277,8 +285,8 @@ Important:
 Sistemul de mapping exista, dar urmatoarele piese nu sunt inca conectate complet:
 
 - NPC-urile folosesc ancore de locatie, dar nu au inca `homePlaceId`, `workPlaceId`, `socialPlaceId`
-- `NPCContext` nu expune inca complet `currentPlaceId` si semantica locului
-- questurile nu au inca obiective precum `visit_place` sau `inspect_node`
+- `NPCContext` expune context semantic initial prin `WorldContextSnapshot`, dar nu exista inca bindings persistente dedicate pe placeId/nodeId
+- questurile au `visit_place`, `inspect_node`, `QuestAnchorResolver`, persistenta initiala in `quest_anchor_bindings` si audit/comanda admin read-only pentru binding-uri
 - `places` nu au stare dinamica de tip `open`, `closed`, `under_attack`
 - persistenta este in `config.yml`, nu in baza de date
 
@@ -332,7 +340,7 @@ Efecte:
 
 - NPC-urile folosesc fallback-uri pentru casa si loc de munca
 - `/ainpc world whereami` nu poate explica locatia semantic
-- questurile nu pot tinti places sau nodes
+- questurile `visit_place` si `inspect_node` nu pot progresa fara places/nodes reale
 - generarea viitoare nu are inca un strat persistent de continut semantic
 
 Acesta nu este un crash si nu este coruptie de date.

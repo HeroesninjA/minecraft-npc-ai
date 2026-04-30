@@ -11,6 +11,7 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\DecisionEngine.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\DialogueEngine.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\FeaturePackLoader.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\QuestAnchorResolver.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\ScenarioEngine.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\AbstractPluginListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\ListenerRegistry.java
@@ -40,6 +41,10 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\routine\RoutineTickSummary.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\FamilyBindingPlan.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\FamilyBindingResult.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocation.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocationValidationResult.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocationValidator.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseholdSpawnResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\NpcSpawnOrchestrator.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\NpcSpawnPlan.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\NpcSpawnResult.java
@@ -58,6 +63,8 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\scan\VanillaVillageScanResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\StoryState.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldAdminService.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldContextSnapshot.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldContextSnapshotBuilder.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldNode.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldNodeType.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\WorldPlace.java

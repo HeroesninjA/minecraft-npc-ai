@@ -243,6 +243,31 @@ public class DatabaseManager {
                 ON player_quests(player_uuid, status)
             """);
 
+            // Tabel binding-uri semantice pentru obiective de quest.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS quest_anchor_bindings (
+                    player_uuid TEXT NOT NULL,
+                    template_id TEXT NOT NULL,
+                    objective_key TEXT NOT NULL,
+                    quest_code TEXT NOT NULL DEFAULT '',
+                    objective_type TEXT NOT NULL,
+                    reference TEXT NOT NULL DEFAULT '',
+                    anchor_type TEXT NOT NULL,
+                    anchor_id TEXT NOT NULL,
+                    anchor_label TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (player_uuid, template_id, objective_key),
+                    FOREIGN KEY (player_uuid, template_id)
+                        REFERENCES player_quests(player_uuid, template_id)
+                        ON DELETE CASCADE
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_quest_anchor_bindings_anchor
+                ON quest_anchor_bindings(anchor_type, anchor_id)
+            """);
+
             // Backfill pentru baze de date vechi, astfel incat fiecare NPC existent sa aiba toate datele de profil.
             stmt.executeUpdate("""
                 INSERT OR IGNORE INTO npc_personality (npc_id)

@@ -37,6 +37,10 @@ public interface WorldAdminApi {
 
     WorldNodeInfo getNode(String nodeId);
 
+    WorldNodeInfo findNode(String worldName, int x, int y, int z);
+
+    Collection<WorldNodeInfo> findNodesNear(String worldName, double x, double y, double z, double radius, int limit);
+
     int getRegionCount();
 
     int getPlaceCount();

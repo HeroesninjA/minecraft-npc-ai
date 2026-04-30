@@ -1,10 +1,13 @@
 package ro.ainpc.world;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 class MappingIndex {
 
@@ -59,6 +62,35 @@ class MappingIndex {
             }
         }
         return null;
+    }
+
+    WorldNode findNode(String worldName, double x, double y, double z) {
+        for (WorldNode node : nodesByChunk.getOrDefault(keyAt(worldName, (int) Math.floor(x), (int) Math.floor(z)), List.of())) {
+            if (node.contains(worldName, x, y, z)) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    List<WorldNode> findNodesNear(String worldName, double x, double y, double z, double radius, int limit) {
+        if (worldName == null || radius < 0.0 || limit == 0) {
+            return List.of();
+        }
+
+        Set<WorldNode> candidates = new LinkedHashSet<>();
+        int minX = (int) Math.floor(x - radius);
+        int minZ = (int) Math.floor(z - radius);
+        int maxX = (int) Math.ceil(x + radius);
+        int maxZ = (int) Math.ceil(z + radius);
+        forEachChunk(worldName, minX, minZ, maxX, maxZ,
+            key -> candidates.addAll(nodesByChunk.getOrDefault(key, List.of())));
+
+        return candidates.stream()
+            .filter(node -> node.isNear(worldName, x, y, z, radius + node.getRadius()))
+            .sorted(Comparator.comparingDouble(node -> node.distanceSquared(worldName, x, y, z)))
+            .limit(limit > 0 ? limit : Long.MAX_VALUE)
+            .toList();
     }
 
     int indexedRegionChunks() {

@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Comanda principala pentru gestionarea NPC-urilor AI
@@ -163,6 +164,7 @@ public class AINPCCommand implements CommandExecutor {
         String mode = args[1].toLowerCase();
         questDebug("Parsare quest mode='" + mode + "' sender=" + sender.getName());
         return switch (mode) {
+            case "anchors" -> handleQuestAnchors(sender, args);
             case "nearest" -> handleNearestQuest(sender, args);
             case "accept" -> handleAcceptQuest(sender, args);
             case "decline" -> handleDeclineQuest(sender, args);
@@ -453,6 +455,143 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
+    private boolean handleQuestAnchors(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+        if (plugin.getDatabaseManager() == null) {
+            plugin.getMessageUtils().send(sender, "&cDatabaseManager nu este initializat.");
+            return true;
+        }
+
+        String playerUuid = "";
+        String templateId = "";
+        if (args.length > 2 && !"all".equalsIgnoreCase(args[2])) {
+            playerUuid = resolveQuestAnchorPlayerUuid(sender, args[2]);
+            if (playerUuid == null) {
+                return true;
+            }
+        }
+        if (args.length > 3) {
+            templateId = args[3];
+        }
+        if (args.length > 4) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId]");
+            return true;
+        }
+
+        try {
+            List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings(playerUuid, templateId, 20);
+            plugin.getMessageUtils().send(sender, "&6=== Quest Anchor Bindings ===");
+            plugin.getMessageUtils().send(sender, "&eFiltru player: &f" + (playerUuid.isBlank() ? "all" : playerUuid));
+            plugin.getMessageUtils().send(sender, "&eFiltru template: &f" + (templateId.isBlank() ? "all" : templateId));
+            if (rows.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&7Nu exista binding-uri pentru filtrul curent.");
+                return true;
+            }
+
+            plugin.getMessageUtils().send(sender, "&eAfisate: &f" + rows.size() + " &7(max 20, cele mai recente)");
+            for (QuestAnchorBindingRow row : rows) {
+                plugin.getMessageUtils().send(sender, "&7- &f" + formatQuestAnchorBinding(row));
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().warning("Nu am putut lista quest_anchor_bindings: " + exception.getMessage());
+            plugin.getMessageUtils().send(sender, "&cNu am putut lista quest anchor bindings: " + exception.getMessage());
+        }
+        return true;
+    }
+
+    private String resolveQuestAnchorPlayerUuid(CommandSender sender, String selector) {
+        if (selector == null || selector.isBlank()) {
+            return "";
+        }
+
+        try {
+            return UUID.fromString(selector).toString();
+        } catch (IllegalArgumentException ignored) {
+            // Nu este UUID; incercam jucator online.
+        }
+
+        Player player = plugin.getServer().getPlayerExact(selector);
+        if (player == null) {
+            player = plugin.getServer().getPlayer(selector);
+        }
+        if (player == null) {
+            plugin.getMessageUtils().send(sender,
+                "&cJucatorul trebuie sa fie online sau trebuie sa folosesti UUID-ul lui.");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId]");
+            return null;
+        }
+        return player.getUniqueId().toString();
+    }
+
+    private List<QuestAnchorBindingRow> queryQuestAnchorBindings(String playerUuid,
+                                                                 String templateId,
+                                                                 int limit) throws SQLException {
+        StringBuilder sql = new StringBuilder("""
+            SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
+                   b.objective_type, b.reference, b.anchor_type, b.anchor_id,
+                   b.anchor_label, b.created_at, b.updated_at, p.status
+            FROM quest_anchor_bindings b
+            LEFT JOIN player_quests p
+              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            WHERE 1 = 1
+        """);
+        List<String> parameters = new ArrayList<>();
+        if (playerUuid != null && !playerUuid.isBlank()) {
+            sql.append(" AND b.player_uuid = ?");
+            parameters.add(playerUuid);
+        }
+        if (templateId != null && !templateId.isBlank()) {
+            sql.append(" AND b.template_id = ?");
+            parameters.add(templateId);
+        }
+        sql.append(" ORDER BY b.updated_at DESC LIMIT ?");
+
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql.toString())) {
+            int index = 1;
+            for (String parameter : parameters) {
+                stmt.setString(index++, parameter);
+            }
+            stmt.setInt(index, limit);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<QuestAnchorBindingRow> rows = new ArrayList<>();
+                while (rs.next()) {
+                    rows.add(readQuestAnchorBindingRow(rs));
+                }
+                return rows;
+            }
+        }
+    }
+
+    private QuestAnchorBindingRow readQuestAnchorBindingRow(ResultSet rs) throws SQLException {
+        return new QuestAnchorBindingRow(
+            rs.getString("player_uuid"),
+            rs.getString("template_id"),
+            rs.getString("objective_key"),
+            rs.getString("quest_code"),
+            rs.getString("objective_type"),
+            rs.getString("reference"),
+            rs.getString("anchor_type"),
+            rs.getString("anchor_id"),
+            rs.getString("anchor_label"),
+            rs.getLong("created_at"),
+            rs.getLong("updated_at"),
+            rs.getString("status")
+        );
+    }
+
+    private String formatQuestAnchorBinding(QuestAnchorBindingRow row) {
+        return row.playerUuid() + " | " + row.templateId()
+            + " | " + row.objectiveKey()
+            + " | " + row.objectiveType()
+            + " -> " + row.anchorType() + ":" + row.anchorId()
+            + " (" + formatOptional(row.anchorLabel()) + ")"
+            + " | status=" + formatOptional(row.status());
+    }
+
     private AINPC resolveQuestNpcSelector(CommandSender sender, String npcSelector, Player targetPlayer, String action) {
         if (npcSelector == null || npcSelector.isBlank()) {
             plugin.getMessageUtils().send(sender, "&cSpecifica NPC-ul pentru quest.");
@@ -602,6 +741,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc quest status <numeNpc>|nearest [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest reset <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
     }
 
     private boolean handleWorld(CommandSender sender, String[] args) {
@@ -1198,7 +1338,7 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         String mode = args.length > 1 ? args[1].toLowerCase() : "all";
-        if (!Set.of("all", "npc", "world", "db", "spawn").contains(mode)) {
+        if (!Set.of("all", "npc", "world", "db", "spawn", "quest").contains(mode)) {
             sendAuditUsage(sender);
             return true;
         }
@@ -1216,6 +1356,9 @@ public class AINPCCommand implements CommandExecutor {
         if ("all".equals(mode) || "spawn".equals(mode)) {
             auditSpawnOrder(report);
         }
+        if ("all".equals(mode) || "quest".equals(mode)) {
+            auditQuestAnchors(report);
+        }
 
         sendAuditReport(sender, mode, report);
         return true;
@@ -1228,6 +1371,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc audit world &7- verifica world mapping");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit db &7- verifica tabelele si profile_data");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit spawn &7- verifica ordinea casa/node/NPC/familie");
+        plugin.getMessageUtils().send(sender, "&e/ainpc audit quest &7- verifica quest_anchor_bindings");
     }
 
     private boolean handleDebugDump(CommandSender sender, String[] args) {
@@ -1580,6 +1724,156 @@ public class AINPCCommand implements CommandExecutor {
         } catch (SQLException exception) {
             report.error("Audit familie/spawn-order esuat: " + exception.getMessage());
         }
+    }
+
+    private void auditQuestAnchors(AuditReport report) {
+        if (plugin.getDatabaseManager() == null) {
+            report.error("DatabaseManager nu este initializat.");
+            return;
+        }
+
+        try {
+            int questRows = queryCount("SELECT COUNT(*) FROM player_quests");
+            int anchorRows = queryCount("SELECT COUNT(*) FROM quest_anchor_bindings");
+            report.info("Quest anchors: " + anchorRows + " binding-uri, " + questRows + " progres quest in DB.");
+
+            auditQueryRows(report, """
+                SELECT b.player_uuid, b.template_id, b.objective_key
+                FROM quest_anchor_bindings b
+                LEFT JOIN player_quests p
+                  ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+                WHERE p.player_uuid IS NULL
+                """, "Quest anchor fara progres parinte");
+
+            List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings("", "", 500);
+            if (anchorRows > rows.size()) {
+                report.warn("Audit quest anchors a verificat primele " + rows.size()
+                    + " randuri din " + anchorRows + ". Ruleaza inspectie DB pentru audit complet.");
+            }
+            validateQuestAnchorRows(report, rows);
+        } catch (SQLException exception) {
+            report.error("Audit quest anchors esuat: " + exception.getMessage());
+        }
+    }
+
+    private void validateQuestAnchorRows(AuditReport report, List<QuestAnchorBindingRow> rows) {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        Map<String, WorldRegionInfo> regionsById = new HashMap<>();
+        Map<String, WorldPlaceInfo> placesById = new HashMap<>();
+        Map<String, WorldNodeInfo> nodesById = new HashMap<>();
+        if (worldAdmin != null && worldAdmin.isEnabled()) {
+            for (WorldRegionInfo region : worldAdmin.getRegions()) {
+                regionsById.put(region.id(), region);
+            }
+            for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
+                placesById.put(place.id(), place);
+            }
+            for (WorldNodeInfo node : worldAdmin.getNodes()) {
+                nodesById.put(node.id(), node);
+            }
+        }
+
+        Map<String, Integer> countsByAnchorType = new HashMap<>();
+        for (QuestAnchorBindingRow row : rows) {
+            String label = "Quest anchor " + row.templateId() + "/" + row.objectiveKey()
+                + " pentru player " + row.playerUuid();
+            String anchorType = normalizeAuditKey(row.anchorType());
+            countsByAnchorType.merge(anchorType.isBlank() ? "<gol>" : anchorType, 1, Integer::sum);
+
+            if (row.playerUuid() == null || row.playerUuid().isBlank()) {
+                report.error(label + " nu are player_uuid.");
+            } else {
+                try {
+                    UUID.fromString(row.playerUuid());
+                } catch (IllegalArgumentException exception) {
+                    report.error(label + " are player_uuid invalid: " + row.playerUuid() + ".");
+                }
+            }
+            if (row.templateId() == null || row.templateId().isBlank()) {
+                report.error(label + " nu are template_id.");
+            }
+            if (row.objectiveKey() == null || row.objectiveKey().isBlank()) {
+                report.error(label + " nu are objective_key.");
+            }
+            if (row.objectiveType() == null || row.objectiveType().isBlank()) {
+                report.error(label + " nu are objective_type.");
+            }
+            if (row.anchorType() == null || row.anchorType().isBlank()) {
+                report.error(label + " nu are anchor_type.");
+            }
+            if (row.anchorId() == null || row.anchorId().isBlank()) {
+                report.error(label + " nu are anchor_id.");
+            }
+            if (!isQuestAnchorTypeCompatible(row.objectiveType(), row.anchorType())) {
+                report.error(label + " are tip incompatibil: objective_type=" + row.objectiveType()
+                    + ", anchor_type=" + row.anchorType() + ".");
+            }
+            validateQuestAnchorTarget(report, label, row, worldAdmin, regionsById, placesById, nodesById);
+        }
+
+        if (!countsByAnchorType.isEmpty()) {
+            report.info("Quest anchors pe tip: " + formatCountMap(countsByAnchorType));
+        }
+    }
+
+    private void validateQuestAnchorTarget(AuditReport report,
+                                           String label,
+                                           QuestAnchorBindingRow row,
+                                           WorldAdminApi worldAdmin,
+                                           Map<String, WorldRegionInfo> regionsById,
+                                           Map<String, WorldPlaceInfo> placesById,
+                                           Map<String, WorldNodeInfo> nodesById) {
+        String anchorType = normalizeAuditKey(row.anchorType());
+        String anchorId = row.anchorId() == null ? "" : row.anchorId();
+        if (anchorId.isBlank()) {
+            return;
+        }
+
+        switch (anchorType) {
+            case "region" -> {
+                if (worldAdmin == null || !worldAdmin.isEnabled()) {
+                    report.warn(label + " nu poate valida region anchor: World admin este dezactivat.");
+                } else if (!regionsById.containsKey(anchorId)) {
+                    report.error(label + " refera regiunea inexistenta " + anchorId + ".");
+                }
+            }
+            case "place" -> {
+                if (worldAdmin == null || !worldAdmin.isEnabled()) {
+                    report.warn(label + " nu poate valida place anchor: World admin este dezactivat.");
+                } else if (!placesById.containsKey(anchorId)) {
+                    report.error(label + " refera place-ul inexistent " + anchorId + ".");
+                }
+            }
+            case "node" -> {
+                if (worldAdmin == null || !worldAdmin.isEnabled()) {
+                    report.warn(label + " nu poate valida node anchor: World admin este dezactivat.");
+                } else if (!nodesById.containsKey(anchorId)) {
+                    report.error(label + " refera node-ul inexistent " + anchorId + ".");
+                }
+            }
+            case "npc" -> {
+                if (findLoadedNpcBySelector(anchorId) == null) {
+                    report.warn(label + " refera NPC care nu este incarcat acum: " + anchorId + ".");
+                }
+            }
+            default -> report.error(label + " are anchor_type necunoscut: " + row.anchorType() + ".");
+        }
+    }
+
+    private boolean isQuestAnchorTypeCompatible(String objectiveType, String anchorType) {
+        String objective = normalizeAuditKey(objectiveType);
+        String anchor = normalizeAuditKey(anchorType);
+        if (objective.isBlank() || anchor.isBlank()) {
+            return true;
+        }
+
+        return switch (objective) {
+            case "visit_region" -> "region".equals(anchor);
+            case "visit_place" -> "place".equals(anchor);
+            case "inspect_node" -> "node".equals(anchor);
+            case "talk_to_npc" -> "npc".equals(anchor);
+            default -> true;
+        };
     }
 
     private void auditDatabase(AuditReport report) {
@@ -1983,6 +2277,22 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
+    private record QuestAnchorBindingRow(
+        String playerUuid,
+        String templateId,
+        String objectiveKey,
+        String questCode,
+        String objectiveType,
+        String reference,
+        String anchorType,
+        String anchorId,
+        String anchorLabel,
+        long createdAt,
+        long updatedAt,
+        String status
+    ) {
+    }
+
     /**
      * /ainpc delete <nume>
      */
@@ -2355,6 +2665,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Reseteaza progresul quest-ului pentru un jucator");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza ancorele semantice persistate pentru questuri");
         plugin.getMessageUtils().send(sender, "&e/ainpc list");
         plugin.getMessageUtils().send(sender, "&7  Lista toate NPC-urile");
         plugin.getMessageUtils().send(sender, "&e/ainpc world whereami [jucator]");
@@ -2375,7 +2687,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Scaneaza sat vanilla si poate importa mapping semantic AINPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
         plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
-        plugin.getMessageUtils().send(sender, "&e/ainpc audit [all|npc|world|db|spawn]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]");
         plugin.getMessageUtils().send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date");
         plugin.getMessageUtils().send(sender, "&e/ainpc debugdump [all|npc|world|quest|openai]");
         plugin.getMessageUtils().send(sender, "&7  Genereaza un jurnal avansat read-only pentru debugging");
@@ -2585,6 +2897,18 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private String formatMap(Map<String, String> values) {
+        if (values == null || values.isEmpty()) {
+            return "<gol>";
+        }
+
+        return values.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + "=" + entry.getValue())
+            .reduce((left, right) -> left + ", " + right)
+            .orElse("<gol>");
+    }
+
+    private String formatCountMap(Map<String, Integer> values) {
         if (values == null || values.isEmpty()) {
             return "<gol>";
         }
