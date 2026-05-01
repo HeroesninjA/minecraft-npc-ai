@@ -3,5 +3,7 @@ ro\ainpc\spawn\HouseAllocationValidatorTest.class
 ro\ainpc\world\QuestAnchorResolverTest.class
 ro\ainpc\spawn\HouseAllocationTest.class
 ro\ainpc\routine\RoutineEngineTest.class
+ro\ainpc\engine\QuestDecisionIntentResolverTest.class
 ro\ainpc\world\WorldAdminServiceTest.class
+ro\ainpc\engine\QuestScenarioContractTest.class
 ro\ainpc\world\SemanticVillageMapperTest.class

@@ -169,6 +169,7 @@ public class AINPCPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (scenarioEngine != null) {
+            scenarioEngine.stopAllQuestTracking();
             getLogger().info("Salvare progres quest-uri...");
             scenarioEngine.flushQuestProgress();
         }

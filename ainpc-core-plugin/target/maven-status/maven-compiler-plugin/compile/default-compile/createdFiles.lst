@@ -1,6 +1,8 @@
 ro\ainpc\npc\NPCState.class
 ro\ainpc\world\WorldContextSnapshot$NpcBindingInfo.class
+ro\ainpc\engine\QuestScenarioContract$CompletionMode.class
 ro\ainpc\managers\ConversationSessionManager$ConversationSession.class
+ro\ainpc\engine\ScenarioEngine$QuestTrackingMarker.class
 ro\ainpc\routine\RoutineService.class
 ro\ainpc\ai\DialogManager$DialogStatus.class
 ro\ainpc\ai\DialogManager.class
@@ -8,6 +10,7 @@ ro\ainpc\spawn\NpcSpawnPlan.class
 ro\ainpc\ai\NpcFactResolver$1.class
 ro\ainpc\engine\DialogueEngine$DialogueIntent.class
 ro\ainpc\engine\ScenarioEngine$1.class
+ro\ainpc\engine\QuestScenarioContract$AcceptanceMode.class
 ro\ainpc\engine\ScenarioEngine$QuestAvailability.class
 ro\ainpc\world\WorldContextSnapshot.class
 ro\ainpc\npc\NPCContext.class
@@ -33,6 +36,7 @@ ro\ainpc\world\StoryState.class
 ro\ainpc\database\DatabaseManager$LockedStatementInvocationHandler.class
 ro\ainpc\engine\ScenarioEngine$QuestObjectiveCheck.class
 ro\ainpc\npc\NPCAction.class
+ro\ainpc\engine\QuestScenarioContract$TrackingMode.class
 ro\ainpc\managers\FamilyMemberRecord.class
 ro\ainpc\utils\NPCNameGenerator.class
 ro\ainpc\managers\MemoryManager$MemoryStats.class
@@ -42,11 +46,13 @@ ro\ainpc\npc\NPCEmotions.class
 ro\ainpc\debug\DebugDumpService$DebugDumpResult.class
 ro\ainpc\spawn\ResolvedNpcSpawnPlan.class
 ro\ainpc\world\scan\VanillaVillageFeature.class
+ro\ainpc\engine\QuestDecisionIntentResolver$Intent.class
 ro\ainpc\spawn\HouseAllocation$Builder.class
 ro\ainpc\managers\MemoryManager.class
 ro\ainpc\AINPCPlugin.class
 ro\ainpc\spawn\FamilyBindingPlan.class
 ro\ainpc\engine\ScenarioEngine$SimpleQuestProfile.class
+ro\ainpc\engine\QuestScenarioContract$Kind.class
 ro\ainpc\ai\DialogManager$GeneratedDialog.class
 ro\ainpc\listeners\ListenerRegistry.class
 ro\ainpc\spawn\NpcSpawnResult.class
@@ -80,11 +86,13 @@ ro\ainpc\engine\QuestAnchorResolver$ResolutionIssue.class
 ro\ainpc\ai\OpenAIService$PromptSnapshot.class
 ro\ainpc\engine\QuestAnchorResolver.class
 ro\ainpc\engine\FeaturePackLoader$TraitDefinition.class
+ro\ainpc\engine\ScenarioEngine$QuestTrackingStep.class
 ro\ainpc\world\scan\VanillaVillageFeatureType.class
 ro\ainpc\engine\ScenarioEngine$QuestDialogueContext.class
 ro\ainpc\spawn\HouseAllocationValidationResult.class
 ro\ainpc\platform\PlatformProfile.class
 ro\ainpc\engine\DecisionEngine$LocationWrapper.class
+ro\ainpc\commands\AINPCCommand$QuestDecisionTarget.class
 ro\ainpc\engine\FeaturePackLoader$ProfessionDefinition.class
 ro\ainpc\debug\DebugDumpService.class
 ro\ainpc\bootstrap\SchedulerCoordinator.class
@@ -105,8 +113,10 @@ ro\ainpc\engine\ScenarioEngine$ScenarioRoleRule.class
 ro\ainpc\engine\DialogueEngine.class
 ro\ainpc\npc\NPCPersonality.class
 ro\ainpc\ai\OpenAIService.class
+ro\ainpc\engine\ScenarioEngine$QuestTrackingTarget.class
 ro\ainpc\listeners\PlayerJoinListener.class
 ro\ainpc\listeners\QuestObjectiveListener.class
+ro\ainpc\engine\QuestDecisionIntentResolver.class
 ro\ainpc\npc\AINPC$OwnedLocation.class
 ro\ainpc\spawn\HouseAllocationValidator$1.class
 ro\ainpc\world\scan\SemanticVillageMapper$FeatureCluster.class
@@ -129,6 +139,7 @@ ro\ainpc\addons\AddonRegistry.class
 ro\ainpc\spawn\HouseAllocation$ResidentBuilder.class
 ro\ainpc\managers\NPCManager$VillageSnapshot.class
 ro\ainpc\commands\AINPCCommand.class
+ro\ainpc\engine\QuestScenarioContract.class
 ro\ainpc\world\MappingIndex.class
 ro\ainpc\world\scan\SemanticVillageMapper.class
 ro\ainpc\managers\ConversationSessionManager.class

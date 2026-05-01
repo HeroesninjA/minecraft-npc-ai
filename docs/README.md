@@ -41,7 +41,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | 1 | World mapping si spawn order MVP | `mapping.md`, `ordine-spawn-npc-cladiri-region-node.md`, `rutine-npc-si-timeline.md` | Nucleu implementat initial; generatorul complet lipseste |
 | 2 | First playable release | `roadmap-orientativ.md`, `questuri-avansate.md`, `story-si-context-ai.md`, `story-context-service.md`, `reactie-npc-jucator.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Directie de produs; story context read-only exista, continutul demo jucabil lipseste |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
-| 4 | Runtime scenarii extensibil | `questuri-avansate.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping-pentru-implementari-ulterioare.md` | Design partial; necesita registri actiuni/conditii/trigger |
+| 4 | Runtime scenarii extensibil | `questuri-avansate.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Design partial; necesita registri actiuni/conditii/trigger |
 | 5 | Generare sate si authoring asistat | `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper initial exista; generarea completa ramane viitoare |
 | 6 | Hardening productie si livrare | `reducere-marime-jar.md`, `audit.md`, `debugging-si-testare.md` | Backlog tehnic; nu bloca MVP-ul fara motiv |
 
@@ -60,8 +60,9 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `generare-sate-fara-worldedit.md` | 1, 5 | Generare si completare sate vanilla fara WorldEdit obligatoriu | Scannerul/mapperul sunt initiale; patch planner si builder complet lipsesc |
 | `generare-sate-worldedit-si-npc.md` | 5 | Design pentru integrare optionala WorldEdit | Integrarea WorldEdit trebuie sa ramana optionala, nu dependinta obligatorie a MVP-ului |
 | `implementat-deja.md` | 0 | Rezumat al functionalitatii confirmate in cod | Actualizeaza-l dupa fiecare schimbare de faza care modifica statusul real |
-| `mapping.md` | 1 | Stare si limitari pentru regiuni/places/nodes | Mapping-ul poate exista in cod, dar serverul poate avea 0 regiuni pana la config/import |
-| `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Cum trebuie consumat mapping-ul de subsisteme | Nu extinde questuri/generare peste mapping fara validari de bounds si node-uri |
+| `mapping.md` | 1, 4, 5 | Stare, limitari, reguli de consum si evolutie pentru regiuni/places/nodes | Mapping-ul poate exista in cod, dar serverul poate avea 0 regiuni pana la config/import |
+| `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual si strat semantic validat de admin | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
+| `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Redirect istoric catre `mapping.md` | Pastreaza-l doar pentru linkuri vechi; continutul canonic este in `mapping.md` |
 | `npc-uri-temporare-si-episodice.md` | 4 | NPC-uri temporare, episodice si non-villager | Pastreaza persistenta light separata de NPC-urile permanente |
 | `ordine-spawn-npc-cladiri-region-node.md` | 1, 5, 6 | v2 pentru fazele urmatoare de spawn order | v1 este arhivat in `arhiva/`; v2 se concentreaza pe generator, planuri, persistenta, migration si rollback |
 | `quest-anchor-bindings.md` | 2, 4 | Contract DB pentru ancore semantice de quest | Binding-urile, auditul si comanda admin read-only exista initial; lipseste export/debugdump complet |

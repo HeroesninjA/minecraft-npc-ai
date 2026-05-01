@@ -6,17 +6,22 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCEmotions;
 import ro.ainpc.npc.NPCPersonality;
 import ro.ainpc.world.WorldNode;
+import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlace;
+import ro.ainpc.world.WorldPlaceInfo;
 import ro.ainpc.world.WorldRegion;
+import ro.ainpc.world.WorldRegionInfo;
 
 import java.lang.reflect.Type;
 import java.sql.PreparedStatement;
@@ -28,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +60,7 @@ public class ScenarioEngine {
     private final Map<UUID, PlayerQuestProgress> activePlayerQuests;
     private final Map<UUID, Map<String, PlayerQuestProgress>> archivedPlayerQuests;
     private final Set<String> questCompletionLocks;
+    private final Set<UUID> trackedQuestPlayers;
 
     public ScenarioEngine(AINPCPlugin plugin) {
         this.plugin = plugin;
@@ -64,6 +71,7 @@ public class ScenarioEngine {
         this.activePlayerQuests = new ConcurrentHashMap<>();
         this.archivedPlayerQuests = new ConcurrentHashMap<>();
         this.questCompletionLocks = ConcurrentHashMap.newKeySet();
+        this.trackedQuestPlayers = ConcurrentHashMap.newKeySet();
 
         loadScenarioTemplates();
         loadPersistedQuestProgress();
@@ -233,6 +241,7 @@ public class ScenarioEngine {
                 template.setQuestDialogues(definition.getQuestDialogues());
                 template.setObjectives(definition.getObjectives());
                 template.setRewards(definition.getRewards());
+                template.setQuestContract(QuestScenarioContract.fromScenarioDefinition(definition));
 
                 for (FeaturePackLoader.ScenarioRoleDefinition roleDefinition : definition.getRoles().values()) {
                     ScenarioRoleRule role = new ScenarioRoleRule(
@@ -298,14 +307,12 @@ public class ScenarioEngine {
             plugin.debug("[QuestEngine] Player=" + player.getName() + " nu are progres de quest inregistrat.");
         }
 
-        if (currentProgress != null && !currentProgress.templateId().equals(template.getTemplateId())) {
+        if (isDifferentActiveQuest(currentProgress, template)) {
             plugin.debug("[QuestEngine] Player=" + player.getName()
                 + " are deja alt quest activ: " + currentProgress.templateId());
             return QuestInteractionResult.handled(
                 true,
-                List.of(currentProgress.isOffered()
-                    ? "Ti-am oferit deja o alta misiune. Hotaraste-te intai la aceea."
-                    : "Ai deja o alta misiune in desfasurare. Termina intai ce ai inceput."),
+                List.of("Ai deja o alta misiune in desfasurare. Termina intai ce ai inceput."),
                 List.of("&cAi deja alta misiune in curs: &f" + describeQuestProgress(currentProgress))
             );
         }
@@ -324,7 +331,7 @@ public class ScenarioEngine {
                 return buildQuestUnavailableResult(template, resolvedAnchors);
             }
 
-            PlayerQuestProgress offeredProgress = setOfferedQuestProgress(playerId, player, template);
+            PlayerQuestProgress offeredProgress = setInitialQuestProgress(playerId, player, template);
             offeredProgress = bindQuestProgressToNpc(playerId, template, offeredProgress, npc);
             offeredProgress = bindQuestProgressToAnchors(playerId, offeredProgress, resolvedAnchors);
             plugin.debug("[QuestEngine] Quest oferit pentru player=" + player.getName()
@@ -333,8 +340,8 @@ public class ScenarioEngine {
             List<String> npcMessages = buildQuestNpcMessages(
                 template,
                 offeredProgress,
-                QuestDialogueContext.OFFER,
-                List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template))
+                resolveInitialQuestDialogueContext(template),
+                buildInitialQuestNpcFallbackMessages(template)
             );
             return QuestInteractionResult.handled(
                 true,
@@ -473,12 +480,10 @@ public class ScenarioEngine {
             }
         }
 
-        if (currentProgress != null && !currentProgress.templateId().equals(template.getTemplateId())) {
+        if (isDifferentActiveQuest(currentProgress, template)) {
             return QuestInteractionResult.handled(
                 true,
-                List.of(currentProgress.isOffered()
-                    ? "Intai raspunde la cealalta misiune pe care ti-am oferit-o."
-                    : "Ai deja alta misiune activa. Revino dupa ce o termini."),
+                List.of("Ai deja alta misiune activa. Revino dupa ce o termini."),
                 List.of("&cAi deja alta misiune in curs: &f" + describeQuestProgress(currentProgress))
             );
         }
@@ -639,6 +644,18 @@ public class ScenarioEngine {
         }
 
         UUID playerId = player.getUniqueId();
+        PlayerQuestProgress currentProgress = activePlayerQuests.get(playerId);
+        if (isDifferentActiveQuest(currentProgress, template)) {
+            return QuestInteractionResult.handled(
+                true,
+                List.of("Ai deja alta misiune activa. Revino dupa ce o termini."),
+                List.of("&cAi deja alta misiune in curs: &f" + describeQuestProgress(currentProgress))
+            );
+        }
+        if (currentProgress != null && currentProgress.templateId().equals(template.getTemplateId())) {
+            return getQuestStatus(player, npc);
+        }
+
         QuestAvailability availability = evaluateQuestAvailability(playerId, template);
         if (!availability.available()) {
             return buildQuestUnavailableResult(template, availability);
@@ -650,7 +667,7 @@ public class ScenarioEngine {
         }
 
         removeArchivedQuestProgress(playerId, template.getTemplateId());
-        PlayerQuestProgress offeredProgress = setOfferedQuestProgress(playerId, player, template);
+        PlayerQuestProgress offeredProgress = setInitialQuestProgress(playerId, player, template);
         offeredProgress = bindQuestProgressToNpc(playerId, template, offeredProgress, npc);
         offeredProgress = bindQuestProgressToAnchors(playerId, offeredProgress, resolvedAnchors);
         plugin.debug("[QuestEngine] startQuestManually a oferit questul pentru player=" + player.getName()
@@ -659,8 +676,8 @@ public class ScenarioEngine {
         List<String> npcMessages = buildQuestNpcMessages(
             template,
             offeredProgress,
-            QuestDialogueContext.OFFER,
-            List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template))
+            resolveInitialQuestDialogueContext(template),
+            buildInitialQuestNpcFallbackMessages(template)
         );
         return QuestInteractionResult.handled(
             true,
@@ -800,6 +817,56 @@ public class ScenarioEngine {
         return resolveQuestTitle(template);
     }
 
+    public boolean hasOfferedQuest(Player player) {
+        if (player == null) {
+            return false;
+        }
+
+        PlayerQuestProgress progress = activePlayerQuests.get(player.getUniqueId());
+        return progress != null && progress.isOffered();
+    }
+
+    public AINPC resolveActiveQuestNpc(Player player) {
+        return resolveActiveQuestNpc(player, null);
+    }
+
+    public AINPC resolveActiveQuestNpc(Player player, AINPC fallbackNpc) {
+        if (player == null) {
+            return null;
+        }
+
+        PlayerQuestProgress progress = activePlayerQuests.get(player.getUniqueId());
+        if (progress == null || !progress.isCurrent()) {
+            return null;
+        }
+
+        AINPC questGiver = resolveQuestGiverNpc(progress);
+        if (questGiver != null) {
+            return questGiver;
+        }
+
+        if (fallbackNpc == null) {
+            return null;
+        }
+
+        ScenarioTemplate fallbackTemplate = findQuestTemplateForNpc(fallbackNpc);
+        if (fallbackTemplate != null
+            && progress.templateId() != null
+            && progress.templateId().equals(fallbackTemplate.getTemplateId())) {
+            return fallbackNpc;
+        }
+
+        return null;
+    }
+
+    private boolean isDifferentActiveQuest(PlayerQuestProgress progress, ScenarioTemplate template) {
+        return progress != null
+            && progress.isActive()
+            && template != null
+            && progress.templateId() != null
+            && !progress.templateId().equals(template.getTemplateId());
+    }
+
     public QuestInteractionResult getQuestStatus(Player player, AINPC npc) {
         if (player == null || npc == null) {
             return QuestInteractionResult.notHandled();
@@ -860,7 +927,7 @@ public class ScenarioEngine {
             );
         }
 
-        if (currentProgress != null) {
+        if (currentProgress != null && currentProgress.isActive()) {
             return QuestInteractionResult.handled(
                 true,
                 List.of("Nu asta este misiunea la care lucrezi acum."),
@@ -929,6 +996,239 @@ public class ScenarioEngine {
         }
 
         return QuestInteractionResult.handled(false, List.of(), systemMessages);
+    }
+
+    public QuestInteractionResult getQuestTrack(Player player) {
+        if (player == null) {
+            return QuestInteractionResult.notHandled();
+        }
+
+        UUID playerId = player.getUniqueId();
+        PlayerQuestProgress currentProgress = activePlayerQuests.get(playerId);
+        List<String> systemMessages = new ArrayList<>();
+        systemMessages.add("&6=== Quest Track ===");
+        systemMessages.add("&eJucator: &f" + player.getName());
+
+        if (currentProgress == null || !currentProgress.isCurrent()) {
+            systemMessages.add("&7Nu ai quest activ de urmarit.");
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        ScenarioTemplate template = resolveTemplateForProgress(currentProgress, null);
+        if (template == null) {
+            systemMessages.add("&eQuest: &f" + currentProgress.templateId());
+            systemMessages.add("&7Status: &f" + formatQuestStatus(currentProgress.status()));
+            if (!currentProgress.currentPhase().isBlank()) {
+                systemMessages.add("&7Faza curenta: &f" + formatQuestPhase(currentProgress.currentPhase()));
+            }
+            systemMessages.add("&cTemplate-ul questului nu mai este disponibil in configuratia curenta.");
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        PlayerQuestProgress refreshedProgress = refreshTrackedQuestProgress(player, template, currentProgress);
+        systemMessages.add("&eQuest: &f" + resolveQuestTitle(template));
+        systemMessages.add("&7Status: &f" + formatQuestStatus(refreshedProgress.status()));
+        if (!refreshedProgress.currentPhase().isBlank()) {
+            systemMessages.add("&7Faza curenta: &f" + formatQuestPhase(refreshedProgress.currentPhase()));
+        }
+
+        if (refreshedProgress.isOffered()) {
+            systemMessages.add("&7Misiunea este oferita, dar trebuie acceptata inainte sa fie urmarita.");
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        if (!refreshedProgress.isActive()) {
+            systemMessages.add("&7Questul nu este activ.");
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        QuestObjectiveCheck objectiveCheck = inspectQuestObjectives(player, template, refreshedProgress, null, false);
+        if (objectiveCheck.complete()) {
+            systemMessages.add("&aObiectivele sunt complete. Revino la NPC pentru finalizare.");
+            String questGiverHint = describeQuestGiverTrackingTarget(refreshedProgress, player);
+            if (!questGiverHint.isBlank()) {
+                systemMessages.add("&bTinta: &f" + questGiverHint);
+            }
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        List<String> trackingLines = buildQuestTrackingLines(template, refreshedProgress, player);
+        if (!trackingLines.isEmpty()) {
+            systemMessages.add("&eUrmatorul pas:");
+            systemMessages.addAll(trackingLines);
+        } else {
+            systemMessages.add("&eIti mai lipsesc:");
+            for (String missingObjective : objectiveCheck.missingObjectives()) {
+                systemMessages.add("&7- &f" + missingObjective);
+            }
+            systemMessages.add("&7Nu exista tinte de locatie salvate pentru obiectivele ramase.");
+        }
+
+        return QuestInteractionResult.handled(false, List.of(), systemMessages);
+    }
+
+    public QuestTrackingMarker getQuestTrackingMarker(Player player) {
+        if (player == null) {
+            return null;
+        }
+
+        PlayerQuestProgress currentProgress = activePlayerQuests.get(player.getUniqueId());
+        if (currentProgress == null || !currentProgress.isCurrent()) {
+            return null;
+        }
+
+        ScenarioTemplate template = resolveTemplateForProgress(currentProgress, null);
+        if (template == null) {
+            return null;
+        }
+
+        PlayerQuestProgress refreshedProgress = refreshTrackedQuestProgress(player, template, currentProgress);
+        if (!refreshedProgress.isActive()) {
+            return null;
+        }
+
+        QuestObjectiveCheck objectiveCheck = inspectQuestObjectives(player, template, refreshedProgress, null, false);
+        if (objectiveCheck.complete()) {
+            QuestTrackingTarget questGiverTarget = resolveQuestGiverTrackingTarget(refreshedProgress);
+            return buildQuestTrackingMarker("finalizeaza questul", questGiverTarget, player);
+        }
+
+        QuestTrackingStep trackingStep = resolveNextQuestTrackingStep(template, refreshedProgress, player);
+        if (trackingStep == null) {
+            return null;
+        }
+
+        return buildQuestTrackingMarker(trackingStep.objectiveLabel(), trackingStep.target(), player);
+    }
+
+    public QuestTrackingMarker startQuestTracking(Player player) {
+        QuestTrackingMarker marker = getQuestTrackingMarker(player);
+        if (player == null || marker == null || !marker.hasLocation()) {
+            return marker;
+        }
+
+        trackedQuestPlayers.add(player.getUniqueId());
+        return marker;
+    }
+
+    public boolean stopQuestTracking(Player player) {
+        if (player == null) {
+            return false;
+        }
+
+        return trackedQuestPlayers.remove(player.getUniqueId());
+    }
+
+    public void stopAllQuestTracking() {
+        trackedQuestPlayers.clear();
+    }
+
+    public boolean isQuestTracking(Player player) {
+        return player != null && trackedQuestPlayers.contains(player.getUniqueId());
+    }
+
+    public int tickQuestTrackingMarkers() {
+        int updated = 0;
+        Iterator<UUID> iterator = trackedQuestPlayers.iterator();
+        while (iterator.hasNext()) {
+            UUID playerId = iterator.next();
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                iterator.remove();
+                continue;
+            }
+
+            QuestTrackingMarker marker = getQuestTrackingMarker(player);
+            if (marker == null || !marker.hasLocation()) {
+                iterator.remove();
+                plugin.getMessageUtils().sendActionBar(player, "&cQuest tracking oprit &8| &7nu mai exista tinta activa");
+                continue;
+            }
+
+            applyQuestTrackingMarker(player, marker);
+            updated++;
+        }
+        return updated;
+    }
+
+    public boolean applyQuestTrackingMarker(Player player, QuestTrackingMarker marker) {
+        if (player == null || marker == null || !marker.hasLocation()) {
+            return false;
+        }
+
+        Location targetLocation = marker.location();
+        plugin.getMessageUtils().sendActionBar(player, marker.actionBarMessage());
+        spawnQuestTrackingParticles(player, marker);
+        if (targetLocation.getWorld().equals(player.getWorld())) {
+            player.setCompassTarget(targetLocation);
+            return true;
+        }
+        return false;
+    }
+
+    private void spawnQuestTrackingParticles(Player player, QuestTrackingMarker marker) {
+        if (!plugin.getConfig().getBoolean("quest.tracking_particles", true)) {
+            return;
+        }
+        if (player == null || marker == null || !marker.hasLocation()) {
+            return;
+        }
+
+        Location targetLocation = marker.location();
+        if (!targetLocation.getWorld().equals(player.getWorld())) {
+            return;
+        }
+
+        double distance = targetLocation.distance(player.getLocation());
+        spawnQuestDirectionParticles(player, targetLocation, distance);
+
+        double waypointRange = Math.max(12.0, plugin.getConfig().getDouble("quest.tracking_particle_range", 96.0));
+        if (distance <= waypointRange) {
+            spawnQuestWaypointParticles(player, targetLocation);
+        }
+    }
+
+    private void spawnQuestDirectionParticles(Player player, Location targetLocation, double distance) {
+        if (distance < 3.0) {
+            return;
+        }
+
+        Location playerLocation = player.getLocation();
+        double dx = targetLocation.getX() - playerLocation.getX();
+        double dz = targetLocation.getZ() - playerLocation.getZ();
+        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+        if (horizontalDistance < 0.5) {
+            return;
+        }
+
+        double unitX = dx / horizontalDistance;
+        double unitZ = dz / horizontalDistance;
+        Location base = playerLocation.clone().add(0.0, 1.15, 0.0);
+        int particleCount = Math.min(7, Math.max(3, (int) Math.round(distance / 18.0)));
+        for (int index = 1; index <= particleCount; index++) {
+            double offset = 0.65 * index;
+            Location particleLocation = base.clone().add(unitX * offset, 0.0, unitZ * offset);
+            player.spawnParticle(Particle.END_ROD, particleLocation, 1, 0.02, 0.02, 0.02, 0.0);
+        }
+    }
+
+    private void spawnQuestWaypointParticles(Player player, Location targetLocation) {
+        Location base = targetLocation.clone().add(0.0, 0.2, 0.0);
+        for (int index = 0; index < 12; index++) {
+            double angle = (Math.PI * 2.0 * index) / 12.0;
+            Location ringLocation = base.clone().add(Math.cos(angle) * 0.85, 0.0, Math.sin(angle) * 0.85);
+            player.spawnParticle(Particle.END_ROD, ringLocation, 1, 0.0, 0.02, 0.0, 0.0);
+        }
+
+        player.spawnParticle(
+            Particle.ENCHANT,
+            targetLocation.clone().add(0.0, 1.15, 0.0),
+            18,
+            0.45,
+            0.75,
+            0.45,
+            0.08
+        );
     }
 
     public void recordNpcConversation(Player player, AINPC npc) {
@@ -1055,6 +1355,28 @@ public class ScenarioEngine {
 
     private PlayerQuestProgress setActiveQuestProgress(UUID playerId, Player player, ScenarioTemplate template) {
         return setCurrentQuestProgress(playerId, player, template, QuestStatus.ACTIVE);
+    }
+
+    private PlayerQuestProgress setInitialQuestProgress(UUID playerId, Player player, ScenarioTemplate template) {
+        return shouldAutoAcceptOnOffer(template)
+            ? setActiveQuestProgress(playerId, player, template)
+            : setOfferedQuestProgress(playerId, player, template);
+    }
+
+    private QuestDialogueContext resolveInitialQuestDialogueContext(ScenarioTemplate template) {
+        return shouldAutoAcceptOnOffer(template) ? QuestDialogueContext.ACCEPTED : QuestDialogueContext.OFFER;
+    }
+
+    private List<String> buildInitialQuestNpcFallbackMessages(ScenarioTemplate template) {
+        return shouldAutoAcceptOnOffer(template)
+            ? List.of("Bine. Ma bazez pe tine.", "Intoarce-te cand ai terminat.")
+            : List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template));
+    }
+
+    private boolean shouldAutoAcceptOnOffer(ScenarioTemplate template) {
+        return template != null
+            && template.getQuestContract() != null
+            && template.getQuestContract().autoAcceptOnOffer();
     }
 
     private PlayerQuestProgress setCurrentQuestProgress(UUID playerId,
@@ -2631,6 +2953,14 @@ public class ScenarioEngine {
             questProfile.rewardAmount(),
             "Primesti " + formatQuestAmount(questProfile.rewardAmount(), questProfile.rewardMaterial()) + "."
         )));
+        template.setQuestContract(QuestScenarioContract.fromQuestEntries(
+            "fetch",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("fallback", "simple"),
+            template.getObjectives()
+        ));
         return template;
     }
 
@@ -2915,6 +3245,10 @@ public class ScenarioEngine {
         if (!questGiver.isBlank()) {
             lines.add("&7Misiune de la: &f" + questGiver);
         }
+        QuestScenarioContract contract = template.getQuestContract();
+        if (contract != null) {
+            lines.add("&7Tip scenariu: &f" + contract.displayName());
+        }
 
         if (!template.getObjectives().isEmpty()) {
             lines.add("&eObiective:");
@@ -2950,15 +3284,15 @@ public class ScenarioEngine {
         if (progress == null || progress.status() == QuestStatus.NOT_STARTED) {
             lines.add("&7Misiunea este disponibila, dar nu ai acceptat-o inca.");
             if (npcName != null && !npcName.isBlank()) {
-                lines.add("&eAcceptare: &fScrie &aaccept &fsau foloseste &a/npcquest accept " + npcName);
+                lines.add("&eAcceptare: &fScrie &ada&f/&aaccept &fsau foloseste &a/npcquest accept " + npcName);
             }
             return lines;
         }
 
         if (progress.isOffered()) {
             if (npcName != null && !npcName.isBlank()) {
-                lines.add("&eAcceptare: &fScrie &aaccept &fsau foloseste &a/npcquest accept " + npcName);
-                lines.add("&cRefuz: &fScrie &arefuz &fsau foloseste &a/npcquest decline " + npcName);
+                lines.add("&eAcceptare: &fScrie &ada&f/&aaccept &fsau foloseste &a/npcquest accept");
+                lines.add("&cRefuz: &fScrie &anu&f/&arefuz &fsau foloseste &a/npcquest decline");
             }
             return lines;
         }
@@ -3028,6 +3362,465 @@ public class ScenarioEngine {
         }
 
         return lines;
+    }
+
+    private List<String> buildQuestTrackingLines(ScenarioTemplate template,
+                                                 PlayerQuestProgress progress,
+                                                 Player player) {
+        if (template == null || progress == null || template.getObjectives().isEmpty()) {
+            return List.of();
+        }
+
+        List<String> lines = new ArrayList<>();
+        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
+        for (int index = 0; index < objectives.size(); index++) {
+            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
+            String objectiveKey = buildObjectiveKey(objective, index);
+            int requiredAmount = Math.max(1, objective != null ? objective.getAmount() : 1);
+            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, objectiveKey);
+            if (currentAmount >= requiredAmount) {
+                continue;
+            }
+
+            String objectiveLabel = formatMissingObjective(objective, currentAmount, requiredAmount);
+            String targetHint = describeObjectiveTrackingTarget(progress, objectiveKey, objective, player);
+            if (targetHint.isBlank()) {
+                targetHint = describeGenericQuestTrackingHint(objective);
+            }
+
+            if (targetHint.isBlank()) {
+                lines.add("&7- &f" + objectiveLabel);
+            } else {
+                lines.add("&7- &f" + objectiveLabel + " &8-> " + targetHint);
+            }
+        }
+
+        return lines;
+    }
+
+    private QuestTrackingStep resolveNextQuestTrackingStep(ScenarioTemplate template,
+                                                           PlayerQuestProgress progress,
+                                                           Player player) {
+        if (template == null || progress == null || template.getObjectives().isEmpty()) {
+            return null;
+        }
+
+        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
+        for (int index = 0; index < objectives.size(); index++) {
+            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
+            String objectiveKey = buildObjectiveKey(objective, index);
+            int requiredAmount = Math.max(1, objective != null ? objective.getAmount() : 1);
+            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, objectiveKey);
+            if (currentAmount >= requiredAmount) {
+                continue;
+            }
+
+            QuestTrackingTarget target = resolveQuestAnchorTrackingTarget(progress, objectiveKey);
+            String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
+            if (target == null && "deliver_to_npc".equals(objectiveType)) {
+                target = resolveQuestGiverTrackingTarget(progress);
+            }
+            if (target != null && target.hasLocation()) {
+                return new QuestTrackingStep(formatMissingObjective(objective, currentAmount, requiredAmount), target);
+            }
+        }
+
+        return null;
+    }
+
+    private String describeObjectiveTrackingTarget(PlayerQuestProgress progress,
+                                                   String objectiveKey,
+                                                   FeaturePackLoader.QuestEntryDefinition objective,
+                                                   Player player) {
+        QuestTrackingTarget target = resolveQuestAnchorTrackingTarget(progress, objectiveKey);
+        if (target != null) {
+            return formatQuestTrackingTarget(target, player);
+        }
+
+        String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
+        if ("deliver_to_npc".equals(objectiveType)) {
+            return describeQuestGiverTrackingTarget(progress, player);
+        }
+
+        return "";
+    }
+
+    private String describeGenericQuestTrackingHint(FeaturePackLoader.QuestEntryDefinition objective) {
+        String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
+        return switch (objectiveType) {
+            case "collect_item" -> "&7aduna obiectele cerute";
+            case "deliver_to_npc" -> "&7intoarce-te la NPC-ul questului";
+            case "talk_to_npc" -> "&7cauta NPC-ul tintit";
+            case "visit_region", "visit_place", "inspect_node" -> "&cancora lipsa in mapping";
+            case "kill_mob" -> "&7cauta inamicul tintit";
+            default -> "&7continua obiectivul";
+        };
+    }
+
+    private QuestTrackingTarget resolveQuestAnchorTrackingTarget(PlayerQuestProgress progress, String objectiveKey) {
+        if (!hasBoundAnchor(progress, objectiveKey)) {
+            return null;
+        }
+
+        String prefix = "anchor." + objectiveKey;
+        String anchorType = progress.questVariables().getOrDefault(prefix + ".type", "");
+        String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
+        String label = progress.questVariables().getOrDefault(prefix + ".label", "");
+        QuestTrackingTarget locatedTarget = resolveQuestAnchorLocation(anchorType, anchorId, label);
+        if (locatedTarget != null) {
+            return locatedTarget;
+        }
+
+        return new QuestTrackingTarget(anchorType, anchorId, label, "", 0.0, 0.0, 0.0, false);
+    }
+
+    private QuestTrackingTarget resolveQuestAnchorLocation(String anchorType, String anchorId, String label) {
+        String normalizedType = normalizeTrackingAnchorType(anchorType);
+        if (normalizedType.isBlank() || anchorId == null || anchorId.isBlank()) {
+            return null;
+        }
+
+        if ("npc".equals(normalizedType)) {
+            return resolveNpcTrackingTarget(anchorId, label);
+        }
+
+        WorldAdminApi worldAdminApi = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdminApi == null) {
+            return null;
+        }
+
+        return switch (normalizedType) {
+            case "region" -> {
+                WorldRegionInfo region = worldAdminApi.getRegion(anchorId);
+                yield region != null
+                    ? targetFromRegion(region, label)
+                    : null;
+            }
+            case "place" -> {
+                WorldPlaceInfo place = worldAdminApi.getPlace(anchorId);
+                yield place != null
+                    ? targetFromPlace(place, label)
+                    : null;
+            }
+            case "node" -> {
+                WorldNodeInfo node = worldAdminApi.getNode(anchorId);
+                yield node != null
+                    ? new QuestTrackingTarget(
+                        "node",
+                        node.id(),
+                        label == null || label.isBlank() ? node.typeId() : label,
+                        node.worldName(),
+                        node.x(),
+                        node.y(),
+                        node.z(),
+                        true
+                    )
+                    : null;
+            }
+            default -> null;
+        };
+    }
+
+    private QuestTrackingTarget targetFromRegion(WorldRegionInfo region, String label) {
+        return new QuestTrackingTarget(
+            "region",
+            region.id(),
+            label == null || label.isBlank() ? region.name() : label,
+            region.worldName(),
+            center(region.minX(), region.maxX()),
+            center(region.minY(), region.maxY()),
+            center(region.minZ(), region.maxZ()),
+            true
+        );
+    }
+
+    private QuestTrackingTarget targetFromPlace(WorldPlaceInfo place, String label) {
+        return new QuestTrackingTarget(
+            "place",
+            place.id(),
+            label == null || label.isBlank() ? place.displayName() : label,
+            place.worldName(),
+            center(place.minX(), place.maxX()),
+            center(place.minY(), place.maxY()),
+            center(place.minZ(), place.maxZ()),
+            true
+        );
+    }
+
+    private QuestTrackingTarget resolveNpcTrackingTarget(String anchorId, String label) {
+        AINPC npc = resolveNpcByAnchorId(anchorId);
+        if (npc == null && label != null && !label.isBlank()) {
+            npc = plugin.getNpcManager() != null ? plugin.getNpcManager().getNPCByName(label) : null;
+        }
+        if (npc == null) {
+            return null;
+        }
+
+        Location location = npc.getLocation();
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+
+        return new QuestTrackingTarget(
+            "npc",
+            anchorId,
+            label == null || label.isBlank() ? npc.getName() : label,
+            location.getWorld().getName(),
+            location.getX(),
+            location.getY(),
+            location.getZ(),
+            true
+        );
+    }
+
+    private String describeQuestGiverTrackingTarget(PlayerQuestProgress progress, Player player) {
+        QuestTrackingTarget target = resolveQuestGiverTrackingTarget(progress);
+        if (target != null) {
+            return formatQuestTrackingTarget(target, player);
+        }
+
+        String label = resolveQuestNpcName(progress);
+        return label.isBlank() ? "" : "&b" + label + " &7(NPC quest)";
+    }
+
+    private QuestTrackingTarget resolveQuestGiverTrackingTarget(PlayerQuestProgress progress) {
+        AINPC questGiver = resolveQuestGiverNpc(progress);
+        if (questGiver == null) {
+            return null;
+        }
+
+        Location location = questGiver.getLocation();
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+
+        String label = resolveQuestNpcName(progress);
+        String anchorId = questGiver.getUuid() != null
+            ? questGiver.getUuid().toString()
+            : String.valueOf(questGiver.getDatabaseId());
+        return new QuestTrackingTarget(
+            "npc",
+            anchorId,
+            label.isBlank() ? questGiver.getName() : label,
+            location.getWorld().getName(),
+            location.getX(),
+            location.getY(),
+            location.getZ(),
+            true
+        );
+    }
+
+    private AINPC resolveQuestGiverNpc(PlayerQuestProgress progress) {
+        if (progress == null || progress.questVariables().isEmpty() || plugin.getNpcManager() == null) {
+            return null;
+        }
+
+        String uuid = progress.questVariables().getOrDefault("quest_giver_uuid", "");
+        AINPC npc = resolveNpcByAnchorId(uuid);
+        if (npc != null) {
+            return npc;
+        }
+
+        String databaseId = progress.questVariables().getOrDefault("quest_giver_db_id", "");
+        npc = resolveNpcByAnchorId(databaseId);
+        if (npc != null) {
+            return npc;
+        }
+
+        String name = progress.questVariables().getOrDefault("quest_giver_name", "");
+        if (!name.isBlank()) {
+            npc = plugin.getNpcManager().getNPCByName(name);
+            if (npc != null) {
+                return npc;
+            }
+        }
+
+        String displayName = progress.questVariables().getOrDefault("quest_giver_display_name", "");
+        return displayName.isBlank() ? null : plugin.getNpcManager().getNPCByName(displayName);
+    }
+
+    private AINPC resolveNpcByAnchorId(String anchorId) {
+        if (anchorId == null || anchorId.isBlank() || plugin.getNpcManager() == null) {
+            return null;
+        }
+
+        try {
+            AINPC npc = plugin.getNpcManager().getNPCByUuid(UUID.fromString(anchorId));
+            if (npc != null) {
+                return npc;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Nu este UUID; incercam ID numeric sau nume.
+        }
+
+        try {
+            int databaseId = Integer.parseInt(anchorId);
+            AINPC npc = plugin.getNpcManager().getNPCById(databaseId);
+            if (npc != null) {
+                return npc;
+            }
+        } catch (NumberFormatException ignored) {
+            // Nu este ID numeric.
+        }
+
+        return plugin.getNpcManager().getNPCByName(anchorId);
+    }
+
+    private String formatQuestTrackingTarget(QuestTrackingTarget target, Player player) {
+        if (target == null) {
+            return "";
+        }
+
+        String label = target.label() != null && !target.label().isBlank()
+            ? target.label()
+            : (target.anchorId() != null && !target.anchorId().isBlank()
+                ? target.anchorId()
+                : formatQuestAnchorType(target.anchorType()));
+        String type = formatQuestAnchorType(target.anchorType());
+        if (!target.hasLocation()) {
+            return "&b" + label + " &7(" + type + ", locatie necunoscuta)";
+        }
+
+        return "&b" + label + " &7(" + type + ") " + formatQuestTrackingPosition(target, player);
+    }
+
+    private QuestTrackingMarker buildQuestTrackingMarker(String objectiveLabel,
+                                                         QuestTrackingTarget target,
+                                                         Player player) {
+        Location location = toQuestTrackingLocation(target);
+        if (location == null) {
+            return null;
+        }
+
+        String label = target.label() != null && !target.label().isBlank()
+            ? target.label()
+            : formatQuestAnchorType(target.anchorType());
+        return new QuestTrackingMarker(
+            objectiveLabel,
+            label,
+            formatQuestAnchorType(target.anchorType()),
+            location,
+            formatQuestTrackingActionBar(label, target, player)
+        );
+    }
+
+    private Location toQuestTrackingLocation(QuestTrackingTarget target) {
+        if (target == null || !target.hasLocation() || target.worldName().isBlank()) {
+            return null;
+        }
+
+        org.bukkit.World world = Bukkit.getWorld(target.worldName());
+        if (world == null) {
+            return null;
+        }
+
+        return new Location(world, target.x(), target.y(), target.z());
+    }
+
+    private String formatQuestTrackingActionBar(String label, QuestTrackingTarget target, Player player) {
+        Location playerLocation = player != null ? player.getLocation() : null;
+        String targetLabel = label == null || label.isBlank() ? "tinta questului" : label;
+        if (playerLocation == null || playerLocation.getWorld() == null || target.worldName().isBlank()) {
+            return "&6Quest &8| &f" + targetLabel;
+        }
+
+        String playerWorldName = playerLocation.getWorld().getName();
+        if (!target.worldName().equalsIgnoreCase(playerWorldName)) {
+            return "&6Quest &8| &f" + targetLabel + " &7in lumea &e" + target.worldName();
+        }
+
+        double dx = target.x() - playerLocation.getX();
+        double dy = target.y() - playerLocation.getY();
+        double dz = target.z() - playerLocation.getZ();
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance < 2.0) {
+            return "&aQuest &8| &f" + targetLabel + " &aeste aici";
+        }
+
+        return "&6Quest &8| &f" + targetLabel + " &7- &e" + Math.round(distance)
+            + " blocuri &7spre &b" + formatHorizontalDirection(dx, dz)
+            + formatVerticalHint(dy);
+    }
+
+    private String formatQuestTrackingPosition(QuestTrackingTarget target, Player player) {
+        String coordinates = formatQuestTrackingCoordinates(target);
+        Location playerLocation = player != null ? player.getLocation() : null;
+        if (playerLocation == null || playerLocation.getWorld() == null || target.worldName().isBlank()) {
+            return "&8(" + coordinates + ")";
+        }
+
+        String playerWorldName = playerLocation.getWorld().getName();
+        if (!target.worldName().equalsIgnoreCase(playerWorldName)) {
+            return "&7in lumea &f" + target.worldName() + " &8(" + coordinates + ")";
+        }
+
+        double dx = target.x() - playerLocation.getX();
+        double dy = target.y() - playerLocation.getY();
+        double dz = target.z() - playerLocation.getZ();
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance < 2.0) {
+            return "&ala pozitia ta &8(" + coordinates + ")";
+        }
+
+        String direction = formatHorizontalDirection(dx, dz);
+        String verticalHint = formatVerticalHint(dy);
+        return "&7la &e" + Math.round(distance) + " blocuri &7spre &f" + direction
+            + verticalHint + " &8(" + coordinates + ")";
+    }
+
+    private String formatHorizontalDirection(double dx, double dz) {
+        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+        if (horizontalDistance < 1.0) {
+            return "aceeasi coloana";
+        }
+
+        double degrees = Math.toDegrees(Math.atan2(dz, dx));
+        if (degrees < 0.0) {
+            degrees += 360.0;
+        }
+
+        String[] directions = {
+            "est", "sud-est", "sud", "sud-vest",
+            "vest", "nord-vest", "nord", "nord-est"
+        };
+        int index = (int) Math.round(degrees / 45.0) % directions.length;
+        return directions[index];
+    }
+
+    private String formatVerticalHint(double dy) {
+        long blocks = Math.round(dy);
+        if (Math.abs(blocks) < 4) {
+            return "";
+        }
+
+        return blocks > 0
+            ? " &7si cu &f" + blocks + " blocuri mai sus"
+            : " &7si cu &f" + Math.abs(blocks) + " blocuri mai jos";
+    }
+
+    private String formatQuestTrackingCoordinates(QuestTrackingTarget target) {
+        return target.worldName() + " "
+            + Math.round(target.x()) + " "
+            + Math.round(target.y()) + " "
+            + Math.round(target.z());
+    }
+
+    private String formatQuestAnchorType(String anchorType) {
+        return switch (normalizeTrackingAnchorType(anchorType)) {
+            case "region" -> "regiune";
+            case "place" -> "loc";
+            case "node" -> "punct";
+            case "npc" -> "npc";
+            default -> anchorType == null || anchorType.isBlank() ? "tinta" : anchorType;
+        };
+    }
+
+    private String normalizeTrackingAnchorType(String anchorType) {
+        return anchorType == null ? "" : anchorType.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private double center(double min, double max) {
+        return (min + max) / 2.0;
     }
 
     private String formatQuestPhase(String phaseId) {
@@ -4117,6 +4910,7 @@ public class ScenarioEngine {
         private boolean questRepeatable;
         private long questCooldownSeconds;
         private Map<String, List<String>> questDialogues;
+        private QuestScenarioContract questContract;
         private List<FeaturePackLoader.QuestEntryDefinition> objectives;
         private List<FeaturePackLoader.QuestEntryDefinition> rewards;
         private double triggerProbability;
@@ -4140,6 +4934,7 @@ public class ScenarioEngine {
             this.questRepeatable = false;
             this.questCooldownSeconds = 0L;
             this.questDialogues = new LinkedHashMap<>();
+            this.questContract = QuestScenarioContract.defaultContract();
             this.objectives = new ArrayList<>();
             this.rewards = new ArrayList<>();
             this.triggerProbability = 0.05;
@@ -4227,6 +5022,10 @@ public class ScenarioEngine {
         }
         public List<String> getQuestDialogueLines(String key) {
             return questDialogues.getOrDefault(normalizeQuestDialogueKey(key), List.of());
+        }
+        public QuestScenarioContract getQuestContract() { return questContract; }
+        public void setQuestContract(QuestScenarioContract questContract) {
+            this.questContract = questContract != null ? questContract : QuestScenarioContract.defaultContract();
         }
         public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
         public void setObjectives(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
@@ -4402,6 +5201,53 @@ public class ScenarioEngine {
 
         private boolean isCompleted() {
             return status == QuestStatus.COMPLETED;
+        }
+    }
+
+    public record QuestTrackingMarker(
+        String objectiveLabel,
+        String targetLabel,
+        String anchorType,
+        Location location,
+        String actionBarMessage
+    ) {
+        public QuestTrackingMarker {
+            objectiveLabel = objectiveLabel == null ? "" : objectiveLabel;
+            targetLabel = targetLabel == null ? "" : targetLabel;
+            anchorType = anchorType == null ? "" : anchorType;
+            location = location != null ? location.clone() : null;
+            actionBarMessage = actionBarMessage == null ? "" : actionBarMessage;
+        }
+
+        public boolean hasLocation() {
+            return location != null && location.getWorld() != null;
+        }
+    }
+
+    private record QuestTrackingTarget(
+        String anchorType,
+        String anchorId,
+        String label,
+        String worldName,
+        double x,
+        double y,
+        double z,
+        boolean hasLocation
+    ) {
+        private QuestTrackingTarget {
+            anchorType = anchorType == null ? "" : anchorType;
+            anchorId = anchorId == null ? "" : anchorId;
+            label = label == null ? "" : label;
+            worldName = worldName == null ? "" : worldName;
+        }
+    }
+
+    private record QuestTrackingStep(
+        String objectiveLabel,
+        QuestTrackingTarget target
+    ) {
+        private QuestTrackingStep {
+            objectiveLabel = objectiveLabel == null ? "" : objectiveLabel;
         }
     }
 

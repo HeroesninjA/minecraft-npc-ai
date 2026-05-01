@@ -18,6 +18,7 @@ public class SchedulerCoordinator {
         scheduleMemoryCleanup();
         scheduleNpcStatePersistence();
         scheduleVillageRebalance();
+        scheduleQuestTracking();
     }
 
     private void scheduleInitialNpcRestore() {
@@ -87,5 +88,15 @@ public class SchedulerCoordinator {
         plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             plugin.getNpcManager().rebalanceLoadedVillages();
         }, 20L * 45, 20L * 120);
+    }
+
+    private void scheduleQuestTracking() {
+        int refreshSeconds = Math.max(2, plugin.getConfig().getInt("quest.tracking_refresh_seconds", 5));
+        plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+            int updated = plugin.getScenarioEngine().tickQuestTrackingMarkers();
+            if (updated > 0 && plugin.getConfig().getBoolean("debug")) {
+                plugin.getLogger().info("[Debug] Quest tracking refresh: updated=" + updated);
+            }
+        }, 20L * refreshSeconds, 20L * refreshSeconds);
     }
 }

@@ -83,6 +83,13 @@ routine:
   min_teleport_distance: 8.0
 
 # Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
+quest:
+  # La cate secunde se improspateaza busola, actionbar-ul si particulele pentru /quest track start.
+  tracking_refresh_seconds: 5
+  # Afiseaza particule directionale langa jucator si waypoint la tinta urmarita.
+  tracking_particles: true
+  # Distanta maxima la care se deseneaza waypoint-ul direct pe tinta. Sageata de langa jucator ramane activa.
+  tracking_particle_range: 96
 
 # Setari emotii
 emotions:

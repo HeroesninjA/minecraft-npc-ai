@@ -8,8 +8,9 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 
 | Document | Rol |
 |---|---|
-| `../../mapping.md` | Starea actuala a sistemului `WorldRegion -> WorldPlace -> WorldNode` |
-| `../../mapping-pentru-implementari-ulterioare.md` | Cum trebuie consumat mapping-ul in sistemele urmatoare |
+| `../../mapping.md` | Starea actuala, regulile de consum si evolutia sistemului `WorldRegion -> WorldPlace -> WorldNode` |
+| `../../mapping-harti-manuale.md` | Ghid pentru harti construite manual, etichetare semantica si limitele detectiei automate |
+| `../../mapping-pentru-implementari-ulterioare.md` | Redirect istoric catre `../../mapping.md` |
 | `../../ordine-spawn-npc-cladiri-region-node.md` | v2 pentru spawn order, household, generator si rollback |
 | `../../rutine-npc-si-timeline.md` | Rutine NPC peste ancore home/work/social |
 | `../../generare-sate-fara-worldedit.md` | Scanner, mapper semantic si completare sate vanilla |

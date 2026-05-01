@@ -1,15 +1,16 @@
 # Mapping
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-01
 
 ## Scop
 
-Acest document descrie strict starea actuala a sistemului de mapping dupa implementarile recente.
+Acest document descrie sistemul de mapping ca document canonic unic:
 
-Pentru directia de evolutie si ideile pe termen lung, vezi:
-
-- `docs/mapping-pentru-implementari-ulterioare.md`
-- `docs/generare-ai-si-constructie-automata.md`
+- ce exista implementat acum
+- cum se configureaza `regions / places / nodes`
+- cum trebuie consumat mapping-ul in NPC-uri, questuri, story, AI si generare
+- ce reguli de design trebuie respectate in implementarile urmatoare
+- ce imbunatatiri raman backlog
 
 ## Ce este acum mapping-ul
 
@@ -29,6 +30,9 @@ Ideea de baza ramane:
 
 - coordonatele spun unde este ceva
 - mapping-ul spune ce este acel loc
+
+Pentru harti construite manual, vezi si `docs/mapping-harti-manuale.md`.
+Documentul acela explica de ce pluginul nu poate deduce sigur din blocuri ce este o casa, o fierarie, o cripta sau un regat si cum trebuie adaugat stratul semantic de catre admin.
 
 ## Ce exista implementat
 
@@ -357,14 +361,514 @@ In forma actuala, mapping-ul este fundatia pentru:
 
 Fara acest strat, restul sistemului poate lucra doar cu coordonate brute.
 
-## Ce document acopera ce
+## Reguli de folosire in implementari viitoare
+
+### Coordonatele nu sunt contract de gameplay
+
+Orice sistem care are nevoie de sensul unui loc nu trebuie sa lucreze direct cu coordonate brute.
+
+Sistemele de gameplay trebuie sa consume:
+
+- `regionId`
+- `placeId`
+- `nodeId`
+- `placeType`
+- `tags`
+- `metadata`
+
+Coordonatele raman utile pentru:
+
+- detectie
+- validare
+- plasare fizica
+- navigatie
+
+Semantica trebuie sa conduca gameplay-ul.
+
+### Fluxul corect de consum
+
+Fluxul recomandat este:
+
+1. un sistem pleaca de la locatie, NPC, eveniment, quest sau plan de generatie
+2. `WorldAdminService` rezolva `region`, `place` si `node`
+3. contextul semantic este injectat in runtime
+4. logica reactioneaza pe baza de `id`, `type`, `tags`, `metadata`
+5. rezultatul este persistat sau transmis mai departe
+
+Pe scurt:
+
+- coordonatele spun unde este ceva
+- mapping-ul spune ce este acel loc
+- gameplay-ul decide ce inseamna acel loc
+
+### `Region` nu trebuie folosit ca `Place`
+
+Regiunea descrie aria mare.
+Cladirea, camera sau zona functionala trebuie modelata ca `place`.
+
+Exemplu slab:
+
+- tot satul este folosit ca destinatie pentru o interactiune precisa
+
+Exemplu bun:
+
+- satul este `region`
+- fieraria este `place`
+- nicovala este `node`
+
+### `Node` nu trebuie sa inlocuiasca `Place`
+
+Node-ul este punct exact, nu spatiu semantic.
+
+Daca un sistem vrea sa stie:
+
+- unde locuieste un NPC
+- unde munceste
+- unde se afla o scena
+
+atunci tinta buna este `place`, nu doar `node`.
+
+### ID-urile trebuie sa fie stabile
+
+ID-urile sunt identificatori de gameplay.
+
+Reguli:
+
+- nu redenumi ID-uri fara migrare
+- nu folosi texte afisate drept identificator intern
+- generarea trebuie sa produca namespace-uri coerente
+- ID-urile locale trebuie lasate sa fie calificate automat de loader unde este cazul
+
+### Tag-urile trebuie sa fie semantice
+
+Tag-uri bune:
+
+- `home`
+- `workplace`
+- `shop`
+- `public`
+- `restricted`
+- `danger`
+- `ritual`
+
+Tag-uri slabe:
+
+- `cool`
+- `important`
+- `misc`
+
+### Codul trebuie sa foloseasca API/service, nu YAML direct
+
+Codul de gameplay nu trebuie sa parseze direct `config.yml`.
+
+El trebuie sa consume:
+
+- `WorldAdminApi`
+- `WorldAdminService`
+- `WorldRegionInfo`
+- `WorldPlaceInfo`
+- `WorldNodeInfo`
+
+## Integrare viitoare pe subsisteme
+
+### NPC-uri si rutine
+
+Mapping-ul trebuie sa devina sursa principala pentru rutina sociala si profesionala a NPC-urilor.
+
+Exemple:
+
+- un NPC merge la `homePlaceId` seara
+- un NPC lucreaza la `workPlaceId` ziua
+- un NPC socializeaza intr-un `socialPlaceId`
+- un NPC foloseste `nodes` diferite in acelasi `place`
+
+Exemple concrete:
+
+- `homePlaceId = satul_central:casa_fierarului`
+- `workPlaceId = satul_central:fierarie`
+- `socialPlaceId = satul_central:taverna`
+
+Ce trebuie facut in implementari viitoare:
+
+- `AINPC` sa tina ID-urile semantice persistente
+- `NPCContext` sa stie locul semantic curent
+- planner-ul de rutina sa aleaga destinatii prin `placeId`, nu prin coordonate hardcodate
+- fallback-ul la coordonate sa ramana doar pentru cazurile fara mapping
+
+### Dialog si raspuns AI
+
+Dialogul trebuie sa consume context semantic scurt, validat si limitat.
+
+In loc de:
+
+- `NPC-ul este la x=144 y=65 z=149`
+
+AI-ul si dialogul trebuie sa stie:
+
+- este in `fierarie`
+- locul are tip `forge`
+- tag-urile sunt `workplace`, `blacksmith`, `shop`
+- owner-ul este un anumit NPC
+- accesul este public sau privat
+
+Efecte:
+
+- replici contextuale
+- ton diferit in loc public vs privat
+- raspunsuri diferite in functie de program si tipul locului
+- motivatie mai buna pentru scenarii si evenimente
+
+Regula: promptul AI primeste sumar semantic, nu dump complet al mapping-ului.
+
+### Questuri
+
+Mapping-ul este critic pentru questuri bazate pe locuri reale.
+
+Questurile nu trebuie sa tina doar `target coordinates`.
+Trebuie sa tina tinta semantica.
+
+Tipuri de obiective potrivite:
+
+- `visit_region`
+- `visit_place`
+- `inspect_node`
+- `talk_to_npc_at_place`
+- `bring_item_to_place`
+- `kill_mob_in_place`
+- `escort_npc_to_place`
+
+Exemple:
+
+- mergi la fierarie
+- vorbeste cu fierarul la tejghea
+- inspecteaza intrarea in pestera
+- du minereul in camera de topire
+
+Starea actuala:
+
+- `visit_region`, `visit_place`, `inspect_node` exista initial
+- `QuestAnchorResolver` poate valida si bind-ui ancore semantice
+- `quest_anchor_bindings` persista initial ancorele de quest
+
+Urmatorul pas este ca `/quest track` si mesajele de obiectiv sa foloseasca aceste ancore pentru indicii clare.
+
+### Generare de sate, castele, pesteri si structuri
+
+Mapping-ul este puntea dintre constructie si gameplay.
+
+Fara mapping, o structura generata este doar blocuri.
+Cu mapping, structura devine continut utilizabil.
+
+Pipeline recomandat dupa generare:
+
+1. se construieste structura
+2. se creeaza `region`
+3. se creeaza `places`
+4. se creeaza `nodes`
+5. se asociaza NPC-uri si roluri
+6. se adauga quest hooks si story hooks
+7. se ruleaza auditul
+8. se salveaza mapping-ul
+
+Exemplu pentru un sat generat:
+
+- `region = satul_nou`
+- `place = satul_nou:piata`
+- `place = satul_nou:fierarie`
+- `place = satul_nou:taverna`
+- `node = satul_nou:fierarie:forge_spot`
+- `node = satul_nou:piata:announcement_board`
+
+Abia dupa acest pas generarea devine utila pentru AI si questuri.
+
+### Scenarii narative
+
+Scenariile viitoare nu trebuie sa porneasca doar din evenimente abstracte.
+
+Ele pot porni din:
+
+- un loc
+- o combinatie de tag-uri
+- un `node`
+- o stare a unui `place`
+
+Exemple:
+
+- furt in `market`
+- incendiu in `forge`
+- conflict in `tavern`
+- aparitie episodica la `castle_gate`
+
+Ce inseamna asta:
+
+- mapping-ul devine sursa de trigger
+- mapping-ul devine selectie de context
+- mapping-ul devine filtru de validare pentru scenarii
+
+Pentru designul complet al stratului `mapping -> indexare -> quest -> story`, vezi `story-si-context-ai.md`.
+
+### Admin si debugging
+
+Mapping-ul trebuie sa ramana baza pentru operare si debug, nu doar runtime.
+
+Directii utile:
+
+- inspectie rapida a locului curent
+- listare de `places` si `nodes`
+- verificare de suprapuneri
+- verificare de ownership
+- validare de `tags`
+- debug pentru quest anchors si NPC world bindings
+
+Comenzile existente sunt deja punctul de plecare:
+
+- `/ainpc world whereami`
+- `/ainpc world places`
+- `/ainpc world region info ...`
+- `/ainpc world place info ...`
+- `/ainpc world node create ...`
+- `/ainpc world save`
+- `/ainpc audit world`
+- `/ainpc debugdump world`
+
+## Exemple de fluxuri viitoare
+
+### NPC merge la munca
+
+1. planner-ul verifica ora si rutina
+2. gaseste `workPlaceId`
+3. cere `place` din world admin
+4. cauta un `node` cu rol de lucru
+5. muta NPC-ul spre acel punct
+6. dialogul si comportamentul se schimba deoarece `currentPlaceType = forge`
+
+### Quest de inspectie
+
+1. questul cere `inspect_node`
+2. tinta este `satul_central:fierarie:forge_spot`
+3. listener-ul detecteaza apropierea jucatorului
+4. progresul pe obiectiv este actualizat
+5. jurnalul si dialogul se schimba in functie de noul progres
+
+### Generare de sat
+
+1. sistemul alege zona
+2. construieste cladirile
+3. inregistreaza `region`
+4. inregistreaza `places`
+5. adauga `nodes`
+6. salveaza mapping-ul
+7. NPC-urile si questurile incep sa foloseasca automat noua structura
+
+## Imbunatatiri recomandate
+
+### API public de scriere mai complet
+
+Acum exista creare runtime prin comenzi si service, dar pe termen lung merita un contract public clar pentru mutatii controlate.
+
+Exemple:
+
+- `createRegion`
+- `createPlace`
+- `createNode`
+- `removeRegion`
+- `removePlace`
+- `removeNode`
+- `updatePlaceMetadata`
+
+### Persistenta mai buna decat `config.yml`
+
+Pentru continut generat dinamic, `config.yml` este bun ca start, dar nu este suficient pe termen lung.
+
+Imbunatatiri:
+
+- persistenta in baza de date
+- versiuni de mapping
+- snapshot / rollback
+- export / import
+
+### Stare dinamica pentru `places`
+
+In prezent, `place` este in principal o definitie statica.
+Pe viitor, un `place` ar trebui sa poata avea si stare.
+
+Exemple:
+
+- `open`
+- `closed`
+- `under_attack`
+- `burned`
+- `contested`
+- `quest_locked`
+
+Asta ar ajuta:
+
+- dialogul
+- questurile
+- scenariile
+- rutinele
+
+### Tipuri si roluri mai bogate pentru `nodes`
+
+Roluri semantice utile:
+
+- `entry`
+- `exit`
+- `sleep`
+- `work`
+- `guard`
+- `shop_counter`
+- `ritual_center`
+- `loot_spawn`
+- `conversation_anchor`
+
+Aceste roluri pot sta fie in `type`, fie in metadata standardizata.
+
+### Relatii intre `places`
+
+Sistemul actual descrie containment, dar nu si relatii intre locuri.
+
+Relatii utile:
+
+- `connected_to`
+- `adjacent_to`
+- `owned_by`
+- `serves`
+- `depends_on`
+
+Exemple:
+
+- taverna este conectata la piata
+- fieraria serveste satul central
+- camera tronului apartine castelului
+
+### Ierarhii si sub-places
+
+Pentru castele, pesteri si orase mari, un singur nivel de `place` poate deveni prea simplu.
+
+Extensii utile:
+
+- `parentPlaceId`
+- `subplaces`
+- camere interioare
+- zone functionale din cladiri mari
+
+Exemple:
+
+- `castel:sala_mare`
+- `castel:turn_nord`
+- `castel:turn_nord:camera_garda`
+
+### Evenimente Bukkit pentru mapping
+
+Evenimente utile pentru extensii:
+
+- `AINPCRegionEnteredEvent`
+- `AINPCPlaceEnteredEvent`
+- `AINPCPlaceExitedEvent`
+- `AINPCNodeReachedEvent`
+- `AINPCMappingReloadedEvent`
+
+Acestea ar permite:
+
+- quest hooks
+- scene triggers
+- analytics
+- addonuri externe
+
+### Validare mai stricta
+
+Verificari utile:
+
+- `place` complet in interiorul regiunii
+- `node` in interiorul containerului
+- suprapuneri per tip
+- owner NPC valid
+- tag-uri necunoscute
+- metadata obligatorie pentru anumite tipuri
+
+### Editor si unelte admin mai bune
+
+Pe termen lung, configurarea manuala devine lenta.
+
+Imbunatatiri utile:
+
+- selectie din world cu doua colturi
+- `setpos1 / setpos2` intern
+- creare `place` din selectie
+- creare `node` la pozitia curenta
+- highlight vizual pentru region / place / node
+- export rapid din selectie
+
+### Integrare cu navigatie si pathing
+
+Mapping-ul devine mai util cand se leaga de miscare.
+
+Exemple:
+
+- `preferred entry node`
+- `sleep node`
+- `work node`
+- drumuri sau muchii intre `places`
+- costuri de traversare
+
+Astfel:
+
+- NPC-urile merg mai coerent
+- escort quests sunt mai stabile
+- scenele cu miscare sunt mai usor de orchestrat
+
+### Template-uri si generare semantica
+
+Pentru constructie automata, mapping-ul ar trebui generat din template metadata.
+
+Exemple:
+
+- o schematica de fierarie vine cu `placeType=forge`
+- anumite markere din template definesc `nodes`
+- template-ul declara tag-uri, owner roles si hooks
+
+Asta reduce munca manuala dupa generare.
+
+### Standardizare pentru tags si metadata
+
+Pe termen lung, trebuie evitat haosul semantic.
+
+Merita definite:
+
+- tag-uri oficiale
+- chei oficiale de metadata
+- conventii de naming
+
+Exemple:
+
+- `role=work`
+- `access=public`
+- `business=blacksmith`
+- `danger=high`
+
+## Ordine buna de evolutie
+
+1. leaga NPC-urile si `NPCContext` de `placeId`
+2. adauga tracking vizual/textual pentru `visit_place` si `inspect_node`
+3. extinde `WorldContextSnapshot` pentru AI, questuri si story
+4. adauga evenimente de mapping
+5. standardizeaza `tags` si metadata
+6. introdu stare dinamica pentru `places`
+7. adauga relatii intre `places`
+8. adauga editor si unelte vizuale
+9. leaga mapping-ul de generare automata si template-uri
+
+## Documente conexe
 
 Foloseste documentele astfel:
 
 - `docs/mapping.md`
-  pentru starea actuala si contractul conceptual de baza
+  pentru starea actuala, contractul conceptual, reguli de consum si roadmap mapping
 - `docs/mapping-pentru-implementari-ulterioare.md`
-  pentru cum trebuie consumat mapping-ul in viitoarele sisteme
+  redirect istoric catre acest document
+- `docs/mapping-harti-manuale.md`
+  pentru harti construite manual, etichetare semantica si limitele detectiei automate
 - `docs/generare-ai-si-constructie-automata.md`
   pentru rolul mapping-ului in constructie si generare
 

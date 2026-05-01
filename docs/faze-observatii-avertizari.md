@@ -153,7 +153,7 @@ Documente:
 - `questuri-avansate.md`
 - `story-si-context-ai.md`
 - `npc-uri-temporare-si-episodice.md`
-- `mapping-pentru-implementari-ulterioare.md`
+- `mapping.md`
 - `strategie-plugin-modular-si-scenarii-programabile.md`
 
 Observatii:

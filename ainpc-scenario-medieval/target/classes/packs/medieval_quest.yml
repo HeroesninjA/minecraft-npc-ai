@@ -254,6 +254,11 @@ scenarios:
     quest:
       code: "Q01"
       giver_profession: "blacksmith"
+      kind: "fetch"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["starter", "crafting", "materials"]
       dialogues:
         offer:
           - "Am nevoie de fier bun si de o scandura uscata. Daca ma ajuti, iti fac o sabie pe masura."
@@ -335,6 +340,11 @@ scenarios:
     quest:
       code: "Q02"
       giver_profession: "farmer"
+      kind: "fetch"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["village_support", "supplies"]
       dialogues:
         offer:
           - "Hambarul e prea gol. Imi trebuie grau si morcovi inainte sa cada seara."
@@ -403,6 +413,11 @@ scenarios:
     quest:
       code: "Q03"
       giver_profession: "guard"
+      kind: "hunt"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["combat", "road_safety"]
       prerequisites:
         - "Q01"
       dialogues:
@@ -475,6 +490,11 @@ scenarios:
     quest:
       code: "Q04"
       giver_profession: "innkeeper"
+      kind: "fetch"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["repeatable", "inn", "food"]
       repeatable: true
       cooldown_seconds: 1800
       dialogues:
@@ -547,6 +567,11 @@ scenarios:
     quest:
       code: "Q05"
       giver_profession: "healer"
+      kind: "fetch"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["healing", "ingredients"]
       prerequisites:
         - "Q02"
       dialogues:

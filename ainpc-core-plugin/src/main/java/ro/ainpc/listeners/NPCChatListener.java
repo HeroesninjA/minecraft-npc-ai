@@ -9,12 +9,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerQuitEvent;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.ai.DialogManager;
+import ro.ainpc.engine.QuestDecisionIntentResolver;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -24,6 +24,7 @@ public class NPCChatListener extends AbstractPluginListener {
 
     private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText();
     private static final long CONVERSATION_TIMEOUT_MILLIS = 300_000L;
+    private static final QuestDecisionIntentResolver QUEST_INTENTS = new QuestDecisionIntentResolver();
 
     private final DialogManager dialogManager;
 
@@ -188,24 +189,27 @@ public class NPCChatListener extends AbstractPluginListener {
     }
 
     private boolean handleQuestInteractionFromMessage(Player player, AINPC npc, String message) {
-        if (!containsQuestKeyword(message)
-            && !containsQuestAcceptKeyword(message)
-            && !containsQuestDeclineKeyword(message)
-            && !containsQuestAbandonKeyword(message)
-            && !containsQuestStatusKeyword(message)
-            && !containsQuestCompletionKeyword(message)) {
+        QuestDecisionIntentResolver.Intent intent = QUEST_INTENTS.resolve(
+            message,
+            isQuestDecisionContext(player, npc)
+        );
+        if (intent == QuestDecisionIntentResolver.Intent.NONE) {
             return false;
         }
 
-        AINPC questNpc = refreshQuestNpc(npc);
+        AINPC questNpc = refreshQuestNpc(resolveQuestNpcForIntent(player, npc, intent));
+        if (questNpc == null) {
+            return false;
+        }
+
         ScenarioEngine.QuestInteractionResult questInteraction;
-        if (containsQuestDeclineKeyword(message)) {
+        if (intent == QuestDecisionIntentResolver.Intent.DECLINE) {
             questInteraction = plugin.getScenarioEngine().declineQuest(player, questNpc);
-        } else if (containsQuestAbandonKeyword(message)) {
+        } else if (intent == QuestDecisionIntentResolver.Intent.ABANDON) {
             questInteraction = plugin.getScenarioEngine().abandonQuest(player, questNpc);
-        } else if (containsQuestAcceptKeyword(message)) {
+        } else if (intent == QuestDecisionIntentResolver.Intent.ACCEPT) {
             questInteraction = plugin.getScenarioEngine().acceptQuest(player, questNpc);
-        } else if (containsQuestStatusKeyword(message)) {
+        } else if (intent == QuestDecisionIntentResolver.Intent.STATUS) {
             questInteraction = plugin.getScenarioEngine().getQuestStatus(player, questNpc);
         } else {
             questInteraction = plugin.getScenarioEngine().handleQuestInteraction(player, questNpc);
@@ -223,6 +227,43 @@ public class NPCChatListener extends AbstractPluginListener {
         }
 
         return true;
+    }
+
+    private AINPC resolveQuestNpcForIntent(Player player, AINPC npc, QuestDecisionIntentResolver.Intent intent) {
+        if (intent == QuestDecisionIntentResolver.Intent.ACCEPT
+            || intent == QuestDecisionIntentResolver.Intent.DECLINE) {
+            AINPC activeQuestNpc = plugin.getScenarioEngine().resolveActiveQuestNpc(player, npc);
+            if (activeQuestNpc != null) {
+                return activeQuestNpc;
+            }
+        }
+
+        return npc;
+    }
+
+    private boolean isQuestDecisionContext(Player player, AINPC npc) {
+        if (!plugin.getScenarioEngine().hasOfferedQuest(player)) {
+            return false;
+        }
+
+        AINPC activeQuestNpc = plugin.getScenarioEngine().resolveActiveQuestNpc(player, npc);
+        return isSameNpc(activeQuestNpc, npc);
+    }
+
+    private boolean isSameNpc(AINPC first, AINPC second) {
+        if (first == null || second == null) {
+            return false;
+        }
+        if (first == second) {
+            return true;
+        }
+        if (first.getUuid() != null && second.getUuid() != null && first.getUuid().equals(second.getUuid())) {
+            return true;
+        }
+        if (first.getDatabaseId() > 0 && first.getDatabaseId() == second.getDatabaseId()) {
+            return true;
+        }
+        return first.getName() != null && first.getName().equalsIgnoreCase(second.getName());
     }
 
     private AINPC refreshQuestNpc(AINPC npc) {
@@ -246,62 +287,6 @@ public class NPCChatListener extends AbstractPluginListener {
         return containsNpcName(normalizedMessage, npc.getName()) || containsNpcName(normalizedMessage, npc.getDisplayName());
     }
 
-    private boolean containsQuestKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "misiune")
-            || containsWord(normalizedMessage, "misiuni")
-            || containsWord(normalizedMessage, "quest")
-            || containsWord(normalizedMessage, "quests");
-    }
-
-    private boolean containsQuestAcceptKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "accept")
-            || containsWord(normalizedMessage, "accepta");
-    }
-
-    private boolean containsQuestDeclineKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "refuz")
-            || containsWord(normalizedMessage, "refuza")
-            || normalizedMessage.contains("nu accept");
-    }
-
-    private boolean containsQuestAbandonKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "renunt")
-            || containsWord(normalizedMessage, "abandonez")
-            || containsWord(normalizedMessage, "abandon");
-    }
-
-    private boolean containsQuestStatusKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "status")
-            || containsWord(normalizedMessage, "progres");
-    }
-
-    private boolean containsQuestCompletionKeyword(String message) {
-        String normalizedMessage = normalize(message);
-        return containsWord(normalizedMessage, "gata")
-            || containsWord(normalizedMessage, "terminat")
-            || containsWord(normalizedMessage, "finalizat")
-            || normalizedMessage.contains("am adus");
-    }
-
-    private boolean containsWord(String normalizedMessage, String token) {
-        if (normalizedMessage == null || normalizedMessage.isBlank() || token == null || token.isBlank()) {
-            return false;
-        }
-
-        for (String word : normalizedMessage.split(" ")) {
-            if (word.equals(token)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private boolean containsNpcName(String normalizedMessage, String npcName) {
         if (npcName == null || npcName.isBlank()) {
             return false;
@@ -312,7 +297,7 @@ public class NPCChatListener extends AbstractPluginListener {
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{Nd}\\s]", " ").replaceAll("\\s+", " ").trim();
+        return QuestDecisionIntentResolver.normalize(value);
     }
 
     private void endConversation(Player player, AINPC npc) {

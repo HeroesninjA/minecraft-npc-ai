@@ -46,6 +46,13 @@ public class MessageUtils {
         sender.sendMessage(colorize(message));
     }
 
+    public void sendActionBar(Player player, String message) {
+        if (player == null || message == null || message.isBlank()) {
+            return;
+        }
+        player.sendActionBar(colorize(message));
+    }
+
     /**
      * Trimite un mesaj de la un NPC catre un jucator
      */

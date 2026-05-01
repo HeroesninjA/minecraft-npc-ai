@@ -388,6 +388,17 @@ public class FeaturePackLoader {
             if (questSection != null) {
                 scenario.setQuestCode(questSection.getString("code", scenarioId));
                 scenario.setQuestGiverProfession(questSection.getString("giver_profession", ""));
+                scenario.setQuestScenarioKind(questSection.getString(
+                    "scenario_kind",
+                    questSection.getString("kind", questSection.getString("scenario_type", ""))
+                ));
+                scenario.setQuestAcceptanceMode(questSection.getString(
+                    "acceptance_mode",
+                    questSection.getString("offer_policy", "")
+                ));
+                scenario.setQuestCompletionMode(questSection.getString("completion_mode", ""));
+                scenario.setQuestTrackingMode(questSection.getString("tracking_mode", ""));
+                scenario.setQuestTags(questSection.getStringList("tags"));
                 scenario.setQuestPrerequisites(questSection.getStringList("prerequisites"));
                 scenario.setQuestRepeatable(questSection.getBoolean("repeatable", false));
                 scenario.setQuestCooldownSeconds(Math.max(0L, questSection.getLong("cooldown_seconds", 0L)));
@@ -1125,6 +1136,11 @@ public class FeaturePackLoader {
         private String hint;
         private String questCode;
         private String questGiverProfession;
+        private String questScenarioKind;
+        private String questAcceptanceMode;
+        private String questCompletionMode;
+        private String questTrackingMode;
+        private List<String> questTags;
         private List<String> questPrerequisites;
         private boolean questRepeatable;
         private long questCooldownSeconds;
@@ -1153,6 +1169,11 @@ public class FeaturePackLoader {
             this.hint = "";
             this.questCode = "";
             this.questGiverProfession = "";
+            this.questScenarioKind = "";
+            this.questAcceptanceMode = "";
+            this.questCompletionMode = "";
+            this.questTrackingMode = "";
+            this.questTags = new ArrayList<>();
             this.questPrerequisites = new ArrayList<>();
             this.questRepeatable = false;
             this.questCooldownSeconds = 0L;
@@ -1214,6 +1235,26 @@ public class FeaturePackLoader {
         public String getQuestGiverProfession() { return questGiverProfession; }
         public void setQuestGiverProfession(String questGiverProfession) {
             this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
+        }
+        public String getQuestScenarioKind() { return questScenarioKind; }
+        public void setQuestScenarioKind(String questScenarioKind) {
+            this.questScenarioKind = questScenarioKind == null ? "" : questScenarioKind;
+        }
+        public String getQuestAcceptanceMode() { return questAcceptanceMode; }
+        public void setQuestAcceptanceMode(String questAcceptanceMode) {
+            this.questAcceptanceMode = questAcceptanceMode == null ? "" : questAcceptanceMode;
+        }
+        public String getQuestCompletionMode() { return questCompletionMode; }
+        public void setQuestCompletionMode(String questCompletionMode) {
+            this.questCompletionMode = questCompletionMode == null ? "" : questCompletionMode;
+        }
+        public String getQuestTrackingMode() { return questTrackingMode; }
+        public void setQuestTrackingMode(String questTrackingMode) {
+            this.questTrackingMode = questTrackingMode == null ? "" : questTrackingMode;
+        }
+        public List<String> getQuestTags() { return questTags; }
+        public void setQuestTags(List<String> questTags) {
+            this.questTags = questTags != null ? new ArrayList<>(questTags) : new ArrayList<>();
         }
         public List<String> getQuestPrerequisites() { return questPrerequisites; }
         public void setQuestPrerequisites(List<String> questPrerequisites) {
