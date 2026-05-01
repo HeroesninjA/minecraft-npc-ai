@@ -7,16 +7,9 @@
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="other futures gf656ft">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/QuestObjectiveListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/QuestObjectiveListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/plugin.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/AINPCPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/AINPCPlugin.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCCommand.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$FeaturePack.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$FeaturePack.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ProfessionDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ProfessionDefinition.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$QuestEntryDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$QuestEntryDefinition.class" afterDir="false" />
@@ -25,6 +18,8 @@
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TopologyDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TopologyDefinition.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TraitDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TraitDefinition.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$2.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$PlayerQuestProgress.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" afterDir="false" />
@@ -36,10 +31,9 @@
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$SimpleQuestProfile.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine$SimpleQuestProfile.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/ScenarioEngine.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/listeners/QuestObjectiveListener.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/listeners/QuestObjectiveListener.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/TEST-ro.ainpc.world.WorldAdminServiceTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/TEST-ro.ainpc.world.WorldAdminServiceTest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/ro.ainpc.world.WorldAdminServiceTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/ro.ainpc.world.WorldAdminServiceTest.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/packs/medieval_quest.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/packs/medieval_quest.yml" afterDir="false" />
     </list>
@@ -226,7 +220,7 @@
       <workItem from="1777432551412" duration="20250000" />
       <workItem from="1777518173616" duration="17662000" />
       <workItem from="1777573421516" duration="663000" />
-      <workItem from="1777617208007" duration="3386000" />
+      <workItem from="1777617208007" duration="4418000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -396,7 +390,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777572502980</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="other futures gf656ft">
+      <option name="closed" value="true" />
+      <created>1777620852830</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1777620852830</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

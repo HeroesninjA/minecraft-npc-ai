@@ -11,6 +11,7 @@ ro\ainpc\engine\ScenarioEngine$1.class
 ro\ainpc\engine\ScenarioEngine$QuestAvailability.class
 ro\ainpc\world\WorldContextSnapshot.class
 ro\ainpc\npc\NPCContext.class
+ro\ainpc\engine\ScenarioEngine$QuestRewardCheck.class
 ro\ainpc\database\DatabaseManager$DatabaseThreadFactory.class
 ro\ainpc\listeners\NPCChatListener.class
 ro\ainpc\routine\RoutineSlot.class
@@ -80,6 +81,7 @@ ro\ainpc\ai\OpenAIService$PromptSnapshot.class
 ro\ainpc\engine\QuestAnchorResolver.class
 ro\ainpc\engine\FeaturePackLoader$TraitDefinition.class
 ro\ainpc\world\scan\VanillaVillageFeatureType.class
+ro\ainpc\engine\ScenarioEngine$QuestDialogueContext.class
 ro\ainpc\spawn\HouseAllocationValidationResult.class
 ro\ainpc\platform\PlatformProfile.class
 ro\ainpc\engine\DecisionEngine$LocationWrapper.class

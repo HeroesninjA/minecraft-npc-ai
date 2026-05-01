@@ -168,6 +168,11 @@ public class AINPCPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (scenarioEngine != null) {
+            getLogger().info("Salvare progres quest-uri...");
+            scenarioEngine.flushQuestProgress();
+        }
+
         // Salveaza toate datele NPC-urilor
         if (npcManager != null) {
             getLogger().info("Salvare date NPC-uri...");

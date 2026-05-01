@@ -254,6 +254,22 @@ scenarios:
     quest:
       code: "Q01"
       giver_profession: "blacksmith"
+      dialogues:
+        offer:
+          - "Am nevoie de fier bun si de o scandura uscata. Daca ma ajuti, iti fac o sabie pe masura."
+        offered:
+          - "Hotaraste-te: aduci materialele sau caut pe altcineva?"
+        accepted:
+          - "Bun. Adu-mi lingourile si scandura, iar eu pregatesc nicovala."
+        active:
+          - "Inca astept fierul si lemnul. Fara ele nu pot fauri nimic."
+        ready:
+          - "Vad ca ai materialele. Adu-le aici si terminam treaba."
+        completed:
+          - "Sabia e gata. Ai muncit cinstit, asa ca poart-o cu grija."
+        phase:
+          GATHERING:
+            - "Trei lingouri si o scandura, atat iti cer pentru prima lama."
       objectives:
         iron_ingots:
           type: "collect_item"
@@ -319,6 +335,19 @@ scenarios:
     quest:
       code: "Q02"
       giver_profession: "farmer"
+      dialogues:
+        offer:
+          - "Hambarul e prea gol. Imi trebuie grau si morcovi inainte sa cada seara."
+        offered:
+          - "Daca poti ajuta satul cu provizii, spune-mi acum."
+        accepted:
+          - "Multumesc. Fiecare snop si fiecare morcov conteaza."
+        active:
+          - "Mai avem nevoie de provizii. Verifica hambarele si campurile."
+        ready:
+          - "Ai strans ce trebuie. Adu proviziile la mine."
+        completed:
+          - "Hambarul respira din nou. Ia painea asta pentru drum."
       objectives:
         wheat_bundle:
           type: "collect_item"
@@ -376,6 +405,21 @@ scenarios:
       giver_profession: "guard"
       prerequisites:
         - "Q01"
+      dialogues:
+        offer:
+          - "Acum ca ai o lama decenta, drumul de langa sat trebuie curatat."
+        unavailable:
+          - "Nu trimit pe nimeni pe drum fara pregatire. Intai ajuta fierarul."
+        offered:
+          - "Accepti patrula sau lasi drumul in mana strigoilor?"
+        accepted:
+          - "Tine ochii deschisi. Zombie si scheletele nu vin niciodata singure."
+        active:
+          - "Drumul inca nu e sigur. Intoarce-te dupa ce amenintarea e taiata din radacina."
+        ready:
+          - "Ai curatat drumul? Raporteaza, vreau sa aud tot."
+        completed:
+          - "Satul poate respira mai usor. Scutul asta ti se cuvine."
       objectives:
         zombies:
           type: "kill_mob"
@@ -433,6 +477,21 @@ scenarios:
       giver_profession: "innkeeper"
       repeatable: true
       cooldown_seconds: 1800
+      dialogues:
+        offer:
+          - "Calatorii cer masa calda, iar camara mea scartaie. Adu paine si carne."
+        unavailable:
+          - "Deocamdata am destul pentru mese. Revino cand se golesc blidele."
+        offered:
+          - "Bucataria asteapta raspunsul tau. Ma ajuti sau inchid sala?"
+        accepted:
+          - "Bine. Tine mancarea curata si adu-o repede la han."
+        active:
+          - "Oaspetii intreaba deja de cina. Mai ai de adus provizii."
+        ready:
+          - "Miroase a mancare buna. Adu proviziile la tejghea."
+        completed:
+          - "Ai salvat seara calatorilor. Uite plata pentru ajutor."
       objectives:
         bread:
           type: "collect_item"
@@ -490,6 +549,21 @@ scenarios:
       giver_profession: "healer"
       prerequisites:
         - "Q02"
+      dialogues:
+        offer:
+          - "Am raniti de ingrijit si rafturile sunt goale. Imi trebuie plante si miere."
+        unavailable:
+          - "Mai intai ajuta satul cu provizii. Leacurile nu tin loc de foame."
+        offered:
+          - "Daca ai mana usoara pentru cules, spune-mi ca pornesti."
+        accepted:
+          - "Cauta ciuperci rosii, papadii si o sticla cu miere. Nu risipi nimic."
+        active:
+          - "Leacurile asteapta ingredientele. Padurea si stupii sunt cea mai buna sansa."
+        ready:
+          - "Ai adus tot? Pune ingredientele pe masa de lucru."
+        completed:
+          - "Leacul e gata. Ia morcovii astia aurii, iti vor prinde bine."
       objectives:
         mushrooms:
           type: "collect_item"

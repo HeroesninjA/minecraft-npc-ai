@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,6 +53,7 @@ public class ScenarioEngine {
     private final List<ScenarioTemplate> questTemplates;
     private final Map<UUID, PlayerQuestProgress> activePlayerQuests;
     private final Map<UUID, Map<String, PlayerQuestProgress>> archivedPlayerQuests;
+    private final Set<String> questCompletionLocks;
 
     public ScenarioEngine(AINPCPlugin plugin) {
         this.plugin = plugin;
@@ -61,6 +63,7 @@ public class ScenarioEngine {
         this.questTemplates = new ArrayList<>();
         this.activePlayerQuests = new ConcurrentHashMap<>();
         this.archivedPlayerQuests = new ConcurrentHashMap<>();
+        this.questCompletionLocks = ConcurrentHashMap.newKeySet();
 
         loadScenarioTemplates();
         loadPersistedQuestProgress();
@@ -68,6 +71,24 @@ public class ScenarioEngine {
 
     public void reloadTemplates() {
         loadScenarioTemplates();
+    }
+
+    public void flushQuestProgress() {
+        if (plugin.getDatabaseManager() == null) {
+            return;
+        }
+
+        Map<UUID, List<PlayerQuestProgress>> snapshot = snapshotQuestProgress();
+        if (snapshot.isEmpty()) {
+            return;
+        }
+
+        try {
+            plugin.getDatabaseManager().runAsync(() -> persistQuestProgressSnapshot(snapshot)).join();
+            plugin.debug("[QuestEngine] Progres quest salvat la oprire pentru " + snapshot.size() + " jucatori.");
+        } catch (RuntimeException ex) {
+            plugin.getLogger().warning("Nu am putut salva progresul quest-urilor la oprire: " + ex.getMessage());
+        }
     }
 
     /**
@@ -209,6 +230,7 @@ public class ScenarioEngine {
                 template.setQuestPrerequisites(definition.getQuestPrerequisites());
                 template.setQuestRepeatable(definition.isQuestRepeatable());
                 template.setQuestCooldownSeconds(definition.getQuestCooldownSeconds());
+                template.setQuestDialogues(definition.getQuestDialogues());
                 template.setObjectives(definition.getObjectives());
                 template.setRewards(definition.getRewards());
 
@@ -308,9 +330,11 @@ public class ScenarioEngine {
             plugin.debug("[QuestEngine] Quest oferit pentru player=" + player.getName()
                 + " templateId=" + template.getTemplateId());
 
-            List<String> npcMessages = List.of(
-                "Am o treaba pentru tine.",
-                buildQuestOfferMessage(template)
+            List<String> npcMessages = buildQuestNpcMessages(
+                template,
+                offeredProgress,
+                QuestDialogueContext.OFFER,
+                List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template))
             );
             return QuestInteractionResult.handled(
                 true,
@@ -322,7 +346,12 @@ public class ScenarioEngine {
         if (currentProgress.isOffered()) {
             return QuestInteractionResult.handled(
                 true,
-                List.of("Misiunea e a ta daca o vrei. Spune-mi clar daca o accepti."),
+                buildQuestNpcMessages(
+                    template,
+                    currentProgress,
+                    QuestDialogueContext.OFFERED,
+                    List.of("Misiunea e a ta daca o vrei. Spune-mi clar daca o accepti.")
+                ),
                 buildQuestStatusMessages(template, currentProgress, player, npc.getName())
             );
         }
@@ -336,32 +365,78 @@ public class ScenarioEngine {
                 + " lipsesc=" + String.join(", ", objectiveCheck.missingObjectives()));
             return QuestInteractionResult.handled(
                 true,
-                List.of("Inca nu ai terminat tot ce ti-am cerut. Revino cand obiectivele sunt complete."),
+                buildQuestNpcMessages(
+                    template,
+                    currentProgress,
+                    QuestDialogueContext.ACTIVE,
+                    List.of("Inca nu ai terminat tot ce ti-am cerut. Revino cand obiectivele sunt complete.")
+                ),
                 buildQuestStatusMessages(template, currentProgress, player, npc.getName())
             );
         }
 
-        consumeQuestObjectives(player.getInventory(), template.getObjectives());
-        List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
-        player.updateInventory();
-
-        markQuestCompleted(playerId, template);
-        plugin.debug("[QuestEngine] Quest completat pentru player=" + player.getName()
-            + " templateId=" + template.getTemplateId());
-
-        List<String> systemMessages = new ArrayList<>();
-        systemMessages.add("&aQuest completat: &f" + resolveQuestTitle(template));
-        systemMessages.add("&aRecompense primite:");
-        for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
-            systemMessages.add("&7- &f" + formatQuestEntry(reward));
+        String completionKey = buildQuestCompletionKey(playerId, template.getTemplateId());
+        if (!questCompletionLocks.add(completionKey)) {
+            return QuestInteractionResult.handled(
+                true,
+                List.of("Misiunea este deja in curs de finalizare."),
+                buildQuestStatusMessages(template, currentProgress, player, npc.getName())
+            );
         }
-        systemMessages.addAll(rewardNotes);
 
-        return QuestInteractionResult.handled(
-            true,
-            List.of("Perfect. Exact materialele de care aveam nevoie.", "Poftim sabia promisa. Sa-ti fie de folos."),
-            systemMessages
-        );
+        try {
+            QuestRewardCheck rewardCheck = inspectQuestRewardDelivery(
+                player.getInventory(),
+                template.getObjectives(),
+                template.getRewards()
+            );
+            if (!rewardCheck.canGrant()) {
+                List<String> systemMessages = buildQuestStatusMessages(template, currentProgress, player, npc.getName());
+                systemMessages.add("&cNu pot finaliza questul pana cand recompensa poate fi acordata:");
+                for (String issue : rewardCheck.issues()) {
+                    systemMessages.add("&7- &f" + issue);
+                }
+                return QuestInteractionResult.handled(
+                    true,
+                    buildQuestNpcMessages(
+                        template,
+                        currentProgress,
+                        QuestDialogueContext.READY,
+                        List.of("Ai facut partea grea, dar fa putin loc pentru rasplata si vorbim din nou.")
+                    ),
+                    systemMessages
+                );
+            }
+
+            consumeQuestObjectives(player.getInventory(), template.getObjectives());
+            List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
+            player.updateInventory();
+
+            markQuestCompleted(playerId, template);
+            plugin.debug("[QuestEngine] Quest completat pentru player=" + player.getName()
+                + " templateId=" + template.getTemplateId());
+
+            List<String> systemMessages = new ArrayList<>();
+            systemMessages.add("&aQuest completat: &f" + resolveQuestTitle(template));
+            systemMessages.add("&aRecompense primite:");
+            for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
+                systemMessages.add("&7- &f" + formatQuestEntry(reward));
+            }
+            systemMessages.addAll(rewardNotes);
+
+            return QuestInteractionResult.handled(
+                true,
+                buildQuestNpcMessages(
+                    template,
+                    currentProgress,
+                    QuestDialogueContext.COMPLETED,
+                    List.of("Perfect. Exact materialele de care aveam nevoie.", "Poftim sabia promisa. Sa-ti fie de folos.")
+                ),
+                systemMessages
+            );
+        } finally {
+            questCompletionLocks.remove(completionKey);
+        }
     }
 
     public QuestInteractionResult acceptQuest(Player player, AINPC npc) {
@@ -382,7 +457,12 @@ public class ScenarioEngine {
         if (completedProgress != null && !template.isQuestRepeatable()) {
             return QuestInteractionResult.handled(
                 true,
-                List.of("Misiunea asta este deja incheiata intre noi."),
+                buildQuestNpcMessages(
+                    template,
+                    completedProgress,
+                    QuestDialogueContext.COMPLETED,
+                    List.of("Misiunea asta este deja incheiata intre noi.")
+                ),
                 buildQuestStatusMessages(template, completedProgress, player, npc.getName())
             );
         }
@@ -414,7 +494,12 @@ public class ScenarioEngine {
         if (currentProgress.isActive()) {
             return QuestInteractionResult.handled(
                 true,
-                List.of("Ai acceptat deja misiunea. Ma astept sa te intorci cu ce ti-am cerut."),
+                buildQuestNpcMessages(
+                    template,
+                    currentProgress,
+                    QuestDialogueContext.ACTIVE,
+                    List.of("Ai acceptat deja misiunea. Ma astept sa te intorci cu ce ti-am cerut.")
+                ),
                 buildQuestStatusMessages(template, currentProgress, player, npc.getName())
             );
         }
@@ -431,7 +516,12 @@ public class ScenarioEngine {
             + " templateId=" + template.getTemplateId());
         return QuestInteractionResult.handled(
             true,
-            List.of("Bine. Ma bazez pe tine.", "Intoarce-te cand ai terminat."),
+            buildQuestNpcMessages(
+                template,
+                acceptedProgress,
+                QuestDialogueContext.ACCEPTED,
+                List.of("Bine. Ma bazez pe tine.", "Intoarce-te cand ai terminat.")
+            ),
             buildQuestStatusMessages(template, acceptedProgress, player, npc.getName())
         );
     }
@@ -526,7 +616,12 @@ public class ScenarioEngine {
         PlayerQuestProgress failedProgress = markQuestFailed(playerId, template);
         return QuestInteractionResult.handled(
             true,
-            List.of("Am inteles. Consider misiunea abandonata."),
+            buildQuestNpcMessages(
+                template,
+                failedProgress,
+                QuestDialogueContext.FAILED,
+                List.of("Am inteles. Consider misiunea abandonata.")
+            ),
             buildQuestStatusMessages(template, failedProgress, player, npc.getName())
         );
     }
@@ -561,9 +656,11 @@ public class ScenarioEngine {
         plugin.debug("[QuestEngine] startQuestManually a oferit questul pentru player=" + player.getName()
             + " templateId=" + template.getTemplateId());
 
-        List<String> npcMessages = List.of(
-            "Am o treaba pentru tine.",
-            buildQuestOfferMessage(template)
+        List<String> npcMessages = buildQuestNpcMessages(
+            template,
+            offeredProgress,
+            QuestDialogueContext.OFFER,
+            List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template))
         );
         return QuestInteractionResult.handled(
             true,
@@ -615,28 +712,84 @@ public class ScenarioEngine {
         plugin.debug("[QuestEngine] forceCompleteQuest pentru player=" + player.getName()
             + " templateId=" + template.getTemplateId());
 
-        List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
-        player.updateInventory();
-
-        markQuestCompleted(player.getUniqueId(), template);
-        plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
-            + player.getName() + " templateId=" + template.getTemplateId());
-
-        List<String> systemMessages = new ArrayList<>();
-        systemMessages.add("&aQuest marcat manual ca finalizat: &f" + resolveQuestTitle(template));
-        if (!template.getRewards().isEmpty()) {
-            systemMessages.add("&aRecompense acordate:");
-            for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
-                systemMessages.add("&7- &f" + formatQuestEntry(reward));
-            }
+        UUID playerId = player.getUniqueId();
+        PlayerQuestProgress completedProgress = getCompletedQuestProgress(playerId, template.getTemplateId());
+        if (completedProgress != null) {
+            return QuestInteractionResult.handled(
+                false,
+                buildQuestNpcMessages(
+                    template,
+                    completedProgress,
+                    QuestDialogueContext.COMPLETED,
+                    List.of("Misiunea asta este deja marcata ca terminata.")
+                ),
+                buildQuestStatusMessages(template, completedProgress, player, npc.getName())
+            );
         }
-        systemMessages.addAll(rewardNotes);
 
-        return QuestInteractionResult.handled(
-            false,
-            List.of("In regula. Consider misiunea terminata.", "Poftim rasplata promisa."),
-            systemMessages
-        );
+        String completionKey = buildQuestCompletionKey(playerId, template.getTemplateId());
+        if (!questCompletionLocks.add(completionKey)) {
+            return QuestInteractionResult.handled(
+                false,
+                List.of("Misiunea este deja in curs de finalizare."),
+                buildQuestStatusMessages(template, activePlayerQuests.get(playerId), player, npc.getName())
+            );
+        }
+
+        try {
+            QuestRewardCheck rewardCheck = inspectQuestRewardDelivery(
+                player.getInventory(),
+                List.of(),
+                template.getRewards()
+            );
+            if (!rewardCheck.canGrant()) {
+                List<String> systemMessages = buildQuestStatusMessages(
+                    template,
+                    activePlayerQuests.get(playerId),
+                    player,
+                    npc.getName()
+                );
+                systemMessages.add("&cNu pot marca questul ca finalizat pana cand recompensa poate fi acordata:");
+                for (String issue : rewardCheck.issues()) {
+                    systemMessages.add("&7- &f" + issue);
+                }
+                return QuestInteractionResult.handled(
+                    false,
+                    List.of("Fa loc pentru rasplata inainte sa inchid misiunea."),
+                    systemMessages
+                );
+            }
+
+            List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
+            player.updateInventory();
+
+            markQuestCompleted(playerId, template);
+            plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
+                + player.getName() + " templateId=" + template.getTemplateId());
+
+            List<String> systemMessages = new ArrayList<>();
+            systemMessages.add("&aQuest marcat manual ca finalizat: &f" + resolveQuestTitle(template));
+            if (!template.getRewards().isEmpty()) {
+                systemMessages.add("&aRecompense acordate:");
+                for (FeaturePackLoader.QuestEntryDefinition reward : template.getRewards()) {
+                    systemMessages.add("&7- &f" + formatQuestEntry(reward));
+                }
+            }
+            systemMessages.addAll(rewardNotes);
+
+            return QuestInteractionResult.handled(
+                false,
+                buildQuestNpcMessages(
+                    template,
+                    null,
+                    QuestDialogueContext.COMPLETED,
+                    List.of("In regula. Consider misiunea terminata.", "Poftim rasplata promisa.")
+                ),
+                systemMessages
+            );
+        } finally {
+            questCompletionLocks.remove(completionKey);
+        }
     }
 
     public String getQuestTitle(AINPC npc) {
@@ -665,7 +818,12 @@ public class ScenarioEngine {
         if (completedProgress != null) {
             return QuestInteractionResult.handled(
                 true,
-                List.of("Ti-ai dus la capat datoria pentru misiunea asta."),
+                buildQuestNpcMessages(
+                    template,
+                    completedProgress,
+                    QuestDialogueContext.COMPLETED,
+                    List.of("Ti-ai dus la capat datoria pentru misiunea asta.")
+                ),
                 buildQuestStatusMessages(template, completedProgress, player, npc.getName())
             );
         }
@@ -673,17 +831,31 @@ public class ScenarioEngine {
         if (failedProgress != null) {
             return QuestInteractionResult.handled(
                 true,
-                List.of("Misiunea asta a fost abandonata sau esuata."),
+                buildQuestNpcMessages(
+                    template,
+                    failedProgress,
+                    QuestDialogueContext.FAILED,
+                    List.of("Misiunea asta a fost abandonata sau esuata.")
+                ),
                 buildQuestStatusMessages(template, failedProgress, player, npc.getName())
             );
         }
 
         if (currentProgress != null && currentProgress.templateId().equals(template.getTemplateId())) {
+            currentProgress = refreshTrackedQuestProgress(player, template, currentProgress);
+            QuestDialogueContext context = currentProgress.isOffered()
+                ? QuestDialogueContext.OFFERED
+                : resolveStatusDialogueContext(player, template, currentProgress);
             return QuestInteractionResult.handled(
                 true,
-                List.of(currentProgress.isOffered()
-                    ? "Inca astept sa-mi spui daca accepti."
-                    : "Asa stai acum cu misiunea."),
+                buildQuestNpcMessages(
+                    template,
+                    currentProgress,
+                    context,
+                    List.of(currentProgress.isOffered()
+                        ? "Inca astept sa-mi spui daca accepti."
+                        : "Asa stai acum cu misiunea.")
+                ),
                 buildQuestStatusMessages(template, currentProgress, player, npc.getName())
             );
         }
@@ -702,7 +874,12 @@ public class ScenarioEngine {
 
         return QuestInteractionResult.handled(
             true,
-            List.of("Misiunea este disponibila, dar inca nu ai acceptat-o."),
+            buildQuestNpcMessages(
+                template,
+                null,
+                QuestDialogueContext.OFFER,
+                List.of("Misiunea este disponibila, dar inca nu ai acceptat-o.")
+            ),
             buildQuestStatusMessages(template, null, player, npc.getName())
         );
     }
@@ -1123,6 +1300,12 @@ public class ScenarioEngine {
         return removed;
     }
 
+    private String buildQuestCompletionKey(UUID playerId, String templateId) {
+        return (playerId != null ? playerId.toString() : "unknown")
+            + "::"
+            + (templateId != null ? templateId : "");
+    }
+
     private void loadPersistedQuestProgress() {
         activePlayerQuests.clear();
         archivedPlayerQuests.clear();
@@ -1218,6 +1401,28 @@ public class ScenarioEngine {
         }
 
         plugin.getDatabaseManager().runAsync(() -> persistQuestProgress(playerId, progress));
+    }
+
+    private Map<UUID, List<PlayerQuestProgress>> snapshotQuestProgress() {
+        Map<UUID, List<PlayerQuestProgress>> snapshot = new LinkedHashMap<>();
+        for (Map.Entry<UUID, PlayerQuestProgress> entry : activePlayerQuests.entrySet()) {
+            snapshot.computeIfAbsent(entry.getKey(), ignored -> new ArrayList<>()).add(entry.getValue());
+        }
+        for (Map.Entry<UUID, Map<String, PlayerQuestProgress>> playerEntry : archivedPlayerQuests.entrySet()) {
+            for (PlayerQuestProgress progress : playerEntry.getValue().values()) {
+                snapshot.computeIfAbsent(playerEntry.getKey(), ignored -> new ArrayList<>()).add(progress);
+            }
+        }
+        return snapshot;
+    }
+
+    private void persistQuestProgressSnapshot(Map<UUID, List<PlayerQuestProgress>> snapshot) {
+        for (Map.Entry<UUID, List<PlayerQuestProgress>> entry : snapshot.entrySet()) {
+            UUID playerId = entry.getKey();
+            for (PlayerQuestProgress progress : entry.getValue()) {
+                persistQuestProgress(playerId, progress);
+            }
+        }
     }
 
     private void persistQuestProgress(UUID playerId, PlayerQuestProgress progress) {
@@ -1579,7 +1784,12 @@ public class ScenarioEngine {
 
         return QuestInteractionResult.handled(
             true,
-            List.of("Nu pot porni misiunea asta acum. Locurile sau punctele necesare nu sunt pregatite."),
+            buildQuestNpcMessages(
+                template,
+                null,
+                QuestDialogueContext.UNAVAILABLE,
+                List.of("Nu pot porni misiunea asta acum. Locurile sau punctele necesare nu sunt pregatite.")
+            ),
             systemMessages
         );
     }
@@ -1594,7 +1804,12 @@ public class ScenarioEngine {
 
         return QuestInteractionResult.handled(
             true,
-            List.of("Nu pot porni misiunea asta acum."),
+            buildQuestNpcMessages(
+                template,
+                null,
+                QuestDialogueContext.UNAVAILABLE,
+                List.of("Nu pot porni misiunea asta acum.")
+            ),
             systemMessages
         );
     }
@@ -2866,6 +3081,57 @@ public class ScenarioEngine {
         return "Ai de facut urmatoarele: " + joinNaturally(objectives) + ".";
     }
 
+    private List<String> buildQuestNpcMessages(ScenarioTemplate template,
+                                               PlayerQuestProgress progress,
+                                               QuestDialogueContext context,
+                                               List<String> fallback) {
+        List<String> configuredMessages = resolveQuestDialogueMessages(template, progress, context);
+        return configuredMessages.isEmpty() ? fallback : configuredMessages;
+    }
+
+    private List<String> resolveQuestDialogueMessages(ScenarioTemplate template,
+                                                      PlayerQuestProgress progress,
+                                                      QuestDialogueContext context) {
+        if (template == null || context == null || template.getQuestDialogues().isEmpty()) {
+            return List.of();
+        }
+
+        List<String> keys = new ArrayList<>();
+        keys.addAll(context.dialogueKeys());
+        if (progress != null && progress.currentPhase() != null && !progress.currentPhase().isBlank()) {
+            keys.add("phase." + progress.currentPhase());
+            keys.add(progress.currentPhase());
+        }
+
+        for (String key : keys) {
+            List<String> lines = template.getQuestDialogueLines(key);
+            if (!lines.isEmpty()) {
+                return lines;
+            }
+        }
+
+        return List.of();
+    }
+
+    private QuestDialogueContext resolveStatusDialogueContext(Player player,
+                                                              ScenarioTemplate template,
+                                                              PlayerQuestProgress progress) {
+        if (progress == null) {
+            return QuestDialogueContext.OFFER;
+        }
+        if (progress.isCompleted()) {
+            return QuestDialogueContext.COMPLETED;
+        }
+        if (progress.status() == QuestStatus.FAILED) {
+            return QuestDialogueContext.FAILED;
+        }
+        if (progress.isActive()
+            && inspectQuestObjectives(player, template, progress, null, false).complete()) {
+            return QuestDialogueContext.READY;
+        }
+        return progress.isOffered() ? QuestDialogueContext.OFFERED : QuestDialogueContext.ACTIVE;
+    }
+
     private QuestInventoryCheck inspectQuestInventory(PlayerInventory inventory,
                                                       List<FeaturePackLoader.QuestEntryDefinition> objectives) {
         List<String> missingItems = new ArrayList<>();
@@ -2928,6 +3194,111 @@ public class ScenarioEngine {
             }
             removeMaterial(inventory, material, objective.getAmount());
         }
+    }
+
+    private QuestRewardCheck inspectQuestRewardDelivery(PlayerInventory inventory,
+                                                        List<FeaturePackLoader.QuestEntryDefinition> objectivesToConsume,
+                                                        List<FeaturePackLoader.QuestEntryDefinition> rewards) {
+        if (rewards == null || rewards.isEmpty()) {
+            return QuestRewardCheck.allowed();
+        }
+        if (inventory == null) {
+            return QuestRewardCheck.blocked(List.of("Inventarul jucatorului nu poate fi verificat."));
+        }
+
+        List<String> issues = new ArrayList<>();
+        ItemStack[] simulatedStorage = cloneStorageContents(inventory);
+        simulateQuestObjectiveConsumption(simulatedStorage, objectivesToConsume);
+
+        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
+            Material material = resolveQuestMaterial(reward);
+            if (material == null) {
+                issues.add("Recompensa invalida in configuratie: " + (reward != null ? reward.getItemId() : "necunoscut"));
+                continue;
+            }
+
+            int amount = Math.max(1, reward.getAmount());
+            if (!simulateAddMaterial(simulatedStorage, material, amount)) {
+                issues.add("Fa loc pentru " + formatQuestAmount(amount, material) + ".");
+            }
+        }
+
+        return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
+    }
+
+    private ItemStack[] cloneStorageContents(PlayerInventory inventory) {
+        ItemStack[] contents = inventory.getStorageContents();
+        ItemStack[] clone = new ItemStack[contents.length];
+        for (int i = 0; i < contents.length; i++) {
+            clone[i] = contents[i] != null ? contents[i].clone() : null;
+        }
+        return clone;
+    }
+
+    private void simulateQuestObjectiveConsumption(ItemStack[] contents,
+                                                   List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        if (contents == null || objectives == null || objectives.isEmpty()) {
+            return;
+        }
+
+        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
+            if (!shouldConsumeObjectiveItem(objective)) {
+                continue;
+            }
+            Material material = resolveQuestMaterial(objective);
+            if (material != null) {
+                simulateRemoveMaterial(contents, material, objective.getAmount());
+            }
+        }
+    }
+
+    private void simulateRemoveMaterial(ItemStack[] contents, Material material, int amount) {
+        int remaining = Math.max(0, amount);
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null || stack.getType() != material) {
+                continue;
+            }
+
+            if (stack.getAmount() <= remaining) {
+                remaining -= stack.getAmount();
+                contents[i] = null;
+            } else {
+                stack.setAmount(stack.getAmount() - remaining);
+                remaining = 0;
+            }
+        }
+    }
+
+    private boolean simulateAddMaterial(ItemStack[] contents, Material material, int amount) {
+        int remaining = Math.max(0, amount);
+        int maxStackSize = Math.max(1, material.getMaxStackSize());
+
+        for (ItemStack stack : contents) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (stack == null || stack.getType() != material || stack.getAmount() >= maxStackSize) {
+                continue;
+            }
+
+            int added = Math.min(remaining, maxStackSize - stack.getAmount());
+            stack.setAmount(stack.getAmount() + added);
+            remaining -= added;
+        }
+
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack stack = contents[i];
+            if (stack != null && stack.getType() != Material.AIR) {
+                continue;
+            }
+
+            int added = Math.min(remaining, maxStackSize);
+            contents[i] = new ItemStack(material, added);
+            remaining -= added;
+        }
+
+        return remaining <= 0;
     }
 
     private int resolveObjectiveCurrentProgress(Player player,
@@ -3019,7 +3390,7 @@ public class ScenarioEngine {
             Map<Integer, ItemStack> leftovers = player.getInventory().addItem(rewardStack);
             if (!leftovers.isEmpty()) {
                 leftovers.values().forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
-                notes.add("&eInventarul era plin. Recompensa a fost lasata pe jos langa tine.");
+                notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.");
             }
         }
 
@@ -3745,6 +4116,7 @@ public class ScenarioEngine {
         private List<String> questPrerequisites;
         private boolean questRepeatable;
         private long questCooldownSeconds;
+        private Map<String, List<String>> questDialogues;
         private List<FeaturePackLoader.QuestEntryDefinition> objectives;
         private List<FeaturePackLoader.QuestEntryDefinition> rewards;
         private double triggerProbability;
@@ -3767,6 +4139,7 @@ public class ScenarioEngine {
             this.questPrerequisites = new ArrayList<>();
             this.questRepeatable = false;
             this.questCooldownSeconds = 0L;
+            this.questDialogues = new LinkedHashMap<>();
             this.objectives = new ArrayList<>();
             this.rewards = new ArrayList<>();
             this.triggerProbability = 0.05;
@@ -3837,6 +4210,24 @@ public class ScenarioEngine {
         public void setQuestCooldownSeconds(long questCooldownSeconds) {
             this.questCooldownSeconds = Math.max(0L, questCooldownSeconds);
         }
+        public Map<String, List<String>> getQuestDialogues() { return questDialogues; }
+        public void setQuestDialogues(Map<String, List<String>> questDialogues) {
+            this.questDialogues = new LinkedHashMap<>();
+            if (questDialogues == null) {
+                return;
+            }
+
+            for (Map.Entry<String, List<String>> entry : questDialogues.entrySet()) {
+                String key = normalizeQuestDialogueKey(entry.getKey());
+                List<String> lines = entry.getValue();
+                if (!key.isBlank() && lines != null && !lines.isEmpty()) {
+                    this.questDialogues.put(key, List.copyOf(lines));
+                }
+            }
+        }
+        public List<String> getQuestDialogueLines(String key) {
+            return questDialogues.getOrDefault(normalizeQuestDialogueKey(key), List.of());
+        }
         public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
         public void setObjectives(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
             this.objectives = objectives != null ? new ArrayList<>(objectives) : new ArrayList<>();
@@ -3847,6 +4238,10 @@ public class ScenarioEngine {
         }
         public boolean hasQuestBriefing() {
             return !questCode.isBlank() || !objectives.isEmpty() || !rewards.isEmpty();
+        }
+
+        private static String normalizeQuestDialogueKey(String key) {
+            return key == null ? "" : key.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         }
 
         public List<ScenarioRoleRule> getNpcRoles() {
@@ -4021,6 +4416,27 @@ public class ScenarioEngine {
     ) {
     }
 
+    private enum QuestDialogueContext {
+        OFFER("offer", "available", "not_started"),
+        OFFERED("offered", "pending", "acceptance"),
+        ACCEPTED("accepted", "acceptance"),
+        ACTIVE("active", "in_progress", "work"),
+        READY("ready", "return", "turn_in"),
+        COMPLETED("completed", "completion"),
+        FAILED("failed", "abandoned"),
+        UNAVAILABLE("unavailable", "locked");
+
+        private final List<String> dialogueKeys;
+
+        QuestDialogueContext(String... dialogueKeys) {
+            this.dialogueKeys = List.of(dialogueKeys);
+        }
+
+        private List<String> dialogueKeys() {
+            return dialogueKeys;
+        }
+    }
+
     private enum QuestStatus {
         NOT_STARTED,
         OFFERED,
@@ -4070,6 +4486,23 @@ public class ScenarioEngine {
         boolean complete,
         List<String> missingItems
     ) {
+    }
+
+    private record QuestRewardCheck(
+        boolean canGrant,
+        List<String> issues
+    ) {
+        private QuestRewardCheck {
+            issues = List.copyOf(issues != null ? issues : List.of());
+        }
+
+        private static QuestRewardCheck allowed() {
+            return new QuestRewardCheck(true, List.of());
+        }
+
+        private static QuestRewardCheck blocked(List<String> issues) {
+            return new QuestRewardCheck(false, issues);
+        }
     }
 
     private record QuestObjectiveCheck(

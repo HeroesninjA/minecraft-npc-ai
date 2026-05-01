@@ -391,6 +391,7 @@ public class FeaturePackLoader {
                 scenario.setQuestPrerequisites(questSection.getStringList("prerequisites"));
                 scenario.setQuestRepeatable(questSection.getBoolean("repeatable", false));
                 scenario.setQuestCooldownSeconds(Math.max(0L, questSection.getLong("cooldown_seconds", 0L)));
+                scenario.setQuestDialogues(loadQuestDialogues(questSection.getConfigurationSection("dialogues")));
 
                 loadQuestEntries(
                     questSection.getConfigurationSection("objectives"),
@@ -429,6 +430,34 @@ public class FeaturePackLoader {
                 entrySection.getString("description", "")
             ));
         }
+    }
+
+    private Map<String, List<String>> loadQuestDialogues(ConfigurationSection section) {
+        Map<String, List<String>> dialogues = new LinkedHashMap<>();
+        if (section == null) {
+            return dialogues;
+        }
+
+        for (String key : section.getKeys(false)) {
+            List<String> lines = section.getStringList(key);
+            if (!lines.isEmpty()) {
+                dialogues.put(key, lines);
+                continue;
+            }
+
+            ConfigurationSection nestedSection = section.getConfigurationSection(key);
+            if (nestedSection == null) {
+                continue;
+            }
+            for (String nestedKey : nestedSection.getKeys(false)) {
+                List<String> nestedLines = nestedSection.getStringList(nestedKey);
+                if (!nestedLines.isEmpty()) {
+                    dialogues.put(key + "." + nestedKey, nestedLines);
+                }
+            }
+        }
+
+        return dialogues;
     }
 
     /**
@@ -1099,6 +1128,7 @@ public class FeaturePackLoader {
         private List<String> questPrerequisites;
         private boolean questRepeatable;
         private long questCooldownSeconds;
+        private Map<String, List<String>> questDialogues;
 
         public ScenarioDefinition(String packId,
                                   String id,
@@ -1126,6 +1156,7 @@ public class FeaturePackLoader {
             this.questPrerequisites = new ArrayList<>();
             this.questRepeatable = false;
             this.questCooldownSeconds = 0L;
+            this.questDialogues = new LinkedHashMap<>();
         }
 
         public void addRole(ScenarioRoleDefinition role) {
@@ -1193,6 +1224,10 @@ public class FeaturePackLoader {
         public long getQuestCooldownSeconds() { return questCooldownSeconds; }
         public void setQuestCooldownSeconds(long questCooldownSeconds) {
             this.questCooldownSeconds = Math.max(0L, questCooldownSeconds);
+        }
+        public Map<String, List<String>> getQuestDialogues() { return questDialogues; }
+        public void setQuestDialogues(Map<String, List<String>> questDialogues) {
+            this.questDialogues = questDialogues != null ? new LinkedHashMap<>(questDialogues) : new LinkedHashMap<>();
         }
     }
 
