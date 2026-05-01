@@ -13,8 +13,12 @@ commands:
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC
-    usage: /npcquest <numeNpc|nearest|reset|complete|anchors> [jucator]
+    usage: /npcquest <log|status|numeNpc|nearest|reset|complete|anchors> [jucator]
     aliases: [npcq]
+  quest:
+    description: Quest log si comenzi rapide pentru quest-uri
+    usage: /quest <log|status|numeNpc|nearest>
+    aliases: [quests]
 
 permissions:
   ainpc.admin:
@@ -27,5 +31,5 @@ permissions:
     description: Permite vizualizarea informatiilor despre NPC-uri
     default: true
   ainpc.quest:
-    description: Permite declansarea si administrarea quest-urilor NPC
-    default: op
+    description: Permite jucatorilor sa foloseasca quest log-ul si comenzile normale de quest
+    default: true

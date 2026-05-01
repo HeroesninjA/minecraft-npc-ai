@@ -138,6 +138,14 @@ public class AINPCPlugin extends JavaPlugin {
         } else {
             getLogger().warning("Comanda 'npcquest' nu a fost gasita in plugin.yml.");
         }
+
+        PluginCommand questCommand = getCommand("quest");
+        if (questCommand != null) {
+            questCommand.setExecutor(command);
+            questCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'quest' nu a fost gasita in plugin.yml.");
+        }
         
         // Inregistreaza listenerele
         getLogger().info("Inregistrare listenere...");

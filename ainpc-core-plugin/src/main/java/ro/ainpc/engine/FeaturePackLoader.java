@@ -388,6 +388,9 @@ public class FeaturePackLoader {
             if (questSection != null) {
                 scenario.setQuestCode(questSection.getString("code", scenarioId));
                 scenario.setQuestGiverProfession(questSection.getString("giver_profession", ""));
+                scenario.setQuestPrerequisites(questSection.getStringList("prerequisites"));
+                scenario.setQuestRepeatable(questSection.getBoolean("repeatable", false));
+                scenario.setQuestCooldownSeconds(Math.max(0L, questSection.getLong("cooldown_seconds", 0L)));
 
                 loadQuestEntries(
                     questSection.getConfigurationSection("objectives"),
@@ -1093,6 +1096,9 @@ public class FeaturePackLoader {
         private String hint;
         private String questCode;
         private String questGiverProfession;
+        private List<String> questPrerequisites;
+        private boolean questRepeatable;
+        private long questCooldownSeconds;
 
         public ScenarioDefinition(String packId,
                                   String id,
@@ -1117,6 +1123,9 @@ public class FeaturePackLoader {
             this.hint = "";
             this.questCode = "";
             this.questGiverProfession = "";
+            this.questPrerequisites = new ArrayList<>();
+            this.questRepeatable = false;
+            this.questCooldownSeconds = 0L;
         }
 
         public void addRole(ScenarioRoleDefinition role) {
@@ -1174,6 +1183,16 @@ public class FeaturePackLoader {
         public String getQuestGiverProfession() { return questGiverProfession; }
         public void setQuestGiverProfession(String questGiverProfession) {
             this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
+        }
+        public List<String> getQuestPrerequisites() { return questPrerequisites; }
+        public void setQuestPrerequisites(List<String> questPrerequisites) {
+            this.questPrerequisites = questPrerequisites != null ? new ArrayList<>(questPrerequisites) : new ArrayList<>();
+        }
+        public boolean isQuestRepeatable() { return questRepeatable; }
+        public void setQuestRepeatable(boolean questRepeatable) { this.questRepeatable = questRepeatable; }
+        public long getQuestCooldownSeconds() { return questCooldownSeconds; }
+        public void setQuestCooldownSeconds(long questCooldownSeconds) {
+            this.questCooldownSeconds = Math.max(0L, questCooldownSeconds);
         }
     }
 

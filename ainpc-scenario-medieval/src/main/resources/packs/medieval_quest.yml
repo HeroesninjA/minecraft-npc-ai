@@ -223,6 +223,10 @@ dialogues:
     - "Fierarul cauta pe cineva care sa-i aduca materiale pentru o sabie buna."
     - "Daca vrei de lucru, treci pe la forja. Fierarul are nevoie de ajutor."
     - "Prin sat se spune ca fierarul pregateste o prima misiune pentru un ucenic curajos."
+    - "Fermierul strange provizii pentru hambar inainte sa vina noaptea."
+    - "Garda promite rasplata celui care curata drumul de strigoi."
+    - "Hangiul cauta mancare pentru calatorii blocati in sat."
+    - "Vindecatorul are nevoie de ierburi pentru leacuri de urgenta."
 
 scenarios:
   Q01:
@@ -290,3 +294,234 @@ scenarios:
         preferred_traits:
           - "friendly"
           - "loyal"
+
+  Q02:
+    name: "Provizii Pentru Hambar"
+    description: "Fermierul cere ajutor pentru strangerea unor provizii simple, ca satul sa aiba mancare pentru urmatoarele zile."
+    base_type: "QUEST"
+    trigger_probability: 0.10
+    min_npcs: 1
+    requires_player: true
+    hint: "Fermierul pare ingrijorat de hambar si de rezervele satului."
+    preferred_topologies:
+      - "village_center"
+      - "farmland"
+    narrative_hints:
+      - "este o misiune de aprovizionare data de fermier"
+      - "obiectivul este sa aduci grau si morcovi pentru hambar"
+      - "recompensa este mancare pentru drum"
+    phases:
+      INTRODUCTION: "Fermierul explica de ce hambarul trebuie completat."
+      ACCEPTANCE: "Jucatorul accepta sa ajute la strangerea proviziilor."
+      GATHERING: "Jucatorul strange grau si morcovi."
+      RETURN: "Jucatorul revine la fermier cu proviziile."
+      COMPLETION: "Fermierul multumeste si ofera mancare pentru drum."
+    quest:
+      code: "Q02"
+      giver_profession: "farmer"
+      objectives:
+        wheat_bundle:
+          type: "collect_item"
+          item: "WHEAT"
+          amount: 8
+          description: "Adu 8 fire de grau."
+        carrots:
+          type: "collect_item"
+          item: "CARROT"
+          amount: 4
+          description: "Adu 4 morcovi."
+      rewards:
+        bread:
+          type: "item"
+          item: "BREAD"
+          amount: 4
+          description: "Primesti 4 paini."
+    roles:
+      QUEST_GIVER:
+        description: "Fermierul care strange provizii pentru sat."
+        required_professions:
+          - "farmer"
+        preferred_professions:
+          - "farmer"
+        preferred_traits:
+          - "hardworking"
+          - "friendly"
+      HERO:
+        description: "Jucatorul care ajuta la aprovizionare."
+        player_role: true
+
+  Q03:
+    name: "Drumul Nesigur"
+    description: "Garda satului cere ajutor pentru a elimina creaturile care ameninta drumul de langa asezare."
+    base_type: "QUEST"
+    trigger_probability: 0.08
+    min_npcs: 1
+    requires_player: true
+    hint: "Garda tine mana pe manerul sabiei si urmareste drumul din afara satului."
+    preferred_topologies:
+      - "village_edge"
+      - "road"
+    narrative_hints:
+      - "este o misiune de aparare data de garda satului"
+      - "obiectivul este sa ucizi creaturi ostile"
+      - "recompensa ajuta jucatorul sa supravietuiasca mai bine"
+    phases:
+      INTRODUCTION: "Garda descrie pericolul de pe drum."
+      ACCEPTANCE: "Jucatorul accepta sa curete zona."
+      HUNTING: "Jucatorul cauta si invinge creaturile ostile."
+      RETURN: "Jucatorul revine la garda cu drumul curatat."
+      COMPLETION: "Garda confirma ca satul este mai sigur."
+    quest:
+      code: "Q03"
+      giver_profession: "guard"
+      prerequisites:
+        - "Q01"
+      objectives:
+        zombies:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 2
+          description: "Ucide 2 zombie."
+        skeleton:
+          type: "kill_mob"
+          item: "SKELETON"
+          amount: 1
+          description: "Ucide 1 schelet."
+      rewards:
+        shield:
+          type: "item"
+          item: "SHIELD"
+          amount: 1
+          description: "Primesti 1 scut."
+    roles:
+      QUEST_GIVER:
+        description: "Garda care protejeaza drumul satului."
+        required_professions:
+          - "guard"
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care curata drumul."
+        player_role: true
+
+  Q04:
+    name: "Masa Calatorilor"
+    description: "Hangiul are clienti blocati in sat si are nevoie de provizii pregatite rapid."
+    base_type: "QUEST"
+    trigger_probability: 0.09
+    min_npcs: 1
+    requires_player: true
+    hint: "Hangiul numara portiile ramase si priveste nelinistit spre sala mare."
+    preferred_topologies:
+      - "inn"
+      - "village_center"
+    narrative_hints:
+      - "este o misiune de aprovizionare data de hangiu"
+      - "obiectivul este sa aduci mancare gata pentru calatori"
+      - "recompensa este mica, dar utila pentru economie"
+    phases:
+      INTRODUCTION: "Hangiul explica lipsa de mancare pentru oaspeti."
+      ACCEPTANCE: "Jucatorul accepta sa aduca provizii."
+      GATHERING: "Jucatorul strange mancare pentru han."
+      RETURN: "Jucatorul revine la hangiu."
+      COMPLETION: "Hangiul serveste calatorii si plateste ajutorul."
+    quest:
+      code: "Q04"
+      giver_profession: "innkeeper"
+      repeatable: true
+      cooldown_seconds: 1800
+      objectives:
+        bread:
+          type: "collect_item"
+          item: "BREAD"
+          amount: 3
+          description: "Adu 3 paini."
+        cooked_beef:
+          type: "collect_item"
+          item: "COOKED_BEEF"
+          amount: 2
+          description: "Adu 2 fripturi."
+      rewards:
+        emeralds:
+          type: "item"
+          item: "EMERALD"
+          amount: 2
+          description: "Primesti 2 smaralde."
+    roles:
+      QUEST_GIVER:
+        description: "Hangiul care pregateste masa calatorilor."
+        required_professions:
+          - "innkeeper"
+        preferred_professions:
+          - "innkeeper"
+        preferred_traits:
+          - "friendly"
+          - "charismatic"
+      HERO:
+        description: "Jucatorul care aduce provizii pentru han."
+        player_role: true
+
+  Q05:
+    name: "Leac Pentru Rani"
+    description: "Vindecatorul pregateste leacuri pentru sat si cere ingrediente simple din imprejurimi."
+    base_type: "QUEST"
+    trigger_probability: 0.09
+    min_npcs: 1
+    requires_player: true
+    hint: "Vindecatorul verifica rafturile si pare sa aiba nevoie de ingrediente proaspete."
+    preferred_topologies:
+      - "forest_edge"
+      - "village_center"
+    narrative_hints:
+      - "este o misiune de cules ingrediente data de vindecator"
+      - "obiectivul este sa aduci ciuperci, papadii si miere"
+      - "recompensa este o gustare buna pentru drum"
+    phases:
+      INTRODUCTION: "Vindecatorul explica ce ingrediente lipsesc."
+      ACCEPTANCE: "Jucatorul accepta sa adune ingredientele."
+      GATHERING: "Jucatorul strange plante si miere."
+      RETURN: "Jucatorul revine la vindecator cu ingredientele."
+      COMPLETION: "Vindecatorul pregateste leacul si ofera rasplata."
+    quest:
+      code: "Q05"
+      giver_profession: "healer"
+      prerequisites:
+        - "Q02"
+      objectives:
+        mushrooms:
+          type: "collect_item"
+          item: "RED_MUSHROOM"
+          amount: 2
+          description: "Adu 2 ciuperci rosii."
+        flowers:
+          type: "collect_item"
+          item: "DANDELION"
+          amount: 3
+          description: "Adu 3 papadii."
+        honey:
+          type: "collect_item"
+          item: "HONEY_BOTTLE"
+          amount: 1
+          description: "Adu 1 sticla cu miere."
+      rewards:
+        golden_carrot:
+          type: "item"
+          item: "GOLDEN_CARROT"
+          amount: 2
+          description: "Primesti 2 morcovi aurii."
+    roles:
+      QUEST_GIVER:
+        description: "Vindecatorul care pregateste leacuri pentru sat."
+        required_professions:
+          - "healer"
+        preferred_professions:
+          - "healer"
+        preferred_traits:
+          - "wise"
+          - "empathetic"
+      HERO:
+        description: "Jucatorul care aduna ingredientele."
+        player_role: true

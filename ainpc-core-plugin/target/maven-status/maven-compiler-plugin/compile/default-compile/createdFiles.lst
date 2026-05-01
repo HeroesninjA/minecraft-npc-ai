@@ -8,6 +8,7 @@ ro\ainpc\spawn\NpcSpawnPlan.class
 ro\ainpc\ai\NpcFactResolver$1.class
 ro\ainpc\engine\DialogueEngine$DialogueIntent.class
 ro\ainpc\engine\ScenarioEngine$1.class
+ro\ainpc\engine\ScenarioEngine$QuestAvailability.class
 ro\ainpc\world\WorldContextSnapshot.class
 ro\ainpc\npc\NPCContext.class
 ro\ainpc\database\DatabaseManager$DatabaseThreadFactory.class

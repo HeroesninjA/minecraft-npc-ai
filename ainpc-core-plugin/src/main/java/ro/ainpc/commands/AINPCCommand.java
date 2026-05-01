@@ -61,7 +61,7 @@ public class AINPCCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if ("npcquest".equalsIgnoreCase(command.getName())) {
+        if ("npcquest".equalsIgnoreCase(command.getName()) || "quest".equalsIgnoreCase(command.getName())) {
             String[] routedArgs = new String[args.length + 1];
             routedArgs[0] = "quest";
             System.arraycopy(args, 0, routedArgs, 1, args.length);
@@ -170,6 +170,7 @@ public class AINPCCommand implements CommandExecutor {
         questDebug("Parsare quest mode='" + mode + "' sender=" + sender.getName());
         return switch (mode) {
             case "anchors" -> handleQuestAnchors(sender, args);
+            case "log", "track", "current" -> handleQuestLog(sender, args);
             case "nearest" -> handleNearestQuest(sender, args);
             case "accept" -> handleAcceptQuest(sender, args);
             case "decline" -> handleDeclineQuest(sender, args);
@@ -180,6 +181,36 @@ public class AINPCCommand implements CommandExecutor {
             default -> handleTriggerQuest(sender, args[1],
                 resolveQuestTargetPlayer(sender, args, 2, "&cUtilizare: /ainpc quest <numeNpc> [jucator]"));
         };
+    }
+
+    private boolean handleQuestLog(CommandSender sender, String[] args) {
+        Player targetPlayer = resolveQuestTargetPlayer(
+            sender,
+            args,
+            2,
+            "&cUtilizare: /ainpc quest log [jucator]"
+        );
+        if (targetPlayer == null) {
+            questDebug("Quest log oprit: nu am putut rezolva jucatorul tinta.");
+            return true;
+        }
+
+        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().getQuestLog(targetPlayer);
+        if (!questInteraction.isHandled()) {
+            plugin.getMessageUtils().send(sender, "&cNu am putut citi quest log-ul.");
+            return true;
+        }
+
+        CommandSender recipient = sender.equals(targetPlayer) ? targetPlayer : sender;
+        for (String systemMessage : questInteraction.getSystemMessages()) {
+            plugin.getMessageUtils().send(recipient, systemMessage);
+        }
+
+        if (!sender.equals(targetPlayer)) {
+            plugin.getMessageUtils().send(sender,
+                "&aAi cerut quest log-ul pentru &f" + targetPlayer.getName() + "&a.");
+        }
+        return true;
     }
 
     private boolean handleNearestQuest(CommandSender sender, String[] args) {
@@ -232,6 +263,10 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         npc = refreshQuestNpc(npc);
+        if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) {
+            return true;
+        }
+
         ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().acceptQuest(targetPlayer, npc);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + npc.getName() + " &cnu are un quest disponibil.");
@@ -272,6 +307,10 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         npc = refreshQuestNpc(npc);
+        if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) {
+            return true;
+        }
+
         ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().declineQuest(targetPlayer, npc);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + npc.getName() + " &cnu are un quest disponibil.");
@@ -312,6 +351,10 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         npc = refreshQuestNpc(npc);
+        if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) {
+            return true;
+        }
+
         ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().abandonQuest(targetPlayer, npc);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + npc.getName() + " &cnu are un quest disponibil.");
@@ -330,8 +373,7 @@ public class AINPCCommand implements CommandExecutor {
 
     private boolean handleStatusQuest(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest status <numeNpc>|nearest [jucator]");
-            return true;
+            return handleQuestLog(sender, args);
         }
 
         String npcSelector = args[2];
@@ -352,6 +394,10 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         npc = refreshQuestNpc(npc);
+        if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) {
+            return true;
+        }
+
         ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().getQuestStatus(targetPlayer, npc);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + npc.getName() + " &cnu are un quest disponibil.");
@@ -369,6 +415,11 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleResetQuest(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
         if (args.length < 3) {
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest reset <numeNpc> [jucator]");
             return true;
@@ -415,6 +466,11 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleCompleteQuest(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
         if (args.length < 3) {
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest complete <numeNpc> [jucator]");
             return true;
@@ -647,6 +703,10 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         npc = refreshQuestNpc(npc);
+        if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) {
+            return true;
+        }
+
         questDebug("Quest trigger foloseste npc=" + npc.getName() + " id=" + npc.getDatabaseId()
             + " ocupatie=" + npc.getOccupation());
 
@@ -688,6 +748,11 @@ public class AINPCCommand implements CommandExecutor {
                 plugin.getMessageUtils().send(sender, "&cJucatorul &e" + args[playerArgIndex] + " &cnu este online.");
                 return null;
             }
+            if (!sender.hasPermission("ainpc.admin")
+                && (!(sender instanceof Player player) || !player.getUniqueId().equals(targetPlayer.getUniqueId()))) {
+                plugin.getMessageUtils().send(sender, "&cNu poti folosi comenzi de quest pentru alt jucator.");
+                return null;
+            }
             questDebug("Player tinta rezolvat: " + targetPlayer.getName());
             return targetPlayer;
         }
@@ -701,6 +766,21 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&cDin consola trebuie sa specifici si jucatorul.");
         plugin.getMessageUtils().send(sender, usage.replace("[jucator]", "<jucator>"));
         return null;
+    }
+
+    private boolean ensureQuestNpcCommandRange(CommandSender sender, Player targetPlayer, AINPC npc) {
+        if (sender.hasPermission("ainpc.admin")) {
+            return true;
+        }
+        if (targetPlayer == null || npc == null) {
+            return false;
+        }
+        if (npc.isInRange(targetPlayer)) {
+            return true;
+        }
+
+        plugin.getMessageUtils().send(sender, "&cEsti prea departe de NPC-ul &e" + npc.getName() + "&c.");
+        return false;
     }
 
     private void deliverQuestInteraction(CommandSender sender,
@@ -738,6 +818,8 @@ public class AINPCCommand implements CommandExecutor {
 
     private void sendQuestUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest status");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest nearest [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest accept <numeNpc>|nearest [jucator]");
