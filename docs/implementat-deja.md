@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -36,6 +36,7 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 - verifica si completeaza profilurile lipsa
 - initializeaza motoarele de decizie, dialog si scenarii
 - initializeaza `StoryContextService` read-only
+- initializeaza `StoryStateService` pentru persistenta story
 - inregistreaza comenzile si listener-ele
 - porneste task-urile periodice de simulare, decay si autosave
 - porneste task-ul periodic de rutina NPC, daca `routine.enabled` este activ
@@ -57,6 +58,12 @@ Sistemul de NPC-uri are deja implementate:
 - teleport la NPC
 - completare automata pentru `homeAnchor` si `workAnchor`
 - completare automata pentru `socialAnchor`
+- bind manual initial prin `/ainpc world bind npc ...` catre home/work/social places
+- planner initial `/ainpc world household plan ...` care produce `HouseAllocation` din mapping
+- spawn initial `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
+- planner initial `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
+- spawn initial `/ainpc world settlement spawn ...` pentru household-uri secventiale pe regiune
+- rollback global practic pentru `settlement spawn`, daca un household ulterior esueaza
 - selectie de ancora din `WorldPlace`, bloc fizic apropiat sau fallback la pozitia NPC-ului
 - evitare de nume duplicate pentru NPC-urile generate automat in viitor
 
@@ -198,6 +205,7 @@ Ce este implementat:
 - context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres
 - finalizare cu recompensa
+- finalizare cu actiuni story `set_story_state` si `record_story_event`
 - arhivare pentru questuri completate sau esuate
 
 Stari de quest implementate:
@@ -240,19 +248,28 @@ Limitare actuala importanta:
 
 ## Context story si AI
 
-Exista deja un strat initial read-only pentru context narativ:
+Exista deja un strat initial read-only pentru context narativ si persistenta story initiala:
 
 - `StoryContextService`
 - `StoryContextSnapshot`
+- `StoryStateService`
+- `RegionStoryState`
+- `PlaceStoryState`
+- `StoryEvent`
 - integrare in `NPCContext` pentru sectiunea `STORY_CONTEXT`
 - comanda admin `/ainpc story context [jucator] [numeNpc|nearest]`
+- comenzi admin read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`
+- actiuni de quest `set_story_state` si `record_story_event`
 - incarcare de quest anchors active din `quest_anchor_bindings`
+- tabele `region_story_state`, `place_story_state` si `story_events`
 - semnale story din regiune, place metadata, node-uri relevante si quest anchors
+- semnale story persistente din regiune/place si evenimente recente, cand exista date persistate
 
 Limitari actuale:
 
-- nu exista inca tabele dedicate pentru `region_story_state`, `place_story_state` sau `story_events`
-- serviciul nu genereaza questuri si nu scrie in DB
+- nu exista inca audit/debugdump dedicat pentru story state-ul persistent
+- `StoryContextService` nu genereaza questuri si nu scrie in DB
+- actiunile story sunt suportate initial doar la finalizarea questului, ca intrari in `rewards`
 - contextul este util doar cat mapping-ul si quest anchors sunt suficient populate
 
 ## Feature packs si scenarii
@@ -330,10 +347,17 @@ Capabilitati implementate:
 - `WorldContextSnapshot` initial pentru context semantic in `NPCContext` si prompt AI
 - `StoryContextService` initial pentru context narativ peste mapping si quest anchors
 - comenzi admin pentru inspectie si creare manuala
+- comanda `/ainpc world demo create [regionId]` pentru generare rapida de mapping demo semantic in jurul jucatorului
+- comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
+- comanda `/ainpc world household <plan|spawn> <homePlaceId> [count]`
+- comanda `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
+- metadata initiala pentru bind home/work/social: `owner_npc_id`, `resident_npc_ids`, `worker_npc_ids`, `social_npc_ids`
 - audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
 - scanare vanilla initiala prin `/ainpc world scan village`
 - import semantic initial prin `/ainpc world scan village <radius> import [regionId]`
 - validare initiala pentru alocarea rezidentilor intr-o casa inainte de spawn batch
+- generare determinista initiala `WorldPlace house -> HouseAllocation -> NpcSpawnPlan`
+- generare determinista initiala `WorldRegion -> houses -> HouseAllocation list`
 
 Scannerul vanilla detecteaza:
 
@@ -360,10 +384,13 @@ Tipuri deja prezente:
 
 Limitari actuale:
 - mapping-ul este functional, dar serverul de test poate avea inca `0` regiuni, `0` places si `0` nodes pana cand sunt definite in config sau prin comenzi
-- NPC-urile salveaza ancore de locatie, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
+- NPC-urile salveaza ancore de locatie si pot fi legate manual la places, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
 - `visit_place` si `inspect_node` exista initial cu `QuestAnchorResolver` si persistenta dedicata `quest_anchor_bindings`
 - scannerul vanilla si mapperul semantic exista initial, dar generatorul complet de sate/cladiri si patch-uri native nu este inca implementat ca pipeline complet
 - exista `HouseAllocation` ca model intern, dar generatorul complet nu il produce inca automat dintr-un `SettlementPlan`
+- household plannerul actual este minim si determinist; nu genereaza inca familii narative complexe sau populatie pe tot satul
+- settlement spawn ruleaza household-uri secvential, se opreste la prima eroare si sterge NPC-urile create in household-uri anterioare
+- rollback-ul global este practic la nivel de NPC, nu tranzactie DB completa peste mapping/family bind
 
 ## Comenzi existente
 
@@ -374,6 +401,9 @@ Comenzi principale disponibile:
 - `/ainpc quest`
 - `/ainpc world`
 - `/ainpc story`
+- `/ainpc story region`
+- `/ainpc story place`
+- `/ainpc story events`
 - `/ainpc audit`
 - `/ainpc debugdump`
 - `/ainpc list`
@@ -443,7 +473,7 @@ Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul act
 
 - legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
 - export/debugdump complet pentru `quest_anchor_bindings`
-- story state persistent pe regiune/place si evenimente story
+- comenzi si audit/debugdump complet pentru story state persistent
 - generator complet de sate, case si cladiri de meserii
 - integrare optionala cu WorldEdit API
 - questuri cu etape reale si branching avansat
@@ -471,7 +501,11 @@ Proiectul are deja implementate:
 - obiective native initiale `visit_place` si `inspect_node`
 - `QuestAnchorResolver` initial cu ancore persistate in `quest_anchor_bindings`
 - `StoryContextService` initial cu `/ainpc story context`
+- `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
+- comenzi read-only pentru story state persistent si evenimente story
+- actiuni de quest pentru story state si story events
 - scanare vanilla initiala si import semantic pentru world mapping
+- comanda pentru mapping demo minim in jurul jucatorului
 - rutina zilnica initiala peste `home/work/social anchors`
 - `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic
 - audit read-only pentru NPC, world mapping, DB si spawn order

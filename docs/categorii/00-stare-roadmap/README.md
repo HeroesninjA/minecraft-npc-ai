@@ -10,7 +10,7 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 |---|---|
 | `../../implementat-deja.md` | Sursa principala pentru ce este confirmat in cod |
 | `../../faze-observatii-avertizari.md` | Harta de control pe faze, observatii si avertizari |
-| `../../roadmap-orientativ.md` | Directie de produs si versiuni orientative |
+| `../../roadmap-orientativ.md` | Organizare interna pe componente, mecanici, engine-uri si ordine de dezvoltare |
 | `../../../TODO.md` | Lista de lucru curenta |
 | `../../analiza-erori-si-plan-rezolvare.md` | Backlog tehnic si analiza istorica de probleme |
 
@@ -23,4 +23,4 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 
 ## Avertizare
 
-`roadmap-orientativ.md` este directie de produs. `implementat-deja.md` este sursa de adevar pentru ce exista in cod.
+`roadmap-orientativ.md` este documentul de organizare interna pentru ordinea de lucru. `implementat-deja.md` este sursa de adevar pentru ce exista in cod.

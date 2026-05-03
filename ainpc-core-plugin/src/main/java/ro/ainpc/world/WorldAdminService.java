@@ -223,6 +223,246 @@ public class WorldAdminService implements WorldAdminApi {
         return dirty;
     }
 
+    public WorldPlaceInfo bindNpcToHomePlace(String placeId, String npcId, String npcName) {
+        WorldPlace place = requireExistingPlace(placeId);
+        String normalizedNpcId = normalizeBindingValue(npcId);
+        if (normalizedNpcId.isBlank()) {
+            throw new IllegalArgumentException("NPC id este obligatoriu pentru bind-ul home.");
+        }
+
+        place.setOwnerNpcId(normalizedNpcId);
+        place.putMetadata("owner_status", "assigned");
+        putMetadataIfPresent(place, "owner_name", npcName);
+        appendMetadataValue(place, "resident_npc_ids", normalizedNpcId);
+        appendMetadataValue(place, "resident_names", npcName);
+        place.putMetadata("residents_status", "assigned");
+        dirty = true;
+        return toPlaceInfo(place);
+    }
+
+    public WorldPlaceInfo bindNpcToWorkPlace(String placeId, String npcId, String npcName) {
+        WorldPlace place = requireExistingPlace(placeId);
+        String normalizedNpcId = normalizeBindingValue(npcId);
+        if (normalizedNpcId.isBlank()) {
+            throw new IllegalArgumentException("NPC id este obligatoriu pentru bind-ul work.");
+        }
+
+        appendMetadataValue(place, "worker_npc_ids", normalizedNpcId);
+        appendMetadataValue(place, "worker_names", npcName);
+        place.putMetadata("worker_status", "assigned");
+        dirty = true;
+        return toPlaceInfo(place);
+    }
+
+    public WorldPlaceInfo bindNpcToSocialPlace(String placeId, String npcId, String npcName) {
+        WorldPlace place = requireExistingPlace(placeId);
+        String normalizedNpcId = normalizeBindingValue(npcId);
+        if (normalizedNpcId.isBlank()) {
+            throw new IllegalArgumentException("NPC id este obligatoriu pentru bind-ul social.");
+        }
+
+        appendMetadataValue(place, "social_npc_ids", normalizedNpcId);
+        appendMetadataValue(place, "social_names", npcName);
+        place.putMetadata("social_status", "assigned");
+        dirty = true;
+        return toPlaceInfo(place);
+    }
+
+    public DemoMappingResult createDemoSettlement(String requestedRegionId,
+                                                  String worldName,
+                                                  int centerX,
+                                                  int centerY,
+                                                  int centerZ,
+                                                  int worldMinY,
+                                                  int worldMaxY) {
+        String regionId = requestedRegionId == null || requestedRegionId.isBlank()
+            ? nextAvailableDemoRegionId()
+            : normalizeScopeId(requestedRegionId, "regionId");
+        String resolvedWorldName = requireWorldName(worldName);
+        int safeWorldMinY = Math.min(worldMinY, worldMaxY - 1);
+        int safeWorldMaxY = Math.max(worldMinY + 1, worldMaxY - 1);
+        int regionMinY = clamp(centerY - 8, safeWorldMinY, safeWorldMaxY);
+        int regionMaxY = clamp(centerY + 20, regionMinY + 1, safeWorldMaxY);
+        int placeMinY = clamp(centerY - 1, regionMinY, Math.max(regionMinY, regionMaxY - 2));
+        int placeMaxY = clamp(centerY + 7, placeMinY + 1, regionMaxY);
+        double nodeY = clamp(centerY, placeMinY, placeMaxY);
+
+        List<String> createdPlaceIds = new ArrayList<>();
+        List<String> createdNodeIds = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+
+        WorldRegion region = createRegion(
+            regionId,
+            "Demo Village",
+            resolvedWorldName,
+            RegionType.SETTLEMENT,
+            centerX - 44,
+            regionMinY,
+            centerZ - 44,
+            centerX + 44,
+            regionMaxY,
+            centerZ + 44
+        );
+        region.setTags(List.of("demo", "village", "medieval", "first_playable"));
+
+        createDemoNode(regionId, null, "village_center", WorldNodeType.MEETING_POINT,
+            resolvedWorldName, centerX, nodeY, centerZ, 5.0, createdNodeIds, "meeting_point");
+
+        WorldPlace house1 = createDemoPlace(regionId, "house_1", "Casa 1", resolvedWorldName, PlaceType.HOUSE,
+            centerX - 34, placeMinY, centerZ - 30, centerX - 24, placeMaxY, centerZ - 20,
+            List.of("demo", "house", "home", "residential"), createdPlaceIds);
+        house1.setPublicAccess(false);
+        house1.putMetadata("max_residents", "2");
+        house1.putMetadata("owner_status", "pending");
+        house1.putMetadata("residents_status", "pending");
+        addDemoHouseNodes(regionId, house1, resolvedWorldName, nodeY, createdNodeIds);
+
+        WorldPlace house2 = createDemoPlace(regionId, "house_2", "Casa 2", resolvedWorldName, PlaceType.HOUSE,
+            centerX - 14, placeMinY, centerZ - 30, centerX - 4, placeMaxY, centerZ - 20,
+            List.of("demo", "house", "home", "residential"), createdPlaceIds);
+        house2.setPublicAccess(false);
+        house2.putMetadata("max_residents", "2");
+        house2.putMetadata("owner_status", "pending");
+        house2.putMetadata("residents_status", "pending");
+        addDemoHouseNodes(regionId, house2, resolvedWorldName, nodeY, createdNodeIds);
+
+        WorldPlace house3 = createDemoPlace(regionId, "house_3", "Casa 3", resolvedWorldName, PlaceType.HOUSE,
+            centerX + 6, placeMinY, centerZ - 30, centerX + 16, placeMaxY, centerZ - 20,
+            List.of("demo", "house", "home", "residential"), createdPlaceIds);
+        house3.setPublicAccess(false);
+        house3.putMetadata("max_residents", "1");
+        house3.putMetadata("owner_status", "pending");
+        house3.putMetadata("residents_status", "pending");
+        addDemoHouseNodes(regionId, house3, resolvedWorldName, nodeY, createdNodeIds);
+
+        WorldPlace house4 = createDemoPlace(regionId, "house_4", "Casa 4", resolvedWorldName, PlaceType.HOUSE,
+            centerX + 26, placeMinY, centerZ - 30, centerX + 36, placeMaxY, centerZ - 20,
+            List.of("demo", "house", "home", "residential"), createdPlaceIds);
+        house4.setPublicAccess(false);
+        house4.putMetadata("max_residents", "1");
+        house4.putMetadata("owner_status", "pending");
+        house4.putMetadata("residents_status", "pending");
+        addDemoHouseNodes(regionId, house4, resolvedWorldName, nodeY, createdNodeIds);
+
+        WorldPlace market = createDemoPlace(regionId, "piata", "Piata", resolvedWorldName, PlaceType.MARKET,
+            centerX - 8, placeMinY, centerZ - 8, centerX + 8, placeMaxY, centerZ + 8,
+            List.of("demo", "market", "public", "social"), createdPlaceIds);
+        market.putMetadata("role", "social");
+        createDemoNode(regionId, market.getId(), "meeting_point_1", WorldNodeType.MEETING_POINT,
+            resolvedWorldName, centerX, nodeY, centerZ, 4.0, createdNodeIds, "meeting_point");
+        createDemoNode(regionId, market.getId(), "social_1", WorldNodeType.SOCIAL,
+            resolvedWorldName, centerX - 5, nodeY, centerZ, 3.0, createdNodeIds, "social_anchor");
+        createDemoNode(regionId, market.getId(), "quest_board", WorldNodeType.QUEST_TRIGGER,
+            resolvedWorldName, centerX + 6, nodeY, centerZ + 2, 2.0, createdNodeIds, "quest_board");
+
+        WorldPlace forge = createDemoPlace(regionId, "fierarie", "Fierarie", resolvedWorldName, PlaceType.FORGE,
+            centerX - 36, placeMinY, centerZ + 12, centerX - 20, placeMaxY, centerZ + 28,
+            List.of("demo", "forge", "workplace", "blacksmith", "shop"), createdPlaceIds);
+        forge.putMetadata("role", "work");
+        forge.putMetadata("profession", "blacksmith");
+        createDemoNode(regionId, forge.getId(), "workstation_1", WorldNodeType.WORKSTATION,
+            resolvedWorldName, centerX - 30, nodeY, centerZ + 20, 2.0, createdNodeIds, "workstation");
+        createDemoNode(regionId, forge.getId(), "work_1", WorldNodeType.WORK,
+            resolvedWorldName, centerX - 28, nodeY, centerZ + 22, 3.0, createdNodeIds, "work_anchor");
+        createDemoNode(regionId, forge.getId(), "inspect_1", WorldNodeType.INTERACTION,
+            resolvedWorldName, centerX - 32, nodeY, centerZ + 18, 2.0, createdNodeIds, "inspect_node");
+
+        WorldPlace farm = createDemoPlace(regionId, "ferma", "Ferma", resolvedWorldName, PlaceType.FARM,
+            centerX + 20, placeMinY, centerZ + 12, centerX + 36, placeMaxY, centerZ + 30,
+            List.of("demo", "farm", "workplace"), createdPlaceIds);
+        farm.putMetadata("role", "work");
+        farm.putMetadata("profession", "farmer");
+        createDemoNode(regionId, farm.getId(), "work_1", WorldNodeType.WORK,
+            resolvedWorldName, centerX + 28, nodeY, centerZ + 20, 4.0, createdNodeIds, "work_anchor");
+        createDemoNode(regionId, farm.getId(), "inspect_1", WorldNodeType.QUEST_TRIGGER,
+            resolvedWorldName, centerX + 32, nodeY, centerZ + 24, 3.0, createdNodeIds, "inspect_node");
+
+        WorldPlace tavern = createDemoPlace(regionId, "taverna", "Taverna", resolvedWorldName, PlaceType.TAVERN,
+            centerX - 8, placeMinY, centerZ + 22, centerX + 8, placeMaxY, centerZ + 36,
+            List.of("demo", "tavern", "public", "social"), createdPlaceIds);
+        tavern.putMetadata("role", "social");
+        createDemoNode(regionId, tavern.getId(), "entrance_1", WorldNodeType.ENTRANCE,
+            resolvedWorldName, centerX, nodeY, centerZ + 22, 2.0, createdNodeIds, "entrance");
+        createDemoNode(regionId, tavern.getId(), "social_1", WorldNodeType.SOCIAL,
+            resolvedWorldName, centerX, nodeY, centerZ + 30, 4.0, createdNodeIds, "social_anchor");
+        createDemoNode(regionId, tavern.getId(), "interaction_1", WorldNodeType.INTERACTION,
+            resolvedWorldName, centerX - 4, nodeY, centerZ + 30, 2.0, createdNodeIds, "dialog_anchor");
+
+        warnings.add("Demo-ul marcheaza semantic zona din jurul jucatorului; nu construieste blocuri fizice.");
+        return new DemoMappingResult(region.getId(), createdPlaceIds, createdNodeIds, warnings);
+    }
+
+    private WorldPlace createDemoPlace(String regionId,
+                                       String localId,
+                                       String displayName,
+                                       String worldName,
+                                       PlaceType placeType,
+                                       int minX,
+                                       int minY,
+                                       int minZ,
+                                       int maxX,
+                                       int maxY,
+                                       int maxZ,
+                                       List<String> tags,
+                                       List<String> createdPlaceIds) {
+        WorldPlace place = createPlace(regionId, localId, displayName, worldName, placeType,
+            minX, minY, minZ, maxX, maxY, maxZ);
+        place.setTags(tags);
+        place.putMetadata("source", "demo_mapping");
+        createdPlaceIds.add(place.getId());
+        return place;
+    }
+
+    private WorldNode createDemoNode(String regionId,
+                                     String placeId,
+                                     String localId,
+                                     WorldNodeType nodeType,
+                                     String worldName,
+                                     double x,
+                                     double y,
+                                     double z,
+                                     double radius,
+                                     List<String> createdNodeIds,
+                                     String semantic) {
+        WorldNode node = createNode(regionId, placeId, localId, nodeType, worldName, x, y, z, radius);
+        node.putMetadata("source", "demo_mapping");
+        node.putMetadata("semantic", semantic);
+        createdNodeIds.add(node.getId());
+        return node;
+    }
+
+    private void addDemoHouseNodes(String regionId,
+                                   WorldPlace house,
+                                   String worldName,
+                                   double y,
+                                   List<String> createdNodeIds) {
+        double centerX = (house.getMinX() + house.getMaxX()) / 2.0;
+        double centerZ = (house.getMinZ() + house.getMaxZ()) / 2.0;
+        double bedZ = house.getMinZ() + 2.0;
+        double entranceZ = house.getMaxZ();
+
+        createDemoNode(regionId, house.getId(), "bed_1", WorldNodeType.BED, worldName,
+            centerX, y, bedZ, 1.5, createdNodeIds, "bed");
+        createDemoNode(regionId, house.getId(), "home_1", WorldNodeType.HOME, worldName,
+            centerX, y, centerZ, 2.5, createdNodeIds, "home_anchor");
+        createDemoNode(regionId, house.getId(), "entrance_1", WorldNodeType.ENTRANCE, worldName,
+            centerX, y, entranceZ, 2.0, createdNodeIds, "entrance");
+        createDemoNode(regionId, house.getId(), "npc_spawn_1", WorldNodeType.NPC_SPAWN, worldName,
+            centerX, y, centerZ + 1.0, 2.0, createdNodeIds, "npc_spawn");
+    }
+
+    private String nextAvailableDemoRegionId() {
+        String baseId = "demo_sat";
+        if (!regionsById.containsKey(baseId)) {
+            return baseId;
+        }
+        int index = 2;
+        while (regionsById.containsKey(baseId + "_" + index)) {
+            index++;
+        }
+        return baseId + "_" + index;
+    }
+
     public WorldRegion createRegion(String regionId,
                                     String name,
                                     String worldName,
@@ -396,6 +636,48 @@ public class WorldAdminService implements WorldAdminApi {
         }
 
         dirty = false;
+    }
+
+    private WorldPlace requireExistingPlace(String placeId) {
+        String normalizedPlaceId = normalizeBindingValue(placeId);
+        WorldPlace place = placesById.get(normalizedPlaceId);
+        if (place == null) {
+            throw new IllegalArgumentException("Place-ul " + placeId + " nu exista in world mapping.");
+        }
+        return place;
+    }
+
+    private void putMetadataIfPresent(WorldPlace place, String key, String value) {
+        String normalizedValue = normalizeBindingValue(value);
+        if (!normalizedValue.isBlank()) {
+            place.putMetadata(key, normalizedValue);
+        }
+    }
+
+    private void appendMetadataValue(WorldPlace place, String key, String value) {
+        String normalizedValue = normalizeBindingValue(value);
+        if (normalizedValue.isBlank()) {
+            return;
+        }
+
+        List<String> values = new ArrayList<>();
+        String existing = place.getMetadata().getOrDefault(key, "");
+        if (!existing.isBlank()) {
+            for (String part : existing.split("[,;]")) {
+                String candidate = normalizeBindingValue(part);
+                if (!candidate.isBlank() && values.stream().noneMatch(candidate::equalsIgnoreCase)) {
+                    values.add(candidate);
+                }
+            }
+        }
+        if (values.stream().noneMatch(normalizedValue::equalsIgnoreCase)) {
+            values.add(normalizedValue);
+        }
+        place.putMetadata(key, String.join(",", values));
+    }
+
+    private String normalizeBindingValue(String value) {
+        return value == null ? "" : value.trim();
     }
 
     public void registerRegion(WorldRegion region) {
@@ -938,5 +1220,25 @@ public class WorldAdminService implements WorldAdminApi {
             }
         }
         return builder.length() > 0 ? builder.toString() : rawId;
+    }
+
+    private int clamp(int value, int min, int max) {
+        if (max < min) {
+            return min;
+        }
+        return Math.max(min, Math.min(max, value));
+    }
+
+    public record DemoMappingResult(
+        String regionId,
+        List<String> createdPlaceIds,
+        List<String> createdNodeIds,
+        List<String> warnings
+    ) {
+        public DemoMappingResult {
+            createdPlaceIds = List.copyOf(createdPlaceIds != null ? createdPlaceIds : List.of());
+            createdNodeIds = List.copyOf(createdNodeIds != null ? createdNodeIds : List.of());
+            warnings = List.copyOf(warnings != null ? warnings : List.of());
+        }
     }
 }

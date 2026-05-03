@@ -477,7 +477,38 @@ Recomandare:
 
 ## Recompense avansate
 
-Acum sistemul acorda in principal iteme.
+Acum sistemul acorda iteme si are suport initial pentru doua actiuni story controlate:
+
+- `set_story_state`
+- `record_story_event`
+
+Aceste actiuni sunt definite in `rewards`, dar nu sunt tratate ca materiale Minecraft. Ele ruleaza la finalizarea questului si scriu prin `StoryStateService`.
+
+Exemplu:
+
+```yml
+rewards:
+  sword:
+    type: "item"
+    item: "IRON_SWORD"
+    amount: 1
+  region_state:
+    type: "set_story_state"
+    scope: "region"
+    target: "current_region"
+    state: "forge_supplied"
+    variables:
+      quest: "Q01"
+  completion_event:
+    type: "record_story_event"
+    scope: "region"
+    target: "current_region"
+    event_type: "quest_completed"
+    event_key: "q01_forge_supplied"
+    title: "Fierarul a primit proviziile"
+    payload:
+      quest: "Q01"
+```
 
 Pentru un sistem avansat, recompensele trebuie abstractizate:
 - iteme
@@ -508,7 +539,8 @@ Fisier:
 - `ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java`
 
 De facut:
-- extinde `QuestEntryDefinition` sau inlocuieste-l cu un model mai bogat
+- `QuestEntryDefinition` a fost extins initial cu metadata, `variables` si `payload`
+- pe termen lung, inlocuieste-l cu un model mai bogat daca apar multe tipuri de actiuni
 - adauga suport pentru `stages`
 - adauga suport pentru campuri noi:
   - `id`

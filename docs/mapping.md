@@ -1,6 +1,6 @@
 # Mapping
 
-Actualizat: 2026-05-01
+Actualizat: 2026-05-03
 
 ## Scop
 
@@ -212,9 +212,136 @@ Sunt disponibile deja:
 - `/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]`
 - `/ainpc world scan village [radius]`
 - `/ainpc world scan village [radius] import [regionId]`
+- `/ainpc world demo create [regionId]`
+- `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
+- `/ainpc world household <plan|spawn> <homePlaceId> [count]`
+- `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - `/ainpc world save`
-- `/ainpc audit [all|npc|world|db|spawn]`
+- `/ainpc audit [all|npc|world|db|spawn|quest]`
 - `/ainpc debugdump [all|npc|world|quest|openai]`
+
+### Demo mapping minim
+
+Pentru Faza 1 exista o comanda care creeaza un mapping semantic demo in jurul pozitiei jucatorului:
+
+```text
+/ainpc world demo create [regionId]
+```
+
+Comanda creeaza:
+
+- o regiune de tip `settlement`
+- `4` case
+- `1` piata
+- `1` fierarie
+- `1` ferma
+- `1` taverna
+- node-uri pentru `bed`, `home`, `entrance`, `npc_spawn`, `work`, `workstation`, `social`, `meeting_point`, `quest_trigger` si `interaction`
+
+Important:
+
+- comanda marcheaza semantic zona, nu construieste blocuri fizice
+- daca nu dai `regionId`, se foloseste `demo_sat`
+- casele demo primesc `metadata.owner_status: pending`, deoarece owner-ul real se leaga abia in faza de spawn/NPC
+- dupa creare ruleaza `/ainpc audit world`
+- dupa ce alegi sau creezi NPC-urile, ruleaza bind-ul NPC-place
+- daca auditul este acceptabil, ruleaza `/ainpc world save`
+
+### Bind NPC la mapping
+
+Pentru faza urmatoare exista acum comanda:
+
+```text
+/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]
+```
+
+Ce face:
+
+- rezolva NPC-ul incarcat dupa nume, ID, UUID sau `nearest`
+- rezolva `homePlaceId`, optional `workPlaceId` si optional `socialPlaceId`
+- alege automat cel mai bun node semantic din place pentru ancora respectiva
+- salveaza `homeAnchor`, `workAnchor` si `socialAnchor` in `npc_profiles.profile_data`
+- marcheaza home place-ul cu `owner_npc_id`, `metadata.owner_status: assigned`, `resident_npc_ids` si `resident_names`
+- marcheaza work place-ul cu `worker_npc_ids` si social place-ul cu `social_npc_ids`, daca sunt date
+
+Exemplu pentru mapping-ul demo:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world bind npc nearest demo_sat:house_1 demo_sat:fierarie demo_sat:piata
+/ainpc audit spawn
+/ainpc world save
+```
+
+Aceasta este legarea initiala practica intre mapping si NPC-uri. Inca nu exista tabela dedicata `npc_world_bindings`, deci ID-urile explicite de place raman in mapping metadata, iar NPC-ul pastreaza ancorele efective in `profile_data`.
+
+### Household plan din mapping
+
+Pentru faza urmatoare exista acum planner de household peste mapping:
+
+```text
+/ainpc world household plan <homePlaceId> [count]
+/ainpc world household spawn <homePlaceId> [count]
+```
+
+Ce face:
+
+- porneste de la o casa mapata ca `house/home`
+- citeste capacitatea din `metadata.max_residents`, `maxResidents` sau `capacity`
+- alege node-uri `npc_spawn` si `bed/home` din casa
+- alege un workplace din aceeasi regiune, daca exista
+- alege un loc social din aceeasi regiune, daca exista
+- produce un `HouseAllocation` validabil prin `HouseAllocationValidator`
+- `plan` ruleaza dry-run prin `NpcSpawnOrchestrator`
+- `spawn` creeaza NPC-urile si apoi actualizeaza metadata mapping prin bind home/work/social
+
+Exemplu sigur:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world household plan demo_sat:house_1
+/ainpc world household spawn demo_sat:house_1
+/ainpc audit spawn
+/ainpc world save
+```
+
+Pentru demo-ul curent, o casa cu `max_residents: 2` poate genera doar rezidentii pentru care exista perechi suficiente de `npc_spawn` si `bed/home`. Plannerul reduce count-ul si emite warning in loc sa produca un plan invalid.
+
+### Settlement plan din mapping
+
+Pentru popularea unei regiuni intregi exista acum:
+
+```text
+/ainpc world settlement plan <regionId> [maxHouses]
+/ainpc world settlement spawn <regionId> [maxHouses]
+```
+
+Ce face:
+
+- cauta toate casele/home places din regiune
+- genereaza cate un `HouseAllocation` valid pentru fiecare casa
+- ruleaza dry-run pentru toate household-urile cu `plan`
+- ruleaza spawn secvential pentru household-uri cu `spawn`
+- opreste executia la prima eroare
+- face rollback global pentru household-urile create anterior daca o casa ulterioara esueaza
+- actualizeaza metadata mapping doar dupa ce toate household-urile au reusit
+
+Exemplu:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world settlement plan demo_sat
+/ainpc world settlement spawn demo_sat
+/ainpc audit spawn
+/ainpc world save
+```
+
+Pentru testare graduala:
+
+```text
+/ainpc world settlement plan demo_sat 2
+/ainpc world settlement spawn demo_sat 2
+```
 
 ## Ce valideaza sistemul acum
 
@@ -238,6 +365,10 @@ In acest moment, mapping-ul este folosit in principal pentru:
 - `QuestAnchorResolver` initial pentru validarea si bind-uirea ancorelor in `quest_anchor_bindings`
 - rezolvarea automata a unor ancore NPC (`homeAnchor`, `workAnchor`) din `WorldPlace`
 - rezolvarea initiala a `socialAnchor` din noduri sau locuri sociale
+- bind manual initial prin `/ainpc world bind npc ...` pentru ancore NPC si metadata home/work/social
+- generare initiala `HouseAllocation` dintr-o casa mapata prin `/ainpc world household plan ...`
+- spawn household initial prin `/ainpc world household spawn ...`
+- generare si spawn initial pe regiune prin `/ainpc world settlement plan/spawn ...`
 - `WorldContextSnapshot` in `NPCContext`, inclusiv `WORLD_CONTEXT` pentru promptul AI
 - rutina zilnica initiala a NPC-urilor
 - import semantic initial peste sate vanilla scanate
@@ -281,14 +412,17 @@ Important:
 
 - NPC-ul salveaza acum coordonata si label-ul ancorei in `npc_profiles.profile_data`
 - `WorldPlace` poate avea `owner_npc_id`
+- comanda `/ainpc world bind npc ...` seteaza initial ancorele NPC si metadata inversa pe place
 - nu exista inca un camp persistent explicit `homePlaceId` sau `workPlaceId` pe NPC
-- asocierea inversa completa `place -> npc -> place` trebuie inca standardizata
+- asocierea inversa completa `place -> npc -> place` exista doar initial prin metadata, nu printr-o tabela dedicata
 
 ## Ce nu este inca legat complet
 
 Sistemul de mapping exista, dar urmatoarele piese nu sunt inca conectate complet:
 
-- NPC-urile folosesc ancore de locatie, dar nu au inca `homePlaceId`, `workPlaceId`, `socialPlaceId`
+- NPC-urile pot fi legate manual la places, dar nu au inca `homePlaceId`, `workPlaceId`, `socialPlaceId` ca proprietati dedicate
+- household plannerul este determinist si minim; nu este inca generator narativ complet de populatie
+- settlement spawn are rollback global practic pentru NPC-urile create anterior, dar nu este inca tranzactie DB completa peste mapping si familie
 - `NPCContext` expune context semantic initial prin `WorldContextSnapshot`, dar nu exista inca bindings persistente dedicate pe placeId/nodeId
 - questurile au `visit_place`, `inspect_node`, `QuestAnchorResolver`, persistenta initiala in `quest_anchor_bindings` si audit/comanda admin read-only pentru binding-uri
 - `places` nu au stare dinamica de tip `open`, `closed`, `under_attack`
@@ -307,6 +441,7 @@ Auditul verifica:
 
 - world admin activ dar fara regiuni
 - regiuni, places si nodes inexistente sau inconsistente
+- readiness minim pentru gameplay: case, locuri de munca, locuri sociale si quest/interaction nodes
 - `place` in afara regiunii
 - `node` in afara containerului
 - case fara `owner_npc_id`

@@ -44,6 +44,7 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\FamilyBindingPlan.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\FamilyBindingResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocation.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocationPlanner.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocationValidationResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseAllocationValidator.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\HouseholdSpawnResult.java
@@ -51,8 +52,13 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\NpcSpawnPlan.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\NpcSpawnResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\ResolvedNpcSpawnPlan.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\spawn\SettlementSpawnResult.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\PlaceStoryState.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\RegionStoryState.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\StoryContextService.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\StoryContextSnapshot.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\StoryEvent.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\story\StoryStateService.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\topology\TopologyCategory.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\topology\TopologyConsensus.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\utils\MessageUtils.java

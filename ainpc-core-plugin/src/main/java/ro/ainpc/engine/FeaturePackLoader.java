@@ -438,9 +438,58 @@ public class FeaturePackLoader {
                 entrySection.getString("type", "item"),
                 entrySection.getString("item", entryId),
                 Math.max(1, entrySection.getInt("amount", 1)),
-                entrySection.getString("description", "")
+                entrySection.getString("description", ""),
+                loadQuestEntryMetadata(entryId, entrySection),
+                loadQuestEntryMap(entrySection.getConfigurationSection("variables")),
+                loadQuestEntryMap(entrySection.getConfigurationSection("payload"))
             ));
         }
+    }
+
+    private Map<String, String> loadQuestEntryMetadata(String entryId, ConfigurationSection entrySection) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("entry_id", entryId == null ? "" : entryId);
+        if (entrySection == null) {
+            return metadata;
+        }
+
+        for (String key : entrySection.getKeys(false)) {
+            Object value = entrySection.get(key);
+            if (value == null || value instanceof ConfigurationSection) {
+                continue;
+            }
+            metadata.put(key, questEntryValueToString(value));
+        }
+        return metadata;
+    }
+
+    private Map<String, String> loadQuestEntryMap(ConfigurationSection section) {
+        Map<String, String> values = new LinkedHashMap<>();
+        if (section == null) {
+            return values;
+        }
+
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            if (value == null || value instanceof ConfigurationSection) {
+                continue;
+            }
+            values.put(key, questEntryValueToString(value));
+        }
+        return values;
+    }
+
+    private String questEntryValueToString(Object value) {
+        if (value instanceof List<?> list) {
+            List<String> parts = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    parts.add(String.valueOf(item));
+                }
+            }
+            return String.join(",", parts);
+        }
+        return String.valueOf(value);
     }
 
     private Map<String, List<String>> loadQuestDialogues(ConfigurationSection section) {
@@ -1322,18 +1371,37 @@ public class FeaturePackLoader {
         private final String itemId;
         private final int amount;
         private final String description;
+        private final Map<String, String> metadata;
+        private final Map<String, String> variables;
+        private final Map<String, String> payload;
 
         public QuestEntryDefinition(String type, String itemId, int amount, String description) {
+            this(type, itemId, amount, description, Map.of(), Map.of(), Map.of());
+        }
+
+        public QuestEntryDefinition(String type,
+                                    String itemId,
+                                    int amount,
+                                    String description,
+                                    Map<String, String> metadata,
+                                    Map<String, String> variables,
+                                    Map<String, String> payload) {
             this.type = type == null ? "item" : type;
             this.itemId = itemId == null ? "" : itemId;
             this.amount = Math.max(1, amount);
             this.description = description == null ? "" : description;
+            this.metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata != null ? metadata : Map.of()));
+            this.variables = Collections.unmodifiableMap(new LinkedHashMap<>(variables != null ? variables : Map.of()));
+            this.payload = Collections.unmodifiableMap(new LinkedHashMap<>(payload != null ? payload : Map.of()));
         }
 
         public String getType() { return type; }
         public String getItemId() { return itemId; }
         public int getAmount() { return amount; }
         public String getDescription() { return description; }
+        public Map<String, String> getMetadata() { return metadata; }
+        public Map<String, String> getVariables() { return variables; }
+        public Map<String, String> getPayload() { return payload; }
     }
 
 }

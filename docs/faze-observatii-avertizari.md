@@ -1,6 +1,6 @@
 # Faze, Observatii si Avertizari
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
 Status: audit documentatie dupa codul curent si dupa conectarea initiala `HouseAllocation -> NpcSpawnPlan`.
 
@@ -59,6 +59,12 @@ Status curent:
 
 - world admin exista pentru regiuni, places si node-uri
 - mapping-ul are lookup initial pentru node curent si node-uri apropiate
+- exista comanda `/ainpc world demo create [regionId]` pentru mapping demo minim in jurul jucatorului
+- exista comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]` pentru legarea initiala NPC-place
+- exista comanda `/ainpc world household <plan|spawn> <homePlaceId> [count]` pentru plan/spawn household din mapping
+- exista comanda `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]` pentru plan/spawn household-uri pe regiune
+- `settlement spawn` are rollback global practic pentru household-urile create anterior daca o casa ulterioara esueaza
+- auditul world raporteaza readiness minim: case, locuri de munca, locuri sociale si quest/interaction nodes
 - scannerul vanilla si mapperul semantic exista initial
 - `HouseAllocation` exista initial si produce `NpcSpawnPlan`
 - `NpcSpawnOrchestrator` are validare, dry-run si spawn batch pentru household
@@ -67,18 +73,27 @@ Status curent:
 - `WorldContextSnapshot` este legat initial in `NPCContext` si prompt AI
 - questurile suporta initial `visit_place` si `inspect_node`
 - `QuestAnchorResolver` valideaza initial ancorele semantice, le persista in `quest_anchor_bindings` si le reflecta in `questVariables`
-- `StoryContextService` construieste initial `STORY_CONTEXT` din mapping si quest anchors active
+- `StoryContextService` construieste initial `STORY_CONTEXT` din mapping, quest anchors active si story state persistent daca exista
+- `StoryStateService` persista initial `region_story_state`, `place_story_state` si `story_events`
+- comenzile `/ainpc story region`, `/ainpc story place` si `/ainpc story events` inspecteaza read-only story state-ul persistent
+- quest completion poate executa `set_story_state` si `record_story_event` din YAML
 
 Observatii:
 
 - Pentru MVP, fluxul corect este `plan -> constructie/import -> region -> place -> node -> HouseAllocation -> NpcSpawnPlan -> spawn -> save -> family bind -> audit`.
+- Pentru demo manual cu NPC existent, fluxul scurt este `world demo create -> world bind npc -> audit spawn -> world save`.
+- Pentru demo cu spawn generat, fluxul scurt este `world demo create -> world household plan -> world household spawn -> audit spawn -> world save`.
+- Pentru demo de sat intreg, fluxul scurt este `world demo create -> world settlement plan -> world settlement spawn -> audit spawn -> world save`.
 - `metadata.residents` ramane solutia temporara pentru case cu mai multi locuitori.
 - Rutina actuala este suficienta pentru comportament controlat, nu pentru pathfinding natural.
 
 Avertizari:
 
 - Generatorul real care produce automat `HouseAllocation` dintr-un `SettlementPlan` nu este inca gata.
+- Plannerul actual produce `HouseAllocation` pentru o casa sau pentru toate casele dintr-o regiune, dar nu genereaza inca narativ locuitori pe roluri complexe.
+- Spawn-ul pe regiune are rollback global practic pentru NPC-urile create anterior, dar nu este tranzactie DB completa peste toate efectele secundare.
 - `homePlaceId/workPlaceId/socialPlaceId` nu sunt persistate in model dedicat.
+- Bind-ul NPC-place foloseste momentan `profile_data.owned_locations` si metadata pe place, nu tabela dedicata.
 - `quest_anchor_bindings` exista initial si are audit/comanda admin read-only.
 - Daca serverul nu are mapping importat/configurat, codul cade pe fallback-uri vanilla.
 - Spawn-ul batch are rollback practic pentru NPC-urile create, dar nu tranzactie DB completa.
@@ -104,7 +119,7 @@ Observatii:
 
 - First playable trebuie sa prioritizeze continutul testabil, nu infrastructura infinita.
 - Questurile existente sunt functionale la nivel de baza, dar modelul multi-quest matur poate astepta.
-- Story-ul pentru first playable poate folosi `StoryContextService`, dar nu trebuie sa depinda de generare libera sau story state nepersistat.
+- Story-ul pentru first playable poate folosi `StoryContextService` si `StoryStateService`, dar nu trebuie sa depinda de generare libera.
 - Reactiile NPC-jucator trebuie extinse incremental peste memoria si emotiile existente.
 
 Avertizari:
@@ -160,7 +175,7 @@ Observatii:
 
 - Directia corecta este `ScenarioActionRegistry`, `ScenarioConditionRegistry`, `ScenarioTriggerRegistry` si validator separat.
 - Obiectivele `visit_place` si `inspect_node` exista initial dupa `visit_region`.
-- `WorldContextSnapshot`, `QuestAnchorResolver`, `quest_anchor_bindings` si `StoryContextService` exista initial; urmatorul strat recomandat este story state persistent.
+- `WorldContextSnapshot`, `QuestAnchorResolver`, `quest_anchor_bindings`, `StoryContextService`, `StoryStateService`, comenzile read-only story si actiunile story de quest exista initial; urmatorul strat recomandat este audit/debugdump si validare explicita pentru story actions.
 - NPC-urile temporare trebuie sa foloseasca persistenta light sau deloc, in functie de scop.
 
 Avertizari:
@@ -168,7 +183,7 @@ Avertizari:
 - Nu transforma `ScenarioEngine` intr-o clasa si mai mare.
 - Nu lega questurile de coordonate brute cand exista mapping semantic disponibil.
 - Nu lasa AI-ul sa genereze story/quest executabil fara validare de ancore.
-- Nu trata `StoryContextService` ca runtime de story; este doar snapshot read-only pana exista `region_story_state` si `story_events`.
+- Nu trata `StoryContextService` ca runtime de story; este doar snapshot read-only. Scrierile story trebuie sa treaca prin `StoryStateService` si actiuni validate.
 - Nu pastra NPC-uri temporare in DB permanent fara cleanup clar.
 
 ## Faza 5: Generare si Authoring Asistat
@@ -235,7 +250,7 @@ Avertizari:
 - `ordine-spawn-npc-cladiri-region-node.md` este v2 pentru fazele urmatoare de spawn order.
 - `story-si-context-ai.md` este documentul central pentru legatura `mapping -> indexare -> quest -> story`.
 - `arhiva/ordine-spawn-npc-cladiri-region-node-v1.md` pastreaza istoricul complet al fazelor 0-10.
-- `roadmap-orientativ.md` este sursa principala pentru prioritatea de produs.
+- `roadmap-orientativ.md` este sursa principala pentru organizarea interna pe componente, mecanici si ordinea de dezvoltare.
 - `debugging-si-testare.md` este sursa principala pentru cum verifici ca ceva chiar merge.
 - `TODO.md` ramane lista de lucru, nu documentatie tehnica completa.
 

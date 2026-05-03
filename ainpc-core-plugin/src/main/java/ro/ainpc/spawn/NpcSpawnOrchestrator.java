@@ -118,6 +118,75 @@ public class NpcSpawnOrchestrator {
         return HouseholdSpawnResult.success(spawnPlans, spawnResults, familyBindingResult, warnings);
     }
 
+    public SettlementSpawnResult dryRunSettlement(List<HouseAllocation> allocations) {
+        return executeSettlement(allocations, true);
+    }
+
+    public SettlementSpawnResult spawnSettlement(List<HouseAllocation> allocations) {
+        return executeSettlement(allocations, false);
+    }
+
+    private SettlementSpawnResult executeSettlement(List<HouseAllocation> allocations, boolean dryRun) {
+        List<HouseAllocation> safeAllocations = List.copyOf(allocations != null ? allocations : List.of());
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<HouseholdSpawnResult> householdResults = new ArrayList<>();
+        List<AINPC> spawnedNpcs = new ArrayList<>();
+
+        if (safeAllocations.isEmpty()) {
+            errors.add("Settlement spawn nu are HouseAllocation-uri.");
+            return SettlementSpawnResult.failed(dryRun, false, safeAllocations, householdResults, errors, warnings);
+        }
+
+        for (HouseAllocation allocation : safeAllocations) {
+            HouseholdSpawnResult result = dryRun
+                ? dryRunHouseAllocation(allocation)
+                : spawnHousehold(allocation);
+            householdResults.add(result);
+            warnings.addAll(prefixMessages(allocation.placeId(), result.warnings()));
+
+            if (!result.success()) {
+                errors.addAll(prefixMessages(allocation.placeId(), result.errors()));
+                if (result.rolledBack()) {
+                    warnings.add(allocation.placeId() + ": rollback local executat pentru household-ul esuat.");
+                }
+                boolean globallyRolledBack = !dryRun && rollbackSpawnedNpcs(spawnedNpcs, warnings);
+                if (!dryRun) {
+                    warnings.add(globallyRolledBack
+                        ? "Rollback global settlement executat pentru household-urile create anterior."
+                        : "Rollback global settlement incomplet pentru household-urile create anterior.");
+                }
+                return SettlementSpawnResult.failed(
+                    dryRun,
+                    !dryRun && globallyRolledBack,
+                    safeAllocations,
+                    householdResults,
+                    errors,
+                    warnings
+                );
+            }
+
+            if (!dryRun) {
+                result.spawnResults().stream()
+                    .filter(NpcSpawnResult::success)
+                    .map(NpcSpawnResult::npc)
+                    .filter(Objects::nonNull)
+                    .forEach(spawnedNpcs::add);
+            }
+        }
+
+        return SettlementSpawnResult.success(dryRun, safeAllocations, householdResults, warnings);
+    }
+
+    private List<String> prefixMessages(String prefix, List<String> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+        return messages.stream()
+            .map(message -> prefix + ": " + message)
+            .toList();
+    }
+
     private List<NpcSpawnPlan> prepareHouseholdPlans(HouseAllocation allocation,
                                                     List<String> errors,
                                                     List<String> warnings) {

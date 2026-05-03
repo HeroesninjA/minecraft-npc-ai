@@ -299,6 +299,98 @@ class WorldAdminServiceTest {
     }
 
     @Test
+    void createDemoSettlementBuildsMinimalPlayableMapping() {
+        WorldAdminService.DemoMappingResult result = service.createDemoSettlement(
+            null,
+            "world",
+            0,
+            64,
+            0,
+            -64,
+            320
+        );
+
+        assertEquals("demo_sat", result.regionId());
+        assertEquals(8, result.createdPlaceIds().size());
+        assertEquals(28, result.createdNodeIds().size());
+        assertTrue(result.warnings().stream().anyMatch(warning -> warning.contains("nu construieste blocuri")));
+        assertTrue(service.hasUnsavedChanges());
+        assertEquals(1, service.getRegionCount());
+        assertEquals(8, service.getPlaceCount());
+        assertEquals(28, service.getNodeCount());
+
+        assertNotNull(service.getPlace("demo_sat:house_1"));
+        assertEquals("pending", service.getPlace("demo_sat:house_1").metadata().get("owner_status"));
+        assertNotNull(service.getPlace("demo_sat:piata"));
+        assertNotNull(service.getPlace("demo_sat:fierarie"));
+        assertNotNull(service.getPlace("demo_sat:ferma"));
+        assertNotNull(service.getPlace("demo_sat:taverna"));
+        assertNotNull(service.getNode("demo_sat:piata:quest_board"));
+        assertNotNull(service.getNode("demo_sat:fierarie:work_1"));
+        assertNotNull(service.getNode("demo_sat:house_1:bed_1"));
+
+        WorldRegionInfo region = service.findRegion("world", 0, 64, 0);
+        WorldPlaceInfo currentPlace = service.findPlace("world", 0, 64, 0);
+        assertNotNull(region);
+        assertEquals("demo_sat", region.id());
+        assertNotNull(currentPlace);
+        assertEquals("demo_sat:piata", currentPlace.id());
+
+        YamlConfiguration savedConfiguration = new YamlConfiguration();
+        service.saveToConfig(savedConfiguration);
+
+        WorldAdminService reloadedService = new WorldAdminService(message -> { }, Logger.getLogger("WorldAdminDemoReloadedTest"));
+        reloadedService.reloadFromConfig(savedConfiguration, profile());
+
+        assertEquals(1, reloadedService.getRegionCount());
+        assertEquals(8, reloadedService.getPlaceCount());
+        assertEquals(28, reloadedService.getNodeCount());
+        assertNotNull(reloadedService.getNode("demo_sat:piata:quest_board"));
+    }
+
+    @Test
+    void bindNpcToMappedPlacesPersistsOwnershipAndRoleMetadata() {
+        service.createDemoSettlement(
+            "demo_sat",
+            "world",
+            0,
+            64,
+            0,
+            -64,
+            320
+        );
+
+        WorldPlaceInfo home = service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Ion");
+        WorldPlaceInfo work = service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_42", "Ion");
+        WorldPlaceInfo social = service.bindNpcToSocialPlace("demo_sat:piata", "npc_42", "Ion");
+
+        assertEquals("npc_42", home.ownerNpcId());
+        assertEquals("assigned", home.metadata().get("owner_status"));
+        assertEquals("npc_42", home.metadata().get("resident_npc_ids"));
+        assertEquals("Ion", home.metadata().get("resident_names"));
+        assertEquals("npc_42", work.metadata().get("worker_npc_ids"));
+        assertEquals("Ion", work.metadata().get("worker_names"));
+        assertEquals("npc_42", social.metadata().get("social_npc_ids"));
+        assertTrue(service.hasUnsavedChanges());
+
+        YamlConfiguration savedConfiguration = new YamlConfiguration();
+        service.saveToConfig(savedConfiguration);
+
+        WorldAdminService reloadedService = new WorldAdminService(message -> { }, Logger.getLogger("WorldAdminBindReloadedTest"));
+        reloadedService.reloadFromConfig(savedConfiguration, profile());
+
+        WorldPlaceInfo reloadedHome = reloadedService.getPlace("demo_sat:house_1");
+        WorldPlaceInfo reloadedWork = reloadedService.getPlace("demo_sat:fierarie");
+        WorldPlaceInfo reloadedSocial = reloadedService.getPlace("demo_sat:piata");
+
+        assertEquals("npc_42", reloadedHome.ownerNpcId());
+        assertEquals("assigned", reloadedHome.metadata().get("owner_status"));
+        assertEquals("npc_42", reloadedHome.metadata().get("resident_npc_ids"));
+        assertEquals("npc_42", reloadedWork.metadata().get("worker_npc_ids"));
+        assertEquals("npc_42", reloadedSocial.metadata().get("social_npc_ids"));
+    }
+
+    @Test
     void createPlaceRejectsBoundsOutsideRegion() {
         service.createRegion("satul_central", null, "world", RegionType.SETTLEMENT,
             100, 60, 100, 220, 90, 220);

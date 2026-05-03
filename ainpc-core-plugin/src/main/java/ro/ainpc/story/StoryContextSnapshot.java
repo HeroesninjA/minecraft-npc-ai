@@ -12,6 +12,9 @@ public record StoryContextSnapshot(
     String subjectNpcOccupation,
     String playerName,
     WorldContextSnapshot worldContext,
+    RegionStoryState persistentRegionState,
+    PlaceStoryState persistentPlaceState,
+    List<StoryEvent> recentStoryEvents,
     List<QuestAnchorSnapshot> activeQuestAnchors,
     List<String> storySignals,
     List<String> warnings
@@ -21,19 +24,34 @@ public record StoryContextSnapshot(
         subjectNpcOccupation = valueOrEmpty(subjectNpcOccupation);
         playerName = valueOrEmpty(playerName);
         worldContext = worldContext != null ? worldContext : WorldContextSnapshot.empty();
+        recentStoryEvents = List.copyOf(recentStoryEvents != null ? recentStoryEvents : List.of());
         activeQuestAnchors = List.copyOf(activeQuestAnchors != null ? activeQuestAnchors : List.of());
         storySignals = List.copyOf(storySignals != null ? storySignals : List.of());
         warnings = List.copyOf(warnings != null ? warnings : List.of());
     }
 
     public static StoryContextSnapshot empty() {
-        return new StoryContextSnapshot("", "", "", WorldContextSnapshot.empty(), List.of(), List.of(), List.of());
+        return new StoryContextSnapshot(
+            "",
+            "",
+            "",
+            WorldContextSnapshot.empty(),
+            null,
+            null,
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of()
+        );
     }
 
     public boolean isEmpty() {
         return subjectNpcName.isBlank()
             && playerName.isBlank()
             && worldContext.isEmpty()
+            && persistentRegionState == null
+            && persistentPlaceState == null
+            && recentStoryEvents.isEmpty()
             && activeQuestAnchors.isEmpty()
             && storySignals.isEmpty()
             && warnings.isEmpty();
@@ -69,6 +87,20 @@ public record StoryContextSnapshot(
                 .append("\n");
         }
 
+        if (persistentRegionState != null) {
+            block.append("- persistent_region_story: ")
+                .append(persistentRegionState.regionId())
+                .append(", state=")
+                .append(valueOrUnknown(persistentRegionState.stateKey()))
+                .append(", mode=")
+                .append(persistentRegionState.storyMode().name().toLowerCase(Locale.ROOT))
+                .append(", pool=")
+                .append(persistentRegionState.storyPool())
+                .append(", vars=")
+                .append(persistentRegionState.variables())
+                .append("\n");
+        }
+
         WorldPlaceInfo place = worldContext.currentPlace();
         if (place != null) {
             block.append("- place_story: ")
@@ -80,6 +112,34 @@ public record StoryContextSnapshot(
                 .append(", metadata=")
                 .append(place.metadata())
                 .append("\n");
+        }
+
+        if (persistentPlaceState != null) {
+            block.append("- persistent_place_story: ")
+                .append(persistentPlaceState.placeId())
+                .append(", state=")
+                .append(valueOrUnknown(persistentPlaceState.stateKey()))
+                .append(", vars=")
+                .append(persistentPlaceState.variables())
+                .append("\n");
+        }
+
+        if (!recentStoryEvents.isEmpty()) {
+            block.append("- recent_story_events:\n");
+            for (StoryEvent event : recentStoryEvents) {
+                block.append("  - ")
+                    .append(event.scopeType())
+                    .append(":")
+                    .append(event.scopeId())
+                    .append(" ")
+                    .append(event.eventType())
+                    .append("/")
+                    .append(valueOrUnknown(event.eventKey()));
+                if (!event.title().isBlank()) {
+                    block.append(" - ").append(event.title());
+                }
+                block.append("\n");
+            }
         }
 
         if (!storySignals.isEmpty()) {

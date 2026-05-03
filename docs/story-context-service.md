@@ -1,8 +1,8 @@
 # StoryContextService
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
-Status: implementat initial ca strat read-only peste mapping si quest anchors.
+Status: implementat initial ca strat read-only peste mapping, quest anchors si story state persistent initial; scrierile controlate vin prin actiuni de quest.
 
 ## Scop
 
@@ -23,15 +23,33 @@ Implementarea initiala este in `ro.ainpc.story`:
 - `StoryContextService`
 - `StoryContextSnapshot`
 - `StoryContextSnapshot.QuestAnchorSnapshot`
+- `StoryStateService`
+- `RegionStoryState`
+- `PlaceStoryState`
+- `StoryEvent`
 
 Serviciul este initializat in `AINPCPlugin` si expus prin `getStoryContextService()`.
 
+Persistenta story initiala este expusa separat prin `getStoryStateService()` si foloseste tabelele:
+
+- `region_story_state`
+- `place_story_state`
+- `story_events`
+
 `NPCContext` include sectiunea `STORY_CONTEXT` in prompt cand exista un jucator care interactioneaza cu NPC-ul.
 
-Comanda admin read-only:
+Quest completion poate scrie in persistenta story prin actiunile:
+
+- `set_story_state`
+- `record_story_event`
+
+Comenzi admin read-only:
 
 ```text
 /ainpc story context [jucator] [numeNpc|nearest]
+/ainpc story region <regionId>
+/ainpc story place <placeId>
+/ainpc story events <regionId|placeId> [limit]
 ```
 
 Fara NPC tinta, contextul se construieste pentru locatia jucatorului.
@@ -44,6 +62,8 @@ Snapshot-ul poate include:
 - jucatorul tinta
 - regiunea curenta, `storyState`, `storyMode` si `storyPool`
 - place-ul curent, tipul, tag-urile si metadata
+- story state persistent pentru regiune/place, daca exista
+- evenimente story recente pentru regiune/place, daca exista
 - node-uri apropiate relevante pentru quest/story
 - quest anchors active pentru jucator
 - warnings daca mapping-ul, DB-ul sau locatia nu sunt disponibile
@@ -55,20 +75,18 @@ Snapshot-ul poate include:
 - Nu scrie in DB.
 - Nu genereaza questuri sau povesti prin AI.
 - Nu inlocuieste `QuestAnchorResolver`; doar expune ancorele active ca parte din context.
+- Scrierile in story state trebuie facute prin `StoryStateService`, nu prin `StoryContextService`.
 
 ## Limitari
 
-- Story state-ul persistent dedicat pe regiune/place nu exista inca.
-- Evenimentele story recente nu sunt persistate inca.
+- Actiunile story exista initial doar ca intrari de reward executate la finalizarea questului.
+- Evenimentele story sunt persistate si pot fi inspectate read-only, dar nu exista inca audit/debugdump dedicat.
 - Semnalele story din place vin temporar din `metadata`.
 - Contextul depinde de mapping existent; daca serverul are 0 regiuni/places/nodes, snapshot-ul va contine warnings si fallback limitat.
 
 ## Faza urmatoare
 
-Urmatorul pas tehnic este persistenta story:
+Urmatorii pasi tehnici sunt auditul si validarea persistentei story:
 
-- `region_story_state`
-- `place_story_state`
-- `story_events`
-- actiuni de quest precum `set_story_state` si `record_story_event`
 - audit/debug pentru story state
+- validator pentru actiunile story din feature packs

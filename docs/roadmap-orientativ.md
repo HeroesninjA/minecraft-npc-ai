@@ -1,378 +1,514 @@
-# Roadmap Orientativ
+# Organizare Interna: Componente, Mecanici si Ordine de Dezvoltare
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
-## Scop
+## Rolul documentului
 
-Acest document propune un roadmap realist pentru evolutia proiectului, pornind de la starea actuala a codului si de la directia dorita:
+Acest fisier inlocuieste vechiul roadmap orientativ ca document intern de organizare.
 
-- plugin modular
-- scenarii extensibile
-- addonuri separate
-- pe termen lung, scenarii asistate de AI
+Scopul lui este sa raspunda clar la trei intrebari:
 
-Nu este un plan rigid.
-Este o ordine recomandata de constructie, astfel incat fiecare faza sa lase in urma un produs utilizabil, nu doar infrastructura.
+1. ce componente tehnice exista si cine poarta responsabilitatea fiecareia
+2. ce mecanici si engine-uri trebuie dezvoltate mai departe
+3. in ce ordine se lucreaza, ca proiectul sa ajunga la un prim release jucabil fara sa sara prematur la sisteme prea mari
 
-## Principiul de baza
+Nu este un document de marketing si nu este o promisiune de versiuni publice. Este harta interna dupa care se alege ce se implementeaza, ce se stabilizeaza si ce se amana.
 
-Ordinea buna este:
+## Surse de adevar
 
-1. produs mic, dar jucabil
-2. modularitate reala
-3. runtime extensibil
-4. ecosistem de addonuri
-5. authoring asistat de AI
+Pentru a evita confuzia intre design si cod existent:
 
-Ce trebuie evitat:
+- `docs/implementat-deja.md` este sursa principala pentru ce este confirmat in cod.
+- `docs/faze-observatii-avertizari.md` este harta de control pe faze, riscuri si dependinte.
+- `TODO.md` este lista curenta de lucru, nu specificatie completa.
+- `docs/debugging-si-testare.md` este sursa pentru verificari, smoke tests si debug.
 
-- sa construiesti prea devreme faza AI
-- sa amani primul release pana cand totul este "perfect"
-- sa extinzi `ScenarioEngine` in toate directiile inainte sa separi contractele
+Regula interna:
 
-## Starea actuala
+- daca o sarcina nu poate fi legata de o componenta, o mecanica si o faza de mai jos, nu intra in lucru pana nu este clarificata.
 
-Proiectul are deja:
+## Principiul de dezvoltare
 
-- nucleu functional de plugin
-- persistenta SQLite
-- NPC-uri AI bazate pe `Villager`
-- dialog contextual cu OpenAI
-- memorie, emotii, relatii
-- questuri de baza functionale
-- feature packs YAML
-- API public initial
-- addon medieval separat
-- world admin la nivel de regiuni, places si noduri
-- audit read-only pentru NPC, world mapping si DB
-- debug dump avansat pentru colectarea contextului de investigatie
-- ancore automate pentru casa si locul de munca al NPC-urilor
-- scanner vanilla initial pentru sate
-- mapper semantic initial catre `WorldRegion`, `WorldPlace` si `WorldNode`
-- rutina zilnica initiala pentru NPC-uri pe `home/work/social anchors`
-- audit de spawn order pentru case, rezidenti, ancore si relatii familiale reciproce
+Ordinea sanatoasa pentru proiect este:
 
-Asta inseamna ca proiectul este deja peste stadiul de prototip simplu.
+1. baza stabila si diagnosticabila
+2. lume semantica reala: `WorldRegion -> WorldPlace -> WorldNode`
+3. spawn si alocare NPC peste acea lume
+4. rutina si interactiune NPC peste ancore stabile
+5. questuri mici, completabile, persistente
+6. story context si story state controlat
+7. modularizare si API public curate
+8. runtime de scenarii extensibil
+9. addonuri tematice separate
+10. authoring asistat de AI peste validatoare, nu executie directa din prompt
 
-## Rezumat pe faze
+Fiecare faza trebuie sa lase in urma un rezultat testabil in joc, nu doar infrastructura.
 
-### Faza 1
+## Harta interna a componentelor
 
-`First playable release`
+| Componenta | Zona / modul | Rol intern | Focus urmator |
+|---|---|---|---|
+| Platforma core | `ainpc-core-plugin` | Pornire plugin, config, servicii, comenzi, listenere, schedulere | Stabilitate, reload sigur, mesaje clare la startup |
+| API public | `ainpc-api` | Contracte pentru addonuri, runtime mode, world mode si world admin | Stabilizarea contractelor care nu expun internals |
+| Addon medieval | `ainpc-scenario-medieval` | Continut demo separat si sincronizare pack medieval | Transformare in scenariu jucabil cap-coada |
+| Persistenta | SQLite prin managerii core | Salveaza NPC-uri, memorii, relatii, questuri, story state si ancore | Audit, export/debugdump si migrari controlate |
+| World admin | regiuni, places, nodes | Model semantic al lumii folosit de NPC, quest si story | Mapping demo real si validare de consistenta |
+| Scanner / mapper semantic | scanare sat vanilla si import | Detecteaza paturi, clopote, workstation-uri, usi, farmland si creeaza mapping semantic initial | Import mai complet si corectii manuale clare |
+| Spawn si household | `HouseAllocation`, `NpcSpawnPlan`, orchestrare spawn | Leaga case, rezidenti, familie, ancore si spawn batch | Populare mai narativa si tranzactii DB complete |
+| NPC lifecycle | manageri NPC, villager sync, profiluri | Creeaza, restaureaza si sincronizeaza NPC-uri AI | Generator automat si persistenta dedicata peste bind-ul initial home/work/social |
+| Rutina si simulare | `RoutineEngine`, `RoutineService`, nevoi NPC | Muta NPC-urile intre ancore si ruleaza simulare de baza | Pasi intermediari si evenimente sociale controlate |
+| Dialog si AI | dialog, context NPC, OpenAI, fallback | Conversatie contextualizata cu memorie, emotii si story context | Reactii mai clare la quest, reputatie locala si istoric |
+| Quest runtime | `ScenarioEngine`, quest progress, obiective | Ofera, urmareste si finalizeaza questuri persistente | Questuri in lant si separare progresiva a runtime-ului |
+| Quest anchors | `QuestAnchorResolver`, `quest_anchor_bindings` | Leaga obiectivele de regiuni, places, nodes si NPC-uri | Export/debugdump complet si validare mai explicita |
+| Story runtime | `StoryContextService`, `StoryStateService` | Snapshot read-only pentru prompt si persistenta story state/events | Audit/debugdump dedicat si reguli clare de scriere |
+| Feature packs | `FeaturePackLoader`, pack-uri YAML | Incarca traits, professions, dialogues, topologies si scenarios | Validare de schema, dependencies si capabilities |
+| Addon registry | `AddonRegistryApi`, `AINPCAddon` | Inregistreaza addonuri si continut separat | Compatibilitate, versionare si erori clare la load |
+| Operare | `/ainpc audit`, `/ainpc debugdump`, teste | Verifica starea runtime si strange context de investigatie | Acoperire mai buna pentru story, quest anchors si scenarii |
 
-Scop:
-- un pachet mic, stabil si jucabil cap-coada
+## Axe de executie
 
-### Faza 2
-
-`Stabilizare modulara`
-
-Scop:
-- separarea curata intre core, API si addonuri
-
-### Faza 3
-
-`Runtime de scenarii extensibil`
+### A0. Stabilitate, audit si debug
 
 Scop:
-- scenarii configurabile prin actiuni, conditii si tranzitii
 
-### Faza 4
+- fiecare schimbare importanta sa poata fi verificata prin teste, comenzi admin sau debug dump
+- datele partiale sa fie vizibile, nu ascunse
 
-`Addon ecosystem`
+Se ataca acum:
+
+- audit/debugdump dedicat pentru story state si story events
+- export/debugdump complet pentru `quest_anchor_bindings`
+- mesaje clare pentru config, pack-uri si compatibilitati invalide
+- smoke tests pentru fluxurile critice
+
+Se amana:
+
+- tooling complex de productie fara un prim scenariu jucabil
+- refactorizari mari care nu cresc verificabilitatea
+
+### A1. Lume semantica si mapping
 
 Scop:
-- scenarii si integrari livrate din jar-uri separate
 
-### Faza 5
+- `WorldRegion`, `WorldPlace` si `WorldNode` sa devina baza comuna pentru spawn, rutina, quest si story
 
-`Prompt-assisted scenario authoring`
+Se ataca acum:
+
+- mapping demo real: regiune, case, locuri de munca, piata si node-uri
+- bind initial NPC -> home/work/social places pentru demo si harti manuale
+- import semantic mai util din satele vanilla
+- validare intre regiuni, places, nodes si NPC-uri
+- documentare scurta pentru admin: cum creezi/importi mapping-ul minim
+
+Se amana:
+
+- worldgen complet de la zero
+- dependinta obligatorie de WorldEdit
+- regenerarea agresiva a satelor existente
+
+### A2. Spawn order, case si familii
 
 Scop:
-- AI-ul ajuta la generarea scenariilor, dar pluginul ramane executorul si validatorul
 
-## Faza 1: First Playable Release
+- NPC-urile sa fie create numai dupa ce exista context semantic suficient: casa, node-uri, alocare si relatii
 
-Aceasta este faza care trebuie sa duca la primul release public sau semi-public.
+Flux intern recomandat:
 
-Obiectiv:
-- un server admin sa poata instala pluginul
-- sa poata crea sau incarca un sat demo
-- jucatorul sa poata interactiona cu NPC-uri
-- sa existe cateva questuri clare si completabile
+1. scanare sau definire manuala lume
+2. `WorldRegion`
+3. `WorldPlace` pentru case si locuri de munca
+4. `WorldNode` pentru pat, intrare, workstation si punct social
+5. `HouseAllocation`
+6. `NpcSpawnPlan`
+7. spawn batch
+8. salvare DB
+9. family bind
+10. audit spawn order
 
-## Must have
+Se ataca acum:
 
-- instalare clara si configurare minima
-- un scenariu medieval mic, dar complet
-- `5-10 NPC-uri` cu roluri diferite
-- `3-5 questuri` cap-coada
-- persistenta stabila pentru NPC-uri si questuri
-- fallback acceptabil cand AI-ul raspunde slab sau deloc
-- comenzi admin suficiente pentru create, info, tp, reload, world, audit si debugdump
-- documentatie de instalare si testare
+- generator real care produce automat `HouseAllocation` din mapping semantic
+- plannerul initial pentru o casa: `world household plan/spawn`
+- plannerul initial pentru regiune: `world settlement plan/spawn`
+- rollback global practic pentru `settlement spawn`
+- dry-run mai clar pentru planuri de spawn
+- persistenta dedicata pentru legatura NPC-place, peste bind-ul initial bazat pe `profile_data` si metadata
 
-## Should have
+Se amana:
 
-- extinderea rutinei zilnice initiale cu pathfinding/pasi intermediari si evenimente sociale probabilistice
-- mapping demo populat cu regiune, case, locuri de munca, piata si nodes
-- world admin stabilizat pe regiuni, places si noduri
-- mai multe mesaje de debug pentru probleme de config
-- reward-uri mai clare si mai consistente
+- rollback tranzactional complet pana cand fluxul MVP este stabil
+- spawn masiv fara plan serializabil si validabil
 
-## Can wait
+### A3. NPC lifecycle, rutina si simulare
 
-- economie completa
-- reputatie globala
-- NPC-uri non-villager
+Scop:
+
+- NPC-ul sa para parte din lume, nu doar entitate de dialog
+
+Se ataca acum:
+
+- rutina zilnica peste `home/work/social anchors`
+- reactii la stare, familie, emotii si context local
+- evenimente sociale probabilistice simple
+- evitarea intreruperii conversatiilor si questurilor active
+
+Se amana:
+
+- pathfinding natural complet
+- NPC-uri non-villager ca sistem general
+- simulare economica ampla
+
+### A4. Dialog, memorie si reactie NPC-jucator
+
+Scop:
+
+- dialogul sa foloseasca memoria, relatia, emotiile, questurile si story context-ul fara sa devina dependent de AI pentru logica de joc
+
+Se ataca acum:
+
+- raspunsuri mai clare cand NPC-ul are quest activ sau story state relevant
+- fallback-uri deterministe pentru intentii de quest
+- context prompt limitat si verificabil
+- debug pentru prompt, model si fallback
+
+Se amana:
+
+- AI care decide direct progresul questului
+- generare libera de actiuni runtime
+
+### A5. Questuri si story
+
+Scop:
+
+- questurile sa fie mici, clare, persistente si conectate la locuri semantice
+
+Se ataca acum:
+
+- 3-5 questuri medievale completabile cap-coada
+- obiective `visit_place` si `inspect_node` folosite real in demo
+- quest anchors persistente auditate si exportabile
+- story state si story events scrise numai prin actiuni validate
+- briefing, progres, recompensa si finalizare consistente
+
+Se amana:
+
 - branching avansat
-- scenarii generate prin prompt
+- multi-quest runtime matur pe jucator
+- reputatie globala pe factiuni
 
-## Criteriul de iesire din Faza 1
+### A6. Modularizare, API si addonuri
 
-Poti spune ca ai un `v0.1` sau `alpha` cand:
+Scop:
 
-- pluginul se instaleaza fara pasi obscuri
-- un demo medieval se joaca de la inceput la sfarsit
-- questurile nu se rup usor la reload
-- NPC-urile interactioneaza consistent
-- ai documentatie minima pentru admin
+- core-ul ramane platforma, iar scenariile si integrarile stau in addonuri separate
 
-## Faza 2: Stabilizare Modulare
+Se ataca dupa primul slice jucabil:
 
-Aceasta faza nu este despre continut nou mare, ci despre curatarea arhitecturii.
-
-Obiectiv:
-- addonurile sa poata depinde de `ainpc-api`, nu de internals
-
-## De facut
-
-- clarificarea responsabilitatilor `ainpc-api` vs `ainpc-core-plugin`
-- stabilizarea `AINPCPlatformApi`
-- extinderea documentatiei API
-- conventii pentru `capabilities` si `dependencies`
-- addon demo minim documentat
+- clarificarea contractelor `ainpc-api`
+- documentatie API pentru developer extern
+- capabilitati si dependinte validate la load
 - reload de continut mai sigur
-- mai putin coupling direct cu clase din core
+- addon medieval ca exemplu curat, nu hack peste internals
 
-## Criteriul de iesire din Faza 2
+Se amana:
 
-Poti spune ca ai `v0.2` sau `beta modular` cand:
+- ecosistem mare de addonuri inainte ca un addon real sa fie stabil
+- expunerea claselor interne doar pentru comoditate
 
-- un addon separat se poate conecta curat prin API
-- addonul poate instala continut fara hack-uri
-- nu trebuie sa importe clase interne instabile
-- documentatia API este suficienta pentru un developer extern
+### A7. Runtime de scenarii extensibil
 
-## Faza 3: Runtime de Scenarii Extensibil
+Scop:
 
-Aceasta este faza in care treci de la scenarii finite si relativ hardcodate la scenarii compuse din piese extensibile.
+- scenariile sa fie compuse din actiuni, conditii, trigger-e si tranzitii validate
 
-Obiectiv:
-- pluginul sa poata executa scenarii mai flexibile fara sa modifici core-ul pentru fiecare caz nou
-
-## De facut
+Se ataca dupa stabilizarea questurilor MVP:
 
 - `ScenarioActionRegistry`
 - `ScenarioConditionRegistry`
 - `ScenarioTriggerRegistry`
 - `ScenarioExecutionContext`
-- parser separat pentru scenarii
-- validator separat
-- suport YAML pentru:
-  - `actions`
-  - `conditions`
-  - `transitions`
-  - `cleanup`
+- `ScenarioVariableProvider`
+- `ScenarioValidationReport`
+- parser si validator separat pentru YAML
 
-## Puternic recomandat in aceasta faza
+Regula:
 
-- consum complet al `places` semantice in NPCContext, questuri si scenarii
-- questuri pe etape reale
-- NPC-uri temporare de quest
-- reactie NPC-jucator mai structurata
+- `ScenarioEngine` nu trebuie sa devina si mai mare; fiecare extensie noua trebuie sa impinga spre registri si validare.
 
-## Criteriul de iesire din Faza 3
+Se amana:
 
-Poti spune ca ai `v0.3` sau `advanced scenario runtime` cand:
+- scripting general inainte de contracte clare
+- executie de scenarii generate fara validare
 
-- scenariile nu mai depind exclusiv de if-uri in `ScenarioEngine`
-- poti adauga un tip nou de actiune fara sa rupi tot motorul
-- continutul poate fi validat inainte de executie
+### A8. Generare si authoring asistat de AI
 
-## Faza 4: Addon Ecosystem
+Scop:
 
-Aceasta este faza in care scenariile si capabilitatile noi se muta natural in jar-uri separate.
+- AI-ul ajuta la authoring, dar pluginul valideaza si executa determinist
 
-Obiectiv:
-- core-ul devine platforma
-- universurile si integratiile devin addonuri
+Model acceptat:
 
-## De facut
+1. prompt
+2. research/context
+3. alegere template
+4. draft YAML sau plan
+5. validare schema/capabilities/anchors
+6. import controlat in `packs/`
 
-- addon template oficial
-- exemple pentru `ainpc-scenario-*`
-- feature packs suplimentare:
-  - fantasy
-  - social
-  - modern
-- reguli de compatibilitate si versionare
-- mesaje mai clare pentru dependinte lipsa
-- validare de capabilitati la load
+Se ataca tarziu:
 
-## Rezultatul dorit
+- biblioteca de template-uri
+- validator matur
+- rapoarte de validare
+- generare de drafturi, nu executie directa
 
-- poti avea mai multe pachete tematice
-- poti porni servere cu continut diferit fara fork de proiect
-- poti combina addonuri fara configuratie fragila
-
-## Criteriul de iesire din Faza 4
-
-Poti spune ca ai `v0.4` sau `platform mode` cand:
-
-- exista cel putin `2-3` addonuri reale separate
-- core-ul ruleaza si fara sa fie lipit de un singur scenariu
-- ecosistemul are reguli clare de compatibilitate
-
-## Faza 5: Scenarii Prin Prompturi
-
-Aceasta faza trebuie sa vina tarziu, nu devreme.
-
-Obiectiv:
-- AI-ul ajuta la authoring de continut
-- pluginul valideaza si executa
-
-## Modelul corect
-
-Nu:
+Se amana explicit:
 
 - `prompt -> executie directa`
+- AI care construieste, spawneaza sau modifica DB fara dry-run
 
-Da:
+## Mecanici prioritare
 
-1. `prompt -> research`
-2. `research -> alegere template`
-3. `template -> draft de scenariu`
-4. `draft -> validare`
-5. `valid -> import in plugin`
+| Mecanica | Motor / componenta | Depinde de | Status intern | Urmatorul pas |
+|---|---|---|---|---|
+| Instalare plugin si reload | Platforma core | config, DB, pack loader | functional initial | documentatie scurta si smoke test |
+| Scanare sat vanilla | scanner world | lume incarcata | initial | import mai complet si raport de rezultate |
+| Mapping semantic manual/importat | world admin | regiuni, places, nodes | functional initial | demo map populat si validat |
+| Alocare casa si rezidenti | `HouseAllocation` | places/nodes valide | initial | generator din mapping semantic |
+| Spawn batch household | spawn orchestrator | plan validat | initial | dry-run/rollback mai clar |
+| Legare familie | `FamilyManager` | NPC-uri cu ID DB valid | initial | audit si cazuri de test mai clare |
+| Rutina zilnica | routine engine/service | ancore home/work/social | initial | pasi intermediari si evenimente sociale |
+| Dialog contextual | dialog/AI services | NPCContext, memorie, relatie | functional initial | debug prompt si fallback pe intentii |
+| Quest simplu | `ScenarioEngine` | pack YAML, DB player quests | functional initial | continut medieval cap-coada |
+| Quest pe locatie | quest anchors | mapping semantic | initial | folosire reala in demo si debugdump |
+| Story context | `StoryContextService` | mapping, quest anchors, story state | initial | audit/debugdump dedicat |
+| Story state persistent | `StoryStateService` | DB si actiuni quest validate | initial | reguli clare pentru scrieri si inspectie |
+| Feature packs | `FeaturePackLoader` | YAML valid | functional initial | validator de schema/capabilities |
+| Addon content | addon registry | API public | initial | stabilizare contract medieval addon |
+| Runtime extensibil | registri scenarii | quest MVP stabil | lipseste complet | proiectare si introducere incrementala |
+| Authoring AI | tool extern/template-uri | validatoare mature | viitor | nu se ataca inainte de A7 |
 
-## Ce trebuie sa existe inainte
+## Engine-uri de protejat
+
+| Engine / serviciu | Responsabilitate | Regula interna |
+|---|---|---|
+| Platform startup | initializeaza config, DB, servicii, comenzi si schedulere | nu se incarca logica de gameplay direct in startup |
+| Database layer | persistenta pentru NPC, quest, story, relatii si ancore | migrarile trebuie documentate si testate |
+| World admin | sursa semantica pentru regiuni, places si nodes | coordonatele brute sunt fallback, nu contract de gameplay |
+| Spawn orchestration | transforma alocari valide in NPC-uri reale | spawn fara plan validabil este interzis |
+| Routine engine | misca NPC-urile intre ancore | nu trebuie sa intrerupa interactiuni critice |
+| Dialog/AI layer | produce raspunsuri conversaionale | nu decide starea autoritara a questului |
+| Scenario/quest engine | executa questuri si scenarii | trebuie spart treptat in registri, nu extins monolitic |
+| Quest anchor resolver | leaga obiectivele de mapping semantic | binding-urile trebuie auditate si exportabile |
+| Story context service | produce snapshot read-only | nu scrie in DB si nu genereaza questuri |
+| Story state service | scrie/citeste story state si events | scrierile vin prin actiuni validate |
+| Feature pack loader | incarca continut YAML | trebuie sa raporteze clar schema/dependinte/capabilitati invalide |
+| Addon registry | conecteaza addonuri externe | nu trebuie sa expuna internals instabile |
+
+## Ordinea de dezvoltare
+
+### P0. Baseline verificabil
+
+Obiectiv:
+
+- build-ul si documentatia sa reflecte starea reala.
+
+Livrabile:
+
+- `mvn test` trece
+- `implementat-deja.md`, `TODO.md` si documentul afectat sunt actualizate dupa schimbari majore
+- comenzile de audit/debug functioneaza pentru fluxurile atinse
+
+### P1. Mapping demo minim
+
+Obiectiv:
+
+- sa existe o lume semantica minima folosibila in test.
+
+Livrabile:
+
+- o regiune demo
+- cateva case
+- locuri de munca
+- punct social/piata
+- node-uri pentru pat, intrare, workstation si inspectie
+- audit world fara erori majore
+
+### P2. Spawn order complet pentru household
+
+Obiectiv:
+
+- NPC-urile demo sa fie create din plan, nu prin pasi manuali fragili.
+
+Livrabile:
+
+- `HouseAllocation` generat sau completat din mapping
+- `NpcSpawnPlan` validabil
+- dry-run de spawn
+- spawn batch cu familie si ancore
+- audit spawn order dupa creare
+
+### P3. Rutina NPC si interactiune stabila
+
+Obiectiv:
+
+- NPC-urile demo sa aiba comportament zilnic minim si dialog consistent.
+
+Livrabile:
+
+- rutina home/work/social activa
+- fallback cand lipsesc ancore
+- interactiuni care nu rup rutina
+- debug pentru dialog si prompt
+
+### P4. First playable medieval slice
+
+Obiectiv:
+
+- un admin poate instala pluginul si juca un scenariu medieval mic de la inceput la sfarsit.
+
+Livrabile:
+
+- 5-10 NPC-uri cu roluri clare
+- 3-5 questuri completabile
+- obiective pe conversatie, iteme, regiuni, places si nodes
+- recompense clare
+- persistenta stabila la reload
+- documentatie scurta de instalare si testare
+
+### P5. Story si observabilitate
+
+Obiectiv:
+
+- story context-ul si story state-ul sa fie utile, verificabile si controlate.
+
+Livrabile:
+
+- audit/debugdump pentru story state si events
+- export complet pentru `quest_anchor_bindings`
+- rapoarte clare cand un quest nu isi poate rezolva ancora
+- story actions validate in quest rewards
+
+### P6. Stabilizare modulara
+
+Obiectiv:
+
+- addonurile sa consume `ainpc-api`, nu clase interne instabile.
+
+Livrabile:
+
+- contracte API documentate
+- capabilities/dependencies verificate
+- addon medieval curat
+- reload de continut mai sigur
+
+### P7. Runtime extensibil pentru scenarii
+
+Obiectiv:
+
+- scenariile sa fie compuse din piese validate si extensibile.
+
+Livrabile:
+
+- registri pentru actiuni, conditii si trigger-e
+- context de executie separat
+- validator de scenarii
+- raport de validare pentru pack-uri
+
+### P8. Ecosistem de addonuri
+
+Obiectiv:
+
+- continutul tematic sa poata fi livrat din jar-uri separate.
+
+Livrabile:
+
+- template addon oficial
+- 2-3 addonuri sau pack-uri reale
+- reguli de versionare
+- mesaje clare pentru dependinte lipsa
+
+### P9. Authoring asistat de AI
+
+Obiectiv:
+
+- AI-ul produce drafturi validate, nu executie directa.
+
+Livrabile:
 
 - template-uri de scenarii
-- validator de schema
-- validator de capabilitati
-- registri maturi de actiuni si conditii
-- documentatie API buna
-- context semantic despre lume, NPC-uri si questuri
-- `WorldContextSnapshot` si story state validabil peste mapping semantic
-
-## De facut
-
-- script sau tool extern de generare
-- biblioteca de template-uri
+- validator schema/capabilities/anchors
 - raport de validare
 - import controlat in `packs/`
-- eventual mod `deep research` pentru cereri complexe
 
-## Criteriul de iesire din Faza 5
+## Prioritatea imediata
 
-Poti spune ca ai `v0.5` sau `AI-assisted authoring` cand:
+Urmatoarea ordine de lucru recomandata este:
 
-- un prompt poate produce un draft coerent
-- draftul trece prin validator
-- validatorul poate spune clar daca resursele actuale sunt suficiente
-- scenariul rezultat nu ocoleste contractele platformei
+1. audit/debugdump pentru story state si story events
+2. export/debugdump complet pentru `quest_anchor_bindings`
+3. mapping demo real cu regiune, case, locuri de munca, piata si nodes
+4. generator sau completare automata `HouseAllocation` din mapping semantic
+5. dry-run si audit mai clar pentru spawn household
+6. 3-5 questuri medievale cap-coada care folosesc NPC-uri, places si nodes
+7. fallback-uri deterministe pentru intentii de quest in dialog
+8. documentatie scurta pentru instalare, testare si reset demo
+9. stabilizare API/addon dupa ce slice-ul medieval este jucabil
+10. registri de scenarii numai dupa ce questurile MVP sunt stabile
 
-## V1.0 realist
+## Dependinte critice
 
-Un `v1.0` realist pentru proiectul tau nu inseamna:
+Respecta aceste dependinte cand alegi taskurile:
 
-- toate sistemele imaginabile
-- generare infinita
-- toate tipurile de NPC
+| Nu incepe | Pana cand nu exista |
+|---|---|
+| spawn automat mare | mapping semantic minim si dry-run |
+| rutina complexa | ancore home/work/social stabile |
+| questuri pe locatie | `quest_anchor_bindings` verificabile |
+| story AI mai bogat | story context/state auditabil |
+| addon ecosystem | `ainpc-api` stabilizat |
+| scenarii programabile | registri si validator |
+| authoring AI | template-uri si validatoare mature |
+| economie/reputatie globala | first playable release stabil |
 
-Un `v1.0` realist inseamna:
+## Ce nu se ataca acum
 
-- first release deja stabilizat in productie mica
-- API public clar
-- addonuri separate functionale
-- runtime de scenarii suficient de extensibil
-- continut modular real
+Pentru primul release jucabil, nu prioritiza:
 
-## Propunere simpla de versiuni
+- generare directa prin prompt
+- economie completa
+- reputatie globala pe factiuni sau regiuni
+- sistem RPG complet
+- NPC-uri non-villager ca platforma generala
+- WorldEdit ca dependinta obligatorie
+- branching complex inainte ca questurile simple sa fie stabile
+- scripting general fara validator
+- refactorizari mari care nu produc un flux testabil
 
-### `v0.1-alpha`
+## Definition of Done intern
 
-Focus:
-- demo medieval jucabil
-- stabilitate
-- instalare si documentatie minima
+O sarcina este considerata terminata numai daca:
 
-### `v0.2-beta`
+- build-ul trece sau este mentionat clar de ce nu a fost rulat
+- exista test automat, smoke test sau comanda admin pentru verificare
+- configuratia noua are default sigur
+- datele persistente noi au strategie de migration/backfill sau explicatie de compatibilitate
+- audit/debugdump poate ajuta la investigarea erorilor principale
+- documentatia afectata este actualizata
+- nu a crescut coupling-ul intre addonuri si internals core
 
-Focus:
-- API mai clar
-- modularizare mai curata
-- addon model mai solid
+## Regula de decizie
 
-### `v0.3`
+Cand exista dubiu intre doua directii, se alege directia care:
 
-Focus:
-- runtime de scenarii extensibil
-- questuri mai avansate
-- obiective `visit_place` si `inspect_node`
-- NPC-uri temporare
+1. apropie proiectul de un scenariu medieval jucabil
+2. reduce riscul de date rupte sau greu de investigat
+3. foloseste mapping semantic in loc de coordonate brute
+4. lasa o componenta mai clara, nu mai monolitica
+5. poate fi verificata prin test, audit, debugdump sau smoke test in joc
 
-### `v0.4`
+Concluzia interna:
 
-Focus:
-- ecosistem de addonuri
-- mai multe scenarii tematice
-- compatibilitate si validare
-
-### `v0.5`
-
-Focus:
-- authoring asistat de AI
-- template-uri
-- validator de capabilitati
-
-### `v1.0`
-
-Focus:
-- platforma modulara stabila
-- documentatie suficienta
-- scenarii livrabile si extensibile
-
-## Prioritatea recomandata chiar acum
-
-Daca alegi doar urmatoarele directii pentru perioada imediata, ele sunt cele mai valoroase:
-
-1. `first playable release`
-2. stabilitate si debug
-3. generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
-4. popularea unui mapping demo real cu scannerul vanilla si import semantic
-5. `WorldContextSnapshot` pentru NPCContext, questuri si story
-6. comenzi admin pentru validare/dry-run planuri serializate
-7. evenimente sociale probabilistice peste rutina
-8. API si modularizare curate
-9. runtime extensibil pentru scenarii
-
-Nu recomand sa intri acum direct in:
-
-- prompt generation
-- scripting avansat
-- economie mare
-- sisteme foarte largi de reputatie sau RPG
-
-## Concluzie
-
-Roadmap-ul sanatos pentru proiect este:
-
-1. scoate un release mic, dar complet
-2. stabilizeaza modularitatea
-3. deschide runtime-ul pentru extensii
-4. construieste ecosistemul de addonuri
-5. adauga AI-ul ca tool de authoring, nu ca substitut pentru arhitectura
-
-Aceasta ordine iti permite sa livrezi ceva jucabil devreme, fara sa blochezi proiectul in infrastructura nesfarsita.
+- proiectul nu trebuie impins direct spre AI sau ecosistem mare
+- ordinea corecta este lume semantica, spawn, rutina, quest, story, modularizare, runtime extensibil, apoi authoring AI
+- primul obiectiv real ramane un demo medieval mic, stabil si jucabil cap-coada

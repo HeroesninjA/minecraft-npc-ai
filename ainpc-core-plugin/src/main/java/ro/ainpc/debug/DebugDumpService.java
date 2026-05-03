@@ -180,7 +180,7 @@ public class DebugDumpService {
                 warnings.add("World admin nu are places.");
             }
             for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
-                if (place.placeType().getId().equals("house") && place.ownerNpcId().isBlank()) {
+                if (place.placeType().getId().equals("house") && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
                     warnings.add("Casa fara owner_npc_id: " + place.id());
                 }
                 if (isWorkplace(place) && worldAdmin.getNodesForPlace(place.id()).isEmpty()) {
@@ -397,6 +397,15 @@ public class DebugDumpService {
                 case FORGE, SHOP, FARM, MARKET, TAVERN -> true;
                 default -> false;
             };
+    }
+
+    private boolean hasPendingOwner(WorldPlaceInfo place) {
+        String ownerStatus = place.metadata().getOrDefault("owner_status", "");
+        String ownerPending = place.metadata().getOrDefault("owner_pending", "");
+        return "pending".equalsIgnoreCase(ownerStatus)
+            || "true".equalsIgnoreCase(ownerPending)
+            || ("demo_mapping".equalsIgnoreCase(place.metadata().getOrDefault("source", ""))
+                && place.hasTag("demo"));
     }
 
     private void auditHouseSpawnOrder(WorldAdminApi worldAdmin,

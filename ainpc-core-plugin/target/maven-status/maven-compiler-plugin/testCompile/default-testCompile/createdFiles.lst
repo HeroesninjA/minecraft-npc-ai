@@ -1,5 +1,6 @@
 ro\ainpc\spawn\HouseAllocationValidatorTest$FakeWorldAdmin.class
 ro\ainpc\spawn\HouseAllocationValidatorTest.class
+ro\ainpc\world\HouseAllocationPlannerTest.class
 ro\ainpc\world\QuestAnchorResolverTest.class
 ro\ainpc\spawn\HouseAllocationTest.class
 ro\ainpc\routine\RoutineEngineTest.class

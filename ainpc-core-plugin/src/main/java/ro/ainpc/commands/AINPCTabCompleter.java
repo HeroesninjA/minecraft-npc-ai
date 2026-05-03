@@ -37,12 +37,16 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> QUEST_DECISION_MODES = Arrays.asList(
         "accept", "decline", "yes", "y", "da", "ok", "confirm", "deny", "reject", "no", "n", "nu", "refuz"
     );
-    private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "save");
-    private static final List<String> STORY_MODES = Arrays.asList("context");
+    private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "household", "settlement", "save");
+    private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> NODE_ACTIONS = Arrays.asList("create");
     private static final List<String> SCAN_TARGETS = Arrays.asList("village");
+    private static final List<String> DEMO_ACTIONS = Arrays.asList("create");
+    private static final List<String> BIND_TARGETS = Arrays.asList("npc");
+    private static final List<String> HOUSEHOLD_ACTIONS = Arrays.asList("plan", "spawn");
+    private static final List<String> SETTLEMENT_ACTIONS = Arrays.asList("plan", "spawn");
     private static final List<String> REGION_TYPES = Arrays.stream(RegionType.values())
         .map(RegionType::getId)
         .sorted()
@@ -157,6 +161,15 @@ public class AINPCTabCompleter implements TabCompleter {
         } else if (args.length == 4 && "context".equalsIgnoreCase(args[1])) {
             completions.addAll(filterStartsWith(List.of("nearest"), args[3]));
             completions.addAll(getNPCNames(args[3]));
+        } else if (args.length == 3 && "region".equalsIgnoreCase(args[1])) {
+            completions.addAll(getRegionIds(args[2]));
+        } else if (args.length == 3 && "place".equalsIgnoreCase(args[1])) {
+            completions.addAll(getPlaceIds(args[2]));
+        } else if (args.length == 3 && "events".equalsIgnoreCase(args[1])) {
+            completions.addAll(getRegionIds(args[2]));
+            completions.addAll(getPlaceIds(args[2]));
+        } else if (args.length == 4 && "events".equalsIgnoreCase(args[1])) {
+            completions.addAll(filterStartsWith(List.of("5", "10", "20", "50"), args[3]));
         }
         return completions;
     }
@@ -240,6 +253,44 @@ public class AINPCTabCompleter implements TabCompleter {
                 } else if (args.length == 6 && "village".equalsIgnoreCase(args[2])
                     && "import".equalsIgnoreCase(args[4])) {
                     completions.add("<regionId>");
+                }
+            }
+            case "demo" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(DEMO_ACTIONS, args[2]));
+                } else if (args.length == 4 && "create".equalsIgnoreCase(args[2])) {
+                    completions.add("<regionId>");
+                }
+            }
+            case "bind" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(BIND_TARGETS, args[2]));
+                } else if (args.length == 4 && "npc".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(List.of("nearest"), args[3]));
+                    completions.addAll(getNPCNames(args[3]));
+                } else if (args.length == 5 && "npc".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getPlaceIds(args[4]));
+                } else if ((args.length == 6 || args.length == 7) && "npc".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(List.of("-"), args[args.length - 1]));
+                    completions.addAll(getPlaceIds(args[args.length - 1]));
+                }
+            }
+            case "household" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(HOUSEHOLD_ACTIONS, args[2]));
+                } else if (args.length == 4 && HOUSEHOLD_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                    completions.addAll(getPlaceIds(args[3]));
+                } else if (args.length == 5 && HOUSEHOLD_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                    completions.addAll(filterStartsWith(Arrays.asList("1", "2", "3", "4"), args[4]));
+                }
+            }
+            case "settlement" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(SETTLEMENT_ACTIONS, args[2]));
+                } else if (args.length == 4 && SETTLEMENT_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                    completions.addAll(getRegionIds(args[3]));
+                } else if (args.length == 5 && SETTLEMENT_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                    completions.addAll(filterStartsWith(Arrays.asList("1", "2", "4", "8"), args[4]));
                 }
             }
         }

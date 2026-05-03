@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
 ## Exista deja
 
@@ -21,12 +21,22 @@ Actualizat: 2026-04-30
 - [x] Persistenta dedicata `quest_anchor_bindings` pentru ancore semantice de quest
 - [x] Audit si comanda admin read-only pentru `quest_anchor_bindings`
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
+- [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
+- [x] Comenzi read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`
+- [x] Actiuni de quest `set_story_state` si `record_story_event`
+- [x] Comanda `/ainpc world demo create [regionId]` pentru mapping demo minim in jurul jucatorului
+- [x] Comanda `/ainpc world bind npc ...` pentru legarea initiala NPC -> home/work/social places
+- [x] Planner `/ainpc world household plan ...` pentru `HouseAllocation` din mapping
+- [x] Spawn `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
+- [x] Planner `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
+- [x] Spawn `/ainpc world settlement spawn ...` pentru household-uri secventiale pe regiune
+- [x] Rollback global practic pentru `settlement spawn` daca un household ulterior esueaza
 - [x] `HouseAllocation` initial pentru case cu mai multi rezidenti si conversie catre `NpcSpawnPlan`
 - [x] Dry-run si spawn batch initial pentru household, cu rollback practic daca spawn-ul esueaza la mijloc
 
 ## Prioritate curenta
 
-- [ ] Story state persistent pe regiune/place si `story_events`
+- [ ] Audit/debugdump dedicat pentru story state si story events
 - [ ] Questuri complete pe NPC, cu obiective clare si progres persistent
 - [ ] Export/debugdump complet pentru `quest_anchor_bindings`
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes
@@ -81,13 +91,19 @@ Actualizat: 2026-04-30
 - [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
 - [x] Quest anchors persistente pe `regionId`, `placeId`, `nodeId` si `npcId`
 - [x] Context narativ read-only peste mapping si quest anchors
-- [ ] Story state pe regiune, pentru lumi care evolueaza in timp
+- [x] Story state pe regiune/place, pentru lumi care evolueaza in timp
+- [x] Quest completion poate scrie story state si story events prin actiuni controlate
 
 ## Lume si gameplay
 
 - [ ] Regiuni cu identitate proprie: sat, castel, pestera, dungeon
+- [ ] Demo mapping salvat si verificat pe server Paper real cu `/ainpc audit world`
+- [x] Bind manual initial NPC-place pentru demo mapping si harti manuale
 - [ ] Spawn si comportament diferit pe tipuri de zona
 - [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
+- [x] Planner pentru tot satul, nu doar pentru o singura casa
+- [ ] Generator narativ mai bun pentru nume, roluri si familii pe regiune
+- [ ] Tranzactie DB completa pentru spawn pe regiune, peste mapping/family bind
 - [ ] Economie de baza: monede, tranzactii, roluri comerciale
 - [ ] Reputatie pe sat, regiune sau factiune
 - [ ] Sistem de progres pentru jucator: nivel, skill-uri sau experienta

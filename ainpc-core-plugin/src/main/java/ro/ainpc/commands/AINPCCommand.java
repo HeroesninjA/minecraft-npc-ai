@@ -15,7 +15,16 @@ import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.routine.RoutineAssignment;
 import ro.ainpc.routine.RoutineTickSummary;
+import ro.ainpc.spawn.HouseAllocation;
+import ro.ainpc.spawn.HouseAllocationPlanner;
+import ro.ainpc.spawn.HouseholdSpawnResult;
+import ro.ainpc.spawn.NpcSpawnPlan;
+import ro.ainpc.spawn.NpcSpawnResult;
+import ro.ainpc.spawn.SettlementSpawnResult;
+import ro.ainpc.story.PlaceStoryState;
+import ro.ainpc.story.RegionStoryState;
 import ro.ainpc.story.StoryContextSnapshot;
+import ro.ainpc.story.StoryEvent;
 import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.RegionType;
 import ro.ainpc.world.WorldAdminService;
@@ -33,6 +42,10 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -49,6 +62,9 @@ import java.util.UUID;
 public class AINPCCommand implements CommandExecutor {
 
     private static final int AUDIT_PREVIEW_LIMIT = 12;
+    private static final int STORY_EVENT_DEFAULT_LIMIT = 10;
+    private static final int STORY_EVENT_MAX_LIMIT = 50;
+    private static final DateTimeFormatter STORY_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AINPCPlugin plugin;
 
@@ -57,6 +73,9 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private record StoryContextTarget(Player player, String npcSelector) {
+    }
+
+    private record StoryEventTarget(String regionId, String placeId, String label, boolean mapped) {
     }
 
     private record QuestDecisionTarget(Player player, AINPC npc) {
@@ -975,11 +994,166 @@ public class AINPCCommand implements CommandExecutor {
         String storyMode = args[1].toLowerCase();
         return switch (storyMode) {
             case "context" -> handleStoryContext(sender, args);
+            case "region" -> handleStoryRegion(sender, args);
+            case "place" -> handleStoryPlace(sender, args);
+            case "events" -> handleStoryEvents(sender, args);
             default -> {
                 sendStoryUsage(sender);
                 yield true;
             }
         };
+    }
+
+    private boolean handleStoryRegion(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc story region <regionId>");
+            return true;
+        }
+        if (plugin.getStoryStateService() == null) {
+            plugin.getMessageUtils().send(sender, "&cStoryStateService nu este initializat.");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = getEnabledWorldAdmin();
+        WorldRegionInfo mappedRegion = resolveSingleStoryRegion(sender, worldAdmin, args[2]);
+        if (mappedRegion == null && hasAmbiguousRegionMatch(worldAdmin, args[2])) {
+            return true;
+        }
+
+        String regionId = mappedRegion != null ? mappedRegion.id() : args[2];
+        try {
+            RegionStoryState state = plugin.getStoryStateService().getRegionState(regionId).orElse(null);
+            List<StoryEvent> events = plugin.getStoryStateService()
+                .listRecentEvents(regionId, "", 5);
+
+            plugin.getMessageUtils().send(sender, "&6=== Story Region ===");
+            plugin.getMessageUtils().send(sender, "&eRegion ID: &f" + regionId);
+            if (mappedRegion != null) {
+                plugin.getMessageUtils().send(sender, "&eMapping name: &f" + mappedRegion.name());
+                plugin.getMessageUtils().send(sender, "&eMapping story mode: &f" + mappedRegion.storyMode().getId());
+                plugin.getMessageUtils().send(sender, "&eMapping story state: &f" + mappedRegion.storyStateKey());
+                plugin.getMessageUtils().send(sender, "&eMapping story pool: &f" + formatList(mappedRegion.storyPool()));
+            } else {
+                plugin.getMessageUtils().send(sender, "&eMapping: &7nu exista regiune mapata pentru selectorul dat");
+            }
+
+            if (state == null) {
+                plugin.getMessageUtils().send(sender, "&ePersistent state: &7nu exista rand in region_story_state");
+            } else {
+                sendRegionStoryState(sender, state);
+            }
+            plugin.getMessageUtils().send(sender, "&eEvenimente recente: &f" + events.size());
+            for (StoryEvent event : events) {
+                plugin.getMessageUtils().send(sender, "&7- " + formatStoryEvent(event));
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().warning("Nu am putut citi story state pentru regiune: " + exception.getMessage());
+            plugin.getMessageUtils().send(sender, "&cNu am putut citi story state: " + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleStoryPlace(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc story place <placeId>");
+            return true;
+        }
+        if (plugin.getStoryStateService() == null) {
+            plugin.getMessageUtils().send(sender, "&cStoryStateService nu este initializat.");
+            return true;
+        }
+
+        WorldAdminApi worldAdmin = getEnabledWorldAdmin();
+        WorldPlaceInfo mappedPlace = resolveSingleStoryPlace(sender, worldAdmin, args[2]);
+        if (mappedPlace == null && hasAmbiguousPlaceMatch(worldAdmin, args[2])) {
+            return true;
+        }
+
+        String placeId = mappedPlace != null ? mappedPlace.id() : args[2];
+        String regionId = mappedPlace != null ? mappedPlace.regionId() : inferRegionIdFromPlaceId(placeId);
+        try {
+            PlaceStoryState state = plugin.getStoryStateService().getPlaceState(placeId).orElse(null);
+            List<StoryEvent> events = plugin.getStoryStateService()
+                .listRecentEvents(regionId, placeId, 5);
+
+            plugin.getMessageUtils().send(sender, "&6=== Story Place ===");
+            plugin.getMessageUtils().send(sender, "&ePlace ID: &f" + placeId);
+            if (mappedPlace != null) {
+                plugin.getMessageUtils().send(sender, "&eMapping name: &f" + mappedPlace.displayName());
+                plugin.getMessageUtils().send(sender, "&eRegiune: &f" + mappedPlace.regionId());
+                plugin.getMessageUtils().send(sender, "&eTip: &f" + mappedPlace.placeType().getId());
+                plugin.getMessageUtils().send(sender, "&eMetadata story: &f" + formatStoryMetadata(mappedPlace.metadata()));
+            } else {
+                plugin.getMessageUtils().send(sender, "&eMapping: &7nu exista place mapat pentru selectorul dat");
+            }
+
+            if (state == null) {
+                plugin.getMessageUtils().send(sender, "&ePersistent state: &7nu exista rand in place_story_state");
+            } else {
+                sendPlaceStoryState(sender, state);
+            }
+            plugin.getMessageUtils().send(sender, "&eEvenimente recente: &f" + events.size());
+            for (StoryEvent event : events) {
+                plugin.getMessageUtils().send(sender, "&7- " + formatStoryEvent(event));
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().warning("Nu am putut citi story state pentru place: " + exception.getMessage());
+            plugin.getMessageUtils().send(sender, "&cNu am putut citi story state: " + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleStoryEvents(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc story events <regionId|placeId> [limit]");
+            return true;
+        }
+        if (plugin.getStoryStateService() == null) {
+            plugin.getMessageUtils().send(sender, "&cStoryStateService nu este initializat.");
+            return true;
+        }
+
+        int limit = STORY_EVENT_DEFAULT_LIMIT;
+        if (args.length >= 4) {
+            Integer parsedLimit = parseIntegerStrict(args[3]);
+            if (parsedLimit == null || parsedLimit <= 0) {
+                plugin.getMessageUtils().send(sender, "&cLimit trebuie sa fie un numar pozitiv.");
+                return true;
+            }
+            limit = Math.min(parsedLimit, STORY_EVENT_MAX_LIMIT);
+        }
+
+        StoryEventTarget target = resolveStoryEventTarget(sender, args[2]);
+        if (target == null) {
+            return true;
+        }
+
+        try {
+            List<StoryEvent> events = plugin.getStoryStateService()
+                .listRecentEvents(target.regionId(), target.placeId(), limit);
+            plugin.getMessageUtils().send(sender, "&6=== Story Events ===");
+            plugin.getMessageUtils().send(sender, "&eTinta: &f" + target.label());
+            if (!target.mapped()) {
+                plugin.getMessageUtils().send(sender, "&7Selectorul nu a fost gasit in mapping; se cauta direct in DB.");
+            }
+            if (events.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&7Nu exista story_events pentru tinta curenta.");
+                return true;
+            }
+            for (StoryEvent event : events) {
+                plugin.getMessageUtils().send(sender, "&7- " + formatStoryEvent(event));
+                if (!event.description().isBlank()) {
+                    plugin.getMessageUtils().send(sender, "&8  " + event.description());
+                }
+                if (!event.payload().isEmpty()) {
+                    plugin.getMessageUtils().send(sender, "&8  payload: " + formatMap(event.payload()));
+                }
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().warning("Nu am putut lista story events: " + exception.getMessage());
+            plugin.getMessageUtils().send(sender, "&cNu am putut lista story events: " + exception.getMessage());
+        }
+        return true;
     }
 
     private boolean handleStoryContext(CommandSender sender, String[] args) {
@@ -1078,9 +1252,169 @@ public class AINPCCommand implements CommandExecutor {
         return npc;
     }
 
+    private WorldAdminApi getEnabledWorldAdmin() {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        return worldAdmin != null && worldAdmin.isEnabled() ? worldAdmin : null;
+    }
+
+    private WorldRegionInfo resolveSingleStoryRegion(CommandSender sender, WorldAdminApi worldAdmin, String selector) {
+        if (worldAdmin == null) {
+            return null;
+        }
+
+        List<WorldRegionInfo> matches = findRegionMatches(worldAdmin, selector);
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru regiune. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(matches.stream().map(WorldRegionInfo::id).toList()));
+            return null;
+        }
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    private WorldPlaceInfo resolveSingleStoryPlace(CommandSender sender, WorldAdminApi worldAdmin, String selector) {
+        if (worldAdmin == null) {
+            return null;
+        }
+
+        List<WorldPlaceInfo> matches = findPlaceMatches(worldAdmin, selector);
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru place. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(matches.stream().map(WorldPlaceInfo::id).toList()));
+            return null;
+        }
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    private boolean hasAmbiguousRegionMatch(WorldAdminApi worldAdmin, String selector) {
+        return worldAdmin != null && findRegionMatches(worldAdmin, selector).size() > 1;
+    }
+
+    private boolean hasAmbiguousPlaceMatch(WorldAdminApi worldAdmin, String selector) {
+        return worldAdmin != null && findPlaceMatches(worldAdmin, selector).size() > 1;
+    }
+
+    private StoryEventTarget resolveStoryEventTarget(CommandSender sender, String selector) {
+        WorldAdminApi worldAdmin = getEnabledWorldAdmin();
+        if (worldAdmin != null) {
+            List<WorldPlaceInfo> placeMatches = findPlaceMatches(worldAdmin, selector);
+            if (placeMatches.size() > 1) {
+                plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru place. Foloseste ID-ul complet.");
+                plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(placeMatches.stream().map(WorldPlaceInfo::id).toList()));
+                return null;
+            }
+            if (placeMatches.size() == 1) {
+                WorldPlaceInfo place = placeMatches.get(0);
+                return new StoryEventTarget(
+                    place.regionId(),
+                    place.id(),
+                    "place " + place.id(),
+                    true
+                );
+            }
+
+            List<WorldRegionInfo> regionMatches = findRegionMatches(worldAdmin, selector);
+            if (regionMatches.size() > 1) {
+                plugin.getMessageUtils().send(sender, "&cSelector ambiguu pentru regiune. Foloseste ID-ul complet.");
+                plugin.getMessageUtils().send(sender, "&7Potriviri: &f" + formatList(regionMatches.stream().map(WorldRegionInfo::id).toList()));
+                return null;
+            }
+            if (regionMatches.size() == 1) {
+                WorldRegionInfo region = regionMatches.get(0);
+                return new StoryEventTarget(
+                    region.id(),
+                    "",
+                    "region " + region.id(),
+                    true
+                );
+            }
+        }
+
+        String rawSelector = selector != null ? selector.trim() : "";
+        if (rawSelector.isBlank()) {
+            plugin.getMessageUtils().send(sender, "&cSelectorul story events nu poate fi gol.");
+            return null;
+        }
+        if (rawSelector.contains(":")) {
+            return new StoryEventTarget(
+                inferRegionIdFromPlaceId(rawSelector),
+                rawSelector,
+                "place " + rawSelector,
+                false
+            );
+        }
+        return new StoryEventTarget(rawSelector, "", "region " + rawSelector, false);
+    }
+
+    private void sendRegionStoryState(CommandSender sender, RegionStoryState state) {
+        plugin.getMessageUtils().send(sender, "&ePersistent mode: &f" + state.storyMode().getId());
+        plugin.getMessageUtils().send(sender, "&ePersistent state: &f" + state.stateKey());
+        plugin.getMessageUtils().send(sender, "&ePersistent pool: &f" + formatList(state.storyPool()));
+        plugin.getMessageUtils().send(sender, "&eVariables: &f" + formatMap(state.variables()));
+        plugin.getMessageUtils().send(sender, "&eUpdated: &f" + formatStoryTime(state.updatedAt())
+            + " &7by &f" + formatOptional(state.updatedBy())
+            + " &7source=&f" + formatOptional(state.source()));
+    }
+
+    private void sendPlaceStoryState(CommandSender sender, PlaceStoryState state) {
+        plugin.getMessageUtils().send(sender, "&ePersistent state: &f" + state.stateKey());
+        plugin.getMessageUtils().send(sender, "&eRegion: &f" + formatOptional(state.regionId()));
+        plugin.getMessageUtils().send(sender, "&eVariables: &f" + formatMap(state.variables()));
+        plugin.getMessageUtils().send(sender, "&eUpdated: &f" + formatStoryTime(state.updatedAt())
+            + " &7by &f" + formatOptional(state.updatedBy())
+            + " &7source=&f" + formatOptional(state.source()));
+    }
+
+    private String formatStoryEvent(StoryEvent event) {
+        String eventKey = event.eventKey().isBlank() ? "<no-key>" : event.eventKey();
+        String title = event.title().isBlank() ? "" : " - " + event.title();
+        String actor = event.actorType().isBlank() && event.actorId().isBlank()
+            ? ""
+            : " actor=" + formatOptional(event.actorType()) + ":" + formatOptional(event.actorId());
+        return "#" + event.id()
+            + " " + formatStoryTime(event.createdAt())
+            + " " + event.scopeType() + ":" + event.scopeId()
+            + " " + event.eventType() + "/" + eventKey
+            + title
+            + actor;
+    }
+
+    private String formatStoryMetadata(Map<String, String> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return "<gol>";
+        }
+
+        Map<String, String> storyMetadata = new HashMap<>();
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            String key = entry.getKey() != null ? entry.getKey().toLowerCase() : "";
+            if (key.contains("story") || key.contains("event") || key.contains("state")
+                || key.contains("tension") || key.contains("danger") || key.contains("conflict")) {
+                storyMetadata.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return formatMap(storyMetadata);
+    }
+
+    private String inferRegionIdFromPlaceId(String placeId) {
+        if (placeId == null || placeId.isBlank() || !placeId.contains(":")) {
+            return "";
+        }
+        return placeId.substring(0, placeId.indexOf(':'));
+    }
+
+    private String formatStoryTime(long epochMillis) {
+        if (epochMillis <= 0L) {
+            return "<necunoscut>";
+        }
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault())
+            .format(STORY_TIME_FORMAT);
+    }
+
     private void sendStoryUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
         plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story region <regionId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story place <placeId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story events <regionId|placeId> [limit]");
         plugin.getMessageUtils().send(sender, "&7Fara NPC tinta, contextul este construit pentru locatia jucatorului.");
     }
 
@@ -1103,6 +1437,10 @@ public class AINPCCommand implements CommandExecutor {
             case "place" -> handleWorldPlace(sender, args);
             case "node" -> handleWorldNode(sender, args);
             case "scan" -> handleWorldScan(sender, args);
+            case "demo" -> handleWorldDemo(sender, args);
+            case "bind" -> handleWorldBind(sender, args);
+            case "household" -> handleWorldHousehold(sender, args);
+            case "settlement" -> handleWorldSettlement(sender, args);
             case "save" -> handleWorldSave(sender);
             default -> {
                 sendWorldUsage(sender);
@@ -1281,6 +1619,406 @@ public class AINPCCommand implements CommandExecutor {
         }
         plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti mapping-ul.");
         return true;
+    }
+
+    private boolean handleWorldDemo(CommandSender sender, String[] args) {
+        if (args.length < 3 || args.length > 4 || !"create".equalsIgnoreCase(args[2])) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world demo create [regionId]");
+            plugin.getMessageUtils().send(sender, "&7Creeaza un mapping demo minim in jurul pozitiei tale curente.");
+            return true;
+        }
+
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        String regionId = args.length == 4 ? args[3] : null;
+        Location location = player.getLocation();
+        try {
+            WorldAdminService.DemoMappingResult result = worldAdmin.createDemoSettlement(
+                regionId,
+                player.getWorld().getName(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ(),
+                player.getWorld().getMinHeight(),
+                player.getWorld().getMaxHeight()
+            );
+
+            plugin.getMessageUtils().send(sender, "&aMapping demo creat in regiunea &f" + result.regionId() + "&a.");
+            plugin.getMessageUtils().send(sender, "&7Centru: &f" + location.getBlockX() + ", "
+                + location.getBlockY() + ", " + location.getBlockZ());
+            plugin.getMessageUtils().send(sender, "&7Places create: &f" + result.createdPlaceIds().size()
+                + " &7| Nodes create: &f" + result.createdNodeIds().size());
+            plugin.getMessageUtils().send(sender, "&7Places: &f" + formatList(result.createdPlaceIds()));
+            for (String warning : result.warnings()) {
+                plugin.getMessageUtils().send(sender, "&eWarning: &f" + warning);
+            }
+            plugin.getMessageUtils().send(sender, "&7Urmatorul pas: &f/ainpc audit world");
+            plugin.getMessageUtils().send(sender, "&7Daca auditul arata bine, ruleaza &f/ainpc world save&7.");
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldBind(CommandSender sender, String[] args) {
+        if (args.length < 5 || args.length > 7 || !"npc".equalsIgnoreCase(args[2])) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]");
+            plugin.getMessageUtils().send(sender,
+                "&7Leaga un NPC incarcat la home/work/social anchors din world mapping.");
+            return true;
+        }
+
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        AINPC npc = resolveWorldBindNpc(sender, args[3]);
+        if (npc == null) {
+            return true;
+        }
+
+        WorldPlaceInfo homePlace = resolveSingleWorldPlace(sender, worldAdmin, args[4], "home");
+        if (homePlace == null) {
+            return true;
+        }
+
+        WorldPlaceInfo workPlace = null;
+        if (args.length >= 6 && !isNoneSelector(args[5])) {
+            workPlace = resolveSingleWorldPlace(sender, worldAdmin, args[5], "work");
+            if (workPlace == null) {
+                return true;
+            }
+        }
+
+        WorldPlaceInfo socialPlace = null;
+        if (args.length >= 7 && !isNoneSelector(args[6])) {
+            socialPlace = resolveSingleWorldPlace(sender, worldAdmin, args[6], "social");
+            if (socialPlace == null) {
+                return true;
+            }
+        }
+
+        if (!isHousePlace(homePlace)) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: homePlace-ul &f" + homePlace.id() + " &enu este marcat ca house/home.");
+        }
+        if (workPlace != null && !isWorkplace(workPlace)) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: workPlace-ul &f" + workPlace.id() + " &enu este marcat clar ca workplace.");
+        }
+        if (socialPlace != null && !isSocialPlace(socialPlace)) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: socialPlace-ul &f" + socialPlace.id() + " &enu este marcat clar ca loc social.");
+        }
+
+        AINPC.OwnedLocation previousHome = npc.getHomeAnchor();
+        AINPC.OwnedLocation previousWork = npc.getWorkAnchor();
+        AINPC.OwnedLocation previousSocial = npc.getSocialAnchor();
+        AINPC.OwnedLocation homeAnchor = createOwnedLocationFromPlace(worldAdmin, homePlace, "home");
+        AINPC.OwnedLocation workAnchor = workPlace != null
+            ? createOwnedLocationFromPlace(worldAdmin, workPlace, "work")
+            : previousWork;
+        AINPC.OwnedLocation socialAnchor = socialPlace != null
+            ? createOwnedLocationFromPlace(worldAdmin, socialPlace, "social")
+            : previousSocial;
+
+        npc.setHomeAnchor(homeAnchor);
+        npc.setWorkAnchor(workAnchor);
+        npc.setSocialAnchor(socialAnchor);
+
+        if (!plugin.getNpcManager().saveNPC(npc, false)) {
+            npc.setHomeAnchor(previousHome);
+            npc.setWorkAnchor(previousWork);
+            npc.setSocialAnchor(previousSocial);
+            plugin.getMessageUtils().send(sender, "&cNu am putut salva profilul NPC-ului.");
+            return true;
+        }
+
+        String npcBindingId = npcBindingId(npc);
+        try {
+            worldAdmin.bindNpcToHomePlace(homePlace.id(), npcBindingId, npc.getName());
+            if (workPlace != null) {
+                worldAdmin.bindNpcToWorkPlace(workPlace.id(), npcBindingId, npc.getName());
+            }
+            if (socialPlace != null) {
+                worldAdmin.bindNpcToSocialPlace(socialPlace.id(), npcBindingId, npc.getName());
+            }
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+            return true;
+        }
+
+        plugin.getMessageUtils().send(sender, "&aNPC-ul &f" + npc.getName() + " &aa fost legat la mapping.");
+        plugin.getMessageUtils().send(sender, "&eHome: &f" + formatOwnedLocation(homeAnchor));
+        if (workPlace != null) {
+            plugin.getMessageUtils().send(sender, "&eWork: &f" + formatOwnedLocation(workAnchor));
+        } else {
+            plugin.getMessageUtils().send(sender, "&eWork: &7pastrat neschimbat");
+        }
+        if (socialPlace != null) {
+            plugin.getMessageUtils().send(sender, "&eSocial: &f" + formatOwnedLocation(socialAnchor));
+        } else {
+            plugin.getMessageUtils().send(sender, "&eSocial: &7pastrat neschimbat");
+        }
+        plugin.getMessageUtils().send(sender,
+            "&7Profilul NPC a fost salvat. Ruleaza &f/ainpc world save &7pentru metadata mapping, apoi &f/ainpc audit spawn&7.");
+        return true;
+    }
+
+    private boolean handleWorldHousehold(CommandSender sender, String[] args) {
+        if (args.length < 4 || args.length > 5
+            || (!"plan".equalsIgnoreCase(args[2]) && !"spawn".equalsIgnoreCase(args[2]))) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world household <plan|spawn> <homePlaceId> [count]");
+            plugin.getMessageUtils().send(sender,
+                "&7Genereaza un HouseAllocation din mapping. plan este dry-run, spawn creeaza NPC-uri.");
+            return true;
+        }
+
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        int requestedCount = 0;
+        if (args.length == 5) {
+            Integer parsedCount = parseIntegerStrict(args[4]);
+            if (parsedCount == null || parsedCount <= 0) {
+                plugin.getMessageUtils().send(sender, "&cCount trebuie sa fie un numar pozitiv.");
+                return true;
+            }
+            requestedCount = parsedCount;
+        }
+
+        HouseAllocationPlanner.PlanningResult planning =
+            new HouseAllocationPlanner().plan(worldAdmin, args[3], requestedCount);
+        if (!planning.success()) {
+            plugin.getMessageUtils().send(sender, "&cNu am putut genera HouseAllocation.");
+            sendAuditMessages(sender, "&cErori", planning.errors());
+            sendAuditMessages(sender, "&eWarning-uri", planning.warnings());
+            return true;
+        }
+
+        HouseAllocation allocation = planning.allocation();
+        sendHouseholdAllocationSummary(sender, allocation);
+        sendAuditMessages(sender, "&eWarning-uri planner", planning.warnings());
+
+        boolean shouldSpawn = "spawn".equalsIgnoreCase(args[2]);
+        HouseholdSpawnResult result = shouldSpawn
+            ? plugin.getNpcSpawnOrchestrator().spawnHousehold(allocation)
+            : plugin.getNpcSpawnOrchestrator().dryRunHouseAllocation(allocation);
+
+        sendHouseholdSpawnResult(sender, result);
+        if (!result.success()) {
+            return true;
+        }
+
+        if (shouldSpawn) {
+            bindSpawnedHouseholdToMapping(sender, worldAdmin, result);
+            plugin.getMessageUtils().send(sender,
+                "&7NPC-urile au fost create si legate la mapping. Ruleaza &f/ainpc world save &7si &f/ainpc audit spawn&7.");
+        } else {
+            plugin.getMessageUtils().send(sender,
+                "&7Dry-run reusit. Pentru executie: &f/ainpc world household spawn "
+                    + allocation.placeId() + " " + allocation.residentPlans().size());
+        }
+        return true;
+    }
+
+    private boolean handleWorldSettlement(CommandSender sender, String[] args) {
+        if (args.length < 4 || args.length > 5
+            || (!"plan".equalsIgnoreCase(args[2]) && !"spawn".equalsIgnoreCase(args[2]))) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc world settlement <plan|spawn> <regionId> [maxHouses]");
+            plugin.getMessageUtils().send(sender,
+                "&7Genereaza household plan-uri pentru toate casele dintr-o regiune.");
+            return true;
+        }
+
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return true;
+        }
+
+        int maxHouses = 0;
+        if (args.length == 5) {
+            Integer parsedMaxHouses = parseIntegerStrict(args[4]);
+            if (parsedMaxHouses == null || parsedMaxHouses <= 0) {
+                plugin.getMessageUtils().send(sender, "&cmaxHouses trebuie sa fie un numar pozitiv.");
+                return true;
+            }
+            maxHouses = parsedMaxHouses;
+        }
+
+        HouseAllocationPlanner.SettlementPlanningResult planning =
+            new HouseAllocationPlanner().planSettlement(worldAdmin, args[3], maxHouses);
+        if (!planning.success()) {
+            plugin.getMessageUtils().send(sender, "&cNu am putut genera planul pentru regiune.");
+            sendSettlementPlanningSummary(sender, planning);
+            sendAuditMessages(sender, "&cErori", planning.errors());
+            sendAuditMessages(sender, "&eWarning-uri", planning.warnings());
+            return true;
+        }
+
+        sendSettlementPlanningSummary(sender, planning);
+        sendAuditMessages(sender, "&eWarning-uri planner", planning.warnings());
+
+        boolean shouldSpawn = "spawn".equalsIgnoreCase(args[2]);
+        SettlementSpawnResult result = shouldSpawn
+            ? plugin.getNpcSpawnOrchestrator().spawnSettlement(planning.allocations())
+            : plugin.getNpcSpawnOrchestrator().dryRunSettlement(planning.allocations());
+
+        sendSettlementSpawnResult(sender, result);
+        if (result.success()) {
+            if (shouldSpawn) {
+                bindSpawnedSettlementToMapping(sender, worldAdmin, result);
+                plugin.getMessageUtils().send(sender,
+                    "&7Settlement spawn terminat. Ruleaza &f/ainpc world save &7si &f/ainpc audit spawn&7.");
+            } else {
+                plugin.getMessageUtils().send(sender,
+                    "&7Dry-run reusit. Pentru executie: &f/ainpc world settlement spawn "
+                        + planning.regionId() + (maxHouses > 0 ? " " + maxHouses : ""));
+            }
+        }
+        return true;
+    }
+
+    private void sendHouseholdAllocationSummary(CommandSender sender, HouseAllocation allocation) {
+        plugin.getMessageUtils().send(sender, "&6=== Household Plan ===");
+        plugin.getMessageUtils().send(sender, "&eCasa: &f" + allocation.placeId());
+        plugin.getMessageUtils().send(sender, "&eFamily: &f" + formatOptional(allocation.familyId()));
+        plugin.getMessageUtils().send(sender, "&eRezidenti: &f" + allocation.residentPlans().size()
+            + " &7/ max &f" + allocation.maxResidents());
+        for (HouseAllocation.ResidentPlan resident : allocation.residentPlans()) {
+            plugin.getMessageUtils().send(sender,
+                "&7- &f" + resident.name()
+                    + " &7key=&f" + resident.npcKey()
+                    + " &7ocupatie=&f" + formatOptional(resident.occupation())
+                    + " &7spawn=&f" + resident.spawnNodeId()
+                    + " &7home=&f" + resident.effectiveHomeNodeId()
+                    + " &7work=&f" + formatOptional(resident.workPlaceId()));
+        }
+    }
+
+    private void sendSettlementPlanningSummary(CommandSender sender,
+                                               HouseAllocationPlanner.SettlementPlanningResult planning) {
+        plugin.getMessageUtils().send(sender, "&6=== Settlement Plan ===");
+        plugin.getMessageUtils().send(sender, "&eRegiune: &f" + formatOptional(planning.regionId()));
+        plugin.getMessageUtils().send(sender, "&eHousehold-uri: &f" + planning.allocations().size());
+        int totalResidents = planning.allocations().stream()
+            .mapToInt(allocation -> allocation.residentPlans().size())
+            .sum();
+        plugin.getMessageUtils().send(sender, "&eRezidenti planificati: &f" + totalResidents);
+        for (HouseAllocation allocation : planning.allocations().stream().limit(8).toList()) {
+            plugin.getMessageUtils().send(sender,
+                "&7- &f" + allocation.placeId()
+                    + " &7rezidenti=&f" + allocation.residentPlans().size()
+                    + " &7family=&f" + formatOptional(allocation.familyId()));
+        }
+        if (planning.allocations().size() > 8) {
+            plugin.getMessageUtils().send(sender,
+                "&7... inca " + (planning.allocations().size() - 8) + " household-uri.");
+        }
+    }
+
+    private void sendHouseholdSpawnResult(CommandSender sender, HouseholdSpawnResult result) {
+        String mode = result.dryRun() ? "dry-run" : "spawn";
+        if (result.success()) {
+            plugin.getMessageUtils().send(sender, "&aHousehold " + mode + " reusit.");
+        } else {
+            plugin.getMessageUtils().send(sender, "&cHousehold " + mode + " esuat.");
+        }
+        plugin.getMessageUtils().send(sender, "&eSpawn plans: &f" + result.spawnPlans().size()
+            + " &7| Rezultate spawn: &f" + result.spawnResults().size());
+        if (result.rolledBack()) {
+            plugin.getMessageUtils().send(sender, "&eRollback: &fexecutat pentru NPC-urile create partial.");
+        }
+        sendAuditMessages(sender, "&cErori household", result.errors());
+        sendAuditMessages(sender, "&eWarning-uri household", result.warnings());
+        if (!result.spawnResults().isEmpty()) {
+            List<String> spawned = result.spawnResults().stream()
+                .filter(NpcSpawnResult::success)
+                .map(spawnResult -> spawnResult.npc().getName() + "#" + spawnResult.npc().getDatabaseId())
+                .toList();
+            if (!spawned.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&eNPC-uri create: &f" + formatList(spawned));
+            }
+        }
+    }
+
+    private void sendSettlementSpawnResult(CommandSender sender, SettlementSpawnResult result) {
+        String mode = result.dryRun() ? "dry-run" : "spawn";
+        plugin.getMessageUtils().send(sender,
+            (result.success() ? "&a" : "&c") + "Settlement " + mode
+                + ": &f" + result.successfulHouseholds() + "/" + result.allocations().size()
+                + " &7household-uri reusite, &f" + result.totalSpawnPlans() + " &7NPC planificati.");
+        if (result.rolledBack()) {
+            plugin.getMessageUtils().send(sender,
+                "&eRollback global: &fNPC-urile create in household-uri anterioare au fost sterse.");
+        }
+        sendAuditMessages(sender, "&cErori settlement", result.errors());
+        sendAuditMessages(sender, "&eWarning-uri settlement", result.warnings());
+    }
+
+    private void bindSpawnedSettlementToMapping(CommandSender sender,
+                                                WorldAdminService worldAdmin,
+                                                SettlementSpawnResult result) {
+        int householdCount = 0;
+        for (HouseholdSpawnResult householdResult : result.householdResults()) {
+            if (!householdResult.success()) {
+                continue;
+            }
+            bindSpawnedHouseholdToMapping(sender, worldAdmin, householdResult);
+            householdCount++;
+        }
+        plugin.getMessageUtils().send(sender, "&eHousehold-uri legate la mapping: &f" + householdCount);
+    }
+
+    private void bindSpawnedHouseholdToMapping(CommandSender sender,
+                                               WorldAdminService worldAdmin,
+                                               HouseholdSpawnResult result) {
+        List<NpcSpawnPlan> plans = result.spawnPlans();
+        List<NpcSpawnResult> spawnResults = result.spawnResults();
+        int boundCount = 0;
+        for (int index = 0; index < Math.min(plans.size(), spawnResults.size()); index++) {
+            NpcSpawnPlan plan = plans.get(index);
+            NpcSpawnResult spawnResult = spawnResults.get(index);
+            if (!spawnResult.success() || spawnResult.npc() == null) {
+                continue;
+            }
+
+            AINPC npc = spawnResult.npc();
+            String bindingId = npcBindingId(npc);
+            try {
+                if (!plan.homePlaceId().isBlank()) {
+                    worldAdmin.bindNpcToHomePlace(plan.homePlaceId(), bindingId, npc.getName());
+                }
+                if (!plan.workPlaceId().isBlank()) {
+                    worldAdmin.bindNpcToWorkPlace(plan.workPlaceId(), bindingId, npc.getName());
+                }
+                if (!plan.socialPlaceId().isBlank()) {
+                    worldAdmin.bindNpcToSocialPlace(plan.socialPlaceId(), bindingId, npc.getName());
+                }
+                boundCount++;
+            } catch (IllegalArgumentException exception) {
+                plugin.getMessageUtils().send(sender, "&eWarning: &f" + exception.getMessage());
+            }
+        }
+        plugin.getMessageUtils().send(sender, "&eBind-uri mapping actualizate: &f" + boundCount);
     }
 
     private void sendVillageScanSummary(CommandSender sender, VanillaVillageScanResult scan) {
@@ -1668,6 +2406,10 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>");
         plugin.getMessageUtils().send(sender, "&e/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world scan village [radius] [import] [regionId]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world demo create [regionId]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household <plan|spawn> <homePlaceId> [count]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world settlement <plan|spawn> <regionId> [maxHouses]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
     }
 
@@ -1866,10 +2608,10 @@ public class AINPCCommand implements CommandExecutor {
             if (!validBounds(place.minX(), place.minY(), place.minZ(), place.maxX(), place.maxY(), place.maxZ())) {
                 report.error("Place-ul " + place.id() + " are bounds invalide.");
             }
-            if (place.placeType() == PlaceType.HOUSE && place.ownerNpcId().isBlank()) {
+            if (place.placeType() == PlaceType.HOUSE && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
                 report.warn("Casa " + place.id() + " nu are owner_npc_id.");
             }
-            if (!place.publicAccess() && place.ownerNpcId().isBlank()) {
+            if (!place.publicAccess() && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
                 report.warn("Place-ul privat " + place.id() + " nu are owner_npc_id.");
             }
             if (!place.ownerNpcId().isBlank() && !ownerMatchesLoadedNpc(place.ownerNpcId())) {
@@ -1883,6 +2625,8 @@ public class AINPCCommand implements CommandExecutor {
                 report.warn("Locul de munca " + place.id() + " nu are nodes de interactiune.");
             }
         }
+
+        auditWorldReadiness(report, worldAdmin, places, nodes);
 
         for (int i = 0; i < places.size(); i++) {
             for (int j = i + 1; j < places.size(); j++) {
@@ -1922,6 +2666,51 @@ public class AINPCCommand implements CommandExecutor {
                 report.error("Node-ul " + node.id() + " nu este in interiorul place-ului " + place.id() + ".");
             } else if (place == null && region != null && !pointInsideRegion(node, region)) {
                 report.error("Node-ul " + node.id() + " nu este in interiorul regiunii " + region.id() + ".");
+            }
+        }
+    }
+
+    private void auditWorldReadiness(AuditReport report,
+                                     WorldAdminApi worldAdmin,
+                                     List<WorldPlaceInfo> places,
+                                     List<WorldNodeInfo> nodes) {
+        if (places.isEmpty()) {
+            return;
+        }
+
+        long houseCount = places.stream().filter(this::isHousePlace).count();
+        long workplaceCount = places.stream().filter(this::isWorkplace).count();
+        long socialPlaceCount = places.stream().filter(this::isSocialPlace).count();
+        long questNodeCount = nodes.stream().filter(node -> nodeMatchesAny(node,
+            "quest_trigger", "quest_board", "inspect_node", "interaction")).count();
+        long bedNodeCount = nodes.stream().filter(node -> nodeMatchesAny(node, "bed")).count();
+        long workNodeCount = nodes.stream().filter(node -> nodeMatchesAny(node,
+            "work", "workstation", "work_anchor")).count();
+
+        report.info("Mapping readiness: " + houseCount + " case, " + workplaceCount
+            + " locuri de munca, " + socialPlaceCount + " locuri sociale, "
+            + questNodeCount + " quest/interaction nodes.");
+
+        if (houseCount == 0) {
+            report.warn("Mapping-ul nu are nicio casa. Spawn-ul household si rutina home vor cadea pe fallback.");
+        }
+        if (bedNodeCount == 0) {
+            report.warn("Mapping-ul nu are node-uri de tip bed. Casele nu pot fi validate bine pentru rezidenti.");
+        }
+        if (workplaceCount == 0 || workNodeCount == 0) {
+            report.warn("Mapping-ul nu are locuri de munca cu node-uri work/workstation.");
+        }
+        if (socialPlaceCount == 0) {
+            report.warn("Mapping-ul nu are loc social public pentru rutina sociala.");
+        }
+        if (questNodeCount == 0) {
+            report.warn("Mapping-ul nu are quest/interaction nodes pentru obiective inspect_node.");
+        }
+
+        for (WorldPlaceInfo house : places.stream().filter(this::isHousePlace).toList()) {
+            Collection<WorldNodeInfo> houseNodes = worldAdmin.getNodesForPlace(house.id());
+            if (!hasAnySemanticNode(houseNodes, "bed", "home", "npc_spawn", "spawn")) {
+                report.warn("Casa " + house.id() + " nu are node bed/home/npc_spawn.");
             }
         }
     }
@@ -2392,6 +3181,25 @@ public class AINPCCommand implements CommandExecutor {
             || place.placeType() == PlaceType.FARM
             || place.placeType() == PlaceType.MARKET
             || place.placeType() == PlaceType.TAVERN;
+    }
+
+    private boolean isSocialPlace(WorldPlaceInfo place) {
+        return place.hasTag("social")
+            || place.hasTag("public")
+            || "social".equalsIgnoreCase(place.metadata().get("role"))
+            || "social".equalsIgnoreCase(place.metadata().get("purpose"))
+            || place.placeType() == PlaceType.MARKET
+            || place.placeType() == PlaceType.TAVERN
+            || place.placeType() == PlaceType.CAMP;
+    }
+
+    private boolean hasPendingOwner(WorldPlaceInfo place) {
+        String ownerStatus = place.metadata().getOrDefault("owner_status", "");
+        String ownerPending = place.metadata().getOrDefault("owner_pending", "");
+        return "pending".equalsIgnoreCase(ownerStatus)
+            || "true".equalsIgnoreCase(ownerPending)
+            || ("demo_mapping".equalsIgnoreCase(place.metadata().getOrDefault("source", ""))
+                && place.hasTag("demo"));
     }
 
     private boolean placeInsideRegion(WorldPlaceInfo place, WorldRegionInfo region) {
@@ -3027,10 +3835,24 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Creeaza un node de regiune sau de place");
         plugin.getMessageUtils().send(sender, "&e/ainpc world scan village [radius] [import] [regionId]");
         plugin.getMessageUtils().send(sender, "&7  Scaneaza sat vanilla si poate importa mapping semantic AINPC");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world demo create [regionId]");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza un mapping demo minim in jurul pozitiei tale");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]");
+        plugin.getMessageUtils().send(sender, "&7  Leaga un NPC la home/work/social places din mapping");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household <plan|spawn> <homePlaceId> [count]");
+        plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa un household spawn plan din mapping");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world settlement <plan|spawn> <regionId> [maxHouses]");
+        plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa household-uri pentru casele din regiune");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
         plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
         plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza contextul narativ curent din mapping si quest anchors");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story region <regionId>");
+        plugin.getMessageUtils().send(sender, "&7  Afiseaza story state-ul persistent pentru o regiune");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story place <placeId>");
+        plugin.getMessageUtils().send(sender, "&7  Afiseaza story state-ul persistent pentru un place");
+        plugin.getMessageUtils().send(sender, "&e/ainpc story events <regionId|placeId> [limit]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza evenimente story persistente");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]");
         plugin.getMessageUtils().send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date");
         plugin.getMessageUtils().send(sender, "&e/ainpc debugdump [all|npc|world|quest|openai]");
@@ -3110,6 +3932,184 @@ public class AINPCCommand implements CommandExecutor {
             })
             .sorted(Comparator.comparing(WorldNodeInfo::id))
             .toList();
+    }
+
+    private AINPC resolveWorldBindNpc(CommandSender sender, String selector) {
+        if (selector == null || selector.isBlank()) {
+            plugin.getMessageUtils().send(sender, "&cSpecifica NPC-ul pentru bind.");
+            return null;
+        }
+
+        if ("nearest".equalsIgnoreCase(selector)) {
+            Player player = requirePlayerSender(sender);
+            if (player == null) {
+                return null;
+            }
+            AINPC nearestNpc = findNearestQuestNpc(player);
+            if (nearestNpc == null) {
+                plugin.getMessageUtils().send(sender, "&cNu exista NPC-uri active in apropierea jucatorului.");
+            }
+            return nearestNpc;
+        }
+
+        AINPC npc = findLoadedNpcBySelector(selector);
+        if (npc == null) {
+            plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + selector + " &cnu a fost gasit sau nu este incarcat.");
+        }
+        return npc;
+    }
+
+    private WorldPlaceInfo resolveSingleWorldPlace(CommandSender sender,
+                                                   WorldAdminApi worldAdmin,
+                                                   String selector,
+                                                   String role) {
+        List<WorldPlaceInfo> matches = findPlaceMatches(worldAdmin, selector);
+        if (matches.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&cPlace-ul &e" + selector + " &cpentru &f" + role + " &cnu a fost gasit.");
+            return null;
+        }
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender,
+                "&cSelector ambiguu pentru place-ul &f" + role + "&c. Foloseste ID-ul complet.");
+            plugin.getMessageUtils().send(sender,
+                "&7Potriviri: &f" + formatList(matches.stream().map(WorldPlaceInfo::id).toList()));
+            return null;
+        }
+        return matches.get(0);
+    }
+
+    private AINPC.OwnedLocation createOwnedLocationFromPlace(WorldAdminApi worldAdmin,
+                                                             WorldPlaceInfo place,
+                                                             String anchorRole) {
+        WorldNodeInfo node = findBestAnchorNodeForPlace(worldAdmin, place, anchorRole);
+        if (node != null) {
+            return new AINPC.OwnedLocation(
+                anchorRole,
+                nodeLabel(node, place.displayName()),
+                node.worldName(),
+                node.x(),
+                node.y(),
+                node.z()
+            );
+        }
+
+        return new AINPC.OwnedLocation(
+            anchorRole,
+            place.displayName(),
+            place.worldName(),
+            placeCenterX(place),
+            placeAnchorY(place),
+            placeCenterZ(place)
+        );
+    }
+
+    private WorldNodeInfo findBestAnchorNodeForPlace(WorldAdminApi worldAdmin,
+                                                     WorldPlaceInfo place,
+                                                     String anchorRole) {
+        WorldNodeInfo bestNode = null;
+        double bestScore = Double.MAX_VALUE;
+        for (WorldNodeInfo node : worldAdmin.getNodesForPlace(place.id())) {
+            int priority = nodePriorityForAnchor(node, anchorRole);
+            if (priority < 0) {
+                continue;
+            }
+
+            double score = priority * 100_000D + distanceSquaredToPlaceCenter(place, node);
+            if (score < bestScore) {
+                bestScore = score;
+                bestNode = node;
+            }
+        }
+        return bestNode;
+    }
+
+    private int nodePriorityForAnchor(WorldNodeInfo node, String anchorRole) {
+        return switch (normalizeAuditKey(anchorRole)) {
+            case "home" -> {
+                if (nodeMatchesAny(node, "home", "house", "bed", "sleep", "pat")) {
+                    yield 0;
+                }
+                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
+                    yield 1;
+                }
+                if (nodeMatchesAny(node, "entrance", "door", "inside", "intrare", "usa")) {
+                    yield 2;
+                }
+                yield nodeMatchesAny(node, "interaction") ? 3 : -1;
+            }
+            case "work" -> {
+                if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
+                    yield 0;
+                }
+                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
+                    yield 1;
+                }
+                if (nodeMatchesAny(node, "interaction", "counter", "desk")) {
+                    yield 2;
+                }
+                yield -1;
+            }
+            case "social" -> {
+                if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata", "fantana")) {
+                    yield 0;
+                }
+                if (nodeMatchesAny(node, "interaction")) {
+                    yield 1;
+                }
+                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
+                    yield 2;
+                }
+                yield -1;
+            }
+            default -> -1;
+        };
+    }
+
+    private String nodeLabel(WorldNodeInfo node, String fallbackLabel) {
+        String explicitLabel = firstNonBlank(
+            node.metadata().get("label"),
+            node.metadata().get("name"),
+            node.metadata().get("display_name")
+        );
+        if (!explicitLabel.isBlank()) {
+            return explicitLabel;
+        }
+        return fallbackLabel == null || fallbackLabel.isBlank() ? node.id() : fallbackLabel;
+    }
+
+    private String npcBindingId(AINPC npc) {
+        if (npc.getDatabaseId() > 0) {
+            return "npc_" + npc.getDatabaseId();
+        }
+        if (npc.getUuid() != null) {
+            return npc.getUuid().toString();
+        }
+        return npc.getName();
+    }
+
+    private double distanceSquaredToPlaceCenter(WorldPlaceInfo place, WorldNodeInfo node) {
+        return distanceSquared(placeCenterX(place), placeAnchorY(place), placeCenterZ(place), node.x(), node.y(), node.z());
+    }
+
+    private double distanceSquared(double leftX, double leftY, double leftZ,
+                                   double rightX, double rightY, double rightZ) {
+        double dx = leftX - rightX;
+        double dy = leftY - rightY;
+        double dz = leftZ - rightZ;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private double placeCenterX(WorldPlaceInfo place) {
+        return (place.minX() + place.maxX()) / 2.0D;
+    }
+
+    private double placeAnchorY(WorldPlaceInfo place) {
+        return Math.min(place.maxY(), place.minY() + 1.0D);
+    }
+
+    private double placeCenterZ(WorldPlaceInfo place) {
+        return (place.minZ() + place.maxZ()) / 2.0D;
     }
 
     private List<WorldRegionInfo> findRegionMatches(WorldAdminApi worldAdmin, String selector) {

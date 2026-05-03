@@ -27,6 +27,7 @@ public class StoryContextService {
 
     private static final double NEARBY_NPC_RADIUS = 20.0;
     private static final int MAX_ACTIVE_QUEST_ANCHORS = 12;
+    private static final int MAX_RECENT_STORY_EVENTS = 5;
 
     private final AINPCPlugin plugin;
 
@@ -46,17 +47,29 @@ public class StoryContextService {
         List<StoryContextSnapshot.QuestAnchorSnapshot> activeQuestAnchors = player != null
             ? loadActiveQuestAnchors(player.getUniqueId(), warnings)
             : List.of();
+        RegionStoryState persistentRegionState = loadPersistentRegionState(worldContext, warnings);
+        PlaceStoryState persistentPlaceState = loadPersistentPlaceState(worldContext, warnings);
+        List<StoryEvent> recentStoryEvents = loadRecentStoryEvents(worldContext, warnings);
 
         if (player == null) {
             warnings.add("no player context; active quest anchors unavailable");
         }
 
-        List<String> storySignals = collectStorySignals(worldContext, activeQuestAnchors);
+        List<String> storySignals = collectStorySignals(
+            worldContext,
+            activeQuestAnchors,
+            persistentRegionState,
+            persistentPlaceState,
+            recentStoryEvents
+        );
         return new StoryContextSnapshot(
             npc != null ? npc.getName() : "",
             npc != null ? npc.getOccupation() : "",
             player != null ? player.getName() : "",
             worldContext,
+            persistentRegionState,
+            persistentPlaceState,
+            recentStoryEvents,
             activeQuestAnchors,
             storySignals,
             warnings
@@ -159,11 +172,79 @@ public class StoryContextService {
         return anchors;
     }
 
+    private RegionStoryState loadPersistentRegionState(WorldContextSnapshot worldContext, List<String> warnings) {
+        WorldRegionInfo region = worldContext != null ? worldContext.currentRegion() : null;
+        if (region == null || region.id().isBlank()) {
+            return null;
+        }
+        if (plugin.getStoryStateService() == null) {
+            warnings.add("story state service unavailable");
+            return null;
+        }
+
+        try {
+            return plugin.getStoryStateService().getRegionState(region.id()).orElse(null);
+        } catch (SQLException exception) {
+            warnings.add("persistent region story state could not be loaded");
+            plugin.getLogger().log(Level.WARNING, "Nu s-a putut incarca region_story_state pentru story context.", exception);
+            return null;
+        }
+    }
+
+    private PlaceStoryState loadPersistentPlaceState(WorldContextSnapshot worldContext, List<String> warnings) {
+        WorldPlaceInfo place = worldContext != null ? worldContext.currentPlace() : null;
+        if (place == null || place.id().isBlank()) {
+            return null;
+        }
+        if (plugin.getStoryStateService() == null) {
+            warnings.add("story state service unavailable");
+            return null;
+        }
+
+        try {
+            return plugin.getStoryStateService().getPlaceState(place.id()).orElse(null);
+        } catch (SQLException exception) {
+            warnings.add("persistent place story state could not be loaded");
+            plugin.getLogger().log(Level.WARNING, "Nu s-a putut incarca place_story_state pentru story context.", exception);
+            return null;
+        }
+    }
+
+    private List<StoryEvent> loadRecentStoryEvents(WorldContextSnapshot worldContext, List<String> warnings) {
+        if (worldContext == null || worldContext.isEmpty()) {
+            return List.of();
+        }
+        if (plugin.getStoryStateService() == null) {
+            warnings.add("story state service unavailable");
+            return List.of();
+        }
+
+        WorldRegionInfo region = worldContext.currentRegion();
+        WorldPlaceInfo place = worldContext.currentPlace();
+        String regionId = region != null ? region.id() : "";
+        String placeId = place != null ? place.id() : "";
+        if (regionId.isBlank() && placeId.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            return plugin.getStoryStateService().listRecentEvents(regionId, placeId, MAX_RECENT_STORY_EVENTS);
+        } catch (SQLException exception) {
+            warnings.add("recent story events could not be loaded");
+            plugin.getLogger().log(Level.WARNING, "Nu s-au putut incarca story_events recente pentru story context.", exception);
+            return List.of();
+        }
+    }
+
     private List<String> collectStorySignals(WorldContextSnapshot worldContext,
-                                             List<StoryContextSnapshot.QuestAnchorSnapshot> activeQuestAnchors) {
+                                             List<StoryContextSnapshot.QuestAnchorSnapshot> activeQuestAnchors,
+                                             RegionStoryState persistentRegionState,
+                                             PlaceStoryState persistentPlaceState,
+                                             List<StoryEvent> recentStoryEvents) {
         Set<String> signals = new LinkedHashSet<>();
         if (worldContext == null || worldContext.isEmpty()) {
             addActiveQuestAnchorSignals(signals, activeQuestAnchors);
+            addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents);
             return new ArrayList<>(signals);
         }
 
@@ -202,8 +283,34 @@ public class StoryContextService {
         }
 
         addActiveQuestAnchorSignals(signals, activeQuestAnchors);
+        addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents);
 
         return new ArrayList<>(signals);
+    }
+
+    private void addPersistentStorySignals(Set<String> signals,
+                                           RegionStoryState persistentRegionState,
+                                           PlaceStoryState persistentPlaceState,
+                                           List<StoryEvent> recentStoryEvents) {
+        if (persistentRegionState != null) {
+            addSignal(signals, "persistent_region_state", persistentRegionState.stateKey());
+            addSignal(signals, "persistent_region_story_mode", persistentRegionState.storyMode().getId());
+            if (!persistentRegionState.storyPool().isEmpty()) {
+                addSignal(signals, "persistent_region_story_pool",
+                    String.join(",", limit(persistentRegionState.storyPool(), 5)));
+            }
+            addVariableKeySignal(signals, "persistent_region_vars", persistentRegionState.variables());
+        }
+
+        if (persistentPlaceState != null) {
+            addSignal(signals, "persistent_place_state", persistentPlaceState.stateKey());
+            addVariableKeySignal(signals, "persistent_place_vars", persistentPlaceState.variables());
+        }
+
+        if (recentStoryEvents != null && !recentStoryEvents.isEmpty()) {
+            addSignal(signals, "recent_story_event_count", String.valueOf(recentStoryEvents.size()));
+            addSignal(signals, "recent_story_event_types", String.join(",", collectEventTypes(recentStoryEvents)));
+        }
     }
 
     private void addActiveQuestAnchorSignals(Set<String> signals,
@@ -245,6 +352,25 @@ public class StoryContextService {
             .distinct()
             .limit(5)
             .toList();
+    }
+
+    private List<String> collectEventTypes(List<StoryEvent> events) {
+        return events.stream()
+            .map(StoryEvent::eventType)
+            .filter(value -> value != null && !value.isBlank())
+            .distinct()
+            .limit(5)
+            .toList();
+    }
+
+    private void addVariableKeySignal(Set<String> signals, String signalKey, Map<String, String> variables) {
+        if (variables == null || variables.isEmpty()) {
+            return;
+        }
+        addSignal(signals, signalKey, String.join(",", variables.keySet().stream()
+            .filter(key -> key != null && !key.isBlank())
+            .limit(6)
+            .toList()));
     }
 
     private void addSignal(Set<String> signals, String key, String value) {

@@ -1,8 +1,8 @@
 # Story si Context AI - Mapping, Indexare si Questuri
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
-Status: design pentru faze urmatoare, cu Faza A implementata initial, Faza B implementata initial la nivel de quest anchors si `StoryContextService` implementat initial read-only.
+Status: design pentru faze urmatoare, cu Faza A implementata initial, Faza B implementata initial la nivel de quest anchors, `StoryContextService` implementat initial read-only si Faza C implementata initial la nivel de schema, serviciu si actiuni de quest pentru story state.
 
 ## Scop
 
@@ -358,7 +358,7 @@ El trebuie sa combine:
 - evenimente recente
 - story flags persistente
 
-In implementarea actuala, evenimentele recente si story flags persistente nu exista inca drept tabele dedicate. Semnalele story vin din `WorldRegionInfo`, `WorldPlaceInfo.metadata` si `quest_anchor_bindings`.
+In implementarea actuala, evenimentele recente si story flags persistente exista initial prin `story_events`, `region_story_state` si `place_story_state`. Semnalele story din mapping raman completate din `WorldRegionInfo`, `WorldPlaceInfo.metadata` si `quest_anchor_bindings`.
 
 AI-ul nu trebuie sa scrie direct in DB. AI-ul produce drafturi:
 
@@ -489,6 +489,45 @@ Scop:
 
 Story-ul incepe sa evolueze dupa questuri si interactiuni.
 
+Status: implementat initial la nivel de persistenta, citire in context si actiuni controlate de quest.
+
+Implementat initial:
+
+- tabele `region_story_state`, `place_story_state` si `story_events`
+- `StoryStateService`
+- modele `RegionStoryState`, `PlaceStoryState` si `StoryEvent`
+- includere in `StoryContextSnapshot` si `STORY_CONTEXT` cand exista mapping curent
+- comenzi read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`
+- actiuni de quest `set_story_state` si `record_story_event`, executate la finalizarea questului
+- metadata, `variables` si `payload` citite din YAML pentru intrari de quest non-item
+
+Exemplu YAML minim:
+
+```yml
+rewards:
+  story_state:
+    type: "set_story_state"
+    scope: "region"
+    target: "current_region"
+    state: "blacksmith_helped"
+    variables:
+      quest: "Q01"
+  story_event:
+    type: "record_story_event"
+    scope: "region"
+    target: "current_region"
+    event_type: "quest_completed"
+    event_key: "q01_completed"
+    title: "Fierarul a primit materialele"
+    payload:
+      quest: "Q01"
+```
+
+Ramas:
+
+- audit/debugdump pentru story state
+- validator explicit pentru actiunile story din feature packs
+
 ### Faza D: Authoring asistat de AI
 
 Scop:
@@ -507,13 +546,14 @@ Comenzi utile pentru fazele urmatoare:
 /ainpc story context [jucator] [numeNpc|nearest]
 /ainpc quest anchors [jucator|uuid|all] [templateId]
 /ainpc story region <regionId>
-/ainpc story events <regionId>
+/ainpc story place <placeId>
+/ainpc story events <regionId|placeId> [limit]
 /ainpc story validate <storyArcId>
 /ainpc world context <npcId>
 /ainpc ai context <npcId>
 ```
 
-Primele doua comenzi exista initial. Restul sunt propuneri pentru fazele cu story state persistent si inspectie AI mai avansata.
+Primele cinci comenzi exista initial. Restul sunt propuneri pentru fazele cu validare si inspectie AI mai avansata.
 
 Validari utile:
 
@@ -528,7 +568,7 @@ Validari utile:
 
 ## Ordine minima recomandata
 
-Pasi 1-7 sunt implementati initial. Urmatorul pas recomandat este persistenta `region_story_state` si `story_events`.
+Pasi 1-9 si actiunile story de baza sunt implementate initial. Urmatorul pas recomandat este audit/debugdump pentru persistenta story si validare explicita pentru actiunile din feature packs.
 
 1. creeaza `WorldContextSnapshot` read-only
 2. leaga snapshot-ul la `NPCContext` si prompt AI
@@ -537,9 +577,11 @@ Pasi 1-7 sunt implementati initial. Urmatorul pas recomandat este persistenta `r
 5. stabilizeaza `QuestAnchorResolver` peste mai multe template-uri reale
 6. persista `quest_anchor_bindings`
 7. adauga `StoryContextService`
-8. persista `region_story_state` si `story_events`
-9. adauga validatoare si comenzi de debug
-10. abia apoi adauga generare AI de quest/story drafts
+8. persista `region_story_state`, `place_story_state` si `story_events`
+9. adauga comenzi read-only pentru story state si events
+10. adauga audit/debugdump pentru `region_story_state`, `place_story_state` si `story_events`
+11. adauga validatoare pentru actiunile story din feature packs
+12. abia apoi adauga generare AI de quest/story drafts
 
 ## Avertizari
 

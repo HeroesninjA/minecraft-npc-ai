@@ -268,6 +268,69 @@ public class DatabaseManager {
                 ON quest_anchor_bindings(anchor_type, anchor_id)
             """);
 
+            // Tabele story persistente. Mapping-ul ramane in config/runtime, dar aceste tabele tin
+            // starea narativa care se poate schimba dupa questuri sau evenimente.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS region_story_state (
+                    region_id TEXT PRIMARY KEY,
+                    story_mode TEXT NOT NULL DEFAULT 'evolutive',
+                    state_key TEXT NOT NULL DEFAULT 'default',
+                    story_pool TEXT NOT NULL DEFAULT '[]',
+                    variables TEXT NOT NULL DEFAULT '{}',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    updated_by TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT ''
+                )
+            """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS place_story_state (
+                    place_id TEXT PRIMARY KEY,
+                    region_id TEXT NOT NULL DEFAULT '',
+                    state_key TEXT NOT NULL DEFAULT 'default',
+                    variables TEXT NOT NULL DEFAULT '{}',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    updated_by TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT ''
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_place_story_state_region
+                ON place_story_state(region_id)
+            """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS story_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scope_type TEXT NOT NULL,
+                    scope_id TEXT NOT NULL,
+                    region_id TEXT NOT NULL DEFAULT '',
+                    place_id TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL,
+                    event_key TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    description TEXT NOT NULL DEFAULT '',
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    actor_type TEXT NOT NULL DEFAULT '',
+                    actor_id TEXT NOT NULL DEFAULT '',
+                    player_uuid TEXT NOT NULL DEFAULT '',
+                    npc_id TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_story_events_scope
+                ON story_events(scope_type, scope_id, created_at DESC)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_story_events_region
+                ON story_events(region_id, created_at DESC)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_story_events_place
+                ON story_events(place_id, created_at DESC)
+            """);
+
             // Backfill pentru baze de date vechi, astfel incat fiecare NPC existent sa aiba toate datele de profil.
             stmt.executeUpdate("""
                 INSERT OR IGNORE INTO npc_personality (npc_id)

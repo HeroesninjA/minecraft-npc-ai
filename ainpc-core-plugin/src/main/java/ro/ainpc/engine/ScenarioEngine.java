@@ -16,6 +16,8 @@ import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCEmotions;
 import ro.ainpc.npc.NPCPersonality;
+import ro.ainpc.story.StoryStateService;
+import ro.ainpc.world.StoryMode;
 import ro.ainpc.world.WorldNode;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlace;
@@ -418,6 +420,7 @@ public class ScenarioEngine {
             consumeQuestObjectives(player.getInventory(), template.getObjectives());
             List<String> rewardNotes = grantQuestRewards(player, template.getRewards());
             player.updateInventory();
+            rewardNotes.addAll(applyQuestStoryActions(player, npc, template, currentProgress, template.getRewards()));
 
             markQuestCompleted(playerId, template);
             plugin.debug("[QuestEngine] Quest completat pentru player=" + player.getName()
@@ -3995,6 +3998,10 @@ public class ScenarioEngine {
         if (rewards == null || rewards.isEmpty()) {
             return QuestRewardCheck.allowed();
         }
+        boolean hasInventoryReward = rewards.stream().anyMatch(reward -> !isQuestStoryAction(reward));
+        if (!hasInventoryReward) {
+            return QuestRewardCheck.allowed();
+        }
         if (inventory == null) {
             return QuestRewardCheck.blocked(List.of("Inventarul jucatorului nu poate fi verificat."));
         }
@@ -4004,6 +4011,10 @@ public class ScenarioEngine {
         simulateQuestObjectiveConsumption(simulatedStorage, objectivesToConsume);
 
         for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
+            if (isQuestStoryAction(reward)) {
+                continue;
+            }
+
             Material material = resolveQuestMaterial(reward);
             if (material == null) {
                 issues.add("Recompensa invalida in configuratie: " + (reward != null ? reward.getItemId() : "necunoscut"));
@@ -4173,6 +4184,10 @@ public class ScenarioEngine {
     private List<String> grantQuestRewards(Player player, List<FeaturePackLoader.QuestEntryDefinition> rewards) {
         List<String> notes = new ArrayList<>();
         for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
+            if (isQuestStoryAction(reward)) {
+                continue;
+            }
+
             Material material = resolveQuestMaterial(reward);
             if (material == null) {
                 notes.add("&cRecompensa invalida in configuratie: &f" + reward.getItemId());
@@ -4188,6 +4203,502 @@ public class ScenarioEngine {
         }
 
         return notes;
+    }
+
+    private List<String> applyQuestStoryActions(Player player,
+                                                AINPC npc,
+                                                ScenarioTemplate template,
+                                                PlayerQuestProgress progress,
+                                                List<FeaturePackLoader.QuestEntryDefinition> rewards) {
+        if (rewards == null || rewards.isEmpty()) {
+            return List.of();
+        }
+
+        boolean hasStoryAction = rewards.stream().anyMatch(this::isQuestStoryAction);
+        if (!hasStoryAction) {
+            return List.of();
+        }
+
+        StoryStateService storyStateService = plugin.getStoryStateService();
+        if (storyStateService == null) {
+            return List.of("&cStoryStateService indisponibil; actiunile story nu au fost aplicate.");
+        }
+
+        List<String> notes = new ArrayList<>();
+        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
+            String actionType = normalizeStoryActionType(reward);
+            if (actionType.isBlank()) {
+                continue;
+            }
+
+            try {
+                switch (actionType) {
+                    case "set_story_state" -> applySetStoryStateAction(storyStateService, player, npc, template, progress, reward, notes);
+                    case "record_story_event" -> applyRecordStoryEventAction(storyStateService, player, npc, template, progress, reward, notes);
+                    default -> {
+                    }
+                }
+            } catch (SQLException | IllegalArgumentException ex) {
+                plugin.debug("[QuestEngine] Actiune story esuata pentru "
+                    + (template != null ? template.getTemplateId() : "quest necunoscut")
+                    + ": " + ex.getMessage());
+                notes.add("&cActiune story esuata: &f" + formatQuestEntry(reward));
+            }
+        }
+
+        return notes;
+    }
+
+    private void applySetStoryStateAction(StoryStateService storyStateService,
+                                          Player player,
+                                          AINPC npc,
+                                          ScenarioTemplate template,
+                                          PlayerQuestProgress progress,
+                                          FeaturePackLoader.QuestEntryDefinition action,
+                                          List<String> notes) throws SQLException {
+        StoryActionTarget target = resolveStoryActionTarget(action, player, progress);
+        if (target == null || target.scopeId().isBlank()) {
+            notes.add("&eActiune story ignorata: tinta lipsa pentru &f" + formatQuestEntry(action));
+            return;
+        }
+
+        String stateKey = firstNonBlank(
+            getQuestEntryMetadata(action, "state_key", "state", "flag", "value"),
+            action != null ? action.getItemId() : "",
+            "default"
+        );
+        Map<String, String> variables = buildStoryActionData(
+            action != null ? action.getVariables() : Map.of(),
+            template,
+            player,
+            npc
+        );
+        String source = firstNonBlank(getQuestEntryMetadata(action, "source"), "quest_completion");
+        String updatedBy = player != null ? player.getName() : "quest";
+
+        if ("place".equals(target.scopeType())) {
+            storyStateService.savePlaceState(
+                target.placeId(),
+                target.regionId(),
+                stateKey,
+                variables,
+                updatedBy,
+                source
+            );
+        } else {
+            storyStateService.saveRegionState(
+                target.regionId(),
+                StoryMode.fromId(getQuestEntryMetadata(action, "mode", "story_mode")),
+                stateKey,
+                parseStoryList(getQuestEntryMetadata(action, "story_pool", "pool")),
+                variables,
+                updatedBy,
+                source
+            );
+        }
+
+        notes.add("&7Story state actualizat: &f" + target.scopeType() + ":" + target.scopeId() + " &7-> &f" + stateKey);
+    }
+
+    private void applyRecordStoryEventAction(StoryStateService storyStateService,
+                                             Player player,
+                                             AINPC npc,
+                                             ScenarioTemplate template,
+                                             PlayerQuestProgress progress,
+                                             FeaturePackLoader.QuestEntryDefinition action,
+                                             List<String> notes) throws SQLException {
+        StoryActionTarget target = resolveStoryActionTarget(action, player, progress);
+        if (target == null || target.scopeId().isBlank()) {
+            notes.add("&eActiune story ignorata: tinta lipsa pentru &f" + formatQuestEntry(action));
+            return;
+        }
+
+        String eventType = firstNonBlank(getQuestEntryMetadata(action, "event_type", "type_id"), "quest_completed");
+        String eventKey = firstNonBlank(
+            getQuestEntryMetadata(action, "event_key", "key"),
+            template != null ? normalizeReference(template.getQuestCode()) : ""
+        );
+        String title = firstNonBlank(
+            getQuestEntryMetadata(action, "title", "name"),
+            template != null ? resolveQuestTitle(template) : "Quest completat"
+        );
+        String description = firstNonBlank(
+            getQuestEntryMetadata(action, "event_description", "message", "details"),
+            action != null ? action.getDescription() : ""
+        );
+        Map<String, String> payload = buildStoryActionData(
+            action != null ? action.getPayload() : Map.of(),
+            template,
+            player,
+            npc
+        );
+
+        storyStateService.recordEvent(
+            target.scopeType(),
+            target.scopeId(),
+            target.regionId(),
+            target.placeId(),
+            eventType,
+            eventKey,
+            title,
+            description,
+            payload,
+            firstNonBlank(getQuestEntryMetadata(action, "actor_type"), player != null ? "player" : "quest"),
+            firstNonBlank(getQuestEntryMetadata(action, "actor_id"), storyActorId(player, npc, template)),
+            player != null ? player.getUniqueId().toString() : "",
+            npc != null && npc.getUuid() != null ? npc.getUuid().toString() : ""
+        );
+
+        notes.add("&7Story event inregistrat: &f" + target.scopeType() + ":" + target.scopeId() + " &7-> &f" + eventType);
+    }
+
+    private boolean isQuestStoryAction(FeaturePackLoader.QuestEntryDefinition entry) {
+        return !normalizeStoryActionType(entry).isBlank();
+    }
+
+    private String normalizeStoryActionType(FeaturePackLoader.QuestEntryDefinition entry) {
+        String normalized = normalizeReference(entry != null ? entry.getType() : "");
+        return switch (normalized) {
+            case "set_story_state", "setstorystate", "story_state", "set_story_flag", "story_flag", "set_flag" ->
+                "set_story_state";
+            case "record_story_event", "recordstoryevent", "story_event", "record_event", "event" ->
+                "record_story_event";
+            default -> "";
+        };
+    }
+
+    private StoryActionTarget resolveStoryActionTarget(FeaturePackLoader.QuestEntryDefinition action,
+                                                       Player player,
+                                                       PlayerQuestProgress progress) {
+        String targetValue = getQuestEntryMetadata(action, "target", "scope_id", "target_id", "id");
+        String scope = normalizeStoryScope(getQuestEntryMetadata(action, "scope", "scope_type"));
+        String targetScope = detectStoryTargetScope(targetValue);
+        String placeId = firstNonBlank(
+            cleanStoryId(getQuestEntryMetadata(action, "place_id", "placeId", "target_place", "place")),
+            "place".equals(targetScope) ? cleanStoryId(targetValue) : ""
+        );
+        String regionId = firstNonBlank(
+            cleanStoryId(getQuestEntryMetadata(action, "region_id", "regionId", "target_region", "region")),
+            "region".equals(targetScope) ? cleanStoryId(targetValue) : ""
+        );
+
+        if (scope.isBlank()) {
+            scope = !placeId.isBlank() || "place".equals(targetScope) ? "place" : "region";
+        }
+
+        if ("place".equals(scope)) {
+            if (placeId.isBlank()) {
+                placeId = resolveStoryScopeId(targetValue, "place", player, progress);
+            }
+            if (regionId.isBlank()) {
+                regionId = resolveRegionIdForPlace(placeId, player);
+            }
+            if (placeId.isBlank()) {
+                return null;
+            }
+            return new StoryActionTarget("place", placeId, regionId, placeId);
+        }
+
+        if (regionId.isBlank() && !placeId.isBlank()) {
+            regionId = resolveRegionIdForPlace(placeId, player);
+        }
+        if (regionId.isBlank()) {
+            regionId = resolveStoryScopeId(targetValue, "region", player, progress);
+        }
+        if (regionId.isBlank()) {
+            return null;
+        }
+        return new StoryActionTarget("region", regionId, regionId, placeId);
+    }
+
+    private String resolveStoryScopeId(String targetValue,
+                                       String expectedScope,
+                                       Player player,
+                                       PlayerQuestProgress progress) {
+        String normalizedTarget = normalizeReference(targetValue);
+        if (("current_" + expectedScope).equals(normalizedTarget) || expectedScope.equals(normalizedTarget)) {
+            return "place".equals(expectedScope) ? findCurrentPlaceId(player) : findCurrentRegionId(player);
+        }
+
+        String directScope = detectStoryTargetScope(targetValue);
+        if (expectedScope.equals(directScope)) {
+            return cleanStoryId(targetValue);
+        }
+        if (!targetValue.isBlank()
+            && directScope.isBlank()
+            && !normalizedTarget.startsWith("anchor_")
+            && !normalizedTarget.startsWith("current_")) {
+            return cleanStoryId(targetValue);
+        }
+
+        String anchorId = resolveStoryAnchorReference(targetValue, expectedScope, progress);
+        if (!anchorId.isBlank()) {
+            return anchorId;
+        }
+
+        anchorId = findFirstQuestAnchorId(progress, expectedScope);
+        if (!anchorId.isBlank()) {
+            return anchorId;
+        }
+
+        if ("region".equals(expectedScope)) {
+            String placeAnchorId = findFirstQuestAnchorId(progress, "place");
+            if (!placeAnchorId.isBlank()) {
+                String regionId = resolveRegionIdForPlace(placeAnchorId, player);
+                if (!regionId.isBlank()) {
+                    return regionId;
+                }
+            }
+            return firstNonBlank(findCurrentRegionId(player), resolveRegionIdForPlace(findCurrentPlaceId(player), player));
+        }
+
+        return findCurrentPlaceId(player);
+    }
+
+    private String resolveStoryAnchorReference(String targetValue, String expectedScope, PlayerQuestProgress progress) {
+        if (targetValue == null || targetValue.isBlank() || progress == null) {
+            return "";
+        }
+
+        String trimmed = targetValue.trim();
+        String normalized = normalizeReference(trimmed);
+        if (!normalized.startsWith("anchor_")) {
+            return "";
+        }
+
+        String requestedAnchor = trimmed.substring(trimmed.indexOf(':') + 1).trim();
+        String normalizedRequestedAnchor = normalizeReference(requestedAnchor);
+        if (normalizedRequestedAnchor.equals(expectedScope)) {
+            return findFirstQuestAnchorId(progress, expectedScope);
+        }
+
+        String directAnchorId = resolveQuestVariableAnchorId(progress, requestedAnchor, expectedScope);
+        if (!directAnchorId.isBlank()) {
+            return directAnchorId;
+        }
+
+        if ("region".equals(expectedScope)) {
+            String placeId = resolveQuestVariableAnchorId(progress, requestedAnchor, "place");
+            if (!placeId.isBlank()) {
+                return resolveRegionIdForPlace(placeId, null);
+            }
+        }
+
+        return "";
+    }
+
+    private String resolveQuestVariableAnchorId(PlayerQuestProgress progress, String objectiveKey, String expectedScope) {
+        if (progress == null || objectiveKey == null || objectiveKey.isBlank()) {
+            return "";
+        }
+
+        String prefix = "anchor." + objectiveKey;
+        String anchorType = normalizeTrackingAnchorType(progress.questVariables().getOrDefault(prefix + ".type", ""));
+        String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
+        if (expectedScope.equals(anchorType) && anchorId != null && !anchorId.isBlank()) {
+            return anchorId;
+        }
+
+        String normalizedObjectiveKey = normalizeReference(objectiveKey);
+        for (String key : progress.questVariables().keySet()) {
+            if (!key.startsWith("anchor.") || !key.endsWith(".type")) {
+                continue;
+            }
+            String candidatePrefix = key.substring(0, key.length() - ".type".length());
+            String candidateKey = candidatePrefix.substring("anchor.".length());
+            if (!normalizeReference(candidateKey).equals(normalizedObjectiveKey)) {
+                continue;
+            }
+            String candidateType = normalizeTrackingAnchorType(progress.questVariables().getOrDefault(key, ""));
+            String candidateId = progress.questVariables().getOrDefault(candidatePrefix + ".id", "");
+            if (expectedScope.equals(candidateType) && !candidateId.isBlank()) {
+                return candidateId;
+            }
+        }
+
+        return "";
+    }
+
+    private String findFirstQuestAnchorId(PlayerQuestProgress progress, String expectedScope) {
+        if (progress == null || progress.questVariables().isEmpty()) {
+            return "";
+        }
+
+        for (String key : progress.questVariables().keySet()) {
+            if (!key.startsWith("anchor.") || !key.endsWith(".type")) {
+                continue;
+            }
+            String anchorType = normalizeTrackingAnchorType(progress.questVariables().getOrDefault(key, ""));
+            if (!expectedScope.equals(anchorType)) {
+                continue;
+            }
+            String prefix = key.substring(0, key.length() - ".type".length());
+            String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
+            if (anchorId != null && !anchorId.isBlank()) {
+                return anchorId;
+            }
+        }
+
+        return "";
+    }
+
+    private String normalizeStoryScope(String scope) {
+        String normalized = normalizeReference(scope);
+        return switch (normalized) {
+            case "region", "regional" -> "region";
+            case "place", "local", "location" -> "place";
+            default -> "";
+        };
+    }
+
+    private String detectStoryTargetScope(String targetValue) {
+        if (targetValue == null || targetValue.isBlank()) {
+            return "";
+        }
+
+        int separator = targetValue.indexOf(':');
+        if (separator <= 0) {
+            return "";
+        }
+
+        String prefix = normalizeReference(targetValue.substring(0, separator));
+        return "region".equals(prefix) || "place".equals(prefix) ? prefix : "";
+    }
+
+    private String cleanStoryId(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        String trimmed = value.trim();
+        String targetScope = detectStoryTargetScope(trimmed);
+        if (!targetScope.isBlank()) {
+            return trimmed.substring(trimmed.indexOf(':') + 1).trim();
+        }
+        return trimmed;
+    }
+
+    private String resolveRegionIdForPlace(String placeId, Player player) {
+        if (placeId == null || placeId.isBlank()) {
+            return "";
+        }
+
+        WorldAdminApi worldAdminApi = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdminApi != null) {
+            WorldPlaceInfo place = worldAdminApi.getPlace(placeId);
+            if (place != null && place.regionId() != null && !place.regionId().isBlank()) {
+                return place.regionId();
+            }
+        }
+
+        WorldPlace currentPlace = findCurrentPlace(player != null ? player.getLocation() : null);
+        if (currentPlace != null && placeId.equalsIgnoreCase(currentPlace.getId())) {
+            return currentPlace.getRegionId();
+        }
+
+        int separator = placeId.indexOf(':');
+        return separator > 0 ? placeId.substring(0, separator) : "";
+    }
+
+    private String findCurrentRegionId(Player player) {
+        WorldRegion region = findCurrentRegion(player != null ? player.getLocation() : null);
+        return region != null ? region.getId() : "";
+    }
+
+    private String findCurrentPlaceId(Player player) {
+        WorldPlace place = findCurrentPlace(player != null ? player.getLocation() : null);
+        return place != null ? place.getId() : "";
+    }
+
+    private Map<String, String> buildStoryActionData(Map<String, String> configured,
+                                                     ScenarioTemplate template,
+                                                     Player player,
+                                                     AINPC npc) {
+        Map<String, String> data = new LinkedHashMap<>();
+        if (configured != null) {
+            data.putAll(configured);
+        }
+        if (template != null) {
+            data.putIfAbsent("quest_template", template.getTemplateId());
+            data.putIfAbsent("quest_code", template.getQuestCode());
+        }
+        if (player != null) {
+            data.putIfAbsent("player_uuid", player.getUniqueId().toString());
+            data.putIfAbsent("player_name", player.getName());
+        }
+        if (npc != null) {
+            data.putIfAbsent("npc_name", npc.getName());
+            if (npc.getUuid() != null) {
+                data.putIfAbsent("npc_uuid", npc.getUuid().toString());
+            }
+        }
+        return data;
+    }
+
+    private List<String> parseStoryList(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+
+        List<String> values = new ArrayList<>();
+        for (String part : value.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isBlank()) {
+                values.add(trimmed);
+            }
+        }
+        return values;
+    }
+
+    private String getQuestEntryMetadata(FeaturePackLoader.QuestEntryDefinition entry, String... keys) {
+        if (entry == null || keys == null || keys.length == 0) {
+            return "";
+        }
+
+        Map<String, String> metadata = entry.getMetadata();
+        for (String key : keys) {
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+
+            String directValue = metadata.get(key);
+            if (directValue != null && !directValue.isBlank()) {
+                return directValue;
+            }
+
+            String normalizedKey = normalizeReference(key);
+            for (Map.Entry<String, String> metadataEntry : metadata.entrySet()) {
+                if (normalizeReference(metadataEntry.getKey()).equals(normalizedKey)
+                    && metadataEntry.getValue() != null
+                    && !metadataEntry.getValue().isBlank()) {
+                    return metadataEntry.getValue();
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private String storyActorId(Player player, AINPC npc, ScenarioTemplate template) {
+        if (player != null) {
+            return player.getUniqueId().toString();
+        }
+        if (npc != null && npc.getUuid() != null) {
+            return npc.getUuid().toString();
+        }
+        return template != null ? template.getTemplateId() : "quest";
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private Material resolveQuestMaterial(FeaturePackLoader.QuestEntryDefinition entry) {
@@ -4779,6 +5290,14 @@ public class ScenarioEngine {
             case "kill_mob" -> "Ucide " + (entry.getAmount() > 1
                 ? entry.getAmount() + "x " + formatObjectiveTargetLabel(entry, "inamicul tintit")
                 : formatObjectiveTargetLabel(entry, "inamicul tintit"));
+            case "set_story_state" -> {
+                String stateKey = firstNonBlank(getQuestEntryMetadata(entry, "state_key", "state", "flag", "value"), entry.getItemId());
+                yield "Actualizeaza story state" + (!stateKey.isBlank() ? ": " + stateKey : "");
+            }
+            case "record_story_event" -> {
+                String eventType = firstNonBlank(getQuestEntryMetadata(entry, "event_type", "type_id"), "quest_completed");
+                yield "Inregistreaza story event: " + eventType;
+            }
             default -> {
                 String itemName = humanizeItemId(entry.getItemId());
                 yield entry.getAmount() > 1 ? entry.getAmount() + "x " + itemName : itemName;
@@ -5349,6 +5868,14 @@ public class ScenarioEngine {
         private static QuestRewardCheck blocked(List<String> issues) {
             return new QuestRewardCheck(false, issues);
         }
+    }
+
+    private record StoryActionTarget(
+        String scopeType,
+        String scopeId,
+        String regionId,
+        String placeId
+    ) {
     }
 
     private record QuestObjectiveCheck(

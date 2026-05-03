@@ -26,6 +26,7 @@ import ro.ainpc.platform.AINPCPlatform;
 import ro.ainpc.routine.RoutineService;
 import ro.ainpc.spawn.NpcSpawnOrchestrator;
 import ro.ainpc.story.StoryContextService;
+import ro.ainpc.story.StoryStateService;
 import ro.ainpc.utils.MessageUtils;
 
 import java.io.File;
@@ -58,6 +59,7 @@ public class AINPCPlugin extends JavaPlugin {
     private ScenarioEngine scenarioEngine;
     private FeaturePackLoader featurePackLoader;
     private StoryContextService storyContextService;
+    private StoryStateService storyStateService;
 
     @Override
     public void onEnable() {
@@ -117,6 +119,7 @@ public class AINPCPlugin extends JavaPlugin {
         decisionEngine = new DecisionEngine(this);
         dialogueEngine = new DialogueEngine(this, openAIService);
         scenarioEngine = new ScenarioEngine(this);
+        storyStateService = new StoryStateService(this);
         storyContextService = new StoryContextService(this);
         
         // Inregistreaza comenzile
@@ -219,6 +222,7 @@ public class AINPCPlugin extends JavaPlugin {
         if (scenarioEngine != null) {
             scenarioEngine.reloadTemplates();
         }
+        storyStateService = new StoryStateService(this);
         storyContextService = new StoryContextService(this);
         if (npcManager != null) {
             npcManager.ensureAllNPCsHaveProfiles();
@@ -305,6 +309,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public StoryContextService getStoryContextService() {
         return storyContextService;
+    }
+
+    public StoryStateService getStoryStateService() {
+        return storyStateService;
     }
 
     public FeaturePackLoader getFeaturePackLoader() {
