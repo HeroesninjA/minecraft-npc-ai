@@ -1,6 +1,6 @@
 # Ordine spawn NPC, cladiri, regiuni si node-uri - v2
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
 Versiune: v2
 
@@ -14,7 +14,8 @@ Acest document nu mai repeta tot istoricul fazelor 0-10. Versiunea v1 ramane arh
 
 v2 stabileste ce trebuie facut in continuare dupa nucleul MVP de spawn order:
 
-- generator real care produce automat `HouseAllocation`
+- smoke test Paper pentru mapping demo, household planner si settlement planner
+- generator narativ care produce automat `HouseAllocation`
 - planuri serializate si comenzi admin pentru validate/dry-run
 - model persistent dedicat pentru household si world bindings
 - migration/backfill pentru date vechi
@@ -33,6 +34,14 @@ Implementat initial:
 - `NpcSpawnOrchestrator.validateHouseAllocation(...)`
 - `NpcSpawnOrchestrator.dryRunHouseAllocation(...)`
 - `NpcSpawnOrchestrator.spawnHousehold(...)`
+- `/ainpc world demo create [regionId]`
+- `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
+- `/ainpc world household <plan|spawn> <homePlaceId> [count]`
+- `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
+- planner determinist pentru o casa mapata
+- planner determinist pentru toate casele dintr-o regiune
+- rollback global practic pentru `settlement spawn`, la nivel de NPC-uri create anterior
+- `npc_world_bindings` initial pentru home/work/social place si node IDs
 - family bind dupa spawn prin `FamilyBindingPlan`
 - audit spawn-order pentru case, rezidenti, ancore si familie reciproca
 - routine MVP pe `home/work/social anchors`
@@ -40,12 +49,13 @@ Implementat initial:
 
 Nu este complet inca:
 
-- generatorul nu produce automat `HouseAllocation` din sat/cladiri/node-uri
+- generatorul nu produce inca `SettlementPlan` serializat si populatie narativa complexa
 - planurile nu au format serializat stabil
 - nu exista comenzi admin dedicate `/ainpc spawnplan validate|dryrun|commit`
 - `metadata.residents` este inca solutie temporara
-- nu exista tabele `households`, `household_residents`, `npc_world_bindings`
-- rollback-ul nu este tranzactie completa
+- nu exista tabele `households`, `household_residents` si `spawn_batches`
+- `npc_world_bindings` exista initial, dar mai trebuie inspectie/backfill matur
+- rollback-ul global practic nu este tranzactie DB completa
 - nu exista patch planner/builder complet pentru lipsuri de sat
 
 ## Regula de baza ramasa valabila
@@ -59,6 +69,43 @@ plan -> constructie/import -> region -> place -> node -> HouseAllocation
 
 Nu schimba aceasta ordine. Daca generatorul sare peste `place`, `node` sau `HouseAllocation`, NPC-urile vor ajunge iar pe fallback-uri random.
 
+## Faza Curenta Salvata: Mapping Demo si Settlement Planner
+
+Starea curenta de lucru:
+
+- mapping demo poate crea regiune, case, locuri de munca, piata si node-uri
+- NPC existent poate fi legat manual la home/work/social places
+- o casa poate fi planificata si populata prin `world household plan/spawn`
+- o regiune poate fi planificata si populata prin `world settlement plan/spawn`
+- `settlement spawn` opreste executia la prima eroare si sterge NPC-urile create in household-uri anterioare
+- metadata mapping se actualizeaza dupa spawn reusit
+- `npc_world_bindings` se actualizeaza dupa bind manual si spawn reusit
+
+Urmatorul test obligatoriu:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world settlement plan demo_sat
+/ainpc world settlement spawn demo_sat
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world save
+```
+
+Dupa reload/restart:
+
+```text
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world places demo_sat
+```
+
+Conditia pentru a trece la questuri:
+
+- demo-ul ramane coerent dupa reload
+- NPC-urile au casa, ancore si familie valida
+- auditul nu raporteaza erori de mapping/spawn order
+
 ## Faza 11: SettlementPlan si Generator Real
 
 Scop:
@@ -66,6 +113,10 @@ Scop:
 - generatorul produce planul complet in memorie inainte de orice modificare reala
 - `HouseAllocation` nu mai este construit manual
 - fiecare cladire, node si NPC are ID stabil inainte de spawn
+
+Document:
+
+- `settlement-plan.md`
 
 Modele recomandate:
 
@@ -193,6 +244,10 @@ Scop:
 - eliminarea dependentei de `metadata.residents` pentru date mature
 - cautari rapide si clare dupa casa, familie si ancore
 - reluare dupa restart fara presupuneri
+
+Document:
+
+- `households-persistente.md`
 
 Tabele recomandate:
 
@@ -360,6 +415,10 @@ Scop:
 - pluginul completeaza doar ce lipseste
 - mapping-ul semantic devine suficient pentru spawn controlat
 
+Document:
+
+- `patch-planner.md`
+
 Pipeline recomandat:
 
 ```text
@@ -491,16 +550,16 @@ Avertizari:
 
 ## Ordinea recomandata de lucru
 
-1. `SettlementPlan` minim si generator determinist pentru o casa/familie.
-2. Plan serializat pentru household si comenzi `validate/dryrun`.
-3. `commit` controlat pentru un household.
-4. `households` si `npc_world_bindings` in DB.
-5. Migration/backfill dry-run.
-6. Rollback cu `spawn_batches`.
-7. Gap analyzer si patch planner peste scannerul vanilla.
-8. Rutina extinsa pe household/family.
-9. Audit services reutilizabile.
-10. Smoke test complet pe server Paper.
+1. Smoke test complet pe server Paper pentru `demo_sat`, cu save si reload.
+2. Inspectie/backfill matur pentru `npc_world_bindings`.
+3. Migration/backfill dry-run din `profile_data` si metadata veche pentru cazuri ambigue.
+4. Generator narativ peste regiune: nume, roluri, familii, profesii si distributie pe case/work/social.
+5. `SettlementPlan` serializat si comenzi `validate/dryrun/commit`.
+6. `households`, `household_residents`, `spawn_batches` si audit post-commit.
+7. Rollback tranzactional sau compensare documentata peste spawn, DB, familie si mapping metadata.
+8. Gap analyzer si patch planner peste scannerul vanilla.
+9. Rutina extinsa pe household/family.
+10. Audit services reutilizabile si debugdump complet.
 
 ## Criterii de iesire pentru v2
 

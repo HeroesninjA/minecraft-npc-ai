@@ -8,10 +8,14 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 
 | Document | Rol |
 |---|---|
+| `../../questuri-faza-1-stabilizare.md` | Faza Q1 pentru stabilizarea Q01-Q05, audit template si smoke test |
 | `../../questuri-avansate.md` | Evolutia questurilor pe obiective, etape si progres |
+| `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
+| `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
 | `../../quest-anchor-bindings.md` | Contract DB pentru ancore semantice de quest |
 | `../../story-context-service.md` | Context narativ read-only pentru prompt si debugging |
 | `../../story-si-context-ai.md` | Legatura `mapping -> indexare -> quest -> story -> AI` |
+| `../../environment-context-si-engine.md` | Context read-only de lume pentru questuri si EnvironmentEngine viitor |
 | `../../betonquest-directii-potrivite-pentru-ainpc.md` | Inspiratie pentru quest runtime matur |
 | `../../generare-ai-si-constructie-automata.md` | AI ca tool de authoring validat |
 | `../../reactie-npc-jucator.md` | Reactii NPC legate de questuri si interactiuni |
@@ -26,6 +30,10 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - `StoryStateService` exista initial pentru `region_story_state`, `place_story_state` si `story_events`.
 - `/ainpc story region`, `/ainpc story place` si `/ainpc story events` exista initial pentru inspectia read-only a story state-ului persistent.
 - Actiunile de quest `set_story_state` si `record_story_event` exista initial.
+- `/ainpc audit quest` verifica initial si quest templates, nu doar binding-uri.
+- `EnvironmentContextService` este directia recomandata pentru context read-only de lume; `EnvironmentEngine` complet ramane feature viitor.
+- Dialogul trebuie sa devina quest-aware, story-aware si environment-aware, dar sa ramana prezentare peste runtime validat.
+- AI-ul trebuie orchestratat central printr-un serviciu dedicat, dar executia ramane in serviciile deterministe.
 - Lipsesc inca audit/debugdump dedicat si validator complet pentru story actions.
 
 ## Urmatoarele documente utile
@@ -33,3 +41,4 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - Contract pentru `StoryDraft` si `QuestDraft`.
 - Ghid de prompturi sigure pentru generare quest/story.
 - Specificatie completa si validator pentru actiunile `set_story_state` si `record_story_event`.
+- Contract complet pentru `DialogueContextSnapshot`, dialogue nodes si choices validate.

@@ -268,6 +268,39 @@ public class DatabaseManager {
                 ON quest_anchor_bindings(anchor_type, anchor_id)
             """);
 
+            // Binding-uri persistente intre NPC-uri si world mapping. Profile_data ramane fallback
+            // pentru coordonate, dar place/node IDs trebuie sa aiba o sursa dedicata.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS npc_world_bindings (
+                    npc_id INTEGER PRIMARY KEY,
+                    npc_uuid TEXT NOT NULL DEFAULT '',
+                    npc_name TEXT NOT NULL DEFAULT '',
+                    home_place_id TEXT NOT NULL DEFAULT '',
+                    work_place_id TEXT NOT NULL DEFAULT '',
+                    social_place_id TEXT NOT NULL DEFAULT '',
+                    home_node_id TEXT NOT NULL DEFAULT '',
+                    work_node_id TEXT NOT NULL DEFAULT '',
+                    social_node_id TEXT NOT NULL DEFAULT '',
+                    family_id TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_home_place
+                ON npc_world_bindings(home_place_id)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_work_place
+                ON npc_world_bindings(work_place_id)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_social_place
+                ON npc_world_bindings(social_place_id)
+            """);
+
             // Tabele story persistente. Mapping-ul ramane in config/runtime, dar aceste tabele tin
             // starea narativa care se poate schimba dupa questuri sau evenimente.
             stmt.execute("""

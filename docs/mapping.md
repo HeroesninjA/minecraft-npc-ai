@@ -261,6 +261,7 @@ Ce face:
 - rezolva `homePlaceId`, optional `workPlaceId` si optional `socialPlaceId`
 - alege automat cel mai bun node semantic din place pentru ancora respectiva
 - salveaza `homeAnchor`, `workAnchor` si `socialAnchor` in `npc_profiles.profile_data`
+- salveaza `home_place_id`, `work_place_id`, `social_place_id` si node-urile aferente in `npc_world_bindings`
 - marcheaza home place-ul cu `owner_npc_id`, `metadata.owner_status: assigned`, `resident_npc_ids` si `resident_names`
 - marcheaza work place-ul cu `worker_npc_ids` si social place-ul cu `social_npc_ids`, daca sunt date
 
@@ -273,7 +274,7 @@ Exemplu pentru mapping-ul demo:
 /ainpc world save
 ```
 
-Aceasta este legarea initiala practica intre mapping si NPC-uri. Inca nu exista tabela dedicata `npc_world_bindings`, deci ID-urile explicite de place raman in mapping metadata, iar NPC-ul pastreaza ancorele efective in `profile_data`.
+Aceasta este legarea initiala practica intre mapping si NPC-uri. Tabela `npc_world_bindings` pastreaza ID-urile stabile de place/node, iar `profile_data.owned_locations` ramane cache/fallback pentru coordonate si rutina.
 
 ### Household plan din mapping
 
@@ -343,6 +344,81 @@ Pentru testare graduala:
 /ainpc world settlement spawn demo_sat 2
 ```
 
+## Fazele urmatoare pentru mapping si spawn
+
+Prioritatea curenta nu mai este alegerea intre mapping si questuri. Mapping-ul MVP are acum comenzi initiale pentru demo, bind, household planner si settlement planner. Urmatorul pas este validarea lui pe server Paper, apoi questurile trebuie construite peste mapping-ul validat.
+
+### Faza M1: Smoke test Paper
+
+Flux de verificat:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world settlement plan demo_sat
+/ainpc world settlement spawn demo_sat
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world save
+```
+
+Dupa reload/restart se verifica din nou:
+
+```text
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world places demo_sat
+```
+
+Conditie de iesire:
+
+- mapping-ul ramane incarcat dupa reload
+- NPC-urile spawnate raman legate de case, work/social places si familie
+- auditul nu raporteaza erori de spawn order sau places lipsa
+
+### Faza M2: Persistenta dedicata NPC-place
+
+Implementat initial:
+
+- tabela `npc_world_bindings`
+- legaturi explicite `homePlaceId`, `workPlaceId`, `socialPlaceId`
+- node IDs pentru home/work/social cand planul sau mapping-ul le poate rezolva
+- scriere din `world bind`, `household spawn` si `settlement spawn`
+- backfill initial din ancorele existente, cand coordonatele cad intr-un mapped place
+- audit DB pentru randuri orfane, place-uri si node-uri invalide
+
+Ramas de maturizat:
+
+- comanda read-only dedicata pentru inspectie bindings
+- migration/backfill explicit pentru servere vechi
+- audit dedicat `worldbindings`
+
+### Faza M3: Generator narativ de populatie
+
+De facut:
+
+- generare de nume, roluri, profesii si relatii dupa mapping
+- reguli pentru mai multi rezidenti per casa
+- distributie coerenta intre case, locuri de munca si puncte sociale
+- integrare cu story local fara ca AI-ul sa scrie direct in DB
+
+### Faza M4: Hardening spawn pe regiune
+
+De facut:
+
+- tranzactie DB completa sau compensare documentata peste spawn, profil, familie si metadata
+- debugdump pentru plan, reusite partiale si rollback
+- test automat pentru esec la household intermediar
+- mesaje admin clare cand un settlement spawn este refuzat sau anulat
+
+### Faza M5: Quest slice peste mapping
+
+De facut dupa smoke test:
+
+- 3-5 questuri medievale care folosesc `visit_place` si `inspect_node`
+- quest anchors persistente verificate in audit/debugdump
+- story state/events scrise la completare
+- test manual cap-coada dupa reload
+
 ## Ce valideaza sistemul acum
 
 La creare runtime exista deja validare pentru:
@@ -411,19 +487,19 @@ Pentru locuri de munca, mapping-ul recunoaste:
 Important:
 
 - NPC-ul salveaza acum coordonata si label-ul ancorei in `npc_profiles.profile_data`
+- `npc_world_bindings` salveaza acum ID-urile stabile `home_place_id`, `work_place_id`, `social_place_id` si node IDs
 - `WorldPlace` poate avea `owner_npc_id`
 - comanda `/ainpc world bind npc ...` seteaza initial ancorele NPC si metadata inversa pe place
-- nu exista inca un camp persistent explicit `homePlaceId` sau `workPlaceId` pe NPC
-- asocierea inversa completa `place -> npc -> place` exista doar initial prin metadata, nu printr-o tabela dedicata
+- asocierea inversa pe `WorldPlace` ramane in metadata pentru compatibilitate si inspectie admin
 
 ## Ce nu este inca legat complet
 
 Sistemul de mapping exista, dar urmatoarele piese nu sunt inca conectate complet:
 
-- NPC-urile pot fi legate manual la places, dar nu au inca `homePlaceId`, `workPlaceId`, `socialPlaceId` ca proprietati dedicate
+- `npc_world_bindings` exista initial, dar rutina si toate auditurile nu se bazeaza inca exclusiv pe aceasta tabela
 - household plannerul este determinist si minim; nu este inca generator narativ complet de populatie
 - settlement spawn are rollback global practic pentru NPC-urile create anterior, dar nu este inca tranzactie DB completa peste mapping si familie
-- `NPCContext` expune context semantic initial prin `WorldContextSnapshot`, dar nu exista inca bindings persistente dedicate pe placeId/nodeId
+- `NPCContext` expune context semantic initial prin `WorldContextSnapshot`, dar nu consuma inca direct `npc_world_bindings`
 - questurile au `visit_place`, `inspect_node`, `QuestAnchorResolver`, persistenta initiala in `quest_anchor_bindings` si audit/comanda admin read-only pentru binding-uri
 - `places` nu au stare dinamica de tip `open`, `closed`, `under_attack`
 - persistenta este in `config.yml`, nu in baza de date

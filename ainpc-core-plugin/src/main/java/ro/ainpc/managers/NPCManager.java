@@ -25,6 +25,8 @@ import ro.ainpc.npc.NPCPersonality;
 import ro.ainpc.spawn.NpcSpawnPlan;
 import ro.ainpc.spawn.ResolvedNpcSpawnPlan;
 import ro.ainpc.utils.NPCNameGenerator;
+import ro.ainpc.world.NpcWorldBinding;
+import ro.ainpc.world.NpcWorldBindingService;
 import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlaceInfo;
@@ -314,6 +316,7 @@ public class NPCManager {
         emotions.setAnticipation(rs.getDouble("anticipation"));
         npc.setEmotions(emotions);
         hydrateProfileRuntimeData(npc);
+        hydrateWorldBindingRuntimeData(npc);
 
         return npc;
     }
@@ -363,6 +366,21 @@ public class NPCManager {
             }
         } catch (Exception e) {
             plugin.debug("Nu am putut hidrata profilul runtime pentru NPC-ul " + npc.getName() + ": " + e.getMessage());
+        }
+    }
+
+    private void hydrateWorldBindingRuntimeData(AINPC npc) {
+        NpcWorldBindingService bindings = plugin.getNpcWorldBindingService();
+        if (bindings == null || npc == null || npc.getDatabaseId() <= 0) {
+            return;
+        }
+
+        try {
+            bindings.getBinding(npc.getDatabaseId())
+                .ifPresent(binding -> applyWorldBindingAnchors(npc, binding));
+        } catch (SQLException exception) {
+            plugin.debug("Nu am putut hidrata npc_world_bindings pentru NPC-ul "
+                + npc.getName() + ": " + exception.getMessage());
         }
     }
 
@@ -732,6 +750,148 @@ public class NPCManager {
         }
 
         return backfilledProfiles;
+    }
+
+    public int backfillWorldBindingsFromAnchors() {
+        NpcWorldBindingService bindings = plugin.getNpcWorldBindingService();
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (bindings == null || worldAdmin == null || !worldAdmin.isEnabled()) {
+            return 0;
+        }
+
+        int backfilled = 0;
+        for (AINPC npc : npcsByUuid.values()) {
+            if (npc == null || npc.getDatabaseId() <= 0) {
+                continue;
+            }
+
+            try {
+                if (bindings.getBinding(npc.getDatabaseId()).isPresent()) {
+                    continue;
+                }
+
+                NpcWorldBinding inferred = inferWorldBindingFromAnchors(npc, worldAdmin);
+                if (inferred != null && inferred.hasAnyPlaceBinding()) {
+                    bindings.saveBinding(inferred);
+                    backfilled++;
+                }
+            } catch (SQLException exception) {
+                plugin.debug("Backfill npc_world_bindings esuat pentru NPC-ul "
+                    + npc.getName() + ": " + exception.getMessage());
+            }
+        }
+        return backfilled;
+    }
+
+    private NpcWorldBinding inferWorldBindingFromAnchors(AINPC npc, WorldAdminApi worldAdmin) {
+        WorldPlaceInfo homePlace = inferPlaceFromAnchor(worldAdmin, npc.getHomeAnchor());
+        WorldPlaceInfo workPlace = inferPlaceFromAnchor(worldAdmin, npc.getWorkAnchor());
+        WorldPlaceInfo socialPlace = inferPlaceFromAnchor(worldAdmin, npc.getSocialAnchor());
+        if (homePlace == null && workPlace == null && socialPlace == null) {
+            return null;
+        }
+
+        WorldNodeInfo homeNode = inferNodeFromAnchor(worldAdmin, npc.getHomeAnchor(), homePlace);
+        WorldNodeInfo workNode = inferNodeFromAnchor(worldAdmin, npc.getWorkAnchor(), workPlace);
+        WorldNodeInfo socialNode = inferNodeFromAnchor(worldAdmin, npc.getSocialAnchor(), socialPlace);
+
+        return new NpcWorldBinding(
+            npc.getDatabaseId(),
+            npc.getUuid() != null ? npc.getUuid().toString() : "",
+            npc.getName(),
+            homePlace != null ? homePlace.id() : "",
+            workPlace != null ? workPlace.id() : "",
+            socialPlace != null ? socialPlace.id() : "",
+            homeNode != null ? homeNode.id() : "",
+            workNode != null ? workNode.id() : "",
+            socialNode != null ? socialNode.id() : "",
+            "",
+            "profile_backfill",
+            0L,
+            0L
+        );
+    }
+
+    private void applyWorldBindingAnchors(AINPC npc, NpcWorldBinding binding) {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            return;
+        }
+
+        AINPC.OwnedLocation homeAnchor = anchorFromBinding(worldAdmin,
+            binding.homePlaceId(), binding.homeNodeId(), "home");
+        if (homeAnchor != null) {
+            npc.setHomeAnchor(homeAnchor);
+        }
+
+        AINPC.OwnedLocation workAnchor = anchorFromBinding(worldAdmin,
+            binding.workPlaceId(), binding.workNodeId(), "work");
+        if (workAnchor != null) {
+            npc.setWorkAnchor(workAnchor);
+        }
+
+        AINPC.OwnedLocation socialAnchor = anchorFromBinding(worldAdmin,
+            binding.socialPlaceId(), binding.socialNodeId(), "social");
+        if (socialAnchor != null) {
+            npc.setSocialAnchor(socialAnchor);
+        }
+    }
+
+    private AINPC.OwnedLocation anchorFromBinding(WorldAdminApi worldAdmin,
+                                                  String placeId,
+                                                  String nodeId,
+                                                  String role) {
+        WorldPlaceInfo place = placeId == null || placeId.isBlank() ? null : worldAdmin.getPlace(placeId);
+        WorldNodeInfo node = nodeId == null || nodeId.isBlank() ? null : worldAdmin.getNode(nodeId);
+        if (node != null) {
+            String label = place != null ? place.displayName() : node.id();
+            return new AINPC.OwnedLocation(
+                role,
+                nodeLabel(node, label),
+                node.worldName(),
+                node.x(),
+                node.y(),
+                node.z()
+            );
+        }
+        if (place == null) {
+            return null;
+        }
+
+        return new AINPC.OwnedLocation(
+            role,
+            place.displayName(),
+            place.worldName(),
+            placeCenterX(place),
+            placeAnchorY(place),
+            placeCenterZ(place)
+        );
+    }
+
+    private WorldPlaceInfo inferPlaceFromAnchor(WorldAdminApi worldAdmin, AINPC.OwnedLocation anchor) {
+        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
+            return null;
+        }
+        return worldAdmin.findPlace(
+            anchor.worldName(),
+            (int) Math.floor(anchor.x()),
+            (int) Math.floor(anchor.y()),
+            (int) Math.floor(anchor.z())
+        );
+    }
+
+    private WorldNodeInfo inferNodeFromAnchor(WorldAdminApi worldAdmin,
+                                              AINPC.OwnedLocation anchor,
+                                              WorldPlaceInfo place) {
+        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
+            return null;
+        }
+
+        return worldAdmin.findNodesNear(anchor.worldName(), anchor.x(), anchor.y(), anchor.z(), 2.5D, 5)
+            .stream()
+            .filter(node -> place == null || node.placeId().isBlank() || node.placeId().equalsIgnoreCase(place.id()))
+            .findFirst()
+            .orElse(null);
     }
 
     /**

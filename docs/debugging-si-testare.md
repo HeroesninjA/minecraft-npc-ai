@@ -1,10 +1,12 @@
 # Debugging si Testare
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-03
 
 ## Scop
 
 Acest document centralizeaza metodele practice de debugging si testare pentru proiectul AINPC.
+
+Pentru fluxul operational cap-coada pe server Paper, pornind de la instalare si configuratie minima, vezi `server-admin-runbook.md`. Pentru acceptarea unui build ca release, vezi `release-checklist.md`.
 
 Acopera:
 
@@ -69,6 +71,31 @@ mvn clean test
 Cand folosesti `clean`, asteapta-te ca directoarele `target/` sa fie regenerate.
 
 ## Scripturi existente
+
+### `scripts/smoke-paper-mapping.ps1`
+
+Scop:
+
+- pregateste un server Paper pentru smoke test-ul mapping/spawn
+- construieste JAR-urile, daca nu folosesti `-SkipBuild`
+- copiaza pluginul core si addonul medieval in `plugins/`
+- genereaza comenzile de rulat in `ainpc-mapping-smoke-commands.txt`
+- genereaza raport cu hash-uri in `ainpc-mapping-smoke-report.txt`
+
+Rulare simpla:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
+  -ServerDir "C:\Minecraft\paper-test"
+```
+
+Cu teste Maven inainte de package:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -RunTests
+```
 
 ### `scripts/debug-openai.ps1`
 
@@ -175,6 +202,10 @@ Pentru creare manuala:
 /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]
 /ainpc world scan village [radius]
 /ainpc world scan village [radius] import [regionId]
+/ainpc world demo create [regionId]
+/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]
+/ainpc world household <plan|spawn> <homePlaceId> [count]
+/ainpc world settlement <plan|spawn> <regionId> [maxHouses]
 /ainpc world save
 ```
 
@@ -287,11 +318,13 @@ Ce verifica:
 - places suprapuse
 - nodes in afara containerului semantic
 - profile DB lipsa, profile orfane si campuri DB obligatorii lipsa
+- `npc_world_bindings` orfane, fara place, cu place/node IDs inexistente sau incompatibile
 - case cu rezidenti peste capacitate
 - rezidenti care nu se pot rezolva ca NPC-uri incarcate
 - `homeAnchor` in afara casei
 - relatii familiale fara reciproc
 - duplicate exacte in `npc_family`
+- quest templates cu profesii, prerequisite-uri, faze, dialoguri, obiective sau recompense invalide
 - `quest_anchor_bindings` fara progres parinte
 - quest anchors catre regiuni, places sau nodes inexistente
 - incompatibilitati intre `objective_type` si `anchor_type`
@@ -491,6 +524,34 @@ Comenzi exemplu:
 /ainpc world node create sat_test sat_test:fierarie forge_spot interaction 15 64 15 2
 /ainpc world save
 ```
+
+## Smoke Test Mapping si Settlement Spawn
+
+Acesta este testul imediat pentru faza curenta de mapping/spawn:
+
+```text
+/ainpc world demo create demo_sat
+/ainpc world settlement plan demo_sat
+/ainpc world settlement spawn demo_sat
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world save
+```
+
+Dupa reload sau restart:
+
+```text
+/ainpc audit world
+/ainpc audit spawn
+/ainpc world places demo_sat
+```
+
+Verifica:
+
+- mapping-ul demo ramane incarcat dupa reload
+- NPC-urile spawnate au casa, ancore si familie valida
+- place-urile home/work/social au metadata de rezidenti, worker sau social
+- auditul nu raporteaza erori de spawn order
 
 ## Testare NPC auto-indexat din villager
 

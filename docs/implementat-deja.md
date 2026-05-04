@@ -59,6 +59,7 @@ Sistemul de NPC-uri are deja implementate:
 - completare automata pentru `homeAnchor` si `workAnchor`
 - completare automata pentru `socialAnchor`
 - bind manual initial prin `/ainpc world bind npc ...` catre home/work/social places
+- persistenta initiala `npc_world_bindings` pentru home/work/social place si node IDs
 - planner initial `/ainpc world household plan ...` care produce `HouseAllocation` din mapping
 - spawn initial `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
 - planner initial `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
@@ -202,6 +203,9 @@ Ce este implementat:
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
 - audit read-only `/ainpc audit quest`
+- validare initiala de quest templates in `/ainpc audit quest`
+- teste de contract pentru Q01-Q05 din addonul medieval
+- smoke script `scripts/smoke-paper-quests.ps1`
 - context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres
 - finalizare cu recompensa
@@ -351,6 +355,7 @@ Capabilitati implementate:
 - comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
 - comanda `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - comanda `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
+- tabela `npc_world_bindings` pentru binding-uri persistente NPC -> home/work/social places si nodes
 - metadata initiala pentru bind home/work/social: `owner_npc_id`, `resident_npc_ids`, `worker_npc_ids`, `social_npc_ids`
 - audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
 - scanare vanilla initiala prin `/ainpc world scan village`
@@ -505,6 +510,7 @@ Proiectul are deja implementate:
 - comenzi read-only pentru story state persistent si evenimente story
 - actiuni de quest pentru story state si story events
 - scanare vanilla initiala si import semantic pentru world mapping
+- `npc_world_bindings` initial pentru home/work/social place si node IDs
 - comanda pentru mapping demo minim in jurul jucatorului
 - rutina zilnica initiala peste `home/work/social anchors`
 - `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic

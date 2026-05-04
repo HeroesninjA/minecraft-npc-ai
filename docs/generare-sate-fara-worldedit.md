@@ -51,6 +51,7 @@ Asta inseamna:
 - legam NPC-urile de case, familii si locuri de munca
 
 `WorldEdit` ramane util pe termen lung, dar nu trebuie introdus acum ca dependinta obligatorie.
+Cand devine necesar pentru template-uri mari, contractul separat este `worldedit-integration-contract.md`.
 
 ## Regula: adaptare vanilla, nu inlocuire
 
@@ -195,6 +196,8 @@ nu exista node-uri clare pentru rutine
 ```
 
 ### VillagePatchPlanner
+
+Pentru contractul dedicat, vezi `patch-planner.md`.
 
 Rol:
 
@@ -421,6 +424,8 @@ metadata:
 ## Tipuri minime de cladiri
 
 Pentru o generatie utila, biblioteca nativa de cladiri ar trebui sa inceapa cu aceste template-uri parametrice:
+
+Pentru contractul de template metadata si marker nodes, vezi `template-cladiri-si-marker-nodes.md`.
 
 - `house_small`
 - `house_medium`
@@ -789,9 +794,10 @@ Aceasta mecanica foloseste stilul vanilla si blocuri vanilla, dar nu depinde de 
 
 Ordinea buna de implementare:
 
-1. defineste `GeneratedSettlementPlan`
-2. defineste `GeneratedLotPlan`
-3. defineste `GeneratedBuildingPlan`
+1. defineste `GeneratedSettlementPlan` / `SettlementPlan`; vezi `settlement-plan.md`
+2. defineste `PatchPlan`; vezi `patch-planner.md`
+3. defineste `GeneratedLotPlan`
+4. defineste `GeneratedBuildingPlan`
 4. adauga reguli de proportii si distante minime
 5. adauga un catalog nativ de cladiri mici si medii in stil vanilla
 6. implementeaza builder pentru `house_small`

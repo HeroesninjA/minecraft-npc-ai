@@ -64,6 +64,8 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\utils\MessageUtils.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\utils\NPCNameGenerator.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\MappingIndex.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\NpcWorldBinding.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\NpcWorldBindingService.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\RegionType.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\scan\SemanticVillageImportResult.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\scan\SemanticVillageMapper.java

@@ -8,6 +8,8 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 
 | Document | Rol |
 |---|---|
+| `../../server-admin-runbook.md` | Runbook pentru instalare, config minim, verificari, audit, debugdump si smoke test pe Paper |
+| `../../release-checklist.md` | Checklist pentru build, inspectie JAR, test Paper, audit, restart si rollback |
 | `../../audit.md` | Documentatie pentru `/ainpc audit` si backlog de verificari |
 | `../../debugging-si-testare.md` | Testare Maven, debug dump, smoke tests |
 | `../../prevenire-duplicare-npc.md` | Runbook pentru diagnostic si cleanup controlat cand NPC-urile se dubleaza |
@@ -17,7 +19,5 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 
 ## Urmatoarele documente utile
 
-- Runbook pentru server admin.
 - Ghid de backup, restore si migration.
-- Checklist de release.
 - Politica pentru debug logs si date sensibile.

@@ -89,10 +89,6 @@ public class AINPCScenarioMedievalPlugin extends JavaPlugin {
         Files.createDirectories(addonDirectory);
 
         Path managedPack = addonDirectory.resolve(PACK_FILE_NAME);
-        if (Files.exists(managedPack)) {
-            return;
-        }
-
         try (InputStream inputStream = getResource(PACK_RESOURCE_PATH)) {
             if (inputStream == null) {
                 throw new IOException("Resursa lipsa: " + PACK_RESOURCE_PATH);

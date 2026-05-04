@@ -12,6 +12,8 @@ Acest document descrie cum ar trebui construit sistemul de reactie dintre NPC si
 - legata de memorie, relatie, emotii si context
 - reutilizabila pentru dialog, questuri, combat si simulare
 
+Pentru evolutia dialogului propriu-zis peste quest, story, environment, memorie si reputatie, vezi si `dialog-si-conversatii.md`.
+
 Ideea centrala:
 - reactia nu trebuie sa fie doar text
 - reactia trebuie sa fie un pipeline de stare + decizie + manifestare

@@ -232,6 +232,8 @@ Este mai sigur sa alegi variante de template:
 - `house_shared`
 - `house_large`
 
+Pentru contractul canonic de template metadata, ancore si marker nodes, vezi `template-cladiri-si-marker-nodes.md`.
+
 Fiecare template trebuie sa declare:
 
 - latime
@@ -285,6 +287,8 @@ Modul recomandat:
 - dependinta soft pe WorldEdit
 - capabilitate declarata: `worldedit-execution`
 - fallback la builder nativ pentru structuri mici
+
+Contractul API si limitele adapterului sunt detaliate in `worldedit-integration-contract.md`.
 
 Interfata recomandata:
 

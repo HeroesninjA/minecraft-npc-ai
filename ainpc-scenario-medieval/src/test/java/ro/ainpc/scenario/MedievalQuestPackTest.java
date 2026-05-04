@@ -7,7 +7,9 @@ import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,9 +21,7 @@ class MedievalQuestPackTest {
 
     @Test
     void medievalQuestPackDefinesPlayableQuestSet() {
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(
-            new File("src/main/resources/packs/medieval_quest.yml")
-        );
+        YamlConfiguration config = loadMedievalQuestPack();
 
         ConfigurationSection scenarios = config.getConfigurationSection("scenarios");
         assertNotNull(scenarios, "scenarios section should exist");
@@ -85,6 +85,76 @@ class MedievalQuestPackTest {
         assertEquals(List.of("Q02"), scenarios.getStringList("Q05.quest.prerequisites"));
     }
 
+    @Test
+    void medievalQuestPackHasStableRuntimeContractForStarterQuests() {
+        YamlConfiguration config = loadMedievalQuestPack();
+
+        ConfigurationSection professions = config.getConfigurationSection("professions");
+        ConfigurationSection scenarios = config.getConfigurationSection("scenarios");
+        assertNotNull(professions, "professions section should exist");
+        assertNotNull(scenarios, "scenarios section should exist");
+
+        Set<String> knownQuestReferences = new HashSet<>();
+        for (String scenarioId : scenarios.getKeys(false)) {
+            knownQuestReferences.add(normalize(scenarioId));
+            knownQuestReferences.add(normalize("medieval_quest:" + scenarioId));
+            knownQuestReferences.add(normalize(scenarios.getString(scenarioId + ".quest.code", "")));
+        }
+
+        Set<String> questCodes = new HashSet<>();
+        for (String scenarioId : scenarios.getKeys(false)) {
+            ConfigurationSection scenario = scenarios.getConfigurationSection(scenarioId);
+            assertNotNull(scenario, "scenario " + scenarioId + " should exist");
+
+            String questCode = scenario.getString("quest.code", "");
+            assertTrue(!questCode.isBlank(), scenarioId + " should define quest.code");
+            assertTrue(questCodes.add(normalize(questCode)), "quest.code should be unique: " + questCode);
+
+            String giverProfession = scenario.getString("quest.giver_profession", "");
+            assertTrue(!giverProfession.isBlank(), scenarioId + " should define giver profession");
+            assertTrue(professions.contains(giverProfession), scenarioId + " giver profession should exist");
+
+            ConfigurationSection giverRole = scenario.getConfigurationSection("roles.QUEST_GIVER");
+            assertNotNull(giverRole, scenarioId + " should define QUEST_GIVER role");
+            assertTrue(
+                giverRole.getStringList("required_professions").contains(giverProfession),
+                scenarioId + " QUEST_GIVER role should require the configured giver profession"
+            );
+
+            for (String prerequisite : scenario.getStringList("quest.prerequisites")) {
+                assertTrue(
+                    knownQuestReferences.contains(normalize(prerequisite)),
+                    scenarioId + " prerequisite should reference an existing quest: " + prerequisite
+                );
+            }
+
+            boolean repeatable = scenario.getBoolean("quest.repeatable", false);
+            int cooldownSeconds = scenario.getInt("quest.cooldown_seconds", 0);
+            if (repeatable) {
+                assertTrue(cooldownSeconds > 0, scenarioId + " repeatable quests should define cooldown_seconds");
+            } else {
+                assertEquals(0, cooldownSeconds, scenarioId + " non-repeatable quests should not define cooldown_seconds");
+            }
+
+            ConfigurationSection dialogues = scenario.getConfigurationSection("quest.dialogues");
+            assertNotNull(dialogues, scenarioId + " should define quest dialogues");
+            if (repeatable || !scenario.getStringList("quest.prerequisites").isEmpty()) {
+                assertDialogueLines(dialogues, "unavailable");
+            }
+
+            validateRuntimeSupportedObjectives(scenarioId, scenario.getConfigurationSection("quest.objectives"));
+            validateRuntimeSupportedRewards(scenarioId, scenario.getConfigurationSection("quest.rewards"));
+            validateStableEntryIds(scenarioId, "objective", scenario.getConfigurationSection("quest.objectives"));
+            validateStableEntryIds(scenarioId, "reward", scenario.getConfigurationSection("quest.rewards"));
+        }
+    }
+
+    private YamlConfiguration loadMedievalQuestPack() {
+        return YamlConfiguration.loadConfiguration(
+            new File("src/main/resources/packs/medieval_quest.yml")
+        );
+    }
+
     private void validateObjectives(ConfigurationSection objectives) {
         for (String key : objectives.getKeys(false)) {
             ConfigurationSection objective = objectives.getConfigurationSection(key);
@@ -101,6 +171,53 @@ class MedievalQuestPackTest {
         }
     }
 
+    private void validateRuntimeSupportedObjectives(String scenarioId, ConfigurationSection objectives) {
+        assertNotNull(objectives, scenarioId + " should define objectives");
+        Set<String> supportedObjectiveTypes = Set.of(
+            "collect_item",
+            "deliver_to_npc",
+            "talk_to_npc",
+            "visit_region",
+            "visit_place",
+            "inspect_node",
+            "kill_mob"
+        );
+
+        for (String key : objectives.getKeys(false)) {
+            ConfigurationSection objective = objectives.getConfigurationSection(key);
+            assertNotNull(objective, scenarioId + " objective " + key + " should be a section");
+            String type = normalizeRuntimeType(objective.getString("type", ""));
+            assertTrue(
+                supportedObjectiveTypes.contains(type),
+                scenarioId + " objective " + key + " should use a supported runtime type: " + type
+            );
+        }
+    }
+
+    private void validateRuntimeSupportedRewards(String scenarioId, ConfigurationSection rewards) {
+        assertNotNull(rewards, scenarioId + " should define rewards");
+        Set<String> supportedRewardTypes = Set.of("item", "set_story_state", "record_story_event");
+
+        for (String key : rewards.getKeys(false)) {
+            ConfigurationSection reward = rewards.getConfigurationSection(key);
+            assertNotNull(reward, scenarioId + " reward " + key + " should be a section");
+            String type = normalizeRuntimeType(reward.getString("type", "item"));
+            assertTrue(
+                supportedRewardTypes.contains(type),
+                scenarioId + " reward " + key + " should use a supported runtime type: " + type
+            );
+        }
+    }
+
+    private void validateStableEntryIds(String scenarioId, String entryKind, ConfigurationSection entries) {
+        assertNotNull(entries, scenarioId + " should define " + entryKind + " entries");
+        Set<String> entryIds = new HashSet<>();
+        for (String key : entries.getKeys(false)) {
+            assertTrue(!key.isBlank(), scenarioId + " " + entryKind + " key should not be blank");
+            assertTrue(entryIds.add(normalize(key)), scenarioId + " duplicate " + entryKind + " key: " + key);
+        }
+    }
+
     private void validateItemEntries(ConfigurationSection entries) {
         for (String key : entries.getKeys(false)) {
             ConfigurationSection entry = entries.getConfigurationSection(key);
@@ -113,5 +230,32 @@ class MedievalQuestPackTest {
     private void assertDialogueLines(ConfigurationSection dialogues, String key) {
         List<String> lines = dialogues.getStringList(key);
         assertTrue(!lines.isEmpty(), "dialogue key " + key + " should define at least one line");
+    }
+
+    private String normalizeRuntimeType(String type) {
+        String normalized = normalize(type);
+        return switch (normalized) {
+            case "", "item", "reward_item" -> "item";
+            case "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
+            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
+            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
+            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
+            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
+            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
+            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
+            case "set_story_state", "record_story_event" -> normalized;
+            default -> normalized;
+        };
+    }
+
+    private String normalize(String value) {
+        return value == null
+            ? ""
+            : value.trim()
+                .toLowerCase(Locale.ROOT)
+                .replace("minecraft:", "")
+                .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
+                .replaceAll("^_+|_+$", "")
+                .replaceAll("_+", "_");
     }
 }

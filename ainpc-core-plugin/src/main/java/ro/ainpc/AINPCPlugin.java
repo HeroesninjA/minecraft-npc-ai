@@ -28,6 +28,7 @@ import ro.ainpc.spawn.NpcSpawnOrchestrator;
 import ro.ainpc.story.StoryContextService;
 import ro.ainpc.story.StoryStateService;
 import ro.ainpc.utils.MessageUtils;
+import ro.ainpc.world.NpcWorldBindingService;
 
 import java.io.File;
 import java.util.logging.Level;
@@ -46,6 +47,7 @@ public class AINPCPlugin extends JavaPlugin {
     private OpenAIService openAIService;
     private RoutineService routineService;
     private NpcSpawnOrchestrator npcSpawnOrchestrator;
+    private NpcWorldBindingService npcWorldBindingService;
     private MessageUtils messageUtils;
     private AINPCPlatform platform;
     private ListenerRegistry listenerRegistry;
@@ -86,6 +88,7 @@ public class AINPCPlugin extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        npcWorldBindingService = new NpcWorldBindingService(this);
         
         // Initializeaza serviciul OpenAI
         getLogger().info("Initializare serviciu OpenAI...");
@@ -112,7 +115,9 @@ public class AINPCPlugin extends JavaPlugin {
         npcManager.loadAllNPCs();
         npcManager.discoverExistingVillagers();
         int backfilledProfiles = npcManager.ensureAllNPCsHaveProfiles();
+        int backfilledWorldBindings = npcManager.backfillWorldBindingsFromAnchors();
         getLogger().info("Profiluri NPC verificate. Profiluri create/backfill: " + backfilledProfiles);
+        getLogger().info("Binding-uri NPC-world inferate/backfill: " + backfilledWorldBindings);
         
         // Initializeaza motoarele AI
         getLogger().info("Initializare motoare AI...");
@@ -277,6 +282,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public NpcSpawnOrchestrator getNpcSpawnOrchestrator() {
         return npcSpawnOrchestrator;
+    }
+
+    public NpcWorldBindingService getNpcWorldBindingService() {
+        return npcWorldBindingService;
     }
 
     public RoutineService getRoutineService() {

@@ -6,6 +6,8 @@ Actualizat: 2026-04-28
 
 Acest document descrie cum poate fi refactorizat proiectul ca JAR-ul final al `ainpc-core-plugin` sa fie mai mic.
 
+Pentru verificarea unui build livrabil dupa schimbari de shade, dependinte sau `minimizeJar`, foloseste si `release-checklist.md`.
+
 Concluzia importanta este ca marimea JAR-ului nu vine din codul AINPC, ci din dependintele impachetate prin `maven-shade-plugin`.
 
 ## Starea actuala

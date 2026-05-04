@@ -44,6 +44,23 @@ Ordinea sanatoasa pentru proiect este:
 
 Fiecare faza trebuie sa lase in urma un rezultat testabil in joc, nu doar infrastructura.
 
+## Ordinea imediata dupa faza curenta
+
+Starea curenta a mapping-ului nu mai cere alegerea "quest sau mapping" ca blocaj. Mapping-ul are acum demo, bind NPC-place, household planner, settlement planner, rollback global practic si persistenta initiala `npc_world_bindings`. Ordinea de lucru recomandata este:
+
+1. `P0`: documentatia si TODO-ul raman sincronizate cu codul curent.
+2. `P1`: smoke test pe Paper pentru `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`.
+3. `P2`: persistenta dedicata `npc_world_bindings` si `homePlaceId/workPlaceId/socialPlaceId` este implementata initial; ramane inspectie/backfill mai matur si model household persistent, vezi `households-persistente.md`.
+4. `P3`: `SettlementPlan` si generator narativ de populatie pe regiune: plan complet validabil, nume, roluri, familii si distributie pe case/work/social; vezi `settlement-plan.md` si `generare-populatie-narativa.md`.
+5. `P4`: primul slice jucabil medieval: 3-5 questuri peste places/nodes demo.
+6. `P5`: hardening production: tranzactii DB complete, debugdump pentru rollback si mesaje admin mai clare.
+
+Regula de prioritate:
+
+- daca smoke test-ul Paper nu trece, se repara mapping/spawn
+- daca smoke test-ul trece, questurile devin focusul principal pentru primul release jucabil
+- hardening-ul mare intra dupa ce exista un flow jucabil care poate demonstra riscul real
+
 ## Harta interna a componentelor
 
 | Componenta | Zona / modul | Rol intern | Focus urmator |
@@ -55,7 +72,7 @@ Fiecare faza trebuie sa lase in urma un rezultat testabil in joc, nu doar infras
 | World admin | regiuni, places, nodes | Model semantic al lumii folosit de NPC, quest si story | Mapping demo real si validare de consistenta |
 | Scanner / mapper semantic | scanare sat vanilla si import | Detecteaza paturi, clopote, workstation-uri, usi, farmland si creeaza mapping semantic initial | Import mai complet si corectii manuale clare |
 | Spawn si household | `HouseAllocation`, `NpcSpawnPlan`, orchestrare spawn | Leaga case, rezidenti, familie, ancore si spawn batch | Populare mai narativa si tranzactii DB complete |
-| NPC lifecycle | manageri NPC, villager sync, profiluri | Creeaza, restaureaza si sincronizeaza NPC-uri AI | Generator automat si persistenta dedicata peste bind-ul initial home/work/social |
+| NPC lifecycle | manageri NPC, villager sync, profiluri | Creeaza, restaureaza si sincronizeaza NPC-uri AI | Generator automat, inspectie binding-uri si consum complet `npc_world_bindings` |
 | Rutina si simulare | `RoutineEngine`, `RoutineService`, nevoi NPC | Muta NPC-urile intre ancore si ruleaza simulare de baza | Pasi intermediari si evenimente sociale controlate |
 | Dialog si AI | dialog, context NPC, OpenAI, fallback | Conversatie contextualizata cu memorie, emotii si story context | Reactii mai clare la quest, reputatie locala si istoric |
 | Quest runtime | `ScenarioEngine`, quest progress, obiective | Ofera, urmareste si finalizeaza questuri persistente | Questuri in lant si separare progresiva a runtime-ului |
@@ -132,10 +149,11 @@ Se ataca acum:
 - plannerul initial pentru regiune: `world settlement plan/spawn`
 - rollback global practic pentru `settlement spawn`
 - dry-run mai clar pentru planuri de spawn
-- persistenta dedicata pentru legatura NPC-place, peste bind-ul initial bazat pe `profile_data` si metadata
+- persistenta dedicata initiala `npc_world_bindings` pentru legatura NPC-place
 
 Se amana:
 
+- inspectie/backfill matur pentru toate serverele vechi
 - rollback tranzactional complet pana cand fluxul MVP este stabil
 - spawn masiv fara plan serializabil si validabil
 
@@ -184,6 +202,7 @@ Scop:
 
 Se ataca acum:
 
+- Faza Q1 de stabilizare: audit template, teste Q01-Q05 si smoke script server
 - 3-5 questuri medievale completabile cap-coada
 - obiective `visit_place` si `inspect_node` folosite real in demo
 - quest anchors persistente auditate si exportabile

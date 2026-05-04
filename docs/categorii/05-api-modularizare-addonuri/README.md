@@ -9,6 +9,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | Document | Rol |
 |---|---|
 | `../../documentatie-api.md` | Contract public curent |
+| `../../ai-orchestrare-si-mecanici.md` | Contract conceptual pentru `AIOrchestrationService`, tool calls si validare |
 | `../../strategie-plugin-modular-si-scenarii-programabile.md` | Strategie pentru addonuri si scenarii |
 | `../../refactorizare-si-impartire-pe-module.md` | Plan de refactorizare si impartire pe module |
 | `../../betonquest-directii-potrivite-pentru-ainpc.md` | Directii pentru runtime de questuri configurabile |

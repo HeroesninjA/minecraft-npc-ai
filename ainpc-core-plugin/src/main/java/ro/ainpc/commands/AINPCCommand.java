@@ -3,14 +3,17 @@ package ro.ainpc.commands;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.debug.DebugDumpService;
+import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.routine.RoutineAssignment;
@@ -27,6 +30,7 @@ import ro.ainpc.story.StoryContextSnapshot;
 import ro.ainpc.story.StoryEvent;
 import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.RegionType;
+import ro.ainpc.world.NpcWorldBinding;
 import ro.ainpc.world.WorldAdminService;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldNodeType;
@@ -1726,6 +1730,13 @@ public class AINPCCommand implements CommandExecutor {
         AINPC.OwnedLocation previousHome = npc.getHomeAnchor();
         AINPC.OwnedLocation previousWork = npc.getWorkAnchor();
         AINPC.OwnedLocation previousSocial = npc.getSocialAnchor();
+        WorldNodeInfo homeNode = findBestAnchorNodeForPlace(worldAdmin, homePlace, "home");
+        WorldNodeInfo workNode = workPlace != null
+            ? findBestAnchorNodeForPlace(worldAdmin, workPlace, "work")
+            : null;
+        WorldNodeInfo socialNode = socialPlace != null
+            ? findBestAnchorNodeForPlace(worldAdmin, socialPlace, "social")
+            : null;
         AINPC.OwnedLocation homeAnchor = createOwnedLocationFromPlace(worldAdmin, homePlace, "home");
         AINPC.OwnedLocation workAnchor = workPlace != null
             ? createOwnedLocationFromPlace(worldAdmin, workPlace, "work")
@@ -1759,6 +1770,23 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
             return true;
         }
+
+        NpcWorldBinding binding = new NpcWorldBinding(
+            npc.getDatabaseId(),
+            npc.getUuid() != null ? npc.getUuid().toString() : "",
+            npc.getName(),
+            homePlace.id(),
+            workPlace != null ? workPlace.id() : "",
+            socialPlace != null ? socialPlace.id() : "",
+            homeNode != null ? homeNode.id() : "",
+            workNode != null ? workNode.id() : "",
+            socialNode != null ? socialNode.id() : "",
+            "",
+            "manual_bind",
+            0L,
+            0L
+        );
+        saveNpcWorldBinding(sender, binding, true);
 
         plugin.getMessageUtils().send(sender, "&aNPC-ul &f" + npc.getName() + " &aa fost legat la mapping.");
         plugin.getMessageUtils().send(sender, "&eHome: &f" + formatOwnedLocation(homeAnchor));
@@ -2013,12 +2041,38 @@ public class AINPCCommand implements CommandExecutor {
                 if (!plan.socialPlaceId().isBlank()) {
                     worldAdmin.bindNpcToSocialPlace(plan.socialPlaceId(), bindingId, npc.getName());
                 }
+                saveNpcWorldBinding(sender, NpcWorldBinding.fromSpawnPlan(npc, plan, "spawn_plan"), false);
                 boundCount++;
             } catch (IllegalArgumentException exception) {
                 plugin.getMessageUtils().send(sender, "&eWarning: &f" + exception.getMessage());
             }
         }
         plugin.getMessageUtils().send(sender, "&eBind-uri mapping actualizate: &f" + boundCount);
+    }
+
+    private boolean saveNpcWorldBinding(CommandSender sender, NpcWorldBinding binding, boolean mergeExisting) {
+        if (plugin.getNpcWorldBindingService() == null) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: &fnpc_world_bindings nu este disponibil; ramane fallback-ul profile_data/metadata.");
+            return false;
+        }
+
+        try {
+            NpcWorldBinding toSave = binding;
+            if (mergeExisting) {
+                toSave = plugin.getNpcWorldBindingService()
+                    .getBinding(binding.npcId())
+                    .map(binding::mergeMissingFrom)
+                    .orElse(binding);
+            }
+            plugin.getNpcWorldBindingService().saveBinding(toSave);
+            return true;
+        } catch (SQLException | IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: &fNu am putut salva npc_world_bindings pentru npc_id="
+                    + binding.npcId() + ": " + exception.getMessage());
+            return false;
+        }
     }
 
     private void sendVillageScanSummary(CommandSender sender, VanillaVillageScanResult scan) {
@@ -2453,7 +2507,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc audit world &7- verifica world mapping");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit db &7- verifica tabelele si profile_data");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit spawn &7- verifica ordinea casa/node/NPC/familie");
-        plugin.getMessageUtils().send(sender, "&e/ainpc audit quest &7- verifica quest_anchor_bindings");
+        plugin.getMessageUtils().send(sender, "&e/ainpc audit quest &7- verifica quest templates si quest_anchor_bindings");
     }
 
     private boolean handleDebugDump(CommandSender sender, String[] args) {
@@ -2856,6 +2910,8 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private void auditQuestAnchors(AuditReport report) {
+        auditQuestTemplates(report);
+
         if (plugin.getDatabaseManager() == null) {
             report.error("DatabaseManager nu este initializat.");
             return;
@@ -2883,6 +2939,302 @@ public class AINPCCommand implements CommandExecutor {
         } catch (SQLException exception) {
             report.error("Audit quest anchors esuat: " + exception.getMessage());
         }
+    }
+
+    private void auditQuestTemplates(AuditReport report) {
+        FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
+        if (featurePackLoader == null) {
+            report.warn("FeaturePackLoader indisponibil; nu pot valida quest templates.");
+            return;
+        }
+
+        List<FeaturePackLoader.ScenarioDefinition> quests = featurePackLoader.getAllScenarios().stream()
+            .filter(scenario -> scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST)
+            .toList();
+
+        report.info("Quest templates: " + quests.size() + " questuri definite in feature packs.");
+        if (quests.isEmpty()) {
+            report.warn("Nu exista quest templates incarcate din feature packs.");
+            return;
+        }
+
+        Set<String> knownQuestReferences = collectKnownQuestReferences(quests);
+        Map<String, String> questCodes = new HashMap<>();
+        for (FeaturePackLoader.ScenarioDefinition quest : quests) {
+            String label = "Quest template " + quest.getPackId() + ":" + quest.getId()
+                + " (" + formatOptional(quest.getName()) + ")";
+            validateQuestTemplate(report, featurePackLoader, label, quest, knownQuestReferences, questCodes);
+        }
+    }
+
+    private Set<String> collectKnownQuestReferences(List<FeaturePackLoader.ScenarioDefinition> quests) {
+        Set<String> references = new HashSet<>();
+        for (FeaturePackLoader.ScenarioDefinition quest : quests) {
+            addQuestReference(references, quest.getId());
+            addQuestReference(references, quest.getPackId() + ":" + quest.getId());
+            addQuestReference(references, quest.getQuestCode());
+        }
+        return references;
+    }
+
+    private void addQuestReference(Set<String> references, String value) {
+        String normalized = normalizeAuditKey(value);
+        if (!normalized.isBlank()) {
+            references.add(normalized);
+        }
+    }
+
+    private void validateQuestTemplate(AuditReport report,
+                                       FeaturePackLoader featurePackLoader,
+                                       String label,
+                                       FeaturePackLoader.ScenarioDefinition quest,
+                                       Set<String> knownQuestReferences,
+                                       Map<String, String> questCodes) {
+        if (quest.getQuestCode().isBlank()) {
+            report.warn(label + " nu are quest.code; runtime-ul foloseste template_id ca fallback.");
+        } else {
+            String normalizedCode = normalizeAuditKey(quest.getQuestCode());
+            String previous = questCodes.putIfAbsent(normalizedCode, label);
+            if (previous != null) {
+                report.error(label + " are quest.code duplicat cu " + previous + ": " + quest.getQuestCode() + ".");
+            }
+        }
+
+        if (!quest.isRequiresPlayer()) {
+            report.warn(label + " nu are requires_player=true; questurile jucabile ar trebui sa ceara player.");
+        }
+        if (quest.getQuestGiverProfession().isBlank()) {
+            report.warn(label + " nu are quest.giver_profession; poate cadea pe fallback de NPC.");
+        } else if (featurePackLoader.findProfessionDefinition(quest.getQuestGiverProfession()) == null) {
+            report.warn(label + " foloseste giver_profession necunoscuta: "
+                + quest.getQuestGiverProfession() + ".");
+        }
+
+        validateQuestPrerequisites(report, label, quest, knownQuestReferences);
+        validateQuestRepeatability(report, label, quest);
+        validateQuestPhases(report, label, quest);
+        validateQuestDialogues(report, label, quest);
+        validateQuestGiverRole(report, label, quest);
+        validateQuestEntries(report, label, "obiectiv", quest.getObjectives(), true);
+        validateQuestEntries(report, label, "recompensa", quest.getRewards(), false);
+    }
+
+    private void validateQuestPrerequisites(AuditReport report,
+                                            String label,
+                                            FeaturePackLoader.ScenarioDefinition quest,
+                                            Set<String> knownQuestReferences) {
+        for (String prerequisite : quest.getQuestPrerequisites()) {
+            String normalizedPrerequisite = normalizeAuditKey(prerequisite);
+            if (normalizedPrerequisite.isBlank()) {
+                report.warn(label + " are prerequisite gol.");
+            } else if (!knownQuestReferences.contains(normalizedPrerequisite)) {
+                report.error(label + " cere prerequisite necunoscut: " + prerequisite + ".");
+            }
+        }
+    }
+
+    private void validateQuestRepeatability(AuditReport report,
+                                            String label,
+                                            FeaturePackLoader.ScenarioDefinition quest) {
+        if (quest.isQuestRepeatable() && quest.getQuestCooldownSeconds() <= 0) {
+            report.warn(label + " este repeatable, dar nu are cooldown_seconds.");
+        }
+        if (!quest.isQuestRepeatable() && quest.getQuestCooldownSeconds() > 0) {
+            report.warn(label + " are cooldown_seconds, dar repeatable=false.");
+        }
+    }
+
+    private void validateQuestPhases(AuditReport report,
+                                     String label,
+                                     FeaturePackLoader.ScenarioDefinition quest) {
+        if (quest.getPhases().isEmpty()) {
+            report.warn(label + " nu are phases; statusul va fi mai greu de urmarit.");
+            return;
+        }
+
+        Set<String> phases = new HashSet<>();
+        for (String phase : quest.getPhases()) {
+            phases.add(normalizeAuditKey(phase));
+        }
+        for (String requiredPhase : List.of("introduction", "acceptance", "return", "completion")) {
+            if (!phases.contains(requiredPhase)) {
+                report.warn(label + " nu are faza " + requiredPhase + ".");
+            }
+        }
+    }
+
+    private void validateQuestDialogues(AuditReport report,
+                                        String label,
+                                        FeaturePackLoader.ScenarioDefinition quest) {
+        Map<String, List<String>> dialogues = quest.getQuestDialogues();
+        for (String requiredDialogue : List.of("offer", "offered", "accepted", "active", "ready", "completed")) {
+            List<String> lines = dialogues.get(requiredDialogue);
+            if (lines == null || lines.isEmpty()) {
+                report.warn(label + " nu are quest.dialogues." + requiredDialogue + ".");
+            }
+        }
+        boolean hasAvailabilityGate = !quest.getQuestPrerequisites().isEmpty() || quest.isQuestRepeatable();
+        List<String> unavailableLines = dialogues.get("unavailable");
+        if (hasAvailabilityGate && (unavailableLines == null || unavailableLines.isEmpty())) {
+            report.warn(label + " are prerequisite/repeatable, dar nu are quest.dialogues.unavailable.");
+        }
+    }
+
+    private void validateQuestGiverRole(AuditReport report,
+                                        String label,
+                                        FeaturePackLoader.ScenarioDefinition quest) {
+        FeaturePackLoader.ScenarioRoleDefinition role = quest.getRoles().get("QUEST_GIVER");
+        if (role == null) {
+            report.warn(label + " nu defineste rolul QUEST_GIVER.");
+            return;
+        }
+
+        String giverProfession = normalizeAuditKey(quest.getQuestGiverProfession());
+        if (giverProfession.isBlank() || role.getRequiredProfessions().isEmpty()) {
+            return;
+        }
+
+        boolean roleMatchesGiver = role.getRequiredProfessions().stream()
+            .map(this::normalizeAuditKey)
+            .anyMatch(giverProfession::equals);
+        if (!roleMatchesGiver) {
+            report.warn(label + " are QUEST_GIVER.required_professions diferit de quest.giver_profession.");
+        }
+    }
+
+    private void validateQuestEntries(AuditReport report,
+                                      String label,
+                                      String entryKind,
+                                      List<FeaturePackLoader.QuestEntryDefinition> entries,
+                                      boolean objectives) {
+        if (entries.isEmpty()) {
+            if (objectives) {
+                report.error(label + " nu are obiective.");
+            } else {
+                report.warn(label + " nu are recompense.");
+            }
+            return;
+        }
+
+        Set<String> entryIds = new HashSet<>();
+        for (FeaturePackLoader.QuestEntryDefinition entry : entries) {
+            String entryLabel = label + " " + entryKind + " " + questEntryId(entry);
+            String entryId = normalizeAuditKey(entry.getMetadata().getOrDefault("entry_id", ""));
+            if (!entryId.isBlank() && !entryIds.add(entryId)) {
+                report.error(label + " are " + entryKind + " duplicat: " + entry.getMetadata().get("entry_id") + ".");
+            }
+            if (entry.getAmount() <= 0) {
+                report.error(entryLabel + " are amount invalid: " + entry.getAmount() + ".");
+            }
+
+            if (objectives) {
+                validateQuestObjectiveEntry(report, entryLabel, entry);
+            } else {
+                validateQuestRewardEntry(report, entryLabel, entry);
+            }
+        }
+    }
+
+    private void validateQuestObjectiveEntry(AuditReport report,
+                                             String entryLabel,
+                                             FeaturePackLoader.QuestEntryDefinition entry) {
+        String type = normalizeQuestRuntimeType(entry.getType());
+        switch (type) {
+            case "collect_item", "deliver_to_npc" -> validateMaterialReference(report, entryLabel, entry.getItemId());
+            case "kill_mob" -> validateEntityReference(report, entryLabel, entry.getItemId());
+            case "talk_to_npc", "visit_region", "visit_place", "inspect_node" -> {
+                if (entry.getItemId().isBlank()) {
+                    report.warn(entryLabel + " nu are item/reference; resolverul va folosi contextul curent daca poate.");
+                }
+            }
+            default -> report.warn(entryLabel + " are tip de obiectiv necunoscut pentru audit: " + entry.getType() + ".");
+        }
+    }
+
+    private void validateQuestRewardEntry(AuditReport report,
+                                          String entryLabel,
+                                          FeaturePackLoader.QuestEntryDefinition entry) {
+        String type = normalizeQuestRuntimeType(entry.getType());
+        if (isQuestStoryActionType(type)) {
+            validateQuestStoryAction(report, entryLabel, type, entry);
+            return;
+        }
+
+        validateMaterialReference(report, entryLabel, entry.getItemId());
+    }
+
+    private void validateMaterialReference(AuditReport report, String label, String materialId) {
+        if (materialId == null || materialId.isBlank()) {
+            report.error(label + " nu are item/material.");
+            return;
+        }
+        if (Material.matchMaterial(materialId) == null) {
+            report.error(label + " refera material Minecraft invalid: " + materialId + ".");
+        }
+    }
+
+    private void validateEntityReference(AuditReport report, String label, String entityId) {
+        if (entityId == null || entityId.isBlank()) {
+            report.error(label + " nu are mob/entity.");
+            return;
+        }
+        try {
+            EntityType.valueOf(entityId.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            report.error(label + " refera entity Minecraft invalid: " + entityId + ".");
+        }
+    }
+
+    private void validateQuestStoryAction(AuditReport report,
+                                          String label,
+                                          String type,
+                                          FeaturePackLoader.QuestEntryDefinition entry) {
+        Map<String, String> metadata = entry.getMetadata();
+        if (metadata.getOrDefault("scope", "").isBlank()) {
+            report.error(label + " nu are metadata.scope pentru story action.");
+        }
+        if ("set_story_state".equals(type) && metadata.getOrDefault("state", "").isBlank()) {
+            report.error(label + " nu are metadata.state pentru set_story_state.");
+        }
+        if ("record_story_event".equals(type)) {
+            if (metadata.getOrDefault("event_type", "").isBlank()) {
+                report.error(label + " nu are metadata.event_type pentru record_story_event.");
+            }
+            if (metadata.getOrDefault("event_key", "").isBlank()) {
+                report.warn(label + " nu are metadata.event_key; se va genera fallback runtime.");
+            }
+        }
+    }
+
+    private String questEntryId(FeaturePackLoader.QuestEntryDefinition entry) {
+        if (entry == null) {
+            return "<null>";
+        }
+        String entryId = entry.getMetadata().getOrDefault("entry_id", "");
+        if (!entryId.isBlank()) {
+            return entryId;
+        }
+        return entry.getType() + ":" + entry.getItemId();
+    }
+
+    private boolean isQuestStoryActionType(String type) {
+        return "set_story_state".equals(type) || "record_story_event".equals(type);
+    }
+
+    private String normalizeQuestRuntimeType(String type) {
+        String normalized = normalizeAuditKey(type);
+        return switch (normalized) {
+            case "", "item", "reward_item" -> "item";
+            case "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
+            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
+            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
+            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
+            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
+            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
+            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
+            case "set_story_state", "record_story_event" -> normalized;
+            default -> normalized;
+        };
     }
 
     private void validateQuestAnchorRows(AuditReport report, List<QuestAnchorBindingRow> rows) {
@@ -3014,7 +3366,9 @@ public class AINPCCommand implements CommandExecutor {
         try {
             int npcRows = queryCount("SELECT COUNT(*) FROM npcs");
             int profileRows = queryCount("SELECT COUNT(*) FROM npc_profiles");
+            int worldBindingRows = queryCount("SELECT COUNT(*) FROM npc_world_bindings");
             report.info("DB: " + npcRows + " randuri in npcs, " + profileRows + " randuri in npc_profiles.");
+            report.info("NPC world bindings: " + worldBindingRows + " randuri in npc_world_bindings.");
 
             auditQueryRows(report, """
                 SELECT n.id, n.name
@@ -3043,6 +3397,19 @@ public class AINPCCommand implements CommandExecutor {
                 HAVING COUNT(*) > 1
                 """, "UUID duplicat in DB");
 
+            auditQueryRows(report, """
+                SELECT b.npc_id, b.npc_name
+                FROM npc_world_bindings b
+                LEFT JOIN npcs n ON n.id = b.npc_id
+                WHERE n.id IS NULL
+                """, "NPC world binding orfan fara NPC");
+
+            auditQueryRows(report, """
+                SELECT npc_id, npc_name
+                FROM npc_world_bindings
+                WHERE home_place_id = '' AND work_place_id = '' AND social_place_id = ''
+                """, "NPC world binding fara niciun place");
+
             try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(
                      "SELECT npc_id, profile_source, profile_data FROM npc_profiles");
                  ResultSet rs = stmt.executeQuery()) {
@@ -3056,8 +3423,95 @@ public class AINPCCommand implements CommandExecutor {
                     validateProfileJson(report, "Profil DB npc_id=" + npcId, profileData);
                 }
             }
+            auditNpcWorldBindings(report, worldBindingRows);
         } catch (SQLException exception) {
             report.error("Audit DB esuat: " + exception.getMessage());
+        }
+    }
+
+    private void auditNpcWorldBindings(AuditReport report, int totalRows) throws SQLException {
+        if (plugin.getNpcWorldBindingService() == null) {
+            report.warn("NpcWorldBindingService indisponibil; nu pot valida npc_world_bindings.");
+            return;
+        }
+
+        List<NpcWorldBinding> rows = plugin.getNpcWorldBindingService().listBindings(500);
+        if (totalRows > rows.size()) {
+            report.warn("Audit npc_world_bindings a verificat primele " + rows.size()
+                + " randuri din " + totalRows + ".");
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        Map<String, WorldPlaceInfo> placesById = new HashMap<>();
+        Map<String, WorldNodeInfo> nodesById = new HashMap<>();
+        if (worldAdmin != null && worldAdmin.isEnabled()) {
+            for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
+                placesById.put(place.id(), place);
+            }
+            for (WorldNodeInfo node : worldAdmin.getNodes()) {
+                nodesById.put(node.id(), node);
+            }
+        }
+
+        for (NpcWorldBinding binding : rows) {
+            String label = "npc_world_bindings npc_id=" + binding.npcId()
+                + " (" + formatOptional(binding.npcName()) + ")";
+            if (findLoadedNpcBySelector("npc_" + binding.npcId()) == null) {
+                report.warn(label + " nu are NPC incarcat acum.");
+            }
+            validateNpcWorldPlaceBinding(report, label, "home", binding.homePlaceId(), placesById);
+            validateNpcWorldPlaceBinding(report, label, "work", binding.workPlaceId(), placesById);
+            validateNpcWorldPlaceBinding(report, label, "social", binding.socialPlaceId(), placesById);
+            validateNpcWorldNodeBinding(report, label, "home", binding.homeNodeId(), binding.homePlaceId(), nodesById);
+            validateNpcWorldNodeBinding(report, label, "work", binding.workNodeId(), binding.workPlaceId(), nodesById);
+            validateNpcWorldNodeBinding(report, label, "social", binding.socialNodeId(), binding.socialPlaceId(), nodesById);
+        }
+    }
+
+    private void validateNpcWorldPlaceBinding(AuditReport report,
+                                              String label,
+                                              String role,
+                                              String placeId,
+                                              Map<String, WorldPlaceInfo> placesById) {
+        if (placeId == null || placeId.isBlank()) {
+            return;
+        }
+
+        WorldPlaceInfo place = placesById.get(placeId);
+        if (place == null) {
+            report.error(label + " refera " + role + "_place_id inexistent: " + placeId + ".");
+            return;
+        }
+
+        if ("home".equals(role) && !isHousePlace(place)) {
+            report.warn(label + " are home_place_id care nu este casa/home: " + placeId + ".");
+        } else if ("work".equals(role) && !isWorkplace(place)) {
+            report.error(label + " are work_place_id care nu este workplace: " + placeId + ".");
+        } else if ("social".equals(role) && !isSocialPlace(place)) {
+            report.warn(label + " are social_place_id care nu este loc social clar: " + placeId + ".");
+        }
+    }
+
+    private void validateNpcWorldNodeBinding(AuditReport report,
+                                             String label,
+                                             String role,
+                                             String nodeId,
+                                             String expectedPlaceId,
+                                             Map<String, WorldNodeInfo> nodesById) {
+        if (nodeId == null || nodeId.isBlank()) {
+            return;
+        }
+
+        WorldNodeInfo node = nodesById.get(nodeId);
+        if (node == null) {
+            report.error(label + " refera " + role + "_node_id inexistent: " + nodeId + ".");
+            return;
+        }
+        if (expectedPlaceId != null && !expectedPlaceId.isBlank()
+            && !node.placeId().isBlank()
+            && !node.placeId().equalsIgnoreCase(expectedPlaceId)) {
+            report.error(label + " are " + role + "_node_id=" + nodeId
+                + " in alt place decat " + expectedPlaceId + ".");
         }
     }
 

@@ -150,7 +150,17 @@ Audit read-only:
 /ainpc audit quest
 ```
 
-Auditul verifica:
+Auditul verifica initial quest templates si quest anchor bindings.
+
+Pentru template-uri verifica:
+
+- coduri duplicate
+- profesii giver inexistente
+- prerequisite-uri catre questuri inexistente
+- obiective/recompense cu materiale sau entity invalide
+- dialoguri, faze si roluri critice lipsa
+
+Pentru binding-uri verifica:
 
 - binding-uri fara progres parinte in `player_quests`
 - `player_uuid` invalid
