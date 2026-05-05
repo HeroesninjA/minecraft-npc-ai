@@ -1400,6 +1400,7 @@ public class FeaturePackLoader {
         public int getAmount() { return amount; }
         public String getDescription() { return description; }
         public Map<String, String> getMetadata() { return metadata; }
+        public String getEntryId() { return metadata.getOrDefault("entry_id", ""); }
         public Map<String, String> getVariables() { return variables; }
         public Map<String, String> getPayload() { return payload; }
     }

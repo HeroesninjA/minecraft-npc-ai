@@ -372,6 +372,7 @@ Fisiere generate:
 - `npcs.json`
 - `world-mapping.json`
 - `quests.yml`
+- `quest-anchor-bindings.json`
 - `openai.txt`
 - `recent-server-log.txt`
 
@@ -425,6 +426,7 @@ Pentru quest anchors, prefera intai comenzile read-only din joc:
 /ainpc quest anchors <jucator>
 /ainpc quest anchors all <templateId>
 /ainpc audit quest
+/ainpc debugdump quest
 /ainpc story context <jucator> nearest
 ```
 
@@ -434,6 +436,8 @@ Tabele relevante:
 - `quest_anchor_bindings`
 
 `/ainpc story context` este util cand vrei sa vezi ce ajunge in prompt ca `STORY_CONTEXT`, fara sa pornesti manual o generatie AI.
+
+`/ainpc debugdump quest` exporta complet `quest_anchor_bindings` in `quest-anchor-bindings.json`, inclusiv agregari pe template si tip de ancora.
 
 Atentie:
 

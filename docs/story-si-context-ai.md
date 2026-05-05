@@ -459,7 +459,7 @@ Implementat initial:
 Ramas:
 
 - validare schema mai stricta pentru template-uri si raport admin dedicat
-- export/debugdump complet pentru binding-uri de quest
+- repair/backfill pentru binding-uri de quest dupa rename-uri de mapping
 
 ### Faza B.5: Story context read-only
 

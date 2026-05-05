@@ -1346,8 +1346,8 @@ Set recomandat:
 | Cod | Giver | Tip | Obiective | Scop tehnic |
 |---|---|---|---|---|
 | `Q06` | `blacksmith` | `exploration` | `visit_place`, `inspect_node` | verifica mapping pentru fierarie |
-| `Q07` | `innkeeper` | `delivery` | `collect_item`, `talk_to_npc` | verifica livrare sociala |
-| `Q08` | `guard` | `hunt` | `kill_mob` | verifica combat si reward item |
+| `Q07` | `innkeeper` | `delivery` | `collect_item`, `talk_to_npc`, `deliver_to_npc` | verifica livrare sociala |
+| `Q08` | `guard` | `hunt` | `visit_region`, `kill_mob`, `talk_to_npc` | verifica combat contextual si story event regional |
 | `Q09` | `healer` | `investigation` | `talk_to_npc`, `visit_place`, `inspect_node` | combina social, mapping si story |
 | `Q10` | `priest` | `story` | doar dupa stages | pregateste branching viitor |
 
@@ -4896,16 +4896,16 @@ Inainte sa adaugi un quest in pack:
 ### Q07 - Livrare sociala
 
 - giver: `innkeeper`;
-- obiective: `collect_item PAPER`, `talk_to_npc profession:guard`;
-- reward: `EMERALD`, eventual `relationship` in viitor;
+- obiective: `collect_item PAPER`, `talk_to_npc profession:guard`, `deliver_to_npc BREAD`;
+- reward: `record_story_event` plus `EMERALD`;
 - scop: quest fara lupta, cu NPC tinta.
 
 ### Q08 - Vanatoare contextualizata
 
 - giver: `guard`;
-- obiective: acum `kill_mob`; ulterior `kill_mob_in_region`;
-- reward: `SHIELD` sau `ARROW`;
-- scop: combat legat de regiunea drumului.
+- obiective: `visit_region type:settlement`, `kill_mob ZOMBIE`, `talk_to_npc profession:guard`;
+- reward: `record_story_event` plus `ARROW`;
+- scop: combina mapping regional, combat si raportare la quest giver.
 
 ### Q09 - Investigatie
 

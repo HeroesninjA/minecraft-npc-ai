@@ -74,6 +74,82 @@ class QuestAnchorResolverTest {
     }
 
     @Test
+    void usesStableYamlEntryIdsForAnchorKeys() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 50, z: 0 }
+                  max: { x: 100, y: 90, z: 100 }
+                  places:
+                    fierarie:
+                      name: "Fierarie"
+                      type: "forge"
+                      min: { x: 20, y: 60, z: 20 }
+                      max: { x: 40, y: 75, z: 40 }
+                      tags: [blacksmith]
+            """), profile());
+
+        ScenarioEngine.ScenarioTemplate template = new ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST);
+        template.setObjectives(List.of(new FeaturePackLoader.QuestEntryDefinition(
+            "visit_place",
+            "tag:blacksmith",
+            1,
+            "",
+            Map.of("entry_id", "visit_forge"),
+            Map.of(),
+            Map.of()
+        )));
+
+        QuestAnchorResolver.ResolvedQuestAnchors result = new QuestAnchorResolver(service, List.of())
+            .resolve(template, null, null);
+
+        assertTrue(result.valid());
+        Map<String, String> variables = result.toQuestVariables();
+        assertEquals("satul_central:fierarie", variables.get("anchor.visit_forge.id"));
+        assertFalse(variables.containsKey("anchor.visit_place:tag:blacksmith:0.id"));
+    }
+
+    @Test
+    void resolvesStableRegionAnchorFromTypeReference() throws Exception {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                satul_central:
+                  name: "Satul Central"
+                  world: "world"
+                  type: "settlement"
+                  min: { x: 0, y: 50, z: 0 }
+                  max: { x: 100, y: 90, z: 100 }
+                  tags: [demo, medieval]
+            """), profile());
+
+        ScenarioEngine.ScenarioTemplate template = new ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST);
+        template.setObjectives(List.of(new FeaturePackLoader.QuestEntryDefinition(
+            "visit_region",
+            "type:settlement",
+            1,
+            "",
+            Map.of("entry_id", "patrol_region"),
+            Map.of(),
+            Map.of()
+        )));
+
+        QuestAnchorResolver.ResolvedQuestAnchors result = new QuestAnchorResolver(service, List.of())
+            .resolve(template, null, null);
+
+        assertTrue(result.valid());
+        Map<String, String> variables = result.toQuestVariables();
+        assertEquals("satul_central", variables.get("anchor.patrol_region.id"));
+        assertFalse(variables.containsKey("anchor.visit_region:type:settlement:0.id"));
+    }
+
+    @Test
     void reportsMissingSemanticAnchor() throws Exception {
         service.reloadFromConfig(loadConfig("""
             world_admin:

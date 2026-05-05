@@ -14,6 +14,7 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\QuestAnchorResolver.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\QuestDecisionIntentResolver.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\QuestScenarioContract.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\QuestTemplateSelector.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\engine\ScenarioEngine.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\AbstractPluginListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\ListenerRegistry.java

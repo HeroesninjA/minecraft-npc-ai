@@ -624,3 +624,299 @@ scenarios:
       HERO:
         description: "Jucatorul care aduna ingredientele."
         player_role: true
+
+  Q06:
+    name: "Urme La Forja"
+    description: "Fierarul observa semne ciudate in forja si cere jucatorului sa verifice locul inainte ca munca satului sa fie afectata."
+    base_type: "QUEST"
+    trigger_probability: 0.07
+    min_npcs: 1
+    requires_player: true
+    hint: "Fierarul priveste spre forja ca si cum ceva nu este la locul lui."
+    preferred_topologies:
+      - "village_center"
+      - "interior"
+    narrative_hints:
+      - "este prima misiune medievala legata direct de mapping semantic"
+      - "jucatorul trebuie sa ajunga la fierarie si sa inspecteze un node de investigatie"
+      - "finalizarea scrie un story event local pentru forja"
+    phases:
+      INTRODUCTION: "Fierarul explica urmele suspecte din forja."
+      ACCEPTANCE: "Jucatorul accepta sa verifice locul."
+      INVESTIGATION: "Jucatorul merge la forja si inspecteaza punctul suspect."
+      RETURN: "Jucatorul revine la fierar cu observatiile."
+      COMPLETION: "Fierarul noteaza ce s-a intamplat si pregateste urmatorii pasi."
+    quest:
+      code: "Q06"
+      giver_profession: "blacksmith"
+      kind: "exploration"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["mapping", "investigation", "forge", "story"]
+      prerequisites:
+        - "Q01"
+      dialogues:
+        offer:
+          - "Dupa ce m-ai ajutat cu materialele, am nevoie de ochi buni. In forja au aparut urme pe care nu le recunosc."
+        unavailable:
+          - "Intai trebuie sa stiu ca pot avea incredere in tine. Ajuta-ma cu materialele pentru prima lama."
+        offered:
+          - "Verifici forja sau lasam semnele astea sa se adanceasca?"
+        accepted:
+          - "Mergi la forja, cauta punctul suspect si intoarce-te la mine cu ce ai vazut."
+        active:
+          - "Forja nu se verifica singura. Cauta locul si inspecteaza semnele."
+        ready:
+          - "Te-ai intors? Spune-mi ce ai gasit langa nicovala."
+        completed:
+          - "Bine ai facut ca ai verificat. Satul trebuie sa tina minte ca forja a fost cercetata."
+      objectives:
+        visit_forge:
+          type: "visit_place"
+          item: "tag:blacksmith"
+          amount: 1
+          description: "Mergi la fierarie."
+        inspect_forge_marks:
+          type: "inspect_node"
+          item: "type:inspect_node"
+          amount: 1
+          description: "Inspecteaza punctul suspect din forja."
+        report_to_blacksmith:
+          type: "talk_to_npc"
+          item: "profession:blacksmith"
+          amount: 1
+          description: "Raporteaza fierarului ce ai gasit."
+      rewards:
+        forge_investigated_event:
+          type: "record_story_event"
+          item: "forge_investigated"
+          amount: 1
+          description: "Satul retine ca forja a fost investigata."
+          scope: "place"
+          target: "anchor:visit_forge"
+          event_type: "quest_completed"
+          event_key: "q06_forge_investigated"
+          title: "Forja a fost investigata"
+          payload:
+            quest: "Q06"
+            outcome: "forge_checked"
+        emerald:
+          type: "item"
+          item: "EMERALD"
+          amount: 1
+          description: "Primesti 1 smarald."
+    roles:
+      QUEST_GIVER:
+        description: "Fierarul care cere investigatia forjei."
+        required_professions:
+          - "blacksmith"
+        preferred_professions:
+          - "blacksmith"
+        preferred_traits:
+          - "hardworking"
+          - "honorable"
+      HERO:
+        description: "Jucatorul care verifica forja."
+        player_role: true
+
+  Q07:
+    name: "Mesaj Pentru Straja"
+    description: "Hangiul pregateste un mesaj pentru straja drumului si cere jucatorului sa confirme cu garda ca patrula poate primi provizii."
+    base_type: "QUEST"
+    trigger_probability: 0.07
+    min_npcs: 1
+    requires_player: true
+    hint: "Hangiul strange un pachet mic si asculta atent zvonurile de pe drum."
+    preferred_topologies:
+      - "inn"
+      - "village_center"
+      - "road"
+    narrative_hints:
+      - "este o misiune sociala de livrare intre han si straja"
+      - "jucatorul pregateste mesajul, vorbeste cu garda si aduce proviziile finale la hangiu"
+      - "finalizarea poate inregistra un story event regional despre legatura cu patrula"
+    phases:
+      INTRODUCTION: "Hangiul explica de ce straja trebuie anuntata."
+      ACCEPTANCE: "Jucatorul accepta sa pregateasca mesajul."
+      CONTACT: "Jucatorul vorbeste cu garda despre patrula."
+      RETURN: "Jucatorul revine la hangiu cu proviziile pregatite."
+      COMPLETION: "Hangiul trimite pachetul si marcheaza drumul ca mai bine coordonat."
+    quest:
+      code: "Q07"
+      giver_profession: "innkeeper"
+      kind: "delivery"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["social", "delivery", "inn", "guard", "story"]
+      prerequisites:
+        - "Q03"
+        - "Q04"
+      dialogues:
+        offer:
+          - "Drumul e mai linistit dupa ajutorul tau, dar straja are nevoie de un mesaj clar si de provizii."
+        unavailable:
+          - "Nu trimit vorba la patrula pana nu stiu ca drumul a fost curatat."
+        offered:
+          - "Pregatesti mesajul pentru straja sau astept alt calator?"
+        accepted:
+          - "Ia o hartie curata, vorbeste cu garda si intoarce-te cu painea pentru pachet."
+        active:
+          - "Mesajul nu ajunge singur. Vorbeste cu garda si pregateste proviziile."
+        ready:
+          - "Ai confirmarea si painea? Adu-le la tejghea si trimit pachetul."
+        completed:
+          - "Bine. Straja primeste semn si provizii, iar calatorii vor auzi ca drumul e supravegheat."
+      objectives:
+        prepare_notice:
+          type: "collect_item"
+          item: "PAPER"
+          amount: 1
+          description: "Pregateste 1 hartie pentru mesaj."
+        speak_with_guard:
+          type: "talk_to_npc"
+          item: "profession:guard"
+          amount: 1
+          description: "Vorbeste cu garda despre patrula drumului."
+        deliver_rations:
+          type: "deliver_to_npc"
+          item: "BREAD"
+          amount: 2
+          description: "Preda hangiului 2 paini pentru pachetul strajii."
+      rewards:
+        guard_message_event:
+          type: "record_story_event"
+          item: "guard_message_delivered"
+          amount: 1
+          description: "Regiunea retine ca straja a primit mesajul hangiului."
+          scope: "region"
+          target: "current_region"
+          event_type: "quest_completed"
+          event_key: "q07_guard_message_delivered"
+          title: "Straja a primit mesajul hangiului"
+          payload:
+            quest: "Q07"
+            outcome: "guard_notified"
+        emeralds:
+          type: "item"
+          item: "EMERALD"
+          amount: 2
+          description: "Primesti 2 smaralde."
+    roles:
+      QUEST_GIVER:
+        description: "Hangiul care coordoneaza mesajul pentru straja."
+        required_professions:
+          - "innkeeper"
+        preferred_professions:
+          - "innkeeper"
+        preferred_traits:
+          - "friendly"
+          - "charismatic"
+      GUARD_CONTACT:
+        description: "Garda care confirma patrula drumului."
+        optional: true
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care pregateste mesajul si pachetul."
+        player_role: true
+
+  Q08:
+    name: "Patrula De Hotar"
+    description: "Garda cere o verificare rapida a hotarului satului dupa primele semne ca drumul poate fi amenintat din nou."
+    base_type: "QUEST"
+    trigger_probability: 0.07
+    min_npcs: 1
+    requires_player: true
+    hint: "Garda priveste spre marginea satului si numara urmele din noroi."
+    preferred_topologies:
+      - "village_edge"
+      - "road"
+      - "wilderness_edge"
+    narrative_hints:
+      - "este primul hunt contextual legat de regiunea mapata"
+      - "jucatorul intra in regiunea patrulei, elimina amenintari si raporteaza garzii"
+      - "finalizarea scrie un story event regional pentru siguranta hotarului"
+    phases:
+      INTRODUCTION: "Garda explica de ce hotarul trebuie verificat."
+      ACCEPTANCE: "Jucatorul accepta patrula."
+      PATROL: "Jucatorul intra in regiunea satului si cauta amenintari."
+      RETURN: "Jucatorul revine la garda dupa lupta."
+      COMPLETION: "Garda noteaza raportul si intareste patrula."
+    quest:
+      code: "Q08"
+      giver_profession: "guard"
+      kind: "hunt"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["combat", "region", "patrol", "story"]
+      prerequisites:
+        - "Q03"
+      dialogues:
+        offer:
+          - "Drumul a fost curatat, dar hotarul satului trebuie verificat din nou. Vreau un raport scurt si sigur."
+        unavailable:
+          - "Intai curata drumul principal. Abia apoi pot trimite patrule mai departe."
+        offered:
+          - "Faci patrula de hotar sau tin oamenii in poarta?"
+        accepted:
+          - "Intra in regiunea satului, taie amenintarile si intoarce-te cu raportul."
+        active:
+          - "Hotarul nu se pazeste singur. Verifica regiunea si elimina creaturile ramase."
+        ready:
+          - "Ai terminat patrula? Raporteaza ce ai vazut la margine."
+        completed:
+          - "Raport bun. Straja poate intari hotarul exact unde trebuie."
+      objectives:
+        patrol_region:
+          type: "visit_region"
+          item: "type:settlement"
+          amount: 1
+          description: "Patruleaza regiunea satului."
+        clear_zombies:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 2
+          description: "Elimina 2 zombie de la hotar."
+        report_to_guard:
+          type: "talk_to_npc"
+          item: "profession:guard"
+          amount: 1
+          description: "Raporteaza garzii rezultatul patrulei."
+      rewards:
+        patrol_report_event:
+          type: "record_story_event"
+          item: "border_patrol_reported"
+          amount: 1
+          description: "Regiunea retine ca hotarul a fost patrulat."
+          scope: "region"
+          target: "anchor:patrol_region"
+          event_type: "quest_completed"
+          event_key: "q08_border_patrol_reported"
+          title: "Hotarul satului a fost patrulat"
+          payload:
+            quest: "Q08"
+            outcome: "border_patrolled"
+        arrows:
+          type: "item"
+          item: "ARROW"
+          amount: 8
+          description: "Primesti 8 sageti."
+    roles:
+      QUEST_GIVER:
+        description: "Garda care coordoneaza patrula hotarului."
+        required_professions:
+          - "guard"
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care patruleaza hotarul."
+        player_role: true

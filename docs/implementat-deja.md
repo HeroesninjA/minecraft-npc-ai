@@ -202,6 +202,7 @@ Ce este implementat:
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
+- export complet `quest-anchor-bindings.json` prin `/ainpc debugdump quest`
 - audit read-only `/ainpc audit quest`
 - validare initiala de quest templates in `/ainpc audit quest`
 - teste de contract pentru Q01-Q05 din addonul medieval
@@ -477,7 +478,6 @@ Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul actual:
 
 - legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
-- export/debugdump complet pentru `quest_anchor_bindings`
 - comenzi si audit/debugdump complet pentru story state persistent
 - generator complet de sate, case si cladiri de meserii
 - integrare optionala cu WorldEdit API

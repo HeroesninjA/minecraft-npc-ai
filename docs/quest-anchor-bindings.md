@@ -169,10 +169,24 @@ Pentru binding-uri verifica:
 - `region`, `place` sau `node` care nu mai exista in mapping
 - `npc` anchor catre NPC care nu este incarcat in runtime
 
+Debug dump complet:
+
+```text
+/ainpc debugdump quest
+/ainpc debugdump all
+```
+
+Dump-ul include `quest-anchor-bindings.json`, cu:
+
+- toate randurile din `quest_anchor_bindings`, fara limita de preview;
+- statusul si faza questului parinte din `player_quests`, daca exista;
+- agregari `by_template` si `by_anchor_type`;
+- cheile stabile de obiectiv, de exemplu `visit_forge` sau `patrol_region`.
+
 ## Limitari curente
 
-- `objective_key` este inca generat din `type:item:index`, nu vine dintr-un `objectiveId` explicit in YAML.
-- Comanda `/ainpc quest anchors` afiseaza un preview limitat, nu export complet.
+- `objective_key` foloseste cheia YAML/`entry_id` pentru binding-uri noi, cu fallback legacy pentru progres vechi.
+- Comanda `/ainpc quest anchors` afiseaza un preview limitat; exportul complet este in `quest-anchor-bindings.json`.
 - Auditul verifica initial un set limitat de randuri pentru tinerea rezultatului scurt in joc.
 - Daca mapping-ul este schimbat dupa acceptarea questului, binding-ul ramane catre ID-ul vechi pana la reset/reoffer.
 - Nu exista inca model matur multi-quest pe jucator.
@@ -188,7 +202,7 @@ Pentru binding-uri verifica:
 
 Prioritate recomandata:
 
-1. adauga `objectiveId` explicit in feature packs;
-2. adauga export/debugdump complet pentru quest anchors;
+1. extinde auditul cu mod strict/offline pentru toate randurile, nu doar preview;
+2. adauga repair/backfill pentru binding-uri dupa rename de mapping;
 3. extinde `StoryContextService` dupa ce exista story state persistent;
 4. adauga `quest_story_links` dupa ce story state-ul este persistent.

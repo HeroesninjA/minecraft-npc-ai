@@ -53,5 +53,5 @@ Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru
 | `households-persistente.md` | Creat ca document canonic initial pentru `households`, `household_residents`, migration, audit si integrare cu `npc_world_bindings` |
 | `generare-populatie-narativa.md` | Creat ca document dedicat pentru generatorul narativ: `PopulationPlan`, household-uri, rezidenti, roluri, validari si conversie catre `HouseAllocation` |
 | `simulare-sat-si-lume.md` | Creat ca document canonic initial pentru simulare de comunitate: household-uri, resurse, economie, reputatie, evenimente, quest/story hooks si rolul AI |
-| `quest-anchor-bindings.md` | Creat dupa implementarea initiala a tabelei `quest_anchor_bindings`; auditul si comanda admin read-only exista initial, dar lipseste export/debugdump complet |
+| `quest-anchor-bindings.md` | Creat dupa implementarea initiala a tabelei `quest_anchor_bindings`; auditul, comanda admin read-only si exportul `debugdump quest` exista initial |
 | `story-context-service.md` | Creat dupa implementarea initiala a `StoryContextService`; ramane necesara documentatia separata pentru story state persistent si events |

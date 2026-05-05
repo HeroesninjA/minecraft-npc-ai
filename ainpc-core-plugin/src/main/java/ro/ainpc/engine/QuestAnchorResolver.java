@@ -369,6 +369,11 @@ public class QuestAnchorResolver {
     }
 
     private String buildObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective, int index) {
+        String entryId = objective != null ? normalizeEntryId(objective.getEntryId()) : "";
+        if (!entryId.isBlank()) {
+            return entryId;
+        }
+
         String type = objective != null && objective.getType() != null && !objective.getType().isBlank()
             ? normalize(objective.getType())
             : "objective";
@@ -376,6 +381,10 @@ public class QuestAnchorResolver {
             ? normalize(objective.getItemId())
             : "entry";
         return type + ":" + itemId + ":" + index;
+    }
+
+    private String normalizeEntryId(String entryId) {
+        return entryId == null ? "" : entryId.trim();
     }
 
     private String stripObjectivePrefix(String reference) {

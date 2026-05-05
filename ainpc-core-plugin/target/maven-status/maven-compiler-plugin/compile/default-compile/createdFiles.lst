@@ -36,6 +36,7 @@ ro\ainpc\story\StoryEvent.class
 ro\ainpc\commands\AINPCCommand$StoryContextTarget.class
 ro\ainpc\spawn\HouseAllocationPlanner$SettlementPlanningResult.class
 ro\ainpc\engine\FeaturePackLoader$QuestEntryDefinition.class
+ro\ainpc\engine\QuestTemplateSelector.class
 ro\ainpc\commands\AINPCTabCompleter.class
 ro\ainpc\engine\ScenarioEngine.class
 ro\ainpc\world\StoryState.class

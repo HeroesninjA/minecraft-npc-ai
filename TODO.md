@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-05
 
 ## Exista deja
 
@@ -18,10 +18,16 @@ Actualizat: 2026-05-03
 - [x] `WorldContextSnapshot` initial pentru legatura mapping -> NPCContext -> prompt AI
 - [x] Obiective quest initiale `visit_place` si `inspect_node`
 - [x] `QuestAnchorResolver` initial cu ancore persistate si reflectate in `questVariables`
+- [x] `objective_id` stabil initial pentru progres si quest anchor bindings noi
 - [x] Persistenta dedicata `quest_anchor_bindings` pentru ancore semantice de quest
 - [x] Audit si comanda admin read-only pentru `quest_anchor_bindings`
 - [x] `/ainpc audit quest` valideaza initial si quest templates din feature packs
+- [x] `/ainpc audit quest` raporteaza strict tipuri necunoscute de obiective/reward-uri si story actions incomplete
 - [x] Teste de contract runtime pentru Q01-Q05 din addonul medieval
+- [x] Q06 medieval initial cu `visit_place`, `inspect_node`, `talk_to_npc` si `record_story_event`
+- [x] Q07 medieval initial cu `collect_item`, `talk_to_npc`, `deliver_to_npc` si `record_story_event`
+- [x] Q08 medieval initial cu `visit_region`, `kill_mob`, `talk_to_npc` si `record_story_event`
+- [x] Selector quest per jucator pentru NPC-uri care pot oferi mai multe questuri in lant
 - [x] Script `scripts/smoke-paper-quests.ps1` pentru pregatirea smoke test-ului Paper pe questuri
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
@@ -45,9 +51,9 @@ Actualizat: 2026-05-03
 - [ ] Smoke test Paper pentru `/ainpc world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`
 - [ ] Generator narativ pentru populatie pe regiune: nume, roluri, familii si distributie pe case/work/social
 - [ ] Smoke test Paper pentru Q01-Q05: oferta, acceptare, progres, completare, reward
-- [ ] 3-5 questuri medievale completabile pe mapping-ul demo, cu `visit_place` si `inspect_node`
+- [ ] Smoke test Paper pentru Q06-Q08 pe mapping demo si NPC-uri medievale
 - [ ] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
-- [ ] Export/debugdump complet pentru `quest_anchor_bindings`
+- [x] Export/debugdump complet pentru `quest_anchor_bindings`
 - [ ] Comanda read-only dedicata pentru inspectie `npc_world_bindings`
 
 ## Componente lipsa confirmate in cod
@@ -78,6 +84,7 @@ Actualizat: 2026-05-03
 - [ ] scenarii active
 - [ ] quest progress
 - [x] validare initiala quest templates prin `/ainpc audit quest`
+- [x] audit strict initial pentru continut quest avansat
 - [ ] validare completa pack-uri si addonuri
 - [ ] Suita de teste automate pentru questuri, world admin si addon registry
 - [x] Build-ul core foloseste sursele din `ainpc-core-plugin/src/main`, nu din `src/src`
@@ -100,6 +107,9 @@ Actualizat: 2026-05-03
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes
 - [x] Audit initial pentru quest templates: profesii, prerequisites, obiective si recompense
 - [x] Quest anchors persistente pe `regionId`, `placeId`, `nodeId` si `npcId`
+- [x] Primul quest medieval pe mapping: Q06 foloseste `visit_place`, `inspect_node` si story event
+- [x] Quest social/delivery initial: Q07 foloseste NPC secundar si revenire la quest giver
+- [x] Hunt contextual initial: Q08 foloseste regiune mapata, combat si raportare la garda
 - [x] Context narativ read-only peste mapping si quest anchors
 - [x] Story state pe regiune/place, pentru lumi care evolueaza in timp
 - [x] Quest completion poate scrie story state si story events prin actiuni controlate

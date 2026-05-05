@@ -17,10 +17,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,6 +66,7 @@ public class DebugDumpService {
             writeText(dumpRoot.resolve("quests.yml"), plugin.getQuestConfig() != null
                 ? plugin.getQuestConfig().saveToString()
                 : "# questConfig indisponibil\n");
+            writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), buildQuestAnchorBindingsJson());
         }
         if ("all".equals(normalizedScope) || "openai".equals(normalizedScope)) {
             writeText(dumpRoot.resolve("openai.txt"), buildOpenAiInfo());
@@ -105,7 +110,7 @@ public class DebugDumpService {
         sb.append("- server.txt\n");
         sb.append("- config-sanitized.yml\n");
         sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, quests.yml, openai.txt depending on scope\n");
+        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-anchor-bindings.json, openai.txt depending on scope\n");
         sb.append("- recent-server-log.txt\n");
         return sb.toString();
     }
@@ -340,6 +345,92 @@ public class DebugDumpService {
         json.addProperty("radius", node.radius());
         json.add("metadata", gson.toJsonTree(node.metadata()));
         return json;
+    }
+
+    private JsonObject buildQuestAnchorBindingsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_table", "quest_anchor_bindings");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("row_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> byTemplate = new LinkedHashMap<>();
+        Map<String, Integer> byAnchorType = new LinkedHashMap<>();
+
+        String sql = """
+            SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
+                   b.objective_type, b.reference, b.anchor_type, b.anchor_id,
+                   b.anchor_label, b.created_at, b.updated_at, p.status,
+                   p.current_phase, p.updated_at AS progress_updated_at
+            FROM quest_anchor_bindings b
+            LEFT JOIN player_quests p
+              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            ORDER BY b.player_uuid, b.template_id, b.objective_key
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                JsonObject row = questAnchorBindingRowJson(resultSet);
+                rows.add(row);
+                incrementCount(byTemplate, resultSet.getString("template_id"));
+                incrementCount(byAnchorType, resultSet.getString("anchor_type"));
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        root.addProperty("row_count", rows.size());
+        root.add("by_template", countMapJson(byTemplate));
+        root.add("by_anchor_type", countMapJson(byAnchorType));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject questAnchorBindingRowJson(ResultSet resultSet) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("player_uuid", valueOrEmpty(resultSet.getString("player_uuid")));
+        json.addProperty("template_id", valueOrEmpty(resultSet.getString("template_id")));
+        json.addProperty("quest_code", valueOrEmpty(resultSet.getString("quest_code")));
+        json.addProperty("objective_key", valueOrEmpty(resultSet.getString("objective_key")));
+        json.addProperty("objective_type", valueOrEmpty(resultSet.getString("objective_type")));
+        json.addProperty("reference", valueOrEmpty(resultSet.getString("reference")));
+        json.addProperty("anchor_type", valueOrEmpty(resultSet.getString("anchor_type")));
+        json.addProperty("anchor_id", valueOrEmpty(resultSet.getString("anchor_id")));
+        json.addProperty("anchor_label", valueOrEmpty(resultSet.getString("anchor_label")));
+        json.addProperty("created_at", resultSet.getLong("created_at"));
+        json.addProperty("updated_at", resultSet.getLong("updated_at"));
+        json.addProperty("quest_status", valueOrEmpty(resultSet.getString("status")));
+        json.addProperty("quest_phase", valueOrEmpty(resultSet.getString("current_phase")));
+        json.addProperty("quest_updated_at", resultSet.getLong("progress_updated_at"));
+        return json;
+    }
+
+    private void incrementCount(Map<String, Integer> counts, String key) {
+        String normalizedKey = valueOrEmpty(key);
+        if (normalizedKey.isBlank()) {
+            normalizedKey = "unknown";
+        }
+        counts.put(normalizedKey, counts.getOrDefault(normalizedKey, 0) + 1);
+    }
+
+    private JsonObject countMapJson(Map<String, Integer> counts) {
+        JsonObject json = new JsonObject();
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            json.addProperty(entry.getKey(), entry.getValue());
+        }
+        return json;
+    }
+
+    private String valueOrEmpty(String value) {
+        return value != null ? value : "";
     }
 
     private JsonObject boundsJson(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

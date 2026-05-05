@@ -3119,9 +3119,11 @@ public class AINPCCommand implements CommandExecutor {
         Set<String> entryIds = new HashSet<>();
         for (FeaturePackLoader.QuestEntryDefinition entry : entries) {
             String entryLabel = label + " " + entryKind + " " + questEntryId(entry);
-            String entryId = normalizeAuditKey(entry.getMetadata().getOrDefault("entry_id", ""));
+            String rawEntryId = entry.getMetadata().getOrDefault("entry_id", "");
+            String entryId = normalizeAuditKey(rawEntryId);
+            validateQuestEntryId(report, label, entryKind, rawEntryId);
             if (!entryId.isBlank() && !entryIds.add(entryId)) {
-                report.error(label + " are " + entryKind + " duplicat: " + entry.getMetadata().get("entry_id") + ".");
+                report.error(label + " are " + entryKind + " duplicat: " + rawEntryId + ".");
             }
             if (entry.getAmount() <= 0) {
                 report.error(entryLabel + " are amount invalid: " + entry.getAmount() + ".");
@@ -3135,32 +3137,45 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
+    private void validateQuestEntryId(AuditReport report, String label, String entryKind, String entryId) {
+        if (entryId == null || entryId.isBlank()) {
+            report.error(label + " are " + entryKind + " fara ID stabil.");
+            return;
+        }
+
+        if (!entryId.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")) {
+            report.error(label + " are " + entryKind + " cu ID fragil: " + entryId
+                + ". Foloseste doar litere ASCII, cifre, '_', '-' sau '.'.");
+        }
+    }
+
     private void validateQuestObjectiveEntry(AuditReport report,
                                              String entryLabel,
                                              FeaturePackLoader.QuestEntryDefinition entry) {
-        String type = normalizeQuestRuntimeType(entry.getType());
+        String type = normalizeQuestObjectiveType(entry.getType());
         switch (type) {
             case "collect_item", "deliver_to_npc" -> validateMaterialReference(report, entryLabel, entry.getItemId());
             case "kill_mob" -> validateEntityReference(report, entryLabel, entry.getItemId());
             case "talk_to_npc", "visit_region", "visit_place", "inspect_node" -> {
                 if (entry.getItemId().isBlank()) {
                     report.warn(entryLabel + " nu are item/reference; resolverul va folosi contextul curent daca poate.");
+                } else {
+                    validateQuestSemanticReference(report, entryLabel, type, entry.getItemId());
                 }
             }
-            default -> report.warn(entryLabel + " are tip de obiectiv necunoscut pentru audit: " + entry.getType() + ".");
+            default -> report.error(entryLabel + " are tip de obiectiv nesuportat de runtime: " + entry.getType() + ".");
         }
     }
 
     private void validateQuestRewardEntry(AuditReport report,
                                           String entryLabel,
                                           FeaturePackLoader.QuestEntryDefinition entry) {
-        String type = normalizeQuestRuntimeType(entry.getType());
-        if (isQuestStoryActionType(type)) {
-            validateQuestStoryAction(report, entryLabel, type, entry);
-            return;
+        String type = normalizeQuestRewardType(entry.getType());
+        switch (type) {
+            case "item" -> validateMaterialReference(report, entryLabel, entry.getItemId());
+            case "set_story_state", "record_story_event" -> validateQuestStoryAction(report, entryLabel, type, entry);
+            default -> report.error(entryLabel + " are tip de recompensa nesuportat de runtime: " + entry.getType() + ".");
         }
-
-        validateMaterialReference(report, entryLabel, entry.getItemId());
     }
 
     private void validateMaterialReference(AuditReport report, String label, String materialId) {
@@ -3185,6 +3200,42 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
+    private void validateQuestSemanticReference(AuditReport report,
+                                                String label,
+                                                String objectiveType,
+                                                String reference) {
+        String prefix = questReferencePrefix(reference);
+        if (prefix.isBlank()) {
+            return;
+        }
+
+        Set<String> allowedPrefixes = switch (objectiveType) {
+            case "talk_to_npc" -> Set.of("npc", "name", "profession");
+            case "visit_region" -> Set.of("region", "tag", "type");
+            case "visit_place" -> Set.of("place", "region", "tag", "type");
+            case "inspect_node" -> Set.of("node", "place", "tag", "type");
+            default -> Set.of();
+        };
+
+        if (!allowedPrefixes.isEmpty() && !allowedPrefixes.contains(prefix)) {
+            report.warn(label + " foloseste prefix de referinta neobisnuit pentru " + objectiveType
+                + ": " + reference + ".");
+        }
+    }
+
+    private String questReferencePrefix(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return "";
+        }
+
+        String trimmed = reference.trim();
+        int separator = trimmed.indexOf(':');
+        if (separator <= 0) {
+            return "";
+        }
+        return normalizeAuditKey(trimmed.substring(0, separator));
+    }
+
     private void validateQuestStoryAction(AuditReport report,
                                           String label,
                                           String type,
@@ -3193,17 +3244,35 @@ public class AINPCCommand implements CommandExecutor {
         if (metadata.getOrDefault("scope", "").isBlank()) {
             report.error(label + " nu are metadata.scope pentru story action.");
         }
-        if ("set_story_state".equals(type) && metadata.getOrDefault("state", "").isBlank()) {
+        if (!hasAnyMetadata(metadata,
+            "target", "scope_id", "target_id", "id",
+            "place_id", "region_id", "target_place", "target_region", "place", "region")) {
+            report.error(label + " nu are metadata.target pentru story action.");
+        }
+        if ("set_story_state".equals(type)
+            && !hasAnyMetadata(metadata, "state_key", "state", "flag", "value", "item")) {
             report.error(label + " nu are metadata.state pentru set_story_state.");
         }
         if ("record_story_event".equals(type)) {
-            if (metadata.getOrDefault("event_type", "").isBlank()) {
+            if (!hasAnyMetadata(metadata, "event_type", "type_id")) {
                 report.error(label + " nu are metadata.event_type pentru record_story_event.");
             }
-            if (metadata.getOrDefault("event_key", "").isBlank()) {
+            if (!hasAnyMetadata(metadata, "event_key", "key")) {
                 report.warn(label + " nu are metadata.event_key; se va genera fallback runtime.");
             }
         }
+    }
+
+    private boolean hasAnyMetadata(Map<String, String> metadata, String... keys) {
+        if (metadata == null || metadata.isEmpty() || keys == null) {
+            return false;
+        }
+        for (String key : keys) {
+            if (key != null && !metadata.getOrDefault(key, "").isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String questEntryId(FeaturePackLoader.QuestEntryDefinition entry) {
@@ -3217,21 +3286,24 @@ public class AINPCCommand implements CommandExecutor {
         return entry.getType() + ":" + entry.getItemId();
     }
 
-    private boolean isQuestStoryActionType(String type) {
-        return "set_story_state".equals(type) || "record_story_event".equals(type);
-    }
-
-    private String normalizeQuestRuntimeType(String type) {
+    private String normalizeQuestObjectiveType(String type) {
         String normalized = normalizeAuditKey(type);
         return switch (normalized) {
-            case "", "item", "reward_item" -> "item";
-            case "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
+            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
             case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
             case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
             case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
             case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
             case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
             case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
+            default -> normalized;
+        };
+    }
+
+    private String normalizeQuestRewardType(String type) {
+        String normalized = normalizeAuditKey(type);
+        return switch (normalized) {
+            case "", "item", "reward_item" -> "item";
             case "set_story_state", "record_story_event" -> normalized;
             default -> normalized;
         };

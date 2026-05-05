@@ -25,21 +25,27 @@ class MedievalQuestPackTest {
 
         ConfigurationSection scenarios = config.getConfigurationSection("scenarios");
         assertNotNull(scenarios, "scenarios section should exist");
-        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05"), scenarios.getKeys(false));
+        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08"), scenarios.getKeys(false));
 
         Map<String, String> expectedGivers = Map.of(
             "Q01", "blacksmith",
             "Q02", "farmer",
             "Q03", "guard",
             "Q04", "innkeeper",
-            "Q05", "healer"
+            "Q05", "healer",
+            "Q06", "blacksmith",
+            "Q07", "innkeeper",
+            "Q08", "guard"
         );
         Map<String, String> expectedKinds = Map.of(
             "Q01", "fetch",
             "Q02", "fetch",
             "Q03", "hunt",
             "Q04", "fetch",
-            "Q05", "fetch"
+            "Q05", "fetch",
+            "Q06", "exploration",
+            "Q07", "delivery",
+            "Q08", "hunt"
         );
         for (Map.Entry<String, String> entry : expectedGivers.entrySet()) {
             ConfigurationSection scenario = scenarios.getConfigurationSection(entry.getKey());
@@ -67,7 +73,7 @@ class MedievalQuestPackTest {
 
             ConfigurationSection rewards = scenario.getConfigurationSection("quest.rewards");
             assertNotNull(rewards, entry.getKey() + " should define rewards");
-            validateItemEntries(rewards);
+            validateRewards(rewards);
 
             ConfigurationSection questDialogues = scenario.getConfigurationSection("quest.dialogues");
             assertNotNull(questDialogues, entry.getKey() + " should define quest dialogues");
@@ -83,6 +89,9 @@ class MedievalQuestPackTest {
         assertTrue(scenarios.getBoolean("Q04.quest.repeatable"));
         assertEquals(1800, scenarios.getInt("Q04.quest.cooldown_seconds"));
         assertEquals(List.of("Q02"), scenarios.getStringList("Q05.quest.prerequisites"));
+        assertEquals(List.of("Q01"), scenarios.getStringList("Q06.quest.prerequisites"));
+        assertEquals(List.of("Q03", "Q04"), scenarios.getStringList("Q07.quest.prerequisites"));
+        assertEquals(List.of("Q03"), scenarios.getStringList("Q08.quest.prerequisites"));
     }
 
     @Test
@@ -163,10 +172,13 @@ class MedievalQuestPackTest {
             String type = objective.getString("type", "");
             String item = objective.getString("item", "");
             assertTrue(objective.getInt("amount", 0) > 0, "objective " + key + " should have positive amount");
-            if ("kill_mob".equalsIgnoreCase(type)) {
+            String normalizedType = normalizeRuntimeType(type);
+            if ("kill_mob".equals(normalizedType)) {
                 assertNotNull(EntityType.valueOf(item), "objective " + key + " should target a valid entity type");
-            } else {
+            } else if ("collect_item".equals(normalizedType) || "deliver_to_npc".equals(normalizedType)) {
                 assertNotNull(Material.matchMaterial(item), "objective " + key + " should use a valid material");
+            } else {
+                assertTrue(!item.isBlank(), "semantic objective " + key + " should define a reference");
             }
         }
     }
@@ -218,12 +230,23 @@ class MedievalQuestPackTest {
         }
     }
 
-    private void validateItemEntries(ConfigurationSection entries) {
+    private void validateRewards(ConfigurationSection entries) {
         for (String key : entries.getKeys(false)) {
             ConfigurationSection entry = entries.getConfigurationSection(key);
             assertNotNull(entry, "reward " + key + " should be a section");
             assertTrue(entry.getInt("amount", 0) > 0, "reward " + key + " should have positive amount");
-            assertNotNull(Material.matchMaterial(entry.getString("item", "")), "reward " + key + " should use a valid material");
+            String type = normalizeRuntimeType(entry.getString("type", "item"));
+            if ("item".equals(type)) {
+                assertNotNull(Material.matchMaterial(entry.getString("item", "")), "reward " + key + " should use a valid material");
+            } else if ("record_story_event".equals(type)) {
+                assertTrue(!entry.getString("scope", "").isBlank(), "story reward " + key + " should define scope");
+                assertTrue(!entry.getString("target", "").isBlank(), "story reward " + key + " should define target");
+                assertTrue(!entry.getString("event_type", "").isBlank(), "story reward " + key + " should define event_type");
+            } else if ("set_story_state".equals(type)) {
+                assertTrue(!entry.getString("scope", "").isBlank(), "story reward " + key + " should define scope");
+                assertTrue(!entry.getString("target", "").isBlank(), "story reward " + key + " should define target");
+                assertTrue(!entry.getString("state", "").isBlank(), "story reward " + key + " should define state");
+            }
         }
     }
 

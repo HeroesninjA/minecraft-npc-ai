@@ -1,6 +1,6 @@
 # Quest, Story si AI
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-05
 
 Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-ul asistat.
 
@@ -9,6 +9,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | Document | Rol |
 |---|---|
 | `../../questuri-faza-1-stabilizare.md` | Faza Q1 pentru stabilizarea Q01-Q05, audit template si smoke test |
+| `../../pregatire-questuri-avansate.md` | Pregatiri minime pentru Q06-Q08, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate.md` | Evolutia questurilor pe obiective, etape si progres |
 | `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
 | `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
@@ -23,6 +24,11 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 ## Status scurt
 
 - Questurile de baza sunt functionale.
+- Pregatirea pentru questuri avansate a inceput: `objective_id` stabil exista initial, cu fallback pentru progres legacy.
+- Auditul strict pentru continut avansat exista initial: obiective/reward-uri necunoscute si story actions incomplete sunt raportate ca erori.
+- Q06 medieval exista initial ca primul quest pe mapping: `visit_place`, `inspect_node`, `talk_to_npc` si `record_story_event`.
+- Q07 medieval exista initial ca quest social/delivery: `collect_item`, `talk_to_npc`, `deliver_to_npc` si `record_story_event`.
+- Q08 medieval exista initial ca hunt contextual: `visit_region`, `kill_mob`, `talk_to_npc` si `record_story_event`.
 - `visit_place`, `inspect_node` si `QuestAnchorResolver` exista initial.
 - Ancorele semantice sunt persistate initial in `quest_anchor_bindings`.
 - `/ainpc quest anchors` si `/ainpc audit quest` exista initial pentru inspectie read-only.
