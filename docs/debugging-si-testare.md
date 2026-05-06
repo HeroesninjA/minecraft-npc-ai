@@ -372,7 +372,11 @@ Fisiere generate:
 - `npcs.json`
 - `world-mapping.json`
 - `quests.yml`
+- `quest-audit-report.txt`
+- `loaded-quest-definitions.json`
+- `player-quest-progress.json`
 - `quest-anchor-bindings.json`
+- `story-events.json`
 - `openai.txt`
 - `recent-server-log.txt`
 
@@ -437,7 +441,7 @@ Tabele relevante:
 
 `/ainpc story context` este util cand vrei sa vezi ce ajunge in prompt ca `STORY_CONTEXT`, fara sa pornesti manual o generatie AI.
 
-`/ainpc debugdump quest` exporta complet `quest_anchor_bindings` in `quest-anchor-bindings.json`, inclusiv agregari pe template si tip de ancora.
+`/ainpc debugdump quest` exporta un raport dedicat in `quest-audit-report.txt`, definitiile de quest incarcate in `loaded-quest-definitions.json`, progresul complet din `player_quests` in `player-quest-progress.json`, ancorele din `quest_anchor_bindings` in `quest-anchor-bindings.json` si evenimentele narative din `story_events` in `story-events.json`, inclusiv agregari utile pentru inspectie. Progresul exportat include `current_phase` si `current_stage_id`, iar raportul verifica referintele `phase`/`stage` ale obiectivelor etapizate.
 
 Atentie:
 

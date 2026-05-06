@@ -1,5 +1,6 @@
 package ro.ainpc.commands;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import org.bukkit.Location;
@@ -59,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Comanda principala pentru gestionarea NPC-urilor AI
@@ -83,6 +85,12 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private record QuestDecisionTarget(Player player, AINPC npc) {
+    }
+
+    private record QuestTrackRequest(Player player, String questSelector, String action) {
+    }
+
+    private record QuestLogRequest(Player player, String filter) {
     }
 
     @Override
@@ -171,11 +179,11 @@ public class AINPCCommand implements CommandExecutor {
     /**
      * /ainpc quest <numeNpc> [jucator]
      * /ainpc quest nearest [jucator]
-     * /ainpc quest track [jucator]
+     * /ainpc quest track [start|stop] [questCode|templateId] [jucator]
      * /ainpc quest accept <numeNpc>|nearest [jucator]
      * /ainpc quest decline <numeNpc>|nearest [jucator]
-     * /ainpc quest abandon <numeNpc>|nearest [jucator]
-     * /ainpc quest status <numeNpc>|nearest [jucator]
+     * /ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]
+     * /ainpc quest status <numeNpc>|nearest|<questCode|templateId> [jucator]
      * /ainpc quest reset <numeNpc> [jucator]
      * /ainpc quest complete <numeNpc> [jucator]
      */
@@ -204,6 +212,7 @@ public class AINPCCommand implements CommandExecutor {
             case "decline", "deny", "reject", "no", "n", "nu", "refuz" -> handleDeclineQuest(sender, args);
             case "abandon" -> handleAbandonQuest(sender, args);
             case "status" -> handleStatusQuest(sender, args);
+            case "debug" -> handleQuestDebug(sender, args);
             case "reset" -> handleResetQuest(sender, args);
             case "complete" -> handleCompleteQuest(sender, args);
             default -> handleTriggerQuest(sender, args[1],
@@ -212,18 +221,15 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleQuestLog(CommandSender sender, String[] args) {
-        Player targetPlayer = resolveQuestTargetPlayer(
-            sender,
-            args,
-            2,
-            "&cUtilizare: /ainpc quest log [jucator]"
-        );
-        if (targetPlayer == null) {
+        QuestLogRequest request = resolveQuestLogRequest(sender, args);
+        if (request == null) {
             questDebug("Quest log oprit: nu am putut rezolva jucatorul tinta.");
             return true;
         }
+        Player targetPlayer = request.player();
 
-        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().getQuestLog(targetPlayer);
+        ScenarioEngine.QuestInteractionResult questInteraction =
+            plugin.getScenarioEngine().getQuestLog(targetPlayer, request.filter(), sender.hasPermission("ainpc.admin"));
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNu am putut citi quest log-ul.");
             return true;
@@ -236,26 +242,80 @@ public class AINPCCommand implements CommandExecutor {
 
         if (!sender.equals(targetPlayer)) {
             plugin.getMessageUtils().send(sender,
-                "&aAi cerut quest log-ul pentru &f" + targetPlayer.getName() + "&a.");
+                "&aAi cerut quest log-ul pentru &f" + targetPlayer.getName()
+                    + (request.filter().isBlank() ? "&a." : " &afiltru=&f" + request.filter() + "&a."));
         }
         return true;
     }
 
+    private QuestLogRequest resolveQuestLogRequest(CommandSender sender, String[] args) {
+        String usage = "&cUtilizare: /ainpc quest log [jucator] [active|current|tracked|main|side|repeatable|completed|failed|archived|all]";
+        if (args.length > 4) {
+            plugin.getMessageUtils().send(sender, usage);
+            return null;
+        }
+
+        String filter = "";
+        int playerArgIndex = -1;
+        if (args.length == 3) {
+            String argument = args[2];
+            if (isQuestLogFilter(argument)) {
+                filter = normalizeQuestLogFilter(argument);
+            } else {
+                playerArgIndex = 2;
+            }
+        } else if (args.length == 4) {
+            boolean firstIsFilter = isQuestLogFilter(args[2]);
+            boolean secondIsFilter = isQuestLogFilter(args[3]);
+            if (firstIsFilter && !secondIsFilter) {
+                filter = normalizeQuestLogFilter(args[2]);
+                playerArgIndex = 3;
+            } else if (!firstIsFilter && secondIsFilter) {
+                playerArgIndex = 2;
+                filter = normalizeQuestLogFilter(args[3]);
+            } else {
+                plugin.getMessageUtils().send(sender, usage);
+                return null;
+            }
+        }
+
+        Player targetPlayer = resolveQuestTargetPlayer(sender, args, playerArgIndex, usage);
+        return targetPlayer != null ? new QuestLogRequest(targetPlayer, filter) : null;
+    }
+
+    private boolean isQuestLogFilter(String value) {
+        return !normalizeQuestLogFilter(value).isBlank();
+    }
+
+    private String normalizeQuestLogFilter(String value) {
+        String normalized = value == null ? "" : value.trim().toLowerCase();
+        return switch (normalized) {
+            case "all", "toate" -> "all";
+            case "current", "curent", "curente" -> "current";
+            case "active", "activ", "activeaza" -> "active";
+            case "offered", "oferit", "oferite" -> "offered";
+            case "tracked", "urmarit" -> "tracked";
+            case "main", "principal" -> "main";
+            case "side", "secundar", "secundare" -> "side";
+            case "repeatable", "repetabil", "repetabile" -> "repeatable";
+            case "completed", "complete", "completat", "finalizat", "finalizate" -> "completed";
+            case "failed", "esuat", "abandonat", "abandonate" -> "failed";
+            case "archived", "archive", "arhivat", "arhivate" -> "archived";
+            default -> "";
+        };
+    }
+
     private boolean handleQuestTrack(CommandSender sender, String[] args) {
         String trackAction = args.length > 2 ? args[2].toLowerCase() : "";
-        boolean persistentAction = "start".equals(trackAction) || "stop".equals(trackAction);
-        Player targetPlayer = resolveQuestTargetPlayer(
-            sender,
-            args,
-            persistentAction ? 3 : 2,
-            "&cUtilizare: /ainpc quest track [start|stop] [jucator]"
-        );
-        if (targetPlayer == null) {
+        QuestTrackRequest trackRequest = resolveQuestTrackRequest(sender, args, trackAction);
+        if (trackRequest == null) {
             questDebug("Quest track oprit: nu am putut rezolva jucatorul tinta.");
             return true;
         }
+        Player targetPlayer = trackRequest.player();
+        String questSelector = trackRequest.questSelector();
 
-        if ("stop".equals(trackAction)) {
+        if ("stop".equals(trackRequest.action())) {
             boolean stopped = plugin.getScenarioEngine().stopQuestTracking(targetPlayer);
             plugin.getMessageUtils().send(sender, stopped
                 ? "&aQuest tracking oprit pentru &f" + targetPlayer.getName() + "&a."
@@ -266,7 +326,7 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
-        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().getQuestTrack(targetPlayer);
+        ScenarioEngine.QuestInteractionResult questInteraction = plugin.getScenarioEngine().getQuestTrack(targetPlayer, questSelector);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNu am putut urmari quest-ul curent.");
             return true;
@@ -277,12 +337,12 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(recipient, systemMessage);
         }
 
-        ScenarioEngine.QuestTrackingMarker trackingMarker = "start".equals(trackAction)
-            ? plugin.getScenarioEngine().startQuestTracking(targetPlayer)
-            : plugin.getScenarioEngine().getQuestTrackingMarker(targetPlayer);
+        ScenarioEngine.QuestTrackingMarker trackingMarker = "start".equals(trackRequest.action())
+            ? plugin.getScenarioEngine().startQuestTracking(targetPlayer, questSelector)
+            : plugin.getScenarioEngine().getQuestTrackingMarker(targetPlayer, questSelector);
         applyQuestTrackingMarker(sender, targetPlayer, trackingMarker);
 
-        if ("start".equals(trackAction)) {
+        if ("start".equals(trackRequest.action())) {
             if (trackingMarker != null && trackingMarker.hasLocation()) {
                 plugin.getMessageUtils().send(sender,
                     "&aQuest tracking persistent pornit pentru &f" + targetPlayer.getName() + "&a.");
@@ -298,6 +358,42 @@ public class AINPCCommand implements CommandExecutor {
                 "&aAi cerut quest tracking pentru &f" + targetPlayer.getName() + "&a.");
         }
         return true;
+    }
+
+    private QuestTrackRequest resolveQuestTrackRequest(CommandSender sender, String[] args, String rawAction) {
+        String action = "start".equals(rawAction) || "stop".equals(rawAction) ? rawAction : "";
+        int firstOptionalIndex = action.isBlank() ? 2 : 3;
+        String questSelector = "";
+        int playerArgIndex = -1;
+        String usage = "&cUtilizare: /ainpc quest track [start|stop] [questCode|templateId] [jucator]";
+
+        if (args.length > firstOptionalIndex) {
+            String firstOptional = args[firstOptionalIndex];
+            Player firstAsPlayer = findOnlinePlayer(firstOptional);
+            if (firstAsPlayer != null) {
+                playerArgIndex = firstOptionalIndex;
+            } else if (!"stop".equals(action)) {
+                questSelector = firstOptional;
+                playerArgIndex = args.length > firstOptionalIndex + 1 ? firstOptionalIndex + 1 : -1;
+            } else {
+                plugin.getMessageUtils().send(sender, usage);
+                return null;
+            }
+        }
+
+        int maxArgs = firstOptionalIndex
+            + (questSelector.isBlank() ? (playerArgIndex >= 0 ? 1 : 0) : (playerArgIndex >= 0 ? 2 : 1));
+        if (args.length > maxArgs) {
+            plugin.getMessageUtils().send(sender, usage);
+            return null;
+        }
+
+        Player targetPlayer = resolveQuestTargetPlayer(sender, args, playerArgIndex, usage);
+        if (targetPlayer == null) {
+            return null;
+        }
+
+        return new QuestTrackRequest(targetPlayer, questSelector, action);
     }
 
     private void applyQuestTrackingMarker(CommandSender sender,
@@ -480,8 +576,9 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleAbandonQuest(CommandSender sender, String[] args) {
+        String usage = "&cUtilizare: /ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]";
         if (args.length < 3) {
-            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest abandon <numeNpc>|nearest [jucator]");
+            plugin.getMessageUtils().send(sender, usage);
             return true;
         }
 
@@ -490,10 +587,31 @@ public class AINPCCommand implements CommandExecutor {
             sender,
             args,
             3,
-            "&cUtilizare: /ainpc quest abandon <numeNpc>|nearest [jucator]"
+            usage
         );
         if (targetPlayer == null) {
             questDebug("Quest abandon oprit: nu am putut rezolva jucatorul tinta.");
+            return true;
+        }
+
+        if (shouldHandleAbandonAsQuestSelector(npcSelector)) {
+            ScenarioEngine.QuestInteractionResult questInteraction =
+                plugin.getScenarioEngine().abandonQuest(targetPlayer, npcSelector);
+            if (!questInteraction.isHandled()) {
+                plugin.getMessageUtils().send(sender,
+                    "&cNu exista quest curent sau arhivat pentru selectorul &f" + npcSelector + "&c.");
+                return true;
+            }
+
+            CommandSender recipient = sender.equals(targetPlayer) ? targetPlayer : sender;
+            for (String systemMessage : questInteraction.getSystemMessages()) {
+                plugin.getMessageUtils().send(recipient, systemMessage);
+            }
+            if (!sender.equals(targetPlayer)) {
+                plugin.getMessageUtils().send(sender,
+                    "&eJucatorul &f" + targetPlayer.getName()
+                        + " &ea folosit abandon pentru quest selector &6" + npcSelector + "&e.");
+            }
             return true;
         }
 
@@ -523,6 +641,57 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
+    private boolean shouldHandleAbandonAsQuestSelector(String selector) {
+        if (selector == null || selector.isBlank() || "nearest".equalsIgnoreCase(selector)) {
+            return false;
+        }
+        if (isTrackedQuestSelector(selector)) {
+            return true;
+        }
+        return plugin.getNpcManager().getNPCByName(selector) == null;
+    }
+
+    private boolean isTrackedQuestSelector(String selector) {
+        String normalized = selector == null ? "" : selector.trim().toLowerCase();
+        return "tracked".equals(normalized)
+            || "current".equals(normalized)
+            || "curent".equals(normalized)
+            || "urmarit".equals(normalized);
+    }
+
+    private boolean handleQuestDebug(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        String usage = "&cUtilizare: /ainpc quest debug <tracked|questCode|templateId> [jucator]";
+        if (args.length < 3) {
+            plugin.getMessageUtils().send(sender, usage);
+            return true;
+        }
+
+        String questSelector = args[2];
+        Player targetPlayer = resolveQuestTargetPlayer(sender, args, 3, usage);
+        if (targetPlayer == null) {
+            questDebug("Quest debug oprit: nu am putut rezolva jucatorul tinta.");
+            return true;
+        }
+
+        ScenarioEngine.QuestInteractionResult questInteraction =
+            plugin.getScenarioEngine().getQuestDebug(targetPlayer, questSelector);
+        if (!questInteraction.isHandled()) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu exista quest curent sau arhivat pentru selectorul &f" + questSelector + "&c.");
+            return true;
+        }
+
+        for (String systemMessage : questInteraction.getSystemMessages()) {
+            plugin.getMessageUtils().send(sender, systemMessage);
+        }
+        return true;
+    }
+
     private boolean handleStatusQuest(CommandSender sender, String[] args) {
         if (args.length < 3) {
             return handleQuestLog(sender, args);
@@ -533,11 +702,29 @@ public class AINPCCommand implements CommandExecutor {
             sender,
             args,
             3,
-            "&cUtilizare: /ainpc quest status <numeNpc>|nearest [jucator]"
+            "&cUtilizare: /ainpc quest status <numeNpc>|nearest|<questCode|templateId> [jucator]"
         );
         if (targetPlayer == null) {
             questDebug("Quest status oprit: nu am putut rezolva jucatorul tinta.");
             return true;
+        }
+
+        if (!"nearest".equalsIgnoreCase(npcSelector)
+            && plugin.getNpcManager().getNPCByName(npcSelector) == null) {
+            ScenarioEngine.QuestInteractionResult questInteraction =
+                plugin.getScenarioEngine().getQuestStatus(targetPlayer, npcSelector);
+            if (questInteraction.isHandled()) {
+                CommandSender recipient = sender.equals(targetPlayer) ? targetPlayer : sender;
+                for (String systemMessage : questInteraction.getSystemMessages()) {
+                    plugin.getMessageUtils().send(recipient, systemMessage);
+                }
+                if (!sender.equals(targetPlayer)) {
+                    plugin.getMessageUtils().send(sender,
+                        "&aAi cerut statusul questului &f" + npcSelector
+                            + " &apentru &f" + targetPlayer.getName() + "&a.");
+                }
+                return true;
+            }
         }
 
         AINPC npc = resolveQuestNpcSelector(sender, npcSelector, targetPlayer, "status");
@@ -970,15 +1157,16 @@ public class AINPCCommand implements CommandExecutor {
 
     private void sendQuestUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|main|side|repeatable|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest status");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest nearest [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest accept|da [numeNpc|nearest] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest decline|nu [numeNpc|nearest] [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest abandon <numeNpc>|nearest [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest status <numeNpc>|nearest [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest status <numeNpc>|nearest|<questCode|templateId> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest debug <tracked|questCode|templateId> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest reset <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
@@ -2921,6 +3109,24 @@ public class AINPCCommand implements CommandExecutor {
             int questRows = queryCount("SELECT COUNT(*) FROM player_quests");
             int anchorRows = queryCount("SELECT COUNT(*) FROM quest_anchor_bindings");
             report.info("Quest anchors: " + anchorRows + " binding-uri, " + questRows + " progres quest in DB.");
+            int trackedRows = queryCount("SELECT COUNT(*) FROM player_quests WHERE tracked <> 0");
+            report.info("Quest tracking: " + trackedRows + " questuri urmarite persistent.");
+
+            auditQueryErrorRows(report, """
+                SELECT player_uuid, COUNT(*) AS tracked_count
+                FROM player_quests
+                WHERE tracked <> 0
+                GROUP BY player_uuid
+                HAVING COUNT(*) > 1
+                """, "Jucator cu mai multe questuri tracked");
+
+            auditQueryErrorRows(report, """
+                SELECT player_uuid, template_id, quest_code, status
+                FROM player_quests
+                WHERE tracked <> 0
+                  AND LOWER(COALESCE(status, '')) <> 'active'
+                """, "Quest tracked care nu este activ");
+            auditLegacyQuestProgressKeys(report);
 
             auditQueryRows(report, """
                 SELECT b.player_uuid, b.template_id, b.objective_key
@@ -2929,6 +3135,12 @@ public class AINPCCommand implements CommandExecutor {
                   ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
                 WHERE p.player_uuid IS NULL
                 """, "Quest anchor fara progres parinte");
+            auditQueryRows(report, """
+                SELECT player_uuid, template_id, objective_key
+                FROM quest_anchor_bindings
+                WHERE objective_key LIKE '%:%:%'
+                LIMIT 20
+                """, "Quest anchor cu objective_key legacy");
 
             List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings("", "", 500);
             if (anchorRows > rows.size()) {
@@ -3017,6 +3229,7 @@ public class AINPCCommand implements CommandExecutor {
         validateQuestGiverRole(report, label, quest);
         validateQuestEntries(report, label, "obiectiv", quest.getObjectives(), true);
         validateQuestEntries(report, label, "recompensa", quest.getRewards(), false);
+        validateQuestObjectiveStages(report, label, quest);
     }
 
     private void validateQuestPrerequisites(AuditReport report,
@@ -3061,6 +3274,57 @@ public class AINPCCommand implements CommandExecutor {
                 report.warn(label + " nu are faza " + requiredPhase + ".");
             }
         }
+    }
+
+    private void validateQuestObjectiveStages(AuditReport report,
+                                              String label,
+                                              FeaturePackLoader.ScenarioDefinition quest) {
+        if (quest.getObjectives().isEmpty()) {
+            return;
+        }
+
+        Set<String> knownPhases = quest.getPhases().stream()
+            .map(this::normalizeAuditKey)
+            .filter(phase -> !phase.isBlank())
+            .collect(Collectors.toSet());
+        boolean hasStagedObjective = false;
+        boolean hasUnstagedObjective = false;
+
+        for (FeaturePackLoader.QuestEntryDefinition objective : quest.getObjectives()) {
+            String stage = questEntryStage(objective);
+            if (stage.isBlank()) {
+                hasUnstagedObjective = true;
+                continue;
+            }
+
+            hasStagedObjective = true;
+            String normalizedStage = normalizeAuditKey(stage);
+            if (!knownPhases.contains(normalizedStage)) {
+                report.error(label + " are obiectiv " + questEntryId(objective)
+                    + " cu phase/stage necunoscut: " + stage + ".");
+            }
+        }
+
+        if (hasStagedObjective && hasUnstagedObjective) {
+            report.warn(label + " combina obiective cu phase/stage si obiective fara etapa explicita.");
+        }
+    }
+
+    private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
+        if (entry == null) {
+            return "";
+        }
+
+        return firstNonBlank(
+            entry.getMetadata().get("stage_id"),
+            entry.getMetadata().get("stage"),
+            entry.getMetadata().get("phase"),
+            entry.getMetadata().get("current_stage_id"),
+            entry.getMetadata().get("current_phase"),
+            entry.getVariables().get("stage_id"),
+            entry.getVariables().get("stage"),
+            entry.getVariables().get("phase")
+        );
     }
 
     private void validateQuestDialogues(AuditReport report,
@@ -3284,6 +3548,91 @@ public class AINPCCommand implements CommandExecutor {
             return entryId;
         }
         return entry.getType() + ":" + entry.getItemId();
+    }
+
+    private void auditLegacyQuestProgressKeys(AuditReport report) throws SQLException {
+        String sql = """
+            SELECT player_uuid, template_id, objective_progress
+            FROM player_quests
+            WHERE objective_progress IS NOT NULL
+              AND TRIM(objective_progress) <> ''
+              AND TRIM(objective_progress) <> '{}'
+            LIMIT 500
+        """;
+
+        int legacyWarnings = 0;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String rawProgress = rs.getString("objective_progress");
+                if (rawProgress == null || rawProgress.isBlank()) {
+                    continue;
+                }
+
+                JsonElement parsed;
+                try {
+                    parsed = JsonParser.parseString(rawProgress);
+                } catch (JsonSyntaxException exception) {
+                    report.warn("player_quests.objective_progress JSON invalid: player_uuid="
+                        + rs.getString("player_uuid") + ", template_id=" + rs.getString("template_id")
+                        + ", eroare=" + exception.getMessage());
+                    continue;
+                }
+
+                if (!parsed.isJsonObject()) {
+                    report.warn("player_quests.objective_progress nu este obiect JSON: player_uuid="
+                        + rs.getString("player_uuid") + ", template_id=" + rs.getString("template_id") + ".");
+                    continue;
+                }
+
+                for (String key : parsed.getAsJsonObject().keySet()) {
+                    if (!isLegacyObjectiveProgressKey(key)) {
+                        continue;
+                    }
+                    report.warn("player_quests contine objective_progress legacy: player_uuid="
+                        + rs.getString("player_uuid") + ", template_id=" + rs.getString("template_id")
+                        + ", objective_key=" + key + ".");
+                    legacyWarnings++;
+                    break;
+                }
+
+                if (legacyWarnings >= AUDIT_PREVIEW_LIMIT) {
+                    report.warn("Audit quest a oprit preview-ul pentru objective_progress legacy la "
+                        + AUDIT_PREVIEW_LIMIT + " randuri.");
+                    return;
+                }
+            }
+        }
+    }
+
+    private boolean isLegacyObjectiveProgressKey(String key) {
+        if (key == null || key.isBlank()) {
+            return false;
+        }
+
+        String[] parts = key.split(":");
+        if (parts.length < 3) {
+            return false;
+        }
+
+        String type = normalizeQuestObjectiveType(parts[0]);
+        if (!isSupportedQuestObjectiveType(type)) {
+            return false;
+        }
+
+        try {
+            return Integer.parseInt(parts[parts.length - 1]) >= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private boolean isSupportedQuestObjectiveType(String type) {
+        return switch (normalizeQuestObjectiveType(type)) {
+            case "collect_item", "deliver_to_npc", "talk_to_npc", "visit_region", "visit_place",
+                 "inspect_node", "kill_mob" -> true;
+            default -> false;
+        };
     }
 
     private String normalizeQuestObjectiveType(String type) {
@@ -3660,6 +4009,15 @@ public class AINPCCommand implements CommandExecutor {
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 report.warn(label + ": " + describeCurrentRow(rs));
+            }
+        }
+    }
+
+    private void auditQueryErrorRows(AuditReport report, String sql, String label) throws SQLException {
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                report.error(label + ": " + describeCurrentRow(rs));
             }
         }
     }
@@ -4333,7 +4691,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Afiseaza informatii despre un NPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza manual quest-ul unui NPC");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Arata sau mentine busola/actionbar/particule catre tinta questului");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest nearest [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza quest-ul celui mai apropiat NPC");

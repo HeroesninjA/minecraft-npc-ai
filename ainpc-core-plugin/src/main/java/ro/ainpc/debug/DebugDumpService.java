@@ -3,11 +3,17 @@ package ro.ainpc.debug;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
+import ro.ainpc.engine.FeaturePackLoader;
+import ro.ainpc.engine.QuestScenarioContract;
+import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlaceInfo;
@@ -24,9 +30,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DebugDumpService {
 
@@ -66,7 +74,11 @@ public class DebugDumpService {
             writeText(dumpRoot.resolve("quests.yml"), plugin.getQuestConfig() != null
                 ? plugin.getQuestConfig().saveToString()
                 : "# questConfig indisponibil\n");
+            writeText(dumpRoot.resolve("quest-audit-report.txt"), buildQuestAuditReportText());
+            writeJson(dumpRoot.resolve("loaded-quest-definitions.json"), buildLoadedQuestDefinitionsJson());
+            writeJson(dumpRoot.resolve("player-quest-progress.json"), buildPlayerQuestProgressJson());
             writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), buildQuestAnchorBindingsJson());
+            writeJson(dumpRoot.resolve("story-events.json"), buildStoryEventsJson());
         }
         if ("all".equals(normalizedScope) || "openai".equals(normalizedScope)) {
             writeText(dumpRoot.resolve("openai.txt"), buildOpenAiInfo());
@@ -110,7 +122,7 @@ public class DebugDumpService {
         sb.append("- server.txt\n");
         sb.append("- config-sanitized.yml\n");
         sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-anchor-bindings.json, openai.txt depending on scope\n");
+        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-quest-progress.json, quest-anchor-bindings.json, story-events.json, openai.txt depending on scope\n");
         sb.append("- recent-server-log.txt\n");
         return sb.toString();
     }
@@ -304,6 +316,518 @@ public class DebugDumpService {
         return root;
     }
 
+    private String buildQuestAuditReportText() {
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+
+        auditLoadedQuestTemplates(errors, warnings);
+        auditQuestPersistence(errors, warnings);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("AINPC Quest Audit Report\n");
+        sb.append("Generated: ").append(LocalDateTime.now()).append("\n");
+        sb.append("Errors: ").append(errors.size()).append("\n");
+        for (String error : errors) {
+            sb.append("[ERROR] ").append(error).append("\n");
+        }
+        sb.append("\nWarnings: ").append(warnings.size()).append("\n");
+        for (String warning : warnings) {
+            sb.append("[WARN] ").append(warning).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private void auditLoadedQuestTemplates(List<String> errors, List<String> warnings) {
+        FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
+        if (featurePackLoader == null) {
+            errors.add("FeaturePackLoader indisponibil; nu pot valida quest templates.");
+            return;
+        }
+
+        int questCount = 0;
+        for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
+            if (scenario.getBaseType() != ScenarioEngine.ScenarioType.QUEST) {
+                continue;
+            }
+            questCount++;
+            String templateId = questTemplateId(scenario);
+            if (valueOrEmpty(scenario.getQuestCode()).isBlank()) {
+                warnings.add(templateId + " nu defineste quest.code.");
+            }
+            if (valueOrEmpty(scenario.getQuestGiverProfession()).isBlank()) {
+                warnings.add(templateId + " nu defineste quest.giver_profession.");
+            }
+            auditQuestEntries(templateId, "objective", scenario.getObjectives(), supportedQuestObjectiveTypes(), errors, warnings);
+            auditQuestEntries(templateId, "reward", scenario.getRewards(), supportedQuestRewardTypes(), errors, warnings);
+            auditQuestObjectiveStages(templateId, scenario, errors, warnings);
+        }
+
+        if (questCount == 0) {
+            warnings.add("Nu exista scenarii incarcate cu base_type QUEST.");
+        }
+    }
+
+    private void auditQuestEntries(String templateId,
+                                   String entryKind,
+                                   List<FeaturePackLoader.QuestEntryDefinition> entries,
+                                   Set<String> supportedTypes,
+                                   List<String> errors,
+                                   List<String> warnings) {
+        if (entries == null || entries.isEmpty()) {
+            if ("objective".equals(entryKind)) {
+                errors.add(templateId + " nu are obiective.");
+            } else {
+                warnings.add(templateId + " nu are reward-uri.");
+            }
+            return;
+        }
+
+        Set<String> entryIds = new HashSet<>();
+        for (int index = 0; index < entries.size(); index++) {
+            FeaturePackLoader.QuestEntryDefinition entry = entries.get(index);
+            if (entry == null) {
+                errors.add(templateId + " are " + entryKind + " null la index " + index + ".");
+                continue;
+            }
+            String type = "objective".equals(entryKind)
+                ? normalizeQuestObjectiveType(entry.getType())
+                : normalizeQuestRewardType(entry.getType());
+            if (!supportedTypes.contains(type)) {
+                errors.add(templateId + " are " + entryKind + " cu tip nesuportat: " + entry.getType() + ".");
+            }
+            String entryId = valueOrEmpty(entry.getEntryId());
+            if (entryId.isBlank()) {
+                warnings.add(templateId + " are " + entryKind + " fara entry_id stabil la index " + index + ".");
+            } else if (!entryIds.add(normalizeKey(entryId))) {
+                errors.add(templateId + " are " + entryKind + " duplicat: " + entryId + ".");
+            }
+        }
+    }
+
+    private void auditQuestObjectiveStages(String templateId,
+                                           FeaturePackLoader.ScenarioDefinition scenario,
+                                           List<String> errors,
+                                           List<String> warnings) {
+        if (scenario == null || scenario.getObjectives().isEmpty()) {
+            return;
+        }
+
+        Set<String> knownPhases = new HashSet<>();
+        for (String phase : scenario.getPhases()) {
+            String normalizedPhase = normalizeKey(phase);
+            if (!normalizedPhase.isBlank()) {
+                knownPhases.add(normalizedPhase);
+            }
+        }
+
+        boolean hasStagedObjective = false;
+        boolean hasUnstagedObjective = false;
+        for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
+            String stage = questEntryStage(objective);
+            if (stage.isBlank()) {
+                hasUnstagedObjective = true;
+                continue;
+            }
+
+            hasStagedObjective = true;
+            if (!knownPhases.contains(normalizeKey(stage))) {
+                errors.add(templateId + " are objective phase/stage necunoscut: " + stage + ".");
+            }
+        }
+
+        if (hasStagedObjective && hasUnstagedObjective) {
+            warnings.add(templateId + " combina obiective cu phase/stage si obiective fara etapa explicita.");
+        }
+    }
+
+    private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
+        if (entry == null) {
+            return "";
+        }
+
+        return firstNonBlank(
+            entry.getMetadata().get("stage_id"),
+            entry.getMetadata().get("stage"),
+            entry.getMetadata().get("phase"),
+            entry.getMetadata().get("current_stage_id"),
+            entry.getMetadata().get("current_phase"),
+            entry.getVariables().get("stage_id"),
+            entry.getVariables().get("stage"),
+            entry.getVariables().get("phase")
+        );
+    }
+
+    private String normalizeQuestObjectiveType(String type) {
+        String normalized = normalizeKey(type).replace('-', '_');
+        return switch (normalized) {
+            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
+            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
+            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
+            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
+            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
+            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
+            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
+            default -> normalized;
+        };
+    }
+
+    private String normalizeQuestRewardType(String type) {
+        String normalized = normalizeKey(type).replace('-', '_');
+        return switch (normalized) {
+            case "", "item", "reward_item" -> "item";
+            case "story_state", "set_story_flag", "story_flag", "set_flag", "setstorystate" -> "set_story_state";
+            case "story_event", "record_event", "event", "recordstoryevent" -> "record_story_event";
+            default -> normalized;
+        };
+    }
+
+    private Set<String> supportedQuestObjectiveTypes() {
+        return Set.of(
+            "collect_item",
+            "deliver_to_npc",
+            "talk_to_npc",
+            "visit_region",
+            "visit_place",
+            "inspect_node",
+            "kill_mob"
+        );
+    }
+
+    private Set<String> supportedQuestRewardTypes() {
+        return Set.of(
+            "item",
+            "set_story_state",
+            "record_story_event"
+        );
+    }
+
+    private void auditQuestPersistence(List<String> errors, List<String> warnings) {
+        if (plugin.getDatabaseManager() == null) {
+            warnings.add("DatabaseManager indisponibil; nu pot valida player_quests, quest_anchor_bindings sau story_events.");
+            return;
+        }
+
+        auditTrackedQuestPersistence(errors, warnings);
+        auditQuestAnchorPersistence(errors, warnings);
+        auditStoredQuestJson(warnings);
+    }
+
+    private void auditTrackedQuestPersistence(List<String> errors, List<String> warnings) {
+        String duplicateTrackedSql = """
+            SELECT player_uuid, COUNT(*) AS tracked_count
+            FROM player_quests
+            WHERE tracked != 0
+            GROUP BY player_uuid
+            HAVING COUNT(*) > 1
+            ORDER BY tracked_count DESC, player_uuid
+            LIMIT 50
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(duplicateTrackedSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                errors.add("player_quests are " + resultSet.getInt("tracked_count")
+                    + " questuri tracked pentru jucatorul " + resultSet.getString("player_uuid") + ".");
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida unicitatea player_quests.tracked: " + exception.getMessage());
+        }
+
+        String inactiveTrackedSql = """
+            SELECT player_uuid, template_id, status
+            FROM player_quests
+            WHERE tracked != 0
+              AND LOWER(status) NOT IN ('active', 'offered')
+            ORDER BY player_uuid, template_id
+            LIMIT 50
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(inactiveTrackedSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                errors.add("player_quests.tracked indica quest inactiv: "
+                    + resultSet.getString("player_uuid") + " " + resultSet.getString("template_id")
+                    + " status=" + resultSet.getString("status") + ".");
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida statusul player_quests.tracked: " + exception.getMessage());
+        }
+    }
+
+    private void auditQuestAnchorPersistence(List<String> errors, List<String> warnings) {
+        String duplicateAnchorsSql = """
+            SELECT player_uuid, template_id, objective_key, COUNT(*) AS duplicate_count
+            FROM quest_anchor_bindings
+            GROUP BY player_uuid, template_id, objective_key
+            HAVING COUNT(*) > 1
+            ORDER BY duplicate_count DESC, player_uuid, template_id, objective_key
+            LIMIT 50
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(duplicateAnchorsSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                errors.add("quest_anchor_bindings are duplicate pentru "
+                    + resultSet.getString("player_uuid") + " " + resultSet.getString("template_id")
+                    + " " + resultSet.getString("objective_key") + ": "
+                    + resultSet.getInt("duplicate_count") + ".");
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida duplicatele din quest_anchor_bindings: " + exception.getMessage());
+        }
+
+        String orphanAnchorsSql = """
+            SELECT b.player_uuid, b.template_id, b.objective_key
+            FROM quest_anchor_bindings b
+            LEFT JOIN player_quests p
+              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            WHERE p.player_uuid IS NULL
+            ORDER BY b.player_uuid, b.template_id, b.objective_key
+            LIMIT 50
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(orphanAnchorsSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                warnings.add("quest_anchor_bindings orfan fara player_quests parinte: "
+                    + resultSet.getString("player_uuid") + " " + resultSet.getString("template_id")
+                    + " " + resultSet.getString("objective_key") + ".");
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida ancorele orfane: " + exception.getMessage());
+        }
+    }
+
+    private void auditStoredQuestJson(List<String> warnings) {
+        String playerQuestSql = """
+            SELECT player_uuid, template_id, objective_progress, quest_variables
+            FROM player_quests
+            ORDER BY player_uuid, template_id
+            LIMIT 500
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(playerQuestSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String label = resultSet.getString("player_uuid") + " " + resultSet.getString("template_id");
+                auditStoredJsonColumn(warnings, "player_quests.objective_progress", label, resultSet.getString("objective_progress"));
+                auditStoredJsonColumn(warnings, "player_quests.quest_variables", label, resultSet.getString("quest_variables"));
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida JSON-ul din player_quests: " + exception.getMessage());
+        }
+
+        String storyEventSql = """
+            SELECT id, payload
+            FROM story_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 500
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(storyEventSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                auditStoredJsonColumn(warnings, "story_events.payload", "id=" + resultSet.getLong("id"), resultSet.getString("payload"));
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida JSON-ul din story_events: " + exception.getMessage());
+        }
+    }
+
+    private void auditStoredJsonColumn(List<String> warnings, String column, String label, String rawValue) {
+        if (isStoredJsonValid(rawValue)) {
+            return;
+        }
+        warnings.add(column + " are JSON invalid pentru " + label + ".");
+    }
+
+    private JsonObject buildLoadedQuestDefinitionsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source", "FeaturePackLoader#getAllScenarios");
+
+        FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
+        if (featurePackLoader == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "FeaturePackLoader indisponibil");
+            root.addProperty("scenario_count", 0);
+            root.addProperty("quest_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        List<FeaturePackLoader.ScenarioDefinition> scenarios = new ArrayList<>(featurePackLoader.getAllScenarios());
+        scenarios.sort(Comparator
+            .comparing((FeaturePackLoader.ScenarioDefinition scenario) -> valueOrEmpty(scenario.getPackId()))
+            .thenComparing(scenario -> valueOrEmpty(scenario.getId())));
+
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> byPack = new LinkedHashMap<>();
+        Map<String, Integer> byCategory = new LinkedHashMap<>();
+        Map<String, Integer> byKind = new LinkedHashMap<>();
+
+        for (FeaturePackLoader.ScenarioDefinition scenario : scenarios) {
+            if (scenario.getBaseType() != ScenarioEngine.ScenarioType.QUEST) {
+                continue;
+            }
+
+            QuestScenarioContract contract = QuestScenarioContract.fromScenarioDefinition(scenario);
+            rows.add(loadedQuestDefinitionRowJson(scenario, contract));
+            incrementCount(byPack, scenario.getPackId());
+            incrementCount(byCategory, enumJsonId(contract.category()));
+            incrementCount(byKind, enumJsonId(contract.kind()));
+        }
+
+        root.addProperty("scenario_count", scenarios.size());
+        root.addProperty("quest_count", rows.size());
+        root.add("by_pack", countMapJson(byPack));
+        root.add("by_category", countMapJson(byCategory));
+        root.add("by_kind", countMapJson(byKind));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject loadedQuestDefinitionRowJson(FeaturePackLoader.ScenarioDefinition scenario,
+                                                    QuestScenarioContract contract) {
+        JsonObject json = new JsonObject();
+        json.addProperty("pack_id", valueOrEmpty(scenario.getPackId()));
+        json.addProperty("id", valueOrEmpty(scenario.getId()));
+        json.addProperty("template_id", questTemplateId(scenario));
+        json.addProperty("name", valueOrEmpty(scenario.getName()));
+        json.addProperty("description", valueOrEmpty(scenario.getDescription()));
+        json.addProperty("base_type", scenario.getBaseType() != null ? scenario.getBaseType().name() : "");
+        json.addProperty("quest_code", valueOrEmpty(scenario.getQuestCode()));
+        json.addProperty("giver_profession", valueOrEmpty(scenario.getQuestGiverProfession()));
+        json.addProperty("category", valueOrEmpty(scenario.getQuestCategory()));
+        json.addProperty("kind", valueOrEmpty(scenario.getQuestScenarioKind()));
+        json.addProperty("acceptance_mode", valueOrEmpty(scenario.getQuestAcceptanceMode()));
+        json.addProperty("completion_mode", valueOrEmpty(scenario.getQuestCompletionMode()));
+        json.addProperty("tracking_mode", valueOrEmpty(scenario.getQuestTrackingMode()));
+        json.addProperty("repeatable", scenario.isQuestRepeatable());
+        json.addProperty("cooldown_seconds", scenario.getQuestCooldownSeconds());
+        json.addProperty("requires_player", scenario.isRequiresPlayer());
+        json.addProperty("replace_base_type", scenario.isReplaceBaseType());
+        json.addProperty("trigger_probability", scenario.getTriggerProbability());
+        json.addProperty("minimum_npc_count", scenario.getMinimumNpcCount());
+        json.addProperty("hint", valueOrEmpty(scenario.getHint()));
+        json.add("effective_contract", questContractJson(contract));
+        json.add("tags", gson.toJsonTree(scenario.getQuestTags()));
+        json.add("prerequisites", gson.toJsonTree(scenario.getQuestPrerequisites()));
+        json.add("phases", gson.toJsonTree(scenario.getPhases()));
+        json.add("stages", questStagesJson(scenario.getQuestStages()));
+        json.add("preferred_topologies", gson.toJsonTree(scenario.getPreferredTopologies()));
+        json.add("narrative_hints", gson.toJsonTree(scenario.getNarrativeHints()));
+        json.add("roles", scenarioRolesJson(scenario.getRoles()));
+        json.add("objectives", questEntriesJson(scenario.getObjectives()));
+        json.add("rewards", questEntriesJson(scenario.getRewards()));
+        json.add("dialogues", gson.toJsonTree(scenario.getQuestDialogues()));
+        return json;
+    }
+
+    private JsonArray questStagesJson(List<FeaturePackLoader.QuestStageDefinition> stages) {
+        JsonArray json = new JsonArray();
+        if (stages == null || stages.isEmpty()) {
+            return json;
+        }
+
+        for (FeaturePackLoader.QuestStageDefinition stage : stages) {
+            json.add(questStageJson(stage));
+        }
+        return json;
+    }
+
+    private JsonObject questStageJson(FeaturePackLoader.QuestStageDefinition stage) {
+        JsonObject json = new JsonObject();
+        if (stage == null) {
+            return json;
+        }
+
+        json.addProperty("id", valueOrEmpty(stage.getId()));
+        json.addProperty("description", valueOrEmpty(stage.getDescription()));
+        json.addProperty("completion_mode", valueOrEmpty(stage.getCompletionMode()));
+        json.add("objective_ids", gson.toJsonTree(stage.getObjectiveIds()));
+        json.add("metadata", gson.toJsonTree(stage.getMetadata()));
+        return json;
+    }
+
+    private JsonObject questContractJson(QuestScenarioContract contract) {
+        JsonObject json = new JsonObject();
+        json.addProperty("kind", enumJsonId(contract.kind()));
+        json.addProperty("category", enumJsonId(contract.category()));
+        json.addProperty("category_display_name", contract.categoryDisplayName());
+        json.addProperty("acceptance_mode", enumJsonId(contract.acceptanceMode()));
+        json.addProperty("completion_mode", enumJsonId(contract.completionMode()));
+        json.addProperty("tracking_mode", enumJsonId(contract.trackingMode()));
+        json.addProperty("auto_accept_on_offer", contract.autoAcceptOnOffer());
+        json.add("tags", gson.toJsonTree(contract.tags()));
+        return json;
+    }
+
+    private JsonObject scenarioRolesJson(Map<String, FeaturePackLoader.ScenarioRoleDefinition> roles) {
+        JsonObject json = new JsonObject();
+        if (roles == null || roles.isEmpty()) {
+            return json;
+        }
+
+        roles.entrySet().stream()
+            .sorted(Comparator.comparing(entry -> valueOrEmpty(entry.getKey())))
+            .forEach(entry -> json.add(valueOrEmpty(entry.getKey()), scenarioRoleJson(entry.getValue())));
+        return json;
+    }
+
+    private JsonObject scenarioRoleJson(FeaturePackLoader.ScenarioRoleDefinition role) {
+        JsonObject json = new JsonObject();
+        if (role == null) {
+            return json;
+        }
+
+        json.addProperty("id", valueOrEmpty(role.getId()));
+        json.addProperty("description", valueOrEmpty(role.getDescription()));
+        json.addProperty("player_role", role.isPlayerRole());
+        json.addProperty("optional", role.isOptional());
+        json.add("required_professions", gson.toJsonTree(role.getRequiredProfessions()));
+        json.add("preferred_professions", gson.toJsonTree(role.getPreferredProfessions()));
+        json.add("required_traits", gson.toJsonTree(role.getRequiredTraits()));
+        json.add("preferred_traits", gson.toJsonTree(role.getPreferredTraits()));
+        return json;
+    }
+
+    private JsonArray questEntriesJson(List<FeaturePackLoader.QuestEntryDefinition> entries) {
+        JsonArray json = new JsonArray();
+        if (entries == null || entries.isEmpty()) {
+            return json;
+        }
+
+        for (int index = 0; index < entries.size(); index++) {
+            json.add(questEntryJson(entries.get(index), index));
+        }
+        return json;
+    }
+
+    private JsonObject questEntryJson(FeaturePackLoader.QuestEntryDefinition entry, int index) {
+        JsonObject json = new JsonObject();
+        json.addProperty("index", index);
+        if (entry == null) {
+            return json;
+        }
+
+        json.addProperty("entry_id", valueOrEmpty(entry.getEntryId()));
+        json.addProperty("type", valueOrEmpty(entry.getType()));
+        json.addProperty("item", valueOrEmpty(entry.getItemId()));
+        json.addProperty("amount", entry.getAmount());
+        json.addProperty("description", valueOrEmpty(entry.getDescription()));
+        json.add("metadata", gson.toJsonTree(entry.getMetadata()));
+        json.add("variables", gson.toJsonTree(entry.getVariables()));
+        json.add("payload", gson.toJsonTree(entry.getPayload()));
+        return json;
+    }
+
+    private String questTemplateId(FeaturePackLoader.ScenarioDefinition scenario) {
+        String packId = valueOrEmpty(scenario.getPackId());
+        String scenarioId = valueOrEmpty(scenario.getId());
+        if (packId.isBlank()) {
+            return scenarioId;
+        }
+        if (scenarioId.isBlank()) {
+            return packId;
+        }
+        return packId + ":" + scenarioId;
+    }
+
     private JsonObject toRegionJson(WorldRegionInfo region) {
         JsonObject json = new JsonObject();
         json.addProperty("id", region.id());
@@ -347,6 +871,93 @@ public class DebugDumpService {
         return json;
     }
 
+    private JsonObject buildPlayerQuestProgressJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_table", "player_quests");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("row_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> byStatus = new LinkedHashMap<>();
+        Map<String, Integer> byTemplate = new LinkedHashMap<>();
+        int trackedCount = 0;
+        int currentCount = 0;
+        int archivedCount = 0;
+
+        String sql = """
+            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
+                   current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
+            FROM player_quests
+            ORDER BY player_uuid, status, updated_at DESC, template_id
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                JsonObject row = playerQuestProgressRowJson(resultSet);
+                rows.add(row);
+
+                String status = valueOrEmpty(resultSet.getString("status"));
+                incrementCount(byStatus, status);
+                incrementCount(byTemplate, resultSet.getString("template_id"));
+                if (resultSet.getInt("tracked") != 0) {
+                    trackedCount++;
+                }
+                if ("active".equalsIgnoreCase(status) || "offered".equalsIgnoreCase(status)) {
+                    currentCount++;
+                } else if ("completed".equalsIgnoreCase(status) || "failed".equalsIgnoreCase(status)) {
+                    archivedCount++;
+                }
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        root.addProperty("row_count", rows.size());
+        root.addProperty("current_count", currentCount);
+        root.addProperty("archived_count", archivedCount);
+        root.addProperty("tracked_count", trackedCount);
+        root.add("by_status", countMapJson(byStatus));
+        root.add("by_template", countMapJson(byTemplate));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject playerQuestProgressRowJson(ResultSet resultSet) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("player_uuid", valueOrEmpty(resultSet.getString("player_uuid")));
+        json.addProperty("template_id", valueOrEmpty(resultSet.getString("template_id")));
+        json.addProperty("quest_code", valueOrEmpty(resultSet.getString("quest_code")));
+        json.addProperty("status", valueOrEmpty(resultSet.getString("status")));
+        json.addProperty("started_at", resultSet.getLong("started_at"));
+        json.addProperty("completed_at", resultSet.getLong("completed_at"));
+        json.addProperty("current_phase", valueOrEmpty(resultSet.getString("current_phase")));
+        json.addProperty("current_stage_id", valueOrEmpty(resultSet.getString("current_stage_id")));
+        json.addProperty("updated_at", resultSet.getLong("updated_at"));
+        json.addProperty("tracked", resultSet.getInt("tracked") != 0);
+        addStoredJson(json, "objective_progress", resultSet.getString("objective_progress"));
+        addStoredJson(json, "quest_variables", resultSet.getString("quest_variables"));
+        return json;
+    }
+
+    private void addStoredJson(JsonObject root, String key, String rawValue) {
+        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
+        try {
+            JsonElement parsed = JsonParser.parseString(safeRawValue);
+            root.add(key, parsed);
+        } catch (JsonSyntaxException exception) {
+            root.addProperty(key + "_raw", safeRawValue);
+            root.addProperty(key + "_parse_error", exception.getMessage());
+        }
+    }
+
     private JsonObject buildQuestAnchorBindingsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source_table", "quest_anchor_bindings");
@@ -367,7 +978,7 @@ public class DebugDumpService {
             SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
                    b.objective_type, b.reference, b.anchor_type, b.anchor_id,
                    b.anchor_label, b.created_at, b.updated_at, p.status,
-                   p.current_phase, p.updated_at AS progress_updated_at
+                   p.current_phase, p.current_stage_id, p.updated_at AS progress_updated_at
             FROM quest_anchor_bindings b
             LEFT JOIN player_quests p
               ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
@@ -409,7 +1020,79 @@ public class DebugDumpService {
         json.addProperty("updated_at", resultSet.getLong("updated_at"));
         json.addProperty("quest_status", valueOrEmpty(resultSet.getString("status")));
         json.addProperty("quest_phase", valueOrEmpty(resultSet.getString("current_phase")));
+        json.addProperty("quest_stage_id", valueOrEmpty(resultSet.getString("current_stage_id")));
         json.addProperty("quest_updated_at", resultSet.getLong("progress_updated_at"));
+        return json;
+    }
+
+    private JsonObject buildStoryEventsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_table", "story_events");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("row_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> byEventType = new LinkedHashMap<>();
+        Map<String, Integer> byScopeType = new LinkedHashMap<>();
+        Map<String, Integer> byQuestTemplate = new LinkedHashMap<>();
+        Map<String, Integer> byQuestCode = new LinkedHashMap<>();
+
+        String sql = """
+            SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
+                   title, description, payload, actor_type, actor_id, player_uuid,
+                   npc_id, created_at
+            FROM story_events
+            ORDER BY created_at DESC, id DESC
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String payload = resultSet.getString("payload");
+                JsonObject row = storyEventRowJson(resultSet, payload);
+                rows.add(row);
+                incrementCount(byEventType, resultSet.getString("event_type"));
+                incrementCount(byScopeType, resultSet.getString("scope_type"));
+                incrementCountIfPresent(byQuestTemplate, storedJsonProperty(payload, "quest_template"));
+                incrementCountIfPresent(byQuestCode, storedJsonProperty(payload, "quest_code"));
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        root.addProperty("row_count", rows.size());
+        root.add("by_event_type", countMapJson(byEventType));
+        root.add("by_scope_type", countMapJson(byScopeType));
+        root.add("by_quest_template", countMapJson(byQuestTemplate));
+        root.add("by_quest_code", countMapJson(byQuestCode));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject storyEventRowJson(ResultSet resultSet, String payload) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("id", resultSet.getLong("id"));
+        json.addProperty("scope_type", valueOrEmpty(resultSet.getString("scope_type")));
+        json.addProperty("scope_id", valueOrEmpty(resultSet.getString("scope_id")));
+        json.addProperty("region_id", valueOrEmpty(resultSet.getString("region_id")));
+        json.addProperty("place_id", valueOrEmpty(resultSet.getString("place_id")));
+        json.addProperty("event_type", valueOrEmpty(resultSet.getString("event_type")));
+        json.addProperty("event_key", valueOrEmpty(resultSet.getString("event_key")));
+        json.addProperty("title", valueOrEmpty(resultSet.getString("title")));
+        json.addProperty("description", valueOrEmpty(resultSet.getString("description")));
+        json.addProperty("actor_type", valueOrEmpty(resultSet.getString("actor_type")));
+        json.addProperty("actor_id", valueOrEmpty(resultSet.getString("actor_id")));
+        json.addProperty("player_uuid", valueOrEmpty(resultSet.getString("player_uuid")));
+        json.addProperty("npc_id", valueOrEmpty(resultSet.getString("npc_id")));
+        json.addProperty("created_at", resultSet.getLong("created_at"));
+        addStoredJson(json, "payload", payload);
         return json;
     }
 
@@ -421,12 +1104,52 @@ public class DebugDumpService {
         counts.put(normalizedKey, counts.getOrDefault(normalizedKey, 0) + 1);
     }
 
+    private void incrementCountIfPresent(Map<String, Integer> counts, String key) {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+        incrementCount(counts, key);
+    }
+
     private JsonObject countMapJson(Map<String, Integer> counts) {
         JsonObject json = new JsonObject();
         for (Map.Entry<String, Integer> entry : counts.entrySet()) {
             json.addProperty(entry.getKey(), entry.getValue());
         }
         return json;
+    }
+
+    private String enumJsonId(Enum<?> value) {
+        return value != null ? normalizeKey(value.name()) : "";
+    }
+
+    private String storedJsonProperty(String rawValue, String key) {
+        if (rawValue == null || rawValue.isBlank() || key == null || key.isBlank()) {
+            return "";
+        }
+        try {
+            JsonElement parsed = JsonParser.parseString(rawValue);
+            if (!parsed.isJsonObject()) {
+                return "";
+            }
+            JsonElement value = parsed.getAsJsonObject().get(key);
+            if (value == null || value.isJsonNull()) {
+                return "";
+            }
+            return value.isJsonPrimitive() ? value.getAsString() : value.toString();
+        } catch (JsonSyntaxException | IllegalStateException exception) {
+            return "";
+        }
+    }
+
+    private boolean isStoredJsonValid(String rawValue) {
+        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
+        try {
+            JsonParser.parseString(safeRawValue);
+            return true;
+        } catch (JsonSyntaxException exception) {
+            return false;
+        }
     }
 
     private String valueOrEmpty(String value) {

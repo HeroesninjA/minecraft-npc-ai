@@ -47,12 +47,23 @@ class MedievalQuestPackTest {
             "Q07", "delivery",
             "Q08", "hunt"
         );
+        Map<String, String> expectedCategories = Map.of(
+            "Q01", "main",
+            "Q02", "side",
+            "Q03", "side",
+            "Q04", "repeatable",
+            "Q05", "side",
+            "Q06", "side",
+            "Q07", "side",
+            "Q08", "side"
+        );
         for (Map.Entry<String, String> entry : expectedGivers.entrySet()) {
             ConfigurationSection scenario = scenarios.getConfigurationSection(entry.getKey());
             assertNotNull(scenario, "scenario " + entry.getKey() + " should exist");
             assertEquals("QUEST", scenario.getString("base_type"));
             assertEquals(entry.getValue(), scenario.getString("quest.giver_profession"));
             assertEquals(expectedKinds.get(entry.getKey()), scenario.getString("quest.kind"));
+            assertEquals(expectedCategories.get(entry.getKey()), scenario.getString("quest.category"));
             assertEquals("explicit", scenario.getString("quest.acceptance_mode"));
             assertEquals("return_to_giver", scenario.getString("quest.completion_mode"));
             assertEquals("next_objective", scenario.getString("quest.tracking_mode"));
@@ -70,6 +81,7 @@ class MedievalQuestPackTest {
             assertNotNull(objectives, entry.getKey() + " should define objectives");
             assertTrue(objectives.getKeys(false).size() >= 1);
             validateObjectives(objectives);
+            validateObjectivePhases(entry.getKey(), phases, objectives);
 
             ConfigurationSection rewards = scenario.getConfigurationSection("quest.rewards");
             assertNotNull(rewards, entry.getKey() + " should define rewards");
@@ -92,6 +104,21 @@ class MedievalQuestPackTest {
         assertEquals(List.of("Q01"), scenarios.getStringList("Q06.quest.prerequisites"));
         assertEquals(List.of("Q03", "Q04"), scenarios.getStringList("Q07.quest.prerequisites"));
         assertEquals(List.of("Q03"), scenarios.getStringList("Q08.quest.prerequisites"));
+        assertObjectivePhases(scenarios, "Q06", Map.of(
+            "visit_forge", "INVESTIGATION",
+            "inspect_forge_marks", "INVESTIGATION",
+            "report_to_blacksmith", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "Q07", Map.of(
+            "prepare_notice", "CONTACT",
+            "speak_with_guard", "CONTACT",
+            "deliver_rations", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "Q08", Map.of(
+            "patrol_region", "PATROL",
+            "clear_zombies", "PATROL",
+            "report_to_guard", "RETURN"
+        ));
     }
 
     @Test
@@ -155,6 +182,11 @@ class MedievalQuestPackTest {
             validateRuntimeSupportedRewards(scenarioId, scenario.getConfigurationSection("quest.rewards"));
             validateStableEntryIds(scenarioId, "objective", scenario.getConfigurationSection("quest.objectives"));
             validateStableEntryIds(scenarioId, "reward", scenario.getConfigurationSection("quest.rewards"));
+            validateObjectivePhases(
+                scenarioId,
+                scenario.getConfigurationSection("phases"),
+                scenario.getConfigurationSection("quest.objectives")
+            );
         }
     }
 
@@ -202,6 +234,38 @@ class MedievalQuestPackTest {
             assertTrue(
                 supportedObjectiveTypes.contains(type),
                 scenarioId + " objective " + key + " should use a supported runtime type: " + type
+            );
+        }
+    }
+
+    private void validateObjectivePhases(String scenarioId, ConfigurationSection phases, ConfigurationSection objectives) {
+        assertNotNull(phases, scenarioId + " should define phases");
+        assertNotNull(objectives, scenarioId + " should define objectives");
+
+        Set<String> knownPhases = new HashSet<>();
+        for (String phase : phases.getKeys(false)) {
+            knownPhases.add(normalize(phase));
+        }
+
+        for (String key : objectives.getKeys(false)) {
+            ConfigurationSection objective = objectives.getConfigurationSection(key);
+            assertNotNull(objective, scenarioId + " objective " + key + " should be a section");
+            String phase = objective.getString("phase", "");
+            if (!phase.isBlank()) {
+                assertTrue(
+                    knownPhases.contains(normalize(phase)),
+                    scenarioId + " objective " + key + " should reference an existing phase: " + phase
+                );
+            }
+        }
+    }
+
+    private void assertObjectivePhases(ConfigurationSection scenarios, String scenarioId, Map<String, String> expectedPhases) {
+        for (Map.Entry<String, String> entry : expectedPhases.entrySet()) {
+            assertEquals(
+                entry.getValue(),
+                scenarios.getString(scenarioId + ".quest.objectives." + entry.getKey() + ".phase"),
+                scenarioId + " objective " + entry.getKey() + " should declare runtime phase"
             );
         }
     }

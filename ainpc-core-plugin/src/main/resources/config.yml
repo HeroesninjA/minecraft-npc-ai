@@ -84,6 +84,11 @@ routine:
 
 # Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
 quest:
+  # Limite pentru questuri curente per jucator, pe categorii de runtime.
+  max_active:
+    main: 1
+    side: 3
+    repeatable: 2
   # La cate secunde se improspateaza busola, actionbar-ul si particulele pentru /quest track start.
   tracking_refresh_seconds: 5
   # Afiseaza particule directionale langa jucator si waypoint la tinta urmarita.

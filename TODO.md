@@ -28,6 +28,24 @@ Actualizat: 2026-05-05
 - [x] Q07 medieval initial cu `collect_item`, `talk_to_npc`, `deliver_to_npc` si `record_story_event`
 - [x] Q08 medieval initial cu `visit_region`, `kill_mob`, `talk_to_npc` si `record_story_event`
 - [x] Selector quest per jucator pentru NPC-uri care pot oferi mai multe questuri in lant
+- [x] Runtime initial multi-quest pe jucator: progres curent per template si update-uri de obiective peste toate questurile active
+- [x] Selector explicit pentru `/ainpc quest status <questCode|templateId>` si `/ainpc quest track [start] <questCode|templateId>`
+- [x] Selector explicit pentru `/ainpc quest abandon tracked|<questCode|templateId>`
+- [x] Comanda admin read-only `/ainpc quest debug <tracked|questCode|templateId>` pentru progres si variabile persistente
+- [x] `quest log` marcheaza questul urmarit cand tracking-ul persistent are selector explicit
+- [x] Filtre initiale pentru `quest log`: active/current/tracked/main/side/repeatable/completed/failed/archived/all
+- [x] `quest log` prioritizeaza tracked -> main -> side -> repeatable si afiseaza sumar curent pe status/categorii
+- [x] `quest log` afiseaza actiuni rapide pentru status, track, abandon si debug admin
+- [x] `quest log` grupeaza vizual questurile curente in tracked/main/side/repeatable/template lipsa
+- [x] Categorii quest `main`, `side`, `repeatable` in contract si limite initiale prin `quest.max_active`
+- [x] Stages runtime initial: obiectivele cu `phase`/`stage` sunt evaluate doar in etapa curenta, cu `player_quests.current_stage_id` persistat si fallback plat pentru questurile vechi
+- [x] Persistenta pentru quest tracked prin `player_quests.tracked`, restaurata la load
+- [x] `/ainpc audit quest` valideaza unicitatea si statusul activ pentru `player_quests.tracked`
+- [x] `/ainpc audit quest` avertizeaza pentru chei legacy in `objective_progress` si `quest_anchor_bindings.objective_key`
+- [x] Raport dedicat `quest-audit-report.txt` in `/ainpc debugdump quest`
+- [x] Export/debugdump pentru quest templates incarcate in `loaded-quest-definitions.json`
+- [x] Export/debugdump complet pentru `player_quests` in `player-quest-progress.json`
+- [x] Export/debugdump pentru `story_events` in `story-events.json`
 - [x] Script `scripts/smoke-paper-quests.ps1` pentru pregatirea smoke test-ului Paper pe questuri
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
@@ -70,7 +88,7 @@ Actualizat: 2026-05-05
 - [ ] verificare `capabilities`
 - [ ] verificare compatibilitate cu `RuntimeMode`
 - [ ] mesaje clare la load pentru incompatibilitati
-- [ ] Multi-quest runtime matur pe jucator, nu doar un singur quest activ
+- [x] Multi-quest runtime matur pe jucator, cu UX complet pentru prioritizare, grupare si actiuni rapide in `quest log`
 - [ ] Sistem semantic de `places` peste world admin:
 - [ ] locuri de tip `fierarie`, `taverna`, `casa_fierarului`
 - [ ] API public pentru interogarea acestor locuri

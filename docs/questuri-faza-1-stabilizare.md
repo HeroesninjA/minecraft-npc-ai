@@ -32,6 +32,8 @@ Obiectivul este ca Q01-Q05 sa fie sigure pentru test pe server:
   - materiale Minecraft invalide pentru obiective/recompense
   - entity invalid pentru `kill_mob`
   - actiuni story incomplete
+  - `player_quests.tracked` duplicat sau legat de quest inactiv
+  - progres/ancore de quest ramase pe chei legacy `type:item:index`
 - Testul `MedievalQuestPackTest` verifica Q01-Q05 mai strict pentru contract runtime.
 - Scriptul `scripts/smoke-paper-quests.ps1` pregateste JAR-urile si comenzile de test pentru server.
 
@@ -42,10 +44,18 @@ Dupa restart cu JAR-ul nou:
 ```text
 ainpc audit quest
 ainpc quest log <player>
+ainpc quest log <player> active
+ainpc quest log tracked <player>
+ainpc quest log <player> all
+ainpc quest log <player> repeatable
 ainpc quest nearest <player>
 ainpc quest accept nearest <player>
 ainpc quest status nearest <player>
 ainpc quest track start <player>
+ainpc quest status Q01 <player>
+ainpc quest track start Q01 <player>
+ainpc quest debug Q01 <player>
+ainpc quest abandon tracked <player>
 ```
 
 Pentru Q01, stai langa fierar si testeaza finalizarea rapida:
@@ -60,10 +70,18 @@ ainpc quest anchors <player>
 ainpc audit quest
 ```
 
+Pentru retestare fara NPC selector:
+
+```text
+ainpc quest abandon Q01 <player>
+ainpc quest reset nearest <player>
+```
+
 ## Ce ramane pentru fazele urmatoare
 
 - smoke test manual Q01-Q05 cap-coada pe server live
-- debugdump complet pentru `player_quests` si `quest_anchor_bindings`
+- smoke test manual Q06-Q08 cu verificare ca obiectivele progreseaza doar in `INVESTIGATION`/`CONTACT`/`PATROL` si apoi `RETURN`
+- verificare pe server live ca `debugdump quest` include `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json`
 - 1-2 questuri legate direct de `visit_place` si `inspect_node`
 - `objectiveId` explicit in YAML
 - etape reale persistente

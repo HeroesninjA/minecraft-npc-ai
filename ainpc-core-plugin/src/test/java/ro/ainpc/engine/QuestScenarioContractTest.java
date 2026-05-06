@@ -28,6 +28,7 @@ class QuestScenarioContractTest {
         );
 
         assertEquals(QuestScenarioContract.Kind.FETCH, contract.kind());
+        assertEquals(QuestScenarioContract.Category.SIDE, contract.category());
         assertEquals(QuestScenarioContract.AcceptanceMode.EXPLICIT, contract.acceptanceMode());
         assertEquals(QuestScenarioContract.CompletionMode.RETURN_TO_GIVER, contract.completionMode());
         assertEquals(QuestScenarioContract.TrackingMode.NEXT_OBJECTIVE, contract.trackingMode());
@@ -38,6 +39,7 @@ class QuestScenarioContractTest {
     @Test
     void explicitMetadataOverridesInference() {
         QuestScenarioContract contract = QuestScenarioContract.fromQuestEntries(
+            "main",
             "hunt",
             "auto_accept",
             "manual",
@@ -48,10 +50,12 @@ class QuestScenarioContractTest {
                 "ARROW",
                 8,
                 "Adu sageti."
-            ))
+            )),
+            false
         );
 
         assertEquals(QuestScenarioContract.Kind.HUNT, contract.kind());
+        assertEquals(QuestScenarioContract.Category.MAIN, contract.category());
         assertEquals(QuestScenarioContract.AcceptanceMode.AUTO_ACCEPT, contract.acceptanceMode());
         assertEquals(QuestScenarioContract.CompletionMode.MANUAL, contract.completionMode());
         assertEquals(QuestScenarioContract.TrackingMode.QUEST_GIVER, contract.trackingMode());

@@ -74,7 +74,9 @@ Ce exista deja:
 
 Limitari care conteaza:
 
-- exista un singur quest curent per jucator;
+- exista runtime initial pentru mai multe questuri curente per jucator, iar `quest status` si `quest track` pot folosi selector explicit de quest;
+- exista categorii `main`, `side`, `repeatable` cu limite initiale prin `quest.max_active`;
+- questul urmarit este persistat in `player_quests.tracked` si restaurat la load;
 - `phases` sunt faze informative, nu stage-uri runtime;
 - obiectivele sunt plate;
 - `objective_key` este derivat din `type:item:index`;
@@ -169,12 +171,13 @@ Implementarea initiala acopera:
 - progresul de `talk_to_npc`, `visit_*`, `inspect_node` si `kill_mob` copiaza valoarea legacy cand actualizeaza obiectivul;
 - `QuestAnchorResolver` foloseste `entry_id` pentru `quest_anchor_bindings` noi;
 - tracking-ul cauta ancore atat dupa cheia stabila, cat si dupa cheia legacy.
+- `/ainpc audit quest` avertizeaza cand gaseste `objective_progress` sau `quest_anchor_bindings.objective_key` in format legacy.
 
 Ramane pentru faza urmatoare:
 
 - migrare explicita DB pentru `player_quests.objective_progress` si `quest_anchor_bindings.objective_key`;
 - test unitar dedicat pentru fallback-ul de progres legacy din `ScenarioEngine`;
-- raport de audit care marcheaza obiectivele cu chei legacy persistate.
+- repair/migration command explicit pentru datele legacy persistate.
 
 ## Pregatirea 2 - Audit strict pentru continut avansat
 
@@ -294,6 +297,7 @@ Implementarea initiala acopera:
 - Q06 `Urme La Forja` in `ainpc-scenario-medieval`;
 - Q07 `Mesaj Pentru Straja` in `ainpc-scenario-medieval`;
 - Q08 `Patrula De Hotar` in `ainpc-scenario-medieval`;
+- Q06-Q08 au metadata `phase` pe obiective, iar runtime-ul progreseaza doar etapa curenta cand aceste campuri exista;
 - prerequisite `Q01` pentru Q06, `Q03` + `Q04` pentru Q07 si `Q03` pentru Q08;
 - obiective plate combinate: `visit_place`, `visit_region`, `inspect_node`, `talk_to_npc`, `collect_item`, `deliver_to_npc`, `kill_mob`;
 - reward `record_story_event` pe ancora `visit_forge`, pe regiunea curenta si pe ancora `patrol_region`;
@@ -320,6 +324,8 @@ ainpc world places
 ainpc quest nearest <player>
 ainpc quest accept nearest <player>
 ainpc quest track start <player>
+ainpc quest status Q06 <player>
+ainpc quest track start Q06 <player>
 ainpc quest anchors <player>
 ainpc quest status nearest <player>
 ainpc story events

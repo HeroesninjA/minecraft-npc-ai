@@ -9,6 +9,7 @@ import java.util.Locale;
  */
 public record QuestScenarioContract(
     Kind kind,
+    Category category,
     AcceptanceMode acceptanceMode,
     CompletionMode completionMode,
     TrackingMode trackingMode,
@@ -16,6 +17,7 @@ public record QuestScenarioContract(
 ) {
     public QuestScenarioContract {
         kind = kind != null ? kind : Kind.CUSTOM;
+        category = category != null ? category : Category.SIDE;
         acceptanceMode = acceptanceMode != null ? acceptanceMode : AcceptanceMode.EXPLICIT;
         completionMode = completionMode != null ? completionMode : CompletionMode.RETURN_TO_GIVER;
         trackingMode = trackingMode != null ? trackingMode : TrackingMode.NEXT_OBJECTIVE;
@@ -25,6 +27,7 @@ public record QuestScenarioContract(
     public static QuestScenarioContract defaultContract() {
         return new QuestScenarioContract(
             Kind.CUSTOM,
+            Category.SIDE,
             AcceptanceMode.EXPLICIT,
             CompletionMode.RETURN_TO_GIVER,
             TrackingMode.NEXT_OBJECTIVE,
@@ -38,12 +41,14 @@ public record QuestScenarioContract(
         }
 
         return fromQuestEntries(
+            definition.getQuestCategory(),
             definition.getQuestScenarioKind(),
             definition.getQuestAcceptanceMode(),
             definition.getQuestCompletionMode(),
             definition.getQuestTrackingMode(),
             definition.getQuestTags(),
-            definition.getObjectives()
+            definition.getObjectives(),
+            definition.isQuestRepeatable()
         );
     }
 
@@ -53,17 +58,30 @@ public record QuestScenarioContract(
                                                          String trackingMode,
                                                          List<String> tags,
                                                          List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        return fromQuestEntries("", kind, acceptanceMode, completionMode, trackingMode, tags, objectives, false);
+    }
+
+    public static QuestScenarioContract fromQuestEntries(String category,
+                                                         String kind,
+                                                         String acceptanceMode,
+                                                         String completionMode,
+                                                         String trackingMode,
+                                                         List<String> tags,
+                                                         List<FeaturePackLoader.QuestEntryDefinition> objectives,
+                                                         boolean repeatable) {
         Kind resolvedKind = Kind.fromId(kind);
         if (resolvedKind == Kind.CUSTOM) {
             resolvedKind = inferKind(objectives);
         }
+        List<String> normalizedTags = normalizeTags(tags);
 
         return new QuestScenarioContract(
             resolvedKind,
+            Category.fromId(category, normalizedTags, repeatable),
             AcceptanceMode.fromId(acceptanceMode),
             CompletionMode.fromId(completionMode),
             TrackingMode.fromId(trackingMode),
-            normalizeTags(tags)
+            normalizedTags
         );
     }
 
@@ -76,6 +94,10 @@ public record QuestScenarioContract(
             case SOCIAL -> "social";
             case CUSTOM -> "personalizat";
         };
+    }
+
+    public String categoryDisplayName() {
+        return category.displayName();
     }
 
     public boolean autoAcceptOnOffer() {
@@ -158,6 +180,41 @@ public record QuestScenarioContract(
                 case "social", "dialogue", "talk" -> SOCIAL;
                 default -> CUSTOM;
             };
+        }
+    }
+
+    public enum Category {
+        MAIN("principal"),
+        SIDE("secundar"),
+        REPEATABLE("repetabil");
+
+        private final String displayName;
+
+        Category(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public static Category fromId(String value, List<String> tags, boolean repeatable) {
+            return switch (normalize(value)) {
+                case "main", "primary", "main_quest", "principal" -> MAIN;
+                case "repeatable", "daily", "repetabil" -> REPEATABLE;
+                case "side", "secondary", "side_quest", "secundar" -> SIDE;
+                default -> infer(tags, repeatable);
+            };
+        }
+
+        private static Category infer(List<String> tags, boolean repeatable) {
+            if (repeatable || tags != null && tags.contains("repeatable")) {
+                return REPEATABLE;
+            }
+            if (tags != null && (tags.contains("main") || tags.contains("primary") || tags.contains("main_quest"))) {
+                return MAIN;
+            }
+            return SIDE;
         }
     }
 

@@ -198,14 +198,24 @@ Ce este implementat:
 - asociere quest cu profesia NPC-ului
 - oferire, acceptare, refuz, abandon, status, reset si completare fortata
 - progres persistent per jucator in tabela `player_quests`
+- selector explicit pentru `quest status`, `quest track` si `quest abandon`
+- comanda admin read-only `quest debug` pentru progres, variabile si obiective template
+- filtre initiale in `quest log` pentru status, tracking si categorii `main`/`side`/`repeatable`
+- sortare initiala in `quest log`: tracked primul, apoi questuri principale, secundare si repetabile, cu sumar pe status/categorii
+- actiuni rapide in `quest log` pentru status, tracking, abandon si debug admin
+- grupare vizuala in `quest log` pentru tracked, main, side, repeatable si template lipsa
+- stages runtime initial peste `current_phase` si `player_quests.current_stage_id`: obiectivele cu metadata `phase`/`stage` progreseaza doar in etapa curenta, questurile fara metadata raman pe fluxul plat, iar DB-ul vechi face backfill din `current_phase`
 - rezolvare initiala de ancore semantice prin `QuestAnchorResolver`
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
-- export complet `quest-anchor-bindings.json` prin `/ainpc debugdump quest`
+- raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json` prin `/ainpc debugdump quest`
 - audit read-only `/ainpc audit quest`
 - validare initiala de quest templates in `/ainpc audit quest`
-- teste de contract pentru Q01-Q05 din addonul medieval
+- validare `phase`/`stage` pentru obiective etapizate in `/ainpc audit quest`
+- validare pentru `player_quests.tracked`: cel mult un quest tracked activ per jucator
+- warning de audit pentru chei legacy in progresul persistent al obiectivelor
+- teste de contract pentru Q01-Q08 din addonul medieval, inclusiv validare ca `phase` de obiectiv refera o faza existenta
 - smoke script `scripts/smoke-paper-quests.ps1`
 - context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres
@@ -249,7 +259,7 @@ Interactiunea cu questurile functioneaza prin:
   - `progres`
 
 Limitare actuala importanta:
-- modelul runtime este orientat in principal pe un singur quest curent per jucator
+- runtime-ul poate pastra mai multe questuri curente per jucator, poate selecta si persista quest tracked, aplica limite initiale pe categoriile `main`, `side` si `repeatable`, sorta/filtra/grupa `quest log` si afisa actiuni rapide
 
 ## Context story si AI
 

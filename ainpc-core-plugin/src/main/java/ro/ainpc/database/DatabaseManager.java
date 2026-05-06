@@ -229,6 +229,7 @@ public class DatabaseManager {
                     started_at INTEGER,
                     completed_at INTEGER,
                     current_phase TEXT NOT NULL DEFAULT '',
+                    current_stage_id TEXT NOT NULL DEFAULT '',
                     objective_progress TEXT NOT NULL DEFAULT '{}',
                     quest_variables TEXT NOT NULL DEFAULT '{}',
                     updated_at INTEGER NOT NULL,
@@ -236,11 +237,23 @@ public class DatabaseManager {
                 )
             """);
             ensureColumnExists("player_quests", "current_phase", "TEXT NOT NULL DEFAULT ''");
+            ensureColumnExists("player_quests", "current_stage_id", "TEXT NOT NULL DEFAULT ''");
             ensureColumnExists("player_quests", "objective_progress", "TEXT NOT NULL DEFAULT '{}'");
             ensureColumnExists("player_quests", "quest_variables", "TEXT NOT NULL DEFAULT '{}'");
+            ensureColumnExists("player_quests", "tracked", "INTEGER NOT NULL DEFAULT 0");
+            stmt.executeUpdate("""
+                UPDATE player_quests
+                SET current_stage_id = current_phase
+                WHERE TRIM(COALESCE(current_stage_id, '')) = ''
+                  AND TRIM(COALESCE(current_phase, '')) <> ''
+            """);
             stmt.execute("""
                 CREATE INDEX IF NOT EXISTS idx_player_quests_player_status
                 ON player_quests(player_uuid, status)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_player_quests_player_tracked
+                ON player_quests(player_uuid, tracked)
             """);
 
             // Tabel binding-uri semantice pentru obiective de quest.

@@ -375,14 +375,7 @@ public class FeaturePackLoader {
                 }
             }
 
-            ConfigurationSection phasesSection = scenarioSection.getConfigurationSection("phases");
-            if (phasesSection != null) {
-                for (String phaseId : phasesSection.getKeys(false)) {
-                    scenario.addPhase(phaseId);
-                }
-            } else {
-                scenario.setPhases(scenarioSection.getStringList("phases"));
-            }
+            loadScenarioPhases(scenario, scenarioSection);
 
             ConfigurationSection questSection = scenarioSection.getConfigurationSection("quest");
             if (questSection != null) {
@@ -392,6 +385,7 @@ public class FeaturePackLoader {
                     "scenario_kind",
                     questSection.getString("kind", questSection.getString("scenario_type", ""))
                 ));
+                scenario.setQuestCategory(questSection.getString("category", ""));
                 scenario.setQuestAcceptanceMode(questSection.getString(
                     "acceptance_mode",
                     questSection.getString("offer_policy", "")
@@ -403,6 +397,7 @@ public class FeaturePackLoader {
                 scenario.setQuestRepeatable(questSection.getBoolean("repeatable", false));
                 scenario.setQuestCooldownSeconds(Math.max(0L, questSection.getLong("cooldown_seconds", 0L)));
                 scenario.setQuestDialogues(loadQuestDialogues(questSection.getConfigurationSection("dialogues")));
+                loadQuestStages(scenario, questSection.getConfigurationSection("stages"));
 
                 loadQuestEntries(
                     questSection.getConfigurationSection("objectives"),
@@ -421,6 +416,81 @@ public class FeaturePackLoader {
         if (!pack.getScenarios().isEmpty()) {
             pack.markHasScenarioDefinitions();
         }
+    }
+
+    private void loadScenarioPhases(ScenarioDefinition scenario, ConfigurationSection scenarioSection) {
+        ConfigurationSection phasesSection = scenarioSection.getConfigurationSection("phases");
+        if (phasesSection != null) {
+            for (String phaseId : phasesSection.getKeys(false)) {
+                String description = phasesSection.getString(phaseId, phaseId);
+                scenario.addPhase(phaseId);
+                scenario.addQuestStage(new QuestStageDefinition(
+                    phaseId,
+                    description,
+                    "all_objectives",
+                    List.of(),
+                    Map.of("source", "phases")
+                ));
+            }
+            return;
+        }
+
+        List<String> phases = scenarioSection.getStringList("phases");
+        scenario.setPhases(phases);
+        for (String phaseId : phases) {
+            scenario.addQuestStage(new QuestStageDefinition(
+                phaseId,
+                phaseId,
+                "all_objectives",
+                List.of(),
+                Map.of("source", "phases")
+            ));
+        }
+    }
+
+    private void loadQuestStages(ScenarioDefinition scenario, ConfigurationSection stagesSection) {
+        if (scenario == null || stagesSection == null) {
+            return;
+        }
+
+        for (String stageId : stagesSection.getKeys(false)) {
+            ConfigurationSection stageSection = stagesSection.getConfigurationSection(stageId);
+            if (stageSection == null) {
+                continue;
+            }
+
+            scenario.addQuestStage(new QuestStageDefinition(
+                stageId,
+                stageSection.getString("description", stageSection.getString("name", stageId)),
+                stageSection.getString("completion_mode", stageSection.getString("complete_when", "all_objectives")),
+                stageSection.getStringList("objectives"),
+                loadQuestStageMetadata(stageId, stageSection)
+            ));
+            if (!scenario.getPhases().stream().anyMatch(phase -> phase.equalsIgnoreCase(stageId))) {
+                scenario.addPhase(stageId);
+            }
+        }
+    }
+
+    private Map<String, String> loadQuestStageMetadata(String stageId, ConfigurationSection stageSection) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("stage_id", stageId == null ? "" : stageId);
+        if (stageSection == null) {
+            return metadata;
+        }
+
+        for (String key : stageSection.getKeys(false)) {
+            Object value = stageSection.get(key);
+            if (value == null || value instanceof ConfigurationSection) {
+                continue;
+            }
+            if (value instanceof List<?>) {
+                metadata.put(key, String.join(",", stageSection.getStringList(key)));
+            } else {
+                metadata.put(key, questEntryValueToString(value));
+            }
+        }
+        return metadata;
     }
 
     private void loadQuestEntries(ConfigurationSection section, Consumer<QuestEntryDefinition> consumer) {
@@ -1175,6 +1245,7 @@ public class FeaturePackLoader {
         private final Map<String, ScenarioRoleDefinition> roles;
         private final List<QuestEntryDefinition> objectives;
         private final List<QuestEntryDefinition> rewards;
+        private final Map<String, QuestStageDefinition> questStages;
         private List<String> phases;
         private List<String> preferredTopologies;
         private List<String> narrativeHints;
@@ -1185,6 +1256,7 @@ public class FeaturePackLoader {
         private String hint;
         private String questCode;
         private String questGiverProfession;
+        private String questCategory;
         private String questScenarioKind;
         private String questAcceptanceMode;
         private String questCompletionMode;
@@ -1208,6 +1280,7 @@ public class FeaturePackLoader {
             this.roles = new LinkedHashMap<>();
             this.objectives = new ArrayList<>();
             this.rewards = new ArrayList<>();
+            this.questStages = new LinkedHashMap<>();
             this.phases = new ArrayList<>();
             this.preferredTopologies = new ArrayList<>();
             this.narrativeHints = new ArrayList<>();
@@ -1218,6 +1291,7 @@ public class FeaturePackLoader {
             this.hint = "";
             this.questCode = "";
             this.questGiverProfession = "";
+            this.questCategory = "";
             this.questScenarioKind = "";
             this.questAcceptanceMode = "";
             this.questCompletionMode = "";
@@ -1236,6 +1310,12 @@ public class FeaturePackLoader {
         public void addPhase(String phaseId) {
             if (phaseId != null && !phaseId.isBlank()) {
                 phases.add(phaseId);
+            }
+        }
+
+        public void addQuestStage(QuestStageDefinition stage) {
+            if (stage != null && !stage.getId().isBlank()) {
+                questStages.put(stage.getId(), stage);
             }
         }
 
@@ -1259,6 +1339,7 @@ public class FeaturePackLoader {
         public Map<String, ScenarioRoleDefinition> getRoles() { return roles; }
         public List<QuestEntryDefinition> getObjectives() { return objectives; }
         public List<QuestEntryDefinition> getRewards() { return rewards; }
+        public List<QuestStageDefinition> getQuestStages() { return new ArrayList<>(questStages.values()); }
         public List<String> getPhases() { return phases; }
         public void setPhases(List<String> phases) { this.phases = phases != null ? phases : new ArrayList<>(); }
         public List<String> getPreferredTopologies() { return preferredTopologies; }
@@ -1284,6 +1365,10 @@ public class FeaturePackLoader {
         public String getQuestGiverProfession() { return questGiverProfession; }
         public void setQuestGiverProfession(String questGiverProfession) {
             this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
+        }
+        public String getQuestCategory() { return questCategory; }
+        public void setQuestCategory(String questCategory) {
+            this.questCategory = questCategory == null ? "" : questCategory;
         }
         public String getQuestScenarioKind() { return questScenarioKind; }
         public void setQuestScenarioKind(String questScenarioKind) {
@@ -1364,6 +1449,36 @@ public class FeaturePackLoader {
         public void setPreferredTraits(List<String> preferredTraits) {
             this.preferredTraits = preferredTraits != null ? preferredTraits : new ArrayList<>();
         }
+    }
+
+    public static class QuestStageDefinition {
+        private final String id;
+        private final String description;
+        private final String completionMode;
+        private final List<String> objectiveIds;
+        private final Map<String, String> metadata;
+
+        public QuestStageDefinition(String id,
+                                    String description,
+                                    String completionMode,
+                                    List<String> objectiveIds,
+                                    Map<String, String> metadata) {
+            this.id = id == null ? "" : id;
+            this.description = description == null ? "" : description;
+            this.completionMode = completionMode == null || completionMode.isBlank() ? "all_objectives" : completionMode;
+            this.objectiveIds = Collections.unmodifiableList(new ArrayList<>(
+                objectiveIds != null ? objectiveIds : List.of()
+            ));
+            this.metadata = Collections.unmodifiableMap(new LinkedHashMap<>(
+                metadata != null ? metadata : Map.of()
+            ));
+        }
+
+        public String getId() { return id; }
+        public String getDescription() { return description; }
+        public String getCompletionMode() { return completionMode; }
+        public List<String> getObjectiveIds() { return objectiveIds; }
+        public Map<String, String> getMetadata() { return metadata; }
     }
 
     public static class QuestEntryDefinition {

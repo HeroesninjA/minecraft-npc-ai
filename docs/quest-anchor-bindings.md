@@ -176,7 +176,7 @@ Debug dump complet:
 /ainpc debugdump all
 ```
 
-Dump-ul include `quest-anchor-bindings.json`, cu:
+Dump-ul include `loaded-quest-definitions.json`, `player-quest-progress.json` si `quest-anchor-bindings.json`. Pentru ancore, `quest-anchor-bindings.json` include:
 
 - toate randurile din `quest_anchor_bindings`, fara limita de preview;
 - statusul si faza questului parinte din `player_quests`, daca exista;
@@ -186,10 +186,9 @@ Dump-ul include `quest-anchor-bindings.json`, cu:
 ## Limitari curente
 
 - `objective_key` foloseste cheia YAML/`entry_id` pentru binding-uri noi, cu fallback legacy pentru progres vechi.
-- Comanda `/ainpc quest anchors` afiseaza un preview limitat; exportul complet este in `quest-anchor-bindings.json`.
+- Comanda `/ainpc quest anchors` afiseaza un preview limitat; exportul complet este in `quest-anchor-bindings.json`, progresul parinte complet este in `player-quest-progress.json`, iar template-urile incarcate sunt in `loaded-quest-definitions.json`.
 - Auditul verifica initial un set limitat de randuri pentru tinerea rezultatului scurt in joc.
 - Daca mapping-ul este schimbat dupa acceptarea questului, binding-ul ramane catre ID-ul vechi pana la reset/reoffer.
-- Nu exista inca model matur multi-quest pe jucator.
 
 ## Avertizari
 
