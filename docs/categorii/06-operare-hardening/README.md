@@ -1,6 +1,6 @@
 # Operare si Hardening
 
-Actualizat: 2026-05-01
+Actualizat: 2026-05-06
 
 Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentru productie.
 
@@ -12,6 +12,7 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 | `../../release-checklist.md` | Checklist pentru build, inspectie JAR, test Paper, audit, restart si rollback |
 | `../../audit.md` | Documentatie pentru `/ainpc audit` si backlog de verificari |
 | `../../debugging-si-testare.md` | Testare Maven, debug dump, smoke tests |
+| `../../gui-interfete.md` | Directie pentru Debug GUI, Audit GUI, permisiuni, confirmari si hardening pentru click-uri |
 | `../../prevenire-duplicare-npc.md` | Runbook pentru diagnostic si cleanup controlat cand NPC-urile se dubleaza |
 | `../../reducere-marime-jar.md` | Reducere JAR si riscuri de shading/minimize |
 | `../../analiza-erori-si-plan-rezolvare.md` | Analiza de probleme si plan de remediere |

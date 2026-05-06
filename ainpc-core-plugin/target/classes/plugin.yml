@@ -9,7 +9,7 @@ website: https://v0.dev
 commands:
   ainpc:
     description: Comanda principala pentru gestionarea NPC-urilor AI
-    usage: /ainpc <create|delete|info|quest|world|story|audit|debugdump|family|routine|mood|list|tp|reload|test>
+    usage: /ainpc <create|delete|info|gui|quest|world|story|audit|debugdump|family|routine|mood|list|tp|reload|test>
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC
@@ -33,3 +33,30 @@ permissions:
   ainpc.quest:
     description: Permite jucatorilor sa foloseasca quest log-ul si comenzile normale de quest
     default: true
+  ainpc.gui:
+    description: Permite deschiderea hub-ului GUI AINPC
+    default: true
+  ainpc.gui.quest:
+    description: Permite deschiderea GUI-ului de questuri
+    default: true
+  ainpc.gui.stats:
+    description: Permite deschiderea GUI-ului de statistici
+    default: true
+  ainpc.gui.interact:
+    description: Permite deschiderea GUI-ului de interactiuni NPC
+    default: true
+  ainpc.gui.shop:
+    description: Permite deschiderea GUI-ului de shop NPC
+    default: true
+  ainpc.gui.world:
+    description: Permite deschiderea GUI-ului world
+    default: op
+  ainpc.gui.manager:
+    description: Permite deschiderea managerului NPC GUI
+    default: op
+  ainpc.gui.audit:
+    description: Permite deschiderea GUI-ului audit
+    default: op
+  ainpc.gui.debug:
+    description: Permite deschiderea GUI-ului debug
+    default: op

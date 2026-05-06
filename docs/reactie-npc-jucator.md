@@ -1,6 +1,6 @@
 # Reactia NPC La Jucator
 
-Actualizat: 2026-04-26
+Actualizat: 2026-05-06
 
 ## Scop
 
@@ -12,7 +12,7 @@ Acest document descrie cum ar trebui construit sistemul de reactie dintre NPC si
 - legata de memorie, relatie, emotii si context
 - reutilizabila pentru dialog, questuri, combat si simulare
 
-Pentru evolutia dialogului propriu-zis peste quest, story, environment, memorie si reputatie, vezi si `dialog-si-conversatii.md`.
+Pentru evolutia dialogului propriu-zis peste quest, story, environment, memorie si reputatie, vezi si `dialog-si-conversatii.md`. Pentru fluxul concret de click, chat privat, sesiuni si intentii, vezi `interactiuni.md`.
 
 Ideea centrala:
 - reactia nu trebuie sa fie doar text

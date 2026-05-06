@@ -1477,6 +1477,9 @@ public class FeaturePackLoader {
         public String getId() { return id; }
         public String getDescription() { return description; }
         public String getCompletionMode() { return completionMode; }
+        public String getNextStageId() {
+            return metadata.getOrDefault("next_stage", metadata.getOrDefault("next", ""));
+        }
         public List<String> getObjectiveIds() { return objectiveIds; }
         public Map<String, String> getMetadata() { return metadata; }
     }

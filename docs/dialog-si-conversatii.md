@@ -1,10 +1,12 @@
 # Dialog si Conversatii
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-06
 
 ## Scop
 
 Acest document descrie cum trebuie imbunatatit dialogul NPC pe masura ce avanseaza celelalte mecanici: questuri, story state, environment context, memorie, reputatie, rutine, familie, economie si campanii.
+
+Pentru fluxul concret de click, chat privat, sesiuni, ascultare pasiva si intentii de quest, vezi `interactiuni.md`. Documentul de fata ramane despre continutul si contextul dialogului.
 
 Ideea principala:
 

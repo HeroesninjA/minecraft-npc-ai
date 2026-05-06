@@ -16,6 +16,7 @@ import ro.ainpc.engine.DecisionEngine;
 import ro.ainpc.engine.DialogueEngine;
 import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.ScenarioEngine;
+import ro.ainpc.gui.GuiService;
 import ro.ainpc.listeners.ListenerRegistry;
 import ro.ainpc.managers.ConversationSessionManager;
 import ro.ainpc.managers.EmotionManager;
@@ -62,6 +63,7 @@ public class AINPCPlugin extends JavaPlugin {
     private FeaturePackLoader featurePackLoader;
     private StoryContextService storyContextService;
     private StoryStateService storyStateService;
+    private GuiService guiService;
 
     @Override
     public void onEnable() {
@@ -126,6 +128,7 @@ public class AINPCPlugin extends JavaPlugin {
         scenarioEngine = new ScenarioEngine(this);
         storyStateService = new StoryStateService(this);
         storyContextService = new StoryContextService(this);
+        guiService = new GuiService(this);
         
         // Inregistreaza comenzile
         getLogger().info("Inregistrare comenzi...");
@@ -196,6 +199,9 @@ public class AINPCPlugin extends JavaPlugin {
 
         if (platform != null) {
             platform.shutdown();
+        }
+        if (guiService != null) {
+            guiService.sessions().closeAll();
         }
         getServer().getServicesManager().unregisterAll(this);
         
@@ -326,6 +332,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public FeaturePackLoader getFeaturePackLoader() {
         return featurePackLoader;
+    }
+
+    public GuiService getGuiService() {
+        return guiService;
     }
 
     public FileConfiguration getQuestConfig() {

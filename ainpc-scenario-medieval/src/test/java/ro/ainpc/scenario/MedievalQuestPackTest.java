@@ -82,6 +82,7 @@ class MedievalQuestPackTest {
             assertTrue(objectives.getKeys(false).size() >= 1);
             validateObjectives(objectives);
             validateObjectivePhases(entry.getKey(), phases, objectives);
+            validateQuestStages(entry.getKey(), phases, objectives, scenario.getConfigurationSection("quest.stages"));
 
             ConfigurationSection rewards = scenario.getConfigurationSection("quest.rewards");
             assertNotNull(rewards, entry.getKey() + " should define rewards");
@@ -118,6 +119,33 @@ class MedievalQuestPackTest {
             "patrol_region", "PATROL",
             "clear_zombies", "PATROL",
             "report_to_guard", "RETURN"
+        ));
+        assertQuestStages(scenarios, "Q06", Map.of(
+            "INVESTIGATION", List.of("visit_forge", "inspect_forge_marks"),
+            "RETURN", List.of("report_to_blacksmith")
+        ), Map.of(
+            "INVESTIGATION", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "INVESTIGATION", "RETURN"
+        ));
+        assertQuestStages(scenarios, "Q07", Map.of(
+            "CONTACT", List.of("prepare_notice", "speak_with_guard"),
+            "RETURN", List.of("deliver_rations")
+        ), Map.of(
+            "CONTACT", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "CONTACT", "RETURN"
+        ));
+        assertQuestStages(scenarios, "Q08", Map.of(
+            "PATROL", List.of("patrol_region", "clear_zombies"),
+            "RETURN", List.of("report_to_guard")
+        ), Map.of(
+            "PATROL", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "PATROL", "RETURN"
         ));
     }
 
@@ -186,6 +214,12 @@ class MedievalQuestPackTest {
                 scenarioId,
                 scenario.getConfigurationSection("phases"),
                 scenario.getConfigurationSection("quest.objectives")
+            );
+            validateQuestStages(
+                scenarioId,
+                scenario.getConfigurationSection("phases"),
+                scenario.getConfigurationSection("quest.objectives"),
+                scenario.getConfigurationSection("quest.stages")
             );
         }
     }
@@ -260,12 +294,94 @@ class MedievalQuestPackTest {
         }
     }
 
+    private void validateQuestStages(String scenarioId,
+                                     ConfigurationSection phases,
+                                     ConfigurationSection objectives,
+                                     ConfigurationSection stages) {
+        if (stages == null) {
+            return;
+        }
+        assertNotNull(phases, scenarioId + " should define phases before quest stages");
+        assertNotNull(objectives, scenarioId + " should define objectives before quest stages");
+
+        Set<String> knownPhases = new HashSet<>();
+        for (String phase : phases.getKeys(false)) {
+            knownPhases.add(normalize(phase));
+        }
+
+        Set<String> knownObjectives = new HashSet<>();
+        for (String objective : objectives.getKeys(false)) {
+            knownObjectives.add(normalize(objective));
+        }
+
+        Set<String> supportedCompletionModes = Set.of("all_objectives", "any_objective", "manual_turn_in");
+        for (String stageId : stages.getKeys(false)) {
+            ConfigurationSection stage = stages.getConfigurationSection(stageId);
+            assertNotNull(stage, scenarioId + " stage " + stageId + " should be a section");
+            assertTrue(
+                knownPhases.contains(normalize(stageId)),
+                scenarioId + " stage " + stageId + " should reference an existing phase"
+            );
+            String completionMode = normalizeStageCompletionMode(stage.getString("completion_mode", "all_objectives"));
+            assertTrue(
+                supportedCompletionModes.contains(completionMode),
+                scenarioId + " stage " + stageId + " should use a supported completion mode: " + completionMode
+            );
+            String nextStage = stage.getString("next_stage", "");
+            if (!nextStage.isBlank()) {
+                assertTrue(
+                    knownPhases.contains(normalize(nextStage)),
+                    scenarioId + " stage " + stageId + " should use an existing next_stage: " + nextStage
+                );
+                assertTrue(
+                    !normalize(stageId).equals(normalize(nextStage)),
+                    scenarioId + " stage " + stageId + " should not point next_stage to itself"
+                );
+            }
+            List<String> stageObjectives = stage.getStringList("objectives");
+            assertTrue(!stageObjectives.isEmpty(), scenarioId + " stage " + stageId + " should list objectives");
+            for (String objective : stageObjectives) {
+                assertTrue(
+                    knownObjectives.contains(normalize(objective)),
+                    scenarioId + " stage " + stageId + " should reference existing objective: " + objective
+                );
+            }
+        }
+    }
+
     private void assertObjectivePhases(ConfigurationSection scenarios, String scenarioId, Map<String, String> expectedPhases) {
         for (Map.Entry<String, String> entry : expectedPhases.entrySet()) {
             assertEquals(
                 entry.getValue(),
                 scenarios.getString(scenarioId + ".quest.objectives." + entry.getKey() + ".phase"),
                 scenarioId + " objective " + entry.getKey() + " should declare runtime phase"
+            );
+        }
+    }
+
+    private void assertQuestStages(ConfigurationSection scenarios,
+                                   String scenarioId,
+                                   Map<String, List<String>> expectedObjectives,
+                                   Map<String, String> expectedCompletionModes,
+                                   Map<String, String> expectedNextStages) {
+        ConfigurationSection stages = scenarios.getConfigurationSection(scenarioId + ".quest.stages");
+        assertNotNull(stages, scenarioId + " should define explicit quest stages");
+        for (Map.Entry<String, List<String>> entry : expectedObjectives.entrySet()) {
+            String stageId = entry.getKey();
+            assertEquals(
+                entry.getValue(),
+                stages.getStringList(stageId + ".objectives"),
+                scenarioId + " stage " + stageId + " should list runtime objectives"
+            );
+            assertEquals(
+                expectedCompletionModes.get(stageId),
+                stages.getString(stageId + ".completion_mode"),
+                scenarioId + " stage " + stageId + " should declare completion mode"
+            );
+            assertEquals(
+                expectedNextStages.getOrDefault(stageId, ""),
+                stages.getString(stageId + ".next_stage", ""),
+                scenarioId + " stage " + stageId + " should declare expected next_stage"
             );
         }
     }
@@ -331,6 +447,16 @@ class MedievalQuestPackTest {
             case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
             case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
             case "set_story_state", "record_story_event" -> normalized;
+            default -> normalized;
+        };
+    }
+
+    private String normalizeStageCompletionMode(String completionMode) {
+        String normalized = normalize(completionMode);
+        return switch (normalized) {
+            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
+            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
+            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
             default -> normalized;
         };
     }

@@ -25,13 +25,16 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "quest", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "info", "gui", "quest", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+    );
+    private static final List<String> GUI_MODES = Arrays.asList(
+        "main", "quest", "world", "stats", "interact", "shop", "manager", "audit", "debug"
     );
     private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
     private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "openai");
     private static final List<String> ROUTINE_ACTIONS = Arrays.asList("tick", "status");
     private static final List<String> QUEST_MODES = Arrays.asList(
-        "log", "track", "current", "nearest", "accept", "decline", "da", "nu", "ok", "refuz",
+        "gui", "log", "track", "current", "nearest", "accept", "decline", "da", "nu", "ok", "refuz",
         "abandon", "status", "reset", "complete", "anchors"
     );
     private static final List<String> QUEST_DECISION_MODES = Arrays.asList(
@@ -113,6 +116,11 @@ public class AINPCTabCompleter implements TabCompleter {
                 }
                 case "quest" -> {
                     completions.addAll(completeQuestArgs(sliceQuestArgs(args)));
+                }
+                case "gui" -> {
+                    if (args.length == 2) {
+                        completions.addAll(filterStartsWith(GUI_MODES, args[1]));
+                    }
                 }
                 case "world" -> {
                     completions.addAll(completeWorldArgs(sender, args));

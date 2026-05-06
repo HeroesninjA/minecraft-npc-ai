@@ -1,6 +1,6 @@
 # Questuri Avansate - Ghid de evolutie
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-06
 
 ## Scop
 
@@ -37,7 +37,13 @@ Ce exista deja:
 - exista `quest_anchor_bindings` pentru obiective semantice legate de `region`, `place`, `node` si `npc`;
 - exista `QuestAnchorResolver` pentru rezolvarea ancorelor inainte de runtime;
 - exista `StoryStateService` si actiuni de reward controlate: `set_story_state`, `record_story_event`;
-- `/ainpc audit quest` valideaza initial template-uri, binding-uri, materiale, entitati, profesii si prerequisite-uri;
+- exista runtime initial pentru stages: obiectivele cu `phase`/`stage` sau listate in `quest.stages.<stage>.objectives` progreseaza doar in etapa activa;
+- `FeaturePackLoader` incarca `quest.stages` in `QuestStageDefinition`, cu `completion_mode`, `next_stage`, `objectives` si metadata;
+- `player_quests.current_stage_id` este persistat si backfilled din `current_phase` pentru compatibilitate;
+- `quest_variables` pastreaza observabilitate pentru stage runtime: `stage.current`, `stage.previous`, `stage.changed_at`, `stage.completed.<stage>` si `stage.last_completed`;
+- Q06, Q07 si Q08 din pack-ul medieval au stages explicite, `next_stage` liniar spre `RETURN` si metadata `phase` pe obiective;
+- `/ainpc audit quest` valideaza template-uri, binding-uri, materiale, entitati, profesii, prerequisite-uri, phases/stages, `completion_mode`, `next_stage` si objective IDs din stages;
+- `/ainpc debugdump quest` exporta `stages`, inclusiv `next_stage`, in `loaded-quest-definitions.json` si valideaza aceleasi reguli in `quest-audit-report.txt`;
 - `scripts/smoke-paper-quests.ps1` pregateste smoke test-ul Paper pentru questuri.
 
 Tipuri de obiective suportate acum in runtime:
@@ -59,10 +65,10 @@ Tipuri de reward suportate acum:
 Limitari importante:
 
 - `ScenarioEngine` tine progres curent per jucator si template, iar `quest status`/`quest track` pot selecta explicit `quest_code` sau `template_id`;
-- `phases` exista in YAML, dar sunt inca informative, nu etape runtime reale;
-- obiectivele sunt plate, nu grupate pe stage;
-- `objective_key` este generat din tip, item si index, nu vine inca dintr-un `objective_id` explicit;
-- parserul `FeaturePackLoader` nu incarca inca `quest.stages`;
+- `phases` raman si faze narative, dar pentru questurile etapizate sunt folosite initial ca stage IDs runtime;
+- obiectivele pot ramane plate sau pot fi grupate prin metadata `phase`/`stage` si prin `quest.stages.<stage>.objectives`;
+- `objective_key` nou prefera cheia YAML stabila a obiectivului, cu fallback pentru cheia legacy derivata din tip, item si index;
+- `next_stage` explicit este suportat pentru flux liniar;
 - nu exista branching real, conditii pe obiective sau reward resolver general.
 
 ## Directia corecta
@@ -944,60 +950,49 @@ Format tinta:
 
 ## Etape reale
 
-`phases` din YAML sunt utile pentru naratiune, dar nu sunt suficiente pentru questuri avansate. Pentru runtime matur trebuie introdus `quest.stages`.
+Status: implementat initial pe 2026-05-06 pentru flux liniar de stages.
 
-Schema tinta:
+`phases` din YAML raman utile pentru naratiune, dar pot fi folosite initial si ca stage IDs runtime. Pentru definire explicita, questul poate declara `quest.stages`.
+
+Schema suportata acum:
 
 ```yml
 quest:
-  code: "Q10"
-  giver_profession: "priest"
+  code: "Q06"
+  giver_profession: "blacksmith"
   kind: "investigation"
   stages:
-    start:
-      display_name: "Zvonul"
-      completion_mode: "MANUAL_TURN_IN"
+    INVESTIGATION:
+      description: "Jucatorul merge la forja si inspecteaza punctul suspect."
+      completion_mode: "all_objectives"
+      next_stage: "RETURN"
       objectives:
-        talk_priest:
-          type: "talk_to_npc"
-          item: "profession:priest"
-          amount: 1
-          description: "Vorbeste cu preotul."
-      next_stage: "investigate"
-
-    investigate:
-      display_name: "Urmele"
-      completion_mode: "ALL_OBJECTIVES"
+        - "visit_forge"
+        - "inspect_forge_marks"
+    RETURN:
+      description: "Jucatorul revine la fierar si inchide investigatia."
+      completion_mode: "manual_turn_in"
       objectives:
-        visit_chapel:
-          type: "visit_place"
-          item: "tag:chapel"
-          amount: 1
-          description: "Mergi la capela."
-        inspect_altar:
-          type: "inspect_node"
-          item: "type:altar"
-          amount: 1
-          description: "Inspecteaza altarul."
-      next_stage: "choice"
-
-    choice:
-      display_name: "Alegerea"
-      completion_mode: "ANY_OBJECTIVE"
-      objectives:
-        report_priest:
-          type: "talk_to_npc"
-          item: "profession:priest"
-          amount: 1
-          description: "Spune adevarul preotului."
-        report_merchant:
-          type: "talk_to_npc"
-          item: "profession:merchant"
-          amount: 1
-          description: "Vinde informatia negustorului."
-      branch_rules:
-        report_priest: "complete_honorable"
-        report_merchant: "complete_profit"
+        - "report_to_blacksmith"
+  objectives:
+    visit_forge:
+      type: "visit_place"
+      item: "tag:blacksmith"
+      amount: 1
+      phase: "INVESTIGATION"
+      description: "Mergi la fierarie."
+    inspect_forge_marks:
+      type: "inspect_node"
+      item: "type:inspect_node"
+      amount: 1
+      phase: "INVESTIGATION"
+      description: "Inspecteaza punctul suspect din forja."
+    report_to_blacksmith:
+      type: "talk_to_npc"
+      item: "profession:blacksmith"
+      amount: 1
+      phase: "RETURN"
+      description: "Raporteaza fierarului ce ai gasit."
 ```
 
 Reguli de implementare:
@@ -1005,8 +1000,18 @@ Reguli de implementare:
 - verifica doar obiectivele din etapa activa;
 - salveaza `current_stage_id` in `player_quests`;
 - nu consuma reward-uri intermediare prin acelasi cod ca reward-ul final;
-- permite `ALL_OBJECTIVES`, `ANY_OBJECTIVE`, `MANUAL_TURN_IN`;
-- fiecare stage trebuie sa aiba `id`, obiective si tranzitie explicita.
+- permite `all_objectives`, `any_objective`, `manual_turn_in`;
+- permite `next_stage` explicit pentru tranzitii liniare validate;
+- `quest.stages.<stage>.objectives` listeaza cheile YAML stabile ale obiectivelor;
+- obiectivele pot pastra si `phase`/`stage` pentru compatibilitate, audit si citire rapida;
+- stage-urile fara `objectives` sunt acceptate doar ca faze legacy din `phases`; stage-urile explicite trebuie sa listeze obiective sau sa aiba obiective cu metadata aferenta.
+- cand stage-ul se schimba, runtime-ul actualizeaza `quest_variables` pentru debug si hook-uri viitoare.
+
+Limitari ramase:
+
+- `branch_rules` sunt inca schema tinta, nu flux runtime complet;
+- `current_stage_id` este tinut initial sincronizat cu `current_phase`;
+- `manual_turn_in` este tratat conservator: nu sare peste obiectivul explicit de raportare/turn-in.
 
 ## Branching
 
@@ -1170,12 +1175,17 @@ Recomandare importanta:
 ### Q2.5 - Stages runtime
 
 - initial implementat: obiectivele pot declara `phase`/`stage`, iar runtime-ul verifica si actualizeaza doar etapa activa;
+- implementat: `FeaturePackLoader` incarca `quest.stages` in `QuestStageDefinition`;
+- implementat: stage-urile pot lista `objectives` prin cheile YAML stabile ale obiectivelor;
+- implementat: runtime-ul foloseste atat metadata `phase`/`stage`, cat si `quest.stages.<stage>.objectives` pentru gating;
+- implementat: `completion_mode` pe stage suporta `all_objectives`, `any_objective`, `manual_turn_in`;
+- implementat: `next_stage` static este citit din `quest.stages`, validat in audit/debugdump si folosit pentru tranzitii liniare;
+- implementat: tranzitiile de stage sunt salvate in `quest_variables` pentru debug si consumatori viitori;
 - `current_stage_id` este persistat in `player_quests`, tinut sincronizat initial cu `current_phase` si backfilled la upgrade, pastrand compatibilitatea cu progresul existent;
-- Q06, Q07 si Q08 folosesc metadata `phase` pentru obiective etapizate;
-- ramas de facut: adauga model `QuestStageDefinition`;
-- ramas de facut: extinde parserul pentru `quest.stages`;
+- Q06, Q07 si Q08 folosesc metadata `phase`, `quest.stages` explicite si `next_stage: RETURN` pe etapa de lucru;
+- `/ainpc audit quest` si `debugdump quest` valideaza stage IDs, `completion_mode`, `next_stage` si objective IDs din stages;
 - ramas de facut: separa semantic `current_stage_id` de `current_phase` daca apar faze narative care nu sunt stages runtime;
-- adauga `ALL_OBJECTIVES`, `ANY_OBJECTIVE`, `MANUAL_TURN_IN`.
+- ramas de facut: `branch_rules`, `next_stage` dinamic si hook-uri intermediare pe stage.
 
 ### Q2.6 - Branching si reward resolver
 
@@ -1197,7 +1207,7 @@ Inainte de implementare:
 - `scripts/smoke-paper-quests.ps1` trebuie sa poata pregati serverul de test;
 - `quest_anchor_bindings` trebuie sa fie populat pentru questurile care folosesc mapping;
 - `StoryStateService` trebuie sa ramana optional pentru questurile fara story actions;
-- niciun quest nou nu trebuie sa ceara `quest.stages` pana cand parserul nu il suporta explicit.
+- `quest.stages` poate fi folosit pentru flux liniar, pentru ca parserul, runtime-ul initial, auditul si debugdump-ul exista.
 
 Rezultat asteptat: faza Q2 porneste de la runtime-ul existent, nu de la o schema viitoare neimplementata.
 
@@ -1546,8 +1556,8 @@ Ordinea recomandata pentru pull request-uri mici:
 8. adauga Q06-Q09 in `medieval_quest.yml`;
 9. extinde smoke test-ul pentru Q06 si Q09;
 10. implementeaza multi-quest cu compatibilitate pentru cazul unui singur quest;
-11. adauga `QuestStageDefinition` si parser pentru `quest.stages`;
-12. implementeaza stage runtime pentru un quest simplu cu doua stages;
+11. extinde smoke test-ul Paper pentru Q06-Q08 cu stages active;
+12. separa semantic `current_stage_id` de `current_phase`, daca apar faze narative non-runtime;
 13. adauga branch rules;
 14. extrage `RewardResolver`;
 15. abia apoi planifica `QuestEngine` separat.
@@ -1558,7 +1568,7 @@ Ordinea recomandata pentru pull request-uri mici:
 |---|---|---|
 | Schimbarea cheilor de progres | questuri active stricate | fallback pentru cheia veche si migrare controlata |
 | Multi-quest prea devreme | comenzi ambigue si buguri greu de vazut | intai `quest log` si tracking |
-| Stages in YAML fara runtime | authoring fals, audit incomplet | audit warning sau blocare pana exista parser |
+| Stages in YAML fara validare | authoring fals, flux greu de testat | foloseste parserul, runtime-ul initial si auditul existent pentru stage IDs, objective IDs si `completion_mode` |
 | Reward-uri prea flexibile | executie nesigura din YAML | registry strict de reward types |
 | Branching prin AI | comportament nedeterminist | AI doar authoring, runtime doar YAML validat |
 
@@ -1567,13 +1577,13 @@ Ordinea recomandata pentru pull request-uri mici:
 Q2 este considerata gata cand:
 
 - Q01-Q05 raman completabile;
-- Q06-Q09 sunt in pack si trec auditul;
+- Q06-Q08 sunt in pack, au stages explicite si trec auditul; Q09 ramane urmatorul continut de extins;
 - obiectivele noi folosesc `objective_id` stabil;
 - `player_quests` persista `objective_progress` si `quest_variables`;
 - `quest log/status/track` ajuta testarea fara acces direct la DB;
 - smoke test-ul Paper acopera cel putin un quest cu mapping si unul cu combat;
 - documentatia mentioneaza clar ce este runtime curent si ce este schema tinta;
-- stages si branching nu sunt prezentate ca suportate pana cand exista parser, runtime si audit.
+- stages liniare sunt prezentate ca suportate initial; branching ramane schema tinta pana exista parser, runtime si audit complet.
 
 ## Partea 3 - maturizare dupa Q2
 

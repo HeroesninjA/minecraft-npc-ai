@@ -1,6 +1,6 @@
 # Pregatire pentru Questuri Avansate
 
-Actualizat: 2026-05-05
+Actualizat: 2026-05-06
 
 ## Scop
 
@@ -20,14 +20,13 @@ Questuri avansate inseamna, in prima etapa:
 Nu inseamna inca:
 
 - branching complex;
-- mai multe questuri active simultan;
-- `quest.stages` persistente;
+- auto-start sau QuestDirector autonom;
 - conditii dinamice pe obiective;
 - actiuni AI care modifica direct progresul sau reward-urile.
 
 ## Verdict de pornire
 
-Codul actual este suficient pentru a incepe questuri avansate de baza, dar nu este suficient pentru questuri avansate complete.
+Codul actual este suficient pentru questuri avansate de baza si pentru stages liniare initiale, dar nu este suficient pentru branching complex sau QuestDirector autonom.
 
 Se poate incepe imediat cu questuri care combina tipurile deja suportate:
 
@@ -39,12 +38,23 @@ Se poate incepe imediat cu questuri care combina tipurile deja suportate:
 - `inspect_node`
 - `kill_mob`
 
-Trebuie pregatit inainte de questuri cu etape reale:
+Pentru questuri cu etape reale exista deja baza initiala:
 
-- `objective_id` explicit si stabil;
+- `objective_id` explicit si stabil prin cheia YAML;
 - reguli de compatibilitate pentru progresul existent;
-- audit mai strict pentru obiective si reward-uri;
-- smoke test pentru mapping si ancore;
+- `quest.stages` incarcat in `QuestStageDefinition`;
+- runtime care progreseaza doar etapa activa;
+- `next_stage` explicit pentru tranzitii liniare intre stages;
+- persistenta `player_quests.current_stage_id`;
+- `quest_variables` retine stage-ul curent, stage-ul anterior si stage-urile completate pentru debug/hook-uri viitoare;
+- audit/debugdump pentru stage IDs, objective IDs, `completion_mode` si `next_stage`.
+
+Ramane de pregatit pentru questuri avansate complete:
+
+- smoke test Paper extins pentru mapping, ancore si stages;
+- separare semantica intre `current_stage_id` si `current_phase`, daca fazele narative se separa de stages runtime;
+- hook-uri intermediare pe obiectiv/stage;
+- branching si reward resolver general;
 - separare treptata a runtime-ului de quest din `ScenarioEngine`.
 
 ## Starea curenta relevanta
@@ -77,10 +87,11 @@ Limitari care conteaza:
 - exista runtime initial pentru mai multe questuri curente per jucator, iar `quest status` si `quest track` pot folosi selector explicit de quest;
 - exista categorii `main`, `side`, `repeatable` cu limite initiale prin `quest.max_active`;
 - questul urmarit este persistat in `player_quests.tracked` si restaurat la load;
-- `phases` sunt faze informative, nu stage-uri runtime;
-- obiectivele sunt plate;
-- `objective_key` este derivat din `type:item:index`;
-- `FeaturePackLoader` nu incarca inca `quest.stages`;
+- `phases` pot functiona initial ca stage IDs runtime pentru questuri etapizate;
+- obiectivele pot fi plate sau grupate prin metadata `phase`/`stage` si `quest.stages.<stage>.objectives`;
+- `objective_key` nou prefera cheia YAML stabila, cu fallback pentru cheia legacy `type:item:index`;
+- `FeaturePackLoader` incarca `quest.stages`, inclusiv `next_stage`;
+- tranzitiile de stage sunt reflectate in `quest_variables` pentru observabilitate si pregatirea hook-urilor;
 - nu exista hook-uri intermediare pe obiectiv sau stage;
 - reward-ul final nu are inca ledger/idempotency dedicat.
 
@@ -225,11 +236,11 @@ Ramane pentru faza urmatoare:
 - audit strict configurabil pe mod server, de exemplu `warn` in authoring si `error` in production;
 - blocare runtime explicita pentru questuri cu tipuri necunoscute, nu doar raport de audit.
 
-## Pregatirea 3 - Primele questuri avansate fara stages
+## Pregatirea 3 - Primele questuri avansate cu stages liniare
 
-Status: inceputa pe 2026-05-05 cu Q06, Q07 si Q08 in pack-ul medieval.
+Status: implementare initiala pe 2026-05-06 cu Q06, Q07 si Q08 in pack-ul medieval.
 
-Primele questuri avansate trebuie sa foloseasca obiective plate, dar combinate.
+Primele questuri avansate folosesc obiective combinate si stages liniare. Obiectivele raman declarate in `quest.objectives`, iar `quest.stages` grupeaza cheile YAML stabile ale obiectivelor.
 
 Exemplu Q06:
 
@@ -248,21 +259,36 @@ Q06:
     tags: ["exploration", "blacksmith", "mapping", "story"]
     prerequisites:
       - "Q01"
+    stages:
+      INVESTIGATION:
+        description: "Jucatorul merge la forja si inspecteaza punctul suspect."
+        completion_mode: "all_objectives"
+        objectives:
+          - "visit_forge"
+          - "inspect_anvil"
+      RETURN:
+        description: "Jucatorul revine la fierar."
+        completion_mode: "manual_turn_in"
+        objectives:
+          - "report_to_blacksmith"
     objectives:
       visit_forge:
         type: "visit_place"
         item: "tag:blacksmith"
         amount: 1
+        phase: "INVESTIGATION"
         description: "Mergi la forja."
       inspect_anvil:
         type: "inspect_node"
         item: "type:anvil"
         amount: 1
+        phase: "INVESTIGATION"
         description: "Inspecteaza nicovala."
       report_to_blacksmith:
         type: "talk_to_npc"
         item: "profession:blacksmith"
         amount: 1
+        phase: "RETURN"
         description: "Raporteaza fierarului ce ai gasit."
     rewards:
       forge_event:
@@ -281,7 +307,7 @@ Observatii:
 - `visit_forge` si `inspect_anvil` cer mapping valid;
 - `report_to_blacksmith` foloseste NPC/profesie, nu nume fragil;
 - reward-ul story ruleaza doar la final;
-- nu exista ordine stricta intre obiective pana la `quest.stages`;
+- ordinea este controlata de etapa activa: obiectivele din `RETURN` nu progreseaza inainte de etapa de raportare;
 - tracking-ul poate indica urmatorul obiectiv incomplet.
 
 Questuri recomandate pentru prima runda:
@@ -297,13 +323,19 @@ Implementarea initiala acopera:
 - Q06 `Urme La Forja` in `ainpc-scenario-medieval`;
 - Q07 `Mesaj Pentru Straja` in `ainpc-scenario-medieval`;
 - Q08 `Patrula De Hotar` in `ainpc-scenario-medieval`;
-- Q06-Q08 au metadata `phase` pe obiective, iar runtime-ul progreseaza doar etapa curenta cand aceste campuri exista;
+- Q06-Q08 au metadata `phase` pe obiective si `quest.stages` explicite;
+- stage-urile Q06-Q08 folosesc `all_objectives` pentru etapa de lucru si `manual_turn_in` pentru etapa de raportare;
+- etapa de lucru din Q06-Q08 declara `next_stage: RETURN`, iar runtime-ul respecta tranzitia explicita cand etapa este completa;
+- runtime-ul scrie variabile de stage precum `stage.current`, `stage.previous`, `stage.completed.<stage>` si `stage.last_completed`;
+- runtime-ul progreseaza doar etapa curenta, folosind atat metadata `phase`/`stage`, cat si lista `quest.stages.<stage>.objectives`;
 - prerequisite `Q01` pentru Q06, `Q03` + `Q04` pentru Q07 si `Q03` pentru Q08;
 - obiective plate combinate: `visit_place`, `visit_region`, `inspect_node`, `talk_to_npc`, `collect_item`, `deliver_to_npc`, `kill_mob`;
 - reward `record_story_event` pe ancora `visit_forge`, pe regiunea curenta si pe ancora `patrol_region`;
 - reward item mic pentru feedback imediat;
 - selectie quest per jucator, ca giverii cu mai multe questuri sa poata avansa la urmatorul quest disponibil;
 - interactiuni `talk_to_npc` cu NPC secundar pentru questul activ, cu finalizare blocata pana la revenirea la quest giver;
+- `/ainpc audit quest` si `debugdump quest` valideaza stages, objective IDs, `completion_mode` si `next_stage`;
+- testul `MedievalQuestPackTest` valideaza stages pentru Q06-Q08;
 - smoke checklist extins pentru test Paper Q06, Q07 si Q08.
 
 Ramane pentru faza urmatoare:
@@ -384,8 +416,6 @@ Nu se face refactor mare inainte de Q06-Q08. Prima data stabilizam comportamentu
 
 Se amana pana dupa Q06-Q08:
 
-- mai multe questuri active simultan;
-- `quest.stages`;
 - branching;
 - objective optional;
 - failure rules;

@@ -1,6 +1,6 @@
 # API, Modularizare si Addonuri
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-06
 
 Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariile programabile.
 
@@ -12,6 +12,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | `../../ai-orchestrare-si-mecanici.md` | Contract conceptual pentru `AIOrchestrationService`, tool calls si validare |
 | `../../strategie-plugin-modular-si-scenarii-programabile.md` | Strategie pentru addonuri si scenarii |
 | `../../refactorizare-si-impartire-pe-module.md` | Plan de refactorizare si impartire pe module |
+| `../../gui-interfete.md` | Contract pentru framework GUI intern, ecrane, snapshots, actiuni si extensibilitate |
 | `../../betonquest-directii-potrivite-pentru-ainpc.md` | Directii pentru runtime de questuri configurabile |
 | `../../reducere-marime-jar.md` | Impact asupra buildului si livrarii |
 

@@ -1,6 +1,6 @@
 # World Mapping si Spawn
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-06
 
 Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, spawn order, case si bindings.
 
@@ -16,6 +16,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 | `../../settlement-plan.md` | Contract pentru planul complet de regiune inainte de mapping/populatie/spawn |
 | `../../generare-populatie-narativa.md` | Contract pentru nume, roluri, familii si distributie home/work/social inainte de spawn |
 | `../../households-persistente.md` | Contract pentru household-uri persistente si rezidenti, peste mapping si `npc_world_bindings` |
+| `../../gui-interfete.md` | Directie pentru World GUI: whereami, regions, places, nodes, household/settlement plan si audit vizual |
 | `../../prevenire-duplicare-npc.md` | Reguli si runbook pentru evitarea duplicarii NPC la spawn, chunk load si retry |
 | `../../rutine-npc-si-timeline.md` | Rutine NPC peste ancore home/work/social |
 | `../../generare-sate-fara-worldedit.md` | Scanner, mapper semantic si completare sate vanilla |

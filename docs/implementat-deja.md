@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-06
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -103,6 +103,37 @@ Sistemul de chat mai are si:
 - activare prin mentionarea numelui NPC-ului
 - auto-engage pentru NPC-ul cel mai apropiat in raza mica
 
+Documentatia detaliata pentru fluxul click/chat/sesiune/intentie este in `interactiuni.md`.
+
+## GUI
+
+Exista o prima fundatie GUI inventory pentru operare in joc:
+
+- pachet `ro.ainpc.gui` cu `GuiService`, `GuiScreen`, `GuiSessionManager`, `AINPCGuiHolder`, `GuiButton`, contexte de render/click si factory pentru iteme
+- `GuiInventoryListener` anuleaza click/drag in inventarele AINPC si curata sesiunile la close/quit
+- `AINPCPlugin` initializeaza `GuiService`, iar `ListenerRegistry` inregistreaza listenerul GUI
+- comanda `/ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]`
+- comanda rapida `/quest gui`
+- tab-completion pentru `/ainpc gui` si `/quest gui`
+- permisiuni `ainpc.gui`, `ainpc.gui.quest`, `ainpc.gui.stats`, `ainpc.gui.interact`, `ainpc.gui.shop`, `ainpc.gui.world`, `ainpc.gui.manager`, `ainpc.gui.audit`, `ainpc.gui.debug`
+- `ScenarioEngine.getQuestGuiSnapshot(...)` expune pentru GUI un snapshot read-only cu questuri curente/arhivate, status, categorie, selector, stage curent, obiective, stage-uri si recompense
+- ecrane initiale:
+  - hub principal
+  - quest log navigabil peste snapshot-ul GUI din `ScenarioEngine`
+  - detalii quest cu obiective, stage-uri, recompense, status, tracking, debug admin si abandon cu confirmare
+  - world context peste `WorldAdminApi`
+  - statistici jucator si NPC-uri apropiate
+  - interactiune NPC cu info si quest status
+  - manager NPC admin cu info/teleport
+  - audit GUI care ruleaza comenzile audit existente
+  - debug GUI care ruleaza `debugdump` si `test`
+  - confirmare pentru actiuni destructive
+  - shop placeholder pregatit pentru provider dedicat
+
+Limitare actuala:
+
+- GUI-ul este un wrapper peste comenzi si servicii existente; nu exista inca paginare completa, filtre interactive pe quest log, target selection avansat sau shop/economie reala.
+
 ## Memorie, relatii si emotii
 
 Sunt deja prezente:
@@ -204,7 +235,9 @@ Ce este implementat:
 - sortare initiala in `quest log`: tracked primul, apoi questuri principale, secundare si repetabile, cu sumar pe status/categorii
 - actiuni rapide in `quest log` pentru status, tracking, abandon si debug admin
 - grupare vizuala in `quest log` pentru tracked, main, side, repeatable si template lipsa
-- stages runtime initial peste `current_phase` si `player_quests.current_stage_id`: obiectivele cu metadata `phase`/`stage` progreseaza doar in etapa curenta, questurile fara metadata raman pe fluxul plat, iar DB-ul vechi face backfill din `current_phase`
+- stages runtime initial peste `current_phase` si `player_quests.current_stage_id`: obiectivele cu metadata `phase`/`stage` sau listate in `quest.stages.<stage>.objectives` progreseaza doar in etapa curenta, questurile fara metadata raman pe fluxul plat, iar DB-ul vechi face backfill din `current_phase`
+- `FeaturePackLoader` incarca `quest.stages` in `QuestStageDefinition`, inclusiv `completion_mode`, `next_stage`, `objectives` si metadata
+- tranzitiile de stage sunt reflectate in `quest_variables` prin `stage.current`, `stage.previous`, `stage.changed_at`, `stage.completed.<stage>` si `stage.last_completed`
 - rezolvare initiala de ancore semantice prin `QuestAnchorResolver`
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
@@ -212,10 +245,10 @@ Ce este implementat:
 - raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json` prin `/ainpc debugdump quest`
 - audit read-only `/ainpc audit quest`
 - validare initiala de quest templates in `/ainpc audit quest`
-- validare `phase`/`stage` pentru obiective etapizate in `/ainpc audit quest`
+- validare `phase`/`stage`, stage IDs, `completion_mode`, `next_stage` si objective IDs pentru questuri etapizate in `/ainpc audit quest` si `debugdump quest`
 - validare pentru `player_quests.tracked`: cel mult un quest tracked activ per jucator
 - warning de audit pentru chei legacy in progresul persistent al obiectivelor
-- teste de contract pentru Q01-Q08 din addonul medieval, inclusiv validare ca `phase` de obiectiv refera o faza existenta
+- teste de contract pentru Q01-Q08 din addonul medieval, inclusiv validare ca `phase` de obiectiv refera o faza existenta si ca Q06-Q08 au `quest.stages` explicite
 - smoke script `scripts/smoke-paper-quests.ps1`
 - context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres

@@ -16,6 +16,7 @@ import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.debug.DebugDumpService;
 import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.ScenarioEngine;
+import ro.ainpc.gui.GuiKey;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.routine.RoutineAssignment;
 import ro.ainpc.routine.RoutineTickSummary;
@@ -57,6 +58,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -113,6 +115,7 @@ public class AINPCCommand implements CommandExecutor {
             case "create" -> handleCreate(sender, args);
             case "delete", "remove" -> handleDelete(sender, args);
             case "info" -> handleInfo(sender, args);
+            case "gui" -> handleGui(sender, args);
             case "quest" -> handleQuest(sender, args);
             case "world" -> handleWorld(sender, args);
             case "story" -> handleStory(sender, args);
@@ -205,6 +208,7 @@ public class AINPCCommand implements CommandExecutor {
         questDebug("Parsare quest mode='" + mode + "' sender=" + sender.getName());
         return switch (mode) {
             case "anchors" -> handleQuestAnchors(sender, args);
+            case "gui" -> handleQuestGui(sender);
             case "log" -> handleQuestLog(sender, args);
             case "track", "current" -> handleQuestTrack(sender, args);
             case "nearest" -> handleNearestQuest(sender, args);
@@ -218,6 +222,15 @@ public class AINPCCommand implements CommandExecutor {
             default -> handleTriggerQuest(sender, args[1],
                 resolveQuestTargetPlayer(sender, args, 2, "&cUtilizare: /ainpc quest <numeNpc> [jucator]"));
         };
+    }
+
+    private boolean handleQuestGui(CommandSender sender) {
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+        plugin.getGuiService().open(player, GuiKey.QUEST);
+        return true;
     }
 
     private boolean handleQuestLog(CommandSender sender, String[] args) {
@@ -3293,7 +3306,11 @@ public class AINPCCommand implements CommandExecutor {
         for (FeaturePackLoader.QuestEntryDefinition objective : quest.getObjectives()) {
             String stage = questEntryStage(objective);
             if (stage.isBlank()) {
-                hasUnstagedObjective = true;
+                if (questStageReferencesObjective(quest, objective)) {
+                    hasStagedObjective = true;
+                } else {
+                    hasUnstagedObjective = true;
+                }
                 continue;
             }
 
@@ -3308,6 +3325,8 @@ public class AINPCCommand implements CommandExecutor {
         if (hasStagedObjective && hasUnstagedObjective) {
             report.warn(label + " combina obiective cu phase/stage si obiective fara etapa explicita.");
         }
+
+        validateQuestStageDefinitions(report, label, quest, knownPhases);
     }
 
     private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
@@ -3325,6 +3344,184 @@ public class AINPCCommand implements CommandExecutor {
             entry.getVariables().get("stage"),
             entry.getVariables().get("phase")
         );
+    }
+
+    private void validateQuestStageDefinitions(AuditReport report,
+                                               String label,
+                                               FeaturePackLoader.ScenarioDefinition quest,
+                                               Set<String> knownPhases) {
+        if (quest.getQuestStages().isEmpty()) {
+            return;
+        }
+
+        Set<String> objectiveReferences = collectQuestObjectiveReferences(quest.getObjectives());
+        for (FeaturePackLoader.QuestStageDefinition stage : quest.getQuestStages()) {
+            if (stage == null || stage.getId().isBlank()) {
+                report.error(label + " are quest stage fara ID.");
+                continue;
+            }
+
+            String normalizedStageId = normalizeAuditKey(stage.getId());
+            if (!knownPhases.contains(normalizedStageId)) {
+                report.error(label + " are quest stage care nu exista in phases: " + stage.getId() + ".");
+            }
+
+            String completionMode = normalizeQuestStageCompletionMode(stage.getCompletionMode());
+            if (!isSupportedQuestStageCompletionMode(completionMode)) {
+                report.error(label + " stage " + stage.getId()
+                    + " are completion_mode necunoscut: " + stage.getCompletionMode() + ".");
+            }
+
+            validateQuestStageNextStage(report, label, quest, stage, knownPhases, normalizedStageId);
+
+            boolean stageHasObjectiveMetadata = quest.getObjectives().stream()
+                .map(this::questEntryStage)
+                .anyMatch(objectiveStage -> normalizeAuditKey(objectiveStage).equals(normalizedStageId));
+            if (stage.getObjectiveIds().isEmpty()) {
+                if (!"phases".equalsIgnoreCase(stage.getMetadata().getOrDefault("source", ""))
+                    && !stageHasObjectiveMetadata) {
+                    report.warn(label + " stage " + stage.getId()
+                        + " nu listeaza objectives si nu are obiective cu phase/stage aferent.");
+                }
+                continue;
+            }
+
+            Set<String> seenStageObjectives = new HashSet<>();
+            for (String objectiveId : stage.getObjectiveIds()) {
+                String normalizedObjective = normalizeQuestStageReference(objectiveId);
+                if (normalizedObjective.isBlank()) {
+                    report.warn(label + " stage " + stage.getId() + " are objective ID gol.");
+                    continue;
+                }
+                if (!seenStageObjectives.add(normalizedObjective)) {
+                    report.warn(label + " stage " + stage.getId()
+                        + " listeaza objective duplicat: " + objectiveId + ".");
+                }
+                if (!objectiveReferences.contains(normalizedObjective)) {
+                    report.error(label + " stage " + stage.getId()
+                        + " refera objective necunoscut: " + objectiveId + ".");
+                }
+            }
+        }
+    }
+
+    private void validateQuestStageNextStage(AuditReport report,
+                                             String label,
+                                             FeaturePackLoader.ScenarioDefinition quest,
+                                             FeaturePackLoader.QuestStageDefinition stage,
+                                             Set<String> knownPhases,
+                                             String normalizedStageId) {
+        String nextStage = stage.getNextStageId();
+        if (nextStage == null || nextStage.isBlank()) {
+            return;
+        }
+
+        String normalizedNextStage = normalizeAuditKey(nextStage);
+        if (normalizedNextStage.isBlank()) {
+            report.warn(label + " stage " + stage.getId() + " are next_stage gol.");
+            return;
+        }
+        if (normalizedNextStage.equals(normalizedStageId)) {
+            report.error(label + " stage " + stage.getId() + " are next_stage catre sine.");
+        }
+        if (!knownPhases.contains(normalizedNextStage)) {
+            report.error(label + " stage " + stage.getId()
+                + " are next_stage necunoscut: " + nextStage + ".");
+        } else if (!isQuestRuntimeStage(quest, normalizedNextStage)) {
+            report.warn(label + " stage " + stage.getId()
+                + " are next_stage catre o faza fara obiective runtime: " + nextStage + ".");
+        }
+    }
+
+    private boolean isQuestRuntimeStage(FeaturePackLoader.ScenarioDefinition quest, String normalizedStageId) {
+        if (quest == null || normalizedStageId == null || normalizedStageId.isBlank()) {
+            return false;
+        }
+
+        for (FeaturePackLoader.QuestStageDefinition stage : quest.getQuestStages()) {
+            if (stage == null || !normalizeAuditKey(stage.getId()).equals(normalizedStageId)) {
+                continue;
+            }
+            if (!stage.getObjectiveIds().isEmpty()) {
+                return true;
+            }
+            return quest.getObjectives().stream()
+                .map(this::questEntryStage)
+                .anyMatch(objectiveStage -> normalizeAuditKey(objectiveStage).equals(normalizedStageId));
+        }
+        return false;
+    }
+
+    private Set<String> collectQuestObjectiveReferences(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        Set<String> references = new HashSet<>();
+        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
+            if (objective == null) {
+                continue;
+            }
+            references.add(normalizeQuestStageReference(objective.getEntryId()));
+            references.add(normalizeQuestStageReference(objective.getItemId()));
+        }
+        references.remove("");
+        return references;
+    }
+
+    private boolean questStageReferencesObjective(FeaturePackLoader.ScenarioDefinition quest,
+                                                  FeaturePackLoader.QuestEntryDefinition objective) {
+        if (quest == null || objective == null || quest.getQuestStages().isEmpty()) {
+            return false;
+        }
+
+        for (FeaturePackLoader.QuestStageDefinition stage : quest.getQuestStages()) {
+            if (stageReferencesObjective(stage, objective)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
+                                             FeaturePackLoader.QuestEntryDefinition objective) {
+        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
+            return false;
+        }
+
+        String entryId = normalizeQuestStageReference(objective.getEntryId());
+        String itemId = normalizeQuestStageReference(objective.getItemId());
+        for (String objectiveId : stage.getObjectiveIds()) {
+            String normalizedObjective = normalizeQuestStageReference(objectiveId);
+            if (!normalizedObjective.isBlank()
+                && (normalizedObjective.equals(entryId) || normalizedObjective.equals(itemId))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeQuestStageCompletionMode(String completionMode) {
+        String normalized = normalizeQuestStageReference(completionMode);
+        return switch (normalized) {
+            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
+            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
+            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
+            default -> normalized;
+        };
+    }
+
+    private boolean isSupportedQuestStageCompletionMode(String completionMode) {
+        return Set.of("all_objectives", "any_objective", "manual_turn_in").contains(completionMode);
+    }
+
+    private String normalizeQuestStageReference(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return value.trim()
+            .toLowerCase(Locale.ROOT)
+            .replace("minecraft:", "")
+            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
+            .replaceAll("^_+|_+$", "")
+            .replaceAll("_+", "_");
     }
 
     private void validateQuestDialogues(AuditReport report,
@@ -4642,6 +4839,32 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     /**
+     * /ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]
+     */
+    private boolean handleGui(CommandSender sender, String[] args) {
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+
+        if (args.length > 2) {
+            plugin.getMessageUtils().send(sender,
+                "&cUtilizare: /ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]");
+            return true;
+        }
+
+        String rawKey = args.length >= 2 ? args[1] : "main";
+        if (GuiKey.fromId(rawKey).isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&cGUI necunoscut. Optiuni: &fmain, quest, world, stats, interact, shop, manager, audit, debug");
+            return true;
+        }
+
+        plugin.getGuiService().open(player, rawKey);
+        return true;
+    }
+
+    /**
      * /ainpc test - testeaza conexiunea OpenAI
      */
     private boolean handleTest(CommandSender sender) {
@@ -4689,6 +4912,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Sterge un NPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc info [nume]");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza informatii despre un NPC");
+        plugin.getMessageUtils().send(sender, "&e/ainpc gui [quest|world|stats|interact|shop|manager|audit|debug]");
+        plugin.getMessageUtils().send(sender, "&7  Deschide hub-ul GUI sau un ecran specific");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza manual quest-ul unui NPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");

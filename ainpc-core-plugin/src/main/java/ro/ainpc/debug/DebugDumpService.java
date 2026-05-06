@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -425,7 +426,11 @@ public class DebugDumpService {
         for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
             String stage = questEntryStage(objective);
             if (stage.isBlank()) {
-                hasUnstagedObjective = true;
+                if (questStageReferencesObjective(scenario, objective)) {
+                    hasStagedObjective = true;
+                } else {
+                    hasUnstagedObjective = true;
+                }
                 continue;
             }
 
@@ -438,6 +443,8 @@ public class DebugDumpService {
         if (hasStagedObjective && hasUnstagedObjective) {
             warnings.add(templateId + " combina obiective cu phase/stage si obiective fara etapa explicita.");
         }
+
+        auditQuestStageDefinitions(templateId, scenario, knownPhases, errors, warnings);
     }
 
     private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
@@ -455,6 +462,196 @@ public class DebugDumpService {
             entry.getVariables().get("stage"),
             entry.getVariables().get("phase")
         );
+    }
+
+    private void auditQuestStageDefinitions(String templateId,
+                                            FeaturePackLoader.ScenarioDefinition scenario,
+                                            Set<String> knownPhases,
+                                            List<String> errors,
+                                            List<String> warnings) {
+        if (scenario == null || scenario.getQuestStages().isEmpty()) {
+            return;
+        }
+
+        Set<String> objectiveReferences = collectQuestObjectiveReferences(scenario.getObjectives());
+        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
+            if (stage == null || stage.getId().isBlank()) {
+                errors.add(templateId + " are quest stage fara ID.");
+                continue;
+            }
+
+            String normalizedStageId = normalizeKey(stage.getId());
+            if (!knownPhases.contains(normalizedStageId)) {
+                errors.add(templateId + " are quest stage care nu exista in phases: " + stage.getId() + ".");
+            }
+
+            String completionMode = normalizeQuestStageCompletionMode(stage.getCompletionMode());
+            if (!isSupportedQuestStageCompletionMode(completionMode)) {
+                errors.add(templateId + " stage " + stage.getId()
+                    + " are completion_mode necunoscut: " + stage.getCompletionMode() + ".");
+            }
+
+            auditQuestStageNextStage(templateId, scenario, stage, knownPhases, normalizedStageId, errors, warnings);
+
+            boolean stageHasObjectiveMetadata = false;
+            for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
+                if (normalizeKey(questEntryStage(objective)).equals(normalizedStageId)) {
+                    stageHasObjectiveMetadata = true;
+                    break;
+                }
+            }
+            if (stage.getObjectiveIds().isEmpty()) {
+                if (!"phases".equalsIgnoreCase(stage.getMetadata().getOrDefault("source", ""))
+                    && !stageHasObjectiveMetadata) {
+                    warnings.add(templateId + " stage " + stage.getId()
+                        + " nu listeaza objectives si nu are obiective cu phase/stage aferent.");
+                }
+                continue;
+            }
+
+            Set<String> seenStageObjectives = new HashSet<>();
+            for (String objectiveId : stage.getObjectiveIds()) {
+                String normalizedObjective = normalizeQuestStageReference(objectiveId);
+                if (normalizedObjective.isBlank()) {
+                    warnings.add(templateId + " stage " + stage.getId() + " are objective ID gol.");
+                    continue;
+                }
+                if (!seenStageObjectives.add(normalizedObjective)) {
+                    warnings.add(templateId + " stage " + stage.getId()
+                        + " listeaza objective duplicat: " + objectiveId + ".");
+                }
+                if (!objectiveReferences.contains(normalizedObjective)) {
+                    errors.add(templateId + " stage " + stage.getId()
+                        + " refera objective necunoscut: " + objectiveId + ".");
+                }
+            }
+        }
+    }
+
+    private void auditQuestStageNextStage(String templateId,
+                                          FeaturePackLoader.ScenarioDefinition scenario,
+                                          FeaturePackLoader.QuestStageDefinition stage,
+                                          Set<String> knownPhases,
+                                          String normalizedStageId,
+                                          List<String> errors,
+                                          List<String> warnings) {
+        String nextStage = stage.getNextStageId();
+        if (nextStage == null || nextStage.isBlank()) {
+            return;
+        }
+
+        String normalizedNextStage = normalizeKey(nextStage);
+        if (normalizedNextStage.isBlank()) {
+            warnings.add(templateId + " stage " + stage.getId() + " are next_stage gol.");
+            return;
+        }
+        if (normalizedNextStage.equals(normalizedStageId)) {
+            errors.add(templateId + " stage " + stage.getId() + " are next_stage catre sine.");
+        }
+        if (!knownPhases.contains(normalizedNextStage)) {
+            errors.add(templateId + " stage " + stage.getId()
+                + " are next_stage necunoscut: " + nextStage + ".");
+        } else if (!isQuestRuntimeStage(scenario, normalizedNextStage)) {
+            warnings.add(templateId + " stage " + stage.getId()
+                + " are next_stage catre o faza fara obiective runtime: " + nextStage + ".");
+        }
+    }
+
+    private boolean isQuestRuntimeStage(FeaturePackLoader.ScenarioDefinition scenario, String normalizedStageId) {
+        if (scenario == null || normalizedStageId == null || normalizedStageId.isBlank()) {
+            return false;
+        }
+
+        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
+            if (stage == null || !normalizeKey(stage.getId()).equals(normalizedStageId)) {
+                continue;
+            }
+            if (!stage.getObjectiveIds().isEmpty()) {
+                return true;
+            }
+            for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
+                if (normalizeKey(questEntryStage(objective)).equals(normalizedStageId)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return false;
+    }
+
+    private Set<String> collectQuestObjectiveReferences(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
+        Set<String> references = new HashSet<>();
+        if (objectives == null) {
+            return references;
+        }
+        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
+            if (objective == null) {
+                continue;
+            }
+            references.add(normalizeQuestStageReference(objective.getEntryId()));
+            references.add(normalizeQuestStageReference(objective.getItemId()));
+        }
+        references.remove("");
+        return references;
+    }
+
+    private boolean questStageReferencesObjective(FeaturePackLoader.ScenarioDefinition scenario,
+                                                  FeaturePackLoader.QuestEntryDefinition objective) {
+        if (scenario == null || objective == null || scenario.getQuestStages().isEmpty()) {
+            return false;
+        }
+
+        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
+            if (stageReferencesObjective(stage, objective)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
+                                             FeaturePackLoader.QuestEntryDefinition objective) {
+        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
+            return false;
+        }
+
+        String entryId = normalizeQuestStageReference(objective.getEntryId());
+        String itemId = normalizeQuestStageReference(objective.getItemId());
+        for (String objectiveId : stage.getObjectiveIds()) {
+            String normalizedObjective = normalizeQuestStageReference(objectiveId);
+            if (!normalizedObjective.isBlank()
+                && (normalizedObjective.equals(entryId) || normalizedObjective.equals(itemId))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeQuestStageCompletionMode(String completionMode) {
+        String normalized = normalizeQuestStageReference(completionMode);
+        return switch (normalized) {
+            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
+            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
+            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
+            default -> normalized;
+        };
+    }
+
+    private boolean isSupportedQuestStageCompletionMode(String completionMode) {
+        return Set.of("all_objectives", "any_objective", "manual_turn_in").contains(completionMode);
+    }
+
+    private String normalizeQuestStageReference(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return value.trim()
+            .toLowerCase(Locale.ROOT)
+            .replace("minecraft:", "")
+            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
+            .replaceAll("^_+|_+$", "")
+            .replaceAll("_+", "_");
     }
 
     private String normalizeQuestObjectiveType(String type) {
@@ -739,6 +936,7 @@ public class DebugDumpService {
         json.addProperty("id", valueOrEmpty(stage.getId()));
         json.addProperty("description", valueOrEmpty(stage.getDescription()));
         json.addProperty("completion_mode", valueOrEmpty(stage.getCompletionMode()));
+        json.addProperty("next_stage", valueOrEmpty(stage.getNextStageId()));
         json.add("objective_ids", gson.toJsonTree(stage.getObjectiveIds()));
         json.add("metadata", gson.toJsonTree(stage.getMetadata()));
         return json;

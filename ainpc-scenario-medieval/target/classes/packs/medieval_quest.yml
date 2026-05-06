@@ -255,6 +255,7 @@ scenarios:
       code: "Q01"
       giver_profession: "blacksmith"
       kind: "fetch"
+      category: "main"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -341,6 +342,7 @@ scenarios:
       code: "Q02"
       giver_profession: "farmer"
       kind: "fetch"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -414,6 +416,7 @@ scenarios:
       code: "Q03"
       giver_profession: "guard"
       kind: "hunt"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -491,6 +494,7 @@ scenarios:
       code: "Q04"
       giver_profession: "innkeeper"
       kind: "fetch"
+      category: "repeatable"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -568,6 +572,7 @@ scenarios:
       code: "Q05"
       giver_profession: "healer"
       kind: "fetch"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -650,6 +655,7 @@ scenarios:
       code: "Q06"
       giver_profession: "blacksmith"
       kind: "exploration"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -671,21 +677,37 @@ scenarios:
           - "Te-ai intors? Spune-mi ce ai gasit langa nicovala."
         completed:
           - "Bine ai facut ca ai verificat. Satul trebuie sa tina minte ca forja a fost cercetata."
+      stages:
+        INVESTIGATION:
+          description: "Jucatorul merge la forja si inspecteaza punctul suspect."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_forge"
+            - "inspect_forge_marks"
+        RETURN:
+          description: "Jucatorul revine la fierar si inchide investigatia."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_to_blacksmith"
       objectives:
         visit_forge:
           type: "visit_place"
           item: "tag:blacksmith"
           amount: 1
+          phase: "INVESTIGATION"
           description: "Mergi la fierarie."
         inspect_forge_marks:
           type: "inspect_node"
           item: "type:inspect_node"
           amount: 1
+          phase: "INVESTIGATION"
           description: "Inspecteaza punctul suspect din forja."
         report_to_blacksmith:
           type: "talk_to_npc"
           item: "profession:blacksmith"
           amount: 1
+          phase: "RETURN"
           description: "Raporteaza fierarului ce ai gasit."
       rewards:
         forge_investigated_event:
@@ -746,6 +768,7 @@ scenarios:
       code: "Q07"
       giver_profession: "innkeeper"
       kind: "delivery"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -768,21 +791,37 @@ scenarios:
           - "Ai confirmarea si painea? Adu-le la tejghea si trimit pachetul."
         completed:
           - "Bine. Straja primeste semn si provizii, iar calatorii vor auzi ca drumul e supravegheat."
+      stages:
+        CONTACT:
+          description: "Jucatorul pregateste mesajul si confirma cu garda."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "prepare_notice"
+            - "speak_with_guard"
+        RETURN:
+          description: "Jucatorul revine la hangiu cu proviziile."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "deliver_rations"
       objectives:
         prepare_notice:
           type: "collect_item"
           item: "PAPER"
           amount: 1
+          phase: "CONTACT"
           description: "Pregateste 1 hartie pentru mesaj."
         speak_with_guard:
           type: "talk_to_npc"
           item: "profession:guard"
           amount: 1
+          phase: "CONTACT"
           description: "Vorbeste cu garda despre patrula drumului."
         deliver_rations:
           type: "deliver_to_npc"
           item: "BREAD"
           amount: 2
+          phase: "RETURN"
           description: "Preda hangiului 2 paini pentru pachetul strajii."
       rewards:
         guard_message_event:
@@ -851,6 +890,7 @@ scenarios:
       code: "Q08"
       giver_profession: "guard"
       kind: "hunt"
+      category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
       tracking_mode: "next_objective"
@@ -872,21 +912,37 @@ scenarios:
           - "Ai terminat patrula? Raporteaza ce ai vazut la margine."
         completed:
           - "Raport bun. Straja poate intari hotarul exact unde trebuie."
+      stages:
+        PATROL:
+          description: "Jucatorul verifica regiunea si elimina amenintarile."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "patrol_region"
+            - "clear_zombies"
+        RETURN:
+          description: "Jucatorul revine la garda cu raportul."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_to_guard"
       objectives:
         patrol_region:
           type: "visit_region"
           item: "type:settlement"
           amount: 1
+          phase: "PATROL"
           description: "Patruleaza regiunea satului."
         clear_zombies:
           type: "kill_mob"
           item: "ZOMBIE"
           amount: 2
+          phase: "PATROL"
           description: "Elimina 2 zombie de la hotar."
         report_to_guard:
           type: "talk_to_npc"
           item: "profession:guard"
           amount: 1
+          phase: "RETURN"
           description: "Raporteaza garzii rezultatul patrulei."
       rewards:
         patrol_report_event:
