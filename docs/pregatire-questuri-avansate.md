@@ -85,7 +85,7 @@ Ce exista deja:
 Limitari care conteaza:
 
 - exista runtime initial pentru mai multe questuri curente per jucator, iar `quest status` si `quest track` pot folosi selector explicit de quest;
-- exista categorii `main`, `side`, `repeatable` cu limite initiale prin `quest.max_active`;
+- exista categorii `main`, `side`, `repeatable` cu limite initiale prin `quest.max_active`, plus limita initiala per mecanica prin `mechanics.<id>.max_active`;
 - questul urmarit este persistat in `player_quests.tracked` si restaurat la load;
 - `phases` pot functiona initial ca stage IDs runtime pentru questuri etapizate;
 - obiectivele pot fi plate sau grupate prin metadata `phase`/`stage` si `quest.stages.<stage>.objectives`;

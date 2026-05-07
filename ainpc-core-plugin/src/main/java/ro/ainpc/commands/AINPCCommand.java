@@ -103,6 +103,12 @@ public class AINPCCommand implements CommandExecutor {
             System.arraycopy(args, 0, routedArgs, 1, args.length);
             return handleQuest(sender, routedArgs);
         }
+        if ("progression".equalsIgnoreCase(command.getName()) || "progress".equalsIgnoreCase(command.getName())) {
+            return handleProgression(sender, routeDirectCommandToQuest(args));
+        }
+        if ("contract".equalsIgnoreCase(command.getName()) || "contracts".equalsIgnoreCase(command.getName())) {
+            return handleContract(sender, routeDirectCommandToQuest(args));
+        }
 
         if (args.length == 0) {
             sendHelp(sender);
@@ -117,6 +123,8 @@ public class AINPCCommand implements CommandExecutor {
             case "info" -> handleInfo(sender, args);
             case "gui" -> handleGui(sender, args);
             case "quest" -> handleQuest(sender, args);
+            case "progression", "progress" -> handleProgression(sender, args);
+            case "contract", "contracts" -> handleContract(sender, args);
             case "world" -> handleWorld(sender, args);
             case "story" -> handleStory(sender, args);
             case "audit" -> handleAudit(sender, args);
@@ -133,6 +141,19 @@ public class AINPCCommand implements CommandExecutor {
                 yield true;
             }
         };
+    }
+
+    private String[] routeDirectCommandToQuest(String[] args) {
+        String[] routedArgs = new String[args.length + 1];
+        routedArgs[0] = "quest";
+        System.arraycopy(args, 0, routedArgs, 1, args.length);
+        return routedArgs;
+    }
+
+    private String[] routeSubcommandToQuest(String[] args) {
+        String[] routedArgs = args.clone();
+        routedArgs[0] = "quest";
+        return routedArgs;
     }
 
     /**
@@ -187,9 +208,136 @@ public class AINPCCommand implements CommandExecutor {
      * /ainpc quest decline <numeNpc>|nearest [jucator]
      * /ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]
      * /ainpc quest status <numeNpc>|nearest|<questCode|templateId> [jucator]
+     * /ainpc quest progress [tracked|questCode|templateId] [jucator]
      * /ainpc quest reset <numeNpc> [jucator]
      * /ainpc quest complete <numeNpc> [jucator]
      */
+    private boolean handleProgression(CommandSender sender, String[] args) {
+        if (args.length < 2 || isHelpMode(args[1])) {
+            sendProgressionUsage(sender);
+            return true;
+        }
+        return handleQuest(sender, routeSubcommandToQuest(args));
+    }
+
+    private boolean handleContract(CommandSender sender, String[] args) {
+        if (args.length > 1 && isHelpMode(args[1])) {
+            sendContractUsage(sender);
+            return true;
+        }
+        return handleQuest(sender, routeContractAlias(args));
+    }
+
+    private String[] routeContractAlias(String[] args) {
+        String[] routedArgs = routeSubcommandToQuest(args);
+        if (routedArgs.length == 1) {
+            return new String[] {"quest", "log", "contract"};
+        }
+
+        String mode = routedArgs[1].toLowerCase(Locale.ROOT);
+        if ("log".equals(mode)) {
+            return routeContractLogArgs(routedArgs);
+        }
+
+        return routeContractSelectorArgs(routedArgs, mode);
+    }
+
+    private String[] routeContractLogArgs(String[] args) {
+        if (args.length == 2) {
+            return new String[] {"quest", "log", "contract"};
+        }
+
+        if (args.length == 3) {
+            return isQuestLogFilter(args[2])
+                ? new String[] {"quest", "log", contractLogFilter(args[2])}
+                : new String[] {"quest", "log", args[2], "contract"};
+        }
+
+        if (args.length == 4) {
+            boolean firstIsFilter = isQuestLogFilter(args[2]);
+            boolean secondIsFilter = isQuestLogFilter(args[3]);
+            if (firstIsFilter && !secondIsFilter) {
+                return new String[] {"quest", "log", contractLogFilter(args[2]), args[3]};
+            }
+            if (!firstIsFilter && secondIsFilter) {
+                return new String[] {"quest", "log", args[2], contractLogFilter(args[3])};
+            }
+        }
+
+        return args;
+    }
+
+    private String[] routeContractSelectorArgs(String[] args, String mode) {
+        String[] routedArgs = args.clone();
+        switch (mode) {
+            case "gui", "nearest", "accept", "yes", "y", "da", "ok", "confirm",
+                 "decline", "deny", "reject", "no", "n", "nu", "refuz",
+                 "reset", "complete", "anchors" -> {
+                return routedArgs;
+            }
+            case "status", "progress", "progres", "debug", "abandon" -> {
+                if (routedArgs.length > 2) {
+                    routedArgs[2] = contractSelector(routedArgs[2]);
+                }
+            }
+            case "track", "current" -> {
+                String rawAction = routedArgs.length > 2 ? routedArgs[2].toLowerCase(Locale.ROOT) : "";
+                String action = "start".equals(rawAction) || "stop".equals(rawAction) ? rawAction : "";
+                int selectorIndex = action.isBlank() ? 2 : 3;
+                if (!"stop".equals(action) && routedArgs.length > selectorIndex) {
+                    routedArgs[selectorIndex] = contractSelector(routedArgs[selectorIndex]);
+                }
+            }
+            default -> {
+                if (routedArgs.length == 2) {
+                    return new String[] {"quest", "status", contractSelector(routedArgs[1])};
+                }
+                if (routedArgs.length == 3) {
+                    return new String[] {"quest", "status", contractSelector(routedArgs[1]), routedArgs[2]};
+                }
+            }
+        }
+        return routedArgs;
+    }
+
+    private String contractLogFilter(String filter) {
+        String normalized = normalizeQuestLogFilter(filter);
+        return switch (normalized) {
+            case "current" -> "contract_current";
+            case "active" -> "contract_active";
+            case "offered" -> "contract_offered";
+            case "tracked" -> "contract_tracked";
+            case "completed" -> "contract_completed";
+            case "failed" -> "contract_failed";
+            case "archived" -> "contract_archived";
+            default -> "contract";
+        };
+    }
+
+    private String contractSelector(String selector) {
+        if (selector == null || selector.isBlank()
+            || selector.contains(":")
+            || "nearest".equalsIgnoreCase(selector)
+            || isTrackedQuestSelector(selector)
+            || findOnlinePlayer(selector) != null) {
+            return selector;
+        }
+
+        return "contract:" + selector;
+    }
+
+    private boolean isHelpMode(String value) {
+        if (value == null) {
+            return false;
+        }
+
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        return "help".equals(normalized)
+            || "usage".equals(normalized)
+            || "ajutor".equals(normalized)
+            || "?".equals(normalized);
+    }
+
     private boolean handleQuest(CommandSender sender, String[] args) {
         questDebug("Comanda quest primita de la " + sender.getName() + ": " + String.join(" ", args));
         if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
@@ -216,6 +364,7 @@ public class AINPCCommand implements CommandExecutor {
             case "decline", "deny", "reject", "no", "n", "nu", "refuz" -> handleDeclineQuest(sender, args);
             case "abandon" -> handleAbandonQuest(sender, args);
             case "status" -> handleStatusQuest(sender, args);
+            case "progress", "progres" -> handleQuestProgress(sender, args);
             case "debug" -> handleQuestDebug(sender, args);
             case "reset" -> handleResetQuest(sender, args);
             case "complete" -> handleCompleteQuest(sender, args);
@@ -262,7 +411,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private QuestLogRequest resolveQuestLogRequest(CommandSender sender, String[] args) {
-        String usage = "&cUtilizare: /ainpc quest log [jucator] [active|current|tracked|main|side|repeatable|completed|failed|archived|all]";
+        String usage = "&cUtilizare: /ainpc quest log [jucator] [active|current|tracked|quest|contract|main|side|repeatable|completed|failed|archived|all]";
         if (args.length > 4) {
             plugin.getMessageUtils().send(sender, usage);
             return null;
@@ -308,6 +457,15 @@ public class AINPCCommand implements CommandExecutor {
             case "active", "activ", "activeaza" -> "active";
             case "offered", "oferit", "oferite" -> "offered";
             case "tracked", "urmarit" -> "tracked";
+            case "quest", "questuri" -> "quest";
+            case "contract", "contracts", "contracte" -> "contract";
+            case "contract_current", "contract_curent", "contracte_curente" -> "contract_current";
+            case "contract_active", "contract_activ", "contracte_active" -> "contract_active";
+            case "contract_offered", "contract_oferit", "contracte_oferite" -> "contract_offered";
+            case "contract_tracked", "contract_urmarit", "contracte_urmarite" -> "contract_tracked";
+            case "contract_completed", "contract_completat", "contracte_completate" -> "contract_completed";
+            case "contract_failed", "contract_esuat", "contracte_esuate" -> "contract_failed";
+            case "contract_archived", "contract_arhivat", "contracte_arhivate" -> "contract_archived";
             case "main", "principal" -> "main";
             case "side", "secundar", "secundare" -> "side";
             case "repeatable", "repetabil", "repetabile" -> "repeatable";
@@ -701,6 +859,52 @@ public class AINPCCommand implements CommandExecutor {
 
         for (String systemMessage : questInteraction.getSystemMessages()) {
             plugin.getMessageUtils().send(sender, systemMessage);
+        }
+        return true;
+    }
+
+    private boolean handleQuestProgress(CommandSender sender, String[] args) {
+        String usage = "&cUtilizare: /ainpc quest progress [tracked|questCode|templateId] [jucator]";
+        if (args.length > 4) {
+            plugin.getMessageUtils().send(sender, usage);
+            return true;
+        }
+
+        String questSelector = "";
+        int playerArgIndex = -1;
+        if (args.length == 3) {
+            Player explicitPlayer = findOnlinePlayer(args[2]);
+            if (explicitPlayer != null && !isTrackedQuestSelector(args[2])) {
+                playerArgIndex = 2;
+            } else {
+                questSelector = args[2];
+            }
+        } else if (args.length == 4) {
+            questSelector = args[2];
+            playerArgIndex = 3;
+        }
+
+        Player targetPlayer = resolveQuestTargetPlayer(sender, args, playerArgIndex, usage);
+        if (targetPlayer == null) {
+            questDebug("Quest progress oprit: nu am putut rezolva jucatorul tinta.");
+            return true;
+        }
+
+        ScenarioEngine.QuestInteractionResult questInteraction =
+            plugin.getScenarioEngine().getQuestProgress(targetPlayer, questSelector);
+        if (!questInteraction.isHandled()) {
+            plugin.getMessageUtils().send(sender, "&cNu am putut citi progresul questului.");
+            return true;
+        }
+
+        CommandSender recipient = sender.equals(targetPlayer) ? targetPlayer : sender;
+        for (String systemMessage : questInteraction.getSystemMessages()) {
+            plugin.getMessageUtils().send(recipient, systemMessage);
+        }
+        if (!sender.equals(targetPlayer)) {
+            plugin.getMessageUtils().send(sender,
+                "&aAi cerut progresul questului pentru &f" + targetPlayer.getName()
+                    + (questSelector.isBlank() ? "&a." : " &aselector=&f" + questSelector + "&a."));
         }
         return true;
     }
@@ -1170,7 +1374,7 @@ public class AINPCCommand implements CommandExecutor {
 
     private void sendQuestUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|main|side|repeatable|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|quest|contract|main|side|repeatable|completed|failed|archived|all]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest status");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
@@ -1179,10 +1383,31 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc quest decline|nu [numeNpc|nearest] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest status <numeNpc>|nearest|<questCode|templateId> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest progress [tracked|questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest debug <tracked|questCode|templateId> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest reset <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
+    }
+
+    private void sendProgressionUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|active|completed|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression status <tracked|selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression progress [tracked|selector] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression track [start|stop] [selector] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression abandon <tracked|selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&7Selector exemple: &fQ01&7, &fside_quests:Q07&7, &fvillage_contracts:C01&7.");
+    }
+
+    private void sendContractUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract log [jucator] [active|current|tracked|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract status <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract progress <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract track [start|stop] [selector] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract abandon <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&7Selector scurt: &fC01 &7devine &fcontract:C01&7.");
     }
 
     private boolean handleStory(CommandSender sender, String[] args) {
@@ -3174,12 +3399,17 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         List<FeaturePackLoader.ScenarioDefinition> quests = featurePackLoader.getAllScenarios().stream()
-            .filter(scenario -> scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST)
+            .filter(this::isQuestAuditCandidate)
             .toList();
 
-        report.info("Quest templates: " + quests.size() + " questuri definite in feature packs.");
+        report.info("Progression mechanics: "
+            + featurePackLoader.getAllProgressionMechanics().size()
+            + " mecanici definite in feature packs.");
+        validateProgressionMechanicDefinitions(report, featurePackLoader.getAllProgressionMechanics());
+
+        report.info("Quest/progression templates: " + quests.size() + " definitii jucabile in feature packs.");
         if (quests.isEmpty()) {
-            report.warn("Nu exista quest templates incarcate din feature packs.");
+            report.warn("Nu exista quest/progression templates incarcate din feature packs.");
             return;
         }
 
@@ -3190,6 +3420,17 @@ public class AINPCCommand implements CommandExecutor {
                 + " (" + formatOptional(quest.getName()) + ")";
             validateQuestTemplate(report, featurePackLoader, label, quest, knownQuestReferences, questCodes);
         }
+    }
+
+    private boolean isQuestAuditCandidate(FeaturePackLoader.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return false;
+        }
+        return scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST
+            || (scenario.isProgressionEnabled()
+                && (!scenario.getQuestCode().isBlank()
+                    || !scenario.getObjectives().isEmpty()
+                    || !scenario.getRewards().isEmpty()));
     }
 
     private Set<String> collectKnownQuestReferences(List<FeaturePackLoader.ScenarioDefinition> quests) {
@@ -3240,9 +3481,70 @@ public class AINPCCommand implements CommandExecutor {
         validateQuestPhases(report, label, quest);
         validateQuestDialogues(report, label, quest);
         validateQuestGiverRole(report, label, quest);
+        validateQuestProgressionMetadata(report, featurePackLoader, label, quest);
         validateQuestEntries(report, label, "obiectiv", quest.getObjectives(), true);
         validateQuestEntries(report, label, "recompensa", quest.getRewards(), false);
         validateQuestObjectiveStages(report, label, quest);
+    }
+
+    private void validateProgressionMechanicDefinitions(
+        AuditReport report,
+        Collection<FeaturePackLoader.ProgressionMechanicDefinition> mechanics
+    ) {
+        if (mechanics == null || mechanics.isEmpty()) {
+            report.warn("Nu exista mechanics/progression definite explicit; questurile legacy folosesc fallback intern.");
+            return;
+        }
+
+        Set<String> keys = new HashSet<>();
+        for (FeaturePackLoader.ProgressionMechanicDefinition mechanic : mechanics) {
+            if (mechanic == null) {
+                continue;
+            }
+
+            String label = "Progression mechanic " + mechanic.getPackId() + ":" + mechanic.getId();
+            String key = normalizeAuditKey(mechanic.getPackId() + ":" + mechanic.getId());
+            if (!keys.add(key)) {
+                report.error(label + " este duplicat.");
+            }
+            if (mechanic.getId().isBlank()) {
+                report.error(label + " nu are ID.");
+            }
+            if (mechanic.getKind().isBlank()) {
+                report.warn(label + " nu are kind; UI-ul va folosi ID-ul ca fallback.");
+            }
+            if (mechanic.getLabel().isBlank()) {
+                report.warn(label + " nu are label vizibil.");
+            }
+            if (mechanic.isProgressEnabled() && mechanic.getMaxActive() == 0) {
+                report.info(label + " nu are max_active; se aplica limitele globale/config existente.");
+            }
+        }
+    }
+
+    private void validateQuestProgressionMetadata(AuditReport report,
+                                                  FeaturePackLoader featurePackLoader,
+                                                  String label,
+                                                  FeaturePackLoader.ScenarioDefinition quest) {
+        if (!quest.isProgressionEnabled()) {
+            report.warn(label + " are progression/progress disabled; nu va fi candidat bun pentru runtime generic.");
+            return;
+        }
+
+        String mechanicId = quest.getProgressionMechanicId();
+        if (mechanicId.isBlank()) {
+            report.warn(label + " nu are mechanic/progression.mechanic; quest runtime foloseste fallback.");
+            return;
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic =
+            featurePackLoader.findProgressionMechanicDefinition(quest.getPackId(), mechanicId);
+        if (mechanic == null) {
+            report.warn(label + " refera progression mechanic necunoscuta: " + mechanicId + ".");
+        } else if (!mechanic.isProgressEnabled()) {
+            report.warn(label + " foloseste mechanic cu progress=false: "
+                + mechanic.getPackId() + ":" + mechanic.getId() + ".");
+        }
     }
 
     private void validateQuestPrerequisites(AuditReport report,
@@ -4916,6 +5218,10 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Deschide hub-ul GUI sau un ecran specific");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza manual quest-ul unui NPC");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|active|all]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza progresii generice peste questuri si contracte");
+        plugin.getMessageUtils().send(sender, "&e/ainpc contract log [jucator]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza contractele locale prin runtime-ul comun");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Arata sau mentine busola/actionbar/particule catre tinta questului");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest nearest [jucator]");

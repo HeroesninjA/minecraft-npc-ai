@@ -11,6 +11,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../questuri-faza-1-stabilizare.md` | Faza Q1 pentru stabilizarea Q01-Q05, audit template si smoke test |
 | `../../pregatire-questuri-avansate.md` | Pregatiri si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate.md` | Evolutia questurilor pe obiective, etape si progres |
+| `../../progression-service.md` | Directie pentru motor generic de progres peste questuri, contracte, datorii si evenimente |
 | `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
 | `../../interactiuni.md` | Fluxul click/chat/sesiune, ascultare pasiva si intentii de quest inaintea dialogului liber |
 | `../../gui-interfete.md` | Directie pentru Quest GUI, NPC interaction GUI si suprafete vizuale peste quest/story |
@@ -26,6 +27,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 ## Status scurt
 
 - Questurile de baza sunt functionale.
+- `ProgressionService` este directia recomandata pentru a folosi runtime-ul de quest ca motor generic de progres in addonuri, inclusiv pentru mecanici care nu se numesc quest.
 - Pregatirea pentru questuri avansate a inceput: `objective_id` stabil exista initial, cu fallback pentru progres legacy.
 - Auditul strict pentru continut avansat exista initial: obiective/reward-uri necunoscute si story actions incomplete sunt raportate ca erori.
 - Q06 medieval exista initial ca primul quest pe mapping: `visit_place`, `inspect_node`, `talk_to_npc`, stages `INVESTIGATION/RETURN` si `record_story_event`.

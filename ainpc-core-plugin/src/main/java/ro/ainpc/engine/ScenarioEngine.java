@@ -37,6 +37,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -237,6 +238,13 @@ public class ScenarioEngine {
                 template.setRequiresPlayer(definition.isRequiresPlayer());
                 template.setPreferredTopologies(definition.getPreferredTopologies());
                 template.setNarrativeHints(definition.getNarrativeHints());
+                template.setProgressionEnabled(definition.isProgressionEnabled());
+                template.setProgressionMechanicId(definition.getProgressionMechanicId());
+                template.setProgressionKind(definition.getProgressionKind());
+                template.setProgressionLabel(definition.getProgressionLabel());
+                template.setProgressionSingularLabel(definition.getProgressionSingularLabel());
+                template.setProgressionPluralLabel(definition.getProgressionPluralLabel());
+                template.setProgressionMaxActive(definition.getProgressionMaxActive());
                 template.setQuestCode(definition.getQuestCode());
                 template.setQuestGiverProfession(definition.getQuestGiverProfession());
                 template.setQuestPrerequisites(definition.getQuestPrerequisites());
@@ -266,7 +274,7 @@ public class ScenarioEngine {
                     template.addPhase(phase, phase);
                 }
 
-                if (definition.getBaseType() == ScenarioType.QUEST && template.hasQuestBriefing()) {
+                if (isProgressionRuntimeDefinition(definition, template)) {
                     questTemplates.add(template);
                 }
 
@@ -281,6 +289,14 @@ public class ScenarioEngine {
                 }
             }
         }
+    }
+
+    private boolean isProgressionRuntimeDefinition(FeaturePackLoader.ScenarioDefinition definition,
+                                                   ScenarioTemplate template) {
+        if (definition == null || template == null || !template.hasQuestBriefing()) {
+            return false;
+        }
+        return definition.getBaseType() == ScenarioType.QUEST || definition.isProgressionEnabled();
     }
 
     public QuestInteractionResult handleQuestInteraction(Player player, AINPC npc) {
@@ -1006,7 +1022,7 @@ public class ScenarioEngine {
         List<PlayerQuestProgress> currentProgresses = getCurrentQuestProgress(playerId);
         List<PlayerQuestProgress> archivedProgresses = getArchivedQuestProgress(playerId);
         List<String> systemMessages = new ArrayList<>();
-        systemMessages.add("&6=== Quest Log ===");
+        systemMessages.add("&6=== Progression Log ===");
         systemMessages.add("&eJucator: &f" + player.getName());
         if (logFilter != QuestLogFilter.SUMMARY) {
             systemMessages.add("&eFiltru: &f" + logFilter.displayName());
@@ -1020,7 +1036,7 @@ public class ScenarioEngine {
             .sorted(questLogCurrentComparator(playerId))
             .toList();
         if (!matchingCurrent.isEmpty()) {
-            systemMessages.add("&aQuesturi curente: &f" + matchingCurrent.size());
+            systemMessages.add("&aProgresii curente: &f" + matchingCurrent.size());
             String currentGroup = "";
             for (PlayerQuestProgress currentProgress : matchingCurrent) {
                 ScenarioTemplate template = resolveTemplateForProgress(currentProgress, null);
@@ -1048,7 +1064,7 @@ public class ScenarioEngine {
                     systemMessages.add("&7Template: &f" + logProgress.templateId());
                     systemMessages.add("&7Status: &f" + formatQuestStatus(logProgress.status()));
                     if (isTrackedQuest(playerId, logProgress)) {
-                        systemMessages.add("&bQuest urmarit: &fda");
+                        systemMessages.add("&bProgresie urmarita: &fda");
                     }
                     if (!logProgress.currentPhase().isBlank()) {
                         systemMessages.add("&7Faza curenta: &f" + formatQuestPhase(logProgress.currentPhase()));
@@ -1058,8 +1074,8 @@ public class ScenarioEngine {
             }
         } else if (logFilter.showsCurrent()) {
             systemMessages.add(logFilter == QuestLogFilter.SUMMARY
-                ? "&7Nu ai quest activ."
-                : "&7Nu exista questuri curente pentru filtrul ales.");
+                ? "&7Nu ai progresie activa."
+                : "&7Nu exista progresii curente pentru filtrul ales.");
         }
 
         int archivedLimit = logFilter == QuestLogFilter.SUMMARY ? 3 : 20;
@@ -1068,7 +1084,7 @@ public class ScenarioEngine {
             .limit(archivedLimit)
             .toList();
         if (!matchingArchived.isEmpty()) {
-            systemMessages.add(logFilter == QuestLogFilter.SUMMARY ? "&eUltimele questuri:" : "&eQuesturi arhivate:");
+            systemMessages.add(logFilter == QuestLogFilter.SUMMARY ? "&eUltimele progresii:" : "&eProgresii arhivate:");
             for (PlayerQuestProgress archivedProgress : matchingArchived) {
                 ScenarioTemplate template = resolveTemplateForProgress(archivedProgress, null);
                 String title = template != null ? resolveQuestTitle(template) : archivedProgress.templateId();
@@ -1079,10 +1095,10 @@ public class ScenarioEngine {
                 .count();
             if (totalMatchingArchived > matchingArchived.size()) {
                 systemMessages.add("&7... inca &f" + (totalMatchingArchived - matchingArchived.size())
-                    + " &7questuri arhivate pentru filtrul ales.");
+                    + " &7progresii arhivate pentru filtrul ales.");
             }
         } else if (logFilter.showsArchived() && logFilter != QuestLogFilter.SUMMARY) {
-            systemMessages.add("&7Nu exista questuri arhivate pentru filtrul ales.");
+            systemMessages.add("&7Nu exista progresii arhivate pentru filtrul ales.");
         }
 
         return QuestInteractionResult.handled(false, List.of(), systemMessages);
@@ -1098,7 +1114,7 @@ public class ScenarioEngine {
         List<PlayerQuestProgress> currentProgresses = getCurrentQuestProgress(playerId);
         List<PlayerQuestProgress> archivedProgresses = getArchivedQuestProgress(playerId);
         List<String> summaryLines = currentProgresses.isEmpty()
-            ? List.of("&7Nu ai quest activ.")
+            ? List.of("&7Nu ai progresie activa.")
             : buildQuestLogSummaryLines(playerId, currentProgresses);
 
         List<QuestGuiEntry> currentEntries = currentProgresses.stream()
@@ -1142,6 +1158,7 @@ public class ScenarioEngine {
         String selector = questLogActionSelector(template, viewProgress);
         String title = template != null ? resolveQuestTitle(template) : valueOrFallback(viewProgress.templateId(), "Quest necunoscut");
         String category = template != null ? resolveQuestCategory(template).displayName() : "Necunoscut";
+        String mechanic = template != null ? resolveProgressionMechanicDisplay(template) : "Necunoscuta";
         String statusDisplay = formatQuestStatus(viewProgress != null ? viewProgress.status() : QuestStatus.NOT_STARTED);
         String currentStageId = "";
         if (viewProgress != null) {
@@ -1162,6 +1179,7 @@ public class ScenarioEngine {
             title,
             statusDisplay,
             category,
+            mechanic,
             viewProgress != null && isTrackedQuest(playerId, viewProgress),
             viewProgress != null && viewProgress.isCurrent(),
             viewProgress != null && viewProgress.isActive(),
@@ -1215,6 +1233,12 @@ public class ScenarioEngine {
                 : Math.min(requiredAmount, storedProgress);
             boolean activeForStage = progress == null || shouldShowObjectiveForCurrentStage(template, progress, objective);
             String stageId = findObjectiveStageId(template, objective);
+            QuestObjectiveState objectiveState = resolveQuestObjectiveState(
+                progress,
+                currentProgress,
+                requiredAmount,
+                activeForStage
+            );
 
             objectives.add(new QuestGuiObjective(
                 objectiveKey,
@@ -1223,6 +1247,8 @@ public class ScenarioEngine {
                 formatQuestEntry(objective),
                 stageId,
                 formatQuestPhase(stageId),
+                objectiveState.id(),
+                objectiveState.displayName(),
                 Math.min(currentProgress, requiredAmount),
                 requiredAmount,
                 currentProgress >= requiredAmount,
@@ -1305,7 +1331,7 @@ public class ScenarioEngine {
         }
 
         List<String> systemMessages = new ArrayList<>();
-        systemMessages.add("&6=== Quest Status ===");
+        systemMessages.add("&6=== Progression Status ===");
         systemMessages.add("&eJucator: &f" + player.getName());
         if (template != null) {
             systemMessages.addAll(buildQuestStatusMessages(
@@ -1315,7 +1341,7 @@ public class ScenarioEngine {
                 resolveQuestNpcName(progress)
             ));
         } else {
-            systemMessages.add("&eQuest: &f" + progress.templateId());
+            systemMessages.add("&eProgresie: &f" + progress.templateId());
             systemMessages.add("&7Status: &f" + formatQuestStatus(progress.status()));
             if (!progress.currentPhase().isBlank()) {
                 systemMessages.add("&7Faza curenta: &f" + formatQuestPhase(progress.currentPhase()));
@@ -1345,11 +1371,11 @@ public class ScenarioEngine {
         }
 
         List<String> systemMessages = new ArrayList<>();
-        systemMessages.add("&6=== Quest Debug ===");
+        systemMessages.add("&6=== Progression Debug ===");
         systemMessages.add("&eJucator: &f" + player.getName() + " &7(" + playerId + ")");
         systemMessages.add("&eSelector: &f" + questReference);
         systemMessages.add("&eTemplate: &f" + progress.templateId());
-        systemMessages.add("&eQuest code: &f" + formatOptional(progress.questCode()));
+        systemMessages.add("&eCod: &f" + formatOptional(progress.questCode()));
         systemMessages.add("&7Status: &f" + formatQuestStatus(progress.status()));
         systemMessages.add("&7Tracked: &f" + (isTrackedQuest(playerId, progress) ? "da" : "nu"));
         systemMessages.add("&7Faza: &f" + formatOptional(progress.currentPhase()));
@@ -1360,6 +1386,11 @@ public class ScenarioEngine {
 
         if (template != null) {
             systemMessages.add("&eTitlu: &f" + resolveQuestTitle(template));
+            if (!template.getProgressionMechanicId().isBlank()) {
+                systemMessages.add("&7Progression: &f" + template.getProgressionMechanicId()
+                    + " &7/ kind=&f" + formatOptional(template.getProgressionKind())
+                    + " &7/ label=&f" + formatOptional(template.getProgressionLabel()));
+            }
             systemMessages.add("&7Giver profession: &f" + formatOptional(template.getQuestGiverProfession()));
             QuestScenarioContract contract = template.getQuestContract();
             if (contract != null) {
@@ -1375,12 +1406,23 @@ public class ScenarioEngine {
                 for (int index = 0; index < objectives.size(); index++) {
                     FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
                     String objectiveKey = buildObjectiveKey(objective, index);
-                    int current = readObjectiveProgress(progress.objectiveProgress(), objective, index);
+                    int current = progress.isCurrent()
+                        ? resolveObjectiveCurrentProgress(player, objective, progress, index)
+                        : readObjectiveProgress(progress.objectiveProgress(), objective, index);
+                    boolean activeForStage = shouldShowObjectiveForCurrentStage(template, progress, objective);
+                    QuestObjectiveState state = resolveQuestObjectiveState(
+                        progress,
+                        current,
+                        objective.getAmount(),
+                        activeForStage
+                    );
                     systemMessages.add("&7- &f" + objectiveKey
                         + " &7type=&f" + normalizeObjectiveType(objective.getType())
                         + " &7stage=&f" + formatOptional(canonicalQuestPhase(template, getObjectiveStage(objective)))
                         + " &7target=&f" + formatOptional(objective.getItemId())
-                        + " &7progress=&f" + current + "/" + objective.getAmount());
+                        + " &7state=&f" + state.displayName()
+                        + " &7progress=&f" + Math.min(current, Math.max(1, objective.getAmount()))
+                        + "/" + Math.max(1, objective.getAmount()));
                 }
             }
         } else {
@@ -1391,6 +1433,61 @@ public class ScenarioEngine {
         systemMessages.addAll(formatQuestDebugMap(progress.objectiveProgress(), 20));
         systemMessages.add("&eQuest variables:");
         systemMessages.addAll(formatQuestDebugMap(progress.questVariables(), 30));
+
+        return QuestInteractionResult.handled(false, List.of(), systemMessages);
+    }
+
+    public QuestInteractionResult getQuestProgress(Player player, String questReference) {
+        if (player == null) {
+            return QuestInteractionResult.notHandled();
+        }
+
+        UUID playerId = player.getUniqueId();
+        PlayerQuestProgress progress = selectQuestProgressForProgress(playerId, questReference);
+        List<String> systemMessages = new ArrayList<>();
+        systemMessages.add("&6=== Progression Progress ===");
+        systemMessages.add("&eJucator: &f" + player.getName());
+
+        if (progress == null) {
+            if (questReference != null && !questReference.isBlank()) {
+                systemMessages.add("&cNu exista progres pentru selectorul: &f" + questReference);
+            } else {
+                systemMessages.add("&7Nu ai quest curent cu progres.");
+            }
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+        if (template != null && progress.isCurrent()) {
+            progress = refreshTrackedQuestProgress(player, template, progress);
+        }
+
+        systemMessages.add("&eTemplate: &f" + progress.templateId());
+        systemMessages.add("&eCod: &f" + formatOptional(progress.questCode()));
+        systemMessages.add("&7Status: &f" + formatQuestStatus(progress.status()));
+        systemMessages.add("&7Tracked: &f" + (isTrackedQuest(playerId, progress) ? "da" : "nu"));
+        if (!progress.currentPhase().isBlank()) {
+            systemMessages.add("&7Faza curenta: &f" + formatQuestPhase(progress.currentPhase()));
+        }
+
+        if (template == null) {
+            systemMessages.add("&cTemplate-ul progresiei nu mai este disponibil in configuratia curenta.");
+            systemMessages.add("&eObjective progress brut:");
+            systemMessages.addAll(formatQuestDebugMap(progress.objectiveProgress(), 20));
+            return QuestInteractionResult.handled(false, List.of(), systemMessages);
+        }
+
+        systemMessages.add("&e" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + ": &f" + resolveQuestTitle(template));
+        if (!template.getProgressionMechanicId().isBlank()) {
+            systemMessages.add("&7Mecanica: &f" + template.getProgressionMechanicId()
+                + (template.getProgressionLabel().isBlank() ? "" : " &7(" + template.getProgressionLabel() + ")"));
+        }
+        if (template.getObjectives().isEmpty()) {
+            systemMessages.add("&7Nu exista obiective in template.");
+        } else {
+            systemMessages.add("&eObiective:");
+            systemMessages.addAll(buildQuestProgressDetailLines(player, template, progress));
+        }
 
         return QuestInteractionResult.handled(false, List.of(), systemMessages);
     }
@@ -1968,6 +2065,28 @@ public class ScenarioEngine {
         return currentProgresses.isEmpty() ? null : currentProgresses.get(0);
     }
 
+    private PlayerQuestProgress selectQuestProgressForProgress(UUID playerId, String questReference) {
+        if (playerId == null) {
+            return null;
+        }
+
+        if (questReference != null && !questReference.isBlank() && !isTrackedQuestSelector(questReference)) {
+            return findQuestProgressByReference(playerId, questReference, true);
+        }
+
+        PlayerQuestProgress trackedProgress = getTrackedQuestProgress(playerId, true);
+        if (trackedProgress != null) {
+            return trackedProgress;
+        }
+
+        List<PlayerQuestProgress> currentProgresses = getCurrentQuestProgress(playerId);
+        if (!currentProgresses.isEmpty()) {
+            return currentProgresses.get(0);
+        }
+
+        return null;
+    }
+
     private PlayerQuestProgress getTrackedQuestProgress(UUID playerId, boolean includeArchived) {
         if (playerId == null) {
             return null;
@@ -2116,6 +2235,16 @@ public class ScenarioEngine {
                 + category.displayName() + " (limita " + categoryLimit + ").");
         }
 
+        int mechanicLimit = getProgressionMechanicLimit(template);
+        if (mechanicLimit > 0) {
+            int activeInMechanic = countCurrentProgressionsInMechanic(playerId, template, template.getTemplateId());
+            if (activeInMechanic >= mechanicLimit) {
+                issues.add("Ai deja " + activeInMechanic + " "
+                    + resolveProgressionPluralLabel(template) + " curente in "
+                    + resolveProgressionMechanicDisplay(template) + " (limita " + mechanicLimit + ").");
+            }
+        }
+
         return issues.isEmpty()
             ? QuestAvailability.allowed()
             : QuestAvailability.unavailable(issues);
@@ -2138,6 +2267,136 @@ public class ScenarioEngine {
             case REPEATABLE -> 2;
         };
         return Math.max(0, plugin.getConfig().getInt("quest.max_active." + key, defaultLimit));
+    }
+
+    private int getProgressionMechanicLimit(ScenarioTemplate template) {
+        if (template == null || !template.isProgressionEnabled()
+            || template.getProgressionMechanicId().isBlank()) {
+            return 0;
+        }
+
+        if (template.getProgressionMaxActive() > 0) {
+            return template.getProgressionMaxActive();
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        if (mechanic == null || !mechanic.isProgressEnabled()) {
+            return 0;
+        }
+        return mechanic.getMaxActive();
+    }
+
+    private int countCurrentProgressionsInMechanic(UUID playerId,
+                                                   ScenarioTemplate template,
+                                                   String excludedTemplateId) {
+        String mechanicKey = resolveProgressionMechanicKey(template);
+        if (mechanicKey.isBlank()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (PlayerQuestProgress progress : getCurrentQuestProgress(playerId)) {
+            if (progress.templateId() != null && progress.templateId().equals(excludedTemplateId)) {
+                continue;
+            }
+
+            ScenarioTemplate activeTemplate = resolveTemplateForProgress(progress, null);
+            if (mechanicKey.equals(resolveProgressionMechanicKey(activeTemplate))) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private String resolveProgressionMechanicKey(ScenarioTemplate template) {
+        if (template == null || template.getProgressionMechanicId().isBlank()) {
+            return "";
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        if (mechanic != null) {
+            return normalizeReference(mechanic.getPackId()) + ":" + normalizeReference(mechanic.getId());
+        }
+
+        String packId = template.getSourcePackId();
+        return normalizeReference(packId) + ":" + normalizeReference(template.getProgressionMechanicId());
+    }
+
+    private FeaturePackLoader.ProgressionMechanicDefinition resolveProgressionMechanicDefinition(ScenarioTemplate template) {
+        if (template == null || template.getProgressionMechanicId().isBlank()
+            || plugin.getFeaturePackLoader() == null) {
+            return null;
+        }
+
+        return plugin.getFeaturePackLoader().findProgressionMechanicDefinition(
+            template.getSourcePackId(),
+            template.getProgressionMechanicId()
+        );
+    }
+
+    private String resolveProgressionMechanicDisplay(ScenarioTemplate template) {
+        if (template == null) {
+            return "mecanica de progres";
+        }
+
+        if (!template.getProgressionLabel().isBlank()) {
+            return template.getProgressionLabel();
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        if (mechanic != null && !mechanic.getLabel().isBlank()) {
+            return mechanic.getLabel();
+        }
+
+        return template.getProgressionMechanicId().isBlank()
+            ? "mecanica de progres"
+            : template.getProgressionMechanicId();
+    }
+
+    private String resolveProgressionPluralLabel(ScenarioTemplate template) {
+        if (template == null) {
+            return "progresii";
+        }
+
+        if (!template.getProgressionPluralLabel().isBlank()) {
+            return template.getProgressionPluralLabel();
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        if (mechanic != null && !mechanic.getPluralLabel().isBlank()) {
+            return mechanic.getPluralLabel();
+        }
+
+        return "progresii";
+    }
+
+    private String resolveProgressionSingularLabel(ScenarioTemplate template) {
+        if (template == null) {
+            return "progresie";
+        }
+
+        if (!template.getProgressionSingularLabel().isBlank()) {
+            return template.getProgressionSingularLabel();
+        }
+
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        if (mechanic != null && !mechanic.getSingularLabel().isBlank()) {
+            return mechanic.getSingularLabel();
+        }
+
+        return "progresie";
+    }
+
+    private String capitalizeProgressionLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return "Progresie";
+        }
+
+        String trimmed = label.trim();
+        if (trimmed.length() == 1) {
+            return trimmed.toUpperCase(Locale.ROOT);
+        }
+        return trimmed.substring(0, 1).toUpperCase(Locale.ROOT) + trimmed.substring(1);
     }
 
     private int countCurrentQuestsInCategory(UUID playerId,
@@ -2186,20 +2445,74 @@ public class ScenarioEngine {
             return false;
         }
 
-        List<String> candidates = new ArrayList<>();
-        candidates.add(progress.templateId());
-        candidates.add(progress.questCode());
-        int templateSeparator = progress.templateId() != null ? progress.templateId().indexOf(':') : -1;
-        if (templateSeparator >= 0 && templateSeparator < progress.templateId().length() - 1) {
-            candidates.add(progress.templateId().substring(templateSeparator + 1));
-        }
-
-        for (String candidate : candidates) {
+        for (String candidate : buildProgressionReferenceCandidates(progress)) {
             if (normalizedReference.equals(normalizeReference(candidate))) {
                 return true;
             }
         }
         return false;
+    }
+
+    private List<String> buildProgressionReferenceCandidates(PlayerQuestProgress progress) {
+        if (progress == null) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        addProgressionReferenceCandidate(candidates, progress.templateId());
+        addProgressionReferenceCandidate(candidates, progress.questCode());
+
+        String definitionId = extractProgressionDefinitionId(progress.templateId());
+        addProgressionReferenceCandidate(candidates, definitionId);
+
+        ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+        if (template != null) {
+            addProgressionReferenceCandidate(candidates, template.getTemplateId());
+            addProgressionReferenceCandidate(candidates, template.getQuestCode());
+            definitionId = extractProgressionDefinitionId(template.getTemplateId());
+            addProgressionReferenceCandidate(candidates, definitionId);
+
+            String code = firstNonBlank(progress.questCode(), template.getQuestCode(), definitionId);
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionMechanicId(), code));
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionMechanicId(), definitionId));
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionKind(), code));
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionKind(), definitionId));
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getSourcePackId(), template.getProgressionMechanicId(), code));
+            addProgressionReferenceCandidate(candidates, progressionReference(template.getSourcePackId(), template.getProgressionMechanicId(), definitionId));
+        }
+
+        return new ArrayList<>(candidates);
+    }
+
+    private void addProgressionReferenceCandidate(Set<String> candidates, String value) {
+        if (value != null && !value.isBlank()) {
+            candidates.add(value);
+        }
+    }
+
+    private String extractProgressionDefinitionId(String templateId) {
+        if (templateId == null || templateId.isBlank()) {
+            return "";
+        }
+
+        int separator = templateId.indexOf(':');
+        return separator >= 0 && separator < templateId.length() - 1
+            ? templateId.substring(separator + 1)
+            : templateId;
+    }
+
+    private String progressionReference(String... parts) {
+        if (parts == null || parts.length == 0) {
+            return "";
+        }
+
+        List<String> cleanParts = new ArrayList<>();
+        for (String part : parts) {
+            if (part != null && !part.isBlank()) {
+                cleanParts.add(part.trim());
+            }
+        }
+        return cleanParts.isEmpty() ? "" : String.join(":", cleanParts);
     }
 
     private String formatDuration(long durationMillis) {
@@ -2250,6 +2563,15 @@ public class ScenarioEngine {
             case "active", "activ" -> QuestLogFilter.ACTIVE;
             case "offered", "oferit", "oferite" -> QuestLogFilter.OFFERED;
             case "tracked", "urmarit" -> QuestLogFilter.TRACKED;
+            case "quest", "questuri" -> QuestLogFilter.QUEST_KIND;
+            case "contract", "contracts", "contracte" -> QuestLogFilter.CONTRACT_KIND;
+            case "contract_current", "contract_curent", "contracte_curente" -> QuestLogFilter.CONTRACT_CURRENT;
+            case "contract_active", "contract_activ", "contracte_active" -> QuestLogFilter.CONTRACT_ACTIVE;
+            case "contract_offered", "contract_oferit", "contracte_oferite" -> QuestLogFilter.CONTRACT_OFFERED;
+            case "contract_tracked", "contract_urmarit", "contracte_urmarite" -> QuestLogFilter.CONTRACT_TRACKED;
+            case "contract_completed", "contract_completat", "contracte_completate" -> QuestLogFilter.CONTRACT_COMPLETED;
+            case "contract_failed", "contract_esuat", "contracte_esuate" -> QuestLogFilter.CONTRACT_FAILED;
+            case "contract_archived", "contract_arhivat", "contracte_arhivate" -> QuestLogFilter.CONTRACT_ARCHIVED;
             case "main", "principal" -> QuestLogFilter.MAIN;
             case "side", "secundar", "secundare" -> QuestLogFilter.SIDE;
             case "repeatable", "repetabil", "repetabile" -> QuestLogFilter.REPEATABLE;
@@ -2278,6 +2600,21 @@ public class ScenarioEngine {
             case COMPLETED -> progress.isCompleted();
             case FAILED -> progress.status() == QuestStatus.FAILED;
             case ARCHIVED -> archived || progress.status().isArchived();
+            case QUEST_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "quest");
+            }
+            case CONTRACT_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "contract");
+            }
+            case CONTRACT_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "contract");
+            case CONTRACT_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "contract");
             case MAIN, SIDE, REPEATABLE -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
                 if (template == null) {
@@ -2294,9 +2631,15 @@ public class ScenarioEngine {
         };
     }
 
+    private boolean questLogMatchesProgressionKind(PlayerQuestProgress progress, String expectedKind) {
+        ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+        return template != null && progressionKindMatches(template, expectedKind);
+    }
+
     private List<String> buildQuestLogSummaryLines(UUID playerId, List<PlayerQuestProgress> currentProgresses) {
         EnumMap<QuestScenarioContract.Category, Integer> categoryCounts =
             new EnumMap<>(QuestScenarioContract.Category.class);
+        Map<String, Integer> mechanicCounts = new LinkedHashMap<>();
         int activeCount = 0;
         int offeredCount = 0;
         int trackedCount = 0;
@@ -2322,6 +2665,7 @@ public class ScenarioEngine {
             }
             QuestScenarioContract.Category category = resolveQuestCategory(template);
             categoryCounts.merge(category, 1, Integer::sum);
+            mechanicCounts.merge(resolveProgressionMechanicDisplay(template), 1, Integer::sum);
         }
 
         List<String> lines = new ArrayList<>();
@@ -2334,16 +2678,53 @@ public class ScenarioEngine {
             + categoryCounts.getOrDefault(QuestScenarioContract.Category.SIDE, 0)
             + "&7, repetabil=&f"
             + categoryCounts.getOrDefault(QuestScenarioContract.Category.REPEATABLE, 0));
+        if (!mechanicCounts.isEmpty()) {
+            lines.add("&7Mecanici: &f" + formatQuestLogMechanicCounts(mechanicCounts));
+        }
         if (missingTemplateCount > 0) {
             lines.add("&eTemplates lipsa in log: &f" + missingTemplateCount);
         }
         return lines;
     }
 
+    private String formatQuestLogMechanicCounts(Map<String, Integer> mechanicCounts) {
+        if (mechanicCounts == null || mechanicCounts.isEmpty()) {
+            return "<gol>";
+        }
+
+        List<String> parts = new ArrayList<>();
+        mechanicCounts.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
+            .forEach(entry -> parts.add(entry.getKey() + "=" + entry.getValue()));
+        return String.join("&7, &f", parts);
+    }
+
+    private boolean progressionKindMatches(ScenarioTemplate template, String expectedKind) {
+        if (template == null || expectedKind == null || expectedKind.isBlank()) {
+            return false;
+        }
+
+        String expected = normalizeReference(expectedKind);
+        List<String> candidates = List.of(
+            template.getProgressionKind(),
+            template.getProgressionMechanicId(),
+            template.getProgressionSingularLabel(),
+            template.getProgressionPluralLabel(),
+            resolveProgressionMechanicDisplay(template)
+        );
+        for (String candidate : candidates) {
+            if (expected.equals(normalizeReference(candidate))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Comparator<PlayerQuestProgress> questLogCurrentComparator(UUID playerId) {
         return Comparator
             .comparingInt((PlayerQuestProgress progress) -> isTrackedQuest(playerId, progress) ? 0 : 1)
             .thenComparingInt(progress -> questLogCategoryPriority(resolveTemplateForProgress(progress, null)))
+            .thenComparing(progress -> resolveProgressionMechanicSortKey(resolveTemplateForProgress(progress, null)))
             .thenComparingInt(this::questLogStatusPriority)
             .thenComparing(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .thenComparing(progress -> progress.templateId() != null ? progress.templateId() : "");
@@ -2358,6 +2739,14 @@ public class ScenarioEngine {
             case SIDE -> 1;
             case REPEATABLE -> 2;
         };
+    }
+
+    private String resolveProgressionMechanicSortKey(ScenarioTemplate template) {
+        String mechanicKey = resolveProgressionMechanicKey(template);
+        if (!mechanicKey.isBlank()) {
+            return mechanicKey;
+        }
+        return template != null ? normalizeReference(resolveProgressionMechanicDisplay(template)) : "";
     }
 
     private int questLogStatusPriority(PlayerQuestProgress progress) {
@@ -2375,16 +2764,15 @@ public class ScenarioEngine {
 
     private String questLogCurrentGroupLabel(UUID playerId, ScenarioTemplate template, PlayerQuestProgress progress) {
         if (isTrackedQuest(playerId, progress)) {
-            return "&b--- Quest urmarit ---";
+            if (template == null) {
+                return "&b--- Progresie urmarita ---";
+            }
+            return "&b--- " + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " urmarit ---";
         }
         if (template == null) {
             return "&e--- Template lipsa ---";
         }
-        return switch (resolveQuestCategory(template)) {
-            case MAIN -> "&e--- Questuri principale ---";
-            case SIDE -> "&e--- Questuri secundare ---";
-            case REPEATABLE -> "&e--- Questuri repetabile ---";
-        };
+        return "&e--- " + resolveProgressionMechanicDisplay(template) + " ---";
     }
 
     private String formatQuestLogArchivedLine(UUID playerId,
@@ -2398,6 +2786,8 @@ public class ScenarioEngine {
             .append(")");
         if (template != null) {
             line.append(" &8[")
+                .append(resolveProgressionMechanicDisplay(template))
+                .append(" / ")
                 .append(resolveQuestCategory(template).displayName())
                 .append("]");
         }
@@ -2420,6 +2810,7 @@ public class ScenarioEngine {
         String targetSuffix = adminView && player != null ? " " + player.getName() : "";
         List<String> commands = new ArrayList<>();
         commands.add("/ainpc quest status " + selector + targetSuffix);
+        commands.add("/ainpc quest progress " + selector + targetSuffix);
         if (progress != null && progress.isActive()) {
             if (isTrackedQuest(playerId, progress)) {
                 commands.add("/ainpc quest track stop" + targetSuffix);
@@ -2436,6 +2827,15 @@ public class ScenarioEngine {
     }
 
     private String questLogActionSelector(ScenarioTemplate template, PlayerQuestProgress progress) {
+        if (template != null) {
+            String code = progress != null && progress.questCode() != null && !progress.questCode().isBlank()
+                ? progress.questCode()
+                : template.getQuestCode();
+            String selector = progressionReference(template.getProgressionMechanicId(), code);
+            if (!selector.isBlank()) {
+                return selector;
+            }
+        }
         if (progress != null && progress.questCode() != null && !progress.questCode().isBlank()) {
             return progress.questCode();
         }
@@ -4747,11 +5147,15 @@ public class ScenarioEngine {
 
     private List<String> buildQuestBriefingMessages(ScenarioTemplate template) {
         List<String> lines = new ArrayList<>();
-        lines.add("&6[Quest] &f" + resolveQuestTitle(template));
+        String progressionLabel = capitalizeProgressionLabel(resolveProgressionSingularLabel(template));
+        lines.add("&6[" + progressionLabel + "] &f" + resolveQuestTitle(template));
 
         String questGiver = resolveProfessionName(template.getQuestGiverProfession());
         if (!questGiver.isBlank()) {
-            lines.add("&7Misiune de la: &f" + questGiver);
+            lines.add("&7Dat de: &f" + questGiver);
+        }
+        if (!resolveProgressionMechanicDisplay(template).isBlank()) {
+            lines.add("&7Mecanica: &f" + resolveProgressionMechanicDisplay(template));
         }
         QuestScenarioContract contract = template.getQuestContract();
         if (contract != null) {
@@ -4791,7 +5195,7 @@ public class ScenarioEngine {
         }
 
         if (progress == null || progress.status() == QuestStatus.NOT_STARTED) {
-            lines.add("&7Misiunea este disponibila, dar nu ai acceptat-o inca.");
+            lines.add("&7Nu ai acceptat inca acest " + resolveProgressionSingularLabel(template) + ".");
             if (npcName != null && !npcName.isBlank()) {
                 lines.add("&eAcceptare: &fScrie &ada&f/&aaccept &fsau foloseste &a/npcquest accept " + npcName);
             }
@@ -4807,7 +5211,7 @@ public class ScenarioEngine {
         }
 
         if (progress.isActive()) {
-            List<String> progressLines = buildObjectiveProgressLines(template, progress);
+            List<String> progressLines = buildObjectiveProgressLines(template, progress, player);
             if (!progressLines.isEmpty()) {
                 lines.add("&eProgres:");
                 lines.addAll(progressLines);
@@ -4815,7 +5219,7 @@ public class ScenarioEngine {
 
             QuestObjectiveCheck objectiveCheck = inspectQuestObjectives(player, template, progress, null, false);
             if (player == null) {
-                lines.add("&7Quest activ.");
+                lines.add("&7" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " activ.");
             } else if (objectiveCheck.complete()) {
                 lines.add("&aAi indeplinit toate obiectivele. Revino la NPC pentru finalizare.");
             } else {
@@ -4831,10 +5235,10 @@ public class ScenarioEngine {
         }
 
         if (progress.isCompleted()) {
-            lines.add("&aQuest finalizat.");
+            lines.add("&a" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " finalizat.");
         } else if (progress.status() == QuestStatus.FAILED) {
-            lines.add("&cQuest abandonat sau esuat.");
-            lines.add("&7Poti cere din nou misiunea daca vrei sa reincepi.");
+            lines.add("&c" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " abandonat sau esuat.");
+            lines.add("&7Poti cere din nou progresia daca vrei sa reincepi.");
         }
 
         return lines;
@@ -4854,7 +5258,7 @@ public class ScenarioEngine {
         };
     }
 
-    private List<String> buildObjectiveProgressLines(ScenarioTemplate template, PlayerQuestProgress progress) {
+    private List<String> buildObjectiveProgressLines(ScenarioTemplate template, PlayerQuestProgress progress, Player player) {
         if (template == null || progress == null || template.getObjectives().isEmpty()) {
             return List.of();
         }
@@ -4863,16 +5267,91 @@ public class ScenarioEngine {
         List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
         for (int index = 0; index < objectives.size(); index++) {
             FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) {
+            boolean activeForStage = shouldShowObjectiveForCurrentStage(template, progress, objective);
+            if (!activeForStage) {
                 continue;
             }
-            int currentAmount = readObjectiveProgress(progress.objectiveProgress(), objective, index);
+            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
             int requiredAmount = Math.max(1, objective.getAmount());
             String label = formatObjectiveProgressLabel(objective);
-            lines.add("&7- &f" + label + ": &e" + Math.min(currentAmount, requiredAmount) + "&7/&f" + requiredAmount);
+            QuestObjectiveState state = resolveQuestObjectiveState(progress, currentAmount, requiredAmount, activeForStage);
+            lines.add("&7- &f" + label + ": &e" + Math.min(currentAmount, requiredAmount)
+                + "&7/&f" + requiredAmount + " &8(" + state.displayName() + ")");
         }
 
         return lines;
+    }
+
+    private List<String> buildQuestProgressDetailLines(Player player,
+                                                       ScenarioTemplate template,
+                                                       PlayerQuestProgress progress) {
+        if (template == null || progress == null || template.getObjectives().isEmpty()) {
+            return List.of();
+        }
+
+        List<String> lines = new ArrayList<>();
+        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
+        for (int index = 0; index < objectives.size(); index++) {
+            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
+            String objectiveKey = buildObjectiveKey(objective, index);
+            int requiredAmount = Math.max(1, objective.getAmount());
+            int currentAmount = progress.isCurrent()
+                ? resolveObjectiveCurrentProgress(player, objective, progress, index)
+                : readObjectiveProgress(progress.objectiveProgress(), objective, index);
+            boolean activeForStage = shouldShowObjectiveForCurrentStage(template, progress, objective);
+            QuestObjectiveState state = resolveQuestObjectiveState(progress, currentAmount, requiredAmount, activeForStage);
+            String stageId = findObjectiveStageId(template, objective);
+
+            StringBuilder line = new StringBuilder("&7- &f")
+                .append(formatObjectiveProgressLabel(objective))
+                .append(" &8[")
+                .append(objectiveKey)
+                .append("]")
+                .append(" &7stare=&f")
+                .append(state.displayName())
+                .append(" &7progres=&e")
+                .append(Math.min(currentAmount, requiredAmount))
+                .append("&7/&f")
+                .append(requiredAmount);
+            if (!stageId.isBlank()) {
+                line.append(" &7stage=&f").append(formatQuestPhase(stageId));
+            }
+            if (!activeForStage) {
+                line.append(" &8(inactiv)");
+            }
+            lines.add(line.toString());
+        }
+
+        return lines;
+    }
+
+    private QuestObjectiveState resolveQuestObjectiveState(PlayerQuestProgress progress,
+                                                           int currentAmount,
+                                                           int requiredAmount,
+                                                           boolean activeForStage) {
+        QuestStatus status = progress != null ? progress.status() : QuestStatus.NOT_STARTED;
+        return resolveQuestObjectiveState(status, currentAmount, requiredAmount, activeForStage);
+    }
+
+    private QuestObjectiveState resolveQuestObjectiveState(QuestStatus status,
+                                                           int currentAmount,
+                                                           int requiredAmount,
+                                                           boolean activeForStage) {
+        int safeRequiredAmount = Math.max(1, requiredAmount);
+        int safeCurrentAmount = Math.max(0, currentAmount);
+        if (safeCurrentAmount >= safeRequiredAmount || status == QuestStatus.COMPLETED) {
+            return QuestObjectiveState.COMPLETED;
+        }
+        if (status == QuestStatus.FAILED) {
+            return QuestObjectiveState.FAILED;
+        }
+        if (!activeForStage || status == QuestStatus.NOT_STARTED || status == QuestStatus.OFFERED) {
+            return QuestObjectiveState.PENDING;
+        }
+        if (safeCurrentAmount > 0) {
+            return QuestObjectiveState.IN_PROGRESS;
+        }
+        return QuestObjectiveState.STARTED;
     }
 
     private boolean shouldShowObjectiveForCurrentStage(ScenarioTemplate template,
@@ -6976,6 +7455,13 @@ public class ScenarioEngine {
         private String hint;
         private List<String> preferredTopologies;
         private List<String> narrativeHints;
+        private boolean progressionEnabled;
+        private String progressionMechanicId;
+        private String progressionKind;
+        private String progressionLabel;
+        private String progressionSingularLabel;
+        private String progressionPluralLabel;
+        private int progressionMaxActive;
         private String questCode;
         private String questGiverProfession;
         private List<String> questPrerequisites;
@@ -7001,6 +7487,13 @@ public class ScenarioEngine {
             this.hint = "";
             this.preferredTopologies = new ArrayList<>();
             this.narrativeHints = new ArrayList<>();
+            this.progressionEnabled = type == ScenarioType.QUEST;
+            this.progressionMechanicId = type == ScenarioType.QUEST ? "quest" : "";
+            this.progressionKind = type == ScenarioType.QUEST ? "quest" : "";
+            this.progressionLabel = type == ScenarioType.QUEST ? "Quest" : "";
+            this.progressionSingularLabel = "quest";
+            this.progressionPluralLabel = "questuri";
+            this.progressionMaxActive = 0;
             this.questCode = "";
             this.questGiverProfession = "";
             this.questPrerequisites = new ArrayList<>();
@@ -7062,6 +7555,32 @@ public class ScenarioEngine {
         public List<String> getNarrativeHints() { return narrativeHints; }
         public void setNarrativeHints(List<String> narrativeHints) {
             this.narrativeHints = narrativeHints != null ? narrativeHints : new ArrayList<>();
+        }
+        public boolean isProgressionEnabled() { return progressionEnabled; }
+        public void setProgressionEnabled(boolean progressionEnabled) { this.progressionEnabled = progressionEnabled; }
+        public String getProgressionMechanicId() { return progressionMechanicId; }
+        public void setProgressionMechanicId(String progressionMechanicId) {
+            this.progressionMechanicId = progressionMechanicId == null ? "" : progressionMechanicId;
+        }
+        public String getProgressionKind() { return progressionKind; }
+        public void setProgressionKind(String progressionKind) {
+            this.progressionKind = progressionKind == null ? "" : progressionKind;
+        }
+        public String getProgressionLabel() { return progressionLabel; }
+        public void setProgressionLabel(String progressionLabel) {
+            this.progressionLabel = progressionLabel == null ? "" : progressionLabel;
+        }
+        public String getProgressionSingularLabel() { return progressionSingularLabel; }
+        public void setProgressionSingularLabel(String progressionSingularLabel) {
+            this.progressionSingularLabel = progressionSingularLabel == null ? "" : progressionSingularLabel;
+        }
+        public String getProgressionPluralLabel() { return progressionPluralLabel; }
+        public void setProgressionPluralLabel(String progressionPluralLabel) {
+            this.progressionPluralLabel = progressionPluralLabel == null ? "" : progressionPluralLabel;
+        }
+        public int getProgressionMaxActive() { return progressionMaxActive; }
+        public void setProgressionMaxActive(int progressionMaxActive) {
+            this.progressionMaxActive = Math.max(0, progressionMaxActive);
         }
         public String getQuestCode() { return questCode; }
         public void setQuestCode(String questCode) { this.questCode = questCode == null ? "" : questCode; }
@@ -7318,6 +7837,7 @@ public class ScenarioEngine {
         String title,
         String statusDisplay,
         String categoryDisplay,
+        String mechanicDisplay,
         boolean tracked,
         boolean current,
         boolean active,
@@ -7341,6 +7861,7 @@ public class ScenarioEngine {
             title = title == null ? "" : title;
             statusDisplay = statusDisplay == null ? "" : statusDisplay;
             categoryDisplay = categoryDisplay == null ? "" : categoryDisplay;
+            mechanicDisplay = mechanicDisplay == null ? "" : mechanicDisplay;
             currentStageId = currentStageId == null ? "" : currentStageId;
             currentStageLabel = currentStageLabel == null ? "" : currentStageLabel;
             questGiverName = questGiverName == null ? "" : questGiverName;
@@ -7359,6 +7880,8 @@ public class ScenarioEngine {
         String description,
         String stageId,
         String stageLabel,
+        String stateId,
+        String stateDisplay,
         int currentAmount,
         int requiredAmount,
         boolean complete,
@@ -7371,6 +7894,8 @@ public class ScenarioEngine {
             description = description == null ? "" : description;
             stageId = stageId == null ? "" : stageId;
             stageLabel = stageLabel == null ? "" : stageLabel;
+            stateId = stateId == null ? "" : stateId;
+            stateDisplay = stateDisplay == null ? "" : stateDisplay;
             currentAmount = Math.max(0, currentAmount);
             requiredAmount = Math.max(1, requiredAmount);
         }
@@ -7503,6 +8028,30 @@ public class ScenarioEngine {
         }
     }
 
+    private enum QuestObjectiveState {
+        PENDING("pending", "In asteptare"),
+        STARTED("started", "Inceput"),
+        IN_PROGRESS("in_progress", "In progres"),
+        COMPLETED("completed", "Completat"),
+        FAILED("failed", "Esuat");
+
+        private final String id;
+        private final String displayName;
+
+        QuestObjectiveState(String id, String displayName) {
+            this.id = id;
+            this.displayName = displayName;
+        }
+
+        private String id() {
+            return id;
+        }
+
+        private String displayName() {
+            return displayName;
+        }
+    }
+
     private enum QuestLogFilter {
         SUMMARY("sumar"),
         ALL("toate"),
@@ -7510,6 +8059,15 @@ public class ScenarioEngine {
         ACTIVE("active"),
         OFFERED("oferite"),
         TRACKED("urmarit"),
+        QUEST_KIND("questuri"),
+        CONTRACT_KIND("contracte"),
+        CONTRACT_CURRENT("contracte curente"),
+        CONTRACT_ACTIVE("contracte active"),
+        CONTRACT_OFFERED("contracte oferite"),
+        CONTRACT_TRACKED("contracte urmarite"),
+        CONTRACT_COMPLETED("contracte completate"),
+        CONTRACT_FAILED("contracte esuate"),
+        CONTRACT_ARCHIVED("contracte arhivate"),
         MAIN("principal"),
         SIDE("secundar"),
         REPEATABLE("repetabil"),
@@ -7529,15 +8087,20 @@ public class ScenarioEngine {
 
         private boolean showsCurrent() {
             return switch (this) {
-                case SUMMARY, ALL, CURRENT, ACTIVE, OFFERED, TRACKED, MAIN, SIDE, REPEATABLE -> true;
+                case SUMMARY, ALL, CURRENT, ACTIVE, OFFERED, TRACKED, QUEST_KIND, CONTRACT_KIND,
+                     CONTRACT_CURRENT, CONTRACT_ACTIVE, CONTRACT_OFFERED, CONTRACT_TRACKED,
+                     MAIN, SIDE, REPEATABLE -> true;
                 case COMPLETED, FAILED, ARCHIVED -> false;
+                case CONTRACT_COMPLETED, CONTRACT_FAILED, CONTRACT_ARCHIVED -> false;
             };
         }
 
         private boolean showsArchived() {
             return switch (this) {
-                case SUMMARY, ALL, COMPLETED, FAILED, ARCHIVED, MAIN, SIDE, REPEATABLE -> true;
-                case CURRENT, ACTIVE, OFFERED, TRACKED -> false;
+                case SUMMARY, ALL, COMPLETED, FAILED, ARCHIVED, QUEST_KIND, CONTRACT_KIND,
+                     CONTRACT_COMPLETED, CONTRACT_FAILED, CONTRACT_ARCHIVED,
+                     MAIN, SIDE, REPEATABLE -> true;
+                case CURRENT, ACTIVE, OFFERED, TRACKED, CONTRACT_CURRENT, CONTRACT_ACTIVE, CONTRACT_OFFERED, CONTRACT_TRACKED -> false;
             };
         }
     }

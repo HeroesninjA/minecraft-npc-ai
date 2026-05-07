@@ -25,7 +25,15 @@ class MedievalQuestPackTest {
 
         ConfigurationSection scenarios = config.getConfigurationSection("scenarios");
         assertNotNull(scenarios, "scenarios section should exist");
-        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08"), scenarios.getKeys(false));
+        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "C01"), scenarios.getKeys(false));
+
+        ConfigurationSection mechanics = config.getConfigurationSection("mechanics");
+        assertNotNull(mechanics, "mechanics section should exist");
+        assertEquals(Set.of("main_quests", "side_quests", "village_contracts"), mechanics.getKeys(false));
+        assertEquals(1, mechanics.getInt("main_quests.max_active"));
+        assertEquals(3, mechanics.getInt("side_quests.max_active"));
+        assertEquals(3, mechanics.getInt("village_contracts.max_active"));
+        assertEquals("contract", mechanics.getString("village_contracts.kind"));
 
         Map<String, String> expectedGivers = Map.of(
             "Q01", "blacksmith",
@@ -35,7 +43,30 @@ class MedievalQuestPackTest {
             "Q05", "healer",
             "Q06", "blacksmith",
             "Q07", "innkeeper",
-            "Q08", "guard"
+            "Q08", "guard",
+            "C01", "merchant"
+        );
+        Map<String, String> expectedBaseTypes = Map.of(
+            "Q01", "QUEST",
+            "Q02", "QUEST",
+            "Q03", "QUEST",
+            "Q04", "QUEST",
+            "Q05", "QUEST",
+            "Q06", "QUEST",
+            "Q07", "QUEST",
+            "Q08", "QUEST",
+            "C01", "TRADE_DEAL"
+        );
+        Map<String, String> expectedMechanics = Map.of(
+            "Q01", "main_quests",
+            "Q02", "side_quests",
+            "Q03", "side_quests",
+            "Q04", "side_quests",
+            "Q05", "side_quests",
+            "Q06", "side_quests",
+            "Q07", "side_quests",
+            "Q08", "side_quests",
+            "C01", "village_contracts"
         );
         Map<String, String> expectedKinds = Map.of(
             "Q01", "fetch",
@@ -45,7 +76,8 @@ class MedievalQuestPackTest {
             "Q05", "fetch",
             "Q06", "exploration",
             "Q07", "delivery",
-            "Q08", "hunt"
+            "Q08", "hunt",
+            "C01", "delivery"
         );
         Map<String, String> expectedCategories = Map.of(
             "Q01", "main",
@@ -55,12 +87,14 @@ class MedievalQuestPackTest {
             "Q05", "side",
             "Q06", "side",
             "Q07", "side",
-            "Q08", "side"
+            "Q08", "side",
+            "C01", "side"
         );
         for (Map.Entry<String, String> entry : expectedGivers.entrySet()) {
             ConfigurationSection scenario = scenarios.getConfigurationSection(entry.getKey());
             assertNotNull(scenario, "scenario " + entry.getKey() + " should exist");
-            assertEquals("QUEST", scenario.getString("base_type"));
+            assertEquals(expectedBaseTypes.get(entry.getKey()), scenario.getString("base_type"));
+            assertEquals(expectedMechanics.get(entry.getKey()), scenario.getString("mechanic"));
             assertEquals(entry.getValue(), scenario.getString("quest.giver_profession"));
             assertEquals(expectedKinds.get(entry.getKey()), scenario.getString("quest.kind"));
             assertEquals(expectedCategories.get(entry.getKey()), scenario.getString("quest.category"));
@@ -101,6 +135,11 @@ class MedievalQuestPackTest {
         assertEquals(List.of("Q01"), scenarios.getStringList("Q03.quest.prerequisites"));
         assertTrue(scenarios.getBoolean("Q04.quest.repeatable"));
         assertEquals(1800, scenarios.getInt("Q04.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("C01.quest.repeatable"));
+        assertEquals(1200, scenarios.getInt("C01.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("C01.progress.enabled"));
+        assertEquals("contract", scenarios.getString("C01.progress.kind"));
+        assertEquals("village_contracts", scenarios.getString("C01.progress.mechanic"));
         assertEquals(List.of("Q02"), scenarios.getStringList("Q05.quest.prerequisites"));
         assertEquals(List.of("Q01"), scenarios.getStringList("Q06.quest.prerequisites"));
         assertEquals(List.of("Q03", "Q04"), scenarios.getStringList("Q07.quest.prerequisites"));

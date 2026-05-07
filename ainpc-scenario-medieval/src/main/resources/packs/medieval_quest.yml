@@ -11,7 +11,7 @@ addon:
   version: "1.0.0"
   primary_scenario: true
   runtime_modes: ["standalone", "hybrid", "advanced"]
-  capabilities: ["traits", "professions", "dialogues", "scenarios"]
+  capabilities: ["traits", "professions", "dialogues", "scenarios", "progression"]
   dependencies: ["medieval", "social"]
 
 traits:
@@ -228,11 +228,37 @@ dialogues:
     - "Hangiul cauta mancare pentru calatorii blocati in sat."
     - "Vindecatorul are nevoie de ierburi pentru leacuri de urgenta."
 
+mechanics:
+  main_quests:
+    kind: "quest"
+    label: "Questuri principale"
+    singular_label: "quest"
+    plural_label: "questuri"
+    progress: true
+    max_active: 1
+
+  side_quests:
+    kind: "quest"
+    label: "Questuri secundare"
+    singular_label: "quest"
+    plural_label: "questuri"
+    progress: true
+    max_active: 3
+
+  village_contracts:
+    kind: "contract"
+    label: "Contracte locale"
+    singular_label: "contract"
+    plural_label: "contracte"
+    progress: true
+    max_active: 3
+
 scenarios:
   Q01:
     name: "Quest Beginer"
     description: "Fierarul din sat ii ofera jucatorului prima misiune: sa aduca 3 lingouri de fier si o scandura din lemn pentru a primi o sabie."
     base_type: "QUEST"
+    mechanic: "main_quests"
     trigger_probability: 0.12
     min_npcs: 1
     requires_player: true
@@ -321,6 +347,7 @@ scenarios:
     name: "Provizii Pentru Hambar"
     description: "Fermierul cere ajutor pentru strangerea unor provizii simple, ca satul sa aiba mancare pentru urmatoarele zile."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.10
     min_npcs: 1
     requires_player: true
@@ -395,6 +422,7 @@ scenarios:
     name: "Drumul Nesigur"
     description: "Garda satului cere ajutor pentru a elimina creaturile care ameninta drumul de langa asezare."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.08
     min_npcs: 1
     requires_player: true
@@ -473,6 +501,7 @@ scenarios:
     name: "Masa Calatorilor"
     description: "Hangiul are clienti blocati in sat si are nevoie de provizii pregatite rapid."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.09
     min_npcs: 1
     requires_player: true
@@ -551,6 +580,7 @@ scenarios:
     name: "Leac Pentru Rani"
     description: "Vindecatorul pregateste leacuri pentru sat si cere ingrediente simple din imprejurimi."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.09
     min_npcs: 1
     requires_player: true
@@ -634,6 +664,7 @@ scenarios:
     name: "Urme La Forja"
     description: "Fierarul observa semne ciudate in forja si cere jucatorului sa verifice locul inainte ca munca satului sa fie afectata."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -746,6 +777,7 @@ scenarios:
     name: "Mesaj Pentru Straja"
     description: "Hangiul pregateste un mesaj pentru straja drumului si cere jucatorului sa confirme cu garda ca patrula poate primi provizii."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -868,6 +900,7 @@ scenarios:
     name: "Patrula De Hotar"
     description: "Garda cere o verificare rapida a hotarului satului dupa primele semne ca drumul poate fi amenintat din nou."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -975,4 +1008,93 @@ scenarios:
           - "brave"
       HERO:
         description: "Jucatorul care patruleaza hotarul."
+        player_role: true
+
+  C01:
+    name: "Contractul Negustorului"
+    description: "Negustorul are nevoie de hartie pentru evidentele caravanei si foloseste runtime-ul de progres ca un contract, nu ca un quest clasic."
+    base_type: "TRADE_DEAL"
+    mechanic: "village_contracts"
+    progress:
+      enabled: true
+      mechanic: "village_contracts"
+      kind: "contract"
+      label: "Contract local"
+      singular_label: "contract"
+      plural_label: "contracte"
+    trigger_probability: 0.08
+    min_npcs: 1
+    requires_player: true
+    hint: "Negustorul rasfoieste registrul si pare sa caute pe cineva dispus la un contract rapid."
+    preferred_topologies:
+      - "village_center"
+      - "market"
+      - "road"
+    narrative_hints:
+      - "este un contract local, nu un quest principal"
+      - "jucatorul strange hartie si o preda negustorului pentru evidentele caravanei"
+      - "contractul demonstreaza ca acelasi runtime de progres poate fi folosit de scenarii TRADE_DEAL"
+    phases:
+      INTRODUCTION: "Negustorul explica de ce are nevoie de hartie pentru contracte si chitante."
+      ACCEPTANCE: "Jucatorul accepta contractul local."
+      GATHERING: "Jucatorul strange hartia ceruta."
+      RETURN: "Jucatorul preda hartia negustorului."
+      COMPLETION: "Negustorul plateste contractul si isi actualizeaza registrul."
+    quest:
+      code: "C01"
+      giver_profession: "merchant"
+      kind: "delivery"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 1200
+      tags: ["contract", "merchant", "delivery", "repeatable"]
+      dialogues:
+        offer:
+          - "Am nevoie de hartie pentru registrele caravanei. Este contract simplu: aduci, platesc."
+        unavailable:
+          - "Mai lasa putin timp intre contracte. Negotul bun are ritm, nu graba."
+        offered:
+          - "Preiei contractul pentru hartie sau il dau urmatorului calator?"
+        accepted:
+          - "Bun. Adu-mi hartia si trecem plata in registru."
+        active:
+          - "Contractul ramane deschis pana imi aduci hartia."
+        ready:
+          - "Ai hartia? Preda-mi-o si inchidem contractul."
+        completed:
+          - "Corect si rapid. Contract inchis, plata facuta."
+      objectives:
+        collect_paper:
+          type: "collect_item"
+          item: "PAPER"
+          amount: 4
+          phase: "GATHERING"
+          description: "Strange 4 foi de hartie pentru negustor."
+        deliver_paper:
+          type: "deliver_to_npc"
+          item: "PAPER"
+          amount: 4
+          phase: "RETURN"
+          description: "Preda negustorului cele 4 foi de hartie."
+      rewards:
+        emeralds:
+          type: "item"
+          item: "EMERALD"
+          amount: 2
+          description: "Primesti 2 smaralde pentru contract."
+    roles:
+      QUEST_GIVER:
+        description: "Negustorul care tine registrul contractelor locale."
+        required_professions:
+          - "merchant"
+        preferred_professions:
+          - "merchant"
+        preferred_traits:
+          - "cunning"
+          - "charismatic"
+      HERO:
+        description: "Jucatorul care preia contractul local."
         player_role: true

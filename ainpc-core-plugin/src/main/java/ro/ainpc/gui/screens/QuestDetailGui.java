@@ -221,6 +221,9 @@ public class QuestDetailGui implements GuiScreen {
     private List<String> headerLore(ScenarioEngine.QuestGuiEntry entry) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Status: &f" + entry.statusDisplay());
+        if (!entry.mechanicDisplay().isBlank()) {
+            lore.add("&7Mecanica: &f" + entry.mechanicDisplay());
+        }
         lore.add("&7Categorie: &f" + entry.categoryDisplay());
         if (!entry.currentStageLabel().isBlank()) {
             lore.add("&7Stage curent: &f" + entry.currentStageLabel());
@@ -238,14 +241,21 @@ public class QuestDetailGui implements GuiScreen {
     }
 
     private Material objectiveMaterial(ScenarioEngine.QuestGuiObjective objective) {
+        if ("failed".equalsIgnoreCase(objective.stateId())) {
+            return Material.REDSTONE;
+        }
         if (objective.complete()) {
             return Material.LIME_DYE;
+        }
+        if ("in_progress".equalsIgnoreCase(objective.stateId())) {
+            return Material.ORANGE_DYE;
         }
         return objective.active() ? Material.YELLOW_DYE : Material.LIGHT_GRAY_DYE;
     }
 
     private List<String> objectiveLore(ScenarioEngine.QuestGuiObjective objective) {
         List<String> lore = new ArrayList<>();
+        lore.add("&7Stare: &f" + objective.stateDisplay());
         lore.add("&7Progres: &f" + objective.currentAmount() + "&7/&f" + objective.requiredAmount());
         lore.add("&7Tip: &f" + objective.type());
         if (!objective.stageLabel().isBlank()) {

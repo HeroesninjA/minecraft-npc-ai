@@ -25,7 +25,7 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "gui", "quest", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "info", "gui", "quest", "progression", "contract", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
     private static final List<String> GUI_MODES = Arrays.asList(
         "main", "quest", "world", "stats", "interact", "shop", "manager", "audit", "debug"
@@ -35,10 +35,14 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> ROUTINE_ACTIONS = Arrays.asList("tick", "status");
     private static final List<String> QUEST_MODES = Arrays.asList(
         "gui", "log", "track", "current", "nearest", "accept", "decline", "da", "nu", "ok", "refuz",
-        "abandon", "status", "reset", "complete", "anchors"
+        "abandon", "status", "progress", "progres", "reset", "complete", "anchors"
     );
     private static final List<String> QUEST_DECISION_MODES = Arrays.asList(
         "accept", "decline", "yes", "y", "da", "ok", "confirm", "deny", "reject", "no", "n", "nu", "refuz"
+    );
+    private static final List<String> QUEST_LOG_FILTERS = Arrays.asList(
+        "active", "current", "tracked", "quest", "contract", "main", "side", "repeatable",
+        "completed", "failed", "archived", "all"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "household", "settlement", "save");
     private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
@@ -87,7 +91,12 @@ public class AINPCTabCompleter implements TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if ("npcquest".equalsIgnoreCase(command.getName()) || "quest".equalsIgnoreCase(command.getName())) {
+        if ("npcquest".equalsIgnoreCase(command.getName())
+            || "quest".equalsIgnoreCase(command.getName())
+            || "progression".equalsIgnoreCase(command.getName())
+            || "progress".equalsIgnoreCase(command.getName())
+            || "contract".equalsIgnoreCase(command.getName())
+            || "contracts".equalsIgnoreCase(command.getName())) {
             return completeQuestArgs(args);
         }
 
@@ -114,7 +123,7 @@ public class AINPCTabCompleter implements TabCompleter {
                         completions.addAll(getNPCNames(args[1]));
                     }
                 }
-                case "quest" -> {
+                case "quest", "progression", "progress", "contract", "contracts" -> {
                     completions.addAll(completeQuestArgs(sliceQuestArgs(args)));
                 }
                 case "gui" -> {
@@ -327,10 +336,14 @@ public class AINPCTabCompleter implements TabCompleter {
                     if (QUEST_DECISION_MODES.contains(questMode)) {
                         completions.addAll(getOnlinePlayerNames(questArgs[1]));
                     }
+                } else if (questMode.equals("progress") || questMode.equals("progres")) {
+                    completions.addAll(filterStartsWith(List.of("tracked", "current"), questArgs[1]));
+                    completions.addAll(getOnlinePlayerNames(questArgs[1]));
                 } else if (questMode.equals("anchors")) {
                     completions.addAll(filterStartsWith(List.of("all"), questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
                 } else if (questMode.equals("log")) {
+                    completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
                 } else if (questMode.equals("track") || questMode.equals("current")) {
                     completions.addAll(filterStartsWith(List.of("start", "stop"), questArgs[1]));
@@ -345,8 +358,13 @@ public class AINPCTabCompleter implements TabCompleter {
                     || QUEST_DECISION_MODES.contains(questMode)
                     || questMode.equals("abandon") || questMode.equals("status")) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
+                } else if (questMode.equals("progress") || questMode.equals("progres")) {
+                    completions.addAll(getOnlinePlayerNames(questArgs[2]));
                 } else if (questMode.equals("anchors")) {
                     completions.add("<templateId>");
+                } else if (questMode.equals("log")) {
+                    completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[2]));
+                    completions.addAll(getOnlinePlayerNames(questArgs[2]));
                 } else if ((questMode.equals("track") || questMode.equals("current"))
                     && (questArgs[1].equalsIgnoreCase("start") || questArgs[1].equalsIgnoreCase("stop"))) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));

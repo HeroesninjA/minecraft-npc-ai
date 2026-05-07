@@ -13,12 +13,20 @@ commands:
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC
-    usage: /npcquest <log|status|numeNpc|nearest|reset|complete|anchors> [jucator]
+    usage: /npcquest <log|status|progress|numeNpc|nearest|reset|complete|anchors> [jucator]
     aliases: [npcq]
   quest:
     description: Quest log si comenzi rapide pentru quest-uri
-    usage: /quest <log|status|numeNpc|nearest>
+    usage: /quest <log|status|progress|numeNpc|nearest>
     aliases: [quests]
+  progression:
+    description: Log si comenzi generice pentru mecanici de progres
+    usage: /progression <log|status|progress|track|abandon> [selector] [jucator]
+    aliases: [progress]
+  contract:
+    description: Log si comenzi rapide pentru contracte locale
+    usage: /contract <log|status|progress|track|abandon> [selector] [jucator]
+    aliases: [contracts]
 
 permissions:
   ainpc.admin:

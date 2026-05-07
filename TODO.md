@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-05
+Actualizat: 2026-05-07
 
 ## Exista deja
 
@@ -45,7 +45,14 @@ Actualizat: 2026-05-05
 - [x] Raport dedicat `quest-audit-report.txt` in `/ainpc debugdump quest`
 - [x] Export/debugdump pentru quest templates incarcate in `loaded-quest-definitions.json`
 - [x] Export/debugdump complet pentru `player_quests` in `player-quest-progress.json`
+- [x] Export/debugdump generic pentru progresii in `player-progressions.json`, ca view peste `player_quests` cu metadata de mecanica
 - [x] Export/debugdump pentru `story_events` in `story-events.json`
+- [x] Metadata initiala pentru `ProgressionService`: feature packs pot declara `mechanics`, iar scenariile pot seta `mechanic`/`progress`
+- [x] Availability aplica initial `max_active` si pe mecanici de progres declarate in addon
+- [x] Addonul medieval are primul contract non-`QUEST` (`C01`) pe mecanica `village_contracts`
+- [x] `quest log` afiseaza/grupeaza dupa mecanica si are filtre initiale `quest`/`contract`
+- [x] Selectorii de progres accepta forme cu mecanica, de exemplu `village_contracts:C01`
+- [x] Fatade initiale pentru progres generic: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`
 - [x] Script `scripts/smoke-paper-quests.ps1` pentru pregatirea smoke test-ului Paper pe questuri
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
@@ -100,7 +107,7 @@ Actualizat: 2026-05-05
 - [ ] Comenzi de debug si inspectie pentru:
 - [ ] prompt AI
 - [ ] scenarii active
-- [ ] quest progress
+- [x] quest progress
 - [x] validare initiala quest templates prin `/ainpc audit quest`
 - [x] audit strict initial pentru continut quest avansat
 - [ ] validare completa pack-uri si addonuri
@@ -119,7 +126,7 @@ Actualizat: 2026-05-05
 ## Questuri si povesti
 
 - [ ] Questuri in lant, nu doar interactiuni izolate
-- [ ] Obiective cu stari: inceput, progres, completat, esuat
+- [x] Obiective cu stari: inceput, progres, completat, esuat
 - [ ] Recompense configurabile pe scenariu
 - [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes

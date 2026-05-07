@@ -12,7 +12,10 @@ Obiectivul nu este o rescriere brusca. Obiectivul este o evolutie controlata:
 - adaugi tipuri noi de obiective doar cand au listener, validare si persistenta;
 - folosesti mapping semantic pentru regiuni, places si nodes;
 - separi treptat quest runtime-ul din `ScenarioEngine`;
+- extragi partea comuna intr-un `ProgressionService`, astfel incat addonurile sa poata folosi acelasi runtime pentru questuri, contracte, datorii, evenimente si alte mecanici cu progres;
 - ajungi la questuri multi-etapa, cu mai multe questuri active si progres persistent clar.
+
+Pentru directia generica de runtime, vezi `progression-service.md`. `QuestEngine` ramane directia pentru compatibilitatea questurilor concrete, dar mecanicile care nu se numesc quest nu trebuie sa primeasca runtime separat duplicat.
 
 ## Starea curenta
 
@@ -1058,7 +1061,7 @@ Reguli:
 - cheia principala este `player_uuid + template_id`;
 - `quest.code` este cod de design, nu inlocuitor complet pentru `template_id`;
 - un jucator poate avea simultan quest principal, quest secundar, quest repetabil si quest de reputatie;
-- contractul suporta categorii `main`, `side` si `repeatable`, cu limite initiale in `quest.max_active`;
+- contractul suporta categorii `main`, `side` si `repeatable`, cu limite initiale in `quest.max_active`; pentru mecanici declarate in `mechanics`, availability-ul poate aplica si `max_active` pe mecanica;
 - UI-ul si comenzile trebuie sa ceara explicit questul cand exista mai multe active;
 - tracking-ul poate alege "quest tracked", nu "singurul quest activ";
 - questul urmarit este persistat prin `player_quests.tracked`.
@@ -1160,13 +1163,16 @@ Recomandare importanta:
 - comenzile `quest status` si `quest track` accepta deja `quest_code` sau `template_id`;
 - comanda `quest abandon` accepta deja `tracked`, `quest_code` sau `template_id`;
 - comanda admin `quest debug` poate inspecta progresul si variabilele persistente pentru `tracked`, `quest_code` sau `template_id`;
-- `debugdump quest` exporta `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json`;
+- `debugdump quest` exporta `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json`;
 - `quest log` are filtre initiale: `active`, `current`, `tracked`, `main`, `side`, `repeatable`, `completed`, `failed`, `archived`, `all`;
 - `quest log` sorteaza questurile curente cu tracked primul, apoi `main`, `side`, `repeatable`, si arata sumar pe status/categorii;
 - `quest log` afiseaza actiuni rapide cu selectorul corect pentru status, tracking, abandon si debug admin;
-- `quest log` grupeaza vizual questurile curente in tracked, main, side, repeatable si template lipsa;
-- contractul are deja categorie `main`, `side`, `repeatable`, iar availability-ul aplica `quest.max_active`;
+- `quest log` grupeaza vizual progresiile curente dupa mecanica, cu tracked si template lipsa separate;
+- `quest log` are filtre initiale pentru `quest` si `contract`, pe langa filtrele legacy de categorie/status;
+- contractul are deja categorie `main`, `side`, `repeatable`, iar availability-ul aplica `quest.max_active` si, initial, `mechanics.<id>.max_active`;
 - questul tracked este persistat si restaurat la load;
+- selectorii accepta forme compatibile cu mecanici, de exemplu `side_quests:Q07`, `village_contracts:C01` sau `medieval_quest:village_contracts:C01`;
+- exista fatade initiale `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...` si `/contract ...`, rutate catre acelasi runtime compatibil;
 - `/ainpc audit quest` valideaza ca un jucator nu are mai multe questuri tracked si ca tracked indica doar questuri active;
 - maturizeaza mai departe `quest log` cu indicator tracked si filtre;
 - pastreaza selectia explicita prin `template_id` sau `quest_code`;
@@ -1920,6 +1926,7 @@ Export minim:
 debug-dump/
   quests/
     loaded-quest-definitions.json
+    player-progressions.json
     player-quest-progress.json
     quest-anchor-bindings.json
     quest-audit-report.txt

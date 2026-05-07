@@ -157,6 +157,22 @@ public class AINPCPlugin extends JavaPlugin {
         } else {
             getLogger().warning("Comanda 'quest' nu a fost gasita in plugin.yml.");
         }
+
+        PluginCommand progressionCommand = getCommand("progression");
+        if (progressionCommand != null) {
+            progressionCommand.setExecutor(command);
+            progressionCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'progression' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand contractCommand = getCommand("contract");
+        if (contractCommand != null) {
+            contractCommand.setExecutor(command);
+            contractCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'contract' nu a fost gasita in plugin.yml.");
+        }
         
         // Inregistreaza listenerele
         getLogger().info("Inregistrare listenere...");

@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-07
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -229,6 +229,12 @@ Ce este implementat:
 - asociere quest cu profesia NPC-ului
 - oferire, acceptare, refuz, abandon, status, reset si completare fortata
 - progres persistent per jucator in tabela `player_quests`
+- metadata initiala pentru runtime generic de progres: feature packs pot declara `mechanics`, scenariile pot seta `mechanic` si `progress/progression`, iar scenariile non-`QUEST` cu progres activ pot intra in runtime-ul jucabil actual
+- availability-ul aplica initial si `max_active` pe mecanica de progres, nu doar pe categoriile legacy `quest.max_active`
+- addonul medieval are mecanici separate `main_quests`, `side_quests` si `village_contracts`, inclusiv contractul non-`QUEST` `C01` bazat pe `TRADE_DEAL`
+- `quest log`, statusul si GUI-ul afiseaza initial mecanica de progres; log-ul poate filtra `quest` si `contract`
+- selectorii de progres accepta si forme explicite cu mecanica, de exemplu `village_contracts:C01` sau `medieval_quest:village_contracts:C01`
+- fatade initiale peste runtime-ul comun: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...` si `/contract ...`
 - selector explicit pentru `quest status`, `quest track` si `quest abandon`
 - comanda admin read-only `quest debug` pentru progres, variabile si obiective template
 - filtre initiale in `quest log` pentru status, tracking si categorii `main`/`side`/`repeatable`
@@ -242,8 +248,9 @@ Ce este implementat:
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
-- raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json` prin `/ainpc debugdump quest`
+- raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json` prin `/ainpc debugdump quest`
 - audit read-only `/ainpc audit quest`
+- audit/debugdump initial pentru progression mechanics, metadata `progression_*` din definitiile incarcate si progres persistent exportat generic ca `player-progressions.json`
 - validare initiala de quest templates in `/ainpc audit quest`
 - validare `phase`/`stage`, stage IDs, `completion_mode`, `next_stage` si objective IDs pentru questuri etapizate in `/ainpc audit quest` si `debugdump quest`
 - validare pentru `player_quests.tracked`: cel mult un quest tracked activ per jucator

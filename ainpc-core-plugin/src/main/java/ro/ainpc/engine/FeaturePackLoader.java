@@ -39,6 +39,7 @@ public class FeaturePackLoader {
     private final Map<String, TopologyDefinition> allTopologies;
     private final Map<TopologyCategory, List<TopologyDefinition>> topologiesByCategory;
     private final Map<String, ScenarioDefinition> allScenarios;
+    private final Map<String, ProgressionMechanicDefinition> allProgressionMechanics;
 
     public FeaturePackLoader(AINPCPlugin plugin) {
         this.plugin = plugin;
@@ -49,6 +50,7 @@ public class FeaturePackLoader {
         this.allTopologies = new HashMap<>();
         this.topologiesByCategory = new EnumMap<>(TopologyCategory.class);
         this.allScenarios = new LinkedHashMap<>();
+        this.allProgressionMechanics = new LinkedHashMap<>();
     }
 
     /**
@@ -62,6 +64,7 @@ public class FeaturePackLoader {
         allTopologies.clear();
         topologiesByCategory.clear();
         allScenarios.clear();
+        allProgressionMechanics.clear();
         if (plugin.getPlatform() != null) {
             plugin.getPlatform().getAddonRegistry().removeByOrigin(AddonDescriptor.ORIGIN_FEATURE_PACK);
         }
@@ -96,6 +99,7 @@ public class FeaturePackLoader {
         plugin.getLogger().info("Traits disponibile: " + allTraits.size());
         plugin.getLogger().info("Profesii disponibile: " + allProfessions.size());
         plugin.getLogger().info("Topologii disponibile: " + allTopologies.size());
+        plugin.getLogger().info("Mecanici de progres disponibile: " + allProgressionMechanics.size());
     }
 
     /**
@@ -180,6 +184,12 @@ public class FeaturePackLoader {
             ConfigurationSection dialoguesSection = config.getConfigurationSection("dialogues");
             if (dialoguesSection != null) {
                 loadDialogues(pack, dialoguesSection);
+            }
+
+            // Incarca mecanici generice de progres
+            ConfigurationSection mechanicsSection = config.getConfigurationSection("mechanics");
+            if (mechanicsSection != null) {
+                loadProgressionMechanics(pack, mechanicsSection);
             }
             
             // Incarca scenarii custom
@@ -322,6 +332,82 @@ public class FeaturePackLoader {
     }
 
     /**
+     * Incarca mecanici generice de progres dintr-un feature pack.
+     */
+    private void loadProgressionMechanics(FeaturePack pack, ConfigurationSection section) {
+        if (pack == null || section == null) {
+            return;
+        }
+
+        for (String mechanicId : section.getKeys(false)) {
+            ConfigurationSection mechanicSection = section.getConfigurationSection(mechanicId);
+            if (mechanicSection == null) {
+                continue;
+            }
+
+            ProgressionMechanicDefinition mechanic = new ProgressionMechanicDefinition(
+                pack.getId(),
+                mechanicId,
+                mechanicSection.getString("kind", mechanicId),
+                mechanicSection.getString("label", mechanicSection.getString("name", mechanicId)),
+                mechanicSection.getString("singular_label", mechanicSection.getString("singular", mechanicId)),
+                mechanicSection.getString("plural_label", mechanicSection.getString("plural", mechanicId + "s")),
+                mechanicSection.getBoolean("progress", mechanicSection.getBoolean("enabled", true)),
+                Math.max(0, mechanicSection.getInt("max_active", 0)),
+                loadProgressionMetadata(mechanicSection)
+            );
+            registerProgressionMechanic(pack, mechanic);
+        }
+    }
+
+    private Map<String, String> loadProgressionMetadata(ConfigurationSection section) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        if (section == null) {
+            return metadata;
+        }
+
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            if (value == null || value instanceof ConfigurationSection) {
+                continue;
+            }
+            if (value instanceof List<?>) {
+                metadata.put(key, String.join(",", section.getStringList(key)));
+            } else {
+                metadata.put(key, questEntryValueToString(value));
+            }
+        }
+        return metadata;
+    }
+
+    private void registerProgressionMechanic(FeaturePack pack, ProgressionMechanicDefinition mechanic) {
+        if (pack == null || mechanic == null || mechanic.getId().isBlank()) {
+            return;
+        }
+
+        pack.addProgressionMechanic(mechanic);
+        allProgressionMechanics.put(pack.getId() + ":" + mechanic.getId(), mechanic);
+    }
+
+    private void ensureDefaultQuestMechanic(FeaturePack pack) {
+        if (pack == null || pack.hasProgressionMechanic("quest")) {
+            return;
+        }
+
+        registerProgressionMechanic(pack, new ProgressionMechanicDefinition(
+            pack.getId(),
+            "quest",
+            "quest",
+            "Questuri",
+            "quest",
+            "questuri",
+            true,
+            0,
+            Map.of("source", "legacy_quest_default")
+        ));
+    }
+
+    /**
      * Incarca scenarii custom dintr-o sectiune YAML
      */
     private void loadScenarios(FeaturePack pack, ConfigurationSection section) {
@@ -352,6 +438,7 @@ public class FeaturePackLoader {
             scenario.setHint(scenarioSection.getString("hint", ""));
             scenario.setPreferredTopologies(scenarioSection.getStringList("preferred_topologies"));
             scenario.setNarrativeHints(scenarioSection.getStringList("narrative_hints"));
+            scenario.setProgressionMechanicId(scenarioSection.getString("mechanic", ""));
 
             ConfigurationSection rolesSection = scenarioSection.getConfigurationSection("roles");
             if (rolesSection != null) {
@@ -409,12 +496,101 @@ public class FeaturePackLoader {
                 );
             }
 
+            loadScenarioProgression(scenario, scenarioSection, questSection != null);
+            if ("quest".equalsIgnoreCase(scenario.getProgressionMechanicId())) {
+                ensureDefaultQuestMechanic(pack);
+            }
+
             pack.addScenario(scenario);
             allScenarios.put(pack.getId() + ":" + scenarioId, scenario);
         }
 
         if (!pack.getScenarios().isEmpty()) {
             pack.markHasScenarioDefinitions();
+        }
+    }
+
+    private void loadScenarioProgression(ScenarioDefinition scenario,
+                                         ConfigurationSection scenarioSection,
+                                         boolean hasQuestSection) {
+        if (scenario == null || scenarioSection == null) {
+            return;
+        }
+
+        ConfigurationSection progressSection = scenarioSection.getConfigurationSection("progress");
+        if (progressSection == null) {
+            progressSection = scenarioSection.getConfigurationSection("progression");
+        }
+
+        boolean hasProgressSection = progressSection != null;
+        boolean legacyQuestProgress = hasQuestSection || scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST;
+        scenario.setProgressionEnabled(hasProgressSection
+            ? progressSection.getBoolean("enabled", progressSection.getBoolean("progress", true))
+            : legacyQuestProgress);
+
+        if (hasProgressSection) {
+            scenario.setProgressionMechanicId(firstNonBlank(
+                progressSection.getString("mechanic", ""),
+                progressSection.getString("mechanic_id", ""),
+                scenario.getProgressionMechanicId()
+            ));
+            scenario.setProgressionKind(firstNonBlank(
+                progressSection.getString("kind", ""),
+                progressSection.getString("type", ""),
+                scenario.getProgressionKind()
+            ));
+            scenario.setProgressionLabel(firstNonBlank(
+                progressSection.getString("label", ""),
+                progressSection.getString("display_name", "")
+            ));
+            scenario.setProgressionSingularLabel(firstNonBlank(
+                progressSection.getString("singular_label", ""),
+                progressSection.getString("singular", "")
+            ));
+            scenario.setProgressionPluralLabel(firstNonBlank(
+                progressSection.getString("plural_label", ""),
+                progressSection.getString("plural", "")
+            ));
+            scenario.setProgressionMaxActive(Math.max(0, progressSection.getInt("max_active", 0)));
+        }
+
+        if (scenario.getProgressionMechanicId().isBlank() && legacyQuestProgress) {
+            scenario.setProgressionMechanicId("quest");
+        }
+        applyProgressionMechanicDefaults(scenario);
+        if (scenario.getProgressionKind().isBlank() && legacyQuestProgress) {
+            scenario.setProgressionKind(firstNonBlank(scenario.getQuestScenarioKind(), "quest"));
+        }
+        if (scenario.getProgressionLabel().isBlank() && legacyQuestProgress) {
+            scenario.setProgressionLabel("Quest");
+        }
+    }
+
+    private void applyProgressionMechanicDefaults(ScenarioDefinition scenario) {
+        if (scenario == null || scenario.getProgressionMechanicId().isBlank()) {
+            return;
+        }
+
+        ProgressionMechanicDefinition mechanic =
+            findProgressionMechanicDefinition(scenario.getPackId(), scenario.getProgressionMechanicId());
+        if (mechanic == null) {
+            return;
+        }
+
+        if (scenario.getProgressionKind().isBlank()) {
+            scenario.setProgressionKind(mechanic.getKind());
+        }
+        if (scenario.getProgressionLabel().isBlank()) {
+            scenario.setProgressionLabel(mechanic.getLabel());
+        }
+        if (scenario.getProgressionSingularLabel().isBlank()) {
+            scenario.setProgressionSingularLabel(mechanic.getSingularLabel());
+        }
+        if (scenario.getProgressionPluralLabel().isBlank()) {
+            scenario.setProgressionPluralLabel(mechanic.getPluralLabel());
+        }
+        if (scenario.getProgressionMaxActive() == 0) {
+            scenario.setProgressionMaxActive(mechanic.getMaxActive());
         }
     }
 
@@ -866,6 +1042,10 @@ public class FeaturePackLoader {
         return allTopologies.values();
     }
 
+    public Collection<ProgressionMechanicDefinition> getAllProgressionMechanics() {
+        return Collections.unmodifiableCollection(allProgressionMechanics.values());
+    }
+
     public Collection<ScenarioDefinition> getAllScenarios() {
         return Collections.unmodifiableCollection(allScenarios.values());
     }
@@ -927,6 +1107,33 @@ public class FeaturePackLoader {
         }
 
         return target.matches(occupation);
+    }
+
+    public ProgressionMechanicDefinition findProgressionMechanicDefinition(String packId, String reference) {
+        if (reference == null || reference.isBlank()) {
+            return null;
+        }
+
+        String normalizedReference = reference.trim();
+        if (normalizedReference.contains(":")) {
+            ProgressionMechanicDefinition direct = allProgressionMechanics.get(normalizedReference);
+            if (direct != null) {
+                return direct;
+            }
+        }
+
+        if (packId != null && !packId.isBlank()) {
+            ProgressionMechanicDefinition local = allProgressionMechanics.get(packId + ":" + normalizedReference);
+            if (local != null) {
+                return local;
+            }
+        }
+
+        return allProgressionMechanics.values().stream()
+            .filter(mechanic -> mechanic.getId().equalsIgnoreCase(normalizedReference)
+                || mechanic.getKind().equalsIgnoreCase(normalizedReference))
+            .findFirst()
+            .orElse(null);
     }
 
     /**
@@ -1026,6 +1233,9 @@ public class FeaturePackLoader {
         if (pack.hasScenarioDefinitions()) {
             capabilities.add("scenarios");
         }
+        if (!pack.getProgressionMechanics().isEmpty()) {
+            capabilities.add("progression");
+        }
         return capabilities;
     }
 
@@ -1039,12 +1249,29 @@ public class FeaturePackLoader {
         } else {
             sanitized.remove("scenarios");
         }
+        if (!pack.getProgressionMechanics().isEmpty()) {
+            sanitized.add("progression");
+        } else {
+            sanitized.remove("progression");
+        }
 
         return new ArrayList<>(sanitized);
     }
 
     private static String normalizeText(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     // ==================== Inner Classes ====================
@@ -1060,6 +1287,7 @@ public class FeaturePackLoader {
         private final List<ProfessionDefinition> professions;
         private final List<TopologyDefinition> topologies;
         private final List<ScenarioDefinition> scenarios;
+        private final List<ProgressionMechanicDefinition> progressionMechanics;
         private final Map<String, List<String>> dialogues;
         private boolean hasScenarioDefinitions;
         private AddonDescriptor addonDescriptor;
@@ -1072,6 +1300,7 @@ public class FeaturePackLoader {
             this.professions = new ArrayList<>();
             this.topologies = new ArrayList<>();
             this.scenarios = new ArrayList<>();
+            this.progressionMechanics = new ArrayList<>();
             this.dialogues = new HashMap<>();
             this.hasScenarioDefinitions = false;
         }
@@ -1080,6 +1309,11 @@ public class FeaturePackLoader {
         public void addProfession(ProfessionDefinition profession) { professions.add(profession); }
         public void addTopology(TopologyDefinition topology) { topologies.add(topology); }
         public void addScenario(ScenarioDefinition scenario) { scenarios.add(scenario); }
+        public void addProgressionMechanic(ProgressionMechanicDefinition progressionMechanic) {
+            if (progressionMechanic != null && !hasProgressionMechanic(progressionMechanic.getId())) {
+                progressionMechanics.add(progressionMechanic);
+            }
+        }
         public void addDialogueCategory(String category, List<String> lines) { dialogues.put(category, lines); }
         public void markHasScenarioDefinitions() { hasScenarioDefinitions = true; }
 
@@ -1090,10 +1324,63 @@ public class FeaturePackLoader {
         public List<ProfessionDefinition> getProfessions() { return professions; }
         public List<TopologyDefinition> getTopologies() { return topologies; }
         public List<ScenarioDefinition> getScenarios() { return scenarios; }
+        public List<ProgressionMechanicDefinition> getProgressionMechanics() { return progressionMechanics; }
         public Map<String, List<String>> getDialogues() { return dialogues; }
         public boolean hasScenarioDefinitions() { return hasScenarioDefinitions; }
         public AddonDescriptor getAddonDescriptor() { return addonDescriptor; }
         public void setAddonDescriptor(AddonDescriptor addonDescriptor) { this.addonDescriptor = addonDescriptor; }
+        public boolean hasProgressionMechanic(String mechanicId) {
+            if (mechanicId == null || mechanicId.isBlank()) {
+                return false;
+            }
+            return progressionMechanics.stream()
+                .anyMatch(mechanic -> mechanic.getId().equalsIgnoreCase(mechanicId));
+        }
+    }
+
+    /**
+     * Definitia unei mecanici generice de progres.
+     */
+    public static class ProgressionMechanicDefinition {
+        private final String packId;
+        private final String id;
+        private final String kind;
+        private final String label;
+        private final String singularLabel;
+        private final String pluralLabel;
+        private final boolean progressEnabled;
+        private final int maxActive;
+        private final Map<String, String> metadata;
+
+        public ProgressionMechanicDefinition(String packId,
+                                             String id,
+                                             String kind,
+                                             String label,
+                                             String singularLabel,
+                                             String pluralLabel,
+                                             boolean progressEnabled,
+                                             int maxActive,
+                                             Map<String, String> metadata) {
+            this.packId = packId == null ? "" : packId;
+            this.id = id == null ? "" : id;
+            this.kind = kind == null || kind.isBlank() ? this.id : kind;
+            this.label = label == null || label.isBlank() ? this.id : label;
+            this.singularLabel = singularLabel == null || singularLabel.isBlank() ? this.id : singularLabel;
+            this.pluralLabel = pluralLabel == null || pluralLabel.isBlank() ? this.label : pluralLabel;
+            this.progressEnabled = progressEnabled;
+            this.maxActive = Math.max(0, maxActive);
+            this.metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata != null ? metadata : Map.of()));
+        }
+
+        public String getPackId() { return packId; }
+        public String getId() { return id; }
+        public String getKind() { return kind; }
+        public String getLabel() { return label; }
+        public String getSingularLabel() { return singularLabel; }
+        public String getPluralLabel() { return pluralLabel; }
+        public boolean isProgressEnabled() { return progressEnabled; }
+        public int getMaxActive() { return maxActive; }
+        public Map<String, String> getMetadata() { return metadata; }
     }
 
     /**
@@ -1266,6 +1553,13 @@ public class FeaturePackLoader {
         private boolean questRepeatable;
         private long questCooldownSeconds;
         private Map<String, List<String>> questDialogues;
+        private boolean progressionEnabled;
+        private String progressionMechanicId;
+        private String progressionKind;
+        private String progressionLabel;
+        private String progressionSingularLabel;
+        private String progressionPluralLabel;
+        private int progressionMaxActive;
 
         public ScenarioDefinition(String packId,
                                   String id,
@@ -1301,6 +1595,13 @@ public class FeaturePackLoader {
             this.questRepeatable = false;
             this.questCooldownSeconds = 0L;
             this.questDialogues = new LinkedHashMap<>();
+            this.progressionEnabled = false;
+            this.progressionMechanicId = "";
+            this.progressionKind = "";
+            this.progressionLabel = "";
+            this.progressionSingularLabel = "";
+            this.progressionPluralLabel = "";
+            this.progressionMaxActive = 0;
         }
 
         public void addRole(ScenarioRoleDefinition role) {
@@ -1403,6 +1704,32 @@ public class FeaturePackLoader {
         public Map<String, List<String>> getQuestDialogues() { return questDialogues; }
         public void setQuestDialogues(Map<String, List<String>> questDialogues) {
             this.questDialogues = questDialogues != null ? new LinkedHashMap<>(questDialogues) : new LinkedHashMap<>();
+        }
+        public boolean isProgressionEnabled() { return progressionEnabled; }
+        public void setProgressionEnabled(boolean progressionEnabled) { this.progressionEnabled = progressionEnabled; }
+        public String getProgressionMechanicId() { return progressionMechanicId; }
+        public void setProgressionMechanicId(String progressionMechanicId) {
+            this.progressionMechanicId = progressionMechanicId == null ? "" : progressionMechanicId;
+        }
+        public String getProgressionKind() { return progressionKind; }
+        public void setProgressionKind(String progressionKind) {
+            this.progressionKind = progressionKind == null ? "" : progressionKind;
+        }
+        public String getProgressionLabel() { return progressionLabel; }
+        public void setProgressionLabel(String progressionLabel) {
+            this.progressionLabel = progressionLabel == null ? "" : progressionLabel;
+        }
+        public String getProgressionSingularLabel() { return progressionSingularLabel; }
+        public void setProgressionSingularLabel(String progressionSingularLabel) {
+            this.progressionSingularLabel = progressionSingularLabel == null ? "" : progressionSingularLabel;
+        }
+        public String getProgressionPluralLabel() { return progressionPluralLabel; }
+        public void setProgressionPluralLabel(String progressionPluralLabel) {
+            this.progressionPluralLabel = progressionPluralLabel == null ? "" : progressionPluralLabel;
+        }
+        public int getProgressionMaxActive() { return progressionMaxActive; }
+        public void setProgressionMaxActive(int progressionMaxActive) {
+            this.progressionMaxActive = Math.max(0, progressionMaxActive);
         }
     }
 

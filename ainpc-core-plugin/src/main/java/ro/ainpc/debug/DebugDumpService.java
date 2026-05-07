@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -77,6 +78,7 @@ public class DebugDumpService {
                 : "# questConfig indisponibil\n");
             writeText(dumpRoot.resolve("quest-audit-report.txt"), buildQuestAuditReportText());
             writeJson(dumpRoot.resolve("loaded-quest-definitions.json"), buildLoadedQuestDefinitionsJson());
+            writeJson(dumpRoot.resolve("player-progressions.json"), buildPlayerProgressionsJson());
             writeJson(dumpRoot.resolve("player-quest-progress.json"), buildPlayerQuestProgressJson());
             writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), buildQuestAnchorBindingsJson());
             writeJson(dumpRoot.resolve("story-events.json"), buildStoryEventsJson());
@@ -123,7 +125,7 @@ public class DebugDumpService {
         sb.append("- server.txt\n");
         sb.append("- config-sanitized.yml\n");
         sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-quest-progress.json, quest-anchor-bindings.json, story-events.json, openai.txt depending on scope\n");
+        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-events.json, openai.txt depending on scope\n");
         sb.append("- recent-server-log.txt\n");
         return sb.toString();
     }
@@ -856,9 +858,10 @@ public class DebugDumpService {
         Map<String, Integer> byPack = new LinkedHashMap<>();
         Map<String, Integer> byCategory = new LinkedHashMap<>();
         Map<String, Integer> byKind = new LinkedHashMap<>();
+        Map<String, Integer> byMechanic = new LinkedHashMap<>();
 
         for (FeaturePackLoader.ScenarioDefinition scenario : scenarios) {
-            if (scenario.getBaseType() != ScenarioEngine.ScenarioType.QUEST) {
+            if (!isLoadedQuestDefinitionCandidate(scenario)) {
                 continue;
             }
 
@@ -867,15 +870,30 @@ public class DebugDumpService {
             incrementCount(byPack, scenario.getPackId());
             incrementCount(byCategory, enumJsonId(contract.category()));
             incrementCount(byKind, enumJsonId(contract.kind()));
+            incrementCount(byMechanic, valueOrFallback(scenario.getProgressionMechanicId(), "quest"));
         }
 
         root.addProperty("scenario_count", scenarios.size());
         root.addProperty("quest_count", rows.size());
+        root.addProperty("progression_mechanic_count", featurePackLoader.getAllProgressionMechanics().size());
         root.add("by_pack", countMapJson(byPack));
         root.add("by_category", countMapJson(byCategory));
         root.add("by_kind", countMapJson(byKind));
+        root.add("by_mechanic", countMapJson(byMechanic));
+        root.add("progression_mechanics", progressionMechanicsJson(featurePackLoader.getAllProgressionMechanics()));
         root.add("rows", rows);
         return root;
+    }
+
+    private boolean isLoadedQuestDefinitionCandidate(FeaturePackLoader.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return false;
+        }
+        return scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST
+            || (scenario.isProgressionEnabled()
+                && (!scenario.getQuestCode().isBlank()
+                    || !scenario.getObjectives().isEmpty()
+                    || !scenario.getRewards().isEmpty()));
     }
 
     private JsonObject loadedQuestDefinitionRowJson(FeaturePackLoader.ScenarioDefinition scenario,
@@ -894,6 +912,13 @@ public class DebugDumpService {
         json.addProperty("acceptance_mode", valueOrEmpty(scenario.getQuestAcceptanceMode()));
         json.addProperty("completion_mode", valueOrEmpty(scenario.getQuestCompletionMode()));
         json.addProperty("tracking_mode", valueOrEmpty(scenario.getQuestTrackingMode()));
+        json.addProperty("progression_enabled", scenario.isProgressionEnabled());
+        json.addProperty("progression_mechanic", valueOrEmpty(scenario.getProgressionMechanicId()));
+        json.addProperty("progression_kind", valueOrEmpty(scenario.getProgressionKind()));
+        json.addProperty("progression_label", valueOrEmpty(scenario.getProgressionLabel()));
+        json.addProperty("progression_singular_label", valueOrEmpty(scenario.getProgressionSingularLabel()));
+        json.addProperty("progression_plural_label", valueOrEmpty(scenario.getProgressionPluralLabel()));
+        json.addProperty("progression_max_active", scenario.getProgressionMaxActive());
         json.addProperty("repeatable", scenario.isQuestRepeatable());
         json.addProperty("cooldown_seconds", scenario.getQuestCooldownSeconds());
         json.addProperty("requires_player", scenario.isRequiresPlayer());
@@ -912,6 +937,38 @@ public class DebugDumpService {
         json.add("objectives", questEntriesJson(scenario.getObjectives()));
         json.add("rewards", questEntriesJson(scenario.getRewards()));
         json.add("dialogues", gson.toJsonTree(scenario.getQuestDialogues()));
+        return json;
+    }
+
+    private JsonArray progressionMechanicsJson(Collection<FeaturePackLoader.ProgressionMechanicDefinition> mechanics) {
+        JsonArray json = new JsonArray();
+        if (mechanics == null || mechanics.isEmpty()) {
+            return json;
+        }
+
+        mechanics.stream()
+            .sorted(Comparator
+                .comparing((FeaturePackLoader.ProgressionMechanicDefinition mechanic) -> valueOrEmpty(mechanic.getPackId()))
+                .thenComparing(mechanic -> valueOrEmpty(mechanic.getId())))
+            .forEach(mechanic -> json.add(progressionMechanicJson(mechanic)));
+        return json;
+    }
+
+    private JsonObject progressionMechanicJson(FeaturePackLoader.ProgressionMechanicDefinition mechanic) {
+        JsonObject json = new JsonObject();
+        if (mechanic == null) {
+            return json;
+        }
+
+        json.addProperty("pack_id", valueOrEmpty(mechanic.getPackId()));
+        json.addProperty("id", valueOrEmpty(mechanic.getId()));
+        json.addProperty("kind", valueOrEmpty(mechanic.getKind()));
+        json.addProperty("label", valueOrEmpty(mechanic.getLabel()));
+        json.addProperty("singular_label", valueOrEmpty(mechanic.getSingularLabel()));
+        json.addProperty("plural_label", valueOrEmpty(mechanic.getPluralLabel()));
+        json.addProperty("progress_enabled", mechanic.isProgressEnabled());
+        json.addProperty("max_active", mechanic.getMaxActive());
+        json.add("metadata", gson.toJsonTree(mechanic.getMetadata()));
         return json;
     }
 
@@ -1024,6 +1081,251 @@ public class DebugDumpService {
             return packId;
         }
         return packId + ":" + scenarioId;
+    }
+
+    private JsonObject buildPlayerProgressionsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_table", "player_quests");
+        root.addProperty("compatibility_view", true);
+        root.addProperty("storage_note", "Generic progression export peste tabela legacy player_quests.");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("row_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup = buildProgressionScenarioLookup();
+        root.addProperty("available", true);
+        root.addProperty("definitions_available", plugin.getFeaturePackLoader() != null);
+
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> byStatus = new LinkedHashMap<>();
+        Map<String, Integer> byTemplate = new LinkedHashMap<>();
+        Map<String, Integer> byPack = new LinkedHashMap<>();
+        Map<String, Integer> byMechanic = new LinkedHashMap<>();
+        Map<String, Integer> byKind = new LinkedHashMap<>();
+        int trackedCount = 0;
+        int currentCount = 0;
+        int archivedCount = 0;
+        int resolvedDefinitionCount = 0;
+
+        String sql = """
+            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
+                   current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
+            FROM player_quests
+            ORDER BY player_uuid, status, updated_at DESC, template_id
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String templateId = valueOrEmpty(resultSet.getString("template_id"));
+                String questCode = valueOrEmpty(resultSet.getString("quest_code"));
+                String status = valueOrEmpty(resultSet.getString("status"));
+                ProgressionRowMetadata metadata = progressionRowMetadata(templateId, questCode, scenarioLookup);
+                JsonObject row = playerProgressionRowJson(resultSet, metadata);
+                rows.add(row);
+
+                incrementCount(byStatus, status);
+                incrementCount(byTemplate, templateId);
+                incrementCountIfPresent(byPack, metadata.packId());
+                incrementCount(byMechanic, valueOrFallback(metadata.mechanicId(), "unknown"));
+                incrementCount(byKind, valueOrFallback(metadata.kind(), "unknown"));
+                if (metadata.definitionResolved()) {
+                    resolvedDefinitionCount++;
+                }
+                if (resultSet.getInt("tracked") != 0) {
+                    trackedCount++;
+                }
+                if ("active".equalsIgnoreCase(status) || "offered".equalsIgnoreCase(status)) {
+                    currentCount++;
+                } else if ("completed".equalsIgnoreCase(status) || "failed".equalsIgnoreCase(status)) {
+                    archivedCount++;
+                }
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        root.addProperty("row_count", rows.size());
+        root.addProperty("current_count", currentCount);
+        root.addProperty("archived_count", archivedCount);
+        root.addProperty("tracked_count", trackedCount);
+        root.addProperty("resolved_definition_count", resolvedDefinitionCount);
+        root.add("by_status", countMapJson(byStatus));
+        root.add("by_template", countMapJson(byTemplate));
+        root.add("by_pack", countMapJson(byPack));
+        root.add("by_mechanic", countMapJson(byMechanic));
+        root.add("by_kind", countMapJson(byKind));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject playerProgressionRowJson(ResultSet resultSet,
+                                                ProgressionRowMetadata metadata) throws SQLException {
+        JsonObject json = playerQuestProgressRowJson(resultSet);
+        json.addProperty("compatibility_source", "player_quests");
+        json.addProperty("definition_resolved", metadata.definitionResolved());
+        json.addProperty("progression_id", metadata.progressionId());
+        json.addProperty("pack_id", metadata.packId());
+        json.addProperty("definition_id", metadata.definitionId());
+        json.addProperty("mechanic_id", metadata.mechanicId());
+        json.addProperty("kind", metadata.kind());
+        json.addProperty("mechanic_label", metadata.mechanicLabel());
+        json.addProperty("singular_label", metadata.singularLabel());
+        json.addProperty("plural_label", metadata.pluralLabel());
+        return json;
+    }
+
+    private Map<String, FeaturePackLoader.ScenarioDefinition> buildProgressionScenarioLookup() {
+        Map<String, FeaturePackLoader.ScenarioDefinition> lookup = new LinkedHashMap<>();
+        FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
+        if (featurePackLoader == null) {
+            return lookup;
+        }
+
+        for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
+            if (scenario == null) {
+                continue;
+            }
+            addProgressionScenarioLookup(lookup, questTemplateId(scenario), scenario);
+            addProgressionScenarioLookup(lookup, scenario.getId(), scenario);
+            addProgressionScenarioLookup(lookup, scenario.getQuestCode(), scenario);
+            String packId = valueOrEmpty(scenario.getPackId());
+            String scenarioId = valueOrEmpty(scenario.getId());
+            String questCode = valueOrEmpty(scenario.getQuestCode());
+            if (!packId.isBlank() && !scenarioId.isBlank()) {
+                addProgressionScenarioLookup(lookup, packId + ":" + scenarioId, scenario);
+            }
+            if (!questCode.isBlank()) {
+                if (!packId.isBlank()) {
+                    addProgressionScenarioLookup(lookup, packId + ":" + questCode, scenario);
+                }
+                addProgressionScenarioLookup(lookup, "code:" + questCode, scenario);
+                if (!packId.isBlank()) {
+                    addProgressionScenarioLookup(lookup, "code:" + packId + ":" + questCode, scenario);
+                }
+            }
+        }
+        return lookup;
+    }
+
+    private void addProgressionScenarioLookup(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
+                                              String key,
+                                              FeaturePackLoader.ScenarioDefinition scenario) {
+        String normalizedKey = normalizeKey(key);
+        if (normalizedKey.isBlank()) {
+            return;
+        }
+        lookup.putIfAbsent(normalizedKey, scenario);
+    }
+
+    private ProgressionRowMetadata progressionRowMetadata(String templateId,
+                                                          String questCode,
+                                                          Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup) {
+        FeaturePackLoader.ScenarioDefinition scenario =
+            findProgressionScenarioDefinition(templateId, questCode, scenarioLookup);
+        if (scenario == null) {
+            String fallbackTemplateId = valueOrEmpty(templateId);
+            return new ProgressionRowMetadata(
+                false,
+                valueOrFallback(fallbackTemplateId, valueOrEmpty(questCode)),
+                "",
+                extractProgressionDefinitionId(fallbackTemplateId),
+                "",
+                "",
+                "",
+                "",
+                ""
+            );
+        }
+
+        String packId = valueOrEmpty(scenario.getPackId());
+        String definitionId = valueOrFallback(scenario.getId(), extractProgressionDefinitionId(templateId));
+        String mechanicId = valueOrFallback(scenario.getProgressionMechanicId(), "quest");
+        String kind = valueOrFallback(scenario.getProgressionKind(), valueOrFallback(scenario.getQuestScenarioKind(), "quest"));
+        String mechanicLabel = valueOrFallback(scenario.getProgressionLabel(), mechanicId);
+        String singularLabel = valueOrFallback(scenario.getProgressionSingularLabel(), kind);
+        String pluralLabel = valueOrFallback(scenario.getProgressionPluralLabel(), mechanicLabel);
+        return new ProgressionRowMetadata(
+            true,
+            progressionId(packId, mechanicId, definitionId, templateId),
+            packId,
+            definitionId,
+            mechanicId,
+            kind,
+            mechanicLabel,
+            singularLabel,
+            pluralLabel
+        );
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findProgressionScenarioDefinition(
+        String templateId,
+        String questCode,
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup
+    ) {
+        if (scenarioLookup == null || scenarioLookup.isEmpty()) {
+            return null;
+        }
+
+        FeaturePackLoader.ScenarioDefinition scenario = scenarioLookup.get(normalizeKey(templateId));
+        if (scenario != null) {
+            return scenario;
+        }
+
+        String packQualifiedReference = packQualifiedProgressionReference(templateId);
+        scenario = scenarioLookup.get(normalizeKey(packQualifiedReference));
+        if (scenario != null) {
+            return scenario;
+        }
+        scenario = scenarioLookup.get(normalizeKey("code:" + packQualifiedReference));
+        if (scenario != null) {
+            return scenario;
+        }
+
+        String definitionId = extractProgressionDefinitionId(templateId);
+        scenario = scenarioLookup.get(normalizeKey(definitionId));
+        if (scenario != null) {
+            return scenario;
+        }
+
+        String code = valueOrEmpty(questCode);
+        if (code.isBlank()) {
+            return null;
+        }
+        return scenarioLookup.get(normalizeKey("code:" + code));
+    }
+
+    private String progressionId(String packId, String mechanicId, String definitionId, String fallbackTemplateId) {
+        String safePackId = valueOrEmpty(packId);
+        String safeMechanicId = valueOrEmpty(mechanicId);
+        String safeDefinitionId = valueOrEmpty(definitionId);
+        if (safePackId.isBlank() || safeMechanicId.isBlank() || safeDefinitionId.isBlank()) {
+            return valueOrFallback(fallbackTemplateId, safeDefinitionId);
+        }
+        return safePackId + ":" + safeMechanicId + ":" + safeDefinitionId;
+    }
+
+    private String extractProgressionDefinitionId(String templateId) {
+        String safeTemplateId = valueOrEmpty(templateId);
+        int separator = safeTemplateId.lastIndexOf(':');
+        return separator >= 0 && separator < safeTemplateId.length() - 1
+            ? safeTemplateId.substring(separator + 1)
+            : safeTemplateId;
+    }
+
+    private String packQualifiedProgressionReference(String templateId) {
+        String safeTemplateId = valueOrEmpty(templateId);
+        int firstSeparator = safeTemplateId.indexOf(':');
+        int lastSeparator = safeTemplateId.lastIndexOf(':');
+        if (firstSeparator < 0 || lastSeparator <= firstSeparator || lastSeparator >= safeTemplateId.length() - 1) {
+            return "";
+        }
+        return safeTemplateId.substring(0, firstSeparator) + ":" + safeTemplateId.substring(lastSeparator + 1);
     }
 
     private JsonObject toRegionJson(WorldRegionInfo region) {
@@ -1354,6 +1656,10 @@ public class DebugDumpService {
         return value != null ? value : "";
     }
 
+    private String valueOrFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? valueOrEmpty(fallback) : value;
+    }
+
     private JsonObject boundsJson(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         JsonObject json = new JsonObject();
         json.addProperty("min_x", minX);
@@ -1595,6 +1901,19 @@ public class DebugDumpService {
 
     private void writeText(Path path, String content) throws IOException {
         Files.writeString(path, content, StandardCharsets.UTF_8);
+    }
+
+    private record ProgressionRowMetadata(
+        boolean definitionResolved,
+        String progressionId,
+        String packId,
+        String definitionId,
+        String mechanicId,
+        String kind,
+        String mechanicLabel,
+        String singularLabel,
+        String pluralLabel
+    ) {
     }
 
     public record DebugDumpResult(Path directory, String scope) {
