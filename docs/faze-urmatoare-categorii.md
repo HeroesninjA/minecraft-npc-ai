@@ -25,6 +25,7 @@ Sinteza este bazata pe:
 - `faze-observatii-avertizari.md`;
 - `roadmap-orientativ.md`;
 - documentele de domeniu pentru mapping, spawn, questuri, progression, story, dialog, simulare, API, addonuri, generare si operare.
+- `lucru-alternat-quest-mapping-progression.md`, pentru cadenta dintre mapping concret, quest/contract jucabil si extractie mica spre `ProgressionService`.
 
 ## Legenda
 
@@ -32,8 +33,22 @@ Sinteza este bazata pe:
 |---|---|
 | `ACUM` | trebuie lucrat inainte de urmatorul salt mare |
 | `URMATOR` | intra imediat dupa validarea fazei curente |
-| `DUPA MVP` | util, dar nu trebuie sa blocheze primul release jucabil |
+| `DUPA DEMO MATUR` | util, dar nu trebuie sa blocheze demo-ul playable intern si stabil |
 | `AMANAT` | risc de overengineering daca este inceput prea devreme |
+
+## Principiu de maturitate
+
+`First playable` inseamna demo intern/testabil, nu lansare publica. Obiectivul este sa existe un traseu medieval mic, verificabil cap-coada, care poate arata direct riscurile reale din questuri, spawn, persistenta si story.
+
+Lansarea publica ramane o faza ulterioara. Nu se grabeste doar pentru ca demo-ul porneste.
+
+Gate-uri minime inainte de orice `production-public`:
+
+- demo-ul trece smoke test pe Paper dupa restart;
+- questurile demo se pot accepta, progresa si finaliza fara interventii manuale fragile;
+- `audit` si `debugdump` explica mapping, NPC bindings, quest/progression si story state;
+- exista backup, rollback si plan de migration pentru date reale;
+- addonul medieval nu depinde de internals instabile sau configuratie nedocumentata.
 
 ## Ordinea scurta recomandata
 
@@ -41,7 +56,7 @@ Sinteza este bazata pe:
 2. Smoke test Paper pentru questuri: Q01-Q08 plus contractul C01, cu progres, anchors, story events si reload.
 3. Inspectie si debug mai bune pentru datele persistente: `npc_world_bindings`, story state/events, progression exports.
 4. Generator narativ de populatie pe regiune: nume, roluri, familii, home/work/social.
-5. First playable medieval slice: 5-10 NPC-uri, 3-5 questuri completabile, documentatie scurta pentru admin.
+5. First playable medieval demo: 5-10 NPC-uri, 3-5 questuri completabile, documentatie scurta pentru admin/tester.
 6. Hardening pentru spawn si migrari: backup, rollback, transaction/compensation si debugdump.
 7. Extractii controlate: `ProgressionService`, `SimulationService`, registri de scenarii.
 8. API/addon stabilization si schema YAML compacta.
@@ -54,12 +69,12 @@ Sinteza este bazata pe:
 | F0 | Baseline verificabil | Codul, TODO-ul si documentatia reflecta aceeasi realitate | continuu | `mvn test`, audit/debugdump si docs sunt sincronizate |
 | F1 | Paper smoke mapping/spawn | Mapping demo si spawn pe regiune merg pe server real | ACUM | save/reload nu pierde mapping, NPC bindings sau ancore |
 | F2 | Paper smoke quest/progression | Q01-Q08 si C01 pot fi inspectate si testate cap-coada | ACUM | progresul, stages, anchors si story events supravietuiesc reload-ului |
-| F3 | First playable medieval | Un demo mic este instalabil si jucabil de admin/tester | URMATOR | exista 3-5 questuri completabile si NPC-uri cu roluri clare |
+| F3 | First playable medieval demo | Un demo mic este instalabil si jucabil de admin/tester | URMATOR | exista 3-5 questuri completabile si NPC-uri cu roluri clare |
 | F4 | Observabilitate si hardening date | Datele partiale pot fi vazute, exportate si reparate controlat | URMATOR | debugdump/audit acopera mapping, NPC bindings, quest/progression, story |
-| F5 | Extractie servicii runtime | Motoarele mari sunt sparte fara schimbari functionale riscante | DUPA MVP | exista teste/smoke pentru fluxul pe care il extragi |
-| F6 | API, addonuri si schema | Addonurile folosesc contracte clare, nu internals | DUPA MVP | addonul medieval este exemplu stabil |
+| F5 | Extractie servicii runtime | Motoarele mari sunt sparte fara schimbari functionale riscante | DUPA DEMO MATUR | exista teste/smoke pentru fluxul pe care il extragi |
+| F6 | API, addonuri si schema | Addonurile folosesc contracte clare, nu internals | DUPA DEMO MATUR | addonul medieval este exemplu stabil |
 | F7 | Generare si authoring AI | AI produce drafturi validate, nu executa direct | AMANAT | exista validatoare, template-uri si dry-run mature |
-| F8 | Productie publica | Release cu backup, rollback, migrari si operare clara | DUPA MVP | demo-playable trece restart, audit si smoke test |
+| F8 | Productie publica | Release cu backup, rollback, migrari si operare clara | DUPA DEMO MATUR | demo-playable trece restart, audit, debugdump, backup si rollback |
 
 ## Categoria A - Stare, roadmap, audit si operare
 
@@ -95,8 +110,9 @@ Status: `ACUM`.
 
 Livrabile:
 
-- audit/debugdump dedicat pentru story state si story events;
-- inspectie read-only pentru `npc_world_bindings`;
+- audit/debugdump dedicat pentru story state si story events exista initial prin `/ainpc audit quest`, `/ainpc debugdump quest` si `/ainpc debugdump story`;
+- inspectie read-only pentru `npc_world_bindings` exista initial prin `/ainpc world bindings ...`;
+- export offline pentru `npc_world_bindings` exista initial prin `npc-world-bindings.json` in debugdump `world/all`;
 - debugdump pentru settlement spawn, rollback si bindings;
 - verificari clare pentru pack-uri invalide, capabilities si dependencies;
 - output de debug fara date sensibile.
@@ -105,7 +121,7 @@ Subcategorii:
 
 | Subcategorie | Documente | Urmatorul pas |
 |---|---|---|
-| Audit DB | `audit.md`, `npc-world-bindings.md` | comanda read-only pentru inspectia bindings |
+| Audit DB | `audit.md`, `npc-world-bindings.md` | backfill/migration si household bindings persistente |
 | Debugdump quest/progression | `questuri-avansate.md`, `progression-service.md` | verifica pe Paper exporturile `player-progressions.json` si `player-quest-progress.json` |
 | Debugdump story | `story-context-service.md`, `story-si-context-ai.md` | export dedicat pentru state/events, nu doar context read-only |
 | Debugdump spawn | `ordine-spawn-npc-cladiri-region-node.md` | raport pentru plan, NPC creati, rollback si esecuri |
@@ -178,7 +194,7 @@ Status: `ACUM`.
 
 Livrabile:
 
-- comanda read-only pentru `npc_world_bindings`;
+- extindere inspectie/backfill pentru `npc_world_bindings`;
 - audit pentru place/node lipsa sau tip incompatibil;
 - backfill controlat din `profile_data.owned_locations`;
 - clarificare cand `profile_data` este fallback si cand DB-ul dedicat este sursa.
@@ -230,6 +246,7 @@ Documente principale:
 - `pregatire-questuri-avansate.md`
 - `questuri-avansate.md`
 - `progression-service.md`
+- `lucru-alternat-quest-mapping-progression.md`
 - `quest-anchor-bindings.md`
 - `story-context-service.md`
 - `story-si-context-ai.md`
@@ -252,10 +269,11 @@ Livrabile:
   - `player-progressions.json`;
   - `player-quest-progress.json`;
   - `quest-anchor-bindings.json`;
+  - `story-states.json`;
   - `story-events.json`;
   - `quest-audit-report.txt`.
 
-### C2. First playable medieval quest slice
+### C2. First playable medieval demo
 
 Status: `URMATOR`.
 
@@ -283,19 +301,19 @@ Ce exista initial:
 - feature packs pot declara `mechanics`;
 - scenariile pot seta `mechanic` si `progress/progression`;
 - `quest`, `progression` si `contract` sunt fatade peste runtime comun;
+- model intern `ProgressionDefinition`;
+- `ProgressionSelector`;
+- snapshot-uri `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot`;
+- `ProgressionRepository` read-only peste `player_quests`, expus prin `ProgressionService`;
 - `player-progressions.json` exista ca export generic peste `player_quests`.
 
 Livrabile urmatoare:
 
-- model intern `ProgressionDefinition`;
-- `ProgressionSelector`;
-- snapshot-uri `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiEntry`;
-- separarea persistentei in repository;
 - migrare planificata spre `player_progressions`, numai dupa stabilizarea modelului.
 
 ### C4. Story state auditabil
 
-Status: `ACUM/URMATOR`.
+Status: `ACUM`, implementat initial.
 
 Ce exista initial:
 
@@ -303,11 +321,12 @@ Ce exista initial:
 - `StoryStateService` pentru `region_story_state`, `place_story_state`, `story_events`;
 - comenzi read-only pentru region/place/events;
 - actiuni `set_story_state` si `record_story_event`.
+- `/ainpc audit quest` valideaza JSON-ul din story state/events;
+- `/ainpc debugdump quest` si `/ainpc debugdump story` exporta `story-states.json` si `story-events.json`.
 
 Livrabile urmatoare:
 
 - document canonic `story-state-service.md`;
-- audit/debugdump dedicat pentru story state;
 - validator mai strict pentru story actions;
 - reguli pentru chei, scope, event types si retention.
 
@@ -353,7 +372,7 @@ Livrabile:
 
 ### D2. SimulationService extractie fara schimbare functionala
 
-Status: `DUPA MVP`, dar pregatit in documentatie.
+Status: `DUPA DEMO MATUR`, dar pregatit in documentatie.
 
 Livrabile:
 
@@ -369,7 +388,7 @@ Regula:
 
 ### D3. Semnale de simulare si consumatori controlati
 
-Status: `DUPA MVP`.
+Status: `DUPA DEMO MATUR`.
 
 Livrabile:
 
@@ -403,7 +422,7 @@ Documente principale:
 
 ### E1. API public stabil
 
-Status: `DUPA MVP`.
+Status: `DUPA DEMO MATUR`.
 
 Livrabile:
 
@@ -414,7 +433,7 @@ Livrabile:
 
 ### E2. Validator pentru feature packs
 
-Status: `URMATOR/DUPA MVP`.
+Status: `URMATOR/DUPA DEMO MATUR`.
 
 Livrabile:
 
@@ -426,16 +445,18 @@ Livrabile:
 
 ### E3. Registri pentru scenarii
 
-Status: `DUPA MVP`.
+Status: `IMPLEMENTAT INITIAL / INTEGRARE DUPA DEMO MATUR`.
 
 Livrabile:
 
-- `ScenarioActionRegistry`;
-- `ScenarioConditionRegistry`;
-- `ScenarioTriggerRegistry`;
-- `ScenarioExecutionContext`;
-- `ScenarioVariableProvider`;
-- `ScenarioValidationReport`.
+- `ScenarioActionRegistry` - exista initial;
+- `ScenarioConditionRegistry` - exista initial;
+- `ScenarioTriggerRegistry` - exista initial;
+- `ScenarioExecutionContext` - exista initial;
+- `ScenarioVariableProvider` - exista initial;
+- `ScenarioValidationReport` - exista initial;
+- integrare efectiva in `ScenarioEngine` - lipseste;
+- validator complet pentru feature packs - lipseste.
 
 Regula:
 
@@ -466,7 +487,7 @@ Documente principale:
 
 ### F1. SettlementPlan si PatchPlanner
 
-Status: `DUPA MVP`, cu piese pregatite.
+Status: `DUPA DEMO MATUR`, cu piese pregatite.
 
 Livrabile:
 
@@ -478,7 +499,7 @@ Livrabile:
 
 ### F2. Template cladiri si marker nodes
 
-Status: `DUPA MVP`.
+Status: `DUPA DEMO MATUR`.
 
 Livrabile:
 
@@ -489,7 +510,7 @@ Livrabile:
 
 ### F3. WorldEdit optional
 
-Status: `AMANAT` pentru MVP.
+Status: `AMANAT` pentru demo playable.
 
 Livrabile:
 
@@ -543,7 +564,7 @@ Livrabile:
 
 ### G2. World GUI
 
-Status: `URMATOR/DUPA MVP`.
+Status: `URMATOR/DUPA DEMO MATUR`.
 
 Livrabile:
 
@@ -568,9 +589,9 @@ Livrabile:
 | Nu incepe | Pana cand nu exista |
 |---|---|
 | Questuri mari pe locatie | mapping demo si `quest_anchor_bindings` verificate pe Paper |
-| First playable release | Q01-Q08/C01 smoke si reload test |
+| First playable demo | Q01-Q08/C01 smoke si reload test |
 | Migrare `player_progressions` | model `ProgressionDefinition` stabil si exporturi verificate |
-| Runtime scenarii extensibil | questuri MVP stabile si teste pentru actiuni existente |
+| Runtime scenarii extensibil | questuri demo stabile si teste pentru actiuni existente |
 | Authoring AI | validator schema/capabilities/anchors |
 | Worldgen automat | `SettlementPlan`, `PatchPlan`, dry-run si rollback |
 | Reputatie/economie | demo medieval jucabil fara ele |
@@ -627,7 +648,7 @@ Ordinea corecta este:
 baseline verificabil
 -> Paper smoke mapping/spawn
 -> Paper smoke quest/progression
--> first playable medieval
+-> first playable medieval demo
 -> observabilitate si hardening date
 -> extractii servicii runtime
 -> API si addonuri

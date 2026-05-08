@@ -459,6 +459,22 @@ Tool-uri de evitat initial:
 - `server.command`;
 - `world.place_blocks`.
 
+## Implementare initiala in cod
+
+Status 2026-05-07:
+
+- exista pachetul `ro.ainpc.ai.orchestration`;
+- `AIOrchestrationService` este initializat in `AINPCPlugin`;
+- configul `ai.orchestration.enabled` exista si este `false` implicit;
+- `AIUseCase`, `AIOutputType`, `AIResultStatus`, `AIOrchestrationPolicy`, `AIOrchestrationRequest` si `AIOrchestrationResult` definesc contractul minim;
+- `orchestrate(...)` intoarce momentan fallback determinist si nu apeleaza providerul AI;
+- politicile pentru `QUEST_DRAFT` si `STORY_DRAFT` cer validare si nu sunt executabile direct in runtime;
+- exista teste pentru fallback, validare request si politici safe.
+
+Acest pas este intentionat mic. El creeaza gardul de siguranta: AI-ul poate deveni ulterior formular/draft generator, dar nu poate marca questuri complete, nu poate scrie story state si nu poate executa actiuni runtime.
+
+In paralel exista pachetul `ro.ainpc.engine.runtime` cu registri initiali pentru actiuni, conditii si trigger-e. Aceste clase sunt contracte testabile pentru extractia viitoare din `ScenarioEngine`, nu runtime complet inca.
+
 ## AIOrchestrationService
 
 Contract recomandat:

@@ -4,25 +4,36 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="other futures  #9">
+    <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="other futures  #11">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestDetailGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestDetailGui.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestLogGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestLogGui.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/test/java/ro/ainpc/scenario/MedievalQuestPackTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/test/java/ro/ainpc/scenario/MedievalQuestPackTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/categorii/00-stare-roadmap/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/00-stare-roadmap/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ai-orchestrare-si-mecanici.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ai-orchestrare-si-mecanici.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/categorii/01-world-mapping-spawn/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/01-world-mapping-spawn/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/categorii/03-quest-story-ai/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/03-quest-story-ai/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/categorii/05-api-modularizare-addonuri/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/05-api-modularizare-addonuri/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/debugging-si-testare.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/debugging-si-testare.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/faze-urmatoare-categorii.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/faze-urmatoare-categorii.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/implementat-deja.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/implementat-deja.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/pregatire-questuri-avansate.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/pregatire-questuri-avansate.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/mapping.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mapping.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/npc-world-bindings.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/npc-world-bindings.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/progression-service.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/progression-service.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/questuri-avansate.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/questuri-avansate.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/questuri-faza-1-stabilizare.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/questuri-faza-1-stabilizare.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/release-checklist.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/release-checklist.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/roadmap-orientativ.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/roadmap-orientativ.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/server-admin-runbook.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/server-admin-runbook.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/story-context-service.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/story-context-service.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -220,7 +231,7 @@
       <workItem from="1777990730442" duration="5358000" />
       <workItem from="1777998023487" duration="3452000" />
       <workItem from="1778045345769" duration="19254000" />
-      <workItem from="1778123313581" duration="7526000" />
+      <workItem from="1778123313581" duration="19022000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -430,7 +441,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778076387590</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="other futures  #11">
+      <option name="closed" value="true" />
+      <created>1778145429130</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1778145429130</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -445,7 +464,8 @@
     <MESSAGE value="other futures  #6" />
     <MESSAGE value="other futures  #7" />
     <MESSAGE value="other futures  #9" />
-    <option name="LAST_COMMIT_MESSAGE" value="other futures  #9" />
+    <MESSAGE value="other futures  #11" />
+    <option name="LAST_COMMIT_MESSAGE" value="other futures  #11" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

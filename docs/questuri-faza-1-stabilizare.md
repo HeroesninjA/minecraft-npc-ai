@@ -81,7 +81,7 @@ ainpc quest reset nearest <player>
 
 - smoke test manual Q01-Q05 cap-coada pe server live
 - smoke test manual Q06-Q08 cu verificare ca obiectivele progreseaza doar in `INVESTIGATION`/`CONTACT`/`PATROL` si apoi `RETURN`
-- verificare pe server live ca `debugdump quest` include `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json`
+- verificare pe server live ca `debugdump quest` include `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, `story-states.json` si `story-events.json`
 - 1-2 questuri legate direct de `visit_place` si `inspect_node`
 - `objectiveId` explicit in YAML
 - etape reale persistente

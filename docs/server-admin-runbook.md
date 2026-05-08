@@ -289,6 +289,8 @@ Debug dump:
 /ainpc debugdump all
 /ainpc debugdump npc
 /ainpc debugdump world
+/ainpc debugdump quest
+/ainpc debugdump story
 ```
 
 Artefacte asteptate:
@@ -297,7 +299,13 @@ Artefacte asteptate:
 plugins/AINPC/debug-dumps/debug-dump-YYYYMMDD-HHMMSS/
   audit.txt
   npcs.json
-  world.json
+  world-mapping.json
+  npc-world-bindings.json
+  player-progressions.json
+  player-quest-progress.json
+  quest-anchor-bindings.json
+  story-states.json
+  story-events.json
   recent-server-log.txt
 ```
 

@@ -1,6 +1,6 @@
 # API, Modularizare si Addonuri
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-07
 
 Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariile programabile.
 
@@ -18,6 +18,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 
 ## Zone neacoperite complet
 
+- Registrii runtime pentru scenarii exista initial in core, dar nu sunt inca API public stabil pentru addonuri.
 - Ghid oficial pentru dezvoltatorii de addonuri.
 - Compatibilitate intre versiuni API.
 - Contract clar pentru `capabilities` si `dependencies`.

@@ -2,12 +2,15 @@ package ro.ainpc.gui.screens;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.gui.GuiButton;
 import ro.ainpc.gui.GuiItemFactory;
 import ro.ainpc.gui.GuiKey;
 import ro.ainpc.gui.GuiRenderContext;
 import ro.ainpc.gui.GuiScreen;
+import ro.ainpc.progression.ProgressionGuiEntry;
+import ro.ainpc.progression.ProgressionGuiSnapshot;
+import ro.ainpc.progression.ProgressionObjectiveSnapshot;
+import ro.ainpc.progression.ProgressionStageSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,15 +49,15 @@ public class QuestDetailGui implements GuiScreen {
         }
 
         boolean adminView = context.player().hasPermission("ainpc.admin");
-        ScenarioEngine.QuestGuiSnapshot snapshot =
-            context.plugin().getScenarioEngine().getQuestGuiSnapshot(context.player(), "all", adminView);
-        Optional<ScenarioEngine.QuestGuiEntry> optionalEntry = findEntry(snapshot, selector);
+        ProgressionGuiSnapshot snapshot =
+            context.plugin().getProgressionService().getProgressionGuiSnapshot(context.player(), "all", adminView);
+        Optional<ProgressionGuiEntry> optionalEntry = findEntry(snapshot, selector);
         if (optionalEntry.isEmpty()) {
             renderMissingQuest(context, selector);
             return;
         }
 
-        ScenarioEngine.QuestGuiEntry entry = optionalEntry.get();
+        ProgressionGuiEntry entry = optionalEntry.get();
         context.item(4, GuiItemFactory.item(
             headerMaterial(entry),
             "&e" + GuiItemFactory.compact(entry.title(), 40),
@@ -68,15 +71,21 @@ public class QuestDetailGui implements GuiScreen {
         context.fillEmpty(GuiItemFactory.filler());
     }
 
-    private Optional<ScenarioEngine.QuestGuiEntry> findEntry(ScenarioEngine.QuestGuiSnapshot snapshot, String selector) {
+    private Optional<ProgressionGuiEntry> findEntry(ProgressionGuiSnapshot snapshot, String selector) {
         if (snapshot == null || selector == null || selector.isBlank()) {
             return Optional.empty();
         }
         String normalized = selector.trim();
         return snapshot.allEntries().stream()
             .filter(entry -> matches(normalized, entry.selector())
-                || matches(normalized, entry.questCode())
-                || matches(normalized, entry.templateId()))
+                || matches(normalized, entry.progressionId())
+                || matches(normalized, entry.mechanicId() + ":" + entry.code())
+                || matches(normalized, entry.mechanicId() + ":" + entry.definitionId())
+                || matches(normalized, entry.kind() + ":" + entry.code())
+                || matches(normalized, entry.kind() + ":" + entry.definitionId())
+                || matches(normalized, entry.code())
+                || matches(normalized, entry.templateId())
+                || matches(normalized, entry.definitionId()))
             .findFirst();
     }
 
@@ -84,10 +93,10 @@ public class QuestDetailGui implements GuiScreen {
         return left != null && right != null && !right.isBlank() && left.equalsIgnoreCase(right);
     }
 
-    private void renderObjectives(GuiRenderContext context, ScenarioEngine.QuestGuiEntry entry) {
+    private void renderObjectives(GuiRenderContext context, ProgressionGuiEntry entry) {
         int limit = Math.min(OBJECTIVE_SLOTS.length, entry.objectives().size());
         for (int index = 0; index < limit; index++) {
-            ScenarioEngine.QuestGuiObjective objective = entry.objectives().get(index);
+            ProgressionObjectiveSnapshot objective = entry.objectives().get(index);
             context.item(OBJECTIVE_SLOTS[index], GuiItemFactory.item(
                 objectiveMaterial(objective),
                 objective.complete() ? "&a" + objective.label() : objective.active() ? "&e" + objective.label() : "&7" + objective.label(),
@@ -96,10 +105,10 @@ public class QuestDetailGui implements GuiScreen {
         }
     }
 
-    private void renderStages(GuiRenderContext context, ScenarioEngine.QuestGuiEntry entry) {
+    private void renderStages(GuiRenderContext context, ProgressionGuiEntry entry) {
         int limit = Math.min(STAGE_SLOTS.length, entry.stages().size());
         for (int index = 0; index < limit; index++) {
-            ScenarioEngine.QuestGuiStage stage = entry.stages().get(index);
+            ProgressionStageSnapshot stage = entry.stages().get(index);
             context.item(STAGE_SLOTS[index], GuiItemFactory.item(
                 stage.active() ? Material.AMETHYST_SHARD : stage.complete() ? Material.EMERALD : Material.PAPER,
                 stage.active() ? "&d" + stage.label() : stage.complete() ? "&a" + stage.label() : "&f" + stage.label(),
@@ -108,7 +117,7 @@ public class QuestDetailGui implements GuiScreen {
         }
     }
 
-    private void renderRewards(GuiRenderContext context, ScenarioEngine.QuestGuiEntry entry) {
+    private void renderRewards(GuiRenderContext context, ProgressionGuiEntry entry) {
         int limit = Math.min(REWARD_SLOTS.length, entry.rewardLines().size());
         for (int index = 0; index < limit; index++) {
             String reward = entry.rewardLines().get(index);
@@ -121,7 +130,7 @@ public class QuestDetailGui implements GuiScreen {
     }
 
     private void renderActions(GuiRenderContext context,
-                               ScenarioEngine.QuestGuiEntry entry,
+                               ProgressionGuiEntry entry,
                                String selector,
                                boolean adminView) {
         context.button(45, GuiButton.enabled(
@@ -205,7 +214,7 @@ public class QuestDetailGui implements GuiScreen {
         context.fillEmpty(GuiItemFactory.filler());
     }
 
-    private Material headerMaterial(ScenarioEngine.QuestGuiEntry entry) {
+    private Material headerMaterial(ProgressionGuiEntry entry) {
         if (entry.tracked()) {
             return Material.COMPASS;
         }
@@ -218,7 +227,7 @@ public class QuestDetailGui implements GuiScreen {
         return entry.archived() ? Material.MAP : Material.PAPER;
     }
 
-    private List<String> headerLore(ScenarioEngine.QuestGuiEntry entry) {
+    private List<String> headerLore(ProgressionGuiEntry entry) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Status: &f" + entry.statusDisplay());
         if (!entry.mechanicDisplay().isBlank()) {
@@ -231,8 +240,8 @@ public class QuestDetailGui implements GuiScreen {
         if (entry.tracked()) {
             lore.add("&bQuest urmarit");
         }
-        if (!entry.questGiverName().isBlank()) {
-            lore.add("&7NPC: &f" + entry.questGiverName());
+        if (!entry.actorName().isBlank()) {
+            lore.add("&7NPC: &f" + entry.actorName());
         }
         if (entry.missingTemplate()) {
             lore.add("&cTemplate-ul questului nu este incarcat.");
@@ -240,7 +249,7 @@ public class QuestDetailGui implements GuiScreen {
         return lore;
     }
 
-    private Material objectiveMaterial(ScenarioEngine.QuestGuiObjective objective) {
+    private Material objectiveMaterial(ProgressionObjectiveSnapshot objective) {
         if ("failed".equalsIgnoreCase(objective.stateId())) {
             return Material.REDSTONE;
         }
@@ -253,7 +262,7 @@ public class QuestDetailGui implements GuiScreen {
         return objective.active() ? Material.YELLOW_DYE : Material.LIGHT_GRAY_DYE;
     }
 
-    private List<String> objectiveLore(ScenarioEngine.QuestGuiObjective objective) {
+    private List<String> objectiveLore(ProgressionObjectiveSnapshot objective) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Stare: &f" + objective.stateDisplay());
         lore.add("&7Progres: &f" + objective.currentAmount() + "&7/&f" + objective.requiredAmount());
@@ -266,7 +275,7 @@ public class QuestDetailGui implements GuiScreen {
         return lore;
     }
 
-    private List<String> stageLore(ScenarioEngine.QuestGuiStage stage) {
+    private List<String> stageLore(ProgressionStageSnapshot stage) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Status: &f" + (stage.active() ? "curent" : stage.complete() ? "complet" : "in asteptare"));
         lore.add("&7Completare: &f" + stage.completionMode());

@@ -2,13 +2,15 @@ package ro.ainpc.gui.screens;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.gui.GuiButton;
 import ro.ainpc.gui.GuiItemFactory;
 import ro.ainpc.gui.GuiKey;
 import ro.ainpc.gui.GuiNavigation;
 import ro.ainpc.gui.GuiRenderContext;
 import ro.ainpc.gui.GuiScreen;
+import ro.ainpc.progression.ProgressionGuiEntry;
+import ro.ainpc.progression.ProgressionGuiSnapshot;
+import ro.ainpc.progression.ProgressionObjectiveSnapshot;
 
 import java.util.List;
 
@@ -38,8 +40,8 @@ public class QuestLogGui implements GuiScreen {
     @Override
     public void render(GuiRenderContext context) {
         boolean adminView = context.player().hasPermission("ainpc.admin");
-        ScenarioEngine.QuestGuiSnapshot snapshot =
-            context.plugin().getScenarioEngine().getQuestGuiSnapshot(context.player(), "", adminView);
+        ProgressionGuiSnapshot snapshot =
+            context.plugin().getProgressionService().getProgressionGuiSnapshot(context.player(), "", adminView);
 
         context.item(4, GuiItemFactory.item(
             Material.WRITABLE_BOOK,
@@ -51,12 +53,12 @@ public class QuestLogGui implements GuiScreen {
             )
         ));
 
-        List<ScenarioEngine.QuestGuiEntry> entries = snapshot.currentEntries().isEmpty()
+        List<ProgressionGuiEntry> entries = snapshot.currentEntries().isEmpty()
             ? snapshot.archivedEntries()
             : snapshot.currentEntries();
         int limit = Math.min(LOG_SLOTS.length, entries.size());
         for (int index = 0; index < limit; index++) {
-            ScenarioEngine.QuestGuiEntry entry = entries.get(index);
+            ProgressionGuiEntry entry = entries.get(index);
             context.button(LOG_SLOTS[index], GuiButton.enabled(
                 GuiItemFactory.item(entryMaterial(entry), entryTitle(entry), entryLore(entry)),
                 click -> click.service().openQuestDetail(click.player(), entry.selector())
@@ -94,7 +96,7 @@ public class QuestLogGui implements GuiScreen {
         context.fillEmpty(GuiItemFactory.filler());
     }
 
-    private Material entryMaterial(ScenarioEngine.QuestGuiEntry entry) {
+    private Material entryMaterial(ProgressionGuiEntry entry) {
         if (entry.tracked()) {
             return Material.COMPASS;
         }
@@ -110,14 +112,14 @@ public class QuestLogGui implements GuiScreen {
         return entry.missingTemplate() ? Material.BARRIER : Material.PAPER;
     }
 
-    private String entryTitle(ScenarioEngine.QuestGuiEntry entry) {
+    private String entryTitle(ProgressionGuiEntry entry) {
         String prefix = entry.tracked() ? "&b" : entry.active() ? "&a" : entry.offered() ? "&e" : "&f";
         return prefix + GuiItemFactory.compact(entry.title(), 36);
     }
 
-    private List<String> entryLore(ScenarioEngine.QuestGuiEntry entry) {
+    private List<String> entryLore(ProgressionGuiEntry entry) {
         long completeObjectives = entry.objectives().stream()
-            .filter(ScenarioEngine.QuestGuiObjective::complete)
+            .filter(ProgressionObjectiveSnapshot::complete)
             .count();
         List<String> lore = new java.util.ArrayList<>();
         lore.add("&7Status: &f" + entry.statusDisplay());
@@ -128,8 +130,8 @@ public class QuestLogGui implements GuiScreen {
         if (entry.tracked()) {
             lore.add("&bQuest urmarit");
         }
-        if (!entry.questGiverName().isBlank()) {
-            lore.add("&7NPC: &f" + entry.questGiverName());
+        if (!entry.actorName().isBlank()) {
+            lore.add("&7NPC: &f" + entry.actorName());
         }
         if (!entry.objectives().isEmpty()) {
             lore.add("&7Obiective: &f" + completeObjectives + "&7/&f" + entry.objectives().size());

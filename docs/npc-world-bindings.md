@@ -1,6 +1,6 @@
 # NPC World Bindings
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-07
 
 ## Scop
 
@@ -70,9 +70,33 @@ Aceasta compatibilitate ramane intentionata pana cand auditul si rutina folosesc
 - `work_place_id` care nu este workplace
 - `social_place_id` care nu este loc social clar
 
+## Inspectie read-only
+
+Exista comanda admin read-only:
+
+```text
+/ainpc world bindings [limit]
+/ainpc world bindings list [limit]
+/ainpc world bindings npc <numeNpc|nearest|npcId|uuid>
+/ainpc world bindings place <placeId> [limit]
+```
+
+Comanda listeaza randurile persistente, afiseaza sursa, timestamp-urile, `home/work/social place_id`, `home/work/social node_id` si, cand mapping-ul este incarcat, rezolva place/node info pentru verificare rapida.
+
+## Debugdump
+
+`/ainpc debugdump world` si `/ainpc debugdump all` exporta `npc-world-bindings.json`.
+
+Exportul contine:
+
+- toate randurile din `npc_world_bindings`;
+- agregari pe `source`, `home_place_id`, `work_place_id` si `social_place_id`;
+- `loaded_npc` pentru NPC-urile incarcate in runtime;
+- rezolvare place/node cand WorldAdmin este activ;
+- contoare pentru referinte place/node lipsa.
+
 ## Urmatorii pasi
 
-- comanda read-only dedicata pentru inspectie, de exemplu `/ainpc world bindings npc <npc>`
 - integrare cu modelul `households` / `household_residents`; vezi `households-persistente.md`
 - migration/backfill mai explicit pentru servere vechi
 - audit dedicat `worldbindings`

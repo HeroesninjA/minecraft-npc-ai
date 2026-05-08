@@ -34,6 +34,11 @@ openai:
     # Logheaza un preview din raspunsul returnat de model.
     log_response_preview: true
 
+# Orchestrare AI peste mecanici. Dezactivat implicit pana cand validatorii si routerele sunt mature.
+ai:
+  orchestration:
+    enabled: false
+
 # Setari platforma
 platform:
   # standalone | hybrid | advanced

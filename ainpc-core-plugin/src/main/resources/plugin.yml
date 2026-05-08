@@ -21,11 +21,11 @@ commands:
     aliases: [quests]
   progression:
     description: Log si comenzi generice pentru mecanici de progres
-    usage: /progression <log|status|progress|track|abandon> [selector] [jucator]
+    usage: /progression <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
     aliases: [progress]
   contract:
     description: Log si comenzi rapide pentru contracte locale
-    usage: /contract <log|status|progress|track|abandon> [selector] [jucator]
+    usage: /contract <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
     aliases: [contracts]
 
 permissions:

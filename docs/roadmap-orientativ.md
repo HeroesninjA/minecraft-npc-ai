@@ -1,6 +1,6 @@
 # Organizare Interna: Componente, Mecanici si Ordine de Dezvoltare
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-07
 
 ## Rolul documentului
 
@@ -10,9 +10,9 @@ Scopul lui este sa raspunda clar la trei intrebari:
 
 1. ce componente tehnice exista si cine poarta responsabilitatea fiecareia
 2. ce mecanici si engine-uri trebuie dezvoltate mai departe
-3. in ce ordine se lucreaza, ca proiectul sa ajunga la un prim release jucabil fara sa sara prematur la sisteme prea mari
+3. in ce ordine se lucreaza, ca proiectul sa ajunga la un demo medieval jucabil si verificabil fara sa sara prematur la sisteme prea mari
 
-Nu este un document de marketing si nu este o promisiune de versiuni publice. Este harta interna dupa care se alege ce se implementeaza, ce se stabilizeaza si ce se amana.
+Nu este un document de marketing si nu este o promisiune de versiuni publice. `First playable` inseamna aici demo intern/testabil, nu lansare publica. Este harta interna dupa care se alege ce se implementeaza, ce se stabilizeaza si ce se amana.
 
 ## Surse de adevar
 
@@ -52,14 +52,15 @@ Starea curenta a mapping-ului nu mai cere alegerea "quest sau mapping" ca blocaj
 2. `P1`: smoke test pe Paper pentru `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`.
 3. `P2`: persistenta dedicata `npc_world_bindings` si `homePlaceId/workPlaceId/socialPlaceId` este implementata initial; ramane inspectie/backfill mai matur si model household persistent, vezi `households-persistente.md`.
 4. `P3`: `SettlementPlan` si generator narativ de populatie pe regiune: plan complet validabil, nume, roluri, familii si distributie pe case/work/social; vezi `settlement-plan.md` si `generare-populatie-narativa.md`.
-5. `P4`: primul slice jucabil medieval: 3-5 questuri peste places/nodes demo.
+5. `P4`: primul demo jucabil medieval: 3-5 questuri peste places/nodes demo.
 6. `P5`: hardening production: tranzactii DB complete, debugdump pentru rollback si mesaje admin mai clare.
 
 Regula de prioritate:
 
 - daca smoke test-ul Paper nu trece, se repara mapping/spawn
-- daca smoke test-ul trece, questurile devin focusul principal pentru primul release jucabil
+- daca smoke test-ul trece, questurile devin focusul principal pentru demo-ul playable intern
 - hardening-ul mare intra dupa ce exista un flow jucabil care poate demonstra riscul real
+- lansarea publica ramane amanata pana cand demo-ul trece gate-urile de maturitate: restart, audit, debugdump, backup, rollback si migration plan pentru date reale
 
 ## Harta interna a componentelor
 
@@ -93,7 +94,7 @@ Scop:
 
 Se ataca acum:
 
-- audit/debugdump dedicat pentru story state si story events
+- verificare pe Paper a audit/debugdump-ului pentru story state si story events
 - export/debugdump complet pentru `quest_anchor_bindings`
 - mesaje clare pentru config, pack-uri si compatibilitati invalide
 - smoke tests pentru fluxurile critice
@@ -154,7 +155,7 @@ Se ataca acum:
 Se amana:
 
 - inspectie/backfill matur pentru toate serverele vechi
-- rollback tranzactional complet pana cand fluxul MVP este stabil
+- rollback tranzactional complet pana cand fluxul demo este stabil
 - spawn masiv fara plan serializabil si validabil
 
 ### A3. NPC lifecycle, rutina si simulare
@@ -221,7 +222,7 @@ Scop:
 
 - core-ul ramane platforma, iar scenariile si integrarile stau in addonuri separate
 
-Se ataca dupa primul slice jucabil:
+Se ataca dupa primul demo jucabil:
 
 - clarificarea contractelor `ainpc-api`
 - documentatie API pentru developer extern
@@ -240,7 +241,7 @@ Scop:
 
 - scenariile sa fie compuse din actiuni, conditii, trigger-e si tranzitii validate
 
-Se ataca dupa stabilizarea questurilor MVP:
+Se ataca dupa stabilizarea questurilor demo:
 
 - `ScenarioActionRegistry`
 - `ScenarioConditionRegistry`
@@ -300,11 +301,11 @@ Se amana explicit:
 | Dialog contextual | dialog/AI services | NPCContext, memorie, relatie | functional initial | debug prompt si fallback pe intentii |
 | Quest simplu | `ScenarioEngine` | pack YAML, DB player quests | functional initial | continut medieval cap-coada |
 | Quest pe locatie | quest anchors | mapping semantic | initial | folosire reala in demo si debugdump |
-| Story context | `StoryContextService` | mapping, quest anchors, story state | initial | audit/debugdump dedicat |
-| Story state persistent | `StoryStateService` | DB si actiuni quest validate | initial | reguli clare pentru scrieri si inspectie |
+| Story context | `StoryContextService` | mapping, quest anchors, story state | initial | verificare pe Paper si debug pentru prompt |
+| Story state persistent | `StoryStateService` | DB si actiuni quest validate | initial | reguli clare pentru scrieri, chei si retention |
 | Feature packs | `FeaturePackLoader` | YAML valid | functional initial | validator de schema/capabilities |
 | Addon content | addon registry | API public | initial | stabilizare contract medieval addon |
-| Runtime extensibil | registri scenarii | quest MVP stabil | lipseste complet | proiectare si introducere incrementala |
+| Runtime extensibil | registri scenarii | quest demo stabil | schelet initial | integrare incrementala in `ScenarioEngine` si validator |
 | Authoring AI | tool extern/template-uri | validatoare mature | viitor | nu se ataca inainte de A7 |
 
 ## Engine-uri de protejat
@@ -380,11 +381,11 @@ Livrabile:
 - interactiuni care nu rup rutina
 - debug pentru dialog si prompt
 
-### P4. First playable medieval slice
+### P4. First playable medieval demo
 
 Obiectiv:
 
-- un admin poate instala pluginul si juca un scenariu medieval mic de la inceput la sfarsit.
+- un admin/tester poate instala pluginul si juca un scenariu medieval mic de la inceput la sfarsit.
 
 Livrabile:
 
@@ -429,8 +430,8 @@ Obiectiv:
 
 Livrabile:
 
-- registri pentru actiuni, conditii si trigger-e
-- context de executie separat
+- registri pentru actiuni, conditii si trigger-e - exista initial
+- context de executie separat - exista initial
 - validator de scenarii
 - raport de validare pentru pack-uri
 
@@ -472,8 +473,8 @@ Urmatoarea ordine de lucru recomandata este:
 6. 3-5 questuri medievale cap-coada care folosesc NPC-uri, places si nodes
 7. fallback-uri deterministe pentru intentii de quest in dialog
 8. documentatie scurta pentru instalare, testare si reset demo
-9. stabilizare API/addon dupa ce slice-ul medieval este jucabil
-10. registri de scenarii numai dupa ce questurile MVP sunt stabile
+9. stabilizare API/addon dupa ce demo-ul medieval este jucabil
+10. registri de scenarii numai dupa ce questurile demo sunt stabile
 
 ## Dependinte critice
 
@@ -488,11 +489,11 @@ Respecta aceste dependinte cand alegi taskurile:
 | addon ecosystem | `ainpc-api` stabilizat |
 | scenarii programabile | registri si validator |
 | authoring AI | template-uri si validatoare mature |
-| economie/reputatie globala | first playable release stabil |
+| economie/reputatie globala | demo playable stabil si verificat dupa restart |
 
 ## Ce nu se ataca acum
 
-Pentru primul release jucabil, nu prioritiza:
+Pentru demo-ul playable intern, nu prioritiza:
 
 - generare directa prin prompt
 - economie completa

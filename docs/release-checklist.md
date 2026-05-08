@@ -1,6 +1,6 @@
 # Release Checklist
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-07
 
 Status: checklist operational initial pentru build, test si livrare pe server Paper. Nu este un proces complet de release management si nu inlocuieste `migration-si-backup.md`, care ramane de creat.
 
@@ -29,6 +29,8 @@ Nu considera release un simplu `mvn package`.
 | `paper-test` | Test pe server Paper dedicat | Build curat, audit, smoke mapping/NPC |
 | `demo-playable` | Demo pentru jucatori/testeri | Paper test plus quest smoke, restart si backup |
 | `production-public` | Server public sau date reale | Toate verificarile plus plan de rollback si backup complet |
+
+`demo-playable` este un milestone intern/de test pentru first playable. Nu inseamna lansare publica si nu trebuie folosit ca presiune pentru publicarea proiectului inainte sa fie matur.
 
 Daca serverul are date reale, trateaza release-ul ca `production-public`, chiar daca build-ul este numit experimental.
 
@@ -483,4 +485,3 @@ Release-ul este gata cand:
 - backup-ul exista pentru date reale;
 - raportul de release spune clar ce a fost testat si ce nu;
 - exista o cale de rollback fara editare DB live.
-

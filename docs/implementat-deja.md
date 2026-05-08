@@ -29,12 +29,14 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 - initializeaza SQLite
 - initializeaza serviciul OpenAI
 - ruleaza diagnostice pentru model la startup si reload
+- initializeaza `AIOrchestrationService` ca strat initial de politici/fallback pentru AI transversal
 - incarca feature packs
 - initializeaza managerii principali
 - incarca NPC-urile persistate
 - descopera villagerii existenti din lumi
 - verifica si completeaza profilurile lipsa
 - initializeaza motoarele de decizie, dialog si scenarii
+- initializeaza `ProgressionService` ca strat initial peste runtime-ul curent din `ScenarioEngine`
 - initializeaza `StoryContextService` read-only
 - initializeaza `StoryStateService` pentru persistenta story
 - inregistreaza comenzile si listener-ele
@@ -60,6 +62,8 @@ Sistemul de NPC-uri are deja implementate:
 - completare automata pentru `socialAnchor`
 - bind manual initial prin `/ainpc world bind npc ...` catre home/work/social places
 - persistenta initiala `npc_world_bindings` pentru home/work/social place si node IDs
+- comanda read-only `/ainpc world bindings ...` pentru inspectia randurilor persistente NPC -> world mapping
+- export `npc-world-bindings.json` in `/ainpc debugdump world/all`
 - planner initial `/ainpc world household plan ...` care produce `HouseAllocation` din mapping
 - spawn initial `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
 - planner initial `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
@@ -105,6 +109,22 @@ Sistemul de chat mai are si:
 
 Documentatia detaliata pentru fluxul click/chat/sesiune/intentie este in `interactiuni.md`.
 
+## AI orchestration initiala
+
+Exista o fundatie initiala pentru AI transversal peste mecanici:
+
+- pachet `ro.ainpc.ai.orchestration`
+- `AIOrchestrationService` initializat in `AINPCPlugin`
+- config `ai.orchestration.enabled`, dezactivat implicit
+- `AIUseCase` pentru dialog, quest draft, story draft, reactii si rezumat admin
+- `AIOrchestrationPolicy` care declara tipul de output, necesitatea validarii si faptul ca output-ul nu este executabil direct in runtime
+- `AIOrchestrationRequest` si `AIOrchestrationResult` ca modele mici, imutabile si normalizate
+- fallback determinist prin `AIOrchestrationService.orchestrate(...)`, fara apel provider si fara scriere de progres/story state
+
+Limitare actuala:
+
+- serviciul nu este inca legat la `OpenAIService`, `DialogManager` sau `ScenarioEngine`; momentan stabileste contractul sigur pentru pasii urmatori.
+
 ## GUI
 
 Exista o prima fundatie GUI inventory pentru operare in joc:
@@ -116,10 +136,10 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
 - comanda rapida `/quest gui`
 - tab-completion pentru `/ainpc gui` si `/quest gui`
 - permisiuni `ainpc.gui`, `ainpc.gui.quest`, `ainpc.gui.stats`, `ainpc.gui.interact`, `ainpc.gui.shop`, `ainpc.gui.world`, `ainpc.gui.manager`, `ainpc.gui.audit`, `ainpc.gui.debug`
-- `ScenarioEngine.getQuestGuiSnapshot(...)` expune pentru GUI un snapshot read-only cu questuri curente/arhivate, status, categorie, selector, stage curent, obiective, stage-uri si recompense
+- `ProgressionService.getProgressionGuiSnapshot(...)` expune pentru GUI un snapshot generic read-only peste runtime-ul curent, cu questuri/contracte curente/arhivate, status, categorie, selector, stage curent, obiective, stage-uri si recompense
 - ecrane initiale:
   - hub principal
-  - quest log navigabil peste snapshot-ul GUI din `ScenarioEngine`
+  - quest log navigabil peste snapshot-ul GUI generic din `ProgressionService`
   - detalii quest cu obiective, stage-uri, recompense, status, tracking, debug admin si abandon cu confirmare
   - world context peste `WorldAdminApi`
   - statistici jucator si NPC-uri apropiate
@@ -230,6 +250,14 @@ Ce este implementat:
 - oferire, acceptare, refuz, abandon, status, reset si completare fortata
 - progres persistent per jucator in tabela `player_quests`
 - metadata initiala pentru runtime generic de progres: feature packs pot declara `mechanics`, scenariile pot seta `mechanic` si `progress/progression`, iar scenariile non-`QUEST` cu progres activ pot intra in runtime-ul jucabil actual
+- `ProgressionService` exista initial ca strat de rutare pentru log/status/progress/debug/track/abandon si snapshot GUI generic, delegand inca spre `ScenarioEngine`
+- `ProgressionSelector` normalizeaza initial selectori `tracked/current`, selectori simpli, `mechanic:definition` si `pack:mechanic:definition`
+- `ProgressionDefinition` modeleaza read-only definitiile jucabile din feature packs, cu `progression_id`, pack, mecanica, kind, template, cod, obiective, stages si rewards
+- `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista initial ca modele compatibile peste status/progress/GUI, cu player, selector, metadata de mecanica si continut structurat pentru obiective/stage-uri
+- `ProgressionRepository` citeste read-only progresul persistent din `player_quests` ca `StoredProgression`, iar `ProgressionService.getStoredProgressions()` expune view-ul generic fara migrare DB
+- `StoredProgressionSummary` agrega progresul persistent dupa jucatori, status, pack, template, mecanica si kind, fiind folosit de comanda `stored` si debugdump
+- comanda read-only `/ainpc progression definitions [filter]` listeaza definitiile generice de progres vazute de runtime, iar `/ainpc contract definitions [filter]` ofera aliasul pentru contracte
+- comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresiile persistate, iar `/ainpc contract stored ...` aplica implicit filtrul `contract`
 - availability-ul aplica initial si `max_active` pe mecanica de progres, nu doar pe categoriile legacy `quest.max_active`
 - addonul medieval are mecanici separate `main_quests`, `side_quests` si `village_contracts`, inclusiv contractul non-`QUEST` `C01` bazat pe `TRADE_DEAL`
 - `quest log`, statusul si GUI-ul afiseaza initial mecanica de progres; log-ul poate filtra `quest` si `contract`
@@ -248,9 +276,11 @@ Ce este implementat:
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
 - comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
-- raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json` prin `/ainpc debugdump quest`
+- raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, `story-states.json` si `story-events.json` prin `/ainpc debugdump quest`
+- `loaded-quest-definitions.json` include acum si `progression_definitions`, generate din `ProgressionService`
 - audit read-only `/ainpc audit quest`
-- audit/debugdump initial pentru progression mechanics, metadata `progression_*` din definitiile incarcate si progres persistent exportat generic ca `player-progressions.json`
+- audit/debugdump initial pentru progression mechanics, metadata `progression_*` din definitiile incarcate si progres persistent exportat generic ca `player-progressions.json` prin `ProgressionRepository` si `StoredProgressionSummary`
+- `/ainpc audit quest` raporteaza sumarul generic al progresiilor persistate: randuri, jucatori, current/arhivate/tracked, statusuri si mecanici, plus avertizari pentru definitii nerezolvate
 - validare initiala de quest templates in `/ainpc audit quest`
 - validare `phase`/`stage`, stage IDs, `completion_mode`, `next_stage` si objective IDs pentru questuri etapizate in `/ainpc audit quest` si `debugdump quest`
 - validare pentru `player_quests.tracked`: cel mult un quest tracked activ per jucator
@@ -320,9 +350,26 @@ Exista deja un strat initial read-only pentru context narativ si persistenta sto
 - semnale story din regiune, place metadata, node-uri relevante si quest anchors
 - semnale story persistente din regiune/place si evenimente recente, cand exista date persistate
 
+## Runtime extensibil pentru scenarii
+
+Exista o fundatie initiala pentru extragerea treptata din `ScenarioEngine`:
+
+- pachet `ro.ainpc.engine.runtime`
+- `ScenarioActionRegistry`, `ScenarioConditionRegistry` si `ScenarioTriggerRegistry`
+- `ScenarioRuntimeRegistry` generic pentru inregistrare, lookup normalizat si validare de definitii
+- `ScenarioActionHandler`, `ScenarioConditionHandler` si `ScenarioTriggerHandler`
+- `ScenarioExecutionContext` pentru datele runtime curente: jucator, NPC, regiune, place, node, template, progression si variabile
+- `ScenarioRuntimeDefinition` pentru actiuni/conditii/trigger-e declarate generic
+- `ScenarioVariableProvider`
+- `ScenarioValidationReport` cu erori, warning-uri, info, `isValid()` si merge
+
+Limitare actuala:
+
+- registrii sunt schelet testabil si nu sunt inca motorul principal de executie pentru questurile existente.
+
 Limitari actuale:
 
-- nu exista inca audit/debugdump dedicat pentru story state-ul persistent
+- audit/debugdump dedicat pentru story state-ul persistent exista initial prin `/ainpc audit quest`, `/ainpc debugdump quest` si `/ainpc debugdump story`
 - `StoryContextService` nu genereaza questuri si nu scrie in DB
 - actiunile story sunt suportate initial doar la finalizarea questului, ca intrari in `rewards`
 - contextul este util doar cat mapping-ul si quest anchors sunt suficient populate
@@ -528,7 +575,7 @@ Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul actual:
 
 - legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
-- comenzi si audit/debugdump complet pentru story state persistent
+- validator mai strict pentru story actions, chei story si retention
 - generator complet de sate, case si cladiri de meserii
 - integrare optionala cu WorldEdit API
 - questuri cu etape reale si branching avansat
@@ -559,6 +606,7 @@ Proiectul are deja implementate:
 - `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
 - comenzi read-only pentru story state persistent si evenimente story
 - actiuni de quest pentru story state si story events
+- audit/debugdump initial pentru story state persistent si story events
 - scanare vanilla initiala si import semantic pentru world mapping
 - `npc_world_bindings` initial pentru home/work/social place si node IDs
 - comanda pentru mapping demo minim in jurul jucatorului

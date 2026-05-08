@@ -75,6 +75,7 @@ Implementare initiala compatibila:
 
 ```text
 /ainpc progression log
+/ainpc progression stored [jucator|uuid|all] [filter] [limit]
 /ainpc progression status <selector>
 /ainpc progression progress <selector>
 /ainpc progression track start <selector>
@@ -83,6 +84,7 @@ Implementare initiala compatibila:
 /ainpc contract log
 /ainpc contract log active
 /ainpc contract log completed
+/ainpc contract stored [jucator|uuid|all] [filter] [limit]
 /ainpc contract status C01
 /ainpc contract progress C01
 /ainpc contract track start C01
@@ -245,6 +247,24 @@ ObjectiveProgressResult recordObjectiveEvent(Player player, ObjectiveEvent event
 
 `ScenarioEngine`, listener-ele, comenzile si AI-ul nu trebuie sa scrie direct progresul. Ele trebuie sa routeze intentii sau evenimente catre `ProgressionService`.
 
+Implementare initiala in repo:
+
+- `ProgressionService` exista in `ro.ainpc.progression` si este initializat de `AINPCPlugin`;
+- serviciul preia initial log/status/progress/debug/track/abandon si snapshot-ul GUI, dar deleaga inca executia reala catre `ScenarioEngine`;
+- `ProgressionSelector` normalizeaza selectori goi, `tracked/current/curent/urmarit`, selectori simpli, `mechanic:definition` si `pack:mechanic:definition`;
+- `ProgressionDefinition` modeleaza read-only definitiile jucabile din feature packs;
+- `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista initial ca snapshot-uri compatibile peste datele produse inca de `ScenarioEngine`;
+- `ProgressionRepository` citeste read-only tabela compatibila `player_quests` si intoarce `StoredProgression`, cu metadata de definitie rezolvata din `ProgressionDefinition`;
+- `ProgressionService.getStoredProgressions()` expune repository-ul generic pentru audit/debugdump si pentru viitoarea migrare;
+- `StoredProgressionSummary` agrega read-only randurile persistate dupa jucator, status, pack, template, mecanica si kind;
+- `/ainpc progression definitions [filter]` listeaza definitiile generice de progres;
+- `/ainpc contract definitions [filter]` listeaza aceeasi sursa, filtrata implicit pe contracte cand nu primeste filtru;
+- `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresul persistent citit prin `ProgressionRepository`;
+- `/ainpc contract stored ...` foloseste acelasi view, filtrat implicit pe contracte;
+- `/ainpc audit quest` foloseste `StoredProgressionSummary` pentru sumar si avertizari despre progresii persistate fara definitie/mecanica/status;
+- `/ainpc debugdump quest` include `progression_definitions` in `loaded-quest-definitions.json`;
+- `/ainpc contract ...` foloseste parserul pentru a transforma selectorii scurti in forma `contract:<selector>`.
+
 ## Persistenta
 
 Pe termen scurt, tabela `player_quests` poate ramane pentru compatibilitate.
@@ -280,7 +300,7 @@ Pentru compatibilitate:
 - `player_quests` poate fi citit ca view logic peste `player_progressions` unde `kind = quest`;
 - comenzile `/ainpc quest ...` pot filtra doar mecanicile `kind=quest`;
 - debugdump-ul vechi ramane prin `player-quest-progress.json`;
-- implementare initiala: `/ainpc debugdump quest` scrie si `player-progressions.json`, ca view generic peste `player_quests`, cu `progression_id`, `pack_id`, `definition_id`, `mechanic_id`, `kind` si label-uri rezolvate din feature packs.
+- implementare initiala: `ProgressionRepository` citeste `player_quests` ca `StoredProgression`, `StoredProgressionSummary` agrega randurile, iar `/ainpc debugdump quest` scrie `player-progressions.json` ca view generic cu `progression_id`, `pack_id`, `definition_id`, `mechanic_id`, `kind` si label-uri rezolvate din feature packs.
 
 ## Obiective si stari
 
@@ -328,6 +348,7 @@ Implementare initiala in repo:
 - log/status/progress afiseaza metadata mecanicii, iar `quest log` poate filtra initial `quest` si `contract`.
 - selectorii pentru status/progress/track/abandon accepta forme cu mecanica, de exemplu `village_contracts:C01`.
 - exista fatade initiale `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...` si `/contract ...`, toate rutate catre acelasi runtime.
+- comenzile admin `/ainpc progression stored ...` si `/ainpc contract stored ...` inspecteaza progresiile persistate fara sa modifice DB-ul.
 - `/ainpc debugdump quest` exporta initial si `player-progressions.json`, pentru inspectie generica fara dependenta semantica de numele `quest`.
 
 ## Migrare incrementala recomandata
@@ -336,9 +357,11 @@ Implementare initiala in repo:
 2. Adauga metadata de progres in loader: `mechanic`, `progress.enabled`, `progress.kind`, `progress.labels`. Implementat initial: `FeaturePackLoader` incarca `mechanics`, scenariile pot seta `mechanic` si `progress/progression`, iar metadata lipsa se completeaza din mecanica referita.
 3. Permite progres si pentru scenarii non-`QUEST`, daca au mecanica de progres activa. Implementat initial: runtime-ul actual include definitii non-`QUEST` cu progres activ si obiective/rewards, inclusiv contractul medieval `C01`.
 4. Introdu un model intern `ProgressionDefinition` mapat din quest/scenario definitions existente.
-5. Extrage treptat metodele de progres din `ScenarioEngine` in `ProgressionService`.
-6. Adauga snapshot-uri generic numite: `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiEntry`.
-7. Adauga exporturi generic numite pentru observabilitate. Implementat initial: `player-progressions.json` peste `player_quests`.
+   Implementat initial: `ProgressionDefinition` exista read-only peste feature packs si este exportat in debugdump.
+5. Extrage treptat metodele de progres din `ScenarioEngine` in `ProgressionService`. Implementat initial: exista `ProgressionService` ca strat de rutare/delegare pentru comenzile si GUI-urile bazate pe selector.
+6. Adauga snapshot-uri generic numite: `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry`.
+   Implementat initial: `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista ca wrapper-e compatibile peste status/progress/GUI, iar Quest GUI consuma deja snapshot-ul generic expus de `ProgressionService`.
+7. Adauga exporturi generic numite pentru observabilitate. Implementat initial: `ProgressionRepository`, `StoredProgressionSummary` si `player-progressions.json` peste `player_quests`.
 8. Abia apoi planifica migrari DB din `player_quests` catre `player_progressions`.
 
 ## Ce nu trebuie facut
@@ -352,6 +375,7 @@ Implementare initiala in repo:
 ## Legaturi cu documentele existente
 
 - `questuri-avansate.md` ramane ghidul pentru evolutia questurilor concrete.
+- `lucru-alternat-quest-mapping-progression.md` stabileste cadenta de lucru: mapping concret, quest/contract mic, smoke test, observabilitate si apoi extractie mica spre `ProgressionService`.
 - `quest-anchor-bindings.md` ramane contractul pentru ancorele semantice existente.
 - `strategie-plugin-modular-si-scenarii-programabile.md` descrie directia pentru addonuri si scenarii.
 - `ai-orchestrare-si-mecanici.md` trebuie sa trateze `ProgressionService` ca serviciu determinist, nu ca tool AI direct.

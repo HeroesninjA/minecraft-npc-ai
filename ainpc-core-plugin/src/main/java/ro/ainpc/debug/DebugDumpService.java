@@ -15,6 +15,9 @@ import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.QuestScenarioContract;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.npc.AINPC;
+import ro.ainpc.progression.ProgressionDefinition;
+import ro.ainpc.progression.StoredProgression;
+import ro.ainpc.progression.StoredProgressionSummary;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlaceInfo;
 import ro.ainpc.world.WorldRegionInfo;
@@ -71,6 +74,7 @@ public class DebugDumpService {
         }
         if ("all".equals(normalizedScope) || "world".equals(normalizedScope)) {
             writeJson(dumpRoot.resolve("world-mapping.json"), buildWorldMappingJson());
+            writeJson(dumpRoot.resolve("npc-world-bindings.json"), buildNpcWorldBindingsJson());
         }
         if ("all".equals(normalizedScope) || "quest".equals(normalizedScope)) {
             writeText(dumpRoot.resolve("quests.yml"), plugin.getQuestConfig() != null
@@ -81,6 +85,9 @@ public class DebugDumpService {
             writeJson(dumpRoot.resolve("player-progressions.json"), buildPlayerProgressionsJson());
             writeJson(dumpRoot.resolve("player-quest-progress.json"), buildPlayerQuestProgressJson());
             writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), buildQuestAnchorBindingsJson());
+        }
+        if ("all".equals(normalizedScope) || "quest".equals(normalizedScope) || "story".equals(normalizedScope)) {
+            writeJson(dumpRoot.resolve("story-states.json"), buildStoryStatesJson());
             writeJson(dumpRoot.resolve("story-events.json"), buildStoryEventsJson());
         }
         if ("all".equals(normalizedScope) || "openai".equals(normalizedScope)) {
@@ -98,7 +105,7 @@ public class DebugDumpService {
 
         String normalized = scope.trim().toLowerCase();
         return switch (normalized) {
-            case "all", "npc", "world", "quest", "openai" -> normalized;
+            case "all", "npc", "world", "quest", "story", "openai" -> normalized;
             default -> "all";
         };
     }
@@ -125,7 +132,7 @@ public class DebugDumpService {
         sb.append("- server.txt\n");
         sb.append("- config-sanitized.yml\n");
         sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-events.json, openai.txt depending on scope\n");
+        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n");
         sb.append("- recent-server-log.txt\n");
         return sb.toString();
     }
@@ -811,6 +818,38 @@ public class DebugDumpService {
             warnings.add("Nu pot valida JSON-ul din player_quests: " + exception.getMessage());
         }
 
+        String regionStoryStateSql = """
+            SELECT region_id, story_pool, variables
+            FROM region_story_state
+            ORDER BY updated_at DESC, region_id
+            LIMIT 500
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(regionStoryStateSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String label = resultSet.getString("region_id");
+                auditStoredJsonColumn(warnings, "region_story_state.story_pool", label, resultSet.getString("story_pool"));
+                auditStoredJsonColumn(warnings, "region_story_state.variables", label, resultSet.getString("variables"));
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida JSON-ul din region_story_state: " + exception.getMessage());
+        }
+
+        String placeStoryStateSql = """
+            SELECT place_id, variables
+            FROM place_story_state
+            ORDER BY updated_at DESC, place_id
+            LIMIT 500
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(placeStoryStateSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                auditStoredJsonColumn(warnings, "place_story_state.variables", resultSet.getString("place_id"), resultSet.getString("variables"));
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida JSON-ul din place_story_state: " + exception.getMessage());
+        }
+
         String storyEventSql = """
             SELECT id, payload
             FROM story_events
@@ -876,11 +915,17 @@ public class DebugDumpService {
         root.addProperty("scenario_count", scenarios.size());
         root.addProperty("quest_count", rows.size());
         root.addProperty("progression_mechanic_count", featurePackLoader.getAllProgressionMechanics().size());
+        root.addProperty("progression_definition_count", plugin.getProgressionService() != null
+            ? plugin.getProgressionService().getDefinitions().size()
+            : 0);
         root.add("by_pack", countMapJson(byPack));
         root.add("by_category", countMapJson(byCategory));
         root.add("by_kind", countMapJson(byKind));
         root.add("by_mechanic", countMapJson(byMechanic));
         root.add("progression_mechanics", progressionMechanicsJson(featurePackLoader.getAllProgressionMechanics()));
+        root.add("progression_definitions", progressionDefinitionsJson(plugin.getProgressionService() != null
+            ? plugin.getProgressionService().getDefinitions()
+            : List.of()));
         root.add("rows", rows);
         return root;
     }
@@ -951,6 +996,48 @@ public class DebugDumpService {
                 .comparing((FeaturePackLoader.ProgressionMechanicDefinition mechanic) -> valueOrEmpty(mechanic.getPackId()))
                 .thenComparing(mechanic -> valueOrEmpty(mechanic.getId())))
             .forEach(mechanic -> json.add(progressionMechanicJson(mechanic)));
+        return json;
+    }
+
+    private JsonArray progressionDefinitionsJson(Collection<ProgressionDefinition> definitions) {
+        JsonArray json = new JsonArray();
+        if (definitions == null || definitions.isEmpty()) {
+            return json;
+        }
+
+        for (ProgressionDefinition definition : definitions) {
+            json.add(progressionDefinitionJson(definition));
+        }
+        return json;
+    }
+
+    private JsonObject progressionDefinitionJson(ProgressionDefinition definition) {
+        JsonObject json = new JsonObject();
+        if (definition == null) {
+            return json;
+        }
+
+        json.addProperty("progression_id", definition.progressionId());
+        json.addProperty("pack_id", definition.packId());
+        json.addProperty("mechanic_id", definition.mechanicId());
+        json.addProperty("kind", definition.kind());
+        json.addProperty("definition_id", definition.definitionId());
+        json.addProperty("template_id", definition.templateId());
+        json.addProperty("code", definition.code());
+        json.addProperty("display_name", definition.displayName());
+        json.addProperty("description", definition.description());
+        json.addProperty("category", definition.category());
+        json.addProperty("scenario_kind", definition.scenarioKind());
+        json.addProperty("base_type", definition.baseType());
+        json.addProperty("label", definition.label());
+        json.addProperty("singular_label", definition.singularLabel());
+        json.addProperty("plural_label", definition.pluralLabel());
+        json.addProperty("max_active", definition.maxActive());
+        json.addProperty("objective_count", definition.objectiveCount());
+        json.addProperty("stage_count", definition.stageCount());
+        json.addProperty("reward_count", definition.rewardCount());
+        json.addProperty("repeatable", definition.repeatable());
+        json.addProperty("enabled", definition.enabled());
         return json;
     }
 
@@ -1088,244 +1175,77 @@ public class DebugDumpService {
         root.addProperty("source_table", "player_quests");
         root.addProperty("compatibility_view", true);
         root.addProperty("storage_note", "Generic progression export peste tabela legacy player_quests.");
-        if (plugin.getDatabaseManager() == null) {
+        if (plugin.getProgressionService() == null || plugin.getDatabaseManager() == null) {
             root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("error", "ProgressionService sau DatabaseManager indisponibil");
             root.addProperty("row_count", 0);
             root.add("rows", new JsonArray());
             return root;
         }
 
-        Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup = buildProgressionScenarioLookup();
         root.addProperty("available", true);
         root.addProperty("definitions_available", plugin.getFeaturePackLoader() != null);
 
         JsonArray rows = new JsonArray();
-        Map<String, Integer> byStatus = new LinkedHashMap<>();
-        Map<String, Integer> byTemplate = new LinkedHashMap<>();
-        Map<String, Integer> byPack = new LinkedHashMap<>();
-        Map<String, Integer> byMechanic = new LinkedHashMap<>();
-        Map<String, Integer> byKind = new LinkedHashMap<>();
-        int trackedCount = 0;
-        int currentCount = 0;
-        int archivedCount = 0;
-        int resolvedDefinitionCount = 0;
+        StoredProgressionSummary summary = StoredProgressionSummary.from(List.of());
 
-        String sql = """
-            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
-                   current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
-            FROM player_quests
-            ORDER BY player_uuid, status, updated_at DESC, template_id
-        """;
-
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                String templateId = valueOrEmpty(resultSet.getString("template_id"));
-                String questCode = valueOrEmpty(resultSet.getString("quest_code"));
-                String status = valueOrEmpty(resultSet.getString("status"));
-                ProgressionRowMetadata metadata = progressionRowMetadata(templateId, questCode, scenarioLookup);
-                JsonObject row = playerProgressionRowJson(resultSet, metadata);
+        try {
+            List<StoredProgression> progressions = plugin.getProgressionService().getStoredProgressions();
+            summary = StoredProgressionSummary.from(progressions);
+            for (StoredProgression progression : progressions) {
+                JsonObject row = playerProgressionRowJson(progression);
                 rows.add(row);
-
-                incrementCount(byStatus, status);
-                incrementCount(byTemplate, templateId);
-                incrementCountIfPresent(byPack, metadata.packId());
-                incrementCount(byMechanic, valueOrFallback(metadata.mechanicId(), "unknown"));
-                incrementCount(byKind, valueOrFallback(metadata.kind(), "unknown"));
-                if (metadata.definitionResolved()) {
-                    resolvedDefinitionCount++;
-                }
-                if (resultSet.getInt("tracked") != 0) {
-                    trackedCount++;
-                }
-                if ("active".equalsIgnoreCase(status) || "offered".equalsIgnoreCase(status)) {
-                    currentCount++;
-                } else if ("completed".equalsIgnoreCase(status) || "failed".equalsIgnoreCase(status)) {
-                    archivedCount++;
-                }
             }
         } catch (SQLException exception) {
             root.addProperty("available", false);
             root.addProperty("error", exception.getMessage());
         }
 
-        root.addProperty("row_count", rows.size());
-        root.addProperty("current_count", currentCount);
-        root.addProperty("archived_count", archivedCount);
-        root.addProperty("tracked_count", trackedCount);
-        root.addProperty("resolved_definition_count", resolvedDefinitionCount);
-        root.add("by_status", countMapJson(byStatus));
-        root.add("by_template", countMapJson(byTemplate));
-        root.add("by_pack", countMapJson(byPack));
-        root.add("by_mechanic", countMapJson(byMechanic));
-        root.add("by_kind", countMapJson(byKind));
+        root.addProperty("row_count", summary.rowCount());
+        root.addProperty("player_count", summary.playerCount());
+        root.addProperty("current_count", summary.currentCount());
+        root.addProperty("archived_count", summary.archivedCount());
+        root.addProperty("tracked_count", summary.trackedCount());
+        root.addProperty("resolved_definition_count", Math.max(0, summary.rowCount() - summary.unresolvedDefinitionCount()));
+        root.addProperty("unresolved_definition_count", summary.unresolvedDefinitionCount());
+        root.add("by_status", countMapJson(summary.byStatus()));
+        root.add("by_template", countMapJson(summary.byTemplate()));
+        root.add("by_pack", countMapJson(summary.byPack()));
+        root.add("by_mechanic", countMapJson(summary.byMechanic()));
+        root.add("by_kind", countMapJson(summary.byKind()));
         root.add("rows", rows);
         return root;
     }
 
-    private JsonObject playerProgressionRowJson(ResultSet resultSet,
-                                                ProgressionRowMetadata metadata) throws SQLException {
-        JsonObject json = playerQuestProgressRowJson(resultSet);
-        json.addProperty("compatibility_source", "player_quests");
-        json.addProperty("definition_resolved", metadata.definitionResolved());
-        json.addProperty("progression_id", metadata.progressionId());
-        json.addProperty("pack_id", metadata.packId());
-        json.addProperty("definition_id", metadata.definitionId());
-        json.addProperty("mechanic_id", metadata.mechanicId());
-        json.addProperty("kind", metadata.kind());
-        json.addProperty("mechanic_label", metadata.mechanicLabel());
-        json.addProperty("singular_label", metadata.singularLabel());
-        json.addProperty("plural_label", metadata.pluralLabel());
+    private JsonObject playerProgressionRowJson(StoredProgression progression) {
+        JsonObject json = new JsonObject();
+        if (progression == null) {
+            return json;
+        }
+
+        json.addProperty("player_uuid", progression.playerUuid());
+        json.addProperty("template_id", progression.templateId());
+        json.addProperty("quest_code", progression.code());
+        json.addProperty("status", progression.status());
+        json.addProperty("started_at", progression.startedAt());
+        json.addProperty("completed_at", progression.completedAt());
+        json.addProperty("current_phase", progression.currentPhase());
+        json.addProperty("current_stage_id", progression.currentStageId());
+        json.addProperty("updated_at", progression.updatedAt());
+        json.addProperty("tracked", progression.tracked());
+        addStoredJson(json, "objective_progress", progression.objectiveProgressJson());
+        addStoredJson(json, "quest_variables", progression.variablesJson());
+        json.addProperty("compatibility_source", progression.compatibilitySource());
+        json.addProperty("definition_resolved", progression.definitionResolved());
+        json.addProperty("progression_id", progression.progressionId());
+        json.addProperty("pack_id", progression.packId());
+        json.addProperty("definition_id", progression.definitionId());
+        json.addProperty("mechanic_id", progression.mechanicId());
+        json.addProperty("kind", progression.kind());
+        json.addProperty("mechanic_label", progression.mechanicLabel());
+        json.addProperty("singular_label", progression.singularLabel());
+        json.addProperty("plural_label", progression.pluralLabel());
         return json;
-    }
-
-    private Map<String, FeaturePackLoader.ScenarioDefinition> buildProgressionScenarioLookup() {
-        Map<String, FeaturePackLoader.ScenarioDefinition> lookup = new LinkedHashMap<>();
-        FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
-        if (featurePackLoader == null) {
-            return lookup;
-        }
-
-        for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
-            if (scenario == null) {
-                continue;
-            }
-            addProgressionScenarioLookup(lookup, questTemplateId(scenario), scenario);
-            addProgressionScenarioLookup(lookup, scenario.getId(), scenario);
-            addProgressionScenarioLookup(lookup, scenario.getQuestCode(), scenario);
-            String packId = valueOrEmpty(scenario.getPackId());
-            String scenarioId = valueOrEmpty(scenario.getId());
-            String questCode = valueOrEmpty(scenario.getQuestCode());
-            if (!packId.isBlank() && !scenarioId.isBlank()) {
-                addProgressionScenarioLookup(lookup, packId + ":" + scenarioId, scenario);
-            }
-            if (!questCode.isBlank()) {
-                if (!packId.isBlank()) {
-                    addProgressionScenarioLookup(lookup, packId + ":" + questCode, scenario);
-                }
-                addProgressionScenarioLookup(lookup, "code:" + questCode, scenario);
-                if (!packId.isBlank()) {
-                    addProgressionScenarioLookup(lookup, "code:" + packId + ":" + questCode, scenario);
-                }
-            }
-        }
-        return lookup;
-    }
-
-    private void addProgressionScenarioLookup(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
-                                              String key,
-                                              FeaturePackLoader.ScenarioDefinition scenario) {
-        String normalizedKey = normalizeKey(key);
-        if (normalizedKey.isBlank()) {
-            return;
-        }
-        lookup.putIfAbsent(normalizedKey, scenario);
-    }
-
-    private ProgressionRowMetadata progressionRowMetadata(String templateId,
-                                                          String questCode,
-                                                          Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup) {
-        FeaturePackLoader.ScenarioDefinition scenario =
-            findProgressionScenarioDefinition(templateId, questCode, scenarioLookup);
-        if (scenario == null) {
-            String fallbackTemplateId = valueOrEmpty(templateId);
-            return new ProgressionRowMetadata(
-                false,
-                valueOrFallback(fallbackTemplateId, valueOrEmpty(questCode)),
-                "",
-                extractProgressionDefinitionId(fallbackTemplateId),
-                "",
-                "",
-                "",
-                "",
-                ""
-            );
-        }
-
-        String packId = valueOrEmpty(scenario.getPackId());
-        String definitionId = valueOrFallback(scenario.getId(), extractProgressionDefinitionId(templateId));
-        String mechanicId = valueOrFallback(scenario.getProgressionMechanicId(), "quest");
-        String kind = valueOrFallback(scenario.getProgressionKind(), valueOrFallback(scenario.getQuestScenarioKind(), "quest"));
-        String mechanicLabel = valueOrFallback(scenario.getProgressionLabel(), mechanicId);
-        String singularLabel = valueOrFallback(scenario.getProgressionSingularLabel(), kind);
-        String pluralLabel = valueOrFallback(scenario.getProgressionPluralLabel(), mechanicLabel);
-        return new ProgressionRowMetadata(
-            true,
-            progressionId(packId, mechanicId, definitionId, templateId),
-            packId,
-            definitionId,
-            mechanicId,
-            kind,
-            mechanicLabel,
-            singularLabel,
-            pluralLabel
-        );
-    }
-
-    private FeaturePackLoader.ScenarioDefinition findProgressionScenarioDefinition(
-        String templateId,
-        String questCode,
-        Map<String, FeaturePackLoader.ScenarioDefinition> scenarioLookup
-    ) {
-        if (scenarioLookup == null || scenarioLookup.isEmpty()) {
-            return null;
-        }
-
-        FeaturePackLoader.ScenarioDefinition scenario = scenarioLookup.get(normalizeKey(templateId));
-        if (scenario != null) {
-            return scenario;
-        }
-
-        String packQualifiedReference = packQualifiedProgressionReference(templateId);
-        scenario = scenarioLookup.get(normalizeKey(packQualifiedReference));
-        if (scenario != null) {
-            return scenario;
-        }
-        scenario = scenarioLookup.get(normalizeKey("code:" + packQualifiedReference));
-        if (scenario != null) {
-            return scenario;
-        }
-
-        String definitionId = extractProgressionDefinitionId(templateId);
-        scenario = scenarioLookup.get(normalizeKey(definitionId));
-        if (scenario != null) {
-            return scenario;
-        }
-
-        String code = valueOrEmpty(questCode);
-        if (code.isBlank()) {
-            return null;
-        }
-        return scenarioLookup.get(normalizeKey("code:" + code));
-    }
-
-    private String progressionId(String packId, String mechanicId, String definitionId, String fallbackTemplateId) {
-        String safePackId = valueOrEmpty(packId);
-        String safeMechanicId = valueOrEmpty(mechanicId);
-        String safeDefinitionId = valueOrEmpty(definitionId);
-        if (safePackId.isBlank() || safeMechanicId.isBlank() || safeDefinitionId.isBlank()) {
-            return valueOrFallback(fallbackTemplateId, safeDefinitionId);
-        }
-        return safePackId + ":" + safeMechanicId + ":" + safeDefinitionId;
-    }
-
-    private String extractProgressionDefinitionId(String templateId) {
-        String safeTemplateId = valueOrEmpty(templateId);
-        int separator = safeTemplateId.lastIndexOf(':');
-        return separator >= 0 && separator < safeTemplateId.length() - 1
-            ? safeTemplateId.substring(separator + 1)
-            : safeTemplateId;
-    }
-
-    private String packQualifiedProgressionReference(String templateId) {
-        String safeTemplateId = valueOrEmpty(templateId);
-        int firstSeparator = safeTemplateId.indexOf(':');
-        int lastSeparator = safeTemplateId.lastIndexOf(':');
-        if (firstSeparator < 0 || lastSeparator <= firstSeparator || lastSeparator >= safeTemplateId.length() - 1) {
-            return "";
-        }
-        return safeTemplateId.substring(0, firstSeparator) + ":" + safeTemplateId.substring(lastSeparator + 1);
     }
 
     private JsonObject toRegionJson(WorldRegionInfo region) {
@@ -1369,6 +1289,181 @@ public class DebugDumpService {
         json.addProperty("radius", node.radius());
         json.add("metadata", gson.toJsonTree(node.metadata()));
         return json;
+    }
+
+    private JsonObject buildNpcWorldBindingsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_table", "npc_world_bindings");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("row_count", 0);
+            root.add("rows", new JsonArray());
+            return root;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        Map<String, WorldPlaceInfo> placesById = new LinkedHashMap<>();
+        Map<String, WorldNodeInfo> nodesById = new LinkedHashMap<>();
+        if (worldAdmin != null && worldAdmin.isEnabled()) {
+            for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
+                placesById.put(place.id(), place);
+            }
+            for (WorldNodeInfo node : worldAdmin.getNodes()) {
+                nodesById.put(node.id(), node);
+            }
+        }
+
+        root.addProperty("available", true);
+        root.addProperty("world_admin_enabled", worldAdmin != null && worldAdmin.isEnabled());
+        JsonArray rows = new JsonArray();
+        Map<String, Integer> bySource = new LinkedHashMap<>();
+        Map<String, Integer> byHomePlace = new LinkedHashMap<>();
+        Map<String, Integer> byWorkPlace = new LinkedHashMap<>();
+        Map<String, Integer> bySocialPlace = new LinkedHashMap<>();
+        int loadedNpcCount = 0;
+        int missingPlaceReferenceCount = 0;
+        int missingNodeReferenceCount = 0;
+
+        String sql = """
+            SELECT npc_id, npc_uuid, npc_name,
+                   home_place_id, work_place_id, social_place_id,
+                   home_node_id, work_node_id, social_node_id,
+                   family_id, source, created_at, updated_at
+            FROM npc_world_bindings
+            ORDER BY updated_at DESC, npc_id ASC
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                int npcId = resultSet.getInt("npc_id");
+                boolean loadedNpc = findLoadedNpcBySelector("npc_" + npcId) != null;
+                JsonObject row = npcWorldBindingRowJson(resultSet, placesById, nodesById, loadedNpc);
+                rows.add(row);
+
+                incrementCount(bySource, resultSet.getString("source"));
+                incrementCountIfPresent(byHomePlace, resultSet.getString("home_place_id"));
+                incrementCountIfPresent(byWorkPlace, resultSet.getString("work_place_id"));
+                incrementCountIfPresent(bySocialPlace, resultSet.getString("social_place_id"));
+                if (loadedNpc) {
+                    loadedNpcCount++;
+                }
+                missingPlaceReferenceCount += npcWorldMissingPlaceReferenceCount(resultSet, placesById);
+                missingNodeReferenceCount += npcWorldMissingNodeReferenceCount(resultSet, nodesById);
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        root.addProperty("row_count", rows.size());
+        root.addProperty("loaded_npc_count", loadedNpcCount);
+        root.addProperty("missing_place_reference_count", missingPlaceReferenceCount);
+        root.addProperty("missing_node_reference_count", missingNodeReferenceCount);
+        root.add("by_source", countMapJson(bySource));
+        root.add("by_home_place", countMapJson(byHomePlace));
+        root.add("by_work_place", countMapJson(byWorkPlace));
+        root.add("by_social_place", countMapJson(bySocialPlace));
+        root.add("rows", rows);
+        return root;
+    }
+
+    private JsonObject npcWorldBindingRowJson(ResultSet resultSet,
+                                              Map<String, WorldPlaceInfo> placesById,
+                                              Map<String, WorldNodeInfo> nodesById,
+                                              boolean loadedNpc) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("npc_id", resultSet.getInt("npc_id"));
+        json.addProperty("npc_uuid", valueOrEmpty(resultSet.getString("npc_uuid")));
+        json.addProperty("npc_name", valueOrEmpty(resultSet.getString("npc_name")));
+        json.addProperty("family_id", valueOrEmpty(resultSet.getString("family_id")));
+        json.addProperty("source", valueOrEmpty(resultSet.getString("source")));
+        json.addProperty("created_at", resultSet.getLong("created_at"));
+        json.addProperty("updated_at", resultSet.getLong("updated_at"));
+        json.addProperty("loaded_npc", loadedNpc);
+
+        addNpcWorldBindingRoleJson(json, "home",
+            resultSet.getString("home_place_id"),
+            resultSet.getString("home_node_id"),
+            placesById,
+            nodesById);
+        addNpcWorldBindingRoleJson(json, "work",
+            resultSet.getString("work_place_id"),
+            resultSet.getString("work_node_id"),
+            placesById,
+            nodesById);
+        addNpcWorldBindingRoleJson(json, "social",
+            resultSet.getString("social_place_id"),
+            resultSet.getString("social_node_id"),
+            placesById,
+            nodesById);
+        return json;
+    }
+
+    private void addNpcWorldBindingRoleJson(JsonObject root,
+                                            String role,
+                                            String placeId,
+                                            String nodeId,
+                                            Map<String, WorldPlaceInfo> placesById,
+                                            Map<String, WorldNodeInfo> nodesById) {
+        JsonObject json = new JsonObject();
+        String safePlaceId = valueOrEmpty(placeId);
+        String safeNodeId = valueOrEmpty(nodeId);
+        WorldPlaceInfo place = placesById.get(safePlaceId);
+        WorldNodeInfo node = nodesById.get(safeNodeId);
+        json.addProperty("place_id", safePlaceId);
+        json.addProperty("node_id", safeNodeId);
+        json.addProperty("place_exists", safePlaceId.isBlank() || place != null);
+        json.addProperty("node_exists", safeNodeId.isBlank() || node != null);
+        json.addProperty("node_place_matches", safePlaceId.isBlank()
+            || safeNodeId.isBlank()
+            || node == null
+            || node.placeId().isBlank()
+            || node.placeId().equalsIgnoreCase(safePlaceId));
+        if (place != null) {
+            json.addProperty("place_type", valueOrEmpty(place.placeType().getId()));
+            json.addProperty("place_display_name", valueOrEmpty(place.displayName()));
+            json.addProperty("region_id", valueOrEmpty(place.regionId()));
+        }
+        if (node != null) {
+            json.addProperty("node_type", valueOrEmpty(node.typeId()));
+            json.addProperty("node_world", valueOrEmpty(node.worldName()));
+            json.addProperty("node_x", node.x());
+            json.addProperty("node_y", node.y());
+            json.addProperty("node_z", node.z());
+        }
+        root.add(role, json);
+    }
+
+    private int npcWorldMissingPlaceReferenceCount(ResultSet resultSet,
+                                                   Map<String, WorldPlaceInfo> placesById) throws SQLException {
+        return missingReferenceCount(placesById,
+            resultSet.getString("home_place_id"),
+            resultSet.getString("work_place_id"),
+            resultSet.getString("social_place_id"));
+    }
+
+    private int npcWorldMissingNodeReferenceCount(ResultSet resultSet,
+                                                  Map<String, WorldNodeInfo> nodesById) throws SQLException {
+        return missingReferenceCount(nodesById,
+            resultSet.getString("home_node_id"),
+            resultSet.getString("work_node_id"),
+            resultSet.getString("social_node_id"));
+    }
+
+    private int missingReferenceCount(Map<String, ?> knownReferences, String... references) {
+        if (knownReferences == null || knownReferences.isEmpty()) {
+            return 0;
+        }
+        int missing = 0;
+        for (String reference : references) {
+            String safeReference = valueOrEmpty(reference);
+            if (!safeReference.isBlank() && !knownReferences.containsKey(safeReference)) {
+                missing++;
+            }
+        }
+        return missing;
     }
 
     private JsonObject buildPlayerQuestProgressJson() {
@@ -1522,6 +1617,128 @@ public class DebugDumpService {
         json.addProperty("quest_phase", valueOrEmpty(resultSet.getString("current_phase")));
         json.addProperty("quest_stage_id", valueOrEmpty(resultSet.getString("current_stage_id")));
         json.addProperty("quest_updated_at", resultSet.getLong("progress_updated_at"));
+        return json;
+    }
+
+    private JsonObject buildStoryStatesJson() {
+        JsonObject root = new JsonObject();
+        JsonArray sourceTables = new JsonArray();
+        sourceTables.add("region_story_state");
+        sourceTables.add("place_story_state");
+        root.add("source_tables", sourceTables);
+
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("region_state_count", 0);
+            root.addProperty("place_state_count", 0);
+            root.addProperty("invalid_json_count", 0);
+            root.add("region_rows", new JsonArray());
+            root.add("place_rows", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray regionRows = new JsonArray();
+        JsonArray placeRows = new JsonArray();
+        Map<String, Integer> regionsByMode = new LinkedHashMap<>();
+        Map<String, Integer> regionsByState = new LinkedHashMap<>();
+        Map<String, Integer> regionsBySource = new LinkedHashMap<>();
+        Map<String, Integer> placesByRegion = new LinkedHashMap<>();
+        Map<String, Integer> placesByState = new LinkedHashMap<>();
+        Map<String, Integer> placesBySource = new LinkedHashMap<>();
+        int invalidJsonCount = 0;
+
+        String regionSql = """
+            SELECT region_id, story_mode, state_key, story_pool, variables,
+                   created_at, updated_at, updated_by, source
+            FROM region_story_state
+            ORDER BY updated_at DESC, region_id
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(regionSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String storyPool = resultSet.getString("story_pool");
+                String variables = resultSet.getString("variables");
+                regionRows.add(regionStoryStateRowJson(resultSet, storyPool, variables));
+                incrementCount(regionsByMode, resultSet.getString("story_mode"));
+                incrementCount(regionsByState, resultSet.getString("state_key"));
+                incrementCount(regionsBySource, resultSet.getString("source"));
+                if (!isStoredJsonValid(storyPool)) {
+                    invalidJsonCount++;
+                }
+                if (!isStoredJsonValid(variables)) {
+                    invalidJsonCount++;
+                }
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("region_error", exception.getMessage());
+        }
+
+        String placeSql = """
+            SELECT place_id, region_id, state_key, variables,
+                   created_at, updated_at, updated_by, source
+            FROM place_story_state
+            ORDER BY updated_at DESC, place_id
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(placeSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String variables = resultSet.getString("variables");
+                placeRows.add(placeStoryStateRowJson(resultSet, variables));
+                incrementCount(placesByRegion, resultSet.getString("region_id"));
+                incrementCount(placesByState, resultSet.getString("state_key"));
+                incrementCount(placesBySource, resultSet.getString("source"));
+                if (!isStoredJsonValid(variables)) {
+                    invalidJsonCount++;
+                }
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("place_error", exception.getMessage());
+        }
+
+        root.addProperty("region_state_count", regionRows.size());
+        root.addProperty("place_state_count", placeRows.size());
+        root.addProperty("invalid_json_count", invalidJsonCount);
+        root.add("regions_by_mode", countMapJson(regionsByMode));
+        root.add("regions_by_state", countMapJson(regionsByState));
+        root.add("regions_by_source", countMapJson(regionsBySource));
+        root.add("places_by_region", countMapJson(placesByRegion));
+        root.add("places_by_state", countMapJson(placesByState));
+        root.add("places_by_source", countMapJson(placesBySource));
+        root.add("region_rows", regionRows);
+        root.add("place_rows", placeRows);
+        return root;
+    }
+
+    private JsonObject regionStoryStateRowJson(ResultSet resultSet,
+                                               String storyPool,
+                                               String variables) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("region_id", valueOrEmpty(resultSet.getString("region_id")));
+        json.addProperty("story_mode", valueOrEmpty(resultSet.getString("story_mode")));
+        json.addProperty("state_key", valueOrEmpty(resultSet.getString("state_key")));
+        json.addProperty("created_at", resultSet.getLong("created_at"));
+        json.addProperty("updated_at", resultSet.getLong("updated_at"));
+        json.addProperty("updated_by", valueOrEmpty(resultSet.getString("updated_by")));
+        json.addProperty("source", valueOrEmpty(resultSet.getString("source")));
+        addStoredJson(json, "story_pool", storyPool);
+        addStoredJson(json, "variables", variables);
+        return json;
+    }
+
+    private JsonObject placeStoryStateRowJson(ResultSet resultSet, String variables) throws SQLException {
+        JsonObject json = new JsonObject();
+        json.addProperty("place_id", valueOrEmpty(resultSet.getString("place_id")));
+        json.addProperty("region_id", valueOrEmpty(resultSet.getString("region_id")));
+        json.addProperty("state_key", valueOrEmpty(resultSet.getString("state_key")));
+        json.addProperty("created_at", resultSet.getLong("created_at"));
+        json.addProperty("updated_at", resultSet.getLong("updated_at"));
+        json.addProperty("updated_by", valueOrEmpty(resultSet.getString("updated_by")));
+        json.addProperty("source", valueOrEmpty(resultSet.getString("source")));
+        addStoredJson(json, "variables", variables);
         return json;
     }
 
@@ -1901,19 +2118,6 @@ public class DebugDumpService {
 
     private void writeText(Path path, String content) throws IOException {
         Files.writeString(path, content, StandardCharsets.UTF_8);
-    }
-
-    private record ProgressionRowMetadata(
-        boolean definitionResolved,
-        String progressionId,
-        String packId,
-        String definitionId,
-        String mechanicId,
-        String kind,
-        String mechanicLabel,
-        String singularLabel,
-        String pluralLabel
-    ) {
     }
 
     public record DebugDumpResult(Path directory, String scope) {

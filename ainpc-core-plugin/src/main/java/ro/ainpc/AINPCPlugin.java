@@ -7,6 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.command.PluginCommand;
 import ro.ainpc.ai.DialogManager;
 import ro.ainpc.ai.OpenAIService;
+import ro.ainpc.ai.orchestration.AIOrchestrationService;
 import ro.ainpc.api.AINPCPlatformApi;
 import ro.ainpc.bootstrap.SchedulerCoordinator;
 import ro.ainpc.commands.AINPCCommand;
@@ -24,6 +25,7 @@ import ro.ainpc.managers.FamilyManager;
 import ro.ainpc.managers.MemoryManager;
 import ro.ainpc.managers.NPCManager;
 import ro.ainpc.platform.AINPCPlatform;
+import ro.ainpc.progression.ProgressionService;
 import ro.ainpc.routine.RoutineService;
 import ro.ainpc.spawn.NpcSpawnOrchestrator;
 import ro.ainpc.story.StoryContextService;
@@ -46,6 +48,7 @@ public class AINPCPlugin extends JavaPlugin {
     private ConversationSessionManager conversationSessionManager;
     private DialogManager dialogManager;
     private OpenAIService openAIService;
+    private AIOrchestrationService aiOrchestrationService;
     private RoutineService routineService;
     private NpcSpawnOrchestrator npcSpawnOrchestrator;
     private NpcWorldBindingService npcWorldBindingService;
@@ -61,6 +64,7 @@ public class AINPCPlugin extends JavaPlugin {
     private DialogueEngine dialogueEngine;
     private ScenarioEngine scenarioEngine;
     private FeaturePackLoader featurePackLoader;
+    private ProgressionService progressionService;
     private StoryContextService storyContextService;
     private StoryStateService storyStateService;
     private GuiService guiService;
@@ -95,6 +99,7 @@ public class AINPCPlugin extends JavaPlugin {
         // Initializeaza serviciul OpenAI
         getLogger().info("Initializare serviciu OpenAI...");
         openAIService = new OpenAIService(this);
+        aiOrchestrationService = new AIOrchestrationService(this);
         openAIService.runDiagnosticsAsync("startup");
         
         // Incarca Feature Packs
@@ -126,6 +131,7 @@ public class AINPCPlugin extends JavaPlugin {
         decisionEngine = new DecisionEngine(this);
         dialogueEngine = new DialogueEngine(this, openAIService);
         scenarioEngine = new ScenarioEngine(this);
+        progressionService = new ProgressionService(this);
         storyStateService = new StoryStateService(this);
         storyContextService = new StoryContextService(this);
         guiService = new GuiService(this);
@@ -234,6 +240,7 @@ public class AINPCPlugin extends JavaPlugin {
             platform.reloadFromConfig();
         }
         openAIService = new OpenAIService(this);
+        aiOrchestrationService = new AIOrchestrationService(this);
         openAIService.runDiagnosticsAsync("reload");
         if (memoryManager != null) {
             dialogueEngine = new DialogueEngine(this, openAIService);
@@ -322,6 +329,10 @@ public class AINPCPlugin extends JavaPlugin {
         return openAIService;
     }
 
+    public AIOrchestrationService getAIOrchestrationService() {
+        return aiOrchestrationService;
+    }
+
     public MessageUtils getMessageUtils() {
         return messageUtils;
     }
@@ -336,6 +347,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public ScenarioEngine getScenarioEngine() {
         return scenarioEngine;
+    }
+
+    public ProgressionService getProgressionService() {
+        return progressionService;
     }
 
     public StoryContextService getStoryContextService() {

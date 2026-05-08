@@ -7887,6 +7887,32 @@ public class ScenarioEngine {
         boolean complete,
         boolean active
     ) {
+        public QuestGuiObjective(String key,
+                                 String type,
+                                 String label,
+                                 String description,
+                                 String stageId,
+                                 String stageLabel,
+                                 int currentAmount,
+                                 int requiredAmount,
+                                 boolean complete,
+                                 boolean active) {
+            this(
+                key,
+                type,
+                label,
+                description,
+                stageId,
+                stageLabel,
+                legacyObjectiveState(currentAmount, requiredAmount, complete, active).id(),
+                legacyObjectiveState(currentAmount, requiredAmount, complete, active).displayName(),
+                currentAmount,
+                requiredAmount,
+                complete,
+                active
+            );
+        }
+
         public QuestGuiObjective {
             key = key == null ? "" : key;
             type = type == null ? "" : type;
@@ -7898,6 +7924,22 @@ public class ScenarioEngine {
             stateDisplay = stateDisplay == null ? "" : stateDisplay;
             currentAmount = Math.max(0, currentAmount);
             requiredAmount = Math.max(1, requiredAmount);
+        }
+
+        private static QuestObjectiveState legacyObjectiveState(int currentAmount,
+                                                                int requiredAmount,
+                                                                boolean complete,
+                                                                boolean active) {
+            if (complete || Math.max(0, currentAmount) >= Math.max(1, requiredAmount)) {
+                return QuestObjectiveState.COMPLETED;
+            }
+            if (!active) {
+                return QuestObjectiveState.PENDING;
+            }
+            if (currentAmount > 0) {
+                return QuestObjectiveState.IN_PROGRESS;
+            }
+            return QuestObjectiveState.STARTED;
         }
     }
 

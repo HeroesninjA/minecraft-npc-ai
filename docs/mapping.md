@@ -218,7 +218,7 @@ Sunt disponibile deja:
 - `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - `/ainpc world save`
 - `/ainpc audit [all|npc|world|db|spawn|quest]`
-- `/ainpc debugdump [all|npc|world|quest|openai]`
+- `/ainpc debugdump [all|npc|world|quest|story|openai]`
 
 ### Demo mapping minim
 

@@ -23,6 +23,7 @@ Actualizat: 2026-05-07
 - [x] Audit si comanda admin read-only pentru `quest_anchor_bindings`
 - [x] `/ainpc audit quest` valideaza initial si quest templates din feature packs
 - [x] `/ainpc audit quest` raporteaza strict tipuri necunoscute de obiective/reward-uri si story actions incomplete
+- [x] `/ainpc audit quest` raporteaza sumar generic pentru progresiile persistate prin `StoredProgressionSummary`
 - [x] Teste de contract runtime pentru Q01-Q05 din addonul medieval
 - [x] Q06 medieval initial cu `visit_place`, `inspect_node`, `talk_to_npc` si `record_story_event`
 - [x] Q07 medieval initial cu `collect_item`, `talk_to_npc`, `deliver_to_npc` si `record_story_event`
@@ -46,8 +47,20 @@ Actualizat: 2026-05-07
 - [x] Export/debugdump pentru quest templates incarcate in `loaded-quest-definitions.json`
 - [x] Export/debugdump complet pentru `player_quests` in `player-quest-progress.json`
 - [x] Export/debugdump generic pentru progresii in `player-progressions.json`, ca view peste `player_quests` cu metadata de mecanica
+- [x] Export/debugdump pentru `region_story_state` si `place_story_state` in `story-states.json`
 - [x] Export/debugdump pentru `story_events` in `story-events.json`
+- [x] `/ainpc debugdump story` pentru inspectie dedicata story state/events
 - [x] Metadata initiala pentru `ProgressionService`: feature packs pot declara `mechanics`, iar scenariile pot seta `mechanic`/`progress`
+- [x] `ProgressionService` initial ca strat de rutare peste runtime-ul existent din `ScenarioEngine`
+- [x] `ProgressionSelector` initial pentru selectori simpli, `tracked/current`, `mechanic:definition` si `pack:mechanic:definition`
+- [x] `ProgressionDefinition` initial ca model read-only peste definitiile jucabile din feature packs
+- [x] Snapshot-uri initiale `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` peste rezultatele compatibile din runtime-ul curent
+- [x] `ProgressionRepository` read-only peste `player_quests`, expus prin `ProgressionService.getStoredProgressions()`
+- [x] `StoredProgressionSummary` pentru sumar read-only peste progresiile persistate
+- [x] Comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` si alias filtrat `/ainpc contract stored ...`
+- [x] Comanda read-only `/ainpc progression definitions [filter]` si alias filtrat `/ainpc contract definitions [filter]`
+- [x] `AIOrchestrationService` initial pentru politici AI, fallback determinist si rezultate care nu pot executa runtime direct
+- [x] Contracte initiale pentru runtime extensibil: registri de actiuni/conditii/trigger-e, context de executie, definitii runtime, variable provider si raport de validare
 - [x] Availability aplica initial `max_active` si pe mecanici de progres declarate in addon
 - [x] Addonul medieval are primul contract non-`QUEST` (`C01`) pe mecanica `village_contracts`
 - [x] `quest log` afiseaza/grupeaza dupa mecanica si are filtre initiale `quest`/`contract`
@@ -68,6 +81,8 @@ Actualizat: 2026-05-07
 - [x] Script `scripts/smoke-paper-mapping.ps1` pentru pregatirea smoke test-ului Paper mapping/spawn
 - [x] Persistenta initiala `npc_world_bindings` pentru home/work/social place si node IDs
 - [x] `/ainpc audit db` valideaza initial `npc_world_bindings`
+- [x] Comanda read-only `/ainpc world bindings ...` pentru inspectie `npc_world_bindings`
+- [x] Export/debugdump `npc-world-bindings.json` pentru `npc_world_bindings`
 - [x] `HouseAllocation` initial pentru case cu mai multi rezidenti si conversie catre `NpcSpawnPlan`
 - [x] Dry-run si spawn batch initial pentru household, cu rollback practic daca spawn-ul esueaza la mijloc
 
@@ -79,17 +94,18 @@ Actualizat: 2026-05-07
 - [ ] Smoke test Paper pentru Q06-Q08 pe mapping demo si NPC-uri medievale
 - [ ] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
 - [x] Export/debugdump complet pentru `quest_anchor_bindings`
-- [ ] Comanda read-only dedicata pentru inspectie `npc_world_bindings`
+- [x] Comanda read-only dedicata pentru inspectie `npc_world_bindings`
 
-## Componente lipsa confirmate in cod
+## Componente lipsa sau incomplete confirmate in cod
 
-- [ ] Runtime extensibil pentru scenarii:
-- [ ] `ScenarioActionRegistry`
-- [ ] `ScenarioConditionRegistry`
-- [ ] `ScenarioTriggerRegistry`
-- [ ] `ScenarioExecutionContext`
-- [ ] `ScenarioVariableProvider`
-- [ ] `ScenarioValidationReport`
+- [ ] Runtime extensibil complet pentru scenarii: registrii exista initial, dar `ScenarioEngine` nu consuma inca aceste contracte ca runtime principal
+- [x] `ScenarioActionRegistry`
+- [x] `ScenarioConditionRegistry`
+- [x] `ScenarioTriggerRegistry`
+- [x] `ScenarioExecutionContext`
+- [x] `ScenarioVariableProvider`
+- [x] `ScenarioValidationReport`
+- [x] `AIOrchestrationService` initial, dezactivat implicit pentru executie reala prin `ai.orchestration.enabled`
 - [ ] Validator pentru addonuri si feature pack-uri:
 - [ ] verificare `dependencies`
 - [ ] verificare `capabilities`
@@ -165,14 +181,16 @@ Actualizat: 2026-05-07
 ## Admin si debug
 
 - [ ] Comenzi mai bune pentru inspectarea starii unui NPC
-- [ ] Audit/debugdump dedicat pentru story state si story events
+- [x] Audit/debugdump dedicat pentru story state si story events
 - [ ] Debug pentru prompt, model AI si raspuns fallback
 - [ ] Reload sigur pentru config, pack-uri si scenarii
 - [ ] Mesaje de eroare mai clare pentru configuratii invalide
 
-## Pentru primul release bun
+## Pentru demo playable matur
 
-- [ ] Un scenariu medieval complet jucabil
+- [ ] Un scenariu medieval demo complet jucabil cap-coada
 - [ ] Un set mic de NPC-uri cu roluri distincte
-- [ ] Cateva questuri cap-coada care pot fi testate usor
-- [ ] Instalare simpla si documentatie scurta pentru server admins
+- [ ] Cateva questuri cap-coada care pot fi testate usor pe Paper
+- [ ] Smoke test/restart/audit/debugdump trecute pentru mapping, NPC bindings, quest/progression si story state
+- [ ] Instalare simpla si documentatie scurta pentru server admins/testeri
+- [ ] Release-ul public ramane ulterior, dupa backup, rollback, migration plan si stabilizare API/addon

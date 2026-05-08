@@ -1,6 +1,6 @@
 # Quest, Story si AI
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-07
 
 Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-ul asistat.
 
@@ -12,6 +12,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../pregatire-questuri-avansate.md` | Pregatiri si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate.md` | Evolutia questurilor pe obiective, etape si progres |
 | `../../progression-service.md` | Directie pentru motor generic de progres peste questuri, contracte, datorii si evenimente |
+| `../../lucru-alternat-quest-mapping-progression.md` | Protocol de lucru alternat intre mapping, questuri concrete si extractii mici spre `ProgressionService` |
 | `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
 | `../../interactiuni.md` | Fluxul click/chat/sesiune, ascultare pasiva si intentii de quest inaintea dialogului liber |
 | `../../gui-interfete.md` | Directie pentru Quest GUI, NPC interaction GUI si suprafete vizuale peste quest/story |
@@ -43,8 +44,10 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - `/ainpc story region`, `/ainpc story place` si `/ainpc story events` exista initial pentru inspectia read-only a story state-ului persistent.
 - Actiunile de quest `set_story_state` si `record_story_event` exista initial.
 - `/ainpc audit quest` verifica initial si quest templates, nu doar binding-uri.
+- `/ainpc audit quest`, `/ainpc debugdump quest` si `/ainpc debugdump story` acopera initial story state/events persistente.
 - `EnvironmentContextService` este directia recomandata pentru context read-only de lume; `EnvironmentEngine` complet ramane feature viitor.
 - Dialogul trebuie sa devina quest-aware, story-aware si environment-aware, dar sa ramana prezentare peste runtime validat.
+- `AIOrchestrationService` exista initial pentru politici, fallback determinist si output-uri non-executabile direct; integrarea cu dialog/quest/story ramane urmatorul pas.
 - AI-ul trebuie orchestratat central printr-un serviciu dedicat, dar executia ramane in serviciile deterministe.
 - Lipsesc inca branching, hook-uri intermediare pe stage si validator complet pentru story actions complexe.
 

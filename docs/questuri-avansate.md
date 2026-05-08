@@ -1,6 +1,6 @@
 # Questuri Avansate - Ghid de evolutie
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-07
 
 ## Scop
 
@@ -45,8 +45,8 @@ Ce exista deja:
 - `player_quests.current_stage_id` este persistat si backfilled din `current_phase` pentru compatibilitate;
 - `quest_variables` pastreaza observabilitate pentru stage runtime: `stage.current`, `stage.previous`, `stage.changed_at`, `stage.completed.<stage>` si `stage.last_completed`;
 - Q06, Q07 si Q08 din pack-ul medieval au stages explicite, `next_stage` liniar spre `RETURN` si metadata `phase` pe obiective;
-- `/ainpc audit quest` valideaza template-uri, binding-uri, materiale, entitati, profesii, prerequisite-uri, phases/stages, `completion_mode`, `next_stage` si objective IDs din stages;
-- `/ainpc debugdump quest` exporta `stages`, inclusiv `next_stage`, in `loaded-quest-definitions.json` si valideaza aceleasi reguli in `quest-audit-report.txt`;
+- `/ainpc audit quest` valideaza template-uri, binding-uri, materiale, entitati, profesii, prerequisite-uri, phases/stages, `completion_mode`, `next_stage`, objective IDs din stages si JSON-ul din story state/events;
+- `/ainpc debugdump quest` exporta `stages`, inclusiv `next_stage`, in `loaded-quest-definitions.json`, exporta `story-states.json`/`story-events.json` si valideaza aceleasi reguli in `quest-audit-report.txt`;
 - `scripts/smoke-paper-quests.ps1` pregateste smoke test-ul Paper pentru questuri.
 
 Tipuri de obiective suportate acum in runtime:
@@ -1163,7 +1163,7 @@ Recomandare importanta:
 - comenzile `quest status` si `quest track` accepta deja `quest_code` sau `template_id`;
 - comanda `quest abandon` accepta deja `tracked`, `quest_code` sau `template_id`;
 - comanda admin `quest debug` poate inspecta progresul si variabilele persistente pentru `tracked`, `quest_code` sau `template_id`;
-- `debugdump quest` exporta `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json` si `story-events.json`;
+- `debugdump quest` exporta `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, `story-states.json` si `story-events.json`;
 - `quest log` are filtre initiale: `active`, `current`, `tracked`, `main`, `side`, `repeatable`, `completed`, `failed`, `archived`, `all`;
 - `quest log` sorteaza questurile curente cu tracked primul, apoi `main`, `side`, `repeatable`, si arata sumar pe status/categorii;
 - `quest log` afiseaza actiuni rapide cu selectorul corect pentru status, tracking, abandon si debug admin;
@@ -1930,6 +1930,7 @@ debug-dump/
     player-quest-progress.json
     quest-anchor-bindings.json
     quest-audit-report.txt
+    story-states.json
     story-events.json
 ```
 

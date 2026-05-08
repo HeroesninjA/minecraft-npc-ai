@@ -1,6 +1,6 @@
 # Faze, Observatii si Avertizari
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-07
 
 Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner si rollback global practic pentru spawn pe regiune.
 
@@ -40,7 +40,7 @@ Avertizari:
 - Nu folosi fisierele din `target/` ca documentatie sursa.
 - Nu actualiza TODO-ul fara sa actualizezi si documentul tehnic relevant.
 
-## Faza 1: Mapping, Spawn Order si Rutina MVP
+## Faza 1: Mapping, Spawn Order si Rutina Minima
 
 Scop:
 
@@ -80,11 +80,12 @@ Status curent:
 - `StoryContextService` construieste initial `STORY_CONTEXT` din mapping, quest anchors active si story state persistent daca exista
 - `StoryStateService` persista initial `region_story_state`, `place_story_state` si `story_events`
 - comenzile `/ainpc story region`, `/ainpc story place` si `/ainpc story events` inspecteaza read-only story state-ul persistent
+- `/ainpc audit quest`, `/ainpc debugdump quest` si `/ainpc debugdump story` acopera initial story state/events persistente
 - quest completion poate executa `set_story_state` si `record_story_event` din YAML
 
 Observatii:
 
-- Pentru MVP, fluxul corect este `plan -> constructie/import -> region -> place -> node -> HouseAllocation -> NpcSpawnPlan -> spawn -> save -> family bind -> audit`.
+- Pentru demo-ul playable, fluxul corect este `plan -> constructie/import -> region -> place -> node -> HouseAllocation -> NpcSpawnPlan -> spawn -> save -> family bind -> audit`.
 - Pentru demo manual cu NPC existent, fluxul scurt este `world demo create -> world bind npc -> audit spawn -> world save`.
 - Pentru demo cu spawn generat, fluxul scurt este `world demo create -> world household plan -> world household spawn -> audit spawn -> world save`.
 - Pentru demo de sat intreg, fluxul scurt este `world demo create -> world settlement plan -> world settlement spawn -> audit spawn -> world save`.
@@ -198,14 +199,16 @@ Livrabile:
 - story state/events scrise la completare
 - verificare dupa reload pentru quest progress, anchors si story state
 
-## Faza 2: First Playable Release
+## Faza 2: First Playable Demo Intern
 
 Scop:
 
-- un scenariu medieval mic, instalabil si jucabil cap-coada
+- un scenariu medieval mic, instalabil si jucabil cap-coada de admin/tester
 - NPC-uri cu roluri clare
 - questuri completabile si persistente
 - documentatie scurta pentru admin
+
+Aceasta faza nu este lansare publica. Este un demo matur de validare pentru gameplay, persistenta, audit si operare.
 
 Documente:
 
@@ -225,7 +228,7 @@ Observatii:
 
 Avertizari:
 
-- Nu bloca release-ul pe economie, reputatie globala sau RPG complet.
+- Nu confunda demo-ul cu release-ul public; economie, reputatie globala si RPG complet raman pentru dupa validarea demo-ului.
 - Nu introduce branching complex inainte ca 3-5 questuri simple sa fie stabile la reload.
 - Nu lasa scenariul demo sa depinda de setari manuale fragile nedocumentate.
 
@@ -275,6 +278,8 @@ Documente:
 Observatii:
 
 - Directia corecta este `ScenarioActionRegistry`, `ScenarioConditionRegistry`, `ScenarioTriggerRegistry` si validator separat.
+- Registrii, contextul de executie, definitia runtime si raportul de validare exista initial in cod, dar nu sunt inca integrate ca motor principal in `ScenarioEngine`.
+- `AIOrchestrationService` exista initial ca strat de politici si fallback, dezactivat implicit pentru orchestrare reala.
 - Obiectivele `visit_place` si `inspect_node` exista initial dupa `visit_region`.
 - `WorldContextSnapshot`, `QuestAnchorResolver`, `quest_anchor_bindings`, `StoryContextService`, `StoryStateService`, comenzile read-only story si actiunile story de quest exista initial; urmatorul strat recomandat este audit/debugdump si validare explicita pentru story actions.
 - NPC-urile temporare trebuie sa foloseasca persistenta light sau deloc, in functie de scop.
@@ -305,7 +310,7 @@ Documente:
 
 Observatii:
 
-- Directia fara WorldEdit este buna pentru MVP deoarece reduce dependintele obligatorii.
+- Directia fara WorldEdit este buna pentru demo-ul playable deoarece reduce dependintele obligatorii.
 - WorldEdit poate ramane integrare optionala pentru servere care il au deja.
 - Generarea AI trebuie sa produca planuri si drafturi validate, nu modificari directe.
 - Story/quest authoring prin AI trebuie sa porneasca din `WorldContextSnapshot`, nu din harta completa.

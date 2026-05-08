@@ -1,8 +1,8 @@
 # StoryContextService
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-07
 
-Status: implementat initial ca strat read-only peste mapping, quest anchors si story state persistent initial; scrierile controlate vin prin actiuni de quest.
+Status: implementat initial ca strat read-only peste mapping, quest anchors si story state persistent initial; scrierile controlate vin prin actiuni de quest, iar audit/debugdump-ul pentru story state exista initial.
 
 ## Scop
 
@@ -50,6 +50,7 @@ Comenzi admin read-only:
 /ainpc story region <regionId>
 /ainpc story place <placeId>
 /ainpc story events <regionId|placeId> [limit]
+/ainpc debugdump story
 ```
 
 Fara NPC tinta, contextul se construieste pentru locatia jucatorului.
@@ -80,13 +81,13 @@ Snapshot-ul poate include:
 ## Limitari
 
 - Actiunile story exista initial doar ca intrari de reward executate la finalizarea questului.
-- Evenimentele story sunt persistate si pot fi inspectate read-only, dar nu exista inca audit/debugdump dedicat.
+- Evenimentele story si story state-ul persistent pot fi inspectate read-only prin comenzi si exportate prin `story-states.json`/`story-events.json`.
 - Semnalele story din place vin temporar din `metadata`.
 - Contextul depinde de mapping existent; daca serverul are 0 regiuni/places/nodes, snapshot-ul va contine warnings si fallback limitat.
 
 ## Faza urmatoare
 
-Urmatorii pasi tehnici sunt auditul si validarea persistentei story:
+Urmatorii pasi tehnici sunt intarirea contractului de authoring:
 
-- audit/debug pentru story state
 - validator pentru actiunile story din feature packs
+- reguli explicite pentru chei, scope, event types si retention

@@ -354,6 +354,7 @@ Scope-uri disponibile:
 /ainpc debugdump npc
 /ainpc debugdump world
 /ainpc debugdump quest
+/ainpc debugdump story
 /ainpc debugdump openai
 ```
 
@@ -374,8 +375,10 @@ Fisiere generate:
 - `quests.yml`
 - `quest-audit-report.txt`
 - `loaded-quest-definitions.json`
+- `player-progressions.json`
 - `player-quest-progress.json`
 - `quest-anchor-bindings.json`
+- `story-states.json`
 - `story-events.json`
 - `openai.txt`
 - `recent-server-log.txt`
@@ -438,10 +441,15 @@ Tabele relevante:
 
 - `player_quests`
 - `quest_anchor_bindings`
+- `region_story_state`
+- `place_story_state`
+- `story_events`
 
 `/ainpc story context` este util cand vrei sa vezi ce ajunge in prompt ca `STORY_CONTEXT`, fara sa pornesti manual o generatie AI.
 
-`/ainpc debugdump quest` exporta un raport dedicat in `quest-audit-report.txt`, definitiile de quest incarcate in `loaded-quest-definitions.json`, progresul complet din `player_quests` in `player-quest-progress.json`, ancorele din `quest_anchor_bindings` in `quest-anchor-bindings.json` si evenimentele narative din `story_events` in `story-events.json`, inclusiv agregari utile pentru inspectie. Progresul exportat include `current_phase` si `current_stage_id`, iar raportul verifica referintele `phase`/`stage` ale obiectivelor etapizate.
+`/ainpc debugdump quest` exporta un raport dedicat in `quest-audit-report.txt`, definitiile de quest incarcate in `loaded-quest-definitions.json`, progresul generic in `player-progressions.json`, progresul complet din `player_quests` in `player-quest-progress.json`, ancorele din `quest_anchor_bindings` in `quest-anchor-bindings.json`, story state-ul persistent din `region_story_state`/`place_story_state` in `story-states.json` si evenimentele narative din `story_events` in `story-events.json`, inclusiv agregari utile pentru inspectie. `loaded-quest-definitions.json` include si `progression_definitions`, lista read-only generata prin `ProgressionService`. `player-progressions.json` este generat prin `ProgressionRepository` si `StoredProgressionSummary`, ca view generic peste `player_quests`; acelasi view poate fi inspectat in joc prin `/ainpc progression stored ...`, `/ainpc contract stored ...` si sumarizat in `/ainpc audit quest`. Progresul exportat include `current_phase` si `current_stage_id`, iar raportul verifica referintele `phase`/`stage` ale obiectivelor etapizate si JSON-ul din story state/events.
+
+`/ainpc debugdump story` genereaza doar partea dedicata de story observability: `story-states.json` si `story-events.json`, pe langa fisierele comune de context ale dump-ului.
 
 Atentie:
 

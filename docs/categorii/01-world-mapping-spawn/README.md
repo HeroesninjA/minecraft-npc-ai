@@ -1,6 +1,6 @@
 # World Mapping si Spawn
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-07
 
 Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, spawn order, case si bindings.
 
@@ -9,6 +9,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 | Document | Rol |
 |---|---|
 | `../../mapping.md` | Starea actuala, regulile de consum si evolutia sistemului `WorldRegion -> WorldPlace -> WorldNode` |
+| `../../lucru-alternat-quest-mapping-progression.md` | Protocol pentru a verifica mapping-ul prin questuri/contracte mici inainte de extractii mari de runtime |
 | `../../mapping-harti-manuale.md` | Ghid pentru harti construite manual, etichetare semantica si limitele detectiei automate |
 | `../../mapping-pentru-implementari-ulterioare.md` | Redirect istoric catre `../../mapping.md` |
 | `../../npc-world-bindings.md` | Tabela dedicata pentru legaturi NPC -> home/work/social places si nodes |
@@ -35,12 +36,14 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 - Spawn-ul initial pe regiune exista prin `/ainpc world settlement spawn ...`.
 - Rollback-ul global practic pentru `settlement spawn` exista la nivel de NPC-uri create anterior.
 - Persistenta dedicata `npc_world_bindings` exista initial; bind-ul curent pastreaza si fallback-ul `profile_data` plus metadata pe place.
+- Inspectia read-only pentru `npc_world_bindings` exista prin `/ainpc world bindings ...`.
+- Debugdump-ul `world/all` exporta `npc-world-bindings.json`.
 - Protectiile anti-duplicare exista initial in `NPCManager`, dar lipsesc inca delete-by-id, batch idempotent si marker persistent pe entitate.
 
 ## Fazele urmatoare
 
 1. Smoke test Paper pentru `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`.
-2. Inspectie/backfill matur pentru `npc_world_bindings` si household-uri persistente.
+2. Backfill matur pentru `npc_world_bindings` si household-uri persistente.
 3. Generator narativ de populatie pe regiune: nume, roluri, familii si distributie pe case/work/social.
 4. Hardening pentru spawn pe regiune: tranzactie DB completa sau compensare documentata, debugdump si test de rollback.
 5. Quest slice peste mapping: 3-5 questuri medievale cu `visit_place`, `inspect_node`, quest anchors si story events.

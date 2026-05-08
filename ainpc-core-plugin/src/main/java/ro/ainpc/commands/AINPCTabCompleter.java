@@ -31,11 +31,12 @@ public class AINPCTabCompleter implements TabCompleter {
         "main", "quest", "world", "stats", "interact", "shop", "manager", "audit", "debug"
     );
     private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
-    private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "openai");
+    private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "story", "openai");
     private static final List<String> ROUTINE_ACTIONS = Arrays.asList("tick", "status");
     private static final List<String> QUEST_MODES = Arrays.asList(
         "gui", "log", "track", "current", "nearest", "accept", "decline", "da", "nu", "ok", "refuz",
-        "abandon", "status", "progress", "progres", "reset", "complete", "anchors"
+        "abandon", "status", "progress", "progres", "reset", "complete", "anchors", "definitions", "defs",
+        "stored", "state", "progressions"
     );
     private static final List<String> QUEST_DECISION_MODES = Arrays.asList(
         "accept", "decline", "yes", "y", "da", "ok", "confirm", "deny", "reject", "no", "n", "nu", "refuz"
@@ -44,7 +45,11 @@ public class AINPCTabCompleter implements TabCompleter {
         "active", "current", "tracked", "quest", "contract", "main", "side", "repeatable",
         "completed", "failed", "archived", "all"
     );
-    private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "household", "settlement", "save");
+    private static final List<String> PROGRESSION_STORED_FILTERS = Arrays.asList(
+        "all", "active", "current", "tracked", "offered", "completed", "failed", "archived",
+        "quest", "contract", "main_quests", "side_quests", "village_contracts", "unresolved"
+    );
+    private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "bindings", "household", "settlement", "save");
     private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
@@ -52,6 +57,7 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> SCAN_TARGETS = Arrays.asList("village");
     private static final List<String> DEMO_ACTIONS = Arrays.asList("create");
     private static final List<String> BIND_TARGETS = Arrays.asList("npc");
+    private static final List<String> BINDINGS_ACTIONS = Arrays.asList("list", "npc", "place");
     private static final List<String> HOUSEHOLD_ACTIONS = Arrays.asList("plan", "spawn");
     private static final List<String> SETTLEMENT_ACTIONS = Arrays.asList("plan", "spawn");
     private static final List<String> REGION_TYPES = Arrays.stream(RegionType.values())
@@ -292,6 +298,20 @@ public class AINPCTabCompleter implements TabCompleter {
                     completions.addAll(getPlaceIds(args[args.length - 1]));
                 }
             }
+            case "binding", "bindings" -> {
+                if (args.length == 3) {
+                    completions.addAll(filterStartsWith(BINDINGS_ACTIONS, args[2]));
+                    completions.addAll(filterStartsWith(Arrays.asList("10", "20", "50"), args[2]));
+                } else if (args.length == 4 && "npc".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(List.of("nearest"), args[3]));
+                    completions.addAll(getNPCNames(args[3]));
+                } else if (args.length == 4 && "place".equalsIgnoreCase(args[2])) {
+                    completions.addAll(getPlaceIds(args[3]));
+                } else if ((args.length == 4 && "list".equalsIgnoreCase(args[2]))
+                    || (args.length == 5 && "place".equalsIgnoreCase(args[2]))) {
+                    completions.addAll(filterStartsWith(Arrays.asList("10", "20", "50"), args[args.length - 1]));
+                }
+            }
             case "household" -> {
                 if (args.length == 3) {
                     completions.addAll(filterStartsWith(HOUSEHOLD_ACTIONS, args[2]));
@@ -345,6 +365,14 @@ public class AINPCTabCompleter implements TabCompleter {
                 } else if (questMode.equals("log")) {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
+                } else if (questMode.equals("definitions") || questMode.equals("defs")) {
+                    completions.addAll(filterStartsWith(List.of(
+                        "quest", "contract", "main_quests", "side_quests", "village_contracts", "all"
+                    ), questArgs[1]));
+                } else if (questMode.equals("stored") || questMode.equals("state") || questMode.equals("progressions")) {
+                    completions.addAll(filterStartsWith(List.of("all"), questArgs[1]));
+                    completions.addAll(getOnlinePlayerNames(questArgs[1]));
+                    completions.addAll(filterStartsWith(PROGRESSION_STORED_FILTERS, questArgs[1]));
                 } else if (questMode.equals("track") || questMode.equals("current")) {
                     completions.addAll(filterStartsWith(List.of("start", "stop"), questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
@@ -365,6 +393,9 @@ public class AINPCTabCompleter implements TabCompleter {
                 } else if (questMode.equals("log")) {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[2]));
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
+                } else if (questMode.equals("stored") || questMode.equals("state") || questMode.equals("progressions")) {
+                    completions.addAll(filterStartsWith(PROGRESSION_STORED_FILTERS, questArgs[2]));
+                    completions.addAll(filterStartsWith(Arrays.asList("10", "20", "50"), questArgs[2]));
                 } else if ((questMode.equals("track") || questMode.equals("current"))
                     && (questArgs[1].equalsIgnoreCase("start") || questArgs[1].equalsIgnoreCase("stop"))) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
