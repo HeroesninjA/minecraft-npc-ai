@@ -27,6 +27,7 @@ import ro.ainpc.managers.NPCManager;
 import ro.ainpc.platform.AINPCPlatform;
 import ro.ainpc.progression.ProgressionService;
 import ro.ainpc.routine.RoutineService;
+import ro.ainpc.spawn.HouseholdPersistenceService;
 import ro.ainpc.spawn.NpcSpawnOrchestrator;
 import ro.ainpc.story.StoryContextService;
 import ro.ainpc.story.StoryStateService;
@@ -51,6 +52,7 @@ public class AINPCPlugin extends JavaPlugin {
     private AIOrchestrationService aiOrchestrationService;
     private RoutineService routineService;
     private NpcSpawnOrchestrator npcSpawnOrchestrator;
+    private HouseholdPersistenceService householdPersistenceService;
     private NpcWorldBindingService npcWorldBindingService;
     private MessageUtils messageUtils;
     private AINPCPlatform platform;
@@ -95,6 +97,7 @@ public class AINPCPlugin extends JavaPlugin {
             return;
         }
         npcWorldBindingService = new NpcWorldBindingService(this);
+        householdPersistenceService = new HouseholdPersistenceService(this);
         
         // Initializeaza serviciul OpenAI
         getLogger().info("Initializare serviciu OpenAI...");
@@ -121,6 +124,9 @@ public class AINPCPlugin extends JavaPlugin {
         // Incarca NPC-urile din baza de date
         npcManager.loadAllNPCs();
         npcManager.discoverExistingVillagers();
+        npcManager.reconcileDuplicateLiveNPCEntities("startup");
+        npcManager.restoreMissingNPCsInLoadedChunks();
+        npcManager.enforceControlledEntitySettings("startup");
         int backfilledProfiles = npcManager.ensureAllNPCsHaveProfiles();
         int backfilledWorldBindings = npcManager.backfillWorldBindingsFromAnchors();
         getLogger().info("Profiluri NPC verificate. Profiluri create/backfill: " + backfilledProfiles);
@@ -178,6 +184,46 @@ public class AINPCPlugin extends JavaPlugin {
             contractCommand.setTabCompleter(new AINPCTabCompleter(this));
         } else {
             getLogger().warning("Comanda 'contract' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand dutyCommand = getCommand("duty");
+        if (dutyCommand != null) {
+            dutyCommand.setExecutor(command);
+            dutyCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'duty' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand bountyCommand = getCommand("bounty");
+        if (bountyCommand != null) {
+            bountyCommand.setExecutor(command);
+            bountyCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'bounty' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand eventCommand = getCommand("event");
+        if (eventCommand != null) {
+            eventCommand.setExecutor(command);
+            eventCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'event' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand tutorialCommand = getCommand("tutorial");
+        if (tutorialCommand != null) {
+            tutorialCommand.setExecutor(command);
+            tutorialCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'tutorial' nu a fost gasita in plugin.yml.");
+        }
+
+        PluginCommand ritualCommand = getCommand("ritual");
+        if (ritualCommand != null) {
+            ritualCommand.setExecutor(command);
+            ritualCommand.setTabCompleter(new AINPCTabCompleter(this));
+        } else {
+            getLogger().warning("Comanda 'ritual' nu a fost gasita in plugin.yml.");
         }
         
         // Inregistreaza listenerele
@@ -315,6 +361,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public NpcWorldBindingService getNpcWorldBindingService() {
         return npcWorldBindingService;
+    }
+
+    public HouseholdPersistenceService getHouseholdPersistenceService() {
+        return householdPersistenceService;
     }
 
     public RoutineService getRoutineService() {

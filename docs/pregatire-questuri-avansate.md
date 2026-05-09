@@ -1,6 +1,6 @@
 # Pregatire pentru Questuri Avansate
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -499,6 +499,6 @@ Pregatirea este gata cand:
 ## Legatura cu documentele existente
 
 - `questuri-faza-1-stabilizare.md` ramane documentul pentru Q01-Q05.
-- `questuri-avansate.md` ramane ghidul complet de evolutie.
+- `questuri-avansate-v2.md` ramane ghidul complet de evolutie.
 - `quest-anchor-bindings.md` ramane contractul pentru ancore persistente.
 - Acest document este puntea practica dintre stabilizarea Q1 si implementarea Q06-Q08.

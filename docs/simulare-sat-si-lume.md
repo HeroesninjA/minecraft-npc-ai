@@ -1,6 +1,6 @@
 # Simulare Sat si Lume
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-08
 
 Status: document canonic initial pentru trecerea de la NPC-uri individuale la o simulare de comunitate si lume. Acest document este design si ordine de lucru, nu dovada ca mecanicile sunt implementate complet in cod.
 
@@ -15,6 +15,8 @@ AINPC nu trebuie sa ramana doar un sistem de NPC-uri care vorbesc si se teleport
 - sunt afectati de evenimente, questuri si schimbari de story
 - pastreaza consecinte dupa reload
 
+Observatie de gameplay: inainte de mecanici noi, satul trebuie sa fie lizibil. NPC-urile nu trebuie sa fuga haotic, casele si locurile de lucru nu trebuie inghesuite, iar rutina trebuie sa poata fi inspectata rapid. Pass-ul initial de playable village foloseste villageri AINPC controlati, mutari de rutina mai rare si mapping demo mai spatios, dar generatorul fizic de case/teren ramane o faza separata.
+
 Acest document stabileste mecanicile lipsa si ordinea in care trebuie legate. Documentele existente acopera bine parti separate: mapping, spawn, rutine, questuri si story. Lipsa principala era un contract de ansamblu pentru simularea satului.
 
 ## Ce nu este
@@ -24,7 +26,7 @@ Acest document nu inlocuieste:
 - `mapping.md`, pentru `WorldRegion -> WorldPlace -> WorldNode`
 - `ordine-spawn-npc-cladiri-region-node.md`, pentru spawn order si household planning
 - `rutine-npc-si-timeline.md`, pentru rutina zilnica si timeline
-- `questuri-avansate.md`, pentru quest runtime
+- `questuri-avansate-v2.md`, pentru quest runtime
 - `story-si-context-ai.md`, pentru context AI si story drafts
 
 Regula: documentele de specialitate definesc contractele locale. Acest document defineste cum se combina intr-o simulare coerenta.

@@ -1,6 +1,6 @@
 # Interactiuni
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -30,7 +30,7 @@ Acest document acopera:
 Nu acopera in detaliu:
 
 - continutul replicilor AI, care ramane in `dialog-si-conversatii.md`;
-- structura avansata de quest, care ramane in `questuri-avansate.md`;
+- structura avansata de quest, care ramane in `questuri-avansate-v2.md`;
 - reactiile sociale pe termen lung, care raman in `reactie-npc-jucator.md`;
 - rutina si tick-ul NPC, care raman in `simulation-service.md` si documentele urmatoare.
 

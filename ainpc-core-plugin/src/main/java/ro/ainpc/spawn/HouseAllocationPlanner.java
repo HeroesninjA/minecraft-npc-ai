@@ -271,20 +271,28 @@ public final class HouseAllocationPlanner {
     private int nodePriorityForAnchor(WorldNodeInfo node, String anchorRole) {
         return switch (anchorRole) {
             case "work" -> {
-                if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
+                if (matchesAnyToken(node.typeId(), "work")
+                    || matchesAnyToken(node.metadata().get("semantic"), "work_anchor")) {
                     yield 0;
                 }
-                if (nodeMatchesAny(node, "interaction", "counter", "desk", "npc_spawn", "spawn")) {
+                if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
                     yield 1;
+                }
+                if (nodeMatchesAny(node, "interaction", "counter", "desk", "npc_spawn", "spawn")) {
+                    yield 2;
                 }
                 yield -1;
             }
             case "social" -> {
-                if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata")) {
+                if (matchesAnyToken(node.typeId(), "social", "meeting_point")
+                    || matchesAnyToken(node.metadata().get("semantic"), "social_anchor", "meeting_point")) {
                     yield 0;
                 }
-                if (nodeMatchesAny(node, "interaction", "npc_spawn", "spawn")) {
+                if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata")) {
                     yield 1;
+                }
+                if (nodeMatchesAny(node, "interaction", "npc_spawn", "spawn")) {
+                    yield 2;
                 }
                 yield -1;
             }

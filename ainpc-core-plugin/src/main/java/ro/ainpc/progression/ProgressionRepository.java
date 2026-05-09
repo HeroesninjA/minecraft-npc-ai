@@ -3,6 +3,7 @@ package ro.ainpc.progression;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -62,6 +63,19 @@ public class ProgressionRepository {
         return StoredProgressionSummary.from(find(playerUuid, filter, 0));
     }
 
+    public List<ProgressionAnchorBinding> findAnchorBindings(String playerUuid,
+                                                             String templateId,
+                                                             int limit) throws SQLException {
+        return queryAnchorBindings(playerUuid, templateId, "", "", limit);
+    }
+
+    public List<ProgressionAnchorBinding> findAnchorBindingsForAnchor(String playerUuid,
+                                                                      String anchorType,
+                                                                      String anchorId,
+                                                                      int limit) throws SQLException {
+        return queryAnchorBindings(playerUuid, "", anchorType, anchorId, limit);
+    }
+
     private StoredProgression toStoredProgression(ResultSet resultSet,
                                                   List<ProgressionDefinition> definitions) throws SQLException {
         String templateId = valueOrEmpty(resultSet.getString("template_id"));
@@ -74,6 +88,9 @@ public class ProgressionRepository {
             definition != null ? definition.packId() : "",
             definition != null ? definition.mechanicId() : "",
             definition != null ? definition.kind() : "",
+            definition != null ? definition.category() : "",
+            definition != null ? definition.scenarioKind() : "",
+            definition != null ? definition.baseType() : "",
             definition != null ? definition.definitionId() : extractDefinitionId(templateId),
             templateId,
             code,
@@ -91,6 +108,82 @@ public class ProgressionRepository {
             definition != null ? definition.singularLabel() : "",
             definition != null ? definition.pluralLabel() : "",
             "player_quests"
+        );
+    }
+
+    private List<ProgressionAnchorBinding> queryAnchorBindings(String playerUuid,
+                                                               String templateId,
+                                                               String anchorType,
+                                                               String anchorId,
+                                                               int limit) throws SQLException {
+        if (statementProvider == null) {
+            return List.of();
+        }
+
+        String safePlayerUuid = valueOrEmpty(playerUuid);
+        String safeTemplateId = valueOrEmpty(templateId);
+        String safeAnchorType = valueOrEmpty(anchorType);
+        String safeAnchorId = valueOrEmpty(anchorId);
+        StringBuilder sql = new StringBuilder("""
+            SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
+                   b.objective_type, b.reference, b.anchor_type, b.anchor_id,
+                   b.anchor_label, b.created_at, b.updated_at, p.status
+            FROM quest_anchor_bindings b
+            LEFT JOIN player_quests p
+              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            WHERE 1 = 1
+        """);
+        List<String> parameters = new ArrayList<>();
+        if (!safePlayerUuid.isBlank()) {
+            sql.append(" AND b.player_uuid = ?");
+            parameters.add(safePlayerUuid);
+        }
+        if (!safeTemplateId.isBlank()) {
+            sql.append(" AND b.template_id = ?");
+            parameters.add(safeTemplateId);
+        }
+        if (!safeAnchorType.isBlank()) {
+            sql.append(" AND LOWER(b.anchor_type) = ?");
+            parameters.add(safeAnchorType.toLowerCase(Locale.ROOT));
+        }
+        if (!safeAnchorId.isBlank()) {
+            sql.append(" AND LOWER(b.anchor_id) = ?");
+            parameters.add(safeAnchorId.toLowerCase(Locale.ROOT));
+        }
+        sql.append(" ORDER BY b.updated_at DESC, b.template_id, b.objective_key LIMIT ?");
+
+        int safeLimit = limit > 0 ? Math.min(limit, 500) : 100;
+        try (PreparedStatement statement = statementProvider.prepareStatement(sql.toString())) {
+            int index = 1;
+            for (String parameter : parameters) {
+                statement.setString(index++, parameter);
+            }
+            statement.setInt(index, safeLimit);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<ProgressionAnchorBinding> rows = new ArrayList<>();
+                while (resultSet.next()) {
+                    rows.add(toAnchorBinding(resultSet));
+                }
+                return List.copyOf(rows);
+            }
+        }
+    }
+
+    private ProgressionAnchorBinding toAnchorBinding(ResultSet resultSet) throws SQLException {
+        return new ProgressionAnchorBinding(
+            resultSet.getString("player_uuid"),
+            resultSet.getString("template_id"),
+            resultSet.getString("objective_key"),
+            resultSet.getString("quest_code"),
+            resultSet.getString("objective_type"),
+            resultSet.getString("reference"),
+            resultSet.getString("anchor_type"),
+            resultSet.getString("anchor_id"),
+            resultSet.getString("anchor_label"),
+            resultSet.getLong("created_at"),
+            resultSet.getLong("updated_at"),
+            resultSet.getString("status")
         );
     }
 
@@ -127,34 +220,7 @@ public class ProgressionRepository {
     }
 
     private boolean storedProgressionMatchesFilter(StoredProgression progression, String filter) {
-        if (progression == null) {
-            return false;
-        }
-        if (filter == null || filter.isBlank() || "all".equals(filter) || "toate".equals(filter)) {
-            return true;
-        }
-
-        return switch (filter) {
-            case "current", "curent" -> progression.current();
-            case "active", "activ" -> "active".equalsIgnoreCase(progression.status());
-            case "offered", "oferta", "oferit" -> "offered".equalsIgnoreCase(progression.status());
-            case "completed", "complete", "completat" -> "completed".equalsIgnoreCase(progression.status());
-            case "failed", "abandoned", "abandonat" -> "failed".equalsIgnoreCase(progression.status());
-            case "archived", "arhivat" -> progression.archived();
-            case "tracked", "urmarit" -> progression.tracked();
-            case "unresolved", "missing_definition" -> !progression.definitionResolved();
-            default -> contains(progression.progressionId(), filter)
-                || contains(progression.packId(), filter)
-                || contains(progression.mechanicId(), filter)
-                || contains(progression.kind(), filter)
-                || contains(progression.definitionId(), filter)
-                || contains(progression.templateId(), filter)
-                || contains(progression.code(), filter)
-                || contains(progression.status(), filter)
-                || contains(progression.mechanicLabel(), filter)
-                || contains(progression.singularLabel(), filter)
-                || contains(progression.pluralLabel(), filter);
-        };
+        return ProgressionFilter.matchesStored(progression, filter);
     }
 
     private String progressionId(ProgressionDefinition definition, String templateId, String code) {
@@ -193,10 +259,6 @@ public class ProgressionRepository {
     private boolean equalsIgnoreCase(String left, String right) {
         return left != null && right != null && !right.isBlank()
             && left.toLowerCase(Locale.ROOT).equals(right.toLowerCase(Locale.ROOT));
-    }
-
-    private boolean contains(String value, String filter) {
-        return value != null && filter != null && value.toLowerCase(Locale.ROOT).contains(filter);
     }
 
     private String valueOrFallback(String value, String fallback) {

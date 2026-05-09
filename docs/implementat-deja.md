@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-08
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -48,6 +48,7 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 Sistemul de NPC-uri are deja implementate:
 
 - NPC-uri bazate pe entitati `Villager`
+- villagerii existenti convertiti in AINPC primesc control de baza configurabil: AI/gravitatie active implicit pentru miscare naturala, coliziune si sunete configurabile, invulnerabili si persistenti
 - creare manuala prin comanda
 - persistenta in baza de date
 - reincarcare si restaurare din chunk-uri incarcate
@@ -70,7 +71,7 @@ Sistemul de NPC-uri are deja implementate:
 - spawn initial `/ainpc world settlement spawn ...` pentru household-uri secventiale pe regiune
 - rollback global practic pentru `settlement spawn`, daca un household ulterior esueaza
 - selectie de ancora din `WorldPlace`, bloc fizic apropiat sau fallback la pozitia NPC-ului
-- evitare de nume duplicate pentru NPC-urile generate automat in viitor
+- `NPCNameGenerator` are peste 300 de prenume predefinite unice, impartite pe gen, iar generarea automata parcurge pool-ul amestecat si alege primul nume liber inainte sa foloseasca suffix numeric
 
 Capabilitati suplimentare existente in model:
 - personalitate
@@ -132,18 +133,18 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
 - pachet `ro.ainpc.gui` cu `GuiService`, `GuiScreen`, `GuiSessionManager`, `AINPCGuiHolder`, `GuiButton`, contexte de render/click si factory pentru iteme
 - `GuiInventoryListener` anuleaza click/drag in inventarele AINPC si curata sesiunile la close/quit
 - `AINPCPlugin` initializeaza `GuiService`, iar `ListenerRegistry` inregistreaza listenerul GUI
-- comanda `/ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]`
-- comanda rapida `/quest gui`
-- tab-completion pentru `/ainpc gui` si `/quest gui`
+- comanda `/ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]`, inclusiv `/ainpc gui quest <filter>` pentru quest log filtrat
+- comanda rapida `/quest gui [filter]`
+- tab-completion pentru `/ainpc gui`, `/ainpc gui quest <filter>` si `/quest gui [filter]`
 - permisiuni `ainpc.gui`, `ainpc.gui.quest`, `ainpc.gui.stats`, `ainpc.gui.interact`, `ainpc.gui.shop`, `ainpc.gui.world`, `ainpc.gui.manager`, `ainpc.gui.audit`, `ainpc.gui.debug`
 - `ProgressionService.getProgressionGuiSnapshot(...)` expune pentru GUI un snapshot generic read-only peste runtime-ul curent, cu questuri/contracte curente/arhivate, status, categorie, selector, stage curent, obiective, stage-uri si recompense
 - ecrane initiale:
   - hub principal
-  - quest log navigabil peste snapshot-ul GUI generic din `ProgressionService`
+  - quest log navigabil peste snapshot-ul GUI generic din `ProgressionService`, cu filtre interactive pentru `all`, `active`, `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`, paginare initiala si grupare vizuala dupa mecanica
   - detalii quest cu obiective, stage-uri, recompense, status, tracking, debug admin si abandon cu confirmare
   - world context peste `WorldAdminApi`
   - statistici jucator si NPC-uri apropiate
-  - interactiune NPC cu info si quest status
+  - interactiune NPC cu info, quest status, rutina curenta si actiuni rapide pentru nearest quest/story/routine
   - manager NPC admin cu info/teleport
   - audit GUI care ruleaza comenzile audit existente
   - debug GUI care ruleaza `debugdump` si `test`
@@ -152,7 +153,7 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
 
 Limitare actuala:
 
-- GUI-ul este un wrapper peste comenzi si servicii existente; nu exista inca paginare completa, filtre interactive pe quest log, target selection avansat sau shop/economie reala.
+- GUI-ul este un wrapper peste comenzi si servicii existente; paginarea exista initial in quest log, dar lipsesc inca target selection avansat si shop/economie reala.
 
 ## Memorie, relatii si emotii
 
@@ -223,6 +224,7 @@ Exista deja o implementare initiala de rutina zilnica:
   - `SOCIAL`
   - `IDLE`
 - scheduler periodic configurabil prin `routine.tick_seconds`
+- cooldown initial pentru mutarile de rutina, raza de sosire mai mare si corectie fortata doar cand NPC-ul este foarte departe de ancora
 - fallback daca lipseste ancora de munca
 - evitarea intreruperii NPC-urilor aflate in interactiuni importante
 - comanda `/ainpc routine tick`
@@ -236,7 +238,7 @@ Rutina foloseste ancorele existente:
 
 Limitare actuala:
 
-- pentru MVP, mutarea este facuta prin teleport controlat, deoarece villagerii AINPC au AI dezactivat
+- rutina foloseste intai pathfinding Paper pentru mers natural spre ancora curenta, iar teleportul ramane fallback pentru distante mari sau pathfinding esuat
 
 ## Questuri
 
@@ -256,13 +258,13 @@ Ce este implementat:
 - `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista initial ca modele compatibile peste status/progress/GUI, cu player, selector, metadata de mecanica si continut structurat pentru obiective/stage-uri
 - `ProgressionRepository` citeste read-only progresul persistent din `player_quests` ca `StoredProgression`, iar `ProgressionService.getStoredProgressions()` expune view-ul generic fara migrare DB
 - `StoredProgressionSummary` agrega progresul persistent dupa jucatori, status, pack, template, mecanica si kind, fiind folosit de comanda `stored` si debugdump
-- comanda read-only `/ainpc progression definitions [filter]` listeaza definitiile generice de progres vazute de runtime, iar `/ainpc contract definitions [filter]` ofera aliasul pentru contracte
-- comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresiile persistate, iar `/ainpc contract stored ...` aplica implicit filtrul `contract`
+- comanda read-only `/ainpc progression definitions [filter]` listeaza definitiile generice de progres vazute de runtime, iar `/ainpc contract definitions [filter]`, `/ainpc duty definitions [filter]`, `/ainpc bounty definitions [filter]`, `/ainpc event definitions [filter]`, `/ainpc tutorial definitions [filter]` si `/ainpc ritual definitions [filter]` ofera aliasuri filtrate
+- comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresiile persistate, iar `/ainpc contract stored ...`, `/ainpc duty stored ...`, `/ainpc bounty stored ...`, `/ainpc event stored ...`, `/ainpc tutorial stored ...` si `/ainpc ritual stored ...` aplica filtre implicite
 - availability-ul aplica initial si `max_active` pe mecanica de progres, nu doar pe categoriile legacy `quest.max_active`
-- addonul medieval are mecanici separate `main_quests`, `side_quests` si `village_contracts`, inclusiv contractul non-`QUEST` `C01` bazat pe `TRADE_DEAL`
-- `quest log`, statusul si GUI-ul afiseaza initial mecanica de progres; log-ul poate filtra `quest` si `contract`
-- selectorii de progres accepta si forme explicite cu mecanica, de exemplu `village_contracts:C01` sau `medieval_quest:village_contracts:C01`
-- fatade initiale peste runtime-ul comun: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...` si `/contract ...`
+- addonul medieval are mecanici separate `main_quests`, `side_quests`, `village_contracts`, `npc_duties`, `local_bounties`, `village_events`, `onboarding` si `village_rituals`, inclusiv contracte non-`QUEST` bazate pe `TRADE_DEAL`, sarcina non-quest `D01` bazata pe `DUTY`, bounty-urile non-quest `B01`/`B02` bazate pe `BOUNTY`, evenimentul non-quest `E01` bazat pe `WORLD_EVENT`, tutorialul non-quest `T01` bazat pe `TUTORIAL` si ritualul non-quest `R01` bazat pe `RITUAL`
+- `quest log`, statusul si GUI-ul afiseaza initial mecanica de progres; log-ul poate filtra `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`
+- selectorii de progres accepta si forme explicite cu mecanica, de exemplu `village_contracts:C01`, `npc_duties:D01`, `local_bounties:B01`, `local_bounties:B02`, `village_events:E01`, `onboarding:T01`, `village_rituals:R01` sau `medieval_quest:village_contracts:C01`
+- fatade initiale peste runtime-ul comun: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`, `/ainpc duty ...`, `/duty ...`, `/ainpc bounty ...`, `/bounty ...`, `/ainpc event ...`, `/event ...`, `/ainpc tutorial ...`, `/tutorial ...`, `/ainpc ritual ...` si `/ritual ...`
 - selector explicit pentru `quest status`, `quest track` si `quest abandon`
 - comanda admin read-only `quest debug` pentru progres, variabile si obiective template
 - filtre initiale in `quest log` pentru status, tracking si categorii `main`/`side`/`repeatable`
@@ -285,7 +287,7 @@ Ce este implementat:
 - validare `phase`/`stage`, stage IDs, `completion_mode`, `next_stage` si objective IDs pentru questuri etapizate in `/ainpc audit quest` si `debugdump quest`
 - validare pentru `player_quests.tracked`: cel mult un quest tracked activ per jucator
 - warning de audit pentru chei legacy in progresul persistent al obiectivelor
-- teste de contract pentru Q01-Q08 din addonul medieval, inclusiv validare ca `phase` de obiectiv refera o faza existenta si ca Q06-Q08 au `quest.stages` explicite
+- teste de contract pentru Q01-Q08, B02, T01 si R01 din addonul medieval, inclusiv validare ca `phase` de obiectiv refera o faza existenta si ca Q06-Q08/B02/T01/R01 au `quest.stages` explicite
 - smoke script `scripts/smoke-paper-quests.ps1`
 - context narativ read-only prin `StoryContextService` pentru quest anchors active
 - mesaje de briefing si progres
@@ -450,6 +452,7 @@ Capabilitati implementate:
 - `StoryContextService` initial pentru context narativ peste mapping si quest anchors
 - comenzi admin pentru inspectie si creare manuala
 - comanda `/ainpc world demo create [regionId]` pentru generare rapida de mapping demo semantic in jurul jucatorului
+- mapping-ul demo foloseste un layout semantic mai spatios pentru case, piata, locuri de munca si altar, dar nu construieste blocuri fizice si nu niveleaza terenul
 - comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
 - comanda `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - comanda `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
@@ -612,6 +615,15 @@ Proiectul are deja implementate:
 - comanda pentru mapping demo minim in jurul jucatorului
 - rutina zilnica initiala peste `home/work/social anchors`
 - `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic
+- `spawn_batches`/`spawn_batch_steps` leaga pasii de `household_id` si pot jurnaliza dry-run-uri separat prin `spawn.batches.track_dry_runs`
+- rollback-ul settlement foloseste `spawn_batch_steps.created_npc_ids` pentru batch-ul curent, cu fallback pe lista runtime in memorie
+- retry-ul pentru batch-uri ramase `RUNNING` este blocat cand exista pasi creatori jurnalizati, ca sa nu fie pierdut jurnalul de rollback, chiar daca ID-urile sunt corupte sau neparsabile
+- `/ainpc repair batch list [problem|all|failed|running|rolled_back|succeeded]` listeaza rapid batch-urile recente pentru diagnostic si rollback, inclusiv `rollback_pending_steps` pentru batch-uri `RUNNING` cu pasi creatori
+- `/ainpc repair batch <batchKey> inspect` inspecteaza read-only pasii unui batch fara sa fie nevoie de debugdump complet si avertizeaza cand retry-ul este blocat
+- `/ainpc repair batch <batchKey> dryrun|apply` expune rollback compensat pentru batch-uri esuate, fara sa permita `apply` pe batch-uri `SUCCEEDED`, recalculeaza `resident_count` pentru household-urile afectate si marcheaza pasii cu NPC-uri create ca `ROLLED_BACK`
+- `/ainpc repair batch <batchKey> mark-steps` sincronizeaza doar statusul pasilor pentru batch-uri deja `ROLLED_BACK`
+- `/ainpc repair batch <batchKey> mark-failed` inchide manual un batch `RUNNING` ca `FAILED` cand nu exista ID-uri parsabile pentru rollback automat, fara stergere de NPC-uri
+- `/ainpc audit db` verifica batch-uri `RUNNING` cu NPC-uri create si inconsistenta intre statusul `spawn_batches` si statusul pasilor din `spawn_batch_steps`
 - audit read-only pentru NPC, world mapping, DB si spawn order
 - debug dump avansat in `plugins/AINPC/debug-dumps/`
 - addon medieval separat care se integreaza cu core-ul

@@ -63,7 +63,7 @@ public class StatsGui implements GuiScreen {
             )
         ));
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuesturi", "&7Deschide quest log."),
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eProgresii", "&7Deschide log-ul de progresii."),
             click -> click.service().open(click.player(), GuiKey.QUEST)
         ));
         context.button(12, GuiButton.enabled(

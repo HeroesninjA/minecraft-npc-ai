@@ -23,6 +23,9 @@ public class NpcSpawnOrchestrator {
     private final AINPCPlugin plugin;
     private final HouseAllocationValidator houseAllocationValidator;
 
+    private record TrackedHouseholdBatch(SpawnBatchTracker tracker, String batchKey) {
+    }
+
     public NpcSpawnOrchestrator(AINPCPlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.houseAllocationValidator = new HouseAllocationValidator();
@@ -36,13 +39,21 @@ public class NpcSpawnOrchestrator {
             return NpcSpawnResult.failed(errors, warnings);
         }
 
+        AINPC existingNpc = plugin.getNpcManager()
+            .findReusableNPCForSpawn(resolvedPlan.plan(), resolvedPlan.spawnLocation());
+        if (existingNpc != null) {
+            warnings.add("Reutilizez NPC existent pentru planul " + resolvedPlan.plan().npcKey()
+                + ": " + existingNpc.getName() + "#" + existingNpc.getDatabaseId() + ".");
+            return NpcSpawnResult.reused(existingNpc, warnings);
+        }
+
         AINPC npc = plugin.getNpcManager().createNPCFromPlan(resolvedPlan);
         if (npc == null) {
             errors.add("NPC-ul nu a putut fi spawnat sau salvat.");
             return NpcSpawnResult.failed(errors, warnings);
         }
 
-        return NpcSpawnResult.success(npc, warnings);
+        return NpcSpawnResult.created(npc, warnings);
     }
 
     public FamilyBindingResult bindFamily(FamilyBindingPlan plan) {
@@ -60,22 +71,48 @@ public class NpcSpawnOrchestrator {
     }
 
     public HouseholdSpawnResult dryRunHouseAllocation(HouseAllocation allocation) {
+        return dryRunHouseAllocation(allocation, true);
+    }
+
+    private HouseholdSpawnResult dryRunHouseAllocation(HouseAllocation allocation, boolean trackSingularBatch) {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         List<NpcSpawnPlan> spawnPlans = prepareHouseholdPlans(allocation, errors, warnings);
+        TrackedHouseholdBatch trackedBatch = beginTrackedHouseholdBatch(
+            allocation,
+            spawnPlans,
+            trackSingularBatch && shouldTrackDryRunBatches(),
+            true,
+            warnings,
+            errors
+        );
         if (!errors.isEmpty()) {
-            return HouseholdSpawnResult.failed(true, false, spawnPlans, List.of(), null, errors, warnings);
+            HouseholdSpawnResult result =
+                HouseholdSpawnResult.failed(true, false, spawnPlans, List.of(), null, errors, warnings);
+            finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+            return result;
         }
 
-        return HouseholdSpawnResult.dryRunSuccess(spawnPlans, warnings);
+        HouseholdSpawnResult result = HouseholdSpawnResult.dryRunSuccess(spawnPlans, warnings);
+        finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+        return result;
     }
 
     public HouseholdSpawnResult spawnHousehold(HouseAllocation allocation) {
+        return spawnHousehold(allocation, true);
+    }
+
+    private HouseholdSpawnResult spawnHousehold(HouseAllocation allocation, boolean trackSingularBatch) {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         List<NpcSpawnPlan> spawnPlans = prepareHouseholdPlans(allocation, errors, warnings);
+        TrackedHouseholdBatch trackedBatch =
+            beginTrackedHouseholdBatch(allocation, spawnPlans, trackSingularBatch, false, warnings, errors);
         if (!errors.isEmpty()) {
-            return HouseholdSpawnResult.failed(false, false, spawnPlans, List.of(), null, errors, warnings);
+            HouseholdSpawnResult result =
+                HouseholdSpawnResult.failed(false, false, spawnPlans, List.of(), null, errors, warnings);
+            finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+            return result;
         }
 
         List<NpcSpawnResult> spawnResults = new ArrayList<>();
@@ -89,21 +126,26 @@ public class NpcSpawnOrchestrator {
             if (!spawnResult.success()) {
                 errors.addAll(spawnResult.errors());
                 boolean rolledBack = rollbackSpawnedNpcs(spawnedNpcs, warnings);
-                return HouseholdSpawnResult.failed(false, rolledBack, spawnPlans, spawnResults, null, errors, warnings);
+                HouseholdSpawnResult result =
+                    HouseholdSpawnResult.failed(false, rolledBack, spawnPlans, spawnResults, null, errors, warnings);
+                finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+                return result;
             }
 
-            spawnedNpcs.add(spawnResult.npc());
+            if (spawnResult.created()) {
+                spawnedNpcs.add(spawnResult.npc());
+            }
             spawnedNpcsByKey.put(normalizeToken(spawnPlan.npcKey()), spawnResult.npc());
         }
 
         FamilyBindingResult familyBindingResult = null;
-        if (allocation != null && !allocation.familyId().isBlank() && spawnedNpcs.size() >= 2) {
+        if (allocation != null && !allocation.familyId().isBlank() && spawnedNpcsByKey.size() >= 2) {
             familyBindingResult = bindFamily(allocation.toFamilyBindingPlan(spawnedNpcsByKey));
             warnings.addAll(familyBindingResult.warnings());
             if (!familyBindingResult.success()) {
                 errors.addAll(familyBindingResult.errors());
                 boolean rolledBack = rollbackSpawnedNpcs(spawnedNpcs, warnings);
-                return HouseholdSpawnResult.failed(
+                HouseholdSpawnResult result = HouseholdSpawnResult.failed(
                     false,
                     rolledBack,
                     spawnPlans,
@@ -112,10 +154,15 @@ public class NpcSpawnOrchestrator {
                     errors,
                     warnings
                 );
+                finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+                return result;
             }
         }
 
-        return HouseholdSpawnResult.success(spawnPlans, spawnResults, familyBindingResult, warnings);
+        persistHousehold(allocation, spawnPlans, spawnResults, warnings);
+        HouseholdSpawnResult result = HouseholdSpawnResult.success(spawnPlans, spawnResults, familyBindingResult, warnings);
+        finishTrackedHouseholdBatch(trackedBatch, allocation, result);
+        return result;
     }
 
     public SettlementSpawnResult dryRunSettlement(List<HouseAllocation> allocations) {
@@ -132,29 +179,89 @@ public class NpcSpawnOrchestrator {
         List<String> warnings = new ArrayList<>();
         List<HouseholdSpawnResult> householdResults = new ArrayList<>();
         List<AINPC> spawnedNpcs = new ArrayList<>();
+        boolean trackBatch = !dryRun || shouldTrackDryRunBatches();
+        String batchKey = dryRun
+            ? SpawnBatchPlanHasher.dryRunSettlementBatchKey(safeAllocations)
+            : SpawnBatchPlanHasher.settlementBatchKey(safeAllocations);
+        String planHash = SpawnBatchPlanHasher.settlementPlanHash(safeAllocations);
+        String scopeId = SpawnBatchPlanHasher.settlementScopeId(safeAllocations);
+        SpawnBatchTracker batchTracker = trackBatch
+            ? new SpawnBatchTracker(plugin.getDatabaseManager(), plugin.getLogger())
+            : null;
 
         if (safeAllocations.isEmpty()) {
             errors.add("Settlement spawn nu are HouseAllocation-uri.");
             return SettlementSpawnResult.failed(dryRun, false, safeAllocations, householdResults, errors, warnings);
         }
 
+        if (trackBatch) {
+            var existingBatch = batchTracker.findBatch(batchKey);
+            existingBatch.ifPresent(batch -> {
+                if (SpawnBatchTracker.STATUS_SUCCEEDED.equals(batch.status()) && planHash.equals(batch.planHash())) {
+                    warnings.add("Spawn batch existent finalizat: " + batchKey
+                        + ". Rerularea va reutiliza NPC-urile existente dupa source_key.");
+                } else if (SpawnBatchTracker.STATUS_RUNNING.equals(batch.status())) {
+                    warnings.add("Spawn batch existent este inca RUNNING: " + batchKey + ".");
+                }
+            });
+            if (!dryRun && existingBatch.isPresent()
+                && shouldBlockRunningBatchRewrite(batchTracker, existingBatch.get(), batchKey, errors)) {
+                return SettlementSpawnResult.failed(
+                    false,
+                    false,
+                    safeAllocations,
+                    householdResults,
+                    errors,
+                    warnings
+                );
+            }
+            batchTracker.beginBatch(
+                batchKey,
+                "settlement",
+                scopeId,
+                planHash,
+                dryRun,
+                safeAllocations.size(),
+                countNpcPlans(safeAllocations)
+            );
+            warnings.add("Spawn batch " + (dryRun ? "dry-run " : "") + "pornit: "
+                + batchKey + " hash=" + shortHash(planHash) + ".");
+        }
+
         for (HouseAllocation allocation : safeAllocations) {
             HouseholdSpawnResult result = dryRun
-                ? dryRunHouseAllocation(allocation)
-                : spawnHousehold(allocation);
+                ? dryRunHouseAllocation(allocation, false)
+                : spawnHousehold(allocation, false);
             householdResults.add(result);
             warnings.addAll(prefixMessages(allocation.placeId(), result.warnings()));
+            if (trackBatch) {
+                batchTracker.recordHouseholdStep(batchKey, householdResults.size(), allocation, result);
+            }
 
             if (!result.success()) {
                 errors.addAll(prefixMessages(allocation.placeId(), result.errors()));
                 if (result.rolledBack()) {
                     warnings.add(allocation.placeId() + ": rollback local executat pentru household-ul esuat.");
                 }
-                boolean globallyRolledBack = !dryRun && rollbackSpawnedNpcs(spawnedNpcs, warnings);
-                if (!dryRun) {
-                    warnings.add(globallyRolledBack
-                        ? "Rollback global settlement executat pentru household-urile create anterior."
-                        : "Rollback global settlement incomplet pentru household-urile create anterior.");
+                boolean globallyRolledBack = !dryRun
+                    && rollbackSettlementBatchCreatedNpcs(batchTracker, batchKey, spawnedNpcs, warnings);
+                if (trackBatch) {
+                    if (dryRun) {
+                        warnings.add("Spawn batch dry-run settlement finalizat cu erori; nu s-au creat NPC-uri.");
+                    } else {
+                        warnings.add(globallyRolledBack
+                            ? "Rollback global settlement executat pentru household-urile create anterior."
+                            : "Rollback global settlement incomplet pentru household-urile create anterior.");
+                    }
+                    batchTracker.finishBatch(
+                        batchKey,
+                        false,
+                        globallyRolledBack,
+                        countCreatedNpcs(householdResults),
+                        countReusedNpcs(householdResults),
+                        warnings,
+                        errors
+                    );
                 }
                 return SettlementSpawnResult.failed(
                     dryRun,
@@ -169,13 +276,55 @@ public class NpcSpawnOrchestrator {
             if (!dryRun) {
                 result.spawnResults().stream()
                     .filter(NpcSpawnResult::success)
+                    .filter(NpcSpawnResult::created)
                     .map(NpcSpawnResult::npc)
                     .filter(Objects::nonNull)
                     .forEach(spawnedNpcs::add);
             }
         }
 
+        if (trackBatch) {
+            batchTracker.finishBatch(
+                batchKey,
+                true,
+                false,
+                countCreatedNpcs(householdResults),
+                countReusedNpcs(householdResults),
+                warnings,
+                errors
+            );
+        }
+
         return SettlementSpawnResult.success(dryRun, safeAllocations, householdResults, warnings);
+    }
+
+    private int countNpcPlans(List<HouseAllocation> allocations) {
+        return allocations.stream()
+            .mapToInt(allocation -> allocation.toNpcSpawnPlans().size())
+            .sum();
+    }
+
+    private int countCreatedNpcs(List<HouseholdSpawnResult> householdResults) {
+        return (int) householdResults.stream()
+            .flatMap(result -> result.spawnResults().stream())
+            .filter(NpcSpawnResult::success)
+            .filter(NpcSpawnResult::created)
+            .count();
+    }
+
+    private int countReusedNpcs(List<HouseholdSpawnResult> householdResults) {
+        return (int) householdResults.stream()
+            .flatMap(result -> result.spawnResults().stream())
+            .filter(NpcSpawnResult::success)
+            .filter(result -> !result.created())
+            .count();
+    }
+
+    private String shortHash(String hash) {
+        if (hash == null || hash.length() <= 12) {
+            return hash;
+        }
+        return hash.substring(0, 12);
     }
 
     private List<String> prefixMessages(String prefix, List<String> messages) {
@@ -185,6 +334,100 @@ public class NpcSpawnOrchestrator {
         return messages.stream()
             .map(message -> prefix + ": " + message)
             .toList();
+    }
+
+    private TrackedHouseholdBatch beginTrackedHouseholdBatch(HouseAllocation allocation,
+                                                            List<NpcSpawnPlan> spawnPlans,
+                                                            boolean trackSingularBatch,
+                                                            boolean dryRun,
+                                                            List<String> warnings,
+                                                            List<String> errors) {
+        if (!trackSingularBatch || allocation == null || plugin.getDatabaseManager() == null) {
+            return null;
+        }
+
+        String batchKey = dryRun
+            ? SpawnBatchPlanHasher.dryRunHouseholdBatchKey(allocation)
+            : SpawnBatchPlanHasher.householdBatchKey(allocation);
+        String planHash = SpawnBatchPlanHasher.householdPlanHash(allocation);
+        SpawnBatchTracker batchTracker = new SpawnBatchTracker(plugin.getDatabaseManager(), plugin.getLogger());
+        var existingBatch = batchTracker.findBatch(batchKey);
+        existingBatch.ifPresent(batch -> {
+            if (SpawnBatchTracker.STATUS_SUCCEEDED.equals(batch.status()) && planHash.equals(batch.planHash())) {
+                warnings.add("Spawn batch household existent finalizat: " + batchKey
+                    + ". Rerularea va reutiliza NPC-urile existente dupa source_key.");
+            } else if (SpawnBatchTracker.STATUS_RUNNING.equals(batch.status())) {
+                warnings.add("Spawn batch household existent este inca RUNNING: " + batchKey + ".");
+            }
+        });
+        if (!dryRun && existingBatch.isPresent()
+            && shouldBlockRunningBatchRewrite(batchTracker, existingBatch.get(), batchKey, errors)) {
+            return null;
+        }
+        batchTracker.beginBatch(
+            batchKey,
+            "household",
+            allocation.placeId(),
+            planHash,
+            dryRun,
+            1,
+            Math.max(spawnPlans != null ? spawnPlans.size() : 0, allocation.toNpcSpawnPlans().size())
+        );
+        warnings.add("Spawn batch household " + (dryRun ? "dry-run " : "") + "pornit: "
+            + batchKey + " hash=" + shortHash(planHash) + ".");
+        return new TrackedHouseholdBatch(batchTracker, batchKey);
+    }
+
+    private boolean shouldBlockRunningBatchRewrite(SpawnBatchTracker batchTracker,
+                                                   SpawnBatchTracker.BatchRecord existingBatch,
+                                                   String batchKey,
+                                                   List<String> errors) {
+        if (batchTracker == null
+            || existingBatch == null
+            || !SpawnBatchTracker.STATUS_RUNNING.equals(existingBatch.status())) {
+            return false;
+        }
+
+        int creatorSteps = batchTracker.countCreatorStepsForBatch(batchKey);
+        if (creatorSteps <= 0) {
+            return false;
+        }
+
+        List<Integer> createdNpcIds = batchTracker.findCreatedNpcIdsForBatch(batchKey);
+        errors.add("Spawn batch " + batchKey + " este inca RUNNING si are "
+            + creatorSteps + " pasi cu NPC-uri create jurnalizate"
+            + (createdNpcIds.isEmpty() ? "" : " (" + createdNpcIds.size() + " ID-uri parsabile)")
+            + ". Nu rescriu batch-ul ca sa nu pierd rollback-ul. "
+            + "Ruleaza /ainpc repair batch " + batchKey
+            + " inspect, apoi dryrun/apply.");
+        return true;
+    }
+
+    private void finishTrackedHouseholdBatch(TrackedHouseholdBatch trackedBatch,
+                                             HouseAllocation allocation,
+                                             HouseholdSpawnResult result) {
+        if (trackedBatch == null || result == null) {
+            return;
+        }
+
+        trackedBatch.tracker().recordHouseholdStep(trackedBatch.batchKey(), 1, allocation, result);
+        trackedBatch.tracker().finishBatch(
+            trackedBatch.batchKey(),
+            result.success(),
+            result.rolledBack(),
+            countCreatedNpcs(List.of(result)),
+            countReusedNpcs(List.of(result)),
+            result.warnings(),
+            result.errors()
+        );
+    }
+
+    private boolean shouldTrackDryRunBatches() {
+        try {
+            return plugin.getConfig().getBoolean("spawn.batches.track_dry_runs", false);
+        } catch (RuntimeException exception) {
+            return false;
+        }
     }
 
     private List<NpcSpawnPlan> prepareHouseholdPlans(HouseAllocation allocation,
@@ -224,6 +467,66 @@ public class NpcSpawnOrchestrator {
             }
         }
         return rollbackComplete;
+    }
+
+    private boolean rollbackSettlementBatchCreatedNpcs(SpawnBatchTracker batchTracker,
+                                                       String batchKey,
+                                                       List<AINPC> fallbackSpawnedNpcs,
+                                                       List<String> warnings) {
+        if (batchTracker == null || batchKey == null || batchKey.isBlank()) {
+            return rollbackSpawnedNpcs(fallbackSpawnedNpcs, warnings);
+        }
+
+        List<Integer> createdNpcIds = batchTracker.findCreatedNpcIdsForBatch(batchKey);
+        if (createdNpcIds.isEmpty()) {
+            warnings.add("Rollback batch nu a gasit created_npc_ids in spawn_batch_steps; folosesc lista in memorie.");
+            return rollbackSpawnedNpcs(fallbackSpawnedNpcs, warnings);
+        }
+
+        boolean rollbackComplete = true;
+        int deletedCount = 0;
+        int alreadyMissingCount = 0;
+        for (int npcId : createdNpcIds) {
+            AINPC npc = plugin.getNpcManager().getNPCById(npcId);
+            if (npc == null) {
+                alreadyMissingCount++;
+                continue;
+            }
+
+            if (plugin.getNpcManager().deleteNPC(npc)) {
+                deletedCount++;
+            } else {
+                rollbackComplete = false;
+                warnings.add("Rollback batch incomplet: NPC id=" + npcId + " nu a putut fi sters.");
+            }
+        }
+
+        warnings.add("Rollback batch din spawn_batch_steps: stersi=" + deletedCount
+            + ", deja_absenti=" + alreadyMissingCount + ".");
+        if (rollbackComplete) {
+            int rolledBackSteps = batchTracker.markCreatedStepsRolledBack(batchKey);
+            warnings.add("Rollback batch a marcat " + rolledBackSteps + " pasi ca ROLLED_BACK.");
+        }
+        return rollbackComplete;
+    }
+
+    private void persistHousehold(HouseAllocation allocation,
+                                  List<NpcSpawnPlan> spawnPlans,
+                                  List<NpcSpawnResult> spawnResults,
+                                  List<String> warnings) {
+        if (allocation == null || plugin.getHouseholdPersistenceService() == null) {
+            return;
+        }
+
+        try {
+            int residents = plugin.getHouseholdPersistenceService()
+                .saveHousehold(allocation, spawnPlans, spawnResults, "spawn_plan");
+            warnings.add("Household persistent actualizat: " + allocation.householdId()
+                + " rezidenti=" + residents + ".");
+        } catch (Exception exception) {
+            warnings.add("Nu am putut salva household-ul persistent "
+                + allocation.householdId() + ": " + exception.getMessage());
+        }
     }
 
     public ResolvedNpcSpawnPlan resolve(NpcSpawnPlan plan, List<String> errors, List<String> warnings) {

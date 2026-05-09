@@ -296,20 +296,20 @@ public class WorldAdminService implements WorldAdminApi {
             "Demo Village",
             resolvedWorldName,
             RegionType.SETTLEMENT,
-            centerX - 44,
+            centerX - 72,
             regionMinY,
-            centerZ - 44,
-            centerX + 44,
+            centerZ - 72,
+            centerX + 72,
             regionMaxY,
-            centerZ + 44
+            centerZ + 72
         );
-        region.setTags(List.of("demo", "village", "medieval", "first_playable"));
+        region.setTags(List.of("demo", "village", "medieval", "first_playable", "spacious"));
 
         createDemoNode(regionId, null, "village_center", WorldNodeType.MEETING_POINT,
-            resolvedWorldName, centerX, nodeY, centerZ, 5.0, createdNodeIds, "meeting_point");
+            resolvedWorldName, centerX, nodeY, centerZ, 8.0, createdNodeIds, "meeting_point");
 
         WorldPlace house1 = createDemoPlace(regionId, "house_1", "Casa 1", resolvedWorldName, PlaceType.HOUSE,
-            centerX - 34, placeMinY, centerZ - 30, centerX - 24, placeMaxY, centerZ - 20,
+            centerX - 56, placeMinY, centerZ - 40, centerX - 40, placeMaxY, centerZ - 24,
             List.of("demo", "house", "home", "residential"), createdPlaceIds);
         house1.setPublicAccess(false);
         house1.putMetadata("max_residents", "2");
@@ -318,7 +318,7 @@ public class WorldAdminService implements WorldAdminApi {
         addDemoHouseNodes(regionId, house1, resolvedWorldName, nodeY, createdNodeIds);
 
         WorldPlace house2 = createDemoPlace(regionId, "house_2", "Casa 2", resolvedWorldName, PlaceType.HOUSE,
-            centerX - 14, placeMinY, centerZ - 30, centerX - 4, placeMaxY, centerZ - 20,
+            centerX - 30, placeMinY, centerZ - 50, centerX - 14, placeMaxY, centerZ - 34,
             List.of("demo", "house", "home", "residential"), createdPlaceIds);
         house2.setPublicAccess(false);
         house2.putMetadata("max_residents", "2");
@@ -327,7 +327,7 @@ public class WorldAdminService implements WorldAdminApi {
         addDemoHouseNodes(regionId, house2, resolvedWorldName, nodeY, createdNodeIds);
 
         WorldPlace house3 = createDemoPlace(regionId, "house_3", "Casa 3", resolvedWorldName, PlaceType.HOUSE,
-            centerX + 6, placeMinY, centerZ - 30, centerX + 16, placeMaxY, centerZ - 20,
+            centerX + 14, placeMinY, centerZ - 50, centerX + 30, placeMaxY, centerZ - 34,
             List.of("demo", "house", "home", "residential"), createdPlaceIds);
         house3.setPublicAccess(false);
         house3.putMetadata("max_residents", "1");
@@ -336,7 +336,7 @@ public class WorldAdminService implements WorldAdminApi {
         addDemoHouseNodes(regionId, house3, resolvedWorldName, nodeY, createdNodeIds);
 
         WorldPlace house4 = createDemoPlace(regionId, "house_4", "Casa 4", resolvedWorldName, PlaceType.HOUSE,
-            centerX + 26, placeMinY, centerZ - 30, centerX + 36, placeMaxY, centerZ - 20,
+            centerX + 40, placeMinY, centerZ - 40, centerX + 56, placeMaxY, centerZ - 24,
             List.of("demo", "house", "home", "residential"), createdPlaceIds);
         house4.setPublicAccess(false);
         house4.putMetadata("max_residents", "1");
@@ -345,50 +345,62 @@ public class WorldAdminService implements WorldAdminApi {
         addDemoHouseNodes(regionId, house4, resolvedWorldName, nodeY, createdNodeIds);
 
         WorldPlace market = createDemoPlace(regionId, "piata", "Piata", resolvedWorldName, PlaceType.MARKET,
-            centerX - 8, placeMinY, centerZ - 8, centerX + 8, placeMaxY, centerZ + 8,
+            centerX - 14, placeMinY, centerZ - 12, centerX + 14, placeMaxY, centerZ + 12,
             List.of("demo", "market", "public", "social"), createdPlaceIds);
         market.putMetadata("role", "social");
+        market.putMetadata("layout_profile", "spacious_playable");
         createDemoNode(regionId, market.getId(), "meeting_point_1", WorldNodeType.MEETING_POINT,
-            resolvedWorldName, centerX, nodeY, centerZ, 4.0, createdNodeIds, "meeting_point");
+            resolvedWorldName, centerX, nodeY, centerZ, 7.0, createdNodeIds, "meeting_point");
         createDemoNode(regionId, market.getId(), "social_1", WorldNodeType.SOCIAL,
-            resolvedWorldName, centerX - 5, nodeY, centerZ, 3.0, createdNodeIds, "social_anchor");
+            resolvedWorldName, centerX - 8, nodeY, centerZ, 5.0, createdNodeIds, "social_anchor");
         createDemoNode(regionId, market.getId(), "quest_board", WorldNodeType.QUEST_TRIGGER,
-            resolvedWorldName, centerX + 6, nodeY, centerZ + 2, 2.0, createdNodeIds, "quest_board");
+            resolvedWorldName, centerX + 10, nodeY, centerZ + 3, 3.0, createdNodeIds, "quest_board");
 
         WorldPlace forge = createDemoPlace(regionId, "fierarie", "Fierarie", resolvedWorldName, PlaceType.FORGE,
-            centerX - 36, placeMinY, centerZ + 12, centerX - 20, placeMaxY, centerZ + 28,
+            centerX - 60, placeMinY, centerZ + 18, centerX - 38, placeMaxY, centerZ + 40,
             List.of("demo", "forge", "workplace", "blacksmith", "shop"), createdPlaceIds);
         forge.putMetadata("role", "work");
         forge.putMetadata("profession", "blacksmith");
         createDemoNode(regionId, forge.getId(), "workstation_1", WorldNodeType.WORKSTATION,
-            resolvedWorldName, centerX - 30, nodeY, centerZ + 20, 2.0, createdNodeIds, "workstation");
+            resolvedWorldName, centerX - 50, nodeY, centerZ + 28, 3.0, createdNodeIds, "workstation");
         createDemoNode(regionId, forge.getId(), "work_1", WorldNodeType.WORK,
-            resolvedWorldName, centerX - 28, nodeY, centerZ + 22, 3.0, createdNodeIds, "work_anchor");
+            resolvedWorldName, centerX - 48, nodeY, centerZ + 31, 5.0, createdNodeIds, "work_anchor");
         createDemoNode(regionId, forge.getId(), "inspect_1", WorldNodeType.INTERACTION,
-            resolvedWorldName, centerX - 32, nodeY, centerZ + 18, 2.0, createdNodeIds, "inspect_node");
+            resolvedWorldName, centerX - 54, nodeY, centerZ + 25, 3.0, createdNodeIds, "inspect_node");
 
         WorldPlace farm = createDemoPlace(regionId, "ferma", "Ferma", resolvedWorldName, PlaceType.FARM,
-            centerX + 20, placeMinY, centerZ + 12, centerX + 36, placeMaxY, centerZ + 30,
+            centerX + 36, placeMinY, centerZ + 18, centerX + 62, placeMaxY, centerZ + 48,
             List.of("demo", "farm", "workplace"), createdPlaceIds);
         farm.putMetadata("role", "work");
         farm.putMetadata("profession", "farmer");
         createDemoNode(regionId, farm.getId(), "work_1", WorldNodeType.WORK,
-            resolvedWorldName, centerX + 28, nodeY, centerZ + 20, 4.0, createdNodeIds, "work_anchor");
+            resolvedWorldName, centerX + 49, nodeY, centerZ + 31, 6.0, createdNodeIds, "work_anchor");
         createDemoNode(regionId, farm.getId(), "inspect_1", WorldNodeType.QUEST_TRIGGER,
-            resolvedWorldName, centerX + 32, nodeY, centerZ + 24, 3.0, createdNodeIds, "inspect_node");
+            resolvedWorldName, centerX + 55, nodeY, centerZ + 40, 4.0, createdNodeIds, "inspect_node");
 
         WorldPlace tavern = createDemoPlace(regionId, "taverna", "Taverna", resolvedWorldName, PlaceType.TAVERN,
-            centerX - 8, placeMinY, centerZ + 22, centerX + 8, placeMaxY, centerZ + 36,
+            centerX - 14, placeMinY, centerZ + 38, centerX + 14, placeMaxY, centerZ + 58,
             List.of("demo", "tavern", "public", "social"), createdPlaceIds);
         tavern.putMetadata("role", "social");
         createDemoNode(regionId, tavern.getId(), "entrance_1", WorldNodeType.ENTRANCE,
-            resolvedWorldName, centerX, nodeY, centerZ + 22, 2.0, createdNodeIds, "entrance");
+            resolvedWorldName, centerX, nodeY, centerZ + 38, 3.0, createdNodeIds, "entrance");
         createDemoNode(regionId, tavern.getId(), "social_1", WorldNodeType.SOCIAL,
-            resolvedWorldName, centerX, nodeY, centerZ + 30, 4.0, createdNodeIds, "social_anchor");
+            resolvedWorldName, centerX, nodeY, centerZ + 49, 6.0, createdNodeIds, "social_anchor");
         createDemoNode(regionId, tavern.getId(), "interaction_1", WorldNodeType.INTERACTION,
-            resolvedWorldName, centerX - 4, nodeY, centerZ + 30, 2.0, createdNodeIds, "dialog_anchor");
+            resolvedWorldName, centerX - 6, nodeY, centerZ + 49, 3.0, createdNodeIds, "dialog_anchor");
+
+        WorldPlace shrine = createDemoPlace(regionId, "altar", "Altarul satului", resolvedWorldName, PlaceType.CUSTOM,
+            centerX + 40, placeMinY, centerZ - 10, centerX + 60, placeMaxY, centerZ + 12,
+            List.of("demo", "ritual", "altar", "shrine", "sacred", "public"), createdPlaceIds);
+        shrine.putMetadata("role", "ritual");
+        shrine.putMetadata("profession", "priest");
+        createDemoNode(regionId, shrine.getId(), "ritual_circle", WorldNodeType.PROGRESSION,
+            resolvedWorldName, centerX + 50, nodeY, centerZ + 1, 5.0, createdNodeIds, "ritual_circle");
+        createDemoNode(regionId, shrine.getId(), "altar_1", WorldNodeType.INTERACTION,
+            resolvedWorldName, centerX + 55, nodeY, centerZ + 5, 3.0, createdNodeIds, "altar");
 
         warnings.add("Demo-ul marcheaza semantic zona din jurul jucatorului; nu construieste blocuri fizice.");
+        warnings.add("Layout-ul demo este spatios pentru gameplay; alege o zona relativ plata inainte de creare.");
         return new DemoMappingResult(region.getId(), createdPlaceIds, createdNodeIds, warnings);
     }
 

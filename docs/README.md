@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-08
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -11,26 +11,30 @@ Ordinea recomandata pentru orientare:
 1. `implementat-deja.md`
 2. `faze-observatii-avertizari.md`
 3. `faze-urmatoare-categorii.md`
-4. `ordine-spawn-npc-cladiri-region-node.md`
-5. `simulare-sat-si-lume.md`
-6. `simulation-service.md`
-7. `simulation-service-partea-2.md`
-8. `simulation-service-partea-3.md`
-9. `simulation-service-partea-4.md`
-10. `environment-context-si-engine.md`
-11. `dialog-si-conversatii.md`
-12. `interactiuni.md`
-13. `gui-interfete.md`
-14. `ai-orchestrare-si-mecanici.md`
-15. `story-si-context-ai.md`
-16. `story-context-service.md`
-17. `progression-service.md`
-18. `lucru-alternat-quest-mapping-progression.md`
-19. `roadmap-orientativ.md`
-20. `server-admin-runbook.md`
-21. `release-checklist.md`
-22. `debugging-si-testare.md`
-23. `prevenire-duplicare-npc.md`
+4. `faze-urmatoare-250.md`
+5. `faze-urmatoare-250-partea-2.md`
+6. `playable-village-ux.md`
+7. `ordine-spawn-npc-cladiri-region-node.md`
+8. `simulare-sat-si-lume.md`
+9. `simulation-service.md`
+10. `simulation-service-partea-2.md`
+11. `simulation-service-partea-3.md`
+12. `simulation-service-partea-4.md`
+13. `environment-context-si-engine.md`
+14. `dialog-si-conversatii.md`
+15. `interactiuni.md`
+16. `gui-interfete.md`
+17. `ai-orchestrare-si-mecanici.md`
+18. `story-si-context-ai.md`
+19. `story-context-service.md`
+20. `progression-service.md`
+21. `player-onboarding-initiere.md`
+22. `lucru-alternat-quest-mapping-progression.md`
+23. `roadmap-orientativ.md`
+24. `server-admin-runbook.md`
+25. `release-checklist.md`
+26. `debugging-si-testare.md`
+27. `prevenire-duplicare-npc.md`
 
 ## Navigare pe categorii
 
@@ -54,10 +58,10 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | Faza | Scop | Documente principale | Status scurt |
 |---|---|---|---|
 | 0 | Baseline, audit si verificare stare curenta | `implementat-deja.md`, `audit.md`, `debugging-si-testare.md`, `analiza-erori-si-plan-rezolvare.md` | Functional initial; necesita resincronizare dupa schimbari mari |
-| 1 | World mapping si spawn order minim verificabil | `mapping.md`, `ordine-spawn-npc-cladiri-region-node.md`, `settlement-plan.md`, `generare-populatie-narativa.md`, `households-persistente.md`, `rutine-npc-si-timeline.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md` | Nucleu implementat initial; generatorul complet si simularea de comunitate lipsesc |
-| 2 | First playable demo intern | `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate.md`, `progression-service.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
+| 1 | World mapping si spawn order minim verificabil | `mapping.md`, `playable-village-ux.md`, `ordine-spawn-npc-cladiri-region-node.md`, `settlement-plan.md`, `generare-populatie-narativa.md`, `households-persistente.md`, `rutine-npc-si-timeline.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md` | Nucleu implementat initial; generatorul complet si simularea de comunitate lipsesc |
+| 2 | First playable demo intern | `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
-| 4 | Runtime scenarii extensibil | `questuri-avansate.md`, `progression-service.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Registri initiali exista; integrarea reala in `ScenarioEngine`, validatorul complet si runtime-ul generic raman treptate |
+| 4 | Runtime scenarii extensibil | `questuri-avansate-v2.md`, `progression-service.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Registri initiali exista; integrarea reala in `ScenarioEngine`, validatorul complet si runtime-ul generic raman treptate |
 | 5 | Generare sate si authoring asistat | `settlement-plan.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper initial exista; generarea completa ramane viitoare |
 | 6 | Hardening productie si livrare | `server-admin-runbook.md`, `release-checklist.md`, `reducere-marime-jar.md`, `audit.md`, `debugging-si-testare.md`, `gui-interfete.md`, `prevenire-duplicare-npc.md` | Backlog tehnic; nu bloca demo-ul matur fara motiv, dar este obligatoriu inainte de productie publica |
 
@@ -76,6 +80,8 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `environment-context-si-engine.md` | 2, 4, 5 | Contract pentru context read-only de mediu si EnvironmentEngine viitor | Implementeaza intai `EnvironmentContextService`; `EnvironmentEngine` complet ramane pentru questuri sistemice si world events |
 | `faze-observatii-avertizari.md` | toate | Harta centrala pe faze | Document de control pentru citirea restului documentatiei |
 | `faze-urmatoare-categorii.md` | toate | Sinteza operationala a fazelor urmatoare, grupate pe categorii si subcategorii | Foloseste-l pentru alegerea urmatorului task; documentele canonice raman sursa pentru detalii |
+| `faze-urmatoare-250.md` | toate | Backlog operational cu urmatoarele 250 faze | Lista lunga pentru planificare; executa fazele in slice-uri mici, validate |
+| `faze-urmatoare-250-partea-2.md` | toate | Backlog operational F251-F500 pentru generare sate/cladiri, context, comportament realist si API | Continua lista lunga; prioritizeaza config validat, dry-run, context read-only si documentare API |
 | `generare-ai-si-constructie-automata.md` | 5 | Directie pentru generare AI si template-uri | AI-ul trebuie sa genereze drafturi validate, nu sa execute direct modificari in lume |
 | `generare-populatie-narativa.md` | 1, 2 | Contract pentru generarea dry-run a populatiei pe regiune | Produce `PopulationPlan` si se converteste ulterior in `HouseAllocation`, fara spawn direct |
 | `generare-sate-fara-worldedit.md` | 1, 5 | Generare si completare sate vanilla fara WorldEdit obligatoriu | Scannerul/mapperul sunt initiale; patch planner si builder complet lipsesc |
@@ -84,25 +90,27 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `households-persistente.md` | 1, 2 | Contract pentru tabelele `households` si `household_residents` | Design initial; inlocuieste treptat dependenta de `metadata.residents` ca sursa de adevar |
 | `implementat-deja.md` | 0 | Rezumat al functionalitatii confirmate in cod | Actualizeaza-l dupa fiecare schimbare de faza care modifica statusul real |
 | `interactiuni.md` | 2, 4 | Contract tehnic pentru click, chat privat, sesiuni, ascultare pasiva, intentii de quest si efecte sociale | Interactiunea routeaza intentii catre servicii deterministe; dialogul formuleaza raspunsul, nu decide progresul |
-| `lucru-alternat-quest-mapping-progression.md` | 1, 2, 4 | Protocol de lucru alternat intre mapping, questuri si `ProgressionService` | Foloseste slice-uri mici: mapping concret, quest/contract jucabil, audit/debugdump si abia apoi extractie generic progression |
+| `lucru-alternat-quest-mapping-progression.md` | 1, 2, 4 | Protocol de lucru alternat intre mapping, questuri, `ProgressionService` si GUI system | Foloseste slice-uri mici: mapping concret, quest/contract jucabil, GUI peste snapshot-uri, audit/debugdump si abia apoi extractie generic progression |
 | `mapping.md` | 1, 4, 5 | Stare, limitari, reguli de consum si evolutie pentru regiuni/places/nodes | Mapping-ul poate exista in cod, dar serverul poate avea 0 regiuni pana la config/import |
-| `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual si strat semantic validat de admin | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
+| `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual, strat semantic validat de admin si directia wand + prompturi naturale | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
 | `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Redirect istoric catre `mapping.md` | Pastreaza-l doar pentru linkuri vechi; continutul canonic este in `mapping.md` |
 | `npc-uri-temporare-si-episodice.md` | 4 | NPC-uri temporare, episodice si non-villager | Pastreaza persistenta light separata de NPC-urile permanente |
 | `ordine-spawn-npc-cladiri-region-node.md` | 1, 5, 6 | v2 pentru fazele urmatoare de spawn order | v1 este arhivat in `arhiva/`; v2 se concentreaza pe generator, planuri, persistenta, migration si rollback |
 | `patch-planner.md` | 5 | Contract pentru gap analyzer si patch planner peste sate/mapping partial | Produce `GapReport` si `PatchPlan`, dar nu construieste direct |
+| `playable-village-ux.md` | 1, 2, 5 | Criterii pentru sat jucabil, interactiuni NPC clare, rutina stabila, spatiere, teren si questuri vizibile | Prioritizeaza playability inainte de mecanici noi; codul mare fara sat lizibil nu produce demo bun |
+| `player-onboarding-initiere.md` | 2, 4, 6 | Design pentru prima intrare a playerului, profil, starter kit, reset controlat si legare cu tutorialul T01 | Profilul playerului este separat de `npc_profiles`; resetul profilului nu trebuie sa stearga questuri fara optiune explicita |
 | `prevenire-duplicare-npc.md` | 1, 6 | Runbook pentru prevenirea si remedierea duplicarii NPC | Nu edita DB live; foloseste-l inainte de cleanup manual sau retry de spawn |
 | `pregatire-questuri-avansate.md` | 2, 4 | Pregatiri minime si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test | Stabilizeaza `objective_id`, stage runtime initial si auditul inainte de branching |
-| `progression-service.md` | 2, 4 | Directie pentru runtime generic de progres peste questuri, contracte, datorii si evenimente | `Quest` trebuie sa ramana fatada compatibila; progresul generic nu trebuie sa forteze toate scenariile in quest log |
+| `progression-service.md` | 2, 4 | Directie pentru runtime generic de progres peste questuri, contracte, datorii, evenimente, tutoriale si ritualuri | `Quest` trebuie sa ramana fatada compatibila; progresul generic nu trebuie sa forteze toate scenariile in quest log |
 | `quest-anchor-bindings.md` | 2, 4 | Contract DB pentru ancore semantice de quest | Binding-urile, auditul, comanda admin read-only si exportul `debugdump quest` exista initial |
-| `questuri-avansate.md` | 2, 4 | Evolutia questurilor pe obiective si etape | Nu sari direct la branching complex pana cand questurile cap-coada sunt stabile |
+| `questuri-avansate-v2.md` | 2, 4 | Faze V2 pentru diversitate de questuri, mapping, progres generic si mecanici non-quest | Nu sari direct la branching complex pana cand questurile cap-coada sunt stabile |
 | `reactie-npc-jucator.md` | 2, 4 | Reactii bazate pe istoric, emotii si reputatie | Evita sisteme mari de reputatie inainte de primul scenariu jucabil |
 | `README.md` | toate | Indexul documentatiei | Pastreaza aici lista completa a documentelor si fazele principale |
 | `reducere-marime-jar.md` | 6 | Plan pentru micsorarea JAR-ului | Nu activa `minimizeJar` fara smoke test pe server |
 | `release-checklist.md` | 0, 6 | Checklist pentru build, JAR inspect, Paper smoke, audit, restart si rollback | Nu considera release un simplu `mvn package`; cere server smoke si backup pentru date reale |
 | `refactorizare-si-impartire-pe-module.md` | 3 | Migrare si spargere pe module/clase | Refactorizarea trebuie facuta incremental, cu teste dupa fiecare pas |
 | `roadmap-orientativ.md` | toate | Organizare interna pe componente, mecanici si ordine de dezvoltare | Foloseste-l pentru alegerea ordinii de lucru; `implementat-deja.md` ramane sursa pentru ce exista in cod |
-| `rutine-npc-si-timeline.md` | 1, 4 | Rutine zilnice, timeline si hook-uri | Rutina actuala e minima, cu teleport controlat, nu pathfinding real |
+| `rutine-npc-si-timeline.md` | 1, 4 | Rutine zilnice, timeline si hook-uri | Rutina actuala foloseste pathfinding Paper unde poate si teleport doar ca fallback |
 | `server-admin-runbook.md` | 0, 6 | Ghid operational pentru instalare, config minim, audit, debugdump si smoke test pe Paper | Nu edita DB live; foloseste backup inainte de cleanup sau upgrade |
 | `settlement-plan.md` | 1, 5 | Contract pentru planul complet de regiune/sat inainte de mapping, populatie, spawn sau patch/build | Design initial; planul trebuie validat si inspectat inainte de commit |
 | `simulation-service.md` | 1, 2 | Contract tehnic pentru tick-ul periodic de simulare NPC, nevoi, scoring, stare, rutina si persistenta | In cod este inca serviciu logic distribuit intre scheduler, NPC manager, decision engine si routine service |

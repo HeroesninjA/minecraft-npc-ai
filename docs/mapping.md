@@ -1,6 +1,6 @@
 # Mapping
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -33,6 +33,7 @@ Ideea de baza ramane:
 
 Pentru harti construite manual, vezi si `docs/mapping-harti-manuale.md`.
 Documentul acela explica de ce pluginul nu poate deduce sigur din blocuri ce este o casa, o fierarie, o cripta sau un regat si cum trebuie adaugat stratul semantic de catre admin.
+Directia recomandata pentru urmatorul pas de authoring este wand + prompt natural: wand-ul selecteaza geometria sau punctul, iar promptul adminului descrie sensul, de exemplu "aici va fi casa fierarului".
 
 ## Ce exista implementat
 
@@ -220,6 +221,8 @@ Sunt disponibile deja:
 - `/ainpc audit [all|npc|world|db|spawn|quest]`
 - `/ainpc debugdump [all|npc|world|quest|story|openai]`
 
+Nu exista inca `/ainpc wand` sau `/ainpc map <descriere libera>`. Directia pentru aceste comenzi este documentata in `docs/mapping-harti-manuale.md` ca authoring manual asistat prin draft, preview si confirmare.
+
 ### Demo mapping minim
 
 Pentru Faza 1 exista o comanda care creeaza un mapping semantic demo in jurul pozitiei jucatorului:
@@ -236,11 +239,14 @@ Comanda creeaza:
 - `1` fierarie
 - `1` ferma
 - `1` taverna
-- node-uri pentru `bed`, `home`, `entrance`, `npc_spawn`, `work`, `workstation`, `social`, `meeting_point`, `quest_trigger` si `interaction`
+- `1` altar ritualic
+- node-uri pentru `bed`, `home`, `entrance`, `npc_spawn`, `work`, `workstation`, `social`, `meeting_point`, `quest_trigger`, `ritual_circle`, `altar` si `interaction`
 
 Important:
 
 - comanda marcheaza semantic zona, nu construieste blocuri fizice
+- layout-ul demo curent este mai spatios decat versiunea initiala: casele, piata, fieraria, ferma, taverna si altarul sunt separate pentru spawn/rutina mai lizibile
+- alege o zona relativ plata inainte de `/ainpc world demo create`; comanda nu niveleaza terenul si nu largeste case fizice existente
 - daca nu dai `regionId`, se foloseste `demo_sat`
 - casele demo primesc `metadata.owner_status: pending`, deoarece owner-ul real se leaga abia in faza de spawn/NPC
 - dupa creare ruleaza `/ainpc audit world`
@@ -930,6 +936,8 @@ Roluri semantice utile:
 - `guard`
 - `shop_counter`
 - `ritual_center`
+- `ritual_circle`
+- `altar`
 - `loot_spawn`
 - `conversation_anchor`
 
@@ -1006,6 +1014,9 @@ Imbunatatiri utile:
 
 - selectie din world cu doua colturi
 - `setpos1 / setpos2` intern
+- wand dedicat pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`
+- prompt natural peste selectie, de exemplu "aici este casa fierarului"
+- draft semantic cu preview si confirmare inainte de scriere
 - creare `place` din selectie
 - creare `node` la pozitia curenta
 - highlight vizual pentru region / place / node

@@ -6,6 +6,9 @@ public record StoredProgression(
     String packId,
     String mechanicId,
     String kind,
+    String category,
+    String scenarioKind,
+    String baseType,
     String definitionId,
     String templateId,
     String code,
@@ -30,6 +33,9 @@ public record StoredProgression(
         packId = valueOrEmpty(packId);
         mechanicId = valueOrEmpty(mechanicId);
         kind = valueOrEmpty(kind);
+        category = valueOrEmpty(category);
+        scenarioKind = valueOrEmpty(scenarioKind);
+        baseType = valueOrEmpty(baseType);
         definitionId = valueOrEmpty(definitionId);
         templateId = valueOrEmpty(templateId);
         code = valueOrEmpty(code);

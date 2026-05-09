@@ -111,10 +111,11 @@ Rutina trebuie sa fie determinista, dar nu rigida. Este suficient sa existe mici
 - fallback daca locatia nu exista
 - evitarea teleportarii daca NPC-ul poate merge natural
 
-Limitare MVP:
+Comportament curent:
 
-- implementarea actuala foloseste teleport controlat cand NPC-ul este prea departe de tinta
-- pathfinding real sau pasi intermediari trebuie adaugati ulterior
+- NPC-urile AINPC au implicit AI si gravitatie active pentru mers natural;
+- rutina incearca intai pathfinding Paper spre ancora curenta;
+- teleportul ramane fallback pentru distante mari, lumi diferite sau pathfinding esuat.
 
 ## 3. RoutineAssignment
 

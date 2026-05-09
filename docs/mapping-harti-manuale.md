@@ -1,6 +1,6 @@
 # Mapping pentru harti construite manual
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -59,6 +59,106 @@ Limitarea importanta:
 - un castel poate contine mai multe places, nu un singur loc semantic
 
 Concluzie: detectia automata poate crea drafturi, dar adminul trebuie sa confirme tipul si scopul zonei.
+
+## Directie propusa: wand si prompturi naturale
+
+Pentru harti construite manual, directia recomandata este o unealta de tip wand, inspirata de modelul WorldEdit `pos1` / `pos2`, dar fara dependinta obligatorie de WorldEdit.
+
+Wand-ul si promptul trebuie sa aiba roluri diferite:
+
+- wand-ul captureaza geometria: colturi, regiuni, cladiri, puncte si NPC-uri selectate
+- promptul descrie sensul: "aici va fi casa fierarului", "asta este avizierul", "aici se aduna oamenii"
+- sistemul transforma intentia intr-un draft semantic
+- adminul vede preview-ul, corecteaza daca trebuie si confirma
+- doar dupa confirmare mapping-ul este scris si salvat
+
+Exemplu de flux pentru o casa:
+
+```text
+/ainpc wand
+click stanga  -> pos1
+click dreapta -> pos2
+/ainpc map aici va fi casa fierarului
+```
+
+Draft asteptat:
+
+```text
+Place draft:
+- type: forge sau house, in functie de modul ales si de prompt
+- tags: blacksmith, home/workplace, village
+- bounds: selectie wand pos1/pos2
+- metadata: profession=blacksmith, role=home/work
+- suggested nodes: entrance, home, bed, interaction/workstation
+```
+
+Exemplu de flux pentru un node:
+
+```text
+/ainpc wand mode node
+shift + click pe blocul dorit
+/ainpc map acesta este avizierul
+```
+
+Draft asteptat:
+
+```text
+Node draft:
+- type: quest_trigger
+- semantic: quest_board
+- tags: board, public, quests
+- radius: 2.0
+- container: place-ul sau regiunea curenta
+```
+
+Moduri utile pentru wand:
+
+- `REGION` pentru zone mari: sat, castel, pestera, dungeon, regat
+- `PLACE` pentru cladiri, camere si zone functionale
+- `NODE` pentru puncte exacte de interactiune
+- `NPC_BIND` pentru legarea unui NPC de home/work/social places
+- `QUEST_ANCHOR` pentru marcarea unui punct folosit de questuri, contracte, bounties, tutoriale sau ritualuri
+
+Prompturi naturale acceptabile ca intentie:
+
+| Prompt admin | Draft semantic posibil |
+|---|---|
+| `aici este casa fierarului` | `place type=house`, tags `home`, `blacksmith`, owner/profession in metadata |
+| `aici va fi fieraria` | `place type=forge`, tags `workplace`, `blacksmith`, `shop` |
+| `aici este piata satului` | `place type=market`, tags `public`, `social`, `trade` |
+| `asta este avizierul` | `node type=quest_trigger`, metadata `semantic=quest_board` |
+| `aici se aduna oamenii` | `node type=meeting_point` sau `place type=market`, tags `social`, `public` |
+| `aici incepe ritualul` | `node type=interaction` sau `quest_trigger`, tags `ritual`, metadata `role=ritual_start` |
+
+Parserul trebuie sa fie conservator:
+
+- intai reguli deterministe pentru romana simpla si aliasuri comune
+- apoi fallback AI/NLU doar pentru propunere de draft, nu pentru scriere directa
+- daca intentia este ambigua, sistemul cere clarificare sau propune 2-3 optiuni
+- niciun prompt nu trebuie sa modifice direct lumea fara preview si confirmare
+
+Comenzi propuse pentru aceasta directie:
+
+```text
+/ainpc wand
+/ainpc wand mode <region|place|node|npc_bind|quest_anchor>
+/ainpc map <descriere libera>
+/ainpc map node <descriere libera>
+/ainpc map preview
+/ainpc map confirm
+/ainpc map cancel
+```
+
+Regula de siguranta:
+
+- wand-ul selecteaza forma
+- promptul da semantica
+- sistemul produce `MappingDraft`
+- preview-ul arata tipul, ID-ul propus, bounds, tags, metadata si conflicte
+- confirmarea creeaza `Region`, `Place` sau `Node`
+- `/ainpc world save` persista mapping-ul
+
+In prima versiune, wand-ul nu trebuie sa construiasca blocuri. El trebuie sa marcheze semantic harta existenta. Constructia fizica poate veni ulterior prin generator, patch planner sau integrare optionala cu WorldEdit.
 
 ## Modelul valid acum
 
@@ -220,6 +320,8 @@ Comenzile valide pentru creare si inspectie sunt:
 /ainpc debugdump world
 ```
 
+Comenzile de wand si prompt natural sunt documentate mai sus ca directie propusa. Ele nu sunt inca comenzi existente.
+
 Exemplu de lucru, executat din lumea in care marchezi harta:
 
 ```text
@@ -326,7 +428,11 @@ Coordonatele sunt bune pentru plasare si detectie. Gameplay-ul trebuie sa folose
 
 Urmatoarele idei sunt valide ca directii viitoare, dar nu trebuie prezentate ca existente:
 
-- comanda `/region wand`
+- comanda `/ainpc wand`
+- comenzi `/ainpc map <descriere libera>`, `/ainpc map preview`, `/ainpc map confirm` si `/ainpc map cancel`
+- parser romanesc simplu pentru prompturi naturale transformate in `MappingDraft`
+- preview vizual pentru selectie wand, bounds, node radius si conflicte
+- persistenta temporara pentru drafturi pana la confirmare sau anulare
 - comenzi de forma `/ai loc create`, `/ai loc desc`, `/ai loc npc`
 - editor 2D/3D in browser pentru selectarea zonelor
 - fisier canonic `locations.yml`
@@ -335,8 +441,9 @@ Urmatoarele idei sunt valide ca directii viitoare, dar nu trebuie prezentate ca 
 
 Directii viitoare realiste:
 
-- selectie cu doua colturi in joc
-- creare place/node din pozitia curenta
+- selectie cu doua colturi in joc prin wand
+- creare region/place/node din selectie sau pozitia curenta
+- prompt natural pentru etichetare: "aici este casa fierarului", "asta este avizierul"
 - highlight vizual pentru regiuni si places
 - editor extern de mapping
 - export/import separat de `config.yml`
@@ -351,6 +458,10 @@ Pentru harti construite manual, sistemul corect este:
 
 ```text
 harta construita manual
+-> wand selecteaza geometria sau punctul
+-> promptul adminului descrie sensul locului
+-> draft semantic cu preview
+-> confirmare umana
 -> regiuni marcate de admin
 -> places marcate de admin
 -> nodes marcate de admin

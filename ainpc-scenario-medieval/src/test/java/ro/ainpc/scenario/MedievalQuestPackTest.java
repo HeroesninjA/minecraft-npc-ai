@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,70 +26,115 @@ class MedievalQuestPackTest {
 
         ConfigurationSection scenarios = config.getConfigurationSection("scenarios");
         assertNotNull(scenarios, "scenarios section should exist");
-        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "C01"), scenarios.getKeys(false));
+        assertEquals(Set.of("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "C01", "C02", "D01", "B01", "B02", "E01", "T01", "R01"), scenarios.getKeys(false));
 
         ConfigurationSection mechanics = config.getConfigurationSection("mechanics");
         assertNotNull(mechanics, "mechanics section should exist");
-        assertEquals(Set.of("main_quests", "side_quests", "village_contracts"), mechanics.getKeys(false));
+        assertEquals(Set.of("main_quests", "side_quests", "village_contracts", "npc_duties", "local_bounties", "village_events", "onboarding", "village_rituals"), mechanics.getKeys(false));
         assertEquals(1, mechanics.getInt("main_quests.max_active"));
         assertEquals(3, mechanics.getInt("side_quests.max_active"));
         assertEquals(3, mechanics.getInt("village_contracts.max_active"));
         assertEquals("contract", mechanics.getString("village_contracts.kind"));
+        assertEquals(2, mechanics.getInt("npc_duties.max_active"));
+        assertEquals("duty", mechanics.getString("npc_duties.kind"));
+        assertEquals(1, mechanics.getInt("local_bounties.max_active"));
+        assertEquals("bounty", mechanics.getString("local_bounties.kind"));
+        assertEquals(2, mechanics.getInt("village_events.max_active"));
+        assertEquals("event", mechanics.getString("village_events.kind"));
+        assertEquals(1, mechanics.getInt("onboarding.max_active"));
+        assertEquals("tutorial", mechanics.getString("onboarding.kind"));
+        assertEquals(1, mechanics.getInt("village_rituals.max_active"));
+        assertEquals("ritual", mechanics.getString("village_rituals.kind"));
 
-        Map<String, String> expectedGivers = Map.of(
-            "Q01", "blacksmith",
-            "Q02", "farmer",
-            "Q03", "guard",
-            "Q04", "innkeeper",
-            "Q05", "healer",
-            "Q06", "blacksmith",
-            "Q07", "innkeeper",
-            "Q08", "guard",
-            "C01", "merchant"
+        Map<String, String> expectedGivers = Map.ofEntries(
+            Map.entry("Q01", "blacksmith"),
+            Map.entry("Q02", "farmer"),
+            Map.entry("Q03", "guard"),
+            Map.entry("Q04", "innkeeper"),
+            Map.entry("Q05", "healer"),
+            Map.entry("Q06", "blacksmith"),
+            Map.entry("Q07", "innkeeper"),
+            Map.entry("Q08", "guard"),
+            Map.entry("C01", "merchant"),
+            Map.entry("C02", "merchant"),
+            Map.entry("D01", "guard"),
+            Map.entry("B01", "guard"),
+            Map.entry("B02", "farmer"),
+            Map.entry("E01", "guard"),
+            Map.entry("T01", "priest"),
+            Map.entry("R01", "priest")
         );
-        Map<String, String> expectedBaseTypes = Map.of(
-            "Q01", "QUEST",
-            "Q02", "QUEST",
-            "Q03", "QUEST",
-            "Q04", "QUEST",
-            "Q05", "QUEST",
-            "Q06", "QUEST",
-            "Q07", "QUEST",
-            "Q08", "QUEST",
-            "C01", "TRADE_DEAL"
+        Map<String, String> expectedBaseTypes = Map.ofEntries(
+            Map.entry("Q01", "QUEST"),
+            Map.entry("Q02", "QUEST"),
+            Map.entry("Q03", "QUEST"),
+            Map.entry("Q04", "QUEST"),
+            Map.entry("Q05", "QUEST"),
+            Map.entry("Q06", "QUEST"),
+            Map.entry("Q07", "QUEST"),
+            Map.entry("Q08", "QUEST"),
+            Map.entry("C01", "TRADE_DEAL"),
+            Map.entry("C02", "TRADE_DEAL"),
+            Map.entry("D01", "DUTY"),
+            Map.entry("B01", "BOUNTY"),
+            Map.entry("B02", "BOUNTY"),
+            Map.entry("E01", "WORLD_EVENT"),
+            Map.entry("T01", "TUTORIAL"),
+            Map.entry("R01", "RITUAL")
         );
-        Map<String, String> expectedMechanics = Map.of(
-            "Q01", "main_quests",
-            "Q02", "side_quests",
-            "Q03", "side_quests",
-            "Q04", "side_quests",
-            "Q05", "side_quests",
-            "Q06", "side_quests",
-            "Q07", "side_quests",
-            "Q08", "side_quests",
-            "C01", "village_contracts"
+        Map<String, String> expectedMechanics = Map.ofEntries(
+            Map.entry("Q01", "main_quests"),
+            Map.entry("Q02", "side_quests"),
+            Map.entry("Q03", "side_quests"),
+            Map.entry("Q04", "side_quests"),
+            Map.entry("Q05", "side_quests"),
+            Map.entry("Q06", "side_quests"),
+            Map.entry("Q07", "side_quests"),
+            Map.entry("Q08", "side_quests"),
+            Map.entry("C01", "village_contracts"),
+            Map.entry("C02", "village_contracts"),
+            Map.entry("D01", "npc_duties"),
+            Map.entry("B01", "local_bounties"),
+            Map.entry("B02", "local_bounties"),
+            Map.entry("E01", "village_events"),
+            Map.entry("T01", "onboarding"),
+            Map.entry("R01", "village_rituals")
         );
-        Map<String, String> expectedKinds = Map.of(
-            "Q01", "fetch",
-            "Q02", "fetch",
-            "Q03", "hunt",
-            "Q04", "fetch",
-            "Q05", "fetch",
-            "Q06", "exploration",
-            "Q07", "delivery",
-            "Q08", "hunt",
-            "C01", "delivery"
+        Map<String, String> expectedKinds = Map.ofEntries(
+            Map.entry("Q01", "fetch"),
+            Map.entry("Q02", "fetch"),
+            Map.entry("Q03", "hunt"),
+            Map.entry("Q04", "fetch"),
+            Map.entry("Q05", "fetch"),
+            Map.entry("Q06", "exploration"),
+            Map.entry("Q07", "delivery"),
+            Map.entry("Q08", "hunt"),
+            Map.entry("C01", "delivery"),
+            Map.entry("C02", "investigation"),
+            Map.entry("D01", "duty"),
+            Map.entry("B01", "hunt"),
+            Map.entry("B02", "hunt"),
+            Map.entry("E01", "event"),
+            Map.entry("T01", "tutorial"),
+            Map.entry("R01", "ritual")
         );
-        Map<String, String> expectedCategories = Map.of(
-            "Q01", "main",
-            "Q02", "side",
-            "Q03", "side",
-            "Q04", "repeatable",
-            "Q05", "side",
-            "Q06", "side",
-            "Q07", "side",
-            "Q08", "side",
-            "C01", "side"
+        Map<String, String> expectedCategories = Map.ofEntries(
+            Map.entry("Q01", "main"),
+            Map.entry("Q02", "side"),
+            Map.entry("Q03", "side"),
+            Map.entry("Q04", "repeatable"),
+            Map.entry("Q05", "side"),
+            Map.entry("Q06", "side"),
+            Map.entry("Q07", "side"),
+            Map.entry("Q08", "side"),
+            Map.entry("C01", "side"),
+            Map.entry("C02", "side"),
+            Map.entry("D01", "repeatable"),
+            Map.entry("B01", "repeatable"),
+            Map.entry("B02", "repeatable"),
+            Map.entry("E01", "repeatable"),
+            Map.entry("T01", "side"),
+            Map.entry("R01", "repeatable")
         );
         for (Map.Entry<String, String> entry : expectedGivers.entrySet()) {
             ConfigurationSection scenario = scenarios.getConfigurationSection(entry.getKey());
@@ -140,6 +186,40 @@ class MedievalQuestPackTest {
         assertTrue(scenarios.getBoolean("C01.progress.enabled"));
         assertEquals("contract", scenarios.getString("C01.progress.kind"));
         assertEquals("village_contracts", scenarios.getString("C01.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("C02.quest.repeatable"));
+        assertEquals(1800, scenarios.getInt("C02.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("C02.progress.enabled"));
+        assertEquals("contract", scenarios.getString("C02.progress.kind"));
+        assertEquals("village_contracts", scenarios.getString("C02.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("D01.quest.repeatable"));
+        assertEquals(900, scenarios.getInt("D01.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("D01.progress.enabled"));
+        assertEquals("duty", scenarios.getString("D01.progress.kind"));
+        assertEquals("npc_duties", scenarios.getString("D01.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("B01.quest.repeatable"));
+        assertEquals(1800, scenarios.getInt("B01.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("B01.progress.enabled"));
+        assertEquals("bounty", scenarios.getString("B01.progress.kind"));
+        assertEquals("local_bounties", scenarios.getString("B01.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("B02.quest.repeatable"));
+        assertEquals(2700, scenarios.getInt("B02.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("B02.progress.enabled"));
+        assertEquals("bounty", scenarios.getString("B02.progress.kind"));
+        assertEquals("local_bounties", scenarios.getString("B02.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("E01.quest.repeatable"));
+        assertEquals(2400, scenarios.getInt("E01.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("E01.progress.enabled"));
+        assertEquals("event", scenarios.getString("E01.progress.kind"));
+        assertEquals("village_events", scenarios.getString("E01.progress.mechanic"));
+        assertFalse(scenarios.getBoolean("T01.quest.repeatable"));
+        assertTrue(scenarios.getBoolean("T01.progress.enabled"));
+        assertEquals("tutorial", scenarios.getString("T01.progress.kind"));
+        assertEquals("onboarding", scenarios.getString("T01.progress.mechanic"));
+        assertTrue(scenarios.getBoolean("R01.quest.repeatable"));
+        assertEquals(3600, scenarios.getInt("R01.quest.cooldown_seconds"));
+        assertTrue(scenarios.getBoolean("R01.progress.enabled"));
+        assertEquals("ritual", scenarios.getString("R01.progress.kind"));
+        assertEquals("village_rituals", scenarios.getString("R01.progress.mechanic"));
         assertEquals(List.of("Q02"), scenarios.getStringList("Q05.quest.prerequisites"));
         assertEquals(List.of("Q01"), scenarios.getStringList("Q06.quest.prerequisites"));
         assertEquals(List.of("Q03", "Q04"), scenarios.getStringList("Q07.quest.prerequisites"));
@@ -158,6 +238,42 @@ class MedievalQuestPackTest {
             "patrol_region", "PATROL",
             "clear_zombies", "PATROL",
             "report_to_guard", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "C02", Map.of(
+            "visit_market", "MARKET_CHECK",
+            "check_market_board", "MARKET_CHECK",
+            "deliver_market_note", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "D01", Map.of(
+            "check_settlement", "PATROL",
+            "check_guard_board", "PATROL",
+            "report_guard_duty", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "B01", Map.of(
+            "patrol_old_road", "HUNT",
+            "clear_skeletons", "HUNT",
+            "report_bounty", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "B02", Map.of(
+            "visit_farm_edge", "HUNT",
+            "clear_farm_spiders", "HUNT",
+            "report_farm_bounty", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "E01", Map.of(
+            "visit_event_market", "CHECK",
+            "inspect_event_board", "CHECK",
+            "deliver_repair_stone", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "T01", Map.of(
+            "visit_tutorial_market", "LEARN",
+            "inspect_tutorial_board", "LEARN",
+            "report_tutorial", "RETURN"
+        ));
+        assertObjectivePhases(scenarios, "R01", Map.of(
+            "collect_ritual_candles", "PREPARE",
+            "visit_ritual_altar", "CEREMONY",
+            "inspect_ritual_circle", "CEREMONY",
+            "deliver_ritual_candles", "RETURN"
         ));
         assertQuestStages(scenarios, "Q06", Map.of(
             "INVESTIGATION", List.of("visit_forge", "inspect_forge_marks"),
@@ -185,6 +301,72 @@ class MedievalQuestPackTest {
             "RETURN", "manual_turn_in"
         ), Map.of(
             "PATROL", "RETURN"
+        ));
+        assertQuestStages(scenarios, "C02", Map.of(
+            "MARKET_CHECK", List.of("visit_market", "check_market_board"),
+            "RETURN", List.of("deliver_market_note")
+        ), Map.of(
+            "MARKET_CHECK", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "MARKET_CHECK", "RETURN"
+        ));
+        assertQuestStages(scenarios, "D01", Map.of(
+            "PATROL", List.of("check_settlement", "check_guard_board"),
+            "RETURN", List.of("report_guard_duty")
+        ), Map.of(
+            "PATROL", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "PATROL", "RETURN"
+        ));
+        assertQuestStages(scenarios, "B01", Map.of(
+            "HUNT", List.of("patrol_old_road", "clear_skeletons"),
+            "RETURN", List.of("report_bounty")
+        ), Map.of(
+            "HUNT", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "HUNT", "RETURN"
+        ));
+        assertQuestStages(scenarios, "B02", Map.of(
+            "HUNT", List.of("visit_farm_edge", "clear_farm_spiders"),
+            "RETURN", List.of("report_farm_bounty")
+        ), Map.of(
+            "HUNT", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "HUNT", "RETURN"
+        ));
+        assertQuestStages(scenarios, "E01", Map.of(
+            "CHECK", List.of("visit_event_market", "inspect_event_board"),
+            "RETURN", List.of("deliver_repair_stone")
+        ), Map.of(
+            "CHECK", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "CHECK", "RETURN"
+        ));
+        assertQuestStages(scenarios, "T01", Map.of(
+            "LEARN", List.of("visit_tutorial_market", "inspect_tutorial_board"),
+            "RETURN", List.of("report_tutorial")
+        ), Map.of(
+            "LEARN", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "LEARN", "RETURN"
+        ));
+        assertQuestStages(scenarios, "R01", Map.of(
+            "PREPARE", List.of("collect_ritual_candles"),
+            "CEREMONY", List.of("visit_ritual_altar", "inspect_ritual_circle"),
+            "RETURN", List.of("deliver_ritual_candles")
+        ), Map.of(
+            "PREPARE", "all_objectives",
+            "CEREMONY", "all_objectives",
+            "RETURN", "manual_turn_in"
+        ), Map.of(
+            "PREPARE", "CEREMONY",
+            "CEREMONY", "RETURN"
         ));
     }
 

@@ -109,6 +109,8 @@ simulation:
 routine:
   enabled: true
   teleport_enabled: true
+  natural_movement:
+    enabled: true
 
 debug: false
 ```
@@ -131,6 +133,7 @@ Ruleaza:
 /ainpc audit world
 /ainpc audit db
 /ainpc list
+/ainpc routine status nearest
 ```
 
 Semne bune:
@@ -139,7 +142,10 @@ Semne bune:
 - `/ainpc` afiseaza help, nu eroare;
 - `/ainpc audit db` nu raporteaza initializare DB esuata;
 - `/ainpc audit world` nu raporteaza crash sau WorldAdmin indisponibil;
+- `/ainpc routine status nearest` arata `AI=pornit` si `gravity=pornit` pentru NPC-ul apropiat;
 - logul nu contine exceptii repetate la startup.
+
+Dupa `/ainpc routine tick`, campul `path` din `routine status` trebuie sa fie `pornit` daca ancora este in aceeasi lume si exista drum valid pana la ea.
 
 Observatie: `World mapping: 0 regiuni, 0 places, 0 nodes` nu este neaparat bug pe server nou. Inseamna ca mapping-ul nu a fost creat sau importat inca.
 
@@ -217,6 +223,53 @@ Pentru spawn controlat:
 ```
 
 Atentie: spawn-ul trebuie facut doar dupa ce mapping-ul este verificat. Daca regiunea are putine case sau nodes lipsa, foloseste planul ca diagnostic, nu forta spawn-ul.
+Spawn-ul singular de household este jurnalizat in `spawn_batches` cu `scope_type=household`; spawn-ul pe settlement ramane un singur batch de regiune cu fiecare household ca pas. Daca `spawn.batches.track_dry_runs` este activ, dry-run-ul este salvat separat cu prefix `dryrun:` si nu suprascrie batch-ul real.
+
+Inspectie read-only dupa spawn sau restart:
+
+```text
+/ainpc world household list [limit]
+/ainpc world household status <householdId|homePlaceId>
+/ainpc world household place <homePlaceId>
+/ainpc world household resident <npcId|numeNpc|nearest>
+```
+
+Backfill controlat pentru servere care au deja `npc_world_bindings` sau metadata `resident_npc_ids`, dar nu au inca `households`:
+
+```text
+/ainpc migration households dryrun [limit]
+/ainpc migration households apply [limit]
+/ainpc audit db
+```
+
+Ruleaza intotdeauna `dryrun` inainte de `apply`. Migration-ul proceseaza doua surse: `npc_world_bindings` si metadata de pe case. Nu muta automat NPC-uri care apar deja in alt household; acele cazuri raman pentru repair explicit.
+
+Repair pentru cazurile unde un NPC apare deja in doua household-uri:
+
+```text
+/ainpc repair households dryrun
+/ainpc repair households apply
+/ainpc audit db
+```
+
+Rollback pentru batch settlement esuat:
+
+```text
+/ainpc repair batch list problem
+/ainpc repair batch <batchKey> inspect
+/ainpc repair batch <batchKey> dryrun
+/ainpc repair batch <batchKey> apply
+/ainpc audit db
+```
+
+`list problem` arata ultimele batch-uri `RUNNING`, `FAILED` sau `ROLLED_BACK`; poti folosi si `all`, `failed`, `running`, `rolled_back` sau `succeeded` ca filtru. Daca apare `rollback_pending_steps`, batch-ul are pasi creatori si nu trebuie rerulat pana nu este inspectat. `inspect` arata pasii persistati ai batch-ului, inclusiv household-ul, statusul, NPC-urile create/reutilizate si erorile scurte. Daca un retry de spawn refuza un batch `RUNNING`, nu forta comanda: inspecteaza batch-ul si ruleaza rollback controlat. Foloseste `apply` doar dupa ce `dryrun` arata exact NPC-urile care trebuie sterse. Comanda refuza batch-urile `SUCCEEDED`, ca sa nu stearga un spawn valid accidental, recalculeaza `resident_count` pentru household-urile afectate si marcheaza pasii cu NPC-uri create ca `ROLLED_BACK`.
+Foloseste `/ainpc repair batch <batchKey> mark-failed` doar cand batch-ul `RUNNING` nu are ID-uri parsabile pentru rollback automat, dar trebuie inchis manual ca `FAILED`; comanda nu sterge NPC-uri.
+Ruleaza apoi `/ainpc audit db`; auditul semnaleaza batch-uri rollback cu pasi ramasi in status vechi.
+Daca batch-ul este deja `ROLLED_BACK` si lipseste doar marcajul pe pasi, foloseste:
+
+```text
+/ainpc repair batch <batchKey> mark-steps
+```
 
 ## Flux minim pentru quest
 

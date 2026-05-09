@@ -34,6 +34,17 @@ openai:
     # Logheaza un preview din raspunsul returnat de model.
     log_response_preview: true
 
+# Orchestrare AI peste mecanici. Dezactivat implicit pana cand validatorii si routerele sunt mature.
+ai:
+  orchestration:
+    enabled: false
+
+# Setari spawn si jurnalizare batch
+spawn:
+  batches:
+    # Daca este activ, dry-run-ul pentru household/settlement este scris in spawn_batches separat de batch-urile reale.
+    track_dry_runs: false
+
 # Setari platforma
 platform:
   # standalone | hybrid | advanced
@@ -47,6 +58,18 @@ platform:
 npc:
   # Distanta maxima de interactiune (blocuri)
   interaction_distance: 5
+  # Daca este activ, NPC-urile pastreaza AI vanilla pentru mers, usi si reactii naturale.
+  natural_movement: true
+  # Activeaza gravitatia pentru entitatile NPC.
+  gravity: true
+  # La startup si restaurare initiala, elimina entitatile AINPC live duplicate dupa npc_id/source_key.
+  auto_cleanup_duplicate_entities: true
+  # Daca este activ, NPC-urile au coliziune vanilla cu lumea si entitatile.
+  collidable: true
+  # Daca este false, NPC-urile pastreaza sunetele vanilla.
+  silent: false
+  # Protejeaza NPC-urile importante de damage accidental.
+  invulnerable: true
   # Cooldown intre mesaje (secunde)
   message_cooldown: 2
   # Numarul maxim de amintiri pastrate per jucator
@@ -74,13 +97,24 @@ routine:
   # Daca este activ, NPC-urile folosesc home/work/social anchors ca tinta zilnica.
   enabled: true
   # La cate secunde se reevalueaza rutina.
-  tick_seconds: 60
-  # Pentru MVP, villagerii AINPC au AI dezactivat, deci rutina poate muta controlat NPC-ul la ancora.
+  tick_seconds: 120
+  # Teleportul ramane fallback pentru lumi diferite, distante mari sau pathfinding esuat.
   teleport_enabled: true
+  natural_movement:
+    # Daca este activ, rutina incearca intai pathfinding Paper, astfel NPC-ul merge natural spre ancora.
+    enabled: true
+    # Distanta maxima la care merita pathfinding direct; peste aceasta distanta se foloseste fallback-ul de teleport.
+    max_distance: 48.0
+    # Multiplicator viteza pathfinding. 1.0 este viteza vanilla.
+    speed: 1.0
   # Daca NPC-ul este deja in raza tintei, nu este mutat.
-  arrival_radius: 5.5
+  arrival_radius: 8.0
   # Distanta minima pentru teleport ca sa evitam miscari inutile.
-  min_teleport_distance: 8.0
+  min_teleport_distance: 18.0
+  # Cooldown minim intre mutari de rutina, in afara schimbarii clare de slot home/work/social.
+  move_cooldown_seconds: 300
+  # Daca NPC-ul ajunge foarte departe de ancora, rutina il poate corecta chiar daca e in cooldown.
+  force_teleport_distance: 96.0
 
 # Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
 quest:

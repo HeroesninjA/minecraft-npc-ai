@@ -15,6 +15,7 @@ import ro.ainpc.gui.screens.NpcManagerGui;
 import ro.ainpc.gui.screens.PlaceholderGui;
 import ro.ainpc.gui.screens.QuestDetailGui;
 import ro.ainpc.gui.screens.QuestLogGui;
+import ro.ainpc.gui.screens.RoutineGui;
 import ro.ainpc.gui.screens.StatsGui;
 import ro.ainpc.gui.screens.WorldHubGui;
 
@@ -32,6 +33,9 @@ public class GuiService {
     private final GuiSessionManager sessionManager = new GuiSessionManager();
     private final Map<GuiKey, GuiScreen> screens = new EnumMap<>(GuiKey.class);
     private final ConcurrentMap<UUID, String> questDetailSelectors = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, String> questDetailFilters = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, String> questLogFilters = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Integer> questLogPages = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, ConfirmRequest> confirmRequests = new ConcurrentHashMap<>();
 
     public GuiService(AINPCPlugin plugin) {
@@ -42,6 +46,7 @@ public class GuiService {
         register(new WorldHubGui());
         register(new StatsGui());
         register(new NpcInteractionGui());
+        register(new RoutineGui());
         register(new NpcManagerGui());
         register(new AuditGui());
         register(new DebugGui());
@@ -89,11 +94,16 @@ public class GuiService {
     }
 
     public void openQuestDetail(Player player, String questSelector) {
+        openQuestDetail(player, questSelector, getQuestLogFilter(player));
+    }
+
+    public void openQuestDetail(Player player, String questSelector, String sourceFilter) {
         if (player == null || questSelector == null || questSelector.isBlank()) {
             plugin.getMessageUtils().sendActionBar(player, "&cQuest indisponibil.");
             return;
         }
         questDetailSelectors.put(player.getUniqueId(), questSelector);
+        questDetailFilters.put(player.getUniqueId(), QuestLogGuiFilter.normalizeFilter(sourceFilter));
         open(player, GuiKey.QUEST_DETAIL);
     }
 
@@ -102,6 +112,59 @@ public class GuiService {
             return "";
         }
         return questDetailSelectors.getOrDefault(player.getUniqueId(), "");
+    }
+
+    public String getQuestDetailFilter(Player player) {
+        if (player == null) {
+            return QuestLogGuiFilter.ALL.filter();
+        }
+        return questDetailFilters.getOrDefault(player.getUniqueId(), QuestLogGuiFilter.ALL.filter());
+    }
+
+    public void openQuestLog(Player player, String filter) {
+        if (player == null) {
+            return;
+        }
+        String normalizedFilter = QuestLogGuiFilter.normalizeFilter(filter);
+        String previousFilter = questLogFilters.put(player.getUniqueId(), normalizedFilter);
+        if (previousFilter == null || !previousFilter.equalsIgnoreCase(normalizedFilter)) {
+            questLogPages.put(player.getUniqueId(), 0);
+        }
+        open(player, GuiKey.QUEST);
+    }
+
+    public void openQuestLogPage(Player player, int pageIndex) {
+        if (player == null) {
+            return;
+        }
+        questLogPages.put(player.getUniqueId(), Math.max(0, pageIndex));
+        open(player, GuiKey.QUEST);
+    }
+
+    public String getQuestLogFilter(Player player) {
+        if (player == null) {
+            return QuestLogGuiFilter.ALL.filter();
+        }
+        return questLogFilters.getOrDefault(player.getUniqueId(), QuestLogGuiFilter.ALL.filter());
+    }
+
+    public int getQuestLogPage(Player player) {
+        if (player == null) {
+            return 0;
+        }
+        return Math.max(0, questLogPages.getOrDefault(player.getUniqueId(), 0));
+    }
+
+    public void clearPlayerState(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        sessionManager.closePlayer(playerId);
+        questDetailSelectors.remove(playerId);
+        questDetailFilters.remove(playerId);
+        questLogFilters.remove(playerId);
+        questLogPages.remove(playerId);
+        confirmRequests.remove(playerId);
     }
 
     public void openConfirmCommand(Player player,
@@ -137,7 +200,7 @@ public class GuiService {
         }
         confirmRequests.remove(player.getUniqueId());
         if (request.returnKey() == GuiKey.QUEST_DETAIL && !request.returnSelector().isBlank()) {
-            openQuestDetail(player, request.returnSelector());
+            openQuestDetail(player, request.returnSelector(), getQuestDetailFilter(player));
             return;
         }
         open(player, request.returnKey());
@@ -214,6 +277,7 @@ public class GuiService {
             case WORLD -> hasAny(player, "ainpc.admin", "ainpc.gui.world");
             case STATS -> hasAny(player, "ainpc.admin", "ainpc.gui.stats", "ainpc.info");
             case INTERACT -> hasAny(player, "ainpc.admin", "ainpc.gui.interact", "ainpc.talk");
+            case ROUTINE -> hasAny(player, "ainpc.admin", "ainpc.gui.routine", "ainpc.gui.manager");
             case SHOP -> hasAny(player, "ainpc.admin", "ainpc.gui.shop");
             case MANAGER -> hasAny(player, "ainpc.admin", "ainpc.gui.manager");
             case AUDIT -> hasAny(player, "ainpc.admin", "ainpc.gui.audit");

@@ -35,6 +35,14 @@ public record HouseAllocation(
         return List.copyOf(plans);
     }
 
+    public String householdId() {
+        if (!familyId.isBlank()) {
+            return familyId;
+        }
+        String normalizedPlaceId = normalizeKey(placeId);
+        return normalizedPlaceId.isBlank() ? "" : "household_" + normalizedPlaceId;
+    }
+
     public Map<String, String> toPlaceMetadata() {
         Map<String, String> metadata = new LinkedHashMap<>();
         metadata.put("role", "home");

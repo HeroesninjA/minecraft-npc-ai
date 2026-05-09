@@ -60,4 +60,40 @@ class ProgressionSelectorTest {
 
         assertEquals("village_contracts:C01", selector.commandSelector());
     }
+
+    @Test
+    void prefixesShortKindAlias() {
+        ProgressionSelector selector = ProgressionSelector.forKindAlias("D01", "duty");
+
+        assertEquals("duty:D01", selector.commandSelector());
+        assertEquals("duty", selector.mechanicOrKind());
+        assertEquals("D01", selector.definitionId());
+    }
+
+    @Test
+    void prefixesShortEventAlias() {
+        ProgressionSelector selector = ProgressionSelector.forKindAlias("E01", "event");
+
+        assertEquals("event:E01", selector.commandSelector());
+        assertEquals("event", selector.mechanicOrKind());
+        assertEquals("E01", selector.definitionId());
+    }
+
+    @Test
+    void prefixesShortTutorialAlias() {
+        ProgressionSelector selector = ProgressionSelector.forKindAlias("T01", "tutorial");
+
+        assertEquals("tutorial:T01", selector.commandSelector());
+        assertEquals("tutorial", selector.mechanicOrKind());
+        assertEquals("T01", selector.definitionId());
+    }
+
+    @Test
+    void prefixesShortRitualAlias() {
+        ProgressionSelector selector = ProgressionSelector.forKindAlias("R01", "ritual");
+
+        assertEquals("ritual:R01", selector.commandSelector());
+        assertEquals("ritual", selector.mechanicOrKind());
+        assertEquals("R01", selector.definitionId());
+    }
 }

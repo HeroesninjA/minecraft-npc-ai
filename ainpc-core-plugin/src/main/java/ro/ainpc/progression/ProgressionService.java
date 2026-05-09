@@ -63,13 +63,12 @@ public class ProgressionService {
     }
 
     public List<ProgressionDefinition> getDefinitions(String filter) {
-        String normalizedFilter = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
-        if (normalizedFilter.isBlank() || "all".equals(normalizedFilter) || "toate".equals(normalizedFilter)) {
+        if (ProgressionFilter.isAllFilter(filter)) {
             return getDefinitions();
         }
 
         return getDefinitions().stream()
-            .filter(definition -> definitionMatchesFilter(definition, normalizedFilter))
+            .filter(definition -> ProgressionFilter.matchesDefinition(definition, filter))
             .toList();
     }
 
@@ -83,6 +82,18 @@ public class ProgressionService {
 
     public StoredProgressionSummary getStoredProgressionSummary(String playerUuid, String filter) throws SQLException {
         return repository.summarize(playerUuid, filter);
+    }
+
+    public List<ProgressionAnchorBinding> getAnchorBindings(String playerUuid, String templateId, int limit)
+        throws SQLException {
+        return repository.findAnchorBindings(playerUuid, templateId, limit);
+    }
+
+    public List<ProgressionAnchorBinding> getAnchorBindingsForAnchor(String playerUuid,
+                                                                     String anchorType,
+                                                                     String anchorId,
+                                                                     int limit) throws SQLException {
+        return repository.findAnchorBindingsForAnchor(playerUuid, anchorType, anchorId, limit);
     }
 
     public ScenarioEngine.QuestInteractionResult getStatus(Player player, String selector) {
@@ -155,6 +166,10 @@ public class ProgressionService {
 
     public String contractSelector(String selector) {
         return ProgressionSelector.forContractAlias(selector).commandSelector();
+    }
+
+    public String kindSelector(String selector, String progressionKind) {
+        return ProgressionSelector.forKindAlias(selector, progressionKind).commandSelector();
     }
 
     public boolean isTrackedSelector(String selector) {
@@ -277,22 +292,4 @@ public class ProgressionService {
         return left != null && right != null && left.equalsIgnoreCase(right);
     }
 
-    private boolean definitionMatchesFilter(ProgressionDefinition definition, String filter) {
-        if (definition == null || filter == null || filter.isBlank()) {
-            return false;
-        }
-
-        return contains(definition.progressionId(), filter)
-            || contains(definition.packId(), filter)
-            || contains(definition.mechanicId(), filter)
-            || contains(definition.kind(), filter)
-            || contains(definition.definitionId(), filter)
-            || contains(definition.templateId(), filter)
-            || contains(definition.code(), filter)
-            || contains(definition.displayName(), filter);
-    }
-
-    private boolean contains(String value, String filter) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(filter);
-    }
 }

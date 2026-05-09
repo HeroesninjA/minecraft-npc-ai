@@ -154,7 +154,7 @@ Generatorul citeste:
 
 Pack-ul poate furniza:
 
-- liste de nume
+- liste de nume; codul include deja un pool local de peste 300 de prenume unice in `NPCNameGenerator`
 - nume de familie
 - roluri disponibile
 - reguli de familie

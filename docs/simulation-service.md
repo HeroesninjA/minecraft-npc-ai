@@ -157,7 +157,7 @@ Exemple:
 | Strat | Ce decide | Ce modifica |
 |---|---|---|
 | Simulare | Ce nevoie/stare/actiune are NPC-ul | nevoi, `currentState`, `currentGoal`, `plannedRoutineActivity` |
-| Rutina | Unde ar trebui sa fie NPC-ul in ziua curenta | slot `HOME/WORK/SOCIAL/IDLE`, tinta si teleport controlat pentru MVP |
+| Rutina | Unde ar trebui sa fie NPC-ul in ziua curenta | slot `HOME/WORK/SOCIAL/IDLE`, tinta, pathfinding Paper si teleport fallback |
 
 `RoutineService` ruleaza separat prin:
 
@@ -248,7 +248,7 @@ Pentru observarea starii simulate a NPC-ului, foloseste comenzile existente de i
 - Nu exista inca o clasa `SimulationService` separata.
 - Simularea este per NPC, nu agregata pe sat/regiune.
 - Nu exista economie, resurse, reputatie regionala sau evenimente sistemice.
-- Nu exista pathfinding real pentru rutina; mutarea este teleport controlat.
+- Rutina foloseste pathfinding Paper spre ancora cand distanta este rezonabila; teleportul ramane fallback pentru distante mari sau target invalid.
 - Nu exista audit dedicat pentru degradarea nevoilor sau pentru valori anormale.
 - Tick-ul de simulare nu trebuie sa scrie direct story state, quest progress sau modificari de lume.
 

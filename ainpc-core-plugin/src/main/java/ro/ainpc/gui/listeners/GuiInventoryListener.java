@@ -60,6 +60,6 @@ public class GuiInventoryListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        plugin.getGuiService().sessions().closePlayer(event.getPlayer().getUniqueId());
+        plugin.getGuiService().clearPlayerState(event.getPlayer().getUniqueId());
     }
 }

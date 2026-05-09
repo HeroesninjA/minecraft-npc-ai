@@ -472,13 +472,17 @@ public class ScenarioEngine {
     }
 
     public QuestInteractionResult acceptQuest(Player player, AINPC npc) {
+        return acceptQuest(player, npc, "");
+    }
+
+    public QuestInteractionResult acceptQuest(Player player, AINPC npc, String progressionKind) {
         if (player == null || npc == null) {
             plugin.debug("[QuestEngine] acceptQuest oprit: player sau npc este null.");
             return QuestInteractionResult.notHandled();
         }
 
         UUID playerId = player.getUniqueId();
-        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId);
+        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId, progressionKind);
         if (template == null || !template.hasQuestBriefing()) {
             plugin.debug("[QuestEngine] acceptQuest fara template pentru npc=" + npc.getName());
             return QuestInteractionResult.notHandled();
@@ -549,13 +553,17 @@ public class ScenarioEngine {
     }
 
     public QuestInteractionResult declineQuest(Player player, AINPC npc) {
+        return declineQuest(player, npc, "");
+    }
+
+    public QuestInteractionResult declineQuest(Player player, AINPC npc, String progressionKind) {
         if (player == null || npc == null) {
             plugin.debug("[QuestEngine] declineQuest oprit: player sau npc este null.");
             return QuestInteractionResult.notHandled();
         }
 
         UUID playerId = player.getUniqueId();
-        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId);
+        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId, progressionKind);
         if (template == null || !template.hasQuestBriefing()) {
             plugin.debug("[QuestEngine] declineQuest fara template pentru npc=" + npc.getName());
             return QuestInteractionResult.notHandled();
@@ -705,13 +713,17 @@ public class ScenarioEngine {
     }
 
     public QuestInteractionResult startQuestManually(Player player, AINPC npc) {
+        return startQuestManually(player, npc, "");
+    }
+
+    public QuestInteractionResult startQuestManually(Player player, AINPC npc, String progressionKind) {
         if (player == null || npc == null) {
             plugin.debug("[QuestEngine] startQuestManually oprit: player sau npc este null.");
             return QuestInteractionResult.notHandled();
         }
 
         UUID playerId = player.getUniqueId();
-        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId);
+        ScenarioTemplate template = findQuestTemplateForNpc(npc, playerId, progressionKind);
         if (template == null || !template.hasQuestBriefing()) {
             plugin.debug("[QuestEngine] startQuestManually fara template pentru npc=" + npc.getName());
             return QuestInteractionResult.notHandled();
@@ -893,10 +905,18 @@ public class ScenarioEngine {
     }
 
     public AINPC resolveActiveQuestNpc(Player player) {
-        return resolveActiveQuestNpc(player, null);
+        return resolveActiveQuestNpc(player, (AINPC) null);
+    }
+
+    public AINPC resolveActiveQuestNpc(Player player, String progressionKind) {
+        return resolveActiveQuestNpc(player, progressionKind, null);
     }
 
     public AINPC resolveActiveQuestNpc(Player player, AINPC fallbackNpc) {
+        return resolveActiveQuestNpc(player, "", fallbackNpc);
+    }
+
+    public AINPC resolveActiveQuestNpc(Player player, String progressionKind, AINPC fallbackNpc) {
         if (player == null) {
             return null;
         }
@@ -907,7 +927,8 @@ public class ScenarioEngine {
             }
 
             AINPC questGiver = resolveQuestGiverNpc(progress);
-            if (questGiver != null) {
+            ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+            if (questGiver != null && matchesProgressionKindFilter(template, progressionKind)) {
                 return questGiver;
             }
         }
@@ -919,12 +940,22 @@ public class ScenarioEngine {
         for (PlayerQuestProgress progress : getCurrentQuestProgress(player.getUniqueId())) {
             ScenarioTemplate fallbackTemplate = resolveTemplateForProgress(progress, null);
             if (fallbackTemplate != null
+                && matchesProgressionKindFilter(fallbackTemplate, progressionKind)
                 && matchesQuestGiver(fallbackNpc, fallbackTemplate)) {
                 return fallbackNpc;
             }
         }
 
         return null;
+    }
+
+    public boolean hasQuestForNpc(Player player, AINPC npc, String progressionKind) {
+        if (player == null || npc == null) {
+            return false;
+        }
+
+        ScenarioTemplate template = findQuestTemplateForNpc(npc, player.getUniqueId(), progressionKind);
+        return template != null && template.hasQuestBriefing();
     }
 
     private boolean requiresQuestGiverTurnIn(ScenarioTemplate template) {
@@ -2565,6 +2596,11 @@ public class ScenarioEngine {
             case "tracked", "urmarit" -> QuestLogFilter.TRACKED;
             case "quest", "questuri" -> QuestLogFilter.QUEST_KIND;
             case "contract", "contracts", "contracte" -> QuestLogFilter.CONTRACT_KIND;
+            case "duty", "duties", "sarcina", "sarcini" -> QuestLogFilter.DUTY_KIND;
+            case "bounty", "bounties", "recompensa", "recompense" -> QuestLogFilter.BOUNTY_KIND;
+            case "event", "events", "eveniment", "evenimente" -> QuestLogFilter.EVENT_KIND;
+            case "tutorial", "tutorials", "onboarding", "indrumare" -> QuestLogFilter.TUTORIAL_KIND;
+            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> QuestLogFilter.RITUAL_KIND;
             case "contract_current", "contract_curent", "contracte_curente" -> QuestLogFilter.CONTRACT_CURRENT;
             case "contract_active", "contract_activ", "contracte_active" -> QuestLogFilter.CONTRACT_ACTIVE;
             case "contract_offered", "contract_oferit", "contracte_oferite" -> QuestLogFilter.CONTRACT_OFFERED;
@@ -2572,6 +2608,41 @@ public class ScenarioEngine {
             case "contract_completed", "contract_completat", "contracte_completate" -> QuestLogFilter.CONTRACT_COMPLETED;
             case "contract_failed", "contract_esuat", "contracte_esuate" -> QuestLogFilter.CONTRACT_FAILED;
             case "contract_archived", "contract_arhivat", "contracte_arhivate" -> QuestLogFilter.CONTRACT_ARCHIVED;
+            case "duty_current", "duty_curent", "sarcini_curente" -> QuestLogFilter.DUTY_CURRENT;
+            case "duty_active", "duty_activ", "sarcini_active" -> QuestLogFilter.DUTY_ACTIVE;
+            case "duty_offered", "duty_oferit", "sarcini_oferite" -> QuestLogFilter.DUTY_OFFERED;
+            case "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> QuestLogFilter.DUTY_TRACKED;
+            case "duty_completed", "duty_completat", "sarcini_completate" -> QuestLogFilter.DUTY_COMPLETED;
+            case "duty_failed", "duty_esuat", "sarcini_esuate" -> QuestLogFilter.DUTY_FAILED;
+            case "duty_archived", "duty_arhivat", "sarcini_arhivate" -> QuestLogFilter.DUTY_ARCHIVED;
+            case "bounty_current", "bounty_curent", "recompense_curente" -> QuestLogFilter.BOUNTY_CURRENT;
+            case "bounty_active", "bounty_activ", "recompense_active" -> QuestLogFilter.BOUNTY_ACTIVE;
+            case "bounty_offered", "bounty_oferit", "recompense_oferite" -> QuestLogFilter.BOUNTY_OFFERED;
+            case "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> QuestLogFilter.BOUNTY_TRACKED;
+            case "bounty_completed", "bounty_completat", "recompense_completate" -> QuestLogFilter.BOUNTY_COMPLETED;
+            case "bounty_failed", "bounty_esuat", "recompense_esuate" -> QuestLogFilter.BOUNTY_FAILED;
+            case "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> QuestLogFilter.BOUNTY_ARCHIVED;
+            case "event_current", "event_curent", "evenimente_curente" -> QuestLogFilter.EVENT_CURRENT;
+            case "event_active", "event_activ", "evenimente_active" -> QuestLogFilter.EVENT_ACTIVE;
+            case "event_offered", "event_oferit", "evenimente_oferite" -> QuestLogFilter.EVENT_OFFERED;
+            case "event_tracked", "event_urmarit", "evenimente_urmarite" -> QuestLogFilter.EVENT_TRACKED;
+            case "event_completed", "event_completat", "evenimente_completate" -> QuestLogFilter.EVENT_COMPLETED;
+            case "event_failed", "event_esuat", "evenimente_esuate" -> QuestLogFilter.EVENT_FAILED;
+            case "event_archived", "event_arhivat", "evenimente_arhivate" -> QuestLogFilter.EVENT_ARCHIVED;
+            case "tutorial_current", "tutorial_curent", "tutoriale_curente" -> QuestLogFilter.TUTORIAL_CURRENT;
+            case "tutorial_active", "tutorial_activ", "tutoriale_active" -> QuestLogFilter.TUTORIAL_ACTIVE;
+            case "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> QuestLogFilter.TUTORIAL_OFFERED;
+            case "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> QuestLogFilter.TUTORIAL_TRACKED;
+            case "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> QuestLogFilter.TUTORIAL_COMPLETED;
+            case "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> QuestLogFilter.TUTORIAL_FAILED;
+            case "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> QuestLogFilter.TUTORIAL_ARCHIVED;
+            case "ritual_current", "ritual_curent", "ritualuri_curente" -> QuestLogFilter.RITUAL_CURRENT;
+            case "ritual_active", "ritual_activ", "ritualuri_active" -> QuestLogFilter.RITUAL_ACTIVE;
+            case "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> QuestLogFilter.RITUAL_OFFERED;
+            case "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> QuestLogFilter.RITUAL_TRACKED;
+            case "ritual_completed", "ritual_completat", "ritualuri_completate" -> QuestLogFilter.RITUAL_COMPLETED;
+            case "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> QuestLogFilter.RITUAL_FAILED;
+            case "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> QuestLogFilter.RITUAL_ARCHIVED;
             case "main", "principal" -> QuestLogFilter.MAIN;
             case "side", "secundar", "secundare" -> QuestLogFilter.SIDE;
             case "repeatable", "repetabil", "repetabile" -> QuestLogFilter.REPEATABLE;
@@ -2608,6 +2679,26 @@ public class ScenarioEngine {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
                 yield template != null && progressionKindMatches(template, "contract");
             }
+            case DUTY_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "duty");
+            }
+            case BOUNTY_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "bounty");
+            }
+            case EVENT_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "event");
+            }
+            case TUTORIAL_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "tutorial");
+            }
+            case RITUAL_KIND -> {
+                ScenarioTemplate template = resolveTemplateForProgress(progress, null);
+                yield template != null && progressionKindMatches(template, "ritual");
+            }
             case CONTRACT_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "contract");
@@ -2615,6 +2706,41 @@ public class ScenarioEngine {
             case CONTRACT_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "contract");
+            case DUTY_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "duty");
+            case DUTY_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "duty");
+            case BOUNTY_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "bounty");
+            case BOUNTY_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "bounty");
+            case EVENT_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "event");
+            case EVENT_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "event");
+            case TUTORIAL_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "tutorial");
+            case TUTORIAL_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "tutorial");
+            case RITUAL_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_OFFERED -> !archived && progress.isOffered() && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_TRACKED -> !archived && isTrackedQuest(playerId, progress) && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_COMPLETED -> progress.isCompleted() && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_FAILED -> progress.status() == QuestStatus.FAILED && questLogMatchesProgressionKind(progress, "ritual");
+            case RITUAL_ARCHIVED -> (archived || progress.status().isArchived()) && questLogMatchesProgressionKind(progress, "ritual");
             case MAIN, SIDE, REPEATABLE -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
                 if (template == null) {
@@ -2700,24 +2826,11 @@ public class ScenarioEngine {
     }
 
     private boolean progressionKindMatches(ScenarioTemplate template, String expectedKind) {
-        if (template == null || expectedKind == null || expectedKind.isBlank()) {
-            return false;
-        }
-
-        String expected = normalizeReference(expectedKind);
-        List<String> candidates = List.of(
-            template.getProgressionKind(),
-            template.getProgressionMechanicId(),
-            template.getProgressionSingularLabel(),
-            template.getProgressionPluralLabel(),
+        return QuestTemplateSelector.matchesProgressionKind(
+            template,
+            expectedKind,
             resolveProgressionMechanicDisplay(template)
         );
-        for (String candidate : candidates) {
-            if (expected.equals(normalizeReference(candidate))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private Comparator<PlayerQuestProgress> questLogCurrentComparator(UUID playerId) {
@@ -4741,7 +4854,11 @@ public class ScenarioEngine {
     }
 
     private ScenarioTemplate findQuestTemplateForNpc(AINPC npc, UUID playerId) {
-        ScenarioTemplate currentTemplate = resolveCurrentQuestTemplateForNpc(npc, playerId);
+        return findQuestTemplateForNpc(npc, playerId, "");
+    }
+
+    private ScenarioTemplate findQuestTemplateForNpc(AINPC npc, UUID playerId, String progressionKind) {
+        ScenarioTemplate currentTemplate = resolveCurrentQuestTemplateForNpc(npc, playerId, progressionKind);
         if (currentTemplate != null) {
             return currentTemplate;
         }
@@ -4749,6 +4866,7 @@ public class ScenarioEngine {
         List<ScenarioTemplate> configuredTemplates = questTemplates.stream()
             .filter(ScenarioTemplate::hasQuestBriefing)
             .filter(template -> matchesQuestGiver(npc, template))
+            .filter(template -> matchesProgressionKindFilter(template, progressionKind))
             .toList();
         if (!configuredTemplates.isEmpty()) {
             if (playerId == null) {
@@ -4765,10 +4883,16 @@ public class ScenarioEngine {
             }
         }
 
-        return shouldUseSimpleQuestForAllNpcs() ? buildSimpleQuestTemplate(npc) : null;
+        return normalizeReference(progressionKind).isBlank() && shouldUseSimpleQuestForAllNpcs()
+            ? buildSimpleQuestTemplate(npc)
+            : null;
     }
 
     private ScenarioTemplate resolveCurrentQuestTemplateForNpc(AINPC npc, UUID playerId) {
+        return resolveCurrentQuestTemplateForNpc(npc, playerId, "");
+    }
+
+    private ScenarioTemplate resolveCurrentQuestTemplateForNpc(AINPC npc, UUID playerId, String progressionKind) {
         if (npc == null || playerId == null) {
             return null;
         }
@@ -4776,14 +4900,17 @@ public class ScenarioEngine {
         List<PlayerQuestProgress> currentProgresses = getCurrentQuestProgress(playerId);
         for (PlayerQuestProgress progress : currentProgresses) {
             ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-            if (template != null && template.hasQuestBriefing() && matchesQuestGiver(npc, template)) {
+            if (template != null
+                && template.hasQuestBriefing()
+                && matchesProgressionKindFilter(template, progressionKind)
+                && matchesQuestGiver(npc, template)) {
                 return template;
             }
         }
 
         for (PlayerQuestProgress progress : currentProgresses) {
             ScenarioTemplate template = resolveCurrentQuestTemplateForNpc(npc, progress);
-            if (template != null) {
+            if (template != null && matchesProgressionKindFilter(template, progressionKind)) {
                 return template;
             }
         }
@@ -4823,6 +4950,11 @@ public class ScenarioEngine {
         }
 
         return false;
+    }
+
+    private boolean matchesProgressionKindFilter(ScenarioTemplate template, String progressionKind) {
+        String expected = normalizeReference(progressionKind);
+        return expected.isBlank() || progressionKindMatches(template, expected);
     }
 
     private boolean shouldUseSimpleQuestForAllNpcs() {
@@ -7416,6 +7548,11 @@ public class ScenarioEngine {
         EMERGENCY("Urgenta"),
         ROMANCE("Romantism"),
         TRADE_DEAL("Afacere"),
+        DUTY("Sarcina"),
+        BOUNTY("Bounty local"),
+        WORLD_EVENT("Eveniment local"),
+        TUTORIAL("Tutorial"),
+        RITUAL("Ritual"),
         QUEST("Misiune"),
         GOSSIP_SPREAD("Raspandirea zvonurilor");
 
@@ -7438,6 +7575,32 @@ public class ScenarioEngine {
                 if (type.name().equalsIgnoreCase(value) || type.displayName.equalsIgnoreCase(value)) {
                     return type;
                 }
+            }
+
+            String normalized = value.trim().toLowerCase(Locale.ROOT).replace('-', '_').replace(" ", "_");
+            if ("datorie".equals(normalized) || "sarcina".equals(normalized) || "npc_duty".equals(normalized)) {
+                return DUTY;
+            }
+            if ("bounty".equals(normalized) || "bounties".equals(normalized)
+                || "local_bounty".equals(normalized) || "local_bounties".equals(normalized)
+                || "recompensa".equals(normalized) || "recompense".equals(normalized)) {
+                return BOUNTY;
+            }
+            if ("event".equals(normalized) || "events".equals(normalized)
+                || "eveniment".equals(normalized) || "evenimente".equals(normalized)
+                || "world_event".equals(normalized) || "local_event".equals(normalized)
+                || "village_event".equals(normalized) || "village_events".equals(normalized)) {
+                return WORLD_EVENT;
+            }
+            if ("tutorial".equals(normalized) || "tutorials".equals(normalized)
+                || "onboarding".equals(normalized) || "indrumare".equals(normalized)) {
+                return TUTORIAL;
+            }
+            if ("ritual".equals(normalized) || "rituals".equals(normalized)
+                || "ceremony".equals(normalized) || "ceremonies".equals(normalized)
+                || "ceremonie".equals(normalized) || "ceremonii".equals(normalized)
+                || "village_ritual".equals(normalized) || "village_rituals".equals(normalized)) {
+                return RITUAL;
             }
 
             return QUEST;
@@ -8103,6 +8266,11 @@ public class ScenarioEngine {
         TRACKED("urmarit"),
         QUEST_KIND("questuri"),
         CONTRACT_KIND("contracte"),
+        DUTY_KIND("sarcini"),
+        BOUNTY_KIND("bounty-uri"),
+        EVENT_KIND("evenimente"),
+        TUTORIAL_KIND("tutoriale"),
+        RITUAL_KIND("ritualuri"),
         CONTRACT_CURRENT("contracte curente"),
         CONTRACT_ACTIVE("contracte active"),
         CONTRACT_OFFERED("contracte oferite"),
@@ -8110,6 +8278,41 @@ public class ScenarioEngine {
         CONTRACT_COMPLETED("contracte completate"),
         CONTRACT_FAILED("contracte esuate"),
         CONTRACT_ARCHIVED("contracte arhivate"),
+        DUTY_CURRENT("sarcini curente"),
+        DUTY_ACTIVE("sarcini active"),
+        DUTY_OFFERED("sarcini oferite"),
+        DUTY_TRACKED("sarcini urmarite"),
+        DUTY_COMPLETED("sarcini completate"),
+        DUTY_FAILED("sarcini esuate"),
+        DUTY_ARCHIVED("sarcini arhivate"),
+        BOUNTY_CURRENT("bounty-uri curente"),
+        BOUNTY_ACTIVE("bounty-uri active"),
+        BOUNTY_OFFERED("bounty-uri oferite"),
+        BOUNTY_TRACKED("bounty-uri urmarite"),
+        BOUNTY_COMPLETED("bounty-uri completate"),
+        BOUNTY_FAILED("bounty-uri esuate"),
+        BOUNTY_ARCHIVED("bounty-uri arhivate"),
+        EVENT_CURRENT("evenimente curente"),
+        EVENT_ACTIVE("evenimente active"),
+        EVENT_OFFERED("evenimente oferite"),
+        EVENT_TRACKED("evenimente urmarite"),
+        EVENT_COMPLETED("evenimente completate"),
+        EVENT_FAILED("evenimente esuate"),
+        EVENT_ARCHIVED("evenimente arhivate"),
+        TUTORIAL_CURRENT("tutoriale curente"),
+        TUTORIAL_ACTIVE("tutoriale active"),
+        TUTORIAL_OFFERED("tutoriale oferite"),
+        TUTORIAL_TRACKED("tutoriale urmarite"),
+        TUTORIAL_COMPLETED("tutoriale completate"),
+        TUTORIAL_FAILED("tutoriale esuate"),
+        TUTORIAL_ARCHIVED("tutoriale arhivate"),
+        RITUAL_CURRENT("ritualuri curente"),
+        RITUAL_ACTIVE("ritualuri active"),
+        RITUAL_OFFERED("ritualuri oferite"),
+        RITUAL_TRACKED("ritualuri urmarite"),
+        RITUAL_COMPLETED("ritualuri completate"),
+        RITUAL_FAILED("ritualuri esuate"),
+        RITUAL_ARCHIVED("ritualuri arhivate"),
         MAIN("principal"),
         SIDE("secundar"),
         REPEATABLE("repetabil"),
@@ -8129,20 +8332,40 @@ public class ScenarioEngine {
 
         private boolean showsCurrent() {
             return switch (this) {
-                case SUMMARY, ALL, CURRENT, ACTIVE, OFFERED, TRACKED, QUEST_KIND, CONTRACT_KIND,
+                case SUMMARY, ALL, CURRENT, ACTIVE, OFFERED, TRACKED, QUEST_KIND, CONTRACT_KIND, DUTY_KIND, BOUNTY_KIND, EVENT_KIND, TUTORIAL_KIND, RITUAL_KIND,
                      CONTRACT_CURRENT, CONTRACT_ACTIVE, CONTRACT_OFFERED, CONTRACT_TRACKED,
+                     DUTY_CURRENT, DUTY_ACTIVE, DUTY_OFFERED, DUTY_TRACKED,
+                     BOUNTY_CURRENT, BOUNTY_ACTIVE, BOUNTY_OFFERED, BOUNTY_TRACKED,
+                     EVENT_CURRENT, EVENT_ACTIVE, EVENT_OFFERED, EVENT_TRACKED,
+                     TUTORIAL_CURRENT, TUTORIAL_ACTIVE, TUTORIAL_OFFERED, TUTORIAL_TRACKED,
+                     RITUAL_CURRENT, RITUAL_ACTIVE, RITUAL_OFFERED, RITUAL_TRACKED,
                      MAIN, SIDE, REPEATABLE -> true;
                 case COMPLETED, FAILED, ARCHIVED -> false;
-                case CONTRACT_COMPLETED, CONTRACT_FAILED, CONTRACT_ARCHIVED -> false;
+                case CONTRACT_COMPLETED, CONTRACT_FAILED, CONTRACT_ARCHIVED,
+                     DUTY_COMPLETED, DUTY_FAILED, DUTY_ARCHIVED,
+                     BOUNTY_COMPLETED, BOUNTY_FAILED, BOUNTY_ARCHIVED,
+                     EVENT_COMPLETED, EVENT_FAILED, EVENT_ARCHIVED,
+                     TUTORIAL_COMPLETED, TUTORIAL_FAILED, TUTORIAL_ARCHIVED,
+                     RITUAL_COMPLETED, RITUAL_FAILED, RITUAL_ARCHIVED -> false;
             };
         }
 
         private boolean showsArchived() {
             return switch (this) {
-                case SUMMARY, ALL, COMPLETED, FAILED, ARCHIVED, QUEST_KIND, CONTRACT_KIND,
+                case SUMMARY, ALL, COMPLETED, FAILED, ARCHIVED, QUEST_KIND, CONTRACT_KIND, DUTY_KIND, BOUNTY_KIND, EVENT_KIND, TUTORIAL_KIND, RITUAL_KIND,
                      CONTRACT_COMPLETED, CONTRACT_FAILED, CONTRACT_ARCHIVED,
+                     DUTY_COMPLETED, DUTY_FAILED, DUTY_ARCHIVED,
+                     BOUNTY_COMPLETED, BOUNTY_FAILED, BOUNTY_ARCHIVED,
+                     EVENT_COMPLETED, EVENT_FAILED, EVENT_ARCHIVED,
+                     TUTORIAL_COMPLETED, TUTORIAL_FAILED, TUTORIAL_ARCHIVED,
+                     RITUAL_COMPLETED, RITUAL_FAILED, RITUAL_ARCHIVED,
                      MAIN, SIDE, REPEATABLE -> true;
-                case CURRENT, ACTIVE, OFFERED, TRACKED, CONTRACT_CURRENT, CONTRACT_ACTIVE, CONTRACT_OFFERED, CONTRACT_TRACKED -> false;
+                case CURRENT, ACTIVE, OFFERED, TRACKED, CONTRACT_CURRENT, CONTRACT_ACTIVE, CONTRACT_OFFERED, CONTRACT_TRACKED,
+                     DUTY_CURRENT, DUTY_ACTIVE, DUTY_OFFERED, DUTY_TRACKED,
+                     BOUNTY_CURRENT, BOUNTY_ACTIVE, BOUNTY_OFFERED, BOUNTY_TRACKED,
+                     EVENT_CURRENT, EVENT_ACTIVE, EVENT_OFFERED, EVENT_TRACKED,
+                     TUTORIAL_CURRENT, TUTORIAL_ACTIVE, TUTORIAL_OFFERED, TUTORIAL_TRACKED,
+                     RITUAL_CURRENT, RITUAL_ACTIVE, RITUAL_OFFERED, RITUAL_TRACKED -> false;
             };
         }
     }

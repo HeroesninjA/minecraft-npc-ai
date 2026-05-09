@@ -63,6 +63,134 @@ class QuestScenarioContractTest {
     }
 
     @Test
+    void supportsInvestigationContractKind() {
+        QuestScenarioContract explicitContract = QuestScenarioContract.fromQuestEntries(
+            "side",
+            "investigation",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("mapping", "market"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "visit_place",
+                "tag:market",
+                1,
+                "Mergi in piata."
+            )),
+            false
+        );
+        QuestScenarioContract inferredContract = QuestScenarioContract.fromQuestEntries(
+            "",
+            "",
+            "",
+            "",
+            List.of("mapping"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "inspect_node",
+                "quest_board",
+                1,
+                "Verifica avizierul."
+            ))
+        );
+
+        assertEquals(QuestScenarioContract.Kind.INVESTIGATION, explicitContract.kind());
+        assertEquals("investigatie", explicitContract.displayName());
+        assertEquals(QuestScenarioContract.Kind.INVESTIGATION, inferredContract.kind());
+    }
+
+    @Test
+    void supportsDutyScenarioKind() {
+        QuestScenarioContract contract = QuestScenarioContract.fromQuestEntries(
+            "repeatable",
+            "duty",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("guard", "patrol"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "visit_region",
+                "type:settlement",
+                1,
+                "Verifica satul."
+            )),
+            true
+        );
+
+        assertEquals(QuestScenarioContract.Kind.DUTY, contract.kind());
+        assertEquals("sarcina", contract.displayName());
+        assertEquals(QuestScenarioContract.Category.REPEATABLE, contract.category());
+    }
+
+    @Test
+    void supportsEventScenarioKind() {
+        QuestScenarioContract contract = QuestScenarioContract.fromQuestEntries(
+            "repeatable",
+            "event",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("market", "temporary"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "inspect_node",
+                "quest_board",
+                1,
+                "Verifica avizierul."
+            )),
+            true
+        );
+
+        assertEquals(QuestScenarioContract.Kind.EVENT, contract.kind());
+        assertEquals("eveniment", contract.displayName());
+        assertEquals(QuestScenarioContract.Category.REPEATABLE, contract.category());
+    }
+
+    @Test
+    void supportsTutorialScenarioKind() {
+        QuestScenarioContract contract = QuestScenarioContract.fromQuestEntries(
+            "side",
+            "tutorial",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("onboarding", "market"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "inspect_node",
+                "quest_board",
+                1,
+                "Invata avizierul."
+            )),
+            false
+        );
+
+        assertEquals(QuestScenarioContract.Kind.TUTORIAL, contract.kind());
+        assertEquals("tutorial", contract.displayName());
+        assertEquals(QuestScenarioContract.Category.SIDE, contract.category());
+    }
+
+    @Test
+    void supportsRitualScenarioKind() {
+        QuestScenarioContract contract = QuestScenarioContract.fromQuestEntries(
+            "repeatable",
+            "ritual",
+            "explicit",
+            "return_to_giver",
+            "next_objective",
+            List.of("ritual", "altar"),
+            List.of(new FeaturePackLoader.QuestEntryDefinition(
+                "inspect_node",
+                "ritual_circle",
+                1,
+                "Verifica cercul ritualic."
+            )),
+            true
+        );
+
+        assertEquals(QuestScenarioContract.Kind.RITUAL, contract.kind());
+        assertEquals("ritual", contract.displayName());
+        assertEquals(QuestScenarioContract.Category.REPEATABLE, contract.category());
+    }
+
+    @Test
     void questEntryDefinitionCarriesActionMetadata() {
         FeaturePackLoader.QuestEntryDefinition entry = new FeaturePackLoader.QuestEntryDefinition(
             "record_story_event",

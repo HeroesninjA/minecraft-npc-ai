@@ -131,6 +131,22 @@ public class DatabaseManager {
                 )
             """);
 
+            // Index canonic pentru idempotenta spawn-ului din planuri persistente.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS npc_source_keys (
+                    source_key TEXT PRIMARY KEY,
+                    npc_id INTEGER NOT NULL UNIQUE,
+                    source TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_npc_source_keys_npc_id
+                ON npc_source_keys(npc_id)
+            """);
+
             // Tabel traits asociate NPC-urilor
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS npc_traits (
@@ -312,6 +328,142 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_social_place
                 ON npc_world_bindings(social_place_id)
+            """);
+
+            // Jurnal idempotent pentru spawn-uri pe household/settlement. Source_key-ul opreste
+            // duplicarea NPC-ului, iar batch-ul arata daca acelasi plan a fost rulat deja.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS spawn_batches (
+                    batch_key TEXT PRIMARY KEY,
+                    scope_type TEXT NOT NULL DEFAULT '',
+                    scope_id TEXT NOT NULL DEFAULT '',
+                    plan_hash TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    dry_run INTEGER NOT NULL DEFAULT 0,
+                    allocation_count INTEGER NOT NULL DEFAULT 0,
+                    npc_plan_count INTEGER NOT NULL DEFAULT 0,
+                    created_npc_count INTEGER NOT NULL DEFAULT 0,
+                    reused_npc_count INTEGER NOT NULL DEFAULT 0,
+                    rolled_back INTEGER NOT NULL DEFAULT 0,
+                    started_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    completed_at INTEGER,
+                    warning_summary TEXT NOT NULL DEFAULT '',
+                    error_summary TEXT NOT NULL DEFAULT ''
+                )
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_spawn_batches_scope
+                ON spawn_batches(scope_type, scope_id, updated_at DESC)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_spawn_batches_status
+                ON spawn_batches(status, updated_at DESC)
+            """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS spawn_batch_steps (
+                    batch_key TEXT NOT NULL,
+                    step_index INTEGER NOT NULL,
+                    step_key TEXT NOT NULL,
+                    household_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL,
+                    plan_hash TEXT NOT NULL DEFAULT '',
+                    created_npc_ids TEXT NOT NULL DEFAULT '',
+                    reused_npc_ids TEXT NOT NULL DEFAULT '',
+                    warning_summary TEXT NOT NULL DEFAULT '',
+                    error_summary TEXT NOT NULL DEFAULT '',
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (batch_key, step_index),
+                    FOREIGN KEY (batch_key) REFERENCES spawn_batches(batch_key) ON DELETE CASCADE
+                )
+            """);
+            ensureColumnExists("spawn_batch_steps", "household_id", "TEXT NOT NULL DEFAULT ''");
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_key
+                ON spawn_batch_steps(step_key, updated_at DESC)
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_household
+                ON spawn_batch_steps(household_id, updated_at DESC)
+            """);
+
+            // Household persistent si rezidenti logici. Aceste tabele leaga planul de spawn,
+            // NPC-ul canonic si binding-ul world, ca un restart/retry sa nu inventeze locuitori noi.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS households (
+                    household_id TEXT PRIMARY KEY,
+                    family_id TEXT NOT NULL DEFAULT '',
+                    home_place_id TEXT NOT NULL DEFAULT '',
+                    primary_owner_key TEXT NOT NULL DEFAULT '',
+                    max_residents INTEGER NOT NULL DEFAULT 0,
+                    resident_count INTEGER NOT NULL DEFAULT 0,
+                    plan_hash TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )
+            """);
+            stmt.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_households_home_place_unique
+                ON households(home_place_id)
+                WHERE home_place_id <> ''
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_households_family_id
+                ON households(family_id)
+            """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS household_residents (
+                    household_id TEXT NOT NULL,
+                    resident_key TEXT NOT NULL,
+                    npc_id INTEGER NOT NULL,
+                    npc_uuid TEXT NOT NULL DEFAULT '',
+                    npc_name TEXT NOT NULL DEFAULT '',
+                    source_key TEXT NOT NULL DEFAULT '',
+                    relation_role TEXT NOT NULL DEFAULT '',
+                    home_place_id TEXT NOT NULL DEFAULT '',
+                    spawn_node_id TEXT NOT NULL DEFAULT '',
+                    home_node_id TEXT NOT NULL DEFAULT '',
+                    work_place_id TEXT NOT NULL DEFAULT '',
+                    work_node_id TEXT NOT NULL DEFAULT '',
+                    social_place_id TEXT NOT NULL DEFAULT '',
+                    social_node_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (household_id, resident_key),
+                    FOREIGN KEY (household_id) REFERENCES households(household_id) ON DELETE CASCADE,
+                    FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
+                )
+            """);
+            stmt.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_npc_unique
+                ON household_residents(npc_id)
+                WHERE npc_id > 0
+            """);
+            stmt.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_source_key_unique
+                ON household_residents(source_key)
+                WHERE source_key <> ''
+            """);
+            stmt.execute("""
+                CREATE INDEX IF NOT EXISTS idx_household_residents_household
+                ON household_residents(household_id, status)
+            """);
+            stmt.executeUpdate("""
+                UPDATE spawn_batch_steps
+                SET household_id = (
+                    SELECT h.household_id
+                    FROM households h
+                    WHERE h.home_place_id = spawn_batch_steps.step_key
+                    LIMIT 1
+                )
+                WHERE TRIM(COALESCE(household_id, '')) = ''
+                  AND EXISTS (
+                    SELECT 1
+                    FROM households h
+                    WHERE h.home_place_id = spawn_batch_steps.step_key
+                  )
             """);
 
             // Tabele story persistente. Mapping-ul ramane in config/runtime, dar aceste tabele tin

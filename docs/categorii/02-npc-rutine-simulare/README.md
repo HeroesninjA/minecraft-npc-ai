@@ -8,6 +8,7 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 
 | Document | Rol |
 |---|---|
+| `../../playable-village-ux.md` | Criterii concrete pentru NPC-uri stabile, rutina lizibila si interactiuni clare in primul sat jucabil |
 | `../../simulare-sat-si-lume.md` | Contract de ansamblu pentru simulare de comunitate, resurse, reputatie, evenimente si consecinte |
 | `../../simulation-service.md` | Contract tehnic pentru serviciul logic de simulare NPC: tick periodic, nevoi, scoring, stare, rutina si persistenta |
 | `../../simulation-service-partea-2.md` | Plan de extractie pentru `SimulationService` real: API, comenzi, audit, debugdump, teste, performanta si integrare cu household-uri |
@@ -31,3 +32,4 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 - `EnvironmentEngine` complet pentru semnale sistemice; pentru faza curenta ajunge context read-only.
 - Politici clare pentru cleanup NPC temporari.
 - Reguli pentru cand rutina poate fi intrerupta de quest/story.
+- GUI si audit pentru explicarea rutinei curente si a ancorelor home/work/social.

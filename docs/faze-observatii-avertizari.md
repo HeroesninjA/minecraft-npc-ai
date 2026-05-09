@@ -1,6 +1,6 @@
 # Faze, Observatii si Avertizari
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-08
 
 Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner si rollback global practic pentru spawn pe regiune.
 
@@ -213,7 +213,7 @@ Aceasta faza nu este lansare publica. Este un demo matur de validare pentru game
 Documente:
 
 - `roadmap-orientativ.md`
-- `questuri-avansate.md`
+- `questuri-avansate-v2.md`
 - `story-si-context-ai.md`
 - `reactie-npc-jucator.md`
 - `betonquest-directii-potrivite-pentru-ainpc.md`
@@ -269,7 +269,7 @@ Scop:
 
 Documente:
 
-- `questuri-avansate.md`
+- `questuri-avansate-v2.md`
 - `story-si-context-ai.md`
 - `npc-uri-temporare-si-episodice.md`
 - `mapping.md`

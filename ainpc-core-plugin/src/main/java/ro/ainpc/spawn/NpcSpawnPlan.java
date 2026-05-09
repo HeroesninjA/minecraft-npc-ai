@@ -39,6 +39,12 @@ public record NpcSpawnPlan(
         return new Builder(npcKey, name);
     }
 
+    public String sourceKey() {
+        String scope = firstNonBlank(familyId, homePlaceId, spawnNodeId, "global");
+        String key = firstNonBlank(npcKey, name, "npc");
+        return "spawn_plan:" + normalizeToken(scope) + ":" + normalizeToken(key);
+    }
+
     public static final class Builder {
         private final String npcKey;
         private final String name;
@@ -149,5 +155,26 @@ public record NpcSpawnPlan(
 
     private static String clean(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            String cleanValue = clean(value);
+            if (!cleanValue.isBlank()) {
+                return cleanValue;
+            }
+        }
+        return "";
+    }
+
+    private static String normalizeToken(String value) {
+        String cleaned = clean(value).toLowerCase(java.util.Locale.ROOT);
+        if (cleaned.isBlank()) {
+            return "unknown";
+        }
+        return cleaned.replaceAll("[^a-z0-9_.:-]+", "_");
     }
 }

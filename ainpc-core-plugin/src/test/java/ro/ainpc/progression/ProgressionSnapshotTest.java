@@ -260,6 +260,17 @@ class ProgressionSnapshotTest {
         assertEquals("medieval:village_contracts:C01", progressionEntry.progressionId());
         assertEquals("village_contracts", progressionEntry.mechanicId());
         assertEquals("contract", progressionEntry.kind());
+        assertEquals("contract", progressionEntry.commandRoot());
+        assertEquals("village_contracts:C01", progressionEntry.commandSelector());
+        assertEquals("village_contracts:C01", progressionEntry.guiDetailSelector());
+        assertEquals("contract", progressionEntry.guiFilter());
+        assertEquals("ainpc contract status village_contracts:C01", progressionEntry.command("status"));
+        assertEquals("ainpc contract progress village_contracts:C01", progressionEntry.command("progress"));
+        assertEquals("ainpc contract debug village_contracts:C01", progressionEntry.command("debug"));
+        assertEquals("ainpc contract track start village_contracts:C01", progressionEntry.trackStartCommand());
+        assertEquals("ainpc contract track stop", progressionEntry.trackStopCommand());
+        assertEquals(List.of("status"), progressionEntry.statusLines());
+        assertEquals(List.of("action"), progressionEntry.actionLines());
         assertEquals(1, progressionEntry.objectives().size());
         assertEquals("return_goods", progressionEntry.objectives().get(0).key());
         assertEquals(1, progressionEntry.stages().size());

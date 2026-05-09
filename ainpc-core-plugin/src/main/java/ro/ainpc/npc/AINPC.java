@@ -4,10 +4,13 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import ro.ainpc.AINPCPlugin;
 
 import java.util.ArrayList;
@@ -20,6 +23,11 @@ import java.util.UUID;
 public class AINPC {
 
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacySection();
+    public static final String PDC_MANAGED_KEY = "npc_managed";
+    public static final String PDC_DATABASE_ID_KEY = "npc_database_id";
+    public static final String PDC_UUID_KEY = "npc_uuid";
+    public static final String PDC_NAME_KEY = "npc_name";
+    public static final String PDC_SOURCE_KEY = "npc_source_key";
 
     private final AINPCPlugin plugin;
     
@@ -48,6 +56,7 @@ public class AINPC {
     private String profileDataJson;
     private int profileVersion;
     private boolean profileCreated;
+    private String sourceKey;
 
     // Simulare de viata
     private int hungerLevel;
@@ -91,6 +100,7 @@ public class AINPC {
         this.profileDataJson = "{}";
         this.profileVersion = 1;
         this.profileCreated = false;
+        this.sourceKey = "";
         this.hungerLevel = 82;
         this.energyLevel = 78;
         this.socialNeedLevel = 72;
@@ -115,14 +125,10 @@ public class AINPC {
 
         // Folosim Villager ca baza pentru NPC
         Villager villager = world.spawn(location, Villager.class, spawnedVillager -> {
+            applyPersistentIdentity(spawnedVillager);
             spawnedVillager.setProfession(getVillagerProfession());
             spawnedVillager.setVillagerType(Villager.Type.PLAINS);
-            spawnedVillager.setAI(false);
-            spawnedVillager.setInvulnerable(true);
-            spawnedVillager.setSilent(true);
-            spawnedVillager.setCollidable(false);
-            spawnedVillager.setPersistent(true);
-            spawnedVillager.setRemoveWhenFarAway(false);
+            applyControlledVillagerDefaults(spawnedVillager);
         });
 
         attachToVillager(villager);
@@ -145,12 +151,89 @@ public class AINPC {
 
         villager.customName(getColoredDisplayNameComponent());
         villager.setCustomNameVisible(true);
-        villager.setPersistent(true);
-        villager.setRemoveWhenFarAway(false);
+        applyControlledVillagerDefaults(villager);
 
         if (occupation != null && !occupation.isBlank() && shouldApplyProfessionToVillager(villager)) {
             villager.setProfession(getVillagerProfession());
         }
+
+        applyPersistentIdentity(villager);
+    }
+
+    public void applyPersistentIdentity() {
+        applyPersistentIdentity(bukkitEntity);
+    }
+
+    public void applyPersistentIdentity(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+
+        PersistentDataContainer data = entity.getPersistentDataContainer();
+        data.set(persistentKey(PDC_MANAGED_KEY), PersistentDataType.INTEGER, 1);
+        if (databaseId > 0) {
+            data.set(persistentKey(PDC_DATABASE_ID_KEY), PersistentDataType.INTEGER, databaseId);
+        } else {
+            data.remove(persistentKey(PDC_DATABASE_ID_KEY));
+        }
+        if (uuid != null && databaseId > 0) {
+            data.set(persistentKey(PDC_UUID_KEY), PersistentDataType.STRING, uuid.toString());
+        } else {
+            data.remove(persistentKey(PDC_UUID_KEY));
+        }
+        if (name != null && !name.isBlank()) {
+            data.set(persistentKey(PDC_NAME_KEY), PersistentDataType.STRING, name);
+        } else {
+            data.remove(persistentKey(PDC_NAME_KEY));
+        }
+        if (sourceKey != null && !sourceKey.isBlank()) {
+            data.set(persistentKey(PDC_SOURCE_KEY), PersistentDataType.STRING, sourceKey);
+        } else {
+            data.remove(persistentKey(PDC_SOURCE_KEY));
+        }
+    }
+
+    private NamespacedKey persistentKey(String key) {
+        return new NamespacedKey(plugin, key);
+    }
+
+    private void applyControlledVillagerDefaults(Villager villager) {
+        if (villager == null) {
+            return;
+        }
+        villager.setAI(configBoolean("npc.natural_movement", true));
+        villager.setGravity(configBoolean("npc.gravity", true));
+        villager.setInvulnerable(configBoolean("npc.invulnerable", true));
+        villager.setSilent(configBoolean("npc.silent", false));
+        villager.setCollidable(configBoolean("npc.collidable", true));
+        villager.setPersistent(true);
+        villager.setRemoveWhenFarAway(false);
+    }
+
+    public boolean applyControlledEntitySettings() {
+        if (!(bukkitEntity instanceof Villager villager) || !villager.isValid()) {
+            return false;
+        }
+
+        boolean expectedAi = configBoolean("npc.natural_movement", true);
+        boolean expectedGravity = configBoolean("npc.gravity", true);
+        boolean expectedInvulnerable = configBoolean("npc.invulnerable", true);
+        boolean expectedSilent = configBoolean("npc.silent", false);
+        boolean expectedCollidable = configBoolean("npc.collidable", true);
+        boolean changed = villager.hasAI() != expectedAi
+            || villager.hasGravity() != expectedGravity
+            || villager.isInvulnerable() != expectedInvulnerable
+            || villager.isSilent() != expectedSilent
+            || villager.isCollidable() != expectedCollidable
+            || !villager.isPersistent()
+            || villager.getRemoveWhenFarAway();
+
+        applyControlledVillagerDefaults(villager);
+        return changed;
+    }
+
+    private boolean configBoolean(String path, boolean fallback) {
+        return plugin == null ? fallback : plugin.getConfig().getBoolean(path, fallback);
     }
 
     /**
@@ -305,6 +388,7 @@ public class AINPC {
         if (bukkitEntity != null && bukkitEntity.isValid()) {
             syncLocation(bukkitEntity.getLocation());
             spawned = true;
+            applyControlledEntitySettings();
         } else if (bukkitEntity != null) {
             markEntityUnavailable();
         }
@@ -589,6 +673,14 @@ public class AINPC {
 
     public void setProfileCreated(boolean profileCreated) {
         this.profileCreated = profileCreated;
+    }
+
+    public String getSourceKey() {
+        return sourceKey;
+    }
+
+    public void setSourceKey(String sourceKey) {
+        this.sourceKey = sourceKey == null ? "" : sourceKey.trim();
     }
 
     public int getHungerLevel() {

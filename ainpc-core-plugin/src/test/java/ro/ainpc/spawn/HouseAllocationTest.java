@@ -41,6 +41,17 @@ class HouseAllocationTest {
         assertEquals("sat_01:fierarie", plan.workPlaceId());
         assertEquals("sat_01:fierarie:anvil", plan.workNodeId());
         assertEquals("family_popescu_001", plan.familyId());
+        assertEquals("spawn_plan:family_popescu_001:npc_ion", plan.sourceKey());
+    }
+
+    @Test
+    void sourceKeyFallsBackToHomePlaceAndSanitizesResidentKey() {
+        NpcSpawnPlan plan = NpcSpawnPlan.builder("NPC Ion Senior", "Ion")
+            .homePlaceId("Sat 01/Casa Popescu")
+            .spawnNodeId("spawn_ion")
+            .build();
+
+        assertEquals("spawn_plan:sat_01_casa_popescu:npc_ion_senior", plan.sourceKey());
     }
 
     @Test

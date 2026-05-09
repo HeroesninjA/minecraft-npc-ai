@@ -46,6 +46,10 @@ public record ProgressionSelector(
     }
 
     public static ProgressionSelector forContractAlias(String selector) {
+        return forKindAlias(selector, "contract");
+    }
+
+    public static ProgressionSelector forKindAlias(String selector, String kind) {
         ProgressionSelector parsed = parse(selector);
         if (parsed.isEmpty()
             || parsed.hasNamespace()
@@ -54,7 +58,11 @@ public record ProgressionSelector(
             return parsed;
         }
 
-        return parse("contract:" + parsed.normalized());
+        String safeKind = kind == null ? "" : kind.trim();
+        if (safeKind.isBlank()) {
+            return parsed;
+        }
+        return parse(safeKind + ":" + parsed.normalized());
     }
 
     public static boolean isTrackedAlias(String selector) {

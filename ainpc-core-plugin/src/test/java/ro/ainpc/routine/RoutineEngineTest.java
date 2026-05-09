@@ -5,6 +5,7 @@ import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCState;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class RoutineEngineTest {
 
@@ -54,6 +55,23 @@ class RoutineEngineTest {
 
         assertEquals(RoutineSlot.SOCIAL, assignment.slot());
         assertEquals(npc.getSocialAnchor(), assignment.targetAnchor());
+    }
+
+    @Test
+    void previewDayExposesStableGuiScheduleSlots() {
+        AINPC npc = npcWithAnchors();
+        npc.setOccupation("fierar");
+
+        var preview = engine.previewDay(npc);
+
+        assertEquals(4, preview.size());
+        assertEquals("Noapte", preview.get(0).label());
+        assertEquals(RoutineSlot.HOME, preview.get(0).assignment().slot());
+        assertEquals("Dimineata", preview.get(1).label());
+        assertEquals(RoutineSlot.WORK, preview.get(1).assignment().slot());
+        assertEquals("Seara", preview.get(3).label());
+        assertEquals(RoutineSlot.SOCIAL, preview.get(3).assignment().slot());
+        assertFalse(preview.get(1).assignment().activity().isBlank());
     }
 
     private AINPC npcWithAnchors() {

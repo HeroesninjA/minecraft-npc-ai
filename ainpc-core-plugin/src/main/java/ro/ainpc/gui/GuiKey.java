@@ -5,11 +5,12 @@ import java.util.Optional;
 
 public enum GuiKey {
     MAIN("main", "Hub AINPC"),
-    QUEST("quest", "Questuri"),
-    QUEST_DETAIL("quest_detail", "Detalii quest"),
+    QUEST("quest", "Progresii"),
+    QUEST_DETAIL("quest_detail", "Detalii progresie"),
     WORLD("world", "World"),
     STATS("stats", "Statistici"),
     INTERACT("interact", "Interactiune NPC"),
+    ROUTINE("routine", "Rutine NPC"),
     SHOP("shop", "Shop NPC"),
     MANAGER("manager", "Manager NPC"),
     AUDIT("audit", "Audit"),
@@ -40,11 +41,13 @@ public enum GuiKey {
         String normalized = rawValue.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         normalized = switch (normalized) {
             case "hub", "home", "principal" -> "main";
-            case "quests", "questuri", "log" -> "quest";
-            case "questdetail", "quest_details", "quest_detalii", "detalii_quest" -> "quest_detail";
+            case "quests", "questuri", "progression", "progressions", "progresii", "progresie", "log" -> "quest";
+            case "questdetail", "quest_details", "quest_detalii", "detalii_quest",
+                 "progression_detail", "progression_details", "progresie_detalii", "detalii_progresie" -> "quest_detail";
             case "map", "lume" -> "world";
             case "stat", "statistics", "statistici" -> "stats";
             case "npc", "interaction", "interactiune", "nearest" -> "interact";
+            case "routines", "rutine", "program", "schedule" -> "routine";
             case "admin", "npc_manager", "manager_npc" -> "manager";
             case "debugdump", "dump" -> "debug";
             default -> normalized;

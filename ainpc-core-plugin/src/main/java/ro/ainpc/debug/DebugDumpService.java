@@ -75,6 +75,8 @@ public class DebugDumpService {
         if ("all".equals(normalizedScope) || "world".equals(normalizedScope)) {
             writeJson(dumpRoot.resolve("world-mapping.json"), buildWorldMappingJson());
             writeJson(dumpRoot.resolve("npc-world-bindings.json"), buildNpcWorldBindingsJson());
+            writeJson(dumpRoot.resolve("households.json"), buildHouseholdsJson());
+            writeJson(dumpRoot.resolve("spawn-batches.json"), buildSpawnBatchesJson());
         }
         if ("all".equals(normalizedScope) || "quest".equals(normalizedScope)) {
             writeText(dumpRoot.resolve("quests.yml"), plugin.getQuestConfig() != null
@@ -132,7 +134,7 @@ public class DebugDumpService {
         sb.append("- server.txt\n");
         sb.append("- config-sanitized.yml\n");
         sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n");
+        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, households.json, spawn-batches.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n");
         sb.append("- recent-server-log.txt\n");
         return sb.toString();
     }
@@ -255,6 +257,7 @@ public class DebugDumpService {
         json.addProperty("name", npc.getName());
         json.addProperty("display_name", npc.getDisplayName());
         json.addProperty("profile_source", npc.getProfileSource());
+        json.addProperty("source_key", npc.getSourceKey());
         json.addProperty("profile_created", npc.isProfileCreated());
         json.addProperty("occupation", npc.getOccupation());
         json.addProperty("age", npc.getAge());
@@ -323,6 +326,11 @@ public class DebugDumpService {
             .sorted(Comparator.comparing(WorldNodeInfo::id))
             .forEach(node -> nodes.add(toNodeJson(node)));
         root.add("nodes", nodes);
+        root.add("semantic_index", worldMappingSemanticIndexJson(WorldMappingSemanticIndex.from(
+            worldAdmin.getRegions(),
+            worldAdmin.getPlaces(),
+            worldAdmin.getNodes()
+        )));
         return root;
     }
 
@@ -354,9 +362,10 @@ public class DebugDumpService {
             return;
         }
 
+        WorldMappingSemanticIndex worldSemanticIndex = buildWorldMappingSemanticIndexForAudit();
         int questCount = 0;
         for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
-            if (scenario.getBaseType() != ScenarioEngine.ScenarioType.QUEST) {
+            if (!isLoadedQuestDefinitionCandidate(scenario)) {
                 continue;
             }
             questCount++;
@@ -367,14 +376,28 @@ public class DebugDumpService {
             if (valueOrEmpty(scenario.getQuestGiverProfession()).isBlank()) {
                 warnings.add(templateId + " nu defineste quest.giver_profession.");
             }
-            auditQuestEntries(templateId, "objective", scenario.getObjectives(), supportedQuestObjectiveTypes(), errors, warnings);
+            auditQuestEntries(templateId, "objective", scenario.getObjectives(), supportedQuestObjectiveTypes(), errors, warnings, worldSemanticIndex);
             auditQuestEntries(templateId, "reward", scenario.getRewards(), supportedQuestRewardTypes(), errors, warnings);
             auditQuestObjectiveStages(templateId, scenario, errors, warnings);
         }
 
         if (questCount == 0) {
-            warnings.add("Nu exista scenarii incarcate cu base_type QUEST.");
+            warnings.add("Nu exista definitii jucabile incarcate pentru quest/progression.");
         }
+    }
+
+    private WorldMappingSemanticIndex buildWorldMappingSemanticIndexForAudit() {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            return null;
+        }
+
+        WorldMappingSemanticIndex index = WorldMappingSemanticIndex.from(
+            worldAdmin.getRegions(),
+            worldAdmin.getPlaces(),
+            worldAdmin.getNodes()
+        );
+        return index.hasAnyCandidates() ? index : null;
     }
 
     private void auditQuestEntries(String templateId,
@@ -383,6 +406,16 @@ public class DebugDumpService {
                                    Set<String> supportedTypes,
                                    List<String> errors,
                                    List<String> warnings) {
+        auditQuestEntries(templateId, entryKind, entries, supportedTypes, errors, warnings, null);
+    }
+
+    private void auditQuestEntries(String templateId,
+                                   String entryKind,
+                                   List<FeaturePackLoader.QuestEntryDefinition> entries,
+                                   Set<String> supportedTypes,
+                                   List<String> errors,
+                                   List<String> warnings,
+                                   WorldMappingSemanticIndex worldSemanticIndex) {
         if (entries == null || entries.isEmpty()) {
             if ("objective".equals(entryKind)) {
                 errors.add(templateId + " nu are obiective.");
@@ -405,12 +438,37 @@ public class DebugDumpService {
             if (!supportedTypes.contains(type)) {
                 errors.add(templateId + " are " + entryKind + " cu tip nesuportat: " + entry.getType() + ".");
             }
+            if ("objective".equals(entryKind)) {
+                auditQuestSemanticReference(templateId, entry, type, worldSemanticIndex, warnings);
+            }
             String entryId = valueOrEmpty(entry.getEntryId());
             if (entryId.isBlank()) {
                 warnings.add(templateId + " are " + entryKind + " fara entry_id stabil la index " + index + ".");
             } else if (!entryIds.add(normalizeKey(entryId))) {
                 errors.add(templateId + " are " + entryKind + " duplicat: " + entryId + ".");
             }
+        }
+    }
+
+    private void auditQuestSemanticReference(String templateId,
+                                             FeaturePackLoader.QuestEntryDefinition entry,
+                                             String normalizedObjectiveType,
+                                             WorldMappingSemanticIndex worldSemanticIndex,
+                                             List<String> warnings) {
+        if (entry == null || worldSemanticIndex == null) {
+            return;
+        }
+
+        String anchorType = semanticAnchorTypeForObjective(normalizedObjectiveType);
+        String reference = valueOrEmpty(entry.getItemId());
+        if (anchorType.isBlank() || "npc".equals(anchorType) || reference.isBlank()) {
+            return;
+        }
+
+        if (!worldSemanticIndex.hasReference(anchorType, reference)) {
+            warnings.add(templateId + " objective " + valueOrFallback(entry.getEntryId(), normalizedObjectiveType)
+                + " refera `" + reference + "`, dar tokenul nu apare in world mapping semantic_index pentru ancora "
+                + anchorType + ".");
         }
     }
 
@@ -979,8 +1037,8 @@ public class DebugDumpService {
         json.add("preferred_topologies", gson.toJsonTree(scenario.getPreferredTopologies()));
         json.add("narrative_hints", gson.toJsonTree(scenario.getNarrativeHints()));
         json.add("roles", scenarioRolesJson(scenario.getRoles()));
-        json.add("objectives", questEntriesJson(scenario.getObjectives()));
-        json.add("rewards", questEntriesJson(scenario.getRewards()));
+        json.add("objectives", questEntriesJson(scenario.getObjectives(), true));
+        json.add("rewards", questEntriesJson(scenario.getRewards(), false));
         json.add("dialogues", gson.toJsonTree(scenario.getQuestDialogues()));
         return json;
     }
@@ -1128,34 +1186,96 @@ public class DebugDumpService {
         return json;
     }
 
-    private JsonArray questEntriesJson(List<FeaturePackLoader.QuestEntryDefinition> entries) {
+    private JsonArray questEntriesJson(List<FeaturePackLoader.QuestEntryDefinition> entries, boolean objectiveEntries) {
         JsonArray json = new JsonArray();
         if (entries == null || entries.isEmpty()) {
             return json;
         }
 
         for (int index = 0; index < entries.size(); index++) {
-            json.add(questEntryJson(entries.get(index), index));
+            json.add(questEntryJson(entries.get(index), index, objectiveEntries));
         }
         return json;
     }
 
-    private JsonObject questEntryJson(FeaturePackLoader.QuestEntryDefinition entry, int index) {
+    private JsonObject questEntryJson(FeaturePackLoader.QuestEntryDefinition entry, int index, boolean objectiveEntry) {
         JsonObject json = new JsonObject();
         json.addProperty("index", index);
         if (entry == null) {
             return json;
         }
 
+        String type = valueOrEmpty(entry.getType());
+        String itemId = valueOrEmpty(entry.getItemId());
+        String normalizedType = objectiveEntry
+            ? normalizeQuestObjectiveType(type)
+            : normalizeQuestRewardType(type);
+        String semanticAnchorType = objectiveEntry ? semanticAnchorTypeForObjective(normalizedType) : "";
+
         json.addProperty("entry_id", valueOrEmpty(entry.getEntryId()));
-        json.addProperty("type", valueOrEmpty(entry.getType()));
-        json.addProperty("item", valueOrEmpty(entry.getItemId()));
+        json.addProperty("type", type);
+        json.addProperty("normalized_type", normalizedType);
+        json.addProperty("item", itemId);
+        json.addProperty("semantic_anchor_type", semanticAnchorType);
+        json.addProperty("semantic_reference", semanticAnchorType.isBlank() ? "" : itemId);
+        json.addProperty("semantic_reference_prefix", semanticAnchorType.isBlank() ? "" : semanticReferencePrefix(itemId));
+        json.addProperty("semantic_reference_value", semanticAnchorType.isBlank() ? "" : semanticReferenceValue(itemId));
         json.addProperty("amount", entry.getAmount());
         json.addProperty("description", valueOrEmpty(entry.getDescription()));
         json.add("metadata", gson.toJsonTree(entry.getMetadata()));
         json.add("variables", gson.toJsonTree(entry.getVariables()));
         json.add("payload", gson.toJsonTree(entry.getPayload()));
         return json;
+    }
+
+    private String semanticAnchorTypeForObjective(String normalizedObjectiveType) {
+        return switch (normalizedObjectiveType) {
+            case "talk_to_npc" -> "npc";
+            case "visit_region" -> "region";
+            case "visit_place" -> "place";
+            case "inspect_node" -> "node";
+            default -> "";
+        };
+    }
+
+    private String semanticReferencePrefix(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return "";
+        }
+
+        String trimmed = reference.trim();
+        int prefixSeparator = trimmed.indexOf(':');
+        if (prefixSeparator <= 0) {
+            return "";
+        }
+
+        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
+        return isKnownSemanticReferencePrefix(prefix) ? prefix : "";
+    }
+
+    private String semanticReferenceValue(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return "";
+        }
+
+        String trimmed = reference.trim();
+        int prefixSeparator = trimmed.indexOf(':');
+        if (prefixSeparator <= 0) {
+            return trimmed;
+        }
+
+        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
+        if (!isKnownSemanticReferencePrefix(prefix)) {
+            return trimmed;
+        }
+        return trimmed.substring(prefixSeparator + 1).trim();
+    }
+
+    private boolean isKnownSemanticReferencePrefix(String prefix) {
+        return switch (prefix) {
+            case "npc", "name", "profession", "region", "place", "node", "tag", "type", "mob", "entity" -> true;
+            default -> false;
+        };
     }
 
     private String questTemplateId(FeaturePackLoader.ScenarioDefinition scenario) {
@@ -1213,6 +1333,9 @@ public class DebugDumpService {
         root.add("by_pack", countMapJson(summary.byPack()));
         root.add("by_mechanic", countMapJson(summary.byMechanic()));
         root.add("by_kind", countMapJson(summary.byKind()));
+        root.add("by_category", countMapJson(summary.byCategory()));
+        root.add("by_scenario_kind", countMapJson(summary.byScenarioKind()));
+        root.add("by_base_type", countMapJson(summary.byBaseType()));
         root.add("rows", rows);
         return root;
     }
@@ -1242,6 +1365,9 @@ public class DebugDumpService {
         json.addProperty("definition_id", progression.definitionId());
         json.addProperty("mechanic_id", progression.mechanicId());
         json.addProperty("kind", progression.kind());
+        json.addProperty("category", progression.category());
+        json.addProperty("scenario_kind", progression.scenarioKind());
+        json.addProperty("base_type", progression.baseType());
         json.addProperty("mechanic_label", progression.mechanicLabel());
         json.addProperty("singular_label", progression.singularLabel());
         json.addProperty("plural_label", progression.pluralLabel());
@@ -1288,6 +1414,36 @@ public class DebugDumpService {
         json.addProperty("z", node.z());
         json.addProperty("radius", node.radius());
         json.add("metadata", gson.toJsonTree(node.metadata()));
+        return json;
+    }
+
+    private JsonObject worldMappingSemanticIndexJson(WorldMappingSemanticIndex index) {
+        JsonObject json = new JsonObject();
+        if (index == null) {
+            return json;
+        }
+
+        JsonObject resolverCandidates = new JsonObject();
+        resolverCandidates.add("regions", semanticIndexMapJson(index.regionCandidates()));
+        resolverCandidates.add("places", semanticIndexMapJson(index.placeCandidates()));
+        resolverCandidates.add("nodes", semanticIndexMapJson(index.nodeCandidates()));
+        json.add("resolver_candidate_tokens", resolverCandidates);
+        json.add("place_tags", semanticIndexMapJson(index.placeTags()));
+        json.add("place_types", semanticIndexMapJson(index.placeTypes()));
+        json.add("node_types", semanticIndexMapJson(index.nodeTypes()));
+        json.add("node_metadata_values", semanticIndexMapJson(index.nodeMetadataValues()));
+        return json;
+    }
+
+    private JsonObject semanticIndexMapJson(Map<String, List<String>> index) {
+        JsonObject json = new JsonObject();
+        if (index == null || index.isEmpty()) {
+            return json;
+        }
+
+        for (Map.Entry<String, List<String>> entry : index.entrySet()) {
+            json.add(entry.getKey(), gson.toJsonTree(entry.getValue()));
+        }
         return json;
     }
 
@@ -1464,6 +1620,199 @@ public class DebugDumpService {
             }
         }
         return missing;
+    }
+
+    private JsonObject buildSpawnBatchesJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_tables", "spawn_batches, spawn_batch_steps");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("batch_count", 0);
+            root.add("batches", new JsonArray());
+            root.add("steps", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray batches = new JsonArray();
+        JsonArray steps = new JsonArray();
+        Map<String, Integer> byStatus = new LinkedHashMap<>();
+
+        String batchSql = """
+            SELECT batch_key, scope_type, scope_id, plan_hash, status, dry_run,
+                   allocation_count, npc_plan_count, created_npc_count, reused_npc_count,
+                   rolled_back, started_at, updated_at, completed_at, warning_summary, error_summary
+            FROM spawn_batches
+            ORDER BY updated_at DESC
+            LIMIT 100
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(batchSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String status = resultSet.getString("status");
+                incrementCount(byStatus, status);
+
+                JsonObject batch = new JsonObject();
+                batch.addProperty("batch_key", valueOrEmpty(resultSet.getString("batch_key")));
+                batch.addProperty("scope_type", valueOrEmpty(resultSet.getString("scope_type")));
+                batch.addProperty("scope_id", valueOrEmpty(resultSet.getString("scope_id")));
+                batch.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
+                batch.addProperty("status", valueOrEmpty(status));
+                batch.addProperty("dry_run", resultSet.getInt("dry_run") != 0);
+                batch.addProperty("allocation_count", resultSet.getInt("allocation_count"));
+                batch.addProperty("npc_plan_count", resultSet.getInt("npc_plan_count"));
+                batch.addProperty("created_npc_count", resultSet.getInt("created_npc_count"));
+                batch.addProperty("reused_npc_count", resultSet.getInt("reused_npc_count"));
+                batch.addProperty("rolled_back", resultSet.getInt("rolled_back") != 0);
+                batch.addProperty("started_at", resultSet.getLong("started_at"));
+                batch.addProperty("updated_at", resultSet.getLong("updated_at"));
+                batch.addProperty("completed_at", nullableLong(resultSet, "completed_at"));
+                batch.addProperty("warning_summary", valueOrEmpty(resultSet.getString("warning_summary")));
+                batch.addProperty("error_summary", valueOrEmpty(resultSet.getString("error_summary")));
+                batches.add(batch);
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        String stepsSql = """
+            SELECT batch_key, step_index, step_key, household_id, status, plan_hash,
+                   created_npc_ids, reused_npc_ids, warning_summary, error_summary, updated_at
+            FROM spawn_batch_steps
+            ORDER BY updated_at DESC, batch_key ASC, step_index ASC
+            LIMIT 300
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(stepsSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                JsonObject step = new JsonObject();
+                step.addProperty("batch_key", valueOrEmpty(resultSet.getString("batch_key")));
+                step.addProperty("step_index", resultSet.getInt("step_index"));
+                step.addProperty("step_key", valueOrEmpty(resultSet.getString("step_key")));
+                step.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
+                step.addProperty("status", valueOrEmpty(resultSet.getString("status")));
+                step.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
+                step.addProperty("created_npc_ids", valueOrEmpty(resultSet.getString("created_npc_ids")));
+                step.addProperty("reused_npc_ids", valueOrEmpty(resultSet.getString("reused_npc_ids")));
+                step.addProperty("warning_summary", valueOrEmpty(resultSet.getString("warning_summary")));
+                step.addProperty("error_summary", valueOrEmpty(resultSet.getString("error_summary")));
+                step.addProperty("updated_at", resultSet.getLong("updated_at"));
+                steps.add(step);
+            }
+        } catch (SQLException exception) {
+            root.addProperty("steps_error", exception.getMessage());
+        }
+
+        root.addProperty("batch_count", batches.size());
+        root.addProperty("step_count", steps.size());
+        root.add("by_status", countMapJson(byStatus));
+        root.add("batches", batches);
+        root.add("steps", steps);
+        return root;
+    }
+
+    private JsonObject buildHouseholdsJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("source_tables", "households, household_residents");
+        if (plugin.getDatabaseManager() == null) {
+            root.addProperty("available", false);
+            root.addProperty("error", "DatabaseManager indisponibil");
+            root.addProperty("household_count", 0);
+            root.add("households", new JsonArray());
+            root.add("residents", new JsonArray());
+            return root;
+        }
+
+        root.addProperty("available", true);
+        JsonArray households = new JsonArray();
+        JsonArray residents = new JsonArray();
+        Map<String, Integer> bySource = new LinkedHashMap<>();
+        Map<String, Integer> householdsByFamily = new LinkedHashMap<>();
+        Map<String, Integer> householdsByHomePlace = new LinkedHashMap<>();
+        Map<String, Integer> residentsByHousehold = new LinkedHashMap<>();
+        Map<String, Integer> residentsByHomePlace = new LinkedHashMap<>();
+
+        String householdSql = """
+            SELECT household_id, family_id, home_place_id, primary_owner_key,
+                   max_residents, resident_count, plan_hash, source, created_at, updated_at
+            FROM households
+            ORDER BY updated_at DESC, household_id ASC
+            LIMIT 150
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(householdSql);
+            ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                incrementCount(bySource, resultSet.getString("source"));
+                incrementCount(householdsByFamily, resultSet.getString("family_id"));
+                incrementCount(householdsByHomePlace, resultSet.getString("home_place_id"));
+                JsonObject household = new JsonObject();
+                household.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
+                household.addProperty("family_id", valueOrEmpty(resultSet.getString("family_id")));
+                household.addProperty("home_place_id", valueOrEmpty(resultSet.getString("home_place_id")));
+                household.addProperty("primary_owner_key", valueOrEmpty(resultSet.getString("primary_owner_key")));
+                household.addProperty("max_residents", resultSet.getInt("max_residents"));
+                household.addProperty("resident_count", resultSet.getInt("resident_count"));
+                household.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
+                household.addProperty("source", valueOrEmpty(resultSet.getString("source")));
+                household.addProperty("created_at", resultSet.getLong("created_at"));
+                household.addProperty("updated_at", resultSet.getLong("updated_at"));
+                households.add(household);
+            }
+        } catch (SQLException exception) {
+            root.addProperty("available", false);
+            root.addProperty("error", exception.getMessage());
+        }
+
+        String residentSql = """
+            SELECT household_id, resident_key, npc_id, npc_uuid, npc_name, source_key,
+                   relation_role, home_place_id, spawn_node_id, home_node_id,
+                   work_place_id, work_node_id, social_place_id, social_node_id,
+                   status, created_at, updated_at
+            FROM household_residents
+            ORDER BY household_id ASC, resident_key ASC
+            LIMIT 500
+        """;
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(residentSql);
+            ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                incrementCount(residentsByHousehold, resultSet.getString("household_id"));
+                incrementCount(residentsByHomePlace, resultSet.getString("home_place_id"));
+                JsonObject resident = new JsonObject();
+                resident.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
+                resident.addProperty("resident_key", valueOrEmpty(resultSet.getString("resident_key")));
+                resident.addProperty("npc_id", resultSet.getInt("npc_id"));
+                resident.addProperty("npc_uuid", valueOrEmpty(resultSet.getString("npc_uuid")));
+                resident.addProperty("npc_name", valueOrEmpty(resultSet.getString("npc_name")));
+                resident.addProperty("source_key", valueOrEmpty(resultSet.getString("source_key")));
+                resident.addProperty("relation_role", valueOrEmpty(resultSet.getString("relation_role")));
+                resident.addProperty("home_place_id", valueOrEmpty(resultSet.getString("home_place_id")));
+                resident.addProperty("spawn_node_id", valueOrEmpty(resultSet.getString("spawn_node_id")));
+                resident.addProperty("home_node_id", valueOrEmpty(resultSet.getString("home_node_id")));
+                resident.addProperty("work_place_id", valueOrEmpty(resultSet.getString("work_place_id")));
+                resident.addProperty("work_node_id", valueOrEmpty(resultSet.getString("work_node_id")));
+                resident.addProperty("social_place_id", valueOrEmpty(resultSet.getString("social_place_id")));
+                resident.addProperty("social_node_id", valueOrEmpty(resultSet.getString("social_node_id")));
+                resident.addProperty("status", valueOrEmpty(resultSet.getString("status")));
+                resident.addProperty("created_at", resultSet.getLong("created_at"));
+                resident.addProperty("updated_at", resultSet.getLong("updated_at"));
+                residents.add(resident);
+            }
+        } catch (SQLException exception) {
+            root.addProperty("residents_error", exception.getMessage());
+        }
+
+        root.addProperty("household_count", households.size());
+        root.addProperty("resident_count", residents.size());
+        root.add("by_source", countMapJson(bySource));
+        root.add("households_by_family", countMapJson(householdsByFamily));
+        root.add("households_by_home_place", countMapJson(householdsByHomePlace));
+        root.add("residents_by_household", countMapJson(residentsByHousehold));
+        root.add("residents_by_home_place", countMapJson(residentsByHomePlace));
+        root.add("households", households);
+        root.add("residents", residents);
+        return root;
     }
 
     private JsonObject buildPlayerQuestProgressJson() {
@@ -1875,6 +2224,11 @@ public class DebugDumpService {
 
     private String valueOrFallback(String value, String fallback) {
         return value == null || value.isBlank() ? valueOrEmpty(fallback) : value;
+    }
+
+    private long nullableLong(ResultSet resultSet, String column) throws SQLException {
+        Object value = resultSet.getObject(column);
+        return value == null ? 0L : resultSet.getLong(column);
     }
 
     private JsonObject boundsJson(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

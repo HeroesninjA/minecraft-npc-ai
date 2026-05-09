@@ -6,6 +6,7 @@ import java.util.List;
 
 public record NpcSpawnResult(
     boolean success,
+    boolean created,
     AINPC npc,
     List<String> errors,
     List<String> warnings
@@ -16,10 +17,18 @@ public record NpcSpawnResult(
     }
 
     public static NpcSpawnResult success(AINPC npc, List<String> warnings) {
-        return new NpcSpawnResult(true, npc, List.of(), warnings);
+        return created(npc, warnings);
+    }
+
+    public static NpcSpawnResult created(AINPC npc, List<String> warnings) {
+        return new NpcSpawnResult(true, true, npc, List.of(), warnings);
+    }
+
+    public static NpcSpawnResult reused(AINPC npc, List<String> warnings) {
+        return new NpcSpawnResult(true, false, npc, List.of(), warnings);
     }
 
     public static NpcSpawnResult failed(List<String> errors, List<String> warnings) {
-        return new NpcSpawnResult(false, null, errors, warnings);
+        return new NpcSpawnResult(false, false, null, errors, warnings);
     }
 }

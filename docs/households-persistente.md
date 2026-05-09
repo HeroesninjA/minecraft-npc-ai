@@ -431,6 +431,9 @@ Migration:
 /ainpc migration households apply
 ```
 
+Status MVP: comanda este implementata initial pentru backfill din `npc_world_bindings` si din metadata `resident_npc_ids`.
+Ea creeaza doar candidati neambigui, este idempotenta si sare peste NPC-ii care exista deja intr-un alt household.
+
 Audit:
 
 ```text

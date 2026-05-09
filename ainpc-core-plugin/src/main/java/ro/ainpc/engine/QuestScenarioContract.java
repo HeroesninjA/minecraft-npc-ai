@@ -91,6 +91,11 @@ public record QuestScenarioContract(
             case HUNT -> "vanatoare";
             case DELIVERY -> "livrare";
             case EXPLORATION -> "explorare";
+            case INVESTIGATION -> "investigatie";
+            case DUTY -> "sarcina";
+            case EVENT -> "eveniment";
+            case TUTORIAL -> "tutorial";
+            case RITUAL -> "ritual";
             case SOCIAL -> "social";
             case CUSTOM -> "personalizat";
         };
@@ -111,6 +116,7 @@ public record QuestScenarioContract(
 
         boolean hasHunt = false;
         boolean hasDelivery = false;
+        boolean hasInvestigation = false;
         boolean hasExploration = false;
         boolean hasSocial = false;
         boolean hasFetch = false;
@@ -120,7 +126,8 @@ public record QuestScenarioContract(
             switch (type) {
                 case "killmob", "kill_mob", "hunt" -> hasHunt = true;
                 case "deliveritem", "deliver_item", "delivery" -> hasDelivery = true;
-                case "visitregion", "visit_region", "visitplace", "visit_place", "inspectnode", "inspect_node", "explore" -> hasExploration = true;
+                case "inspectnode", "inspect_node", "investigate", "investigation" -> hasInvestigation = true;
+                case "visitregion", "visit_region", "visitplace", "visit_place", "explore" -> hasExploration = true;
                 case "talktonpc", "talk_to_npc", "dialogue", "social" -> hasSocial = true;
                 case "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> hasFetch = true;
                 default -> {
@@ -134,6 +141,9 @@ public record QuestScenarioContract(
         }
         if (hasDelivery) {
             return Kind.DELIVERY;
+        }
+        if (hasInvestigation) {
+            return Kind.INVESTIGATION;
         }
         if (hasExploration) {
             return Kind.EXPLORATION;
@@ -168,6 +178,11 @@ public record QuestScenarioContract(
         HUNT,
         DELIVERY,
         EXPLORATION,
+        INVESTIGATION,
+        DUTY,
+        EVENT,
+        TUTORIAL,
+        RITUAL,
         SOCIAL,
         CUSTOM;
 
@@ -177,6 +192,11 @@ public record QuestScenarioContract(
                 case "hunt", "kill", "kill_mob", "combat" -> HUNT;
                 case "delivery", "deliver", "deliver_item" -> DELIVERY;
                 case "exploration", "explore", "visit", "inspect" -> EXPLORATION;
+                case "investigation", "investigate", "investigatie", "investigare" -> INVESTIGATION;
+                case "duty", "duties", "sarcina", "sarcini", "datorie", "npc_duty" -> DUTY;
+                case "event", "events", "eveniment", "evenimente", "local_event", "world_event", "village_event" -> EVENT;
+                case "tutorial", "tutorials", "onboarding", "indrumare" -> TUTORIAL;
+                case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii", "village_ritual" -> RITUAL;
                 case "social", "dialogue", "talk" -> SOCIAL;
                 default -> CUSTOM;
             };

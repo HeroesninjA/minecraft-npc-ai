@@ -11,7 +11,7 @@ addon:
   version: "1.0.0"
   primary_scenario: true
   runtime_modes: ["standalone", "hybrid", "advanced"]
-  capabilities: ["traits", "professions", "dialogues", "scenarios"]
+  capabilities: ["traits", "professions", "dialogues", "scenarios", "progression"]
   dependencies: ["medieval", "social"]
 
 traits:
@@ -225,14 +225,81 @@ dialogues:
     - "Prin sat se spune ca fierarul pregateste o prima misiune pentru un ucenic curajos."
     - "Fermierul strange provizii pentru hambar inainte sa vina noaptea."
     - "Garda promite rasplata celui care curata drumul de strigoi."
+    - "Fermierul promite o rasplata pentru cine curata paianjenii de la marginea fermei."
     - "Hangiul cauta mancare pentru calatorii blocati in sat."
     - "Vindecatorul are nevoie de ierburi pentru leacuri de urgenta."
+
+mechanics:
+  main_quests:
+    kind: "quest"
+    label: "Questuri principale"
+    singular_label: "quest"
+    plural_label: "questuri"
+    progress: true
+    max_active: 1
+
+  side_quests:
+    kind: "quest"
+    label: "Questuri secundare"
+    singular_label: "quest"
+    plural_label: "questuri"
+    progress: true
+    max_active: 3
+
+  village_contracts:
+    kind: "contract"
+    label: "Contracte locale"
+    singular_label: "contract"
+    plural_label: "contracte"
+    progress: true
+    max_active: 3
+
+  npc_duties:
+    kind: "duty"
+    label: "Sarcini NPC"
+    singular_label: "sarcina"
+    plural_label: "sarcini"
+    progress: true
+    max_active: 2
+
+  local_bounties:
+    kind: "bounty"
+    label: "Bounty locale"
+    singular_label: "bounty"
+    plural_label: "bounty-uri"
+    progress: true
+    max_active: 1
+
+  village_events:
+    kind: "event"
+    label: "Evenimente locale"
+    singular_label: "eveniment"
+    plural_label: "evenimente"
+    progress: true
+    max_active: 2
+
+  onboarding:
+    kind: "tutorial"
+    label: "Tutoriale"
+    singular_label: "tutorial"
+    plural_label: "tutoriale"
+    progress: true
+    max_active: 1
+
+  village_rituals:
+    kind: "ritual"
+    label: "Ritualuri locale"
+    singular_label: "ritual"
+    plural_label: "ritualuri"
+    progress: true
+    max_active: 1
 
 scenarios:
   Q01:
     name: "Quest Beginer"
     description: "Fierarul din sat ii ofera jucatorului prima misiune: sa aduca 3 lingouri de fier si o scandura din lemn pentru a primi o sabie."
     base_type: "QUEST"
+    mechanic: "main_quests"
     trigger_probability: 0.12
     min_npcs: 1
     requires_player: true
@@ -321,6 +388,7 @@ scenarios:
     name: "Provizii Pentru Hambar"
     description: "Fermierul cere ajutor pentru strangerea unor provizii simple, ca satul sa aiba mancare pentru urmatoarele zile."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.10
     min_npcs: 1
     requires_player: true
@@ -395,6 +463,7 @@ scenarios:
     name: "Drumul Nesigur"
     description: "Garda satului cere ajutor pentru a elimina creaturile care ameninta drumul de langa asezare."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.08
     min_npcs: 1
     requires_player: true
@@ -473,6 +542,7 @@ scenarios:
     name: "Masa Calatorilor"
     description: "Hangiul are clienti blocati in sat si are nevoie de provizii pregatite rapid."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.09
     min_npcs: 1
     requires_player: true
@@ -551,6 +621,7 @@ scenarios:
     name: "Leac Pentru Rani"
     description: "Vindecatorul pregateste leacuri pentru sat si cere ingrediente simple din imprejurimi."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.09
     min_npcs: 1
     requires_player: true
@@ -634,6 +705,7 @@ scenarios:
     name: "Urme La Forja"
     description: "Fierarul observa semne ciudate in forja si cere jucatorului sa verifice locul inainte ca munca satului sa fie afectata."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -746,6 +818,7 @@ scenarios:
     name: "Mesaj Pentru Straja"
     description: "Hangiul pregateste un mesaj pentru straja drumului si cere jucatorului sa confirme cu garda ca patrula poate primi provizii."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -868,6 +941,7 @@ scenarios:
     name: "Patrula De Hotar"
     description: "Garda cere o verificare rapida a hotarului satului dupa primele semne ca drumul poate fi amenintat din nou."
     base_type: "QUEST"
+    mechanic: "side_quests"
     trigger_probability: 0.07
     min_npcs: 1
     requires_player: true
@@ -975,4 +1049,944 @@ scenarios:
           - "brave"
       HERO:
         description: "Jucatorul care patruleaza hotarul."
+        player_role: true
+
+  C01:
+    name: "Contractul Negustorului"
+    description: "Negustorul are nevoie de hartie pentru evidentele caravanei si foloseste runtime-ul de progres ca un contract, nu ca un quest clasic."
+    base_type: "TRADE_DEAL"
+    mechanic: "village_contracts"
+    progress:
+      enabled: true
+      mechanic: "village_contracts"
+      kind: "contract"
+      label: "Contract local"
+      singular_label: "contract"
+      plural_label: "contracte"
+    trigger_probability: 0.08
+    min_npcs: 1
+    requires_player: true
+    hint: "Negustorul rasfoieste registrul si pare sa caute pe cineva dispus la un contract rapid."
+    preferred_topologies:
+      - "village_center"
+      - "market"
+      - "road"
+    narrative_hints:
+      - "este un contract local, nu un quest principal"
+      - "jucatorul strange hartie si o preda negustorului pentru evidentele caravanei"
+      - "contractul demonstreaza ca acelasi runtime de progres poate fi folosit de scenarii TRADE_DEAL"
+    phases:
+      INTRODUCTION: "Negustorul explica de ce are nevoie de hartie pentru contracte si chitante."
+      ACCEPTANCE: "Jucatorul accepta contractul local."
+      GATHERING: "Jucatorul strange hartia ceruta."
+      RETURN: "Jucatorul preda hartia negustorului."
+      COMPLETION: "Negustorul plateste contractul si isi actualizeaza registrul."
+    quest:
+      code: "C01"
+      giver_profession: "merchant"
+      kind: "delivery"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 1200
+      tags: ["contract", "merchant", "delivery", "repeatable"]
+      dialogues:
+        offer:
+          - "Am nevoie de hartie pentru registrele caravanei. Este contract simplu: aduci, platesc."
+        unavailable:
+          - "Mai lasa putin timp intre contracte. Negotul bun are ritm, nu graba."
+        offered:
+          - "Preiei contractul pentru hartie sau il dau urmatorului calator?"
+        accepted:
+          - "Bun. Adu-mi hartia si trecem plata in registru."
+        active:
+          - "Contractul ramane deschis pana imi aduci hartia."
+        ready:
+          - "Ai hartia? Preda-mi-o si inchidem contractul."
+        completed:
+          - "Corect si rapid. Contract inchis, plata facuta."
+      objectives:
+        collect_paper:
+          type: "collect_item"
+          item: "PAPER"
+          amount: 4
+          phase: "GATHERING"
+          description: "Strange 4 foi de hartie pentru negustor."
+        deliver_paper:
+          type: "deliver_to_npc"
+          item: "PAPER"
+          amount: 4
+          phase: "RETURN"
+          description: "Preda negustorului cele 4 foi de hartie."
+      rewards:
+        emeralds:
+          type: "item"
+          item: "EMERALD"
+          amount: 2
+          description: "Primesti 2 smaralde pentru contract."
+    roles:
+      QUEST_GIVER:
+        description: "Negustorul care tine registrul contractelor locale."
+        required_professions:
+          - "merchant"
+        preferred_professions:
+          - "merchant"
+        preferred_traits:
+          - "cunning"
+          - "charismatic"
+      HERO:
+        description: "Jucatorul care preia contractul local."
+        player_role: true
+
+  C02:
+    name: "Avizierul Pietei"
+    description: "Negustorul cere verificarea avizierului din piata si confirmarea unei note comerciale, folosind mapping-ul demo printr-un contract non-quest."
+    base_type: "TRADE_DEAL"
+    mechanic: "village_contracts"
+    progress:
+      enabled: true
+      mechanic: "village_contracts"
+      kind: "contract"
+      label: "Contract local"
+      singular_label: "contract"
+      plural_label: "contracte"
+    trigger_probability: 0.06
+    min_npcs: 1
+    requires_player: true
+    hint: "Negustorul cauta pe cineva care sa verifice avizierul pietei inainte de urmatorul schimb."
+    preferred_topologies:
+      - "village_center"
+      - "market"
+    narrative_hints:
+      - "este un contract local legat direct de mapping-ul demo"
+      - "jucatorul viziteaza piata, inspecteaza avizierul si revine la negustor"
+      - "finalizarea scrie un story event pe place-ul pietei"
+    phases:
+      INTRODUCTION: "Negustorul explica de ce avizierul pietei trebuie verificat."
+      ACCEPTANCE: "Jucatorul accepta contractul de verificare."
+      MARKET_CHECK: "Jucatorul merge in piata si verifica avizierul."
+      RETURN: "Jucatorul revine la negustor cu nota confirmata."
+      COMPLETION: "Negustorul inchide contractul si noteaza starea pietei."
+    quest:
+      code: "C02"
+      giver_profession: "merchant"
+      kind: "investigation"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 1800
+      tags: ["contract", "merchant", "mapping", "market", "story", "repeatable"]
+      dialogues:
+        offer:
+          - "Avizierul pietei trebuie verificat inainte de schimb. Mergi acolo, citeste nota si adu-mi confirmarea."
+        unavailable:
+          - "Piata nu are nevoie de o alta verificare chiar acum. Revino mai tarziu."
+        offered:
+          - "Preiei verificarea avizierului sau astept alt om de incredere?"
+        accepted:
+          - "Bun. Treci prin piata, verifica avizierul si intoarce-te cu o foaie curata pentru registru."
+        active:
+          - "Contractul sta deschis pana verifici piata si avizierul."
+        ready:
+          - "Ai verificat avizierul? Adu-mi confirmarea si inchidem nota."
+        completed:
+          - "Piata e verificata si registrul e la zi. Plata e a ta."
+      stages:
+        MARKET_CHECK:
+          description: "Jucatorul merge in piata si inspecteaza avizierul."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_market"
+            - "check_market_board"
+        RETURN:
+          description: "Jucatorul revine la negustor cu confirmarea."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "deliver_market_note"
+      objectives:
+        visit_market:
+          type: "visit_place"
+          item: "tag:market"
+          amount: 1
+          phase: "MARKET_CHECK"
+          description: "Mergi in piata satului."
+        check_market_board:
+          type: "inspect_node"
+          item: "quest_board"
+          amount: 1
+          phase: "MARKET_CHECK"
+          description: "Inspecteaza avizierul pietei."
+        deliver_market_note:
+          type: "deliver_to_npc"
+          item: "PAPER"
+          amount: 1
+          phase: "RETURN"
+          description: "Preda negustorului 1 foaie cu confirmarea pietei."
+      rewards:
+        market_notice_event:
+          type: "record_story_event"
+          item: "market_board_checked"
+          amount: 1
+          description: "Piata retine ca avizierul a fost verificat."
+          scope: "place"
+          target: "anchor:visit_market"
+          event_type: "contract_completed"
+          event_key: "c02_market_board_checked"
+          title: "Avizierul pietei a fost verificat"
+          payload:
+            contract: "C02"
+            outcome: "market_board_checked"
+        emerald:
+          type: "item"
+          item: "EMERALD"
+          amount: 1
+          description: "Primesti 1 smarald pentru contract."
+    roles:
+      QUEST_GIVER:
+        description: "Negustorul care coordoneaza contractele din piata."
+        required_professions:
+          - "merchant"
+        preferred_professions:
+          - "merchant"
+        preferred_traits:
+          - "cunning"
+          - "charismatic"
+      HERO:
+        description: "Jucatorul care verifica avizierul pietei."
+        player_role: true
+
+  D01:
+    name: "Rondul Strajerului"
+    description: "Garda transforma patrula de rutina intr-o sarcina NPC separata de questuri si contracte, folosind acelasi runtime de progres."
+    base_type: "DUTY"
+    mechanic: "npc_duties"
+    progress:
+      enabled: true
+      mechanic: "npc_duties"
+      kind: "duty"
+      label: "Sarcina NPC"
+      singular_label: "sarcina"
+      plural_label: "sarcini"
+    trigger_probability: 0.05
+    min_npcs: 1
+    requires_player: true
+    hint: "Garda face semn spre avizier si pare sa pregateasca rondul de seara."
+    preferred_topologies:
+      - "village_center"
+      - "market"
+      - "road"
+    narrative_hints:
+      - "este o sarcina NPC, nu un quest principal si nu un contract comercial"
+      - "jucatorul confirma rondul intr-o regiune de tip settlement si verifica un node semantic"
+      - "finalizarea scrie un story event regional pentru patrula de rutina"
+    phases:
+      INTRODUCTION: "Garda explica rondul de rutina si punctele care trebuie verificate."
+      ACCEPTANCE: "Jucatorul accepta sarcina de patrula."
+      PATROL: "Jucatorul verifica regiunea si avizierul folosit de straja."
+      RETURN: "Jucatorul revine la garda cu raportul scurt."
+      COMPLETION: "Garda inchide sarcina si noteaza patrula in registru."
+    quest:
+      code: "D01"
+      giver_profession: "guard"
+      kind: "duty"
+      category: "repeatable"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 900
+      tags: ["duty", "guard", "mapping", "patrol", "repeatable", "story"]
+      dialogues:
+        offer:
+          - "Am un rond scurt pentru straja. Verifica satul si avizierul, apoi imi dai raportul."
+        unavailable:
+          - "Rondul tocmai a fost facut. Mai asteapta putin inainte sa notez o alta patrula."
+        offered:
+          - "Preiei rondul strajerului sau ramanem pe patrula obisnuita?"
+        accepted:
+          - "Bun. Treci prin sat, verifica avizierul si intoarce-te cu raportul."
+        active:
+          - "Rondul ramane deschis pana confirmi regiunea si avizierul."
+        ready:
+          - "Ai terminat rondul? Raporteaza-mi ce ai verificat."
+        completed:
+          - "Raport primit. Straja are rondul trecut in registru."
+      stages:
+        PATROL:
+          description: "Jucatorul verifica regiunea satului si avizierul strajii."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "check_settlement"
+            - "check_guard_board"
+        RETURN:
+          description: "Jucatorul revine la garda cu raportul rondului."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_guard_duty"
+      objectives:
+        check_settlement:
+          type: "visit_region"
+          item: "type:settlement"
+          amount: 1
+          phase: "PATROL"
+          description: "Confirma rondul in regiunea satului."
+        check_guard_board:
+          type: "inspect_node"
+          item: "quest_board"
+          amount: 1
+          phase: "PATROL"
+          description: "Verifica avizierul folosit pentru notele strajii."
+        report_guard_duty:
+          type: "talk_to_npc"
+          item: "profession:guard"
+          amount: 1
+          phase: "RETURN"
+          description: "Raporteaza garzii ca rondul a fost facut."
+      rewards:
+        guard_duty_event:
+          type: "record_story_event"
+          item: "guard_duty_reported"
+          amount: 1
+          description: "Regiunea retine ca straja a facut un rond de rutina."
+          scope: "region"
+          target: "anchor:check_settlement"
+          event_type: "duty_completed"
+          event_key: "d01_guard_duty_reported"
+          title: "Rondul strajerului a fost raportat"
+          payload:
+            duty: "D01"
+            outcome: "guard_duty_reported"
+        torches:
+          type: "item"
+          item: "TORCH"
+          amount: 4
+          description: "Primesti 4 torte pentru urmatorul rond."
+    roles:
+      QUEST_GIVER:
+        description: "Garda care imparte sarcini de patrula scurte."
+        required_professions:
+          - "guard"
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care preia sarcina NPC de patrula."
+        player_role: true
+
+  B01:
+    name: "Recompensa Drumului Vechi"
+    description: "Garda publica un bounty local pentru curatarea drumului de creaturi ostile, separat de questurile clasice si de sarcinile de rutina."
+    base_type: "BOUNTY"
+    mechanic: "local_bounties"
+    progress:
+      enabled: true
+      mechanic: "local_bounties"
+      kind: "bounty"
+      label: "Bounty local"
+      singular_label: "bounty"
+      plural_label: "bounty-uri"
+    trigger_probability: 0.04
+    min_npcs: 1
+    requires_player: true
+    hint: "Garda tine o nota de recompensa pentru drumul vechi de langa sat."
+    preferred_topologies:
+      - "road"
+      - "wilderness_edge"
+      - "village_center"
+    narrative_hints:
+      - "este un bounty local, nu un quest principal"
+      - "jucatorul confirma regiunea si elimina creaturile cerute"
+      - "finalizarea scrie un story event regional despre drumul mai sigur"
+    phases:
+      INTRODUCTION: "Garda explica recompensa pusa pe creaturile de langa drum."
+      ACCEPTANCE: "Jucatorul accepta bounty-ul local."
+      HUNT: "Jucatorul patruleaza regiunea si elimina scheletii de pe drum."
+      RETURN: "Jucatorul revine la garda pentru confirmarea recompensei."
+      COMPLETION: "Garda inchide bounty-ul si noteaza drumul ca fiind mai sigur."
+    quest:
+      code: "B01"
+      giver_profession: "guard"
+      kind: "hunt"
+      category: "repeatable"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 1800
+      tags: ["bounty", "guard", "hunt", "mapping", "repeatable", "story"]
+      dialogues:
+        offer:
+          - "Am pus recompensa pe creaturile de langa drumul vechi. Confirma patrula si curata zona."
+        unavailable:
+          - "Bounty-ul acela tocmai a fost inchis. Asteptam sa vedem daca drumul ramane linistit."
+        offered:
+          - "Preiei bounty-ul pentru drumul vechi sau il las pe avizier?"
+        accepted:
+          - "Mergi pe drum, doboara scheletii si intoarce-te cu raportul."
+        active:
+          - "Bounty-ul ramane deschis pana confirmi zona si elimini amenintarea."
+        ready:
+          - "Ai curatat drumul? Raporteaza si iti platesc recompensa."
+        completed:
+          - "Recompensa e a ta. Drumul vechi e mai sigur pentru negustori."
+      stages:
+        HUNT:
+          description: "Jucatorul patruleaza regiunea si elimina creaturile cerute."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "patrol_old_road"
+            - "clear_skeletons"
+        RETURN:
+          description: "Jucatorul revine la garda pentru confirmarea bounty-ului."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_bounty"
+      objectives:
+        patrol_old_road:
+          type: "visit_region"
+          item: "type:settlement"
+          amount: 1
+          phase: "HUNT"
+          description: "Confirma patrula in regiunea satului, spre drumul vechi."
+        clear_skeletons:
+          type: "kill_mob"
+          item: "SKELETON"
+          amount: 2
+          phase: "HUNT"
+          description: "Elimina 2 scheleti de pe drumul vechi."
+        report_bounty:
+          type: "talk_to_npc"
+          item: "profession:guard"
+          amount: 1
+          phase: "RETURN"
+          description: "Raporteaza garzii ca bounty-ul a fost rezolvat."
+      rewards:
+        bounty_event:
+          type: "record_story_event"
+          item: "old_road_bounty_completed"
+          amount: 1
+          description: "Regiunea retine ca drumul vechi a fost curatat printr-un bounty local."
+          scope: "region"
+          target: "anchor:patrol_old_road"
+          event_type: "bounty_completed"
+          event_key: "b01_old_road_bounty_completed"
+          title: "Drumul vechi a fost curatat"
+          payload:
+            bounty: "B01"
+            outcome: "old_road_safer"
+        emeralds:
+          type: "item"
+          item: "EMERALD"
+          amount: 2
+          description: "Primesti 2 smaralde pentru bounty."
+    roles:
+      QUEST_GIVER:
+        description: "Garda care publica bounty-uri locale pentru drumuri nesigure."
+        required_professions:
+          - "guard"
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care accepta bounty-ul local."
+        player_role: true
+
+  B02:
+    name: "Panza de la Marginea Fermei"
+    description: "Fermierul deschide un bounty local pentru paianjenii care se aduna langa ferma, folosind aceeasi mecanica local_bounties cu un alt giver si alt reward."
+    base_type: "BOUNTY"
+    mechanic: "local_bounties"
+    progress:
+      enabled: true
+      mechanic: "local_bounties"
+      kind: "bounty"
+      label: "Bounty local"
+      singular_label: "bounty"
+      plural_label: "bounty-uri"
+    trigger_probability: 0.04
+    min_npcs: 1
+    requires_player: true
+    hint: "Fermierul a pus o mica recompensa pentru paianjenii care ameninta campurile."
+    preferred_topologies:
+      - "farm"
+      - "field"
+      - "village_edge"
+    narrative_hints:
+      - "este al doilea bounty local din aceeasi mecanica"
+      - "jucatorul verifica ferma mapata si elimina paianjenii"
+      - "finalizarea scrie un story event pe place-ul fermei"
+    phases:
+      INTRODUCTION: "Fermierul cere ajutor pentru paianjenii care s-au apropiat de hambar."
+      ACCEPTANCE: "Jucatorul accepta bounty-ul fermei."
+      HUNT: "Jucatorul verifica ferma si elimina paianjenii."
+      RETURN: "Jucatorul revine la fermier pentru confirmarea bounty-ului."
+      COMPLETION: "Fermierul inchide bounty-ul si pastreaza campurile sub observatie."
+    quest:
+      code: "B02"
+      giver_profession: "farmer"
+      kind: "hunt"
+      category: "repeatable"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 2700
+      tags: ["bounty", "farmer", "hunt", "farm", "mapping", "repeatable", "story"]
+      dialogues:
+        offer:
+          - "Am pus o recompensa pe paianjenii de langa ferma. Verifica locul si curata campul."
+        unavailable:
+          - "Bounty-ul fermei este inchis pentru moment. Vedem daca paianjenii se intorc."
+        offered:
+          - "Preiei bounty-ul fermei sau il las pana vine altcineva?"
+        accepted:
+          - "Mergi la ferma, doboara paianjenii si intoarce-te cu vestea."
+        active:
+          - "Campul nu e in siguranta pana verifici ferma si elimini paianjenii."
+        ready:
+          - "Ai curatat marginea fermei? Spune-mi si iti dau recompensa."
+        completed:
+          - "Bine lucrat. Ferma respira mai usor in seara asta."
+      stages:
+        HUNT:
+          description: "Jucatorul verifica ferma si elimina creaturile cerute."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_farm_edge"
+            - "clear_farm_spiders"
+        RETURN:
+          description: "Jucatorul revine la fermier pentru confirmarea bounty-ului."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_farm_bounty"
+      objectives:
+        visit_farm_edge:
+          type: "visit_place"
+          item: "tag:farm"
+          amount: 1
+          phase: "HUNT"
+          description: "Verifica ferma mapata unde s-au adunat paianjenii."
+        clear_farm_spiders:
+          type: "kill_mob"
+          item: "SPIDER"
+          amount: 2
+          phase: "HUNT"
+          description: "Elimina 2 paianjeni de la marginea fermei."
+        report_farm_bounty:
+          type: "talk_to_npc"
+          item: "profession:farmer"
+          amount: 1
+          phase: "RETURN"
+          description: "Raporteaza fermierului ca bounty-ul a fost rezolvat."
+      rewards:
+        bounty_event:
+          type: "record_story_event"
+          item: "farm_spiders_bounty_completed"
+          amount: 1
+          description: "Ferma retine ca paianjenii au fost curatati printr-un bounty local."
+          scope: "place"
+          target: "anchor:visit_farm_edge"
+          event_type: "bounty_completed"
+          event_key: "b02_farm_spiders_bounty_completed"
+          title: "Ferma a fost curatata de paianjeni"
+          payload:
+            bounty: "B02"
+            outcome: "farm_edge_safer"
+        wheat:
+          type: "item"
+          item: "WHEAT"
+          amount: 6
+          description: "Primesti 6 grau pentru bounty."
+    roles:
+      QUEST_GIVER:
+        description: "Fermierul care publica bounty-uri locale pentru amenintari din jurul fermei."
+        required_professions:
+          - "farmer"
+        preferred_professions:
+          - "farmer"
+        preferred_traits:
+          - "patient"
+      HERO:
+        description: "Jucatorul care accepta bounty-ul fermei."
+        player_role: true
+
+  E01:
+    name: "Alarma Fantanii din Piata"
+    description: "Un eveniment local cere verificarea pietei si o reparatie temporara, folosind progres generic fara sa devina quest clasic."
+    base_type: "WORLD_EVENT"
+    mechanic: "village_events"
+    progress:
+      enabled: true
+      mechanic: "village_events"
+      kind: "event"
+      label: "Eveniment local"
+      singular_label: "eveniment"
+      plural_label: "evenimente"
+    trigger_probability: 0.03
+    min_npcs: 1
+    requires_player: true
+    hint: "Garda are o nota urgenta despre fantana din piata."
+    preferred_topologies:
+      - "market"
+      - "village_center"
+    narrative_hints:
+      - "este un eveniment local temporar, nu un quest principal"
+      - "jucatorul verifica piata si avizierul, apoi aduce materiale simple pentru reparatie"
+      - "finalizarea scrie un story event pe place-ul pietei"
+    phases:
+      INTRODUCTION: "Garda explica alarma locala din piata."
+      ACCEPTANCE: "Jucatorul accepta sa verifice evenimentul local."
+      CHECK: "Jucatorul verifica piata si nota de pe avizier."
+      RETURN: "Jucatorul revine cu materiale pentru o reparatie temporara."
+      COMPLETION: "Garda marcheaza evenimentul ca stabilizat."
+    quest:
+      code: "E01"
+      giver_profession: "guard"
+      kind: "event"
+      category: "repeatable"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 2400
+      tags: ["event", "guard", "market", "mapping", "repeatable", "story"]
+      dialogues:
+        offer:
+          - "Avem o alarma la fantana din piata. Verifica avizierul si adu cateva pietre pentru o reparatie rapida."
+        unavailable:
+          - "Evenimentul din piata a fost stabilizat de curand. Mai asteptam inainte sa redeschidem nota."
+        offered:
+          - "Preiei evenimentul din piata sau las nota pe avizier?"
+        accepted:
+          - "Mergi in piata, verifica nota si adu piatra pentru reparatia temporara."
+        active:
+          - "Evenimentul ramane deschis pana confirmi piata si materialele."
+        ready:
+          - "Ai verificat piata si ai materialele? Raporteaza-mi."
+        completed:
+          - "Bine. Notez ca fantana din piata este stabilizata pana la reparatia mare."
+      stages:
+        CHECK:
+          description: "Jucatorul verifica piata si avizierul evenimentului."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_event_market"
+            - "inspect_event_board"
+        RETURN:
+          description: "Jucatorul revine la garda cu materialele de reparatie."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "deliver_repair_stone"
+      objectives:
+        visit_event_market:
+          type: "visit_place"
+          item: "tag:market"
+          amount: 1
+          phase: "CHECK"
+          description: "Verifica piata unde a fost semnalata alarma."
+        inspect_event_board:
+          type: "inspect_node"
+          item: "quest_board"
+          amount: 1
+          phase: "CHECK"
+          description: "Citeste nota de pe avizier despre fantana."
+        deliver_repair_stone:
+          type: "deliver_to_npc"
+          item: "COBBLESTONE"
+          amount: 2
+          phase: "RETURN"
+          description: "Adu 2 pietre garzii pentru reparatia temporara."
+      rewards:
+        fountain_event:
+          type: "record_story_event"
+          item: "market_fountain_stabilized"
+          amount: 1
+          description: "Piata retine ca fantana a fost stabilizata temporar."
+          scope: "place"
+          target: "anchor:visit_event_market"
+          event_type: "event_resolved"
+          event_key: "e01_market_fountain_stabilized"
+          title: "Fantana din piata a fost stabilizata"
+          payload:
+            event: "E01"
+            outcome: "market_fountain_stabilized"
+        torches:
+          type: "item"
+          item: "TORCH"
+          amount: 2
+          description: "Primesti 2 torte pentru ajutorul rapid."
+    roles:
+      QUEST_GIVER:
+        description: "Garda care coordoneaza evenimentele locale urgente."
+        required_professions:
+          - "guard"
+        preferred_professions:
+          - "guard"
+        preferred_traits:
+          - "duty_bound"
+          - "brave"
+      HERO:
+        description: "Jucatorul care stabilizeaza evenimentul local."
+        player_role: true
+
+  T01:
+    name: "Indrumarea Avizierului"
+    description: "Un tutorial scurt de onboarding pentru inspectie, tracking si raportare, expus ca progres generic fara sa fie quest clasic."
+    base_type: "TUTORIAL"
+    mechanic: "onboarding"
+    progress:
+      enabled: true
+      mechanic: "onboarding"
+      kind: "tutorial"
+      label: "Tutoriale"
+      singular_label: "tutorial"
+      plural_label: "tutoriale"
+    trigger_probability: 0.05
+    min_npcs: 1
+    requires_player: true
+    hint: "Preotul iti poate arata cum se foloseste avizierul satului."
+    preferred_topologies:
+      - "market"
+      - "village_center"
+    narrative_hints:
+      - "este un onboarding jucabil pentru verificarea avizierului"
+      - "jucatorul invata sa urmareasca un obiectiv mapat si sa revina la giver"
+      - "finalizarea inregistreaza un story event discret pe piata"
+    phases:
+      INTRODUCTION: "Preotul explica de ce avizierul este punctul sigur pentru cereri locale."
+      ACCEPTANCE: "Jucatorul accepta tutorialul scurt de orientare."
+      LEARN: "Jucatorul merge in piata si inspecteaza avizierul."
+      RETURN: "Jucatorul revine la preot pentru confirmare."
+      COMPLETION: "Tutorialul este marcat ca parcurs."
+    quest:
+      code: "T01"
+      giver_profession: "priest"
+      kind: "tutorial"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["tutorial", "onboarding", "market", "mapping", "story"]
+      dialogues:
+        offer:
+          - "Daca esti nou in sat, incepe cu avizierul. Iti arat cum urmaresti o cerere si cum raportezi inapoi."
+        offered:
+          - "Vrei o indrumare scurta despre avizier?"
+        accepted:
+          - "Mergi in piata, verifica avizierul, apoi intoarce-te la mine."
+        active:
+          - "Avizierul din piata este primul loc pe care trebuie sa il inspectezi."
+        ready:
+          - "Ai vazut avizierul? Spune-mi ce ai invatat."
+        completed:
+          - "Acum stii unde apar cererile satului. Pastreaza busola, te va ajuta sa te orientezi."
+      stages:
+        LEARN:
+          description: "Jucatorul gaseste piata si inspecteaza avizierul."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_tutorial_market"
+            - "inspect_tutorial_board"
+        RETURN:
+          description: "Jucatorul revine la preot pentru confirmarea tutorialului."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "report_tutorial"
+      objectives:
+        visit_tutorial_market:
+          type: "visit_place"
+          item: "tag:market"
+          amount: 1
+          phase: "LEARN"
+          description: "Gaseste piata satului."
+        inspect_tutorial_board:
+          type: "inspect_node"
+          item: "quest_board"
+          amount: 1
+          phase: "LEARN"
+          description: "Inspecteaza avizierul cu cereri locale."
+        report_tutorial:
+          type: "talk_to_npc"
+          item: "profession:priest"
+          amount: 1
+          phase: "RETURN"
+          description: "Revino la preot si confirma ca ai inteles avizierul."
+      rewards:
+        onboarding_event:
+          type: "record_story_event"
+          item: "tutorial_board_checked"
+          amount: 1
+          description: "Piata retine ca jucatorul a parcurs tutorialul avizierului."
+          scope: "place"
+          target: "anchor:visit_tutorial_market"
+          event_type: "tutorial_completed"
+          event_key: "t01_onboarding_board_checked"
+          title: "Avizierul a fost explicat"
+          payload:
+            tutorial: "T01"
+            outcome: "quest_board_understood"
+        compass:
+          type: "item"
+          item: "COMPASS"
+          amount: 1
+          description: "Primesti o busola pentru orientare."
+    roles:
+      QUEST_GIVER:
+        description: "Preotul care explica regulile locale si orientarea prin avizier."
+        required_professions:
+          - "priest"
+        preferred_professions:
+          - "priest"
+        preferred_traits:
+          - "devout"
+          - "wise"
+      HERO:
+        description: "Jucatorul care invata sa urmareasca progresul generic."
+        player_role: true
+
+  R01:
+    name: "Luminile Vechiului Altar"
+    description: "Un ritual local scurt in care jucatorul pregateste lumanari, gaseste altarul semantic si confirma ceremonia la preot."
+    base_type: "RITUAL"
+    mechanic: "village_rituals"
+    progress:
+      enabled: true
+      mechanic: "village_rituals"
+      kind: "ritual"
+      label: "Ritualuri locale"
+      singular_label: "ritual"
+      plural_label: "ritualuri"
+    trigger_probability: 0.025
+    min_npcs: 1
+    requires_player: true
+    hint: "Preotul pregateste luminile vechiului altar."
+    preferred_topologies:
+      - "ritual"
+      - "village_center"
+    narrative_hints:
+      - "este un ritual local temporar, nu un quest principal"
+      - "jucatorul strange lumanari, ajunge la altar si inspecteaza cercul ritualic"
+      - "finalizarea scrie un story event pe place-ul altarului"
+    phases:
+      INTRODUCTION: "Preotul explica ritualul de lumina pentru altarul satului."
+      ACCEPTANCE: "Jucatorul accepta sa ajute la pregatirea ritualului."
+      PREPARE: "Jucatorul strange lumanarile necesare."
+      CEREMONY: "Jucatorul merge la altar si inspecteaza cercul ritualic."
+      RETURN: "Jucatorul revine la preot pentru confirmarea ceremoniei."
+      COMPLETION: "Ritualul este consemnat in povestea locala."
+    quest:
+      code: "R01"
+      giver_profession: "priest"
+      kind: "ritual"
+      category: "repeatable"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      repeatable: true
+      cooldown_seconds: 3600
+      tags: ["ritual", "priest", "altar", "mapping", "repeatable", "story"]
+      dialogues:
+        offer:
+          - "Altarul vechi trebuie luminat inainte de lasarea serii. Adu lumanari, verifica locul si intoarce-te la mine."
+        unavailable:
+          - "Ritualul de lumina a fost facut de curand. Altarul mai pastreaza caldura lumanarilor."
+        offered:
+          - "Vrei sa ajuti la ritualul altarului?"
+        accepted:
+          - "Pregateste doua lumanari, mergi la altar si inspecteaza cercul ritualic."
+        active:
+          - "Ritualul nu poate incepe fara lumanari si fara verificarea altarului."
+        ready:
+          - "Ai verificat altarul si ai lumanarile? Raporteaza-mi."
+        completed:
+          - "Lumina altarului a fost aprinsa. Satul isi va aminti ajutorul tau."
+      stages:
+        PREPARE:
+          description: "Jucatorul pregateste lumanarile ritualului."
+          completion_mode: "all_objectives"
+          next_stage: "CEREMONY"
+          objectives:
+            - "collect_ritual_candles"
+        CEREMONY:
+          description: "Jucatorul ajunge la altar si inspecteaza cercul ritualic."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          objectives:
+            - "visit_ritual_altar"
+            - "inspect_ritual_circle"
+        RETURN:
+          description: "Jucatorul revine la preot si preda lumanarile."
+          completion_mode: "manual_turn_in"
+          objectives:
+            - "deliver_ritual_candles"
+      objectives:
+        collect_ritual_candles:
+          type: "collect_item"
+          item: "CANDLE"
+          amount: 2
+          phase: "PREPARE"
+          description: "Pregateste 2 lumanari pentru ritual."
+        visit_ritual_altar:
+          type: "visit_place"
+          item: "tag:ritual"
+          amount: 1
+          phase: "CEREMONY"
+          description: "Ajungi la altarul semantic al satului."
+        inspect_ritual_circle:
+          type: "inspect_node"
+          item: "ritual_circle"
+          amount: 1
+          phase: "CEREMONY"
+          description: "Inspecteaza cercul ritualic de langa altar."
+        deliver_ritual_candles:
+          type: "deliver_to_npc"
+          item: "CANDLE"
+          amount: 2
+          phase: "RETURN"
+          description: "Preda 2 lumanari preotului pentru inchiderea ritualului."
+      rewards:
+        ritual_event:
+          type: "record_story_event"
+          item: "ritual_lights_kindled"
+          amount: 1
+          description: "Altarul retine ca ritualul luminilor a fost implinit."
+          scope: "place"
+          target: "anchor:visit_ritual_altar"
+          event_type: "ritual_completed"
+          event_key: "r01_ritual_lights_kindled"
+          title: "Luminile altarului au fost aprinse"
+          payload:
+            ritual: "R01"
+            outcome: "altar_lit"
+        blessing:
+          type: "item"
+          item: "EXPERIENCE_BOTTLE"
+          amount: 1
+          description: "Primesti o sticla de experienta pentru ajutorul ritualic."
+    roles:
+      QUEST_GIVER:
+        description: "Preotul care coordoneaza ritualurile locale ale satului."
+        required_professions:
+          - "priest"
+        preferred_professions:
+          - "priest"
+        preferred_traits:
+          - "devout"
+          - "honorable"
+      HERO:
+        description: "Jucatorul care pregateste si confirma ritualul."
         player_role: true

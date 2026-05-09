@@ -250,6 +250,35 @@ Ce verifici pentru un NPC:
 - este spawnat sau asteapta chunk-ul corect
 - nu exista duplicate in acelasi chunk
 
+## Smoke test GUI pentru lucru alternat
+
+Ruleaza acest set dupa ce mapping-ul, questurile/progresiile si reload-ul au trecut. Scopul este sa verifici ca GUI-ul vede aceleasi date ca serviciile text si auditul.
+
+```text
+/ainpc gui
+/ainpc gui quest all
+/ainpc gui quest quest
+/ainpc gui quest contract
+/ainpc gui quest duty
+/ainpc gui quest bounty
+/ainpc gui quest event
+/ainpc gui quest tutorial
+/ainpc gui quest ritual
+/quest gui all
+/ainpc gui world
+/ainpc gui routine
+/ainpc gui audit
+/ainpc gui debug
+```
+
+Ce verifici:
+
+- filtrele afiseaza aceleasi intrari ca `/ainpc progression definitions <filter>`;
+- detaliile arata stage-ul curent, obiectivele si tracking-ul;
+- click-urile pentru status/track folosesc comenzile validate si nu produc erori in consola;
+- ecranele admin nu ruleaza actiuni destructive fara confirmare;
+- dupa restart, aceleasi intrari reapar cu status coerent.
+
 Pentru NPC-uri create automat din villageri:
 
 - verifica daca villagerul are profesie Minecraft relevanta
@@ -450,6 +479,15 @@ Tabele relevante:
 `/ainpc debugdump quest` exporta un raport dedicat in `quest-audit-report.txt`, definitiile de quest incarcate in `loaded-quest-definitions.json`, progresul generic in `player-progressions.json`, progresul complet din `player_quests` in `player-quest-progress.json`, ancorele din `quest_anchor_bindings` in `quest-anchor-bindings.json`, story state-ul persistent din `region_story_state`/`place_story_state` in `story-states.json` si evenimentele narative din `story_events` in `story-events.json`, inclusiv agregari utile pentru inspectie. `loaded-quest-definitions.json` include si `progression_definitions`, lista read-only generata prin `ProgressionService`. `player-progressions.json` este generat prin `ProgressionRepository` si `StoredProgressionSummary`, ca view generic peste `player_quests`; acelasi view poate fi inspectat in joc prin `/ainpc progression stored ...`, `/ainpc contract stored ...` si sumarizat in `/ainpc audit quest`. Progresul exportat include `current_phase` si `current_stage_id`, iar raportul verifica referintele `phase`/`stage` ale obiectivelor etapizate si JSON-ul din story state/events.
 
 `/ainpc debugdump story` genereaza doar partea dedicata de story observability: `story-states.json` si `story-events.json`, pe langa fisierele comune de context ale dump-ului.
+
+`/ainpc debugdump world` si `all` includ `spawn-batches.json`; pasii din `spawn_batch_steps` expun acum si `household_id`, ca un batch settlement sa poata fi legat direct de household-ul persistent. Dry-run-urile apar in acelasi export doar daca `spawn.batches.track_dry_runs` este activ.
+La rerularea aceluiasi `batch_key`, pasii vechi sunt stersi cand batch-ul porneste din nou doar daca batch-ul vechi nu este `RUNNING` cu pasi creatori jurnalizati; in acel caz rerularea este blocata ca sa nu se piarda rollback-ul. Daca un household esueaza, rollback-ul settlement foloseste `created_npc_ids` din pasii curenti exportati in `spawn-batches.json`.
+Pentru gasirea rapida a cheilor, `/ainpc repair batch list problem` listeaza ultimele batch-uri `RUNNING`, `FAILED` sau `ROLLED_BACK`; filtrele acceptate sunt `problem`, `all`, `failed`, `running`, `rolled_back` si `succeeded`. Batch-urile `RUNNING` care au pasi cu `created_npc_ids` apar cu `rollback_pending_steps`.
+Pentru inspectie fara dump, `/ainpc repair batch <batchKey> inspect` afiseaza pasii din `spawn_batch_steps`, cu `household_id`, status, NPC-uri create/reutilizate si sumar de warning/error. Pentru batch-uri `RUNNING` blocate la retry, afiseaza explicit cati pasi creatori sunt jurnalizati si cate ID-uri sunt parsabile.
+Pentru un batch ramas esuat dupa comanda initiala, ruleaza `/ainpc repair batch <batchKey> dryrun`; `apply` sterge doar NPC-urile listate in `created_npc_ids`, refuza batch-urile finalizate cu `SUCCEEDED`, recalculeaza `resident_count` pentru household-urile afectate si marcheaza pasii cu NPC-uri create ca `ROLLED_BACK`.
+Cand batch-ul este `RUNNING`, are pasi creatori, dar nu are niciun ID parsabil pentru rollback automat, `/ainpc repair batch <batchKey> mark-failed` il poate inchide manual ca `FAILED`; comanda nu sterge NPC-uri, nu modifica pasii si refuza cazul in care exista ID-uri parsabile.
+`/ainpc audit db` verifica si consistenta intre `spawn_batches.status` si `spawn_batch_steps.status`, inclusiv batch-uri `RUNNING` cu NPC-uri create care necesita repair inainte de retry si batch-uri `ROLLED_BACK` cu pasi creatori nemarcati rollback.
+Daca auditul gaseste doar pasi nemarcati pentru un batch deja `ROLLED_BACK`, fara NPC-uri ramase de sters, foloseste `/ainpc repair batch <batchKey> mark-steps`; acest mod nu sterge NPC-uri.
 
 Atentie:
 

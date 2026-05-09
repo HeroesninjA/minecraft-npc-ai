@@ -1,6 +1,6 @@
 # ProgressionService
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -254,15 +254,25 @@ Implementare initiala in repo:
 - `ProgressionSelector` normalizeaza selectori goi, `tracked/current/curent/urmarit`, selectori simpli, `mechanic:definition` si `pack:mechanic:definition`;
 - `ProgressionDefinition` modeleaza read-only definitiile jucabile din feature packs;
 - `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista initial ca snapshot-uri compatibile peste datele produse inca de `ScenarioEngine`;
+- `ProgressionGuiEntry` expune comenzi kind-aware pentru GUI, astfel incat actiunile pe contracte, duty-uri, bounty-uri, evenimente, tutoriale si ritualuri folosesc fatada corecta;
 - `ProgressionRepository` citeste read-only tabela compatibila `player_quests` si intoarce `StoredProgression`, cu metadata de definitie rezolvata din `ProgressionDefinition`;
+- `ProgressionRepository` citeste read-only si `quest_anchor_bindings` prin `ProgressionAnchorBinding`, inclusiv filtrare dupa player, template sau ancora world (`region`, `place`, `node`);
+- `StoredProgression` include metadata generica `category`, `scenarioKind` si `baseType`, astfel incat comenzile `stored`, filtrele si debugdump-ul sa poata distinge contractele de investigatie de alte contracte;
+- `ProgressionFilter` centralizeaza filtrele fuzzy si filtrele explicite `kind:`, `scenario:`, `base:`, `category:`, `mechanic:`, `status:`, `tracked:` si `resolved:` pentru definitii si progresii persistate;
 - `ProgressionService.getStoredProgressions()` expune repository-ul generic pentru audit/debugdump si pentru viitoarea migrare;
-- `StoredProgressionSummary` agrega read-only randurile persistate dupa jucator, status, pack, template, mecanica si kind;
+- `ProgressionService.getAnchorBindingsForAnchor(...)` expune ancore locale pentru GUI-uri world/story fara query DB direct in inventar;
+- `StoredProgressionSummary` agrega read-only randurile persistate dupa jucator, status, pack, template, mecanica, kind, category, scenarioKind si baseType;
 - `/ainpc progression definitions [filter]` listeaza definitiile generice de progres;
 - `/ainpc contract definitions [filter]` listeaza aceeasi sursa, filtrata implicit pe contracte cand nu primeste filtru;
 - `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresul persistent citit prin `ProgressionRepository`;
 - `/ainpc contract stored ...` foloseste acelasi view, filtrat implicit pe contracte;
+- exemple de filtre stabile: `scenario:investigation`, `base:TRADE_DEAL`, `mechanic:village_contracts`, `kind:duty`, `base:DUTY`, `mechanic:npc_duties`, `kind:bounty`, `base:BOUNTY`, `mechanic:local_bounties`, `kind:event`, `base:WORLD_EVENT`, `mechanic:village_events`, `kind:tutorial`, `base:TUTORIAL`, `mechanic:onboarding`, `kind:ritual`, `base:RITUAL`, `mechanic:village_rituals`, `status:active`, `tracked:true`, `resolved:false`;
 - `/ainpc audit quest` foloseste `StoredProgressionSummary` pentru sumar si avertizari despre progresii persistate fara definitie/mecanica/status;
 - `/ainpc debugdump quest` include `progression_definitions` in `loaded-quest-definitions.json`;
+- randurile de obiective din `loaded-quest-definitions.json` includ `normalized_type`, `semantic_anchor_type`, `semantic_reference_prefix` si `semantic_reference_value`, utile pentru a vedea direct ce mapping cere un contract ca `C02`;
+- `world-mapping.json` include `semantic_index`, util pentru a verifica daca tokenii folositi de obiective (`market`, `quest_board`) exista in mapping;
+- `/ainpc audit quest` foloseste acest index semantic pentru avertizari despre obiective mapate care nu pot fi satisfacute de world mapping-ul curent;
+- `quest-audit-report.txt` din `/ainpc debugdump quest` valideaza aceeasi suprafata, inclusiv definitii non-`QUEST` cu progres activ;
 - `/ainpc contract ...` foloseste parserul pentru a transforma selectorii scurti in forma `contract:<selector>`.
 
 ## Persistenta
@@ -314,7 +324,7 @@ Starea obiectivului este derivata din progresul numeric, statusul progresiei si 
 | `completed` | obiectivul a atins valoarea ceruta sau progresia este completata |
 | `failed` | progresia a esuat sau a fost abandonata |
 
-Aceeasi logica trebuie folosita pentru questuri, contracte, datorii si evenimente.
+Aceeasi logica trebuie folosita pentru questuri, contracte, datorii, bounty-uri, evenimente, tutoriale si ritualuri.
 
 ## Mai multe mecanici in acelasi addon
 
@@ -327,6 +337,31 @@ Un addon poate declara simultan mai multe mecanici bazate pe progres. Regulile r
 - selectorii trebuie sa accepte fie codul definitiei, fie cheia completa `<pack>:<mechanic>:<definition>`;
 - GUI-ul trebuie sa grupeze progresiile dupa mecanica, nu doar dupa status.
 
+## Contract GUI
+
+`ProgressionGuiSnapshot` este contractul principal dintre runtime-ul generic si GUI. Quest GUI, NPC interaction GUI si viitoarele ecrane de admin trebuie sa consume acelasi model, astfel incat mecanicile noi sa nu ceara cate o implementare vizuala separata.
+
+Reguli:
+
+- snapshot-ul este read-only si poate fi regenerat dupa reload;
+- intrarile includ `kind`, `baseType`, `mechanic`, `definitionId`, status, stage curent, obiective si tracking;
+- filtrele GUI folosesc aceeasi semantica precum `ProgressionFilter`;
+- actiunile GUI pentru track/status/abandon trec prin `ProgressionService` sau fatada mecanicii, nu prin mutatii directe pe DB;
+- un addon nou devine vizibil in GUI daca defineste corect metadata de progres si poate fi selectat prin filtrele existente.
+
+Comenzi de verificare:
+
+```text
+/ainpc gui quest all
+/ainpc gui quest quest
+/ainpc gui quest contract
+/ainpc gui quest duty
+/ainpc gui quest bounty
+/ainpc gui quest event
+/ainpc gui quest tutorial
+/ainpc gui quest ritual
+```
+
 Exemplu practic intr-un addon medieval:
 
 | Mechanic | Rol | Limita |
@@ -336,6 +371,8 @@ Exemplu practic intr-un addon medieval:
 | `delivery_contracts` | contracte de negustor | 3 active |
 | `guard_duties` | sarcini de garda | 1 activ |
 | `village_events` | evenimente locale temporare | 2 active |
+| `onboarding` | tutoriale scurte | 1 activ |
+| `village_rituals` | ritualuri locale | 1 activ |
 | `daily_tasks` | treburi repetabile | 5 active |
 
 Implementare initiala in repo:
@@ -345,10 +382,20 @@ Implementare initiala in repo:
 - availability-ul verifica acum si limita `max_active` a mecanicii, pe langa limitele legacy `quest.max_active`;
 - addonul medieval foloseste simultan `main_quests`, `side_quests` si `village_contracts`;
 - `C01` este primul exemplu concret de progres non-`QUEST`: un scenariu `TRADE_DEAL` expus ca `contract` prin `village_contracts`.
-- log/status/progress afiseaza metadata mecanicii, iar `quest log` poate filtra initial `quest` si `contract`.
-- selectorii pentru status/progress/track/abandon accepta forme cu mecanica, de exemplu `village_contracts:C01`.
-- exista fatade initiale `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...` si `/contract ...`, toate rutate catre acelasi runtime.
-- comenzile admin `/ainpc progression stored ...` si `/ainpc contract stored ...` inspecteaza progresiile persistate fara sa modifice DB-ul.
+- `C02` extinde cazul non-`QUEST` peste mapping-ul demo: un contract `TRADE_DEAL` care foloseste `visit_place tag:market`, `inspect_node quest_board`, selectorii `/ainpc contract ...` si story event pe place.
+- `D01` adauga a doua familie non-quest: o sarcina `DUTY` prin `npc_duties`, selectorii `/ainpc duty ...`, filtrele `kind:duty`/`mechanic:npc_duties` si story event regional.
+- `B01` adauga mecanica de bounty local: `BOUNTY` prin `local_bounties`, selectorii `/ainpc bounty ...`, filtrele `kind:bounty`/`mechanic:local_bounties` si story event regional.
+- `B02` demonstreaza a doua definitie in aceeasi mecanica `local_bounties`: bounty `BOUNTY` dat de fermier, ancorat pe `tag:farm`, cu cooldown si reward proprii.
+- `E01` adauga mecanica de eveniment local: `WORLD_EVENT` prin `village_events`, selectorii `/ainpc event ...`, filtrele `kind:event`/`mechanic:village_events` si story event pe place.
+- `T01` adauga mecanica de onboarding: `TUTORIAL` prin `onboarding`, selectorii `/ainpc tutorial ...`, filtrele `kind:tutorial`/`mechanic:onboarding` si story event pe place.
+- `R01` adauga mecanica de ritual local: `RITUAL` prin `village_rituals`, selectorii `/ainpc ritual ...`, filtrele `kind:ritual`/`mechanic:village_rituals`, obiective mapate pe altar si story event pe place.
+- Aliasurile pentru mecanici nu sunt doar filtre de afisare: selectia `nearest`, `accept` si `decline` pentru contracte, sarcini, bounty-uri, evenimente, tutoriale si ritualuri foloseste `progressionKind`, astfel incat un NPC cu mai multe definitii sa nu ofere tipul gresit prin alias.
+- `QuestScenarioContract` recunoaste acum `investigation` ca tip runtime distinct, astfel incat definitiile generice sa nu raporteze contractele de investigatie ca `custom`.
+- log/status/progress afiseaza metadata mecanicii, iar `quest log` poate filtra initial `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`.
+- `progression definitions` si `progression stored` accepta filtre explicite pentru metadata, de exemplu `scenario:investigation` si `base:TRADE_DEAL`.
+- selectorii pentru status/progress/track/abandon accepta forme cu mecanica, de exemplu `village_contracts:C01`, `npc_duties:D01`, `local_bounties:B01`, `local_bounties:B02`, `village_events:E01`, `onboarding:T01` si `village_rituals:R01`.
+- exista fatade initiale `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`, `/ainpc duty ...`, `/duty ...`, `/ainpc bounty ...`, `/bounty ...`, `/ainpc event ...`, `/event ...`, `/ainpc tutorial ...`, `/tutorial ...`, `/ainpc ritual ...` si `/ritual ...`, toate rutate catre acelasi runtime.
+- comenzile admin `/ainpc progression stored ...` si aliasurile `contract|duty|bounty|event|tutorial|ritual stored ...` inspecteaza progresiile persistate fara sa modifice DB-ul.
 - `/ainpc debugdump quest` exporta initial si `player-progressions.json`, pentru inspectie generica fara dependenta semantica de numele `quest`.
 
 ## Migrare incrementala recomandata
@@ -361,12 +408,12 @@ Implementare initiala in repo:
 5. Extrage treptat metodele de progres din `ScenarioEngine` in `ProgressionService`. Implementat initial: exista `ProgressionService` ca strat de rutare/delegare pentru comenzile si GUI-urile bazate pe selector.
 6. Adauga snapshot-uri generic numite: `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry`.
    Implementat initial: `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista ca wrapper-e compatibile peste status/progress/GUI, iar Quest GUI consuma deja snapshot-ul generic expus de `ProgressionService`.
-7. Adauga exporturi generic numite pentru observabilitate. Implementat initial: `ProgressionRepository`, `StoredProgressionSummary` si `player-progressions.json` peste `player_quests`.
+7. Adauga exporturi generic numite pentru observabilitate. Implementat initial: `ProgressionRepository`, `StoredProgressionSummary` si `player-progressions.json` peste `player_quests`, cu agregari pe metadata generica.
 8. Abia apoi planifica migrari DB din `player_quests` catre `player_progressions`.
 
 ## Ce nu trebuie facut
 
-- Nu duplica runtime separat pentru contracte, duty si events.
+- Nu duplica runtime separat pentru contracte, duty, bounty si events.
 - Nu forta toate scenariile sa apara in quest log.
 - Nu lasa AI-ul sa seteze direct status, obiective sau rewards.
 - Nu lega progresul de numele vizibil "quest".
@@ -374,7 +421,7 @@ Implementare initiala in repo:
 
 ## Legaturi cu documentele existente
 
-- `questuri-avansate.md` ramane ghidul pentru evolutia questurilor concrete.
+- `questuri-avansate-v2.md` ramane ghidul pentru evolutia questurilor concrete.
 - `lucru-alternat-quest-mapping-progression.md` stabileste cadenta de lucru: mapping concret, quest/contract mic, smoke test, observabilitate si apoi extractie mica spre `ProgressionService`.
 - `quest-anchor-bindings.md` ramane contractul pentru ancorele semantice existente.
 - `strategie-plugin-modular-si-scenarii-programabile.md` descrie directia pentru addonuri si scenarii.

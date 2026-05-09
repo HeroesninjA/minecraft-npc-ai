@@ -43,7 +43,8 @@ public class DebugGui implements GuiScreen {
         dumpButton(context, 11, "npc", Material.VILLAGER_SPAWN_EGG, "&eDebugdump NPC");
         dumpButton(context, 12, "world", Material.COMPASS, "&bDebugdump world");
         dumpButton(context, 13, "quest", Material.WRITABLE_BOOK, "&dDebugdump quest");
-        dumpButton(context, 14, "openai", Material.ENDER_EYE, "&aDebugdump OpenAI");
+        dumpButton(context, 14, "story", Material.AMETHYST_SHARD, "&dDebugdump story");
+        dumpButton(context, 15, "openai", Material.ENDER_EYE, "&aDebugdump OpenAI");
 
         context.button(16, GuiButton.enabled(
             GuiItemFactory.item(Material.LIME_DYE, "&aTest OpenAI", "&7Ruleaza /ainpc test."),

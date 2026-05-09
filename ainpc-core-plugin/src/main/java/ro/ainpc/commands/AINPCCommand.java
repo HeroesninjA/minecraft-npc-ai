@@ -8,12 +8,16 @@ import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.debug.DebugDumpService;
+import ro.ainpc.debug.WorldMappingSemanticIndex;
 import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.gui.GuiKey;
@@ -25,10 +29,12 @@ import ro.ainpc.routine.RoutineAssignment;
 import ro.ainpc.routine.RoutineTickSummary;
 import ro.ainpc.spawn.HouseAllocation;
 import ro.ainpc.spawn.HouseAllocationPlanner;
+import ro.ainpc.spawn.HouseholdPersistenceService;
 import ro.ainpc.spawn.HouseholdSpawnResult;
 import ro.ainpc.spawn.NpcSpawnPlan;
 import ro.ainpc.spawn.NpcSpawnResult;
 import ro.ainpc.spawn.SettlementSpawnResult;
+import ro.ainpc.spawn.SpawnBatchTracker;
 import ro.ainpc.story.PlaceStoryState;
 import ro.ainpc.story.RegionStoryState;
 import ro.ainpc.story.StoryContextSnapshot;
@@ -63,6 +69,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -78,6 +85,10 @@ public class AINPCCommand implements CommandExecutor {
     private static final int NPC_WORLD_BINDING_DEFAULT_LIMIT = 10;
     private static final int NPC_WORLD_BINDING_MAX_LIMIT = 50;
     private static final int NPC_WORLD_BINDING_LOOKUP_LIMIT = 500;
+    private static final int HOUSEHOLD_DEFAULT_LIMIT = 10;
+    private static final int HOUSEHOLD_MAX_LIMIT = 50;
+    private static final int SPAWN_BATCH_DEFAULT_LIMIT = 10;
+    private static final int SPAWN_BATCH_STEP_PREVIEW_LIMIT = 12;
     private static final int PROGRESSION_STORED_DEFAULT_LIMIT = 12;
     private static final int PROGRESSION_STORED_MAX_LIMIT = 50;
     private static final DateTimeFormatter STORY_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -103,6 +114,71 @@ public class AINPCCommand implements CommandExecutor {
     private record QuestLogRequest(Player player, String filter) {
     }
 
+    private record HouseholdMetadataBackfillInputs(
+        List<HouseholdPersistenceService.MetadataResidentBackfillInput> inputs,
+        List<String> warnings
+    ) {
+    }
+
+    private record ProgressionAliasConfig(
+        String command,
+        String kind,
+        String displayLabel,
+        String shortSelectorExample,
+        String mechanicExample,
+        String baseTypeExample
+    ) {
+    }
+
+    private static final ProgressionAliasConfig CONTRACT_ALIAS = new ProgressionAliasConfig(
+        "contract",
+        "contract",
+        "contract",
+        "C01",
+        "village_contracts",
+        "TRADE_DEAL"
+    );
+    private static final ProgressionAliasConfig DUTY_ALIAS = new ProgressionAliasConfig(
+        "duty",
+        "duty",
+        "sarcina",
+        "D01",
+        "npc_duties",
+        "DUTY"
+    );
+    private static final ProgressionAliasConfig BOUNTY_ALIAS = new ProgressionAliasConfig(
+        "bounty",
+        "bounty",
+        "bounty",
+        "B01",
+        "local_bounties",
+        "BOUNTY"
+    );
+    private static final ProgressionAliasConfig EVENT_ALIAS = new ProgressionAliasConfig(
+        "event",
+        "event",
+        "eveniment",
+        "E01",
+        "village_events",
+        "WORLD_EVENT"
+    );
+    private static final ProgressionAliasConfig TUTORIAL_ALIAS = new ProgressionAliasConfig(
+        "tutorial",
+        "tutorial",
+        "tutorial",
+        "T01",
+        "onboarding",
+        "TUTORIAL"
+    );
+    private static final ProgressionAliasConfig RITUAL_ALIAS = new ProgressionAliasConfig(
+        "ritual",
+        "ritual",
+        "ritual",
+        "R01",
+        "village_rituals",
+        "RITUAL"
+    );
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if ("npcquest".equalsIgnoreCase(command.getName()) || "quest".equalsIgnoreCase(command.getName())) {
@@ -117,6 +193,24 @@ public class AINPCCommand implements CommandExecutor {
         if ("contract".equalsIgnoreCase(command.getName()) || "contracts".equalsIgnoreCase(command.getName())) {
             return handleContract(sender, routeDirectCommandToQuest(args));
         }
+        if ("duty".equalsIgnoreCase(command.getName()) || "duties".equalsIgnoreCase(command.getName())
+            || "sarcina".equalsIgnoreCase(command.getName()) || "sarcini".equalsIgnoreCase(command.getName())) {
+            return handleDuty(sender, routeDirectCommandToQuest(args));
+        }
+        if ("bounty".equalsIgnoreCase(command.getName()) || "bounties".equalsIgnoreCase(command.getName())) {
+            return handleBounty(sender, routeDirectCommandToQuest(args));
+        }
+        if ("event".equalsIgnoreCase(command.getName()) || "events".equalsIgnoreCase(command.getName())) {
+            return handleEvent(sender, routeDirectCommandToQuest(args));
+        }
+        if ("tutorial".equalsIgnoreCase(command.getName()) || "tutorials".equalsIgnoreCase(command.getName())
+            || "onboarding".equalsIgnoreCase(command.getName())) {
+            return handleTutorial(sender, routeDirectCommandToQuest(args));
+        }
+        if ("ritual".equalsIgnoreCase(command.getName()) || "rituals".equalsIgnoreCase(command.getName())
+            || "ceremony".equalsIgnoreCase(command.getName()) || "ceremonies".equalsIgnoreCase(command.getName())) {
+            return handleRitual(sender, routeDirectCommandToQuest(args));
+        }
 
         if (args.length == 0) {
             sendHelp(sender);
@@ -128,13 +222,22 @@ public class AINPCCommand implements CommandExecutor {
         return switch (subCommand) {
             case "create" -> handleCreate(sender, args);
             case "delete", "remove" -> handleDelete(sender, args);
+            case "delete-id" -> handleDeleteId(sender, args);
+            case "duplicates" -> handleDuplicates(sender, args);
+            case "repair" -> handleRepair(sender, args);
             case "info" -> handleInfo(sender, args);
             case "gui" -> handleGui(sender, args);
             case "quest" -> handleQuest(sender, args);
             case "progression", "progress" -> handleProgression(sender, args);
             case "contract", "contracts" -> handleContract(sender, args);
+            case "duty", "duties", "sarcina", "sarcini" -> handleDuty(sender, args);
+            case "bounty", "bounties" -> handleBounty(sender, args);
+            case "event", "events", "eveniment", "evenimente" -> handleEvent(sender, args);
+            case "tutorial", "tutorials", "onboarding" -> handleTutorial(sender, args);
+            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> handleRitual(sender, args);
             case "world" -> handleWorld(sender, args);
             case "story" -> handleStory(sender, args);
+            case "migration" -> handleMigration(sender, args);
             case "audit" -> handleAudit(sender, args);
             case "debugdump" -> handleDebugDump(sender, args);
             case "list" -> handleList(sender, args);
@@ -274,7 +377,8 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().sendMessage(sender, "no_permission");
             return true;
         }
-        String commandLabel = "contract".equalsIgnoreCase(defaultFilter) ? "contract" : "progression";
+        String normalizedDefaultFilter = normalizeProgressionKind(defaultFilter);
+        String commandLabel = normalizedDefaultFilter.isBlank() ? "progression" : normalizedDefaultFilter;
         String usage = "&cUtilizare: /ainpc " + commandLabel + " stored [jucator|uuid|all] [filter] [limit]";
         if (args.length > 5) {
             plugin.getMessageUtils().send(sender, usage);
@@ -374,6 +478,9 @@ public class AINPCCommand implements CommandExecutor {
             "&7Status: &f" + formatCountMap(summary.byStatus()));
         plugin.getMessageUtils().send(sender,
             "&7Mecanici: &f" + formatCountMap(summary.byMechanic()));
+        plugin.getMessageUtils().send(sender,
+            "&7Scenarii: &f" + formatCountMap(summary.byScenarioKind())
+                + " &7base=&f" + formatCountMap(summary.byBaseType()));
     }
 
     private void sendStoredProgressionLine(CommandSender sender, StoredProgression progression) {
@@ -382,6 +489,7 @@ public class AINPCCommand implements CommandExecutor {
                 + " &7player=&f" + compactUuid(progression.playerUuid())
                 + " &7status=&f" + formatOptional(progression.status())
                 + " &7kind=&f" + formatOptional(progression.kind())
+                + (progression.scenarioKind().isBlank() ? "" : " &7scenario=&f" + progression.scenarioKind())
                 + (progression.tracked() ? " &btracked" : ""));
         plugin.getMessageUtils().send(sender,
             "&8  template=" + formatOptional(progression.templateId())
@@ -431,65 +539,118 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleContract(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, CONTRACT_ALIAS);
+    }
+
+    private boolean handleDuty(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, DUTY_ALIAS);
+    }
+
+    private boolean handleBounty(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, BOUNTY_ALIAS);
+    }
+
+    private boolean handleEvent(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, EVENT_ALIAS);
+    }
+
+    private boolean handleTutorial(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, TUTORIAL_ALIAS);
+    }
+
+    private boolean handleRitual(CommandSender sender, String[] args) {
+        return handleProgressionAlias(sender, args, RITUAL_ALIAS);
+    }
+
+    private boolean handleProgressionAlias(CommandSender sender, String[] args, ProgressionAliasConfig alias) {
+        if (alias == null) {
+            sendProgressionUsage(sender);
+            return true;
+        }
         if (args.length > 1 && isHelpMode(args[1])) {
-            sendContractUsage(sender);
+            sendProgressionAliasUsage(sender, alias);
             return true;
         }
         if (args.length > 1) {
             String mode = args[1].toLowerCase(Locale.ROOT);
             if ("definitions".equals(mode) || "definition".equals(mode) || "defs".equals(mode)) {
                 return handleProgressionDefinitions(sender, args.length == 2
-                    ? new String[] {"progression", "definitions", "contract"}
+                    ? new String[] {"progression", "definitions", alias.kind()}
                     : args);
             }
             if ("stored".equals(mode) || "store".equals(mode) || "state".equals(mode)
                 || "states".equals(mode) || "progressions".equals(mode)) {
-                return handleProgressionStored(sender, args, "contract");
+                return handleProgressionStored(sender, args, alias.kind());
+            }
+            if ("nearest".equals(mode)) {
+                return handleNearestQuest(sender, args, alias.kind(), alias.displayLabel());
+            }
+            if (isQuestAcceptMode(mode)) {
+                return handleAcceptQuest(sender, args, alias.kind(),
+                    "&cUtilizare: /ainpc " + alias.command() + " accept [numeNpc|nearest] [jucator]");
+            }
+            if (isQuestDeclineMode(mode)) {
+                return handleDeclineQuest(sender, args, alias.kind(),
+                    "&cUtilizare: /ainpc " + alias.command() + " decline [numeNpc|nearest] [jucator]");
             }
         }
-        return handleQuest(sender, routeContractAlias(args));
+        return handleQuest(sender, routeProgressionAlias(args, alias.kind()));
     }
 
-    private String[] routeContractAlias(String[] args) {
+    private String[] routeProgressionAlias(String[] args, String kind) {
         String[] routedArgs = routeSubcommandToQuest(args);
+        String normalizedKind = normalizeProgressionKind(kind);
         if (routedArgs.length == 1) {
-            return new String[] {"quest", "log", "contract"};
+            return new String[] {"quest", "log", normalizedKind};
         }
 
         String mode = routedArgs[1].toLowerCase(Locale.ROOT);
         if ("log".equals(mode)) {
-            return routeContractLogArgs(routedArgs);
+            return routeProgressionAliasLogArgs(routedArgs, normalizedKind);
+        }
+        if ("gui".equals(mode)) {
+            return routeProgressionAliasGuiArgs(routedArgs, normalizedKind);
         }
 
-        return routeContractSelectorArgs(routedArgs, mode);
+        return routeProgressionAliasSelectorArgs(routedArgs, mode, normalizedKind);
     }
 
-    private String[] routeContractLogArgs(String[] args) {
+    private String[] routeProgressionAliasGuiArgs(String[] args, String kind) {
         if (args.length == 2) {
-            return new String[] {"quest", "log", "contract"};
+            return new String[] {"quest", "gui", kind};
+        }
+        if (args.length == 3) {
+            return new String[] {"quest", "gui", progressionAliasLogFilter(args[2], kind)};
+        }
+        return args;
+    }
+
+    private String[] routeProgressionAliasLogArgs(String[] args, String kind) {
+        if (args.length == 2) {
+            return new String[] {"quest", "log", kind};
         }
 
         if (args.length == 3) {
             return isQuestLogFilter(args[2])
-                ? new String[] {"quest", "log", contractLogFilter(args[2])}
-                : new String[] {"quest", "log", args[2], "contract"};
+                ? new String[] {"quest", "log", progressionAliasLogFilter(args[2], kind)}
+                : new String[] {"quest", "log", args[2], kind};
         }
 
         if (args.length == 4) {
             boolean firstIsFilter = isQuestLogFilter(args[2]);
             boolean secondIsFilter = isQuestLogFilter(args[3]);
             if (firstIsFilter && !secondIsFilter) {
-                return new String[] {"quest", "log", contractLogFilter(args[2]), args[3]};
+                return new String[] {"quest", "log", progressionAliasLogFilter(args[2], kind), args[3]};
             }
             if (!firstIsFilter && secondIsFilter) {
-                return new String[] {"quest", "log", args[2], contractLogFilter(args[3])};
+                return new String[] {"quest", "log", args[2], progressionAliasLogFilter(args[3], kind)};
             }
         }
 
         return args;
     }
 
-    private String[] routeContractSelectorArgs(String[] args, String mode) {
+    private String[] routeProgressionAliasSelectorArgs(String[] args, String mode, String kind) {
         String[] routedArgs = args.clone();
         switch (mode) {
             case "gui", "nearest", "accept", "yes", "y", "da", "ok", "confirm",
@@ -499,7 +660,7 @@ public class AINPCCommand implements CommandExecutor {
             }
             case "status", "progress", "progres", "debug", "abandon" -> {
                 if (routedArgs.length > 2) {
-                    routedArgs[2] = contractSelector(routedArgs[2]);
+                    routedArgs[2] = progressionAliasSelector(routedArgs[2], kind);
                 }
             }
             case "track", "current" -> {
@@ -507,36 +668,36 @@ public class AINPCCommand implements CommandExecutor {
                 String action = "start".equals(rawAction) || "stop".equals(rawAction) ? rawAction : "";
                 int selectorIndex = action.isBlank() ? 2 : 3;
                 if (!"stop".equals(action) && routedArgs.length > selectorIndex) {
-                    routedArgs[selectorIndex] = contractSelector(routedArgs[selectorIndex]);
+                    routedArgs[selectorIndex] = progressionAliasSelector(routedArgs[selectorIndex], kind);
                 }
             }
             default -> {
                 if (routedArgs.length == 2) {
-                    return new String[] {"quest", "status", contractSelector(routedArgs[1])};
+                    return new String[] {"quest", "status", progressionAliasSelector(routedArgs[1], kind)};
                 }
                 if (routedArgs.length == 3) {
-                    return new String[] {"quest", "status", contractSelector(routedArgs[1]), routedArgs[2]};
+                    return new String[] {"quest", "status", progressionAliasSelector(routedArgs[1], kind), routedArgs[2]};
                 }
             }
         }
         return routedArgs;
     }
 
-    private String contractLogFilter(String filter) {
+    private String progressionAliasLogFilter(String filter, String kind) {
         String normalized = normalizeQuestLogFilter(filter);
         return switch (normalized) {
-            case "current" -> "contract_current";
-            case "active" -> "contract_active";
-            case "offered" -> "contract_offered";
-            case "tracked" -> "contract_tracked";
-            case "completed" -> "contract_completed";
-            case "failed" -> "contract_failed";
-            case "archived" -> "contract_archived";
-            default -> "contract";
+            case "current" -> kind + "_current";
+            case "active" -> kind + "_active";
+            case "offered" -> kind + "_offered";
+            case "tracked" -> kind + "_tracked";
+            case "completed" -> kind + "_completed";
+            case "failed" -> kind + "_failed";
+            case "archived" -> kind + "_archived";
+            default -> kind;
         };
     }
 
-    private String contractSelector(String selector) {
+    private String progressionAliasSelector(String selector, String kind) {
         if (selector == null || selector.isBlank()
             || selector.contains(":")
             || "nearest".equalsIgnoreCase(selector)
@@ -545,7 +706,7 @@ public class AINPCCommand implements CommandExecutor {
             return selector;
         }
 
-        return plugin.getProgressionService().contractSelector(selector);
+        return plugin.getProgressionService().kindSelector(selector, kind);
     }
 
     private boolean isHelpMode(String value) {
@@ -579,7 +740,7 @@ public class AINPCCommand implements CommandExecutor {
         return switch (mode) {
             case "anchors" -> handleQuestAnchors(sender, args);
             case "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args);
-            case "gui" -> handleQuestGui(sender);
+            case "gui" -> handleQuestGui(sender, args);
             case "log" -> handleQuestLog(sender, args);
             case "track", "current" -> handleQuestTrack(sender, args);
             case "nearest" -> handleNearestQuest(sender, args);
@@ -596,9 +757,17 @@ public class AINPCCommand implements CommandExecutor {
         };
     }
 
-    private boolean handleQuestGui(CommandSender sender) {
+    private boolean handleQuestGui(CommandSender sender, String[] args) {
         Player player = requirePlayerSender(sender);
         if (player == null) {
+            return true;
+        }
+        if (args.length > 3) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest gui [progressionFilter]");
+            return true;
+        }
+        if (args.length >= 3) {
+            plugin.getGuiService().openQuestLog(player, args[2]);
             return true;
         }
         plugin.getGuiService().open(player, GuiKey.QUEST);
@@ -634,7 +803,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private QuestLogRequest resolveQuestLogRequest(CommandSender sender, String[] args) {
-        String usage = "&cUtilizare: /ainpc quest log [jucator] [active|current|tracked|quest|contract|main|side|repeatable|completed|failed|archived|all]";
+        String usage = "&cUtilizare: /ainpc quest log [jucator] [active|current|tracked|quest|contract|duty|bounty|event|main|side|repeatable|completed|failed|archived|all]";
         if (args.length > 4) {
             plugin.getMessageUtils().send(sender, usage);
             return null;
@@ -682,6 +851,11 @@ public class AINPCCommand implements CommandExecutor {
             case "tracked", "urmarit" -> "tracked";
             case "quest", "questuri" -> "quest";
             case "contract", "contracts", "contracte" -> "contract";
+            case "duty", "duties", "sarcina", "sarcini" -> "duty";
+            case "bounty", "bounties", "recompensa", "recompense" -> "bounty";
+            case "event", "events", "eveniment", "evenimente" -> "event";
+            case "tutorial", "tutorials", "onboarding", "indrumare" -> "tutorial";
+            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> "ritual";
             case "contract_current", "contract_curent", "contracte_curente" -> "contract_current";
             case "contract_active", "contract_activ", "contracte_active" -> "contract_active";
             case "contract_offered", "contract_oferit", "contracte_oferite" -> "contract_offered";
@@ -689,6 +863,41 @@ public class AINPCCommand implements CommandExecutor {
             case "contract_completed", "contract_completat", "contracte_completate" -> "contract_completed";
             case "contract_failed", "contract_esuat", "contracte_esuate" -> "contract_failed";
             case "contract_archived", "contract_arhivat", "contracte_arhivate" -> "contract_archived";
+            case "duty_current", "duty_curent", "sarcini_curente" -> "duty_current";
+            case "duty_active", "duty_activ", "sarcini_active" -> "duty_active";
+            case "duty_offered", "duty_oferit", "sarcini_oferite" -> "duty_offered";
+            case "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> "duty_tracked";
+            case "duty_completed", "duty_completat", "sarcini_completate" -> "duty_completed";
+            case "duty_failed", "duty_esuat", "sarcini_esuate" -> "duty_failed";
+            case "duty_archived", "duty_arhivat", "sarcini_arhivate" -> "duty_archived";
+            case "bounty_current", "bounty_curent", "recompense_curente" -> "bounty_current";
+            case "bounty_active", "bounty_activ", "recompense_active" -> "bounty_active";
+            case "bounty_offered", "bounty_oferit", "recompense_oferite" -> "bounty_offered";
+            case "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> "bounty_tracked";
+            case "bounty_completed", "bounty_completat", "recompense_completate" -> "bounty_completed";
+            case "bounty_failed", "bounty_esuat", "recompense_esuate" -> "bounty_failed";
+            case "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> "bounty_archived";
+            case "event_current", "event_curent", "evenimente_curente" -> "event_current";
+            case "event_active", "event_activ", "evenimente_active" -> "event_active";
+            case "event_offered", "event_oferit", "evenimente_oferite" -> "event_offered";
+            case "event_tracked", "event_urmarit", "evenimente_urmarite" -> "event_tracked";
+            case "event_completed", "event_completat", "evenimente_completate" -> "event_completed";
+            case "event_failed", "event_esuat", "evenimente_esuate" -> "event_failed";
+            case "event_archived", "event_arhivat", "evenimente_arhivate" -> "event_archived";
+            case "tutorial_current", "tutorial_curent", "tutoriale_curente" -> "tutorial_current";
+            case "tutorial_active", "tutorial_activ", "tutoriale_active" -> "tutorial_active";
+            case "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> "tutorial_offered";
+            case "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> "tutorial_tracked";
+            case "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> "tutorial_completed";
+            case "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> "tutorial_failed";
+            case "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> "tutorial_archived";
+            case "ritual_current", "ritual_curent", "ritualuri_curente" -> "ritual_current";
+            case "ritual_active", "ritual_activ", "ritualuri_active" -> "ritual_active";
+            case "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> "ritual_offered";
+            case "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> "ritual_tracked";
+            case "ritual_completed", "ritual_completat", "ritualuri_completate" -> "ritual_completed";
+            case "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> "ritual_failed";
+            case "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> "ritual_archived";
             case "main", "principal" -> "main";
             case "side", "secundar", "secundare" -> "side";
             case "repeatable", "repetabil", "repetabile" -> "repeatable";
@@ -821,11 +1030,15 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleNearestQuest(CommandSender sender, String[] args) {
+        return handleNearestQuest(sender, args, "", "quest");
+    }
+
+    private boolean handleNearestQuest(CommandSender sender, String[] args, String progressionKind, String label) {
         Player targetPlayer = resolveQuestTargetPlayer(
             sender,
             args,
             2,
-            "&cUtilizare: /ainpc quest nearest [jucator]"
+            "&cUtilizare: /ainpc " + commandLabelForKind(progressionKind) + " nearest [jucator]"
         );
         if (targetPlayer == null) {
             questDebug("Quest nearest oprit: nu am putut rezolva jucatorul tinta.");
@@ -833,32 +1046,40 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         questDebug("Quest nearest pentru player=" + targetPlayer.getName()
+            + " kind=" + formatOptional(progressionKind)
             + " locatie=" + formatLocation(targetPlayer.getLocation()));
-        AINPC nearestNpc = findNearestQuestNpc(targetPlayer);
+        AINPC nearestNpc = findNearestQuestNpc(targetPlayer, progressionKind);
         if (nearestNpc == null) {
             questDebug("Quest nearest: nu exista NPC activ in raza 16 pentru " + targetPlayer.getName());
-            plugin.getMessageUtils().send(sender, "&cNu exista NPC-uri active in apropierea jucatorului.");
+            plugin.getMessageUtils().send(sender, "&cNu exista NPC-uri active in apropierea jucatorului"
+                + (normalizeProgressionKind(progressionKind).isBlank() ? "." : " cu " + label + " disponibila."));
             return true;
         }
 
         questDebug("Quest nearest a ales NPC-ul " + nearestNpc.getName()
             + " (id=" + nearestNpc.getDatabaseId() + ")");
-        return handleTriggerQuest(sender, nearestNpc.getName(), targetPlayer);
+        return handleTriggerQuest(sender, nearestNpc.getName(), targetPlayer, progressionKind);
     }
 
     private boolean handleAcceptQuest(CommandSender sender, String[] args) {
+        return handleAcceptQuest(sender, args, "",
+            "&cUtilizare: /ainpc quest accept [numeNpc|nearest] [jucator]");
+    }
+
+    private boolean handleAcceptQuest(CommandSender sender, String[] args, String progressionKind, String usage) {
         QuestDecisionTarget target = resolveQuestDecisionTarget(
             sender,
             args,
             "accept",
-            "&cUtilizare: /ainpc quest accept [numeNpc|nearest] [jucator]"
+            usage,
+            progressionKind
         );
         if (target == null) {
             return true;
         }
 
         ScenarioEngine.QuestInteractionResult questInteraction =
-            plugin.getScenarioEngine().acceptQuest(target.player(), target.npc());
+            plugin.getScenarioEngine().acceptQuest(target.player(), target.npc(), progressionKind);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + target.npc().getName() + " &cnu are un quest disponibil.");
             return true;
@@ -875,18 +1096,24 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleDeclineQuest(CommandSender sender, String[] args) {
+        return handleDeclineQuest(sender, args, "",
+            "&cUtilizare: /ainpc quest decline [numeNpc|nearest] [jucator]");
+    }
+
+    private boolean handleDeclineQuest(CommandSender sender, String[] args, String progressionKind, String usage) {
         QuestDecisionTarget target = resolveQuestDecisionTarget(
             sender,
             args,
             "decline",
-            "&cUtilizare: /ainpc quest decline [numeNpc|nearest] [jucator]"
+            usage,
+            progressionKind
         );
         if (target == null) {
             return true;
         }
 
         ScenarioEngine.QuestInteractionResult questInteraction =
-            plugin.getScenarioEngine().declineQuest(target.player(), target.npc());
+            plugin.getScenarioEngine().declineQuest(target.player(), target.npc(), progressionKind);
         if (!questInteraction.isHandled()) {
             plugin.getMessageUtils().send(sender, "&cNPC-ul &e" + target.npc().getName() + " &cnu are un quest disponibil.");
             return true;
@@ -906,6 +1133,14 @@ public class AINPCCommand implements CommandExecutor {
                                                            String[] args,
                                                            String action,
                                                            String usage) {
+        return resolveQuestDecisionTarget(sender, args, action, usage, "");
+    }
+
+    private QuestDecisionTarget resolveQuestDecisionTarget(CommandSender sender,
+                                                           String[] args,
+                                                           String action,
+                                                           String usage,
+                                                           String progressionKind) {
         String npcSelector = args.length > 2 ? args[2] : "";
         int playerArgIndex = args.length > 2 ? 3 : -1;
         if (args.length == 3 && shouldTreatQuestDecisionArgumentAsPlayer(args[2])) {
@@ -919,7 +1154,7 @@ public class AINPCCommand implements CommandExecutor {
             return null;
         }
 
-        AINPC npc = resolveFlexibleQuestDecisionNpc(sender, npcSelector, targetPlayer, action);
+        AINPC npc = resolveFlexibleQuestDecisionNpc(sender, npcSelector, targetPlayer, action, progressionKind);
         if (npc == null) {
             return null;
         }
@@ -947,17 +1182,25 @@ public class AINPCCommand implements CommandExecutor {
                                                   String npcSelector,
                                                   Player targetPlayer,
                                                   String action) {
+        return resolveFlexibleQuestDecisionNpc(sender, npcSelector, targetPlayer, action, "");
+    }
+
+    private AINPC resolveFlexibleQuestDecisionNpc(CommandSender sender,
+                                                  String npcSelector,
+                                                  Player targetPlayer,
+                                                  String action,
+                                                  String progressionKind) {
         if (npcSelector != null && !npcSelector.isBlank()) {
-            return resolveQuestNpcSelector(sender, npcSelector, targetPlayer, action);
+            return resolveQuestNpcSelector(sender, npcSelector, targetPlayer, action, progressionKind);
         }
 
-        AINPC npc = plugin.getScenarioEngine().resolveActiveQuestNpc(targetPlayer);
+        AINPC npc = plugin.getScenarioEngine().resolveActiveQuestNpc(targetPlayer, progressionKind);
         if (npc != null) {
             questDebug("Quest " + action + " a folosit NPC-ul questului curent: " + npc.getName());
             return npc;
         }
 
-        npc = findNearestQuestNpc(targetPlayer);
+        npc = findNearestQuestNpc(targetPlayer, progressionKind);
         if (npc != null) {
             questDebug("Quest " + action + " fara selector a ales cel mai apropiat NPC: " + npc.getName());
             return npc;
@@ -1433,13 +1676,21 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private AINPC resolveQuestNpcSelector(CommandSender sender, String npcSelector, Player targetPlayer, String action) {
+        return resolveQuestNpcSelector(sender, npcSelector, targetPlayer, action, "");
+    }
+
+    private AINPC resolveQuestNpcSelector(CommandSender sender,
+                                          String npcSelector,
+                                          Player targetPlayer,
+                                          String action,
+                                          String progressionKind) {
         if (npcSelector == null || npcSelector.isBlank()) {
             plugin.getMessageUtils().send(sender, "&cSpecifica NPC-ul pentru quest.");
             return null;
         }
 
         if ("nearest".equalsIgnoreCase(npcSelector)) {
-            AINPC nearestNpc = findNearestQuestNpc(targetPlayer);
+            AINPC nearestNpc = findNearestQuestNpc(targetPlayer, progressionKind);
             if (nearestNpc == null) {
                 questDebug("Quest " + action + ": nu exista NPC activ in raza 16 pentru " + targetPlayer.getName());
                 plugin.getMessageUtils().send(sender, "&cNu exista NPC-uri active in apropierea jucatorului.");
@@ -1457,17 +1708,27 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private AINPC findNearestQuestNpc(Player targetPlayer) {
+        return findNearestQuestNpc(targetPlayer, "");
+    }
+
+    private AINPC findNearestQuestNpc(Player targetPlayer, String progressionKind) {
         if (targetPlayer == null) {
             return null;
         }
 
         return plugin.getNpcManager().getActiveNPCsNear(targetPlayer.getLocation(), 16).stream()
+            .filter(npc -> normalizeProgressionKind(progressionKind).isBlank()
+                || plugin.getScenarioEngine().hasQuestForNpc(targetPlayer, npc, progressionKind))
             .sorted(Comparator.comparingDouble(npc -> npc.getLocation().distanceSquared(targetPlayer.getLocation())))
             .findFirst()
             .orElse(null);
     }
 
     private boolean handleTriggerQuest(CommandSender sender, String npcName, Player targetPlayer) {
+        return handleTriggerQuest(sender, npcName, targetPlayer, "");
+    }
+
+    private boolean handleTriggerQuest(CommandSender sender, String npcName, Player targetPlayer, String progressionKind) {
         if (targetPlayer == null) {
             questDebug("Quest trigger oprit: player tinta este null pentru npcName='" + npcName + "'.");
             return true;
@@ -1490,7 +1751,7 @@ public class AINPCCommand implements CommandExecutor {
             + " ocupatie=" + npc.getOccupation());
 
         ScenarioEngine.QuestInteractionResult questInteraction =
-            plugin.getScenarioEngine().startQuestManually(targetPlayer, npc);
+            plugin.getScenarioEngine().startQuestManually(targetPlayer, npc, progressionKind);
         if (!questInteraction.isHandled()) {
             questDebug("Quest trigger: handled=false pentru npc=" + npc.getName()
                 + " player=" + targetPlayer.getName());
@@ -1512,6 +1773,39 @@ public class AINPCCommand implements CommandExecutor {
             "&aQuest-ul lui &e" + npc.getName() + " &aa fost declansat pentru &f" + targetPlayer.getName() + "&a."
         );
         return true;
+    }
+
+    private boolean isQuestAcceptMode(String mode) {
+        String normalized = mode == null ? "" : mode.toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "accept", "yes", "y", "da", "ok", "confirm" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isQuestDeclineMode(String mode) {
+        String normalized = mode == null ? "" : mode.toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "decline", "deny", "reject", "no", "n", "nu", "refuz" -> true;
+            default -> false;
+        };
+    }
+
+    private String commandLabelForKind(String progressionKind) {
+        String normalized = normalizeProgressionKind(progressionKind);
+        return switch (normalized) {
+            case "contract" -> "contract";
+            case "duty" -> "duty";
+            case "bounty" -> "bounty";
+            case "event" -> "event";
+            case "tutorial" -> "tutorial";
+            case "ritual" -> "ritual";
+            default -> "quest";
+        };
+    }
+
+    private String normalizeProgressionKind(String progressionKind) {
+        return progressionKind == null ? "" : progressionKind.trim().toLowerCase(Locale.ROOT);
     }
 
     private Player resolveQuestTargetPlayer(CommandSender sender, String[] args, int playerArgIndex, String usage) {
@@ -1597,7 +1891,7 @@ public class AINPCCommand implements CommandExecutor {
 
     private void sendQuestUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|quest|contract|main|side|repeatable|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|quest|contract|duty|bounty|event|main|side|repeatable|completed|failed|archived|all]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest status");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
@@ -1615,26 +1909,34 @@ public class AINPCCommand implements CommandExecutor {
 
     private void sendProgressionUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
-        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|active|completed|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression gui [quest|contract|duty|bounty|event|tutorial|ritual|active|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|tutorial|ritual|active|completed|all]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression definitions [filter]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression stored [jucator|uuid|all] [filter] [limit]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression status <tracked|selector> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression progress [tracked|selector] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression track [start|stop] [selector] [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc progression abandon <tracked|selector> [jucator]");
-        plugin.getMessageUtils().send(sender, "&7Selector exemple: &fQ01&7, &fside_quests:Q07&7, &fvillage_contracts:C01&7.");
+        plugin.getMessageUtils().send(sender, "&7Selector exemple: &fQ01&7, &fside_quests:Q07&7, &fvillage_contracts:C01&7, &fnpc_duties:D01&7, &flocal_bounties:B01&7, &fvillage_events:E01&7, &fonboarding:T01&7, &fvillage_rituals:R01&7.");
+        plugin.getMessageUtils().send(sender, "&7Filtre exemple: &fkind:contract&7, &fkind:duty&7, &fkind:bounty&7, &fkind:event&7, &fkind:tutorial&7, &fkind:ritual&7, &fscenario:investigation&7, &fbase:TRADE_DEAL&7.");
     }
 
-    private void sendContractUsage(CommandSender sender) {
+    private void sendProgressionAliasUsage(CommandSender sender, ProgressionAliasConfig alias) {
+        String command = alias.command();
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract log [jucator] [active|current|tracked|completed|failed|archived|all]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract definitions [filter]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract stored [jucator|uuid|all] [filter] [limit]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract status <selector> [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract progress <selector> [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract track [start|stop] [selector] [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc contract abandon <selector> [jucator]");
-        plugin.getMessageUtils().send(sender, "&7Selector scurt: &fC01 &7devine &fcontract:C01&7.");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " gui [active|current|tracked|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " log [jucator] [active|current|tracked|completed|failed|archived|all]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " definitions [filter]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " stored [jucator|uuid|all] [filter] [limit]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " status <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " progress <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " track [start|stop] [selector] [jucator]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc " + command + " abandon <selector> [jucator]");
+        plugin.getMessageUtils().send(sender, "&7Selector scurt: &f" + alias.shortSelectorExample()
+            + " &7devine &f" + alias.kind() + ":" + alias.shortSelectorExample() + "&7.");
+        plugin.getMessageUtils().send(sender, "&7Filtre exemple: &fkind:" + alias.kind()
+            + "&7, &fmechanic:" + alias.mechanicExample()
+            + "&7, &fbase:" + alias.baseTypeExample() + "&7.");
     }
 
     private boolean handleStory(CommandSender sender, String[] args) {
@@ -2798,12 +3100,27 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private boolean handleWorldHousehold(CommandSender sender, String[] args) {
-        if (args.length < 4 || args.length > 5
-            || (!"plan".equalsIgnoreCase(args[2]) && !"spawn".equalsIgnoreCase(args[2]))) {
-            plugin.getMessageUtils().send(sender,
-                "&cUtilizare: /ainpc world household <plan|spawn> <homePlaceId> [count]");
-            plugin.getMessageUtils().send(sender,
-                "&7Genereaza un HouseAllocation din mapping. plan este dry-run, spawn creeaza NPC-uri.");
+        if (args.length < 3) {
+            sendWorldHouseholdUsage(sender);
+            return true;
+        }
+
+        return switch (args[2].toLowerCase(Locale.ROOT)) {
+            case "plan", "spawn" -> handleWorldHouseholdPlanOrSpawn(sender, args);
+            case "status" -> handleWorldHouseholdStatus(sender, args);
+            case "place" -> handleWorldHouseholdPlace(sender, args);
+            case "resident" -> handleWorldHouseholdResident(sender, args);
+            case "list" -> handleWorldHouseholdList(sender, args);
+            default -> {
+                sendWorldHouseholdUsage(sender);
+                yield true;
+            }
+        };
+    }
+
+    private boolean handleWorldHouseholdPlanOrSpawn(CommandSender sender, String[] args) {
+        if (args.length < 4 || args.length > 5) {
+            sendWorldHouseholdUsage(sender);
             return true;
         }
 
@@ -2854,6 +3171,158 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(sender,
                 "&7Dry-run reusit. Pentru executie: &f/ainpc world household spawn "
                     + allocation.placeId() + " " + allocation.residentPlans().size());
+        }
+        return true;
+    }
+
+    private boolean handleWorldHouseholdStatus(CommandSender sender, String[] args) {
+        if (args.length != 4) {
+            sendWorldHouseholdUsage(sender);
+            return true;
+        }
+
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        String selector = args[3];
+        try {
+            Optional<HouseholdPersistenceService.HouseholdRecord> household = service.getHousehold(selector);
+            if (household.isEmpty()) {
+                household = service.findHouseholdByHomePlace(selector);
+            }
+            if (household.isEmpty()) {
+                plugin.getMessageUtils().send(sender,
+                    "&cNu exista household persistent pentru &e" + selector + "&c.");
+                plugin.getMessageUtils().send(sender,
+                    "&7Foloseste household_id sau home_place_id exact. Pentru sumar: &f/ainpc world household list");
+                return true;
+            }
+
+            sendPersistentHouseholdSummary(sender, household.get(), service.listResidents(household.get().householdId()));
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut citi household-ul persistent: &e" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldHouseholdPlace(CommandSender sender, String[] args) {
+        if (args.length != 4) {
+            sendWorldHouseholdUsage(sender);
+            return true;
+        }
+
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        String homePlaceId = args[3];
+        try {
+            Optional<HouseholdPersistenceService.HouseholdRecord> household =
+                service.findHouseholdByHomePlace(homePlaceId);
+            if (household.isEmpty()) {
+                plugin.getMessageUtils().send(sender,
+                    "&cNu exista household persistent pentru casa &e" + homePlaceId + "&c.");
+                return true;
+            }
+            sendPersistentHouseholdSummary(sender, household.get(), service.listResidents(household.get().householdId()));
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut lista household-ul pentru place: &e" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldHouseholdResident(CommandSender sender, String[] args) {
+        if (args.length != 4) {
+            sendWorldHouseholdUsage(sender);
+            return true;
+        }
+
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        Integer npcId = parseIntegerStrict(args[3]);
+        if (npcId == null) {
+            AINPC npc = resolveWorldBindNpc(sender, args[3]);
+            if (npc == null) {
+                return true;
+            }
+            npcId = npc.getDatabaseId();
+        }
+        if (npcId == null || npcId <= 0) {
+            plugin.getMessageUtils().send(sender, "&cNPC-ul selectat nu are ID DB valid.");
+            return true;
+        }
+
+        try {
+            Optional<HouseholdPersistenceService.HouseholdResidentRecord> resident =
+                service.findResidentByNpcId(npcId);
+            if (resident.isEmpty()) {
+                plugin.getMessageUtils().send(sender,
+                    "&cNu exista resident household persistent pentru NPC id &e" + npcId + "&c.");
+                return true;
+            }
+
+            plugin.getMessageUtils().send(sender, "&6=== Household Resident ===");
+            sendPersistentHouseholdResident(sender, resident.get());
+            service.getHousehold(resident.get().householdId())
+                .ifPresent(household -> sendPersistentHouseholdCompact(sender, household));
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut citi residentul household: &e" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleWorldHouseholdList(CommandSender sender, String[] args) {
+        if (args.length > 4) {
+            sendWorldHouseholdUsage(sender);
+            return true;
+        }
+
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        int limit = HOUSEHOLD_DEFAULT_LIMIT;
+        if (args.length == 4) {
+            Integer parsedLimit = parseIntegerStrict(args[3]);
+            if (parsedLimit == null || parsedLimit <= 0) {
+                plugin.getMessageUtils().send(sender, "&cLimit trebuie sa fie un numar pozitiv.");
+                return true;
+            }
+            limit = Math.min(parsedLimit, HOUSEHOLD_MAX_LIMIT);
+            if (parsedLimit > HOUSEHOLD_MAX_LIMIT) {
+                plugin.getMessageUtils().send(sender,
+                    "&eLimit maxim pentru afisare: &f" + HOUSEHOLD_MAX_LIMIT + "&e.");
+            }
+        }
+
+        try {
+            List<HouseholdPersistenceService.HouseholdRecord> households = service.listHouseholds(limit);
+            plugin.getMessageUtils().send(sender, "&6=== Household-uri Persistente ===");
+            plugin.getMessageUtils().send(sender,
+                "&eTotal DB: &f" + service.countHouseholds()
+                    + " &7| Rezidenti: &f" + service.countResidents()
+                    + " &7| Afisate: &f" + households.size());
+            if (households.isEmpty()) {
+                plugin.getMessageUtils().send(sender,
+                    "&7Nu exista inca household-uri persistente. Ruleaza un household/settlement spawn controlat.");
+                return true;
+            }
+            for (HouseholdPersistenceService.HouseholdRecord household : households) {
+                sendPersistentHouseholdCompact(sender, household);
+            }
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut lista household-urile persistente: &e" + exception.getMessage());
         }
         return true;
     }
@@ -2917,6 +3386,82 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
+    private HouseholdPersistenceService requireHouseholdPersistence(CommandSender sender) {
+        HouseholdPersistenceService service = plugin.getHouseholdPersistenceService();
+        if (service == null) {
+            plugin.getMessageUtils().send(sender, "&cHousehold persistence nu este initializata.");
+            return null;
+        }
+        return service;
+    }
+
+    private void sendWorldHouseholdUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household <plan|spawn> <homePlaceId> [count]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household status <householdId|homePlaceId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household place <homePlaceId>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household resident <npcId|numeNpc|nearest>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household list [limit]");
+        plugin.getMessageUtils().send(sender,
+            "&7Comenzile status/place/resident/list sunt read-only si inspecteaza tabelele households.");
+    }
+
+    private void sendPersistentHouseholdSummary(CommandSender sender,
+                                                HouseholdPersistenceService.HouseholdRecord household,
+                                                List<HouseholdPersistenceService.HouseholdResidentRecord> residents) {
+        plugin.getMessageUtils().send(sender, "&6=== Household Persistent ===");
+        plugin.getMessageUtils().send(sender, "&eID: &f" + household.householdId());
+        plugin.getMessageUtils().send(sender, "&eCasa: &f" + formatOptional(household.homePlaceId()));
+        plugin.getMessageUtils().send(sender, "&eFamily: &f" + formatOptional(household.familyId()));
+        plugin.getMessageUtils().send(sender, "&eOwner key: &f" + formatOptional(household.primaryOwnerKey()));
+        plugin.getMessageUtils().send(sender,
+            "&eRezidenti: &f" + residents.size()
+                + " &7/ DB &f" + household.residentCount()
+                + " &7/ max &f" + household.maxResidents());
+        plugin.getMessageUtils().send(sender,
+            "&eSource: &f" + formatOptional(household.source())
+                + " &7| Update: &f" + formatStoryTime(household.updatedAt()));
+        plugin.getMessageUtils().send(sender, "&ePlan hash: &f" + formatOptional(household.planHash()));
+
+        if (residents.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&eWarning: &fhousehold-ul nu are rezidenti persistenti.");
+            return;
+        }
+
+        for (HouseholdPersistenceService.HouseholdResidentRecord resident : residents.stream().limit(8).toList()) {
+            sendPersistentHouseholdResident(sender, resident);
+        }
+        if (residents.size() > 8) {
+            plugin.getMessageUtils().send(sender,
+                "&7... inca " + (residents.size() - 8) + " rezidenti.");
+        }
+    }
+
+    private void sendPersistentHouseholdCompact(CommandSender sender,
+                                                HouseholdPersistenceService.HouseholdRecord household) {
+        plugin.getMessageUtils().send(sender,
+            "&7- &f" + household.householdId()
+                + " &7casa=&f" + formatOptional(household.homePlaceId())
+                + " &7family=&f" + formatOptional(household.familyId())
+                + " &7rezidenti=&f" + household.residentCount()
+                + "/" + household.maxResidents()
+                + " &7update=&f" + formatStoryTime(household.updatedAt()));
+    }
+
+    private void sendPersistentHouseholdResident(CommandSender sender,
+                                                 HouseholdPersistenceService.HouseholdResidentRecord resident) {
+        plugin.getMessageUtils().send(sender,
+            "&7- &f" + resident.residentKey()
+                + " &7npc=&f" + resident.npcName() + "#" + resident.npcId()
+                + " &7rol=&f" + formatOptional(resident.relationRole())
+                + " &7household=&f" + resident.householdId());
+        plugin.getMessageUtils().send(sender,
+            "  &7home=&f" + formatOptional(resident.homePlaceId())
+                + " &7bed=&f" + formatOptional(resident.homeNodeId())
+                + " &7work=&f" + formatOptional(resident.workPlaceId())
+                + " &7source=&f" + formatOptional(resident.sourceKey()));
+    }
+
     private void sendHouseholdAllocationSummary(CommandSender sender, HouseAllocation allocation) {
         plugin.getMessageUtils().send(sender, "&6=== Household Plan ===");
         plugin.getMessageUtils().send(sender, "&eCasa: &f" + allocation.placeId());
@@ -2970,12 +3515,22 @@ public class AINPCCommand implements CommandExecutor {
         sendAuditMessages(sender, "&cErori household", result.errors());
         sendAuditMessages(sender, "&eWarning-uri household", result.warnings());
         if (!result.spawnResults().isEmpty()) {
-            List<String> spawned = result.spawnResults().stream()
+            List<String> created = result.spawnResults().stream()
                 .filter(NpcSpawnResult::success)
+                .filter(NpcSpawnResult::created)
                 .map(spawnResult -> spawnResult.npc().getName() + "#" + spawnResult.npc().getDatabaseId())
                 .toList();
-            if (!spawned.isEmpty()) {
-                plugin.getMessageUtils().send(sender, "&eNPC-uri create: &f" + formatList(spawned));
+            if (!created.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&eNPC-uri create: &f" + formatList(created));
+            }
+
+            List<String> reused = result.spawnResults().stream()
+                .filter(NpcSpawnResult::success)
+                .filter(spawnResult -> !spawnResult.created())
+                .map(spawnResult -> spawnResult.npc().getName() + "#" + spawnResult.npc().getDatabaseId())
+                .toList();
+            if (!reused.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&eNPC-uri reutilizate: &f" + formatList(reused));
             }
         }
     }
@@ -3458,8 +4013,152 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc world bindings npc <numeNpc|nearest|npcId|uuid>");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bindings place <placeId> [limit]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world household <plan|spawn> <homePlaceId> [count]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household <status|place|resident|list> ...");
         plugin.getMessageUtils().send(sender, "&e/ainpc world settlement <plan|spawn> <regionId> [maxHouses]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
+    }
+
+    private boolean handleMigration(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        if (args.length < 3
+            || !"households".equalsIgnoreCase(args[1])
+            || (!"dryrun".equalsIgnoreCase(args[2]) && !"apply".equalsIgnoreCase(args[2]))
+            || args.length > 4) {
+            sendMigrationUsage(sender);
+            return true;
+        }
+
+        int limit = NPC_WORLD_BINDING_LOOKUP_LIMIT;
+        if (args.length == 4) {
+            Integer parsedLimit = parseIntegerStrict(args[3]);
+            if (parsedLimit == null || parsedLimit <= 0) {
+                plugin.getMessageUtils().send(sender, "&cLimit trebuie sa fie un numar pozitiv.");
+                return true;
+            }
+            limit = Math.min(parsedLimit, 1000);
+            if (parsedLimit > 1000) {
+                plugin.getMessageUtils().send(sender, "&eLimit maxim pentru migration households: &f1000&e.");
+            }
+        }
+
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        boolean apply = "apply".equalsIgnoreCase(args[2]);
+        try {
+            HouseholdPersistenceService.HouseholdBackfillReport bindingReport =
+                service.backfillFromNpcWorldBindings(apply, limit);
+            sendHouseholdBackfillReport(sender, "npc_world_bindings", bindingReport);
+
+            HouseholdMetadataBackfillInputs metadataInputs = collectHouseholdMetadataBackfillInputs(limit);
+            sendAuditMessages(sender, "&eWarning-uri metadata migration", metadataInputs.warnings());
+            HouseholdPersistenceService.HouseholdBackfillReport metadataReport =
+                service.backfillFromMetadataResidents(apply, limit, metadataInputs.inputs());
+            sendHouseholdBackfillReport(sender, "metadata resident_npc_ids", metadataReport);
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cMigration households a esuat: &e" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private void sendMigrationUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc migration households dryrun [limit]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc migration households apply [limit]");
+        plugin.getMessageUtils().send(sender,
+            "&7Backfill controlat din npc_world_bindings si metadata resident_npc_ids.");
+    }
+
+    private HouseholdMetadataBackfillInputs collectHouseholdMetadataBackfillInputs(int limit) {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            return new HouseholdMetadataBackfillInputs(List.of(),
+                List.of("World admin este dezactivat; sar peste metadata resident_npc_ids."));
+        }
+
+        List<HouseholdPersistenceService.MetadataResidentBackfillInput> inputs = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int safeLimit = Math.max(1, Math.min(1000, limit));
+
+        for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
+            if (inputs.size() >= safeLimit) {
+                break;
+            }
+            if (!isHousePlace(place)) {
+                continue;
+            }
+
+            String familyId = firstNonBlank(
+                place.metadata().get("family_id"),
+                place.metadata().get("household_id"),
+                place.metadata().get("household")
+            );
+            for (String residentSelector : parseResidents(place)) {
+                if (inputs.size() >= safeLimit) {
+                    break;
+                }
+                Integer npcId = parseNpcIdSelector(residentSelector);
+                if (npcId == null || npcId <= 0) {
+                    AINPC npc = findLoadedNpcBySelector(residentSelector);
+                    if (npc != null && npc.getDatabaseId() > 0) {
+                        npcId = npc.getDatabaseId();
+                    }
+                }
+                if (npcId == null || npcId <= 0) {
+                    if (warnings.size() < AUDIT_PREVIEW_LIMIT) {
+                        warnings.add("Nu pot rezolva resident_npc_ids=" + residentSelector
+                            + " pentru " + place.id() + ".");
+                    }
+                    continue;
+                }
+
+                String key = place.id() + ":" + npcId;
+                if (seen.add(key)) {
+                    inputs.add(new HouseholdPersistenceService.MetadataResidentBackfillInput(
+                        place.id(),
+                        familyId,
+                        npcId
+                    ));
+                }
+            }
+        }
+
+        return new HouseholdMetadataBackfillInputs(List.copyOf(inputs), List.copyOf(warnings));
+    }
+
+    private void sendHouseholdBackfillReport(CommandSender sender,
+                                             String sourceLabel,
+                                             HouseholdPersistenceService.HouseholdBackfillReport report) {
+        String mode = report.apply() ? "apply" : "dry-run";
+        plugin.getMessageUtils().send(sender, "&6=== Migration Households " + mode
+            + " [" + sourceLabel + "] ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBindings scanate: &f" + report.scannedBindings()
+                + " &7| Household candidati: &f" + report.candidateHouseholds());
+        plugin.getMessageUtils().send(sender,
+            "&eHousehold create/update: &f" + report.householdsCreated()
+                + "/" + report.householdsUpdated()
+                + " &7| Rezidenti noi: &f" + report.residentsCreated()
+                + " &7| deja existenti: &f" + report.residentsAlreadyPresent()
+                + " &7| sariti: &f" + report.skippedResidents());
+        sendAuditMessages(sender, report.apply() ? "&aActiuni migration" : "&eActiuni dry-run", report.actions());
+        sendAuditMessages(sender, "&eWarning-uri migration", report.warnings());
+        sendAuditMessages(sender, "&cErori migration", report.errors());
+        if (!report.apply()) {
+            plugin.getMessageUtils().send(sender,
+                "&7Dry-run read-only. Pentru scriere: &f/ainpc migration households apply");
+        } else {
+            plugin.getMessageUtils().send(sender,
+                "&7Migration apply terminat. Ruleaza &f/ainpc audit db &7si &f/ainpc world household list&7.");
+        }
     }
 
     private boolean handleAudit(CommandSender sender, String[] args) {
@@ -3540,6 +4239,7 @@ public class AINPCCommand implements CommandExecutor {
 
         Map<String, List<AINPC>> npcsByName = new HashMap<>();
         Map<Integer, List<AINPC>> npcsByDatabaseId = new HashMap<>();
+        Map<String, List<AINPC>> npcsBySourceKey = new HashMap<>();
 
         for (AINPC npc : npcs) {
             String label = auditNpcLabel(npc);
@@ -3576,6 +4276,9 @@ public class AINPCCommand implements CommandExecutor {
             if (npc.getProfileSource() == null || npc.getProfileSource().isBlank()) {
                 report.warn(label + " nu are profile_source.");
             }
+            if (npc.getSourceKey() != null && !npc.getSourceKey().isBlank()) {
+                npcsBySourceKey.computeIfAbsent(normalizeAuditKey(npc.getSourceKey()), ignored -> new ArrayList<>()).add(npc);
+            }
 
             validateProfileJson(report, label, npc.getProfileDataJson());
 
@@ -3607,6 +4310,33 @@ public class AINPCCommand implements CommandExecutor {
         for (Map.Entry<Integer, List<AINPC>> entry : npcsByDatabaseId.entrySet()) {
             if (entry.getValue().size() > 1) {
                 report.error("Exista mai multi NPC cu acelasi database_id: " + entry.getKey() + ".");
+            }
+        }
+
+        for (Map.Entry<String, List<AINPC>> entry : npcsBySourceKey.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                String duplicateIds = entry.getValue().stream()
+                    .map(npc -> npc.getName() + "#" + npc.getDatabaseId())
+                    .toList()
+                    .toString();
+                report.error("Exista mai multi NPC cu acelasi source_key: "
+                    + entry.getKey() + " (" + entry.getValue().size() + "): " + duplicateIds + ".");
+            }
+        }
+
+        for (var issue : plugin.getNpcManager().auditManagedVillagerEntities()) {
+            if (issue.error()) {
+                report.error(issue.message());
+            } else {
+                report.warn(issue.message());
+            }
+        }
+
+        for (var issue : plugin.getNpcManager().auditPersistentSourceKeyIndex()) {
+            if (issue.error()) {
+                report.error(issue.message());
+            } else {
+                report.warn(issue.message());
             }
         }
     }
@@ -3976,6 +4706,8 @@ public class AINPCCommand implements CommandExecutor {
             + " arhivate, " + summary.trackedCount() + " tracked.");
         report.info("Progression status: " + formatCountMap(summary.byStatus()));
         report.info("Progression mechanics: " + formatCountMap(summary.byMechanic()));
+        report.info("Progression scenario kinds: " + formatCountMap(summary.byScenarioKind()));
+        report.info("Progression base types: " + formatCountMap(summary.byBaseType()));
 
         if (summary.unresolvedDefinitionCount() > 0) {
             report.warn("Exista " + summary.unresolvedDefinitionCount()
@@ -4086,12 +4818,27 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         Set<String> knownQuestReferences = collectKnownQuestReferences(quests);
+        WorldMappingSemanticIndex worldSemanticIndex = buildWorldMappingSemanticIndexForAudit();
         Map<String, String> questCodes = new HashMap<>();
         for (FeaturePackLoader.ScenarioDefinition quest : quests) {
             String label = "Quest template " + quest.getPackId() + ":" + quest.getId()
                 + " (" + formatOptional(quest.getName()) + ")";
-            validateQuestTemplate(report, featurePackLoader, label, quest, knownQuestReferences, questCodes);
+            validateQuestTemplate(report, featurePackLoader, label, quest, knownQuestReferences, questCodes, worldSemanticIndex);
         }
+    }
+
+    private WorldMappingSemanticIndex buildWorldMappingSemanticIndexForAudit() {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            return null;
+        }
+
+        WorldMappingSemanticIndex index = WorldMappingSemanticIndex.from(
+            worldAdmin.getRegions(),
+            worldAdmin.getPlaces(),
+            worldAdmin.getNodes()
+        );
+        return index.hasAnyCandidates() ? index : null;
     }
 
     private boolean isQuestAuditCandidate(FeaturePackLoader.ScenarioDefinition scenario) {
@@ -4127,7 +4874,8 @@ public class AINPCCommand implements CommandExecutor {
                                        String label,
                                        FeaturePackLoader.ScenarioDefinition quest,
                                        Set<String> knownQuestReferences,
-                                       Map<String, String> questCodes) {
+                                       Map<String, String> questCodes,
+                                       WorldMappingSemanticIndex worldSemanticIndex) {
         if (quest.getQuestCode().isBlank()) {
             report.warn(label + " nu are quest.code; runtime-ul foloseste template_id ca fallback.");
         } else {
@@ -4154,7 +4902,7 @@ public class AINPCCommand implements CommandExecutor {
         validateQuestDialogues(report, label, quest);
         validateQuestGiverRole(report, label, quest);
         validateQuestProgressionMetadata(report, featurePackLoader, label, quest);
-        validateQuestEntries(report, label, "obiectiv", quest.getObjectives(), true);
+        validateQuestEntries(report, label, "obiectiv", quest.getObjectives(), true, worldSemanticIndex);
         validateQuestEntries(report, label, "recompensa", quest.getRewards(), false);
         validateQuestObjectiveStages(report, label, quest);
     }
@@ -4542,6 +5290,15 @@ public class AINPCCommand implements CommandExecutor {
                                       String entryKind,
                                       List<FeaturePackLoader.QuestEntryDefinition> entries,
                                       boolean objectives) {
+        validateQuestEntries(report, label, entryKind, entries, objectives, null);
+    }
+
+    private void validateQuestEntries(AuditReport report,
+                                      String label,
+                                      String entryKind,
+                                      List<FeaturePackLoader.QuestEntryDefinition> entries,
+                                      boolean objectives,
+                                      WorldMappingSemanticIndex worldSemanticIndex) {
         if (entries.isEmpty()) {
             if (objectives) {
                 report.error(label + " nu are obiective.");
@@ -4565,7 +5322,7 @@ public class AINPCCommand implements CommandExecutor {
             }
 
             if (objectives) {
-                validateQuestObjectiveEntry(report, entryLabel, entry);
+                validateQuestObjectiveEntry(report, entryLabel, entry, worldSemanticIndex);
             } else {
                 validateQuestRewardEntry(report, entryLabel, entry);
             }
@@ -4587,6 +5344,13 @@ public class AINPCCommand implements CommandExecutor {
     private void validateQuestObjectiveEntry(AuditReport report,
                                              String entryLabel,
                                              FeaturePackLoader.QuestEntryDefinition entry) {
+        validateQuestObjectiveEntry(report, entryLabel, entry, null);
+    }
+
+    private void validateQuestObjectiveEntry(AuditReport report,
+                                             String entryLabel,
+                                             FeaturePackLoader.QuestEntryDefinition entry,
+                                             WorldMappingSemanticIndex worldSemanticIndex) {
         String type = normalizeQuestObjectiveType(entry.getType());
         switch (type) {
             case "collect_item", "deliver_to_npc" -> validateMaterialReference(report, entryLabel, entry.getItemId());
@@ -4596,10 +5360,42 @@ public class AINPCCommand implements CommandExecutor {
                     report.warn(entryLabel + " nu are item/reference; resolverul va folosi contextul curent daca poate.");
                 } else {
                     validateQuestSemanticReference(report, entryLabel, type, entry.getItemId());
+                    validateQuestSemanticReferenceExists(report, entryLabel, type, entry.getItemId(), worldSemanticIndex);
                 }
             }
             default -> report.error(entryLabel + " are tip de obiectiv nesuportat de runtime: " + entry.getType() + ".");
         }
+    }
+
+    private void validateQuestSemanticReferenceExists(AuditReport report,
+                                                      String label,
+                                                      String objectiveType,
+                                                      String reference,
+                                                      WorldMappingSemanticIndex worldSemanticIndex) {
+        if (worldSemanticIndex == null) {
+            return;
+        }
+
+        String anchorType = semanticAnchorTypeForObjective(objectiveType);
+        if (anchorType.isBlank() || "npc".equals(anchorType)) {
+            return;
+        }
+
+        if (!worldSemanticIndex.hasReference(anchorType, reference)) {
+            report.warn(label + " refera " + objectiveType + " `" + reference
+                + "`, dar tokenul nu apare in world mapping semantic_index pentru ancora " + anchorType
+                + ". Verifica /ainpc debugdump world sau mapping-ul demo.");
+        }
+    }
+
+    private String semanticAnchorTypeForObjective(String objectiveType) {
+        return switch (normalizeQuestObjectiveType(objectiveType)) {
+            case "visit_region" -> "region";
+            case "visit_place" -> "place";
+            case "inspect_node" -> "node";
+            case "talk_to_npc" -> "npc";
+            default -> "";
+        };
     }
 
     private void validateQuestRewardEntry(AuditReport report,
@@ -4958,9 +5754,22 @@ public class AINPCCommand implements CommandExecutor {
         try {
             int npcRows = queryCount("SELECT COUNT(*) FROM npcs");
             int profileRows = queryCount("SELECT COUNT(*) FROM npc_profiles");
+            int sourceKeyRows = queryCount("SELECT COUNT(*) FROM npc_source_keys");
             int worldBindingRows = queryCount("SELECT COUNT(*) FROM npc_world_bindings");
+            int householdRows = queryCount("SELECT COUNT(*) FROM households");
+            int householdResidentRows = queryCount("SELECT COUNT(*) FROM household_residents");
+            int spawnBatchRows = queryCount("SELECT COUNT(*) FROM spawn_batches");
+            int activeSpawnBatchRows = queryCount("""
+                SELECT COUNT(*)
+                FROM spawn_batches
+                WHERE status IN ('RUNNING', 'FAILED', 'ROLLED_BACK')
+                """);
             report.info("DB: " + npcRows + " randuri in npcs, " + profileRows + " randuri in npc_profiles.");
+            report.info("NPC source keys: " + sourceKeyRows + " randuri in npc_source_keys.");
             report.info("NPC world bindings: " + worldBindingRows + " randuri in npc_world_bindings.");
+            report.info("Households: " + householdRows + " randuri, " + householdResidentRows + " rezidenti persistenti.");
+            report.info("Spawn batches: " + spawnBatchRows + " randuri, " + activeSpawnBatchRows
+                + " nefinalizate/esuate.");
 
             auditQueryRows(report, """
                 SELECT n.id, n.name
@@ -4988,6 +5797,14 @@ public class AINPCCommand implements CommandExecutor {
                 GROUP BY uuid
                 HAVING COUNT(*) > 1
                 """, "UUID duplicat in DB");
+            auditNpcDuplicateDatabaseRows(report);
+
+            auditQueryRows(report, """
+                SELECT s.source_key, s.npc_id
+                FROM npc_source_keys s
+                LEFT JOIN npcs n ON n.id = s.npc_id
+                WHERE n.id IS NULL
+                """, "source_key persistent orfan fara NPC");
 
             auditQueryRows(report, """
                 SELECT b.npc_id, b.npc_name
@@ -5001,6 +5818,101 @@ public class AINPCCommand implements CommandExecutor {
                 FROM npc_world_bindings
                 WHERE home_place_id = '' AND work_place_id = '' AND social_place_id = ''
                 """, "NPC world binding fara niciun place");
+
+            auditQueryRows(report, """
+                SELECT household_id, family_id, resident_count
+                FROM households
+                WHERE TRIM(COALESCE(home_place_id, '')) = ''
+                """, "Household fara home_place_id");
+
+            auditQueryRows(report, """
+                SELECT r.household_id, r.resident_key, r.npc_id
+                FROM household_residents r
+                LEFT JOIN households h ON h.household_id = r.household_id
+                WHERE h.household_id IS NULL
+                """, "Household resident orfan fara household");
+
+            auditQueryRows(report, """
+                SELECT r.household_id, r.resident_key, r.npc_id
+                FROM household_residents r
+                LEFT JOIN npcs n ON n.id = r.npc_id
+                WHERE n.id IS NULL
+                """, "Household resident refera NPC inexistent");
+
+            auditQueryRows(report, """
+                SELECT r.household_id, r.resident_key, r.npc_id, r.source_key
+                FROM household_residents r
+                LEFT JOIN npc_source_keys s ON s.source_key = r.source_key
+                WHERE r.source_key <> ''
+                  AND (s.source_key IS NULL OR s.npc_id <> r.npc_id)
+                """, "Household resident are source_key nealiniat cu npc_source_keys");
+
+            auditQueryRows(report, """
+                SELECT h.household_id, h.resident_count, COUNT(r.resident_key) AS actual_residents
+                FROM households h
+                LEFT JOIN household_residents r
+                  ON r.household_id = h.household_id AND r.status = 'active'
+                GROUP BY h.household_id, h.resident_count
+                HAVING h.resident_count <> COUNT(r.resident_key)
+                """, "Household are resident_count diferit de rezidentii activi");
+
+            auditQueryRows(report, """
+                SELECT r.npc_id, COUNT(*) AS household_count
+                FROM household_residents r
+                GROUP BY r.npc_id
+                HAVING COUNT(*) > 1
+                """, "NPC asignat in mai multe household-uri");
+            auditHouseholdMappingReferences(report, householdRows, householdResidentRows);
+
+            auditQueryRows(report, """
+                SELECT batch_key, scope_type, scope_id, status, allocation_count, npc_plan_count
+                FROM spawn_batches
+                WHERE status IN ('RUNNING', 'FAILED', 'ROLLED_BACK')
+                ORDER BY updated_at DESC
+                LIMIT 10
+                """, "Spawn batch nefinalizat sau esuat");
+
+            auditQueryRows(report, """
+                SELECT b.batch_key, b.scope_type, b.scope_id, COUNT(s.step_index) AS creator_steps
+                FROM spawn_batches b
+                JOIN spawn_batch_steps s ON s.batch_key = b.batch_key
+                WHERE b.status = 'RUNNING'
+                  AND TRIM(COALESCE(s.created_npc_ids, '')) <> ''
+                GROUP BY b.batch_key, b.scope_type, b.scope_id
+                ORDER BY b.updated_at DESC
+                LIMIT 10
+                """, "Spawn batch RUNNING are NPC-uri create si necesita repair inainte de retry");
+
+            auditQueryRows(report, """
+                SELECT s.batch_key, s.step_index, s.step_key
+                FROM spawn_batch_steps s
+                LEFT JOIN spawn_batches b ON b.batch_key = s.batch_key
+                WHERE b.batch_key IS NULL
+                """, "Spawn batch step orfan fara batch");
+
+            auditQueryRows(report, """
+                SELECT s.batch_key, s.step_index, s.step_key
+                FROM spawn_batch_steps s
+                WHERE TRIM(COALESCE(s.step_key, '')) <> ''
+                  AND TRIM(COALESCE(s.household_id, '')) = ''
+                """, "Spawn batch step fara household_id explicit");
+
+            auditQueryRows(report, """
+                SELECT s.batch_key, s.step_index, s.step_key, s.status
+                FROM spawn_batch_steps s
+                JOIN spawn_batches b ON b.batch_key = s.batch_key
+                WHERE b.status = 'ROLLED_BACK'
+                  AND TRIM(COALESCE(s.created_npc_ids, '')) <> ''
+                  AND s.status <> 'ROLLED_BACK'
+                """, "Spawn batch ROLLED_BACK are pasi creatori nemarcati ROLLED_BACK");
+
+            auditQueryRows(report, """
+                SELECT s.batch_key, s.step_index, s.step_key, s.status
+                FROM spawn_batch_steps s
+                JOIN spawn_batches b ON b.batch_key = s.batch_key
+                WHERE b.status = 'SUCCEEDED'
+                  AND s.status IN ('FAILED', 'ROLLED_BACK')
+                """, "Spawn batch SUCCEEDED are pasi esuati sau rollback");
 
             try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(
                      "SELECT npc_id, profile_source, profile_data FROM npc_profiles");
@@ -5018,6 +5930,68 @@ public class AINPCCommand implements CommandExecutor {
             auditNpcWorldBindings(report, worldBindingRows);
         } catch (SQLException exception) {
             report.error("Audit DB esuat: " + exception.getMessage());
+        }
+    }
+
+    private void auditNpcDuplicateDatabaseRows(AuditReport report) throws SQLException {
+        auditQueryRows(report, """
+            SELECT LOWER(TRIM(name)) AS name_key,
+                   world,
+                   CAST(ROUND(x * 2.0) AS INTEGER) AS x_half_block,
+                   CAST(ROUND(y * 2.0) AS INTEGER) AS y_half_block,
+                   CAST(ROUND(z * 2.0) AS INTEGER) AS z_half_block,
+                   COUNT(*) AS duplicate_count,
+                   GROUP_CONCAT(id || ':' || name, ', ') AS npc_rows
+            FROM npcs
+            WHERE TRIM(COALESCE(name, '')) <> ''
+              AND TRIM(COALESCE(world, '')) <> ''
+            GROUP BY name_key, world, x_half_block, y_half_block, z_half_block
+            HAVING COUNT(*) > 1
+            """, "NPC DB duplicat dupa nume si locatie apropiata");
+
+        Map<String, List<String>> rowsBySourceKey = new HashMap<>();
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement("""
+                 SELECT n.id, n.name, p.profile_data
+                 FROM npcs n
+                 JOIN npc_profiles p ON p.npc_id = n.id
+                 WHERE TRIM(COALESCE(p.profile_data, '')) <> ''
+                 """);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String sourceKey = extractSourceKeyFromProfileData(rs.getString("profile_data"));
+                if (sourceKey.isBlank()) {
+                    continue;
+                }
+                rowsBySourceKey
+                    .computeIfAbsent(normalizeAuditKey(sourceKey), ignored -> new ArrayList<>())
+                    .add(rs.getInt("id") + ":" + formatOptional(rs.getString("name")));
+            }
+        }
+
+        for (Map.Entry<String, List<String>> entry : rowsBySourceKey.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                report.error("NPC DB duplicat dupa profile_data.source_key=" + entry.getKey()
+                    + " (" + entry.getValue().size() + "): " + entry.getValue() + ".");
+            }
+        }
+    }
+
+    private String extractSourceKeyFromProfileData(String profileData) {
+        if (profileData == null || profileData.isBlank()) {
+            return "";
+        }
+
+        try {
+            JsonElement parsed = JsonParser.parseString(profileData);
+            if (parsed == null || !parsed.isJsonObject()) {
+                return "";
+            }
+            JsonElement sourceKey = parsed.getAsJsonObject().get("source_key");
+            return sourceKey != null && sourceKey.isJsonPrimitive()
+                ? sourceKey.getAsString().trim()
+                : "";
+        } catch (JsonSyntaxException exception) {
+            return "";
         }
     }
 
@@ -5057,6 +6031,115 @@ public class AINPCCommand implements CommandExecutor {
             validateNpcWorldNodeBinding(report, label, "home", binding.homeNodeId(), binding.homePlaceId(), nodesById);
             validateNpcWorldNodeBinding(report, label, "work", binding.workNodeId(), binding.workPlaceId(), nodesById);
             validateNpcWorldNodeBinding(report, label, "social", binding.socialNodeId(), binding.socialPlaceId(), nodesById);
+        }
+    }
+
+    private void auditHouseholdMappingReferences(AuditReport report,
+                                                 int totalHouseholdRows,
+                                                 int totalResidentRows) throws SQLException {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            if (totalHouseholdRows > 0 || totalResidentRows > 0) {
+                report.warn("World admin este dezactivat; nu pot valida referintele mapping din households.");
+            }
+            return;
+        }
+
+        Map<String, WorldPlaceInfo> placesById = new HashMap<>();
+        Map<String, WorldNodeInfo> nodesById = new HashMap<>();
+        for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
+            placesById.put(normalizeAuditKey(place.id()), place);
+        }
+        for (WorldNodeInfo node : worldAdmin.getNodes()) {
+            nodesById.put(normalizeAuditKey(node.id()), node);
+        }
+
+        int checkedHouseholds = 0;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement("""
+                 SELECT household_id, home_place_id
+                 FROM households
+                 WHERE TRIM(COALESCE(home_place_id, '')) <> ''
+                 ORDER BY household_id ASC
+                 LIMIT ?
+                 """)) {
+            stmt.setInt(1, NPC_WORLD_BINDING_LOOKUP_LIMIT);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    checkedHouseholds++;
+                    String label = "Household " + rs.getString("household_id");
+                    validateHouseholdPlaceReference(report, label, "home", rs.getString("home_place_id"), placesById);
+                }
+            }
+        }
+        if (totalHouseholdRows > checkedHouseholds) {
+            report.warn("Audit households a verificat primele " + checkedHouseholds
+                + " household-uri din " + totalHouseholdRows + ".");
+        }
+
+        int checkedResidents = 0;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement("""
+                 SELECT household_id, resident_key, npc_id,
+                        home_place_id, home_node_id, work_place_id, work_node_id
+                 FROM household_residents
+                 ORDER BY household_id ASC, resident_key ASC
+                 LIMIT ?
+                 """)) {
+            stmt.setInt(1, NPC_WORLD_BINDING_LOOKUP_LIMIT);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    checkedResidents++;
+                    String label = "Household resident " + rs.getString("household_id")
+                        + "/" + rs.getString("resident_key") + " npc_id=" + rs.getInt("npc_id");
+                    String homePlaceId = rs.getString("home_place_id");
+                    String workPlaceId = rs.getString("work_place_id");
+                    validateHouseholdPlaceReference(report, label, "home", homePlaceId, placesById);
+                    validateHouseholdPlaceReference(report, label, "work", workPlaceId, placesById);
+                    validateHouseholdNodeReference(report, label, "home", rs.getString("home_node_id"), homePlaceId, nodesById);
+                    validateHouseholdNodeReference(report, label, "work", rs.getString("work_node_id"), workPlaceId, nodesById);
+                }
+            }
+        }
+        if (totalResidentRows > checkedResidents) {
+            report.warn("Audit household_residents a verificat primii " + checkedResidents
+                + " rezidenti din " + totalResidentRows + ".");
+        }
+    }
+
+    private void validateHouseholdPlaceReference(AuditReport report,
+                                                 String label,
+                                                 String role,
+                                                 String placeId,
+                                                 Map<String, WorldPlaceInfo> placesById) {
+        if (placeId == null || placeId.isBlank()) {
+            return;
+        }
+
+        WorldPlaceInfo place = placesById.get(normalizeAuditKey(placeId));
+        if (place == null) {
+            report.error(label + " refera " + role + "_place_id inexistent in mapping: " + placeId + ".");
+        }
+    }
+
+    private void validateHouseholdNodeReference(AuditReport report,
+                                                String label,
+                                                String role,
+                                                String nodeId,
+                                                String expectedPlaceId,
+                                                Map<String, WorldNodeInfo> nodesById) {
+        if (nodeId == null || nodeId.isBlank()) {
+            return;
+        }
+
+        WorldNodeInfo node = nodesById.get(normalizeAuditKey(nodeId));
+        if (node == null) {
+            report.error(label + " refera " + role + "_node_id inexistent in mapping: " + nodeId + ".");
+            return;
+        }
+        if (expectedPlaceId != null && !expectedPlaceId.isBlank()
+            && !node.placeId().isBlank()
+            && !node.placeId().equalsIgnoreCase(expectedPlaceId)) {
+            report.error(label + " are " + role + "_node_id=" + nodeId
+                + " in alt place decat " + expectedPlaceId + ".");
         }
     }
 
@@ -5527,6 +6610,674 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
+    private boolean handleDeleteId(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        if (args.length < 2) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc delete-id <id> confirm");
+            return true;
+        }
+
+        Integer npcId = parseIntegerStrict(args[1]);
+        if (npcId == null || npcId <= 0) {
+            plugin.getMessageUtils().send(sender, "&cID NPC invalid: &f" + args[1]);
+            return true;
+        }
+
+        AINPC npc = plugin.getNpcManager().getNPCById(npcId);
+        if (npc == null) {
+            plugin.getMessageUtils().send(sender, "&cNu exista NPC incarcat cu ID-ul: &f" + npcId);
+            return true;
+        }
+
+        if (args.length < 3 || !"confirm".equalsIgnoreCase(args[2])) {
+            plugin.getMessageUtils().send(sender, "&eNPC selectat: &f" + npc.getName()
+                + " &7(id=&f" + npc.getDatabaseId() + "&7, source=&f" + formatOptional(npc.getSourceKey()) + "&7)");
+            plugin.getMessageUtils().send(sender, "&eLocatie: &f" + formatLocation(npc.getLocation()));
+            plugin.getMessageUtils().send(sender, "&cPentru stergere definitiva ruleaza: &f/ainpc delete-id " + npcId + " confirm");
+            return true;
+        }
+
+        if (plugin.getNpcManager().deleteNPC(npc)) {
+            plugin.getMessageUtils().send(sender, "&aNPC sters dupa ID: &f" + npc.getName() + "#" + npcId);
+        } else {
+            plugin.getMessageUtils().send(sender, "&cEroare la stergerea NPC-ului cu ID: &f" + npcId);
+        }
+
+        return true;
+    }
+
+    private boolean handleDuplicates(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        List<AINPC> npcs = new ArrayList<>(plugin.getNpcManager().getAllNPCs());
+        plugin.getMessageUtils().send(sender, "&6=== Duplicate NPC - raport ===");
+        plugin.getMessageUtils().send(sender, "&eNPC-uri incarcate: &f" + npcs.size());
+
+        List<String> findings = new ArrayList<>();
+        collectSourceKeyDuplicateFindings(npcs, findings);
+        collectNearbyNameDuplicateFindings(npcs, findings);
+        for (var issue : plugin.getNpcManager().auditManagedVillagerEntities()) {
+            findings.add((issue.error() ? "&c" : "&e") + issue.message());
+        }
+        for (var issue : plugin.getNpcManager().auditPersistentSourceKeyIndex()) {
+            findings.add((issue.error() ? "&c" : "&e") + issue.message());
+        }
+
+        if (findings.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu am gasit duplicate evidente in NPCManager, entitati live sau indexul source_key.");
+            return true;
+        }
+
+        int limit = Math.min(12, findings.size());
+        for (int index = 0; index < limit; index++) {
+            plugin.getMessageUtils().send(sender, findings.get(index));
+        }
+        if (findings.size() > limit) {
+            plugin.getMessageUtils().send(sender, "&7... inca &f" + (findings.size() - limit)
+                + " &7probleme. Ruleaza &f/ainpc audit npc &7si &f/ainpc debugdump npc&7.");
+        }
+        plugin.getMessageUtils().send(sender, "&7Cleanup sigur: &f/ainpc delete-id <id> confirm");
+        return true;
+    }
+
+    private boolean handleRepair(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        if (args.length < 2 || (!"duplicates".equalsIgnoreCase(args[1])
+            && !"households".equalsIgnoreCase(args[1])
+            && !isRepairBatchTarget(args[1]))) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair duplicates [dryrun|apply]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair households [dryrun|apply]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch list [problem|all|failed|running|rolled_back|succeeded]");
+            return true;
+        }
+
+        if (isRepairBatchTarget(args[1])) {
+            if (args.length < 3 || args.length > 4) {
+                plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
+                plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch list [problem|all|failed|running|rolled_back|succeeded]");
+                return true;
+            }
+            if (isRepairBatchListAction(args[2])) {
+                String filter = args.length >= 4 ? args[3] : "problem";
+                return handleRepairSpawnBatchList(sender, filter);
+            }
+            String mode = args.length >= 4 ? args[3].toLowerCase(Locale.ROOT) : "dryrun";
+            if (!"dryrun".equals(mode) && !"apply".equals(mode)
+                && !"mark-steps".equals(mode) && !"sync-steps".equals(mode)
+                && !"inspect".equals(mode) && !"steps".equals(mode)
+                && !"mark-failed".equals(mode) && !"mark_failed".equals(mode)
+                && !"fail".equals(mode) && !"abandon".equals(mode)) {
+                plugin.getMessageUtils().send(sender,
+                    "&cMod invalid. Foloseste: &fdryrun&c, &fapply&c, &finspect&c, &fmark-steps &csau &fmark-failed");
+                return true;
+            }
+            return handleRepairSpawnBatch(sender, args[2], mode);
+        }
+
+        String mode = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "dryrun";
+        if (!"dryrun".equals(mode) && !"apply".equals(mode)) {
+            plugin.getMessageUtils().send(sender, "&cMod invalid. Foloseste: &fdryrun &csau &fapply");
+            return true;
+        }
+
+        boolean apply = "apply".equals(mode);
+        if ("households".equalsIgnoreCase(args[1])) {
+            return handleRepairHouseholds(sender, apply);
+        }
+
+        var result = plugin.getNpcManager().repairDuplicateNPCs(apply);
+        plugin.getMessageUtils().send(sender, apply
+            ? "&6=== Repair duplicate NPC - APPLY ==="
+            : "&6=== Repair duplicate NPC - DRYRUN ===");
+        plugin.getMessageUtils().send(sender, "&eRanduri DB duplicate gasite: &f" + result.duplicateDbRows()
+            + " &7| sterse=&f" + result.deletedDbRows());
+        plugin.getMessageUtils().send(sender, "&eEntitati duplicate gasite: &f" + result.duplicateEntities()
+            + " &7| eliminate=&f" + result.removedEntities()
+            + " &7| reasociate=&f" + result.reassociatedEntities());
+        plugin.getMessageUtils().send(sender, "&eProbleme index source_key: &f" + result.sourceKeyIndexIssues()
+            + " &7| reindexate=&f" + result.reindexedSourceKeys());
+
+        sendRepairMessages(sender, result.actions(), apply ? "&a" : "&e", 12);
+        sendRepairMessages(sender, result.warnings(), "&e", 8);
+        sendRepairMessages(sender, result.errors(), "&c", 8);
+
+        if (!apply && (!result.actions().isEmpty()
+            || result.duplicateDbRows() > 0
+            || result.duplicateEntities() > 0
+            || result.sourceKeyIndexIssues() > 0)) {
+            plugin.getMessageUtils().send(sender, "&7Pentru aplicare: &f/ainpc repair duplicates apply");
+        }
+        if (result.actions().isEmpty() && result.warnings().isEmpty() && result.errors().isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu sunt actiuni de reparatie necesare.");
+        }
+        return true;
+    }
+
+    private boolean isRepairBatchTarget(String value) {
+        return "batch".equalsIgnoreCase(value)
+            || "spawn-batch".equalsIgnoreCase(value)
+            || "spawn_batch".equalsIgnoreCase(value);
+    }
+
+    private boolean isRepairBatchListAction(String value) {
+        return "list".equalsIgnoreCase(value)
+            || "recent".equalsIgnoreCase(value)
+            || "history".equalsIgnoreCase(value);
+    }
+
+    private boolean handleRepairHouseholds(CommandSender sender, boolean apply) {
+        HouseholdPersistenceService service = requireHouseholdPersistence(sender);
+        if (service == null) {
+            return true;
+        }
+
+        try {
+            HouseholdPersistenceService.HouseholdResidentRepairReport result =
+                service.repairDuplicateResidents(apply, NPC_WORLD_BINDING_LOOKUP_LIMIT);
+            plugin.getMessageUtils().send(sender, apply
+                ? "&6=== Repair household residents - APPLY ==="
+                : "&6=== Repair household residents - DRYRUN ===");
+            plugin.getMessageUtils().send(sender,
+                "&eGrupuri duplicate NPC/source_key: &f" + result.duplicateNpcGroups()
+                    + "/" + result.duplicateSourceKeyGroups()
+                    + " &7| randuri duplicate=&f" + result.duplicateResidentRows()
+                    + " &7| sterse=&f" + result.deletedResidentRows()
+                    + " &7| household-uri recalculate=&f" + result.updatedHouseholds());
+            sendRepairMessages(sender, result.actions(), apply ? "&a" : "&e", 12);
+            sendRepairMessages(sender, result.warnings(), "&e", 8);
+            sendRepairMessages(sender, result.errors(), "&c", 8);
+
+            if (!apply && result.duplicateResidentRows() > 0) {
+                plugin.getMessageUtils().send(sender, "&7Pentru aplicare: &f/ainpc repair households apply");
+            }
+            if (result.actions().isEmpty() && result.warnings().isEmpty() && result.errors().isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&aNu sunt rezidenti household duplicati de reparat.");
+            }
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cRepair household residents a esuat: &e" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private boolean handleRepairSpawnBatch(CommandSender sender, String batchKey, String mode) {
+        if (plugin.getDatabaseManager() == null) {
+            plugin.getMessageUtils().send(sender, "&cDatabaseManager este indisponibil.");
+            return true;
+        }
+
+        String safeBatchKey = batchKey == null ? "" : batchKey.trim();
+        if (safeBatchKey.isBlank()) {
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
+            return true;
+        }
+
+        SpawnBatchTracker tracker = new SpawnBatchTracker(plugin.getDatabaseManager(), plugin.getLogger());
+        Optional<SpawnBatchTracker.BatchRecord> batchRecord = tracker.findBatch(safeBatchKey);
+        if (batchRecord.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cNu exista spawn batch cu cheia: &e" + safeBatchKey);
+            return true;
+        }
+
+        String safeMode = mode == null || mode.isBlank() ? "dryrun" : mode.toLowerCase(Locale.ROOT);
+        boolean apply = "apply".equals(safeMode);
+        SpawnBatchTracker.BatchRecord batch = batchRecord.get();
+        if ("mark-steps".equals(safeMode) || "sync-steps".equals(safeMode)) {
+            return handleRepairSpawnBatchSteps(sender, tracker, batch, safeBatchKey);
+        }
+        if ("inspect".equals(safeMode) || "steps".equals(safeMode)) {
+            return handleRepairSpawnBatchInspect(sender, tracker, batch, safeBatchKey);
+        }
+        if ("mark-failed".equals(safeMode) || "mark_failed".equals(safeMode)
+            || "fail".equals(safeMode) || "abandon".equals(safeMode)) {
+            return handleRepairSpawnBatchMarkFailed(sender, tracker, batch, safeBatchKey);
+        }
+
+        List<Integer> createdNpcIds = tracker.findCreatedNpcIdsForBatch(safeBatchKey);
+        List<String> affectedHouseholdIds = tracker.findHouseholdIdsForBatch(safeBatchKey);
+        List<String> actions = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int existingNpcCount = 0;
+        int deletedNpcCount = 0;
+
+        plugin.getMessageUtils().send(sender, apply
+            ? "&6=== Repair spawn batch rollback - APPLY ==="
+            : "&6=== Repair spawn batch rollback - DRYRUN ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBatch: &f" + safeBatchKey
+                + " &7status=&f" + batch.status()
+                + " &7scope=&f" + batch.scopeType() + "/" + batch.scopeId()
+                + " &7dry_run=&f" + batch.dryRun());
+        if (!affectedHouseholdIds.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&eHousehold-uri afectate: &f" + String.join(", ", affectedHouseholdIds));
+        }
+
+        if (batch.dryRun()) {
+            plugin.getMessageUtils().send(sender, "&eBatch-ul este dry-run; nu exista NPC-uri reale de sters.");
+            return true;
+        }
+        if (apply && SpawnBatchTracker.STATUS_SUCCEEDED.equals(batch.status())) {
+            plugin.getMessageUtils().send(sender,
+                "&cRefuz apply pe batch SUCCEEDED. Foloseste cleanup manual dupa audit daca vrei sa stergi un spawn valid.");
+            return true;
+        }
+        if (createdNpcIds.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&eBatch-ul nu are created_npc_ids in spawn_batch_steps; nu am ce sterge automat.");
+            return true;
+        }
+
+        for (int npcId : createdNpcIds) {
+            AINPC npc = plugin.getNpcManager().getNPCById(npcId);
+            if (npc == null) {
+                warnings.add("NPC id=" + npcId + " este deja absent din cache/DB.");
+                continue;
+            }
+
+            existingNpcCount++;
+            if (!apply) {
+                actions.add("Ar sterge NPC " + npc.getName() + "#" + npc.getDatabaseId()
+                    + " creat de batch.");
+                continue;
+            }
+
+            if (plugin.getNpcManager().deleteNPC(npc)) {
+                deletedNpcCount++;
+                actions.add("Sters NPC " + npc.getName() + "#" + npc.getDatabaseId()
+                    + " creat de batch.");
+            } else {
+                errors.add("Nu am putut sterge NPC " + npc.getName() + "#" + npc.getDatabaseId() + ".");
+            }
+        }
+
+        if (!affectedHouseholdIds.isEmpty()) {
+            if (!apply) {
+                actions.add("Ar recalcula resident_count pentru household-uri: "
+                    + String.join(", ", affectedHouseholdIds) + ".");
+            } else if (plugin.getHouseholdPersistenceService() != null) {
+                try {
+                    int updatedHouseholds = plugin.getHouseholdPersistenceService()
+                        .recalculateResidentCounts(affectedHouseholdIds);
+                    actions.add("Am recalculat resident_count pentru " + updatedHouseholds + " household-uri.");
+                } catch (SQLException exception) {
+                    errors.add("Nu am putut recalcula resident_count pentru household-uri: " + exception.getMessage());
+                }
+            } else {
+                warnings.add("HouseholdPersistenceService indisponibil; resident_count nu a fost recalculat.");
+            }
+        }
+        boolean rollbackComplete = !apply || errors.isEmpty();
+        if (apply && rollbackComplete) {
+            int rolledBackSteps = tracker.markCreatedStepsRolledBack(safeBatchKey);
+            actions.add("Am marcat " + rolledBackSteps + " pasi batch ca ROLLED_BACK.");
+        }
+
+        plugin.getMessageUtils().send(sender,
+            "&eNPC-uri create in pasi: &f" + createdNpcIds.size()
+                + " &7| existente=&f" + existingNpcCount
+                + " &7| sterse=&f" + deletedNpcCount);
+        sendRepairMessages(sender, actions, apply ? "&a" : "&e", 16);
+        sendRepairMessages(sender, warnings, "&e", 8);
+        sendRepairMessages(sender, errors, "&c", 8);
+
+        if (apply) {
+            tracker.finishBatch(
+                safeBatchKey,
+                false,
+                rollbackComplete,
+                createdNpcIds.size(),
+                batch.reusedNpcCount(),
+                warnings,
+                errors
+            );
+            plugin.getMessageUtils().send(sender, rollbackComplete
+                ? "&aBatch marcat ROLLED_BACK."
+                : "&cBatch ramas FAILED deoarece unele stergeri au esuat.");
+        } else if (existingNpcCount > 0) {
+            plugin.getMessageUtils().send(sender,
+                "&7Pentru aplicare: &f/ainpc repair batch " + safeBatchKey + " apply");
+        }
+
+        if (actions.isEmpty() && warnings.isEmpty() && errors.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu sunt actiuni de rollback necesare pentru acest batch.");
+        }
+        return true;
+    }
+
+    private boolean handleRepairSpawnBatchList(CommandSender sender, String filter) {
+        if (plugin.getDatabaseManager() == null) {
+            plugin.getMessageUtils().send(sender, "&cDatabaseManager este indisponibil.");
+            return true;
+        }
+
+        if (!SpawnBatchTracker.isSupportedBatchStatusFilter(filter)) {
+            plugin.getMessageUtils().send(sender,
+                "&cFiltru invalid. Foloseste: &fproblem&c, &fall&c, &ffailed&c, &frunning&c, &frolled_back &csau &fsucceeded");
+            return true;
+        }
+
+        String normalizedFilter = SpawnBatchTracker.normalizeBatchStatusFilter(filter);
+        SpawnBatchTracker tracker = new SpawnBatchTracker(plugin.getDatabaseManager(), plugin.getLogger());
+        List<SpawnBatchTracker.BatchRecord> batches =
+            tracker.findRecentBatches(normalizedFilter, SPAWN_BATCH_DEFAULT_LIMIT);
+
+        plugin.getMessageUtils().send(sender, "&6=== Spawn batch history ===");
+        plugin.getMessageUtils().send(sender,
+            "&eFiltru: &f" + normalizedFilter + " &7| limita=&f" + SPAWN_BATCH_DEFAULT_LIMIT);
+
+        if (batches.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu exista spawn batches pentru filtrul ales.");
+            return true;
+        }
+
+        for (SpawnBatchTracker.BatchRecord batch : batches) {
+            int pendingCreatorSteps = SpawnBatchTracker.STATUS_RUNNING.equals(batch.status())
+                ? tracker.countCreatorStepsForBatch(batch.batchKey())
+                : 0;
+            String pendingRollback = pendingCreatorSteps <= 0
+                ? ""
+                : " &crollback_pending_steps=&f" + pendingCreatorSteps;
+            plugin.getMessageUtils().send(sender,
+                "&e" + batch.batchKey()
+                    + " &7status=&f" + batch.status()
+                    + " &7scope=&f" + batch.scopeType() + "/" + batch.scopeId()
+                    + " &7dry_run=&f" + batch.dryRun()
+                    + " &7created/reused=&f" + batch.createdNpcCount() + "/" + batch.reusedNpcCount()
+                    + " &7updated=&f" + formatStoryTime(batch.updatedAt())
+                    + pendingRollback);
+        }
+
+        plugin.getMessageUtils().send(sender,
+            "&7Rollback controlat: &f/ainpc repair batch <batchKey> dryrun");
+        plugin.getMessageUtils().send(sender,
+            "&7Pasi rollback deja stersi: &f/ainpc repair batch <batchKey> mark-steps");
+        return true;
+    }
+
+    private boolean handleRepairSpawnBatchInspect(CommandSender sender,
+                                                  SpawnBatchTracker tracker,
+                                                  SpawnBatchTracker.BatchRecord batch,
+                                                  String batchKey) {
+        List<SpawnBatchTracker.BatchStepRecord> steps = tracker.findBatchSteps(batchKey);
+
+        plugin.getMessageUtils().send(sender, "&6=== Spawn batch inspect ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBatch: &f" + batchKey
+                + " &7status=&f" + batch.status()
+                + " &7scope=&f" + batch.scopeType() + "/" + batch.scopeId()
+                + " &7dry_run=&f" + batch.dryRun()
+                + " &7plan=&f" + shortenBatchValue(batch.planHash(), 16));
+
+        int creatorSteps = SpawnBatchTracker.STATUS_RUNNING.equals(batch.status())
+            ? tracker.countCreatorStepsForBatch(batchKey)
+            : 0;
+        if (creatorSteps > 0) {
+            List<Integer> createdNpcIds = tracker.findCreatedNpcIdsForBatch(batchKey);
+            plugin.getMessageUtils().send(sender,
+                "&cRetry blocat: batch-ul este RUNNING si are &f" + creatorSteps
+                    + " &cpasi cu NPC-uri create jurnalizate"
+                    + (createdNpcIds.isEmpty() ? "" : " &7(" + createdNpcIds.size() + " ID-uri parsabile)")
+                    + "&c. Ruleaza dryrun/apply inainte de rerulare.");
+        }
+
+        if (steps.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&eBatch-ul nu are pasi persistati in spawn_batch_steps.");
+            return true;
+        }
+
+        int displayed = Math.min(SPAWN_BATCH_STEP_PREVIEW_LIMIT, steps.size());
+        for (int index = 0; index < displayed; index++) {
+            SpawnBatchTracker.BatchStepRecord step = steps.get(index);
+            plugin.getMessageUtils().send(sender,
+                "&e#" + step.stepIndex()
+                    + " &7status=&f" + step.status()
+                    + " &7place=&f" + valueOrDash(step.stepKey())
+                    + " &7household=&f" + valueOrDash(step.householdId())
+                    + " &7created=&f" + formatBatchNpcIdList(step.createdNpcIds())
+                    + " &7reused=&f" + formatBatchNpcIdList(step.reusedNpcIds())
+                    + " &7updated=&f" + formatStoryTime(step.updatedAt()));
+            if (step.warningSummary() != null && !step.warningSummary().isBlank()) {
+                plugin.getMessageUtils().send(sender,
+                    "&e  warning: &f" + shortenBatchValue(step.warningSummary(), 110));
+            }
+            if (step.errorSummary() != null && !step.errorSummary().isBlank()) {
+                plugin.getMessageUtils().send(sender,
+                    "&c  error: &f" + shortenBatchValue(step.errorSummary(), 110));
+            }
+        }
+        if (steps.size() > displayed) {
+            plugin.getMessageUtils().send(sender,
+                "&7... inca &f" + (steps.size() - displayed) + " &7pasi in batch.");
+        }
+
+        plugin.getMessageUtils().send(sender,
+            "&7Rollback preview: &f/ainpc repair batch " + batchKey + " dryrun");
+        return true;
+    }
+
+    private boolean handleRepairSpawnBatchMarkFailed(CommandSender sender,
+                                                     SpawnBatchTracker tracker,
+                                                     SpawnBatchTracker.BatchRecord batch,
+                                                     String batchKey) {
+        plugin.getMessageUtils().send(sender, "&6=== Repair spawn batch mark-failed ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBatch: &f" + batchKey
+                + " &7status=&f" + batch.status()
+                + " &7scope=&f" + batch.scopeType() + "/" + batch.scopeId()
+                + " &7dry_run=&f" + batch.dryRun());
+
+        if (SpawnBatchTracker.STATUS_SUCCEEDED.equals(batch.status())) {
+            plugin.getMessageUtils().send(sender,
+                "&cRefuz mark-failed pe batch SUCCEEDED. Foloseste cleanup manual dupa audit daca este nevoie.");
+            return true;
+        }
+        if (SpawnBatchTracker.STATUS_ROLLED_BACK.equals(batch.status())) {
+            plugin.getMessageUtils().send(sender,
+                "&eBatch-ul este deja ROLLED_BACK. Pentru pasi nemarcati foloseste mark-steps.");
+            return true;
+        }
+        if (SpawnBatchTracker.STATUS_FAILED.equals(batch.status())) {
+            plugin.getMessageUtils().send(sender, "&aBatch-ul este deja FAILED.");
+            return true;
+        }
+
+        int creatorSteps = tracker.countCreatorStepsForBatch(batchKey);
+        List<Integer> parsedNpcIds = tracker.findCreatedNpcIdsForBatch(batchKey);
+        if (!parsedNpcIds.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&cRefuz mark-failed: batch-ul are &f" + parsedNpcIds.size()
+                    + " &cID-uri parsabile pentru rollback. Ruleaza mai intai dryrun/apply.");
+            return true;
+        }
+
+        List<String> warnings = new ArrayList<>();
+        warnings.add("Batch marcat FAILED manual prin /ainpc repair batch mark-failed; nu s-au sters NPC-uri.");
+        if (creatorSteps > 0) {
+            warnings.add("Exista " + creatorSteps
+                + " pasi creatori cu created_npc_ids neparsabile sau fara ID-uri valide.");
+        }
+        tracker.finishBatch(
+            batchKey,
+            false,
+            false,
+            batch.createdNpcCount(),
+            batch.reusedNpcCount(),
+            warnings,
+            List.of()
+        );
+
+        plugin.getMessageUtils().send(sender,
+            "&aBatch marcat FAILED manual. Nu am sters NPC-uri si nu am modificat pasii.");
+        if (creatorSteps > 0) {
+            plugin.getMessageUtils().send(sender,
+                "&eAtentie: exista &f" + creatorSteps
+                    + " &epasi creatori neparsabili. Verifica inspect/debugdump inainte de retry.");
+        }
+        plugin.getMessageUtils().send(sender,
+            "&7Urmatorul pas: &f/ainpc audit db &7apoi reruleaza spawn-ul doar daca datele sunt corecte.");
+        return true;
+    }
+
+    private boolean handleRepairSpawnBatchSteps(CommandSender sender,
+                                                SpawnBatchTracker tracker,
+                                                SpawnBatchTracker.BatchRecord batch,
+                                                String batchKey) {
+        plugin.getMessageUtils().send(sender, "&6=== Repair spawn batch steps ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBatch: &f" + batchKey
+                + " &7status=&f" + batch.status()
+                + " &7scope=&f" + batch.scopeType() + "/" + batch.scopeId()
+                + " &7dry_run=&f" + batch.dryRun());
+
+        if (!SpawnBatchTracker.STATUS_ROLLED_BACK.equals(batch.status())) {
+            plugin.getMessageUtils().send(sender,
+                "&cRefuz marcarea pasilor: batch-ul nu este ROLLED_BACK.");
+            return true;
+        }
+
+        int rolledBackSteps = tracker.markCreatedStepsRolledBack(batchKey);
+        plugin.getMessageUtils().send(sender,
+            rolledBackSteps > 0
+                ? "&aAm marcat &f" + rolledBackSteps + " &apasi batch ca ROLLED_BACK."
+                : "&eNu am gasit pasi cu created_npc_ids care trebuie marcati.");
+        return true;
+    }
+
+    private String formatBatchNpcIdList(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return "-";
+        }
+        String[] tokens = rawValue.split(",");
+        List<String> values = new ArrayList<>();
+        for (String token : tokens) {
+            if (token == null || token.isBlank()) {
+                continue;
+            }
+            values.add(token.trim());
+            if (values.size() >= 3) {
+                break;
+            }
+        }
+        if (values.isEmpty()) {
+            return "-";
+        }
+        String formatted = String.join(",", values);
+        int total = 0;
+        for (String token : tokens) {
+            if (token != null && !token.isBlank()) {
+                total++;
+            }
+        }
+        if (total > values.size()) {
+            formatted += ",+" + (total - values.size());
+        }
+        return shortenBatchValue(formatted, 72);
+    }
+
+    private String shortenBatchValue(String value, int maxLength) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        int safeMax = Math.max(8, maxLength);
+        String cleanValue = value.trim();
+        return cleanValue.length() <= safeMax
+            ? cleanValue
+            : cleanValue.substring(0, safeMax - 3) + "...";
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private void sendRepairMessages(CommandSender sender, List<String> messages, String color, int limit) {
+        int safeLimit = Math.max(0, limit);
+        int displayed = Math.min(safeLimit, messages.size());
+        for (int index = 0; index < displayed; index++) {
+            plugin.getMessageUtils().send(sender, color + messages.get(index));
+        }
+        if (messages.size() > displayed) {
+            plugin.getMessageUtils().send(sender, "&7... inca &f" + (messages.size() - displayed) + " &7mesaje.");
+        }
+    }
+
+    private void collectSourceKeyDuplicateFindings(List<AINPC> npcs, List<String> findings) {
+        Map<String, List<AINPC>> bySourceKey = new HashMap<>();
+        for (AINPC npc : npcs) {
+            if (npc.getSourceKey() == null || npc.getSourceKey().isBlank()) {
+                continue;
+            }
+            bySourceKey.computeIfAbsent(normalizeAuditKey(npc.getSourceKey()), ignored -> new ArrayList<>()).add(npc);
+        }
+
+        for (Map.Entry<String, List<AINPC>> entry : bySourceKey.entrySet()) {
+            if (entry.getValue().size() <= 1) {
+                continue;
+            }
+            List<AINPC> sorted = entry.getValue().stream()
+                .sorted(Comparator.comparingInt(AINPC::getDatabaseId))
+                .toList();
+            findings.add("&csource_key duplicat &f" + entry.getKey()
+                + " &7canonic=&f" + formatNpcIdentity(sorted.get(0))
+                + " &7duplicate=&f" + formatNpcIdentities(sorted.subList(1, sorted.size())));
+        }
+    }
+
+    private void collectNearbyNameDuplicateFindings(List<AINPC> npcs, List<String> findings) {
+        Set<String> seenPairs = new HashSet<>();
+        for (int leftIndex = 0; leftIndex < npcs.size(); leftIndex++) {
+            AINPC left = npcs.get(leftIndex);
+            for (int rightIndex = leftIndex + 1; rightIndex < npcs.size(); rightIndex++) {
+                AINPC right = npcs.get(rightIndex);
+                if (!normalizeAuditKey(left.getName()).equals(normalizeAuditKey(right.getName()))) {
+                    continue;
+                }
+                if (!sameNearbyLocation(left.getLocation(), right.getLocation(), 2.25D)) {
+                    continue;
+                }
+
+                String pairKey = Math.min(left.getDatabaseId(), right.getDatabaseId())
+                    + ":" + Math.max(left.getDatabaseId(), right.getDatabaseId());
+                if (seenPairs.add(pairKey)) {
+                    findings.add("&eNume si locatie aproape identice: &f"
+                        + formatNpcIdentity(left) + " &7<-> &f" + formatNpcIdentity(right)
+                        + " &7la &f" + formatLocation(left.getLocation()));
+                }
+            }
+        }
+    }
+
+    private boolean sameNearbyLocation(Location left, Location right, double maxDistanceSquared) {
+        if (left == null || right == null || left.getWorld() == null || right.getWorld() == null) {
+            return false;
+        }
+        return left.getWorld().equals(right.getWorld()) && left.distanceSquared(right) <= maxDistanceSquared;
+    }
+
+    private String formatNpcIdentities(List<AINPC> npcs) {
+        return npcs.stream()
+            .map(this::formatNpcIdentity)
+            .toList()
+            .toString();
+    }
+
+    private String formatNpcIdentity(AINPC npc) {
+        return npc.getName() + "#" + npc.getDatabaseId();
+    }
+
     /**
      * /ainpc info [nume]
      */
@@ -5717,9 +7468,40 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&eGoal: &f" + assignment.goal());
         plugin.getMessageUtils().send(sender, "&eStare tinta: &f" + assignment.targetState().name());
         plugin.getMessageUtils().send(sender, "&eTinta: &f" + formatOwnedLocation(assignment.targetAnchor()));
+        sendRoutineMovementStatus(sender, npc, assignment);
         plugin.getMessageUtils().send(sender, "&eRutina curenta salvata: &f" + formatOptional(npc.getPlannedRoutineActivity()));
         plugin.getMessageUtils().send(sender, "&eObiectiv curent: &f" + formatOptional(npc.getCurrentGoal()));
         return true;
+    }
+
+    private void sendRoutineMovementStatus(CommandSender sender, AINPC npc, RoutineAssignment assignment) {
+        Location current = npc.getLocation();
+        Location target = assignment.targetAnchor() == null ? null : assignment.targetAnchor().toLocation();
+        plugin.getMessageUtils().send(sender, "&eLocatie curenta: &f" + formatLocation(current));
+        plugin.getMessageUtils().send(sender, "&eDistanta pana la tinta: &f" + formatDistance(current, target));
+
+        Entity entity = npc.getBukkitEntity();
+        if (entity == null || !entity.isValid()) {
+            plugin.getMessageUtils().send(sender, "&eEntitate: &cneatasata sau invalida");
+            return;
+        }
+
+        String ai = entity instanceof Mob mob ? formatOnOff(mob.hasAI()) : "n/a";
+        String gravity = formatOnOff(entity.hasGravity());
+        String collidable = entity instanceof LivingEntity livingEntity ? formatOnOff(livingEntity.isCollidable()) : "n/a";
+        String silent = formatOnOff(entity.isSilent());
+        String path = entity instanceof Mob mob ? formatOnOff(mob.getPathfinder().hasPath()) : "n/a";
+        plugin.getMessageUtils().send(sender,
+            "&eMiscare live: &fAI=" + ai
+                + " &7gravity=&f" + gravity
+                + " &7coliziune=&f" + collidable
+                + " &7silent=&f" + silent
+                + " &7path=&f" + path);
+        plugin.getMessageUtils().send(sender,
+            "&eConfig miscare: &fnatural=" + formatOnOff(plugin.getConfig().getBoolean("npc.natural_movement", true))
+                + " &7gravity=&f" + formatOnOff(plugin.getConfig().getBoolean("npc.gravity", true))
+                + " &7routineNatural=&f" + formatOnOff(plugin.getConfig().getBoolean("routine.natural_movement.enabled", true))
+                + " &7teleportFallback=&f" + formatOnOff(plugin.getConfig().getBoolean("routine.teleport_enabled", true)));
     }
 
     private void sendRoutineUsage(CommandSender sender) {
@@ -5813,7 +7595,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     /**
-     * /ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]
+     * /ainpc gui [main|quest|progresii|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]
      */
     private boolean handleGui(CommandSender sender, String[] args) {
         Player player = requirePlayerSender(sender);
@@ -5821,20 +7603,32 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
-        if (args.length > 2) {
+        if (args.length > 3) {
             plugin.getMessageUtils().send(sender,
-                "&cUtilizare: /ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]");
+                "&cUtilizare: /ainpc gui [main|quest|progresii|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
             return true;
         }
 
         String rawKey = args.length >= 2 ? args[1] : "main";
-        if (GuiKey.fromId(rawKey).isEmpty()) {
+        Optional<GuiKey> resolvedKey = GuiKey.fromId(rawKey);
+        if (resolvedKey.isEmpty()) {
             plugin.getMessageUtils().send(sender,
-                "&cGUI necunoscut. Optiuni: &fmain, quest, world, stats, interact, shop, manager, audit, debug");
+                "&cGUI necunoscut. Optiuni: &fmain, quest/progresii, world, stats, interact, routine, shop, manager, audit, debug");
             return true;
         }
 
-        plugin.getGuiService().open(player, rawKey);
+        if (args.length == 3 && resolvedKey.get() != GuiKey.QUEST) {
+            plugin.getMessageUtils().send(sender,
+                "&cFiltrul este disponibil doar pentru /ainpc gui quest|progresii <filter>.");
+            return true;
+        }
+
+        if (resolvedKey.get() == GuiKey.QUEST && args.length == 3) {
+            plugin.getGuiService().openQuestLog(player, args[2]);
+            return true;
+        }
+
+        plugin.getGuiService().open(player, resolvedKey.get());
         return true;
     }
 
@@ -5883,17 +7677,33 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc create <nume> [ocupatie] [varsta] [gen] [arhetip]");
         plugin.getMessageUtils().send(sender, "&7  Creeaza un NPC nou la locatia ta");
         plugin.getMessageUtils().send(sender, "&e/ainpc delete <nume>");
-        plugin.getMessageUtils().send(sender, "&7  Sterge un NPC");
+        plugin.getMessageUtils().send(sender, "&7  Sterge un NPC dupa nume; evita daca numele este duplicat");
+        plugin.getMessageUtils().send(sender, "&e/ainpc delete-id <id> confirm");
+        plugin.getMessageUtils().send(sender, "&7  Sterge sigur un NPC dupa ID numeric");
+        plugin.getMessageUtils().send(sender, "&e/ainpc duplicates");
+        plugin.getMessageUtils().send(sender, "&7  Raporteaza duplicate dupa source_key, nume+locatie si entitati live");
+        plugin.getMessageUtils().send(sender, "&e/ainpc repair duplicates [dryrun|apply]");
+        plugin.getMessageUtils().send(sender, "&7  Curata controlat randuri/entitati NPC duplicate; ruleaza dryrun inainte de apply");
+        plugin.getMessageUtils().send(sender, "&e/ainpc repair households [dryrun|apply]");
+        plugin.getMessageUtils().send(sender, "&7  Curata rezidenti household duplicati dupa NPC/source_key; ruleaza dryrun inainte de apply");
+        plugin.getMessageUtils().send(sender, "&e/ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
+        plugin.getMessageUtils().send(sender, "&7  Inspecteaza sau ruleaza rollback controlat pentru un spawn batch esuat");
         plugin.getMessageUtils().send(sender, "&e/ainpc info [nume]");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza informatii despre un NPC");
-        plugin.getMessageUtils().send(sender, "&e/ainpc gui [quest|world|stats|interact|shop|manager|audit|debug]");
-        plugin.getMessageUtils().send(sender, "&7  Deschide hub-ul GUI sau un ecran specific");
+        plugin.getMessageUtils().send(sender, "&e/ainpc gui [quest|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
+        plugin.getMessageUtils().send(sender, "&7  Deschide hub-ul GUI sau un ecran specific; questFilter poate fi quest/contract/duty/bounty/event/tutorial/ritual");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza manual quest-ul unui NPC");
-        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|active|all]");
-        plugin.getMessageUtils().send(sender, "&7  Listeaza progresii generice peste questuri si contracte");
+        plugin.getMessageUtils().send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|active|all]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza progresii generice peste questuri, contracte, sarcini, bounty-uri si evenimente");
         plugin.getMessageUtils().send(sender, "&e/ainpc contract log [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Listeaza contractele locale prin runtime-ul comun");
+        plugin.getMessageUtils().send(sender, "&e/ainpc duty log [jucator]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza sarcinile NPC prin runtime-ul comun");
+        plugin.getMessageUtils().send(sender, "&e/ainpc bounty log [jucator]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza bounty-urile locale prin runtime-ul comun");
+        plugin.getMessageUtils().send(sender, "&e/ainpc event log [jucator]");
+        plugin.getMessageUtils().send(sender, "&7  Listeaza evenimentele locale prin runtime-ul comun");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Arata sau mentine busola/actionbar/particule catre tinta questului");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest nearest [jucator]");
@@ -5930,6 +7740,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Inspecteaza read-only npc_world_bindings");
         plugin.getMessageUtils().send(sender, "&e/ainpc world household <plan|spawn> <homePlaceId> [count]");
         plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa un household spawn plan din mapping");
+        plugin.getMessageUtils().send(sender, "&e/ainpc world household <status|place|resident|list> ...");
+        plugin.getMessageUtils().send(sender, "&7  Inspecteaza read-only household-uri persistente si rezidenti");
         plugin.getMessageUtils().send(sender, "&e/ainpc world settlement <plan|spawn> <regionId> [maxHouses]");
         plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa household-uri pentru casele din regiune");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
@@ -5942,6 +7754,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Afiseaza story state-ul persistent pentru un place");
         plugin.getMessageUtils().send(sender, "&e/ainpc story events <regionId|placeId> [limit]");
         plugin.getMessageUtils().send(sender, "&7  Listeaza evenimente story persistente");
+        plugin.getMessageUtils().send(sender, "&e/ainpc migration households <dryrun|apply> [limit]");
+        plugin.getMessageUtils().send(sender, "&7  Backfill controlat din npc_world_bindings catre household-uri persistente");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]");
         plugin.getMessageUtils().send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date");
         plugin.getMessageUtils().send(sender, "&e/ainpc debugdump [all|npc|world|quest|story|openai]");
@@ -5966,6 +7780,20 @@ public class AINPCCommand implements CommandExecutor {
         if (loc == null) return "necunoscuta";
         return String.format("%s (%.1f, %.1f, %.1f)", 
             loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ());
+    }
+
+    private String formatDistance(Location current, Location target) {
+        if (current == null || target == null || current.getWorld() == null || target.getWorld() == null) {
+            return "necunoscuta";
+        }
+        if (!current.getWorld().equals(target.getWorld())) {
+            return "alta lume";
+        }
+        return String.format("%.1f blocuri", Math.sqrt(current.distanceSquared(target)));
+    }
+
+    private String formatOnOff(boolean enabled) {
+        return enabled ? "pornit" : "oprit";
     }
 
     private int parseInt(String s, int defaultValue) {

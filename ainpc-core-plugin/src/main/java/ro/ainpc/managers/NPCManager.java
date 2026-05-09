@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Tag;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -16,6 +17,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Villager;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.engine.FeaturePackLoader;
@@ -63,6 +66,7 @@ public class NPCManager {
     private final Map<UUID, AINPC> npcsByUuid;
     private final Map<Integer, AINPC> npcsById;
     private final Map<UUID, AINPC> npcsByEntityId;
+    private final Map<String, AINPC> npcsBySourceKey;
     private final Map<String, Long> villagePopulationCooldowns;
 
     public NPCManager(AINPCPlugin plugin) {
@@ -71,6 +75,7 @@ public class NPCManager {
         this.npcsByUuid = new ConcurrentHashMap<>();
         this.npcsById = new ConcurrentHashMap<>();
         this.npcsByEntityId = new ConcurrentHashMap<>();
+        this.npcsBySourceKey = new ConcurrentHashMap<>();
         this.villagePopulationCooldowns = new ConcurrentHashMap<>();
     }
 
@@ -119,7 +124,9 @@ public class NPCManager {
                 count++;
             }
 
-            plugin.getLogger().info("Incarcate " + count + " NPC-uri din baza de date.");
+            int indexedSourceKeys = backfillPersistentSourceKeys();
+            plugin.getLogger().info("Incarcate " + count + " NPC-uri din baza de date. Source keys indexate: "
+                + indexedSourceKeys + ".");
         } catch (SQLException e) {
             plugin.getLogger().severe("Eroare la incarcarea NPC-urilor: " + e.getMessage());
         }
@@ -177,28 +184,44 @@ public class NPCManager {
 
         AINPC existing = getNPCByEntity(villager);
         if (existing != null) {
-            existing.attachToVillager(villager);
-            registerEntity(existing, villager);
-            return existing;
+            return attachCanonicalSourceOwner(existing, villager, "entitate deja mapata");
         }
 
         AINPC byUuid = getNPCByUuid(villager.getUniqueId());
         if (byUuid != null) {
-            byUuid.attachToVillager(villager);
-            registerEntity(byUuid, villager);
-            return byUuid;
+            return attachCanonicalSourceOwner(byUuid, villager, "uuid entitate");
+        }
+
+        int persistentNpcId = readPersistentNpcId(villager);
+        if (persistentNpcId > 0) {
+            AINPC persistentNpc = getNPCById(persistentNpcId);
+            if (persistentNpc != null) {
+                return attachCanonicalSourceOwner(persistentNpc, villager, "npc_id=" + persistentNpcId);
+            }
+
+            plugin.getLogger().warning("Elimin villager AINPC fara rand DB activ: npc_id="
+                + persistentNpcId + " la " + formatLocation(villager.getLocation()) + ".");
+            villager.remove();
+            return null;
+        }
+
+        AINPC byPersistentUuid = findNPCByPersistentUuid(villager);
+        if (byPersistentUuid != null) {
+            return attachCanonicalSourceOwner(byPersistentUuid, villager, "uuid persistent");
+        }
+
+        AINPC byPersistentSource = findNPCBySourceKey(readPersistentString(villager, AINPC.PDC_SOURCE_KEY));
+        if (byPersistentSource != null) {
+            return attachVillagerToNPC(byPersistentSource, villager);
+        }
+
+        if (isPendingManagedVillager(villager)) {
+            return null;
         }
 
         AINPC legacyNpc = findLegacyNPCForVillager(villager);
         if (legacyNpc != null) {
-            UUID previousUuid = legacyNpc.getUuid();
-            legacyNpc.attachToVillager(villager);
-            registerEntity(legacyNpc, villager);
-            refreshNpcCache(legacyNpc, previousUuid);
-            if (!Objects.equals(previousUuid, legacyNpc.getUuid())) {
-                saveNPC(legacyNpc);
-            }
-            return legacyNpc;
+            return attachVillagerToNPC(legacyNpc, villager);
         }
 
         AINPC equivalentActiveNpc = findEquivalentActiveNPC(villager);
@@ -333,6 +356,8 @@ public class NPCManager {
                 return;
             }
 
+            npc.setSourceKey(readString(json, "source_key", npc.getSourceKey()));
+
             String currentState = readString(json, "current_state", "");
             if (!currentState.isBlank()) {
                 try {
@@ -396,6 +421,14 @@ public class NPCManager {
      */
     public AINPC createNPC(String name, Location location, String occupation,
                            String backstory, int age, String gender, String archetype) {
+        AINPC existingNpc = findReusableNPCForSpawn(name, location);
+        if (existingNpc != null) {
+            plugin.getLogger().warning("Sar peste creare NPC '" + name
+                + "' deoarece exista deja la " + formatLocation(location)
+                + ": id=" + existingNpc.getDatabaseId() + ".");
+            return existingNpc;
+        }
+
         AINPC npc = new AINPC(plugin);
         npc.setName(name);
         npc.setDisplayName(name);
@@ -451,6 +484,14 @@ public class NPCManager {
 
         NpcSpawnPlan plan = resolvedPlan.plan();
         Location spawnLocation = resolvedPlan.spawnLocation();
+        AINPC existingNpc = findReusableNPCForSpawn(plan, spawnLocation);
+        if (existingNpc != null) {
+            plugin.getLogger().warning("Sar peste spawn plan pentru '" + plan.name()
+                + "' deoarece exista deja la " + formatLocation(spawnLocation)
+                + ": id=" + existingNpc.getDatabaseId() + ".");
+            return existingNpc;
+        }
+
         AINPC npc = new AINPC(plugin);
         npc.setName(plan.name());
         npc.setDisplayName(plan.name());
@@ -467,6 +508,7 @@ public class NPCManager {
         npc.setAge(plan.age());
         npc.setGender(resolveGender(plan.gender()));
         npc.setProfileSource("spawn_plan");
+        npc.setSourceKey(plan.sourceKey());
 
         if (!plan.archetype().isBlank()) {
             npc.setPersonality(NPCPersonality.fromArchetype(plan.archetype()));
@@ -564,7 +606,11 @@ public class NPCManager {
                 }
             }
 
-            return persistProfileData(npc);
+            boolean persisted = persistProfileData(npc);
+            if (persisted) {
+                npc.applyPersistentIdentity();
+            }
+            return persisted;
         } catch (SQLException e) {
             plugin.getLogger().severe("Eroare la salvarea NPC: " + e.getMessage());
             return false;
@@ -734,7 +780,163 @@ public class NPCManager {
         boolean emotionsSaved = saveEmotionsRow(npc);
         boolean traitsSaved = saveTraits(npc);
         boolean profileSaved = saveProfile(npc);
-        return personalitySaved && emotionsSaved && traitsSaved && profileSaved;
+        boolean sourceKeySaved = persistSourceKey(npc);
+        return personalitySaved && emotionsSaved && traitsSaved && profileSaved && sourceKeySaved;
+    }
+
+    private int backfillPersistentSourceKeys() {
+        int indexed = 0;
+        for (AINPC npc : List.copyOf(npcsBySourceKey.values())) {
+            if (persistSourceKey(npc)) {
+                indexed++;
+            }
+        }
+        return indexed;
+    }
+
+    private boolean persistSourceKey(AINPC npc) {
+        if (npc == null || npc.getDatabaseId() <= 0) {
+            return false;
+        }
+
+        int npcId = npc.getDatabaseId();
+        String normalizedSourceKey = normalizeSourceKey(npc.getSourceKey());
+        if (normalizedSourceKey.isBlank()) {
+            return deletePersistentSourceKey(npcId);
+        }
+
+        try {
+            deleteOtherPersistentSourceKeys(npcId, normalizedSourceKey);
+
+            Integer existingOwnerId = findPersistedSourceKeyOwnerId(normalizedSourceKey);
+            if (existingOwnerId == null) {
+                insertSourceKeyOwner(normalizedSourceKey, npcId, npc.getProfileSource());
+                return true;
+            }
+
+            if (existingOwnerId == npcId) {
+                updateSourceKeyOwner(normalizedSourceKey, npcId, npc.getProfileSource());
+                return true;
+            }
+
+            if (shouldReplacePersistedSourceKeyOwner(npcId, existingOwnerId)) {
+                plugin.getLogger().warning("Mut source_key " + normalizedSourceKey + " de la NPC #"
+                    + existingOwnerId + " la randul canonic #" + npcId + ".");
+                updateSourceKeyOwner(normalizedSourceKey, npcId, npc.getProfileSource());
+                return true;
+            }
+
+            plugin.debug("Pastrez source_key " + normalizedSourceKey + " pe NPC canonic #"
+                + existingOwnerId + "; NPC #" + npcId + " ramane duplicat pana la repair.");
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Eroare la salvarea source_key pentru NPC-ul '" + npc.getName()
+                + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void deleteOtherPersistentSourceKeys(int npcId, String normalizedSourceKey) throws SQLException {
+        String sql = """
+            DELETE FROM npc_source_keys
+            WHERE npc_id = ?
+              AND source_key <> ?
+        """;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setInt(1, npcId);
+            stmt.setString(2, normalizedSourceKey);
+            stmt.executeUpdate();
+        }
+    }
+
+    private boolean deletePersistentSourceKey(int npcId) {
+        if (npcId <= 0) {
+            return true;
+        }
+
+        String sql = "DELETE FROM npc_source_keys WHERE npc_id = ?";
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setInt(1, npcId);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Eroare la stergerea source_key persistent pentru NPC #" + npcId
+                + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void insertSourceKeyOwner(String normalizedSourceKey, int npcId, String source) throws SQLException {
+        String sql = """
+            INSERT INTO npc_source_keys (source_key, npc_id, source, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """;
+        long now = System.currentTimeMillis();
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setString(1, normalizedSourceKey);
+            stmt.setInt(2, npcId);
+            stmt.setString(3, source != null ? source : "");
+            stmt.setLong(4, now);
+            stmt.setLong(5, now);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void updateSourceKeyOwner(String normalizedSourceKey, int npcId, String source) throws SQLException {
+        String sql = """
+            UPDATE npc_source_keys
+            SET npc_id = ?,
+                source = ?,
+                updated_at = ?
+            WHERE source_key = ?
+        """;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setInt(1, npcId);
+            stmt.setString(2, source != null ? source : "");
+            stmt.setLong(3, System.currentTimeMillis());
+            stmt.setString(4, normalizedSourceKey);
+            stmt.executeUpdate();
+        }
+    }
+
+    private Integer findPersistedSourceKeyOwnerId(String sourceKey) throws SQLException {
+        String normalizedSourceKey = normalizeSourceKey(sourceKey);
+        if (normalizedSourceKey.isBlank()) {
+            return null;
+        }
+
+        String sql = "SELECT npc_id FROM npc_source_keys WHERE source_key = ?";
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            stmt.setString(1, normalizedSourceKey);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("npc_id");
+                }
+            }
+        }
+        return null;
+    }
+
+    private Integer findPersistedSourceKeyOwnerIdQuietly(String sourceKey) {
+        try {
+            return findPersistedSourceKeyOwnerId(sourceKey);
+        } catch (SQLException e) {
+            plugin.debug("Nu pot citi indexul source_key persistent: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean shouldReplacePersistedSourceKeyOwner(int candidateNpcId, int currentOwnerId) {
+        if (candidateNpcId <= 0) {
+            return false;
+        }
+        if (currentOwnerId <= 0) {
+            return true;
+        }
+        if (getNPCById(currentOwnerId) == null) {
+            return true;
+        }
+        return candidateNpcId < currentOwnerId;
     }
 
     public int ensureAllNPCsHaveProfiles() {
@@ -907,13 +1109,237 @@ public class NPCManager {
         }
     }
 
+    public AINPC findReusableNPCForSpawn(String name, Location location) {
+        if (name == null || name.isBlank() || location == null || location.getWorld() == null) {
+            return null;
+        }
+
+        for (AINPC npc : npcsByUuid.values()) {
+            if (!namesMatch(npc.getName(), name) && !namesMatch(npc.getDisplayName(), name)) {
+                continue;
+            }
+
+            Location npcLocation = npc.getLocation();
+            if (!isSameNpcLocation(npcLocation, location)) {
+                continue;
+            }
+
+            if (!npc.isSpawned() && isChunkLoaded(npc)) {
+                attachLoadedNPC(npc);
+            }
+            return npc;
+        }
+
+        return null;
+    }
+
+    public AINPC findReusableNPCForSpawn(NpcSpawnPlan plan, Location location) {
+        if (plan == null) {
+            return findReusableNPCForSpawn("", location);
+        }
+
+        AINPC bySourceKey = findNPCBySourceKey(plan.sourceKey());
+        if (bySourceKey != null) {
+            if (!bySourceKey.isSpawned() && isChunkLoaded(bySourceKey)) {
+                attachLoadedNPC(bySourceKey);
+            }
+            return bySourceKey;
+        }
+
+        return findReusableNPCForSpawn(plan.name(), location);
+    }
+
+    private AINPC findNPCBySourceKey(String sourceKey) {
+        String normalizedSourceKey = normalizeSourceKey(sourceKey);
+        if (normalizedSourceKey.isBlank()) {
+            return null;
+        }
+
+        AINPC indexed = npcsBySourceKey.get(normalizedSourceKey);
+        if (indexed != null) {
+            return indexed;
+        }
+
+        AINPC best = null;
+        for (AINPC npc : npcsByUuid.values()) {
+            if (normalizedSourceKey.equals(normalizeSourceKey(npc.getSourceKey()))
+                && isPreferredSourceKeyCandidate(npc, best)) {
+                best = npc;
+            }
+        }
+        if (best != null) {
+            npcsBySourceKey.put(normalizedSourceKey, best);
+            persistSourceKey(best);
+            return best;
+        }
+
+        Integer persistedNpcId = findPersistedSourceKeyOwnerIdQuietly(normalizedSourceKey);
+        if (persistedNpcId != null) {
+            AINPC persisted = getNPCById(persistedNpcId);
+            if (persisted != null) {
+                npcsBySourceKey.put(normalizedSourceKey, persisted);
+                if (normalizeSourceKey(persisted.getSourceKey()).isBlank()) {
+                    persisted.setSourceKey(normalizedSourceKey);
+                }
+                return persisted;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Citeste starea curenta a entitatilor Bukkit pe thread-ul principal.
      */
     public void syncAllNPCEntityState() {
+        int corrected = 0;
         for (AINPC npc : npcsByUuid.values()) {
+            if (npc.applyControlledEntitySettings()) {
+                corrected++;
+            }
             npc.syncLocationFromEntity();
         }
+        if (corrected > 0) {
+            plugin.debug("Setari miscare NPC reaplicate pentru " + corrected + " entitati.");
+        }
+    }
+
+    public int enforceControlledEntitySettings(String reason) {
+        int corrected = 0;
+        for (AINPC npc : npcsByUuid.values()) {
+            if (npc.applyControlledEntitySettings()) {
+                corrected++;
+            }
+        }
+        if (corrected > 0) {
+            plugin.getLogger().info("Setari miscare NPC reaplicate pentru " + corrected
+                + " entitati (" + valueOrFallback(reason, "manual") + ").");
+        }
+        return corrected;
+    }
+
+    public List<ManagedVillagerAuditIssue> auditManagedVillagerEntities() {
+        List<ManagedVillagerAuditIssue> issues = new ArrayList<>();
+        Map<Integer, List<Villager>> villagersByNpcId = new HashMap<>();
+        Map<String, List<Villager>> villagersBySourceKey = new HashMap<>();
+
+        for (World world : plugin.getServer().getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                if (!isMarkedAinpcVillager(villager)) {
+                    continue;
+                }
+
+                String sourceKey = normalizeSourceKey(readPersistentString(villager, AINPC.PDC_SOURCE_KEY));
+                if (!sourceKey.isBlank()) {
+                    villagersBySourceKey.computeIfAbsent(sourceKey, ignored -> new ArrayList<>()).add(villager);
+                }
+
+                int npcId = readPersistentNpcId(villager);
+                if (npcId <= 0) {
+                    issues.add(ManagedVillagerAuditIssue.warning("Villager AINPC fara npc_database_id la "
+                        + formatLocation(villager.getLocation()) + "."));
+                    continue;
+                }
+
+                if (getNPCById(npcId) == null) {
+                    issues.add(ManagedVillagerAuditIssue.error("Villager AINPC refera npc_id inexistent: "
+                        + npcId + " la " + formatLocation(villager.getLocation()) + "."));
+                    continue;
+                }
+
+                villagersByNpcId.computeIfAbsent(npcId, ignored -> new ArrayList<>()).add(villager);
+            }
+        }
+
+        for (Map.Entry<Integer, List<Villager>> entry : villagersByNpcId.entrySet()) {
+            if (entry.getValue().size() <= 1) {
+                continue;
+            }
+
+            String locations = entry.getValue().stream()
+                .map(villager -> formatLocation(villager.getLocation()))
+                .toList()
+                .toString();
+            issues.add(ManagedVillagerAuditIssue.error("NPC id=" + entry.getKey()
+                + " are " + entry.getValue().size() + " entitati villager active: " + locations + "."));
+        }
+
+        for (Map.Entry<String, List<Villager>> entry : villagersBySourceKey.entrySet()) {
+            if (entry.getValue().size() <= 1) {
+                continue;
+            }
+
+            String locations = entry.getValue().stream()
+                .map(villager -> formatLocation(villager.getLocation()))
+                .toList()
+                .toString();
+            issues.add(ManagedVillagerAuditIssue.error("source_key=" + entry.getKey()
+                + " are " + entry.getValue().size() + " entitati villager active: " + locations + "."));
+        }
+
+        return issues;
+    }
+
+    public List<ManagedVillagerAuditIssue> auditPersistentSourceKeyIndex() {
+        List<ManagedVillagerAuditIssue> issues = new ArrayList<>();
+        Map<String, AINPC> canonicalOwners = canonicalSourceKeyOwners();
+        Set<String> indexedSourceKeys = new HashSet<>();
+
+        String sql = """
+            SELECT source_key, npc_id
+            FROM npc_source_keys
+            ORDER BY source_key ASC
+        """;
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String sourceKey = normalizeSourceKey(rs.getString("source_key"));
+                int npcId = rs.getInt("npc_id");
+                if (sourceKey.isBlank()) {
+                    issues.add(ManagedVillagerAuditIssue.error("npc_source_keys contine source_key gol pentru npc_id=" + npcId + "."));
+                    continue;
+                }
+
+                indexedSourceKeys.add(sourceKey);
+                AINPC indexedNpc = getNPCById(npcId);
+                if (indexedNpc == null) {
+                    issues.add(ManagedVillagerAuditIssue.error("npc_source_keys refera NPC inexistent: source_key="
+                        + sourceKey + ", npc_id=" + npcId + "."));
+                    continue;
+                }
+
+                String npcSourceKey = normalizeSourceKey(indexedNpc.getSourceKey());
+                if (!sourceKey.equals(npcSourceKey)) {
+                    issues.add(ManagedVillagerAuditIssue.error("npc_source_keys este stale pentru source_key="
+                        + sourceKey + ": npc_id=" + npcId + " are source_key=" + npcSourceKey + "."));
+                    continue;
+                }
+
+                AINPC canonicalNpc = canonicalOwners.get(sourceKey);
+                if (canonicalNpc == null) {
+                    issues.add(ManagedVillagerAuditIssue.warning("npc_source_keys contine source_key fara owner canonic incarcat: "
+                        + sourceKey + " -> npc_id=" + npcId + "."));
+                    continue;
+                }
+
+                if (canonicalNpc.getDatabaseId() != npcId) {
+                    issues.add(ManagedVillagerAuditIssue.error("npc_source_keys pointeaza spre owner gresit pentru source_key="
+                        + sourceKey + ": index=" + npcId + ", canonic=" + canonicalNpc.getDatabaseId() + "."));
+                }
+            }
+        } catch (SQLException e) {
+            issues.add(ManagedVillagerAuditIssue.error("Nu pot audita npc_source_keys: " + e.getMessage()));
+            return issues;
+        }
+
+        for (Map.Entry<String, AINPC> entry : canonicalOwners.entrySet()) {
+            if (!indexedSourceKeys.contains(entry.getKey())) {
+                issues.add(ManagedVillagerAuditIssue.warning("source_key canonic neindexat in npc_source_keys: "
+                    + entry.getKey() + " -> npc_id=" + entry.getValue().getDatabaseId() + "."));
+            }
+        }
+
+        return issues;
     }
 
     public void runLifeSimulationTick() {
@@ -998,6 +1424,7 @@ public class NPCManager {
      * Sterge un NPC
      */
     public boolean deleteNPC(AINPC npc) {
+        String deletedSourceKey = normalizeSourceKey(npc.getSourceKey());
         npc.despawn();
 
         String sql = "DELETE FROM npcs WHERE id = ?";
@@ -1006,12 +1433,439 @@ public class NPCManager {
             stmt.setInt(1, npc.getDatabaseId());
             stmt.executeUpdate();
 
+            deletePersistentSourceKey(npc.getDatabaseId());
             unregisterNPC(npc);
+            persistReplacementSourceKey(deletedSourceKey);
             return true;
         } catch (SQLException e) {
             plugin.getLogger().severe("Eroare la stergerea NPC: " + e.getMessage());
             return false;
         }
+    }
+
+    private void persistReplacementSourceKey(String normalizedSourceKey) {
+        if (normalizedSourceKey.isBlank()) {
+            return;
+        }
+
+        AINPC replacement = findNPCBySourceKey(normalizedSourceKey);
+        if (replacement != null) {
+            persistSourceKey(replacement);
+        }
+    }
+
+    public DuplicateRepairResult repairDuplicateNPCs(boolean apply) {
+        List<String> actions = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        RepairCounters counters = new RepairCounters();
+        Set<Integer> plannedDeletedNpcIds = new HashSet<>();
+
+        repairSourceKeyDuplicateRows(apply, actions, warnings, errors, counters, plannedDeletedNpcIds);
+        repairNearbyNameDuplicateRows(apply, actions, errors, counters, plannedDeletedNpcIds);
+        repairDuplicateLiveVillagers(apply, actions, warnings, counters);
+        repairPersistentSourceKeyIndex(apply, actions, warnings, errors, counters);
+
+        return new DuplicateRepairResult(
+            apply,
+            counters.duplicateDbRows,
+            counters.deletedDbRows,
+            counters.duplicateEntities,
+            counters.removedEntities,
+            counters.reassociatedEntities,
+            counters.sourceKeyIndexIssues,
+            counters.reindexedSourceKeys,
+            List.copyOf(actions),
+            List.copyOf(warnings),
+            List.copyOf(errors)
+        );
+    }
+
+    public DuplicateRepairResult repairDuplicateLiveNPCEntities(boolean apply) {
+        List<String> actions = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        RepairCounters counters = new RepairCounters();
+
+        repairDuplicateLiveVillagers(apply, actions, warnings, counters);
+
+        return new DuplicateRepairResult(
+            apply,
+            0,
+            0,
+            counters.duplicateEntities,
+            counters.removedEntities,
+            counters.reassociatedEntities,
+            0,
+            0,
+            List.copyOf(actions),
+            List.copyOf(warnings),
+            List.copyOf(errors)
+        );
+    }
+
+    public DuplicateRepairResult reconcileDuplicateLiveNPCEntities(String reason) {
+        if (!plugin.getConfig().getBoolean("npc.auto_cleanup_duplicate_entities", true)) {
+            return new DuplicateRepairResult(false, 0, 0, 0, 0, 0, 0, 0, List.of(), List.of(), List.of());
+        }
+
+        DuplicateRepairResult result = repairDuplicateLiveNPCEntities(true);
+        if (result.duplicateEntities() > 0 || result.removedEntities() > 0 || result.reassociatedEntities() > 0) {
+            plugin.getLogger().warning("Reconciliere duplicate NPC live (" + valueOrFallback(reason, "manual")
+                + "): duplicate=" + result.duplicateEntities()
+                + ", eliminate=" + result.removedEntities()
+                + ", reatasate=" + result.reassociatedEntities() + ".");
+        }
+        for (String warning : result.warnings().stream().limit(5).toList()) {
+            plugin.getLogger().warning("Reconciliere duplicate NPC live: " + warning);
+        }
+        return result;
+    }
+
+    private void repairPersistentSourceKeyIndex(boolean apply,
+                                                List<String> actions,
+                                                List<String> warnings,
+                                                List<String> errors,
+                                                RepairCounters counters) {
+        List<ManagedVillagerAuditIssue> issues = auditPersistentSourceKeyIndex();
+        counters.sourceKeyIndexIssues = issues.size();
+        if (issues.isEmpty()) {
+            return;
+        }
+
+        int warningLimit = Math.min(5, issues.size());
+        for (int index = 0; index < warningLimit; index++) {
+            warnings.add("Index source_key: " + issues.get(index).message());
+        }
+        if (issues.size() > warningLimit) {
+            warnings.add("Index source_key mai are " + (issues.size() - warningLimit) + " probleme ascunse in sumar.");
+        }
+
+        Map<String, AINPC> canonicalOwners = canonicalSourceKeyOwners();
+        actions.add((apply ? "Reconstruiesc" : "As reconstrui")
+            + " indexul persistent npc_source_keys cu " + canonicalOwners.size()
+            + " source_key canonice.");
+
+        if (!apply) {
+            return;
+        }
+
+        try {
+            int deletedRows = clearPersistentSourceKeys();
+            int reindexedRows = 0;
+            for (AINPC npc : canonicalOwners.values()) {
+                if (persistSourceKey(npc)) {
+                    reindexedRows++;
+                } else {
+                    errors.add("Nu am putut reindexa source_key pentru "
+                        + npc.getName() + "#" + npc.getDatabaseId() + ".");
+                }
+            }
+            counters.reindexedSourceKeys = reindexedRows;
+            actions.add("Am reconstruit npc_source_keys: sterse=" + deletedRows
+                + ", indexate=" + reindexedRows + ".");
+        } catch (SQLException e) {
+            errors.add("Nu am putut reconstrui npc_source_keys: " + e.getMessage());
+        }
+    }
+
+    private int clearPersistentSourceKeys() throws SQLException {
+        String sql = "DELETE FROM npc_source_keys";
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
+            return stmt.executeUpdate();
+        }
+    }
+
+    private void repairSourceKeyDuplicateRows(boolean apply,
+                                              List<String> actions,
+                                              List<String> warnings,
+                                              List<String> errors,
+                                              RepairCounters counters,
+                                              Set<Integer> plannedDeletedNpcIds) {
+        Map<String, List<AINPC>> bySourceKey = new HashMap<>();
+        for (AINPC npc : List.copyOf(npcsByUuid.values())) {
+            String sourceKey = normalizeSourceKey(npc.getSourceKey());
+            if (sourceKey.isBlank()) {
+                continue;
+            }
+            bySourceKey.computeIfAbsent(sourceKey, ignored -> new ArrayList<>()).add(npc);
+        }
+
+        for (Map.Entry<String, List<AINPC>> entry : bySourceKey.entrySet()) {
+            List<AINPC> groupedNpcs = entry.getValue().stream()
+                .sorted((left, right) -> {
+                    if (left.getDatabaseId() != right.getDatabaseId()) {
+                        return Integer.compare(left.getDatabaseId(), right.getDatabaseId());
+                    }
+                    return left.getUuid().compareTo(right.getUuid());
+                })
+                .toList();
+            if (groupedNpcs.size() <= 1) {
+                continue;
+            }
+
+            AINPC canonical = groupedNpcs.get(0);
+            if (apply) {
+                persistSourceKey(canonical);
+            }
+            for (int index = 1; index < groupedNpcs.size(); index++) {
+                AINPC duplicate = groupedNpcs.get(index);
+                counters.duplicateDbRows++;
+                markNpcPlannedForDeletion(duplicate, plannedDeletedNpcIds);
+                actions.add((apply ? "Sterg" : "As sterge") + " rand NPC duplicat dupa source_key="
+                    + entry.getKey() + ": duplicat=" + duplicate.getName() + "#" + duplicate.getDatabaseId()
+                    + ", canonic=" + canonical.getName() + "#" + canonical.getDatabaseId() + ".");
+
+                if (!apply) {
+                    continue;
+                }
+
+                Entity duplicateEntity = duplicate.getBukkitEntity();
+                if (duplicateEntity instanceof Villager duplicateVillager && duplicateVillager.isValid() && !canonical.isSpawned()) {
+                    duplicate.markEntityUnavailable();
+                    attachVillagerToNPC(canonical, duplicateVillager);
+                    counters.reassociatedEntities++;
+                    actions.add("Am mutat entitatea duplicata pe NPC-ul canonic "
+                        + canonical.getName() + "#" + canonical.getDatabaseId() + ".");
+                }
+
+                if (deleteNPC(duplicate)) {
+                    counters.deletedDbRows++;
+                } else {
+                    errors.add("Nu am putut sterge randul duplicat "
+                        + duplicate.getName() + "#" + duplicate.getDatabaseId() + ".");
+                }
+            }
+            if (apply) {
+                persistSourceKey(canonical);
+            }
+        }
+    }
+
+    private void repairNearbyNameDuplicateRows(boolean apply,
+                                               List<String> actions,
+                                               List<String> errors,
+                                               RepairCounters counters,
+                                               Set<Integer> plannedDeletedNpcIds) {
+        Map<String, List<AINPC>> byName = new HashMap<>();
+        for (AINPC npc : List.copyOf(npcsByUuid.values())) {
+            if (isNpcPlannedForDeletion(npc, plannedDeletedNpcIds)) {
+                continue;
+            }
+            String nameKey = normalizeSourceKey(npc.getName());
+            if (nameKey.isBlank() || npc.getLocation() == null || npc.getLocation().getWorld() == null) {
+                continue;
+            }
+            byName.computeIfAbsent(nameKey, ignored -> new ArrayList<>()).add(npc);
+        }
+
+        for (Map.Entry<String, List<AINPC>> entry : byName.entrySet()) {
+            List<AINPC> candidates = sortRepairCandidates(entry.getValue());
+            for (AINPC canonical : candidates) {
+                if (isNpcPlannedForDeletion(canonical, plannedDeletedNpcIds)) {
+                    continue;
+                }
+
+                List<AINPC> group = candidates.stream()
+                    .filter(candidate -> !isSameNpcRecord(candidate, canonical))
+                    .filter(candidate -> !isNpcPlannedForDeletion(candidate, plannedDeletedNpcIds))
+                    .filter(candidate -> isSameNpcLocation(canonical.getLocation(), candidate.getLocation()))
+                    .toList();
+                if (group.isEmpty()) {
+                    continue;
+                }
+
+                for (AINPC duplicate : group) {
+                    counters.duplicateDbRows++;
+                    markNpcPlannedForDeletion(duplicate, plannedDeletedNpcIds);
+                    actions.add((apply ? "Sterg" : "As sterge") + " rand NPC duplicat dupa nume+locatie: duplicat="
+                        + duplicate.getName() + "#" + duplicate.getDatabaseId()
+                        + ", canonic=" + canonical.getName() + "#" + canonical.getDatabaseId()
+                        + ", locatie=" + formatLocation(duplicate.getLocation()) + ".");
+
+                    if (!apply) {
+                        continue;
+                    }
+
+                    Entity duplicateEntity = duplicate.getBukkitEntity();
+                    if (duplicateEntity instanceof Villager duplicateVillager
+                        && duplicateVillager.isValid()
+                        && !canonical.isSpawned()) {
+                        duplicate.markEntityUnavailable();
+                        attachVillagerToNPC(canonical, duplicateVillager);
+                        counters.reassociatedEntities++;
+                        actions.add("Am mutat entitatea duplicata pe NPC-ul canonic "
+                            + canonical.getName() + "#" + canonical.getDatabaseId() + ".");
+                    }
+
+                    if (deleteNPC(duplicate)) {
+                        counters.deletedDbRows++;
+                    } else {
+                        errors.add("Nu am putut sterge randul duplicat "
+                            + duplicate.getName() + "#" + duplicate.getDatabaseId() + ".");
+                    }
+                }
+            }
+        }
+    }
+
+    private List<AINPC> sortRepairCandidates(List<AINPC> npcs) {
+        return npcs.stream()
+            .sorted((left, right) -> {
+                if (left.getDatabaseId() != right.getDatabaseId()) {
+                    return Integer.compare(left.getDatabaseId(), right.getDatabaseId());
+                }
+                UUID leftUuid = left.getUuid();
+                UUID rightUuid = right.getUuid();
+                if (leftUuid == null && rightUuid == null) {
+                    return 0;
+                }
+                if (leftUuid == null) {
+                    return 1;
+                }
+                if (rightUuid == null) {
+                    return -1;
+                }
+                return leftUuid.compareTo(rightUuid);
+            })
+            .toList();
+    }
+
+    private void markNpcPlannedForDeletion(AINPC npc, Set<Integer> plannedDeletedNpcIds) {
+        if (npc != null && npc.getDatabaseId() > 0) {
+            plannedDeletedNpcIds.add(npc.getDatabaseId());
+        }
+    }
+
+    private boolean isNpcPlannedForDeletion(AINPC npc, Set<Integer> plannedDeletedNpcIds) {
+        return npc != null
+            && npc.getDatabaseId() > 0
+            && plannedDeletedNpcIds.contains(npc.getDatabaseId());
+    }
+
+    private void repairDuplicateLiveVillagers(boolean apply,
+                                              List<String> actions,
+                                              List<String> warnings,
+                                              RepairCounters counters) {
+        Map<Integer, List<Villager>> byNpcId = new HashMap<>();
+        Map<String, List<Villager>> bySourceKey = new HashMap<>();
+
+        for (World world : plugin.getServer().getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                if (!isMarkedAinpcVillager(villager)) {
+                    continue;
+                }
+
+                int npcId = readPersistentNpcId(villager);
+                if (npcId > 0) {
+                    byNpcId.computeIfAbsent(npcId, ignored -> new ArrayList<>()).add(villager);
+                }
+
+                String sourceKey = normalizeSourceKey(readPersistentString(villager, AINPC.PDC_SOURCE_KEY));
+                if (!sourceKey.isBlank()) {
+                    bySourceKey.computeIfAbsent(sourceKey, ignored -> new ArrayList<>()).add(villager);
+                }
+            }
+        }
+
+        Set<UUID> handledEntities = new HashSet<>();
+        for (Map.Entry<Integer, List<Villager>> entry : byNpcId.entrySet()) {
+            AINPC npc = getNPCById(entry.getKey());
+            if (npc == null) {
+                warnings.add("Sar peste entitati live pentru npc_id inexistent: " + entry.getKey() + ".");
+                continue;
+            }
+            repairDuplicateVillagerGroup("npc_id=" + entry.getKey(), npc, entry.getValue(), apply, actions, counters, handledEntities);
+        }
+
+        for (Map.Entry<String, List<Villager>> entry : bySourceKey.entrySet()) {
+            AINPC canonical = findNPCBySourceKey(entry.getKey());
+            if (canonical == null) {
+                warnings.add("Sar peste entitati live pentru source_key fara NPC canonic: " + entry.getKey() + ".");
+                continue;
+            }
+            repairDuplicateVillagerGroup("source_key=" + entry.getKey(), canonical, entry.getValue(), apply, actions, counters, handledEntities);
+        }
+    }
+
+    private void repairDuplicateVillagerGroup(String groupLabel,
+                                              AINPC canonical,
+                                              List<Villager> villagers,
+                                              boolean apply,
+                                              List<String> actions,
+                                              RepairCounters counters,
+                                              Set<UUID> handledEntities) {
+        List<Villager> activeVillagers = villagers.stream()
+            .filter(Objects::nonNull)
+            .filter(Villager::isValid)
+            .filter(villager -> !handledEntities.contains(villager.getUniqueId()))
+            .toList();
+        if (activeVillagers.size() <= 1) {
+            return;
+        }
+
+        Villager keep = chooseLiveVillagerToKeep(canonical, activeVillagers);
+        for (Villager villager : activeVillagers) {
+            if (villager.getUniqueId().equals(keep.getUniqueId())) {
+                continue;
+            }
+
+            counters.duplicateEntities++;
+            handledEntities.add(villager.getUniqueId());
+            actions.add((apply ? "Elimin" : "As elimina") + " entitate villager duplicata pentru "
+                + groupLabel + " la " + formatLocation(villager.getLocation())
+                + "; pastrez " + formatLocation(keep.getLocation()) + ".");
+            if (apply) {
+                removeDuplicateVillager(villager, canonical);
+                counters.removedEntities++;
+            }
+        }
+
+        if (apply && canonical != null && !canonical.isSpawned()) {
+            attachVillagerToNPC(canonical, keep);
+            counters.reassociatedEntities++;
+        }
+    }
+
+    private Villager chooseLiveVillagerToKeep(AINPC canonical, List<Villager> villagers) {
+        if (canonical != null && canonical.getBukkitEntity() instanceof Villager currentVillager && currentVillager.isValid()) {
+            for (Villager villager : villagers) {
+                if (villager.getUniqueId().equals(currentVillager.getUniqueId())) {
+                    return villager;
+                }
+            }
+        }
+
+        if (canonical != null && canonical.getUuid() != null) {
+            for (Villager villager : villagers) {
+                if (villager.getUniqueId().equals(canonical.getUuid())) {
+                    return villager;
+                }
+            }
+        }
+
+        int canonicalId = canonical != null ? canonical.getDatabaseId() : 0;
+        if (canonicalId > 0) {
+            for (Villager villager : villagers) {
+                if (readPersistentNpcId(villager) == canonicalId) {
+                    return villager;
+                }
+            }
+        }
+
+        return villagers.stream()
+            .min((left, right) -> left.getUniqueId().compareTo(right.getUniqueId()))
+            .orElse(villagers.get(0));
+    }
+
+    private static final class RepairCounters {
+        private int duplicateDbRows;
+        private int deletedDbRows;
+        private int duplicateEntities;
+        private int removedEntities;
+        private int reassociatedEntities;
+        private int sourceKeyIndexIssues;
+        private int reindexedSourceKeys;
     }
 
     /**
@@ -1020,6 +1874,8 @@ public class NPCManager {
     private void registerNPC(AINPC npc) {
         npcsByUuid.put(npc.getUuid(), npc);
         npcsById.put(npc.getDatabaseId(), npc);
+        npc.applyPersistentIdentity();
+        rebuildSourceKeyIndex();
     }
 
     /**
@@ -1041,12 +1897,74 @@ public class NPCManager {
         if (npc.getBukkitEntity() != null) {
             npcsByEntityId.remove(npc.getBukkitEntity().getUniqueId());
         }
+        rebuildSourceKeyIndex();
+    }
+
+    private void rebuildSourceKeyIndex() {
+        npcsBySourceKey.clear();
+        npcsBySourceKey.putAll(canonicalSourceKeyOwners());
+    }
+
+    private Map<String, AINPC> canonicalSourceKeyOwners() {
+        Map<String, AINPC> canonicalOwners = new HashMap<>();
+        for (AINPC npc : npcsByUuid.values()) {
+            String sourceKey = normalizeSourceKey(npc.getSourceKey());
+            if (sourceKey.isBlank()) {
+                continue;
+            }
+
+            AINPC existing = canonicalOwners.get(sourceKey);
+            if (isPreferredSourceKeyCandidate(npc, existing)) {
+                canonicalOwners.put(sourceKey, npc);
+            }
+        }
+        return canonicalOwners;
+    }
+
+    private boolean isPreferredSourceKeyCandidate(AINPC candidate, AINPC current) {
+        if (candidate == null) {
+            return false;
+        }
+        if (current == null) {
+            return true;
+        }
+
+        int candidateId = candidate.getDatabaseId();
+        int currentId = current.getDatabaseId();
+        if (candidateId > 0 && currentId > 0) {
+            return candidateId < currentId;
+        }
+        if (candidateId > 0) {
+            return true;
+        }
+        if (currentId > 0) {
+            return false;
+        }
+        return candidate.getUuid() != null
+            && current.getUuid() != null
+            && candidate.getUuid().compareTo(current.getUuid()) < 0;
+    }
+
+    private String normalizeSourceKey(String sourceKey) {
+        return sourceKey == null ? "" : sourceKey.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String valueOrFallback(String value, String fallback) {
+        String safeValue = value == null ? "" : value.trim();
+        return safeValue.isBlank() ? fallback : safeValue;
     }
 
     /**
      * Asociaza entitatea Bukkit cu NPC-ul
      */
     public void registerEntity(AINPC npc, Entity entity) {
+        if (npc == null || entity == null) {
+            return;
+        }
+        npc.applyPersistentIdentity(entity);
+        if (npc.applyControlledEntitySettings()) {
+            plugin.debug("Setari miscare NPC corectate la inregistrare pentru " + npc.getName() + ".");
+        }
         npcsByEntityId.put(entity.getUniqueId(), npc);
     }
 
@@ -1058,7 +1976,91 @@ public class NPCManager {
 
         npcsByEntityId.remove(entity.getUniqueId());
         npc.markEntityUnavailable();
+        persistNpcRuntimeStateAsync(npc, "entity death");
         plugin.debug("NPC '" + npc.getName() + "' a ramas fara entitate activa dupa moarte.");
+    }
+
+    private void persistNpcRuntimeStateAsync(AINPC npc, String reason) {
+        if (npc == null || npc.getDatabaseId() <= 0 || plugin.getDatabaseManager() == null) {
+            return;
+        }
+        plugin.getDatabaseManager().runAsync(() -> {
+            if (!saveNPC(npc, false)) {
+                plugin.getLogger().warning("Nu am putut persista starea runtime pentru NPC-ul "
+                    + npc.getName() + " dupa " + valueOrFallback(reason, "update") + ".");
+            }
+        });
+    }
+
+    private AINPC attachCanonicalSourceOwner(AINPC matchedNpc, Villager villager, String matchReason) {
+        AINPC sourceOwner = findCanonicalSourceKeyOwner(matchedNpc);
+        if (sourceOwner != null && !isSameNpcRecord(sourceOwner, matchedNpc)) {
+            plugin.getLogger().warning("Reasociez villager AINPC de la rand duplicat "
+                + matchedNpc.getName() + "#" + matchedNpc.getDatabaseId()
+                + " la randul canonic " + sourceOwner.getName() + "#" + sourceOwner.getDatabaseId()
+                + " dupa " + matchReason + ", source_key=" + matchedNpc.getSourceKey() + ".");
+            return attachVillagerToNPC(sourceOwner, villager);
+        }
+
+        return attachVillagerToNPC(matchedNpc, villager);
+    }
+
+    private AINPC attachVillagerToNPC(AINPC npc, Villager villager) {
+        if (npc == null || villager == null || !villager.isValid()) {
+            return npc;
+        }
+
+        Entity currentEntity = npc.getBukkitEntity();
+        boolean wasSpawned = npc.isSpawned();
+        if (currentEntity instanceof Villager currentVillager
+            && currentVillager.isValid()
+            && !currentVillager.getUniqueId().equals(villager.getUniqueId())) {
+            Villager preferred = choosePreferredVillager(npc, currentVillager, villager);
+            Villager duplicate = preferred == villager ? currentVillager : villager;
+            removeDuplicateVillager(duplicate, npc);
+            if (preferred != villager) {
+                registerEntity(npc, currentVillager);
+                return npc;
+            }
+        }
+
+        UUID previousUuid = npc.getUuid();
+        npc.attachToVillager(villager);
+        registerEntity(npc, villager);
+        refreshNpcCache(npc, previousUuid);
+        if (!wasSpawned || !Objects.equals(previousUuid, npc.getUuid())) {
+            saveNPC(npc, false);
+        }
+        return npc;
+    }
+
+    private Villager choosePreferredVillager(AINPC npc, Villager currentVillager, Villager incomingVillager) {
+        UUID storedUuid = npc.getUuid();
+        if (storedUuid != null && incomingVillager.getUniqueId().equals(storedUuid)) {
+            return incomingVillager;
+        }
+        if (storedUuid != null && currentVillager.getUniqueId().equals(storedUuid)) {
+            return currentVillager;
+        }
+
+        int npcId = npc.getDatabaseId();
+        int incomingNpcId = readPersistentNpcId(incomingVillager);
+        int currentNpcId = readPersistentNpcId(currentVillager);
+        if (npcId > 0 && incomingNpcId == npcId && currentNpcId != npcId) {
+            return incomingVillager;
+        }
+        return currentVillager;
+    }
+
+    private void removeDuplicateVillager(Villager villager, AINPC npc) {
+        if (villager == null || !villager.isValid()) {
+            return;
+        }
+
+        npcsByEntityId.remove(villager.getUniqueId());
+        plugin.getLogger().warning("Elimin villager duplicat pentru NPC-ul '" + npc.getName()
+            + "' la " + formatLocation(villager.getLocation()) + ".");
+        villager.remove();
     }
 
     private void attachLoadedNPC(AINPC npc) {
@@ -1066,6 +2068,18 @@ public class NPCManager {
     }
 
     private void attachLoadedNPC(AINPC npc, Chunk preferredChunk) {
+        AINPC sourceOwner = findCanonicalSourceKeyOwner(npc);
+        if (sourceOwner != null && !isSameNpcRecord(sourceOwner, npc)) {
+            if (!sourceOwner.isSpawned() && isChunkLoaded(sourceOwner)) {
+                attachLoadedNPC(sourceOwner, null);
+            }
+            plugin.getLogger().warning("Sar peste restaurare pentru NPC duplicat dupa source_key: duplicat="
+                + npc.getName() + "#" + npc.getDatabaseId()
+                + ", canonic=" + sourceOwner.getName() + "#" + sourceOwner.getDatabaseId()
+                + ", source_key=" + npc.getSourceKey() + ".");
+            return;
+        }
+
         UUID previousUuid = npc.getUuid();
         if (preferredChunk == null && !isChunkLoaded(npc)) {
             plugin.debug("NPC '" + npc.getName() + "' asteapta incarcarea chunk-ului pentru restaurare.");
@@ -1095,6 +2109,26 @@ public class NPCManager {
             refreshNpcCache(npc, previousUuid);
             saveNPC(npc);
         }
+    }
+
+    private AINPC findCanonicalSourceKeyOwner(AINPC npc) {
+        if (npc == null || npc.getSourceKey() == null || npc.getSourceKey().isBlank()) {
+            return null;
+        }
+        return findNPCBySourceKey(npc.getSourceKey());
+    }
+
+    private boolean isSameNpcRecord(AINPC first, AINPC second) {
+        if (first == second) {
+            return true;
+        }
+        if (first == null || second == null) {
+            return false;
+        }
+        if (first.getDatabaseId() > 0 && first.getDatabaseId() == second.getDatabaseId()) {
+            return true;
+        }
+        return first.getUuid() != null && first.getUuid().equals(second.getUuid());
     }
 
     private boolean isChunkLoaded(AINPC npc) {
@@ -1134,6 +2168,13 @@ public class NPCManager {
             return exactMatch;
         }
 
+        Villager persistentMatch = preferredChunk == null
+            ? findVillagerByPersistentIdentity(npc)
+            : findVillagerByPersistentIdentity(preferredChunk, npc);
+        if (persistentMatch != null) {
+            return persistentMatch;
+        }
+
         return preferredChunk == null
             ? findLegacyVillager(npc)
             : findLegacyVillager(npc, preferredChunk);
@@ -1145,6 +2186,34 @@ public class NPCManager {
                 if (villager.getUniqueId().equals(uuid)) {
                     return villager;
                 }
+            }
+        }
+        return null;
+    }
+
+    private Villager findVillagerByPersistentIdentity(AINPC npc) {
+        if (npc == null) {
+            return null;
+        }
+
+        for (World world : plugin.getServer().getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                if (matchesPersistentIdentity(villager, npc)) {
+                    return villager;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Villager findVillagerByPersistentIdentity(Chunk chunk, AINPC npc) {
+        if (chunk == null || npc == null) {
+            return null;
+        }
+
+        for (Entity entity : chunk.getEntities()) {
+            if (entity instanceof Villager villager && matchesPersistentIdentity(villager, npc)) {
+                return villager;
             }
         }
         return null;
@@ -1237,8 +2306,78 @@ public class NPCManager {
         return null;
     }
 
+    private AINPC findNPCByPersistentUuid(Villager villager) {
+        String storedUuid = readPersistentString(villager, AINPC.PDC_UUID_KEY);
+        if (storedUuid.isBlank()) {
+            return null;
+        }
+
+        try {
+            return getNPCByUuid(UUID.fromString(storedUuid));
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private boolean matchesPersistentIdentity(Villager villager, AINPC npc) {
+        if (villager == null || npc == null) {
+            return false;
+        }
+
+        int storedNpcId = readPersistentNpcId(villager);
+        if (storedNpcId > 0 && storedNpcId == npc.getDatabaseId()) {
+            return true;
+        }
+
+        String storedUuid = readPersistentString(villager, AINPC.PDC_UUID_KEY);
+        if (npc.getUuid() != null && storedUuid.equalsIgnoreCase(npc.getUuid().toString())) {
+            return true;
+        }
+
+        String storedSourceKey = readPersistentString(villager, AINPC.PDC_SOURCE_KEY);
+        return !storedSourceKey.isBlank() && storedSourceKey.equalsIgnoreCase(npc.getSourceKey());
+    }
+
+    private boolean isPendingManagedVillager(Villager villager) {
+        return isMarkedAinpcVillager(villager) && readPersistentNpcId(villager) <= 0;
+    }
+
+    private boolean isMarkedAinpcVillager(Villager villager) {
+        if (villager == null) {
+            return false;
+        }
+        PersistentDataContainer data = villager.getPersistentDataContainer();
+        Integer managed = data.get(persistentKey(AINPC.PDC_MANAGED_KEY), PersistentDataType.INTEGER);
+        return managed != null && managed == 1;
+    }
+
+    private int readPersistentNpcId(Villager villager) {
+        if (villager == null) {
+            return 0;
+        }
+        Integer npcId = villager.getPersistentDataContainer()
+            .get(persistentKey(AINPC.PDC_DATABASE_ID_KEY), PersistentDataType.INTEGER);
+        return npcId != null ? npcId : 0;
+    }
+
+    private String readPersistentString(Villager villager, String key) {
+        if (villager == null || key == null || key.isBlank()) {
+            return "";
+        }
+        String value = villager.getPersistentDataContainer()
+            .get(persistentKey(key), PersistentDataType.STRING);
+        return value == null ? "" : value.trim();
+    }
+
+    private NamespacedKey persistentKey(String key) {
+        return new NamespacedKey(plugin, key);
+    }
+
     private boolean isLegacyPluginVillager(Villager villager) {
-        return !villager.hasAI() || villager.isInvulnerable() || villager.isSilent();
+        return isMarkedAinpcVillager(villager)
+            || !villager.hasAI()
+            || villager.isInvulnerable()
+            || villager.isSilent();
     }
 
     private boolean isSameNpcLocation(Location first, Location second) {
@@ -1534,8 +2673,9 @@ public class NPCManager {
     }
 
     private String generateUniqueAutoName(String gender, Random random) {
-        for (int attempt = 0; attempt < 30; attempt++) {
-            String candidate = NPCNameGenerator.randomName(gender, random);
+        List<String> candidates = new ArrayList<>(NPCNameGenerator.predefinedNames(gender));
+        Collections.shuffle(candidates, random);
+        for (String candidate : candidates) {
             if (!isNpcNameTaken(candidate)) {
                 return candidate;
             }
@@ -2518,6 +3658,7 @@ public class NPCManager {
         profile.addProperty("display_name", npc.getDisplayName());
         profile.addProperty("profile_source", npc.getProfileSource());
         profile.addProperty("profile_version", npc.getProfileVersion());
+        profile.addProperty("source_key", npc.getSourceKey());
         profile.addProperty("world", npc.getWorldName());
         profile.addProperty("x", npc.getX());
         profile.addProperty("y", npc.getY());
@@ -2531,6 +3672,7 @@ public class NPCManager {
         profile.addProperty("current_state",
             npc.getCurrentState() != null ? npc.getCurrentState().name() : "");
         profile.addProperty("spawned", npc.isSpawned());
+        profile.add("spawn_state", buildSpawnState(npc));
         profile.addProperty("profile_summary", buildProfileSummary(npc));
 
         JsonArray traitsArray = new JsonArray();
@@ -2586,6 +3728,25 @@ public class NPCManager {
         profile.add("owned_locations", ownedLocations);
 
         return gson.toJson(profile);
+    }
+
+    private JsonObject buildSpawnState(AINPC npc) {
+        JsonObject state = new JsonObject();
+        state.addProperty("spawned", npc.isSpawned());
+        state.addProperty("entity_uuid", npc.getUuid() != null ? npc.getUuid().toString() : "");
+        state.addProperty("database_id", npc.getDatabaseId());
+        state.addProperty("source_key", npc.getSourceKey());
+        state.addProperty("world", npc.getWorldName());
+        state.addProperty("x", npc.getX());
+        state.addProperty("y", npc.getY());
+        state.addProperty("z", npc.getZ());
+        state.addProperty("yaw", npc.getYaw());
+        state.addProperty("pitch", npc.getPitch());
+        state.addProperty("chunk_x", floorToBlock(npc.getX()) >> 4);
+        state.addProperty("chunk_z", floorToBlock(npc.getZ()) >> 4);
+        state.addProperty("restorable", npc.getWorldName() != null && !npc.getWorldName().isBlank());
+        state.addProperty("updated_at", System.currentTimeMillis());
+        return state;
     }
 
     private void writeOwnedLocation(JsonObject root, String key, AINPC.OwnedLocation anchor) {
@@ -2749,5 +3910,34 @@ public class NPCManager {
         }
 
         return nearby;
+    }
+
+    public record ManagedVillagerAuditIssue(boolean error, String message) {
+        public static ManagedVillagerAuditIssue error(String message) {
+            return new ManagedVillagerAuditIssue(true, message);
+        }
+
+        public static ManagedVillagerAuditIssue warning(String message) {
+            return new ManagedVillagerAuditIssue(false, message);
+        }
+
+        public ManagedVillagerAuditIssue {
+            message = message == null ? "" : message;
+        }
+    }
+
+    public record DuplicateRepairResult(
+        boolean applied,
+        int duplicateDbRows,
+        int deletedDbRows,
+        int duplicateEntities,
+        int removedEntities,
+        int reassociatedEntities,
+        int sourceKeyIndexIssues,
+        int reindexedSourceKeys,
+        List<String> actions,
+        List<String> warnings,
+        List<String> errors
+    ) {
     }
 }

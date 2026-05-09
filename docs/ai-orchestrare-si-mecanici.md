@@ -1,6 +1,6 @@
 # AI Orchestration si Mecanici Runtime
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-08
 
 ## Scop
 
@@ -691,7 +691,7 @@ Reguli:
 | Document | Legatura |
 |---|---|
 | `dialog-si-conversatii.md` | AI formuleaza dialog peste context validat |
-| `questuri-avansate.md` | AI propune quest drafts, runtime-ul executa |
+| `questuri-avansate-v2.md` | AI propune quest drafts, runtime-ul executa |
 | `story-si-context-ai.md` | context semantic si story state pentru AI |
 | `environment-context-si-engine.md` | context read-only si semnale viitoare |
 | `generare-ai-si-constructie-automata.md` | AI propune planuri, nu blocuri directe |

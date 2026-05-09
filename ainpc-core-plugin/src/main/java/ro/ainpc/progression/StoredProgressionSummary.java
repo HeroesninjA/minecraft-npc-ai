@@ -17,7 +17,10 @@ public record StoredProgressionSummary(
     Map<String, Integer> byTemplate,
     Map<String, Integer> byPack,
     Map<String, Integer> byMechanic,
-    Map<String, Integer> byKind
+    Map<String, Integer> byKind,
+    Map<String, Integer> byCategory,
+    Map<String, Integer> byScenarioKind,
+    Map<String, Integer> byBaseType
 ) {
     public StoredProgressionSummary {
         rowCount = Math.max(0, rowCount);
@@ -31,12 +34,15 @@ public record StoredProgressionSummary(
         byPack = Map.copyOf(byPack != null ? byPack : Map.of());
         byMechanic = Map.copyOf(byMechanic != null ? byMechanic : Map.of());
         byKind = Map.copyOf(byKind != null ? byKind : Map.of());
+        byCategory = Map.copyOf(byCategory != null ? byCategory : Map.of());
+        byScenarioKind = Map.copyOf(byScenarioKind != null ? byScenarioKind : Map.of());
+        byBaseType = Map.copyOf(byBaseType != null ? byBaseType : Map.of());
     }
 
     public static StoredProgressionSummary from(Collection<StoredProgression> progressions) {
         if (progressions == null || progressions.isEmpty()) {
             return new StoredProgressionSummary(0, 0, 0, 0, 0, 0,
-                Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+                Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
         }
 
         Set<String> players = new LinkedHashSet<>();
@@ -45,6 +51,9 @@ public record StoredProgressionSummary(
         Map<String, Integer> byPack = new LinkedHashMap<>();
         Map<String, Integer> byMechanic = new LinkedHashMap<>();
         Map<String, Integer> byKind = new LinkedHashMap<>();
+        Map<String, Integer> byCategory = new LinkedHashMap<>();
+        Map<String, Integer> byScenarioKind = new LinkedHashMap<>();
+        Map<String, Integer> byBaseType = new LinkedHashMap<>();
         int currentCount = 0;
         int archivedCount = 0;
         int trackedCount = 0;
@@ -62,6 +71,9 @@ public record StoredProgressionSummary(
             increment(byPack, progression.packId());
             increment(byMechanic, progression.mechanicId());
             increment(byKind, progression.kind());
+            increment(byCategory, progression.category());
+            increment(byScenarioKind, progression.scenarioKind());
+            increment(byBaseType, progression.baseType());
             if (progression.current()) {
                 currentCount++;
             }
@@ -87,7 +99,10 @@ public record StoredProgressionSummary(
             byTemplate,
             byPack,
             byMechanic,
-            byKind
+            byKind,
+            byCategory,
+            byScenarioKind,
+            byBaseType
         );
     }
 

@@ -8,6 +8,7 @@ Aceasta categorie acopera generarea de sate, completarea lumii si constructia as
 
 | Document | Rol |
 |---|---|
+| `../../playable-village-ux.md` | Cerinte de playability pentru generator: teren plat, case mai mari, distante, drumuri si locuri de interactiune |
 | `../../settlement-plan.md` | Contract pentru plan complet de sat/regiune, validabil inainte de constructie sau spawn |
 | `../../patch-planner.md` | Contract pentru gap analyzer si patch-uri planificate fara executie directa |
 | `../../template-cladiri-si-marker-nodes.md` | Contract pentru template-uri, ancore si marker nodes care devin mapping |
@@ -21,7 +22,7 @@ Aceasta categorie acopera generarea de sate, completarea lumii si constructia as
 
 ## Regula
 
-Generarea trebuie sa produca mai intai planuri validate, apoi mapping, apoi spawn. AI-ul nu executa direct modificari in lume.
+Generarea trebuie sa produca mai intai planuri validate, apoi mapping, apoi spawn. AI-ul nu executa direct modificari in lume. Cerintele din `playable-village-ux.md` au prioritate fata de generare decorativa: satul trebuie sa fie lizibil si jucabil inainte sa fie complex.
 
 ## Urmatoarele documente utile
 

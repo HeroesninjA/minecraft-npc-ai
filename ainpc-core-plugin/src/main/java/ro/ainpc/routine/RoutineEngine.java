@@ -3,7 +3,16 @@ package ro.ainpc.routine;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCState;
 
+import java.util.List;
+
 public class RoutineEngine {
+
+    private static final List<SchedulePoint> DAY_PREVIEW_POINTS = List.of(
+        new SchedulePoint("Noapte", 19000L),
+        new SchedulePoint("Dimineata", 6000L),
+        new SchedulePoint("Pranz", 13000L),
+        new SchedulePoint("Seara", 17000L)
+    );
 
     public RoutineAssignment assign(AINPC npc, long worldTime) {
         if (npc == null) {
@@ -44,6 +53,12 @@ public class RoutineEngine {
         }
 
         return idle("isi urmeaza rutina obisnuita");
+    }
+
+    public List<RoutineScheduleEntry> previewDay(AINPC npc) {
+        return DAY_PREVIEW_POINTS.stream()
+            .map(point -> new RoutineScheduleEntry(point.label(), point.worldTime(), assign(npc, point.worldTime())))
+            .toList();
     }
 
     private RoutineAssignment fallbackDay(AINPC npc, String reason) {
@@ -140,5 +155,8 @@ public class RoutineEngine {
     private long normalizeWorldTime(long worldTime) {
         long normalized = worldTime % 24000L;
         return normalized < 0 ? normalized + 24000L : normalized;
+    }
+
+    private record SchedulePoint(String label, long worldTime) {
     }
 }

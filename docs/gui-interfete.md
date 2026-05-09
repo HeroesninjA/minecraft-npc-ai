@@ -1,6 +1,6 @@
 # GUI Interfete
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-09
 
 ## Scop
 
@@ -24,12 +24,35 @@ Implementat initial:
 
 - `GuiService`, `GuiSessionManager`, `AINPCGuiHolder`, `GuiInventoryListener`;
 - anulare click/drag in inventarele AINPC si curatare sesiune la close/quit;
-- `/ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]`;
-- `/quest gui`;
-- tab-completion pentru `/ainpc gui` si `/quest gui`;
+- `/ainpc gui [main|quest|world|stats|interact|routine|shop|manager|audit|debug]`;
+- `/ainpc gui quest <filter>` pentru deschidere directa a quest log-ului filtrat;
+- `/quest gui [filter]`;
+- tab-completion pentru `/ainpc gui`, `/ainpc gui quest <filter>` si `/quest gui <filter>`;
 - permisiuni `ainpc.gui.*` in `plugin.yml`;
 - `ScenarioEngine.getQuestGuiSnapshot(...)` ca snapshot read-only pentru GUI;
 - hub principal, quest log navigabil, detalii quest, world context, statistici, interactiune NPC, manager NPC, audit si debug;
+- filtre interactive in `QuestLogGui` pentru `all`, `active`, `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`, cu stare per jucator;
+- `QuestLogGui` grupeaza randurile dupa mecanica si pagineaza lista prin `QuestLogGuiPage`, cu pagina curenta pastrata in `GuiService`;
+- `QuestLogGui` combina intrarile curente si arhivate returnate de snapshot, iar `QuestDetailGui` pastreaza filtrul sursa pentru detalii stabile dupa click;
+- cardurile din `QuestLogGui` au actiuni rapide: click pentru detalii, right click pentru track/status pe intrarea selectata si shift click pentru status in chat;
+- actiunile rapide din `QuestLogGui` si `QuestDetailGui` folosesc comenzi kind-aware din `ProgressionGuiEntry`, de exemplu `/ainpc contract ...`, `/ainpc bounty ...` sau `/ainpc ritual ...`;
+- `ProgressionGuiEntry` centralizeaza selectorul de detalii, filtrul GUI si comenzile kind-aware, astfel `QuestLogGui`, `QuestDetailGui` si `NpcInteractionGui` folosesc aceeasi regula;
+- `QuestLogGui` foloseste etichete vizibile de progresie pentru header, empty state, tracking si ancore, pastrand comenzile existente ca fallback;
+- `QuestLogGui` opreste tracking-ul prin comanda kind-aware a intrarii urmarite cand aceasta este vizibila, cu fallback generic cand filtrul curent nu o contine;
+- `MainHubGui`, `StatsGui`, `GuiKey`, `/ainpc gui` si tab-completion folosesc etichete de progresie si accepta alias-uri GUI ca `progresii`, `progression`, `detalii_progresie` si `progression_details`;
+- comenzile de mecanica pot deschide GUI-ul direct cu filtrul corect, de exemplu `/ainpc contract gui`, `/ainpc contract gui active` si `/ainpc ritual gui tracked`;
+- help-ul pentru `/ainpc progression` si alias-urile de mecanica include intrarea `gui`, nu doar `log/status/progress`;
+- tab-completion pentru comenzile de mecanica sugereaza filtre relative (`active`, `tracked`, `archived`) pentru `gui` si `log`, nu lista globala de kind-uri;
+- `QuestDetailGui` revine in quest log cu filtrul sursa al detaliului, inclusiv cand intrarea a disparut sau a fost arhivata;
+- `QuestDetailGui` foloseste texte generice de progresie in inventar, ca acelasi ecran sa nu afiseze "quest" pe contracte, bounty-uri, duty-uri, evenimente, tutoriale sau ritualuri;
+- `QuestDetailGui` expune status, progress, tracking, abandon si debug prin aceleasi comenzi kind-aware, fara hardcodare pe `/ainpc quest ...`, si arata linii read-only de status/actiuni din snapshot;
+- `QuestLogGuiPage` evita header-ele orfane la final de pagina si repeta header-ul cand un grup mare continua pe pagina urmatoare;
+- `NpcInteractionGui` arata rutina NPC-ului, progresia relevanta din `ProgressionGuiSnapshot` si are actiuni rapide kind-aware pentru nearest/status/accept, detalii progresie, story si routine status;
+- `RoutineGui` dedicat pentru `/ainpc gui routine`, cu preview pentru slotul curent al fiecarui NPC si programul zilnic home/work/social/idle;
+- `NpcManagerGui` afiseaza pe carduri rutina calculata, nevoile si ancorele home/work/social, cu actiuni rapide pentru info, teleport, familie si routine status;
+- `WorldHubGui` afiseaza sumarul `ProgressionGuiSnapshot`, deschide log-ul filtrat de progresii si expune ancorele locale citite prin `ProgressionService` pentru diagnostic mapping/quest;
+- `WorldHubGui` cere confirmare pentru scan sat, demo mapping si save mapping;
+- `DebugGui` expune toate scope-urile principale de debugdump: all, npc, world, quest, story si openai;
 - `QuestDetailGui` cu obiective, stage-uri, recompense, tracking, status, debug admin si abandon cu confirmare;
 - `ConfirmActionGui` pentru actiuni destructive;
 - shop GUI placeholder, pregatit pentru provider dedicat.
@@ -45,6 +68,35 @@ Comenzile text raman fallback si sunt folosite de butoanele GUI pentru actiuni v
 - `/ainpc info`, `list`, `family`, `routine`, `mood`, `tp`, `test`.
 
 Prima implementare GUI este un wrapper sigur peste aceste servicii si comenzi, nu o rescriere completa.
+
+## GUI in lucrul alternat
+
+GUI-ul face parte din fiecare slice din `lucru-alternat-quest-mapping-progression.md`. Un slice nu este complet doar pentru ca exista comanda text; trebuie sa existe si o suprafata vizuala minima care arata aceeasi stare fara sa mute logica in inventare.
+
+Reguli pentru alternanta:
+
+- Mapping-ul expune contextul prin snapshot-uri sau API read-only, iar GUI-ul doar il prezinta.
+- Questurile si mecanicile non-quest apar in `QuestLogGui` prin `ProgressionGuiSnapshot`, nu prin citiri separate din YAML sau DB.
+- `ProgressionService` este sursa pentru status/progress/track/abandon cand exista fatada generica; GUI-ul nu trebuie sa aiba ramuri diferite pentru fiecare mecanica.
+- `WorldHubGui`, `RoutineGui`, `NpcInteractionGui`, `AuditGui` si `DebugGui` sunt suprafete de verificare pentru acelasi slice, nu sisteme paralele.
+- Orice click care schimba stare trebuie sa aiba validare runtime si fallback prin comanda text.
+
+Checklist minim pe slice:
+
+| Componenta | Verificare GUI |
+|---|---|
+| Mapping | `/ainpc gui world` poate arata contextul, progresiile vizibile si ancorele persistate sau trimite spre comenzile world relevante |
+| Quest/progression | `/ainpc gui quest <filter>` listeaza intrarea corecta si detaliile stage/objective |
+| NPC/rutina | `/ainpc gui routine` sau interactiunea NPC explica rutina curenta si ancorele |
+| Audit/debug | `/ainpc gui audit` si `/ainpc gui debug` pot porni inspectiile fara actiuni destructive directe |
+| Persistenta | dupa reload, aceleasi intrari apar cu status/tracking coerent |
+
+Gate pentru demo:
+
+- filtrele `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual` afiseaza intrari corecte cand exista definitii/progres;
+- cardurile nu ascund warnings importante din audit;
+- detaliile nu depind de text hardcodat pentru stage-uri concrete;
+- actiunile rapide au confirmare cand pot abandona, sterge, reseta sau genera date.
 
 ## Principii UI
 
@@ -105,6 +157,7 @@ ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/
   ShopGui.java
   NpcManagerGui.java
   NpcInteractionGui.java
+  RoutineGui.java
   DebugGui.java
   AuditGui.java
   ConfirmActionGui.java
@@ -217,6 +270,7 @@ Permisiuni recomandate:
 | `ainpc.gui.stats` | Statistici personale |
 | `ainpc.gui.shop` | Shop NPC |
 | `ainpc.gui.interact` | Interactiune NPC avansata |
+| `ainpc.gui.routine` | Preview rutine NPC |
 | `ainpc.gui.manager` | Manager NPC admin |
 | `ainpc.gui.debug` | Debug GUI admin |
 | `ainpc.gui.audit` | Audit GUI admin |
@@ -282,12 +336,17 @@ QuestListSnapshot
 Layout `QuestLogGui`, 54 sloturi:
 
 ```text
-0-8     filtre: active, offered, completed, all, tracked
-9-44    quest cards paginate
-45      pagina anterioara
-48      hub
+0-8     header si context
+9-17    filtre: all, active, quest, contract, duty, bounty, event, tutorial, ritual
+19-43   headers de mecanica si quest/progression cards paginate
+44      indicator pagina/lista, cand exista mai multe pagini
+45      hub
+46      pagina anterioara
+47      pagina urmatoare
+48      quest anchors admin
 49      refresh
-50      pagina urmatoare
+50      track quest activ fallback
+51      stop tracking
 53      close
 ```
 
@@ -301,8 +360,8 @@ Obiective:
 - Viziteaza forja: 1/1
 - Inspecteaza urmele: 0/1
 Recompense: emerald x3, story event
-Click stanga: detalii
-Click dreapta: track
+Click: detalii
+Right click: track/status pe intrarea selectata
 Shift click: status in chat
 ```
 
@@ -360,7 +419,7 @@ WorldGuiSnapshot
 10      whereami
 11      regions
 12      places nearby
-13      nodes nearby
+13      progression summary
 14      quest anchors
 15      unsaved changes
 19      scan current area
@@ -778,6 +837,14 @@ Teste:
 - sesiunea se inchide la quit;
 - butoanele fara permisiune sunt dezactivate;
 - paginarea nu depaseste sloturile.
+
+Status implementare:
+
+- fundatia exista in cod;
+- `QuestLogGui` are rand de filtre interactive pentru mecanicile curente;
+- filtrul ales este tinut in `GuiService` per jucator;
+- `QuestLogGui` are paginare initiala si grupare dupa mecanica prin `QuestLogGuiPage`;
+- testele `QuestLogGuiFilterTest` si `QuestLogGuiPageTest` acopera filtrele, ordinea de grupare si limitele de pagina.
 
 ### Faza GUI-2 - Quest si NPC interaction
 

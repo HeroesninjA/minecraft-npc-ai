@@ -24,6 +24,8 @@ public class QuestDetailGui implements GuiScreen {
     };
     private static final int[] STAGE_SLOTS = {28, 29, 30, 31, 32, 33, 34};
     private static final int[] REWARD_SLOTS = {37, 38, 39, 40, 41, 42, 43};
+    private static final int DIAGNOSTIC_SLOT = 2;
+    private static final int ACTION_HINT_SLOT = 6;
 
     @Override
     public GuiKey key() {
@@ -32,7 +34,7 @@ public class QuestDetailGui implements GuiScreen {
 
     @Override
     public String title(Player player) {
-        return "&0AINPC Quest Detalii";
+        return "&0AINPC Progresie";
     }
 
     @Override
@@ -49,11 +51,16 @@ public class QuestDetailGui implements GuiScreen {
         }
 
         boolean adminView = context.player().hasPermission("ainpc.admin");
+        String detailFilter = context.service().getQuestDetailFilter(context.player());
         ProgressionGuiSnapshot snapshot =
-            context.plugin().getProgressionService().getProgressionGuiSnapshot(context.player(), "all", adminView);
+            context.plugin().getProgressionService().getProgressionGuiSnapshot(context.player(), detailFilter, adminView);
         Optional<ProgressionGuiEntry> optionalEntry = findEntry(snapshot, selector);
+        if (optionalEntry.isEmpty() && !"all".equalsIgnoreCase(detailFilter)) {
+            snapshot = context.plugin().getProgressionService().getProgressionGuiSnapshot(context.player(), "all", adminView);
+            optionalEntry = findEntry(snapshot, selector);
+        }
         if (optionalEntry.isEmpty()) {
-            renderMissingQuest(context, selector);
+            renderMissingQuest(context, selector, detailFilter);
             return;
         }
 
@@ -64,10 +71,11 @@ public class QuestDetailGui implements GuiScreen {
             headerLore(entry)
         ));
 
+        renderDiagnosticCards(context, entry);
         renderObjectives(context, entry);
         renderStages(context, entry);
         renderRewards(context, entry);
-        renderActions(context, entry, selector, adminView);
+        renderActions(context, entry, selector, detailFilter, adminView);
         context.fillEmpty(GuiItemFactory.filler());
     }
 
@@ -77,7 +85,9 @@ public class QuestDetailGui implements GuiScreen {
         }
         String normalized = selector.trim();
         return snapshot.allEntries().stream()
-            .filter(entry -> matches(normalized, entry.selector())
+            .filter(entry -> matches(normalized, entry.guiDetailSelector())
+                || matches(normalized, entry.commandSelector())
+                || matches(normalized, entry.selector())
                 || matches(normalized, entry.progressionId())
                 || matches(normalized, entry.mechanicId() + ":" + entry.code())
                 || matches(normalized, entry.mechanicId() + ":" + entry.definitionId())
@@ -129,42 +139,65 @@ public class QuestDetailGui implements GuiScreen {
         }
     }
 
+    private void renderDiagnosticCards(GuiRenderContext context, ProgressionGuiEntry entry) {
+        context.item(DIAGNOSTIC_SLOT, GuiItemFactory.item(
+            Material.BOOK,
+            "&bStatus runtime",
+            compactLore(entry.statusLines(), "&8Nu exista linii de status in snapshot.", 5)
+        ));
+        context.item(ACTION_HINT_SLOT, GuiItemFactory.item(
+            Material.OAK_SIGN,
+            "&aActiuni sugerate",
+            compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.", 5)
+        ));
+    }
+
     private void renderActions(GuiRenderContext context,
                                ProgressionGuiEntry entry,
                                String selector,
+                               String detailFilter,
                                boolean adminView) {
         context.button(45, GuiButton.enabled(
-            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la quest log."),
-            click -> click.service().open(click.player(), GuiKey.QUEST)
+            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la log cu filtrul sursa."),
+            click -> click.service().openQuestLog(click.player(), detailFilter)
         ));
 
         if (entry.active()) {
             context.button(46, GuiButton.enabled(
                 GuiItemFactory.item(entry.tracked() ? Material.GRAY_DYE : Material.COMPASS,
-                    entry.tracked() ? "&eOpreste tracking" : "&aUrmareste quest",
-                    entry.tracked() ? "&7Ruleaza /ainpc quest track stop." : "&7Ruleaza /ainpc quest track start."),
+                    entry.tracked() ? "&eOpreste tracking" : "&aUrmareste progresia",
+                    entry.tracked()
+                        ? "&7Ruleaza /" + entry.trackStopCommand() + "."
+                        : "&7Ruleaza /" + entry.trackStartCommand() + "."),
                 click -> click.service().runCommand(click.player(),
-                    entry.tracked() ? "ainpc quest track stop" : "ainpc quest track start " + selector)
+                    entry.tracked() ? entry.trackStopCommand() : entry.trackStartCommand())
             ));
         }
 
         context.button(47, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bStatus in chat", "&7Ruleaza /ainpc quest status."),
-            click -> click.service().runCommand(click.player(), "ainpc quest status " + selector)
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bStatus in chat",
+                "&7Ruleaza /" + entry.command("status") + "."),
+            click -> click.service().runCommand(click.player(), entry.command("status"))
+        ));
+
+        context.button(51, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&bProgres in chat",
+                "&7Ruleaza /" + entry.command("progress") + "."),
+            click -> click.service().runCommand(click.player(), entry.command("progress"))
         ));
 
         if (entry.active()) {
             context.button(48, GuiButton.enabled(
                 GuiItemFactory.item(Material.REDSTONE_BLOCK, "&cAbandoneaza",
-                    "&7Cere confirmare inainte de /ainpc quest abandon."),
+                    "&7Cere confirmare inainte de /" + entry.command("abandon") + "."),
                 click -> click.service().openConfirmCommand(
                     click.player(),
-                    "Abandoneaza quest",
-                    "ainpc quest abandon " + selector,
+                    "Abandoneaza progresia",
+                    entry.command("abandon"),
                     GuiKey.QUEST_DETAIL,
                     selector,
                     List.of(
-                        "&cQuest: &f" + entry.title(),
+                        "&cProgresie: &f" + entry.title(),
                         "&7Progresul curent va fi marcat ca esuat/abandonat."
                     )
                 )
@@ -172,14 +205,15 @@ public class QuestDetailGui implements GuiScreen {
         }
 
         context.button(49, GuiButton.enabled(
-            GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", "&7Reincarca detaliile questului."),
-            click -> click.service().openQuestDetail(click.player(), selector)
+            GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", "&7Reincarca detaliile progresiei."),
+            click -> click.service().openQuestDetail(click.player(), selector, detailFilter)
         ));
 
         if (adminView) {
             context.button(50, GuiButton.enabled(
-                GuiItemFactory.item(Material.SPYGLASS, "&6Debug quest", "&7Ruleaza /ainpc quest debug."),
-                click -> click.service().runCommand(click.player(), "ainpc quest debug " + selector)
+                GuiItemFactory.item(Material.SPYGLASS, "&6Debug progresie",
+                    "&7Ruleaza /" + entry.command("debug") + "."),
+                click -> click.service().runCommand(click.player(), entry.command("debug"))
             ));
         }
 
@@ -190,26 +224,26 @@ public class QuestDetailGui implements GuiScreen {
     }
 
     private void renderMissingSelection(GuiRenderContext context) {
-        context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNiciun quest selectat",
-            "&7Deschide quest log-ul si alege un quest."));
+        context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNicio progresie selectata",
+            "&7Deschide log-ul si alege o progresie."));
         context.button(45, GuiButton.enabled(
-            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la quest log."),
-            click -> click.service().open(click.player(), GuiKey.QUEST)
+            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la log-ul de progresii."),
+            click -> click.service().openQuestLog(click.player(), click.service().getQuestDetailFilter(click.player()))
         ));
         context.fillEmpty(GuiItemFactory.filler());
     }
 
-    private void renderMissingQuest(GuiRenderContext context, String selector) {
-        context.item(22, GuiItemFactory.item(Material.BARRIER, "&cQuest indisponibil",
+    private void renderMissingQuest(GuiRenderContext context, String selector, String detailFilter) {
+        context.item(22, GuiItemFactory.item(Material.BARRIER, "&cProgresie indisponibila",
             "&7Nu mai gasesc selectorul: &f" + selector,
-            "&7Questul poate fi finalizat, abandonat sau reincarcat."));
+            "&7Progresia poate fi finalizata, abandonata sau reincarcata."));
         context.button(45, GuiButton.enabled(
-            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la quest log."),
-            click -> click.service().open(click.player(), GuiKey.QUEST)
+            GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la log cu filtrul sursa."),
+            click -> click.service().openQuestLog(click.player(), detailFilter)
         ));
         context.button(49, GuiButton.enabled(
-            GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", "&7Reincarca quest log-ul."),
-            click -> click.service().open(click.player(), GuiKey.QUEST)
+            GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", "&7Reincarca log-ul cu filtrul sursa."),
+            click -> click.service().openQuestLog(click.player(), detailFilter)
         ));
         context.fillEmpty(GuiItemFactory.filler());
     }
@@ -238,13 +272,13 @@ public class QuestDetailGui implements GuiScreen {
             lore.add("&7Stage curent: &f" + entry.currentStageLabel());
         }
         if (entry.tracked()) {
-            lore.add("&bQuest urmarit");
+            lore.add("&bProgresie urmarita");
         }
         if (!entry.actorName().isBlank()) {
             lore.add("&7NPC: &f" + entry.actorName());
         }
         if (entry.missingTemplate()) {
-            lore.add("&cTemplate-ul questului nu este incarcat.");
+            lore.add("&cDefinitia progresiei nu este incarcata.");
         }
         return lore;
     }
@@ -286,6 +320,22 @@ public class QuestDetailGui implements GuiScreen {
             lore.add("&7Objectives: &f" + String.join(", ", stage.objectiveIds()));
         }
         lore.addAll(GuiItemFactory.wrapLore(stage.description(), "&7"));
+        return lore;
+    }
+
+    private List<String> compactLore(List<String> lines, String emptyLine, int maxLines) {
+        if (lines == null || lines.isEmpty()) {
+            return List.of(emptyLine);
+        }
+
+        List<String> lore = new ArrayList<>();
+        int limit = Math.min(Math.max(1, maxLines), lines.size());
+        for (int index = 0; index < limit; index++) {
+            lore.add("&7" + GuiItemFactory.compact(lines.get(index), 44));
+        }
+        if (lines.size() > limit) {
+            lore.add("&8+" + (lines.size() - limit) + " linii in chat/status.");
+        }
         return lore;
     }
 }

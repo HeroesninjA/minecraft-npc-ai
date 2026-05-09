@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-08
 
 ## Exista deja
 
@@ -45,8 +45,12 @@ Actualizat: 2026-05-07
 - [x] `/ainpc audit quest` avertizeaza pentru chei legacy in `objective_progress` si `quest_anchor_bindings.objective_key`
 - [x] Raport dedicat `quest-audit-report.txt` in `/ainpc debugdump quest`
 - [x] Export/debugdump pentru quest templates incarcate in `loaded-quest-definitions.json`
+- [x] `loaded-quest-definitions.json` expune pentru obiective `normalized_type`, `semantic_anchor_type`, `semantic_reference_prefix` si `semantic_reference_value`
+- [x] `/ainpc audit quest` verifica referintele semantice de obiective fata de `world-mapping.semantic_index`
+- [x] `quest-audit-report.txt` verifica aceleasi referinte semantice si include contractele/progresiile non-`QUEST`
 - [x] Export/debugdump complet pentru `player_quests` in `player-quest-progress.json`
 - [x] Export/debugdump generic pentru progresii in `player-progressions.json`, ca view peste `player_quests` cu metadata de mecanica
+- [x] `world-mapping.json` expune `semantic_index` pentru tokeni de resolver: place tags/types si node type/metadata
 - [x] Export/debugdump pentru `region_story_state` si `place_story_state` in `story-states.json`
 - [x] Export/debugdump pentru `story_events` in `story-events.json`
 - [x] `/ainpc debugdump story` pentru inspectie dedicata story state/events
@@ -55,23 +59,37 @@ Actualizat: 2026-05-07
 - [x] `ProgressionSelector` initial pentru selectori simpli, `tracked/current`, `mechanic:definition` si `pack:mechanic:definition`
 - [x] `ProgressionDefinition` initial ca model read-only peste definitiile jucabile din feature packs
 - [x] Snapshot-uri initiale `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` peste rezultatele compatibile din runtime-ul curent
+- [x] Quest GUI foloseste snapshot-ul generic de progres si are filtre interactive pentru `all`/`active`/`quest`/`contract`/`duty`/`bounty`/`event`/`tutorial`/`ritual`
+- [x] Quest GUI are paginare initiala si grupare dupa mecanica prin `QuestLogGuiPage`
+- [x] `/ainpc gui quest <filter>` si `/quest gui <filter>` deschid direct quest log-ul filtrat
 - [x] `ProgressionRepository` read-only peste `player_quests`, expus prin `ProgressionService.getStoredProgressions()`
-- [x] `StoredProgressionSummary` pentru sumar read-only peste progresiile persistate
-- [x] Comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` si alias filtrat `/ainpc contract stored ...`
-- [x] Comanda read-only `/ainpc progression definitions [filter]` si alias filtrat `/ainpc contract definitions [filter]`
+- [x] `StoredProgression` expune metadata generica `category`, `scenarioKind` si `baseType` pentru filtrare/debugdump peste progresii persistate
+- [x] `ProgressionFilter` comun pentru filtre explicite `kind:`, `scenario:`, `base:`, `category:`, `mechanic:` in definitions si stored progressions
+- [x] `StoredProgressionSummary` pentru sumar read-only peste progresiile persistate, inclusiv category/scenarioKind/baseType
+- [x] Comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` si aliasuri filtrate `/ainpc contract|duty|bounty|event|tutorial|ritual stored ...`
+- [x] Comanda read-only `/ainpc progression definitions [filter]` si aliasuri filtrate `/ainpc contract|duty|bounty|event|tutorial|ritual definitions [filter]`
+- [x] Prima mecanica `npc_duties` peste runtime-ul comun, cu D01 ca sarcina NPC non-quest filtrabila prin `duty`
+- [x] Prima mecanica `local_bounties` peste runtime-ul comun, cu B01 ca bounty local filtrabil prin `bounty`
+- [x] Al doilea bounty `local_bounties`, B02, foloseste alt giver, `tag:farm`, cooldown si reward proprii peste aceeasi mecanica
+- [x] Prima mecanica `village_events` peste runtime-ul comun, cu E01 ca eveniment local filtrabil prin `event`
+- [x] Prima mecanica `onboarding` peste runtime-ul comun, cu T01 ca tutorial filtrabil prin `tutorial`
+- [x] Prima mecanica `village_rituals` peste runtime-ul comun, cu R01 ca ritual local filtrabil prin `ritual`
 - [x] `AIOrchestrationService` initial pentru politici AI, fallback determinist si rezultate care nu pot executa runtime direct
 - [x] Contracte initiale pentru runtime extensibil: registri de actiuni/conditii/trigger-e, context de executie, definitii runtime, variable provider si raport de validare
+- [x] Contractul runtime recunoaste `investigation` ca `QuestScenarioContract.Kind.INVESTIGATION`, inclusiv pentru snapshot-uri generice de progres
 - [x] Availability aplica initial `max_active` si pe mecanici de progres declarate in addon
 - [x] Addonul medieval are primul contract non-`QUEST` (`C01`) pe mecanica `village_contracts`
-- [x] `quest log` afiseaza/grupeaza dupa mecanica si are filtre initiale `quest`/`contract`
-- [x] Selectorii de progres accepta forme cu mecanica, de exemplu `village_contracts:C01`
-- [x] Fatade initiale pentru progres generic: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`
+- [x] Addonul medieval are contractul mapat `C02`, care foloseste `visit_place tag:market`, `inspect_node quest_board`, story event pe place si runtime-ul generic de progres
+- [x] `quest log` afiseaza/grupeaza dupa mecanica si are filtre initiale `quest`/`contract`/`duty`/`bounty`/`event`/`tutorial`/`ritual`
+- [x] Selectorii de progres accepta forme cu mecanica, de exemplu `village_contracts:C01`, `npc_duties:D01`, `local_bounties:B01`, `local_bounties:B02`, `village_events:E01`, `onboarding:T01` si `village_rituals:R01`
+- [x] Fatade initiale pentru progres generic: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`, `/ainpc duty ...`, `/duty ...`, `/ainpc bounty ...`, `/bounty ...`, `/ainpc event ...`, `/event ...`, `/ainpc tutorial ...`, `/tutorial ...`, `/ainpc ritual ...`, `/ritual ...`
 - [x] Script `scripts/smoke-paper-quests.ps1` pentru pregatirea smoke test-ului Paper pe questuri
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
 - [x] Comenzi read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`
 - [x] Actiuni de quest `set_story_state` si `record_story_event`
 - [x] Comanda `/ainpc world demo create [regionId]` pentru mapping demo minim in jurul jucatorului
+- [x] Mapping-ul demo foloseste layout mai spatios pentru case/piata/workplaces/altar si avertizeaza ca trebuie aleasa o zona relativ plata
 - [x] Comanda `/ainpc world bind npc ...` pentru legarea initiala NPC -> home/work/social places
 - [x] Planner `/ainpc world household plan ...` pentru `HouseAllocation` din mapping
 - [x] Spawn `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
@@ -85,14 +103,26 @@ Actualizat: 2026-05-07
 - [x] Export/debugdump `npc-world-bindings.json` pentru `npc_world_bindings`
 - [x] `HouseAllocation` initial pentru case cu mai multi rezidenti si conversie catre `NpcSpawnPlan`
 - [x] Dry-run si spawn batch initial pentru household, cu rollback practic daca spawn-ul esueaza la mijloc
+- [x] Villagerii existenti convertiti in AINPC primesc control de baza impotriva miscarii vanilla haotice
+- [x] Rutina are cooldown initial si distante mai mari ca NPC-urile sa nu sara prea des intre ancore
+- [x] NPC Interaction GUI afiseaza rutina curenta si are actiuni rapide mai clare pentru nearest quest/story/routine
 
 ## Prioritate curenta
 
+- [ ] Pass Paper pe playable village: teren plat, case distantate, NPC-uri cu home/work/social clare, rutina inspectabila si fara fuga haotica
+- [ ] Mapping wand + prompturi naturale pentru creare `region`/`place`/`node`, NPC bind si quest anchor prin draft, preview si confirmare
 - [ ] Smoke test Paper pentru `/ainpc world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`
 - [ ] Generator narativ pentru populatie pe regiune: nume, roluri, familii si distributie pe case/work/social
 - [ ] Smoke test Paper pentru Q01-Q05: oferta, acceptare, progres, completare, reward
 - [ ] Smoke test Paper pentru Q06-Q08 pe mapping demo si NPC-uri medievale
-- [ ] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
+- [ ] Smoke test Paper pentru C02 pe mapping demo prin `/ainpc contract ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru D01 pe mapping demo prin `/ainpc duty ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru B01 pe mapping demo prin `/ainpc bounty ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru B02 pe mapping demo prin `/ainpc bounty ...`, `tag:farm` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru E01 pe mapping demo prin `/ainpc event ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru T01 pe mapping demo prin `/ainpc tutorial ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru R01 pe mapping demo prin `/ainpc ritual ...` si `/ainpc progression stored ...`
+- [x] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
 - [x] Export/debugdump complet pentru `quest_anchor_bindings`
 - [x] Comanda read-only dedicata pentru inspectie `npc_world_bindings`
 
@@ -133,7 +163,7 @@ Actualizat: 2026-05-07
 
 ## NPC-uri
 
-- [ ] Rutine zilnice mai clare pentru fiecare NPC
+- [x] Rutine zilnice mai clare pentru fiecare NPC, cu sloturi vizibile in GUI si comenzi de inspectie
 - [ ] Reactii mai bune la reputatie, familie, emotii si istoric
 - [ ] Roluri mai bine definite: negustor, gardian, fermier, quest giver
 - [ ] Coordonare intre NPC-uri din acelasi sat sau aceeasi regiune
@@ -143,6 +173,7 @@ Actualizat: 2026-05-07
 
 - [ ] Questuri in lant, nu doar interactiuni izolate
 - [x] Obiective cu stari: inceput, progres, completat, esuat
+- [x] Arhivare documentatie questuri avansate v1 si document canonic V2 pentru diversitate, faze si mecanici non-quest
 - [ ] Recompense configurabile pe scenariu
 - [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
 - [ ] Povesti distribuite pe sate, regiuni si puncte de interes
@@ -154,11 +185,18 @@ Actualizat: 2026-05-07
 - [x] Context narativ read-only peste mapping si quest anchors
 - [x] Story state pe regiune/place, pentru lumi care evolueaza in timp
 - [x] Quest completion poate scrie story state si story events prin actiuni controlate
+- [x] Primul contract medieval peste mapping: C02 foloseste piata/avizierul demo si ramane progresie non-`QUEST`
+- [x] Primul bounty medieval peste mapping: B01 foloseste `BOUNTY`, `local_bounties`, `visit_region`, `kill_mob` si story event regional
+- [x] Al doilea bounty medieval peste mapping: B02 foloseste `BOUNTY`, `local_bounties`, `visit_place tag:farm`, `kill_mob`, cooldown si story event pe place
+- [x] Primul eveniment medieval peste mapping: E01 foloseste `WORLD_EVENT`, `village_events`, `visit_place`, `inspect_node`, `deliver_to_npc` si story event pe place
+- [x] Primul tutorial medieval peste mapping: T01 foloseste `TUTORIAL`, `onboarding`, `visit_place`, `inspect_node`, `talk_to_npc` si story event pe place
+- [x] Primul ritual medieval peste mapping: R01 foloseste `RITUAL`, `village_rituals`, altarul demo, `ritual_circle`, `deliver_to_npc` si story event pe place
 
 ## Lume si gameplay
 
 - [ ] Regiuni cu identitate proprie: sat, castel, pestera, dungeon
 - [ ] Demo mapping salvat si verificat pe server Paper real cu `settlement plan/spawn`, audit, save si reload
+- [ ] Unealta wand pentru mapping manual: selectie pos1/pos2, punct node, prompt natural si confirmare inainte de salvare
 - [x] Bind manual initial NPC-place pentru demo mapping si harti manuale
 - [ ] Spawn si comportament diferit pe tipuri de zona
 - [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri

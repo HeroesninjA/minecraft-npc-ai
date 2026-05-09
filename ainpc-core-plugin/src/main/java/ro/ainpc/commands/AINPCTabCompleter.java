@@ -5,6 +5,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.gui.GuiKey;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.RegionType;
@@ -25,13 +26,24 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "info", "gui", "quest", "progression", "contract", "world", "story", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
     private static final List<String> GUI_MODES = Arrays.asList(
-        "main", "quest", "world", "stats", "interact", "shop", "manager", "audit", "debug"
+        "main", "quest", "progresii", "progression", "world", "stats", "interact", "routine", "shop", "manager", "audit", "debug"
     );
     private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
     private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "story", "openai");
+    private static final List<String> MIGRATION_TARGETS = Arrays.asList("households");
+    private static final List<String> MIGRATION_MODES = Arrays.asList("dryrun", "apply");
+    private static final List<String> REPAIR_TARGETS = Arrays.asList("duplicates", "households", "batch", "spawn-batch");
+    private static final List<String> REPAIR_MODES = Arrays.asList("dryrun", "apply");
+    private static final List<String> REPAIR_BATCH_MODES = Arrays.asList(
+        "dryrun", "apply", "inspect", "steps", "mark-steps", "sync-steps", "mark-failed"
+    );
+    private static final List<String> REPAIR_BATCH_KEYS = Arrays.asList("list", "recent", "<batchKey>");
+    private static final List<String> REPAIR_BATCH_LIST_FILTERS = Arrays.asList(
+        "problem", "all", "failed", "running", "rolled_back", "succeeded"
+    );
     private static final List<String> ROUTINE_ACTIONS = Arrays.asList("tick", "status");
     private static final List<String> QUEST_MODES = Arrays.asList(
         "gui", "log", "track", "current", "nearest", "accept", "decline", "da", "nu", "ok", "refuz",
@@ -42,12 +54,34 @@ public class AINPCTabCompleter implements TabCompleter {
         "accept", "decline", "yes", "y", "da", "ok", "confirm", "deny", "reject", "no", "n", "nu", "refuz"
     );
     private static final List<String> QUEST_LOG_FILTERS = Arrays.asList(
-        "active", "current", "tracked", "quest", "contract", "main", "side", "repeatable",
+        "active", "current", "tracked", "quest", "contract", "duty", "bounty", "event", "tutorial", "ritual", "main", "side", "repeatable",
         "completed", "failed", "archived", "all"
+    );
+    private static final List<String> GUI_QUEST_FILTERS = Arrays.asList(
+        "all", "active", "quest", "contract", "duty", "bounty", "event", "tutorial", "ritual"
+    );
+    private static final List<String> GUI_ALIAS_FILTERS = Arrays.asList(
+        "all", "active", "current", "tracked", "offered", "completed", "failed", "archived"
     );
     private static final List<String> PROGRESSION_STORED_FILTERS = Arrays.asList(
         "all", "active", "current", "tracked", "offered", "completed", "failed", "archived",
-        "quest", "contract", "main_quests", "side_quests", "village_contracts", "unresolved"
+        "quest", "contract", "duty", "bounty", "event", "tutorial", "ritual", "investigation", "main_quests", "side_quests", "village_contracts", "npc_duties", "local_bounties", "village_events", "onboarding", "village_rituals", "unresolved",
+        "kind:contract", "scenario:investigation", "base:TRADE_DEAL", "category:side", "mechanic:village_contracts",
+        "kind:duty", "scenario:duty", "base:DUTY", "mechanic:npc_duties",
+        "kind:bounty", "scenario:hunt", "base:BOUNTY", "mechanic:local_bounties",
+        "kind:event", "scenario:event", "base:WORLD_EVENT", "mechanic:village_events",
+        "kind:tutorial", "scenario:tutorial", "base:TUTORIAL", "mechanic:onboarding",
+        "kind:ritual", "scenario:ritual", "base:RITUAL", "mechanic:village_rituals",
+        "status:active", "tracked:true", "resolved:false"
+    );
+    private static final List<String> PROGRESSION_DEFINITION_FILTERS = Arrays.asList(
+        "all", "quest", "contract", "duty", "bounty", "event", "tutorial", "ritual", "investigation", "main_quests", "side_quests", "village_contracts", "npc_duties", "local_bounties", "village_events", "onboarding", "village_rituals",
+        "kind:contract", "scenario:investigation", "base:TRADE_DEAL", "category:side", "mechanic:village_contracts",
+        "kind:duty", "scenario:duty", "base:DUTY", "mechanic:npc_duties",
+        "kind:bounty", "scenario:hunt", "base:BOUNTY", "mechanic:local_bounties",
+        "kind:event", "scenario:event", "base:WORLD_EVENT", "mechanic:village_events",
+        "kind:tutorial", "scenario:tutorial", "base:TUTORIAL", "mechanic:onboarding",
+        "kind:ritual", "scenario:ritual", "base:RITUAL", "mechanic:village_rituals"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "bindings", "household", "settlement", "save");
     private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
@@ -58,7 +92,8 @@ public class AINPCTabCompleter implements TabCompleter {
     private static final List<String> DEMO_ACTIONS = Arrays.asList("create");
     private static final List<String> BIND_TARGETS = Arrays.asList("npc");
     private static final List<String> BINDINGS_ACTIONS = Arrays.asList("list", "npc", "place");
-    private static final List<String> HOUSEHOLD_ACTIONS = Arrays.asList("plan", "spawn");
+    private static final List<String> HOUSEHOLD_ACTIONS = Arrays.asList("plan", "spawn", "status", "place", "resident", "list");
+    private static final List<String> HOUSEHOLD_PLAN_ACTIONS = Arrays.asList("plan", "spawn");
     private static final List<String> SETTLEMENT_ACTIONS = Arrays.asList("plan", "spawn");
     private static final List<String> REGION_TYPES = Arrays.stream(RegionType.values())
         .map(RegionType::getId)
@@ -102,8 +137,25 @@ public class AINPCTabCompleter implements TabCompleter {
             || "progression".equalsIgnoreCase(command.getName())
             || "progress".equalsIgnoreCase(command.getName())
             || "contract".equalsIgnoreCase(command.getName())
-            || "contracts".equalsIgnoreCase(command.getName())) {
-            return completeQuestArgs(args);
+            || "contracts".equalsIgnoreCase(command.getName())
+            || "duty".equalsIgnoreCase(command.getName())
+            || "duties".equalsIgnoreCase(command.getName())
+            || "sarcina".equalsIgnoreCase(command.getName())
+            || "sarcini".equalsIgnoreCase(command.getName())
+            || "bounty".equalsIgnoreCase(command.getName())
+            || "bounties".equalsIgnoreCase(command.getName())
+            || "event".equalsIgnoreCase(command.getName())
+            || "events".equalsIgnoreCase(command.getName())
+            || "tutorial".equalsIgnoreCase(command.getName())
+            || "tutorials".equalsIgnoreCase(command.getName())
+            || "onboarding".equalsIgnoreCase(command.getName())
+            || "ritual".equalsIgnoreCase(command.getName())
+            || "rituals".equalsIgnoreCase(command.getName())
+            || "ceremony".equalsIgnoreCase(command.getName())
+            || "ceremonies".equalsIgnoreCase(command.getName())) {
+            return isProgressionAliasCommand(command.getName())
+                ? completeProgressionAliasArgs(args)
+                : completeQuestArgs(args);
         }
 
         List<String> completions = new ArrayList<>();
@@ -129,12 +181,42 @@ public class AINPCTabCompleter implements TabCompleter {
                         completions.addAll(getNPCNames(args[1]));
                     }
                 }
-                case "quest", "progression", "progress", "contract", "contracts" -> {
-                    completions.addAll(completeQuestArgs(sliceQuestArgs(args)));
+                case "delete-id" -> {
+                    if (args.length == 2) {
+                        completions.addAll(getNPCIds(args[1]));
+                    } else if (args.length == 3) {
+                        completions.addAll(filterStartsWith(List.of("confirm"), args[2]));
+                    }
+                }
+                case "repair" -> {
+                    if (args.length == 2) {
+                        completions.addAll(filterStartsWith(REPAIR_TARGETS, args[1]));
+                    } else if (args.length == 3
+                        && ("duplicates".equalsIgnoreCase(args[1]) || "households".equalsIgnoreCase(args[1]))) {
+                        completions.addAll(filterStartsWith(REPAIR_MODES, args[2]));
+                    } else if (args.length == 3
+                        && isRepairBatchTarget(args[1])) {
+                        completions.addAll(filterStartsWith(REPAIR_BATCH_KEYS, args[2]));
+                    } else if (args.length == 4
+                        && isRepairBatchTarget(args[1])) {
+                        if ("list".equalsIgnoreCase(args[2]) || "recent".equalsIgnoreCase(args[2])) {
+                            completions.addAll(filterStartsWith(REPAIR_BATCH_LIST_FILTERS, args[3]));
+                        } else {
+                            completions.addAll(filterStartsWith(REPAIR_BATCH_MODES, args[3]));
+                        }
+                    }
+                }
+                case "quest", "progression", "progress", "contract", "contracts", "duty", "duties", "sarcina", "sarcini", "bounty", "bounties", "event", "events", "eveniment", "evenimente", "tutorial", "tutorials", "onboarding", "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> {
+                    String[] questArgs = sliceQuestArgs(args);
+                    completions.addAll(isProgressionAliasCommand(subCommand)
+                        ? completeProgressionAliasArgs(questArgs)
+                        : completeQuestArgs(questArgs));
                 }
                 case "gui" -> {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(GUI_MODES, args[1]));
+                    } else if (args.length == 3 && isProgressionGuiMode(args[1])) {
+                        completions.addAll(filterStartsWith(GUI_QUEST_FILTERS, args[2]));
                     }
                 }
                 case "world" -> {
@@ -142,6 +224,15 @@ public class AINPCTabCompleter implements TabCompleter {
                 }
                 case "story" -> {
                     completions.addAll(completeStoryArgs(args));
+                }
+                case "migration" -> {
+                    if (args.length == 2) {
+                        completions.addAll(filterStartsWith(MIGRATION_TARGETS, args[1]));
+                    } else if (args.length == 3 && "households".equalsIgnoreCase(args[1])) {
+                        completions.addAll(filterStartsWith(MIGRATION_MODES, args[2]));
+                    } else if (args.length == 4 && "households".equalsIgnoreCase(args[1])) {
+                        completions.addAll(filterStartsWith(Arrays.asList("100", "500", "1000"), args[3]));
+                    }
                 }
                 case "audit" -> {
                     if (args.length == 2) {
@@ -171,6 +262,12 @@ public class AINPCTabCompleter implements TabCompleter {
         }
 
         return completions;
+    }
+
+    private boolean isRepairBatchTarget(String value) {
+        return "batch".equalsIgnoreCase(value)
+            || "spawn-batch".equalsIgnoreCase(value)
+            || "spawn_batch".equalsIgnoreCase(value);
     }
 
     private List<String> completeStoryArgs(String[] args) {
@@ -315,9 +412,16 @@ public class AINPCTabCompleter implements TabCompleter {
             case "household" -> {
                 if (args.length == 3) {
                     completions.addAll(filterStartsWith(HOUSEHOLD_ACTIONS, args[2]));
-                } else if (args.length == 4 && HOUSEHOLD_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                } else if (args.length == 4 && HOUSEHOLD_PLAN_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
                     completions.addAll(getPlaceIds(args[3]));
-                } else if (args.length == 5 && HOUSEHOLD_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
+                } else if (args.length == 4 && ("status".equalsIgnoreCase(args[2]) || "place".equalsIgnoreCase(args[2]))) {
+                    completions.addAll(getPlaceIds(args[3]));
+                } else if (args.length == 4 && "resident".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(List.of("nearest"), args[3]));
+                    completions.addAll(getNPCNames(args[3]));
+                } else if (args.length == 4 && "list".equalsIgnoreCase(args[2])) {
+                    completions.addAll(filterStartsWith(Arrays.asList("10", "20", "50"), args[3]));
+                } else if (args.length == 5 && HOUSEHOLD_PLAN_ACTIONS.stream().anyMatch(args[2]::equalsIgnoreCase)) {
                     completions.addAll(filterStartsWith(Arrays.asList("1", "2", "3", "4"), args[4]));
                 }
             }
@@ -365,10 +469,10 @@ public class AINPCTabCompleter implements TabCompleter {
                 } else if (questMode.equals("log")) {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
+                } else if (questMode.equals("gui")) {
+                    completions.addAll(filterStartsWith(GUI_QUEST_FILTERS, questArgs[1]));
                 } else if (questMode.equals("definitions") || questMode.equals("defs")) {
-                    completions.addAll(filterStartsWith(List.of(
-                        "quest", "contract", "main_quests", "side_quests", "village_contracts", "all"
-                    ), questArgs[1]));
+                    completions.addAll(filterStartsWith(PROGRESSION_DEFINITION_FILTERS, questArgs[1]));
                 } else if (questMode.equals("stored") || questMode.equals("state") || questMode.equals("progressions")) {
                     completions.addAll(filterStartsWith(List.of("all"), questArgs[1]));
                     completions.addAll(getOnlinePlayerNames(questArgs[1]));
@@ -406,6 +510,14 @@ public class AINPCTabCompleter implements TabCompleter {
         return completions;
     }
 
+    private List<String> completeProgressionAliasArgs(String[] questArgs) {
+        if (questArgs.length == 2
+            && ("gui".equalsIgnoreCase(questArgs[0]) || "log".equalsIgnoreCase(questArgs[0]))) {
+            return filterStartsWith(GUI_ALIAS_FILTERS, questArgs[1]);
+        }
+        return completeQuestArgs(questArgs);
+    }
+
     private String[] sliceQuestArgs(String[] args) {
         if (args.length <= 1) {
             return new String[0];
@@ -416,6 +528,24 @@ public class AINPCTabCompleter implements TabCompleter {
         return sliced;
     }
 
+    private boolean isProgressionGuiMode(String rawValue) {
+        return GuiKey.fromId(rawValue)
+            .map(key -> key == GuiKey.QUEST)
+            .orElse(false);
+    }
+
+    private boolean isProgressionAliasCommand(String rawValue) {
+        return switch (rawValue == null ? "" : rawValue.toLowerCase()) {
+            case "contract", "contracts",
+                 "duty", "duties", "sarcina", "sarcini",
+                 "bounty", "bounties",
+                 "event", "events", "eveniment", "evenimente",
+                 "tutorial", "tutorials", "onboarding",
+                 "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> true;
+            default -> false;
+        };
+    }
+
     /**
      * Obtine numele tuturor NPC-urilor care incep cu prefixul dat
      */
@@ -423,6 +553,14 @@ public class AINPCTabCompleter implements TabCompleter {
         return plugin.getNpcManager().getAllNPCs().stream()
             .map(AINPC::getName)
             .filter(name -> name.toLowerCase().startsWith(prefix.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+
+    private List<String> getNPCIds(String prefix) {
+        return plugin.getNpcManager().getAllNPCs().stream()
+            .map(npc -> String.valueOf(npc.getDatabaseId()))
+            .filter(id -> id.startsWith(prefix))
+            .sorted()
             .collect(Collectors.toList());
     }
 

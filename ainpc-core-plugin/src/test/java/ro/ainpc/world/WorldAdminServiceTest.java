@@ -311,21 +311,26 @@ class WorldAdminServiceTest {
         );
 
         assertEquals("demo_sat", result.regionId());
-        assertEquals(8, result.createdPlaceIds().size());
-        assertEquals(28, result.createdNodeIds().size());
+        assertEquals(9, result.createdPlaceIds().size());
+        assertEquals(30, result.createdNodeIds().size());
         assertTrue(result.warnings().stream().anyMatch(warning -> warning.contains("nu construieste blocuri")));
+        assertTrue(result.warnings().stream().anyMatch(warning -> warning.contains("zona relativ plata")));
         assertTrue(service.hasUnsavedChanges());
         assertEquals(1, service.getRegionCount());
-        assertEquals(8, service.getPlaceCount());
-        assertEquals(28, service.getNodeCount());
+        assertEquals(9, service.getPlaceCount());
+        assertEquals(30, service.getNodeCount());
 
         assertNotNull(service.getPlace("demo_sat:house_1"));
         assertEquals("pending", service.getPlace("demo_sat:house_1").metadata().get("owner_status"));
+        assertTrue(service.getPlace("demo_sat:house_1").maxX() - service.getPlace("demo_sat:house_1").minX() >= 16);
         assertNotNull(service.getPlace("demo_sat:piata"));
+        assertEquals("spacious_playable", service.getPlace("demo_sat:piata").metadata().get("layout_profile"));
         assertNotNull(service.getPlace("demo_sat:fierarie"));
         assertNotNull(service.getPlace("demo_sat:ferma"));
         assertNotNull(service.getPlace("demo_sat:taverna"));
+        assertNotNull(service.getPlace("demo_sat:altar"));
         assertNotNull(service.getNode("demo_sat:piata:quest_board"));
+        assertNotNull(service.getNode("demo_sat:altar:ritual_circle"));
         assertNotNull(service.getNode("demo_sat:fierarie:work_1"));
         assertNotNull(service.getNode("demo_sat:house_1:bed_1"));
 
@@ -333,6 +338,7 @@ class WorldAdminServiceTest {
         WorldPlaceInfo currentPlace = service.findPlace("world", 0, 64, 0);
         assertNotNull(region);
         assertEquals("demo_sat", region.id());
+        assertTrue(region.tags().contains("spacious"));
         assertNotNull(currentPlace);
         assertEquals("demo_sat:piata", currentPlace.id());
 
@@ -343,9 +349,10 @@ class WorldAdminServiceTest {
         reloadedService.reloadFromConfig(savedConfiguration, profile());
 
         assertEquals(1, reloadedService.getRegionCount());
-        assertEquals(8, reloadedService.getPlaceCount());
-        assertEquals(28, reloadedService.getNodeCount());
+        assertEquals(9, reloadedService.getPlaceCount());
+        assertEquals(30, reloadedService.getNodeCount());
         assertNotNull(reloadedService.getNode("demo_sat:piata:quest_board"));
+        assertNotNull(reloadedService.getNode("demo_sat:altar:ritual_circle"));
     }
 
     @Test

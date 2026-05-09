@@ -1,6 +1,7 @@
 package ro.ainpc.engine;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 
 final class QuestTemplateSelector {
@@ -46,5 +47,40 @@ final class QuestTemplateSelector {
         return firstAvailableCompletedTemplate != null
             ? firstAvailableCompletedTemplate
             : firstUnavailableTemplate;
+    }
+
+    static boolean matchesProgressionKind(ScenarioEngine.ScenarioTemplate template,
+                                          String expectedKind,
+                                          String mechanicDisplay) {
+        if (template == null || expectedKind == null || expectedKind.isBlank()) {
+            return false;
+        }
+
+        String expected = normalize(expectedKind);
+        List<String> candidates = List.of(
+            template.getProgressionKind(),
+            template.getProgressionMechanicId(),
+            template.getProgressionSingularLabel(),
+            template.getProgressionPluralLabel(),
+            mechanicDisplay
+        );
+        for (String candidate : candidates) {
+            if (expected.equals(normalize(candidate))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return value.toLowerCase(Locale.ROOT)
+            .replace("minecraft:", "")
+            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
+            .replaceAll("^_+|_+$", "")
+            .replaceAll("_+", "_");
     }
 }

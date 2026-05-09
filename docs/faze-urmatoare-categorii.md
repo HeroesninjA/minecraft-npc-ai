@@ -1,6 +1,6 @@
 # Faze Urmatoare pe Categorii
 
-Actualizat: 2026-05-07
+Actualizat: 2026-05-09
 
 ## Scop
 
@@ -25,7 +25,7 @@ Sinteza este bazata pe:
 - `faze-observatii-avertizari.md`;
 - `roadmap-orientativ.md`;
 - documentele de domeniu pentru mapping, spawn, questuri, progression, story, dialog, simulare, API, addonuri, generare si operare.
-- `lucru-alternat-quest-mapping-progression.md`, pentru cadenta dintre mapping concret, quest/contract jucabil si extractie mica spre `ProgressionService`.
+- `lucru-alternat-quest-mapping-progression.md`, pentru cadenta dintre mapping concret, quest/contract jucabil, GUI peste snapshot-uri si extractie mica spre `ProgressionService`.
 
 ## Legenda
 
@@ -53,7 +53,7 @@ Gate-uri minime inainte de orice `production-public`:
 ## Ordinea scurta recomandata
 
 1. Smoke test Paper pentru mapping/spawn: `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`.
-2. Smoke test Paper pentru questuri: Q01-Q08 plus contractul C01, cu progres, anchors, story events si reload.
+2. Smoke test Paper pentru questuri/progresii: Q01-Q08 plus C01/C02, D01, B01/B02, E01, T01 si R01, cu progres, anchors, story events si reload.
 3. Inspectie si debug mai bune pentru datele persistente: `npc_world_bindings`, story state/events, progression exports.
 4. Generator narativ de populatie pe regiune: nume, roluri, familii, home/work/social.
 5. First playable medieval demo: 5-10 NPC-uri, 3-5 questuri completabile, documentatie scurta pentru admin/tester.
@@ -68,7 +68,7 @@ Gate-uri minime inainte de orice `production-public`:
 |---|---|---|---|---|
 | F0 | Baseline verificabil | Codul, TODO-ul si documentatia reflecta aceeasi realitate | continuu | `mvn test`, audit/debugdump si docs sunt sincronizate |
 | F1 | Paper smoke mapping/spawn | Mapping demo si spawn pe regiune merg pe server real | ACUM | save/reload nu pierde mapping, NPC bindings sau ancore |
-| F2 | Paper smoke quest/progression | Q01-Q08 si C01 pot fi inspectate si testate cap-coada | ACUM | progresul, stages, anchors si story events supravietuiesc reload-ului |
+| F2 | Paper smoke quest/progression | Q01-Q08, C01/C02, D01, B01/B02, E01, T01 si R01 pot fi inspectate si testate cap-coada | ACUM | progresul, stages, anchors si story events supravietuiesc reload-ului |
 | F3 | First playable medieval demo | Un demo mic este instalabil si jucabil de admin/tester | URMATOR | exista 3-5 questuri completabile si NPC-uri cu roluri clare |
 | F4 | Observabilitate si hardening date | Datele partiale pot fi vazute, exportate si reparate controlat | URMATOR | debugdump/audit acopera mapping, NPC bindings, quest/progression, story |
 | F5 | Extractie servicii runtime | Motoarele mari sunt sparte fara schimbari functionale riscante | DUPA DEMO MATUR | exista teste/smoke pentru fluxul pe care il extragi |
@@ -122,13 +122,13 @@ Subcategorii:
 | Subcategorie | Documente | Urmatorul pas |
 |---|---|---|
 | Audit DB | `audit.md`, `npc-world-bindings.md` | backfill/migration si household bindings persistente |
-| Debugdump quest/progression | `questuri-avansate.md`, `progression-service.md` | verifica pe Paper exporturile `player-progressions.json` si `player-quest-progress.json` |
+| Debugdump quest/progression | `questuri-avansate-v2.md`, `progression-service.md` | verifica pe Paper exporturile `player-progressions.json` si `player-quest-progress.json` |
 | Debugdump story | `story-context-service.md`, `story-si-context-ai.md` | export dedicat pentru state/events, nu doar context read-only |
 | Debugdump spawn | `ordine-spawn-npc-cladiri-region-node.md` | raport pentru plan, NPC creati, rollback si esecuri |
 
 ### A3. Release, backup si migration
 
-Status: `URMATOR`.
+Status: `PARTIAL IMPLEMENTAT`.
 
 Livrabile:
 
@@ -184,11 +184,32 @@ Dupa restart:
 Criteriu de gata:
 
 - mapping-ul ramane dupa reload;
+- demo-ul este creat intr-o zona relativ plata si nu inghesuie ancorele de casa/work/social;
 - NPC-urile generate nu se dubleaza;
+- NPC-urile convertite nu fug haotic si au rutina inspectabila prin `/ainpc routine status`;
+- `npc_source_keys` ramane coerent dupa restart si chunk reload;
 - `npc_world_bindings` ramane coerent;
 - auditul poate explica problemele ramase.
 
-### B2. Inspectie si backfill pentru NPC bindings
+### B2. Anti-duplicare NPC dupa restart
+
+Status: `ACUM / URMATOR IMEDIAT`.
+
+Livrabile:
+
+- smoke test Paper pentru `/ainpc duplicates`, `/ainpc repair duplicates dryrun`, restart si chunk reload;
+- verificare ca `npc_source_keys` se creeaza si se reindexeaza pe DB existent;
+- cleanup legacy numai cu backup, dry-run si comenzi admin dupa ID;
+- criteriu de release: zero duplicate dupa `npc_id`, `source_key` si entitati live marcate AINPC;
+- debugdump extins cu owner canonic, DB UUID, entity UUID si source key.
+
+Nu face:
+
+- cleanup SQLite manual cu serverul pornit;
+- spawn household/settlement repetat fara audit dupa restart;
+- stergere dupa nume cand exista coliziuni.
+
+### B3. Inspectie si backfill pentru NPC bindings
 
 Status: `ACUM`.
 
@@ -198,10 +219,11 @@ Livrabile:
 - audit pentru place/node lipsa sau tip incompatibil;
 - backfill controlat din `profile_data.owned_locations`;
 - clarificare cand `profile_data` este fallback si cand DB-ul dedicat este sursa.
+- sincronizare cu `npc_source_keys`, ca schimbarea casei/workplace sa nu recreeze NPC-ul.
 
-### B3. Household-uri persistente
+### B4. Household-uri persistente
 
-Status: `URMATOR`.
+Status: `IMPLEMENTAT INITIAL / URMATOR`.
 
 Livrabile:
 
@@ -209,8 +231,9 @@ Livrabile:
 - migration din `metadata.residents` unde este sigur;
 - audit pentru case fara node-uri, rezidenti orfani si roluri conflictuale;
 - integrare in rutina home/work/social.
+- constrangere unica pe resident logic, legata de `source_key` canonic.
 
-### B4. Generator narativ de populatie
+### B5. Generator narativ de populatie
 
 Status: `URMATOR`.
 
@@ -227,7 +250,7 @@ Nu face:
 - spawn direct din generator fara plan inspectabil;
 - generare libera prin AI fara validator.
 
-### B5. Hardening spawn pe regiune
+### B6. Hardening spawn pe regiune
 
 Status: `URMATOR`.
 
@@ -244,7 +267,7 @@ Documente principale:
 
 - `questuri-faza-1-stabilizare.md`
 - `pregatire-questuri-avansate.md`
-- `questuri-avansate.md`
+- `questuri-avansate-v2.md`
 - `progression-service.md`
 - `lucru-alternat-quest-mapping-progression.md`
 - `quest-anchor-bindings.md`
@@ -361,7 +384,13 @@ Documente principale:
 
 ### D1. Rutina peste bindings stabile
 
-Status: `URMATOR`.
+Status: `IMPLEMENTAT INITIAL / URMATOR`.
+
+Ce exista initial:
+
+- villagerii convertiti in AINPC primesc control de baza impotriva miscarii vanilla haotice;
+- rutina are cooldown si praguri mai mari pentru mutari intre ancore;
+- `NpcInteractionGui` afiseaza activitatea de rutina curenta.
 
 Livrabile:
 
@@ -552,15 +581,28 @@ Documente principale:
 
 ### G1. Quest/Progression GUI
 
-Status: `URMATOR`.
+Status: `IMPLEMENTAT INITIAL / URMATOR`.
 
 Livrabile:
 
-- filtre interactive pentru quest/contract/progression;
+- filtre interactive pentru quest/contract/duty/bounty/event/tutorial/ritual;
 - grupare dupa mecanica;
 - status obiective si stage-uri;
 - actiuni rapide sigure;
 - debug admin separat de actiunile jucatorului.
+
+Implementat initial:
+
+- Quest GUI consuma `ProgressionGuiSnapshot`;
+- quest log-ul are filtre interactive pe mecanicile curente;
+- quest log-ul are paginare initiala si grupare dupa mecanica;
+- `/ainpc gui quest <filter>` si `/quest gui <filter>` deschid direct view-ul filtrat.
+
+Urmator:
+
+- include verificarea GUI in fiecare slice din `lucru-alternat-quest-mapping-progression.md`;
+- sincronizeaza detaliile GUI cu `ProgressionStatusSnapshot` si `ProgressionProgressSnapshot`;
+- marcheaza vizual warnings din audit cand o definitie/progresie are mapping lipsa.
 
 ### G2. World GUI
 

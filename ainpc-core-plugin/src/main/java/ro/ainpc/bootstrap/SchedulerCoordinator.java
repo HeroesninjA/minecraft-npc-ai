@@ -24,7 +24,9 @@ public class SchedulerCoordinator {
     private void scheduleInitialNpcRestore() {
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getNpcManager().discoverExistingVillagers();
+            plugin.getNpcManager().reconcileDuplicateLiveNPCEntities("initial delayed restore");
             plugin.getNpcManager().restoreMissingNPCsInLoadedChunks();
+            plugin.getNpcManager().enforceControlledEntitySettings("initial delayed restore");
             int ensuredProfiles = plugin.getNpcManager().ensureAllNPCsHaveProfiles();
             if (ensuredProfiles > 0) {
                 plugin.getLogger().info("Profiluri NPC create dupa restaurarea villagerilor: " + ensuredProfiles);

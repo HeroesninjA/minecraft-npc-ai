@@ -3,6 +3,7 @@ package ro.ainpc.progression;
 import ro.ainpc.engine.ScenarioEngine;
 
 import java.util.List;
+import java.util.Locale;
 
 public record ProgressionGuiEntry(
     String selector,
@@ -107,6 +108,58 @@ public record ProgressionGuiEntry(
         );
     }
 
+    public String commandRoot() {
+        return switch (kind.toLowerCase(Locale.ROOT)) {
+            case "quest" -> "quest";
+            case "contract" -> "contract";
+            case "duty" -> "duty";
+            case "bounty" -> "bounty";
+            case "event" -> "event";
+            case "tutorial" -> "tutorial";
+            case "ritual" -> "ritual";
+            default -> kind.isBlank() ? "quest" : "progression";
+        };
+    }
+
+    public String commandSelector() {
+        String preferredSelector = firstNonBlank(
+            selector,
+            !mechanicId.isBlank() && !code.isBlank() ? mechanicId + ":" + code : "",
+            !mechanicId.isBlank() && !definitionId.isBlank() ? mechanicId + ":" + definitionId : "",
+            progressionId,
+            code,
+            templateId,
+            definitionId
+        );
+        return preferredSelector.isBlank() ? "tracked" : preferredSelector;
+    }
+
+    public String guiDetailSelector() {
+        return commandSelector();
+    }
+
+    public String guiFilter() {
+        return switch (kind.toLowerCase(Locale.ROOT)) {
+            case "quest", "contract", "duty", "bounty", "event", "tutorial", "ritual" -> kind.toLowerCase(Locale.ROOT);
+            default -> "all";
+        };
+    }
+
+    public String command(String mode) {
+        String safeMode = valueOrEmpty(mode);
+        return safeMode.isBlank()
+            ? "ainpc " + commandRoot()
+            : "ainpc " + commandRoot() + " " + safeMode + " " + commandSelector();
+    }
+
+    public String trackStartCommand() {
+        return "ainpc " + commandRoot() + " track start " + commandSelector();
+    }
+
+    public String trackStopCommand() {
+        return "ainpc " + commandRoot() + " track stop";
+    }
+
     private static ProgressionGuiEntry empty() {
         return new ProgressionGuiEntry(
             "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -122,5 +175,18 @@ public record ProgressionGuiEntry(
 
     private static String valueOrEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            String safeValue = valueOrEmpty(value);
+            if (!safeValue.isBlank()) {
+                return safeValue;
+            }
+        }
+        return "";
     }
 }

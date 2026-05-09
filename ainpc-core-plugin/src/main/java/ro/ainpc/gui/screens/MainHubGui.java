@@ -49,8 +49,8 @@ public class MainHubGui implements GuiScreen {
             )
         ));
 
-        openButton(context, 10, GuiKey.QUEST, Material.WRITABLE_BOOK, "&eQuesturi",
-            List.of("&7Quest log, tracking si status rapid."));
+        openButton(context, 10, GuiKey.QUEST, Material.WRITABLE_BOOK, "&eProgresii",
+            List.of("&7Questuri, contracte, duty-uri si tracking."));
         openButton(context, 11, GuiKey.INTERACT, Material.VILLAGER_SPAWN_EGG, "&aInteractiune NPC",
             List.of("&7NPC-uri apropiate si actiuni rapide."));
         openButton(context, 12, GuiKey.WORLD, Material.COMPASS, "&bWorld",
@@ -59,6 +59,8 @@ public class MainHubGui implements GuiScreen {
             List.of("&7Snapshot personal si NPC-uri din apropiere."));
         openButton(context, 14, GuiKey.SHOP, Material.EMERALD, "&2Shop NPC",
             List.of("&7Intrare pregatita pentru economie/shop."));
+        openButton(context, 15, GuiKey.ROUTINE, Material.CLOCK, "&eRutine NPC",
+            List.of("&7Preview program zilnic si status rutina."));
 
         openButton(context, 28, GuiKey.MANAGER, Material.NAME_TAG, "&6Manager NPC",
             List.of("&7Lista NPC admin, info si teleport."));
