@@ -21,6 +21,7 @@ public class ListenerRegistry {
         register(new QuestObjectiveListener(plugin));
         register(new PlayerJoinListener(plugin));
         register(new VillagerLifecycleListener(plugin));
+        register(new MappingWandListener(plugin));
         register(new GuiInventoryListener(plugin));
     }
 

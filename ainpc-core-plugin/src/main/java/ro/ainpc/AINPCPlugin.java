@@ -33,6 +33,7 @@ import ro.ainpc.story.StoryContextService;
 import ro.ainpc.story.StoryStateService;
 import ro.ainpc.utils.MessageUtils;
 import ro.ainpc.world.NpcWorldBindingService;
+import ro.ainpc.world.mapping.MappingWandService;
 
 import java.io.File;
 import java.util.logging.Level;
@@ -70,6 +71,7 @@ public class AINPCPlugin extends JavaPlugin {
     private StoryContextService storyContextService;
     private StoryStateService storyStateService;
     private GuiService guiService;
+    private MappingWandService mappingWandService;
 
     @Override
     public void onEnable() {
@@ -141,6 +143,7 @@ public class AINPCPlugin extends JavaPlugin {
         storyStateService = new StoryStateService(this);
         storyContextService = new StoryContextService(this);
         guiService = new GuiService(this);
+        mappingWandService = new MappingWandService(this);
         
         // Inregistreaza comenzile
         getLogger().info("Inregistrare comenzi...");
@@ -417,6 +420,10 @@ public class AINPCPlugin extends JavaPlugin {
 
     public GuiService getGuiService() {
         return guiService;
+    }
+
+    public MappingWandService getMappingWandService() {
+        return mappingWandService;
     }
 
     public FileConfiguration getQuestConfig() {

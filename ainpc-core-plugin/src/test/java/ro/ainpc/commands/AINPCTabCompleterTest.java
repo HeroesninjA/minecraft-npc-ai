@@ -63,6 +63,48 @@ class AINPCTabCompleterTest {
     }
 
     @Test
+    void completesQuestAnchorsWithTemplateOrCodeHint() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> completions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"quest", "anchors", "all", ""}
+        );
+
+        assertTrue(completions.contains("<templateId|questCode>"));
+    }
+
+    @Test
+    void completesMappingWandAndDraftCommands() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> modes = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"wand", "mode", ""}
+        );
+        assertTrue(modes.contains("region"));
+        assertTrue(modes.contains("node"));
+        assertTrue(modes.contains("quest_anchor"));
+
+        List<String> mapActions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"map", ""}
+        );
+        assertTrue(mapActions.contains("region"));
+        assertTrue(mapActions.contains("place"));
+        assertTrue(mapActions.contains("npc_bind"));
+        assertTrue(mapActions.contains("quest_anchor"));
+        assertTrue(mapActions.contains("preview"));
+        assertTrue(mapActions.contains("confirm"));
+    }
+
+    @Test
     void completesHouseholdInspectionActions() {
         AINPCTabCompleter completer = new AINPCTabCompleter(null);
 

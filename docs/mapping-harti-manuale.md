@@ -1,6 +1,6 @@
 # Mapping pentru harti construite manual
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-10
 
 ## Scop
 
@@ -60,9 +60,9 @@ Limitarea importanta:
 
 Concluzie: detectia automata poate crea drafturi, dar adminul trebuie sa confirme tipul si scopul zonei.
 
-## Directie propusa: wand si prompturi naturale
+## Directie implementata initial: wand si prompturi naturale
 
-Pentru harti construite manual, directia recomandata este o unealta de tip wand, inspirata de modelul WorldEdit `pos1` / `pos2`, dar fara dependinta obligatorie de WorldEdit.
+Pentru harti construite manual, exista acum o unealta initiala de tip wand, inspirata de modelul WorldEdit `pos1` / `pos2`, dar fara dependinta obligatorie de WorldEdit.
 
 Wand-ul si promptul trebuie sa aiba roluri diferite:
 
@@ -137,11 +137,13 @@ Parserul trebuie sa fie conservator:
 - daca intentia este ambigua, sistemul cere clarificare sau propune 2-3 optiuni
 - niciun prompt nu trebuie sa modifice direct lumea fara preview si confirmare
 
-Comenzi propuse pentru aceasta directie:
+Comenzi initiale pentru aceasta directie:
 
 ```text
 /ainpc wand
 /ainpc wand mode <region|place|node|npc_bind|quest_anchor>
+/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>
+/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]
 /ainpc map <descriere libera>
 /ainpc map node <descriere libera>
 /ainpc map preview
@@ -149,13 +151,33 @@ Comenzi propuse pentru aceasta directie:
 /ainpc map cancel
 ```
 
+Status implementat initial:
+
+- `/ainpc wand` porneste o sesiune de mapping manual si ofera un wand dedicat;
+- `/ainpc wand mode <region|place|node|npc_bind|quest_anchor>` seteaza modul sesiunii;
+- click stanga cu wand-ul seteaza `pos1`, click dreapta seteaza `pos2`, iar modul `node`/`npc_bind`/`quest_anchor` sau sneak-click seteaza punctul semantic;
+- `/ainpc wand pos1|pos2|point` poate seta selectia la pozitia curenta fara click;
+- `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` creeaza un `MappingDraft` determinist;
+- `/ainpc map preview`, `/ainpc map confirm` si `/ainpc map cancel` controleaza draft-ul inainte sa scrie in runtime;
+- confirmarea creeaza `Region`, `Place` sau `Node` prin aceleasi reguli validate din `WorldAdminService`;
+- confirmarea unui draft `npc_bind` actualizeaza ancora NPC-ului, metadata home/work/social de pe place si randul din `npc_world_bindings`;
+- confirmarea unui draft `quest_anchor` scrie sau actualizeaza randul obiectivului in `quest_anchor_bindings`;
+- dupa schimbari de mapping/metadata, adminul trebuie sa ruleze `/ainpc audit world` si `/ainpc world save`; pentru quest anchors, verificarea directa este `/ainpc quest anchors` si `/ainpc audit quest`.
+
+Limitari ale implementarii initiale:
+
+- parserul este determinist, cu aliasuri simple in romana/engleza; nu foloseste inca AI/NLU;
+- draft-ul `npc_bind` cere un punct aflat intr-un place existent si un NPC rezolvabil prin selector explicit sau `nearest`; `/ainpc world bind npc ...` ramane fallback-ul text direct;
+- draft-ul `quest_anchor` cere progresie existenta in `player_quests`; pentru player se foloseste implicit adminul care ruleaza comanda sau `player:<jucator|uuid>`;
+- nu exista inca preview vizual cu particule pentru bounds/radius.
+
 Regula de siguranta:
 
 - wand-ul selecteaza forma
 - promptul da semantica
 - sistemul produce `MappingDraft`
 - preview-ul arata tipul, ID-ul propus, bounds, tags, metadata si conflicte
-- confirmarea creeaza `Region`, `Place` sau `Node`
+- confirmarea creeaza `Region`, `Place`, `Node`, aplica bind-ul NPC-place validat sau scrie quest anchor-ul persistent
 - `/ainpc world save` persista mapping-ul
 
 In prima versiune, wand-ul nu trebuie sa construiasca blocuri. El trebuie sa marcheze semantic harta existenta. Constructia fizica poate veni ulterior prin generator, patch planner sau integrare optionala cu WorldEdit.
@@ -311,6 +333,14 @@ Comenzile valide pentru creare si inspectie sunt:
 /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>
 /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>
 /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]
+/ainpc wand
+/ainpc wand mode <region|place|node|npc_bind|quest_anchor>
+/ainpc wand <pos1|pos2|point|status|clear>
+/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>
+/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]
+/ainpc map preview
+/ainpc map confirm
+/ainpc map cancel
 /ainpc world demo create [regionId]
 /ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]
 /ainpc world household <plan|spawn> <homePlaceId> [count]
@@ -320,7 +350,7 @@ Comenzile valide pentru creare si inspectie sunt:
 /ainpc debugdump world
 ```
 
-Comenzile de wand si prompt natural sunt documentate mai sus ca directie propusa. Ele nu sunt inca comenzi existente.
+Comenzile de wand si prompt natural sunt implementate initial pentru `region`, `place`, `node`, bind NPC-place pe roluri `home`/`work`/`social` si quest anchors persistente.
 
 Exemplu de lucru, executat din lumea in care marchezi harta:
 
@@ -355,7 +385,7 @@ Pentru un demo rapid controlat, poti sta in centrul zonei dorite si rula:
 
 Aceasta comanda creeaza doar strat semantic pentru un sat mic. Nu construieste cladirile fizice, deci este potrivita pentru marcarea rapida a unei zone deja pregatite sau pentru testarea questurilor bazate pe `placeId` si `nodeId`.
 Casele demo sunt marcate cu `metadata.owner_status: pending`, pentru ca owner-ul real se stabileste dupa spawn-ul NPC-urilor.
-Bind-ul NPC-place seteaza `homeAnchor`, optional `workAnchor` si optional `socialAnchor` in profilul NPC-ului si marcheaza metadata inversa pe places.
+Bind-ul NPC-place seteaza `homeAnchor`, optional `workAnchor` si optional `socialAnchor` in profilul NPC-ului si marcheaza metadata inversa pe places. Poate fi facut direct prin `/ainpc world bind npc ...` sau ca draft confirmat prin `/ainpc wand mode npc_bind` si `/ainpc map npc_bind ...`.
 Household plannerul poate genera un `HouseAllocation` dintr-o casa mapata si il poate executa controlat prin `NpcSpawnOrchestrator`. Daca NPC-ul exista deja, foloseste in locul spawn-ului manual `/ainpc world bind npc nearest demo_sat:house_1 demo_sat:fierarie demo_sat:piata`.
 Settlement plannerul face acelasi lucru pentru toate casele dintr-o regiune. Pentru test gradual, foloseste limita `[maxHouses]`, de exemplu `/ainpc world settlement plan demo_sat 2`.
 
@@ -368,7 +398,7 @@ Settlement plannerul face acelasi lucru pentru toate casele dintr-o regiune. Pen
 5. Adauga `tags` si `metadata` pentru sensul real al locului.
 6. Ruleaza `/ainpc world settlement plan <regionId>` pentru regiunea care trebuie populata automat.
 7. Ruleaza `/ainpc world settlement spawn <regionId>` doar dupa ce planul arata corect.
-8. Leaga manual NPC-urile existente prin `/ainpc world bind npc ...` sau prin `owner_npc_id` unde este cazul.
+8. Leaga manual NPC-urile existente prin `/ainpc world bind npc ...`, prin draft `npc_bind` din wand sau prin `owner_npc_id` unde este cazul.
 9. Ruleaza `/ainpc audit world` si `/ainpc audit spawn`.
 10. Salveaza cu `/ainpc world save`.
 11. Foloseste `placeId` si `nodeId` in questuri, story si AI.
@@ -428,27 +458,19 @@ Coordonatele sunt bune pentru plasare si detectie. Gameplay-ul trebuie sa folose
 
 Urmatoarele idei sunt valide ca directii viitoare, dar nu trebuie prezentate ca existente:
 
-- comanda `/ainpc wand`
-- comenzi `/ainpc map <descriere libera>`, `/ainpc map preview`, `/ainpc map confirm` si `/ainpc map cancel`
-- parser romanesc simplu pentru prompturi naturale transformate in `MappingDraft`
-- preview vizual pentru selectie wand, bounds, node radius si conflicte
-- persistenta temporara pentru drafturi pana la confirmare sau anulare
+- preview vizual pentru selectie wand, bounds, node radius si conflicte;
 - comenzi de forma `/ai loc create`, `/ai loc desc`, `/ai loc npc`
 - editor 2D/3D in browser pentru selectarea zonelor
 - fisier canonic `locations.yml`
 - detectie automata completa pentru case, dungeon-uri, fierarii si regate
 - asociere perfecta `place -> npc -> place` prin campuri persistente dedicate
 
-Directii viitoare realiste:
+Directii viitoare realiste ramase:
 
-- selectie cu doua colturi in joc prin wand
-- creare region/place/node din selectie sau pozitia curenta
-- prompt natural pentru etichetare: "aici este casa fierarului", "asta este avizierul"
 - highlight vizual pentru regiuni si places
 - editor extern de mapping
 - export/import separat de `config.yml`
 - persistenta in baza de date pentru mapping dinamic
-- tabela dedicata pentru `npc_world_bindings`, peste bind-ul initial bazat pe anchors si metadata
 - generator narativ complet pentru household-uri, peste plannerul determinist actual
 - confirmare umana pentru zone propuse automat
 

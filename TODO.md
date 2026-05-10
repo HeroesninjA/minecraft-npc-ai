@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-10
 
 ## Exista deja
 
@@ -62,10 +62,13 @@ Actualizat: 2026-05-08
 - [x] Quest GUI foloseste snapshot-ul generic de progres si are filtre interactive pentru `all`/`active`/`quest`/`contract`/`duty`/`bounty`/`event`/`tutorial`/`ritual`
 - [x] Quest GUI are paginare initiala si grupare dupa mecanica prin `QuestLogGuiPage`
 - [x] `/ainpc gui quest <filter>` si `/quest gui <filter>` deschid direct quest log-ul filtrat
+- [x] Quest Detail GUI afiseaza binding-urile persistate din `quest_anchor_bindings` pentru progresia selectata, marcheaza ancora pe fiecare obiectiv mapat si ofera shortcut admin catre `/ainpc quest anchors`
+- [x] `/ainpc quest anchors` accepta filtrare dupa `template_id` sau `quest_code`, ca diagnosticul text sa corespunda cu detaliile din GUI
 - [x] `ProgressionRepository` read-only peste `player_quests`, expus prin `ProgressionService.getStoredProgressions()`
 - [x] `StoredProgression` expune metadata generica `category`, `scenarioKind` si `baseType` pentru filtrare/debugdump peste progresii persistate
 - [x] `ProgressionFilter` comun pentru filtre explicite `kind:`, `scenario:`, `base:`, `category:`, `mechanic:` in definitions si stored progressions
 - [x] `StoredProgressionSummary` pentru sumar read-only peste progresiile persistate, inclusiv category/scenarioKind/baseType
+- [x] `ProgressionRepository` citeste `quest_anchor_bindings` pentru o progresie dupa `template_id`, cu fallback controlat dupa `quest_code`
 - [x] Comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` si aliasuri filtrate `/ainpc contract|duty|bounty|event|tutorial|ritual stored ...`
 - [x] Comanda read-only `/ainpc progression definitions [filter]` si aliasuri filtrate `/ainpc contract|duty|bounty|event|tutorial|ritual definitions [filter]`
 - [x] Prima mecanica `npc_duties` peste runtime-ul comun, cu D01 ca sarcina NPC non-quest filtrabila prin `duty`
@@ -91,6 +94,10 @@ Actualizat: 2026-05-08
 - [x] Comanda `/ainpc world demo create [regionId]` pentru mapping demo minim in jurul jucatorului
 - [x] Mapping-ul demo foloseste layout mai spatios pentru case/piata/workplaces/altar si avertizeaza ca trebuie aleasa o zona relativ plata
 - [x] Comanda `/ainpc world bind npc ...` pentru legarea initiala NPC -> home/work/social places
+- [x] Mapping wand initial: `/ainpc wand`, selectie pos1/pos2/punct, parser determinist si `/ainpc map preview|confirm|cancel` pentru `region`/`place`/`node`
+- [x] Mapping wand poate crea si confirma draft-uri `npc_bind` pe roluri `home`/`work`/`social`, actualizand profilul NPC, metadata mapping si `npc_world_bindings`
+- [x] Mapping wand poate crea si confirma draft-uri `quest_anchor`, cu context player/progresie/objective_id si upsert in `quest_anchor_bindings`
+- [x] `scripts/smoke-paper-mapping.ps1` genereaza si checklist-ul manual pentru flux wand complet `region`/`place`/`node`/`npc_bind`/`quest_anchor`
 - [x] Planner `/ainpc world household plan ...` pentru `HouseAllocation` din mapping
 - [x] Spawn `/ainpc world household spawn ...` prin `NpcSpawnOrchestrator`
 - [x] Planner `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
@@ -110,7 +117,7 @@ Actualizat: 2026-05-08
 ## Prioritate curenta
 
 - [ ] Pass Paper pe playable village: teren plat, case distantate, NPC-uri cu home/work/social clare, rutina inspectabila si fara fuga haotica
-- [ ] Mapping wand + prompturi naturale pentru creare `region`/`place`/`node`, NPC bind si quest anchor prin draft, preview si confirmare
+- [ ] Smoke test Paper pentru flux wand complet: `region`/`place`/`node`/`npc_bind`/`quest_anchor`, audit, save si reload
 - [ ] Smoke test Paper pentru `/ainpc world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`
 - [ ] Generator narativ pentru populatie pe regiune: nume, roluri, familii si distributie pe case/work/social
 - [ ] Smoke test Paper pentru Q01-Q05: oferta, acceptare, progres, completare, reward
@@ -196,8 +203,9 @@ Actualizat: 2026-05-08
 
 - [ ] Regiuni cu identitate proprie: sat, castel, pestera, dungeon
 - [ ] Demo mapping salvat si verificat pe server Paper real cu `settlement plan/spawn`, audit, save si reload
-- [ ] Unealta wand pentru mapping manual: selectie pos1/pos2, punct node, prompt natural si confirmare inainte de salvare
+- [x] Unealta wand initiala pentru mapping manual: selectie pos1/pos2, punct node, prompt natural determinist si confirmare inainte de salvare
 - [x] Bind manual initial NPC-place pentru demo mapping si harti manuale
+- [x] Draft `npc_bind` prin wand pentru home/work/social peste place-ul selectat
 - [ ] Spawn si comportament diferit pe tipuri de zona
 - [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
 - [x] Planner pentru tot satul, nu doar pentru o singura casa

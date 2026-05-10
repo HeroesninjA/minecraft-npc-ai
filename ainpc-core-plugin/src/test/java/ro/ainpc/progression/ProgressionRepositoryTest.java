@@ -290,6 +290,102 @@ class ProgressionRepositoryTest {
         assertEquals(2, allRows.size());
     }
 
+    @Test
+    void readsAnchorBindingsForProgressionByTemplateOrQuestCode() throws Exception {
+        insertProgression(
+            "player-1",
+            "medieval_quest:C02",
+            "C02",
+            "active",
+            "READ_BOARD",
+            "READ_BOARD",
+            "{}",
+            "{}",
+            100L,
+            0L,
+            150L,
+            true
+        );
+        insertAnchorBinding("player-1", "medieval_quest:C02", "visit_market", "C02",
+            "visit_place", "tag:market", "place", "demo_sat:piata", "Piata", 100L, 160L);
+        ProgressionRepository repository = new ProgressionRepository(
+            connection::prepareStatement,
+            () -> List.of(contractDefinition())
+        );
+
+        List<ProgressionAnchorBinding> byTemplate =
+            repository.findAnchorBindingsForProgression("player-1", "medieval_quest:C02", "", 10);
+        List<ProgressionAnchorBinding> byCode =
+            repository.findAnchorBindingsForProgression("player-1", "", "C02", 10);
+        List<ProgressionAnchorBinding> byTemplateOrCode =
+            repository.findAnchorBindingsForProgression("player-1", "wrong:C02", "C02", 10);
+
+        assertEquals(1, byTemplate.size());
+        assertEquals(1, byCode.size());
+        assertEquals(1, byTemplateOrCode.size());
+        assertEquals("demo_sat:piata", byTemplateOrCode.get(0).anchorId());
+    }
+
+    @Test
+    void savesAndUpdatesManualAnchorBinding() throws Exception {
+        insertProgression(
+            "player-1",
+            "medieval_quest:C02",
+            "C02",
+            "active",
+            "READ_BOARD",
+            "READ_BOARD",
+            "{}",
+            "{}",
+            100L,
+            0L,
+            150L,
+            true
+        );
+        ProgressionRepository repository = new ProgressionRepository(
+            connection::prepareStatement,
+            () -> List.of(contractDefinition())
+        );
+
+        repository.saveAnchorBinding(new ProgressionAnchorBinding(
+            "player-1",
+            "medieval_quest:C02",
+            "inspect_board",
+            "C02",
+            "inspect_node",
+            "node:quest_board",
+            "node",
+            "demo_sat:piata:quest_board",
+            "quest_trigger",
+            100L,
+            160L,
+            ""
+        ));
+        repository.saveAnchorBinding(new ProgressionAnchorBinding(
+            "player-1",
+            "medieval_quest:C02",
+            "inspect_board",
+            "C02",
+            "inspect_node",
+            "node:notice_board",
+            "node",
+            "demo_sat:piata:notice_board",
+            "quest_trigger",
+            0L,
+            170L,
+            ""
+        ));
+
+        List<ProgressionAnchorBinding> rows =
+            repository.findAnchorBindingsForProgression("player-1", "medieval_quest:C02", "", 10);
+
+        assertEquals(1, rows.size());
+        assertEquals("inspect_board", rows.get(0).objectiveKey());
+        assertEquals("demo_sat:piata:notice_board", rows.get(0).anchorId());
+        assertEquals("node:notice_board", rows.get(0).reference());
+        assertEquals(170L, rows.get(0).updatedAt());
+    }
+
     private void insertProgression(String playerUuid,
                                    String templateId,
                                    String questCode,

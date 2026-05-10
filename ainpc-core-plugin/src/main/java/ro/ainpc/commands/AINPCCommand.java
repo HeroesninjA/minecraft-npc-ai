@@ -3,8 +3,10 @@ package ro.ainpc.commands;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -22,6 +24,7 @@ import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.ScenarioEngine;
 import ro.ainpc.gui.GuiKey;
 import ro.ainpc.npc.AINPC;
+import ro.ainpc.progression.ProgressionAnchorBinding;
 import ro.ainpc.progression.ProgressionDefinition;
 import ro.ainpc.progression.StoredProgression;
 import ro.ainpc.progression.StoredProgressionSummary;
@@ -47,6 +50,13 @@ import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldNodeType;
 import ro.ainpc.world.WorldPlaceInfo;
 import ro.ainpc.world.WorldRegionInfo;
+import ro.ainpc.world.mapping.MappingDraft;
+import ro.ainpc.world.mapping.MappingDraftApplyResult;
+import ro.ainpc.world.mapping.MappingDraftKind;
+import ro.ainpc.world.mapping.MappingPoint;
+import ro.ainpc.world.mapping.MappingWandMode;
+import ro.ainpc.world.mapping.MappingWandSelection;
+import ro.ainpc.world.mapping.MappingWandService;
 import ro.ainpc.world.scan.SemanticVillageImportResult;
 import ro.ainpc.world.scan.SemanticVillageMapper;
 import ro.ainpc.world.scan.VanillaVillageFeatureType;
@@ -109,6 +119,15 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private record QuestTrackRequest(Player player, String questSelector, String action) {
+    }
+
+    private record WorldCommandLocation(String worldName,
+                                        int x,
+                                        int y,
+                                        int z,
+                                        int minHeight,
+                                        int maxHeight,
+                                        boolean consoleFallback) {
     }
 
     private record QuestLogRequest(Player player, String filter) {
@@ -236,6 +255,8 @@ public class AINPCCommand implements CommandExecutor {
             case "tutorial", "tutorials", "onboarding" -> handleTutorial(sender, args);
             case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> handleRitual(sender, args);
             case "world" -> handleWorld(sender, args);
+            case "wand" -> handleWand(sender, args);
+            case "map" -> handleMap(sender, args);
             case "story" -> handleStory(sender, args);
             case "migration" -> handleMigration(sender, args);
             case "audit" -> handleAudit(sender, args);
@@ -1560,7 +1581,7 @@ public class AINPCCommand implements CommandExecutor {
             templateId = args[3];
         }
         if (args.length > 4) {
-            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId|questCode]");
             return true;
         }
 
@@ -1568,7 +1589,7 @@ public class AINPCCommand implements CommandExecutor {
             List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings(playerUuid, templateId, 20);
             plugin.getMessageUtils().send(sender, "&6=== Quest Anchor Bindings ===");
             plugin.getMessageUtils().send(sender, "&eFiltru player: &f" + (playerUuid.isBlank() ? "all" : playerUuid));
-            plugin.getMessageUtils().send(sender, "&eFiltru template: &f" + (templateId.isBlank() ? "all" : templateId));
+            plugin.getMessageUtils().send(sender, "&eFiltru template/cod: &f" + (templateId.isBlank() ? "all" : templateId));
             if (rows.isEmpty()) {
                 plugin.getMessageUtils().send(sender, "&7Nu exista binding-uri pentru filtrul curent.");
                 return true;
@@ -1603,14 +1624,30 @@ public class AINPCCommand implements CommandExecutor {
         if (player == null) {
             plugin.getMessageUtils().send(sender,
                 "&cJucatorul trebuie sa fie online sau trebuie sa folosesti UUID-ul lui.");
-            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc quest anchors [jucator|uuid|all] [templateId|questCode]");
             return null;
         }
         return player.getUniqueId().toString();
     }
 
     private List<QuestAnchorBindingRow> queryQuestAnchorBindings(String playerUuid,
+                                                                 String templateIdOrQuestCode,
+                                                                 int limit) throws SQLException {
+        String reference = templateIdOrQuestCode == null ? "" : templateIdOrQuestCode.trim();
+        if (reference.isBlank()) {
+            return queryQuestAnchorBindings(playerUuid, "", "", limit);
+        }
+
+        List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings(playerUuid, reference, "", limit);
+        if (!rows.isEmpty()) {
+            return rows;
+        }
+        return queryQuestAnchorBindings(playerUuid, "", reference, limit);
+    }
+
+    private List<QuestAnchorBindingRow> queryQuestAnchorBindings(String playerUuid,
                                                                  String templateId,
+                                                                 String questCode,
                                                                  int limit) throws SQLException {
         StringBuilder sql = new StringBuilder("""
             SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
@@ -1629,6 +1666,9 @@ public class AINPCCommand implements CommandExecutor {
         if (templateId != null && !templateId.isBlank()) {
             sql.append(" AND b.template_id = ?");
             parameters.add(templateId);
+        } else if (questCode != null && !questCode.isBlank()) {
+            sql.append(" AND LOWER(b.quest_code) = ?");
+            parameters.add(questCode.toLowerCase(Locale.ROOT));
         }
         sql.append(" ORDER BY b.updated_at DESC LIMIT ?");
 
@@ -1904,7 +1944,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc quest debug <tracked|questCode|templateId> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest reset <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]");
     }
 
     private void sendProgressionUsage(CommandSender sender) {
@@ -2377,6 +2417,550 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7Fara NPC tinta, contextul este construit pentru locatia jucatorului.");
     }
 
+    private boolean handleWand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+
+        MappingWandService service = plugin.getMappingWandService();
+        if (service == null) {
+            plugin.getMessageUtils().send(sender, "&cMappingWandService este indisponibil.");
+            return true;
+        }
+
+        if (args.length == 1) {
+            MappingWandService.MappingWandSession session = service.start(player, MappingWandMode.PLACE);
+            plugin.getMessageUtils().send(sender, "&aMapping wand activat in modul &f" + session.mode().id() + "&a.");
+            sendWandStatus(sender, session);
+            return true;
+        }
+
+        String action = args[1].toLowerCase(Locale.ROOT);
+        return switch (action) {
+            case "mode" -> {
+                if (args.length != 3) {
+                    sendWandUsage(sender);
+                    yield true;
+                }
+                MappingWandMode mode = MappingWandMode.fromId(args[2]).orElse(null);
+                if (mode == null) {
+                    plugin.getMessageUtils().send(sender,
+                        "&cMod wand invalid. Optiuni: &fregion, place, node, npc_bind, quest_anchor");
+                    yield true;
+                }
+                MappingWandService.MappingWandSession session = service.setMode(player, mode);
+                plugin.getMessageUtils().send(sender, "&aMapping wand setat pe modul &f" + session.mode().id() + "&a.");
+                sendWandStatus(sender, session);
+                yield true;
+            }
+            case "pos1" -> {
+                MappingWandService.MappingWandSession session = service.setPos1(player, pointFromPlayer(player));
+                plugin.getMessageUtils().send(sender, "&aWand pos1 setat la pozitia ta.");
+                sendWandStatus(sender, session);
+                yield true;
+            }
+            case "pos2" -> {
+                MappingWandService.MappingWandSession session = service.setPos2(player, pointFromPlayer(player));
+                plugin.getMessageUtils().send(sender, "&aWand pos2 setat la pozitia ta.");
+                sendWandStatus(sender, session);
+                yield true;
+            }
+            case "point", "punct" -> {
+                MappingWandService.MappingWandSession session = service.setPoint(player, pointFromPlayer(player));
+                plugin.getMessageUtils().send(sender, "&aWand point setat la pozitia ta.");
+                sendWandStatus(sender, session);
+                yield true;
+            }
+            case "status" -> {
+                sendWandStatus(sender, service.ensureSession(player));
+                yield true;
+            }
+            case "clear", "reset" -> {
+                service.clear(player.getUniqueId());
+                plugin.getMessageUtils().send(sender, "&aSelectia wand a fost curatata.");
+                yield true;
+            }
+            default -> {
+                sendWandUsage(sender);
+                yield true;
+            }
+        };
+    }
+
+    private boolean handleMap(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+
+        Player player = requirePlayerSender(sender);
+        if (player == null) {
+            return true;
+        }
+
+        MappingWandService service = plugin.getMappingWandService();
+        if (service == null) {
+            plugin.getMessageUtils().send(sender, "&cMappingWandService este indisponibil.");
+            return true;
+        }
+
+        if (args.length == 1) {
+            sendMapUsage(sender);
+            return true;
+        }
+
+        String action = args[1].toLowerCase(Locale.ROOT);
+        if ("preview".equals(action)) {
+            MappingDraft draft = service.session(player.getUniqueId())
+                .map(MappingWandService.MappingWandSession::draft)
+                .orElse(null);
+            if (draft == null) {
+                plugin.getMessageUtils().send(sender, "&7Nu exista draft mapping. Ruleaza &f/ainpc map <descriere>&7.");
+                return true;
+            }
+            sendMappingDraft(sender, draft);
+            return true;
+        }
+        if ("cancel".equals(action) || "anuleaza".equals(action)) {
+            service.cancelDraft(player.getUniqueId());
+            plugin.getMessageUtils().send(sender, "&aDraft-ul mapping a fost anulat.");
+            return true;
+        }
+        if ("confirm".equals(action) || "confirma".equals(action)) {
+            MappingDraft draft = service.session(player.getUniqueId())
+                .map(MappingWandService.MappingWandSession::draft)
+                .orElse(null);
+            if (draft != null && draft.isNpcBind()) {
+                if (applyNpcBindDraft(sender, draft)) {
+                    service.cancelDraft(player.getUniqueId());
+                }
+                return true;
+            }
+            if (draft != null && draft.isQuestAnchor()) {
+                if (applyQuestAnchorDraft(sender, player, draft)) {
+                    service.cancelDraft(player.getUniqueId());
+                }
+                return true;
+            }
+            try {
+                MappingDraftApplyResult result = service.confirmDraft(player, plugin.getPlatform().getWorldAdminService());
+                plugin.getMessageUtils().send(sender,
+                    "&a" + result.message() + ": &f" + result.createdId() + "&a.");
+                plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc audit world &7si apoi &f/ainpc world save&7.");
+            } catch (IllegalArgumentException exception) {
+                plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+            }
+            return true;
+        }
+
+        MappingDraftKind explicitKind = MappingDraftKind.fromId(action).orElse(null);
+        int descriptionStart = explicitKind != null ? 2 : 1;
+        if (descriptionStart >= args.length) {
+            sendMapUsage(sender);
+            return true;
+        }
+
+        String description = joinArgs(args, descriptionStart);
+        try {
+            MappingDraft draft = service.createDraft(
+                player,
+                explicitKind,
+                description,
+                plugin.getPlatform().getWorldAdminService()
+            );
+            plugin.getMessageUtils().send(sender, "&aDraft mapping creat. Verifica preview-ul inainte de confirmare.");
+            sendMappingDraft(sender, draft);
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+        }
+        return true;
+    }
+
+    private void sendWandUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand mode <region|place|node|npc_bind|quest_anchor>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand <pos1|pos2|point|status|clear>");
+        plugin.getMessageUtils().send(sender, "&7Click stanga/dreapta cu wand-ul seteaza pos1/pos2; in modurile node/npc_bind/quest_anchor seteaza punctul.");
+    }
+
+    private void sendMapUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map <descriere> &7(foloseste modul wand curent)");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map preview");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map confirm");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map cancel");
+    }
+
+    private void sendWandStatus(CommandSender sender, MappingWandService.MappingWandSession session) {
+        MappingWandSelection selection = session.selection();
+        plugin.getMessageUtils().send(sender, "&6=== Mapping Wand ===");
+        plugin.getMessageUtils().send(sender, "&eMod: &f" + session.mode().id());
+        plugin.getMessageUtils().send(sender, "&ePos1: &f" + formatMappingPoint(selection.pos1()));
+        plugin.getMessageUtils().send(sender, "&ePos2: &f" + formatMappingPoint(selection.pos2()));
+        plugin.getMessageUtils().send(sender, "&ePoint: &f" + formatMappingPoint(selection.point()));
+        selection.bounds().ifPresent(bounds ->
+            plugin.getMessageUtils().send(sender, "&eBounds: &f" + bounds.format()));
+        plugin.getMessageUtils().send(sender, "&eDraft: &f"
+            + (session.draft() != null ? session.draft().qualifiedId() : "<nesetat>"));
+    }
+
+    private void sendMappingDraft(CommandSender sender, MappingDraft draft) {
+        plugin.getMessageUtils().send(sender, "&6=== Mapping Draft Preview ===");
+        plugin.getMessageUtils().send(sender, "&eTip draft: &f" + draft.kind().id());
+        plugin.getMessageUtils().send(sender, "&eID propus: &f" + draft.qualifiedId());
+        plugin.getMessageUtils().send(sender, "&eNume: &f" + draft.displayName());
+        plugin.getMessageUtils().send(sender, "&eTip semantic: &f" + draft.typeId());
+        if (draft.isBox()) {
+            plugin.getMessageUtils().send(sender, "&eLume: &f" + draft.worldName());
+            plugin.getMessageUtils().send(sender, "&eBounds: &f"
+                + formatBounds(draft.minX(), draft.minY(), draft.minZ(), draft.maxX(), draft.maxY(), draft.maxZ()));
+        } else if (draft.isNode()) {
+            plugin.getMessageUtils().send(sender, "&eRegiune: &f" + draft.regionId());
+            plugin.getMessageUtils().send(sender, "&ePlace: &f" + formatOptional(draft.placeId()));
+            plugin.getMessageUtils().send(sender, "&ePozitie: &f"
+                + String.format(Locale.ROOT, "%.1f, %.1f, %.1f", draft.x(), draft.y(), draft.z()));
+            plugin.getMessageUtils().send(sender, "&eRaza: &f" + String.format(Locale.ROOT, "%.1f", draft.radius()));
+        } else if (draft.isNpcBind()) {
+            plugin.getMessageUtils().send(sender, "&eNPC selector: &f" + draft.metadata().getOrDefault("npc_selector", "<nesetat>"));
+            plugin.getMessageUtils().send(sender, "&eRol bind: &f" + draft.metadata().getOrDefault("bind_role", "<nesetat>"));
+            plugin.getMessageUtils().send(sender, "&eRegiune: &f" + draft.regionId());
+            plugin.getMessageUtils().send(sender, "&ePlace: &f" + formatOptional(draft.placeId()));
+        } else if (draft.isQuestAnchor()) {
+            plugin.getMessageUtils().send(sender, "&ePlayer selector: &f" + draft.metadata().getOrDefault("player_selector", "self"));
+            plugin.getMessageUtils().send(sender, "&eProgresie: &f" + draft.metadata().getOrDefault("progression_selector", "<nesetat>"));
+            plugin.getMessageUtils().send(sender, "&eObjective ID: &f" + draft.metadata().getOrDefault("objective_key", "<nesetat>"));
+            plugin.getMessageUtils().send(sender, "&eObjective type: &f" + draft.metadata().getOrDefault("objective_type", "<nesetat>"));
+            plugin.getMessageUtils().send(sender, "&eAncora: &f"
+                + draft.metadata().getOrDefault("anchor_type", "?") + ":"
+                + draft.metadata().getOrDefault("anchor_id", "?"));
+        }
+        plugin.getMessageUtils().send(sender, "&eTag-uri: &f" + formatList(draft.tags()));
+        plugin.getMessageUtils().send(sender, "&eMetadata: &f" + formatMap(draft.metadata()));
+        if (!draft.warnings().isEmpty()) {
+            for (String warning : draft.warnings()) {
+                plugin.getMessageUtils().send(sender, "&eWarning: &f" + warning);
+            }
+        }
+        plugin.getMessageUtils().send(sender, "&7Comanda de baza: &f" + draft.confirmationCommand());
+        plugin.getMessageUtils().send(sender, "&7Confirma cu &f/ainpc map confirm &7sau anuleaza cu &f/ainpc map cancel&7.");
+    }
+
+    private boolean applyNpcBindDraft(CommandSender sender, MappingDraft draft) {
+        WorldAdminService worldAdmin = plugin.getPlatform().getWorldAdminService();
+        if (!worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat.");
+            return false;
+        }
+
+        String npcSelector = draft.metadata().getOrDefault("npc_selector", "nearest");
+        String role = draft.metadata().getOrDefault("bind_role", "home").toLowerCase(Locale.ROOT);
+        AINPC npc = resolveWorldBindNpc(sender, npcSelector);
+        if (npc == null) {
+            return false;
+        }
+
+        WorldPlaceInfo place = worldAdmin.getPlace(draft.placeId());
+        if (place == null) {
+            plugin.getMessageUtils().send(sender, "&cPlace-ul din draft nu mai exista: &e" + draft.placeId() + "&c.");
+            return false;
+        }
+
+        if ("home".equals(role) && !isHousePlace(place)) {
+            plugin.getMessageUtils().send(sender, "&eWarning: place-ul &f" + place.id() + " &enu este marcat ca house/home.");
+        } else if ("work".equals(role) && !isWorkplace(place)) {
+            plugin.getMessageUtils().send(sender, "&eWarning: place-ul &f" + place.id() + " &enu este marcat clar ca workplace.");
+        } else if ("social".equals(role) && !isSocialPlace(place)) {
+            plugin.getMessageUtils().send(sender, "&eWarning: place-ul &f" + place.id() + " &enu este marcat clar ca loc social.");
+        } else if (!List.of("home", "work", "social").contains(role)) {
+            plugin.getMessageUtils().send(sender, "&cRol bind invalid in draft: &e" + role + "&c.");
+            return false;
+        }
+
+        AINPC.OwnedLocation previousHome = npc.getHomeAnchor();
+        AINPC.OwnedLocation previousWork = npc.getWorkAnchor();
+        AINPC.OwnedLocation previousSocial = npc.getSocialAnchor();
+        AINPC.OwnedLocation anchor = createOwnedLocationFromPlace(worldAdmin, place, role);
+        switch (role) {
+            case "home" -> npc.setHomeAnchor(anchor);
+            case "work" -> npc.setWorkAnchor(anchor);
+            case "social" -> npc.setSocialAnchor(anchor);
+            default -> {
+                return false;
+            }
+        }
+
+        if (!plugin.getNpcManager().saveNPC(npc, false)) {
+            npc.setHomeAnchor(previousHome);
+            npc.setWorkAnchor(previousWork);
+            npc.setSocialAnchor(previousSocial);
+            plugin.getMessageUtils().send(sender, "&cNu am putut salva profilul NPC-ului.");
+            return false;
+        }
+
+        String bindingId = npcBindingId(npc);
+        try {
+            switch (role) {
+                case "home" -> worldAdmin.bindNpcToHomePlace(place.id(), bindingId, npc.getName());
+                case "work" -> worldAdmin.bindNpcToWorkPlace(place.id(), bindingId, npc.getName());
+                case "social" -> worldAdmin.bindNpcToSocialPlace(place.id(), bindingId, npc.getName());
+                default -> throw new IllegalArgumentException("Rol bind invalid: " + role);
+            }
+        } catch (IllegalArgumentException exception) {
+            npc.setHomeAnchor(previousHome);
+            npc.setWorkAnchor(previousWork);
+            npc.setSocialAnchor(previousSocial);
+            if (!plugin.getNpcManager().saveNPC(npc, false)) {
+                plugin.getMessageUtils().send(sender,
+                    "&eWarning: &fNu am putut restaura ancorele NPC dupa esecul bind-ului.");
+            }
+            plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
+            return false;
+        }
+
+        WorldNodeInfo node = findBestAnchorNodeForPlace(worldAdmin, place, role);
+        saveNpcWorldBinding(sender, new NpcWorldBinding(
+            npc.getDatabaseId(),
+            npc.getUuid() != null ? npc.getUuid().toString() : "",
+            npc.getName(),
+            "home".equals(role) ? place.id() : "",
+            "work".equals(role) ? place.id() : "",
+            "social".equals(role) ? place.id() : "",
+            "home".equals(role) && node != null ? node.id() : "",
+            "work".equals(role) && node != null ? node.id() : "",
+            "social".equals(role) && node != null ? node.id() : "",
+            "",
+            "wand_bind",
+            0L,
+            0L
+        ), true);
+
+        plugin.getMessageUtils().send(sender,
+            "&aNPC-ul &f" + npc.getName() + " &aa fost legat la &f" + role + " &ain &f" + place.id() + "&a.");
+        plugin.getMessageUtils().send(sender, "&eAncora: &f" + formatOwnedLocation(anchor));
+        plugin.getMessageUtils().send(sender,
+            "&7Ruleaza &f/ainpc world save &7pentru metadata mapping, apoi &f/ainpc audit spawn&7.");
+        return true;
+    }
+
+    private boolean applyQuestAnchorDraft(CommandSender sender, Player commandPlayer, MappingDraft draft) {
+        if (plugin.getDatabaseManager() == null) {
+            plugin.getMessageUtils().send(sender, "&cDatabaseManager nu este initializat.");
+            return false;
+        }
+        if (plugin.getProgressionService() == null) {
+            plugin.getMessageUtils().send(sender, "&cProgressionService este indisponibil.");
+            return false;
+        }
+
+        Map<String, String> metadata = draft.metadata();
+        String playerSelector = metadata.getOrDefault("player_selector", "self");
+        String targetPlayerUuid = resolveQuestAnchorDraftPlayerUuid(sender, commandPlayer, playerSelector);
+        if (targetPlayerUuid == null) {
+            return false;
+        }
+
+        String progressionSelector = metadata.getOrDefault("progression_selector", "");
+        StoredProgression progression;
+        try {
+            progression = resolveQuestAnchorProgression(sender, targetPlayerUuid, progressionSelector);
+        } catch (SQLException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut citi progresiile persistate: " + exception.getMessage());
+            return false;
+        }
+        if (progression == null) {
+            return false;
+        }
+
+        String objectiveKey = metadata.getOrDefault("objective_key", "");
+        String objectiveType = metadata.getOrDefault("objective_type", "");
+        String reference = metadata.getOrDefault("reference", "");
+        String anchorType = metadata.getOrDefault("anchor_type", "");
+        String anchorId = metadata.getOrDefault("anchor_id", "");
+        String anchorLabel = metadata.getOrDefault("anchor_label", "");
+        if (objectiveKey.isBlank() || objectiveType.isBlank() || anchorType.isBlank() || anchorId.isBlank()) {
+            plugin.getMessageUtils().send(sender, "&cDraft quest_anchor incomplet. Refaceti draft-ul.");
+            return false;
+        }
+        if (!isQuestAnchorTypeCompatible(objectiveType, anchorType)) {
+            plugin.getMessageUtils().send(sender,
+                "&cTip incompatibil: objective_type=" + objectiveType + ", anchor_type=" + anchorType + ".");
+            return false;
+        }
+        if (!questAnchorTargetExists(anchorType, anchorId)) {
+            plugin.getMessageUtils().send(sender,
+                "&cAncora din draft nu mai exista in mapping: &e" + anchorType + ":" + anchorId + "&c.");
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        try {
+            plugin.getProgressionService().saveAnchorBinding(new ProgressionAnchorBinding(
+                targetPlayerUuid,
+                progression.templateId(),
+                objectiveKey,
+                progression.code(),
+                objectiveType,
+                reference,
+                anchorType,
+                anchorId,
+                anchorLabel,
+                now,
+                now,
+                progression.status()
+            ));
+        } catch (SQLException | IllegalArgumentException exception) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am putut salva quest_anchor_bindings: " + exception.getMessage());
+            return false;
+        }
+
+        plugin.getMessageUtils().send(sender,
+            "&aQuest anchor salvat pentru &f" + progression.templateId()
+                + " &a/ &f" + objectiveKey + "&a -> &f" + anchorType + ":" + anchorId + "&a.");
+        plugin.getMessageUtils().send(sender,
+            "&7Verifica prin &f/ainpc quest anchors " + targetPlayerUuid + " " + progression.templateId() + "&7.");
+        return true;
+    }
+
+    private String resolveQuestAnchorDraftPlayerUuid(CommandSender sender, Player commandPlayer, String selector) {
+        String safeSelector = selector == null ? "" : selector.trim();
+        if (safeSelector.isBlank()
+            || "self".equalsIgnoreCase(safeSelector)
+            || "me".equalsIgnoreCase(safeSelector)
+            || "@s".equalsIgnoreCase(safeSelector)) {
+            return commandPlayer.getUniqueId().toString();
+        }
+
+        try {
+            return UUID.fromString(safeSelector).toString();
+        } catch (IllegalArgumentException ignored) {
+            // Nu este UUID; incercam jucator online.
+        }
+
+        Player target = plugin.getServer().getPlayerExact(safeSelector);
+        if (target == null) {
+            target = plugin.getServer().getPlayer(safeSelector);
+        }
+        if (target == null) {
+            plugin.getMessageUtils().send(sender,
+                "&cJucatorul pentru quest_anchor trebuie sa fie online sau selectorul trebuie sa fie UUID.");
+            return null;
+        }
+        return target.getUniqueId().toString();
+    }
+
+    private StoredProgression resolveQuestAnchorProgression(CommandSender sender,
+                                                            String playerUuid,
+                                                            String selector) throws SQLException {
+        String safeSelector = selector == null ? "" : selector.trim();
+        if (safeSelector.isBlank()) {
+            plugin.getMessageUtils().send(sender,
+                "&cSpecifica progresia: tracked, current, templateId sau questCode.");
+            return null;
+        }
+
+        List<StoredProgression> rows = plugin.getProgressionService()
+            .getStoredProgressions(playerUuid, "all", 0);
+        if (rows.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cJucatorul nu are progresii persistate.");
+            return null;
+        }
+
+        String normalized = safeSelector.toLowerCase(Locale.ROOT);
+        List<StoredProgression> matches;
+        if ("tracked".equals(normalized) || "urmarit".equals(normalized)) {
+            matches = rows.stream().filter(StoredProgression::tracked).toList();
+        } else if ("current".equals(normalized) || "active".equals(normalized) || "curent".equals(normalized)) {
+            matches = rows.stream().filter(StoredProgression::current).toList();
+        } else {
+            matches = rows.stream()
+                .filter(row -> storedProgressionMatchesSelector(row, safeSelector))
+                .toList();
+        }
+
+        if (matches.isEmpty()) {
+            plugin.getMessageUtils().send(sender,
+                "&cNu am gasit progresia &e" + safeSelector + " &cpentru playerul selectat.");
+            return null;
+        }
+        if (matches.size() > 1) {
+            plugin.getMessageUtils().send(sender,
+                "&cSelectorul &e" + safeSelector + " &care " + matches.size()
+                    + " potriviri. Foloseste templateId sau questCode exact.");
+            matches.stream()
+                .limit(5)
+                .forEach(row -> plugin.getMessageUtils().send(sender,
+                    "&7- &f" + row.templateId() + " &7cod=&f" + formatOptional(row.code())
+                        + " &7status=&f" + row.status()));
+            return null;
+        }
+        return matches.get(0);
+    }
+
+    private boolean storedProgressionMatchesSelector(StoredProgression row, String selector) {
+        String normalized = selector == null ? "" : selector.trim();
+        return equalsIgnoreCase(row.templateId(), normalized)
+            || equalsIgnoreCase(row.code(), normalized)
+            || equalsIgnoreCase(row.progressionId(), normalized)
+            || equalsIgnoreCase(row.definitionId(), normalized)
+            || equalsIgnoreCase(row.mechanicId() + ":" + row.definitionId(), normalized)
+            || equalsIgnoreCase(row.packId() + ":" + row.definitionId(), normalized);
+    }
+
+    private boolean equalsIgnoreCase(String left, String right) {
+        return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
+    }
+
+    private boolean questAnchorTargetExists(String anchorType, String anchorId) {
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            return false;
+        }
+        String type = normalizeAuditKey(anchorType);
+        return switch (type) {
+            case "region" -> worldAdmin.getRegion(anchorId) != null;
+            case "place" -> worldAdmin.getPlace(anchorId) != null;
+            case "node" -> worldAdmin.getNode(anchorId) != null;
+            case "npc" -> findLoadedNpcBySelector(anchorId) != null;
+            default -> false;
+        };
+    }
+
+    private MappingPoint pointFromPlayer(Player player) {
+        Location location = player.getLocation();
+        return new MappingPoint(
+            player.getWorld().getName(),
+            location.getBlockX(),
+            location.getBlockY(),
+            location.getBlockZ()
+        );
+    }
+
+    private String formatMappingPoint(MappingPoint point) {
+        return point == null ? "<nesetat>" : point.format();
+    }
+
+    private String joinArgs(String[] args, int startIndex) {
+        StringBuilder builder = new StringBuilder();
+        for (int index = Math.max(0, startIndex); index < args.length; index++) {
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(args[index]);
+        }
+        return builder.toString();
+    }
+
     private boolean handleWorld(CommandSender sender, String[] args) {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.getMessageUtils().sendMessage(sender, "no_permission");
@@ -2584,12 +3168,13 @@ public class AINPCCommand implements CommandExecutor {
     private boolean handleWorldDemo(CommandSender sender, String[] args) {
         if (args.length < 3 || args.length > 4 || !"create".equalsIgnoreCase(args[2])) {
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc world demo create [regionId]");
-            plugin.getMessageUtils().send(sender, "&7Creeaza un mapping demo minim in jurul pozitiei tale curente.");
+            plugin.getMessageUtils().send(sender,
+                "&7Creeaza un mapping demo minim la pozitia ta; consola/RCON foloseste spawn-ul lumii.");
             return true;
         }
 
-        Player player = requirePlayerSender(sender);
-        if (player == null) {
+        WorldCommandLocation origin = resolveWorldDemoLocation(sender);
+        if (origin == null) {
             return true;
         }
 
@@ -2600,21 +3185,24 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         String regionId = args.length == 4 ? args[3] : null;
-        Location location = player.getLocation();
         try {
             WorldAdminService.DemoMappingResult result = worldAdmin.createDemoSettlement(
                 regionId,
-                player.getWorld().getName(),
-                location.getBlockX(),
-                location.getBlockY(),
-                location.getBlockZ(),
-                player.getWorld().getMinHeight(),
-                player.getWorld().getMaxHeight()
+                origin.worldName(),
+                origin.x(),
+                origin.y(),
+                origin.z(),
+                origin.minHeight(),
+                origin.maxHeight()
             );
 
             plugin.getMessageUtils().send(sender, "&aMapping demo creat in regiunea &f" + result.regionId() + "&a.");
-            plugin.getMessageUtils().send(sender, "&7Centru: &f" + location.getBlockX() + ", "
-                + location.getBlockY() + ", " + location.getBlockZ());
+            if (origin.consoleFallback()) {
+                plugin.getMessageUtils().send(sender, "&7Consola/RCON: am folosit spawn-ul lumii &f"
+                    + origin.worldName() + "&7 ca centru demo.");
+            }
+            plugin.getMessageUtils().send(sender, "&7Centru: &f" + origin.x() + ", "
+                + origin.y() + ", " + origin.z());
             plugin.getMessageUtils().send(sender, "&7Places create: &f" + result.createdPlaceIds().size()
                 + " &7| Nodes create: &f" + result.createdNodeIds().size());
             plugin.getMessageUtils().send(sender, "&7Places: &f" + formatList(result.createdPlaceIds()));
@@ -2627,6 +3215,40 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
         }
         return true;
+    }
+
+    private WorldCommandLocation resolveWorldDemoLocation(CommandSender sender) {
+        if (sender instanceof Player player) {
+            Location location = player.getLocation();
+            World world = player.getWorld();
+            return new WorldCommandLocation(
+                world.getName(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ(),
+                world.getMinHeight(),
+                world.getMaxHeight(),
+                false
+            );
+        }
+
+        List<World> worlds = Bukkit.getWorlds();
+        if (worlds.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&cNu exista lumi incarcate pentru mapping demo.");
+            return null;
+        }
+
+        World world = worlds.get(0);
+        Location spawn = world.getSpawnLocation();
+        return new WorldCommandLocation(
+            world.getName(),
+            spawn.getBlockX(),
+            spawn.getBlockY(),
+            spawn.getBlockZ(),
+            world.getMinHeight(),
+            world.getMaxHeight(),
+            true
+        );
     }
 
     private boolean handleWorldBind(CommandSender sender, String[] args) {
@@ -4008,6 +4630,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world scan village [radius] [import] [regionId]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world demo create [regionId]");
+        plugin.getMessageUtils().send(sender, "&7  Din consola/RCON foloseste spawn-ul lumii incarcate");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bindings [limit]");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bindings npc <numeNpc|nearest|npcId|uuid>");
@@ -7712,7 +8335,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Reseteaza progresul quest-ului pentru un jucator");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest complete <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa");
-        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]");
         plugin.getMessageUtils().send(sender, "&7  Listeaza ancorele semantice persistate pentru questuri");
         plugin.getMessageUtils().send(sender, "&e/ainpc list");
         plugin.getMessageUtils().send(sender, "&7  Lista toate NPC-urile");
@@ -7733,7 +8356,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc world scan village [radius] [import] [regionId]");
         plugin.getMessageUtils().send(sender, "&7  Scaneaza sat vanilla si poate importa mapping semantic AINPC");
         plugin.getMessageUtils().send(sender, "&e/ainpc world demo create [regionId]");
-        plugin.getMessageUtils().send(sender, "&7  Creeaza un mapping demo minim in jurul pozitiei tale");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza mapping demo la pozitia ta; consola/RCON foloseste spawn-ul lumii");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]");
         plugin.getMessageUtils().send(sender, "&7  Leaga un NPC la home/work/social places din mapping");
         plugin.getMessageUtils().send(sender, "&e/ainpc world bindings [list|npc|place] ...");
@@ -7746,6 +8369,10 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa household-uri pentru casele din regiune");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
         plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand [mode|pos1|pos2|point|status|clear]");
+        plugin.getMessageUtils().send(sender, "&7  Selecteaza geometrie sau puncte pentru mapping manual asistat");
+        plugin.getMessageUtils().send(sender, "&e/ainpc map <region|place|node> <descriere>");
+        plugin.getMessageUtils().send(sender, "&7  Creeaza draft mapping cu preview si confirmare inainte de scriere");
         plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza contextul narativ curent din mapping si quest anchors");
         plugin.getMessageUtils().send(sender, "&e/ainpc story region <regionId>");

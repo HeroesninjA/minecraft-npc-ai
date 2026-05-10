@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-10
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -142,6 +142,7 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
   - hub principal
   - quest log navigabil peste snapshot-ul GUI generic din `ProgressionService`, cu filtre interactive pentru `all`, `active`, `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`, paginare initiala si grupare vizuala dupa mecanica
   - detalii quest cu obiective, stage-uri, recompense, status, tracking, debug admin si abandon cu confirmare
+  - detalii quest/progresie cu card read-only pentru ancorele persistate in `quest_anchor_bindings`, lore pe obiectivele mapate si shortcut admin catre diagnosticul `/ainpc quest anchors`
   - world context peste `WorldAdminApi`
   - statistici jucator si NPC-uri apropiate
   - interactiune NPC cu info, quest status, rutina curenta si actiuni rapide pentru nearest quest/story/routine
@@ -257,6 +258,7 @@ Ce este implementat:
 - `ProgressionDefinition` modeleaza read-only definitiile jucabile din feature packs, cu `progression_id`, pack, mecanica, kind, template, cod, obiective, stages si rewards
 - `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionGuiSnapshot`, `ProgressionGuiEntry` si `ProgressionStageSnapshot` exista initial ca modele compatibile peste status/progress/GUI, cu player, selector, metadata de mecanica si continut structurat pentru obiective/stage-uri
 - `ProgressionRepository` citeste read-only progresul persistent din `player_quests` ca `StoredProgression`, iar `ProgressionService.getStoredProgressions()` expune view-ul generic fara migrare DB
+- `ProgressionRepository` poate citi binding-urile persistate ale unei progresii dupa `template_id`, cu fallback dupa `quest_code` pentru cazuri compatibile
 - `StoredProgressionSummary` agrega progresul persistent dupa jucatori, status, pack, template, mecanica si kind, fiind folosit de comanda `stored` si debugdump
 - comanda read-only `/ainpc progression definitions [filter]` listeaza definitiile generice de progres vazute de runtime, iar `/ainpc contract definitions [filter]`, `/ainpc duty definitions [filter]`, `/ainpc bounty definitions [filter]`, `/ainpc event definitions [filter]`, `/ainpc tutorial definitions [filter]` si `/ainpc ritual definitions [filter]` ofera aliasuri filtrate
 - comanda admin read-only `/ainpc progression stored [jucator|uuid|all] [filter] [limit]` listeaza progresiile persistate, iar `/ainpc contract stored ...`, `/ainpc duty stored ...`, `/ainpc bounty stored ...`, `/ainpc event stored ...`, `/ainpc tutorial stored ...` si `/ainpc ritual stored ...` aplica filtre implicite
@@ -277,7 +279,8 @@ Ce este implementat:
 - rezolvare initiala de ancore semantice prin `QuestAnchorResolver`
 - persistenta dedicata a ancorelor rezolvate in `quest_anchor_bindings`
 - reflectare a ancorelor rezolvate in `questVariables` pentru compatibilitate runtime
-- comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId]`
+- comanda admin read-only `/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]`
+- `/ainpc quest anchors` accepta si codul progresiei/questului ca fallback cand filtrul nu gaseste un `template_id`
 - raport dedicat `quest-audit-report.txt` si export complet `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, `story-states.json` si `story-events.json` prin `/ainpc debugdump quest`
 - `loaded-quest-definitions.json` include acum si `progression_definitions`, generate din `ProgressionService`
 - audit read-only `/ainpc audit quest`
@@ -451,9 +454,14 @@ Capabilitati implementate:
 - `WorldContextSnapshot` initial pentru context semantic in `NPCContext` si prompt AI
 - `StoryContextService` initial pentru context narativ peste mapping si quest anchors
 - comenzi admin pentru inspectie si creare manuala
-- comanda `/ainpc world demo create [regionId]` pentru generare rapida de mapping demo semantic in jurul jucatorului
+- comanda `/ainpc world demo create [regionId]` pentru generare rapida de mapping demo semantic la pozitia jucatorului sau, din consola/RCON, la spawn-ul lumii
 - mapping-ul demo foloseste un layout semantic mai spatios pentru case, piata, locuri de munca si altar, dar nu construieste blocuri fizice si nu niveleaza terenul
 - comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
+- comanda `/ainpc wand` pentru selectie manuala pos1/pos2/punct in harta construita
+- comanda `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` cu parser determinist, `preview`, `confirm` si `cancel`
+- `MappingDraft` initial pentru creare validata de `Region`, `Place` si `Node` prin `WorldAdminService`
+- `MappingDraft` pentru `npc_bind`, confirmat prin acelasi flux, care actualizeaza ancora home/work/social din profilul NPC, metadata mapping si `npc_world_bindings`
+- `MappingDraft` pentru `quest_anchor`, confirmat prin acelasi flux, care rezolva playerul/progresia si scrie sau actualizeaza `quest_anchor_bindings`
 - comanda `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - comanda `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - tabela `npc_world_bindings` pentru binding-uri persistente NPC -> home/work/social places si nodes
@@ -497,6 +505,7 @@ Limitari actuale:
 - household plannerul actual este minim si determinist; nu genereaza inca familii narative complexe sau populatie pe tot satul
 - settlement spawn ruleaza household-uri secvential, se opreste la prima eroare si sterge NPC-urile create in household-uri anterioare
 - rollback-ul global este practic la nivel de NPC, nu tranzactie DB completa peste mapping/family bind
+- draft-ul `quest_anchor` din wand cere progresie existenta in `player_quests`; nu porneste automat questuri si nu inventeaza `objective_id`
 
 ## Comenzi existente
 

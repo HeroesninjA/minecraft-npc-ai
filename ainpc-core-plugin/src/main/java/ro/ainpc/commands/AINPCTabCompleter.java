@@ -26,7 +26,7 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "wand", "map", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
     private static final List<String> GUI_MODES = Arrays.asList(
         "main", "quest", "progresii", "progression", "world", "stats", "interact", "routine", "shop", "manager", "audit", "debug"
@@ -84,6 +84,9 @@ public class AINPCTabCompleter implements TabCompleter {
         "kind:ritual", "scenario:ritual", "base:RITUAL", "mechanic:village_rituals"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "bindings", "household", "settlement", "save");
+    private static final List<String> WAND_ACTIONS = Arrays.asList("mode", "pos1", "pos2", "point", "status", "clear");
+    private static final List<String> WAND_MODES = Arrays.asList("region", "place", "node", "npc_bind", "quest_anchor");
+    private static final List<String> MAP_ACTIONS = Arrays.asList("region", "place", "node", "npc_bind", "quest_anchor", "preview", "confirm", "cancel");
     private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
@@ -221,6 +224,18 @@ public class AINPCTabCompleter implements TabCompleter {
                 }
                 case "world" -> {
                     completions.addAll(completeWorldArgs(sender, args));
+                }
+                case "wand" -> {
+                    if (args.length == 2) {
+                        completions.addAll(filterStartsWith(WAND_ACTIONS, args[1]));
+                    } else if (args.length == 3 && "mode".equalsIgnoreCase(args[1])) {
+                        completions.addAll(filterStartsWith(WAND_MODES, args[2]));
+                    }
+                }
+                case "map" -> {
+                    if (args.length == 2) {
+                        completions.addAll(filterStartsWith(MAP_ACTIONS, args[1]));
+                    }
                 }
                 case "story" -> {
                     completions.addAll(completeStoryArgs(args));
@@ -493,7 +508,7 @@ public class AINPCTabCompleter implements TabCompleter {
                 } else if (questMode.equals("progress") || questMode.equals("progres")) {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));
                 } else if (questMode.equals("anchors")) {
-                    completions.add("<templateId>");
+                    completions.add("<templateId|questCode>");
                 } else if (questMode.equals("log")) {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[2]));
                     completions.addAll(getOnlinePlayerNames(questArgs[2]));

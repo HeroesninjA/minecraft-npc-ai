@@ -1,6 +1,6 @@
 # Mapping
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-10
 
 ## Scop
 
@@ -33,7 +33,7 @@ Ideea de baza ramane:
 
 Pentru harti construite manual, vezi si `docs/mapping-harti-manuale.md`.
 Documentul acela explica de ce pluginul nu poate deduce sigur din blocuri ce este o casa, o fierarie, o cripta sau un regat si cum trebuie adaugat stratul semantic de catre admin.
-Directia recomandata pentru urmatorul pas de authoring este wand + prompt natural: wand-ul selecteaza geometria sau punctul, iar promptul adminului descrie sensul, de exemplu "aici va fi casa fierarului".
+Directia de authoring manual are acum o baza initiala: wand-ul selecteaza geometria sau punctul, iar promptul adminului descrie sensul, de exemplu "aici va fi casa fierarului".
 
 ## Ce exista implementat
 
@@ -214,14 +214,23 @@ Sunt disponibile deja:
 - `/ainpc world scan village [radius]`
 - `/ainpc world scan village [radius] import [regionId]`
 - `/ainpc world demo create [regionId]`
+  - din consola/RCON foloseste spawn-ul primei lumi incarcate; in joc foloseste pozitia jucatorului
 - `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
+- `/ainpc wand`
+- `/ainpc wand mode <region|place|node|npc_bind|quest_anchor>`
+- `/ainpc wand <pos1|pos2|point|status|clear>`
+- `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>`
+- `/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]`
+- `/ainpc map preview`
+- `/ainpc map confirm`
+- `/ainpc map cancel`
 - `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - `/ainpc world save`
 - `/ainpc audit [all|npc|world|db|spawn|quest]`
 - `/ainpc debugdump [all|npc|world|quest|story|openai]`
 
-Nu exista inca `/ainpc wand` sau `/ainpc map <descriere libera>`. Directia pentru aceste comenzi este documentata in `docs/mapping-harti-manuale.md` ca authoring manual asistat prin draft, preview si confirmare.
+`/ainpc wand` si `/ainpc map ...` sunt implementate initial pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`, cu draft, preview si confirmare. `quest_anchor` cere context de jucator/progresie/objective_id si scrie controlat in `quest_anchor_bindings`.
 
 ### Demo mapping minim
 
@@ -375,11 +384,22 @@ Dupa reload/restart se verifica din nou:
 /ainpc world places demo_sat
 ```
 
+Pentru fluxul wand complet, `scripts/smoke-paper-mapping.ps1` genereaza si o sectiune manuala care trebuie rulata in joc ca OP:
+
+```text
+/ainpc wand mode region -> pos1/pos2 -> /ainpc map region ...
+/ainpc wand mode place -> pos1/pos2 -> /ainpc map place ...
+/ainpc wand mode node -> point -> /ainpc map node ...
+/ainpc wand mode npc_bind -> point -> /ainpc map npc_bind ...
+/ainpc wand mode quest_anchor -> point -> /ainpc map quest_anchor ...
+```
+
 Conditie de iesire:
 
 - mapping-ul ramane incarcat dupa reload
 - NPC-urile spawnate raman legate de case, work/social places si familie
 - auditul nu raporteaza erori de spawn order sau places lipsa
+- `npc_world_bindings` si `quest_anchor_bindings` pot fi inspectate dupa confirmarea draft-urilor wand
 
 ### Faza M2: Persistenta dedicata NPC-place
 
@@ -1012,13 +1032,13 @@ Pe termen lung, configurarea manuala devine lenta.
 
 Imbunatatiri utile:
 
-- selectie din world cu doua colturi
-- `setpos1 / setpos2` intern
-- wand dedicat pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`
-- prompt natural peste selectie, de exemplu "aici este casa fierarului"
-- draft semantic cu preview si confirmare inainte de scriere
-- creare `place` din selectie
-- creare `node` la pozitia curenta
+- selectie din world cu doua colturi - implementat initial prin `/ainpc wand`
+- `setpos1 / setpos2` intern - implementat initial prin `/ainpc wand pos1|pos2`
+- wand dedicat pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor` - implementat initial
+- prompt natural determinist peste selectie, de exemplu "aici este casa fierarului" - implementat initial prin `/ainpc map ...`
+- draft semantic cu preview si confirmare inainte de scriere - implementat initial pentru `region`/`place`/`node`, bind NPC-place si quest anchors persistente
+- creare `place` din selectie - implementat initial
+- creare `node` la pozitia curenta - implementat initial prin punctul wand
 - highlight vizual pentru region / place / node
 - export rapid din selectie
 

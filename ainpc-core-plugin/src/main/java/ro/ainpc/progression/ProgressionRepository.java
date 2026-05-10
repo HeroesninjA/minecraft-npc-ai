@@ -66,14 +66,80 @@ public class ProgressionRepository {
     public List<ProgressionAnchorBinding> findAnchorBindings(String playerUuid,
                                                              String templateId,
                                                              int limit) throws SQLException {
-        return queryAnchorBindings(playerUuid, templateId, "", "", limit);
+        return queryAnchorBindings(playerUuid, templateId, "", "", "", limit);
+    }
+
+    public List<ProgressionAnchorBinding> findAnchorBindingsForProgression(String playerUuid,
+                                                                           String templateId,
+                                                                           String questCode,
+                                                                           int limit) throws SQLException {
+        String safeTemplateId = valueOrEmpty(templateId);
+        String safeQuestCode = valueOrEmpty(questCode);
+        if (!safeTemplateId.isBlank()) {
+            List<ProgressionAnchorBinding> rows = queryAnchorBindings(playerUuid, safeTemplateId, "", "", "", limit);
+            if (!rows.isEmpty() || safeQuestCode.isBlank()) {
+                return rows;
+            }
+        }
+        return queryAnchorBindings(playerUuid, "", safeQuestCode, "", "", limit);
     }
 
     public List<ProgressionAnchorBinding> findAnchorBindingsForAnchor(String playerUuid,
                                                                       String anchorType,
                                                                       String anchorId,
                                                                       int limit) throws SQLException {
-        return queryAnchorBindings(playerUuid, "", anchorType, anchorId, limit);
+        return queryAnchorBindings(playerUuid, "", "", anchorType, anchorId, limit);
+    }
+
+    public void saveAnchorBinding(ProgressionAnchorBinding binding) throws SQLException {
+        if (statementProvider == null) {
+            throw new SQLException("StatementProvider indisponibil");
+        }
+        if (binding == null) {
+            throw new IllegalArgumentException("Binding-ul quest anchor este null.");
+        }
+        if (binding.playerUuid().isBlank()
+            || binding.templateId().isBlank()
+            || binding.objectiveKey().isBlank()
+            || binding.objectiveType().isBlank()
+            || binding.anchorType().isBlank()
+            || binding.anchorId().isBlank()) {
+            throw new IllegalArgumentException("Quest anchor binding incomplet.");
+        }
+
+        long now = System.currentTimeMillis();
+        long createdAt = binding.createdAt() > 0L ? binding.createdAt() : now;
+        long updatedAt = binding.updatedAt() > 0L ? binding.updatedAt() : now;
+        String sql = """
+            INSERT INTO quest_anchor_bindings (
+                player_uuid, template_id, objective_key, quest_code, objective_type, reference,
+                anchor_type, anchor_id, anchor_label, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(player_uuid, template_id, objective_key) DO UPDATE SET
+                quest_code = excluded.quest_code,
+                objective_type = excluded.objective_type,
+                reference = excluded.reference,
+                anchor_type = excluded.anchor_type,
+                anchor_id = excluded.anchor_id,
+                anchor_label = excluded.anchor_label,
+                updated_at = excluded.updated_at
+        """;
+
+        try (PreparedStatement statement = statementProvider.prepareStatement(sql)) {
+            statement.setString(1, binding.playerUuid());
+            statement.setString(2, binding.templateId());
+            statement.setString(3, binding.objectiveKey());
+            statement.setString(4, binding.questCode());
+            statement.setString(5, binding.objectiveType());
+            statement.setString(6, binding.reference());
+            statement.setString(7, binding.anchorType());
+            statement.setString(8, binding.anchorId());
+            statement.setString(9, binding.anchorLabel());
+            statement.setLong(10, createdAt);
+            statement.setLong(11, updatedAt);
+            statement.executeUpdate();
+        }
     }
 
     private StoredProgression toStoredProgression(ResultSet resultSet,
@@ -113,6 +179,7 @@ public class ProgressionRepository {
 
     private List<ProgressionAnchorBinding> queryAnchorBindings(String playerUuid,
                                                                String templateId,
+                                                               String questCode,
                                                                String anchorType,
                                                                String anchorId,
                                                                int limit) throws SQLException {
@@ -122,6 +189,7 @@ public class ProgressionRepository {
 
         String safePlayerUuid = valueOrEmpty(playerUuid);
         String safeTemplateId = valueOrEmpty(templateId);
+        String safeQuestCode = valueOrEmpty(questCode);
         String safeAnchorType = valueOrEmpty(anchorType);
         String safeAnchorId = valueOrEmpty(anchorId);
         StringBuilder sql = new StringBuilder("""
@@ -141,6 +209,9 @@ public class ProgressionRepository {
         if (!safeTemplateId.isBlank()) {
             sql.append(" AND b.template_id = ?");
             parameters.add(safeTemplateId);
+        } else if (!safeQuestCode.isBlank()) {
+            sql.append(" AND LOWER(b.quest_code) = ?");
+            parameters.add(safeQuestCode.toLowerCase(Locale.ROOT));
         }
         if (!safeAnchorType.isBlank()) {
             sql.append(" AND LOWER(b.anchor_type) = ?");

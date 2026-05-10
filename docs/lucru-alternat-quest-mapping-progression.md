@@ -1,6 +1,6 @@
 # Lucru Alternat: Quest, Mapping, ProgressionService si GUI
 
-Actualizat: 2026-05-09
+Actualizat: 2026-05-10
 
 ## Scop
 
@@ -302,6 +302,150 @@ Daca una dintre cele cinci lipseste, slice-ul nu este gata.
 - GUI: slotul de progresii deschide log-ul filtrat `active` prin click si `all` prin right click, iar slotul de ancore arata potrivirile pentru regiunea/place/node curent si ruleaza diagnosticul `/ainpc quest anchors all`.
 - Debug/audit: ancorele persistate sunt accesibile din World GUI pentru cazurile in care obiectivele nu se leaga de mapping-ul semantic.
 - Limita: acest pas nu introduce filtrare spatiala reala pe progressii; doar face vizibila puntea intre world context, snapshot-ul generic si diagnosticul de ancore.
+
+`GUI-MAP-02 - Detaliu Progression -> Ancore Persistate` extinde puntea in ecranul de detalii:
+
+- Mapping: detaliul unei progresii arata binding-urile persistate din `quest_anchor_bindings` pentru template-ul/codul progresiei selectate.
+- Quest/progression: foloseste `ProgressionService`, nu query direct din GUI, ca sa pastreze progresiile generice peste quest/contract/duty/bounty/event/tutorial/ritual.
+- GUI: `QuestDetailGui` are card dedicat pentru ancore; jucatorul vede read-only binding-urile proprii, obiectivele mapate afiseaza ancora persistata, iar adminul poate deschide diagnosticul text cu click.
+- Persistenta: lookup-ul prefera `template_id` si cade controlat pe `quest_code` pentru progresii vechi sau template-uri mutate.
+- Debug/audit: shortcut-ul admin ruleaza `/ainpc quest anchors <player> <templateId|questCode>`, iar comanda text are acelasi fallback dupa cod ca GUI-ul.
+- Test: `ProgressionRepositoryTest` verifica citirea binding-urilor dupa template si fallback dupa cod de quest.
+
+`MAP-WAND-01 - Draft manual pentru Region/Place/Node` porneste authoring-ul asistat:
+
+- Mapping: adminul poate porni `/ainpc wand`, seta `pos1`/`pos2` sau un punct node si crea draft-uri prin `/ainpc map <region|place|node> <descriere>`.
+- Quest/progression: marker-ele de tip node pot crea deja `quest_trigger` cu metadata precum `semantic=quest_board` sau `role=quest_anchor`, fara sa scrie direct in `quest_anchor_bindings`.
+- GUI/comenzi: fluxul are preview text prin `/ainpc map preview`, confirmare explicita prin `/ainpc map confirm` si anulare prin `/ainpc map cancel`.
+- Persistenta: confirmarea scrie in runtime-ul `WorldAdminService`; persistenta finala ramane controlata prin `/ainpc world save`.
+- Debug/audit: dupa confirmare, fluxul recomandat ramane `/ainpc audit world` inainte de save.
+- Limita: bind-ul NPC si quest anchor-ul persistent sunt lasate pentru slice-urile urmatoare; aici sunt pregatite ca moduri/directionare.
+- Test: `MappingIntentParserTest`, `MappingDraftFactoryTest` si `AINPCTabCompleterTest` acopera parserul, aplicarea draft-ului si completarea comenzilor.
+
+`MAP-WAND-02 - Draft NPC Bind din Wand` extinde authoring-ul asistat catre rutina NPC:
+
+- Mapping: adminul seteaza un punct in interiorul unui `Place` si creeaza draft prin `/ainpc map npc_bind <npc|nearest> <home|work|social>`, sau foloseste modul curent `npc_bind`.
+- Quest/progression: nu modifica progresii direct, dar face NPC-urile si rutina lor consumabile mai coerent de questuri, contracte si GUI.
+- GUI/comenzi: acelasi flux `/ainpc map preview`, `/ainpc map confirm` si `/ainpc map cancel` arata selectorul NPC, rolul si locul tinta inainte de scriere.
+- Persistenta: confirmarea salveaza profilul NPC cu ancora home/work/social, actualizeaza metadata mapping in runtime si scrie/imbina randul corespunzator in `npc_world_bindings`; persistenta finala a mapping-ului ramane prin `/ainpc world save`.
+- Debug/audit: dupa confirmare, fluxul recomandat este `/ainpc world bindings`, `/ainpc audit spawn`, `/ainpc audit world` si apoi `/ainpc world save`.
+- Limita: quest anchor-ul persistent direct ramane pentru slice-ul urmator, ca sa nu amestece bind-ul NPC cu scrierea in progresii.
+- Test: `MappingDraftFactoryTest` acopera draft-ul `npc_bind`, iar `AINPCTabCompleterTest` verifica expunerea lui in completari.
+
+`MAP-WAND-03 - Quest Anchor Persistent din Wand` inchide fluxul de authoring pentru ancore de progresie:
+
+- Mapping: adminul selecteaza un punct; sistemul prefera un `Node` existent, apoi `Place`, apoi `Region` ca ancora persistenta.
+- Quest/progression: draft-ul cere selector de progresie (`tracked`, `current`, `templateId` sau `questCode`) si `objective_id`, apoi confirma doar daca progresia exista in `player_quests`.
+- GUI/comenzi: `/ainpc map quest_anchor [player:<jucator|uuid>] <selector> <objective_id> [objective_type] [reference]` are preview si confirmare prin acelasi flux `/ainpc map preview|confirm|cancel`.
+- Persistenta: confirmarea face upsert in `quest_anchor_bindings` pe cheia `player_uuid/template_id/objective_key`, cu `quest_code`, `objective_type`, `reference`, `anchor_type`, `anchor_id` si label.
+- Debug/audit: verificarea ramane `/ainpc quest anchors <player|uuid> <templateId|questCode>`, `/ainpc audit quest` si `quest-anchor-bindings.json`.
+- Limita: fluxul nu porneste questuri si nu ghiceste `objective_id`; adminul trebuie sa lege o progresie deja existenta.
+- Test: `MappingDraftFactoryTest` acopera draft-ul `quest_anchor`, `ProgressionRepositoryTest` acopera upsert-ul persistent, iar `AINPCTabCompleterTest` expune actiunea.
+
+## Urmatoarele 100 de faze recomandate
+
+Aceste faze sunt intentionat mici. Fiecare faza trebuie sa lase in urma cel putin o verificare: test automat, comanda Paper rulabila, audit, debugdump sau actualizare GUI.
+
+1. F001 - Finalizat 2026-05-10: ruleaza smoke Paper pentru startup, `/plugins`, `/ainpc`, `/ainpc audit all` si shutdown curat.
+2. F002 - Finalizat 2026-05-10: documenteaza rezultatul smoke Paper in `debugging-si-testare.md`, cu data, versiune Java si versiune Paper.
+3. F003 - Finalizat 2026-05-10: ruleaza smoke Paper pentru `/ainpc world demo create demo_sat`, audit world si save.
+4. F004 - Finalizat 2026-05-10: verifica dupa restart ca `demo_sat`, places si nodes raman incarcate.
+5. F005 - Finalizat 2026-05-10: ruleaza `settlement plan` pe `demo_sat` si salveaza raportul de planificare.
+6. F006 - Finalizat 2026-05-10: ruleaza `settlement spawn` cu limita mica, de exemplu 2 case, si verifica rollback-ul.
+7. F007 - Finalizat 2026-05-10: ruleaza `settlement spawn` complet si verifica `npc_world_bindings`.
+8. F008 - Finalizat 2026-05-10: verifica rutina NPC dupa spawn: home, work, social si slot curent in GUI.
+9. F009 - Finalizat 2026-05-10: verifica pathfinding Paper catre ancore si noteaza cazurile unde cade pe teleport fallback.
+10. F010 - Finalizat 2026-05-10: ruleaza `debugdump world` si confirma ca mapping-ul, bindings si households apar coerent.
+11. F011 - Ruleaza smoke manual pentru `/ainpc wand mode region` pe o zona mica.
+12. F012 - Ruleaza smoke manual pentru `/ainpc wand mode place` intr-o regiune existenta.
+13. F013 - Ruleaza smoke manual pentru `/ainpc wand mode node` cu `quest_board`.
+14. F014 - Ruleaza smoke manual pentru `/ainpc map preview|confirm|cancel` pe fiecare tip de draft.
+15. F015 - Verifica erorile de selectie invalida: fara regiune, fara place, fara point.
+16. F016 - Adauga audit pentru draft-uri wand confirmate recent, daca logul operational nu este suficient.
+17. F017 - Adauga preview vizual cu particule pentru bounds region/place.
+18. F018 - Adauga preview vizual cu particule pentru node radius.
+19. F019 - Adauga comanda de inspectie pentru ultima selectie wand a jucatorului.
+20. F020 - Adauga optiune de reset partial pentru `pos1`, `pos2` sau `point`.
+21. F021 - Ruleaza smoke pentru `npc_bind nearest home` peste o casa.
+22. F022 - Ruleaza smoke pentru `npc_bind nearest work` peste fierarie/ferma/shop.
+23. F023 - Ruleaza smoke pentru `npc_bind nearest social` peste piata/taverna.
+24. F024 - Verifica dupa restart ca profilul NPC pastreaza ancorele home/work/social.
+25. F025 - Verifica dupa restart ca `npc_world_bindings` pastreaza place/node IDs.
+26. F026 - Adauga audit pentru divergenta intre profil NPC si `npc_world_bindings`.
+27. F027 - Adauga reparare dry-run pentru divergenta profil NPC -> `npc_world_bindings`.
+28. F028 - Adauga reparare dry-run pentru divergenta `npc_world_bindings` -> metadata mapping.
+29. F029 - Adauga sumar in GUI Routine pentru place/node IDs persistate.
+30. F030 - Adauga shortcut din Routine GUI catre `/ainpc world bindings npc <id>`.
+31. F031 - Ruleaza smoke pentru `quest_anchor tracked <objective_id>` pe node.
+32. F032 - Ruleaza smoke pentru `quest_anchor current <objective_id>` pe place.
+33. F033 - Ruleaza smoke pentru `quest_anchor <templateId> <objective_id>` pe region.
+34. F034 - Ruleaza smoke pentru `quest_anchor player:<nume> <questCode> <objective_id>`.
+35. F035 - Verifica dupa restart ca `quest_anchor_bindings` ramane si apare in `/ainpc quest anchors`.
+36. F036 - Verifica `QuestDetailGui` dupa manual anchor, cu lore pe obiectivul mapat.
+37. F037 - Adauga validare mai stricta pentru `objective_id` fata de definitia progresiei.
+38. F038 - Adauga sugestii de `objective_id` in tab completion pentru progresia tracked.
+39. F039 - Adauga optiune de listare obiective mapabile pentru o progresie selectata.
+40. F040 - Adauga rollback controlat pentru inlocuirea unui quest anchor manual gresit.
+41. F041 - Ruleaza Q01 cap-coada pe Paper: oferta, acceptare, progres, completare, reward.
+42. F042 - Ruleaza Q02 cap-coada pe Paper si verifica persistenta dupa restart.
+43. F043 - Ruleaza Q03 cap-coada pe Paper si verifica abandon/reacceptare.
+44. F044 - Ruleaza Q04 cap-coada pe Paper si verifica edge cases de inventar.
+45. F045 - Ruleaza Q05 cap-coada pe Paper si verifica tracking marker.
+46. F046 - Ruleaza Q06 pe mapping demo cu `visit_place` si `inspect_node`.
+47. F047 - Ruleaza Q07 delivery/social si verifica NPC secundar.
+48. F048 - Ruleaza Q08 hunt si verifica `visit_region`, combat si raportare.
+49. F049 - Verifica `quest log`, `quest status`, `quest progress` pentru Q01-Q08.
+50. F050 - Verifica `quest anchors` pentru toate questurile active dupa restart.
+51. F051 - Ruleaza C01 ca progres non-quest prin `/ainpc contract`.
+52. F052 - Ruleaza C02 pe mapping demo cu piata si `quest_board`.
+53. F053 - Ruleaza D01 prin `/ainpc duty` si verifica status/progress/stored.
+54. F054 - Ruleaza B01 prin `/ainpc bounty` si verifica story event regional.
+55. F055 - Ruleaza B02 prin `/ainpc bounty` si verifica `tag:farm`.
+56. F056 - Ruleaza E01 prin `/ainpc event` si verifica story event pe place.
+57. F057 - Ruleaza T01 prin `/ainpc tutorial` si verifica onboarding GUI.
+58. F058 - Ruleaza R01 prin `/ainpc ritual` si verifica altarul demo.
+59. F059 - Verifica limitele `max_active` intre questuri si mecanici non-quest.
+60. F060 - Verifica `progression stored all` dupa toate mecanicile rulate.
+61. F061 - Extinde `ProgressionService` cu metoda read-only pentru obiectivele unei progresii stocate.
+62. F062 - Mută formatarile comune de status/progress din comenzi in snapshot-uri reutilizabile.
+63. F063 - Adauga selector comun pentru `tracked/current/templateId/questCode` reutilizat de comenzi si GUI.
+64. F064 - Adauga API read-only pentru anchors pe obiectiv, nu doar pe progresie.
+65. F065 - Adauga sumar generic pentru progresii curente pe regiune/place/node.
+66. F066 - Adauga cautare de progresii dupa anchor `region/place/node/npc`.
+67. F067 - Adauga cache scurt pentru definitii progression, invalidat la reload.
+68. F068 - Adauga validare pentru definitii duplicate dupa `mechanic:definition`.
+69. F069 - Adauga raport de compatibilitate pentru progresii fara definitie incarcata.
+70. F070 - Pregateste contractul pentru viitoare tabela `player_progressions`, fara migrare activa.
+71. F071 - Extinde Quest GUI cu grupare mai clara pe tracked/current/offered.
+72. F072 - Extinde Quest Detail GUI cu actiuni rapide pentru track/status/debug.
+73. F073 - Extinde Quest Detail GUI cu lista completa de anchors pe obiective.
+74. F074 - Extinde World GUI cu progresii active legate de place-ul curent.
+75. F075 - Extinde World GUI cu progresii active legate de node-ul curent.
+76. F076 - Extinde Routine GUI cu legaturi catre home/work/social place info.
+77. F077 - Adauga GUI read-only pentru `npc_world_bindings`.
+78. F078 - Adauga GUI read-only pentru `quest_anchor_bindings`.
+79. F079 - Adauga ecran GUI de audit compact pentru world/quest/db/spawn.
+80. F080 - Adauga fallback text pentru fiecare actiune GUI noua.
+81. F081 - Extinde `/ainpc audit world` cu validare pentru suprapuneri suspecte de places.
+82. F082 - Extinde `/ainpc audit world` cu validare pentru nodes in afara containerului.
+83. F083 - Extinde `/ainpc audit quest` cu validare de `objective_id` fata de template.
+84. F084 - Extinde `/ainpc audit quest` cu raport pentru anchors manuale vs anchors rezolvate automat.
+85. F085 - Extinde `/ainpc audit db` cu validare pentru timestamps si randuri orfane.
+86. F086 - Extinde `debugdump world` cu ultima versiune de semantic index.
+87. F087 - Extinde `debugdump quest` cu rezumat pe obiective active si anchors.
+88. F088 - Extinde `debugdump story` cu legaturi catre progresii care au scris story state.
+89. F089 - Adauga raport scurt de smoke test generat automat din debugdump.
+90. F090 - Adauga checklist pentru compararea starii inainte/dupa restart.
+91. F091 - Adauga generator narativ minim pentru nume si roluri pe regiune.
+92. F092 - Leaga generatorul narativ de `HouseAllocation` fara sa schimbe spawn-ul existent.
+93. F093 - Adauga distributie determinista pe familii pentru case.
+94. F094 - Adauga distributie determinista pe work places dupa ocupatie.
+95. F095 - Adauga distributie determinista pe social places dupa regiune.
+96. F096 - Expune planul narativ in comanda dry-run inainte de spawn.
+97. F097 - Scrie planul narativ in debugdump fara sa modifice DB.
+98. F098 - Ruleaza smoke Paper pentru populatie generata pe regiune mica.
+99. F099 - Stabileste criteriile de release `paper-test` pentru mapping/progression/gui.
+100. F100 - Marcheaza demo-ul ca matur doar dupa smoke Paper complet, restart, audit, debugdump si raport documentat.
 
 ## Gate pentru demo playable matur
 

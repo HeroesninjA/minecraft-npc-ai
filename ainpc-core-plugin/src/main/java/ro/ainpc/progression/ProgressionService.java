@@ -89,11 +89,22 @@ public class ProgressionService {
         return repository.findAnchorBindings(playerUuid, templateId, limit);
     }
 
+    public List<ProgressionAnchorBinding> getAnchorBindingsForProgression(String playerUuid,
+                                                                          String templateId,
+                                                                          String questCode,
+                                                                          int limit) throws SQLException {
+        return repository.findAnchorBindingsForProgression(playerUuid, templateId, questCode, limit);
+    }
+
     public List<ProgressionAnchorBinding> getAnchorBindingsForAnchor(String playerUuid,
                                                                      String anchorType,
                                                                      String anchorId,
                                                                      int limit) throws SQLException {
         return repository.findAnchorBindingsForAnchor(playerUuid, anchorType, anchorId, limit);
+    }
+
+    public void saveAnchorBinding(ProgressionAnchorBinding binding) throws SQLException {
+        repository.saveAnchorBinding(binding);
     }
 
     public ScenarioEngine.QuestInteractionResult getStatus(Player player, String selector) {
