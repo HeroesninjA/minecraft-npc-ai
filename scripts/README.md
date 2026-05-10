@@ -60,6 +60,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
   -RegionId "sat_test"
 ```
 
+Fara sectiunea manuala pentru wand:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -SkipWandFlow
+```
+
 Ce face:
 
 - ruleaza `mvn package -DskipTests`, daca nu folosesti `-SkipBuild`
@@ -68,7 +76,7 @@ Ce face:
 - genereaza `ainpc-mapping-smoke-commands.txt` in folderul serverului
 - genereaza `ainpc-mapping-smoke-report.txt` cu hash-uri si verificari de baza
 
-Comenzile generate trebuie rulate in consola Paper sau in joc ca OP.
+Comenzile generate includ fluxul demo/settlement pentru consola Paper si o sectiune manuala pentru `wand` care trebuie rulata in joc ca OP, deoarece `pos1`/`pos2`/`point` folosesc pozitia jucatorului.
 
 ## Paper Quest Smoke Test
 

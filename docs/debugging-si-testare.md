@@ -81,6 +81,7 @@ Scop:
 - copiaza pluginul core si addonul medieval in `plugins/`
 - genereaza comenzile de rulat in `ainpc-mapping-smoke-commands.txt`
 - genereaza raport cu hash-uri in `ainpc-mapping-smoke-report.txt`
+- include implicit o sectiune manuala pentru fluxul wand complet: `region`, `place`, `node`, `npc_bind` si `quest_anchor`
 
 Rulare simpla:
 
@@ -95,6 +96,14 @@ Cu teste Maven inainte de package:
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
   -ServerDir "C:\Minecraft\paper-test" `
   -RunTests
+```
+
+Daca vrei doar fluxul demo/settlement, fara comenzile manuale de wand:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -SkipWandFlow
 ```
 
 ### `scripts/debug-openai.ps1`
@@ -549,6 +558,210 @@ Comenzi smoke test:
 /ainpc world whereami
 /ainpc world places
 ```
+
+### Raport F001 - 2026-05-10
+
+Status: trecut prin Paper + RCON.
+
+Mediu validat:
+
+- server temporar: `%TEMP%/ainpc-paper-f001-rcon-clean-20260510-153820`
+- Paper: `1.21.11-69`
+- Java: `21.0.11` Temurin
+- pluginuri incarcate: `AINPCPlugin 1.0.0`, `AINPCScenarioMedieval 1.0.0`
+- log comenzi: `%TEMP%/ainpc-paper-f001-rcon-clean-20260510-153820/f001-rcon-output-clean.txt`
+
+Rezultat validat:
+
+- serverul Paper a pornit si a ajuns la `Done (26.817s)`;
+- `AINPCPlugin` s-a activat;
+- addonul medieval s-a incarcat;
+- RCON a pornit pe portul local de test;
+- `/plugins` a raportat `AINPCPlugin` si `AINPCScenarioMedieval`;
+- `/ainpc` a afisat meniul de comenzi;
+- `/ainpc audit all` a raportat `0 erori` si `2 warning-uri` asteptate pentru server gol;
+- `stop` prin RCON a facut shutdown curat, cu salvarea dimensiunilor si dezactivarea pluginului.
+
+Observatie tehnica:
+
+- injectarea comenzilor prin stdin/pipe PowerShell a declansat in Paper `NullPointerException` in `CommandSourceStack.getLevel()`;
+- F001 este considerat trecut prin RCON, deoarece comenzile sunt trimise dupa startup complet si shutdown-ul este curat;
+- warning-ul OpenAI este asteptat in mediul fara `OPENAI_API_KEY`.
+
+### Raport F003 - 2026-05-10
+
+Status: trecut prin Paper + RCON.
+
+Mediu validat:
+
+- server temporar: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- Paper: `1.21.11-69`
+- Java: `21.0.11` Temurin
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f003-rcon-output.txt`
+
+Rezultat validat:
+
+- `/ainpc world demo create demo_sat` a creat mapping demo pe spawn-ul lumii cand a fost rulat din RCON;
+- output: `1` regiune, `9` places, `30` nodes;
+- `/ainpc audit world` a raportat `0 erori` si `0 warning-uri`;
+- `/ainpc world save` a salvat mapping-ul in `plugins/AINPCPlugin/config.yml`;
+- `config.yml` contine regiunea `demo_sat`;
+- shutdown-ul prin `stop` a fost curat.
+
+Observatie tehnica:
+
+- comanda `world demo create` poate fi rulata acum si din consola/RCON; pentru jucatori ramane centrata pe pozitia jucatorului, iar pentru consola/RCON foloseste spawn-ul primei lumi incarcate.
+
+### Raport F004 - 2026-05-10
+
+Status: trecut dupa restart Paper.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f004-rcon-output.txt`
+
+Rezultat validat:
+
+- dupa restart, logul de startup a raportat `World admin incarcat: 1 regiuni, 9 places, 30 noduri`;
+- `/ainpc audit world` a raportat `0 erori` si `0 warning-uri`;
+- `/ainpc world places demo_sat` a listat toate cele `9` places;
+- `/ainpc world region info demo_sat` a raportat `Places: 9` si `Nodes: 30`;
+- shutdown-ul prin `stop` a fost curat.
+
+### Raport F005 - 2026-05-10
+
+Status: trecut prin settlement dry-run.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f005-rcon-output.txt`
+
+Rezultat validat:
+
+- `/ainpc world settlement plan demo_sat` a generat `4` household-uri;
+- dry-run-ul a planificat `4` NPC;
+- toate cele `4/4` household-uri au fost planificate cu succes;
+- warning-urile planului sunt asteptate inainte de spawn: casele demo nu au inca `owner_npc_id` si `metadata.residents` sincronizate;
+- `/ainpc audit world` a raportat `0 erori` si `0 warning-uri`;
+- shutdown-ul prin `stop` a fost curat.
+
+### Raport F006 - 2026-05-10
+
+Status: trecut prin settlement spawn limitat si rollback dry-run.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f006-rcon-output.txt`
+
+Rezultat validat:
+
+- `/ainpc world settlement spawn demo_sat 2` a planificat primele `2` case si a creat `2` NPC;
+- batch creat: `settlement:demo_sat:749dc162393a31c0`, status `SUCCEEDED`, `created/reused=2/0`;
+- `/ainpc audit spawn` a raportat `0 erori` si `0 warning-uri`;
+- `/ainpc world bindings list 10` a raportat `2/2` binding-uri persistente;
+- `/ainpc repair batch settlement:demo_sat:749dc162393a31c0 dryrun` a aratat rollback-ul controlat: ar sterge cei `2` NPC creati si ar recalcula resident count pentru household-urile afectate;
+- rollback-ul nu a fost aplicat, deoarece batch-ul este valid si `SUCCEEDED`;
+- `/ainpc world save` si `stop` au trecut curat.
+
+### Raport F007 - 2026-05-10
+
+Status: trecut prin settlement spawn complet.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f007-rcon-output.txt`
+
+Rezultat validat:
+
+- la startup, serverul a reincarcat cei `2` NPC creati in F006;
+- `/ainpc world settlement spawn demo_sat` a planificat `4` case si `4` NPC;
+- rezultatul a fost `4/4` household-uri reusite;
+- batch creat: `settlement:demo_sat:6353be48f6541701`, status `SUCCEEDED`, `created/reused=2/2`;
+- `/ainpc audit spawn` a raportat `0 erori` si `0 warning-uri`;
+- `/ainpc world bindings list 10` a raportat `4/4` binding-uri persistente;
+- `/ainpc world household list 10` a raportat `4` household-uri si `4` rezidenti;
+- `/ainpc list` a raportat `4` NPC incarcati;
+- `/ainpc world save` si `stop` au trecut curat.
+
+Observatie tehnica:
+
+- la rerularea completa dupa spawn-ul limitat din F006, plannerul a raportat warning-uri pentru casele 1-2 deoarece metadata runtime foloseste selectori de forma `npc_1`/`npc_2`, iar planul determinist compara cu cheia de plan; auditul spawn si `npc_world_bindings` confirma ca starea persistenta este coerenta.
+
+### Raport F008 - 2026-05-10
+
+Status: trecut headless, cu verificare de cod pentru GUI.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi initial: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f008-rcon-output.txt`
+- log comenzi cu chunk-uri fortate: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f008-forceload-rcon-output.txt`
+
+Rezultat validat:
+
+- fara chunk-uri incarcate, NPC-urile persistate apar in manager, dar nu au entitate live si `routine tick` evalueaza `0` NPC;
+- dupa `forceload add -80 -80 80 80`, chunk-urile demo au restaurat entitatile NPC;
+- `/ainpc routine tick` a raportat `NPC total: 4`, `Evaluati: 4`, `Mutati: 4`;
+- `/ainpc routine status Radu_house1_1` si `Maria_house4_1` au raportat slot `WORK`, activitate `merge la lucru`, tinta `Fierarie [work]` si entitate live cu AI/gravity/collidable active;
+- `/ainpc world bindings npc ...` confirma ancorele `home`, `work` si `social` pentru NPC-urile verificate;
+- GUI-ul nu poate fi deschis din RCON: `/ainpc gui routine` raspunde ca poate fi folosit doar de jucatori;
+- codul `RoutineGui` afiseaza in lore `Slot curent`, `Activitate`, `Goal`, `Stare tinta`, `Tinta`, `Spawned`, `Locatie` si programul zilnic.
+
+Observatie tehnica:
+
+- pentru smoke headless de rutina dupa restart, trebuie incarcat explicit chunk-ul regiunii demo sau trebuie conectat un player in zona; altfel NPC-urile raman persistate, dar fara entitate live.
+
+### Raport F009 - 2026-05-10
+
+Status: trecut ca verificare pathfinding/fallback, cu observatie de teren.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f009-rcon-output.txt`
+
+Rezultat validat:
+
+- testul a folosit `forceload add -80 -80 80 80` pentru a restaura entitatile NPC si `time set 19000` pentru slotul `HOME`;
+- inainte de tick, `Radu_house1_1` era la `69.4` blocuri de ancora home si `Maria_house4_1` la `118.5` blocuri;
+- aceste distante depasesc `routine.natural_movement.max_distance=48.0`, deci miscarea intra in fallback de teleport/path asistat, nu in pathfinding natural scurt;
+- `/ainpc routine tick` a raportat `Evaluati: 4`, `Mutati: 4`;
+- dupa tick, `Radu_house1_1` a ajuns la `0.7` blocuri de ancora home;
+- `Maria_house4_1` a ajuns pe X/Z-ul casei, dar a ramas la `17.2` blocuri de tinta din cauza diferentei verticale: ancora home este la Y `78`, iar entitatea a cazut la aproximativ Y `60.8`;
+- force-load-ul a fost eliminat la final cu `forceload remove -80 -80 80 80`;
+- shutdown-ul prin `stop` a fost curat.
+
+Observatie tehnica:
+
+- mapping-ul demo are ancore Y generate semantic, nu ajustate la terenul real. Pentru pathfinding matur, F009 indica nevoia unei faze ulterioare de snap la sol/bed node valid sau validare a ancorelor cu `highest block` inainte de rutina.
+
+### Raport F010 - 2026-05-10
+
+Status: trecut prin `debugdump world`.
+
+Mediu validat:
+
+- server temporar reutilizat: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312`
+- log comenzi: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/f010-rcon-output.txt`
+- folder dump: `%TEMP%/ainpc-paper-f003-rcon-20260510-154312/plugins/AINPCPlugin/debug-dumps/debug-dump-20260510-160906`
+
+Rezultat validat:
+
+- `/ainpc debugdump world` a generat folderul de dump fara exceptii;
+- `summary.txt` raporteaza `NPC count: 4`, `World admin enabled: true`, `Regions: 1`, `Places: 9`, `Nodes: 30`;
+- `world-mapping.json` contine `1` regiune, `9` places si `30` nodes;
+- `npc-world-bindings.json` raporteaza `row_count: 4`, `missing_place_reference_count: 0`, `missing_node_reference_count: 0`;
+- `households.json` raporteaza `household_count: 4` si `resident_count: 4`;
+- `spawn-batches.json` este prezent si acopera batch-urile F006/F007;
+- `/ainpc audit all` a raportat `0 erori` si `1 warning`.
+
+Observatie tehnica:
+
+- warning-ul ramas este pentru `medieval_quest:Q06`, obiectivul `inspect_forge_marks`, unde tokenul `type:inspect_node` nu apare in `world mapping semantic_index` pentru ancora node. Nu blocheaza mapping/spawn, dar trebuie tratat intr-o faza de aliniere quest-anchor semantic.
 
 Test dialog:
 

@@ -8,7 +8,19 @@ param(
 
     [switch]$RunTests,
 
-    [switch]$NoCopy
+    [switch]$NoCopy,
+
+    [string]$WandRegionId = "wand_sat",
+
+    [string]$QuestAnchorSelector = "tracked",
+
+    [string]$QuestAnchorObjectiveId = "inspect_board",
+
+    [string]$QuestAnchorObjectiveType = "inspect_node",
+
+    [string]$QuestAnchorReference = "node:quest_board",
+
+    [switch]$SkipWandFlow
 )
 
 Set-StrictMode -Version Latest
@@ -70,6 +82,7 @@ $hasEula = Test-Path -LiteralPath (Join-Path $serverDirFull "eula.txt")
 $hasServerProperties = Test-Path -LiteralPath (Join-Path $serverDirFull "server.properties")
 $coreHash = Get-FileHash -LiteralPath $coreJar -Algorithm SHA256
 $medievalHash = Get-FileHash -LiteralPath $medievalJar -Algorithm SHA256
+$includeWandFlow = -not $SkipWandFlow
 
 $commands = @(
     "# AINPC mapping smoke test",
@@ -91,6 +104,75 @@ $commands = @(
     "ainpc world places $RegionId"
 )
 
+if ($includeWandFlow) {
+    $commands += @(
+        "",
+        "# Flux manual wand complet - ruleaza in joc ca OP, nu in consola.",
+        "# Foloseste o zona libera. Pentru pos1/pos2/point poti folosi click cu wand-ul",
+        "# sau comenzile de mai jos, care iau pozitia curenta a jucatorului.",
+        "# Ajusteaza prompturile daca vrei ID-uri/nume diferite.",
+        "",
+        "# Region din wand",
+        "ainpc wand",
+        "ainpc wand mode region",
+        "# Mergi la primul colt si ruleaza:",
+        "ainpc wand pos1",
+        "# Mergi la al doilea colt si ruleaza:",
+        "ainpc wand pos2",
+        "ainpc map region sat $WandRegionId pentru smoke",
+        "ainpc map preview",
+        "ainpc map confirm",
+        "ainpc audit world",
+        "ainpc world save",
+        "",
+        "# Place din wand, in interiorul regiunii create",
+        "ainpc wand mode place",
+        "# Mergi la primul colt al cladirii/zonei si ruleaza:",
+        "ainpc wand pos1",
+        "# Mergi la al doilea colt al cladirii/zonei si ruleaza:",
+        "ainpc wand pos2",
+        "ainpc map place piata publica pentru smoke",
+        "ainpc map preview",
+        "ainpc map confirm",
+        "ainpc audit world",
+        "ainpc world save",
+        "",
+        "# Node din wand, in interiorul place-ului",
+        "ainpc wand mode node",
+        "# Mergi la punctul avizierului si ruleaza:",
+        "ainpc wand point",
+        "ainpc map node acesta este avizierul",
+        "ainpc map preview",
+        "ainpc map confirm",
+        "ainpc audit world",
+        "ainpc world save",
+        "",
+        "# NPC bind din wand. Trebuie sa existe un NPC incarcat aproape de jucator.",
+        "ainpc wand mode npc_bind",
+        "# Stai in place-ul tinta si ruleaza:",
+        "ainpc wand point",
+        "ainpc map npc_bind nearest social",
+        "ainpc map preview",
+        "ainpc map confirm",
+        "ainpc world bindings list",
+        "ainpc audit spawn",
+        "ainpc world save",
+        "",
+        "# Quest anchor persistent din wand.",
+        "# Inainte de acest pas, playerul trebuie sa aiba o progresie existenta in player_quests.",
+        "# Selector implicit: $QuestAnchorSelector; objective_id implicit: $QuestAnchorObjectiveId.",
+        "ainpc wand mode quest_anchor",
+        "# Stai pe node/place/region tinta si ruleaza:",
+        "ainpc wand point",
+        "ainpc map quest_anchor $QuestAnchorSelector $QuestAnchorObjectiveId $QuestAnchorObjectiveType $QuestAnchorReference",
+        "ainpc map preview",
+        "ainpc map confirm",
+        "ainpc quest anchors all",
+        "ainpc audit quest",
+        "ainpc debugdump quest"
+    )
+}
+
 Set-Content -LiteralPath $commandsPath -Value $commands -Encoding UTF8
 
 $report = @(
@@ -103,6 +185,12 @@ $report = @(
     "Build skipped: $SkipBuild",
     "Tests requested: $RunTests",
     "Copy skipped: $NoCopy",
+    "Wand flow included: $includeWandFlow",
+    "Wand region prompt token: $WandRegionId",
+    "Quest anchor selector: $QuestAnchorSelector",
+    "Quest anchor objective id: $QuestAnchorObjectiveId",
+    "Quest anchor objective type: $QuestAnchorObjectiveType",
+    "Quest anchor reference: $QuestAnchorReference",
     "",
     "Core jar: $coreJar",
     "Core SHA256: $($coreHash.Hash)",
