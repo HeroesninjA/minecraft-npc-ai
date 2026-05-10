@@ -65,6 +65,7 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\gui\screens\WorldHubGui.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\AbstractPluginListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\ListenerRegistry.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\MappingWandListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\NPCChatListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\NPCInteractionListener.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\listeners\PlayerJoinListener.java
@@ -129,6 +130,16 @@ C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\topology\TopologyConsensus.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\utils\MessageUtils.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\utils\NPCNameGenerator.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingDraft.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingDraftApplyResult.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingDraftFactory.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingDraftKind.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingDraftSuggestion.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingIntentParser.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingPoint.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingWandMode.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingWandSelection.java
+C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\mapping\MappingWandService.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\MappingIndex.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\NpcWorldBinding.java
 C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\src\main\java\ro\ainpc\world\NpcWorldBindingService.java
