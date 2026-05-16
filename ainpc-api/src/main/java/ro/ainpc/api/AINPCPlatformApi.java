@@ -22,5 +22,10 @@ public interface AINPCPlatformApi {
 
     Path getPackDirectory();
 
+    default Path getAddonConfigDirectory(String addonId) {
+        String safeAddonId = addonId == null || addonId.isBlank() ? "unknown-addon" : addonId.trim();
+        return getDataDirectory().resolve("addons").resolve(safeAddonId);
+    }
+
     void reloadContent();
 }

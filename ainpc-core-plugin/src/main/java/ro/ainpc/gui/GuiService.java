@@ -17,6 +17,7 @@ import ro.ainpc.gui.screens.QuestDetailGui;
 import ro.ainpc.gui.screens.QuestLogGui;
 import ro.ainpc.gui.screens.RoutineGui;
 import ro.ainpc.gui.screens.StatsGui;
+import ro.ainpc.gui.screens.StoryGui;
 import ro.ainpc.gui.screens.WorldHubGui;
 
 import java.util.List;
@@ -43,6 +44,7 @@ public class GuiService {
         register(new MainHubGui());
         register(new QuestLogGui());
         register(new QuestDetailGui());
+        register(new StoryGui());
         register(new WorldHubGui());
         register(new StatsGui());
         register(new NpcInteractionGui());
@@ -274,6 +276,7 @@ public class GuiService {
         return switch (key) {
             case MAIN -> hasAny(player, "ainpc.admin", "ainpc.gui");
             case QUEST, QUEST_DETAIL -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest");
+            case STORY -> hasAny(player, "ainpc.admin", "ainpc.gui.story");
             case WORLD -> hasAny(player, "ainpc.admin", "ainpc.gui.world");
             case STATS -> hasAny(player, "ainpc.admin", "ainpc.gui.stats", "ainpc.info");
             case INTERACT -> hasAny(player, "ainpc.admin", "ainpc.gui.interact", "ainpc.talk");

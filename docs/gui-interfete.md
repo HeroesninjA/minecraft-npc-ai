@@ -1,6 +1,6 @@
 # GUI Interfete
 
-Actualizat: 2026-05-09
+Actualizat: 2026-05-11
 
 ## Scop
 
@@ -24,13 +24,13 @@ Implementat initial:
 
 - `GuiService`, `GuiSessionManager`, `AINPCGuiHolder`, `GuiInventoryListener`;
 - anulare click/drag in inventarele AINPC si curatare sesiune la close/quit;
-- `/ainpc gui [main|quest|world|stats|interact|routine|shop|manager|audit|debug]`;
+- `/ainpc gui [main|quest|story|world|stats|interact|routine|shop|manager|audit|debug]`;
 - `/ainpc gui quest <filter>` pentru deschidere directa a quest log-ului filtrat;
 - `/quest gui [filter]`;
 - tab-completion pentru `/ainpc gui`, `/ainpc gui quest <filter>` si `/quest gui <filter>`;
 - permisiuni `ainpc.gui.*` in `plugin.yml`;
 - `ScenarioEngine.getQuestGuiSnapshot(...)` ca snapshot read-only pentru GUI;
-- hub principal, quest log navigabil, detalii quest, world context, statistici, interactiune NPC, manager NPC, audit si debug;
+- hub principal, quest log navigabil, detalii quest, story snapshot read-only, world context, statistici, interactiune NPC, manager NPC, audit si debug;
 - filtre interactive in `QuestLogGui` pentru `all`, `active`, `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`, cu stare per jucator;
 - `QuestLogGui` grupeaza randurile dupa mecanica si pagineaza lista prin `QuestLogGuiPage`, cu pagina curenta pastrata in `GuiService`;
 - `QuestLogGui` combina intrarile curente si arhivate returnate de snapshot, iar `QuestDetailGui` pastreaza filtrul sursa pentru detalii stabile dupa click;
@@ -51,6 +51,7 @@ Implementat initial:
 - `RoutineGui` dedicat pentru `/ainpc gui routine`, cu preview pentru slotul curent al fiecarui NPC si programul zilnic home/work/social/idle;
 - `NpcManagerGui` afiseaza pe carduri rutina calculata, nevoile si ancorele home/work/social, cu actiuni rapide pentru info, teleport, familie si routine status;
 - `WorldHubGui` afiseaza sumarul `ProgressionGuiSnapshot`, deschide log-ul filtrat de progresii si expune ancorele locale citite prin `ProgressionService` pentru diagnostic mapping/quest;
+- `StoryGui` afiseaza read-only region state, place state si ultimele story events pentru locatia curenta, folosind `StoryStateService`;
 - `WorldHubGui` cere confirmare pentru scan sat, demo mapping si save mapping;
 - `DebugGui` expune toate scope-urile principale de debugdump: all, npc, world, quest, story si openai;
 - `QuestDetailGui` cu obiective, stage-uri, recompense, tracking, status, debug admin si abandon cu confirmare;
@@ -64,7 +65,7 @@ Comenzile text raman fallback si sunt folosite de butoanele GUI pentru actiuni v
 - `/ainpc world whereami`, `places`, `region`, `place`, `node`, `scan`, `demo`, `bind`, `household`, `settlement`, `save`;
 - `/ainpc story context`, `region`, `place`, `events`;
 - `/ainpc audit`, `audit npc`, `audit world`, `audit db`, `audit spawn`, `audit quest`;
-- `/ainpc debugdump all|npc|world|quest|openai`;
+- `/ainpc debugdump all|npc|world|quest|story|openai`;
 - `/ainpc info`, `list`, `family`, `routine`, `mood`, `tp`, `test`.
 
 Prima implementare GUI este un wrapper sigur peste aceste servicii si comenzi, nu o rescriere completa.
@@ -249,6 +250,7 @@ Reguli:
 ```text
 /ainpc gui
 /ainpc gui quest
+/ainpc gui story
 /ainpc gui world
 /ainpc gui stats
 /ainpc gui shop [npc]
@@ -266,6 +268,7 @@ Permisiuni recomandate:
 |---|---|
 | `ainpc.gui` | Acces la hub-ul GUI de baza |
 | `ainpc.gui.quest` | Quest GUI pentru jucatori |
+| `ainpc.gui.story` | Story GUI read-only pentru admini |
 | `ainpc.gui.world` | World GUI read-only pentru admini |
 | `ainpc.gui.stats` | Statistici personale |
 | `ainpc.gui.shop` | Shop NPC |
@@ -275,7 +278,7 @@ Permisiuni recomandate:
 | `ainpc.gui.debug` | Debug GUI admin |
 | `ainpc.gui.audit` | Audit GUI admin |
 
-Pentru compatibilitate, `ainpc.admin`, `ainpc.quest`, `ainpc.info` si `ainpc.talk` pot activa implicit parti din GUI.
+Pentru compatibilitate, `ainpc.admin`, `ainpc.quest`, `ainpc.info`, `ainpc.talk` si permisiunile dedicate precum `ainpc.gui.story` pot activa implicit parti din GUI. `StoryGui` ramane read-only chiar si cand este deschis de admin.
 
 ## Hub principal
 
@@ -283,7 +286,7 @@ Ecran: 54 sloturi.
 
 ```text
 0-8     header si status server
-9-17    questuri, NPC, world, story, statistici
+9-17    questuri, NPC, world, statistici, shop, rutina, story
 18-26   shop, interactiuni, rutina, familie, mood
 27-35   admin manager, audit, debug, OpenAI test, config
 36-44   notificari, warnings, actiuni recomandate
@@ -299,9 +302,10 @@ Iteme recomandate:
 | 10 | `WRITABLE_BOOK` | Quest GUI |
 | 11 | `VILLAGER_SPAWN_EGG` | NPC Interaction GUI |
 | 12 | `COMPASS` | World GUI |
-| 13 | `NETHER_STAR` | Story/context |
-| 14 | `CLOCK` | Statistici |
-| 15 | `EMERALD` | Shop |
+| 13 | `CLOCK` | Statistici |
+| 14 | `EMERALD` | Shop |
+| 15 | `CLOCK` | Rutine NPC |
+| 16 | `AMETHYST_SHARD` | Story snapshot |
 | 28 | `NAME_TAG` | Manager NPC |
 | 29 | `REDSTONE_TORCH` | Audit |
 | 30 | `SPYGLASS` | Debug |

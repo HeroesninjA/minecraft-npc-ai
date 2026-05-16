@@ -77,8 +77,101 @@ class AINPCTabCompleterTest {
     }
 
     @Test
+    void completesAuditWandMode() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> completions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"audit", ""}
+        );
+
+        assertTrue(completions.contains("wand"));
+    }
+
+    @Test
+    void completesAuditQuestStrictOption() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> completions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"audit", "quest", ""}
+        );
+
+        assertTrue(completions.contains("strict"));
+        assertTrue(completions.contains("full"));
+    }
+
+    @Test
+    void completesPatchPlannerActionsAndFallbackRegionHint() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> actions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"patch", ""}
+        );
+        assertTrue(actions.contains("analyze"));
+        assertTrue(actions.contains("plan"));
+        assertTrue(actions.contains("validate"));
+
+        List<String> regions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"patch", "plan", ""}
+        );
+        assertTrue(regions.contains("<regionId>"));
+
+        List<String> professions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"patch", "plan", "demo_sat", "8", ""}
+        );
+        assertTrue(professions.contains("blacksmith"));
+        assertTrue(professions.contains("blacksmith,farmer"));
+    }
+
+    @Test
+    void completesNpcBindingRepairTargets() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> targets = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"repair", ""}
+        );
+        assertTrue(targets.contains("npc-bindings"));
+        assertTrue(targets.contains("mapping-metadata"));
+
+        List<String> modes = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"repair", "npc-bindings", ""}
+        );
+        assertTrue(modes.contains("dryrun"));
+        assertTrue(modes.contains("apply"));
+    }
+
+    @Test
     void completesMappingWandAndDraftCommands() {
         AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> wandActions = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"wand", ""}
+        );
+        assertTrue(wandActions.contains("inspect"));
+        assertTrue(wandActions.contains("reset"));
 
         List<String> modes = completer.onTabComplete(
             null,
@@ -89,6 +182,17 @@ class AINPCTabCompleterTest {
         assertTrue(modes.contains("region"));
         assertTrue(modes.contains("node"));
         assertTrue(modes.contains("quest_anchor"));
+
+        List<String> resetTargets = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"wand", "reset", ""}
+        );
+        assertTrue(resetTargets.contains("pos1"));
+        assertTrue(resetTargets.contains("pos2"));
+        assertTrue(resetTargets.contains("point"));
+        assertTrue(resetTargets.contains("all"));
 
         List<String> mapActions = completer.onTabComplete(
             null,
@@ -102,6 +206,38 @@ class AINPCTabCompleterTest {
         assertTrue(mapActions.contains("quest_anchor"));
         assertTrue(mapActions.contains("preview"));
         assertTrue(mapActions.contains("confirm"));
+    }
+
+    @Test
+    void completesQuestAnchorDraftShape() {
+        AINPCTabCompleter completer = new AINPCTabCompleter(null);
+
+        List<String> selectors = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"map", "quest_anchor", ""}
+        );
+        assertTrue(selectors.contains("tracked"));
+        assertTrue(selectors.contains("current"));
+        assertTrue(selectors.contains("player:self"));
+
+        List<String> objectiveHint = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"map", "quest_anchor", "tracked", ""}
+        );
+        assertTrue(objectiveHint.contains("<objective_id>"));
+
+        List<String> objectiveTypes = completer.onTabComplete(
+            null,
+            new TestCommand("ainpc"),
+            "ainpc",
+            new String[] {"map", "quest_anchor", "tracked", "objective_1", ""}
+        );
+        assertTrue(objectiveTypes.contains("visit_place"));
+        assertTrue(objectiveTypes.contains("inspect_node"));
     }
 
     @Test

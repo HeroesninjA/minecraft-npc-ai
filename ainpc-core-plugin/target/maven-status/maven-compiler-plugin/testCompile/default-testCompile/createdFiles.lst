@@ -2,10 +2,14 @@ ro\ainpc\spawn\HouseAllocationValidatorTest.class
 ro\ainpc\commands\AINPCTabCompleterTest.class
 ro\ainpc\engine\QuestScenarioContractTest.class
 ro\ainpc\spawn\HouseholdPersistenceServiceTest.class
+ro\ainpc\world\VillagePatchPlannerTest.class
 ro\ainpc\commands\AINPCTabCompleterTest$TestCommand.class
+ro\ainpc\story\StoryStateServiceTest$TestDatabaseManager.class
 ro\ainpc\spawn\HouseAllocationTest.class
 ro\ainpc\spawn\SpawnBatchPlanHasherTest.class
 ro\ainpc\engine\QuestDecisionIntentResolverTest.class
+ro\ainpc\engine\QuestDirectorTest.class
+ro\ainpc\story\StoryStateServiceTest.class
 ro\ainpc\spawn\HouseAllocationValidatorTest$FakeWorldAdmin.class
 ro\ainpc\world\NpcWorldBindingServiceTest.class
 ro\ainpc\world\QuestAnchorResolverTest.class

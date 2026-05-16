@@ -26,16 +26,19 @@ public class AINPCTabCompleter implements TabCompleter {
     private final AINPCPlugin plugin;
     
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-        "create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "wand", "map", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
+        "create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "patch", "wand", "map", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test"
     );
     private static final List<String> GUI_MODES = Arrays.asList(
-        "main", "quest", "progresii", "progression", "world", "stats", "interact", "routine", "shop", "manager", "audit", "debug"
+        "main", "quest", "progresii", "progression", "story", "poveste", "world", "stats", "interact", "routine", "shop", "manager", "audit", "debug"
     );
-    private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest");
+    private static final List<String> AUDIT_MODES = Arrays.asList("all", "npc", "world", "db", "spawn", "quest", "wand");
+    private static final List<String> AUDIT_QUEST_OPTIONS = Arrays.asList("strict", "full", "offline");
     private static final List<String> DEBUG_DUMP_SCOPES = Arrays.asList("all", "npc", "world", "quest", "story", "openai");
     private static final List<String> MIGRATION_TARGETS = Arrays.asList("households");
     private static final List<String> MIGRATION_MODES = Arrays.asList("dryrun", "apply");
-    private static final List<String> REPAIR_TARGETS = Arrays.asList("duplicates", "households", "batch", "spawn-batch");
+    private static final List<String> REPAIR_TARGETS = Arrays.asList(
+        "duplicates", "households", "npc-bindings", "mapping-metadata", "batch", "spawn-batch"
+    );
     private static final List<String> REPAIR_MODES = Arrays.asList("dryrun", "apply");
     private static final List<String> REPAIR_BATCH_MODES = Arrays.asList(
         "dryrun", "apply", "inspect", "steps", "mark-steps", "sync-steps", "mark-failed"
@@ -84,9 +87,22 @@ public class AINPCTabCompleter implements TabCompleter {
         "kind:ritual", "scenario:ritual", "base:RITUAL", "mechanic:village_rituals"
     );
     private static final List<String> WORLD_MODES = Arrays.asList("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "bindings", "household", "settlement", "save");
-    private static final List<String> WAND_ACTIONS = Arrays.asList("mode", "pos1", "pos2", "point", "status", "clear");
+    private static final List<String> PATCH_ACTIONS = Arrays.asList("analyze", "plan", "validate");
+    private static final List<String> PATCH_POPULATION_SUGGESTIONS = Arrays.asList("4", "6", "8", "10", "12");
+    private static final List<String> PATCH_PROFESSION_SUGGESTIONS = Arrays.asList(
+        "blacksmith", "farmer", "merchant", "innkeeper", "guard", "priest",
+        "blacksmith,farmer", "blacksmith,farmer,merchant"
+    );
+    private static final List<String> WAND_ACTIONS = Arrays.asList(
+        "mode", "pos1", "pos2", "point", "status", "inspect", "clear", "reset"
+    );
+    private static final List<String> WAND_RESET_TARGETS = Arrays.asList("pos1", "pos2", "point", "all");
     private static final List<String> WAND_MODES = Arrays.asList("region", "place", "node", "npc_bind", "quest_anchor");
     private static final List<String> MAP_ACTIONS = Arrays.asList("region", "place", "node", "npc_bind", "quest_anchor", "preview", "confirm", "cancel");
+    private static final List<String> MAP_QUEST_ANCHOR_SELECTORS = Arrays.asList("tracked", "current");
+    private static final List<String> MAP_QUEST_ANCHOR_OBJECTIVE_TYPES = Arrays.asList(
+        "visit_place", "inspect_node", "talk_to_npc", "deliver_to_npc", "visit_region", "kill_mob"
+    );
     private static final List<String> STORY_MODES = Arrays.asList("context", "region", "place", "events");
     private static final List<String> REGION_ACTIONS = Arrays.asList("info", "create");
     private static final List<String> PLACE_ACTIONS = Arrays.asList("info", "create");
@@ -195,7 +211,12 @@ public class AINPCTabCompleter implements TabCompleter {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(REPAIR_TARGETS, args[1]));
                     } else if (args.length == 3
-                        && ("duplicates".equalsIgnoreCase(args[1]) || "households".equalsIgnoreCase(args[1]))) {
+                        && ("duplicates".equalsIgnoreCase(args[1])
+                        || "households".equalsIgnoreCase(args[1])
+                        || "npc-bindings".equalsIgnoreCase(args[1])
+                        || "npc_bindings".equalsIgnoreCase(args[1])
+                        || "mapping-metadata".equalsIgnoreCase(args[1])
+                        || "mapping_metadata".equalsIgnoreCase(args[1]))) {
                         completions.addAll(filterStartsWith(REPAIR_MODES, args[2]));
                     } else if (args.length == 3
                         && isRepairBatchTarget(args[1])) {
@@ -225,16 +246,24 @@ public class AINPCTabCompleter implements TabCompleter {
                 case "world" -> {
                     completions.addAll(completeWorldArgs(sender, args));
                 }
+                case "patch" -> {
+                    completions.addAll(completePatchArgs(args));
+                }
                 case "wand" -> {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(WAND_ACTIONS, args[1]));
                     } else if (args.length == 3 && "mode".equalsIgnoreCase(args[1])) {
                         completions.addAll(filterStartsWith(WAND_MODES, args[2]));
+                    } else if (args.length == 3
+                        && ("clear".equalsIgnoreCase(args[1]) || "reset".equalsIgnoreCase(args[1]))) {
+                        completions.addAll(filterStartsWith(WAND_RESET_TARGETS, args[2]));
                     }
                 }
                 case "map" -> {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(MAP_ACTIONS, args[1]));
+                    } else if (args.length >= 3 && "quest_anchor".equalsIgnoreCase(args[1])) {
+                        completions.addAll(completeMapQuestAnchorArgs(sender, args));
                     }
                 }
                 case "story" -> {
@@ -252,6 +281,9 @@ public class AINPCTabCompleter implements TabCompleter {
                 case "audit" -> {
                     if (args.length == 2) {
                         completions.addAll(filterStartsWith(AUDIT_MODES, args[1]));
+                    } else if (args.length == 3
+                        && ("quest".equalsIgnoreCase(args[1]) || "all".equalsIgnoreCase(args[1]))) {
+                        completions.addAll(filterStartsWith(AUDIT_QUEST_OPTIONS, args[2]));
                     }
                 }
                 case "debugdump" -> {
@@ -454,6 +486,20 @@ public class AINPCTabCompleter implements TabCompleter {
         return completions;
     }
 
+    private List<String> completePatchArgs(String[] args) {
+        List<String> completions = new ArrayList<>();
+        if (args.length == 2) {
+            completions.addAll(filterStartsWith(PATCH_ACTIONS, args[1]));
+        } else if (args.length == 3 && PATCH_ACTIONS.stream().anyMatch(args[1]::equalsIgnoreCase)) {
+            completions.addAll(getRegionIdsSafe(args[2]));
+        } else if (args.length == 4 && PATCH_ACTIONS.stream().anyMatch(args[1]::equalsIgnoreCase)) {
+            completions.addAll(filterStartsWith(PATCH_POPULATION_SUGGESTIONS, args[3]));
+        } else if (args.length == 5 && PATCH_ACTIONS.stream().anyMatch(args[1]::equalsIgnoreCase)) {
+            completions.addAll(filterStartsWith(PATCH_PROFESSION_SUGGESTIONS, args[4]));
+        }
+        return completions;
+    }
+
     private List<String> completeQuestArgs(String[] questArgs) {
         List<String> completions = new ArrayList<>();
         if (questArgs.length == 0) {
@@ -561,6 +607,112 @@ public class AINPCTabCompleter implements TabCompleter {
         };
     }
 
+    private List<String> completeMapQuestAnchorArgs(CommandSender sender, String[] args) {
+        List<String> completions = new ArrayList<>();
+        if (args.length == 3) {
+            completions.addAll(filterStartsWith(MAP_QUEST_ANCHOR_SELECTORS, args[2]));
+            completions.addAll(getQuestAnchorPlayerSelectors(args[2]));
+            completions.addAll(getProgressionSelectors(args[2]));
+            return completions;
+        }
+
+        boolean hasPlayerSelector = isQuestAnchorPlayerSelector(args[2]);
+        if (hasPlayerSelector) {
+            if (args.length == 4) {
+                completions.addAll(filterStartsWith(MAP_QUEST_ANCHOR_SELECTORS, args[3]));
+                completions.addAll(getProgressionSelectors(args[3]));
+            } else if (args.length == 5) {
+                completions.addAll(getQuestAnchorObjectiveIds(sender, args[2], args[3], args[4]));
+            } else if (args.length == 6) {
+                completions.addAll(filterStartsWith(MAP_QUEST_ANCHOR_OBJECTIVE_TYPES, args[5]));
+            }
+            return completions;
+        }
+
+        if (args.length == 4) {
+            completions.addAll(getQuestAnchorObjectiveIds(sender, "", args[2], args[3]));
+        } else if (args.length == 5) {
+            completions.addAll(filterStartsWith(MAP_QUEST_ANCHOR_OBJECTIVE_TYPES, args[4]));
+        }
+        return completions;
+    }
+
+    private List<String> getQuestAnchorPlayerSelectors(String prefix) {
+        List<String> selectors = new ArrayList<>(List.of("player:self"));
+        if (plugin != null) {
+            selectors.addAll(plugin.getServer().getOnlinePlayers().stream()
+                .map(player -> "player:" + player.getName())
+                .toList());
+        }
+        return filterStartsWith(selectors, prefix);
+    }
+
+    private boolean isQuestAnchorPlayerSelector(String value) {
+        String normalized = value == null ? "" : value.trim().toLowerCase();
+        return normalized.startsWith("player:") || normalized.startsWith("jucator:");
+    }
+
+    private List<String> getQuestAnchorObjectiveIds(CommandSender sender,
+                                                    String playerSelector,
+                                                    String progressionSelector,
+                                                    String prefix) {
+        if (plugin == null || plugin.getProgressionService() == null) {
+            return filterStartsWith(List.of("<objective_id>"), prefix);
+        }
+
+        Player targetPlayer = resolveQuestAnchorPlayer(sender, playerSelector);
+        if (targetPlayer == null) {
+            return filterStartsWith(List.of("<objective_id>"), prefix);
+        }
+
+        List<String> suggestions = plugin.getProgressionService()
+            .getObjectiveIdSuggestions(targetPlayer, progressionSelector);
+        if (suggestions.isEmpty()) {
+            return filterStartsWith(List.of("<objective_id>"), prefix);
+        }
+        return filterStartsWith(suggestions, prefix);
+    }
+
+    private Player resolveQuestAnchorPlayer(CommandSender sender, String playerSelector) {
+        String safeSelector = playerSelector == null ? "" : playerSelector.trim();
+        if (safeSelector.isBlank()
+            || "player:self".equalsIgnoreCase(safeSelector)
+            || "jucator:self".equalsIgnoreCase(safeSelector)
+            || "self".equalsIgnoreCase(safeSelector)) {
+            return sender instanceof Player player ? player : null;
+        }
+        if (plugin == null) {
+            return null;
+        }
+
+        String playerName = safeSelector;
+        int separator = playerName.indexOf(':');
+        if (separator >= 0 && separator < playerName.length() - 1) {
+            playerName = playerName.substring(separator + 1);
+        }
+        Player exact = plugin.getServer().getPlayerExact(playerName);
+        return exact != null ? exact : plugin.getServer().getPlayer(playerName);
+    }
+
+    private List<String> getProgressionSelectors(String prefix) {
+        if (plugin == null || plugin.getProgressionService() == null) {
+            return List.of();
+        }
+
+        List<String> selectors = plugin.getProgressionService().getDefinitions().stream()
+            .flatMap(definition -> Arrays.asList(
+                definition.templateId(),
+                definition.code(),
+                definition.progressionId(),
+                definition.mechanicId() + ":" + definition.definitionId()
+            ).stream())
+            .filter(value -> value != null && !value.isBlank())
+            .distinct()
+            .sorted(String.CASE_INSENSITIVE_ORDER)
+            .toList();
+        return filterStartsWith(selectors, prefix);
+    }
+
     /**
      * Obtine numele tuturor NPC-urilor care incep cu prefixul dat
      */
@@ -592,6 +744,13 @@ public class AINPCTabCompleter implements TabCompleter {
             .filter(id -> id.toLowerCase().startsWith(prefix.toLowerCase()))
             .sorted()
             .collect(Collectors.toList());
+    }
+
+    private List<String> getRegionIdsSafe(String prefix) {
+        if (plugin == null || plugin.getPlatform() == null || plugin.getPlatform().getWorldAdmin() == null) {
+            return List.of("<regionId>");
+        }
+        return getRegionIds(prefix);
     }
 
     private List<String> getPlaceIds(String prefix) {

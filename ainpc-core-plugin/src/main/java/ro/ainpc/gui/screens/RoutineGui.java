@@ -13,7 +13,9 @@ import ro.ainpc.npc.AINPC;
 import ro.ainpc.routine.RoutineAssignment;
 import ro.ainpc.routine.RoutineScheduleEntry;
 import ro.ainpc.routine.RoutineSlot;
+import ro.ainpc.world.NpcWorldBinding;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -69,10 +71,13 @@ public class RoutineGui implements GuiScreen {
             AINPC npc = npcs.get(index);
             RoutineAssignment current = context.plugin().getRoutineService().preview(npc);
             List<RoutineScheduleEntry> dayPreview = context.plugin().getRoutineService().getRoutineEngine().previewDay(npc);
+            NpcWorldBinding binding = loadNpcWorldBinding(context, npc);
             context.button(NPC_SLOTS[index], GuiButton.enabled(
-                GuiItemFactory.item(slotMaterial(current.slot()), "&f" + npc.getName(), npcLore(npc, current, dayPreview, adminView)),
+                GuiItemFactory.item(slotMaterial(current.slot()), "&f" + npc.getName(), npcLore(npc, current, dayPreview, binding, adminView)),
                 click -> {
-                    if (!adminView || click.clickType().isRightClick()) {
+                    if (adminView && click.clickType().isShiftClick()) {
+                        click.service().runCommand(click.player(), "ainpc world bindings npc " + npc.getDatabaseId());
+                    } else if (!adminView || click.clickType().isRightClick()) {
                         click.service().runCommand(click.player(), "ainpc info " + npc.getName());
                     } else {
                         click.service().runCommand(click.player(), "ainpc routine status " + npc.getName());
@@ -121,6 +126,7 @@ public class RoutineGui implements GuiScreen {
     private List<String> npcLore(AINPC npc,
                                  RoutineAssignment current,
                                  List<RoutineScheduleEntry> dayPreview,
+                                 NpcWorldBinding binding,
                                  boolean adminView) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Slot curent: &f" + slotLabel(current.slot()));
@@ -128,6 +134,7 @@ public class RoutineGui implements GuiScreen {
         lore.add("&7Goal: &f" + GuiItemFactory.compact(current.goal(), 32));
         lore.add("&7Stare tinta: &f" + current.targetState().name());
         lore.add("&7Tinta: &f" + formatOwnedLocation(current.targetAnchor()));
+        addBindingLore(lore, binding);
         lore.add("&7Spawned: &f" + (npc.isSpawned() ? "da" : "nu"));
         lore.add("&7Locatie: &f" + formatLocation(npc.getLocation()));
         lore.add("&8Program zi:");
@@ -138,7 +145,50 @@ public class RoutineGui implements GuiScreen {
         }
         lore.add(adminView ? "&8Click: status rutina" : "&8Click: info NPC");
         lore.add("&8Right click: info NPC");
+        if (adminView) {
+            lore.add("&8Shift click: world bindings");
+        }
         return lore;
+    }
+
+    private NpcWorldBinding loadNpcWorldBinding(GuiRenderContext context, AINPC npc) {
+        if (context.plugin().getNpcWorldBindingService() == null || npc.getDatabaseId() <= 0) {
+            return null;
+        }
+        try {
+            return context.plugin().getNpcWorldBindingService()
+                .getBinding(npc.getDatabaseId())
+                .orElse(null);
+        } catch (SQLException ignored) {
+            return null;
+        }
+    }
+
+    private void addBindingLore(List<String> lore, NpcWorldBinding binding) {
+        if (binding == null) {
+            lore.add("&7Mapping place: &8nepersistat");
+            return;
+        }
+        lore.add("&7Mapping place: &f" + compactBindingTriple(
+            binding.homePlaceId(),
+            binding.workPlaceId(),
+            binding.socialPlaceId()
+        ));
+        lore.add("&7Mapping node: &f" + compactBindingTriple(
+            binding.homeNodeId(),
+            binding.workNodeId(),
+            binding.socialNodeId()
+        ));
+    }
+
+    private String compactBindingTriple(String home, String work, String social) {
+        return GuiItemFactory.compact("H=" + shortValue(home)
+            + " W=" + shortValue(work)
+            + " S=" + shortValue(social), 36);
+    }
+
+    private String shortValue(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private Material slotMaterial(RoutineSlot slot) {

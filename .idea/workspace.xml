@@ -4,39 +4,100 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="other futures  #11">
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/MappingWandListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraft.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraftApplyResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraftFactory.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraftKind.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraftSuggestion.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingIntentParser.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingPoint.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandMode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandSelection.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/world/MappingDraftFactoryTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/world/mapping/MappingIntentParserTest.java" afterDir="false" />
+    <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="other futures">
+      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.main.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.test.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.main.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.test.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/AINPCPlatformApi.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/AINPCPlatformApi.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/AddonRegistryApi.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/api/AddonRegistryApi.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/AINPCPlatformApi.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/AINPCPlatformApi.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/AddonRegistryApi.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/classes/ro/ainpc/api/AddonRegistryApi.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/ainpc-core-plugin.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/addons/AddonRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/addons/AddonRegistry.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCTabCompleter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestDetailGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/QuestDetailGui.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/ListenerRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/ListenerRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackLoader.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/GuiKey.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/GuiKey.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/GuiService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/GuiService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/MainHubGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/MainHubGui.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/RoutineGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/RoutineGui.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/WorldHubGui.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/screens/WorldHubGui.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/MappingWandListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/MappingWandListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/platform/AINPCPlatform.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/platform/AINPCPlatform.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandMode.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandMode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandSelection.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandSelection.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/commands/AINPCTabCompleterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/commands/AINPCTabCompleterTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/progression/ProgressionRepositoryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/progression/ProgressionRepositoryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/medieval.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/medieval.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/modern.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/modern.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/social.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/packs/social.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/plugin.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/addons/AddonRegistry.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/addons/AddonRegistry.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/commands/AINPCTabCompleter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$FeaturePack.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$FeaturePack.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ProfessionDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ProfessionDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$QuestEntryDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$QuestEntryDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioRoleDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$ScenarioRoleDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TopologyDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TopologyDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TraitDefinition.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader$TraitDefinition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/engine/FeaturePackLoader.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/platform/AINPCPlatform.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/classes/ro/ainpc/platform/AINPCPlatform.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/TEST-ro.ainpc.world.WorldAdminServiceTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/TEST-ro.ainpc.world.WorldAdminServiceTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/ro.ainpc.world.WorldAdminServiceTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/target/surefire-reports/ro.ainpc.world.WorldAdminServiceTest.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/ainpc-scenario-medieval.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/MedievalScenarioAddon.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/MedievalScenarioAddon.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/packs/medieval_quest.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/packs/medieval_quest.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/ro/ainpc/addons/medieval/MedievalScenarioAddon.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/classes/ro/ainpc/addons/medieval/MedievalScenarioAddon.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/categorii/03-quest-story-ai/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/03-quest-story-ai/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/categorii/04-generare-worldgen/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/04-generare-worldgen/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/debugging-si-testare.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/debugging-si-testare.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/dialog-si-conversatii.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/dialog-si-conversatii.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/faze-urmatoare-categorii.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/faze-urmatoare-categorii.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/generare-sate-fara-worldedit.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/generare-sate-fara-worldedit.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/gui-interfete.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/gui-interfete.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/implementat-deja.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/implementat-deja.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/lucru-alternat-quest-mapping-progression.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/lucru-alternat-quest-mapping-progression.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/mapping-harti-manuale.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mapping-harti-manuale.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/mapping.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/mapping.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ordine-spawn-npc-cladiri-region-node.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ordine-spawn-npc-cladiri-region-node.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/patch-planner.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/patch-planner.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/quest-anchor-bindings.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/quest-anchor-bindings.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/story-si-context-ai.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/story-si-context-ai.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/smoke-paper-mapping.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/smoke-paper-mapping.ps1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/smoke-paper-quests.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/smoke-paper-quests.ps1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.iml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +105,24 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="304" />
+    <option name="cachedIndexableFilesCount" value="344" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <projects_view>
+          <tree_state>
+            <expand />
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
   </component>
   <component name="Git.Settings">
     <option name="PUSH_AUTO_UPDATE" value="true" />
@@ -90,36 +168,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Maven.Build.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;work-3&quot;,
-    &quot;git.auto.fetch.suggestion.counter&quot;: &quot;1&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/HeroesninjA/IdeaProjects/test&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Problems&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.LLMThirdPartyAiProvidersConfigurable&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.Build.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "work-3",
+    "git.auto.fetch.suggestion.counter": "1",
+    "ignore.virus.scanning.warn.message": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/HeroesninjA/IdeaProjects/test",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Problems",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "ml.llm.LLMThirdPartyAiProvidersConfigurable",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\HeroesninjA\IdeaProjects\test" />
@@ -127,67 +206,29 @@
     </key>
   </component>
   <component name="RunManager">
-    <configuration name="Build" type="MavenRunConfiguration" factoryName="Maven">
-      <MavenSettings>
-        <option name="myGeneralSettings">
-          <MavenGeneralSettings>
-            <option name="alwaysUpdateSnapshots" value="false" />
-            <option name="checksumPolicy" value="NOT_SET" />
-            <option name="customMavenHome" />
-            <option name="emulateTerminal" value="false" />
-            <option name="failureBehavior" value="NOT_SET" />
-            <option name="localRepository" value="" />
-            <option name="mavenHome" value="Bundled (Maven 3)" />
-            <option name="mavenHomeTypeForPersistence" value="BUNDLED3" />
-            <option name="nonRecursive" value="false" />
-            <option name="outputLevel" value="INFO" />
-            <option name="printErrorStackTraces" value="false" />
-            <option name="showDialogWithAdvancedSettings" value="false" />
-            <option name="threads" />
-            <option name="useMavenConfig" value="true" />
-            <option name="userSettingsFile" value="" />
-            <option name="workOffline" value="false" />
-          </MavenGeneralSettings>
+    <configuration name="Build" type="GradleRunConfiguration" factoryName="Gradle">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
         </option>
-        <option name="myRunnerSettings">
-          <MavenRunnerSettings>
-            <option name="delegateBuildToMaven" value="false" />
-            <option name="environmentProperties">
-              <map />
-            </option>
-            <option name="jreName" value="#USE_PROJECT_JDK" />
-            <option name="mavenProperties">
-              <map />
-            </option>
-            <option name="passParentEnv" value="true" />
-            <option name="skipTests" value="false" />
-            <option name="vmOptions" value="" />
-          </MavenRunnerSettings>
+        <option name="taskNames">
+          <list>
+            <option value="assemble" />
+          </list>
         </option>
-        <option name="myRunnerParameters">
-          <MavenRunnerParameters>
-            <option name="cmdOptions" />
-            <option name="profiles">
-              <set />
-            </option>
-            <option name="goals">
-              <list>
-                <option value="package" />
-              </list>
-            </option>
-            <option name="multimoduleDir" />
-            <option name="pomFileName" />
-            <option name="profilesMap">
-              <map />
-            </option>
-            <option name="projectsCmdOptionValues">
-              <list />
-            </option>
-            <option name="resolveToWorkspace" value="false" />
-            <option name="workingDirPath" value="C:\Users\HeroesninjA\IdeaProjects\test" />
-          </MavenRunnerParameters>
-        </option>
-      </MavenSettings>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
       <method v="2" />
     </configuration>
   </component>
@@ -237,7 +278,13 @@
       <workItem from="1778123313581" duration="19022000" />
       <workItem from="1778210026451" duration="9002000" />
       <workItem from="1778309372573" duration="30534000" />
-      <workItem from="1778393921318" duration="12215000" />
+      <workItem from="1778393921318" duration="20593000" />
+      <workItem from="1778439231423" duration="166000" />
+      <workItem from="1778439412962" duration="2322000" />
+      <workItem from="1778480777194" duration="8901000" />
+      <workItem from="1778563503082" duration="797000" />
+      <workItem from="1778667760071" duration="190000" />
+      <workItem from="1778913996422" duration="2296000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -463,7 +510,31 @@
       <option name="project" value="LOCAL" />
       <updated>1778210061834</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="other futures">
+      <option name="closed" value="true" />
+      <created>1778421788389</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1778421788389</updated>
+    </task>
+    <task id="LOCAL-00030" summary="other futures">
+      <option name="closed" value="true" />
+      <created>1778421801787</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1778421801787</updated>
+    </task>
+    <task id="LOCAL-00031" summary="other futures">
+      <option name="closed" value="true" />
+      <created>1778422360539</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1778422360539</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -479,7 +550,8 @@
     <MESSAGE value="other futures  #7" />
     <MESSAGE value="other futures  #9" />
     <MESSAGE value="other futures  #11" />
-    <option name="LAST_COMMIT_MESSAGE" value="other futures  #11" />
+    <MESSAGE value="other futures" />
+    <option name="LAST_COMMIT_MESSAGE" value="other futures" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

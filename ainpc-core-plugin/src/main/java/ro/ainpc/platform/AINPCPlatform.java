@@ -14,6 +14,7 @@ import ro.ainpc.world.WorldMode;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 
 public class AINPCPlatform implements AINPCPlatformApi {
 
@@ -36,6 +37,12 @@ public class AINPCPlatform implements AINPCPlatformApi {
 
     public void reloadFromConfig() {
         this.profile = PlatformProfile.fromConfig(plugin.getConfig());
+        addonRegistry.configure(
+            plugin.getConfig().getBoolean("addons.enabled", true),
+            plugin.getConfig().getBoolean("addons.strict_validation", true),
+            plugin.getConfig().getStringList("addons.disabled"),
+            plugin.getConfig().getStringList("addons.load_order")
+        );
         worldAdminService.reloadFromConfig(plugin.getConfig(), profile);
     }
 
@@ -90,6 +97,13 @@ public class AINPCPlatform implements AINPCPlatformApi {
     }
 
     @Override
+    public Path getAddonConfigDirectory(String addonId) {
+        return getDataDirectory()
+            .resolve(sanitizeRelativeDirectory(plugin.getConfig().getString("addons.config_directory", "addons")))
+            .resolve(sanitizePathSegment(addonId, "unknown-addon"));
+    }
+
+    @Override
     public void reloadContent() {
         plugin.reloadContent();
     }
@@ -104,5 +118,25 @@ public class AINPCPlatform implements AINPCPlatformApi {
 
     public void shutdown() {
         addonRegistry.shutdown();
+    }
+
+    private String sanitizeRelativeDirectory(String directory) {
+        if (directory == null || directory.isBlank()) {
+            return "addons";
+        }
+        String normalized = directory.trim().replace('\\', '/');
+        if (normalized.startsWith("/") || normalized.contains(":") || normalized.contains("..")) {
+            return "addons";
+        }
+        return normalized;
+    }
+
+    private String sanitizePathSegment(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        String sanitized = normalized.replaceAll("[^a-z0-9._-]", "-");
+        return sanitized.isBlank() ? fallback : sanitized;
     }
 }

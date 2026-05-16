@@ -7,6 +7,7 @@ public enum GuiKey {
     MAIN("main", "Hub AINPC"),
     QUEST("quest", "Progresii"),
     QUEST_DETAIL("quest_detail", "Detalii progresie"),
+    STORY("story", "Story"),
     WORLD("world", "World"),
     STATS("stats", "Statistici"),
     INTERACT("interact", "Interactiune NPC"),
@@ -44,6 +45,7 @@ public enum GuiKey {
             case "quests", "questuri", "progression", "progressions", "progresii", "progresie", "log" -> "quest";
             case "questdetail", "quest_details", "quest_detalii", "detalii_quest",
                  "progression_detail", "progression_details", "progresie_detalii", "detalii_progresie" -> "quest_detail";
+            case "poveste", "story_state", "story_context", "narativ" -> "story";
             case "map", "lume" -> "world";
             case "stat", "statistics", "statistici" -> "stats";
             case "npc", "interaction", "interactiune", "nearest" -> "interact";

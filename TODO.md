@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-10
+Actualizat: 2026-05-11
 
 ## Exista deja
 
@@ -78,6 +78,7 @@ Actualizat: 2026-05-10
 - [x] Prima mecanica `onboarding` peste runtime-ul comun, cu T01 ca tutorial filtrabil prin `tutorial`
 - [x] Prima mecanica `village_rituals` peste runtime-ul comun, cu R01 ca ritual local filtrabil prin `ritual`
 - [x] `AIOrchestrationService` initial pentru politici AI, fallback determinist si rezultate care nu pot executa runtime direct
+- [x] Document canonic initial pentru generarea automata de questuri cu AI prin `QuestSeed`/`QuestDraft`, validare si review admin
 - [x] Contracte initiale pentru runtime extensibil: registri de actiuni/conditii/trigger-e, context de executie, definitii runtime, variable provider si raport de validare
 - [x] Contractul runtime recunoaste `investigation` ca `QuestScenarioContract.Kind.INVESTIGATION`, inclusiv pentru snapshot-uri generice de progres
 - [x] Availability aplica initial `max_active` si pe mecanici de progres declarate in addon
@@ -103,6 +104,7 @@ Actualizat: 2026-05-10
 - [x] Planner `/ainpc world settlement plan ...` pentru toate casele dintr-o regiune
 - [x] Spawn `/ainpc world settlement spawn ...` pentru household-uri secventiale pe regiune
 - [x] Rollback global practic pentru `settlement spawn` daca un household ulterior esueaza
+- [x] Patch planner read-only initial: `VillageGapAnalyzer`, `VillagePatchPlanner` si `/ainpc patch analyze|plan|validate`
 - [x] Script `scripts/smoke-paper-mapping.ps1` pentru pregatirea smoke test-ului Paper mapping/spawn
 - [x] Persistenta initiala `npc_world_bindings` pentru home/work/social place si node IDs
 - [x] `/ainpc audit db` valideaza initial `npc_world_bindings`
@@ -129,8 +131,13 @@ Actualizat: 2026-05-10
 - [ ] Smoke test Paper pentru E01 pe mapping demo prin `/ainpc event ...` si `/ainpc progression stored ...`
 - [ ] Smoke test Paper pentru T01 pe mapping demo prin `/ainpc tutorial ...` si `/ainpc progression stored ...`
 - [ ] Smoke test Paper pentru R01 pe mapping demo prin `/ainpc ritual ...` si `/ainpc progression stored ...`
+- [ ] Smoke test Paper pentru `/ainpc patch analyze|plan|validate` pe `demo_sat`
+- [ ] Smoke test Paper pentru story fara quest, quest fara story si quest cu `record_story_event`
+- [x] Model read-only pentru `QuestDirectorDecision`, fara executie de progres
+- [ ] Modele si validator read-only pentru `QuestSeed`/`QuestDraft`
 - [x] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
 - [x] Export/debugdump complet pentru `quest_anchor_bindings`
+- [x] Audit strict complet pentru `quest_anchor_bindings`, inclusiv validarea `objective_key` fata de definitia progresiei
 - [x] Comanda read-only dedicata pentru inspectie `npc_world_bindings`
 
 ## Componente lipsa sau incomplete confirmate in cod

@@ -31,6 +31,10 @@ public enum MappingWandMode {
         };
     }
 
+    public boolean usesPointSelection() {
+        return this == NODE || this == NPC_BIND || this == QUEST_ANCHOR;
+    }
+
     public static Optional<MappingWandMode> fromId(String value) {
         if (value == null || value.isBlank()) {
             return Optional.empty();

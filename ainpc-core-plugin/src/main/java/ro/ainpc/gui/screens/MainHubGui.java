@@ -61,6 +61,8 @@ public class MainHubGui implements GuiScreen {
             List.of("&7Intrare pregatita pentru economie/shop."));
         openButton(context, 15, GuiKey.ROUTINE, Material.CLOCK, "&eRutine NPC",
             List.of("&7Preview program zilnic si status rutina."));
+        openButton(context, 16, GuiKey.STORY, Material.AMETHYST_SHARD, "&dStory",
+            List.of("&7State narativ local si evenimente recente."));
 
         openButton(context, 28, GuiKey.MANAGER, Material.NAME_TAG, "&6Manager NPC",
             List.of("&7Lista NPC admin, info si teleport."));

@@ -335,7 +335,8 @@ Comenzile valide pentru creare si inspectie sunt:
 /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]
 /ainpc wand
 /ainpc wand mode <region|place|node|npc_bind|quest_anchor>
-/ainpc wand <pos1|pos2|point|status|clear>
+/ainpc wand <pos1|pos2|point|status|inspect>
+/ainpc wand <clear|reset> [pos1|pos2|point|all]
 /ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>
 /ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]
 /ainpc map preview
@@ -347,10 +348,14 @@ Comenzile valide pentru creare si inspectie sunt:
 /ainpc world settlement <plan|spawn> <regionId> [maxHouses]
 /ainpc world save
 /ainpc audit world
+/ainpc audit wand
+/ainpc repair npc-bindings dryrun
+/ainpc repair mapping-metadata dryrun
 /ainpc debugdump world
 ```
 
 Comenzile de wand si prompt natural sunt implementate initial pentru `region`, `place`, `node`, bind NPC-place pe roluri `home`/`work`/`social` si quest anchors persistente.
+Selectiile region/place afiseaza bounds cu particule, iar selectiile node/npc_bind/quest_anchor afiseaza raza punctului selectat. `/ainpc map preview` reaprinde preview-ul vizual al draft-ului curent.
 
 Exemplu de lucru, executat din lumea in care marchezi harta:
 

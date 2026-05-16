@@ -774,6 +774,7 @@ public class DebugDumpService {
         auditTrackedQuestPersistence(errors, warnings);
         auditQuestAnchorPersistence(errors, warnings);
         auditStoredQuestJson(warnings);
+        auditStoryProgressionConsistency(warnings);
     }
 
     private void auditTrackedQuestPersistence(List<String> errors, List<String> warnings) {
@@ -929,6 +930,203 @@ public class DebugDumpService {
             return;
         }
         warnings.add(column + " are JSON invalid pentru " + label + ".");
+    }
+
+    private void auditStoryProgressionConsistency(List<String> warnings) {
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        if (scenariosBySelector.isEmpty()) {
+            return;
+        }
+
+        try {
+            Set<String> storyEventProgressionKeys = queryStoryEventProgressionKeys(warnings);
+            String completedProgressionsSql = """
+                SELECT player_uuid, template_id, quest_code, status
+                FROM player_quests
+                WHERE LOWER(COALESCE(status, '')) IN ('completed', 'complete', 'done')
+                ORDER BY completed_at DESC, updated_at DESC
+                LIMIT 500
+            """;
+
+            try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(completedProgressionsSql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String playerUuid = resultSet.getString("player_uuid");
+                    String templateId = resultSet.getString("template_id");
+                    String questCode = resultSet.getString("quest_code");
+                    FeaturePackLoader.ScenarioDefinition scenario =
+                        findScenarioForProgressionRow(templateId, questCode, scenariosBySelector);
+                    if (scenario == null || !hasRecordStoryEventAction(scenario)) {
+                        continue;
+                    }
+                    if (hasStoryEventProgressionKey(storyEventProgressionKeys, playerUuid, templateId, questCode)) {
+                        continue;
+                    }
+                    warnings.add("Progresie completata cu record_story_event fara story_event asociat detectabil: player_uuid="
+                        + playerUuid + ", template_id=" + templateId + ", quest_code=" + questCode
+                        + ". Verifica payload.quest_template/quest_code in story_events.");
+                }
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida consistenta story/progression: " + exception.getMessage());
+        }
+    }
+
+    private Set<String> queryStoryEventProgressionKeys(List<String> warnings) throws SQLException {
+        Set<String> keys = new HashSet<>();
+        String storyEventSql = """
+            SELECT id, player_uuid, event_key, actor_type, payload
+            FROM story_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1000
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(storyEventSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                long id = resultSet.getLong("id");
+                String playerUuid = valueOrEmpty(resultSet.getString("player_uuid"));
+                String actorType = valueOrEmpty(resultSet.getString("actor_type"));
+                String eventKey = valueOrEmpty(resultSet.getString("event_key"));
+                JsonObject payload = parseStoredJsonObject(resultSet.getString("payload"));
+                String questTemplate = jsonString(payload, "quest_template");
+                String questCodeFromPayload = jsonString(payload, "quest_code");
+                String questCode = firstNonBlank(questCodeFromPayload, eventKey);
+                String payloadPlayerUuid = jsonString(payload, "player_uuid");
+                String effectivePlayerUuid = firstNonBlank(playerUuid, payloadPlayerUuid);
+
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questTemplate);
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questCode);
+
+                boolean questLikeEvent = "quest".equalsIgnoreCase(actorType)
+                    || !questTemplate.isBlank()
+                    || !questCodeFromPayload.isBlank();
+                if (questLikeEvent && questTemplate.isBlank() && questCode.isBlank()) {
+                    warnings.add("story_events id=" + id
+                        + " pare legat de quest, dar nu are payload.quest_template sau payload.quest_code.");
+                }
+            }
+        }
+        return keys;
+    }
+
+    private Map<String, FeaturePackLoader.ScenarioDefinition> buildProgressionScenarioLookup() {
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader == null) {
+            return Map.of();
+        }
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> lookup = new LinkedHashMap<>();
+        for (FeaturePackLoader.ScenarioDefinition scenario : loader.getAllScenarios()) {
+            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
+                continue;
+            }
+            ProgressionDefinition definition = ProgressionDefinition.fromScenarioDefinition(scenario);
+            addScenarioLookupKey(lookup, definition.templateId(), scenario);
+            addScenarioLookupKey(lookup, definition.progressionId(), scenario);
+            addScenarioLookupKey(lookup, definition.definitionId(), scenario);
+            addScenarioLookupKey(lookup, definition.code(), scenario);
+            addScenarioLookupKey(lookup, definition.packId() + ":" + definition.definitionId(), scenario);
+            addScenarioLookupKey(
+                lookup,
+                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
+                scenario
+            );
+        }
+        return lookup;
+    }
+
+    private void addScenarioLookupKey(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
+                                      String key,
+                                      FeaturePackLoader.ScenarioDefinition scenario) {
+        String normalized = normalizeKey(key);
+        if (!normalized.isBlank()) {
+            lookup.putIfAbsent(normalized, scenario);
+        }
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
+        String templateId,
+        String questCode,
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector
+    ) {
+        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
+            return null;
+        }
+        FeaturePackLoader.ScenarioDefinition scenario = scenariosBySelector.get(normalizeKey(templateId));
+        if (scenario != null) {
+            return scenario;
+        }
+        scenario = scenariosBySelector.get(normalizeKey(questCode));
+        if (scenario != null) {
+            return scenario;
+        }
+        return scenariosBySelector.get(normalizeKey(lastSelectorSegment(templateId)));
+    }
+
+    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return false;
+        }
+        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasStoryEventProgressionKey(Set<String> keys,
+                                                String playerUuid,
+                                                String templateId,
+                                                String questCode) {
+        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
+            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
+            || keys.contains(storyEventProgressionKey("", templateId))
+            || keys.contains(storyEventProgressionKey("", questCode));
+    }
+
+    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
+        String key = storyEventProgressionKey(playerUuid, selector);
+        if (!key.isBlank()) {
+            keys.add(key);
+        }
+    }
+
+    private String storyEventProgressionKey(String playerUuid, String selector) {
+        String normalizedSelector = normalizeKey(selector);
+        if (normalizedSelector.isBlank()) {
+            return "";
+        }
+        return valueOrEmpty(playerUuid) + "|" + normalizedSelector;
+    }
+
+    private JsonObject parseStoredJsonObject(String rawValue) {
+        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
+        try {
+            JsonElement parsed = JsonParser.parseString(safeRawValue);
+            return parsed != null && parsed.isJsonObject() ? parsed.getAsJsonObject() : null;
+        } catch (JsonSyntaxException ignored) {
+            return null;
+        }
+    }
+
+    private String jsonString(JsonObject object, String key) {
+        if (object == null || key == null || key.isBlank()) {
+            return "";
+        }
+        JsonElement value = object.get(key);
+        return value != null && !value.isJsonNull() ? value.getAsString().trim() : "";
+    }
+
+    private String lastSelectorSegment(String selector) {
+        if (selector == null || selector.isBlank()) {
+            return "";
+        }
+        int separator = selector.lastIndexOf(':');
+        return separator >= 0 && separator < selector.length() - 1
+            ? selector.substring(separator + 1)
+            : selector;
     }
 
     private JsonObject buildLoadedQuestDefinitionsJson() {
@@ -2108,6 +2306,8 @@ public class DebugDumpService {
         Map<String, Integer> byScopeType = new LinkedHashMap<>();
         Map<String, Integer> byQuestTemplate = new LinkedHashMap<>();
         Map<String, Integer> byQuestCode = new LinkedHashMap<>();
+        Map<String, Integer> byProgressionLink = new LinkedHashMap<>();
+        StoryProgressionLinkIndex linkIndex = buildStoryProgressionLinkIndex();
 
         String sql = """
             SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
@@ -2121,7 +2321,21 @@ public class DebugDumpService {
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
                 String payload = resultSet.getString("payload");
+                String playerUuid = resultSet.getString("player_uuid");
+                String eventKey = resultSet.getString("event_key");
                 JsonObject row = storyEventRowJson(resultSet, payload);
+                StoryProgressionMatch progressionMatch = findStoryProgressionMatch(
+                    linkIndex,
+                    playerUuid,
+                    payload,
+                    eventKey
+                );
+                if (progressionMatch != null) {
+                    row.add("progression_link", storyProgressionLinkJson(progressionMatch, eventKey));
+                    incrementCount(byProgressionLink, "linked");
+                } else {
+                    incrementCount(byProgressionLink, "unlinked");
+                }
                 rows.add(row);
                 incrementCount(byEventType, resultSet.getString("event_type"));
                 incrementCount(byScopeType, resultSet.getString("scope_type"));
@@ -2134,10 +2348,16 @@ public class DebugDumpService {
         }
 
         root.addProperty("row_count", rows.size());
+        root.addProperty("progression_cross_link_available", linkIndex.available());
+        root.addProperty("progression_cross_link_source_rows", linkIndex.sourceRows());
+        if (!linkIndex.error().isBlank()) {
+            root.addProperty("progression_cross_link_error", linkIndex.error());
+        }
         root.add("by_event_type", countMapJson(byEventType));
         root.add("by_scope_type", countMapJson(byScopeType));
         root.add("by_quest_template", countMapJson(byQuestTemplate));
         root.add("by_quest_code", countMapJson(byQuestCode));
+        root.add("by_progression_link", countMapJson(byProgressionLink));
         root.add("rows", rows);
         return root;
     }
@@ -2160,6 +2380,252 @@ public class DebugDumpService {
         json.addProperty("created_at", resultSet.getLong("created_at"));
         addStoredJson(json, "payload", payload);
         return json;
+    }
+
+    private StoryProgressionLinkIndex buildStoryProgressionLinkIndex() {
+        if (plugin.getDatabaseManager() == null) {
+            return new StoryProgressionLinkIndex(false, "DatabaseManager indisponibil", 0, Map.of());
+        }
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        Map<String, List<StoryProgressionLink>> linksBySelector = new LinkedHashMap<>();
+        int sourceRows = 0;
+        String sql = """
+            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
+                   updated_at, tracked
+            FROM player_quests
+            ORDER BY updated_at DESC, completed_at DESC, started_at DESC
+            LIMIT 2000
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                sourceRows++;
+                String playerUuid = valueOrEmpty(resultSet.getString("player_uuid"));
+                String templateId = valueOrEmpty(resultSet.getString("template_id"));
+                String questCode = valueOrEmpty(resultSet.getString("quest_code"));
+                FeaturePackLoader.ScenarioDefinition scenario =
+                    findScenarioForProgressionRow(templateId, questCode, scenariosBySelector);
+                StoryProgressionLink link = new StoryProgressionLink(
+                    playerUuid,
+                    templateId,
+                    questCode,
+                    valueOrEmpty(resultSet.getString("status")),
+                    resultSet.getLong("started_at"),
+                    resultSet.getLong("completed_at"),
+                    resultSet.getLong("updated_at"),
+                    resultSet.getInt("tracked") != 0,
+                    scenario
+                );
+
+                addStoryProgressionLink(linksBySelector, playerUuid, templateId, link);
+                addStoryProgressionLink(linksBySelector, playerUuid, questCode, link);
+                addStoryProgressionLink(linksBySelector, playerUuid, lastSelectorSegment(templateId), link);
+                addStoryProgressionLink(linksBySelector, "", templateId, link);
+                addStoryProgressionLink(linksBySelector, "", questCode, link);
+                addStoryProgressionLink(linksBySelector, "", lastSelectorSegment(templateId), link);
+            }
+            return new StoryProgressionLinkIndex(true, "", sourceRows, linksBySelector);
+        } catch (SQLException exception) {
+            return new StoryProgressionLinkIndex(false, exception.getMessage(), sourceRows, linksBySelector);
+        }
+    }
+
+    private void addStoryProgressionLink(Map<String, List<StoryProgressionLink>> linksBySelector,
+                                         String playerUuid,
+                                         String selector,
+                                         StoryProgressionLink link) {
+        String key = storyEventProgressionKey(playerUuid, selector);
+        if (key.isBlank()) {
+            return;
+        }
+        List<StoryProgressionLink> links = linksBySelector.computeIfAbsent(key, ignored -> new ArrayList<>());
+        if (!links.contains(link)) {
+            links.add(link);
+        }
+    }
+
+    private StoryProgressionMatch findStoryProgressionMatch(StoryProgressionLinkIndex index,
+                                                            String eventPlayerUuid,
+                                                            String rawPayload,
+                                                            String eventKey) {
+        if (index == null || index.linksBySelector().isEmpty()) {
+            return null;
+        }
+
+        JsonObject payload = parseStoredJsonObject(rawPayload);
+        String effectivePlayerUuid = firstNonBlank(
+            valueOrEmpty(eventPlayerUuid),
+            jsonString(payload, "player_uuid")
+        );
+        List<StoryProgressionSelector> selectors = new ArrayList<>();
+        addStoryProgressionSelector(selectors, "payload.quest_template", jsonString(payload, "quest_template"));
+        addStoryProgressionSelector(selectors, "payload.quest_code", jsonString(payload, "quest_code"));
+        addStoryProgressionSelector(selectors, "event_key", eventKey);
+
+        for (StoryProgressionSelector selector : selectors) {
+            StoryProgressionMatch exactMatch = findUniqueStoryProgressionMatch(
+                index,
+                effectivePlayerUuid,
+                selector,
+                false
+            );
+            if (exactMatch != null) {
+                return exactMatch;
+            }
+        }
+
+        if (!effectivePlayerUuid.isBlank()) {
+            return null;
+        }
+
+        for (StoryProgressionSelector selector : selectors) {
+            StoryProgressionMatch selectorOnlyMatch = findUniqueStoryProgressionMatch(
+                index,
+                "",
+                selector,
+                true
+            );
+            if (selectorOnlyMatch != null) {
+                return selectorOnlyMatch;
+            }
+        }
+        return null;
+    }
+
+    private void addStoryProgressionSelector(List<StoryProgressionSelector> selectors,
+                                             String source,
+                                             String selector) {
+        String normalizedSelector = normalizeKey(selector);
+        if (normalizedSelector.isBlank()) {
+            return;
+        }
+        for (StoryProgressionSelector existing : selectors) {
+            if (normalizeKey(existing.selector()).equals(normalizedSelector)) {
+                return;
+            }
+        }
+        selectors.add(new StoryProgressionSelector(source, selector));
+    }
+
+    private StoryProgressionMatch findUniqueStoryProgressionMatch(StoryProgressionLinkIndex index,
+                                                                  String playerUuid,
+                                                                  StoryProgressionSelector selector,
+                                                                  boolean selectorOnly) {
+        String key = storyEventProgressionKey(playerUuid, selector.selector());
+        List<StoryProgressionLink> links = index.linksBySelector().get(key);
+        if (links == null || links.size() != 1) {
+            return null;
+        }
+        return new StoryProgressionMatch(
+            links.get(0),
+            selector.source(),
+            selector.selector(),
+            selectorOnly,
+            links.size()
+        );
+    }
+
+    private JsonObject storyProgressionLinkJson(StoryProgressionMatch match, String eventKey) {
+        JsonObject json = new JsonObject();
+        StoryProgressionLink link = match.link();
+        json.addProperty("match_source", match.matchSource());
+        json.addProperty("match_selector", valueOrEmpty(match.matchSelector()));
+        json.addProperty("selector_only_match", match.selectorOnlyMatch());
+        json.addProperty("candidate_count", match.candidateCount());
+        json.addProperty("player_uuid", valueOrEmpty(link.playerUuid()));
+        json.addProperty("template_id", valueOrEmpty(link.templateId()));
+        json.addProperty("quest_code", valueOrEmpty(link.questCode()));
+        json.addProperty("status", valueOrEmpty(link.status()));
+        json.addProperty("started_at", link.startedAt());
+        json.addProperty("completed_at", link.completedAt());
+        json.addProperty("updated_at", link.updatedAt());
+        json.addProperty("tracked", link.tracked());
+
+        FeaturePackLoader.ScenarioDefinition scenario = link.scenario();
+        if (scenario != null) {
+            json.addProperty("scenario_pack_id", valueOrEmpty(scenario.getPackId()));
+            json.addProperty("scenario_id", valueOrEmpty(scenario.getId()));
+            json.addProperty("scenario_name", valueOrEmpty(scenario.getName()));
+            json.addProperty("scenario_base_type", scenario.getBaseType() != null ? scenario.getBaseType().name() : "");
+            json.addProperty("scenario_mechanic_id", valueOrEmpty(scenario.getProgressionMechanicId()));
+            json.addProperty("scenario_kind", valueOrEmpty(scenario.getQuestScenarioKind()));
+            FeaturePackLoader.QuestEntryDefinition action = findRecordStoryEventAction(scenario, eventKey);
+            if (action != null) {
+                json.add("story_action", storyActionJson(action, link));
+            }
+        }
+        return json;
+    }
+
+    private FeaturePackLoader.QuestEntryDefinition findRecordStoryEventAction(
+        FeaturePackLoader.ScenarioDefinition scenario,
+        String eventKey
+    ) {
+        if (scenario == null) {
+            return null;
+        }
+        FeaturePackLoader.QuestEntryDefinition fallback = null;
+        String normalizedEventKey = normalizeKey(eventKey);
+        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+            if (!"record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
+                continue;
+            }
+            if (fallback == null) {
+                fallback = reward;
+            }
+            String actionEventKey = questEntryMetadata(reward, "event_key", "key");
+            if (!normalizedEventKey.isBlank() && normalizeKey(actionEventKey).equals(normalizedEventKey)) {
+                return reward;
+            }
+        }
+        return fallback;
+    }
+
+    private JsonObject storyActionJson(FeaturePackLoader.QuestEntryDefinition action,
+                                       StoryProgressionLink link) {
+        JsonObject json = new JsonObject();
+        json.addProperty("type", normalizeQuestRewardType(action.getType()));
+        json.addProperty("entry_id", valueOrEmpty(action.getEntryId()));
+        json.addProperty("item_id", valueOrEmpty(action.getItemId()));
+        json.addProperty("description", valueOrEmpty(action.getDescription()));
+        json.addProperty("scope", questEntryMetadata(action, "scope", "scope_type"));
+        json.addProperty("target", questEntryMetadata(
+            action,
+            "target",
+            "scope_id",
+            "target_id",
+            "id",
+            "place_id",
+            "region_id",
+            "target_place",
+            "target_region",
+            "place",
+            "region"
+        ));
+        json.addProperty("event_type", questEntryMetadata(action, "event_type", "type_id"));
+        json.addProperty("event_key", firstNonBlank(
+            questEntryMetadata(action, "event_key", "key"),
+            link.questCode()
+        ));
+        json.add("metadata", gson.toJsonTree(action.getMetadata()));
+        json.add("payload", gson.toJsonTree(action.getPayload()));
+        return json;
+    }
+
+    private String questEntryMetadata(FeaturePackLoader.QuestEntryDefinition entry, String... keys) {
+        if (entry == null || keys == null || keys.length == 0) {
+            return "";
+        }
+        Map<String, String> metadata = entry.getMetadata();
+        for (String key : keys) {
+            String value = metadata.get(key);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private void incrementCount(Map<String, Integer> counts, String key) {
@@ -2472,6 +2938,39 @@ public class DebugDumpService {
 
     private void writeText(Path path, String content) throws IOException {
         Files.writeString(path, content, StandardCharsets.UTF_8);
+    }
+
+    private record StoryProgressionLinkIndex(
+        boolean available,
+        String error,
+        int sourceRows,
+        Map<String, List<StoryProgressionLink>> linksBySelector
+    ) {
+    }
+
+    private record StoryProgressionLink(
+        String playerUuid,
+        String templateId,
+        String questCode,
+        String status,
+        long startedAt,
+        long completedAt,
+        long updatedAt,
+        boolean tracked,
+        FeaturePackLoader.ScenarioDefinition scenario
+    ) {
+    }
+
+    private record StoryProgressionSelector(String source, String selector) {
+    }
+
+    private record StoryProgressionMatch(
+        StoryProgressionLink link,
+        String matchSource,
+        String matchSelector,
+        boolean selectorOnlyMatch,
+        int candidateCount
+    ) {
     }
 
     public record DebugDumpResult(Path directory, String scope) {

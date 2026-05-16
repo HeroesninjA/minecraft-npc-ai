@@ -80,10 +80,18 @@ public class FeaturePackLoader {
         
         // Incarca fiecare fisier YAML
         List<File> files = new ArrayList<>();
-        collectPackFiles(packsFolder, files);
+        collectPackFiles(
+            packsFolder,
+            packsFolder,
+            files,
+            plugin.getConfig().getBoolean("feature_packs.allow_addon_packs", true)
+        );
         files.sort(Comparator.comparing(file -> relativizePackPath(packsFolder, file), String.CASE_INSENSITIVE_ORDER));
+        Set<String> candidatePackIds = shouldValidatePackMetadata()
+            ? collectCandidatePackIds(files)
+            : Collections.emptySet();
         for (File file : files) {
-            loadPack(file);
+            loadPack(file, candidatePackIds);
         }
         
         // Incarca pachetul medieval default din resurse daca nu exista niciunul
@@ -125,7 +133,7 @@ public class FeaturePackLoader {
         }
     }
 
-    private void collectPackFiles(File folder, List<File> files) {
+    private void collectPackFiles(File root, File folder, List<File> files, boolean allowAddonPacks) {
         File[] entries = folder.listFiles();
         if (entries == null) {
             return;
@@ -133,8 +141,13 @@ public class FeaturePackLoader {
 
         Arrays.sort(entries, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
         for (File entry : entries) {
+            String relativePath = relativizePackPath(root, entry);
+            if (!allowAddonPacks && (relativePath.equalsIgnoreCase("addons")
+                || relativePath.toLowerCase(Locale.ROOT).startsWith("addons/"))) {
+                continue;
+            }
             if (entry.isDirectory()) {
-                collectPackFiles(entry, files);
+                collectPackFiles(root, entry, files, allowAddonPacks);
                 continue;
             }
 
@@ -153,12 +166,32 @@ public class FeaturePackLoader {
      * Incarca un feature pack dintr-un fisier
      */
     public void loadPack(File file) {
+        loadPack(file, null);
+    }
+
+    private void loadPack(File file, Set<String> candidatePackIds) {
         try {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+            if (shouldValidatePackMetadata()) {
+                FeaturePackMetadataValidator.ValidationResult validation =
+                    FeaturePackMetadataValidator.validate(config, file, currentRuntimeMode());
+                logPackMetadataWarnings(file, validation);
+                if (!validation.valid()) {
+                    rejectInvalidPackMetadata(file, validation);
+                    return;
+                }
+            }
             
             String id = config.getString("id", file.getName().replace(".yml", ""));
             String name = config.getString("name", id);
             String description = config.getString("description", "");
+            if (isFeaturePackDisabled(id)) {
+                plugin.getLogger().info("Feature pack dezactivat prin addons.disabled: " + id);
+                return;
+            }
+            if (!validateFeaturePackDependencies(file, config, id, candidatePackIds)) {
+                return;
+            }
             
             FeaturePack pack = new FeaturePack(id, name, description);
             
@@ -206,7 +239,90 @@ public class FeaturePackLoader {
         } catch (Exception e) {
             plugin.getLogger().warning("Eroare la incarcarea feature pack: " + file.getName());
             e.printStackTrace();
+            if (plugin.getConfig().getBoolean("feature_packs.fail_invalid_pack", false)) {
+                throw new IllegalStateException("Feature pack invalid: " + file.getName(), e);
+            }
         }
+    }
+
+    private Set<String> collectCandidatePackIds(List<File> files) {
+        Map<String, List<String>> dependenciesByPackId = new LinkedHashMap<>();
+        for (File file : files) {
+            try {
+                YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+                FeaturePackMetadataValidator.ValidationResult validation =
+                    FeaturePackMetadataValidator.validate(config, file, currentRuntimeMode());
+                String packId = validation.packId();
+                if (validation.valid() && !isFeaturePackDisabled(packId)) {
+                    dependenciesByPackId.put(packId, config.getStringList("addon.dependencies"));
+                }
+            } catch (Exception exception) {
+                plugin.debug("Nu s-a putut citi metadata pentru candidate pack: " + file.getName());
+            }
+        }
+        return FeaturePackDependencyValidator.resolveAvailablePackIds(dependenciesByPackId);
+    }
+
+    private boolean validateFeaturePackDependencies(File file,
+                                                    YamlConfiguration config,
+                                                    String packId,
+                                                    Set<String> candidatePackIds) {
+        if (!shouldValidatePackMetadata() || candidatePackIds == null) {
+            return true;
+        }
+
+        List<String> dependencies = config.getStringList("addon.dependencies");
+        List<String> missingDependencies =
+            FeaturePackDependencyValidator.missingDependencies(candidatePackIds, dependencies);
+        if (missingDependencies.isEmpty()) {
+            return true;
+        }
+
+        plugin.getLogger().warning("Feature pack respins prin dependinte lipsa: " + packId + " (" + file.getName() + ")");
+        plugin.getLogger().warning("- dependinte lipsa: " + String.join(", ", missingDependencies));
+        if (plugin.getConfig().getBoolean("feature_packs.fail_invalid_pack", false)) {
+            throw new IllegalStateException("Dependinte feature pack lipsa: " + packId);
+        }
+        return false;
+    }
+
+    private boolean shouldValidatePackMetadata() {
+        return plugin.getConfig().getBoolean("feature_packs.validate_on_startup", true)
+            && plugin.getConfig().getBoolean("feature_packs.validate_addon_metadata", true);
+    }
+
+    private RuntimeMode currentRuntimeMode() {
+        if (plugin.getPlatform() != null) {
+            return plugin.getPlatform().getRuntimeMode();
+        }
+        return RuntimeMode.fromId(plugin.getConfig().getString("platform.runtime_mode", "standalone"));
+    }
+
+    private void logPackMetadataWarnings(File file, FeaturePackMetadataValidator.ValidationResult validation) {
+        for (String warning : validation.warnings()) {
+            plugin.getLogger().warning("Metadata feature pack " + file.getName() + ": " + warning);
+        }
+    }
+
+    private void rejectInvalidPackMetadata(File file, FeaturePackMetadataValidator.ValidationResult validation) {
+        plugin.getLogger().warning("Feature pack respins prin metadata invalida: " + file.getName());
+        for (String error : validation.errors()) {
+            plugin.getLogger().warning("- " + error);
+        }
+        if (plugin.getConfig().getBoolean("feature_packs.fail_invalid_pack", false)) {
+            throw new IllegalStateException("Metadata feature pack invalida: " + file.getName());
+        }
+    }
+
+    private boolean isFeaturePackDisabled(String id) {
+        String normalized = id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return false;
+        }
+        return plugin.getConfig().getStringList("addons.disabled").stream()
+            .filter(value -> value != null && !value.isBlank())
+            .map(value -> value.trim().toLowerCase(Locale.ROOT))
+            .anyMatch(normalized::equals);
     }
 
     /**

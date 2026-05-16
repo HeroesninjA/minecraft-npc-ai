@@ -107,10 +107,15 @@ public class WorldHubGui implements GuiScreen {
             GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami."),
             click -> click.service().runCommand(click.player(), "ainpc world whereami")
         ));
-        context.button(29, GuiButton.enabled(
-            GuiItemFactory.item(Material.NETHER_STAR, "&dStory context", "&7Ruleaza context story pentru cel mai apropiat NPC."),
-            click -> click.service().runCommand(click.player(), "ainpc story context " + click.player().getName() + " nearest")
-        ));
+        context.button(29, context.service().canOpen(player, GuiKey.STORY)
+            ? GuiButton.enabled(
+                GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory",
+                    "&7Deschide snapshot-ul story pentru regiunea si place-ul curent."),
+                click -> click.service().open(click.player(), GuiKey.STORY)
+            )
+            : GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Story",
+                List.of("&7Nu ai acces la GUI-ul story.")))
+        );
 
         if (adminView) {
             context.button(30, GuiButton.enabled(

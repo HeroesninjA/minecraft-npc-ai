@@ -22,7 +22,7 @@ public class MedievalScenarioAddon implements AINPCAddon {
             AddonType.FEATURE,
             false,
             EnumSet.allOf(RuntimeMode.class),
-            List.of("scenario-pack", "pack-installer"),
+            List.of("scenario-pack", "pack-installer", "addon-config-template"),
             List.of("ainpc-core")
         );
     }

@@ -1,6 +1,6 @@
 # Faze Urmatoare pe Categorii
 
-Actualizat: 2026-05-09
+Actualizat: 2026-05-11
 
 ## Scop
 
@@ -25,7 +25,7 @@ Sinteza este bazata pe:
 - `faze-observatii-avertizari.md`;
 - `roadmap-orientativ.md`;
 - documentele de domeniu pentru mapping, spawn, questuri, progression, story, dialog, simulare, API, addonuri, generare si operare.
-- `lucru-alternat-quest-mapping-progression.md`, pentru cadenta dintre mapping concret, quest/contract jucabil, GUI peste snapshot-uri si extractie mica spre `ProgressionService`.
+- `lucru-alternat-quest-mapping-progression.md`, pentru cadenta dintre mapping concret, story baseline, quest/contract jucabil, GUI peste snapshot-uri si extractie mica spre `ProgressionService`.
 
 ## Legenda
 

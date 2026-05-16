@@ -72,6 +72,28 @@ public class ProgressionService {
             .toList();
     }
 
+    public List<String> getObjectiveIdSuggestions(Player player, String selector) {
+        FeaturePackLoader.ScenarioDefinition scenario = null;
+        ProgressionSelector progressionSelector = parseSelector(selector);
+        ScenarioEngine.QuestGuiEntry entry = findEntry(player, progressionSelector);
+        ProgressionDefinition entryDefinition = findDefinitionForEntry(entry);
+        if (entryDefinition != null) {
+            scenario = findScenarioForDefinition(entryDefinition);
+        }
+        if (scenario == null) {
+            scenario = findScenarioForSelector(selector);
+        }
+        if (scenario == null) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> suggestions = new LinkedHashSet<>();
+        for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
+            addCandidate(suggestions, displayObjectiveKey(objective));
+        }
+        return List.copyOf(suggestions);
+    }
+
     public List<StoredProgression> getStoredProgressions() throws SQLException {
         return repository.findAll();
     }
@@ -200,7 +222,7 @@ public class ProgressionService {
     }
 
     private ScenarioEngine.QuestGuiEntry findEntry(Player player, ProgressionSelector selector) {
-        if (player == null) {
+        if (player == null || scenarioEngine() == null) {
             return null;
         }
 
@@ -293,6 +315,82 @@ public class ProgressionService {
             .orElse(null);
     }
 
+    private FeaturePackLoader.ScenarioDefinition findScenarioForDefinition(ProgressionDefinition definition) {
+        if (definition == null || plugin.getFeaturePackLoader() == null) {
+            return null;
+        }
+
+        return plugin.getFeaturePackLoader().getAllScenarios().stream()
+            .filter(ProgressionDefinition::isProgressionCandidate)
+            .filter(scenario -> definitionMatchesScenario(definition, scenario))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForSelector(String selector) {
+        String normalized = valueOrEmpty(selector).toLowerCase(Locale.ROOT);
+        if (normalized.isBlank() || plugin.getFeaturePackLoader() == null) {
+            return null;
+        }
+
+        return plugin.getFeaturePackLoader().getAllScenarios().stream()
+            .filter(ProgressionDefinition::isProgressionCandidate)
+            .filter(scenario -> definitionSelectorCandidates(ProgressionDefinition.fromScenarioDefinition(scenario))
+                .stream()
+                .map(candidate -> candidate.toLowerCase(Locale.ROOT))
+                .anyMatch(normalized::equals))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean definitionMatchesScenario(ProgressionDefinition definition,
+                                              FeaturePackLoader.ScenarioDefinition scenario) {
+        if (definition == null || scenario == null) {
+            return false;
+        }
+        ProgressionDefinition scenarioDefinition = ProgressionDefinition.fromScenarioDefinition(scenario);
+        return equalsIgnoreCase(definition.progressionId(), scenarioDefinition.progressionId())
+            || equalsIgnoreCase(definition.templateId(), scenarioDefinition.templateId())
+            || equalsIgnoreCase(definition.code(), scenarioDefinition.code())
+            || (equalsIgnoreCase(definition.packId(), scenarioDefinition.packId())
+                && equalsIgnoreCase(definition.definitionId(), scenarioDefinition.definitionId()));
+    }
+
+    private Set<String> definitionSelectorCandidates(ProgressionDefinition definition) {
+        Set<String> candidates = new LinkedHashSet<>();
+        if (definition == null) {
+            return candidates;
+        }
+        addCandidate(candidates, definition.progressionId());
+        addCandidate(candidates, definition.definitionId());
+        addCandidate(candidates, definition.templateId());
+        addCandidate(candidates, definition.code());
+        addCandidate(candidates, definition.kind() + ":" + definition.definitionId());
+        addCandidate(candidates, definition.kind() + ":" + definition.code());
+        addCandidate(candidates, definition.mechanicId() + ":" + definition.definitionId());
+        addCandidate(candidates, definition.mechanicId() + ":" + definition.code());
+        addCandidate(candidates, definition.packId() + ":" + definition.definitionId());
+        addCandidate(candidates, definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId());
+        addCandidate(candidates, definition.packId() + ":" + definition.mechanicId() + ":" + definition.code());
+        return candidates;
+    }
+
+    private String displayObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective) {
+        if (objective == null) {
+            return "";
+        }
+        String entryId = valueOrEmpty(objective.getEntryId());
+        if (!entryId.isBlank()) {
+            return entryId;
+        }
+        String type = valueOrEmpty(objective.getType());
+        String itemId = valueOrEmpty(objective.getItemId());
+        if (type.isBlank() && itemId.isBlank()) {
+            return "";
+        }
+        return type + ":" + itemId;
+    }
+
     private void addCandidate(Set<String> candidates, String candidate) {
         if (candidate != null && !candidate.isBlank()) {
             candidates.add(candidate);
@@ -301,6 +399,10 @@ public class ProgressionService {
 
     private boolean equalsIgnoreCase(String left, String right) {
         return left != null && right != null && left.equalsIgnoreCase(right);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 
 }

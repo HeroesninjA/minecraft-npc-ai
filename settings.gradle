@@ -1,0 +1,5 @@
+rootProject.name = 'ainpc-parent'
+
+include 'ainpc-api'
+include 'ainpc-core-plugin'
+include 'ainpc-scenario-medieval'

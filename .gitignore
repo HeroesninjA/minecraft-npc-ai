@@ -3,4 +3,9 @@
 /ainpc-api/target/
 /ainpc-core-plugin/target/
 /ainpc-scenario-medieval/target/
+/.gradle/
+/build/
+/ainpc-api/build/
+/ainpc-core-plugin/build/
+/ainpc-scenario-medieval/build/
 /debug-logs/

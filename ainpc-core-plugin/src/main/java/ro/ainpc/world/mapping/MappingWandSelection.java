@@ -15,12 +15,24 @@ public record MappingWandSelection(MappingPoint pos1, MappingPoint pos2, Mapping
         return new MappingWandSelection(value, pos2, point);
     }
 
+    public MappingWandSelection withoutPos1() {
+        return withPos1(null);
+    }
+
     public MappingWandSelection withPos2(MappingPoint value) {
         return new MappingWandSelection(pos1, value, point);
     }
 
+    public MappingWandSelection withoutPos2() {
+        return withPos2(null);
+    }
+
     public MappingWandSelection withPoint(MappingPoint value) {
         return new MappingWandSelection(pos1, pos2, value);
+    }
+
+    public MappingWandSelection withoutPoint() {
+        return withPoint(null);
     }
 
     public Optional<MappingBounds> bounds() {

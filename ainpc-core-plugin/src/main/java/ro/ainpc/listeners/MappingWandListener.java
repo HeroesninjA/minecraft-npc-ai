@@ -46,20 +46,23 @@ public class MappingWandListener extends AbstractPluginListener {
             || mode == MappingWandMode.NPC_BIND
             || mode == MappingWandMode.QUEST_ANCHOR
             || player.isSneaking()) {
-            service.setPoint(player, point);
+            MappingWandService.MappingWandSession session = service.setPoint(player, point);
             messages().send(player, "&aWand point setat: &f" + point.format());
             messages().send(player, "&7Draft: &f/ainpc map " + mode.id() + " <descriere>");
+            service.showSelectionPreview(player, session);
             return;
         }
 
+        MappingWandService.MappingWandSession session;
         if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            service.setPos1(player, point);
+            session = service.setPos1(player, point);
             messages().send(player, "&aWand pos1 setat: &f" + point.format());
         } else {
-            service.setPos2(player, point);
+            session = service.setPos2(player, point);
             messages().send(player, "&aWand pos2 setat: &f" + point.format());
         }
         messages().send(player, "&7Draft: &f/ainpc map " + mode.id() + " <descriere>");
+        service.showSelectionPreview(player, session);
     }
 
     private MappingPoint toPoint(Location location) {

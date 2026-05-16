@@ -1,0 +1,9 @@
+description = 'AINPC Scenario Medieval'
+
+dependencies {
+    compileOnly project(':ainpc-api')
+    compileOnly "io.papermc.paper:paper-api:${paperVersion}"
+
+    testImplementation project(':ainpc-api')
+    testImplementation "io.papermc.paper:paper-api:${paperVersion}"
+}

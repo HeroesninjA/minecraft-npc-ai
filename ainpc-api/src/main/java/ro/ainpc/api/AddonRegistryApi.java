@@ -25,5 +25,9 @@ public interface AddonRegistryApi {
 
     AddonDescriptor getPrimaryScenario();
 
+    default boolean isAddonEnabled(String addonId) {
+        return true;
+    }
+
     int size();
 }
