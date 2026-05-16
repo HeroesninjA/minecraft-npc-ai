@@ -1,3 +1,7 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
 description = 'AINPC Core Plugin'
 
 dependencies {
@@ -8,6 +12,7 @@ dependencies {
     implementation "com.google.code.gson:gson:${gsonVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
     implementation "com.squareup.okhttp3:okhttp:${okhttpVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.ext.kotlinVersion}"
 
     testImplementation "io.papermc.paper:paper-api:${paperVersion}"
 }

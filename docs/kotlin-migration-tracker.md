@@ -77,6 +77,39 @@ Nu grupa mai multe pachete intr-un singur rand.
 | KOT-023 | `spawn` result/resolved models | productie | 2 | validat local | `ro.ainpc.spawn.*` |
 | KOT-024 | `gui` primitives/session models | productie | 2 | validat local | `ro.ainpc.gui.*` |
 | KOT-025 | `debug` semantic index | productie | 2 | validat local | `WorldMappingSemanticIndexTest` |
+| KOT-026 | `gui` quest log paging | productie | 2 | validat local | `QuestLogGuiPageTest` |
+| KOT-027 | `gui` item factory | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-028 | `gui` inventory holder | productie | 1 | validat local | `ro.ainpc.gui.*` |
+| KOT-029 | `gui` inventory listener | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-030 | `gui` placeholder screen | productie | 1 | validat local | `ro.ainpc.gui.*` |
+| KOT-031 | `gui` audit screen | productie | 1 | validat local | `ro.ainpc.gui.*` |
+| KOT-032 | `gui` debug screen | productie | 1 | validat local | `ro.ainpc.gui.*` |
+| KOT-033 | `gui` stats screen | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-034 | `gui` confirm action screen | productie | 1 | validat local | `ro.ainpc.gui.*` |
+| KOT-035 | `gui` main hub screen | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-036 | `gui` npc manager screen | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-037 | `gui` npc interaction screen | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-038 | `gui` routine screen | productie | 2 | validat local | `ro.ainpc.gui.*` |
+| KOT-039 | `gui` quest log screen | productie | 3 | validat local | `ro.ainpc.gui.*` |
+| KOT-040 | `gui` world hub screen | productie | 3 | validat local | `ro.ainpc.gui.*` |
+| KOT-041 | `gui` story screen | productie | 3 | validat local | `ro.ainpc.gui.*` |
+| KOT-042 | `gui` quest detail screen | productie | 4 | validat local | `ro.ainpc.gui.*` |
+| KOT-043 | `npc` state/action enums | productie | 2 | validat local | `RoutineEngineTest` |
+| KOT-044 | `npc` emotions model | productie | 2 | validat local | `clean build` |
+| KOT-045 | `npc` personality model | productie | 2 | validat local | `clean build` |
+| KOT-046 | `npc` context model | productie | 3 | validat local | `clean build` |
+| KOT-047 | `world` type enums | productie | 1 | validat local | `clean build` |
+| KOT-048 | `world` story state model | productie | 1 | validat local | `clean build` |
+| KOT-049 | `world` npc binding model | productie | 2 | validat local | `clean build` |
+| KOT-050 | `world` node model | productie | 2 | validat local | `clean build` |
+| KOT-051 | `world` place model | productie | 2 | validat local | `clean build` |
+| KOT-052 | `world` region model | productie | 2 | validat local | `clean build` |
+| KOT-053 | `world.patch` planner primitives | productie | 2 | validat local | `clean build` |
+| KOT-054 | `world.patch` candidate/plan models | productie | 2 | validat local | `clean build` |
+| KOT-055 | `world.patch` gap report model | productie | 2 | validat local | `clean build` |
+| KOT-056 | `world` context snapshot model | productie | 3 | validat local | `clean build` |
+| KOT-057 | `world` mapping index | productie | 2 | validat local | `clean build` |
+| KOT-058 | `world` context snapshot builder | productie | 3 | validat local | `clean build` |
 
 ## Template pentru un slice
 
@@ -238,7 +271,7 @@ JAR audit: plugin.yml prezent; clasele ai/orchestration Kotlin, clasele debug co
 Smoke Paper: nu a fost rulat local; ramane planificat in KOT-010
 Rollback: nu necesita rollback de cod; daca lipsesc clasele, revizuieste jar/runtimeClasspath
 Status: validat local
-Observatii: audit facut prin API-ul ZIP PowerShell deoarece comanda jar nu este pe PATH; dupa KOT-025 sunt prezente clase Kotlin din ai/orchestration, debug, engine, gui, progression, routine, world.mapping, world.patch, world.scan si spawn.
+Observatii: audit facut prin API-ul ZIP PowerShell deoarece comanda jar nu este pe PATH; dupa KOT-058 sunt prezente clase Kotlin din ai/orchestration, debug, engine, gui, npc, progression, routine, story, world, world.mapping, world.patch, world.scan si spawn.
 ```
 
 ### KOT-006
@@ -653,6 +686,765 @@ Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
 Rollback: sterge fisierul Kotlin si readauga WorldMappingSemanticIndex.java din istoric
 Status: validat local
 Observatii: sortarea interna a ID-urilor a fost adaptata la Kotlin (sortWith) pentru a evita API depreciat tratat ca eroare la compilare.
+```
+
+### KOT-026
+
+```text
+ID: KOT-026
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui
+Fisiere adaugate: QuestLogGuiPage.kt
+Fisiere sterse: QuestLogGuiPage.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste paginatorul de quest log GUI cu grupare pe mecanica si paginare pe randuri
+Compatibilitate Java: metodele record-style rows(), pageIndex(), pageCount(), totalRows(), totalEntries(), displayPage(), hasPrevious(), hasNext() sunt pastrate; fromEntries() ramane static prin @JvmStatic; QuestLogGuiPage.Row pastreaza header()/entry() statice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.QuestLogGuiPageTest"; .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: QuestLogGuiPage.class, QuestLogGuiPage$Row.class, QuestLogGuiPage$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga QuestLogGuiPage.java din istoric
+Status: validat local
+Observatii: logica de evitare a header-ului orfan si repetarea header-ului la split pe pagina este pastrata si acoperita de testele existente.
+```
+
+### KOT-027
+
+```text
+ID: KOT-027
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui
+Fisiere adaugate: GuiItemFactory.kt
+Fisiere sterse: GuiItemFactory.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste factory-ul de iteme GUI folosit transversal in ecrane si mapping wand
+Compatibilitate Java: metodele statice item(...), disabled(...), filler(), text(), wrapLore(...), compact(), stripLegacy() sunt pastrate prin @JvmStatic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: GuiItemFactory.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga GuiItemFactory.java din istoric
+Status: validat local
+Observatii: executiile Gradle au fost rulate serial pentru a evita erori false generate de doua build-uri pornite in paralel pe acelasi workspace.
+```
+
+### KOT-028
+
+```text
+ID: KOT-028
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui
+Fisiere adaugate: AINPCGuiHolder.kt
+Fisiere sterse: AINPCGuiHolder.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste holder-ul de inventar pentru sesiunea GUI
+Compatibilitate Java: metodele sessionId(), key(), attach() si getInventory() sunt pastrate; clasa implementeaza in continuare InventoryHolder
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: AINPCGuiHolder.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga AINPCGuiHolder.java din istoric
+Status: validat local
+Observatii: getInventory() este non-null in semnatura Kotlin pentru compatibilitate stricta cu InventoryHolder.
+```
+
+### KOT-029
+
+```text
+ID: KOT-029
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/listeners
+Fisiere adaugate: GuiInventoryListener.kt
+Fisiere sterse: GuiInventoryListener.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste listener-ul GUI pentru click/drag/close/quit
+Compatibilitate Java: comportamentul ramane identic pentru anulare evenimente GUI, forward catre GuiService si curatare sesiune pe quit
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: GuiInventoryListener.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga GuiInventoryListener.java din istoric
+Status: validat local
+Observatii: listener-ul foloseste in continuare aceeasi conditie de boundary pe rawSlot si aceeasi inchidere de sesiune pe InventoryCloseEvent.
+```
+
+### KOT-030
+
+```text
+ID: KOT-030
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: PlaceholderGui.kt
+Fisiere sterse: PlaceholderGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste ecranul placeholder folosit pentru zone GUI fara provider activ
+Compatibilitate Java: comportamentul de titlu, size=54, item central, controale standard si filler ramane identic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: PlaceholderGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga PlaceholderGui.java din istoric
+Status: validat local
+Observatii: constructorul ramas simplu permite in continuare inregistrarea din GuiService fara schimbari.
+```
+
+### KOT-031
+
+```text
+ID: KOT-031
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: AuditGui.kt
+Fisiere sterse: AuditGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste ecranul de audit operational din hub-ul GUI
+Compatibilitate Java: cheia GUI, titlul, sloturile butoanelor, comenzile /ainpc audit <mode> si controalele standard raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: AuditGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga AuditGui.java din istoric
+Status: validat local
+Observatii: butoanele raman construite prin GuiButton.enabled + runCommand in acelasi mod ca varianta Java.
+```
+
+### KOT-032
+
+```text
+ID: KOT-032
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: DebugGui.kt
+Fisiere sterse: DebugGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste ecranul de debug operational din hub-ul GUI
+Compatibilitate Java: sloturile, scope-urile debugdump, butonul de test OpenAI si comenzile executate raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: DebugGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga DebugGui.java din istoric
+Status: validat local
+Observatii: builder-ele de butoane folosesc aceeasi compozitie GuiButton.enabled + GuiItemFactory.item ca in Java.
+```
+
+### KOT-033
+
+```text
+ID: KOT-033
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: StatsGui.kt
+Fisiere sterse: StatsGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste ecranul de statistici jucator/NPC din hub-ul GUI
+Compatibilitate Java: sloturile, comenziile asociate butoanelor, sortarea NPC-urilor si limita de 14 intrari raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: StatsGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga StatsGui.java din istoric
+Status: validat local
+Observatii: snapshot-ul din GUI pastreaza formatul health cu Locale.ROOT si aceleasi campuri afisate in lore.
+```
+
+### KOT-034
+
+```text
+ID: KOT-034
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: ConfirmActionGui.kt
+Fisiere sterse: ConfirmActionGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste ecranul de confirmare pentru comenzi operationale
+Compatibilitate Java: fallback-ul pentru cerere expirata, butonul inapoi, butoanele confirma/anuleaza si executia comenzilor raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: ConfirmActionGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga ConfirmActionGui.java din istoric
+Status: validat local
+Observatii: lore-ul include in continuare linia de comanda „/&lt;command&gt;” construita din request.command().
+```
+
+### KOT-035
+
+```text
+ID: KOT-035
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: MainHubGui.kt
+Fisiere sterse: MainHubGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste ecranul principal de navigare GUI
+Compatibilitate Java: sloturile, butoanele de navigare, verificarea de permisiuni, fallback-ul locked si comenzile rapide raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: MainHubGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga MainHubGui.java din istoric
+Status: validat local
+Observatii: compozitia lore pentru snapshot hub (NPC count + world mapping + locatie) este pastrata in aceeasi ordine.
+```
+
+### KOT-036
+
+```text
+ID: KOT-036
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: NpcManagerGui.kt
+Fisiere sterse: NpcManagerGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste ecranul de administrare NPC (listare, info, tp, routine, familie)
+Compatibilitate Java: sloturile, combinatiile click/right/shift, comenzile rulate si limita afisata raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: NpcManagerGui.class, NpcManagerGui$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NpcManagerGui.java din istoric
+Status: validat local
+Observatii: slot-ul de rutina este tratat null-safe in Kotlin (fallback IDLE) pentru a pastra compilarea stabila fara schimbare functionala.
+```
+
+### KOT-037
+
+```text
+ID: KOT-037
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: NpcInteractionGui.kt
+Fisiere sterse: NpcInteractionGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste ecranul de interactiune NPC cu nearest progression actions
+Compatibilitate Java: sloturile, actiunile click/right/shift, selectia progresiei nearest si comenzile generate raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: NpcInteractionGui.class, NpcInteractionGui$Companion.class, NpcInteractionGui$NearbyProgression.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NpcInteractionGui.java din istoric
+Status: validat local
+Observatii: prioritatea progresiilor (tracked/current/active/offered/other/archived) ramane neschimbata.
+```
+
+### KOT-038
+
+```text
+ID: KOT-038
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: RoutineGui.kt
+Fisiere sterse: RoutineGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste ecranul de rutina NPC (preview, status, tick, manager shortcuts)
+Compatibilitate Java: sloturile, comenzile admin, fallback-urile de permisiune si reprezentarea programului zilnic raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: RoutineGui.class, RoutineGui$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga RoutineGui.java din istoric
+Status: validat local
+Observatii: campurile nullable din rutina (slot/assignment/targetState) sunt tratate null-safe pentru compatibilitate la compilare, fara schimbare de flux functional.
+```
+
+### KOT-039
+
+```text
+ID: KOT-039
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: QuestLogGui.kt
+Fisiere sterse: QuestLogGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste ecranul central de progresii (filtre, paginare, tracking, actiuni entry)
+Compatibilitate Java: sloturile, materialele, comenzile status/track, paginarea, filtrele si comportamentul click/right/shift sunt pastrate
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: QuestLogGui.class, QuestLogGui$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga QuestLogGui.java din istoric
+Status: validat local
+Observatii: logica grupare+header rows este in continuare delegata la QuestLogGuiPage convertit anterior.
+```
+
+### KOT-040
+
+```text
+ID: KOT-040
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: WorldHubGui.kt
+Fisiere sterse: WorldHubGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste ecranul world hub (context mapping, progresii locale, ancore, comenzi world)
+Compatibilitate Java: sloturile, controalele de permisiune, comenzile whereami/scan/demo/save si integrarea cu Story/Quest GUI raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldHubGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldHubGui.java din istoric
+Status: validat local
+Observatii: query-urile pentru anchor bindings pastreaza fallback-ul pe SQLException, cu warning logger fara intreruperea render-ului.
+```
+
+### KOT-041
+
+```text
+ID: KOT-041
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: StoryGui.kt
+Fisiere sterse: StoryGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste ecranul story snapshot (region/place state, events, comenzi story/debugdump)
+Compatibilitate Java: sloturile, fallback-urile pentru service indisponibil, formatarea evenimentelor si comenzile text raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: StoryGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga StoryGui.java din istoric
+Status: validat local
+Observatii: filtrarea materialelor pe eventType (quest/complete/ritual/alert/alarm) si compactarea payload-ului au ramas neschimbate.
+```
+
+### KOT-042
+
+```text
+ID: KOT-042
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens
+Fisiere adaugate: QuestDetailGui.kt
+Fisiere sterse: QuestDetailGui.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 4
+Motiv: converteste ecranul detaliat de progresie (objectives/stages/rewards/anchor diagnostics/actions)
+Compatibilitate Java: selector fallback all, butoanele de actiuni, confirm abandon, tracking/status/progress/debug si fallback-urile missing selection/quest raman identice
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"
+Build rulat: .\gradlew.bat clean build
+JAR audit: QuestDetailGui.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga QuestDetailGui.java din istoric
+Status: validat local
+Observatii: pachetul `gui/screens` din core este acum complet migrat la Kotlin.
+```
+
+### KOT-043
+
+```text
+ID: KOT-043
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc
+Fisiere adaugate: NPCState.kt, NPCAction.kt
+Fisiere sterse: NPCState.java, NPCAction.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste enum-urile de baza pentru state machine si scoring de actiuni NPC
+Compatibilitate Java: getter-ele Java-style pentru displayName/baseScore/description raman disponibile; aliasul static HELP ramane disponibil; semnaturile metodelor de clasificare (isWorkState/isSocialState/etc.) sunt pastrate
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks; .\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.routine.RoutineEngineTest"
+Build rulat: .\gradlew.bat clean build
+JAR audit: NPCState.class, NPCAction.class, NPCAction$ActionCategory.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierele Kotlin si readauga enum-urile Java din istoric
+Status: validat local
+Observatii: dupa o rulare paralela Gradle care a generat erori false de lock/up-to-date, validarea finala a fost rerulata serial si a trecut.
+```
+
+### KOT-044
+
+```text
+ID: KOT-044
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc
+Fisiere adaugate: NPCEmotions.kt
+Fisiere sterse: NPCEmotions.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul emotional NPC (plutchik), folosit in UI/statistics/dialog context
+Compatibilitate Java: proprietatile si getter-ele JavaBean raman disponibile (inclusiv dominantEmotion/dominantEmotionColor); metoda statica getEmotionColor ramane disponibila prin @JvmStatic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: NPCEmotions.class, NPCEmotions$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NPCEmotions.java din istoric
+Status: validat local
+Observatii: in prima iteratie au aparut unresolved references pe dominantEmotion in GUI; conversia a fost ajustata sa expuna aceeasi proprietate ca in Java interop.
+```
+
+### KOT-045
+
+```text
+ID: KOT-045
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc
+Fisiere adaugate: NPCPersonality.kt
+Fisiere sterse: NPCPersonality.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul Big Five (OCEAN) pentru personalitatea NPC
+Compatibilitate Java: constructorul gol si constructorul cu 5 parametri raman disponibili; metodele statice generateRandom() si fromArchetype() raman disponibile prin @JvmStatic; getter/setter JavaBean pentru trait-uri raman compatibile
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: NPCPersonality.class, NPCPersonality$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NPCPersonality.java din istoric
+Status: validat local
+Observatii: logica de clamp, arhetipuri si affinity pe topic a fost pastrata 1:1 functional.
+```
+
+### KOT-046
+
+```text
+ID: KOT-046
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc
+Fisiere adaugate: NPCContext.kt
+Fisiere sterse: NPCContext.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste contextul runtime NPC (lume, entitati apropiate, relatie jucator, descriere prompt)
+Compatibilitate Java: metodele publice folosite extern (updateFromWorld, syncSimulationState, addRecentEvent, generateContextDescription) si getter/setter-urile JavaBean raman disponibile prin proprietatile Kotlin
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: NPCContext.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NPCContext.java din istoric
+Status: validat local
+Observatii: in pachetul `ro.ainpc.npc` a ramas Java doar clasa mare `AINPC`.
+```
+
+### KOT-047
+
+```text
+ID: KOT-047
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldNodeType.kt, RegionType.kt
+Fisiere sterse: WorldNodeType.java, RegionType.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste enum-urile de tip pentru noduri si regiuni world mapping
+Compatibilitate Java: getter-ul JavaBean getId() ramane disponibil; fromId(String) ramane static prin @JvmStatic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldNodeType.class, RegionType.class, WorldNodeType$Companion.class, RegionType$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierele Kotlin si readauga enum-urile Java din istoric
+Status: validat local
+Observatii: fallback-ul CUSTOM pentru ID gol/necunoscut este pastrat neschimbat.
+```
+
+### KOT-048
+
+```text
+ID: KOT-048
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: StoryState.kt
+Fisiere sterse: StoryState.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 1
+Motiv: converteste modelul simplu pentru state/pool story in world mapping
+Compatibilitate Java: getMode(), getStateKey()/setStateKey(), getStoryPool() si setStoryPool(List) raman disponibile; getStoryPool returneaza in continuare o copie imutabila observabila extern
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: StoryState.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga StoryState.java din istoric
+Status: validat local
+Observatii: setStoryPool pastreaza copy semantics (clear + addAll) si ignora null input ca in varianta Java.
+```
+
+### KOT-049
+
+```text
+ID: KOT-049
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: NpcWorldBinding.kt
+Fisiere sterse: NpcWorldBinding.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul de binding NPC -> world places/nodes folosit de serviciul de persistenta si comenzi admin
+Compatibilitate Java: accesorii record-style (npcId(), npcUuid(), createdAt(), etc.) sunt pastrate explicit; fromSpawnPlan ramane static prin @JvmStatic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: NpcWorldBinding.class, NpcWorldBinding$Companion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga NpcWorldBinding.java din istoric
+Status: validat local
+Observatii: prima varianta Kotlin a rupt interop-ul cu apeluri Java de tip record accessor; a fost corectata in acelasi slice prin expunerea tuturor metodelor `fieldName()`.
+```
+
+### KOT-050
+
+```text
+ID: KOT-050
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldNode.kt
+Fisiere sterse: WorldNode.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul de node world folosit in indexare, mapare si demo settlement
+Compatibilitate Java: getter-ele JavaBean, putMetadata(...), contains(...), isNear(...), distanceSquared(...) raman disponibile; `placeId` accepta null ca in varianta Java
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldNode.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldNode.java din istoric
+Status: validat local
+Observatii: prima varianta Kotlin a marcat `placeId` non-null si a cauzat NPE in createDemoSettlement; a fost corectata in acelasi slice prin nullable `placeId`.
+```
+
+### KOT-051
+
+```text
+ID: KOT-051
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldPlace.kt
+Fisiere sterse: WorldPlace.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul de place pentru mapare regiune, metadata si ownership NPC
+Compatibilitate Java: getter-ele JavaBean, setOwnerNpcId(String) tolerant la null, isPublicAccess()/setPublicAccess(boolean), getTags()/setTags(...) si getMetadata()/putMetadata(...) raman disponibile
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldPlace.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldPlace.java din istoric
+Status: validat local
+Observatii: setOwnerNpcId ramane null-safe explicit pentru a pastra comportamentul Java (null -> string gol).
+```
+
+### KOT-052
+
+```text
+ID: KOT-052
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldRegion.kt
+Fisiere sterse: WorldRegion.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelul de regiune world (boundaries, tags, story state)
+Compatibilitate Java: getter-ele JavaBean, setTags(...), contains(...), getStoryState()/setStoryState(...) raman disponibile prin proprietati/methods Kotlin
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldRegion.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldRegion.java din istoric
+Status: validat local
+Observatii: initializarea implicita StoryState(EVOLUTIVE, "default") este pastrata neschimbata.
+```
+
+### KOT-053
+
+```text
+ID: KOT-053
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/patch
+Fisiere adaugate: PatchPlannerOptions.kt, PatchPlannerResult.kt, VillageGap.kt
+Fisiere sterse: PatchPlannerOptions.java, PatchPlannerResult.java, VillageGap.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste primitivele folosite de planner (options/result/gap) fara atingerea planner-ului principal
+Compatibilitate Java: accesoriile record-style (fieldName()) sunt pastrate explicit; metodele statice forTargetPopulation(...) / defaultCapabilities() sunt pastrate prin @JvmStatic
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: PatchPlannerOptions.class, PatchPlannerResult.class, VillageGap.class, companion classes, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierele Kotlin si readauga cele 3 fisiere Java din istoric
+Status: validat local
+Observatii: normalizarea capability/profession si default-urile defensive (target/min/max/errors lists) sunt pastrate.
+```
+
+### KOT-054
+
+```text
+ID: KOT-054
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/patch
+Fisiere adaugate: PatchCandidate.kt, PatchPlan.kt
+Fisiere sterse: PatchCandidate.java, PatchPlan.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste modelele candidate/plan folosite de planner-ul de patch-uri
+Compatibilitate Java: accesoriile record-style (candidateId(), patchId(), type(), priority(), etc.) si metoda valid() sunt pastrate explicit
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: PatchCandidate.class, PatchPlan.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierele Kotlin si readauga cele 2 fisiere Java din istoric
+Status: validat local
+Observatii: fallback-urile defensive pentru liste si campuri text sunt pastrate in constructorul Kotlin.
+```
+
+### KOT-055
+
+```text
+ID: KOT-055
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/patch
+Fisiere adaugate: GapReport.kt
+Fisiere sterse: GapReport.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste raportul agregat de gap-uri folosit de analyzer/planner
+Compatibilitate Java: accesoriile record-style (regionId(), targetPopulation(), gaps(), errors(), capacityByHouse(), etc.) si metodele success()/hasGaps() sunt pastrate
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: GapReport.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga GapReport.java din istoric
+Status: validat local
+Observatii: normalizarea numerica si defensive copies pentru colectii/map sunt pastrate 1:1 functional.
+```
+
+### KOT-056
+
+```text
+ID: KOT-056
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldContextSnapshot.kt
+Fisiere sterse: WorldContextSnapshot.java
+Fisiere modificate: ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCContext.kt, docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste snapshot-ul world context folosit in prompt-uri runtime (region/place/node/bindings/nearby NPCs)
+Compatibilitate Java: accesoriile record-style pentru snapshot si nested info classes sunt pastrate; empty(), isEmpty() si toPromptBlock() raman disponibile
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldContextSnapshot.class, nested classes, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldContextSnapshot.java din istoric
+Status: validat local
+Observatii: in acelasi slice a fost necesara ajustarea apelurilor din NPCContext de la `isEmpty` proprietate la `isEmpty()` metoda.
+```
+
+### KOT-057
+
+```text
+ID: KOT-057
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: MappingIndex.kt
+Fisiere sterse: MappingIndex.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 2
+Motiv: converteste indexul intern pe chunk-uri pentru lookup rapid de regiuni/places/nodes
+Compatibilitate Java: semnaturile metodelor package-private (index/find/findNear/indexed*) sunt pastrate functional; logica de chunk normalization si deduplicare LinkedHashSet pentru nearby nodes ramane aceeasi
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: MappingIndex.class, nested ChunkKey class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga MappingIndex.java din istoric
+Status: validat local
+Observatii: filtrarea pe radius si sortarea dupa distanceSquared in findNodesNear sunt pastrate.
+```
+
+### KOT-058
+
+```text
+ID: KOT-058
+Data: 2026-05-16
+Autor: local
+Zona: ainpc-core-plugin/src/main/kotlin/ro/ainpc/world
+Fisiere adaugate: WorldContextSnapshotBuilder.kt
+Fisiere sterse: WorldContextSnapshotBuilder.java
+Fisiere modificate: docs/kotlin-migration-tracker.md, docs/rezumat-conversie-java-la-kotlin.md
+Tip: productie
+Risc: 3
+Motiv: converteste builder-ul care compune contextul world pentru prompt-uri NPC (region/place/nodes/bindings/nearby NPCs)
+Compatibilitate Java: constructorul si metoda build(...) raman compatibile; structura warning-urilor si limitele pentru nearby places/nodes/NPCs raman neschimbate
+Teste rulate: .\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:compileJava --rerun-tasks
+Build rulat: .\gradlew.bat clean build
+JAR audit: WorldContextSnapshotBuilder.class, plugin.yml si kotlin/jvm/internal/Intrinsics.class prezente in ainpc-core-plugin-1.0.0.jar
+Smoke Paper: nu a fost rulat local; KOT-010 ramane gate-ul Paper runtime
+Rollback: sterge fisierul Kotlin si readauga WorldContextSnapshotBuilder.java din istoric
+Status: validat local
+Observatii: dupa conversie a fost eliminat un warning Kotlin de conditie redundanta in filtrarea nearby NPCs.
 ```
 
 ## Exemplu de completare

@@ -33,7 +33,7 @@ Status curent dupa pornirea conversiei:
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent
 - smoke Paper nu a fost rulat local inca si ramane urmatorul gate runtime
-- inventar curent: 49 fisiere Kotlin si 183 fisiere Java in sursele proiectului, aproximativ 21.1% Kotlin dupa numar de fisiere
+- inventar curent: 87 fisiere Kotlin si 145 fisiere Java in sursele proiectului, aproximativ 37.5% Kotlin dupa numar de fisiere
 
 ## Ideea principala
 

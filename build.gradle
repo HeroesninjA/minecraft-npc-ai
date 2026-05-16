@@ -1,5 +1,10 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' apply false
+}
+
 ext {
     javaRelease = property('javaRelease').toString().toInteger()
+    kotlinVersion = property('kotlinVersion').toString()
     paperVersion = property('paperVersion').toString()
     gsonVersion = property('gsonVersion').toString()
     sqliteVersion = property('sqliteVersion').toString()
@@ -37,6 +42,14 @@ subprojects {
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
         options.release = rootProject.ext.javaRelease
+    }
+
+    plugins.withId('org.jetbrains.kotlin.jvm') {
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            compilerOptions {
+                jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(rootProject.ext.javaRelease.toString())
+            }
+        }
     }
 
     tasks.withType(ProcessResources).configureEach {

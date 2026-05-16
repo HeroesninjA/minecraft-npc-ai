@@ -14,6 +14,8 @@ Partile anterioare raspund la:
 
 Partea 4 raspunde la intrebarea practica: ce convertesti din acest repo, in ce ordine si cu ce risc.
 
+Continuare pentru tracking, teste, smoke si rollback: `conversie-java-la-kotlin-partea-5.md`.
+
 ## Inventar curent
 
 In `ainpc-core-plugin/src/main/java` exista aproximativ 178 fisiere Java.
