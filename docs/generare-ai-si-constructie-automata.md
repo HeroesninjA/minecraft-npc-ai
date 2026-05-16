@@ -224,6 +224,8 @@ Exemple bune de nume:
 - `ainpc-integration-worldedit`
 - `ainpc-builder-worldedit`
 
+Contractul detaliat pentru acest modul este in `worldedit-integration-contract.md`.
+
 Astfel:
 
 - core-ul nu depinde tare de `WorldEdit`
@@ -243,6 +245,10 @@ Interfete recomandate:
 - `BuildValidationService`
 - `GeneratedSettlementPlan`
 - `GeneratedStructurePlan`
+
+Pentru contractul de plan complet de regiune/sat, vezi `settlement-plan.md`.
+Pentru contractul de gap analyzer si patch-uri planificate inainte de constructie, vezi `patch-planner.md`.
+Pentru metadata de template-uri, ancore si marker nodes, vezi `template-cladiri-si-marker-nodes.md`.
 
 Exemplu conceptual:
 
@@ -350,6 +356,8 @@ Sistemul devine mult mai bun daca foloseste:
 - template metadata
 - YAML sau JSON pentru layout
 - mapping semantic `region/place/node`
+
+Pentru schema canonica a metadata de template, vezi `template-cladiri-si-marker-nodes.md`.
 
 Exemple de resurse:
 

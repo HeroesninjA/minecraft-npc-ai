@@ -9,12 +9,44 @@ website: https://v0.dev
 commands:
   ainpc:
     description: Comanda principala pentru gestionarea NPC-urilor AI
-    usage: /ainpc <create|delete|info|quest|world|audit|debugdump|family|routine|mood|list|tp|reload|test>
+    usage: /ainpc <create|delete|info|gui|quest|progression|contract|duty|bounty|event|world|wand|map|story|migration|audit|debugdump|family|routine|mood|list|tp|reload|test>
     aliases: [npc, ai]
   npcquest:
     description: Comanda rapida pentru quest-urile NPC
-    usage: /npcquest <numeNpc|nearest|reset|complete> [jucator]
+    usage: /npcquest <log|status|progress|numeNpc|nearest|reset|complete|anchors> [jucator]
     aliases: [npcq]
+  quest:
+    description: Quest log si comenzi rapide pentru quest-uri
+    usage: /quest <log|status|progress|numeNpc|nearest>
+    aliases: [quests]
+  progression:
+    description: Log si comenzi generice pentru mecanici de progres
+    usage: /progression <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [progress]
+  contract:
+    description: Log si comenzi rapide pentru contracte locale
+    usage: /contract <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [contracts]
+  duty:
+    description: Log si comenzi rapide pentru sarcini NPC
+    usage: /duty <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [duties, sarcina, sarcini]
+  bounty:
+    description: Log si comenzi rapide pentru bounty-uri locale
+    usage: /bounty <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [bounties]
+  event:
+    description: Log si comenzi rapide pentru evenimente locale
+    usage: /event <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [events]
+  tutorial:
+    description: Log si comenzi rapide pentru onboarding/tutorial
+    usage: /tutorial <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [tutorials, onboarding]
+  ritual:
+    description: Log si comenzi rapide pentru ritualuri locale
+    usage: /ritual <log|definitions|stored|status|progress|track|abandon> [selector] [jucator]
+    aliases: [rituals, ceremony, ceremonies]
 
 permissions:
   ainpc.admin:
@@ -27,5 +59,35 @@ permissions:
     description: Permite vizualizarea informatiilor despre NPC-uri
     default: true
   ainpc.quest:
-    description: Permite declansarea si administrarea quest-urilor NPC
+    description: Permite jucatorilor sa foloseasca quest log-ul si comenzile normale de quest
+    default: true
+  ainpc.gui:
+    description: Permite deschiderea hub-ului GUI AINPC
+    default: true
+  ainpc.gui.quest:
+    description: Permite deschiderea GUI-ului de questuri
+    default: true
+  ainpc.gui.stats:
+    description: Permite deschiderea GUI-ului de statistici
+    default: true
+  ainpc.gui.interact:
+    description: Permite deschiderea GUI-ului de interactiuni NPC
+    default: true
+  ainpc.gui.routine:
+    description: Permite deschiderea GUI-ului de rutine NPC
+    default: op
+  ainpc.gui.shop:
+    description: Permite deschiderea GUI-ului de shop NPC
+    default: true
+  ainpc.gui.world:
+    description: Permite deschiderea GUI-ului world
+    default: op
+  ainpc.gui.manager:
+    description: Permite deschiderea managerului NPC GUI
+    default: op
+  ainpc.gui.audit:
+    description: Permite deschiderea GUI-ului audit
+    default: op
+  ainpc.gui.debug:
+    description: Permite deschiderea GUI-ului debug
     default: op
