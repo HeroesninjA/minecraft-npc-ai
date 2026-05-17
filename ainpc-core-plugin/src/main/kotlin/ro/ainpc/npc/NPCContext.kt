@@ -145,7 +145,7 @@ class NPCContext(
             } else if (isPassiveMob(entity.type.name)) {
                 nearbyPassiveMobs++
             } else {
-                val nearbyNpc = npc.plugin.npcManager.getNPCByEntity(entity)
+                val nearbyNpc = npc.plugin?.npcManager?.getNPCByEntity(entity)
                 if (nearbyNpc != null && nearbyNpc.uuid != npc.uuid) {
                     nearbyNPCs.add(nearbyNpc)
                 }
@@ -175,9 +175,12 @@ class NPCContext(
         safetyLevel = npc.safetyLevel
         plannedRoutineActivity = npc.plannedRoutineActivity
         currentGoal = npc.currentGoal
-        isAtHome = npc.homeAnchor != null && npc.homeAnchor.isNear(npcLocation, 5.5)
-        isAtWork = npc.workAnchor != null && npc.workAnchor.isNear(npcLocation, 6.5)
-        isAtSocialSpot = npc.socialAnchor != null && npc.socialAnchor.isNear(npcLocation, 6.5)
+        val homeAnchor = npc.homeAnchor
+        val workAnchor = npc.workAnchor
+        val socialAnchor = npc.socialAnchor
+        isAtHome = homeAnchor != null && homeAnchor.isNear(npcLocation, 5.5)
+        isAtWork = workAnchor != null && workAnchor.isNear(npcLocation, 6.5)
+        isAtSocialSpot = socialAnchor != null && socialAnchor.isNear(npcLocation, 6.5)
         if (npcLocation != null && npcLocation.world != null) {
             healthPercent = 100.0
         }

@@ -162,7 +162,7 @@ class RoutineGui : GuiScreen {
         lore.add("&7Stare tinta: &f${current.targetState()?.name ?: "UNKNOWN"}")
         lore.add("&7Tinta: &f${formatOwnedLocation(current.targetAnchor())}")
         addBindingLore(lore, binding)
-        lore.add("&7Spawned: &f${if (npc.isSpawned) "da" else "nu"}")
+        lore.add("&7Spawned: &f${if (npc.isSpawned()) "da" else "nu"}")
         lore.add("&7Locatie: &f${formatLocation(npc.location)}")
         lore.add("&8Program zi:")
         for (entry in dayPreview) {

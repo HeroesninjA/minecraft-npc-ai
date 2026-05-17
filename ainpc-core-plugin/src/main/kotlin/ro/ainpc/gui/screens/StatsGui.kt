@@ -84,7 +84,7 @@ class StatsGui : GuiScreen {
                         listOf(
                             "&7Ocupatie: &f${valueOrUnknown(npc.occupation)}",
                             "&7Varsta: &f${npc.age}",
-                            "&7Spawned: &f${if (npc.isSpawned) "da" else "nu"}",
+                            "&7Spawned: &f${if (npc.isSpawned()) "da" else "nu"}",
                             "&7Emotie: &f${npc.emotions.dominantEmotion}",
                             "&7Distanta: &f${if (distance >= 0) String.format(Locale.ROOT, "%.1f", distance) else "necunoscuta"}",
                             "&8Click: /ainpc info"

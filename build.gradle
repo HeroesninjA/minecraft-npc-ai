@@ -19,6 +19,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java-library'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
 
     repositories {
         mavenCentral()
@@ -34,6 +35,8 @@ subprojects {
     }
 
     dependencies {
+        implementation platform("org.jetbrains.kotlin:kotlin-bom:${rootProject.ext.kotlinVersion}")
+        implementation 'org.jetbrains.kotlin:kotlin-stdlib'
         testImplementation platform("org.junit:junit-bom:${rootProject.ext.junitVersion}")
         testImplementation 'org.junit.jupiter:junit-jupiter'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

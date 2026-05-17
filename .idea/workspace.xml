@@ -5,62 +5,100 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/addons/AINPCAddon.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/addons/AddonDescriptor.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/addons/AddonType.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/platform/RuntimeMode.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/PlaceType.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/StoryMode.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/WorldMode.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/WorldNodeInfo.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/WorldPlaceInfo.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/world/WorldRegionInfo.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/AINPCPlugin.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/addons/AddonRegistry.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/DialogManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/NpcFactResolver.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/database/DatabaseManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DecisionEngine.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DialogueEngine.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestAnchorResolver.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestDirector.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestScenarioContract.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/GuiService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCChatListener.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCInteractionListener.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/EmotionManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/FamilyManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/MemoryManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/AINPC.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionRepository.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/HouseAllocation.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/HouseAllocationPlanner.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/HouseAllocationValidator.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/NpcSpawnOrchestrator.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/SpawnBatchTracker.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/story/StoryContextService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/story/StoryStateService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/utils/MessageUtils.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/NpcWorldBindingService.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/scan/SemanticVillageMapper.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/MedievalScenarioAddon.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/bootstrap/SchedulerCoordinator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackDependencyValidator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/FeaturePackMetadataValidator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestDecisionIntentResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestDirectorDecision.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestDirectorRequest.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioActionHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioActionRegistry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioConditionHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioConditionRegistry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioExecutionContext.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioRuntimeDefinition.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioRuntimeHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioRuntimeRegistry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioTriggerHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioTriggerRegistry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioValidationReport.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/runtime/ScenarioVariableProvider.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/AbstractPluginListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/ListenerRegistry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/MappingWandListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/PlayerJoinListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/QuestObjectiveListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/VillagerLifecycleListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/ConversationSessionManager.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/FamilyMemberRecord.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/platform/AINPCPlatform.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/platform/PlatformProfile.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionAnchorBinding.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionDefinition.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionFilter.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionGuiEntry.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionGuiSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionObjectiveSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionProgressSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionStageSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionStatusSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/StoredProgression.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/StoredProgressionSummary.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/routine/RoutineService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/NpcSpawnPlan.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/PlaceStoryState.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/RegionStoryState.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/StoryContextSnapshot.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/StoryEvent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/topology/TopologyCategory.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/topology/TopologyConsensus.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/utils/NPCNameGenerator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraft.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingDraftFactory.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingIntentParser.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/mapping/MappingWandService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/patch/VillageGapAnalyzer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/patch/VillagePatchPlanner.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/scan/VanillaVillageScanner.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/addons/AINPCAddon.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/addons/AddonDescriptor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/addons/AddonType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/platform/RuntimeMode.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/PlaceType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/StoryMode.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/WorldMode.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/WorldNodeInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/WorldPlaceInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/java/ro/ainpc/world/WorldRegionInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/AINPCPlugin.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/addons/AddonRegistry.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/ai/DialogManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/ai/NpcFactResolver.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/database/DatabaseManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/DecisionEngine.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/DialogueEngine.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestAnchorResolver.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestDirector.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/QuestScenarioContract.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/gui/GuiService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/NPCChatListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/listeners/NPCInteractionListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/EmotionManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/FamilyManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/MemoryManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/npc/AINPC.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/progression/ProgressionService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/HouseAllocation.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/HouseAllocationPlanner.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/HouseAllocationValidator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/NpcSpawnOrchestrator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/spawn/SpawnBatchTracker.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/StoryContextService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/story/StoryStateService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/utils/MessageUtils.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/NpcWorldBindingService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/world/scan/SemanticVillageMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/NpcManagerGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/NpcManagerGui.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/StatsGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/StatsGui.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCContext.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCContext.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/WorldContextSnapshotBuilder.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/WorldContextSnapshotBuilder.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/java/ro/ainpc/commands/AINPCTabCompleterTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/java/ro/ainpc/addons/medieval/MedievalScenarioAddon.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" afterDir="false" />
     </list>
@@ -70,7 +108,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="344" />
+    <option name="cachedIndexableFilesCount" value="866" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
@@ -255,7 +293,8 @@
       <workItem from="1778480777194" duration="8901000" />
       <workItem from="1778563503082" duration="797000" />
       <workItem from="1778667760071" duration="190000" />
-      <workItem from="1778913996422" duration="36416000" />
+      <workItem from="1778913996422" duration="53218000" />
+      <workItem from="1779043260609" duration="3230000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -529,7 +568,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778954781374</updated>
     </task>
-    <option name="localTasksCounter" value="35" />
+    <task id="LOCAL-00035" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1779004988706</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1779004988706</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

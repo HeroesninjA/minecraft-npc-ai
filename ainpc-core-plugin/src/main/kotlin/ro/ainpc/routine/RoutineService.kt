@@ -39,7 +39,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
         val now = System.currentTimeMillis()
 
         for (npc in plugin.npcManager.allNPCs) {
-            if (!npc.isSpawned) {
+            if (!npc.isSpawned()) {
                 continue
             }
             if (isBusy(npc.currentState)) {
@@ -61,9 +61,9 @@ class RoutineService(private val plugin: AINPCPlugin) {
             evaluated++
             val npcId = npc.uuid
             val previousSlot = if (npcId != null) lastRoutineSlots.put(npcId, assignment.slot()) else null
-            npc.plannedRoutineActivity = assignment.activity()
-            npc.currentGoal = assignment.goal()
-            npc.changeState(assignment.targetState())
+            npc.plannedRoutineActivity = assignment.activity() ?: ""
+            npc.currentGoal = assignment.goal() ?: ""
+            npc.changeState(assignment.targetState() ?: NPCState.IDLE)
 
             if (!assignment.hasTargetAnchor()) {
                 skippedMissingTarget++
@@ -145,7 +145,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
     }
 
     private fun tryMoveNaturally(npc: AINPC, target: Location, speed: Double): Boolean {
-        val entity: Entity = npc.bukkitEntity
+        val entity: Entity = npc.bukkitEntity ?: return false
         if (entity !is Mob || !entity.hasAI()) {
             return false
         }

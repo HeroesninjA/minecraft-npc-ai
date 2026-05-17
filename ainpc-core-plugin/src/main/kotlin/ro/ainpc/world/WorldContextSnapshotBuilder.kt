@@ -126,16 +126,16 @@ class WorldContextSnapshotBuilder(
         }
 
         return nearbyNpcs.asSequence()
-            .filter { nearbyNpc -> nearbyNpc.location != null }
-            .filter { nearbyNpc -> nearbyNpc.location.world != null }
-            .filter { nearbyNpc -> location.world == nearbyNpc.location.world }
-            .sortedBy { nearbyNpc -> nearbyNpc.location.distanceSquared(location) }
+            .filter { nearbyNpc -> nearbyNpc.location?.world != null }
+            .filter { nearbyNpc -> location.world == nearbyNpc.location?.world }
+            .sortedBy { nearbyNpc -> nearbyNpc.location?.distanceSquared(location) ?: Double.MAX_VALUE }
             .take(MAX_NEARBY_NPCS)
             .map { nearbyNpc ->
+                val nearbyLocation = nearbyNpc.location ?: location
                 WorldContextSnapshot.NearbyNpcInfo(
                     nearbyNpc.name,
                     nearbyNpc.occupation,
-                    nearbyNpc.location.distance(location)
+                    nearbyLocation.distance(location)
                 )
             }
             .toList()

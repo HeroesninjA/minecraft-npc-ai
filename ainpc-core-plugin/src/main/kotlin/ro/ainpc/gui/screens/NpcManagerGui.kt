@@ -25,7 +25,7 @@ class NpcManagerGui : GuiScreen {
 
     override fun render(context: GuiRenderContext) {
         val npcs = context.plugin().npcManager.getAllNPCs().stream()
-            .sorted(Comparator.comparing { npc: AINPC -> npc.getName().lowercase(Locale.ROOT) })
+            .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
             .limit(NPC_SLOTS.size.toLong())
             .toList()
 
@@ -49,16 +49,16 @@ class NpcManagerGui : GuiScreen {
             context.button(
                 NPC_SLOTS[index],
                 GuiButton.enabled(
-                    GuiItemFactory.item(cardMaterial(npc, routine.slot()), "&f${npc.getName()}", npcLore(npc, routine)),
+                    GuiItemFactory.item(cardMaterial(npc, routine.slot()), "&f${npc.name}", npcLore(npc, routine)),
                     GuiAction { click ->
                         if (click.clickType().isShiftClick && click.clickType().isRightClick) {
-                            click.service().runCommand(click.player(), "ainpc family ${npc.getName()}")
+                            click.service().runCommand(click.player(), "ainpc family ${npc.name}")
                         } else if (click.clickType().isShiftClick) {
-                            click.service().runCommand(click.player(), "ainpc routine status ${npc.getName()}")
+                            click.service().runCommand(click.player(), "ainpc routine status ${npc.name}")
                         } else if (click.clickType().isRightClick) {
-                            click.service().runCommand(click.player(), "ainpc tp ${npc.getName()}")
+                            click.service().runCommand(click.player(), "ainpc tp ${npc.name}")
                         } else {
-                            click.service().runCommand(click.player(), "ainpc info ${npc.getName()}")
+                            click.service().runCommand(click.player(), "ainpc info ${npc.name}")
                         }
                     }
                 )
@@ -115,24 +115,24 @@ class NpcManagerGui : GuiScreen {
 
     private fun npcLore(npc: AINPC, routine: RoutineAssignment): List<String> {
         val lore = ArrayList<String>()
-        lore.add("&7ID DB: &f${npc.getDatabaseId()}")
-        lore.add("&7Ocupatie: &f${valueOrUnknown(npc.getOccupation())} &8/ &7varsta &f${npc.getAge()}")
+        lore.add("&7ID DB: &f${npc.databaseId}")
+        lore.add("&7Ocupatie: &f${valueOrUnknown(npc.occupation)} &8/ &7varsta &f${npc.age}")
         lore.add(
-            "&7Spawned: &f${if (npc.isSpawned) "da" else "nu"}" +
-                " &8/ &7stare &f${npc.getCurrentState().displayName}"
+            "&7Spawned: &f${if (npc.isSpawned()) "da" else "nu"}" +
+                " &8/ &7stare &f${npc.currentState.displayName}"
         )
-        lore.add("&7Emotie: &f${npc.getEmotions().dominantEmotion}")
+        lore.add("&7Emotie: &f${npc.emotions.dominantEmotion}")
         lore.add("&7Rutina: &f${slotLabel(routine.slot())} &8/ &7${GuiItemFactory.compact(routine.activity(), 28)}")
-        lore.add("&7Goal: &f${GuiItemFactory.compact(firstNonBlank(npc.getCurrentGoal(), routine.goal()), 32)}")
+        lore.add("&7Goal: &f${GuiItemFactory.compact(firstNonBlank(npc.currentGoal, routine.goal()), 32)}")
         lore.add("&7Tinta rutina: &f${formatOwnedLocation(routine.targetAnchor())}")
         lore.add(
-            "&7Nevoi: &fsat ${npc.getHungerLevel()} &7en &f${npc.getEnergyLevel()}" +
-                " &7sig &f${npc.getSafetyLevel()} &7conf &f${npc.getComfortLevel()}"
+            "&7Nevoi: &fsat ${npc.hungerLevel} &7en &f${npc.energyLevel}" +
+                " &7sig &f${npc.safetyLevel} &7conf &f${npc.comfortLevel}"
         )
-        lore.add("&7Locatie: &f${formatLocation(npc.getLocation())}")
+        lore.add("&7Locatie: &f${formatLocation(npc.location)}")
         lore.add(
-            "&8Ancore: home=${shortAnchor(npc.getHomeAnchor())} " +
-                "work=${shortAnchor(npc.getWorkAnchor())} social=${shortAnchor(npc.getSocialAnchor())}"
+            "&8Ancore: home=${shortAnchor(npc.homeAnchor)} " +
+                "work=${shortAnchor(npc.workAnchor)} social=${shortAnchor(npc.socialAnchor)}"
         )
         lore.add("&8Click: info")
         lore.add("&8Right click: teleport")
@@ -142,7 +142,7 @@ class NpcManagerGui : GuiScreen {
     }
 
     private fun cardMaterial(npc: AINPC, slot: RoutineSlot?): Material {
-        if (!npc.isSpawned) {
+        if (!npc.isSpawned()) {
             return Material.GRAY_DYE
         }
         return when (slot ?: RoutineSlot.IDLE) {
