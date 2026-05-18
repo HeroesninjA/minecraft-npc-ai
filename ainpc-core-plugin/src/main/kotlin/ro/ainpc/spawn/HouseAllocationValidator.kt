@@ -54,7 +54,7 @@ class HouseAllocationValidator {
         errors: MutableList<String>,
         warnings: MutableList<String>
     ): WorldPlaceInfo? {
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+        if (worldAdmin == null || !worldAdmin.isEnabled) {
             errors.add("WorldAdmin este dezactivat sau indisponibil pentru HouseAllocation.")
             return null
         }
@@ -271,7 +271,7 @@ class HouseAllocationValidator {
             return null
         }
 
-        val matches = worldAdmin.getPlaces().asSequence()
+        val matches = worldAdmin.places.asSequence()
             .filter { place -> idMatches(place.id(), placeId) }
             .sortedBy { it.id() }
             .toList()
@@ -297,7 +297,7 @@ class HouseAllocationValidator {
             return null
         }
 
-        val matches = worldAdmin.getNodes().asSequence()
+        val matches = worldAdmin.nodes.asSequence()
             .filter { node -> idMatches(node.id(), nodeId) }
             .sortedBy { it.id() }
             .toList()

@@ -31,8 +31,8 @@ Acest fisier tine evidenta concreta a slice-urilor.
 | Prima clasa Kotlin de productie | validat local |
 | JAR audit Kotlin | validat local pentru core |
 | Smoke Paper dupa Kotlin | neinceput |
-| `ainpc-api` convertit | amanat |
-| `ainpc-scenario-medieval` convertit | amanat |
+| `ainpc-api` convertit | in lucru (majoritar Kotlin; 3 interfețe Java pastrate pentru interop) |
+| `ainpc-scenario-medieval` convertit | validat local |
 
 ## Regula de actualizare
 
@@ -3350,6 +3350,138 @@ Inventar dupa slice:
 
 Rollback:
 - sterge fisierul Kotlin si readauga `NpcSpawnOrchestrator.java` din istoric
+
+### KOT-135
+
+Data: 2026-05-17
+ID: KOT-135
+Status: validat local
+Zona: `ainpc-api/src/main`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate: `AddonType.kt`, `PlaceType.kt`, `StoryMode.kt`, `WorldMode.kt`, `RuntimeMode.kt`, `AINPCAddon.kt`, `WorldNodeInfo.kt`, `WorldPlaceInfo.kt`, `WorldRegionInfo.kt`, `AddonDescriptor.kt`
+Fisiere sterse: versiunile Java echivalente
+
+Gate local:
+- `.\gradlew.bat :ainpc-api:build` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test` (PASS)
+- `.\gradlew.bat :ainpc-scenario-medieval:test` (PASS)
+
+Observatii:
+- interfețele `AddonRegistryApi`, `AINPCPlatformApi`, `WorldAdminApi` au ramas Java pentru interop Kotlin/Java stabil.
+
+### KOT-136
+
+Data: 2026-05-17
+ID: KOT-136
+Status: validat local
+Zona: `ainpc-core-plugin/src/test/commands`
+Tip: test
+Risc: 2
+
+Fisiere adaugate:
+- `AINPCTabCompleterTest.kt`
+- `AINPCCommandRoutingTest.kt`
+- `PluginCommandDescriptorTest.kt`
+
+Fisiere sterse:
+- `AINPCTabCompleterTest.java`
+- `AINPCCommandRoutingTest.java`
+- `PluginCommandDescriptorTest.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.commands.*"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test` (PASS)
+
+### KOT-137
+
+Data: 2026-05-17
+ID: KOT-137
+Status: validat local
+Zona: `ainpc-core-plugin/src/test/gui`
+Tip: test
+Risc: 1
+
+Fisiere adaugate: `GuiKeyTest.kt`
+Fisiere sterse: `GuiKeyTest.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.GuiKeyTest"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test` (PASS)
+
+### KOT-138
+
+Data: 2026-05-17
+ID: KOT-138
+Status: validat local
+Zona: `Gradle Kotlin-first`
+Tip: build
+Risc: 2
+
+Fisiere modificate:
+- `build.gradle` (plugin Kotlin + stdlib/bom centralizat in `subprojects`)
+- `ainpc-api/build.gradle`
+- `ainpc-core-plugin/build.gradle`
+- `ainpc-scenario-medieval/build.gradle`
+
+Gate local:
+- `.\gradlew.bat clean :ainpc-api:build :ainpc-core-plugin:test :ainpc-scenario-medieval:test` (PASS)
+
+### KOT-139
+
+Data: 2026-05-17
+ID: KOT-139
+Status: validat local
+Zona: `ainpc-core-plugin/src/test/gui`
+Tip: test
+Risc: 1
+
+Fisiere adaugate: `QuestLogGuiFilterTest.kt`
+Fisiere sterse: `QuestLogGuiFilterTest.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.QuestLogGuiFilterTest"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.gui.*"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test` (PASS)
+
+### KOT-140
+
+Data: 2026-05-17
+ID: KOT-140
+Status: validat local
+Zona: `ainpc-core-plugin/src/test/world/mapping`
+Tip: test
+Risc: 1
+
+Fisiere adaugate: `MappingIntentParserTest.kt`
+Fisiere sterse: `MappingIntentParserTest.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.world.mapping.MappingIntentParserTest"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.world.mapping.*"` (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:test` (PASS)
+
+### KOT-141
+
+Data: 2026-05-17
+ID: KOT-141
+Status: validat local
+Zona: `docs/* conversie Kotlin`
+Tip: documentatie
+Risc: 1
+
+Fisiere modificate:
+- `docs/conversie-java-la-kotlin.md`
+- `docs/conversie-java-la-kotlin-partea-2.md`
+- `docs/conversie-java-la-kotlin-partea-3.md`
+- `docs/conversie-java-la-kotlin-partea-4.md`
+- `docs/conversie-java-la-kotlin-partea-5.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+- `docs/kotlin-migration-tracker.md`
+
+Motiv:
+- aliniaza documentatia la starea reala a migrarii (95% Kotlin in core, module si teste convertite, slice-uri noi)
 
 ### KOT-133
 

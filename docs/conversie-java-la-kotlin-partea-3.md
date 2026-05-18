@@ -1,6 +1,6 @@
 # Conversie Java la Kotlin - Partea 3
 
-Actualizat: 2026-05-16
+Actualizat: 2026-05-17
 
 ## Scop
 
@@ -24,8 +24,8 @@ kotlinVersion=2.2.0
 
 Nota:
 
-- versiunea exacta trebuie verificata in momentul implementarii
-- foloseste o versiune stabila compatibila cu Gradle-ul proiectului
+- configurarea Kotlin-first este deja aplicata in build-ul curent
+- foloseste in continuare o versiune stabila compatibila cu Gradle-ul proiectului
 - nu combina upgrade Gradle si introducere Kotlin in acelasi slice daca apar probleme
 
 Root `build.gradle`, forma recomandata:

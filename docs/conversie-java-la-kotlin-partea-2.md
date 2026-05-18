@@ -1,6 +1,6 @@
 # Conversie Java la Kotlin - Partea 2
 
-Actualizat: 2026-05-16
+Actualizat: 2026-05-17
 
 ## Scop
 
@@ -15,8 +15,8 @@ Continuare cu retete concrete de implementare: `conversie-java-la-kotlin-partea-
 Directia recomandata:
 
 - `ainpc-core-plugin`: poate primi Kotlin primul
-- `ainpc-scenario-medieval`: primeste Kotlin doar dupa ce core-ul este stabil cu Kotlin
-- `ainpc-api`: ramane Java pana exista un motiv clar sa fie convertit
+- `ainpc-scenario-medieval`: este deja migrat la Kotlin pe `src/main`; continua validarea prin teste/build
+- `ainpc-api`: este majoritar Kotlin; interfetele API publice critice raman Java pentru interop stabil
 
 Motiv:
 

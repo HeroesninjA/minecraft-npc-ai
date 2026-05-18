@@ -17,7 +17,7 @@ import java.util.Locale
 class AINPCPlatform(
     private val plugin: AINPCPlugin
 ) : AINPCPlatformApi {
-    private val addonRegistry: AddonRegistry = AddonRegistry(this)
+    override val addonRegistry: AddonRegistry = AddonRegistry(this)
     val worldAdminService: WorldAdminService = WorldAdminService(plugin)
     private var profile: PlatformProfile = PlatformProfile.fromConfig(plugin.config)
 
@@ -54,21 +54,25 @@ class AINPCPlatform(
         )
     }
 
-    override fun getRuntimeMode(): RuntimeMode = profile.runtimeMode
+    override val runtimeMode: RuntimeMode
+        get() = profile.runtimeMode
 
-    override fun getWorldMode(): WorldMode = profile.worldMode
+    override val worldMode: WorldMode
+        get() = profile.worldMode
 
-    override fun getDefaultStoryMode(): StoryMode = profile.defaultStoryMode
+    override val defaultStoryMode: StoryMode
+        get() = profile.defaultStoryMode
 
-    override fun getAddonRegistry(): AddonRegistryApi = addonRegistry
+    override val worldAdmin: WorldAdminApi
+        get() = worldAdminService
 
-    override fun getWorldAdmin(): WorldAdminApi = worldAdminService
+    override val dataDirectory: Path
+        get() = plugin.dataFolder.toPath()
 
-    override fun getDataDirectory(): Path = plugin.dataFolder.toPath()
+    override val packDirectory: Path
+        get() = dataDirectory.resolve("packs")
 
-    override fun getPackDirectory(): Path = dataDirectory.resolve("packs")
-
-    override fun getAddonConfigDirectory(addonId: String): Path {
+    override fun getAddonConfigDirectory(addonId: String?): Path {
         return dataDirectory
             .resolve(sanitizeRelativeDirectory(plugin.config.getString("addons.config_directory", "addons")))
             .resolve(sanitizePathSegment(addonId, "unknown-addon"))

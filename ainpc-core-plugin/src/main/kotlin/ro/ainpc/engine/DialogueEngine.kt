@@ -3,6 +3,8 @@ package ro.ainpc.engine
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
+import ro.ainpc.ai.DialogHistory
+import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.NpcFactResolver
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.npc.AINPC
@@ -229,9 +231,9 @@ class DialogueEngine(
 
     fun generateResponse(
         request: DialogManager.DialogRequest,
-        recentHistory: List<OpenAIService.DialogHistory>,
+        recentHistory: List<DialogHistory>,
         relevantMemories: List<String>,
-        relationship: OpenAIService.NPCRelationship?,
+        relationship: NPCRelationship?,
         dbContext: DialogManager.PromptDbContext
     ): CompletableFuture<String> {
         val npc = request.npc()
@@ -361,9 +363,9 @@ class DialogueEngine(
         intent: DialogueIntent,
         context: NPCContext,
         request: DialogManager.DialogRequest,
-        recentHistory: List<OpenAIService.DialogHistory>?,
+        recentHistory: List<DialogHistory>?,
         relevantMemories: List<String>?,
-        relationship: OpenAIService.NPCRelationship?
+        relationship: NPCRelationship?
     ): Boolean {
         if (!openAIService.isAvailable) return false
         if (shouldUseAI(intent, context)) return true

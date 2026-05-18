@@ -1,12 +1,14 @@
 # Conversie Java la Kotlin - Partea 5
 
-Actualizat: 2026-05-16
+Actualizat: 2026-05-17
 
 ## Scop
 
 Acest document continua seria Java -> Kotlin cu partea de control al executiei: tracking, criterii de acceptare, matrice de teste, audit de JAR, smoke test Paper si rollback.
 
 Partile anterioare definesc strategia, runbook-ul, retetele si harta pe pachete. Partea 5 este documentul de folosit cand conversia chiar incepe si trebuie masurata.
+
+Nota operationala: statusul real pe slice-uri active (KOT-001+), inclusiv ultimele conversii si gate-urile rulate, este mentinut in `kotlin-migration-tracker.md`.
 
 ## Regula principala
 

@@ -114,12 +114,12 @@ class DialogManager(private val plugin: AINPCPlugin) {
     /**
      * Obtine istoricul recent al conversatiei
      */
-    fun getRecentHistory(npc: AINPC, player: Player, limit: Int): List<OpenAIService.DialogHistory> {
+    fun getRecentHistory(npc: AINPC, player: Player, limit: Int): List<DialogHistory> {
         return getRecentHistory(npc, player.uniqueId, limit)
     }
 
-    fun getRecentHistory(npc: AINPC, playerUuid: UUID, limit: Int): List<OpenAIService.DialogHistory> {
-        val history = mutableListOf<OpenAIService.DialogHistory>()
+    fun getRecentHistory(npc: AINPC, playerUuid: UUID, limit: Int): List<DialogHistory> {
+        val history = mutableListOf<DialogHistory>()
 
         val sql = """
             SELECT player_message, npc_response, created_at
@@ -138,7 +138,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
                         history.add(
-                            OpenAIService.DialogHistory(
+                            DialogHistory(
                                 rs.getString("player_message"),
                                 rs.getString("npc_response"),
                                 rs.getTimestamp("created_at").time
@@ -186,11 +186,11 @@ class DialogManager(private val plugin: AINPCPlugin) {
     /**
      * Obtine relatia dintre NPC si jucator
      */
-    fun getRelationship(npc: AINPC, player: Player): OpenAIService.NPCRelationship? {
+    fun getRelationship(npc: AINPC, player: Player): NPCRelationship? {
         return getRelationship(npc, player.uniqueId)
     }
 
-    fun getRelationship(npc: AINPC, playerUuid: UUID): OpenAIService.NPCRelationship? {
+    fun getRelationship(npc: AINPC, playerUuid: UUID): NPCRelationship? {
         val sql = """
             SELECT affection, trust, respect, familiarity, interaction_count, relationship_type
             FROM npc_relationships
@@ -204,7 +204,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
                 stmt.executeQuery().use { rs ->
                     if (rs.next()) {
-                        val rel = OpenAIService.NPCRelationship()
+                        val rel = NPCRelationship()
                         rel.affection = rs.getDouble("affection")
                         rel.trust = rs.getDouble("trust")
                         rel.respect = rs.getDouble("respect")
@@ -222,7 +222,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
         return null // Prima intalnire
     }
 
-    fun getRelationshipAsync(npc: AINPC, player: Player): CompletableFuture<OpenAIService.NPCRelationship?> {
+    fun getRelationshipAsync(npc: AINPC, player: Player): CompletableFuture<NPCRelationship?> {
         val playerUuid = player.uniqueId
         return plugin.databaseManager.supplyAsync { getRelationship(npc, playerUuid) }
     }
@@ -336,7 +336,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
     /**
      * Actualizeaza emotiile NPC-ului bazat pe mesaj
      */
-    private fun updateEmotions(npc: AINPC, relationship: OpenAIService.NPCRelationship?, sentiment: String) {
+    private fun updateEmotions(npc: AINPC, relationship: NPCRelationship?, sentiment: String) {
         val familiarity = relationship?.familiarity ?: 0.0
         val multiplier = 0.5 + familiarity * 0.5
 
@@ -394,28 +394,28 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
     // Context holder class
     private class DialogContext(
-        val history: List<OpenAIService.DialogHistory>,
+        val history: List<DialogHistory>,
         val memories: List<String>,
-        val relationship: OpenAIService.NPCRelationship?,
+        val relationship: NPCRelationship?,
         val dbContext: PromptDbContext
     )
 
     private data class GeneratedDialog(
         val response: String,
-        val relationship: OpenAIService.NPCRelationship?
+        val relationship: NPCRelationship?
     ) {
         fun response(): String = response
-        fun relationship(): OpenAIService.NPCRelationship? = relationship
+        fun relationship(): NPCRelationship? = relationship
     }
 
     private data class PostProcessResult(
         val response: String,
         val sentiment: String,
-        val relationship: OpenAIService.NPCRelationship?
+        val relationship: NPCRelationship?
     ) {
         fun response(): String = response
         fun sentiment(): String = sentiment
-        fun relationship(): OpenAIService.NPCRelationship? = relationship
+        fun relationship(): NPCRelationship? = relationship
     }
 
     data class PromptDbContext(

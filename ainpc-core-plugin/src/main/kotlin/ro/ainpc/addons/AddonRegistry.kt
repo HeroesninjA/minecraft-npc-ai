@@ -106,9 +106,9 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
         }
     }
 
-    @Synchronized
-    override fun getDescriptors(): Collection<AddonDescriptor> =
-        Collections.unmodifiableCollection(sortedDescriptors())
+    override val descriptors: Collection<AddonDescriptor>
+        @Synchronized
+        get() = Collections.unmodifiableCollection(sortedDescriptors())
 
     @Synchronized
     override fun getDescriptors(type: AddonType?): List<AddonDescriptor> {
@@ -119,15 +119,16 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
     @Synchronized
     override fun getDescriptor(id: String?): AddonDescriptor? = descriptorsById[id]
 
-    @Synchronized
-    override fun getPrimaryScenario(): AddonDescriptor? {
-        val descriptors = sortedDescriptors()
-        return descriptors.firstOrNull { descriptor ->
-            descriptor.type == AddonType.SCENARIO && descriptor.isPrimaryScenario
-        } ?: descriptors.firstOrNull { descriptor ->
-            descriptor.type == AddonType.SCENARIO
+    override val primaryScenario: AddonDescriptor?
+        @Synchronized
+        get() {
+            val descriptors = sortedDescriptors()
+            return descriptors.firstOrNull { descriptor ->
+                descriptor.type == AddonType.SCENARIO && descriptor.isPrimaryScenario
+            } ?: descriptors.firstOrNull { descriptor ->
+                descriptor.type == AddonType.SCENARIO
+            }
         }
-    }
 
     @Synchronized
     override fun size(): Int = descriptorsById.size

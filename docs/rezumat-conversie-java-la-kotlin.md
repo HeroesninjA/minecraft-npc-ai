@@ -22,13 +22,13 @@ Acesta este rezumatul seriei:
 
 Seria descrie cum se introduce Kotlin in proiectul AINPC dupa migrarea la Gradle, fara rescriere masiva si fara ruperea compatibilitatii cu Paper, addonul medieval sau API-ul public Java.
 
-Status curent dupa pornirea conversiei:
+Status curent:
 
-- Kotlin este activat si validat local doar in `ainpc-core-plugin`
-- `ainpc-api` ramane Java-only
-- `ainpc-scenario-medieval` ramane Java-only
+- Kotlin este activat si validat local in toate modulele Gradle (`ainpc-api`, `ainpc-core-plugin`, `ainpc-scenario-medieval`)
+- `ainpc-api` este migrat majoritar la Kotlin pentru modele/enum-uri/descriptor; au ramas Java doar 3 interfețe API pentru interop stabil (`AddonRegistryApi`, `AINPCPlatformApi`, `WorldAdminApi`)
+- `ainpc-scenario-medieval` este migrat la Kotlin pe `src/main`
 - primul test Kotlin smoke exista in core si ruleaza cu JUnit 5
-- doua teste Java au fost mutate in Kotlin: `NPCNameGeneratorTest` si `ProgressionSelectorTest`
+- teste Java mutate in Kotlin (pana acum): `NPCNameGeneratorTest`, `ProgressionSelectorTest`, `AINPCTabCompleterTest`, `AINPCCommandRoutingTest`, `PluginCommandDescriptorTest`, `GuiKeyTest`, `QuestLogGuiFilterTest`, `MappingIntentParserTest`
 - primele clase Kotlin de productie sunt convertite in zonele `ai/orchestration`, `debug`, `engine`, `gui`, `progression`, `routine`, `spawn`, `world.mapping`, `world.patch` si `world.scan`
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent

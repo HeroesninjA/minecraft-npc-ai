@@ -19,7 +19,7 @@ class VillageGapAnalyzer {
         val missingNodes = LinkedHashSet<String>()
         val capacityByHouse = LinkedHashMap<String, Int>()
 
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+        if (worldAdmin == null || !worldAdmin.isEnabled) {
             errors.add("WorldAdmin este dezactivat sau indisponibil.")
             return emptyReport("", safeOptions, errors, warnings)
         }
@@ -235,7 +235,7 @@ class VillageGapAnalyzer {
         }
 
         val selector = regionSelector.trim()
-        val matches = worldAdmin.getRegions()
+        val matches = worldAdmin.regions
             .filter { region ->
                 region.id().equals(selector, ignoreCase = true) || region.name().equals(selector, ignoreCase = true)
             }

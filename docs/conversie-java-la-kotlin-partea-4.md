@@ -1,6 +1,6 @@
 # Conversie Java la Kotlin - Partea 4
 
-Actualizat: 2026-05-16
+Actualizat: 2026-05-17
 
 ## Scop
 
@@ -18,7 +18,7 @@ Continuare pentru tracking, teste, smoke si rollback: `conversie-java-la-kotlin-
 
 ## Inventar curent
 
-In `ainpc-core-plugin/src/main/java` exista aproximativ 178 fisiere Java.
+In `ainpc-core-plugin/src/main` exista 169 fisiere Kotlin si 9 fisiere Java (~95.0% Kotlin).
 
 Pachete principale:
 
@@ -52,7 +52,7 @@ Regula de baza:
 
 - Kotlin intra prima data in `ainpc-core-plugin`.
 - `ainpc-api` ramane Java pana cand exista test Java de consum pentru orice tip public convertit.
-- `ainpc-scenario-medieval` ramane Java pana cand core-ul dovedeste ca packaging-ul Kotlin merge pe server Paper.
+- `ainpc-scenario-medieval` este migrat pe `src/main`; ramane validarea runtime prin smoke Paper.
 
 ## Scor de risc
 

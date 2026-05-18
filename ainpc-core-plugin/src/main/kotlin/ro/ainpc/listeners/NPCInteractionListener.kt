@@ -7,7 +7,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
-import ro.ainpc.ai.OpenAIService
+import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.npc.AINPC
 import java.util.concurrent.CompletableFuture
@@ -132,7 +132,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         }
     }
 
-    private fun getReturningGreeting(npc: AINPC, player: Player, relationship: OpenAIService.NPCRelationship?): String {
+    private fun getReturningGreeting(npc: AINPC, player: Player, relationship: NPCRelationship?): String {
         var affection = 0.0
         if (relationship != null) {
             affection = relationship.affection

@@ -14,7 +14,7 @@ class HouseAllocationPlanner {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+        if (worldAdmin == null || !worldAdmin.isEnabled) {
             errors.add("WorldAdmin este dezactivat sau indisponibil.")
             return PlanningResult.failed(errors, warnings)
         }
@@ -130,7 +130,7 @@ class HouseAllocationPlanner {
         val warnings = mutableListOf<String>()
         val allocations = mutableListOf<HouseAllocation>()
 
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+        if (worldAdmin == null || !worldAdmin.isEnabled) {
             errors.add("WorldAdmin este dezactivat sau indisponibil.")
             return SettlementPlanningResult.failed("", allocations, errors, warnings)
         }
@@ -179,7 +179,7 @@ class HouseAllocationPlanner {
 
         val selector = houseSelector.trim()
         val idSuffix = ":${selector.lowercase(Locale.ROOT)}"
-        val matches = worldAdmin.getPlaces().asSequence()
+        val matches = worldAdmin.places.asSequence()
             .filter { place ->
                 place.id().equals(selector, ignoreCase = true) ||
                     place.displayName().equals(selector, ignoreCase = true) ||
@@ -212,7 +212,7 @@ class HouseAllocationPlanner {
         }
 
         val selector = regionSelector.trim()
-        val matches = worldAdmin.getRegions().asSequence()
+        val matches = worldAdmin.regions.asSequence()
             .filter { region -> region.id().equals(selector, ignoreCase = true) || region.name().equals(selector, ignoreCase = true) }
             .sortedBy { it.id() }
             .toList()
