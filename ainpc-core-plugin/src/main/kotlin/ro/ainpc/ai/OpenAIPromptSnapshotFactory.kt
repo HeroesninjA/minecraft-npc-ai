@@ -19,9 +19,10 @@ object OpenAIPromptSnapshotFactory {
 
         if (npc.context != null) {
             environmentDescription = npc.context.generateContextDescription()
-            if (plugin.featurePackLoader != null && npc.context.topologyCategory != null) {
+            val topologyCategory = npc.context.topologyCategory
+            if (plugin.featurePackLoader != null && topologyCategory != null) {
                 val topologyConsensus: TopologyConsensus? =
-                    plugin.featurePackLoader.buildTopologyConsensus(npc.context.topologyCategory)
+                    plugin.featurePackLoader.buildTopologyConsensus(topologyCategory)
                 if (topologyConsensus != null) {
                     topologyConsensusBlock = topologyConsensus.toPromptBlock()
                 }

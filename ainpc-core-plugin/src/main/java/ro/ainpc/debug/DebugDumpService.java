@@ -41,6 +41,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static ro.ainpc.debug.DebugDumpSupport.*;
+
 public class DebugDumpService {
 
     private static final DateTimeFormatter DUMP_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -694,77 +696,6 @@ public class DebugDumpService {
         return false;
     }
 
-    private String normalizeQuestStageCompletionMode(String completionMode) {
-        String normalized = normalizeQuestStageReference(completionMode);
-        return switch (normalized) {
-            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
-            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
-            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
-            default -> normalized;
-        };
-    }
-
-    private boolean isSupportedQuestStageCompletionMode(String completionMode) {
-        return Set.of("all_objectives", "any_objective", "manual_turn_in").contains(completionMode);
-    }
-
-    private String normalizeQuestStageReference(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        return value.trim()
-            .toLowerCase(Locale.ROOT)
-            .replace("minecraft:", "")
-            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
-            .replaceAll("^_+|_+$", "")
-            .replaceAll("_+", "_");
-    }
-
-    private String normalizeQuestObjectiveType(String type) {
-        String normalized = normalizeKey(type).replace('-', '_');
-        return switch (normalized) {
-            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
-            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
-            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
-            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
-            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
-            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
-            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
-            default -> normalized;
-        };
-    }
-
-    private String normalizeQuestRewardType(String type) {
-        String normalized = normalizeKey(type).replace('-', '_');
-        return switch (normalized) {
-            case "", "item", "reward_item" -> "item";
-            case "story_state", "set_story_flag", "story_flag", "set_flag", "setstorystate" -> "set_story_state";
-            case "story_event", "record_event", "event", "recordstoryevent" -> "record_story_event";
-            default -> normalized;
-        };
-    }
-
-    private Set<String> supportedQuestObjectiveTypes() {
-        return Set.of(
-            "collect_item",
-            "deliver_to_npc",
-            "talk_to_npc",
-            "visit_region",
-            "visit_place",
-            "inspect_node",
-            "kill_mob"
-        );
-    }
-
-    private Set<String> supportedQuestRewardTypes() {
-        return Set.of(
-            "item",
-            "set_story_state",
-            "record_story_event"
-        );
-    }
-
     private void auditQuestPersistence(List<String> errors, List<String> warnings) {
         if (plugin.getDatabaseManager() == null) {
             warnings.add("DatabaseManager indisponibil; nu pot valida player_quests, quest_anchor_bindings sau story_events.");
@@ -1101,34 +1032,6 @@ public class DebugDumpService {
         return valueOrEmpty(playerUuid) + "|" + normalizedSelector;
     }
 
-    private JsonObject parseStoredJsonObject(String rawValue) {
-        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
-        try {
-            JsonElement parsed = JsonParser.parseString(safeRawValue);
-            return parsed != null && parsed.isJsonObject() ? parsed.getAsJsonObject() : null;
-        } catch (JsonSyntaxException ignored) {
-            return null;
-        }
-    }
-
-    private String jsonString(JsonObject object, String key) {
-        if (object == null || key == null || key.isBlank()) {
-            return "";
-        }
-        JsonElement value = object.get(key);
-        return value != null && !value.isJsonNull() ? value.getAsString().trim() : "";
-    }
-
-    private String lastSelectorSegment(String selector) {
-        if (selector == null || selector.isBlank()) {
-            return "";
-        }
-        int separator = selector.lastIndexOf(':');
-        return separator >= 0 && separator < selector.length() - 1
-            ? selector.substring(separator + 1)
-            : selector;
-    }
-
     private JsonObject buildLoadedQuestDefinitionsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source", "FeaturePackLoader#getAllScenarios");
@@ -1426,68 +1329,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private String semanticAnchorTypeForObjective(String normalizedObjectiveType) {
-        return switch (normalizedObjectiveType) {
-            case "talk_to_npc" -> "npc";
-            case "visit_region" -> "region";
-            case "visit_place" -> "place";
-            case "inspect_node" -> "node";
-            default -> "";
-        };
-    }
-
-    private String semanticReferencePrefix(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int prefixSeparator = trimmed.indexOf(':');
-        if (prefixSeparator <= 0) {
-            return "";
-        }
-
-        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
-        return isKnownSemanticReferencePrefix(prefix) ? prefix : "";
-    }
-
-    private String semanticReferenceValue(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int prefixSeparator = trimmed.indexOf(':');
-        if (prefixSeparator <= 0) {
-            return trimmed;
-        }
-
-        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
-        if (!isKnownSemanticReferencePrefix(prefix)) {
-            return trimmed;
-        }
-        return trimmed.substring(prefixSeparator + 1).trim();
-    }
-
-    private boolean isKnownSemanticReferencePrefix(String prefix) {
-        return switch (prefix) {
-            case "npc", "name", "profession", "region", "place", "node", "tag", "type", "mob", "entity" -> true;
-            default -> false;
-        };
-    }
-
-    private String questTemplateId(FeaturePackLoader.ScenarioDefinition scenario) {
-        String packId = valueOrEmpty(scenario.getPackId());
-        String scenarioId = valueOrEmpty(scenario.getId());
-        if (packId.isBlank()) {
-            return scenarioId;
-        }
-        if (scenarioId.isBlank()) {
-            return packId;
-        }
-        return packId + ":" + scenarioId;
-    }
-
     private JsonObject buildPlayerProgressionsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source_table", "player_quests");
@@ -1569,79 +1410,6 @@ public class DebugDumpService {
         json.addProperty("mechanic_label", progression.mechanicLabel());
         json.addProperty("singular_label", progression.singularLabel());
         json.addProperty("plural_label", progression.pluralLabel());
-        return json;
-    }
-
-    private JsonObject toRegionJson(WorldRegionInfo region) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", region.id());
-        json.addProperty("name", region.name());
-        json.addProperty("world", region.worldName());
-        json.addProperty("type", region.typeId());
-        json.add("bounds", boundsJson(region.minX(), region.minY(), region.minZ(), region.maxX(), region.maxY(), region.maxZ()));
-        json.add("tags", gson.toJsonTree(region.tags()));
-        json.addProperty("story_mode", region.storyMode().getId());
-        json.addProperty("story_state", region.storyStateKey());
-        return json;
-    }
-
-    private JsonObject toPlaceJson(WorldPlaceInfo place) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", place.id());
-        json.addProperty("region_id", place.regionId());
-        json.addProperty("display_name", place.displayName());
-        json.addProperty("world", place.worldName());
-        json.addProperty("type", place.placeType().getId());
-        json.add("bounds", boundsJson(place.minX(), place.minY(), place.minZ(), place.maxX(), place.maxY(), place.maxZ()));
-        json.add("tags", gson.toJsonTree(place.tags()));
-        json.addProperty("owner_npc_id", place.ownerNpcId());
-        json.addProperty("public_access", place.publicAccess());
-        json.add("metadata", gson.toJsonTree(place.metadata()));
-        return json;
-    }
-
-    private JsonObject toNodeJson(WorldNodeInfo node) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", node.id());
-        json.addProperty("region_id", node.regionId());
-        json.addProperty("place_id", node.placeId());
-        json.addProperty("type", node.typeId());
-        json.addProperty("world", node.worldName());
-        json.addProperty("x", node.x());
-        json.addProperty("y", node.y());
-        json.addProperty("z", node.z());
-        json.addProperty("radius", node.radius());
-        json.add("metadata", gson.toJsonTree(node.metadata()));
-        return json;
-    }
-
-    private JsonObject worldMappingSemanticIndexJson(WorldMappingSemanticIndex index) {
-        JsonObject json = new JsonObject();
-        if (index == null) {
-            return json;
-        }
-
-        JsonObject resolverCandidates = new JsonObject();
-        resolverCandidates.add("regions", semanticIndexMapJson(index.regionCandidates()));
-        resolverCandidates.add("places", semanticIndexMapJson(index.placeCandidates()));
-        resolverCandidates.add("nodes", semanticIndexMapJson(index.nodeCandidates()));
-        json.add("resolver_candidate_tokens", resolverCandidates);
-        json.add("place_tags", semanticIndexMapJson(index.placeTags()));
-        json.add("place_types", semanticIndexMapJson(index.placeTypes()));
-        json.add("node_types", semanticIndexMapJson(index.nodeTypes()));
-        json.add("node_metadata_values", semanticIndexMapJson(index.nodeMetadataValues()));
-        return json;
-    }
-
-    private JsonObject semanticIndexMapJson(Map<String, List<String>> index) {
-        JsonObject json = new JsonObject();
-        if (index == null || index.isEmpty()) {
-            return json;
-        }
-
-        for (Map.Entry<String, List<String>> entry : index.entrySet()) {
-            json.add(entry.getKey(), gson.toJsonTree(entry.getValue()));
-        }
         return json;
     }
 
@@ -1753,71 +1521,6 @@ public class DebugDumpService {
             placesById,
             nodesById);
         return json;
-    }
-
-    private void addNpcWorldBindingRoleJson(JsonObject root,
-                                            String role,
-                                            String placeId,
-                                            String nodeId,
-                                            Map<String, WorldPlaceInfo> placesById,
-                                            Map<String, WorldNodeInfo> nodesById) {
-        JsonObject json = new JsonObject();
-        String safePlaceId = valueOrEmpty(placeId);
-        String safeNodeId = valueOrEmpty(nodeId);
-        WorldPlaceInfo place = placesById.get(safePlaceId);
-        WorldNodeInfo node = nodesById.get(safeNodeId);
-        json.addProperty("place_id", safePlaceId);
-        json.addProperty("node_id", safeNodeId);
-        json.addProperty("place_exists", safePlaceId.isBlank() || place != null);
-        json.addProperty("node_exists", safeNodeId.isBlank() || node != null);
-        json.addProperty("node_place_matches", safePlaceId.isBlank()
-            || safeNodeId.isBlank()
-            || node == null
-            || node.placeId().isBlank()
-            || node.placeId().equalsIgnoreCase(safePlaceId));
-        if (place != null) {
-            json.addProperty("place_type", valueOrEmpty(place.placeType().getId()));
-            json.addProperty("place_display_name", valueOrEmpty(place.displayName()));
-            json.addProperty("region_id", valueOrEmpty(place.regionId()));
-        }
-        if (node != null) {
-            json.addProperty("node_type", valueOrEmpty(node.typeId()));
-            json.addProperty("node_world", valueOrEmpty(node.worldName()));
-            json.addProperty("node_x", node.x());
-            json.addProperty("node_y", node.y());
-            json.addProperty("node_z", node.z());
-        }
-        root.add(role, json);
-    }
-
-    private int npcWorldMissingPlaceReferenceCount(ResultSet resultSet,
-                                                   Map<String, WorldPlaceInfo> placesById) throws SQLException {
-        return missingReferenceCount(placesById,
-            resultSet.getString("home_place_id"),
-            resultSet.getString("work_place_id"),
-            resultSet.getString("social_place_id"));
-    }
-
-    private int npcWorldMissingNodeReferenceCount(ResultSet resultSet,
-                                                  Map<String, WorldNodeInfo> nodesById) throws SQLException {
-        return missingReferenceCount(nodesById,
-            resultSet.getString("home_node_id"),
-            resultSet.getString("work_node_id"),
-            resultSet.getString("social_node_id"));
-    }
-
-    private int missingReferenceCount(Map<String, ?> knownReferences, String... references) {
-        if (knownReferences == null || knownReferences.isEmpty()) {
-            return 0;
-        }
-        int missing = 0;
-        for (String reference : references) {
-            String safeReference = valueOrEmpty(reference);
-            if (!safeReference.isBlank() && !knownReferences.containsKey(safeReference)) {
-                missing++;
-            }
-        }
-        return missing;
     }
 
     private JsonObject buildSpawnBatchesJson() {
@@ -2614,100 +2317,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private String questEntryMetadata(FeaturePackLoader.QuestEntryDefinition entry, String... keys) {
-        if (entry == null || keys == null || keys.length == 0) {
-            return "";
-        }
-        Map<String, String> metadata = entry.getMetadata();
-        for (String key : keys) {
-            String value = metadata.get(key);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private void incrementCount(Map<String, Integer> counts, String key) {
-        String normalizedKey = valueOrEmpty(key);
-        if (normalizedKey.isBlank()) {
-            normalizedKey = "unknown";
-        }
-        counts.put(normalizedKey, counts.getOrDefault(normalizedKey, 0) + 1);
-    }
-
-    private void incrementCountIfPresent(Map<String, Integer> counts, String key) {
-        if (key == null || key.isBlank()) {
-            return;
-        }
-        incrementCount(counts, key);
-    }
-
-    private JsonObject countMapJson(Map<String, Integer> counts) {
-        JsonObject json = new JsonObject();
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            json.addProperty(entry.getKey(), entry.getValue());
-        }
-        return json;
-    }
-
-    private String enumJsonId(Enum<?> value) {
-        return value != null ? normalizeKey(value.name()) : "";
-    }
-
-    private String storedJsonProperty(String rawValue, String key) {
-        if (rawValue == null || rawValue.isBlank() || key == null || key.isBlank()) {
-            return "";
-        }
-        try {
-            JsonElement parsed = JsonParser.parseString(rawValue);
-            if (!parsed.isJsonObject()) {
-                return "";
-            }
-            JsonElement value = parsed.getAsJsonObject().get(key);
-            if (value == null || value.isJsonNull()) {
-                return "";
-            }
-            return value.isJsonPrimitive() ? value.getAsString() : value.toString();
-        } catch (JsonSyntaxException | IllegalStateException exception) {
-            return "";
-        }
-    }
-
-    private boolean isStoredJsonValid(String rawValue) {
-        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
-        try {
-            JsonParser.parseString(safeRawValue);
-            return true;
-        } catch (JsonSyntaxException exception) {
-            return false;
-        }
-    }
-
-    private String valueOrEmpty(String value) {
-        return value != null ? value : "";
-    }
-
-    private String valueOrFallback(String value, String fallback) {
-        return value == null || value.isBlank() ? valueOrEmpty(fallback) : value;
-    }
-
-    private long nullableLong(ResultSet resultSet, String column) throws SQLException {
-        Object value = resultSet.getObject(column);
-        return value == null ? 0L : resultSet.getLong(column);
-    }
-
-    private JsonObject boundsJson(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        JsonObject json = new JsonObject();
-        json.addProperty("min_x", minX);
-        json.addProperty("min_y", minY);
-        json.addProperty("min_z", minZ);
-        json.addProperty("max_x", maxX);
-        json.addProperty("max_y", maxY);
-        json.addProperty("max_z", maxZ);
-        return json;
-    }
-
     private String buildOpenAiInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append("OpenAI diagnostics snapshot\n");
@@ -2741,26 +2350,6 @@ public class DebugDumpService {
         } catch (IOException exception) {
             return "Nu pot citi latest.log: " + exception.getMessage() + "\n";
         }
-    }
-
-    private boolean isWorkplace(WorldPlaceInfo place) {
-        return place.hasTag("work")
-            || place.hasTag("workplace")
-            || "work".equalsIgnoreCase(place.metadata().get("role"))
-            || "work".equalsIgnoreCase(place.metadata().get("purpose"))
-            || switch (place.placeType()) {
-                case FORGE, SHOP, FARM, MARKET, TAVERN -> true;
-                default -> false;
-            };
-    }
-
-    private boolean hasPendingOwner(WorldPlaceInfo place) {
-        String ownerStatus = place.metadata().getOrDefault("owner_status", "");
-        String ownerPending = place.metadata().getOrDefault("owner_pending", "");
-        return "pending".equalsIgnoreCase(ownerStatus)
-            || "true".equalsIgnoreCase(ownerPending)
-            || ("demo_mapping".equalsIgnoreCase(place.metadata().getOrDefault("source", ""))
-                && place.hasTag("demo"));
     }
 
     private void auditHouseSpawnOrder(WorldAdminApi worldAdmin,
@@ -2797,101 +2386,6 @@ public class DebugDumpService {
         }
     }
 
-    private boolean isHousePlace(WorldPlaceInfo place) {
-        return place.placeType().getId().equals("house")
-            || place.hasTag("home")
-            || place.hasTag("house")
-            || "home".equalsIgnoreCase(place.metadata().get("role"))
-            || "home".equalsIgnoreCase(place.metadata().get("purpose"));
-    }
-
-    private List<String> parseResidents(WorldPlaceInfo place) {
-        String rawResidents = firstNonBlank(
-            place.metadata().get("residents"),
-            place.metadata().get("resident_npc_ids"),
-            place.metadata().get("resident_ids")
-        );
-        if (rawResidents.isBlank()) {
-            return List.of();
-        }
-
-        List<String> residents = new ArrayList<>();
-        for (String part : rawResidents.split("[,;]")) {
-            String resident = part.trim();
-            if (!resident.isBlank()) {
-                residents.add(resident);
-            }
-        }
-        return residents;
-    }
-
-    private Integer parsePositiveIntMetadata(WorldPlaceInfo place, String... keys) {
-        String rawValue = firstNonBlankFromMap(place.metadata(), keys);
-        if (rawValue.isBlank()) {
-            return null;
-        }
-
-        try {
-            int value = Integer.parseInt(rawValue.trim());
-            return value > 0 ? value : null;
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
-    }
-
-    private String firstNonBlankFromMap(Map<String, String> values, String... keys) {
-        for (String key : keys) {
-            String value = values.get(key);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private boolean hasAnySemanticNode(Iterable<WorldNodeInfo> nodes, String... expectedTokens) {
-        for (WorldNodeInfo node : nodes) {
-            if (nodeMatchesAny(node, expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean nodeMatchesAny(WorldNodeInfo node, String... expectedTokens) {
-        if (matchesAnyToken(node.typeId(), expectedTokens)) {
-            return true;
-        }
-        for (Map.Entry<String, String> entry : node.metadata().entrySet()) {
-            if (matchesAnyToken(entry.getKey(), expectedTokens) || matchesAnyToken(entry.getValue(), expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean matchesAnyToken(String rawValue, String... expectedTokens) {
-        String value = normalizeKey(rawValue).replace('-', '_');
-        if (value.isBlank()) {
-            return false;
-        }
-        for (String expectedToken : expectedTokens) {
-            if (value.equals(normalizeKey(expectedToken).replace('-', '_'))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private AINPC findLoadedNpcBySelector(String selector) {
         String normalizedSelector = normalizeKey(selector);
         if (normalizedSelector.isBlank() || plugin.getNpcManager() == null) {
@@ -2917,60 +2411,12 @@ public class DebugDumpService {
         return null;
     }
 
-    private boolean ownedLocationInsidePlace(AINPC.OwnedLocation location, WorldPlaceInfo place) {
-        return location != null
-            && place.worldName().equalsIgnoreCase(location.worldName())
-            && location.x() >= place.minX()
-            && location.x() <= place.maxX()
-            && location.y() >= place.minY()
-            && location.y() <= place.maxY()
-            && location.z() >= place.minZ()
-            && location.z() <= place.maxZ();
-    }
-
-    private String normalizeKey(String value) {
-        return value == null ? "" : value.trim().toLowerCase().replace(' ', '_');
-    }
-
     private void writeJson(Path path, Object value) throws IOException {
         writeText(path, gson.toJson(value));
     }
 
     private void writeText(Path path, String content) throws IOException {
         Files.writeString(path, content, StandardCharsets.UTF_8);
-    }
-
-    private record StoryProgressionLinkIndex(
-        boolean available,
-        String error,
-        int sourceRows,
-        Map<String, List<StoryProgressionLink>> linksBySelector
-    ) {
-    }
-
-    private record StoryProgressionLink(
-        String playerUuid,
-        String templateId,
-        String questCode,
-        String status,
-        long startedAt,
-        long completedAt,
-        long updatedAt,
-        boolean tracked,
-        FeaturePackLoader.ScenarioDefinition scenario
-    ) {
-    }
-
-    private record StoryProgressionSelector(String source, String selector) {
-    }
-
-    private record StoryProgressionMatch(
-        StoryProgressionLink link,
-        String matchSource,
-        String matchSelector,
-        boolean selectorOnlyMatch,
-        int candidateCount
-    ) {
     }
 
     public record DebugDumpResult(Path directory, String scope) {

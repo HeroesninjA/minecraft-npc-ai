@@ -36,7 +36,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     fun getDefinitions(): List<ProgressionDefinition> {
         val featurePackLoader = plugin.featurePackLoader ?: return listOf()
 
-        return featurePackLoader.allScenarios.stream()
+        return featurePackLoader.getAllScenarios().stream()
             .filter(ProgressionDefinition::isProgressionCandidate)
             .map(ProgressionDefinition::fromScenarioDefinition)
             .sorted(
@@ -308,7 +308,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return null
         }
 
-        return plugin.featurePackLoader.allScenarios.stream()
+        return plugin.featurePackLoader.getAllScenarios().stream()
             .filter(ProgressionDefinition::isProgressionCandidate)
             .filter { scenario -> definitionMatchesScenario(definition, scenario) }
             .findFirst()
@@ -321,7 +321,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return null
         }
 
-        return plugin.featurePackLoader.allScenarios.stream()
+        return plugin.featurePackLoader.getAllScenarios().stream()
             .filter(ProgressionDefinition::isProgressionCandidate)
             .filter { scenario ->
                 definitionSelectorCandidates(ProgressionDefinition.fromScenarioDefinition(scenario))
