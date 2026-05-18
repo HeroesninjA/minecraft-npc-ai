@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-11
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -25,16 +25,31 @@ Ordinea recomandata pentru orientare:
 15. `interactiuni.md`
 16. `gui-interfete.md`
 17. `ai-orchestrare-si-mecanici.md`
-18. `story-si-context-ai.md`
-19. `story-context-service.md`
-20. `progression-service.md`
-21. `player-onboarding-initiere.md`
-22. `lucru-alternat-quest-mapping-progression.md`
-23. `roadmap-orientativ.md`
-24. `server-admin-runbook.md`
-25. `release-checklist.md`
-26. `debugging-si-testare.md`
-27. `prevenire-duplicare-npc.md`
+18. `generare-automata-questuri-ai.md`
+19. `story-si-context-ai.md`
+20. `story-context-service.md`
+21. `progression-service.md`
+22. `player-onboarding-initiere.md`
+23. `lucru-alternat-quest-mapping-progression.md`
+24. `roadmap-orientativ.md`
+25. `server-admin-runbook.md`
+26. `release-checklist.md`
+27. `debugging-si-testare.md`
+28. `prevenire-duplicare-npc.md`
+29. `conversie-java-la-kotlin.md`
+30. `conversie-java-la-kotlin-partea-2.md`
+31. `conversie-java-la-kotlin-partea-3.md`
+32. `conversie-java-la-kotlin-partea-4.md`
+33. `conversie-java-la-kotlin-partea-5.md`
+34. `rezumat-conversie-java-la-kotlin.md`
+35. `kotlin-style-guide.md`
+36. `kotlin-interop-api-addonuri.md`
+37. `kotlin-paper-packaging-si-smoke.md`
+38. `kotlin-migration-tracker.md`
+39. `kotlin-code-review-checklist.md`
+40. `kotlin-coroutines-paper-policy.md`
+41. `kotlin-gradle-activation-plan.md`
+42. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -59,10 +74,10 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 |---|---|---|---|
 | 0 | Baseline, audit si verificare stare curenta | `implementat-deja.md`, `audit.md`, `debugging-si-testare.md`, `analiza-erori-si-plan-rezolvare.md` | Functional initial; necesita resincronizare dupa schimbari mari |
 | 1 | World mapping si spawn order minim verificabil | `mapping.md`, `playable-village-ux.md`, `ordine-spawn-npc-cladiri-region-node.md`, `settlement-plan.md`, `generare-populatie-narativa.md`, `households-persistente.md`, `rutine-npc-si-timeline.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md` | Nucleu implementat initial; generatorul complet si simularea de comunitate lipsesc |
-| 2 | First playable demo intern | `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
+| 2 | First playable demo intern | `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `generare-automata-questuri-ai.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
 | 4 | Runtime scenarii extensibil | `questuri-avansate-v2.md`, `progression-service.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Registri initiali exista; integrarea reala in `ScenarioEngine`, validatorul complet si runtime-ul generic raman treptate |
-| 5 | Generare sate si authoring asistat | `settlement-plan.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper initial exista; generarea completa ramane viitoare |
+| 5 | Generare sate si authoring asistat | `settlement-plan.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper si patch planner read-only initial exista; generarea completa ramane viitoare |
 | 6 | Hardening productie si livrare | `server-admin-runbook.md`, `release-checklist.md`, `reducere-marime-jar.md`, `audit.md`, `debugging-si-testare.md`, `gui-interfete.md`, `prevenire-duplicare-npc.md` | Backlog tehnic; nu bloca demo-ul matur fara motiv, dar este obligatoriu inainte de productie publica |
 
 ## Index documente
@@ -74,8 +89,23 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `audit.md` | 0, 6 | Documentatie pentru `/ainpc audit` si backlog securitate | Auditul runtime este read-only si nu dovedeste securitate completa |
 | `betonquest-directii-potrivite-pentru-ainpc.md` | 2, 4 | Inspiratie pentru questuri mature | Nu copia modelul BetonQuest integral inainte de stabilizarea runtime-ului propriu |
 | `debugging-si-testare.md` | 0, 6 | Testare Maven, debug dump, smoke tests | Diferentiaza clar testele locale de testele pe server Paper real |
+| `conversie-java-la-kotlin.md` | 3, 6 | Plan pe faze pentru introducerea Kotlin in proiectul Gradle | Migrarea trebuie facuta incremental; pastreaza `ainpc-api` Java-friendly pana exista motiv clar sa il schimbi |
+| `conversie-java-la-kotlin-partea-2.md` | 3, 6 | Runbook operational pentru executia conversiei Java -> Kotlin | Foloseste-l pentru ordinea slice-urilor, gate-uri, rollback si riscuri de interop |
+| `conversie-java-la-kotlin-partea-3.md` | 3, 6 | Retete concrete pentru configurare Gradle Kotlin, conversii si interop Java | Foloseste-l cand incepi implementarea efectiva a primelor fisiere `.kt` |
+| `conversie-java-la-kotlin-partea-4.md` | 3, 6 | Harta de conversie pe pachetele reale din repo | Stabileste ce pachete si clase se convertesc devreme, mediu sau tarziu |
+| `conversie-java-la-kotlin-partea-5.md` | 3, 6 | Controlul executiei conversiei Kotlin: tracking, teste, JAR audit, smoke si rollback | Foloseste-l dupa primele slice-uri, ca sa decizi daca migrarea este stabila |
+| `rezumat-conversie-java-la-kotlin.md` | 3, 6 | Rezumatul celor 5 parti pentru migrarea Java -> Kotlin | Punct rapid de pornire inainte de implementare sau revizuire |
+| `kotlin-style-guide.md` | 3, 6 | Reguli de stil Kotlin pentru codul AINPC | Stabileste cum se folosesc `data class`, `object`, nullability, sealed, colectii si servicii |
+| `kotlin-interop-api-addonuri.md` | 3, 6 | Contract Java interop pentru API si addonuri | Obligatoriu inainte de orice tip Kotlin expus catre Java sau addonuri |
+| `kotlin-paper-packaging-si-smoke.md` | 6 | Runbook pentru JAR, runtime Kotlin si smoke test Paper | Foloseste-l dupa prima clasa Kotlin de productie sau orice schimbare de packaging |
+| `kotlin-migration-tracker.md` | 3, 6 | Tracker operational pentru slice-urile Kotlin | Actualizeaza-l dupa fiecare conversie sau smoke relevant |
+| `kotlin-code-review-checklist.md` | 3, 6 | Checklist de review pentru schimbari Kotlin | Foloseste-l la fiecare PR/slice care adauga `.kt` sau modifica packaging/API |
+| `kotlin-coroutines-paper-policy.md` | 6 | Politica pentru coroutine in context Paper | Coroutine sunt amanate pana exista design separat de lifecycle si scheduling |
+| `kotlin-gradle-activation-plan.md` | 3, 6 | Plan exact pentru activarea Kotlin in Gradle | Primul document de executie pentru KOT-001/F001 |
+| `kotlin-testing-strategy.md` | 3, 6 | Strategie de testare pentru conversiile Kotlin | Defineste testele minime, tematice, API Java si smoke Paper |
 | `dialog-si-conversatii.md` | 2, 4, 5 | Evolutia dialogului pe masura ce avanseaza quest, story, environment, memorie si reputatie | Dialogul formuleaza raspunsuri peste context validat; nu trebuie sa decida progres sau reward-uri |
 | `documentatie-api.md` | 3 | Contract public curent | Nu trata clasele interne core ca API stabil pentru addonuri |
+| `addon-config-template.md` | 3 | Separarea config core vs config addon | Core-ul ramane universal, addonurile isi livreaza propriul template |
 | `documentatie-lipsa.md` | toate | Idei de documentatie lipsa si prioritate | Foloseste-l ca backlog de documentatie, nu ca status de implementare |
 | `environment-context-si-engine.md` | 2, 4, 5 | Contract pentru context read-only de mediu si EnvironmentEngine viitor | Implementeaza intai `EnvironmentContextService`; `EnvironmentEngine` complet ramane pentru questuri sistemice si world events |
 | `faze-observatii-avertizari.md` | toate | Harta centrala pe faze | Document de control pentru citirea restului documentatiei |
@@ -83,20 +113,21 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `faze-urmatoare-250.md` | toate | Backlog operational cu urmatoarele 250 faze | Lista lunga pentru planificare; executa fazele in slice-uri mici, validate |
 | `faze-urmatoare-250-partea-2.md` | toate | Backlog operational F251-F500 pentru generare sate/cladiri, context, comportament realist si API | Continua lista lunga; prioritizeaza config validat, dry-run, context read-only si documentare API |
 | `generare-ai-si-constructie-automata.md` | 5 | Directie pentru generare AI si template-uri | AI-ul trebuie sa genereze drafturi validate, nu sa execute direct modificari in lume |
+| `generare-automata-questuri-ai.md` | 2, 4 | Contract pentru generarea asistata de questuri cu AI | AI-ul produce `QuestDraft`, validatorul si adminul decid daca ajunge in pack |
 | `generare-populatie-narativa.md` | 1, 2 | Contract pentru generarea dry-run a populatiei pe regiune | Produce `PopulationPlan` si se converteste ulterior in `HouseAllocation`, fara spawn direct |
-| `generare-sate-fara-worldedit.md` | 1, 5 | Generare si completare sate vanilla fara WorldEdit obligatoriu | Scannerul/mapperul sunt initiale; patch planner si builder complet lipsesc |
+| `generare-sate-fara-worldedit.md` | 1, 5 | Generare si completare sate vanilla fara WorldEdit obligatoriu | Scannerul/mapperul si patch planner-ul read-only sunt initiale; builder-ul complet lipseste |
 | `generare-sate-worldedit-si-npc.md` | 5 | Design pentru integrare optionala WorldEdit | Integrarea WorldEdit trebuie sa ramana optionala, nu dependinta obligatorie a demo-ului |
 | `gui-interfete.md` | 2, 4, 6 | Contract de implementare pentru GUI-uri: quest, world, statistici, shop, manager, debug, audit si interactiune NPC | GUI-ul este strat de prezentare peste servicii validate; nu muta logica runtime in inventare |
 | `households-persistente.md` | 1, 2 | Contract pentru tabelele `households` si `household_residents` | Design initial; inlocuieste treptat dependenta de `metadata.residents` ca sursa de adevar |
 | `implementat-deja.md` | 0 | Rezumat al functionalitatii confirmate in cod | Actualizeaza-l dupa fiecare schimbare de faza care modifica statusul real |
 | `interactiuni.md` | 2, 4 | Contract tehnic pentru click, chat privat, sesiuni, ascultare pasiva, intentii de quest si efecte sociale | Interactiunea routeaza intentii catre servicii deterministe; dialogul formuleaza raspunsul, nu decide progresul |
-| `lucru-alternat-quest-mapping-progression.md` | 1, 2, 4 | Protocol de lucru alternat intre mapping, questuri, `ProgressionService` si GUI system | Foloseste slice-uri mici: mapping concret, quest/contract jucabil, GUI peste snapshot-uri, audit/debugdump si abia apoi extractie generic progression |
+| `lucru-alternat-quest-mapping-progression.md` | 1, 2, 4 | Protocol de lucru alternat intre mapping, questuri, story, `ProgressionService` si GUI system | Foloseste slice-uri mici: mapping concret, story baseline, quest/contract jucabil, GUI peste snapshot-uri, audit/debugdump si abia apoi extractie generic progression |
 | `mapping.md` | 1, 4, 5 | Stare, limitari, reguli de consum si evolutie pentru regiuni/places/nodes | Mapping-ul poate exista in cod, dar serverul poate avea 0 regiuni pana la config/import |
 | `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual, strat semantic validat de admin si directia wand + prompturi naturale | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
 | `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Redirect istoric catre `mapping.md` | Pastreaza-l doar pentru linkuri vechi; continutul canonic este in `mapping.md` |
 | `npc-uri-temporare-si-episodice.md` | 4 | NPC-uri temporare, episodice si non-villager | Pastreaza persistenta light separata de NPC-urile permanente |
 | `ordine-spawn-npc-cladiri-region-node.md` | 1, 5, 6 | v2 pentru fazele urmatoare de spawn order | v1 este arhivat in `arhiva/`; v2 se concentreaza pe generator, planuri, persistenta, migration si rollback |
-| `patch-planner.md` | 5 | Contract pentru gap analyzer si patch planner peste sate/mapping partial | Produce `GapReport` si `PatchPlan`, dar nu construieste direct |
+| `patch-planner.md` | 5 | Contract pentru gap analyzer si patch planner peste sate/mapping partial | Produce initial `GapReport`/`PatchPlan` prin `/ainpc patch analyze|plan|validate`, dar nu construieste direct |
 | `playable-village-ux.md` | 1, 2, 5 | Criterii pentru sat jucabil, interactiuni NPC clare, rutina stabila, spatiere, teren si questuri vizibile | Prioritizeaza playability inainte de mecanici noi; codul mare fara sat lizibil nu produce demo bun |
 | `player-onboarding-initiere.md` | 2, 4, 6 | Design pentru prima intrare a playerului, profil, starter kit, reset controlat si legare cu tutorialul T01 | Profilul playerului este separat de `npc_profiles`; resetul profilului nu trebuie sa stearga questuri fara optiune explicita |
 | `prevenire-duplicare-npc.md` | 1, 6 | Runbook pentru prevenirea si remedierea duplicarii NPC | Nu edita DB live; foloseste-l inainte de cleanup manual sau retry de spawn |

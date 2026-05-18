@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <annotationProcessing>
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <module name="ainpc-api" />
-        <module name="ainpc-core-plugin" />
-        <module name="ainpc-scenario-medieval" />
-      </profile>
-    </annotationProcessing>
+    <bytecodeTargetLevel target="21">
+      <module name="ainpc-api" target="21" />
+      <module name="ainpc-core-plugin" target="21" />
+      <module name="ainpc-scenario-medieval" target="21" />
+      <module name="test" target="1.5" />
+    </bytecodeTargetLevel>
   </component>
 </project>

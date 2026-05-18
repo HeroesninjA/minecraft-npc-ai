@@ -41,6 +41,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static ro.ainpc.debug.DebugDumpSupport.*;
+
 public class DebugDumpService {
 
     private static final DateTimeFormatter DUMP_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -694,77 +696,6 @@ public class DebugDumpService {
         return false;
     }
 
-    private String normalizeQuestStageCompletionMode(String completionMode) {
-        String normalized = normalizeQuestStageReference(completionMode);
-        return switch (normalized) {
-            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
-            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
-            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
-            default -> normalized;
-        };
-    }
-
-    private boolean isSupportedQuestStageCompletionMode(String completionMode) {
-        return Set.of("all_objectives", "any_objective", "manual_turn_in").contains(completionMode);
-    }
-
-    private String normalizeQuestStageReference(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        return value.trim()
-            .toLowerCase(Locale.ROOT)
-            .replace("minecraft:", "")
-            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
-            .replaceAll("^_+|_+$", "")
-            .replaceAll("_+", "_");
-    }
-
-    private String normalizeQuestObjectiveType(String type) {
-        String normalized = normalizeKey(type).replace('-', '_');
-        return switch (normalized) {
-            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
-            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
-            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
-            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
-            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
-            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
-            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
-            default -> normalized;
-        };
-    }
-
-    private String normalizeQuestRewardType(String type) {
-        String normalized = normalizeKey(type).replace('-', '_');
-        return switch (normalized) {
-            case "", "item", "reward_item" -> "item";
-            case "story_state", "set_story_flag", "story_flag", "set_flag", "setstorystate" -> "set_story_state";
-            case "story_event", "record_event", "event", "recordstoryevent" -> "record_story_event";
-            default -> normalized;
-        };
-    }
-
-    private Set<String> supportedQuestObjectiveTypes() {
-        return Set.of(
-            "collect_item",
-            "deliver_to_npc",
-            "talk_to_npc",
-            "visit_region",
-            "visit_place",
-            "inspect_node",
-            "kill_mob"
-        );
-    }
-
-    private Set<String> supportedQuestRewardTypes() {
-        return Set.of(
-            "item",
-            "set_story_state",
-            "record_story_event"
-        );
-    }
-
     private void auditQuestPersistence(List<String> errors, List<String> warnings) {
         if (plugin.getDatabaseManager() == null) {
             warnings.add("DatabaseManager indisponibil; nu pot valida player_quests, quest_anchor_bindings sau story_events.");
@@ -774,6 +705,7 @@ public class DebugDumpService {
         auditTrackedQuestPersistence(errors, warnings);
         auditQuestAnchorPersistence(errors, warnings);
         auditStoredQuestJson(warnings);
+        auditStoryProgressionConsistency(warnings);
     }
 
     private void auditTrackedQuestPersistence(List<String> errors, List<String> warnings) {
@@ -929,6 +861,175 @@ public class DebugDumpService {
             return;
         }
         warnings.add(column + " are JSON invalid pentru " + label + ".");
+    }
+
+    private void auditStoryProgressionConsistency(List<String> warnings) {
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        if (scenariosBySelector.isEmpty()) {
+            return;
+        }
+
+        try {
+            Set<String> storyEventProgressionKeys = queryStoryEventProgressionKeys(warnings);
+            String completedProgressionsSql = """
+                SELECT player_uuid, template_id, quest_code, status
+                FROM player_quests
+                WHERE LOWER(COALESCE(status, '')) IN ('completed', 'complete', 'done')
+                ORDER BY completed_at DESC, updated_at DESC
+                LIMIT 500
+            """;
+
+            try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(completedProgressionsSql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String playerUuid = resultSet.getString("player_uuid");
+                    String templateId = resultSet.getString("template_id");
+                    String questCode = resultSet.getString("quest_code");
+                    FeaturePackLoader.ScenarioDefinition scenario =
+                        findScenarioForProgressionRow(templateId, questCode, scenariosBySelector);
+                    if (scenario == null || !hasRecordStoryEventAction(scenario)) {
+                        continue;
+                    }
+                    if (hasStoryEventProgressionKey(storyEventProgressionKeys, playerUuid, templateId, questCode)) {
+                        continue;
+                    }
+                    warnings.add("Progresie completata cu record_story_event fara story_event asociat detectabil: player_uuid="
+                        + playerUuid + ", template_id=" + templateId + ", quest_code=" + questCode
+                        + ". Verifica payload.quest_template/quest_code in story_events.");
+                }
+            }
+        } catch (SQLException exception) {
+            warnings.add("Nu pot valida consistenta story/progression: " + exception.getMessage());
+        }
+    }
+
+    private Set<String> queryStoryEventProgressionKeys(List<String> warnings) throws SQLException {
+        Set<String> keys = new HashSet<>();
+        String storyEventSql = """
+            SELECT id, player_uuid, event_key, actor_type, payload
+            FROM story_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1000
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(storyEventSql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                long id = resultSet.getLong("id");
+                String playerUuid = valueOrEmpty(resultSet.getString("player_uuid"));
+                String actorType = valueOrEmpty(resultSet.getString("actor_type"));
+                String eventKey = valueOrEmpty(resultSet.getString("event_key"));
+                JsonObject payload = parseStoredJsonObject(resultSet.getString("payload"));
+                String questTemplate = jsonString(payload, "quest_template");
+                String questCodeFromPayload = jsonString(payload, "quest_code");
+                String questCode = firstNonBlank(questCodeFromPayload, eventKey);
+                String payloadPlayerUuid = jsonString(payload, "player_uuid");
+                String effectivePlayerUuid = firstNonBlank(playerUuid, payloadPlayerUuid);
+
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questTemplate);
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questCode);
+
+                boolean questLikeEvent = "quest".equalsIgnoreCase(actorType)
+                    || !questTemplate.isBlank()
+                    || !questCodeFromPayload.isBlank();
+                if (questLikeEvent && questTemplate.isBlank() && questCode.isBlank()) {
+                    warnings.add("story_events id=" + id
+                        + " pare legat de quest, dar nu are payload.quest_template sau payload.quest_code.");
+                }
+            }
+        }
+        return keys;
+    }
+
+    private Map<String, FeaturePackLoader.ScenarioDefinition> buildProgressionScenarioLookup() {
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader == null) {
+            return Map.of();
+        }
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> lookup = new LinkedHashMap<>();
+        for (FeaturePackLoader.ScenarioDefinition scenario : loader.getAllScenarios()) {
+            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
+                continue;
+            }
+            ProgressionDefinition definition = ProgressionDefinition.fromScenarioDefinition(scenario);
+            addScenarioLookupKey(lookup, definition.templateId(), scenario);
+            addScenarioLookupKey(lookup, definition.progressionId(), scenario);
+            addScenarioLookupKey(lookup, definition.definitionId(), scenario);
+            addScenarioLookupKey(lookup, definition.code(), scenario);
+            addScenarioLookupKey(lookup, definition.packId() + ":" + definition.definitionId(), scenario);
+            addScenarioLookupKey(
+                lookup,
+                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
+                scenario
+            );
+        }
+        return lookup;
+    }
+
+    private void addScenarioLookupKey(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
+                                      String key,
+                                      FeaturePackLoader.ScenarioDefinition scenario) {
+        String normalized = normalizeKey(key);
+        if (!normalized.isBlank()) {
+            lookup.putIfAbsent(normalized, scenario);
+        }
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
+        String templateId,
+        String questCode,
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector
+    ) {
+        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
+            return null;
+        }
+        FeaturePackLoader.ScenarioDefinition scenario = scenariosBySelector.get(normalizeKey(templateId));
+        if (scenario != null) {
+            return scenario;
+        }
+        scenario = scenariosBySelector.get(normalizeKey(questCode));
+        if (scenario != null) {
+            return scenario;
+        }
+        return scenariosBySelector.get(normalizeKey(lastSelectorSegment(templateId)));
+    }
+
+    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return false;
+        }
+        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasStoryEventProgressionKey(Set<String> keys,
+                                                String playerUuid,
+                                                String templateId,
+                                                String questCode) {
+        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
+            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
+            || keys.contains(storyEventProgressionKey("", templateId))
+            || keys.contains(storyEventProgressionKey("", questCode));
+    }
+
+    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
+        String key = storyEventProgressionKey(playerUuid, selector);
+        if (!key.isBlank()) {
+            keys.add(key);
+        }
+    }
+
+    private String storyEventProgressionKey(String playerUuid, String selector) {
+        String normalizedSelector = normalizeKey(selector);
+        if (normalizedSelector.isBlank()) {
+            return "";
+        }
+        return valueOrEmpty(playerUuid) + "|" + normalizedSelector;
     }
 
     private JsonObject buildLoadedQuestDefinitionsJson() {
@@ -1228,68 +1329,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private String semanticAnchorTypeForObjective(String normalizedObjectiveType) {
-        return switch (normalizedObjectiveType) {
-            case "talk_to_npc" -> "npc";
-            case "visit_region" -> "region";
-            case "visit_place" -> "place";
-            case "inspect_node" -> "node";
-            default -> "";
-        };
-    }
-
-    private String semanticReferencePrefix(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int prefixSeparator = trimmed.indexOf(':');
-        if (prefixSeparator <= 0) {
-            return "";
-        }
-
-        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
-        return isKnownSemanticReferencePrefix(prefix) ? prefix : "";
-    }
-
-    private String semanticReferenceValue(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int prefixSeparator = trimmed.indexOf(':');
-        if (prefixSeparator <= 0) {
-            return trimmed;
-        }
-
-        String prefix = normalizeKey(trimmed.substring(0, prefixSeparator));
-        if (!isKnownSemanticReferencePrefix(prefix)) {
-            return trimmed;
-        }
-        return trimmed.substring(prefixSeparator + 1).trim();
-    }
-
-    private boolean isKnownSemanticReferencePrefix(String prefix) {
-        return switch (prefix) {
-            case "npc", "name", "profession", "region", "place", "node", "tag", "type", "mob", "entity" -> true;
-            default -> false;
-        };
-    }
-
-    private String questTemplateId(FeaturePackLoader.ScenarioDefinition scenario) {
-        String packId = valueOrEmpty(scenario.getPackId());
-        String scenarioId = valueOrEmpty(scenario.getId());
-        if (packId.isBlank()) {
-            return scenarioId;
-        }
-        if (scenarioId.isBlank()) {
-            return packId;
-        }
-        return packId + ":" + scenarioId;
-    }
-
     private JsonObject buildPlayerProgressionsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source_table", "player_quests");
@@ -1371,79 +1410,6 @@ public class DebugDumpService {
         json.addProperty("mechanic_label", progression.mechanicLabel());
         json.addProperty("singular_label", progression.singularLabel());
         json.addProperty("plural_label", progression.pluralLabel());
-        return json;
-    }
-
-    private JsonObject toRegionJson(WorldRegionInfo region) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", region.id());
-        json.addProperty("name", region.name());
-        json.addProperty("world", region.worldName());
-        json.addProperty("type", region.typeId());
-        json.add("bounds", boundsJson(region.minX(), region.minY(), region.minZ(), region.maxX(), region.maxY(), region.maxZ()));
-        json.add("tags", gson.toJsonTree(region.tags()));
-        json.addProperty("story_mode", region.storyMode().getId());
-        json.addProperty("story_state", region.storyStateKey());
-        return json;
-    }
-
-    private JsonObject toPlaceJson(WorldPlaceInfo place) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", place.id());
-        json.addProperty("region_id", place.regionId());
-        json.addProperty("display_name", place.displayName());
-        json.addProperty("world", place.worldName());
-        json.addProperty("type", place.placeType().getId());
-        json.add("bounds", boundsJson(place.minX(), place.minY(), place.minZ(), place.maxX(), place.maxY(), place.maxZ()));
-        json.add("tags", gson.toJsonTree(place.tags()));
-        json.addProperty("owner_npc_id", place.ownerNpcId());
-        json.addProperty("public_access", place.publicAccess());
-        json.add("metadata", gson.toJsonTree(place.metadata()));
-        return json;
-    }
-
-    private JsonObject toNodeJson(WorldNodeInfo node) {
-        JsonObject json = new JsonObject();
-        json.addProperty("id", node.id());
-        json.addProperty("region_id", node.regionId());
-        json.addProperty("place_id", node.placeId());
-        json.addProperty("type", node.typeId());
-        json.addProperty("world", node.worldName());
-        json.addProperty("x", node.x());
-        json.addProperty("y", node.y());
-        json.addProperty("z", node.z());
-        json.addProperty("radius", node.radius());
-        json.add("metadata", gson.toJsonTree(node.metadata()));
-        return json;
-    }
-
-    private JsonObject worldMappingSemanticIndexJson(WorldMappingSemanticIndex index) {
-        JsonObject json = new JsonObject();
-        if (index == null) {
-            return json;
-        }
-
-        JsonObject resolverCandidates = new JsonObject();
-        resolverCandidates.add("regions", semanticIndexMapJson(index.regionCandidates()));
-        resolverCandidates.add("places", semanticIndexMapJson(index.placeCandidates()));
-        resolverCandidates.add("nodes", semanticIndexMapJson(index.nodeCandidates()));
-        json.add("resolver_candidate_tokens", resolverCandidates);
-        json.add("place_tags", semanticIndexMapJson(index.placeTags()));
-        json.add("place_types", semanticIndexMapJson(index.placeTypes()));
-        json.add("node_types", semanticIndexMapJson(index.nodeTypes()));
-        json.add("node_metadata_values", semanticIndexMapJson(index.nodeMetadataValues()));
-        return json;
-    }
-
-    private JsonObject semanticIndexMapJson(Map<String, List<String>> index) {
-        JsonObject json = new JsonObject();
-        if (index == null || index.isEmpty()) {
-            return json;
-        }
-
-        for (Map.Entry<String, List<String>> entry : index.entrySet()) {
-            json.add(entry.getKey(), gson.toJsonTree(entry.getValue()));
-        }
         return json;
     }
 
@@ -1555,71 +1521,6 @@ public class DebugDumpService {
             placesById,
             nodesById);
         return json;
-    }
-
-    private void addNpcWorldBindingRoleJson(JsonObject root,
-                                            String role,
-                                            String placeId,
-                                            String nodeId,
-                                            Map<String, WorldPlaceInfo> placesById,
-                                            Map<String, WorldNodeInfo> nodesById) {
-        JsonObject json = new JsonObject();
-        String safePlaceId = valueOrEmpty(placeId);
-        String safeNodeId = valueOrEmpty(nodeId);
-        WorldPlaceInfo place = placesById.get(safePlaceId);
-        WorldNodeInfo node = nodesById.get(safeNodeId);
-        json.addProperty("place_id", safePlaceId);
-        json.addProperty("node_id", safeNodeId);
-        json.addProperty("place_exists", safePlaceId.isBlank() || place != null);
-        json.addProperty("node_exists", safeNodeId.isBlank() || node != null);
-        json.addProperty("node_place_matches", safePlaceId.isBlank()
-            || safeNodeId.isBlank()
-            || node == null
-            || node.placeId().isBlank()
-            || node.placeId().equalsIgnoreCase(safePlaceId));
-        if (place != null) {
-            json.addProperty("place_type", valueOrEmpty(place.placeType().getId()));
-            json.addProperty("place_display_name", valueOrEmpty(place.displayName()));
-            json.addProperty("region_id", valueOrEmpty(place.regionId()));
-        }
-        if (node != null) {
-            json.addProperty("node_type", valueOrEmpty(node.typeId()));
-            json.addProperty("node_world", valueOrEmpty(node.worldName()));
-            json.addProperty("node_x", node.x());
-            json.addProperty("node_y", node.y());
-            json.addProperty("node_z", node.z());
-        }
-        root.add(role, json);
-    }
-
-    private int npcWorldMissingPlaceReferenceCount(ResultSet resultSet,
-                                                   Map<String, WorldPlaceInfo> placesById) throws SQLException {
-        return missingReferenceCount(placesById,
-            resultSet.getString("home_place_id"),
-            resultSet.getString("work_place_id"),
-            resultSet.getString("social_place_id"));
-    }
-
-    private int npcWorldMissingNodeReferenceCount(ResultSet resultSet,
-                                                  Map<String, WorldNodeInfo> nodesById) throws SQLException {
-        return missingReferenceCount(nodesById,
-            resultSet.getString("home_node_id"),
-            resultSet.getString("work_node_id"),
-            resultSet.getString("social_node_id"));
-    }
-
-    private int missingReferenceCount(Map<String, ?> knownReferences, String... references) {
-        if (knownReferences == null || knownReferences.isEmpty()) {
-            return 0;
-        }
-        int missing = 0;
-        for (String reference : references) {
-            String safeReference = valueOrEmpty(reference);
-            if (!safeReference.isBlank() && !knownReferences.containsKey(safeReference)) {
-                missing++;
-            }
-        }
-        return missing;
     }
 
     private JsonObject buildSpawnBatchesJson() {
@@ -2108,6 +2009,8 @@ public class DebugDumpService {
         Map<String, Integer> byScopeType = new LinkedHashMap<>();
         Map<String, Integer> byQuestTemplate = new LinkedHashMap<>();
         Map<String, Integer> byQuestCode = new LinkedHashMap<>();
+        Map<String, Integer> byProgressionLink = new LinkedHashMap<>();
+        StoryProgressionLinkIndex linkIndex = buildStoryProgressionLinkIndex();
 
         String sql = """
             SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
@@ -2121,7 +2024,21 @@ public class DebugDumpService {
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
                 String payload = resultSet.getString("payload");
+                String playerUuid = resultSet.getString("player_uuid");
+                String eventKey = resultSet.getString("event_key");
                 JsonObject row = storyEventRowJson(resultSet, payload);
+                StoryProgressionMatch progressionMatch = findStoryProgressionMatch(
+                    linkIndex,
+                    playerUuid,
+                    payload,
+                    eventKey
+                );
+                if (progressionMatch != null) {
+                    row.add("progression_link", storyProgressionLinkJson(progressionMatch, eventKey));
+                    incrementCount(byProgressionLink, "linked");
+                } else {
+                    incrementCount(byProgressionLink, "unlinked");
+                }
                 rows.add(row);
                 incrementCount(byEventType, resultSet.getString("event_type"));
                 incrementCount(byScopeType, resultSet.getString("scope_type"));
@@ -2134,10 +2051,16 @@ public class DebugDumpService {
         }
 
         root.addProperty("row_count", rows.size());
+        root.addProperty("progression_cross_link_available", linkIndex.available());
+        root.addProperty("progression_cross_link_source_rows", linkIndex.sourceRows());
+        if (!linkIndex.error().isBlank()) {
+            root.addProperty("progression_cross_link_error", linkIndex.error());
+        }
         root.add("by_event_type", countMapJson(byEventType));
         root.add("by_scope_type", countMapJson(byScopeType));
         root.add("by_quest_template", countMapJson(byQuestTemplate));
         root.add("by_quest_code", countMapJson(byQuestCode));
+        root.add("by_progression_link", countMapJson(byProgressionLink));
         root.add("rows", rows);
         return root;
     }
@@ -2162,83 +2085,235 @@ public class DebugDumpService {
         return json;
     }
 
-    private void incrementCount(Map<String, Integer> counts, String key) {
-        String normalizedKey = valueOrEmpty(key);
-        if (normalizedKey.isBlank()) {
-            normalizedKey = "unknown";
+    private StoryProgressionLinkIndex buildStoryProgressionLinkIndex() {
+        if (plugin.getDatabaseManager() == null) {
+            return new StoryProgressionLinkIndex(false, "DatabaseManager indisponibil", 0, Map.of());
         }
-        counts.put(normalizedKey, counts.getOrDefault(normalizedKey, 0) + 1);
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        Map<String, List<StoryProgressionLink>> linksBySelector = new LinkedHashMap<>();
+        int sourceRows = 0;
+        String sql = """
+            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
+                   updated_at, tracked
+            FROM player_quests
+            ORDER BY updated_at DESC, completed_at DESC, started_at DESC
+            LIMIT 2000
+        """;
+
+        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                sourceRows++;
+                String playerUuid = valueOrEmpty(resultSet.getString("player_uuid"));
+                String templateId = valueOrEmpty(resultSet.getString("template_id"));
+                String questCode = valueOrEmpty(resultSet.getString("quest_code"));
+                FeaturePackLoader.ScenarioDefinition scenario =
+                    findScenarioForProgressionRow(templateId, questCode, scenariosBySelector);
+                StoryProgressionLink link = new StoryProgressionLink(
+                    playerUuid,
+                    templateId,
+                    questCode,
+                    valueOrEmpty(resultSet.getString("status")),
+                    resultSet.getLong("started_at"),
+                    resultSet.getLong("completed_at"),
+                    resultSet.getLong("updated_at"),
+                    resultSet.getInt("tracked") != 0,
+                    scenario
+                );
+
+                addStoryProgressionLink(linksBySelector, playerUuid, templateId, link);
+                addStoryProgressionLink(linksBySelector, playerUuid, questCode, link);
+                addStoryProgressionLink(linksBySelector, playerUuid, lastSelectorSegment(templateId), link);
+                addStoryProgressionLink(linksBySelector, "", templateId, link);
+                addStoryProgressionLink(linksBySelector, "", questCode, link);
+                addStoryProgressionLink(linksBySelector, "", lastSelectorSegment(templateId), link);
+            }
+            return new StoryProgressionLinkIndex(true, "", sourceRows, linksBySelector);
+        } catch (SQLException exception) {
+            return new StoryProgressionLinkIndex(false, exception.getMessage(), sourceRows, linksBySelector);
+        }
     }
 
-    private void incrementCountIfPresent(Map<String, Integer> counts, String key) {
-        if (key == null || key.isBlank()) {
+    private void addStoryProgressionLink(Map<String, List<StoryProgressionLink>> linksBySelector,
+                                         String playerUuid,
+                                         String selector,
+                                         StoryProgressionLink link) {
+        String key = storyEventProgressionKey(playerUuid, selector);
+        if (key.isBlank()) {
             return;
         }
-        incrementCount(counts, key);
+        List<StoryProgressionLink> links = linksBySelector.computeIfAbsent(key, ignored -> new ArrayList<>());
+        if (!links.contains(link)) {
+            links.add(link);
+        }
     }
 
-    private JsonObject countMapJson(Map<String, Integer> counts) {
+    private StoryProgressionMatch findStoryProgressionMatch(StoryProgressionLinkIndex index,
+                                                            String eventPlayerUuid,
+                                                            String rawPayload,
+                                                            String eventKey) {
+        if (index == null || index.linksBySelector().isEmpty()) {
+            return null;
+        }
+
+        JsonObject payload = parseStoredJsonObject(rawPayload);
+        String effectivePlayerUuid = firstNonBlank(
+            valueOrEmpty(eventPlayerUuid),
+            jsonString(payload, "player_uuid")
+        );
+        List<StoryProgressionSelector> selectors = new ArrayList<>();
+        addStoryProgressionSelector(selectors, "payload.quest_template", jsonString(payload, "quest_template"));
+        addStoryProgressionSelector(selectors, "payload.quest_code", jsonString(payload, "quest_code"));
+        addStoryProgressionSelector(selectors, "event_key", eventKey);
+
+        for (StoryProgressionSelector selector : selectors) {
+            StoryProgressionMatch exactMatch = findUniqueStoryProgressionMatch(
+                index,
+                effectivePlayerUuid,
+                selector,
+                false
+            );
+            if (exactMatch != null) {
+                return exactMatch;
+            }
+        }
+
+        if (!effectivePlayerUuid.isBlank()) {
+            return null;
+        }
+
+        for (StoryProgressionSelector selector : selectors) {
+            StoryProgressionMatch selectorOnlyMatch = findUniqueStoryProgressionMatch(
+                index,
+                "",
+                selector,
+                true
+            );
+            if (selectorOnlyMatch != null) {
+                return selectorOnlyMatch;
+            }
+        }
+        return null;
+    }
+
+    private void addStoryProgressionSelector(List<StoryProgressionSelector> selectors,
+                                             String source,
+                                             String selector) {
+        String normalizedSelector = normalizeKey(selector);
+        if (normalizedSelector.isBlank()) {
+            return;
+        }
+        for (StoryProgressionSelector existing : selectors) {
+            if (normalizeKey(existing.selector()).equals(normalizedSelector)) {
+                return;
+            }
+        }
+        selectors.add(new StoryProgressionSelector(source, selector));
+    }
+
+    private StoryProgressionMatch findUniqueStoryProgressionMatch(StoryProgressionLinkIndex index,
+                                                                  String playerUuid,
+                                                                  StoryProgressionSelector selector,
+                                                                  boolean selectorOnly) {
+        String key = storyEventProgressionKey(playerUuid, selector.selector());
+        List<StoryProgressionLink> links = index.linksBySelector().get(key);
+        if (links == null || links.size() != 1) {
+            return null;
+        }
+        return new StoryProgressionMatch(
+            links.get(0),
+            selector.source(),
+            selector.selector(),
+            selectorOnly,
+            links.size()
+        );
+    }
+
+    private JsonObject storyProgressionLinkJson(StoryProgressionMatch match, String eventKey) {
         JsonObject json = new JsonObject();
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            json.addProperty(entry.getKey(), entry.getValue());
+        StoryProgressionLink link = match.link();
+        json.addProperty("match_source", match.matchSource());
+        json.addProperty("match_selector", valueOrEmpty(match.matchSelector()));
+        json.addProperty("selector_only_match", match.selectorOnlyMatch());
+        json.addProperty("candidate_count", match.candidateCount());
+        json.addProperty("player_uuid", valueOrEmpty(link.playerUuid()));
+        json.addProperty("template_id", valueOrEmpty(link.templateId()));
+        json.addProperty("quest_code", valueOrEmpty(link.questCode()));
+        json.addProperty("status", valueOrEmpty(link.status()));
+        json.addProperty("started_at", link.startedAt());
+        json.addProperty("completed_at", link.completedAt());
+        json.addProperty("updated_at", link.updatedAt());
+        json.addProperty("tracked", link.tracked());
+
+        FeaturePackLoader.ScenarioDefinition scenario = link.scenario();
+        if (scenario != null) {
+            json.addProperty("scenario_pack_id", valueOrEmpty(scenario.getPackId()));
+            json.addProperty("scenario_id", valueOrEmpty(scenario.getId()));
+            json.addProperty("scenario_name", valueOrEmpty(scenario.getName()));
+            json.addProperty("scenario_base_type", scenario.getBaseType() != null ? scenario.getBaseType().name() : "");
+            json.addProperty("scenario_mechanic_id", valueOrEmpty(scenario.getProgressionMechanicId()));
+            json.addProperty("scenario_kind", valueOrEmpty(scenario.getQuestScenarioKind()));
+            FeaturePackLoader.QuestEntryDefinition action = findRecordStoryEventAction(scenario, eventKey);
+            if (action != null) {
+                json.add("story_action", storyActionJson(action, link));
+            }
         }
         return json;
     }
 
-    private String enumJsonId(Enum<?> value) {
-        return value != null ? normalizeKey(value.name()) : "";
-    }
-
-    private String storedJsonProperty(String rawValue, String key) {
-        if (rawValue == null || rawValue.isBlank() || key == null || key.isBlank()) {
-            return "";
+    private FeaturePackLoader.QuestEntryDefinition findRecordStoryEventAction(
+        FeaturePackLoader.ScenarioDefinition scenario,
+        String eventKey
+    ) {
+        if (scenario == null) {
+            return null;
         }
-        try {
-            JsonElement parsed = JsonParser.parseString(rawValue);
-            if (!parsed.isJsonObject()) {
-                return "";
+        FeaturePackLoader.QuestEntryDefinition fallback = null;
+        String normalizedEventKey = normalizeKey(eventKey);
+        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+            if (!"record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
+                continue;
             }
-            JsonElement value = parsed.getAsJsonObject().get(key);
-            if (value == null || value.isJsonNull()) {
-                return "";
+            if (fallback == null) {
+                fallback = reward;
             }
-            return value.isJsonPrimitive() ? value.getAsString() : value.toString();
-        } catch (JsonSyntaxException | IllegalStateException exception) {
-            return "";
+            String actionEventKey = questEntryMetadata(reward, "event_key", "key");
+            if (!normalizedEventKey.isBlank() && normalizeKey(actionEventKey).equals(normalizedEventKey)) {
+                return reward;
+            }
         }
+        return fallback;
     }
 
-    private boolean isStoredJsonValid(String rawValue) {
-        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
-        try {
-            JsonParser.parseString(safeRawValue);
-            return true;
-        } catch (JsonSyntaxException exception) {
-            return false;
-        }
-    }
-
-    private String valueOrEmpty(String value) {
-        return value != null ? value : "";
-    }
-
-    private String valueOrFallback(String value, String fallback) {
-        return value == null || value.isBlank() ? valueOrEmpty(fallback) : value;
-    }
-
-    private long nullableLong(ResultSet resultSet, String column) throws SQLException {
-        Object value = resultSet.getObject(column);
-        return value == null ? 0L : resultSet.getLong(column);
-    }
-
-    private JsonObject boundsJson(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+    private JsonObject storyActionJson(FeaturePackLoader.QuestEntryDefinition action,
+                                       StoryProgressionLink link) {
         JsonObject json = new JsonObject();
-        json.addProperty("min_x", minX);
-        json.addProperty("min_y", minY);
-        json.addProperty("min_z", minZ);
-        json.addProperty("max_x", maxX);
-        json.addProperty("max_y", maxY);
-        json.addProperty("max_z", maxZ);
+        json.addProperty("type", normalizeQuestRewardType(action.getType()));
+        json.addProperty("entry_id", valueOrEmpty(action.getEntryId()));
+        json.addProperty("item_id", valueOrEmpty(action.getItemId()));
+        json.addProperty("description", valueOrEmpty(action.getDescription()));
+        json.addProperty("scope", questEntryMetadata(action, "scope", "scope_type"));
+        json.addProperty("target", questEntryMetadata(
+            action,
+            "target",
+            "scope_id",
+            "target_id",
+            "id",
+            "place_id",
+            "region_id",
+            "target_place",
+            "target_region",
+            "place",
+            "region"
+        ));
+        json.addProperty("event_type", questEntryMetadata(action, "event_type", "type_id"));
+        json.addProperty("event_key", firstNonBlank(
+            questEntryMetadata(action, "event_key", "key"),
+            link.questCode()
+        ));
+        json.add("metadata", gson.toJsonTree(action.getMetadata()));
+        json.add("payload", gson.toJsonTree(action.getPayload()));
         return json;
     }
 
@@ -2277,26 +2352,6 @@ public class DebugDumpService {
         }
     }
 
-    private boolean isWorkplace(WorldPlaceInfo place) {
-        return place.hasTag("work")
-            || place.hasTag("workplace")
-            || "work".equalsIgnoreCase(place.metadata().get("role"))
-            || "work".equalsIgnoreCase(place.metadata().get("purpose"))
-            || switch (place.placeType()) {
-                case FORGE, SHOP, FARM, MARKET, TAVERN -> true;
-                default -> false;
-            };
-    }
-
-    private boolean hasPendingOwner(WorldPlaceInfo place) {
-        String ownerStatus = place.metadata().getOrDefault("owner_status", "");
-        String ownerPending = place.metadata().getOrDefault("owner_pending", "");
-        return "pending".equalsIgnoreCase(ownerStatus)
-            || "true".equalsIgnoreCase(ownerPending)
-            || ("demo_mapping".equalsIgnoreCase(place.metadata().getOrDefault("source", ""))
-                && place.hasTag("demo"));
-    }
-
     private void auditHouseSpawnOrder(WorldAdminApi worldAdmin,
                                       WorldPlaceInfo house,
                                       List<String> warnings,
@@ -2331,101 +2386,6 @@ public class DebugDumpService {
         }
     }
 
-    private boolean isHousePlace(WorldPlaceInfo place) {
-        return place.placeType().getId().equals("house")
-            || place.hasTag("home")
-            || place.hasTag("house")
-            || "home".equalsIgnoreCase(place.metadata().get("role"))
-            || "home".equalsIgnoreCase(place.metadata().get("purpose"));
-    }
-
-    private List<String> parseResidents(WorldPlaceInfo place) {
-        String rawResidents = firstNonBlank(
-            place.metadata().get("residents"),
-            place.metadata().get("resident_npc_ids"),
-            place.metadata().get("resident_ids")
-        );
-        if (rawResidents.isBlank()) {
-            return List.of();
-        }
-
-        List<String> residents = new ArrayList<>();
-        for (String part : rawResidents.split("[,;]")) {
-            String resident = part.trim();
-            if (!resident.isBlank()) {
-                residents.add(resident);
-            }
-        }
-        return residents;
-    }
-
-    private Integer parsePositiveIntMetadata(WorldPlaceInfo place, String... keys) {
-        String rawValue = firstNonBlankFromMap(place.metadata(), keys);
-        if (rawValue.isBlank()) {
-            return null;
-        }
-
-        try {
-            int value = Integer.parseInt(rawValue.trim());
-            return value > 0 ? value : null;
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
-    }
-
-    private String firstNonBlankFromMap(Map<String, String> values, String... keys) {
-        for (String key : keys) {
-            String value = values.get(key);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private boolean hasAnySemanticNode(Iterable<WorldNodeInfo> nodes, String... expectedTokens) {
-        for (WorldNodeInfo node : nodes) {
-            if (nodeMatchesAny(node, expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean nodeMatchesAny(WorldNodeInfo node, String... expectedTokens) {
-        if (matchesAnyToken(node.typeId(), expectedTokens)) {
-            return true;
-        }
-        for (Map.Entry<String, String> entry : node.metadata().entrySet()) {
-            if (matchesAnyToken(entry.getKey(), expectedTokens) || matchesAnyToken(entry.getValue(), expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean matchesAnyToken(String rawValue, String... expectedTokens) {
-        String value = normalizeKey(rawValue).replace('-', '_');
-        if (value.isBlank()) {
-            return false;
-        }
-        for (String expectedToken : expectedTokens) {
-            if (value.equals(normalizeKey(expectedToken).replace('-', '_'))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private AINPC findLoadedNpcBySelector(String selector) {
         String normalizedSelector = normalizeKey(selector);
         if (normalizedSelector.isBlank() || plugin.getNpcManager() == null) {
@@ -2449,21 +2409,6 @@ public class DebugDumpService {
         }
 
         return null;
-    }
-
-    private boolean ownedLocationInsidePlace(AINPC.OwnedLocation location, WorldPlaceInfo place) {
-        return location != null
-            && place.worldName().equalsIgnoreCase(location.worldName())
-            && location.x() >= place.minX()
-            && location.x() <= place.maxX()
-            && location.y() >= place.minY()
-            && location.y() <= place.maxY()
-            && location.z() >= place.minZ()
-            && location.z() <= place.maxZ();
-    }
-
-    private String normalizeKey(String value) {
-        return value == null ? "" : value.trim().toLowerCase().replace(' ', '_');
     }
 
     private void writeJson(Path path, Object value) throws IOException {

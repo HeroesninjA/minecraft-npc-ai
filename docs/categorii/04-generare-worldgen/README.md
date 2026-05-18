@@ -1,6 +1,6 @@
 # Generare si Worldgen
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-11
 
 Aceasta categorie acopera generarea de sate, completarea lumii si constructia asistata.
 
@@ -10,7 +10,7 @@ Aceasta categorie acopera generarea de sate, completarea lumii si constructia as
 |---|---|
 | `../../playable-village-ux.md` | Cerinte de playability pentru generator: teren plat, case mai mari, distante, drumuri si locuri de interactiune |
 | `../../settlement-plan.md` | Contract pentru plan complet de sat/regiune, validabil inainte de constructie sau spawn |
-| `../../patch-planner.md` | Contract pentru gap analyzer si patch-uri planificate fara executie directa |
+| `../../patch-planner.md` | Contract si implementare initiala read-only pentru gap analyzer si patch-uri planificate fara executie directa |
 | `../../template-cladiri-si-marker-nodes.md` | Contract pentru template-uri, ancore si marker nodes care devin mapping |
 | `../../worldedit-integration-contract.md` | Contract pentru integrarea optionala WorldEdit ca adapter de executie |
 | `../../generare-sate-fara-worldedit.md` | Generare si completare sate vanilla fara WorldEdit obligatoriu |

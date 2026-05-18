@@ -30,10 +30,11 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $serverPath = Resolve-Path -LiteralPath $ServerDir -ErrorAction Stop
 $serverDirFull = $serverPath.Path
 $pluginsDir = Join-Path $serverDirFull "plugins"
-$coreJar = Join-Path $repoRoot "ainpc-core-plugin\target\ainpc-core-plugin-1.0.0.jar"
-$medievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\target\ainpc-scenario-medieval-1.0.0.jar"
+$coreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar"
+$medievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-1.0.0.jar"
 $commandsPath = Join-Path $serverDirFull "ainpc-mapping-smoke-commands.txt"
 $reportPath = Join-Path $serverDirFull "ainpc-mapping-smoke-report.txt"
+$gradleWrapper = Join-Path $repoRoot "gradlew.bat"
 
 function Invoke-RepoCommand {
     param(
@@ -43,9 +44,9 @@ function Invoke-RepoCommand {
 
     Push-Location $repoRoot
     try {
-        & mvn @Arguments
+        & $gradleWrapper @Arguments
         if ($LASTEXITCODE -ne 0) {
-            throw "Comanda Maven a esuat: mvn $($Arguments -join ' ')"
+            throw "Comanda Gradle a esuat: $gradleWrapper $($Arguments -join ' ')"
         }
     } finally {
         Pop-Location
@@ -56,15 +57,15 @@ if (-not $SkipBuild) {
     if ($RunTests) {
         Invoke-RepoCommand -Arguments @("test")
     }
-    Invoke-RepoCommand -Arguments @("package", "-DskipTests")
+    Invoke-RepoCommand -Arguments @("assemble")
 }
 
 if (-not (Test-Path -LiteralPath $coreJar)) {
-    throw "Lipseste JAR-ul core: $coreJar. Ruleaza mvn package -DskipTests."
+    throw "Lipseste JAR-ul core: $coreJar. Ruleaza .\gradlew.bat assemble."
 }
 
 if (-not (Test-Path -LiteralPath $medievalJar)) {
-    throw "Lipseste JAR-ul medieval: $medievalJar. Ruleaza mvn package -DskipTests."
+    throw "Lipseste JAR-ul medieval: $medievalJar. Ruleaza .\gradlew.bat assemble."
 }
 
 if (-not (Test-Path -LiteralPath $pluginsDir)) {

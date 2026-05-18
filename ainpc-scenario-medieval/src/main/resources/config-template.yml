@@ -1,0 +1,69 @@
+# ========================================
+# AINPC Scenario Medieval - Config Template
+# ========================================
+#
+# Acest fisier este copiat de addon in:
+# plugins/AINPC/addons/ainpc-scenario-medieval/config.yml
+#
+# Core-ul ramane universal. Pastreaza aici doar optiuni specifice
+# scenariului medieval, balancing-ului si continutului livrat de addon.
+
+addon:
+  id: "ainpc-scenario-medieval"
+  config_version: 1
+  # Dezactiveaza doar addonul medieval. Pentru dezactivare globala foloseste addons.disabled in config-ul core.
+  enabled: true
+
+content:
+  # Activeaza pack-ul medieval_quest livrat de addon.
+  install_pack: true
+  # Daca este false, addonul ramane inregistrat, dar pack-ul jucabil nu este instalat.
+  playable_content: true
+
+progression:
+  main_quests:
+    enabled: true
+    max_active: 1
+  side_quests:
+    enabled: true
+    max_active: 3
+  village_contracts:
+    enabled: true
+    max_active: 3
+  npc_duties:
+    enabled: true
+    max_active: 2
+  local_bounties:
+    enabled: true
+    max_active: 2
+  village_events:
+    enabled: true
+    max_active: 2
+  tutorials:
+    enabled: true
+    max_active: 1
+  rituals:
+    enabled: true
+    max_active: 1
+
+world:
+  demo_mapping:
+    enabled: true
+    default_region_id: "demo_sat"
+  anchors:
+    require_objective_ids: true
+    require_semantic_mapping: true
+
+rewards:
+  item_rewards_enabled: true
+  currency_enabled: false
+  reward_multiplier: 1.0
+
+dialogue:
+  language: "ro"
+  tone: "medieval"
+  use_titles: true
+
+debug:
+  log_pack_install: true
+  log_config_path: true

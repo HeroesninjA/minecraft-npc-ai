@@ -44,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
   -ServerDir "C:\Minecraft\paper-test"
 ```
 
-Cu teste Maven inainte de package:
+Cu teste Gradle inainte de assemble:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
@@ -70,8 +70,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
 
 Ce face:
 
-- ruleaza `mvn package -DskipTests`, daca nu folosesti `-SkipBuild`
-- optional ruleaza si `mvn test` cu `-RunTests`
+- ruleaza `.\gradlew.bat assemble`, daca nu folosesti `-SkipBuild`
+- optional ruleaza si `.\gradlew.bat test` cu `-RunTests`
 - copiaza JAR-ul core si addonul medieval in `plugins/`
 - genereaza `ainpc-mapping-smoke-commands.txt` in folderul serverului
 - genereaza `ainpc-mapping-smoke-report.txt` cu hash-uri si verificari de baza
@@ -101,8 +101,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
 
 Ce face:
 
-- ruleaza `mvn package -DskipTests`, daca nu folosesti `-SkipBuild`
-- optional ruleaza si `mvn test` cu `-RunTests`
+- ruleaza `.\gradlew.bat assemble`, daca nu folosesti `-SkipBuild`
+- optional ruleaza si `.\gradlew.bat test` cu `-RunTests`
 - copiaza JAR-ul core si addonul medieval in `plugins/`
 - genereaza `ainpc-quest-smoke-commands.txt` in folderul serverului
 - genereaza `ainpc-quest-smoke-report.txt` cu hash-uri si verificari de baza

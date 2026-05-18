@@ -1,8 +1,8 @@
 # Patch Planner
 
-Actualizat: 2026-05-04
+Actualizat: 2026-05-11
 
-Status: document canonic initial pentru `VillageGapAnalyzer` si `VillagePatchPlanner`. Acest document defineste contractul de analiza si planificare a completarilor de sat; nu inseamna ca patch planner-ul sau builder-ul sunt implementate complet in cod.
+Status: document canonic si implementare initiala read-only pentru `VillageGapAnalyzer`, `VillagePatchPlanner` si comanda `/ainpc patch analyze|plan|validate`. Patch planner-ul produce `GapReport`, `PatchCandidate` si `PatchPlan`; builder-ul fizic si commit-ul de mapping nu sunt implementate.
 
 ## Scop
 
@@ -494,23 +494,38 @@ Regula:
 
 ## Comenzi recomandate
 
-Read-only:
+Implementate read-only:
 
 ```text
-/ainpc patch analyze <regionId> [targetPopulation]
-/ainpc patch plan <regionId> [targetPopulation]
+/ainpc patch analyze <regionId> [targetPopulation] [profesiiCSV]
+/ainpc patch plan <regionId> [targetPopulation] [profesiiCSV]
+/ainpc patch validate <regionId> [targetPopulation] [profesiiCSV]
+```
+
+Aceste comenzi nu scriu mapping, nu construiesc blocuri si nu persista planuri. Ele analizeaza regiunea curenta din `WorldAdminApi`, afiseaza gap-urile si, pentru `plan`/`validate`, propun patch-uri inspectabile in mesajul admin.
+
+Planificat ulterior:
+
+```text
 /ainpc patch inspect <planId>
-/ainpc patch validate <planId>
 /ainpc patch discard <planId>
 ```
 
-Executie ulterioara:
+Executie ulterioara, doar dupa persistenta planurilor si validare explicita:
 
 ```text
 /ainpc patch commit <planId>
 ```
 
-Pentru MVP, `commit` poate ramane neimplementat. `analyze`, `plan` si `validate` sunt mai importante.
+Pentru MVP, `commit` ramane neimplementat. `analyze`, `plan` si `validate` sunt partea utila pentru audit si pregatirea urmatorilor pasi.
+
+Capabilitatea implicita permisa este doar:
+
+```text
+semantic-place-mapping
+```
+
+De aceea patch-urile `add_node` pot fi validate ca `semantic_only`, iar patch-urile care cer `native-block-build` sunt propuneri blocate pana cand exista builder nativ.
 
 ## Exemplu
 
@@ -560,6 +575,8 @@ patches:
 
 ### PP0: Contract documentat
 
+Status: implementat.
+
 Livrabile:
 
 - documentul de fata
@@ -570,6 +587,8 @@ Nu necesita server Paper.
 
 ### PP1: Gap analyzer read-only
 
+Status: implementat initial.
+
 Livrabile:
 
 - calculeaza capacitate case/paturi
@@ -577,6 +596,8 @@ Livrabile:
 - produce `GapReport`
 
 ### PP2: Patch candidates
+
+Status: implementat initial.
 
 Livrabile:
 
@@ -586,6 +607,8 @@ Livrabile:
 
 ### PP3: PatchPlan in SettlementPlan
 
+Status: partial. Modelul `PatchPlan` si validarea de capabilitati exista, dar integrarea in `SettlementPlan` si persistenta/inspectia de plan lipsesc.
+
 Livrabile:
 
 - adauga patch-uri in `SettlementPlan`
@@ -594,6 +617,8 @@ Livrabile:
 
 ### PP4: Semantic-only commit
 
+Status: neimplementat.
+
 Livrabile:
 
 - aplica doar node-uri si tags semantice
@@ -601,6 +626,8 @@ Livrabile:
 - audit post-commit
 
 ### PP5: Builder integration
+
+Status: neimplementat.
 
 Livrabile:
 
@@ -628,4 +655,4 @@ Patch planner-ul este suficient pentru MVP cand:
 - patch-urile pot fi validate fara a modifica lumea
 - patch-urile semantic-only pot fi aplicate separat in faza controlata
 
-Abia dupa acest nivel merita introdus builder nativ sau WorldEdit pentru patch-uri fizice.
+Primele trei puncte exista initial in cod. Urmatoarele raman faze de integrare inainte de builder nativ sau WorldEdit pentru patch-uri fizice.

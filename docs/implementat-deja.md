@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-10
+Actualizat: 2026-05-11
 
 Status verificat:
 - build-ul multi-module trece cu `mvn test`
@@ -346,6 +346,7 @@ Exista deja un strat initial read-only pentru context narativ si persistenta sto
 - `RegionStoryState`
 - `PlaceStoryState`
 - `StoryEvent`
+- `QuestDirector`, `QuestDirectorRequest` si `QuestDirectorDecision` ca strat determinist read-only pentru selectie story-driven
 - integrare in `NPCContext` pentru sectiunea `STORY_CONTEXT`
 - comanda admin `/ainpc story context [jucator] [numeNpc|nearest]`
 - comenzi admin read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`
@@ -376,6 +377,7 @@ Limitari actuale:
 
 - audit/debugdump dedicat pentru story state-ul persistent exista initial prin `/ainpc audit quest`, `/ainpc debugdump quest` si `/ainpc debugdump story`
 - `StoryContextService` nu genereaza questuri si nu scrie in DB
+- `QuestDirector` nu este inca legat la comenzi, GUI, AI provider sau executie runtime; decizia lui ramane `runtimeExecutable=false`
 - actiunile story sunt suportate initial doar la finalizarea questului, ca intrari in `rewards`
 - contextul este util doar cat mapping-ul si quest anchors sunt suficient populate
 
@@ -469,6 +471,9 @@ Capabilitati implementate:
 - audit pentru inconsistenta intre regiuni, places, nodes si NPC-uri
 - scanare vanilla initiala prin `/ainpc world scan village`
 - import semantic initial prin `/ainpc world scan village <radius> import [regionId]`
+- patch planner read-only initial prin `/ainpc patch analyze|plan|validate <regionId> [targetPopulation] [profesiiCSV]`
+- `VillageGapAnalyzer` produce `GapReport` pentru capacitate, case/paturi, workplace-uri cerute, social hub, quest trigger si node-uri lipsa
+- `VillagePatchPlanner` transforma gap-urile in `PatchCandidate` si `PatchPlan`, cu prioritate, cost, risc, build mode si validare de capabilitati
 - validare initiala pentru alocarea rezidentilor intr-o casa inainte de spawn batch
 - generare determinista initiala `WorldPlace house -> HouseAllocation -> NpcSpawnPlan`
 - generare determinista initiala `WorldRegion -> houses -> HouseAllocation list`
@@ -500,7 +505,7 @@ Limitari actuale:
 - mapping-ul este functional, dar serverul de test poate avea inca `0` regiuni, `0` places si `0` nodes pana cand sunt definite in config sau prin comenzi
 - NPC-urile salveaza ancore de locatie si pot fi legate manual la places, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
 - `visit_place` si `inspect_node` exista initial cu `QuestAnchorResolver` si persistenta dedicata `quest_anchor_bindings`
-- scannerul vanilla si mapperul semantic exista initial, dar generatorul complet de sate/cladiri si patch-uri native nu este inca implementat ca pipeline complet
+- scannerul vanilla, mapperul semantic si patch planner-ul read-only exista initial, dar generatorul complet de sate/cladiri si patch-urile native nu sunt inca implementate ca pipeline complet
 - exista `HouseAllocation` ca model intern, dar generatorul complet nu il produce inca automat dintr-un `SettlementPlan`
 - household plannerul actual este minim si determinist; nu genereaza inca familii narative complexe sau populatie pe tot satul
 - settlement spawn ruleaza household-uri secvential, se opreste la prima eroare si sterge NPC-urile create in household-uri anterioare
@@ -515,6 +520,7 @@ Comenzi principale disponibile:
 - `/ainpc info`
 - `/ainpc quest`
 - `/ainpc world`
+- `/ainpc patch`
 - `/ainpc story`
 - `/ainpc story region`
 - `/ainpc story place`
@@ -589,6 +595,7 @@ Pentru claritate, urmatoarele directii nu sunt inca livrate complet in codul act
 - legare completa NPC <-> `WorldPlace` prin `homePlaceId`, `workPlaceId`, `socialPlaceId`
 - validator mai strict pentru story actions, chei story si retention
 - generator complet de sate, case si cladiri de meserii
+- persistenta/inspectia dedicata pentru `PatchPlan`, commit semantic-only si builder native pentru patch-uri fizice
 - integrare optionala cu WorldEdit API
 - questuri cu etape reale si branching avansat
 - economie functionala
@@ -620,6 +627,7 @@ Proiectul are deja implementate:
 - actiuni de quest pentru story state si story events
 - audit/debugdump initial pentru story state persistent si story events
 - scanare vanilla initiala si import semantic pentru world mapping
+- patch planner read-only initial pentru `GapReport`, `PatchCandidate` si `PatchPlan`
 - `npc_world_bindings` initial pentru home/work/social place si node IDs
 - comanda pentru mapping demo minim in jurul jucatorului
 - rutina zilnica initiala peste `home/work/social anchors`

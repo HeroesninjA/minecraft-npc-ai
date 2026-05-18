@@ -1,6 +1,6 @@
 # Documentatie Lipsa si Idei Recomandate
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-16
 
 Acest document listeaza documentatiile care lipsesc sau merita separate din documentele mari existente.
 
@@ -61,3 +61,17 @@ Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru
 | `gui-interfete.md` | Creat ca document de implementare pentru GUI-uri: quest, world, statistici, shop, manager, debug, audit si interactiune NPC profesionala |
 | `quest-anchor-bindings.md` | Creat dupa implementarea initiala a tabelei `quest_anchor_bindings`; auditul, comanda admin read-only si exportul `debugdump quest` exista initial |
 | `story-context-service.md` | Creat dupa implementarea initiala a `StoryContextService`; ramane necesara documentatia separata pentru story state persistent si events |
+| `conversie-java-la-kotlin.md` | Creat ca plan principal pe faze pentru migrarea Java -> Kotlin |
+| `conversie-java-la-kotlin-partea-2.md` | Creat ca runbook operational pentru executia conversiei Kotlin |
+| `conversie-java-la-kotlin-partea-3.md` | Creat cu retete concrete pentru Gradle Kotlin, conversii si interop |
+| `conversie-java-la-kotlin-partea-4.md` | Creat ca harta pe pachetele reale din repo |
+| `conversie-java-la-kotlin-partea-5.md` | Creat pentru tracking, teste, JAR audit, smoke si rollback |
+| `rezumat-conversie-java-la-kotlin.md` | Creat ca rezumat al celor 5 parti |
+| `kotlin-style-guide.md` | Creat ca document de stil Kotlin pentru proiect |
+| `kotlin-interop-api-addonuri.md` | Creat ca document de compatibilitate Java/API/addonuri |
+| `kotlin-paper-packaging-si-smoke.md` | Creat ca runbook pentru runtime Kotlin, JAR audit si Paper smoke |
+| `kotlin-migration-tracker.md` | Creat ca tracker operational pentru slice-urile Kotlin |
+| `kotlin-code-review-checklist.md` | Creat ca checklist de review pentru schimbari Kotlin |
+| `kotlin-coroutines-paper-policy.md` | Creat ca politica pentru coroutine in context Paper |
+| `kotlin-gradle-activation-plan.md` | Creat ca plan exact pentru activarea Kotlin in Gradle |
+| `kotlin-testing-strategy.md` | Creat ca strategie de testare pentru conversiile Kotlin |

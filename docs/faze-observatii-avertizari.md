@@ -1,8 +1,8 @@
 # Faze, Observatii si Avertizari
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-11
 
-Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner si rollback global practic pentru spawn pe regiune.
+Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner, patch planner read-only si rollback global practic pentru spawn pe regiune.
 
 ## Verdict
 
@@ -68,6 +68,7 @@ Status curent:
 - `/ainpc audit db` valideaza initial randurile `npc_world_bindings`
 - auditul world raporteaza readiness minim: case, locuri de munca, locuri sociale si quest/interaction nodes
 - scannerul vanilla si mapperul semantic exista initial
+- patch planner-ul read-only exista initial prin `/ainpc patch analyze|plan|validate`, dar nu construieste si nu scrie mapping
 - `HouseAllocation` exista initial si produce `NpcSpawnPlan`
 - `NpcSpawnOrchestrator` are validare, dry-run si spawn batch pentru household
 - auditul spawn-order verifica case, rezidenti, ancore si familie reciproca
@@ -95,6 +96,7 @@ Observatii:
 Avertizari:
 
 - Generatorul real care produce automat `HouseAllocation` dintr-un `SettlementPlan` nu este inca gata; contractul de plan este separat in `settlement-plan.md`.
+- Patch planner-ul produce initial `GapReport` si `PatchPlan`, dar persistenta planurilor, commit-ul semantic-only si builder-ul nativ raman neimplementate.
 - Plannerul actual produce `HouseAllocation` pentru o casa sau pentru toate casele dintr-o regiune, dar nu genereaza inca narativ locuitori pe roluri complexe.
 - Spawn-ul pe regiune are rollback global practic pentru NPC-urile create anterior, dar nu este tranzactie DB completa peste toate efectele secundare.
 - `npc_world_bindings` exista initial, dar rutina si auditul spawn inca folosesc in mare parte ancorele din profil.

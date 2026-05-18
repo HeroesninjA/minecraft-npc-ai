@@ -1,6 +1,6 @@
 # Story si Context AI - Mapping, Indexare si Questuri
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-11
 
 Status: design pentru faze urmatoare, cu Faza A implementata initial, Faza B implementata initial la nivel de quest anchors, `StoryContextService` implementat initial read-only si Faza C implementata initial la nivel de schema, serviciu si actiuni de quest pentru story state.
 
@@ -69,6 +69,105 @@ Coordonatele sunt utile pentru detectie si teleport/pathing. Gameplay-ul narativ
 - `householdId`
 - `tags`
 - `storyState`
+
+## Integrare fara conflict intre contexte
+
+Contextul final pentru AI, dialog, `QuestDirector` sau GUI nu trebuie sa fie un obiect mare in care toate sistemele scriu. Trebuie compus din snapshot-uri mici, fiecare cu proprietar clar.
+
+```text
+WorldContext = unde este NPC-ul sau jucatorul
+StoryContext = ce se intampla in regiune/place
+MemoryContext = ce tine minte NPC-ul despre jucator/evenimente
+ProgressionContext = ce questuri/progresii sunt active
+```
+
+Agregarea recomandata:
+
+```text
+ContextAssembler
+-> WorldContextSnapshot
+-> StoryContextSnapshot
+-> MemorySnapshot
+-> ProgressionSnapshot
+-> PromptContext / QuestDirectorContext / GuiSnapshot
+```
+
+Regula principala: fiecare context are un singur proprietar de scriere.
+
+| Context | Proprietar | Scrie | Citeste |
+|---|---|---|---|
+| World | `WorldAdminService` | mapping semantic | story, quest, AI, GUI |
+| Story | `StoryStateService` | story state si story events | AI, `QuestDirector`, GUI |
+| Memory | `MemoryManager`, viitor `MemoryService` | memorii NPC despre jucator/evenimente | AI, dialog, reactii, `QuestDirector` optional |
+| Progression | `ProgressionService` | progres jucator, obiective, stages, status | GUI, story actions, AI |
+
+Reguli de evitare a conflictelor:
+
+- `MemoryService` nu schimba story state.
+- `StoryStateService` nu scrie memorii NPC.
+- `ProgressionService` nu decide directia narativa, ci executa progres validat.
+- `QuestDirector` citeste contextul combinat, dar produce doar decizie read-only.
+- AI-ul nu scrie direct in DB, story, memorie sau progres; AI propune, serviciile valideaza.
+
+Exemplu:
+
+```text
+Jucatorul ajuta fierarul.
+
+ProgressionService completeaza questul.
+-> StoryStateService scrie story event: blacksmith_helped
+-> MemoryService scrie memorie NPC: "Ion m-a ajutat cu fieraria."
+```
+
+Nu este conflict, pentru ca sunt adevaruri diferite:
+
+```text
+Story = in sat s-a intamplat evenimentul X
+Memory = NPC-ul Y tine minte ceva despre jucatorul Z
+```
+
+## Matrice permisiuni story
+
+Story are trei niveluri separate. Orice functie noua trebuie incadrata explicit intr-unul dintre ele.
+
+| Nivel | Cine poate declansa | Operatii permise | Interzis |
+|---|---|---|---|
+| `read_only` | `ainpc.admin`, `ainpc.gui.story`, debug/admin GUI | citire `region_story_state`, `place_story_state`, `story_events`, context, audit, debugdump | `saveRegionState`, `savePlaceState`, `recordEvent` |
+| `write_admin` | admin explicit, viitoare comenzi de repair/migration/seed controlat | scriere manuala cu confirmare, `source` clar si audit dupa operatie | scriere ascunsa din GUI sau dialog |
+| `write_runtime` | runtime validat, de exemplu completion prin `ProgressionService`/`ScenarioEngine` | `set_story_state` si `record_story_event` declarate in pack, dupa validare | AI text care scrie direct in DB |
+
+Reguli:
+
+- `/ainpc gui story` este strict `read_only`: poate afisa region state, place state si evenimente recente, dar nu modifica story.
+- `/ainpc story region|place|events|context` este inspectie admin; daca in viitor apar comenzi de scriere, ele trebuie separate clar de inspectie.
+- actiunile `set_story_state` si `record_story_event` sunt `write_runtime`, nu `write_admin`; ele ruleaza doar ca efect al unei progresii validate.
+- pack-urile trebuie validate inainte de runtime: story action are `scope` valid (`region`/`place`), target explicit, `event_key` pentru `record_story_event` si payload semantic minim.
+- AI-ul poate propune `QuestSeed`, `QuestDraft` sau un story action candidat, dar nu primeste permisiune directa de scriere.
+- orice scriere story trebuie sa lase `source`, `updated_by` sau payload suficient pentru audit/debugdump.
+
+Pentru prompt AI, sectiunile trebuie pastrate separate:
+
+```text
+WORLD_CONTEXT:
+...
+
+STORY_CONTEXT:
+...
+
+MEMORY_CONTEXT:
+...
+
+PROGRESSION_CONTEXT:
+...
+```
+
+Daca doua contexte par sa se contrazica, prioritatea este:
+
+```text
+Progression > Story > Memory > AI text
+```
+
+Exemplu: daca memoria spune ca jucatorul este prieten, dar progresul curent spune ca jucatorul a tradat o factiune, dialogul respecta progresul/story-ul curent, iar memoria doar nuanteaza reactia NPC-ului.
 
 ## Arhitectura recomandata
 
@@ -320,6 +419,61 @@ Story-ul trebuie sa raspunda la intrebari clare:
 - ce questuri pot avansa povestea?
 - ce s-a intamplat recent?
 - ce nu are voie AI-ul sa schimbe?
+
+## Story-driven quest selection
+
+Story-ul poate decide directia questului, dar nu executa questul.
+
+Regula:
+
+```text
+story state decide ce are sens
+QuestDirector alege sau genereaza candidatul
+validatorul confirma ca este jucabil
+ProgressionService ruleaza progresul
+```
+
+Responsabilitati:
+
+- `StoryStateService` pastreaza starea narativa si evenimentele persistente.
+- `StoryContextService` construieste snapshot-ul read-only pentru decizie.
+- `QuestDirector` transforma contextul in selectie de quest existent sau `QuestSeed` pentru draft.
+- `QuestAnchorResolver` leaga obiectivele de regiuni, places, nodes si NPC-uri reale.
+- `ProgressionService` ofera, porneste, progreseaza si finalizeaza questul.
+- AI-ul poate formula motivatie, dialog si `QuestDraft`, dar nu scrie progres.
+
+Flux pentru quest existent:
+
+```text
+region_story_state + recent_story_events + semantic_index
+-> StoryContextSnapshot
+-> QuestDirector
+-> quest template candidat
+-> QuestAnchorResolver
+-> audit/validator
+-> ProgressionService.offer/start
+```
+
+Flux pentru quest generat:
+
+```text
+StoryContextSnapshot
+-> QuestSeed
+-> AIOrchestrationService
+-> QuestDraft
+-> QuestDraftValidator
+-> admin review/export
+-> audit quest
+-> ProgressionService dupa activare
+```
+
+Interzis:
+
+- `StoryStateService` care scrie direct in `player_quests`;
+- AI care creeaza quest live direct;
+- dialog care completeaza obiective fara runtime;
+- story flag care acorda reward fara validator;
+- quest generat fara mapping/audit.
 
 ## StoryContextService
 

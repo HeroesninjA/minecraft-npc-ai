@@ -57,6 +57,14 @@ import ro.ainpc.world.mapping.MappingPoint;
 import ro.ainpc.world.mapping.MappingWandMode;
 import ro.ainpc.world.mapping.MappingWandSelection;
 import ro.ainpc.world.mapping.MappingWandService;
+import ro.ainpc.world.patch.GapReport;
+import ro.ainpc.world.patch.PatchCandidate;
+import ro.ainpc.world.patch.PatchPlan;
+import ro.ainpc.world.patch.PatchPlannerOptions;
+import ro.ainpc.world.patch.PatchPlannerResult;
+import ro.ainpc.world.patch.VillageGap;
+import ro.ainpc.world.patch.VillageGapAnalyzer;
+import ro.ainpc.world.patch.VillagePatchPlanner;
 import ro.ainpc.world.scan.SemanticVillageImportResult;
 import ro.ainpc.world.scan.SemanticVillageMapper;
 import ro.ainpc.world.scan.VanillaVillageFeatureType;
@@ -99,6 +107,7 @@ public class AINPCCommand implements CommandExecutor {
     private static final int HOUSEHOLD_MAX_LIMIT = 50;
     private static final int SPAWN_BATCH_DEFAULT_LIMIT = 10;
     private static final int SPAWN_BATCH_STEP_PREVIEW_LIMIT = 12;
+    private static final int QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT = 500;
     private static final int PROGRESSION_STORED_DEFAULT_LIMIT = 12;
     private static final int PROGRESSION_STORED_MAX_LIMIT = 50;
     private static final DateTimeFormatter STORY_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -255,6 +264,7 @@ public class AINPCCommand implements CommandExecutor {
             case "tutorial", "tutorials", "onboarding" -> handleTutorial(sender, args);
             case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> handleRitual(sender, args);
             case "world" -> handleWorld(sender, args);
+            case "patch" -> handlePatch(sender, args);
             case "wand" -> handleWand(sender, args);
             case "map" -> handleMap(sender, args);
             case "story" -> handleStory(sender, args);
@@ -1670,14 +1680,19 @@ public class AINPCCommand implements CommandExecutor {
             sql.append(" AND LOWER(b.quest_code) = ?");
             parameters.add(questCode.toLowerCase(Locale.ROOT));
         }
-        sql.append(" ORDER BY b.updated_at DESC LIMIT ?");
+        sql.append(" ORDER BY b.updated_at DESC");
+        if (limit > 0) {
+            sql.append(" LIMIT ?");
+        }
 
         try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql.toString())) {
             int index = 1;
             for (String parameter : parameters) {
                 stmt.setString(index++, parameter);
             }
-            stmt.setInt(index, limit);
+            if (limit > 0) {
+                stmt.setInt(index, limit);
+            }
 
             try (ResultSet rs = stmt.executeQuery()) {
                 List<QuestAnchorBindingRow> rows = new ArrayList<>();
@@ -2463,27 +2478,46 @@ public class AINPCCommand implements CommandExecutor {
                 MappingWandService.MappingWandSession session = service.setPos1(player, pointFromPlayer(player));
                 plugin.getMessageUtils().send(sender, "&aWand pos1 setat la pozitia ta.");
                 sendWandStatus(sender, session);
+                service.showSelectionPreview(player, session);
                 yield true;
             }
             case "pos2" -> {
                 MappingWandService.MappingWandSession session = service.setPos2(player, pointFromPlayer(player));
                 plugin.getMessageUtils().send(sender, "&aWand pos2 setat la pozitia ta.");
                 sendWandStatus(sender, session);
+                service.showSelectionPreview(player, session);
                 yield true;
             }
             case "point", "punct" -> {
                 MappingWandService.MappingWandSession session = service.setPoint(player, pointFromPlayer(player));
                 plugin.getMessageUtils().send(sender, "&aWand point setat la pozitia ta.");
                 sendWandStatus(sender, session);
+                service.showSelectionPreview(player, session);
                 yield true;
             }
-            case "status" -> {
+            case "status", "inspect" -> {
                 sendWandStatus(sender, service.ensureSession(player));
                 yield true;
             }
             case "clear", "reset" -> {
-                service.clear(player.getUniqueId());
-                plugin.getMessageUtils().send(sender, "&aSelectia wand a fost curatata.");
+                if (args.length == 2 || (args.length == 3 && "all".equalsIgnoreCase(args[2]))) {
+                    service.clear(player.getUniqueId());
+                    plugin.getMessageUtils().send(sender, "&aSelectia wand a fost curatata.");
+                    yield true;
+                }
+                if (args.length == 3) {
+                    MappingWandService.MappingWandSession session = resetWandSelectionPart(service, player, args[2]);
+                    if (session == null) {
+                        plugin.getMessageUtils().send(sender,
+                            "&cParte wand invalida. Optiuni: &fpos1, pos2, point, all");
+                        yield true;
+                    }
+                    plugin.getMessageUtils().send(sender,
+                        "&aWand " + formatWandSelectionPart(args[2]) + " a fost resetat.");
+                    sendWandStatus(sender, session);
+                    yield true;
+                }
+                sendWandUsage(sender);
                 yield true;
             }
             default -> {
@@ -2525,6 +2559,7 @@ public class AINPCCommand implements CommandExecutor {
                 return true;
             }
             sendMappingDraft(sender, draft);
+            service.showDraftPreview(player, draft);
             return true;
         }
         if ("cancel".equals(action) || "anuleaza".equals(action)) {
@@ -2576,6 +2611,7 @@ public class AINPCCommand implements CommandExecutor {
             );
             plugin.getMessageUtils().send(sender, "&aDraft mapping creat. Verifica preview-ul inainte de confirmare.");
             sendMappingDraft(sender, draft);
+            service.showDraftPreview(player, draft);
         } catch (IllegalArgumentException exception) {
             plugin.getMessageUtils().send(sender, "&c" + exception.getMessage());
         }
@@ -2586,8 +2622,31 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
         plugin.getMessageUtils().send(sender, "&e/ainpc wand");
         plugin.getMessageUtils().send(sender, "&e/ainpc wand mode <region|place|node|npc_bind|quest_anchor>");
-        plugin.getMessageUtils().send(sender, "&e/ainpc wand <pos1|pos2|point|status|clear>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand <pos1|pos2|point|status|inspect>");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand <clear|reset> [pos1|pos2|point|all]");
         plugin.getMessageUtils().send(sender, "&7Click stanga/dreapta cu wand-ul seteaza pos1/pos2; in modurile node/npc_bind/quest_anchor seteaza punctul.");
+    }
+
+    private MappingWandService.MappingWandSession resetWandSelectionPart(MappingWandService service,
+                                                                         Player player,
+                                                                         String rawPart) {
+        String part = rawPart.toLowerCase(Locale.ROOT);
+        return switch (part) {
+            case "pos1" -> service.resetPos1(player);
+            case "pos2" -> service.resetPos2(player);
+            case "point", "punct" -> service.resetPoint(player);
+            default -> null;
+        };
+    }
+
+    private String formatWandSelectionPart(String rawPart) {
+        String part = rawPart.toLowerCase(Locale.ROOT);
+        return switch (part) {
+            case "pos1" -> "pos1";
+            case "pos2" -> "pos2";
+            case "punct" -> "point";
+            default -> "point";
+        };
     }
 
     private void sendMapUsage(CommandSender sender) {
@@ -2748,6 +2807,7 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&eAncora: &f" + formatOwnedLocation(anchor));
         plugin.getMessageUtils().send(sender,
             "&7Ruleaza &f/ainpc world save &7pentru metadata mapping, apoi &f/ainpc audit spawn&7.");
+        recordConfirmedMappingDraft(sender, draft, bindingId + ":" + role + ":" + place.id(), "NPC bind confirmat");
         return true;
     }
 
@@ -2796,6 +2856,9 @@ public class AINPCCommand implements CommandExecutor {
                 "&cTip incompatibil: objective_type=" + objectiveType + ", anchor_type=" + anchorType + ".");
             return false;
         }
+        if (!validateQuestAnchorObjectiveAgainstDefinition(sender, progression, objectiveKey, objectiveType)) {
+            return false;
+        }
         if (!questAnchorTargetExists(anchorType, anchorId)) {
             plugin.getMessageUtils().send(sender,
                 "&cAncora din draft nu mai exista in mapping: &e" + anchorType + ":" + anchorId + "&c.");
@@ -2829,7 +2892,143 @@ public class AINPCCommand implements CommandExecutor {
                 + " &a/ &f" + objectiveKey + "&a -> &f" + anchorType + ":" + anchorId + "&a.");
         plugin.getMessageUtils().send(sender,
             "&7Verifica prin &f/ainpc quest anchors " + targetPlayerUuid + " " + progression.templateId() + "&7.");
+        recordConfirmedMappingDraft(sender, draft,
+            progression.templateId() + ":" + objectiveKey,
+            "Quest anchor confirmat");
         return true;
+    }
+
+    private boolean validateQuestAnchorObjectiveAgainstDefinition(CommandSender sender,
+                                                                  StoredProgression progression,
+                                                                  String objectiveKey,
+                                                                  String objectiveType) {
+        FeaturePackLoader.ScenarioDefinition scenario = findScenarioForProgression(progression);
+        if (scenario == null) {
+            plugin.getMessageUtils().send(sender,
+                "&eWarning: &fNu am gasit definitia progresiei pentru validarea stricta a objective_id.");
+            return true;
+        }
+
+        Map<String, FeaturePackLoader.QuestEntryDefinition> objectives = collectObjectiveKeyLookup(scenario);
+        FeaturePackLoader.QuestEntryDefinition objective = objectives.get(normalizeQuestObjectiveLookupKey(objectiveKey));
+        if (objective == null) {
+            List<String> candidates = objectives.values().stream()
+                .distinct()
+                .map(this::displayQuestObjectiveKey)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .limit(8)
+                .toList();
+            plugin.getMessageUtils().send(sender,
+                "&cObjective_id invalid pentru progresia &e" + progression.templateId() + "&c: &e" + objectiveKey + "&c.");
+            if (!candidates.isEmpty()) {
+                plugin.getMessageUtils().send(sender, "&7Obiective valide: &f" + String.join(", ", candidates));
+            }
+            return false;
+        }
+
+        String expectedType = normalizeQuestObjectiveType(objective.getType());
+        String requestedType = normalizeQuestObjectiveType(objectiveType);
+        if (!expectedType.isBlank() && !requestedType.isBlank() && !expectedType.equals(requestedType)) {
+            plugin.getMessageUtils().send(sender,
+                "&cObjective_type nu corespunde definitiei: draft=&e" + objectiveType
+                    + " &c, definitie=&e" + expectedType + "&c.");
+            return false;
+        }
+        return true;
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForProgression(StoredProgression progression) {
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader == null || progression == null) {
+            return null;
+        }
+        for (FeaturePackLoader.ScenarioDefinition scenario : loader.getAllScenarios()) {
+            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
+                continue;
+            }
+            ProgressionDefinition definition = ProgressionDefinition.fromScenarioDefinition(scenario);
+            if (storedProgressionMatchesDefinition(progression, definition)) {
+                return scenario;
+            }
+        }
+        return null;
+    }
+
+    private boolean storedProgressionMatchesDefinition(StoredProgression progression,
+                                                       ProgressionDefinition definition) {
+        return sameNonBlankIgnoreCase(progression.templateId(), definition.templateId())
+            || sameNonBlankIgnoreCase(progression.code(), definition.code())
+            || sameNonBlankIgnoreCase(progression.progressionId(), definition.progressionId())
+            || (sameNonBlankIgnoreCase(progression.packId(), definition.packId())
+                && sameNonBlankIgnoreCase(progression.definitionId(), definition.definitionId()))
+            || sameNonBlankIgnoreCase(progression.definitionId(), definition.definitionId());
+    }
+
+    private Map<String, FeaturePackLoader.QuestEntryDefinition> collectObjectiveKeyLookup(
+        FeaturePackLoader.ScenarioDefinition scenario) {
+        Map<String, FeaturePackLoader.QuestEntryDefinition> lookup = new HashMap<>();
+        List<FeaturePackLoader.QuestEntryDefinition> objectives = scenario.getObjectives();
+        for (int index = 0; index < objectives.size(); index++) {
+            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
+            addObjectiveLookupKey(lookup, objective.getEntryId(), objective);
+            addObjectiveLookupKey(lookup, questEntryId(objective), objective);
+            addObjectiveLookupKey(lookup, objective.getItemId(), objective);
+            addObjectiveLookupKey(lookup, generatedQuestObjectiveKey(objective, index), objective);
+        }
+        return lookup;
+    }
+
+    private void addObjectiveLookupKey(Map<String, FeaturePackLoader.QuestEntryDefinition> lookup,
+                                       String key,
+                                       FeaturePackLoader.QuestEntryDefinition objective) {
+        String normalized = normalizeQuestObjectiveLookupKey(key);
+        if (!normalized.isBlank()) {
+            lookup.putIfAbsent(normalized, objective);
+        }
+    }
+
+    private String generatedQuestObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective, int index) {
+        String entryId = objective.getEntryId();
+        if (entryId != null && !entryId.isBlank()) {
+            return entryId;
+        }
+        String type = normalizeQuestStageReference(firstNonBlank(objective.getType(), "objective"));
+        String itemId = normalizeQuestStageReference(firstNonBlank(objective.getItemId(), "entry"));
+        return type + ":" + itemId + ":" + index;
+    }
+
+    private String displayQuestObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective) {
+        String entryId = objective.getEntryId();
+        if (entryId != null && !entryId.isBlank()) {
+            return entryId;
+        }
+        return questEntryId(objective);
+    }
+
+    private String normalizeQuestObjectiveLookupKey(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim()
+            .toLowerCase(Locale.ROOT)
+            .replace("minecraft:", "")
+            .replaceAll("[^\\p{L}\\p{Nd}:]+", "_")
+            .replaceAll("^_+|_+$", "")
+            .replaceAll("_+", "_");
+    }
+
+    private void recordConfirmedMappingDraft(CommandSender sender,
+                                             MappingDraft draft,
+                                             String resultId,
+                                             String resultMessage) {
+        if (!(sender instanceof Player player)) {
+            return;
+        }
+        MappingWandService service = plugin.getMappingWandService();
+        if (service != null) {
+            service.recordConfirmedDraft(player, draft, resultId, resultMessage);
+        }
     }
 
     private String resolveQuestAnchorDraftPlayerUuid(CommandSender sender, Player commandPlayer, String selector) {
@@ -2921,6 +3120,13 @@ public class AINPCCommand implements CommandExecutor {
         return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
     }
 
+    private boolean sameNonBlankIgnoreCase(String left, String right) {
+        return left != null && right != null
+            && !left.isBlank()
+            && !right.isBlank()
+            && left.trim().equalsIgnoreCase(right.trim());
+    }
+
     private boolean questAnchorTargetExists(String anchorType, String anchorId) {
         WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
         if (worldAdmin == null || !worldAdmin.isEnabled()) {
@@ -2991,6 +3197,151 @@ public class AINPCCommand implements CommandExecutor {
                 yield true;
             }
         };
+    }
+
+    private boolean handlePatch(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.getMessageUtils().sendMessage(sender, "no_permission");
+            return true;
+        }
+        if (args.length < 3 || args.length > 5) {
+            sendPatchUsage(sender);
+            return true;
+        }
+
+        String mode = args[1].toLowerCase(Locale.ROOT);
+        if (!Set.of("analyze", "analyse", "plan", "validate").contains(mode)) {
+            sendPatchUsage(sender);
+            return true;
+        }
+
+        int targetPopulation = 0;
+        if (args.length >= 4) {
+            Integer parsedPopulation = parseIntegerStrict(args[3]);
+            if (parsedPopulation == null || parsedPopulation < 0) {
+                plugin.getMessageUtils().send(sender, "&cTarget population trebuie sa fie 0 sau un numar pozitiv.");
+                return true;
+            }
+            targetPopulation = parsedPopulation;
+        }
+
+        PatchPlannerOptions options = PatchPlannerOptions.forTargetPopulation(
+            targetPopulation,
+            args.length >= 5 ? parsePatchProfessionList(args[4]) : List.of()
+        );
+        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
+        GapReport report = new VillageGapAnalyzer().analyze(worldAdmin, args[2], options);
+        sendPatchGapReport(sender, report);
+        if (!report.success() || "analyze".equals(mode) || "analyse".equals(mode)) {
+            return true;
+        }
+
+        PatchPlannerResult result = new VillagePatchPlanner().plan(report, options);
+        sendPatchPlannerResult(sender, result, "validate".equals(mode));
+        return true;
+    }
+
+    private void sendPatchUsage(CommandSender sender) {
+        plugin.getMessageUtils().send(sender, "&cUtilizare:");
+        plugin.getMessageUtils().send(sender, "&e/ainpc patch analyze <regionId> [targetPopulation] [profesiiCSV]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc patch plan <regionId> [targetPopulation] [profesiiCSV]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc patch validate <regionId> [targetPopulation] [profesiiCSV]");
+        plugin.getMessageUtils().send(sender,
+            "&7Read-only: produce GapReport si PatchPlan, fara constructie si fara scrieri in mapping.");
+    }
+
+    private List<String> parsePatchProfessionList(String rawValue) {
+        if (rawValue == null || rawValue.isBlank() || "-".equals(rawValue)) {
+            return List.of();
+        }
+        List<String> professions = new ArrayList<>();
+        for (String part : rawValue.split(",")) {
+            String profession = part.trim();
+            if (!profession.isBlank()) {
+                professions.add(profession);
+            }
+        }
+        return List.copyOf(professions);
+    }
+
+    private void sendPatchGapReport(CommandSender sender, GapReport report) {
+        plugin.getMessageUtils().send(sender, "&6=== Patch Gap Report ===");
+        plugin.getMessageUtils().send(sender, "&eRegiune: &f" + formatOptional(report.regionId()));
+        plugin.getMessageUtils().send(sender,
+            "&eCapacitate: &f" + report.currentCapacity()
+                + " &7/ tinta &f" + report.requiredCapacity()
+                + " &7| case &f" + report.houseCount()
+                + " &7| case lipsa &f" + report.missingHomes());
+        plugin.getMessageUtils().send(sender,
+            "&eWorkplace lipsa: &f" + formatListOrNone(report.missingWorkplaces())
+                + " &7| social lipsa &f" + report.missingSocialPlaces()
+                + " &7| node-uri lipsa &f" + formatListOrNone(report.missingNodes()));
+        sendAuditMessages(sender, "&cErori patch", report.errors());
+        sendAuditMessages(sender, "&eWarning-uri patch", report.warnings());
+        sendAuditMessages(sender, "&eGap-uri", report.gaps().stream()
+            .map(this::formatVillageGap)
+            .toList());
+        if (report.success() && !report.hasGaps()) {
+            plugin.getMessageUtils().send(sender, "&aNu sunt gap-uri evidente pentru optiunile curente.");
+        }
+    }
+
+    private String formatVillageGap(VillageGap gap) {
+        return gap.type()
+            + " x" + gap.amount()
+            + (gap.targetPlaceId().isBlank() ? "" : " place=" + gap.targetPlaceId())
+            + (gap.reference().isBlank() ? "" : " ref=" + gap.reference())
+            + " severity=" + gap.severity()
+            + " - " + gap.reason();
+    }
+
+    private void sendPatchPlannerResult(CommandSender sender, PatchPlannerResult result, boolean validationView) {
+        plugin.getMessageUtils().send(sender, validationView ? "&6=== Patch Validation ===" : "&6=== Patch Plan ===");
+        plugin.getMessageUtils().send(sender,
+            "&eCandidati: &f" + result.candidates().size()
+                + " &7| Patch-uri: &f" + result.patchPlans().size()
+                + " &7| Blocate: &f" + result.patchPlans().stream().filter(plan -> !plan.valid()).count());
+        sendAuditMessages(sender, "&cErori planner", result.errors());
+        sendAuditMessages(sender, "&eWarning-uri planner", result.warnings());
+        sendAuditMessages(sender, "&eCandidati patch", result.candidates().stream()
+            .map(this::formatPatchCandidate)
+            .toList());
+        sendAuditMessages(sender, validationView ? "&eValidare patch-uri" : "&ePatch-uri planificate",
+            result.patchPlans().stream()
+                .map(this::formatPatchPlan)
+                .toList());
+        if (validationView) {
+            if (result.patchPlans().stream().allMatch(PatchPlan::valid)) {
+                plugin.getMessageUtils().send(sender, "&aToate patch-urile planificate sunt valide pentru mod read-only.");
+            } else {
+                plugin.getMessageUtils().send(sender, "&eUnele patch-uri sunt blocate de capabilitati lipsa.");
+            }
+        }
+    }
+
+    private String formatPatchCandidate(PatchCandidate candidate) {
+        return candidate.candidateId()
+            + " " + candidate.patchType().id()
+            + " priority=" + candidate.priority()
+            + " cost=" + candidate.cost()
+            + " risk=" + candidate.risk();
+    }
+
+    private String formatPatchPlan(PatchPlan plan) {
+        return plan.patchId()
+            + " " + plan.type().id()
+            + " mode=" + plan.buildMode().id()
+            + " status=" + plan.validationStatus()
+            + " places=" + formatListOrNone(plan.plannedPlaces())
+            + " nodes=" + formatListOrNone(plan.plannedNodes())
+            + (plan.errors().isEmpty() ? "" : " errors=" + String.join("; ", plan.errors()));
+    }
+
+    private String formatListOrNone(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "-";
+        }
+        return String.join(", ", values);
     }
 
     private boolean handleWorldWhereAmI(CommandSender sender, String[] args) {
@@ -4790,11 +5141,17 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
-        String mode = args.length > 1 ? args[1].toLowerCase() : "all";
-        if (!Set.of("all", "npc", "world", "db", "spawn", "quest").contains(mode)) {
+        String mode = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "all";
+        if (!Set.of("all", "npc", "world", "db", "spawn", "quest", "wand").contains(mode)) {
             sendAuditUsage(sender);
             return true;
         }
+        String option = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "";
+        if (args.length > 3 || !isAuditOptionSupported(mode, option)) {
+            sendAuditUsage(sender);
+            return true;
+        }
+        boolean strictQuestAnchorAudit = isStrictQuestAuditOption(option);
 
         AuditReport report = new AuditReport();
         if ("all".equals(mode) || "npc".equals(mode)) {
@@ -4810,11 +5167,29 @@ public class AINPCCommand implements CommandExecutor {
             auditSpawnOrder(report);
         }
         if ("all".equals(mode) || "quest".equals(mode)) {
-            auditQuestAnchors(report);
+            auditQuestAnchors(report, strictQuestAnchorAudit);
+        }
+        if ("all".equals(mode) || "world".equals(mode) || "wand".equals(mode)) {
+            auditMappingWandDrafts(report);
         }
 
-        sendAuditReport(sender, mode, report);
+        sendAuditReport(sender, auditModeLabel(mode, option), report);
         return true;
+    }
+
+    private boolean isAuditOptionSupported(String mode, String option) {
+        if (option == null || option.isBlank()) {
+            return true;
+        }
+        return ("quest".equals(mode) || "all".equals(mode)) && isStrictQuestAuditOption(option);
+    }
+
+    private boolean isStrictQuestAuditOption(String option) {
+        return "strict".equals(option) || "full".equals(option) || "offline".equals(option);
+    }
+
+    private String auditModeLabel(String mode, String option) {
+        return option == null || option.isBlank() ? mode : mode + " " + option;
     }
 
     private void sendAuditUsage(CommandSender sender) {
@@ -4825,6 +5200,9 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&e/ainpc audit db &7- verifica tabelele si profile_data");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit spawn &7- verifica ordinea casa/node/NPC/familie");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit quest &7- verifica quest templates si quest_anchor_bindings");
+        plugin.getMessageUtils().send(sender,
+            "&e/ainpc audit quest <strict|full|offline> &7- verifica toate randurile quest_anchor_bindings");
+        plugin.getMessageUtils().send(sender, "&e/ainpc audit wand &7- verifica draft-urile wand confirmate recent");
     }
 
     private boolean handleDebugDump(CommandSender sender, String[] args) {
@@ -5072,6 +5450,95 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
+    private void auditMappingWandDrafts(AuditReport report) {
+        MappingWandService service = plugin.getMappingWandService();
+        if (service == null) {
+            report.warn("MappingWandService este indisponibil; nu pot audita draft-urile wand recente.");
+            return;
+        }
+
+        List<MappingWandService.MappingWandAuditEntry> entries = service.recentConfirmedDrafts();
+        report.info("Wand draft-uri confirmate recent: " + entries.size() + ".");
+        if (entries.isEmpty()) {
+            return;
+        }
+
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        boolean canValidateWorld = worldAdmin != null && worldAdmin.isEnabled();
+        int limit = Math.min(AUDIT_PREVIEW_LIMIT, entries.size());
+        for (int i = 0; i < limit; i++) {
+            MappingWandService.MappingWandAuditEntry entry = entries.get(i);
+            report.info("Wand " + formatStoryTime(entry.confirmedAt())
+                + " player=" + entry.playerName()
+                + " kind=" + formatMappingDraftKind(entry.kind())
+                + " draft=" + formatOptional(entry.qualifiedId())
+                + " result=" + formatOptional(entry.resultId())
+                + " (" + formatOptional(entry.resultMessage()) + ").");
+            if (canValidateWorld) {
+                validateMappingWandAuditEntry(report, entry, worldAdmin);
+            }
+        }
+
+        if (entries.size() > limit) {
+            report.info("Wand audit afiseaza ultimele " + limit + " din " + entries.size()
+                + " confirmari pastrate in memorie.");
+        }
+        if (!canValidateWorld) {
+            report.warn("World admin este dezactivat sau indisponibil; auditul wand nu poate valida tintele din mapping.");
+        }
+    }
+
+    private void validateMappingWandAuditEntry(AuditReport report,
+                                               MappingWandService.MappingWandAuditEntry entry,
+                                               WorldAdminApi worldAdmin) {
+        String label = "Wand draft recent " + formatOptional(entry.qualifiedId());
+        if (entry.kind() == null) {
+            report.warn(label + " nu are kind setat.");
+            return;
+        }
+
+        switch (entry.kind()) {
+            case REGION -> {
+                if (entry.resultId().isBlank() || worldAdmin.getRegion(entry.resultId()) == null) {
+                    report.error(label + " a confirmat o regiune care nu mai exista: "
+                        + formatOptional(entry.resultId()) + ".");
+                }
+            }
+            case PLACE -> {
+                if (entry.resultId().isBlank() || worldAdmin.getPlace(entry.resultId()) == null) {
+                    report.error(label + " a confirmat un place care nu mai exista: "
+                        + formatOptional(entry.resultId()) + ".");
+                }
+            }
+            case NODE -> {
+                if (entry.resultId().isBlank() || worldAdmin.getNode(entry.resultId()) == null) {
+                    report.error(label + " a confirmat un node care nu mai exista: "
+                        + formatOptional(entry.resultId()) + ".");
+                }
+            }
+            case NPC_BIND -> {
+                if (entry.placeId().isBlank() || worldAdmin.getPlace(entry.placeId()) == null) {
+                    report.error(label + " a confirmat un npc_bind catre place inexistent: "
+                        + formatOptional(entry.placeId()) + ".");
+                }
+            }
+            case QUEST_ANCHOR -> {
+                String anchorType = entry.metadata().getOrDefault("anchor_type", "");
+                String anchorId = entry.metadata().getOrDefault("anchor_id", "");
+                if (anchorType.isBlank() || anchorId.isBlank()) {
+                    report.warn(label + " nu are anchor_type/anchor_id in metadata.");
+                } else if (!questAnchorTargetExists(anchorType, anchorId)) {
+                    report.error(label + " a confirmat quest_anchor catre tinta inexistenta: "
+                        + anchorType + ":" + anchorId + ".");
+                }
+            }
+        }
+    }
+
+    private String formatMappingDraftKind(MappingDraftKind kind) {
+        return kind != null ? kind.id() : "<nesetat>";
+    }
+
     private void auditWorldReadiness(AuditReport report,
                                      WorldAdminApi worldAdmin,
                                      List<WorldPlaceInfo> places,
@@ -5257,7 +5724,7 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private void auditQuestAnchors(AuditReport report) {
+    private void auditQuestAnchors(AuditReport report, boolean strict) {
         auditQuestTemplates(report);
 
         if (plugin.getDatabaseManager() == null) {
@@ -5304,10 +5771,13 @@ public class AINPCCommand implements CommandExecutor {
                 """, "Quest anchor cu objective_key legacy");
             auditStoryPersistence(report);
 
-            List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings("", "", 500);
-            if (anchorRows > rows.size()) {
+            int auditLimit = strict ? 0 : QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT;
+            List<QuestAnchorBindingRow> rows = queryQuestAnchorBindings("", "", auditLimit);
+            report.info("Quest anchor audit: " + rows.size() + "/" + anchorRows
+                + " binding-uri verificate" + (strict ? " in mod strict." : "."));
+            if (!strict && anchorRows > rows.size()) {
                 report.warn("Audit quest anchors a verificat primele " + rows.size()
-                    + " randuri din " + anchorRows + ". Ruleaza inspectie DB pentru audit complet.");
+                    + " randuri din " + anchorRows + ". Ruleaza `/ainpc audit quest strict` pentru audit complet.");
             }
             validateQuestAnchorRows(report, rows);
         } catch (SQLException exception) {
@@ -5396,6 +5866,8 @@ public class AINPCCommand implements CommandExecutor {
                     false);
             }
         }
+
+        auditStoryProgressionConsistency(report);
     }
 
     private void auditStoryJsonColumn(AuditReport report,
@@ -5416,6 +5888,159 @@ public class AINPCCommand implements CommandExecutor {
         } catch (JsonSyntaxException exception) {
             report.warn(column + " are JSON invalid pentru " + label + ": " + exception.getMessage());
         }
+    }
+
+    private void auditStoryProgressionConsistency(AuditReport report) throws SQLException {
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        if (scenariosBySelector.isEmpty()) {
+            return;
+        }
+
+        Set<String> storyEventProgressionKeys = queryStoryEventProgressionKeys(report);
+        String completedProgressionsSql = """
+            SELECT player_uuid, template_id, quest_code, status
+            FROM player_quests
+            WHERE LOWER(COALESCE(status, '')) IN ('completed', 'complete', 'done')
+            ORDER BY completed_at DESC, updated_at DESC
+            LIMIT 500
+        """;
+
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(completedProgressionsSql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String playerUuid = rs.getString("player_uuid");
+                String templateId = rs.getString("template_id");
+                String questCode = rs.getString("quest_code");
+                FeaturePackLoader.ScenarioDefinition scenario =
+                    findScenarioForProgressionRow(templateId, questCode, scenariosBySelector);
+                if (scenario == null || !hasRecordStoryEventAction(scenario)) {
+                    continue;
+                }
+                if (hasStoryEventProgressionKey(storyEventProgressionKeys, playerUuid, templateId, questCode)) {
+                    continue;
+                }
+                report.warn("Progresie completata cu record_story_event fara story_event asociat detectabil: player_uuid="
+                    + playerUuid + ", template_id=" + templateId + ", quest_code=" + questCode
+                    + ". Verifica payload.quest_template/quest_code in story_events.");
+            }
+        }
+    }
+
+    private Set<String> queryStoryEventProgressionKeys(AuditReport report) throws SQLException {
+        Set<String> keys = new HashSet<>();
+        String storyEventSql = """
+            SELECT id, player_uuid, event_key, actor_type, payload
+            FROM story_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1000
+        """;
+
+        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(storyEventSql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                long id = rs.getLong("id");
+                String playerUuid = safeAuditValue(rs.getString("player_uuid"));
+                String actorType = safeAuditValue(rs.getString("actor_type"));
+                String eventKey = safeAuditValue(rs.getString("event_key"));
+                JsonElement payload = parseStoredJsonObject(rs.getString("payload"));
+                String questTemplate = jsonString(payload, "quest_template");
+                String questCodeFromPayload = jsonString(payload, "quest_code");
+                String questCode = firstNonBlank(questCodeFromPayload, eventKey);
+                String payloadPlayerUuid = jsonString(payload, "player_uuid");
+                String effectivePlayerUuid = firstNonBlank(playerUuid, payloadPlayerUuid);
+
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questTemplate);
+                addStoryEventProgressionKey(keys, effectivePlayerUuid, questCode);
+
+                boolean questLikeEvent = "quest".equalsIgnoreCase(actorType)
+                    || !questTemplate.isBlank()
+                    || !questCodeFromPayload.isBlank();
+                if (questLikeEvent && questTemplate.isBlank() && questCode.isBlank()) {
+                    report.warn("story_events id=" + id
+                        + " pare legat de quest, dar nu are payload.quest_template sau payload.quest_code.");
+                }
+            }
+        }
+        return keys;
+    }
+
+    private boolean hasStoryEventProgressionKey(Set<String> keys,
+                                                String playerUuid,
+                                                String templateId,
+                                                String questCode) {
+        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
+            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
+            || keys.contains(storyEventProgressionKey("", templateId))
+            || keys.contains(storyEventProgressionKey("", questCode));
+    }
+
+    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
+        String key = storyEventProgressionKey(playerUuid, selector);
+        if (!key.isBlank()) {
+            keys.add(key);
+        }
+    }
+
+    private String storyEventProgressionKey(String playerUuid, String selector) {
+        String normalizedSelector = normalizeQuestObjectiveLookupKey(selector);
+        if (normalizedSelector.isBlank()) {
+            return "";
+        }
+        return safeAuditValue(playerUuid) + "|" + normalizedSelector;
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
+        String templateId,
+        String questCode,
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector
+    ) {
+        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
+            return null;
+        }
+        FeaturePackLoader.ScenarioDefinition scenario =
+            scenariosBySelector.get(normalizeQuestObjectiveLookupKey(templateId));
+        if (scenario != null) {
+            return scenario;
+        }
+        scenario = scenariosBySelector.get(normalizeQuestObjectiveLookupKey(questCode));
+        if (scenario != null) {
+            return scenario;
+        }
+        return scenariosBySelector.get(normalizeQuestObjectiveLookupKey(lastSelectorSegment(templateId)));
+    }
+
+    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return false;
+        }
+        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
+            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private JsonElement parseStoredJsonObject(String rawValue) {
+        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
+        try {
+            JsonElement parsed = JsonParser.parseString(safeRawValue);
+            return parsed != null && parsed.isJsonObject() ? parsed : null;
+        } catch (JsonSyntaxException ignored) {
+            return null;
+        }
+    }
+
+    private String jsonString(JsonElement element, String key) {
+        if (element == null || !element.isJsonObject() || key == null || key.isBlank()) {
+            return "";
+        }
+        JsonElement value = element.getAsJsonObject().get(key);
+        return value != null && !value.isJsonNull() ? value.getAsString().trim() : "";
+    }
+
+    private String safeAuditValue(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private void auditQuestTemplates(AuditReport report) {
@@ -6095,8 +6720,12 @@ public class AINPCCommand implements CommandExecutor {
                                           String type,
                                           FeaturePackLoader.QuestEntryDefinition entry) {
         Map<String, String> metadata = entry.getMetadata();
-        if (metadata.getOrDefault("scope", "").isBlank()) {
+        String scope = normalizeStoryActionScope(metadata.getOrDefault("scope", ""));
+        if (scope.isBlank()) {
             report.error(label + " nu are metadata.scope pentru story action.");
+        } else if (!Set.of("region", "place").contains(scope)) {
+            report.error(label + " are metadata.scope invalid pentru story action: "
+                + metadata.getOrDefault("scope", "") + ". Valori acceptate: region, place.");
         }
         if (!hasAnyMetadata(metadata,
             "target", "scope_id", "target_id", "id",
@@ -6107,14 +6736,33 @@ public class AINPCCommand implements CommandExecutor {
             && !hasAnyMetadata(metadata, "state_key", "state", "flag", "value", "item")) {
             report.error(label + " nu are metadata.state pentru set_story_state.");
         }
+        if ("set_story_state".equals(type) && entry.getVariables().isEmpty()) {
+            report.warn(label + " nu are variables pentru set_story_state; va scrie doar state_key.");
+        }
         if ("record_story_event".equals(type)) {
             if (!hasAnyMetadata(metadata, "event_type", "type_id")) {
                 report.error(label + " nu are metadata.event_type pentru record_story_event.");
             }
             if (!hasAnyMetadata(metadata, "event_key", "key")) {
-                report.warn(label + " nu are metadata.event_key; se va genera fallback runtime.");
+                report.error(label + " nu are metadata.event_key pentru record_story_event.");
+            }
+            if (entry.getPayload().isEmpty()) {
+                report.error(label + " nu are payload minim pentru record_story_event.");
+            } else if (!hasAnyMapEntry(entry.getPayload(),
+                "quest", "outcome", "result", "reason", "state", "mechanic", "tag", "quest_template", "quest_code")) {
+                report.warn(label + " are payload record_story_event, dar fara cheie semantica uzuala "
+                    + "(quest/outcome/result/reason/state/mechanic/tag).");
             }
         }
+    }
+
+    private String normalizeStoryActionScope(String scope) {
+        String normalized = normalizeAuditKey(scope).replace('-', '_');
+        return switch (normalized) {
+            case "region", "world_region", "village", "settlement" -> "region";
+            case "place", "world_place", "location" -> "place";
+            default -> normalized;
+        };
     }
 
     private boolean hasAnyMetadata(Map<String, String> metadata, String... keys) {
@@ -6123,6 +6771,18 @@ public class AINPCCommand implements CommandExecutor {
         }
         for (String key : keys) {
             if (key != null && !metadata.getOrDefault(key, "").isBlank()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAnyMapEntry(Map<String, String> values, String... keys) {
+        if (values == null || values.isEmpty() || keys == null) {
+            return false;
+        }
+        for (String key : keys) {
+            if (key != null && !values.getOrDefault(key, "").isBlank()) {
                 return true;
             }
         }
@@ -6265,6 +6925,10 @@ public class AINPCCommand implements CommandExecutor {
             }
         }
 
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector = buildProgressionScenarioLookup();
+        if (scenariosBySelector.isEmpty() && !rows.isEmpty()) {
+            report.warn("Nu pot valida objective_key pentru quest anchors; nu exista definitii de progresie incarcate.");
+        }
         Map<String, Integer> countsByAnchorType = new HashMap<>();
         for (QuestAnchorBindingRow row : rows) {
             String label = "Quest anchor " + row.templateId() + "/" + row.objectiveKey()
@@ -6300,12 +6964,121 @@ public class AINPCCommand implements CommandExecutor {
                 report.error(label + " are tip incompatibil: objective_type=" + row.objectiveType()
                     + ", anchor_type=" + row.anchorType() + ".");
             }
+            if (!scenariosBySelector.isEmpty()) {
+                validateQuestAnchorObjectiveDefinition(report, label, row, scenariosBySelector);
+            }
             validateQuestAnchorTarget(report, label, row, worldAdmin, regionsById, placesById, nodesById);
         }
 
         if (!countsByAnchorType.isEmpty()) {
             report.info("Quest anchors pe tip: " + formatCountMap(countsByAnchorType));
         }
+    }
+
+    private Map<String, FeaturePackLoader.ScenarioDefinition> buildProgressionScenarioLookup() {
+        FeaturePackLoader loader = plugin.getFeaturePackLoader();
+        if (loader == null) {
+            return Map.of();
+        }
+
+        Map<String, FeaturePackLoader.ScenarioDefinition> lookup = new HashMap<>();
+        for (FeaturePackLoader.ScenarioDefinition scenario : loader.getAllScenarios()) {
+            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
+                continue;
+            }
+            ProgressionDefinition definition = ProgressionDefinition.fromScenarioDefinition(scenario);
+            addScenarioLookupKey(lookup, definition.templateId(), scenario);
+            addScenarioLookupKey(lookup, definition.progressionId(), scenario);
+            addScenarioLookupKey(lookup, definition.definitionId(), scenario);
+            addScenarioLookupKey(lookup, definition.code(), scenario);
+            addScenarioLookupKey(lookup, definition.packId() + ":" + definition.definitionId(), scenario);
+            addScenarioLookupKey(lookup,
+                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
+                scenario);
+        }
+        return lookup;
+    }
+
+    private void addScenarioLookupKey(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
+                                      String key,
+                                      FeaturePackLoader.ScenarioDefinition scenario) {
+        String normalized = normalizeQuestObjectiveLookupKey(key);
+        if (!normalized.isBlank()) {
+            lookup.putIfAbsent(normalized, scenario);
+        }
+    }
+
+    private void validateQuestAnchorObjectiveDefinition(AuditReport report,
+                                                       String label,
+                                                       QuestAnchorBindingRow row,
+                                                       Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector) {
+        if (row.objectiveKey() == null || row.objectiveKey().isBlank()) {
+            return;
+        }
+
+        FeaturePackLoader.ScenarioDefinition scenario = findScenarioForQuestAnchorRow(row, scenariosBySelector);
+        if (scenario == null) {
+            report.warn(label + " nu poate valida objective_key; definitia progresiei nu este incarcata.");
+            return;
+        }
+
+        Map<String, FeaturePackLoader.QuestEntryDefinition> objectives = collectObjectiveKeyLookup(scenario);
+        FeaturePackLoader.QuestEntryDefinition objective =
+            objectives.get(normalizeQuestObjectiveLookupKey(row.objectiveKey()));
+        if (objective == null) {
+            List<String> candidates = objectives.values().stream()
+                .distinct()
+                .map(this::displayQuestObjectiveKey)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .limit(8)
+                .toList();
+            report.error(label + " are objective_key inexistent in definitie: " + row.objectiveKey()
+                + formatObjectiveCandidates(candidates));
+            return;
+        }
+
+        String expectedType = normalizeQuestObjectiveType(objective.getType());
+        String actualType = normalizeQuestObjectiveType(row.objectiveType());
+        if (!expectedType.isBlank() && !actualType.isBlank() && !expectedType.equals(actualType)) {
+            report.error(label + " are objective_type diferit de definitie: binding="
+                + row.objectiveType() + ", definitie=" + expectedType + ".");
+        }
+    }
+
+    private FeaturePackLoader.ScenarioDefinition findScenarioForQuestAnchorRow(
+        QuestAnchorBindingRow row,
+        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector) {
+        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
+            return null;
+        }
+
+        FeaturePackLoader.ScenarioDefinition scenario =
+            scenariosBySelector.get(normalizeQuestObjectiveLookupKey(row.templateId()));
+        if (scenario != null) {
+            return scenario;
+        }
+        scenario = scenariosBySelector.get(normalizeQuestObjectiveLookupKey(row.questCode()));
+        if (scenario != null) {
+            return scenario;
+        }
+        return scenariosBySelector.get(normalizeQuestObjectiveLookupKey(lastSelectorSegment(row.templateId())));
+    }
+
+    private String formatObjectiveCandidates(List<String> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return ".";
+        }
+        return ". Obiective valide: " + String.join(", ", candidates) + ".";
+    }
+
+    private String lastSelectorSegment(String selector) {
+        String safeSelector = selector == null ? "" : selector.trim();
+        int separator = safeSelector.lastIndexOf(':');
+        if (separator < 0 || separator >= safeSelector.length() - 1) {
+            return safeSelector;
+        }
+        return safeSelector.substring(separator + 1);
     }
 
     private void validateQuestAnchorTarget(AuditReport report,
@@ -6642,10 +7415,20 @@ public class AINPCCommand implements CommandExecutor {
             }
         }
 
+        Map<Integer, NpcWorldBinding> bindingsByNpcId = new HashMap<>();
+        Map<Integer, AINPC> loadedNpcsById = new HashMap<>();
+        for (AINPC npc : plugin.getNpcManager().getAllNPCs()) {
+            if (npc != null && npc.getDatabaseId() > 0) {
+                loadedNpcsById.put(npc.getDatabaseId(), npc);
+            }
+        }
+
         for (NpcWorldBinding binding : rows) {
+            bindingsByNpcId.put(binding.npcId(), binding);
             String label = "npc_world_bindings npc_id=" + binding.npcId()
                 + " (" + formatOptional(binding.npcName()) + ")";
-            if (findLoadedNpcBySelector("npc_" + binding.npcId()) == null) {
+            AINPC loadedNpc = loadedNpcsById.get(binding.npcId());
+            if (loadedNpc == null) {
                 report.warn(label + " nu are NPC incarcat acum.");
             }
             validateNpcWorldPlaceBinding(report, label, "home", binding.homePlaceId(), placesById);
@@ -6654,6 +7437,64 @@ public class AINPCCommand implements CommandExecutor {
             validateNpcWorldNodeBinding(report, label, "home", binding.homeNodeId(), binding.homePlaceId(), nodesById);
             validateNpcWorldNodeBinding(report, label, "work", binding.workNodeId(), binding.workPlaceId(), nodesById);
             validateNpcWorldNodeBinding(report, label, "social", binding.socialNodeId(), binding.socialPlaceId(), nodesById);
+            auditNpcProfileBindingDivergence(report, label, loadedNpc, binding, worldAdmin);
+        }
+
+        if (worldAdmin != null && worldAdmin.isEnabled()) {
+            for (AINPC npc : loadedNpcsById.values()) {
+                if (bindingsByNpcId.containsKey(npc.getDatabaseId())) {
+                    continue;
+                }
+                NpcWorldBinding inferred = inferNpcWorldBindingFromProfile(npc, worldAdmin, "audit_profile");
+                if (inferred != null && inferred.hasAnyPlaceBinding()) {
+                    report.warn("NPC " + npc.getName() + "#" + npc.getDatabaseId()
+                        + " are ancore in profil dar nu are rand in npc_world_bindings. "
+                        + "Ruleaza /ainpc repair npc-bindings dryrun.");
+                }
+            }
+        }
+    }
+
+    private void auditNpcProfileBindingDivergence(AuditReport report,
+                                                  String label,
+                                                  AINPC npc,
+                                                  NpcWorldBinding binding,
+                                                  WorldAdminApi worldAdmin) {
+        if (npc == null || worldAdmin == null || !worldAdmin.isEnabled()) {
+            return;
+        }
+
+        NpcWorldBinding inferred = inferNpcWorldBindingFromProfile(npc, worldAdmin, "audit_profile");
+        if (inferred == null || !inferred.hasAnyPlaceBinding()) {
+            if (binding.hasAnyPlaceBinding()) {
+                report.warn(label + " are rand persistent, dar profilul NPC nu mai indica ancore mapabile.");
+            }
+            return;
+        }
+
+        warnNpcBindingFieldDivergence(report, label, "home_place_id",
+            binding.homePlaceId(), inferred.homePlaceId());
+        warnNpcBindingFieldDivergence(report, label, "work_place_id",
+            binding.workPlaceId(), inferred.workPlaceId());
+        warnNpcBindingFieldDivergence(report, label, "social_place_id",
+            binding.socialPlaceId(), inferred.socialPlaceId());
+        warnNpcBindingFieldDivergence(report, label, "home_node_id",
+            binding.homeNodeId(), inferred.homeNodeId());
+        warnNpcBindingFieldDivergence(report, label, "work_node_id",
+            binding.workNodeId(), inferred.workNodeId());
+        warnNpcBindingFieldDivergence(report, label, "social_node_id",
+            binding.socialNodeId(), inferred.socialNodeId());
+    }
+
+    private void warnNpcBindingFieldDivergence(AuditReport report,
+                                               String label,
+                                               String field,
+                                               String storedValue,
+                                               String profileValue) {
+        if (!sameOptionalId(storedValue, profileValue)) {
+            report.warn(label + " difera de profil pentru " + field
+                + ": binding=" + formatOptional(storedValue)
+                + ", profil=" + formatOptional(profileValue) + ".");
         }
     }
 
@@ -6844,7 +7685,7 @@ public class AINPCCommand implements CommandExecutor {
         }
         if (messages.size() > limit) {
             plugin.getMessageUtils().send(sender, "&7... inca " + (messages.size() - limit)
-                + " rezultate. Ruleaza audituri mai specifice: npc/world/db/spawn.");
+                + " rezultate. Ruleaza audituri mai specifice: npc/world/db/spawn/quest/wand.");
         }
     }
 
@@ -7318,9 +8159,13 @@ public class AINPCCommand implements CommandExecutor {
 
         if (args.length < 2 || (!"duplicates".equalsIgnoreCase(args[1])
             && !"households".equalsIgnoreCase(args[1])
+            && !isNpcBindingRepairTarget(args[1])
+            && !isMappingMetadataRepairTarget(args[1])
             && !isRepairBatchTarget(args[1]))) {
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair duplicates [dryrun|apply]");
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair households [dryrun|apply]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair npc-bindings [dryrun|apply]");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair mapping-metadata [dryrun|apply]");
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
             plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc repair batch list [problem|all|failed|running|rolled_back|succeeded]");
             return true;
@@ -7359,6 +8204,12 @@ public class AINPCCommand implements CommandExecutor {
         if ("households".equalsIgnoreCase(args[1])) {
             return handleRepairHouseholds(sender, apply);
         }
+        if (isNpcBindingRepairTarget(args[1])) {
+            return handleRepairNpcBindings(sender, apply);
+        }
+        if (isMappingMetadataRepairTarget(args[1])) {
+            return handleRepairMappingMetadata(sender, apply);
+        }
 
         var result = plugin.getNpcManager().repairDuplicateNPCs(apply);
         plugin.getMessageUtils().send(sender, apply
@@ -7386,6 +8237,20 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(sender, "&aNu sunt actiuni de reparatie necesare.");
         }
         return true;
+    }
+
+    private boolean isNpcBindingRepairTarget(String value) {
+        return "npc-bindings".equalsIgnoreCase(value)
+            || "npc_bindings".equalsIgnoreCase(value)
+            || "world-bindings".equalsIgnoreCase(value)
+            || "world_bindings".equalsIgnoreCase(value);
+    }
+
+    private boolean isMappingMetadataRepairTarget(String value) {
+        return "mapping-metadata".equalsIgnoreCase(value)
+            || "mapping_metadata".equalsIgnoreCase(value)
+            || "metadata-mapping".equalsIgnoreCase(value)
+            || "metadata_mapping".equalsIgnoreCase(value);
     }
 
     private boolean isRepairBatchTarget(String value) {
@@ -7433,6 +8298,371 @@ public class AINPCCommand implements CommandExecutor {
                 "&cRepair household residents a esuat: &e" + exception.getMessage());
         }
         return true;
+    }
+
+    private boolean handleRepairNpcBindings(CommandSender sender, boolean apply) {
+        if (plugin.getNpcWorldBindingService() == null) {
+            plugin.getMessageUtils().send(sender, "&cNpcWorldBindingService este indisponibil.");
+            return true;
+        }
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat sau indisponibil.");
+            return true;
+        }
+
+        List<String> actions = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int scannedNpcs = 0;
+        int candidates = 0;
+        int missingBindings = 0;
+        int divergentBindings = 0;
+        int savedBindings = 0;
+
+        try {
+            Map<Integer, NpcWorldBinding> existingBindings = loadNpcWorldBindingsById();
+            for (AINPC npc : plugin.getNpcManager().getAllNPCs()) {
+                if (npc == null || npc.getDatabaseId() <= 0) {
+                    continue;
+                }
+                scannedNpcs++;
+                NpcWorldBinding inferred = inferNpcWorldBindingFromProfile(npc, worldAdmin, "profile_repair");
+                if (inferred == null || !inferred.hasAnyPlaceBinding()) {
+                    continue;
+                }
+
+                NpcWorldBinding existing = existingBindings.get(npc.getDatabaseId());
+                NpcWorldBinding proposed = preserveBindingMetadata(inferred, existing, "profile_repair");
+                if (existing == null) {
+                    missingBindings++;
+                } else if (!sameMappingBinding(existing, proposed)) {
+                    divergentBindings++;
+                } else {
+                    continue;
+                }
+
+                candidates++;
+                actions.add((apply ? "Salvez" : "Ar salva")
+                    + " npc_world_bindings pentru " + npc.getName() + "#" + npc.getDatabaseId()
+                    + ": " + formatNpcWorldBindingPlaces(proposed) + ".");
+                if (apply) {
+                    plugin.getNpcWorldBindingService().saveBinding(proposed);
+                    savedBindings++;
+                }
+            }
+        } catch (SQLException | IllegalArgumentException exception) {
+            errors.add("Repair npc-bindings a esuat: " + exception.getMessage());
+        }
+
+        plugin.getMessageUtils().send(sender, apply
+            ? "&6=== Repair npc_world_bindings din profil - APPLY ==="
+            : "&6=== Repair npc_world_bindings din profil - DRYRUN ===");
+        plugin.getMessageUtils().send(sender,
+            "&eNPC-uri scanate: &f" + scannedNpcs
+                + " &7| candidati=&f" + candidates
+                + " &7| lipsa=&f" + missingBindings
+                + " &7| divergente=&f" + divergentBindings
+                + " &7| salvate=&f" + savedBindings);
+        sendRepairMessages(sender, actions, apply ? "&a" : "&e", 16);
+        sendRepairMessages(sender, warnings, "&e", 8);
+        sendRepairMessages(sender, errors, "&c", 8);
+        if (!apply && candidates > 0) {
+            plugin.getMessageUtils().send(sender, "&7Pentru aplicare: &f/ainpc repair npc-bindings apply");
+        }
+        if (actions.isEmpty() && warnings.isEmpty() && errors.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu sunt divergente profil -> npc_world_bindings de reparat.");
+        }
+        return true;
+    }
+
+    private boolean handleRepairMappingMetadata(CommandSender sender, boolean apply) {
+        if (plugin.getNpcWorldBindingService() == null) {
+            plugin.getMessageUtils().send(sender, "&cNpcWorldBindingService este indisponibil.");
+            return true;
+        }
+        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
+        WorldAdminService worldAdminService = plugin.getPlatform() != null
+            ? plugin.getPlatform().getWorldAdminService()
+            : null;
+        if (worldAdmin == null || !worldAdmin.isEnabled() || worldAdminService == null || !worldAdminService.isEnabled()) {
+            plugin.getMessageUtils().send(sender, "&cWorld admin este dezactivat sau indisponibil.");
+            return true;
+        }
+
+        List<String> actions = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int scannedBindings = 0;
+        int candidates = 0;
+        int appliedUpdates = 0;
+
+        try {
+            int totalBindings = plugin.getNpcWorldBindingService().countBindings();
+            List<NpcWorldBinding> bindings = plugin.getNpcWorldBindingService()
+                .listBindings(Math.max(NPC_WORLD_BINDING_LOOKUP_LIMIT, totalBindings));
+            if (totalBindings > bindings.size()) {
+                warnings.add("Repair mapping-metadata a scanat primele " + bindings.size()
+                    + " randuri din " + totalBindings + ".");
+            }
+
+            for (NpcWorldBinding binding : bindings) {
+                scannedBindings++;
+                String npcSelector = "npc_" + binding.npcId();
+                String npcName = firstNonBlank(binding.npcName(), npcSelector);
+                candidates += collectMappingMetadataRepairActions(
+                    worldAdmin,
+                    actions,
+                    warnings,
+                    binding,
+                    "home",
+                    binding.homePlaceId(),
+                    npcSelector
+                );
+                candidates += collectMappingMetadataRepairActions(
+                    worldAdmin,
+                    actions,
+                    warnings,
+                    binding,
+                    "work",
+                    binding.workPlaceId(),
+                    npcSelector
+                );
+                candidates += collectMappingMetadataRepairActions(
+                    worldAdmin,
+                    actions,
+                    warnings,
+                    binding,
+                    "social",
+                    binding.socialPlaceId(),
+                    npcSelector
+                );
+
+                if (!apply) {
+                    continue;
+                }
+                try {
+                    if (!binding.homePlaceId().isBlank()) {
+                        worldAdminService.bindNpcToHomePlace(binding.homePlaceId(), npcSelector, npcName);
+                        appliedUpdates++;
+                    }
+                    if (!binding.workPlaceId().isBlank()) {
+                        worldAdminService.bindNpcToWorkPlace(binding.workPlaceId(), npcSelector, npcName);
+                        appliedUpdates++;
+                    }
+                    if (!binding.socialPlaceId().isBlank()) {
+                        worldAdminService.bindNpcToSocialPlace(binding.socialPlaceId(), npcSelector, npcName);
+                        appliedUpdates++;
+                    }
+                } catch (IllegalArgumentException exception) {
+                    errors.add("Nu am putut aplica metadata pentru npc_id=" + binding.npcId()
+                        + ": " + exception.getMessage());
+                }
+            }
+        } catch (SQLException exception) {
+            errors.add("Repair mapping-metadata a esuat: " + exception.getMessage());
+        }
+
+        plugin.getMessageUtils().send(sender, apply
+            ? "&6=== Repair metadata mapping din npc_world_bindings - APPLY ==="
+            : "&6=== Repair metadata mapping din npc_world_bindings - DRYRUN ===");
+        plugin.getMessageUtils().send(sender,
+            "&eBinding-uri scanate: &f" + scannedBindings
+                + " &7| actiuni candidate=&f" + candidates
+                + " &7| update-uri aplicate=&f" + appliedUpdates);
+        sendRepairMessages(sender, actions, apply ? "&a" : "&e", 16);
+        sendRepairMessages(sender, warnings, "&e", 8);
+        sendRepairMessages(sender, errors, "&c", 8);
+        if (!apply && candidates > 0) {
+            plugin.getMessageUtils().send(sender, "&7Pentru aplicare: &f/ainpc repair mapping-metadata apply");
+        }
+        if (apply && appliedUpdates > 0) {
+            plugin.getMessageUtils().send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti metadata mapping.");
+        }
+        if (actions.isEmpty() && warnings.isEmpty() && errors.isEmpty()) {
+            plugin.getMessageUtils().send(sender, "&aNu sunt divergente npc_world_bindings -> metadata mapping de reparat.");
+        }
+        return true;
+    }
+
+    private Map<Integer, NpcWorldBinding> loadNpcWorldBindingsById() throws SQLException {
+        int totalBindings = plugin.getNpcWorldBindingService().countBindings();
+        List<NpcWorldBinding> bindings = plugin.getNpcWorldBindingService()
+            .listBindings(Math.max(NPC_WORLD_BINDING_LOOKUP_LIMIT, totalBindings));
+        Map<Integer, NpcWorldBinding> byNpcId = new HashMap<>();
+        for (NpcWorldBinding binding : bindings) {
+            byNpcId.put(binding.npcId(), binding);
+        }
+        return byNpcId;
+    }
+
+    private NpcWorldBinding inferNpcWorldBindingFromProfile(AINPC npc,
+                                                            WorldAdminApi worldAdmin,
+                                                            String source) {
+        if (npc == null || worldAdmin == null || !worldAdmin.isEnabled()) {
+            return null;
+        }
+        WorldPlaceInfo homePlace = inferProfileAnchorPlace(worldAdmin, npc.getHomeAnchor());
+        WorldPlaceInfo workPlace = inferProfileAnchorPlace(worldAdmin, npc.getWorkAnchor());
+        WorldPlaceInfo socialPlace = inferProfileAnchorPlace(worldAdmin, npc.getSocialAnchor());
+        if (homePlace == null && workPlace == null && socialPlace == null) {
+            return null;
+        }
+
+        WorldNodeInfo homeNode = inferProfileAnchorNode(worldAdmin, npc.getHomeAnchor(), homePlace);
+        WorldNodeInfo workNode = inferProfileAnchorNode(worldAdmin, npc.getWorkAnchor(), workPlace);
+        WorldNodeInfo socialNode = inferProfileAnchorNode(worldAdmin, npc.getSocialAnchor(), socialPlace);
+        return new NpcWorldBinding(
+            npc.getDatabaseId(),
+            npc.getUuid() != null ? npc.getUuid().toString() : "",
+            npc.getName(),
+            homePlace != null ? homePlace.id() : "",
+            workPlace != null ? workPlace.id() : "",
+            socialPlace != null ? socialPlace.id() : "",
+            homeNode != null ? homeNode.id() : "",
+            workNode != null ? workNode.id() : "",
+            socialNode != null ? socialNode.id() : "",
+            "",
+            source,
+            0L,
+            0L
+        );
+    }
+
+    private WorldPlaceInfo inferProfileAnchorPlace(WorldAdminApi worldAdmin, AINPC.OwnedLocation anchor) {
+        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
+            return null;
+        }
+        return worldAdmin.findPlace(
+            anchor.worldName(),
+            (int) Math.floor(anchor.x()),
+            (int) Math.floor(anchor.y()),
+            (int) Math.floor(anchor.z())
+        );
+    }
+
+    private WorldNodeInfo inferProfileAnchorNode(WorldAdminApi worldAdmin,
+                                                 AINPC.OwnedLocation anchor,
+                                                 WorldPlaceInfo place) {
+        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
+            return null;
+        }
+        return worldAdmin.findNodesNear(anchor.worldName(), anchor.x(), anchor.y(), anchor.z(), 2.5D, 5)
+            .stream()
+            .filter(node -> place == null || node.placeId().isBlank() || node.placeId().equalsIgnoreCase(place.id()))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private NpcWorldBinding preserveBindingMetadata(NpcWorldBinding proposed,
+                                                    NpcWorldBinding existing,
+                                                    String source) {
+        if (existing == null) {
+            return proposed;
+        }
+        return new NpcWorldBinding(
+            proposed.npcId(),
+            firstNonBlank(proposed.npcUuid(), existing.npcUuid()),
+            firstNonBlank(proposed.npcName(), existing.npcName()),
+            proposed.homePlaceId(),
+            proposed.workPlaceId(),
+            proposed.socialPlaceId(),
+            proposed.homeNodeId(),
+            proposed.workNodeId(),
+            proposed.socialNodeId(),
+            existing.familyId(),
+            source,
+            existing.createdAt(),
+            0L
+        );
+    }
+
+    private boolean sameMappingBinding(NpcWorldBinding left, NpcWorldBinding right) {
+        return sameOptionalId(left.homePlaceId(), right.homePlaceId())
+            && sameOptionalId(left.workPlaceId(), right.workPlaceId())
+            && sameOptionalId(left.socialPlaceId(), right.socialPlaceId())
+            && sameOptionalId(left.homeNodeId(), right.homeNodeId())
+            && sameOptionalId(left.workNodeId(), right.workNodeId())
+            && sameOptionalId(left.socialNodeId(), right.socialNodeId());
+    }
+
+    private boolean sameOptionalId(String left, String right) {
+        return normalizeAuditKey(left).equals(normalizeAuditKey(right));
+    }
+
+    private String formatNpcWorldBindingPlaces(NpcWorldBinding binding) {
+        return "home=" + formatOptional(binding.homePlaceId())
+            + " work=" + formatOptional(binding.workPlaceId())
+            + " social=" + formatOptional(binding.socialPlaceId())
+            + " nodes=" + formatOptional(binding.homeNodeId())
+            + "/" + formatOptional(binding.workNodeId())
+            + "/" + formatOptional(binding.socialNodeId());
+    }
+
+    private int collectMappingMetadataRepairActions(WorldAdminApi worldAdmin,
+                                                    List<String> actions,
+                                                    List<String> warnings,
+                                                    NpcWorldBinding binding,
+                                                    String role,
+                                                    String placeId,
+                                                    String npcSelector) {
+        if (placeId == null || placeId.isBlank()) {
+            return 0;
+        }
+        WorldPlaceInfo place = worldAdmin.getPlace(placeId);
+        if (place == null) {
+            warnings.add("npc_world_bindings npc_id=" + binding.npcId()
+                + " refera " + role + "_place_id inexistent: " + placeId + ".");
+            return 0;
+        }
+
+        int candidates = 0;
+        switch (role) {
+            case "home" -> {
+                if (!sameOptionalId(place.ownerNpcId(), npcSelector)) {
+                    actions.add("Ar seta owner_npc_id pentru " + place.id()
+                        + " la " + npcSelector + " din binding npc_id=" + binding.npcId() + ".");
+                    candidates++;
+                }
+                if (!metadataListContains(place, "resident_npc_ids", npcSelector)) {
+                    actions.add("Ar adauga " + npcSelector + " in resident_npc_ids pentru " + place.id() + ".");
+                    candidates++;
+                }
+            }
+            case "work" -> {
+                if (!metadataListContains(place, "worker_npc_ids", npcSelector)) {
+                    actions.add("Ar adauga " + npcSelector + " in worker_npc_ids pentru " + place.id() + ".");
+                    candidates++;
+                }
+            }
+            case "social" -> {
+                if (!metadataListContains(place, "social_npc_ids", npcSelector)) {
+                    actions.add("Ar adauga " + npcSelector + " in social_npc_ids pentru " + place.id() + ".");
+                    candidates++;
+                }
+            }
+            default -> {
+                // Rolurile validate mai sus sunt cele persistate in npc_world_bindings.
+            }
+        }
+        return candidates;
+    }
+
+    private boolean metadataListContains(WorldPlaceInfo place, String key, String expected) {
+        String normalizedExpected = normalizeAuditKey(expected);
+        if (normalizedExpected.isBlank()) {
+            return false;
+        }
+        String raw = place.metadata().getOrDefault(key, "");
+        if (raw.isBlank()) {
+            return false;
+        }
+        for (String part : raw.split("[,;]")) {
+            if (normalizeAuditKey(part).equals(normalizedExpected)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean handleRepairSpawnBatch(CommandSender sender, String batchKey, String mode) {
@@ -8218,7 +9448,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     /**
-     * /ainpc gui [main|quest|progresii|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]
+     * /ainpc gui [main|quest|progresii|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]
      */
     private boolean handleGui(CommandSender sender, String[] args) {
         Player player = requirePlayerSender(sender);
@@ -8228,7 +9458,7 @@ public class AINPCCommand implements CommandExecutor {
 
         if (args.length > 3) {
             plugin.getMessageUtils().send(sender,
-                "&cUtilizare: /ainpc gui [main|quest|progresii|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
+                "&cUtilizare: /ainpc gui [main|quest|progresii|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
             return true;
         }
 
@@ -8236,7 +9466,7 @@ public class AINPCCommand implements CommandExecutor {
         Optional<GuiKey> resolvedKey = GuiKey.fromId(rawKey);
         if (resolvedKey.isEmpty()) {
             plugin.getMessageUtils().send(sender,
-                "&cGUI necunoscut. Optiuni: &fmain, quest/progresii, world, stats, interact, routine, shop, manager, audit, debug");
+                "&cGUI necunoscut. Optiuni: &fmain, quest/progresii, story, world, stats, interact, routine, shop, manager, audit, debug");
             return true;
         }
 
@@ -8309,11 +9539,15 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Curata controlat randuri/entitati NPC duplicate; ruleaza dryrun inainte de apply");
         plugin.getMessageUtils().send(sender, "&e/ainpc repair households [dryrun|apply]");
         plugin.getMessageUtils().send(sender, "&7  Curata rezidenti household duplicati dupa NPC/source_key; ruleaza dryrun inainte de apply");
+        plugin.getMessageUtils().send(sender, "&e/ainpc repair npc-bindings [dryrun|apply]");
+        plugin.getMessageUtils().send(sender, "&7  Sincronizeaza profilul NPC catre npc_world_bindings; ruleaza dryrun inainte de apply");
+        plugin.getMessageUtils().send(sender, "&e/ainpc repair mapping-metadata [dryrun|apply]");
+        plugin.getMessageUtils().send(sender, "&7  Sincronizeaza npc_world_bindings catre metadata WorldAdmin; ruleaza dryrun inainte de apply");
         plugin.getMessageUtils().send(sender, "&e/ainpc repair batch <batchKey> [dryrun|apply|inspect|mark-steps|mark-failed]");
         plugin.getMessageUtils().send(sender, "&7  Inspecteaza sau ruleaza rollback controlat pentru un spawn batch esuat");
         plugin.getMessageUtils().send(sender, "&e/ainpc info [nume]");
         plugin.getMessageUtils().send(sender, "&7  Afiseaza informatii despre un NPC");
-        plugin.getMessageUtils().send(sender, "&e/ainpc gui [quest|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc gui [quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]");
         plugin.getMessageUtils().send(sender, "&7  Deschide hub-ul GUI sau un ecran specific; questFilter poate fi quest/contract/duty/bounty/event/tutorial/ritual");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest <numeNpc> [jucator]");
         plugin.getMessageUtils().send(sender, "&7  Declanseaza manual quest-ul unui NPC");
@@ -8369,7 +9603,9 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Genereaza sau executa household-uri pentru casele din regiune");
         plugin.getMessageUtils().send(sender, "&e/ainpc world save");
         plugin.getMessageUtils().send(sender, "&7  Salveaza modificarile runtime in config.yml");
-        plugin.getMessageUtils().send(sender, "&e/ainpc wand [mode|pos1|pos2|point|status|clear]");
+        plugin.getMessageUtils().send(sender, "&e/ainpc patch <analyze|plan|validate> <regionId> [targetPopulation] [profesiiCSV]");
+        plugin.getMessageUtils().send(sender, "&7  Produce gap report si patch plan read-only pentru completarea satului");
+        plugin.getMessageUtils().send(sender, "&e/ainpc wand [mode|pos1|pos2|point|status|inspect|clear|reset]");
         plugin.getMessageUtils().send(sender, "&7  Selecteaza geometrie sau puncte pentru mapping manual asistat");
         plugin.getMessageUtils().send(sender, "&e/ainpc map <region|place|node> <descriere>");
         plugin.getMessageUtils().send(sender, "&7  Creeaza draft mapping cu preview si confirmare inainte de scriere");

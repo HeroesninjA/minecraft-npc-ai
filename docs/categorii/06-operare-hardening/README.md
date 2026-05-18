@@ -15,6 +15,10 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 | `../../gui-interfete.md` | Directie pentru Debug GUI, Audit GUI, permisiuni, confirmari si hardening pentru click-uri |
 | `../../prevenire-duplicare-npc.md` | Runbook pentru diagnostic si cleanup controlat cand NPC-urile se dubleaza |
 | `../../reducere-marime-jar.md` | Reducere JAR si riscuri de shading/minimize |
+| `../../kotlin-paper-packaging-si-smoke.md` | Runbook pentru runtime Kotlin, JAR audit si smoke test Paper |
+| `../../kotlin-code-review-checklist.md` | Checklist pentru review-ul schimbarilor Kotlin |
+| `../../kotlin-coroutines-paper-policy.md` | Politica pentru coroutine si Paper scheduler |
+| `../../kotlin-testing-strategy.md` | Strategie de testare pentru conversiile Kotlin |
 | `../../analiza-erori-si-plan-rezolvare.md` | Analiza de probleme si plan de remediere |
 | `../../faze-observatii-avertizari.md` | Avertizari globale pe faze |
 

@@ -2,9 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ainpc-core-plugin/ainpc-core-plugin.iml" filepath="$PROJECT_DIR$/ainpc-core-plugin/ainpc-core-plugin.iml" />
-      <module fileurl="file://$PROJECT_DIR$/ainpc-scenario-medieval/ainpc-scenario-medieval.iml" filepath="$PROJECT_DIR$/ainpc-scenario-medieval/ainpc-scenario-medieval.iml" />
-      <module fileurl="file://$PROJECT_DIR$/test.iml" filepath="$PROJECT_DIR$/test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.test.iml" />
     </modules>
   </component>
 </project>

@@ -1,8 +1,8 @@
 # Quest Anchor Bindings
 
-Actualizat: 2026-04-30
+Actualizat: 2026-05-11
 
-Status: implementat initial in cod, cu audit si comanda admin read-only.
+Status: implementat initial in cod, cu audit strict si comanda admin read-only.
 
 ## Scop
 
@@ -148,9 +148,10 @@ Audit read-only:
 
 ```text
 /ainpc audit quest
+/ainpc audit quest strict
 ```
 
-Auditul verifica initial quest templates si quest anchor bindings.
+Auditul verifica initial quest templates si quest anchor bindings. Varianta normala pastreaza un plafon de audit pentru bindings, ca sa ramana folosibila in joc. Varianta `strict` verifica toate randurile din `quest_anchor_bindings`; `full` si `offline` sunt aliasuri pentru acelasi mod complet.
 
 Pentru template-uri verifica:
 
@@ -165,6 +166,7 @@ Pentru binding-uri verifica:
 - binding-uri fara progres parinte in `player_quests`
 - `player_uuid` invalid
 - campuri obligatorii lipsa
+- `objective_key` inexistent in definitia progresiei incarcate
 - incompatibilitate intre `objective_type` si `anchor_type`
 - `region`, `place` sau `node` care nu mai exista in mapping
 - `npc` anchor catre NPC care nu este incarcat in runtime
@@ -187,7 +189,7 @@ Dump-ul include `loaded-quest-definitions.json`, `player-quest-progress.json` si
 
 - `objective_key` foloseste cheia YAML/`entry_id` pentru binding-uri noi, cu fallback legacy pentru progres vechi.
 - Comanda `/ainpc quest anchors` afiseaza un preview limitat; exportul complet este in `quest-anchor-bindings.json`, progresul parinte complet este in `player-quest-progress.json`, iar template-urile incarcate sunt in `loaded-quest-definitions.json`.
-- Auditul verifica initial un set limitat de randuri pentru tinerea rezultatului scurt in joc.
+- Auditul normal verifica un set limitat de randuri pentru tinerea rezultatului scurt in joc; `/ainpc audit quest strict` scaneaza toate binding-urile.
 - Daca mapping-ul este schimbat dupa acceptarea questului, binding-ul ramane catre ID-ul vechi pana la reset/reoffer.
 
 ## Avertizari
@@ -201,7 +203,6 @@ Dump-ul include `loaded-quest-definitions.json`, `player-quest-progress.json` si
 
 Prioritate recomandata:
 
-1. extinde auditul cu mod strict/offline pentru toate randurile, nu doar preview;
-2. adauga repair/backfill pentru binding-uri dupa rename de mapping;
-3. extinde `StoryContextService` dupa ce exista story state persistent;
-4. adauga `quest_story_links` dupa ce story state-ul este persistent.
+1. adauga repair/backfill pentru binding-uri dupa rename de mapping;
+2. extinde `StoryContextService` dupa ce exista story state persistent;
+3. adauga `quest_story_links` dupa ce story state-ul este persistent.

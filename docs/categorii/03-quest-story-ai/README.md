@@ -1,6 +1,6 @@
 # Quest, Story si AI
 
-Actualizat: 2026-05-08
+Actualizat: 2026-05-11
 
 Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-ul asistat.
 
@@ -12,11 +12,12 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../pregatire-questuri-avansate.md` | Pregatiri si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate-v2.md` | Faze V2 pentru diversitate de questuri, mapping, progres generic si mecanici non-quest |
 | `../../progression-service.md` | Directie pentru motor generic de progres peste questuri, contracte, datorii, evenimente, tutoriale si ritualuri |
-| `../../lucru-alternat-quest-mapping-progression.md` | Protocol de lucru alternat intre mapping, questuri concrete, GUI system si extractii mici spre `ProgressionService` |
+| `../../lucru-alternat-quest-mapping-progression.md` | Protocol de lucru alternat intre mapping, questuri concrete, story, GUI system si extractii mici spre `ProgressionService` |
 | `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
 | `../../interactiuni.md` | Fluxul click/chat/sesiune, ascultare pasiva si intentii de quest inaintea dialogului liber |
 | `../../gui-interfete.md` | Directie pentru Quest GUI, NPC interaction GUI si suprafete vizuale peste quest/story |
 | `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
+| `../../generare-automata-questuri-ai.md` | Contract pentru `QuestSeed`, `QuestDraft`, validare, review admin si export YAML dezactivat |
 | `../../quest-anchor-bindings.md` | Contract DB pentru ancore semantice de quest |
 | `../../story-context-service.md` | Context narativ read-only pentru prompt si debugging |
 | `../../story-si-context-ai.md` | Legatura `mapping -> indexare -> quest -> story -> AI` |
@@ -54,12 +55,14 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - `EnvironmentContextService` este directia recomandata pentru context read-only de lume; `EnvironmentEngine` complet ramane feature viitor.
 - Dialogul trebuie sa devina quest-aware, story-aware si environment-aware, dar sa ramana prezentare peste runtime validat.
 - `AIOrchestrationService` exista initial pentru politici, fallback determinist si output-uri non-executabile direct; integrarea cu dialog/quest/story ramane urmatorul pas.
+- Generarea automata de questuri cu AI are document canonic initial: AI produce `QuestDraft`, nu quest live.
+- Story-ul poate conduce selectia sau generarea unui quest prin context si `QuestDirector`, dar `ProgressionService` ramane responsabil pentru progres si executie.
 - AI-ul trebuie orchestratat central printr-un serviciu dedicat, dar executia ramane in serviciile deterministe.
 - Lipsesc inca branching, hook-uri intermediare pe stage si validator complet pentru story actions complexe.
 
 ## Urmatoarele documente utile
 
-- Contract pentru `StoryDraft` si `QuestDraft`.
-- Ghid de prompturi sigure pentru generare quest/story.
+- Contract separat pentru `StoryDraft`.
+- Ghid de prompturi sigure pentru generare story si dialog.
 - Specificatie completa si validator pentru actiunile `set_story_state` si `record_story_event`.
 - Contract complet pentru `DialogueContextSnapshot`, dialogue nodes si choices validate.

@@ -1,0 +1,70 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' apply false
+}
+
+ext {
+    javaRelease = property('javaRelease').toString().toInteger()
+    kotlinVersion = property('kotlinVersion').toString()
+    paperVersion = property('paperVersion').toString()
+    gsonVersion = property('gsonVersion').toString()
+    sqliteVersion = property('sqliteVersion').toString()
+    okhttpVersion = property('okhttpVersion').toString()
+    junitVersion = property('junitVersion').toString()
+}
+
+allprojects {
+    group = rootProject.property('projectGroup').toString()
+    version = rootProject.property('projectVersion').toString()
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'papermc'
+            url = uri('https://repo.papermc.io/repository/maven-public/')
+        }
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.toVersion(rootProject.ext.javaRelease)
+        targetCompatibility = JavaVersion.toVersion(rootProject.ext.javaRelease)
+    }
+
+    dependencies {
+        implementation platform("org.jetbrains.kotlin:kotlin-bom:${rootProject.ext.kotlinVersion}")
+        implementation 'org.jetbrains.kotlin:kotlin-stdlib'
+        testImplementation platform("org.junit:junit-bom:${rootProject.ext.junitVersion}")
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = rootProject.ext.javaRelease
+    }
+
+    plugins.withId('org.jetbrains.kotlin.jvm') {
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            compilerOptions {
+                jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(rootProject.ext.javaRelease.toString())
+            }
+        }
+    }
+
+    tasks.withType(ProcessResources).configureEach {
+        def expandedProjectVersion = project.version.toString()
+        filteringCharset = 'UTF-8'
+        inputs.property('projectVersion', expandedProjectVersion)
+        filesMatching('plugin.yml') {
+            expand(project: [version: expandedProjectVersion])
+        }
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+}

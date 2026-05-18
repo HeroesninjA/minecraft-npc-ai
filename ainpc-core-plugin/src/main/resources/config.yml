@@ -54,6 +54,31 @@ platform:
   # static | evolutive | rotative
   default_story_mode: "evolutive"
 
+# Setari universale pentru addonuri. Continutul specific unui addon sta in
+# plugins/AINPC/addons/<addon-id>/config.yml, nu in config-ul core.
+addons:
+  # Activeaza registrul de addonuri si integrarea cu pluginuri externe.
+  enabled: true
+  # Folderul standard pentru configuratiile per-addon.
+  config_directory: "addons"
+  # Daca este activ, descriptorii addonurilor sunt validati mai strict la startup/reload.
+  strict_validation: true
+  # Addonuri dezactivate explicit dupa ID.
+  disabled: []
+  # Ordine optionala de incarcare pentru addonuri care au dependinte functionale intre ele.
+  load_order: []
+
+# Setari universale pentru feature packs incarcate de core sau instalate de addonuri.
+feature_packs:
+  # Valideaza pack-urile la startup si reload.
+  validate_on_startup: true
+  # Daca este true, un pack invalid opreste incarcarea continutului dependent.
+  fail_invalid_pack: false
+  # Permite pack-uri instalate sub packs/addons/<addon-id>/.
+  allow_addon_packs: true
+  # Verifica metadata addon/capabilities declarate in pack.
+  validate_addon_metadata: true
+
 # Setari NPC
 npc:
   # Distanta maxima de interactiune (blocuri)

@@ -218,7 +218,9 @@ Sunt disponibile deja:
 - `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
 - `/ainpc wand`
 - `/ainpc wand mode <region|place|node|npc_bind|quest_anchor>`
-- `/ainpc wand <pos1|pos2|point|status|clear>`
+- `/ainpc wand <pos1|pos2|point|status|inspect>`
+- `/ainpc wand <clear|reset> [pos1|pos2|point|all]`
+  - selectiile region/place afiseaza bounds cu particule; selectiile node/npc_bind/quest_anchor afiseaza raza punctului
 - `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>`
 - `/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]`
 - `/ainpc map preview`
@@ -227,7 +229,9 @@ Sunt disponibile deja:
 - `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - `/ainpc world save`
-- `/ainpc audit [all|npc|world|db|spawn|quest]`
+- `/ainpc audit [all|npc|world|db|spawn|quest|wand]`
+- `/ainpc repair npc-bindings [dryrun|apply]`
+- `/ainpc repair mapping-metadata [dryrun|apply]`
 - `/ainpc debugdump [all|npc|world|quest|story|openai]`
 
 `/ainpc wand` si `/ainpc map ...` sunt implementate initial pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`, cu draft, preview si confirmare. `quest_anchor` cere context de jucator/progresie/objective_id si scrie controlat in `quest_anchor_bindings`.

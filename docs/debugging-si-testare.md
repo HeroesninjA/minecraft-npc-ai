@@ -1,6 +1,6 @@
 # Debugging si Testare
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-11
 
 ## Scop
 
@@ -274,6 +274,7 @@ Ruleaza acest set dupa ce mapping-ul, questurile/progresiile si reload-ul au tre
 /ainpc gui quest tutorial
 /ainpc gui quest ritual
 /quest gui all
+/ainpc gui story
 /ainpc gui world
 /ainpc gui routine
 /ainpc gui audit
@@ -284,6 +285,7 @@ Ce verifici:
 
 - filtrele afiseaza aceleasi intrari ca `/ainpc progression definitions <filter>`;
 - detaliile arata stage-ul curent, obiectivele si tracking-ul;
+- `StoryGui` arata acelasi region/place state si aceleasi evenimente ca `/ainpc story region|place|events`;
 - click-urile pentru status/track folosesc comenzile validate si nu produc erori in consola;
 - ecranele admin nu ruleaza actiuni destructive fara confirmare;
 - dupa restart, aceleasi intrari reapar cu status coerent.
@@ -763,6 +765,198 @@ Observatie tehnica:
 
 - warning-ul ramas este pentru `medieval_quest:Q06`, obiectivul `inspect_forge_marks`, unde tokenul `type:inspect_node` nu apare in `world mapping semantic_index` pentru ancora node. Nu blocheaza mapping/spawn, dar trebuie tratat intr-o faza de aliniere quest-anchor semantic.
 
+### Raport F011-F015 - 2026-05-10
+
+Status: amanat pentru test manual in joc.
+
+Motiv:
+
+- `/ainpc wand` si `/ainpc map preview|confirm|cancel` trec prin validare `Player`;
+- RCON/console nu poate simula selectii wand reale, click stanga/dreapta sau context de inventar;
+- aceste faze nu sunt marcate finalizate pana cand exista un jucator conectat in Paper.
+
+Comenzi manuale ramase:
+
+```text
+/ainpc wand mode region
+/ainpc wand mode place
+/ainpc wand mode node
+/ainpc map preview
+/ainpc map confirm
+/ainpc map cancel
+```
+
+### Raport F016 - 2026-05-10
+
+Status: implementat si testat automat.
+
+Rezultat validat:
+
+- `MappingWandService` pastreaza in memorie ultimele `25` draft-uri wand confirmate;
+- confirmarile prin `/ainpc map confirm` sunt inregistrate pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`;
+- `/ainpc audit wand` afiseaza confirmarile recente si valideaza tintele in world mapping cand World Admin este activ;
+- `/ainpc audit world` si `/ainpc audit all` includ acelasi audit wand;
+- tab completion expune noul mod `wand` pentru `/ainpc audit`.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F026-F028 - 2026-05-10
+
+Status: implementat si testat automat.
+
+Rezultat validat:
+
+- auditul `npc_world_bindings` compara acum randurile persistente cu ancorele mapabile din profilul NPC;
+- daca un NPC incarcat are ancore in profil, dar nu are rand in `npc_world_bindings`, auditul raporteaza reparatia recomandata;
+- `/ainpc repair npc-bindings dryrun` raporteaza ce randuri ar crea sau actualiza din profilul NPC;
+- `/ainpc repair mapping-metadata dryrun` raporteaza ce metadata WorldAdmin ar reface din `npc_world_bindings`;
+- ambele comenzi au si mod `apply`, dar fluxul recomandat ramane `dryrun` urmat de audit si `world save` cand se aplica metadata.
+
+Comenzi:
+
+```text
+/ainpc repair npc-bindings dryrun
+/ainpc repair mapping-metadata dryrun
+/ainpc audit db
+/ainpc audit all
+```
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F037 - 2026-05-10
+
+Status: implementat si testat prin compilare.
+
+Rezultat validat:
+
+- confirmarea `quest_anchor` cauta definitia progresiei persistate;
+- `objective_id` este acceptat doar daca poate fi mapat la un obiectiv din definitie;
+- `objective_type` este comparat cu tipul obiectivului definit si respinge mismatch-ul;
+- daca definitia nu este disponibila pentru o progresie legacy, comanda avertizeaza si nu blocheaza salvarea.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F038 - 2026-05-10
+
+Status: implementat si testat automat.
+
+Rezultat validat:
+
+- `/ainpc map quest_anchor ...` sugereaza `tracked`, `current` si `player:self`;
+- dupa selectorul progresiei, tab completion poate cere `objective_id`;
+- cand exista runtime complet si sender/target player, `ProgressionService` rezolva definitia progresiei si intoarce cheile obiectivelor mapabile;
+- pentru selector explicit, fallback-ul poate cauta direct in definitiile incarcate;
+- dupa `objective_id`, completarea sugereaza tipuri comune de obiectiv mapabil.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin,ainpc-scenario-medieval -am clean "-Dtest=AINPCTabCompleterTest,AddonRegistryTest,FeaturePackMetadataValidatorTest,FeaturePackDependencyValidatorTest,MedievalQuestPackTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 24, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F029-F030 - 2026-05-10
+
+Status: implementat si testat prin compilare.
+
+Rezultat validat:
+
+- `RoutineGui` afiseaza pentru fiecare NPC sumarul `home/work/social` din `npc_world_bindings`;
+- cardul NPC arata separat place IDs si node IDs persistate;
+- daca nu exista rand persistent, GUI-ul afiseaza `Mapping place: nepersistat`;
+- pentru admini, `Shift click` pe card ruleaza `/ainpc world bindings npc <databaseId>`.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F017-F018 - 2026-05-10
+
+Status: implementat si testat prin compilare.
+
+Rezultat validat:
+
+- selectia `region/place` deseneaza un preview cu particule `END_ROD` pe muchiile bounds-ului cand se seteaza `pos1/pos2` sau cand se ruleaza `/ainpc map preview`;
+- selectia `node/npc_bind/quest_anchor` deseneaza un cerc de raza in jurul punctului selectat;
+- draft-urile generate prin `/ainpc map <descriere>` reaprind preview-ul vizual, folosind radius-ul draft-ului pentru node/anchor;
+- preview-ul se afiseaza doar in lumea curenta a jucatorului si nu scrie date persistente.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport F019-F020 - 2026-05-10
+
+Status: implementat si testat automat.
+
+Rezultat validat:
+
+- `/ainpc wand inspect` este alias explicit pentru inspectia ultimei selectii wand si afiseaza acelasi sumar ca `/ainpc wand status`;
+- `/ainpc wand clear [pos1|pos2|point|all]` si `/ainpc wand reset [pos1|pos2|point|all]` permit reset partial fara a pierde automat toata sesiunea;
+- tab completion expune `inspect`, `reset` si tintele `pos1`, `pos2`, `point`, `all`;
+- documentatia de mapping listeaza noile forme de comanda.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
+
+### Raport ADDON-CONFIG-01 - 2026-05-10
+
+Status: implementat si testat automat.
+
+Rezultat validat:
+
+- core-ul pastreaza doar setari universale in `config.yml`: registry addonuri, dezactivari, load order si reguli generale pentru feature packs;
+- `AINPCPlatformApi` expune `getAddonConfigDirectory(addonId)`, iar core-ul respecta `addons.config_directory`;
+- registrul de addonuri respecta `addons.enabled`, `addons.disabled`, `addons.strict_validation` si ordoneaza descriptorii dupa `addons.load_order`;
+- `feature_packs.validate_on_startup` si `feature_packs.validate_addon_metadata` ruleaza preflight peste metadata `addon:` declarata in pack-uri;
+- pack-urile cu `addon.type`, `runtime_modes`, `capabilities`, `dependencies` sau runtime incompatibil sunt respinse inainte sa incarce continut;
+- dependintele declarate in `addon.dependencies` sunt evaluate dupa un prepass peste toate pack-urile candidate, inclusiv pentru cazuri tranzitive;
+- `feature_packs.fail_invalid_pack` decide daca metadata invalida doar sare pack-ul sau opreste incarcarea prin eroare;
+- addonul medieval livreaza `config-template.yml`, creeaza `plugins/AINPC/addons/ainpc-scenario-medieval/config.yml` doar daca lipseste si nu suprascrie config-ul adminului;
+- `addon.enabled: false` dezactiveaza addonul medieval local;
+- `content.install_pack: false` sau `content.playable_content: false` impiedica instalarea pack-ului `medieval_quest.yml`;
+- documentatia separa explicit config-ul core, config-ul addonului si pack-urile livrate de addon.
+
+Test automat:
+
+```text
+mvn -pl ainpc-core-plugin,ainpc-scenario-medieval -am clean "-Dtest=AINPCTabCompleterTest,AddonRegistryTest,FeaturePackMetadataValidatorTest,FeaturePackDependencyValidatorTest,MedievalQuestPackTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+```
+
+Rezultat: `Tests run: 23, Failures: 0, Errors: 0, Skipped: 0`.
+
 Test dialog:
 
 1. apropie-te de un NPC
@@ -819,6 +1013,162 @@ Verifica:
 - NPC-urile spawnate au casa, ancore si familie valida
 - place-urile home/work/social au metadata de rezidenti, worker sau social
 - auditul nu raporteaza erori de spawn order
+
+## Smoke Test Patch Planner
+
+Patch Planner este read-only. Smoke test-ul confirma ca poate explica lipsurile din mapping fara sa construiasca blocuri, fara sa scrie planuri persistente si fara sa porneasca questuri.
+
+Ruleaza dupa ce exista o regiune demo sau o regiune importata din sat:
+
+```text
+/ainpc patch analyze demo_sat 6 blacksmith,farmer,merchant,innkeeper
+/ainpc patch plan demo_sat 8 blacksmith,farmer,merchant,innkeeper
+/ainpc patch validate demo_sat 8 blacksmith,farmer,merchant,innkeeper
+/ainpc audit world
+/ainpc world save
+```
+
+Dupa reload sau restart:
+
+```text
+/ainpc patch analyze demo_sat 6 blacksmith,farmer,merchant,innkeeper
+/ainpc audit world
+/ainpc world places demo_sat
+```
+
+Verifica:
+
+- `analyze` raporteaza capacitate, case/paturi, workplace-uri, social hub si node-uri lipsa;
+- `plan` produce candidati de patch cu prioritate, risc si build mode;
+- `validate` marcheaza `semantic_only` ca permis cand cere doar mapping semantic;
+- patch-urile care cer `native-block-build` raman blocate pana exista builder nativ;
+- niciuna dintre comenzi nu creeaza places/nodes noi;
+- dupa restart, mapping-ul este neschimbat si analiza este reproductibila.
+
+Raport recomandat:
+
+```text
+Data:
+Build/JAR:
+Server/Paper:
+World:
+Region:
+Commands run:
+Analyze result:
+Plan result:
+Validate result:
+Expected blocked capabilities:
+Mapping changed: no
+Restart result:
+Issues:
+Decision:
+```
+
+## Smoke Test Story Lane
+
+Story lane verifica trei cazuri diferite. Nu le amesteca intr-un singur rezultat:
+
+```text
+story_only
+quest_only
+writes_story
+```
+
+### `story_only`
+
+Scop: exista story state/event inspectabil, dar nu apare progres nou pentru jucator.
+
+Pornire:
+
+- foloseste o regiune/place care are deja story state/event dintr-un fixture, seed controlat sau actiune validata anterior;
+- daca nu exista mecanism sigur de a crea story fara quest, marcheaza smoke-ul `blocked`, nu `failed`;
+- nu edita DB live ca sa fortezi trecerea testului.
+
+Comenzi:
+
+```text
+/ainpc story region demo_sat
+/ainpc story place demo_sat:piata
+/ainpc story events demo_sat 10
+/ainpc progression stored all all
+/ainpc debugdump story
+/ainpc debugdump quest
+```
+
+Verifica:
+
+- `story-states.json` sau `story-events.json` contine starea/evenimentul asteptat;
+- `player-progressions.json` si `player-quest-progress.json` nu primesc progres nou din acest smoke;
+- `/ainpc gui quest all` nu afiseaza intrare noua doar pentru ca story-ul exista;
+- dupa restart, story state/event ramane inspectabil.
+
+### `quest_only`
+
+Scop: o progresie merge cap-coada fara sa modifice story state/events.
+
+Comenzi orientative:
+
+```text
+/ainpc progression definitions tutorial
+/ainpc progression stored all tutorial
+/ainpc quest log all
+/ainpc debugdump quest
+/ainpc debugdump story
+```
+
+Verifica:
+
+- progresia apare in `player-progressions.json`;
+- statusul/stage-ul se schimba conform mecanicii testate;
+- `story-events.json` nu primeste event nou pentru acest slice;
+- daca definitia contine `record_story_event`, atunci nu este `quest_only`, ci `writes_story`.
+
+### `writes_story`
+
+Scop: completarea progresiei produce exact story action-ul declarat.
+
+Comenzi orientative:
+
+```text
+/ainpc audit quest strict
+/ainpc progression stored all all
+/ainpc debugdump quest
+/ainpc debugdump story
+```
+
+Verifica:
+
+- auditul vede actiunea `record_story_event` sau `set_story_state`;
+- inainte de completare, event-ul asteptat lipseste sau are timestamp anterior;
+- dupa completare, `story-events.json` sau `story-states.json` contine exact scope-ul asteptat;
+- in `story-events.json`, campul `progression_link` indica progresia, scenariul si action-ul `record_story_event` care au scris event-ul, cand legatura este unica;
+- dupa restart, progresul si story-ul raman coerente.
+
+Raport recomandat:
+
+```text
+Data:
+Build/JAR:
+Server/Paper:
+World:
+Region/place:
+Story mode: story_only | quest_only | writes_story
+Commands run:
+Expected progression change:
+Actual progression change:
+Expected story change:
+Actual story change:
+Context priority result: Progression > Story > Memory > AI text
+Context conflicts:
+Debugdump files:
+Restart result:
+Issues:
+Decision:
+```
+
+`Decision=blocked` este corect cand lipseste un writer sigur pentru `story_only`, cand mapping-ul nu exista sau cand questul testat are alta incadrare story decat cea declarata.
+
+Pentru `Context priority result`, noteaza explicit daca un text AI sau o memorie ar contrazice progresul ori story state-ul. Rezultatul corect este ca progresul validat castiga peste story, story castiga peste memorie, iar AI text ramane doar explicatie/generare, nu sursa de adevar.
 
 ## Testare NPC auto-indexat din villager
 

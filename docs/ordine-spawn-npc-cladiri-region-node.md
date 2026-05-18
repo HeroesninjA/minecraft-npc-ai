@@ -1,6 +1,6 @@
 # Ordine spawn NPC, cladiri, regiuni si node-uri - v2
 
-Actualizat: 2026-05-03
+Actualizat: 2026-05-11
 
 Versiune: v2
 
@@ -46,6 +46,7 @@ Implementat initial:
 - audit spawn-order pentru case, rezidenti, ancore si familie reciproca
 - routine MVP pe `home/work/social anchors`
 - scanner vanilla si semantic mapper initial
+- patch planner read-only initial prin `/ainpc patch analyze|plan|validate`
 
 Nu este complet inca:
 
@@ -56,7 +57,7 @@ Nu este complet inca:
 - nu exista tabele `households`, `household_residents` si `spawn_batches`
 - `npc_world_bindings` exista initial, dar mai trebuie inspectie/backfill matur
 - rollback-ul global practic nu este tranzactie DB completa
-- nu exista patch planner/builder complet pentru lipsuri de sat
+- nu exista inca persistenta/commit pentru `PatchPlan` si nici builder complet pentru lipsuri de sat
 
 ## Regula de baza ramasa valabila
 
@@ -418,6 +419,12 @@ Scop:
 Document:
 
 - `patch-planner.md`
+
+Status:
+
+- scannerul vanilla si mapperul semantic exista initial
+- `VillageGapAnalyzer` si `VillagePatchPlanner` exista initial read-only
+- `NativePatchBuilder`/`WorldEditAdapter`, persistenta planurilor si integrarea completa in `SettlementPlan` raman viitoare
 
 Pipeline recomandat:
 

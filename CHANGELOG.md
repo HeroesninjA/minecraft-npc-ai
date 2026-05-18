@@ -37,6 +37,11 @@ Formatul este orientat pe intrari scurte, verificabile:
 - Comenzi read-only pentru story state persistent: `/ainpc story region <regionId>`, `/ainpc story place <placeId>` si `/ainpc story events <regionId|placeId> [limit]`.
 - Actiuni de quest `set_story_state` si `record_story_event`, executate controlat la finalizarea questului.
 - `QuestEntryDefinition` pastreaza acum metadata, `variables` si `payload` din YAML pentru actiuni non-item.
+- `VillageGapAnalyzer` read-only pentru capacitate, case/paturi, workplace-uri cerute, social hub, quest trigger si node-uri lipsa in mapping.
+- `VillagePatchPlanner` read-only pentru transformarea gap-urilor in `PatchCandidate` si `PatchPlan`, cu prioritate, cost, risc, build mode si validare de capabilitati.
+- Modele initiale pentru patch planner: `GapReport`, `VillageGap`, `PatchCandidate`, `PatchPlan`, `PatchPlannerResult`, `PatchPlannerOptions`, `PatchGapType`, `PatchType`, `PatchBuildMode` si `PatchValidationStatus`.
+- Comanda admin read-only `/ainpc patch analyze|plan|validate <regionId> [targetPopulation] [profesiiCSV]`.
+- `QuestDirector` read-only cu `QuestDirectorRequest` si `QuestDirectorDecision`, pentru decizii `no_action`, `candidate_found`, `seed_suggested` sau `blocked` fara executie de progres.
 
 ### Changed
 
@@ -65,6 +70,7 @@ Formatul este orientat pe intrari scurte, verificabile:
 - `world-mapping.json` include un `semantic_index` pentru tokenii folositi de resolverul de ancore, inclusiv tag-uri de place si metadata de node.
 - `/ainpc audit quest` foloseste `semantic_index` ca sa avertizeze cand obiectivele `visit_region`, `visit_place` sau `inspect_node` cer tokeni care lipsesc din mapping-ul curent.
 - `quest-audit-report.txt` din `/ainpc debugdump quest` valideaza aceiasi candidati jucabili si foloseste acelasi `semantic_index`, inclusiv pentru contracte non-`QUEST`.
+- `/ainpc audit quest strict` verifica toate randurile din `quest_anchor_bindings`, iar auditul valideaza `objective_key` fata de definitia progresiei incarcate.
 
 ### Docs
 
@@ -82,6 +88,23 @@ Formatul este orientat pe intrari scurte, verificabile:
 - Actualizat `TODO.md`, `docs/progression-service.md` si `docs/lucru-alternat-quest-mapping-progression.md` pentru slice-ul C02 mapping/contract/progression.
 - Actualizat `TODO.md` pentru a muta persistenta story initiala la functionalitati existente.
 - Actualizate documentele de stare pentru story: `docs/story-context-service.md`, `docs/story-si-context-ai.md`, `docs/implementat-deja.md`, `docs/faze-observatii-avertizari.md`, `docs/README.md` si `docs/categorii/03-quest-story-ai/README.md`.
+- Actualizat `docs/quest-anchor-bindings.md`, `docs/lucru-alternat-quest-mapping-progression.md` si `TODO.md` pentru auditul strict al anchor bindings.
+- Actualizat `docs/patch-planner.md`, indexurile de documentatie, `docs/implementat-deja.md`, `docs/generare-sate-fara-worldedit.md`, `docs/ordine-spawn-npc-cladiri-region-node.md` si `TODO.md` pentru implementarea initiala read-only a Patch Planner.
+- Creat `docs/generare-automata-questuri-ai.md` si actualizate indexurile pentru contractul `QuestSeed`/`QuestDraft`, validare, review admin si export YAML dezactivat.
+- Documentata regula story-driven quest selection: story-ul decide directia prin context/`QuestDirector`, iar `ProgressionService` ramane proprietarul executiei questului.
+- Extins `docs/lucru-alternat-quest-mapping-progression.md` si `docs/implementat-deja.md` cu patch planner read-only, story vs quest independent, `QuestDirector`, `QuestDraft` AI, sablon de slice, contracte GUI/debug, exemple concrete, raport standard de smoke si fazele F101-F120.
+- Adaugat in `docs/debugging-si-testare.md` smoke test-ul read-only pentru Patch Planner si raportul standard pentru `/ainpc patch analyze|plan|validate`.
+- Documentata integrarea fara conflict intre `WorldContext`, `StoryContext`, `MemoryContext` si `ProgressionContext`, inclusiv proprietari unici si prioritatea `Progression > Story > Memory > AI text`.
+- Actualizat protocolul de lucru alternat ca story-ul sa fie fir principal: `Quest, Mapping, Story, ProgressionService si GUI`, cu pas dedicat pentru story baseline peste mapping si fazele F121-F135 pentru story lane.
+- Adaugat in `docs/debugging-si-testare.md` smoke test-ul Story Lane pentru `story_only`, `quest_only` si `writes_story`, inclusiv cazul `blocked` cand lipseste writer sigur pentru story fara quest.
+- Extins auditul quest/debugdump cu verificare initiala pentru contradictii story/progression: progresie completata cu `record_story_event`, dar fara `story_event` asociat detectabil prin payload.
+- Extins `story-events.json` din debugdump cu `progression_link` pentru legatura story event -> progresie/scenariu/action `record_story_event`, cand legatura este unica.
+- Adaugat `StoryGui` read-only pentru `/ainpc gui story`, cu region state, place state, story events recente si fallback text catre comenzile `/ainpc story ...`.
+- Documentata matricea de permisiuni story: `read_only`, `write_admin` si `write_runtime`, cu regula ca AI-ul si GUI-ul story nu scriu direct in persistenta.
+- Intarita validarea pack-urilor pentru story actions: scope `region`/`place`, target, `event_key` obligatoriu si payload minim pentru `record_story_event`.
+- Extins `QuestDirectorTest` cu caz story demand + preferinta de mecanica, confirmand ca selectia ramane read-only (`runtimeExecutable=false`).
+- Adaugate teste pentru story local fara NPC tinta, story regional si blocaj `QuestDirector` cu motiv story condition lipsa.
+- Extins raportul `Smoke Test Story Lane` cu verificarea prioritatii `Progression > Story > Memory > AI text` si camp pentru conflicte de context.
 
 ### Tests
 
@@ -100,8 +123,12 @@ Formatul este orientat pe intrari scurte, verificabile:
 - Adaugat `ProgressionFilterTest` pentru filtre explicite pe definitii si progresii persistate.
 - Adaugat test pentru indexul semantic din world mapping pe cazul `market`/`quest_board`.
 - Extins `ProgressionRepositoryTest` pentru metadata si filtre `scenarioKind`/`baseType`.
-- Rulat `mvn test`.
-- Rezultat: `100` teste trecute, `0` esecuri.
+- Extins `AINPCTabCompleterTest` pentru optiunile `/ainpc audit quest strict|full`.
+- Adaugat `VillagePatchPlannerTest` pentru gap analyzer, planificare read-only si mapping-ul demo cu populatie initiala jucabila.
+- Extins `AINPCTabCompleterTest` pentru `/ainpc patch analyze|plan|validate`.
+- Adaugat `QuestDirectorTest` pentru selectie determinista story-driven, blocaje, seed suggestion si garantia ca decizia nu este executabila runtime.
+- Rulat `mvn -pl ainpc-core-plugin -am "-Dtest=QuestDirectorTest,VillagePatchPlannerTest,AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test`.
+- Rezultat focalizat: `21` teste trecute, `0` esecuri.
 
 ### Remaining
 

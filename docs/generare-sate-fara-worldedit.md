@@ -1,15 +1,18 @@
 # Generare de Sate Fara WorldEdit
 
-Actualizat: 2026-04-29
+Actualizat: 2026-05-11
 
 Status curent:
 
 - `VanillaVillageScanner` exista initial in cod
 - `SemanticVillageMapper` exista initial in cod
+- `VillageGapAnalyzer` exista initial in cod si produce `GapReport` read-only
+- `VillagePatchPlanner` exista initial in cod si produce `PatchPlan` read-only
 - comanda `/ainpc world scan village [radius]` face dry-run
 - comanda `/ainpc world scan village [radius] import [regionId]` importa mapping semantic runtime
+- comanda `/ainpc patch analyze|plan|validate <regionId> [targetPopulation] [profesiiCSV]` inspecteaza gap-uri si planuri fara scrieri
 - `/ainpc world save` persista mapping-ul rezultat in `config.yml`
-- `VillageGapAnalyzer`, `VillagePatchPlanner`, `NativePatchBuilder` si `NpcBinder` raman de implementat
+- `NativePatchBuilder`, commit-ul semantic-only si integrarea completa cu `SettlementPlan` raman de implementat
 
 ## Scop
 
@@ -184,6 +187,12 @@ Rol:
 - nu construieste nimic
 - produce o lista de probleme si recomandari
 
+Status implementare initiala:
+
+- calculeaza capacitate din `max_residents`, apoi din node-uri `bed` sau `home`
+- detecteaza lipsa de capacitate, workplace-uri pentru profesii cerute, social hub, quest trigger si node-uri de intrare/work
+- este expus prin `/ainpc patch analyze`
+
 Exemple de lipsuri:
 
 ```text
@@ -202,9 +211,15 @@ Pentru contractul dedicat, vezi `patch-planner.md`.
 Rol:
 
 - decide patch-uri mici, nu reconstructie completa
-- gaseste loturi libere langa sat
-- respecta stilul vanilla si biomul
-- foloseste proportiile minime definite in document
+- transforma gap-urile in candidati si planuri inspectabile
+- marcheaza capabilitatile lipsa in loc sa execute modificari
+- prefera patch-uri semantic-only cand sunt suficiente
+
+Status implementare initiala:
+
+- produce `PatchCandidate` si `PatchPlan` read-only prin `/ainpc patch plan|validate`
+- valideaza doar capabilitati declarate; implicit este permisa doar `semantic-place-mapping`
+- patch-urile care cer `native-block-build` raman propuneri blocate pana exista builder
 
 Patch-uri permise:
 

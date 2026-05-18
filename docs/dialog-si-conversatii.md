@@ -1,6 +1,6 @@
 # Dialog si Conversatii
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-11
 
 ## Scop
 
@@ -143,6 +143,23 @@ Cand promptul devine prea mare, prioritatea trebuie sa fie:
 8. memorii relevante;
 9. rutina NPC;
 10. stil si ton.
+
+Separarea surselor este obligatorie:
+
+```text
+WORLD_CONTEXT:
+STORY_CONTEXT:
+MEMORY_CONTEXT:
+PROGRESSION_CONTEXT:
+```
+
+Regula de conflict:
+
+```text
+Progression > Story > Memory > AI text
+```
+
+Memoria NPC-ului coloreaza reactia, dar nu poate contrazice progresul curent sau story state-ul real.
 
 Ce nu trebuie trimis in prompt:
 
