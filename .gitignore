@@ -1,12 +1,1 @@
-# Project exclude paths
-/target/
-/ainpc-api/target/
-/ainpc-core-plugin/target/
-/ainpc-scenario-medieval/target/
-/.gradle/
-/.kotlin/
-/build/
-/ainpc-api/build/
-/ainpc-core-plugin/build/
-/ainpc-scenario-medieval/build/
-/debug-logs/
+# Intentionally left empty so all project files/folders can be tracked in Git.
