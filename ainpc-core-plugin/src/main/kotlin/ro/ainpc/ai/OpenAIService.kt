@@ -97,10 +97,6 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     @Throws(IOException::class)
     private fun callOpenAI(prompt: String, expectedSpeakerName: String?): String {
-        if (apiKey.isBlank()) {
-            throw IOException("Cheia API OpenAI lipseste. Seteaza openai.api_key sau OPENAI_API_KEY.")
-        }
-
         val requestBody = JsonObject()
         requestBody.addProperty("model", model)
         requestBody.addProperty("input", prompt)
@@ -187,7 +183,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     val isAvailable: Boolean
-        get() = apiKey.isNotBlank() && !isInOfflineBackoffWindow()
+        get() = !isInOfflineBackoffWindow()
 
     private fun isInOfflineBackoffWindow(): Boolean {
         return System.currentTimeMillis() < offlineRetryAfterMillis

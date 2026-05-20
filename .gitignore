@@ -1,1 +1,3 @@
-# Intentionally left empty so all project files/folders can be tracked in Git.
+# MCP local indexing/changelog state
+.mcp-index-manifest.json
+.mcp-changelog-state.json

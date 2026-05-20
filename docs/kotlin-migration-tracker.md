@@ -3483,6 +3483,48 @@ Fisiere modificate:
 Motiv:
 - aliniaza documentatia la starea reala a migrarii (95% Kotlin in core, module si teste convertite, slice-uri noi)
 
+### KOT-142
+
+Data: 2026-05-19
+ID: KOT-142
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `DebugDumpIO.kt`
+
+Fisiere modificate:
+- `DebugDumpService.java` (delegare IO catre utilitar Kotlin)
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Slice incremental pentru conversia `DebugDumpService`: operatiile de IO (`writeText`, `writeJson`, citire `latest.log`) au fost mutate in Kotlin fara schimbare functionala.
+
+### KOT-143
+
+Data: 2026-05-19
+ID: KOT-143
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `DebugDumpFormatting.kt`
+
+Fisiere modificate:
+- `DebugDumpService.java` (delegare formatting/config/openai helpers catre Kotlin)
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- `normalizeScope`, `sanitizeConfig` si `buildOpenAiInfo` au fost mutate in utilitar Kotlin, cu acelasi comportament functional.
+
 ### KOT-133
 
 Data: 2026-05-17

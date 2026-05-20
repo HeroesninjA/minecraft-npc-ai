@@ -103,15 +103,7 @@ public class DebugDumpService {
     }
 
     private String normalizeScope(String scope) {
-        if (scope == null || scope.isBlank()) {
-            return "all";
-        }
-
-        String normalized = scope.trim().toLowerCase();
-        return switch (normalized) {
-            case "all", "npc", "world", "quest", "story", "openai" -> normalized;
-            default -> "all";
-        };
+        return DebugDumpFormatting.normalizeScope(scope);
     }
 
     private String buildSummary(String scope, Path dumpRoot) {
@@ -164,13 +156,7 @@ public class DebugDumpService {
     }
 
     private String sanitizeConfig(FileConfiguration config) {
-        if (config == null) {
-            return "# config indisponibil\n";
-        }
-
-        String raw = config.saveToString();
-        return raw.replaceAll("(?m)^(\\s*api_key\\s*:\\s*).*$", "$1\"<redacted>\"")
-            .replaceAll("(?m)^(\\s*openai_api_key\\s*:\\s*).*$", "$1\"<redacted>\"");
+        return DebugDumpFormatting.sanitizeConfig(config);
     }
 
     private String buildAuditText() {
@@ -2318,38 +2304,11 @@ public class DebugDumpService {
     }
 
     private String buildOpenAiInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("OpenAI diagnostics snapshot\n");
-        sb.append("base_url: ").append(plugin.getConfig().getString("openai.base_url", "")).append("\n");
-        sb.append("model: ").append(plugin.getConfig().getString("openai.model", "")).append("\n");
-        sb.append("api_key: <redacted>\n");
-        sb.append("diagnostics.enabled: ").append(plugin.getConfig().getBoolean("openai.diagnostics.enabled", false)).append("\n");
-        sb.append("diagnostics.check_on_startup: ").append(plugin.getConfig().getBoolean("openai.diagnostics.check_on_startup", false)).append("\n");
-        sb.append("Note: network probe is not run by debugdump. Use /ainpc test or scripts/debug-openai.ps1.\n");
-        return sb.toString();
+        return DebugDumpFormatting.buildOpenAiInfo(plugin.getConfig());
     }
 
     private String readRecentServerLog() {
-        Path serverRoot = plugin.getDataFolder().toPath().getParent();
-        if (serverRoot != null) {
-            serverRoot = serverRoot.getParent();
-        }
-        if (serverRoot == null) {
-            return "Server root indisponibil.\n";
-        }
-
-        Path latestLog = serverRoot.resolve("logs").resolve("latest.log");
-        if (!Files.exists(latestLog)) {
-            return "latest.log indisponibil la " + latestLog.toAbsolutePath() + "\n";
-        }
-
-        try {
-            List<String> lines = Files.readAllLines(latestLog, StandardCharsets.UTF_8);
-            int fromIndex = Math.max(0, lines.size() - RECENT_LOG_LINES);
-            return String.join(System.lineSeparator(), lines.subList(fromIndex, lines.size())) + System.lineSeparator();
-        } catch (IOException exception) {
-            return "Nu pot citi latest.log: " + exception.getMessage() + "\n";
-        }
+        return DebugDumpIO.readRecentServerLog(plugin.getDataFolder().toPath(), RECENT_LOG_LINES);
     }
 
     private void auditHouseSpawnOrder(WorldAdminApi worldAdmin,
@@ -2412,11 +2371,11 @@ public class DebugDumpService {
     }
 
     private void writeJson(Path path, Object value) throws IOException {
-        writeText(path, gson.toJson(value));
+        DebugDumpIO.writeJson(path, value, gson);
     }
 
     private void writeText(Path path, String content) throws IOException {
-        Files.writeString(path, content, StandardCharsets.UTF_8);
+        DebugDumpIO.writeText(path, content);
     }
 
     public record DebugDumpResult(Path directory, String scope) {

@@ -4,9 +4,12 @@
 
 # Setari OpenAI
 openai:
-  # Endpointul de baza pentru OpenAI API. Pentru configuratia standard lasa /v1.
+  # Endpointul runtime folosit de pluginul AINPC.
+  # Nu folosi aici endpoint-ul local al editorului/Codex (ex: localhost:3000),
+  # ca sa nu amesteci traficul de dezvoltare cu traficul pluginului.
   base_url: "https://api.openai.com/v1"
-  # Cheia API OpenAI. Poate fi lasata goala daca folosesti variabila de mediu OPENAI_API_KEY.
+  # Cheia API pentru runtime plugin. Recomandat prin variabila de mediu OPENAI_API_KEY.
+  # Evita commit cu cheia in config.
   api_key: ""
   # Modelul nano recomandat pentru cost si latenta.
   model: "gpt-5.4-nano"
