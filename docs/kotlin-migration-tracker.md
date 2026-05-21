@@ -3525,6 +3525,212 @@ Gate local:
 Observatii:
 - `normalizeScope`, `sanitizeConfig` si `buildOpenAiInfo` au fost mutate in utilitar Kotlin, cu acelasi comportament functional.
 
+### KOT-144
+
+Data: 2026-05-20
+ID: KOT-144
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `DebugDumpServerSnapshot.kt`
+
+Fisiere modificate:
+- `DebugDumpService.java` (delegare summary/server snapshot catre Kotlin)
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- `summary.txt` si `server.txt` sunt construite acum din Kotlin, fara schimbare de format intentionata.
+
+### KOT-145
+
+Data: 2026-05-20
+ID: KOT-145
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `DebugDumpNpcJson.kt`
+
+Fisiere modificate:
+- `DebugDumpService.java` (delegare `npcs.json` catre Kotlin)
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Serializarea JSON pentru NPC-uri si `owned_locations` a fost mutata in Kotlin; avertismentele introduse initial de nullability au fost curatate.
+
+### KOT-146
+
+Data: 2026-05-20
+ID: KOT-146
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `DebugDumpWorldJson.kt`
+
+Fisiere modificate:
+- `DebugDumpService.java` (delegare `world-mapping.json` catre Kotlin)
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Serializarea JSON pentru world mapping (`regions`, `places`, `nodes`, `semantic_index`) a fost mutata in Kotlin folosind helper-ele existente din `DebugDumpSupport`.
+
+### KOT-147
+
+Data: 2026-05-20
+ID: KOT-147
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- `addStoredJson` a fost mutat in Kotlin si este consumat prin importul static existent din `DebugDumpService`.
+- MCP context server a fost verificat in acelasi flux cu `context_pack`; logul Docker a ramas fara `Remote embeddings failed`.
+
+### KOT-148
+
+Data: 2026-05-20
+ID: KOT-148
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpWorldJson.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- `buildWorldMappingSemanticIndexForAudit` a fost mutat in Kotlin si este apelat din auditul de questuri.
+- MCP context server a fost folosit pentru context inaintea editarii; logul Docker a ramas curat.
+
+### KOT-149
+
+Data: 2026-05-20
+ID: KOT-149
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Helper-ele `hasStoryEventProgressionKey`, `addStoryEventProgressionKey` si `storyEventProgressionKey` au fost mutate in Kotlin si sunt consumate prin importul static existent.
+- MCP context server a fost folosit pentru context inaintea editarii; logul Docker a ramas curat.
+
+### KOT-150
+
+Data: 2026-05-20
+ID: KOT-150
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Helper-ele `questEntryStage`, `isQuestRuntimeStage`, `collectQuestObjectiveReferences`, `questStageReferencesObjective` si `stageReferencesObjective` au fost mutate in Kotlin si sunt consumate prin importul static existent.
+- Warning-urile Kotlin de nullability aparute initial in slice au fost curatate inainte de validare.
+- MCP context server a fost folosit pentru context inaintea editarii; logul Docker a ramas curat.
+
+### KOT-151
+
+Data: 2026-05-20
+ID: KOT-151
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Helper-ele `addScenarioLookupKey`, `findScenarioForProgressionRow` si `hasRecordStoryEventAction` au fost mutate in Kotlin si sunt consumate prin importul static existent.
+- Slice-ul pastreaza `buildProgressionScenarioLookup` in Java pentru ca depinde direct de `plugin`, dar scoate lookup-ul pur in `DebugDumpSupport`.
+- MCP context server a fost folosit pentru context inaintea editarii.
+
+### KOT-152
+
+Data: 2026-05-20
+ID: KOT-152
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Helper-ul `findRecordStoryEventAction` a fost mutat in Kotlin si ramane apelat din `storyProgressionLinkJson` prin importul static existent.
+- Conversia pastreaza fallback-ul pe primul reward `record_story_event` cand `event_key` nu potriveste explicit.
+
+### KOT-153
+
+Data: 2026-05-20
+ID: KOT-153
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 1
+
+Fisiere modificate:
+- `DebugDumpSupport.kt`
+- `DebugDumpService.java`
+
+Gate local:
+- `.\gradlew.bat :ainpc-core-plugin:compileJava --rerun-tasks` (PASS)
+
+Observatii:
+- Helper-ele `questStagesJson` si `questStageJson` au fost mutate in Kotlin si primesc explicit instanta `Gson` din `DebugDumpService`.
+- Conversia pastreaza aceleasi campuri JSON pentru stage-uri: `id`, `description`, `completion_mode`, `next_stage`, `objective_ids`, `metadata`.
+- Prima rulare a prins diferenta de interop pentru `getNextStageId()`, corectata inainte de validarea finala.
+
 ### KOT-133
 
 Data: 2026-05-17

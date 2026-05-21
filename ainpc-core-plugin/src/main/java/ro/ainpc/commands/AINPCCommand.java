@@ -17,6 +17,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import ro.ainpc.AINPCPlugin;
+import ro.ainpc.ai.OpenAIDebugSnapshot;
 import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.debug.DebugDumpService;
 import ro.ainpc.debug.WorldMappingSemanticIndex;
@@ -9494,6 +9495,31 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
+        OpenAIDebugSnapshot snapshot = plugin.getOpenAIService().captureDebugSnapshot();
+        plugin.getMessageUtils().send(sender, "&eModel runtime: &f" + snapshot.getModel());
+        plugin.getMessageUtils().send(sender, "&eEndpoint runtime: &f" + snapshot.getBaseUrl());
+        plugin.getMessageUtils().send(sender, "&eBackoff: &f" + (snapshot.getBackoffActive()
+            ? "activ (" + snapshot.getBackoffRemainingSeconds() + "s)"
+            : "inactiv"));
+        if (snapshot.getLastPromptChars() > 0) {
+            plugin.getMessageUtils().send(sender, "&eUltimul prompt: &f" + snapshot.getLastPromptChars()
+                + " chars &7la &f" + formatStoryTime(snapshot.getLastRequestAtMillis()));
+        }
+        if (snapshot.getLastResponseChars() > 0) {
+            plugin.getMessageUtils().send(sender, "&eUltimul raspuns model: &f" + snapshot.getLastResponseChars()
+                + " chars &7la &f" + formatStoryTime(snapshot.getLastResponseAtMillis()));
+        }
+        if (snapshot.getLastFailureAtMillis() > 0) {
+            plugin.getMessageUtils().send(sender, "&eUltima eroare OpenAI: &f"
+                + sanitizeForChat(snapshot.getLastFailureMessage())
+                + " &7la &f" + formatStoryTime(snapshot.getLastFailureAtMillis()));
+        }
+        if (snapshot.getLastFallbackAtMillis() > 0) {
+            plugin.getMessageUtils().send(sender, "&eUltimul fallback: &f"
+                + sanitizeForChat(snapshot.getLastFallbackReason())
+                + " &7la &f" + formatStoryTime(snapshot.getLastFallbackAtMillis()));
+        }
+
         plugin.getMessageUtils().send(sender, "&7Testare conexiune OpenAI...");
 
         plugin.getOpenAIService().diagnoseConnection(true).thenAccept(status -> {
@@ -9520,6 +9546,17 @@ public class AINPCCommand implements CommandExecutor {
         });
 
         return true;
+    }
+
+    private String sanitizeForChat(String message) {
+        if (message == null || message.isBlank()) {
+            return "<gol>";
+        }
+        return message
+            .replace("&", "")
+            .replace('\n', ' ')
+            .replace('\r', ' ')
+            .trim();
     }
 
     /**

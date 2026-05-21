@@ -2,6 +2,7 @@ package ro.ainpc.debug
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonArray
+import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
@@ -98,6 +99,18 @@ object DebugDumpSupport {
             if (parsed.isJsonObject) parsed.asJsonObject else null
         } catch (ignored: JsonSyntaxException) {
             null
+        }
+    }
+
+    @JvmStatic
+    fun addStoredJson(root: JsonObject, key: String, rawValue: String?) {
+        val safeRawValue = if (rawValue.isNullOrBlank()) "{}" else rawValue
+        try {
+            val parsed = JsonParser.parseString(safeRawValue)
+            root.add(key, parsed)
+        } catch (exception: JsonSyntaxException) {
+            root.addProperty("${key}_raw", safeRawValue)
+            root.addProperty("${key}_parse_error", exception.message)
         }
     }
 
@@ -251,6 +264,245 @@ object DebugDumpSupport {
         } catch (exception: IllegalStateException) {
             ""
         }
+    }
+
+    @JvmStatic
+    fun hasStoryEventProgressionKey(
+        keys: Set<String>,
+        playerUuid: String?,
+        templateId: String?,
+        questCode: String?
+    ): Boolean {
+        return keys.contains(storyEventProgressionKey(playerUuid, templateId)) ||
+            keys.contains(storyEventProgressionKey(playerUuid, questCode)) ||
+            keys.contains(storyEventProgressionKey("", templateId)) ||
+            keys.contains(storyEventProgressionKey("", questCode))
+    }
+
+    @JvmStatic
+    fun addStoryEventProgressionKey(keys: MutableSet<String>, playerUuid: String?, selector: String?) {
+        val key = storyEventProgressionKey(playerUuid, selector)
+        if (key.isNotBlank()) {
+            keys.add(key)
+        }
+    }
+
+    @JvmStatic
+    fun storyEventProgressionKey(playerUuid: String?, selector: String?): String {
+        val normalizedSelector = normalizeKey(selector)
+        if (normalizedSelector.isBlank()) {
+            return ""
+        }
+        return "${valueOrEmpty(playerUuid)}|$normalizedSelector"
+    }
+
+    @JvmStatic
+    fun addScenarioLookupKey(
+        lookup: MutableMap<String, FeaturePackLoader.ScenarioDefinition>,
+        key: String?,
+        scenario: FeaturePackLoader.ScenarioDefinition
+    ) {
+        val normalized = normalizeKey(key)
+        if (normalized.isNotBlank()) {
+            lookup.putIfAbsent(normalized, scenario)
+        }
+    }
+
+    @JvmStatic
+    fun findScenarioForProgressionRow(
+        templateId: String?,
+        questCode: String?,
+        scenariosBySelector: Map<String, FeaturePackLoader.ScenarioDefinition>?
+    ): FeaturePackLoader.ScenarioDefinition? {
+        if (scenariosBySelector.isNullOrEmpty()) {
+            return null
+        }
+
+        var scenario = scenariosBySelector[normalizeKey(templateId)]
+        if (scenario != null) {
+            return scenario
+        }
+
+        scenario = scenariosBySelector[normalizeKey(questCode)]
+        if (scenario != null) {
+            return scenario
+        }
+
+        return scenariosBySelector[normalizeKey(lastSelectorSegment(templateId))]
+    }
+
+    @JvmStatic
+    fun hasRecordStoryEventAction(scenario: FeaturePackLoader.ScenarioDefinition?): Boolean {
+        if (scenario == null) {
+            return false
+        }
+
+        for (reward in scenario.rewards) {
+            if (normalizeQuestRewardType(reward.type) == "record_story_event") {
+                return true
+            }
+        }
+        return false
+    }
+
+    @JvmStatic
+    fun findRecordStoryEventAction(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        eventKey: String?
+    ): FeaturePackLoader.QuestEntryDefinition? {
+        if (scenario == null) {
+            return null
+        }
+
+        var fallback: FeaturePackLoader.QuestEntryDefinition? = null
+        val normalizedEventKey = normalizeKey(eventKey)
+        for (reward in scenario.rewards) {
+            if (normalizeQuestRewardType(reward.type) != "record_story_event") {
+                continue
+            }
+            if (fallback == null) {
+                fallback = reward
+            }
+            val actionEventKey = questEntryMetadata(reward, "event_key", "key")
+            if (normalizedEventKey.isNotBlank() && normalizeKey(actionEventKey) == normalizedEventKey) {
+                return reward
+            }
+        }
+        return fallback
+    }
+
+    @JvmStatic
+    fun questStagesJson(
+        stages: List<FeaturePackLoader.QuestStageDefinition>?,
+        gson: Gson
+    ): JsonArray {
+        val json = JsonArray()
+        if (stages.isNullOrEmpty()) {
+            return json
+        }
+
+        for (stage in stages) {
+            json.add(questStageJson(stage, gson))
+        }
+        return json
+    }
+
+    @JvmStatic
+    fun questStageJson(
+        stage: FeaturePackLoader.QuestStageDefinition?,
+        gson: Gson
+    ): JsonObject {
+        val json = JsonObject()
+        if (stage == null) {
+            return json
+        }
+
+        json.addProperty("id", valueOrEmpty(stage.id))
+        json.addProperty("description", valueOrEmpty(stage.description))
+        json.addProperty("completion_mode", valueOrEmpty(stage.completionMode))
+        json.addProperty("next_stage", valueOrEmpty(stage.getNextStageId()))
+        json.add("objective_ids", gson.toJsonTree(stage.objectiveIds))
+        json.add("metadata", gson.toJsonTree(stage.metadata))
+        return json
+    }
+
+    @JvmStatic
+    fun questEntryStage(entry: FeaturePackLoader.QuestEntryDefinition?): String {
+        if (entry == null) {
+            return ""
+        }
+
+        return firstNonBlank(
+            entry.metadata["stage_id"],
+            entry.metadata["stage"],
+            entry.metadata["phase"],
+            entry.metadata["current_stage_id"],
+            entry.metadata["current_phase"],
+            entry.variables["stage_id"],
+            entry.variables["stage"],
+            entry.variables["phase"],
+        )
+    }
+
+    @JvmStatic
+    fun isQuestRuntimeStage(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        normalizedStageId: String?
+    ): Boolean {
+        if (scenario == null || normalizedStageId.isNullOrBlank()) {
+            return false
+        }
+
+        for (stage in scenario.questStages) {
+            if (normalizeKey(stage.id) != normalizedStageId) {
+                continue
+            }
+            if (stage.objectiveIds.isNotEmpty()) {
+                return true
+            }
+            for (objective in scenario.objectives) {
+                if (normalizeKey(questEntryStage(objective)) == normalizedStageId) {
+                    return true
+                }
+            }
+            return false
+        }
+        return false
+    }
+
+    @JvmStatic
+    fun collectQuestObjectiveReferences(
+        objectives: List<FeaturePackLoader.QuestEntryDefinition>?
+    ): Set<String> {
+        val references = LinkedHashSet<String>()
+        if (objectives == null) {
+            return references
+        }
+        for (objective in objectives) {
+            references.add(normalizeQuestStageReference(objective.entryId))
+            references.add(normalizeQuestStageReference(objective.itemId))
+        }
+        references.remove("")
+        return references
+    }
+
+    @JvmStatic
+    fun questStageReferencesObjective(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        objective: FeaturePackLoader.QuestEntryDefinition?
+    ): Boolean {
+        if (scenario == null || objective == null || scenario.questStages.isEmpty()) {
+            return false
+        }
+
+        for (stage in scenario.questStages) {
+            if (stageReferencesObjective(stage, objective)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    @JvmStatic
+    fun stageReferencesObjective(
+        stage: FeaturePackLoader.QuestStageDefinition?,
+        objective: FeaturePackLoader.QuestEntryDefinition?
+    ): Boolean {
+        if (stage == null || objective == null || stage.objectiveIds.isEmpty()) {
+            return false
+        }
+
+        val entryId = normalizeQuestStageReference(objective.entryId)
+        val itemId = normalizeQuestStageReference(objective.itemId)
+        for (objectiveId in stage.objectiveIds) {
+            val normalizedObjective = normalizeQuestStageReference(objectiveId)
+            if (normalizedObjective.isNotBlank() &&
+                (normalizedObjective == entryId || normalizedObjective == itemId)
+            ) {
+                return true
+            }
+        }
+        return false
     }
 
     @JvmStatic

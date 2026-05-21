@@ -1,6 +1,6 @@
 # Operare si Hardening
 
-Actualizat: 2026-05-06
+Actualizat: 2026-05-21
 
 Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentru productie.
 
@@ -9,6 +9,7 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 | Document | Rol |
 |---|---|
 | `../../server-admin-runbook.md` | Runbook pentru instalare, config minim, verificari, audit, debugdump si smoke test pe Paper |
+| `../../mcp-docker-server-mvp-si-faze.md` | Checklist pentru serverul MCP din Docker, integrare Codex/JetBrains, vector DB, watchers, backup si faze ulterioare |
 | `../../release-checklist.md` | Checklist pentru build, inspectie JAR, test Paper, audit, restart si rollback |
 | `../../audit.md` | Documentatie pentru `/ainpc audit` si backlog de verificari |
 | `../../debugging-si-testare.md` | Testare Maven, debug dump, smoke tests |

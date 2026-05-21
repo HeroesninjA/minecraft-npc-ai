@@ -3,11 +3,7 @@ package ro.ainpc.debug;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
@@ -66,16 +62,16 @@ public class DebugDumpService {
             .resolve("debug-dump-" + DUMP_TIMESTAMP.format(LocalDateTime.now()));
         Files.createDirectories(dumpRoot);
 
-        writeText(dumpRoot.resolve("summary.txt"), buildSummary(normalizedScope, dumpRoot));
-        writeText(dumpRoot.resolve("server.txt"), buildServerInfo());
+        writeText(dumpRoot.resolve("summary.txt"), DebugDumpServerSnapshot.buildSummary(normalizedScope, dumpRoot, plugin));
+        writeText(dumpRoot.resolve("server.txt"), DebugDumpServerSnapshot.buildServerInfo(plugin));
         writeText(dumpRoot.resolve("config-sanitized.yml"), sanitizeConfig(plugin.getConfig()));
         writeText(dumpRoot.resolve("audit.txt"), buildAuditText());
 
         if ("all".equals(normalizedScope) || "npc".equals(normalizedScope)) {
-            writeJson(dumpRoot.resolve("npcs.json"), buildNpcsJson());
+            writeJson(dumpRoot.resolve("npcs.json"), DebugDumpNpcJson.buildNpcsJson(plugin));
         }
         if ("all".equals(normalizedScope) || "world".equals(normalizedScope)) {
-            writeJson(dumpRoot.resolve("world-mapping.json"), buildWorldMappingJson());
+            writeJson(dumpRoot.resolve("world-mapping.json"), DebugDumpWorldJson.buildWorldMappingJson(plugin));
             writeJson(dumpRoot.resolve("npc-world-bindings.json"), buildNpcWorldBindingsJson());
             writeJson(dumpRoot.resolve("households.json"), buildHouseholdsJson());
             writeJson(dumpRoot.resolve("spawn-batches.json"), buildSpawnBatchesJson());
@@ -104,55 +100,6 @@ public class DebugDumpService {
 
     private String normalizeScope(String scope) {
         return DebugDumpFormatting.normalizeScope(scope);
-    }
-
-    private String buildSummary(String scope, Path dumpRoot) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("AINPC Debug Dump\n");
-        sb.append("Generated: ").append(LocalDateTime.now()).append("\n");
-        sb.append("Scope: ").append(scope).append("\n");
-        sb.append("Path: ").append(dumpRoot.toAbsolutePath()).append("\n");
-        sb.append("Plugin version: ").append(plugin.getPluginMeta().getVersion()).append("\n");
-        sb.append("NPC count: ").append(plugin.getNpcManager() != null ? plugin.getNpcManager().getNPCCount() : 0).append("\n");
-
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin != null) {
-            sb.append("World admin enabled: ").append(worldAdmin.isEnabled()).append("\n");
-            sb.append("Regions: ").append(worldAdmin.getRegionCount()).append("\n");
-            sb.append("Places: ").append(worldAdmin.getPlaceCount()).append("\n");
-            sb.append("Nodes: ").append(worldAdmin.getNodeCount()).append("\n");
-        }
-
-        sb.append("\nFiles:\n");
-        sb.append("- summary.txt\n");
-        sb.append("- server.txt\n");
-        sb.append("- config-sanitized.yml\n");
-        sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, households.json, spawn-batches.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n");
-        sb.append("- recent-server-log.txt\n");
-        return sb.toString();
-    }
-
-    private String buildServerInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Server: ").append(plugin.getServer().getName()).append("\n");
-        sb.append("Bukkit version: ").append(plugin.getServer().getBukkitVersion()).append("\n");
-        sb.append("Minecraft version: ").append(plugin.getServer().getMinecraftVersion()).append("\n");
-        sb.append("Java version: ").append(System.getProperty("java.version")).append("\n");
-        sb.append("Java vendor: ").append(System.getProperty("java.vendor")).append("\n");
-        sb.append("OS: ").append(System.getProperty("os.name")).append(" ")
-            .append(System.getProperty("os.version")).append(" ")
-            .append(System.getProperty("os.arch")).append("\n");
-        sb.append("Online players: ").append(plugin.getServer().getOnlinePlayers().size()).append("\n");
-        sb.append("\nLoaded worlds:\n");
-        for (World world : plugin.getServer().getWorlds()) {
-            sb.append("- ").append(world.getName())
-                .append(" env=").append(world.getEnvironment())
-                .append(" loadedChunks=").append(world.getLoadedChunks().length)
-                .append(" entities=").append(world.getEntities().size())
-                .append("\n");
-        }
-        return sb.toString();
     }
 
     private String sanitizeConfig(FileConfiguration config) {
@@ -226,102 +173,6 @@ public class DebugDumpService {
         return sb.toString();
     }
 
-    private JsonArray buildNpcsJson() {
-        JsonArray npcs = new JsonArray();
-        if (plugin.getNpcManager() == null) {
-            return npcs;
-        }
-
-        plugin.getNpcManager().getAllNPCs().stream()
-            .sorted(Comparator.comparing(AINPC::getDatabaseId))
-            .forEach(npc -> npcs.add(toNpcJson(npc)));
-        return npcs;
-    }
-
-    private JsonObject toNpcJson(AINPC npc) {
-        JsonObject json = new JsonObject();
-        json.addProperty("database_id", npc.getDatabaseId());
-        json.addProperty("uuid", npc.getUuid() != null ? npc.getUuid().toString() : "");
-        json.addProperty("name", npc.getName());
-        json.addProperty("display_name", npc.getDisplayName());
-        json.addProperty("profile_source", npc.getProfileSource());
-        json.addProperty("source_key", npc.getSourceKey());
-        json.addProperty("profile_created", npc.isProfileCreated());
-        json.addProperty("occupation", npc.getOccupation());
-        json.addProperty("age", npc.getAge());
-        json.addProperty("gender", npc.getGender());
-        json.addProperty("spawned", npc.isSpawned());
-        json.addProperty("world", npc.getWorldName());
-        json.addProperty("x", npc.getX());
-        json.addProperty("y", npc.getY());
-        json.addProperty("z", npc.getZ());
-        json.addProperty("current_state", npc.getCurrentState() != null ? npc.getCurrentState().name() : "");
-        json.addProperty("current_goal", npc.getCurrentGoal());
-        json.addProperty("planned_routine_activity", npc.getPlannedRoutineActivity());
-        json.add("owned_locations", ownedLocationsJson(npc));
-        json.addProperty("profile_summary", npc.getProfileSummary());
-        return json;
-    }
-
-    private JsonObject ownedLocationsJson(AINPC npc) {
-        JsonObject owned = new JsonObject();
-        addOwnedLocation(owned, "home", npc.getHomeAnchor());
-        addOwnedLocation(owned, "work", npc.getWorkAnchor());
-        addOwnedLocation(owned, "social", npc.getSocialAnchor());
-        return owned;
-    }
-
-    private void addOwnedLocation(JsonObject root, String key, AINPC.OwnedLocation location) {
-        if (location == null) {
-            return;
-        }
-        JsonObject json = new JsonObject();
-        json.addProperty("type", location.type());
-        json.addProperty("label", location.label());
-        json.addProperty("world", location.worldName());
-        json.addProperty("x", location.x());
-        json.addProperty("y", location.y());
-        json.addProperty("z", location.z());
-        root.add(key, json);
-    }
-
-    private JsonObject buildWorldMappingJson() {
-        JsonObject root = new JsonObject();
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin == null) {
-            root.addProperty("enabled", false);
-            root.addProperty("error", "WorldAdmin indisponibil");
-            return root;
-        }
-
-        root.addProperty("enabled", worldAdmin.isEnabled());
-        root.addProperty("world_mode", worldAdmin.getWorldMode().getId());
-
-        JsonArray regions = new JsonArray();
-        worldAdmin.getRegions().stream()
-            .sorted(Comparator.comparing(WorldRegionInfo::id))
-            .forEach(region -> regions.add(toRegionJson(region)));
-        root.add("regions", regions);
-
-        JsonArray places = new JsonArray();
-        worldAdmin.getPlaces().stream()
-            .sorted(Comparator.comparing(WorldPlaceInfo::id))
-            .forEach(place -> places.add(toPlaceJson(place)));
-        root.add("places", places);
-
-        JsonArray nodes = new JsonArray();
-        worldAdmin.getNodes().stream()
-            .sorted(Comparator.comparing(WorldNodeInfo::id))
-            .forEach(node -> nodes.add(toNodeJson(node)));
-        root.add("nodes", nodes);
-        root.add("semantic_index", worldMappingSemanticIndexJson(WorldMappingSemanticIndex.from(
-            worldAdmin.getRegions(),
-            worldAdmin.getPlaces(),
-            worldAdmin.getNodes()
-        )));
-        return root;
-    }
-
     private String buildQuestAuditReportText() {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
@@ -350,7 +201,7 @@ public class DebugDumpService {
             return;
         }
 
-        WorldMappingSemanticIndex worldSemanticIndex = buildWorldMappingSemanticIndexForAudit();
+        WorldMappingSemanticIndex worldSemanticIndex = DebugDumpWorldJson.buildWorldMappingSemanticIndexForAudit(plugin);
         int questCount = 0;
         for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
             if (!isLoadedQuestDefinitionCandidate(scenario)) {
@@ -372,20 +223,6 @@ public class DebugDumpService {
         if (questCount == 0) {
             warnings.add("Nu exista definitii jucabile incarcate pentru quest/progression.");
         }
-    }
-
-    private WorldMappingSemanticIndex buildWorldMappingSemanticIndexForAudit() {
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
-            return null;
-        }
-
-        WorldMappingSemanticIndex index = WorldMappingSemanticIndex.from(
-            worldAdmin.getRegions(),
-            worldAdmin.getPlaces(),
-            worldAdmin.getNodes()
-        );
-        return index.hasAnyCandidates() ? index : null;
     }
 
     private void auditQuestEntries(String templateId,
@@ -502,23 +339,6 @@ public class DebugDumpService {
         auditQuestStageDefinitions(templateId, scenario, knownPhases, errors, warnings);
     }
 
-    private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null) {
-            return "";
-        }
-
-        return firstNonBlank(
-            entry.getMetadata().get("stage_id"),
-            entry.getMetadata().get("stage"),
-            entry.getMetadata().get("phase"),
-            entry.getMetadata().get("current_stage_id"),
-            entry.getMetadata().get("current_phase"),
-            entry.getVariables().get("stage_id"),
-            entry.getVariables().get("stage"),
-            entry.getVariables().get("phase")
-        );
-    }
-
     private void auditQuestStageDefinitions(String templateId,
                                             FeaturePackLoader.ScenarioDefinition scenario,
                                             Set<String> knownPhases,
@@ -610,76 +430,6 @@ public class DebugDumpService {
             warnings.add(templateId + " stage " + stage.getId()
                 + " are next_stage catre o faza fara obiective runtime: " + nextStage + ".");
         }
-    }
-
-    private boolean isQuestRuntimeStage(FeaturePackLoader.ScenarioDefinition scenario, String normalizedStageId) {
-        if (scenario == null || normalizedStageId == null || normalizedStageId.isBlank()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
-            if (stage == null || !normalizeKey(stage.getId()).equals(normalizedStageId)) {
-                continue;
-            }
-            if (!stage.getObjectiveIds().isEmpty()) {
-                return true;
-            }
-            for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
-                if (normalizeKey(questEntryStage(objective)).equals(normalizedStageId)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return false;
-    }
-
-    private Set<String> collectQuestObjectiveReferences(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        Set<String> references = new HashSet<>();
-        if (objectives == null) {
-            return references;
-        }
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (objective == null) {
-                continue;
-            }
-            references.add(normalizeQuestStageReference(objective.getEntryId()));
-            references.add(normalizeQuestStageReference(objective.getItemId()));
-        }
-        references.remove("");
-        return references;
-    }
-
-    private boolean questStageReferencesObjective(FeaturePackLoader.ScenarioDefinition scenario,
-                                                  FeaturePackLoader.QuestEntryDefinition objective) {
-        if (scenario == null || objective == null || scenario.getQuestStages().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
-            if (stageReferencesObjective(stage, objective)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
-                                             FeaturePackLoader.QuestEntryDefinition objective) {
-        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
-            return false;
-        }
-
-        String entryId = normalizeQuestStageReference(objective.getEntryId());
-        String itemId = normalizeQuestStageReference(objective.getItemId());
-        for (String objectiveId : stage.getObjectiveIds()) {
-            String normalizedObjective = normalizeQuestStageReference(objectiveId);
-            if (!normalizedObjective.isBlank()
-                && (normalizedObjective.equals(entryId) || normalizedObjective.equals(itemId))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void auditQuestPersistence(List<String> errors, List<String> warnings) {
@@ -953,71 +703,6 @@ public class DebugDumpService {
         return lookup;
     }
 
-    private void addScenarioLookupKey(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
-                                      String key,
-                                      FeaturePackLoader.ScenarioDefinition scenario) {
-        String normalized = normalizeKey(key);
-        if (!normalized.isBlank()) {
-            lookup.putIfAbsent(normalized, scenario);
-        }
-    }
-
-    private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
-        String templateId,
-        String questCode,
-        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector
-    ) {
-        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
-            return null;
-        }
-        FeaturePackLoader.ScenarioDefinition scenario = scenariosBySelector.get(normalizeKey(templateId));
-        if (scenario != null) {
-            return scenario;
-        }
-        scenario = scenariosBySelector.get(normalizeKey(questCode));
-        if (scenario != null) {
-            return scenario;
-        }
-        return scenariosBySelector.get(normalizeKey(lastSelectorSegment(templateId)));
-    }
-
-    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
-        if (scenario == null) {
-            return false;
-        }
-        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
-            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasStoryEventProgressionKey(Set<String> keys,
-                                                String playerUuid,
-                                                String templateId,
-                                                String questCode) {
-        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
-            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
-            || keys.contains(storyEventProgressionKey("", templateId))
-            || keys.contains(storyEventProgressionKey("", questCode));
-    }
-
-    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
-        String key = storyEventProgressionKey(playerUuid, selector);
-        if (!key.isBlank()) {
-            keys.add(key);
-        }
-    }
-
-    private String storyEventProgressionKey(String playerUuid, String selector) {
-        String normalizedSelector = normalizeKey(selector);
-        if (normalizedSelector.isBlank()) {
-            return "";
-        }
-        return valueOrEmpty(playerUuid) + "|" + normalizedSelector;
-    }
-
     private JsonObject buildLoadedQuestDefinitionsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source", "FeaturePackLoader#getAllScenarios");
@@ -1120,7 +805,7 @@ public class DebugDumpService {
         json.add("tags", gson.toJsonTree(scenario.getQuestTags()));
         json.add("prerequisites", gson.toJsonTree(scenario.getQuestPrerequisites()));
         json.add("phases", gson.toJsonTree(scenario.getPhases()));
-        json.add("stages", questStagesJson(scenario.getQuestStages()));
+        json.add("stages", questStagesJson(scenario.getQuestStages(), gson));
         json.add("preferred_topologies", gson.toJsonTree(scenario.getPreferredTopologies()));
         json.add("narrative_hints", gson.toJsonTree(scenario.getNarrativeHints()));
         json.add("roles", scenarioRolesJson(scenario.getRoles()));
@@ -1201,33 +886,6 @@ public class DebugDumpService {
         json.addProperty("progress_enabled", mechanic.isProgressEnabled());
         json.addProperty("max_active", mechanic.getMaxActive());
         json.add("metadata", gson.toJsonTree(mechanic.getMetadata()));
-        return json;
-    }
-
-    private JsonArray questStagesJson(List<FeaturePackLoader.QuestStageDefinition> stages) {
-        JsonArray json = new JsonArray();
-        if (stages == null || stages.isEmpty()) {
-            return json;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : stages) {
-            json.add(questStageJson(stage));
-        }
-        return json;
-    }
-
-    private JsonObject questStageJson(FeaturePackLoader.QuestStageDefinition stage) {
-        JsonObject json = new JsonObject();
-        if (stage == null) {
-            return json;
-        }
-
-        json.addProperty("id", valueOrEmpty(stage.getId()));
-        json.addProperty("description", valueOrEmpty(stage.getDescription()));
-        json.addProperty("completion_mode", valueOrEmpty(stage.getCompletionMode()));
-        json.addProperty("next_stage", valueOrEmpty(stage.getNextStageId()));
-        json.add("objective_ids", gson.toJsonTree(stage.getObjectiveIds()));
-        json.add("metadata", gson.toJsonTree(stage.getMetadata()));
         return json;
     }
 
@@ -1778,17 +1436,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private void addStoredJson(JsonObject root, String key, String rawValue) {
-        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
-        try {
-            JsonElement parsed = JsonParser.parseString(safeRawValue);
-            root.add(key, parsed);
-        } catch (JsonSyntaxException exception) {
-            root.addProperty(key + "_raw", safeRawValue);
-            root.addProperty(key + "_parse_error", exception.getMessage());
-        }
-    }
-
     private JsonObject buildQuestAnchorBindingsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source_table", "quest_anchor_bindings");
@@ -2248,30 +1895,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private FeaturePackLoader.QuestEntryDefinition findRecordStoryEventAction(
-        FeaturePackLoader.ScenarioDefinition scenario,
-        String eventKey
-    ) {
-        if (scenario == null) {
-            return null;
-        }
-        FeaturePackLoader.QuestEntryDefinition fallback = null;
-        String normalizedEventKey = normalizeKey(eventKey);
-        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
-            if (!"record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
-                continue;
-            }
-            if (fallback == null) {
-                fallback = reward;
-            }
-            String actionEventKey = questEntryMetadata(reward, "event_key", "key");
-            if (!normalizedEventKey.isBlank() && normalizeKey(actionEventKey).equals(normalizedEventKey)) {
-                return reward;
-            }
-        }
-        return fallback;
-    }
-
     private JsonObject storyActionJson(FeaturePackLoader.QuestEntryDefinition action,
                                        StoryProgressionLink link) {
         JsonObject json = new JsonObject();
@@ -2304,7 +1927,10 @@ public class DebugDumpService {
     }
 
     private String buildOpenAiInfo() {
-        return DebugDumpFormatting.buildOpenAiInfo(plugin.getConfig());
+        return DebugDumpFormatting.buildOpenAiInfo(
+            plugin.getConfig(),
+            plugin.getOpenAIService().captureDebugSnapshot()
+        );
     }
 
     private String readRecentServerLog() {

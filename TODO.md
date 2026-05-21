@@ -150,11 +150,11 @@ Actualizat: 2026-05-11
 - [x] `ScenarioVariableProvider`
 - [x] `ScenarioValidationReport`
 - [x] `AIOrchestrationService` initial, dezactivat implicit pentru executie reala prin `ai.orchestration.enabled`
-- [ ] Validator pentru addonuri si feature pack-uri:
-- [ ] verificare `dependencies`
-- [ ] verificare `capabilities`
-- [ ] verificare compatibilitate cu `RuntimeMode`
-- [ ] mesaje clare la load pentru incompatibilitati
+- [x] Validator initial pentru addonuri si feature pack-uri:
+- [x] verificare `dependencies`
+- [x] verificare `capabilities`
+- [x] verificare compatibilitate cu `RuntimeMode`
+- [x] mesaje clare la load pentru incompatibilitati
 - [x] Multi-quest runtime matur pe jucator, cu UX complet pentru prioritizare, grupare si actiuni rapide in `quest log`
 - [ ] Sistem semantic de `places` peste world admin:
 - [ ] locuri de tip `fierarie`, `taverna`, `casa_fierarului`
@@ -235,7 +235,7 @@ Actualizat: 2026-05-11
 
 - [ ] Comenzi mai bune pentru inspectarea starii unui NPC
 - [x] Audit/debugdump dedicat pentru story state si story events
-- [ ] Debug pentru prompt, model AI si raspuns fallback
+- [x] Debug pentru prompt, model AI si raspuns fallback
 - [ ] Reload sigur pentru config, pack-uri si scenarii
 - [ ] Mesaje de eroare mai clare pentru configuratii invalide
 
