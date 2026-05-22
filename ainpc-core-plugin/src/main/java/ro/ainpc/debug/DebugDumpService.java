@@ -3,24 +3,13 @@ package ro.ainpc.debug;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import ro.ainpc.AINPCPlugin;
-import ro.ainpc.api.WorldAdminApi;
 import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.engine.QuestScenarioContract;
 import ro.ainpc.engine.ScenarioEngine;
-import ro.ainpc.npc.AINPC;
 import ro.ainpc.progression.ProgressionDefinition;
-import ro.ainpc.progression.StoredProgression;
-import ro.ainpc.progression.StoredProgressionSummary;
-import ro.ainpc.world.WorldNodeInfo;
-import ro.ainpc.world.WorldPlaceInfo;
-import ro.ainpc.world.WorldRegionInfo;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -66,19 +55,19 @@ public class DebugDumpService {
             .resolve("debug-dump-" + DUMP_TIMESTAMP.format(LocalDateTime.now()));
         Files.createDirectories(dumpRoot);
 
-        writeText(dumpRoot.resolve("summary.txt"), buildSummary(normalizedScope, dumpRoot));
-        writeText(dumpRoot.resolve("server.txt"), buildServerInfo());
+        writeText(dumpRoot.resolve("summary.txt"), DebugDumpServerSnapshot.buildSummary(normalizedScope, dumpRoot, plugin));
+        writeText(dumpRoot.resolve("server.txt"), DebugDumpServerSnapshot.buildServerInfo(plugin));
         writeText(dumpRoot.resolve("config-sanitized.yml"), sanitizeConfig(plugin.getConfig()));
-        writeText(dumpRoot.resolve("audit.txt"), buildAuditText());
+        writeText(dumpRoot.resolve("audit.txt"), DebugDumpAudit.buildAuditText(plugin));
 
         if ("all".equals(normalizedScope) || "npc".equals(normalizedScope)) {
-            writeJson(dumpRoot.resolve("npcs.json"), buildNpcsJson());
+            writeJson(dumpRoot.resolve("npcs.json"), DebugDumpNpcJson.buildNpcsJson(plugin));
         }
         if ("all".equals(normalizedScope) || "world".equals(normalizedScope)) {
-            writeJson(dumpRoot.resolve("world-mapping.json"), buildWorldMappingJson());
-            writeJson(dumpRoot.resolve("npc-world-bindings.json"), buildNpcWorldBindingsJson());
-            writeJson(dumpRoot.resolve("households.json"), buildHouseholdsJson());
-            writeJson(dumpRoot.resolve("spawn-batches.json"), buildSpawnBatchesJson());
+            writeJson(dumpRoot.resolve("world-mapping.json"), DebugDumpWorldJson.buildWorldMappingJson(plugin));
+            writeJson(dumpRoot.resolve("npc-world-bindings.json"), DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJson(plugin));
+            writeJson(dumpRoot.resolve("households.json"), DebugDumpSpawnPersistenceJson.buildHouseholdsJson(plugin));
+            writeJson(dumpRoot.resolve("spawn-batches.json"), DebugDumpSpawnPersistenceJson.buildSpawnBatchesJson(plugin));
         }
         if ("all".equals(normalizedScope) || "quest".equals(normalizedScope)) {
             writeText(dumpRoot.resolve("quests.yml"), plugin.getQuestConfig() != null
@@ -86,9 +75,9 @@ public class DebugDumpService {
                 : "# questConfig indisponibil\n");
             writeText(dumpRoot.resolve("quest-audit-report.txt"), buildQuestAuditReportText());
             writeJson(dumpRoot.resolve("loaded-quest-definitions.json"), buildLoadedQuestDefinitionsJson());
-            writeJson(dumpRoot.resolve("player-progressions.json"), buildPlayerProgressionsJson());
-            writeJson(dumpRoot.resolve("player-quest-progress.json"), buildPlayerQuestProgressJson());
-            writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), buildQuestAnchorBindingsJson());
+            writeJson(dumpRoot.resolve("player-progressions.json"), DebugDumpProgressionJson.buildPlayerProgressionsJson(plugin));
+            writeJson(dumpRoot.resolve("player-quest-progress.json"), DebugDumpProgressionJson.buildPlayerQuestProgressJson(plugin));
+            writeJson(dumpRoot.resolve("quest-anchor-bindings.json"), DebugDumpProgressionJson.buildQuestAnchorBindingsJson(plugin));
         }
         if ("all".equals(normalizedScope) || "quest".equals(normalizedScope) || "story".equals(normalizedScope)) {
             writeJson(dumpRoot.resolve("story-states.json"), buildStoryStatesJson());
@@ -103,237 +92,11 @@ public class DebugDumpService {
     }
 
     private String normalizeScope(String scope) {
-        if (scope == null || scope.isBlank()) {
-            return "all";
-        }
-
-        String normalized = scope.trim().toLowerCase();
-        return switch (normalized) {
-            case "all", "npc", "world", "quest", "story", "openai" -> normalized;
-            default -> "all";
-        };
-    }
-
-    private String buildSummary(String scope, Path dumpRoot) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("AINPC Debug Dump\n");
-        sb.append("Generated: ").append(LocalDateTime.now()).append("\n");
-        sb.append("Scope: ").append(scope).append("\n");
-        sb.append("Path: ").append(dumpRoot.toAbsolutePath()).append("\n");
-        sb.append("Plugin version: ").append(plugin.getPluginMeta().getVersion()).append("\n");
-        sb.append("NPC count: ").append(plugin.getNpcManager() != null ? plugin.getNpcManager().getNPCCount() : 0).append("\n");
-
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin != null) {
-            sb.append("World admin enabled: ").append(worldAdmin.isEnabled()).append("\n");
-            sb.append("Regions: ").append(worldAdmin.getRegionCount()).append("\n");
-            sb.append("Places: ").append(worldAdmin.getPlaceCount()).append("\n");
-            sb.append("Nodes: ").append(worldAdmin.getNodeCount()).append("\n");
-        }
-
-        sb.append("\nFiles:\n");
-        sb.append("- summary.txt\n");
-        sb.append("- server.txt\n");
-        sb.append("- config-sanitized.yml\n");
-        sb.append("- audit.txt\n");
-        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, households.json, spawn-batches.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n");
-        sb.append("- recent-server-log.txt\n");
-        return sb.toString();
-    }
-
-    private String buildServerInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Server: ").append(plugin.getServer().getName()).append("\n");
-        sb.append("Bukkit version: ").append(plugin.getServer().getBukkitVersion()).append("\n");
-        sb.append("Minecraft version: ").append(plugin.getServer().getMinecraftVersion()).append("\n");
-        sb.append("Java version: ").append(System.getProperty("java.version")).append("\n");
-        sb.append("Java vendor: ").append(System.getProperty("java.vendor")).append("\n");
-        sb.append("OS: ").append(System.getProperty("os.name")).append(" ")
-            .append(System.getProperty("os.version")).append(" ")
-            .append(System.getProperty("os.arch")).append("\n");
-        sb.append("Online players: ").append(plugin.getServer().getOnlinePlayers().size()).append("\n");
-        sb.append("\nLoaded worlds:\n");
-        for (World world : plugin.getServer().getWorlds()) {
-            sb.append("- ").append(world.getName())
-                .append(" env=").append(world.getEnvironment())
-                .append(" loadedChunks=").append(world.getLoadedChunks().length)
-                .append(" entities=").append(world.getEntities().size())
-                .append("\n");
-        }
-        return sb.toString();
+        return DebugDumpFormatting.normalizeScope(scope);
     }
 
     private String sanitizeConfig(FileConfiguration config) {
-        if (config == null) {
-            return "# config indisponibil\n";
-        }
-
-        String raw = config.saveToString();
-        return raw.replaceAll("(?m)^(\\s*api_key\\s*:\\s*).*$", "$1\"<redacted>\"")
-            .replaceAll("(?m)^(\\s*openai_api_key\\s*:\\s*).*$", "$1\"<redacted>\"");
-    }
-
-    private String buildAuditText() {
-        List<String> warnings = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
-
-        if (plugin.getNpcManager() == null) {
-            errors.add("NPCManager indisponibil.");
-        } else {
-            for (AINPC npc : plugin.getNpcManager().getAllNPCs()) {
-                String label = npc.getName() + "#" + npc.getDatabaseId();
-                if (npc.getUuid() == null) {
-                    errors.add(label + " nu are UUID.");
-                }
-                if (npc.getHomeAnchor() == null) {
-                    warnings.add(label + " nu are homeAnchor.");
-                }
-                if (npc.getWorkAnchor() == null) {
-                    warnings.add(label + " nu are workAnchor.");
-                }
-                if (!npc.isProfileCreated()) {
-                    warnings.add(label + " nu are profil persistent creat.");
-                }
-                if (npc.getOccupation() == null || npc.getOccupation().isBlank()) {
-                    warnings.add(label + " nu are ocupatie.");
-                }
-            }
-        }
-
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
-            warnings.add("World admin dezactivat sau indisponibil.");
-        } else {
-            if (worldAdmin.getRegionCount() == 0) {
-                warnings.add("World admin este activ, dar nu are regiuni.");
-            }
-            if (worldAdmin.getPlaceCount() == 0) {
-                warnings.add("World admin nu are places.");
-            }
-            for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
-                if (place.placeType().getId().equals("house") && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
-                    warnings.add("Casa fara owner_npc_id: " + place.id());
-                }
-                if (isWorkplace(place) && worldAdmin.getNodesForPlace(place.id()).isEmpty()) {
-                    warnings.add("Loc de munca fara nodes: " + place.id());
-                }
-                if (isHousePlace(place)) {
-                    auditHouseSpawnOrder(worldAdmin, place, warnings, errors);
-                }
-            }
-            for (WorldNodeInfo node : worldAdmin.getNodes()) {
-                if (node.radius() <= 0) {
-                    errors.add("Node cu raza invalida: " + node.id());
-                }
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("Errors: ").append(errors.size()).append("\n");
-        for (String error : errors) {
-            sb.append("[ERROR] ").append(error).append("\n");
-        }
-        sb.append("\nWarnings: ").append(warnings.size()).append("\n");
-        for (String warning : warnings) {
-            sb.append("[WARN] ").append(warning).append("\n");
-        }
-        return sb.toString();
-    }
-
-    private JsonArray buildNpcsJson() {
-        JsonArray npcs = new JsonArray();
-        if (plugin.getNpcManager() == null) {
-            return npcs;
-        }
-
-        plugin.getNpcManager().getAllNPCs().stream()
-            .sorted(Comparator.comparing(AINPC::getDatabaseId))
-            .forEach(npc -> npcs.add(toNpcJson(npc)));
-        return npcs;
-    }
-
-    private JsonObject toNpcJson(AINPC npc) {
-        JsonObject json = new JsonObject();
-        json.addProperty("database_id", npc.getDatabaseId());
-        json.addProperty("uuid", npc.getUuid() != null ? npc.getUuid().toString() : "");
-        json.addProperty("name", npc.getName());
-        json.addProperty("display_name", npc.getDisplayName());
-        json.addProperty("profile_source", npc.getProfileSource());
-        json.addProperty("source_key", npc.getSourceKey());
-        json.addProperty("profile_created", npc.isProfileCreated());
-        json.addProperty("occupation", npc.getOccupation());
-        json.addProperty("age", npc.getAge());
-        json.addProperty("gender", npc.getGender());
-        json.addProperty("spawned", npc.isSpawned());
-        json.addProperty("world", npc.getWorldName());
-        json.addProperty("x", npc.getX());
-        json.addProperty("y", npc.getY());
-        json.addProperty("z", npc.getZ());
-        json.addProperty("current_state", npc.getCurrentState() != null ? npc.getCurrentState().name() : "");
-        json.addProperty("current_goal", npc.getCurrentGoal());
-        json.addProperty("planned_routine_activity", npc.getPlannedRoutineActivity());
-        json.add("owned_locations", ownedLocationsJson(npc));
-        json.addProperty("profile_summary", npc.getProfileSummary());
-        return json;
-    }
-
-    private JsonObject ownedLocationsJson(AINPC npc) {
-        JsonObject owned = new JsonObject();
-        addOwnedLocation(owned, "home", npc.getHomeAnchor());
-        addOwnedLocation(owned, "work", npc.getWorkAnchor());
-        addOwnedLocation(owned, "social", npc.getSocialAnchor());
-        return owned;
-    }
-
-    private void addOwnedLocation(JsonObject root, String key, AINPC.OwnedLocation location) {
-        if (location == null) {
-            return;
-        }
-        JsonObject json = new JsonObject();
-        json.addProperty("type", location.type());
-        json.addProperty("label", location.label());
-        json.addProperty("world", location.worldName());
-        json.addProperty("x", location.x());
-        json.addProperty("y", location.y());
-        json.addProperty("z", location.z());
-        root.add(key, json);
-    }
-
-    private JsonObject buildWorldMappingJson() {
-        JsonObject root = new JsonObject();
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin == null) {
-            root.addProperty("enabled", false);
-            root.addProperty("error", "WorldAdmin indisponibil");
-            return root;
-        }
-
-        root.addProperty("enabled", worldAdmin.isEnabled());
-        root.addProperty("world_mode", worldAdmin.getWorldMode().getId());
-
-        JsonArray regions = new JsonArray();
-        worldAdmin.getRegions().stream()
-            .sorted(Comparator.comparing(WorldRegionInfo::id))
-            .forEach(region -> regions.add(toRegionJson(region)));
-        root.add("regions", regions);
-
-        JsonArray places = new JsonArray();
-        worldAdmin.getPlaces().stream()
-            .sorted(Comparator.comparing(WorldPlaceInfo::id))
-            .forEach(place -> places.add(toPlaceJson(place)));
-        root.add("places", places);
-
-        JsonArray nodes = new JsonArray();
-        worldAdmin.getNodes().stream()
-            .sorted(Comparator.comparing(WorldNodeInfo::id))
-            .forEach(node -> nodes.add(toNodeJson(node)));
-        root.add("nodes", nodes);
-        root.add("semantic_index", worldMappingSemanticIndexJson(WorldMappingSemanticIndex.from(
-            worldAdmin.getRegions(),
-            worldAdmin.getPlaces(),
-            worldAdmin.getNodes()
-        )));
-        return root;
+        return DebugDumpFormatting.sanitizeConfig(config);
     }
 
     private String buildQuestAuditReportText() {
@@ -364,7 +127,7 @@ public class DebugDumpService {
             return;
         }
 
-        WorldMappingSemanticIndex worldSemanticIndex = buildWorldMappingSemanticIndexForAudit();
+        WorldMappingSemanticIndex worldSemanticIndex = DebugDumpWorldJson.buildWorldMappingSemanticIndexForAudit(plugin);
         int questCount = 0;
         for (FeaturePackLoader.ScenarioDefinition scenario : featurePackLoader.getAllScenarios()) {
             if (!isLoadedQuestDefinitionCandidate(scenario)) {
@@ -386,20 +149,6 @@ public class DebugDumpService {
         if (questCount == 0) {
             warnings.add("Nu exista definitii jucabile incarcate pentru quest/progression.");
         }
-    }
-
-    private WorldMappingSemanticIndex buildWorldMappingSemanticIndexForAudit() {
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
-            return null;
-        }
-
-        WorldMappingSemanticIndex index = WorldMappingSemanticIndex.from(
-            worldAdmin.getRegions(),
-            worldAdmin.getPlaces(),
-            worldAdmin.getNodes()
-        );
-        return index.hasAnyCandidates() ? index : null;
     }
 
     private void auditQuestEntries(String templateId,
@@ -516,23 +265,6 @@ public class DebugDumpService {
         auditQuestStageDefinitions(templateId, scenario, knownPhases, errors, warnings);
     }
 
-    private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null) {
-            return "";
-        }
-
-        return firstNonBlank(
-            entry.getMetadata().get("stage_id"),
-            entry.getMetadata().get("stage"),
-            entry.getMetadata().get("phase"),
-            entry.getMetadata().get("current_stage_id"),
-            entry.getMetadata().get("current_phase"),
-            entry.getVariables().get("stage_id"),
-            entry.getVariables().get("stage"),
-            entry.getVariables().get("phase")
-        );
-    }
-
     private void auditQuestStageDefinitions(String templateId,
                                             FeaturePackLoader.ScenarioDefinition scenario,
                                             Set<String> knownPhases,
@@ -624,76 +356,6 @@ public class DebugDumpService {
             warnings.add(templateId + " stage " + stage.getId()
                 + " are next_stage catre o faza fara obiective runtime: " + nextStage + ".");
         }
-    }
-
-    private boolean isQuestRuntimeStage(FeaturePackLoader.ScenarioDefinition scenario, String normalizedStageId) {
-        if (scenario == null || normalizedStageId == null || normalizedStageId.isBlank()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
-            if (stage == null || !normalizeKey(stage.getId()).equals(normalizedStageId)) {
-                continue;
-            }
-            if (!stage.getObjectiveIds().isEmpty()) {
-                return true;
-            }
-            for (FeaturePackLoader.QuestEntryDefinition objective : scenario.getObjectives()) {
-                if (normalizeKey(questEntryStage(objective)).equals(normalizedStageId)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return false;
-    }
-
-    private Set<String> collectQuestObjectiveReferences(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        Set<String> references = new HashSet<>();
-        if (objectives == null) {
-            return references;
-        }
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (objective == null) {
-                continue;
-            }
-            references.add(normalizeQuestStageReference(objective.getEntryId()));
-            references.add(normalizeQuestStageReference(objective.getItemId()));
-        }
-        references.remove("");
-        return references;
-    }
-
-    private boolean questStageReferencesObjective(FeaturePackLoader.ScenarioDefinition scenario,
-                                                  FeaturePackLoader.QuestEntryDefinition objective) {
-        if (scenario == null || objective == null || scenario.getQuestStages().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : scenario.getQuestStages()) {
-            if (stageReferencesObjective(stage, objective)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
-                                             FeaturePackLoader.QuestEntryDefinition objective) {
-        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
-            return false;
-        }
-
-        String entryId = normalizeQuestStageReference(objective.getEntryId());
-        String itemId = normalizeQuestStageReference(objective.getItemId());
-        for (String objectiveId : stage.getObjectiveIds()) {
-            String normalizedObjective = normalizeQuestStageReference(objectiveId);
-            if (!normalizedObjective.isBlank()
-                && (normalizedObjective.equals(entryId) || normalizedObjective.equals(itemId))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void auditQuestPersistence(List<String> errors, List<String> warnings) {
@@ -967,71 +629,6 @@ public class DebugDumpService {
         return lookup;
     }
 
-    private void addScenarioLookupKey(Map<String, FeaturePackLoader.ScenarioDefinition> lookup,
-                                      String key,
-                                      FeaturePackLoader.ScenarioDefinition scenario) {
-        String normalized = normalizeKey(key);
-        if (!normalized.isBlank()) {
-            lookup.putIfAbsent(normalized, scenario);
-        }
-    }
-
-    private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
-        String templateId,
-        String questCode,
-        Map<String, FeaturePackLoader.ScenarioDefinition> scenariosBySelector
-    ) {
-        if (scenariosBySelector == null || scenariosBySelector.isEmpty()) {
-            return null;
-        }
-        FeaturePackLoader.ScenarioDefinition scenario = scenariosBySelector.get(normalizeKey(templateId));
-        if (scenario != null) {
-            return scenario;
-        }
-        scenario = scenariosBySelector.get(normalizeKey(questCode));
-        if (scenario != null) {
-            return scenario;
-        }
-        return scenariosBySelector.get(normalizeKey(lastSelectorSegment(templateId)));
-    }
-
-    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
-        if (scenario == null) {
-            return false;
-        }
-        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
-            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasStoryEventProgressionKey(Set<String> keys,
-                                                String playerUuid,
-                                                String templateId,
-                                                String questCode) {
-        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
-            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
-            || keys.contains(storyEventProgressionKey("", templateId))
-            || keys.contains(storyEventProgressionKey("", questCode));
-    }
-
-    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
-        String key = storyEventProgressionKey(playerUuid, selector);
-        if (!key.isBlank()) {
-            keys.add(key);
-        }
-    }
-
-    private String storyEventProgressionKey(String playerUuid, String selector) {
-        String normalizedSelector = normalizeKey(selector);
-        if (normalizedSelector.isBlank()) {
-            return "";
-        }
-        return valueOrEmpty(playerUuid) + "|" + normalizedSelector;
-    }
-
     private JsonObject buildLoadedQuestDefinitionsJson() {
         JsonObject root = new JsonObject();
         root.addProperty("source", "FeaturePackLoader#getAllScenarios");
@@ -1134,7 +731,7 @@ public class DebugDumpService {
         json.add("tags", gson.toJsonTree(scenario.getQuestTags()));
         json.add("prerequisites", gson.toJsonTree(scenario.getQuestPrerequisites()));
         json.add("phases", gson.toJsonTree(scenario.getPhases()));
-        json.add("stages", questStagesJson(scenario.getQuestStages()));
+        json.add("stages", questStagesJson(scenario.getQuestStages(), gson));
         json.add("preferred_topologies", gson.toJsonTree(scenario.getPreferredTopologies()));
         json.add("narrative_hints", gson.toJsonTree(scenario.getNarrativeHints()));
         json.add("roles", scenarioRolesJson(scenario.getRoles()));
@@ -1215,33 +812,6 @@ public class DebugDumpService {
         json.addProperty("progress_enabled", mechanic.isProgressEnabled());
         json.addProperty("max_active", mechanic.getMaxActive());
         json.add("metadata", gson.toJsonTree(mechanic.getMetadata()));
-        return json;
-    }
-
-    private JsonArray questStagesJson(List<FeaturePackLoader.QuestStageDefinition> stages) {
-        JsonArray json = new JsonArray();
-        if (stages == null || stages.isEmpty()) {
-            return json;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : stages) {
-            json.add(questStageJson(stage));
-        }
-        return json;
-    }
-
-    private JsonObject questStageJson(FeaturePackLoader.QuestStageDefinition stage) {
-        JsonObject json = new JsonObject();
-        if (stage == null) {
-            return json;
-        }
-
-        json.addProperty("id", valueOrEmpty(stage.getId()));
-        json.addProperty("description", valueOrEmpty(stage.getDescription()));
-        json.addProperty("completion_mode", valueOrEmpty(stage.getCompletionMode()));
-        json.addProperty("next_stage", valueOrEmpty(stage.getNextStageId()));
-        json.add("objective_ids", gson.toJsonTree(stage.getObjectiveIds()));
-        json.add("metadata", gson.toJsonTree(stage.getMetadata()));
         return json;
     }
 
@@ -1326,547 +896,6 @@ public class DebugDumpService {
         json.add("metadata", gson.toJsonTree(entry.getMetadata()));
         json.add("variables", gson.toJsonTree(entry.getVariables()));
         json.add("payload", gson.toJsonTree(entry.getPayload()));
-        return json;
-    }
-
-    private JsonObject buildPlayerProgressionsJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_table", "player_quests");
-        root.addProperty("compatibility_view", true);
-        root.addProperty("storage_note", "Generic progression export peste tabela legacy player_quests.");
-        if (plugin.getProgressionService() == null || plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "ProgressionService sau DatabaseManager indisponibil");
-            root.addProperty("row_count", 0);
-            root.add("rows", new JsonArray());
-            return root;
-        }
-
-        root.addProperty("available", true);
-        root.addProperty("definitions_available", plugin.getFeaturePackLoader() != null);
-
-        JsonArray rows = new JsonArray();
-        StoredProgressionSummary summary = StoredProgressionSummary.from(List.of());
-
-        try {
-            List<StoredProgression> progressions = plugin.getProgressionService().getStoredProgressions();
-            summary = StoredProgressionSummary.from(progressions);
-            for (StoredProgression progression : progressions) {
-                JsonObject row = playerProgressionRowJson(progression);
-                rows.add(row);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        root.addProperty("row_count", summary.rowCount());
-        root.addProperty("player_count", summary.playerCount());
-        root.addProperty("current_count", summary.currentCount());
-        root.addProperty("archived_count", summary.archivedCount());
-        root.addProperty("tracked_count", summary.trackedCount());
-        root.addProperty("resolved_definition_count", Math.max(0, summary.rowCount() - summary.unresolvedDefinitionCount()));
-        root.addProperty("unresolved_definition_count", summary.unresolvedDefinitionCount());
-        root.add("by_status", countMapJson(summary.byStatus()));
-        root.add("by_template", countMapJson(summary.byTemplate()));
-        root.add("by_pack", countMapJson(summary.byPack()));
-        root.add("by_mechanic", countMapJson(summary.byMechanic()));
-        root.add("by_kind", countMapJson(summary.byKind()));
-        root.add("by_category", countMapJson(summary.byCategory()));
-        root.add("by_scenario_kind", countMapJson(summary.byScenarioKind()));
-        root.add("by_base_type", countMapJson(summary.byBaseType()));
-        root.add("rows", rows);
-        return root;
-    }
-
-    private JsonObject playerProgressionRowJson(StoredProgression progression) {
-        JsonObject json = new JsonObject();
-        if (progression == null) {
-            return json;
-        }
-
-        json.addProperty("player_uuid", progression.playerUuid());
-        json.addProperty("template_id", progression.templateId());
-        json.addProperty("quest_code", progression.code());
-        json.addProperty("status", progression.status());
-        json.addProperty("started_at", progression.startedAt());
-        json.addProperty("completed_at", progression.completedAt());
-        json.addProperty("current_phase", progression.currentPhase());
-        json.addProperty("current_stage_id", progression.currentStageId());
-        json.addProperty("updated_at", progression.updatedAt());
-        json.addProperty("tracked", progression.tracked());
-        addStoredJson(json, "objective_progress", progression.objectiveProgressJson());
-        addStoredJson(json, "quest_variables", progression.variablesJson());
-        json.addProperty("compatibility_source", progression.compatibilitySource());
-        json.addProperty("definition_resolved", progression.definitionResolved());
-        json.addProperty("progression_id", progression.progressionId());
-        json.addProperty("pack_id", progression.packId());
-        json.addProperty("definition_id", progression.definitionId());
-        json.addProperty("mechanic_id", progression.mechanicId());
-        json.addProperty("kind", progression.kind());
-        json.addProperty("category", progression.category());
-        json.addProperty("scenario_kind", progression.scenarioKind());
-        json.addProperty("base_type", progression.baseType());
-        json.addProperty("mechanic_label", progression.mechanicLabel());
-        json.addProperty("singular_label", progression.singularLabel());
-        json.addProperty("plural_label", progression.pluralLabel());
-        return json;
-    }
-
-    private JsonObject buildNpcWorldBindingsJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_table", "npc_world_bindings");
-        if (plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
-            root.addProperty("row_count", 0);
-            root.add("rows", new JsonArray());
-            return root;
-        }
-
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        Map<String, WorldPlaceInfo> placesById = new LinkedHashMap<>();
-        Map<String, WorldNodeInfo> nodesById = new LinkedHashMap<>();
-        if (worldAdmin != null && worldAdmin.isEnabled()) {
-            for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
-                placesById.put(place.id(), place);
-            }
-            for (WorldNodeInfo node : worldAdmin.getNodes()) {
-                nodesById.put(node.id(), node);
-            }
-        }
-
-        root.addProperty("available", true);
-        root.addProperty("world_admin_enabled", worldAdmin != null && worldAdmin.isEnabled());
-        JsonArray rows = new JsonArray();
-        Map<String, Integer> bySource = new LinkedHashMap<>();
-        Map<String, Integer> byHomePlace = new LinkedHashMap<>();
-        Map<String, Integer> byWorkPlace = new LinkedHashMap<>();
-        Map<String, Integer> bySocialPlace = new LinkedHashMap<>();
-        int loadedNpcCount = 0;
-        int missingPlaceReferenceCount = 0;
-        int missingNodeReferenceCount = 0;
-
-        String sql = """
-            SELECT npc_id, npc_uuid, npc_name,
-                   home_place_id, work_place_id, social_place_id,
-                   home_node_id, work_node_id, social_node_id,
-                   family_id, source, created_at, updated_at
-            FROM npc_world_bindings
-            ORDER BY updated_at DESC, npc_id ASC
-        """;
-
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                int npcId = resultSet.getInt("npc_id");
-                boolean loadedNpc = findLoadedNpcBySelector("npc_" + npcId) != null;
-                JsonObject row = npcWorldBindingRowJson(resultSet, placesById, nodesById, loadedNpc);
-                rows.add(row);
-
-                incrementCount(bySource, resultSet.getString("source"));
-                incrementCountIfPresent(byHomePlace, resultSet.getString("home_place_id"));
-                incrementCountIfPresent(byWorkPlace, resultSet.getString("work_place_id"));
-                incrementCountIfPresent(bySocialPlace, resultSet.getString("social_place_id"));
-                if (loadedNpc) {
-                    loadedNpcCount++;
-                }
-                missingPlaceReferenceCount += npcWorldMissingPlaceReferenceCount(resultSet, placesById);
-                missingNodeReferenceCount += npcWorldMissingNodeReferenceCount(resultSet, nodesById);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        root.addProperty("row_count", rows.size());
-        root.addProperty("loaded_npc_count", loadedNpcCount);
-        root.addProperty("missing_place_reference_count", missingPlaceReferenceCount);
-        root.addProperty("missing_node_reference_count", missingNodeReferenceCount);
-        root.add("by_source", countMapJson(bySource));
-        root.add("by_home_place", countMapJson(byHomePlace));
-        root.add("by_work_place", countMapJson(byWorkPlace));
-        root.add("by_social_place", countMapJson(bySocialPlace));
-        root.add("rows", rows);
-        return root;
-    }
-
-    private JsonObject npcWorldBindingRowJson(ResultSet resultSet,
-                                              Map<String, WorldPlaceInfo> placesById,
-                                              Map<String, WorldNodeInfo> nodesById,
-                                              boolean loadedNpc) throws SQLException {
-        JsonObject json = new JsonObject();
-        json.addProperty("npc_id", resultSet.getInt("npc_id"));
-        json.addProperty("npc_uuid", valueOrEmpty(resultSet.getString("npc_uuid")));
-        json.addProperty("npc_name", valueOrEmpty(resultSet.getString("npc_name")));
-        json.addProperty("family_id", valueOrEmpty(resultSet.getString("family_id")));
-        json.addProperty("source", valueOrEmpty(resultSet.getString("source")));
-        json.addProperty("created_at", resultSet.getLong("created_at"));
-        json.addProperty("updated_at", resultSet.getLong("updated_at"));
-        json.addProperty("loaded_npc", loadedNpc);
-
-        addNpcWorldBindingRoleJson(json, "home",
-            resultSet.getString("home_place_id"),
-            resultSet.getString("home_node_id"),
-            placesById,
-            nodesById);
-        addNpcWorldBindingRoleJson(json, "work",
-            resultSet.getString("work_place_id"),
-            resultSet.getString("work_node_id"),
-            placesById,
-            nodesById);
-        addNpcWorldBindingRoleJson(json, "social",
-            resultSet.getString("social_place_id"),
-            resultSet.getString("social_node_id"),
-            placesById,
-            nodesById);
-        return json;
-    }
-
-    private JsonObject buildSpawnBatchesJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_tables", "spawn_batches, spawn_batch_steps");
-        if (plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
-            root.addProperty("batch_count", 0);
-            root.add("batches", new JsonArray());
-            root.add("steps", new JsonArray());
-            return root;
-        }
-
-        root.addProperty("available", true);
-        JsonArray batches = new JsonArray();
-        JsonArray steps = new JsonArray();
-        Map<String, Integer> byStatus = new LinkedHashMap<>();
-
-        String batchSql = """
-            SELECT batch_key, scope_type, scope_id, plan_hash, status, dry_run,
-                   allocation_count, npc_plan_count, created_npc_count, reused_npc_count,
-                   rolled_back, started_at, updated_at, completed_at, warning_summary, error_summary
-            FROM spawn_batches
-            ORDER BY updated_at DESC
-            LIMIT 100
-        """;
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(batchSql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                String status = resultSet.getString("status");
-                incrementCount(byStatus, status);
-
-                JsonObject batch = new JsonObject();
-                batch.addProperty("batch_key", valueOrEmpty(resultSet.getString("batch_key")));
-                batch.addProperty("scope_type", valueOrEmpty(resultSet.getString("scope_type")));
-                batch.addProperty("scope_id", valueOrEmpty(resultSet.getString("scope_id")));
-                batch.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
-                batch.addProperty("status", valueOrEmpty(status));
-                batch.addProperty("dry_run", resultSet.getInt("dry_run") != 0);
-                batch.addProperty("allocation_count", resultSet.getInt("allocation_count"));
-                batch.addProperty("npc_plan_count", resultSet.getInt("npc_plan_count"));
-                batch.addProperty("created_npc_count", resultSet.getInt("created_npc_count"));
-                batch.addProperty("reused_npc_count", resultSet.getInt("reused_npc_count"));
-                batch.addProperty("rolled_back", resultSet.getInt("rolled_back") != 0);
-                batch.addProperty("started_at", resultSet.getLong("started_at"));
-                batch.addProperty("updated_at", resultSet.getLong("updated_at"));
-                batch.addProperty("completed_at", nullableLong(resultSet, "completed_at"));
-                batch.addProperty("warning_summary", valueOrEmpty(resultSet.getString("warning_summary")));
-                batch.addProperty("error_summary", valueOrEmpty(resultSet.getString("error_summary")));
-                batches.add(batch);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        String stepsSql = """
-            SELECT batch_key, step_index, step_key, household_id, status, plan_hash,
-                   created_npc_ids, reused_npc_ids, warning_summary, error_summary, updated_at
-            FROM spawn_batch_steps
-            ORDER BY updated_at DESC, batch_key ASC, step_index ASC
-            LIMIT 300
-        """;
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(stepsSql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                JsonObject step = new JsonObject();
-                step.addProperty("batch_key", valueOrEmpty(resultSet.getString("batch_key")));
-                step.addProperty("step_index", resultSet.getInt("step_index"));
-                step.addProperty("step_key", valueOrEmpty(resultSet.getString("step_key")));
-                step.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
-                step.addProperty("status", valueOrEmpty(resultSet.getString("status")));
-                step.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
-                step.addProperty("created_npc_ids", valueOrEmpty(resultSet.getString("created_npc_ids")));
-                step.addProperty("reused_npc_ids", valueOrEmpty(resultSet.getString("reused_npc_ids")));
-                step.addProperty("warning_summary", valueOrEmpty(resultSet.getString("warning_summary")));
-                step.addProperty("error_summary", valueOrEmpty(resultSet.getString("error_summary")));
-                step.addProperty("updated_at", resultSet.getLong("updated_at"));
-                steps.add(step);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("steps_error", exception.getMessage());
-        }
-
-        root.addProperty("batch_count", batches.size());
-        root.addProperty("step_count", steps.size());
-        root.add("by_status", countMapJson(byStatus));
-        root.add("batches", batches);
-        root.add("steps", steps);
-        return root;
-    }
-
-    private JsonObject buildHouseholdsJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_tables", "households, household_residents");
-        if (plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
-            root.addProperty("household_count", 0);
-            root.add("households", new JsonArray());
-            root.add("residents", new JsonArray());
-            return root;
-        }
-
-        root.addProperty("available", true);
-        JsonArray households = new JsonArray();
-        JsonArray residents = new JsonArray();
-        Map<String, Integer> bySource = new LinkedHashMap<>();
-        Map<String, Integer> householdsByFamily = new LinkedHashMap<>();
-        Map<String, Integer> householdsByHomePlace = new LinkedHashMap<>();
-        Map<String, Integer> residentsByHousehold = new LinkedHashMap<>();
-        Map<String, Integer> residentsByHomePlace = new LinkedHashMap<>();
-
-        String householdSql = """
-            SELECT household_id, family_id, home_place_id, primary_owner_key,
-                   max_residents, resident_count, plan_hash, source, created_at, updated_at
-            FROM households
-            ORDER BY updated_at DESC, household_id ASC
-            LIMIT 150
-        """;
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(householdSql);
-            ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                incrementCount(bySource, resultSet.getString("source"));
-                incrementCount(householdsByFamily, resultSet.getString("family_id"));
-                incrementCount(householdsByHomePlace, resultSet.getString("home_place_id"));
-                JsonObject household = new JsonObject();
-                household.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
-                household.addProperty("family_id", valueOrEmpty(resultSet.getString("family_id")));
-                household.addProperty("home_place_id", valueOrEmpty(resultSet.getString("home_place_id")));
-                household.addProperty("primary_owner_key", valueOrEmpty(resultSet.getString("primary_owner_key")));
-                household.addProperty("max_residents", resultSet.getInt("max_residents"));
-                household.addProperty("resident_count", resultSet.getInt("resident_count"));
-                household.addProperty("plan_hash", valueOrEmpty(resultSet.getString("plan_hash")));
-                household.addProperty("source", valueOrEmpty(resultSet.getString("source")));
-                household.addProperty("created_at", resultSet.getLong("created_at"));
-                household.addProperty("updated_at", resultSet.getLong("updated_at"));
-                households.add(household);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        String residentSql = """
-            SELECT household_id, resident_key, npc_id, npc_uuid, npc_name, source_key,
-                   relation_role, home_place_id, spawn_node_id, home_node_id,
-                   work_place_id, work_node_id, social_place_id, social_node_id,
-                   status, created_at, updated_at
-            FROM household_residents
-            ORDER BY household_id ASC, resident_key ASC
-            LIMIT 500
-        """;
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(residentSql);
-            ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                incrementCount(residentsByHousehold, resultSet.getString("household_id"));
-                incrementCount(residentsByHomePlace, resultSet.getString("home_place_id"));
-                JsonObject resident = new JsonObject();
-                resident.addProperty("household_id", valueOrEmpty(resultSet.getString("household_id")));
-                resident.addProperty("resident_key", valueOrEmpty(resultSet.getString("resident_key")));
-                resident.addProperty("npc_id", resultSet.getInt("npc_id"));
-                resident.addProperty("npc_uuid", valueOrEmpty(resultSet.getString("npc_uuid")));
-                resident.addProperty("npc_name", valueOrEmpty(resultSet.getString("npc_name")));
-                resident.addProperty("source_key", valueOrEmpty(resultSet.getString("source_key")));
-                resident.addProperty("relation_role", valueOrEmpty(resultSet.getString("relation_role")));
-                resident.addProperty("home_place_id", valueOrEmpty(resultSet.getString("home_place_id")));
-                resident.addProperty("spawn_node_id", valueOrEmpty(resultSet.getString("spawn_node_id")));
-                resident.addProperty("home_node_id", valueOrEmpty(resultSet.getString("home_node_id")));
-                resident.addProperty("work_place_id", valueOrEmpty(resultSet.getString("work_place_id")));
-                resident.addProperty("work_node_id", valueOrEmpty(resultSet.getString("work_node_id")));
-                resident.addProperty("social_place_id", valueOrEmpty(resultSet.getString("social_place_id")));
-                resident.addProperty("social_node_id", valueOrEmpty(resultSet.getString("social_node_id")));
-                resident.addProperty("status", valueOrEmpty(resultSet.getString("status")));
-                resident.addProperty("created_at", resultSet.getLong("created_at"));
-                resident.addProperty("updated_at", resultSet.getLong("updated_at"));
-                residents.add(resident);
-            }
-        } catch (SQLException exception) {
-            root.addProperty("residents_error", exception.getMessage());
-        }
-
-        root.addProperty("household_count", households.size());
-        root.addProperty("resident_count", residents.size());
-        root.add("by_source", countMapJson(bySource));
-        root.add("households_by_family", countMapJson(householdsByFamily));
-        root.add("households_by_home_place", countMapJson(householdsByHomePlace));
-        root.add("residents_by_household", countMapJson(residentsByHousehold));
-        root.add("residents_by_home_place", countMapJson(residentsByHomePlace));
-        root.add("households", households);
-        root.add("residents", residents);
-        return root;
-    }
-
-    private JsonObject buildPlayerQuestProgressJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_table", "player_quests");
-        if (plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
-            root.addProperty("row_count", 0);
-            root.add("rows", new JsonArray());
-            return root;
-        }
-
-        root.addProperty("available", true);
-        JsonArray rows = new JsonArray();
-        Map<String, Integer> byStatus = new LinkedHashMap<>();
-        Map<String, Integer> byTemplate = new LinkedHashMap<>();
-        int trackedCount = 0;
-        int currentCount = 0;
-        int archivedCount = 0;
-
-        String sql = """
-            SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
-                   current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
-            FROM player_quests
-            ORDER BY player_uuid, status, updated_at DESC, template_id
-        """;
-
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                JsonObject row = playerQuestProgressRowJson(resultSet);
-                rows.add(row);
-
-                String status = valueOrEmpty(resultSet.getString("status"));
-                incrementCount(byStatus, status);
-                incrementCount(byTemplate, resultSet.getString("template_id"));
-                if (resultSet.getInt("tracked") != 0) {
-                    trackedCount++;
-                }
-                if ("active".equalsIgnoreCase(status) || "offered".equalsIgnoreCase(status)) {
-                    currentCount++;
-                } else if ("completed".equalsIgnoreCase(status) || "failed".equalsIgnoreCase(status)) {
-                    archivedCount++;
-                }
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        root.addProperty("row_count", rows.size());
-        root.addProperty("current_count", currentCount);
-        root.addProperty("archived_count", archivedCount);
-        root.addProperty("tracked_count", trackedCount);
-        root.add("by_status", countMapJson(byStatus));
-        root.add("by_template", countMapJson(byTemplate));
-        root.add("rows", rows);
-        return root;
-    }
-
-    private JsonObject playerQuestProgressRowJson(ResultSet resultSet) throws SQLException {
-        JsonObject json = new JsonObject();
-        json.addProperty("player_uuid", valueOrEmpty(resultSet.getString("player_uuid")));
-        json.addProperty("template_id", valueOrEmpty(resultSet.getString("template_id")));
-        json.addProperty("quest_code", valueOrEmpty(resultSet.getString("quest_code")));
-        json.addProperty("status", valueOrEmpty(resultSet.getString("status")));
-        json.addProperty("started_at", resultSet.getLong("started_at"));
-        json.addProperty("completed_at", resultSet.getLong("completed_at"));
-        json.addProperty("current_phase", valueOrEmpty(resultSet.getString("current_phase")));
-        json.addProperty("current_stage_id", valueOrEmpty(resultSet.getString("current_stage_id")));
-        json.addProperty("updated_at", resultSet.getLong("updated_at"));
-        json.addProperty("tracked", resultSet.getInt("tracked") != 0);
-        addStoredJson(json, "objective_progress", resultSet.getString("objective_progress"));
-        addStoredJson(json, "quest_variables", resultSet.getString("quest_variables"));
-        return json;
-    }
-
-    private void addStoredJson(JsonObject root, String key, String rawValue) {
-        String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
-        try {
-            JsonElement parsed = JsonParser.parseString(safeRawValue);
-            root.add(key, parsed);
-        } catch (JsonSyntaxException exception) {
-            root.addProperty(key + "_raw", safeRawValue);
-            root.addProperty(key + "_parse_error", exception.getMessage());
-        }
-    }
-
-    private JsonObject buildQuestAnchorBindingsJson() {
-        JsonObject root = new JsonObject();
-        root.addProperty("source_table", "quest_anchor_bindings");
-        if (plugin.getDatabaseManager() == null) {
-            root.addProperty("available", false);
-            root.addProperty("error", "DatabaseManager indisponibil");
-            root.addProperty("row_count", 0);
-            root.add("rows", new JsonArray());
-            return root;
-        }
-
-        root.addProperty("available", true);
-        JsonArray rows = new JsonArray();
-        Map<String, Integer> byTemplate = new LinkedHashMap<>();
-        Map<String, Integer> byAnchorType = new LinkedHashMap<>();
-
-        String sql = """
-            SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
-                   b.objective_type, b.reference, b.anchor_type, b.anchor_id,
-                   b.anchor_label, b.created_at, b.updated_at, p.status,
-                   p.current_phase, p.current_stage_id, p.updated_at AS progress_updated_at
-            FROM quest_anchor_bindings b
-            LEFT JOIN player_quests p
-              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
-            ORDER BY b.player_uuid, b.template_id, b.objective_key
-        """;
-
-        try (PreparedStatement statement = plugin.getDatabaseManager().prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                JsonObject row = questAnchorBindingRowJson(resultSet);
-                rows.add(row);
-                incrementCount(byTemplate, resultSet.getString("template_id"));
-                incrementCount(byAnchorType, resultSet.getString("anchor_type"));
-            }
-        } catch (SQLException exception) {
-            root.addProperty("available", false);
-            root.addProperty("error", exception.getMessage());
-        }
-
-        root.addProperty("row_count", rows.size());
-        root.add("by_template", countMapJson(byTemplate));
-        root.add("by_anchor_type", countMapJson(byAnchorType));
-        root.add("rows", rows);
-        return root;
-    }
-
-    private JsonObject questAnchorBindingRowJson(ResultSet resultSet) throws SQLException {
-        JsonObject json = new JsonObject();
-        json.addProperty("player_uuid", valueOrEmpty(resultSet.getString("player_uuid")));
-        json.addProperty("template_id", valueOrEmpty(resultSet.getString("template_id")));
-        json.addProperty("quest_code", valueOrEmpty(resultSet.getString("quest_code")));
-        json.addProperty("objective_key", valueOrEmpty(resultSet.getString("objective_key")));
-        json.addProperty("objective_type", valueOrEmpty(resultSet.getString("objective_type")));
-        json.addProperty("reference", valueOrEmpty(resultSet.getString("reference")));
-        json.addProperty("anchor_type", valueOrEmpty(resultSet.getString("anchor_type")));
-        json.addProperty("anchor_id", valueOrEmpty(resultSet.getString("anchor_id")));
-        json.addProperty("anchor_label", valueOrEmpty(resultSet.getString("anchor_label")));
-        json.addProperty("created_at", resultSet.getLong("created_at"));
-        json.addProperty("updated_at", resultSet.getLong("updated_at"));
-        json.addProperty("quest_status", valueOrEmpty(resultSet.getString("status")));
-        json.addProperty("quest_phase", valueOrEmpty(resultSet.getString("current_phase")));
-        json.addProperty("quest_stage_id", valueOrEmpty(resultSet.getString("current_stage_id")));
-        json.addProperty("quest_updated_at", resultSet.getLong("progress_updated_at"));
         return json;
     }
 
@@ -2262,30 +1291,6 @@ public class DebugDumpService {
         return json;
     }
 
-    private FeaturePackLoader.QuestEntryDefinition findRecordStoryEventAction(
-        FeaturePackLoader.ScenarioDefinition scenario,
-        String eventKey
-    ) {
-        if (scenario == null) {
-            return null;
-        }
-        FeaturePackLoader.QuestEntryDefinition fallback = null;
-        String normalizedEventKey = normalizeKey(eventKey);
-        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
-            if (!"record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
-                continue;
-            }
-            if (fallback == null) {
-                fallback = reward;
-            }
-            String actionEventKey = questEntryMetadata(reward, "event_key", "key");
-            if (!normalizedEventKey.isBlank() && normalizeKey(actionEventKey).equals(normalizedEventKey)) {
-                return reward;
-            }
-        }
-        return fallback;
-    }
-
     private JsonObject storyActionJson(FeaturePackLoader.QuestEntryDefinition action,
                                        StoryProgressionLink link) {
         JsonObject json = new JsonObject();
@@ -2318,105 +1323,22 @@ public class DebugDumpService {
     }
 
     private String buildOpenAiInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("OpenAI diagnostics snapshot\n");
-        sb.append("base_url: ").append(plugin.getConfig().getString("openai.base_url", "")).append("\n");
-        sb.append("model: ").append(plugin.getConfig().getString("openai.model", "")).append("\n");
-        sb.append("api_key: <redacted>\n");
-        sb.append("diagnostics.enabled: ").append(plugin.getConfig().getBoolean("openai.diagnostics.enabled", false)).append("\n");
-        sb.append("diagnostics.check_on_startup: ").append(plugin.getConfig().getBoolean("openai.diagnostics.check_on_startup", false)).append("\n");
-        sb.append("Note: network probe is not run by debugdump. Use /ainpc test or scripts/debug-openai.ps1.\n");
-        return sb.toString();
+        return DebugDumpFormatting.buildOpenAiInfo(
+            plugin.getConfig(),
+            plugin.getOpenAIService().captureDebugSnapshot()
+        );
     }
 
     private String readRecentServerLog() {
-        Path serverRoot = plugin.getDataFolder().toPath().getParent();
-        if (serverRoot != null) {
-            serverRoot = serverRoot.getParent();
-        }
-        if (serverRoot == null) {
-            return "Server root indisponibil.\n";
-        }
-
-        Path latestLog = serverRoot.resolve("logs").resolve("latest.log");
-        if (!Files.exists(latestLog)) {
-            return "latest.log indisponibil la " + latestLog.toAbsolutePath() + "\n";
-        }
-
-        try {
-            List<String> lines = Files.readAllLines(latestLog, StandardCharsets.UTF_8);
-            int fromIndex = Math.max(0, lines.size() - RECENT_LOG_LINES);
-            return String.join(System.lineSeparator(), lines.subList(fromIndex, lines.size())) + System.lineSeparator();
-        } catch (IOException exception) {
-            return "Nu pot citi latest.log: " + exception.getMessage() + "\n";
-        }
-    }
-
-    private void auditHouseSpawnOrder(WorldAdminApi worldAdmin,
-                                      WorldPlaceInfo house,
-                                      List<String> warnings,
-                                      List<String> errors) {
-        List<String> residents = parseResidents(house);
-        Integer maxResidents = parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity");
-        if (maxResidents == null) {
-            warnings.add("Casa fara max_residents/capacity: " + house.id());
-        } else if (!residents.isEmpty() && residents.size() > maxResidents) {
-            errors.add("Casa " + house.id() + " are " + residents.size()
-                + " rezidenti peste max_residents=" + maxResidents + ".");
-        }
-
-        if (!residents.isEmpty() && !hasAnySemanticNode(worldAdmin.getNodesForPlace(house.id()),
-            "bed", "home", "npc_spawn", "spawn")) {
-            errors.add("Casa " + house.id() + " are rezidenti, dar nu are node bed/home/npc_spawn.");
-        }
-
-        for (String residentSelector : residents) {
-            AINPC resident = findLoadedNpcBySelector(residentSelector);
-            if (resident == null) {
-                errors.add("Casa " + house.id() + " contine resident necunoscut: " + residentSelector + ".");
-                continue;
-            }
-            if (resident.getHomeAnchor() == null) {
-                errors.add(resident.getName() + "#" + resident.getDatabaseId()
-                    + " este resident in " + house.id() + ", dar nu are homeAnchor.");
-            } else if (!ownedLocationInsidePlace(resident.getHomeAnchor(), house)) {
-                errors.add(resident.getName() + "#" + resident.getDatabaseId()
-                    + " este resident in " + house.id() + ", dar homeAnchor nu este in casa.");
-            }
-        }
-    }
-
-    private AINPC findLoadedNpcBySelector(String selector) {
-        String normalizedSelector = normalizeKey(selector);
-        if (normalizedSelector.isBlank() || plugin.getNpcManager() == null) {
-            return null;
-        }
-
-        for (AINPC npc : plugin.getNpcManager().getAllNPCs()) {
-            if (npc.getUuid() != null && normalizedSelector.equalsIgnoreCase(npc.getUuid().toString())) {
-                return npc;
-            }
-            if (npc.getDatabaseId() > 0) {
-                String id = String.valueOf(npc.getDatabaseId());
-                if (normalizedSelector.equals(id) || normalizedSelector.equals("npc_" + id)) {
-                    return npc;
-                }
-            }
-            String npcName = normalizeKey(npc.getName());
-            if (!npcName.isBlank() && (normalizedSelector.equals(npcName) || normalizedSelector.equals("npc_" + npcName))) {
-                return npc;
-            }
-        }
-
-        return null;
+        return DebugDumpIO.readRecentServerLog(plugin.getDataFolder().toPath(), RECENT_LOG_LINES);
     }
 
     private void writeJson(Path path, Object value) throws IOException {
-        writeText(path, gson.toJson(value));
+        DebugDumpIO.writeJson(path, value, gson);
     }
 
     private void writeText(Path path, String content) throws IOException {
-        Files.writeString(path, content, StandardCharsets.UTF_8);
+        DebugDumpIO.writeText(path, content);
     }
 
     public record DebugDumpResult(Path directory, String scope) {

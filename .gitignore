@@ -1,12 +1,3 @@
-# Project exclude paths
-/target/
-/ainpc-api/target/
-/ainpc-core-plugin/target/
-/ainpc-scenario-medieval/target/
-/.gradle/
-/.kotlin/
-/build/
-/ainpc-api/build/
-/ainpc-core-plugin/build/
-/ainpc-scenario-medieval/build/
-/debug-logs/
+# MCP local indexing/changelog state
+.mcp-index-manifest.json
+.mcp-changelog-state.json

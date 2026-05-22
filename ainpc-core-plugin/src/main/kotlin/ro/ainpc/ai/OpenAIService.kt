@@ -34,6 +34,36 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     @Volatile
     private var offlineMode = false
 
+    @Volatile
+    private var lastRequestAtMillis = 0L
+
+    @Volatile
+    private var lastPromptChars = 0
+
+    @Volatile
+    private var lastPromptPreview = ""
+
+    @Volatile
+    private var lastResponseAtMillis = 0L
+
+    @Volatile
+    private var lastResponseChars = 0
+
+    @Volatile
+    private var lastResponsePreview = ""
+
+    @Volatile
+    private var lastFailureAtMillis = 0L
+
+    @Volatile
+    private var lastFailureMessage = ""
+
+    @Volatile
+    private var lastFallbackAtMillis = 0L
+
+    @Volatile
+    private var lastFallbackReason = ""
+
     init {
         baseUrl = OpenAITextSupport.sanitizeBaseUrl(
             plugin.config.getString("openai.base_url", "https://api.openai.com/v1")
@@ -69,10 +99,12 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         return capturePromptSnapshot(request).thenCompose { snapshot ->
             CompletableFuture.supplyAsync {
                 if (isInOfflineBackoffWindow()) {
+                    val remainingSeconds = maxOf(0L, (offlineRetryAfterMillis - System.currentTimeMillis()) / 1000L)
                     diagInfo(
                         "Sar peste request catre OpenAI din cauza backoff-ului activ. Mai sunt " +
-                            maxOf(0L, (offlineRetryAfterMillis - System.currentTimeMillis()) / 1000L) + "s."
+                            remainingSeconds + "s."
                     )
+                    recordFallback("offline_backoff_active (${remainingSeconds}s remaining)")
                     return@supplyAsync OpenAITextSupport.generateFallbackResponse(snapshot)
                 }
 
@@ -89,6 +121,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                     response
                 } catch (e: Exception) {
                     handleGenerationFailure(e)
+                    recordFallback("exception: ${OpenAITextSupport.compactExceptionMessage(e)}")
                     OpenAITextSupport.generateFallbackResponse(snapshot)
                 }
             }
@@ -97,9 +130,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     @Throws(IOException::class)
     private fun callOpenAI(prompt: String, expectedSpeakerName: String?): String {
-        if (apiKey.isBlank()) {
-            throw IOException("Cheia API OpenAI lipseste. Seteaza openai.api_key sau OPENAI_API_KEY.")
-        }
+        recordPrompt(prompt)
 
         val requestBody = JsonObject()
         requestBody.addProperty("model", model)
@@ -150,6 +181,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             }
 
             val generatedText = OpenAITextSupport.extractGeneratedText(gson, responseBody, expectedSpeakerName)
+            recordResponse(generatedText)
             diagInfo(
                 "Responses reusit: url=$baseUrl" +
                     ", ms=$elapsedMs" +
@@ -187,7 +219,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     val isAvailable: Boolean
-        get() = apiKey.isNotBlank() && !isInOfflineBackoffWindow()
+        get() = !isInOfflineBackoffWindow()
 
     private fun isInOfflineBackoffWindow(): Boolean {
         return System.currentTimeMillis() < offlineRetryAfterMillis
@@ -204,6 +236,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     private fun handleOfflineFailure(exception: Exception) {
         val retrySeconds = plugin.config.getLong("openai.offline_retry_seconds", 15L)
         offlineRetryAfterMillis = System.currentTimeMillis() + retrySeconds * 1000L
+        recordFallback("offline_failure: ${OpenAITextSupport.compactExceptionMessage(exception)}")
 
         if (offlineMode) {
             plugin.debug(
@@ -222,6 +255,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     private fun handleGenerationFailure(exception: Exception) {
+        recordFailure(exception)
+
         if (OpenAITextSupport.isReadTimeout(exception)) {
             diagWarning(
                 "OpenAI a raspuns prea lent pentru timeout-ul curent: " +
@@ -324,6 +359,69 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     private fun probeConnection(): ConnectionStatus {
         return OpenAIConnectionProbe.probeConnection(model, baseUrl, apiKey, httpClient, gson)
+    }
+
+    @JvmOverloads
+    fun captureDebugSnapshot(nowMillis: Long = System.currentTimeMillis()): OpenAIDebugSnapshot {
+        return OpenAIDebugSnapshot(
+            baseUrl = baseUrl,
+            model = model,
+            apiKeyPresent = apiKey.isNotBlank(),
+            connectTimeoutSeconds = connectTimeoutSeconds,
+            readTimeoutSeconds = readTimeoutSeconds,
+            writeTimeoutSeconds = writeTimeoutSeconds,
+            maxOutputTokens = maxOutputTokens,
+            temperature = temperature,
+            storeResponses = storeResponses,
+            offlineRetrySeconds = plugin.config.getLong("openai.offline_retry_seconds", 15L),
+            diagnosticsEnabled = plugin.config.getBoolean("openai.diagnostics.enabled", false),
+            diagnosticsCheckOnStartup = plugin.config.getBoolean("openai.diagnostics.check_on_startup", false),
+            logPromptSummary = plugin.config.getBoolean("openai.diagnostics.log_prompt_summary", true),
+            logResponsePreview = plugin.config.getBoolean("openai.diagnostics.log_response_preview", true),
+            offlineMode = offlineMode,
+            offlineRetryAfterMillis = offlineRetryAfterMillis,
+            nowMillis = nowMillis,
+            lastRequestAtMillis = lastRequestAtMillis,
+            lastPromptChars = lastPromptChars,
+            lastPromptPreview = lastPromptPreview,
+            lastResponseAtMillis = lastResponseAtMillis,
+            lastResponseChars = lastResponseChars,
+            lastResponsePreview = lastResponsePreview,
+            lastFailureAtMillis = lastFailureAtMillis,
+            lastFailureMessage = lastFailureMessage,
+            lastFallbackAtMillis = lastFallbackAtMillis,
+            lastFallbackReason = lastFallbackReason
+        )
+    }
+
+    private fun recordPrompt(prompt: String) {
+        lastRequestAtMillis = System.currentTimeMillis()
+        lastPromptChars = prompt.length
+        lastPromptPreview = if (plugin.config.getBoolean("openai.diagnostics.log_prompt_summary", true)) {
+            OpenAITextSupport.abbreviate(prompt, 180)
+        } else {
+            "<disabled>"
+        }
+    }
+
+    private fun recordResponse(responseText: String) {
+        lastResponseAtMillis = System.currentTimeMillis()
+        lastResponseChars = responseText.length
+        lastResponsePreview = if (plugin.config.getBoolean("openai.diagnostics.log_response_preview", true)) {
+            OpenAITextSupport.abbreviate(responseText, 180)
+        } else {
+            "<disabled>"
+        }
+    }
+
+    private fun recordFailure(exception: Exception) {
+        lastFailureAtMillis = System.currentTimeMillis()
+        lastFailureMessage = OpenAITextSupport.compactExceptionMessage(exception)
+    }
+
+    private fun recordFallback(reason: String) {
+        lastFallbackAtMillis = System.currentTimeMillis()
+        lastFallbackReason = reason
     }
 
     private fun logConfigurationDiagnostics() {

@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-05-11
+Actualizat: 2026-05-21
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -11,45 +11,47 @@ Ordinea recomandata pentru orientare:
 1. `implementat-deja.md`
 2. `faze-observatii-avertizari.md`
 3. `faze-urmatoare-categorii.md`
-4. `faze-urmatoare-250.md`
-5. `faze-urmatoare-250-partea-2.md`
-6. `playable-village-ux.md`
-7. `ordine-spawn-npc-cladiri-region-node.md`
-8. `simulare-sat-si-lume.md`
-9. `simulation-service.md`
-10. `simulation-service-partea-2.md`
-11. `simulation-service-partea-3.md`
-12. `simulation-service-partea-4.md`
-13. `environment-context-si-engine.md`
-14. `dialog-si-conversatii.md`
-15. `interactiuni.md`
-16. `gui-interfete.md`
-17. `ai-orchestrare-si-mecanici.md`
-18. `generare-automata-questuri-ai.md`
-19. `story-si-context-ai.md`
-20. `story-context-service.md`
-21. `progression-service.md`
-22. `player-onboarding-initiere.md`
-23. `lucru-alternat-quest-mapping-progression.md`
-24. `roadmap-orientativ.md`
-25. `server-admin-runbook.md`
-26. `release-checklist.md`
-27. `debugging-si-testare.md`
-28. `prevenire-duplicare-npc.md`
-29. `conversie-java-la-kotlin.md`
-30. `conversie-java-la-kotlin-partea-2.md`
-31. `conversie-java-la-kotlin-partea-3.md`
-32. `conversie-java-la-kotlin-partea-4.md`
-33. `conversie-java-la-kotlin-partea-5.md`
-34. `rezumat-conversie-java-la-kotlin.md`
-35. `kotlin-style-guide.md`
-36. `kotlin-interop-api-addonuri.md`
-37. `kotlin-paper-packaging-si-smoke.md`
-38. `kotlin-migration-tracker.md`
-39. `kotlin-code-review-checklist.md`
-40. `kotlin-coroutines-paper-policy.md`
-41. `kotlin-gradle-activation-plan.md`
-42. `kotlin-testing-strategy.md`
+4. `server-npc-mvp-si-faze.md`
+5. `mcp-docker-server-mvp-si-faze.md`
+6. `faze-urmatoare-250.md`
+7. `faze-urmatoare-250-partea-2.md`
+8. `playable-village-ux.md`
+9. `ordine-spawn-npc-cladiri-region-node.md`
+10. `simulare-sat-si-lume.md`
+11. `simulation-service.md`
+12. `simulation-service-partea-2.md`
+13. `simulation-service-partea-3.md`
+14. `simulation-service-partea-4.md`
+15. `environment-context-si-engine.md`
+16. `dialog-si-conversatii.md`
+17. `interactiuni.md`
+18. `gui-interfete.md`
+19. `ai-orchestrare-si-mecanici.md`
+20. `generare-automata-questuri-ai.md`
+21. `story-si-context-ai.md`
+22. `story-context-service.md`
+23. `progression-service.md`
+24. `player-onboarding-initiere.md`
+25. `lucru-alternat-quest-mapping-progression.md`
+26. `roadmap-orientativ.md`
+27. `server-admin-runbook.md`
+28. `release-checklist.md`
+29. `debugging-si-testare.md`
+30. `prevenire-duplicare-npc.md`
+31. `conversie-java-la-kotlin.md`
+32. `conversie-java-la-kotlin-partea-2.md`
+33. `conversie-java-la-kotlin-partea-3.md`
+34. `conversie-java-la-kotlin-partea-4.md`
+35. `conversie-java-la-kotlin-partea-5.md`
+36. `rezumat-conversie-java-la-kotlin.md`
+37. `kotlin-style-guide.md`
+38. `kotlin-interop-api-addonuri.md`
+39. `kotlin-paper-packaging-si-smoke.md`
+40. `kotlin-migration-tracker.md`
+41. `kotlin-code-review-checklist.md`
+42. `kotlin-coroutines-paper-policy.md`
+43. `kotlin-gradle-activation-plan.md`
+44. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -112,6 +114,8 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `faze-urmatoare-categorii.md` | toate | Sinteza operationala a fazelor urmatoare, grupate pe categorii si subcategorii | Foloseste-l pentru alegerea urmatorului task; documentele canonice raman sursa pentru detalii |
 | `faze-urmatoare-250.md` | toate | Backlog operational cu urmatoarele 250 faze | Lista lunga pentru planificare; executa fazele in slice-uri mici, validate |
 | `faze-urmatoare-250-partea-2.md` | toate | Backlog operational F251-F500 pentru generare sate/cladiri, context, comportament realist si API | Continua lista lunga; prioritizeaza config validat, dry-run, context read-only si documentare API |
+| `server-npc-mvp-si-faze.md` | toate | Plan operational pentru versiunea minim functionala a serverului NPC si fazele ulterioare | Foloseste-l ca checklist de MVP Paper inainte de mecanici mari sau release public |
+| `mcp-docker-server-mvp-si-faze.md` | 0, 6 | Plan operational pentru versiunea minim functionala a serverului MCP din Docker si fazele ulterioare | Foloseste-l pentru setup, repair, backup, watcher si integrarea Codex/JetBrains |
 | `generare-ai-si-constructie-automata.md` | 5 | Directie pentru generare AI si template-uri | AI-ul trebuie sa genereze drafturi validate, nu sa execute direct modificari in lume |
 | `generare-automata-questuri-ai.md` | 2, 4 | Contract pentru generarea asistata de questuri cu AI | AI-ul produce `QuestDraft`, validatorul si adminul decid daca ajunge in pack |
 | `generare-populatie-narativa.md` | 1, 2 | Contract pentru generarea dry-run a populatiei pe regiune | Produce `PopulationPlan` si se converteste ulterior in `HouseAllocation`, fara spawn direct |

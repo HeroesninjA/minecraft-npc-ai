@@ -5,8 +5,11 @@ import ro.ainpc.api.AddonRegistryApi
 import java.util.Collections
 import java.util.EnumMap
 import java.util.LinkedHashMap
+import java.util.Locale
+import java.util.logging.Logger
 
 class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryApi {
+    private val logger: Logger = Logger.getLogger(AddonRegistry::class.java.name)
     private val descriptorsById: MutableMap<String, AddonDescriptor> = LinkedHashMap()
     private val addonsById: MutableMap<String, AINPCAddon> = LinkedHashMap()
     private val descriptorsByType: MutableMap<AddonType, MutableList<AddonDescriptor>> = EnumMap(AddonType::class.java)
@@ -41,20 +44,13 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
 
     @Synchronized
     override fun registerDescriptor(descriptor: AddonDescriptor?) {
-        if (!canRegister(descriptor)) {
+        val validationErrors = registrationErrors(descriptor)
+        if (validationErrors.isNotEmpty()) {
+            logRegistrationRejection(descriptor, validationErrors)
             return
         }
         val safeDescriptor = descriptor!!
-
-        val previous = descriptorsById.put(safeDescriptor.id, safeDescriptor)
-        if (previous != null) {
-            removeDescriptorFromType(previous)
-        }
-
-        descriptorsByType
-            .computeIfAbsent(safeDescriptor.type) { mutableListOf() }
-            .add(safeDescriptor)
-        descriptorsByType[safeDescriptor.type]?.sortWith(descriptorComparator())
+        registerDescriptorInternal(safeDescriptor)
     }
 
     @Synchronized
@@ -63,13 +59,15 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
             return
         }
         val descriptor = addon.getDescriptor()
-        if (!canRegister(descriptor)) {
+        val validationErrors = registrationErrors(descriptor)
+        if (validationErrors.isNotEmpty()) {
+            logRegistrationRejection(descriptor, validationErrors)
             return
         }
 
         unregisterAddon(descriptor.id)
         addon.onLoad(platformApi)
-        registerDescriptor(descriptor)
+        registerDescriptorInternal(descriptor)
         addonsById[descriptor.id] = addon
         addon.onEnable(platformApi)
     }
@@ -180,6 +178,18 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
         return descriptors
     }
 
+    private fun registerDescriptorInternal(descriptor: AddonDescriptor) {
+        val previous = descriptorsById.put(descriptor.id, descriptor)
+        if (previous != null) {
+            removeDescriptorFromType(previous)
+        }
+
+        descriptorsByType
+            .computeIfAbsent(descriptor.type) { mutableListOf() }
+            .add(descriptor)
+        descriptorsByType[descriptor.type]?.sortWith(descriptorComparator())
+    }
+
     private fun descriptorComparator(): Comparator<AddonDescriptor> {
         return compareBy<AddonDescriptor> { descriptor -> loadOrderIndex(descriptor) }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { descriptor -> descriptor.id }
@@ -196,26 +206,91 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
         return if (index >= 0) index else Int.MAX_VALUE
     }
 
-    private fun canRegister(descriptor: AddonDescriptor?): Boolean {
+    private fun registrationErrors(descriptor: AddonDescriptor?): List<String> {
+        val errors = mutableListOf<String>()
         if (descriptor == null) {
-            return false
+            errors.add("descriptor lipsa")
+            return errors
         }
         if (AddonDescriptor.ORIGIN_CORE.equals(descriptor.origin, ignoreCase = true)) {
-            return true
+            return errors
         }
         if (!isAddonEnabled(descriptor.id)) {
-            return false
+            errors.add("addon dezactivat prin configuratie: ${descriptor.id}")
+            return errors
         }
         if (!strictValidation) {
-            return true
+            return errors
         }
-        if (descriptor.id.isBlank() || descriptor.name.isBlank() || descriptor.type == null) {
-            return false
+        if (descriptor.id.isBlank()) {
+            errors.add("id addon lipsa")
         }
-        return descriptor.supports(platformApi.runtimeMode)
+        if (descriptor.name.isBlank()) {
+            errors.add("name addon lipsa")
+        }
+        if (!descriptor.supports(platformApi.runtimeMode)) {
+            errors.add(
+                "runtime incompatibil: curent=${platformApi.runtimeMode.id}, " +
+                    "suportat=${descriptor.supportedRuntimeModes.joinToString(",") { it.id }}"
+            )
+        }
+
+        val normalizedCapabilities = LinkedHashMap<String, String>()
+        for (capability in descriptor.capabilities) {
+            val normalized = normalizeToken(capability)
+            if (normalized.isBlank()) {
+                errors.add("capability invalida (goala)")
+                continue
+            }
+            if (normalizedCapabilities.containsKey(normalized)) {
+                errors.add("capability duplicata: $normalized")
+                continue
+            }
+            normalizedCapabilities[normalized] = capability
+        }
+
+        if (descriptor.type == AddonType.SCENARIO && !normalizedCapabilities.containsKey("scenarios")) {
+            errors.add("addon SCENARIO fara capability 'scenarios'")
+        }
+
+        val normalizedDescriptorId = normalizeId(descriptor.id)
+        val seenDependencies = mutableSetOf<String>()
+        for (dependency in descriptor.dependencies) {
+            val normalizedDependency = normalizeId(dependency)
+            if (normalizedDependency.isBlank()) {
+                errors.add("dependency invalida (goala)")
+                continue
+            }
+            if (!seenDependencies.add(normalizedDependency)) {
+                errors.add("dependency duplicata: $normalizedDependency")
+                continue
+            }
+            if (normalizedDependency == normalizedDescriptorId) {
+                errors.add("dependency circulara pe sine: $normalizedDependency")
+            }
+            if (disabledAddonIds.contains(normalizedDependency)) {
+                errors.add("dependency dezactivata prin configuratie: $normalizedDependency")
+            }
+        }
+
+        return errors
     }
 
-    private fun normalizeId(addonId: String?): String = addonId?.trim()?.lowercase() ?: ""
+    private fun logRegistrationRejection(descriptor: AddonDescriptor?, errors: List<String>) {
+        if (errors.isEmpty()) {
+            return
+        }
+        val descriptorId = descriptor?.id?.ifBlank { "<fara-id>" } ?: "<descriptor-null>"
+        val origin = descriptor?.origin?.ifBlank { "<fara-origin>" } ?: "<fara-origin>"
+        logger.warning(
+            "[AINPC AddonRegistry] Descriptor respins id=$descriptorId origin=$origin: " +
+                errors.joinToString(" | ")
+        )
+    }
+
+    private fun normalizeId(addonId: String?): String = normalizeToken(addonId)
+
+    private fun normalizeToken(value: String?): String = value?.trim()?.lowercase(Locale.ROOT) ?: ""
 
     private fun normalizeIds(ids: List<String>?): List<String> {
         return ids?.asSequence()
