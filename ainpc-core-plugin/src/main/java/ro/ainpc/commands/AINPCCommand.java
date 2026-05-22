@@ -119,46 +119,6 @@ public class AINPCCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
-    private record StoryContextTarget(Player player, String npcSelector) {
-    }
-
-    private record StoryEventTarget(String regionId, String placeId, String label, boolean mapped) {
-    }
-
-    private record QuestDecisionTarget(Player player, AINPC npc) {
-    }
-
-    private record QuestTrackRequest(Player player, String questSelector, String action) {
-    }
-
-    private record WorldCommandLocation(String worldName,
-                                        int x,
-                                        int y,
-                                        int z,
-                                        int minHeight,
-                                        int maxHeight,
-                                        boolean consoleFallback) {
-    }
-
-    private record QuestLogRequest(Player player, String filter) {
-    }
-
-    private record HouseholdMetadataBackfillInputs(
-        List<HouseholdPersistenceService.MetadataResidentBackfillInput> inputs,
-        List<String> warnings
-    ) {
-    }
-
-    private record ProgressionAliasConfig(
-        String command,
-        String kind,
-        String displayLabel,
-        String shortSelectorExample,
-        String mechanicExample,
-        String baseTypeExample
-    ) {
-    }
-
     private static final ProgressionAliasConfig CONTRACT_ALIAS = new ProgressionAliasConfig(
         "contract",
         "contract",

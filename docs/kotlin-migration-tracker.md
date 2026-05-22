@@ -1,6 +1,6 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-05-17
+Actualizat: 2026-05-22
 
 ## Scop
 
@@ -3757,3 +3757,163 @@ Inventar dupa slice:
 
 Rollback:
 - sterge fisierul Kotlin si readauga `AINPC.java` din istoric
+
+### KOT-154
+
+Data: 2026-05-21
+ID: KOT-154
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandModels.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`AINPCCommand.java`, `AINPCCommandModels.kt`) (PASS)
+
+Observatii:
+- Record-urile interne din `AINPCCommand` (`StoryContextTarget`, `StoryEventTarget`, `QuestDecisionTarget`, `QuestTrackRequest`, `WorldCommandLocation`, `QuestLogRequest`, `HouseholdMetadataBackfillInputs`, `ProgressionAliasConfig`) au fost mutate in Kotlin.
+- Clasele Kotlin expun explicit aceleasi accesorii de tip record (`player()`, `kind()`, `worldName()`, etc.) pentru a pastra call-site-urile Java nemodificate.
+- Rebuild-ul global al proiectului ramane rosu din cauza unor erori preexistente in testele Kotlin, fara legatura cu acest slice.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 196 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `AINPCCommandModels.kt` si readauga record-urile din `AINPCCommand.java` din istoric
+
+### KOT-155
+
+Data: 2026-05-22
+ID: KOT-155
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpAudit.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`DebugDumpService.java`, `DebugDumpAudit.kt`) (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Auditul general pentru debug dump (`buildAuditText`) a fost mutat in Kotlin.
+- Cautarea NPC-ului incarcat dupa selector a fost mutata in acelasi helper Kotlin si reutilizata din `DebugDumpService`.
+- Verificarea `uuid == null` din audit nu a fost portata, deoarece `AINPC.uuid` este non-null in modelul Kotlin curent.
+- `JAVA_HOME` din shell-ul default era invalid/indisponibil; validarea Gradle a fost rulata cu `JAVA_HOME` setat doar pentru comanda.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 197 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `DebugDumpAudit.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-156
+
+Data: 2026-05-22
+ID: KOT-156
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpProgressionJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`DebugDumpService.java`, `DebugDumpProgressionJson.kt`) (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exporturile JSON pentru `player-progressions.json`, `player-quest-progress.json` si `quest-anchor-bindings.json` au fost mutate in Kotlin.
+- `DebugDumpService` pastreaza orchestration-ul fisierelor de dump si deleaga exporturile de progresie catre `DebugDumpProgressionJson`.
+- Accesul la serviciile `lateinit` din plugin este protejat cu `runCatching` pentru a pastra raspunsurile `available=false` in locul unui crash in cazuri de initializare partiala.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 198 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `DebugDumpProgressionJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-157
+
+Data: 2026-05-22
+ID: KOT-157
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpSpawnPersistenceJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`DebugDumpService.java`, `DebugDumpSpawnPersistenceJson.kt`) (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exporturile JSON pentru `households.json` si `spawn-batches.json` au fost mutate in Kotlin.
+- `DebugDumpService` pastreaza doar orchestration-ul fisierelor si deleaga persistenta spawn/household catre `DebugDumpSpawnPersistenceJson`.
+- Blocul `npc-world-bindings.json` ramane in Java pentru un slice separat, deoarece foloseste suplimentar indexuri `WorldAdmin`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 199 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `DebugDumpSpawnPersistenceJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-158
+
+Data: 2026-05-22
+ID: KOT-158
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpNpcWorldBindingJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`DebugDumpService.java`, `DebugDumpNpcWorldBindingJson.kt`) (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exportul JSON pentru `npc-world-bindings.json` a fost mutat in Kotlin.
+- Helper-ul Kotlin indexeaza `WorldAdmin` local pentru validarea referintelor place/node si reutilizeaza `DebugDumpAudit.findLoadedNpcBySelector`.
+- `DebugDumpService` ramane orchestratorul fisierelor de dump si nu mai contine exporturile world/spawn mutate in slice-urile KOT-157/KOT-158.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 200 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `DebugDumpNpcWorldBindingJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
