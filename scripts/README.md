@@ -60,6 +60,8 @@ Ce face:
 
 - ruleaza context retrieval in etape: `900/8`, `1400/12`, `2200/14`;
 - opreste escaladarea cand output-ul pare suficient;
+- opreste retry-ul cand output-ul inutil se repeta identic;
+- scrie in summary `selected_useful`, `selected_failed`, `selected_failure_reason` si `context_tokens_present`;
 - aplica implicit auto-scope pe profil:
   - `code`: include `ainpc-core-plugin/src/main/`, `ainpc-api/src/main/`, `ainpc-scenario-medieval/src/main/`, `scripts/`;
   - `debug`: include codul + `docs/`;
@@ -130,8 +132,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-summary-report.ps
 Raportul include:
 
 - distributia attempt-urilor (`attempt1/2/3`);
-- medie `selected_token_budget` si `tokens_used`;
-- economii medii vs buget fix `2200`;
+- separat `usable_runs` si `failed_runs`;
+- medie `selected_token_budget` si `tokens_used` doar pentru rulari utile;
+- economii medii vs buget fix `2200` doar pentru rulari utile;
+- motive de esec (`failure_reason`) pentru output fara token metadata, fara hits sau sub prag;
 - breakdown pe profil (`code/debug/planning/full`).
 - optional CSV pentru analiza in Excel (`rows` + `profiles`).
 
@@ -151,6 +155,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly.ps1 `
   -NoTests `
   -UseAdaptiveThresholds `
   -SaveContextOutputs `
+  -WriteCsvReports
+```
+
+Pentru o masuratoare curata, fara istoric vechi:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly.ps1 `
+  -QueryFile ".ai\mcp-nightly-queries.txt" `
+  -OutputDir ".ai\nightly-clean" `
+  -Profile code `
+  -NoTests `
+  -FreshRun `
   -WriteCsvReports
 ```
 
@@ -176,6 +192,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly-matrix.ps
   -UseAdaptiveThresholds `
   -EnsureQueryTemplates `
   -SaveContextOutputs `
+  -WriteCsvReports
+```
+
+Pentru recalibrare token economy, foloseste `-FreshRun` ca sa stergi doar summary/report-urile generate anterior din `OutputRoot` si rapoartele globale din `ReportRoot`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly-matrix.ps1 `
+  -OutputRoot ".ai\nightly-token-economy" `
+  -ReportRoot ".ai\token-economy-current" `
+  -Profiles code,debug,planning `
+  -NoTests `
+  -EnsureQueryTemplates `
+  -FreshRun `
   -WriteCsvReports
 ```
 

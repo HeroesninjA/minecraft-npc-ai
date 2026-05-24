@@ -4048,3 +4048,548 @@ Inventar dupa slice:
 
 Rollback:
 - sterge `DebugDumpQuestAudit.kt` si readauga metodele de audit quest in `DebugDumpService.java` din istoric
+
+### KOT-163
+
+Data: 2026-05-24
+ID: KOT-163
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 4
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt`
+
+Fisiere sterse:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+
+Fisiere modificate:
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `DebugDumpService.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- `DebugDumpService` a fost convertit complet la Kotlin dupa ce logica grea fusese extrasa in helper-ele `DebugDump*`.
+- `createDump(String)` ramane apelabil din Java si declara `IOException` prin `@Throws(IOException::class)`.
+- Clasa nested `DebugDumpResult` pastreaza accessorii record-style `directory()` si `scope()` folosite de `AINPCCommand.java`.
+- Fallback-ul Java pentru `questConfig == null` a fost eliminat deoarece Kotlin vede `questConfig` ca non-null in API-ul pluginului curent.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 205 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `DebugDumpService.kt` si readauga `DebugDumpService.java` din istoric
+
+### KOT-164
+
+Data: 2026-05-24
+ID: KOT-164
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NpcVillageSnapshot.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `NpcVillageSnapshot.kt` si `NPCManager.java` (PASS)
+
+Observatii:
+- Record-ul privat `VillageSnapshot` din `NPCManager` a fost mutat intr-un model Kotlin intern pachetului.
+- `NpcVillageSnapshot` expune accesorii `center()`, `bedLocations()` si `villagerCount()` pentru a pastra call-site-urile Java simple.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 206 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `NpcVillageSnapshot.kt` si readauga record-ul privat `VillageSnapshot` in `NPCManager.java`
+
+### KOT-165
+
+Data: 2026-05-24
+ID: KOT-165
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NpcRepairCounters.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `NpcRepairCounters.kt` si `NPCManager.java` (PASS)
+
+Observatii:
+- Clasa privata mutabila `RepairCounters` din `NPCManager` a fost mutata in Kotlin ca `NpcRepairCounters`.
+- Campurile sunt expuse cu `@JvmField` pentru a pastra accesul direct din Java fara getter/setter changes.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 207 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `NpcRepairCounters.kt` si readauga clasa privata `RepairCounters` in `NPCManager.java`
+
+### KOT-166
+
+Data: 2026-05-24
+ID: KOT-166
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/SimpleQuestProfile.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `SimpleQuestProfile.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-ul privat `SimpleQuestProfile` din `ScenarioEngine` a fost mutat intr-un model Kotlin intern pachetului.
+- `SimpleQuestProfile` pastreaza constructorul si accessorii folositi de Java: `title()`, `objectiveMaterial()`, `objectiveAmount()`, `rewardMaterial()`, `rewardAmount()`, `objectivePrompt()` si `hint()`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 208 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `SimpleQuestProfile.kt` si readauga record-ul privat `SimpleQuestProfile` in `ScenarioEngine.java`
+
+### KOT-167
+
+Data: 2026-05-24
+ID: KOT-167
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestCheckResults.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestCheckResults.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-urile private `QuestInventoryCheck` si `QuestObjectiveCheck` din `ScenarioEngine` au fost mutate in Kotlin.
+- `QuestCheckResults.kt` pastreaza accessorii Java `complete()`, `missingItems()` si `missingObjectives()`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 209 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestCheckResults.kt` si readauga record-urile private `QuestInventoryCheck` si `QuestObjectiveCheck` in `ScenarioEngine.java`
+
+### KOT-168
+
+Data: 2026-05-24
+ID: KOT-168
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/StoryActionTarget.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `StoryActionTarget.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-ul privat `StoryActionTarget` din `ScenarioEngine` a fost mutat intr-un model Kotlin intern pachetului.
+- `StoryActionTarget` pastreaza accessorii Java `scopeType()`, `scopeId()`, `regionId()` si `placeId()`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 210 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `StoryActionTarget.kt` si readauga record-ul privat `StoryActionTarget` in `ScenarioEngine.java`
+
+### KOT-169
+
+Data: 2026-05-24
+ID: KOT-169
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestValidationResults.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestValidationResults.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-urile private `QuestAvailability` si `QuestRewardCheck` din `ScenarioEngine` au fost mutate in Kotlin.
+- Factory methods Java `allowed()`, `unavailable(...)` si `blocked(...)` sunt pastrate cu `@JvmStatic`.
+- Copierea defensiva a listelor de issues este pastrata prin `java.util.List.copyOf(...)`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 211 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestValidationResults.kt` si readauga record-urile private `QuestAvailability` si `QuestRewardCheck` in `ScenarioEngine.java`
+
+### KOT-170
+
+Data: 2026-05-24
+ID: KOT-170
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestTrackingModels.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestTrackingModels.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-urile private `QuestTrackingTarget` si `QuestTrackingStep` din `ScenarioEngine` au fost mutate in Kotlin.
+- Normalizarea `null -> ""` pentru `anchorType`, `anchorId`, `label`, `worldName` si `objectiveLabel` este pastrata.
+- Accessorii Java record-style folositi de `ScenarioEngine` sunt pastrati: `anchorType()`, `anchorId()`, `label()`, `worldName()`, `x()`, `y()`, `z()`, `hasLocation()`, `objectiveLabel()` si `target()`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 212 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestTrackingModels.kt` si readauga record-urile private `QuestTrackingTarget` si `QuestTrackingStep` in `ScenarioEngine.java`
+
+### KOT-171
+
+Data: 2026-05-24
+ID: KOT-171
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 4
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/PlayerQuestProgress.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `PlayerQuestProgress.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Record-ul privat `PlayerQuestProgress` si enum-ul privat `QuestStatus` din `ScenarioEngine` au fost mutate in Kotlin impreuna, deoarece modelul depinde direct de enum.
+- Accessorii Java record-style pentru progres sunt pastrati: `templateId()`, `questCode()`, `status()`, `startedAt()`, `completedAt()`, `updatedAt()`, `currentPhase()`, `objectiveProgress()` si `questVariables()`.
+- Helper-ele de stare sunt pastrate: `isCurrent()`, `isOffered()`, `isActive()`, `isCompleted()`, `QuestStatus.isArchived()`, `QuestStatus.storageValue()` si `QuestStatus.fromStorage(...)`.
+- Normalizarea `currentPhase == null ? "" : currentPhase` si copierea defensiva `Collections.unmodifiableMap(new LinkedHashMap<>(...))` sunt pastrate in Kotlin.
+- Dupa acest slice, `ScenarioEngine.java` nu mai contine `private record`.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 213 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `PlayerQuestProgress.kt` si readauga record-ul privat `PlayerQuestProgress` si enum-ul privat `QuestStatus` in `ScenarioEngine.java`
+
+### KOT-172
+
+Data: 2026-05-24
+ID: KOT-172
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestStateEnums.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestStateEnums.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Enum-urile private `QuestDialogueContext` si `QuestObjectiveState` din `ScenarioEngine` au fost mutate in Kotlin.
+- `QuestDialogueContext.dialogueKeys()` si `QuestObjectiveState.id()` / `displayName()` sunt pastrate pentru call-site-urile Java existente.
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 214 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestStateEnums.kt` si readauga enum-urile private `QuestDialogueContext` si `QuestObjectiveState` in `ScenarioEngine.java`
+
+### KOT-173
+
+Data: 2026-05-24
+ID: KOT-173
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie
+Risc: 4
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestLogFilter.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestLogFilter.kt` si `ScenarioEngine.java` (PASS)
+
+Observatii:
+- Enum-ul privat `QuestLogFilter` din `ScenarioEngine` a fost mutat in Kotlin.
+- Constantele, `displayName()`, `showsCurrent()` si `showsArchived()` pastreaza comportamentul din switch-urile Java.
+- Dupa acest slice, `ScenarioEngine.java` nu mai contine `private record` sau `private enum`; raman doar API-urile nested publice (`ScenarioType`, `QuestGui*`, `QuestTrackingMarker`).
+- Warning-urile Kotlin afisate de Gradle sunt preexistente in alte fisiere si nu includ fisierele slice-ului.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 215 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestLogFilter.kt` si readauga enum-ul privat `QuestLogFilter` in `ScenarioEngine.java`
+
+### KOT-174
+
+Data: 2026-05-24
+ID: KOT-174
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/QuestAnchorBindingRow.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `QuestAnchorBindingRow.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Record-ul privat `QuestAnchorBindingRow` din `AINPCCommand` a fost mutat in Kotlin.
+- Constructorul si accessorii Java record-style sunt pastrati pentru query/format/audit call-site-uri.
+- Nu a fost introdusa normalizare noua; valorile nullable din `ResultSet` raman nullable.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 216 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `QuestAnchorBindingRow.kt` si readauga record-ul privat `QuestAnchorBindingRow` in `AINPCCommand.java`
+
+### KOT-175
+
+Data: 2026-05-24
+ID: KOT-175
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AuditReport.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `AuditReport.kt`, `QuestAnchorBindingRow.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Clasa privata mutabila `AuditReport` din `AINPCCommand` a fost mutata in Kotlin.
+- Listele `errors`, `warnings` si `infos` sunt expuse cu `@JvmField` pentru a pastra accesul direct existent din Java.
+- Metodele `error(...)`, `warn(...)` si `info(...)` raman apelabile din `AINPCCommand`.
+- Dupa acest slice, `AINPCCommand.java` nu mai contine tipuri private nested.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 217 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `AuditReport.kt` si readauga clasa privata `AuditReport` in `AINPCCommand.java`
+
+### KOT-176
+
+Data: 2026-05-24
+ID: KOT-176
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `AINPCCommandText.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Helper-ele pure de text/parsing din `AINPCCommand` au fost mutate in Kotlin: `formatBounds`, `formatList`, `formatMap`, `formatCountMap`, `formatOptional`, `formatOnOff`, `parseInt`, `parseDouble`, `shortenBatchValue` si `valueOrDash`.
+- Fisierul Kotlin foloseste `@file:JvmName("AINPCCommandText")`, iar Java foloseste static import pentru a pastra call-site-urile curate.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 218 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- sterge `AINPCCommandText.kt` si readauga helper-ele mutate in `AINPCCommand.java`
+
+### KOT-177
+
+Data: 2026-05-24
+ID: KOT-177
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 3
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `AINPCCommandText.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Helper-ul `normalizeAuditKey` a fost mutat in Kotlin.
+- Comportamentul Java `String.toLowerCase()` a fost pastrat prin `Locale.getDefault()`.
+- Doua method references `this::normalizeAuditKey` au fost convertite in lambdas catre helperul static.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 218 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- muta `normalizeAuditKey` inapoi in `AINPCCommand.java` si revino la `this::normalizeAuditKey` unde era cazul
+
+### KOT-178
+
+Data: 2026-05-24
+ID: KOT-178
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 3
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `AINPCCommandText.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Helper-ele pure de comparare/fallback string au fost mutate in Kotlin: `equalsIgnoreCase`, `sameNonBlankIgnoreCase`, `sameOptionalId`, `isNoneSelector`, `firstNonBlank` si `firstNonBlankFromMap`.
+- Call-site-urile Java folosesc in continuare aceleasi nume prin static import.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 218 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarea lor din `AINPCCommandText.kt`
+
+### KOT-179
+
+Data: 2026-05-24
+ID: KOT-179
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 3
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+- IntelliJ build targetat pentru `AINPCCommandText.kt` si `AINPCCommand.java` (PASS)
+
+Observatii:
+- Helper-ele pure audit/story au fost mutate in Kotlin: `jsonString`, `safeAuditValue`, `questReferencePrefix`, `normalizeStoryActionScope`, `hasAnyMetadata` si `hasAnyMapEntry`.
+- `jsonString` pastreaza dependenta Gson strict in helperul Kotlin, fara schimbari de schema sau payload.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 218 fisiere Kotlin, 3 fisiere Java (~98.6% Kotlin)
+
+Rollback:
+- readauga helper-ele audit/story mutate in `AINPCCommand.java` si sterge implementarea lor din `AINPCCommandText.kt`
