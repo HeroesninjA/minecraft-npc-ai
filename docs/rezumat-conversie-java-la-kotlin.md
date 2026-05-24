@@ -1,6 +1,6 @@
 # Rezumat Conversie Java la Kotlin
 
-Actualizat: 2026-05-22
+Actualizat: 2026-05-24
 
 ## Scop
 
@@ -33,7 +33,7 @@ Status curent:
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent
 - smoke Paper nu a fost rulat local inca si ramane urmatorul gate runtime
-- inventar curent: 200 fisiere Kotlin si 4 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.0% Kotlin dupa numar de fisiere
+- inventar curent: 204 fisiere Kotlin si 4 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.1% Kotlin dupa numar de fisiere
 - fisiere Java de productie ramase in core: `AINPCCommand.java`, `DebugDumpService.java`, `ScenarioEngine.java`, `NPCManager.java`
 
 ## Ideea principala

@@ -175,41 +175,42 @@ class HouseAllocationValidatorTest {
     }
 
     private data class FakeWorldAdmin(
-        private val places: List<WorldPlaceInfo>,
-        private val nodes: List<WorldNodeInfo>
+        private val placeList: List<WorldPlaceInfo>,
+        private val nodeList: List<WorldNodeInfo>
     ) : WorldAdminApi {
-        override fun isEnabled(): Boolean = true
-        override fun getWorldMode(): WorldMode = WorldMode.FINITE_DYNAMIC
-        override fun getRegions(): Collection<WorldRegionInfo> = listOf()
-        override fun getRegion(regionId: String): WorldRegionInfo? = null
-        override fun findRegion(worldName: String, x: Int, y: Int, z: Int): WorldRegionInfo? = null
-        override fun getPlaces(): Collection<WorldPlaceInfo> = places
-        override fun getPlaces(regionId: String): Collection<WorldPlaceInfo> =
-            places.filter { place -> place.regionId().equals(regionId, ignoreCase = true) }
+        override val isEnabled: Boolean = true
+        override val worldMode: WorldMode = WorldMode.FINITE_DYNAMIC
+        override val regions: Collection<WorldRegionInfo> = listOf()
+        override val places: Collection<WorldPlaceInfo> = placeList
+        override val nodes: Collection<WorldNodeInfo> = nodeList
+        override val regionCount: Int = 0
+        override val placeCount: Int = placeList.size
+        override val nodeCount: Int = nodeList.size
 
-        override fun getPlace(placeId: String): WorldPlaceInfo? =
-            places.firstOrNull { place -> place.id().equals(placeId, ignoreCase = true) }
+        override fun getRegion(regionId: String?): WorldRegionInfo? = null
+        override fun findRegion(worldName: String?, x: Int, y: Int, z: Int): WorldRegionInfo? = null
+        override fun getPlaces(regionId: String?): Collection<WorldPlaceInfo> =
+            placeList.filter { place -> place.regionId().equals(regionId, ignoreCase = true) }
 
-        override fun findPlace(worldName: String, x: Int, y: Int, z: Int): WorldPlaceInfo? = null
-        override fun findPlacesByTag(regionId: String, tag: String): Collection<WorldPlaceInfo> =
-            places.filter { place ->
+        override fun getPlace(placeId: String?): WorldPlaceInfo? =
+            placeList.firstOrNull { place -> place.id().equals(placeId, ignoreCase = true) }
+
+        override fun findPlace(worldName: String?, x: Int, y: Int, z: Int): WorldPlaceInfo? = null
+        override fun findPlacesByTag(regionId: String?, tag: String?): Collection<WorldPlaceInfo> =
+            placeList.filter { place ->
                 place.regionId().equals(regionId, ignoreCase = true) && place.hasTag(tag)
             }
 
-        override fun getNodes(): Collection<WorldNodeInfo> = nodes
-        override fun getNodes(regionId: String): Collection<WorldNodeInfo> =
-            nodes.filter { node -> node.regionId().equals(regionId, ignoreCase = true) }
+        override fun getNodes(regionId: String?): Collection<WorldNodeInfo> =
+            nodeList.filter { node -> node.regionId().equals(regionId, ignoreCase = true) }
 
-        override fun getNodesForPlace(placeId: String): Collection<WorldNodeInfo> =
-            nodes.filter { node -> node.placeId().equals(placeId, ignoreCase = true) }
+        override fun getNodesForPlace(placeId: String?): Collection<WorldNodeInfo> =
+            nodeList.filter { node -> node.placeId().equals(placeId, ignoreCase = true) }
 
-        override fun getNode(nodeId: String): WorldNodeInfo? =
-            nodes.firstOrNull { node -> node.id().equals(nodeId, ignoreCase = true) }
+        override fun getNode(nodeId: String?): WorldNodeInfo? =
+            nodeList.firstOrNull { node -> node.id().equals(nodeId, ignoreCase = true) }
 
-        override fun findNode(worldName: String, x: Int, y: Int, z: Int): WorldNodeInfo? = null
-        override fun findNodesNear(worldName: String, x: Double, y: Double, z: Double, radius: Double, limit: Int): Collection<WorldNodeInfo> = listOf()
-        override fun getRegionCount(): Int = 0
-        override fun getPlaceCount(): Int = places.size
-        override fun getNodeCount(): Int = nodes.size
+        override fun findNode(worldName: String?, x: Int, y: Int, z: Int): WorldNodeInfo? = null
+        override fun findNodesNear(worldName: String?, x: Double, y: Double, z: Double, radius: Double, limit: Int): Collection<WorldNodeInfo> = listOf()
     }
 }

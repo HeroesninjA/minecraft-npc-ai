@@ -106,34 +106,39 @@ docs/debugging-si-testare.md
 Ruleaza testele:
 
 ```powershell
-mvn clean test
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.2"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+.\gradlew.bat clean test
 ```
 
 Construieste artefactele:
 
 ```powershell
-mvn package -DskipTests
+.\gradlew.bat assemble
 ```
 
 Verifica JAR-urile:
 
 ```powershell
-Get-ChildItem .\ainpc-core-plugin\target\*.jar | Select-Object Name,Length
-Get-ChildItem .\ainpc-scenario-medieval\target\*.jar | Select-Object Name,Length
+Get-ChildItem .\ainpc-core-plugin\build\libs\*.jar | Select-Object Name,Length
+Get-ChildItem .\ainpc-scenario-medieval\build\libs\*.jar | Select-Object Name,Length
+Get-ChildItem .\ainpc-api\build\libs\*.jar | Select-Object Name,Length
 ```
 
 Artefacte asteptate pentru versiunea curenta:
 
 ```text
-ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar
-ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar
+ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar
+ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar
+ainpc-api/build/libs/ainpc-api-1.0.0.jar
 ```
 
 Calculeaza hash-uri pentru raport:
 
 ```powershell
-Get-FileHash .\ainpc-core-plugin\target\ainpc-core-plugin-1.0.0.jar -Algorithm SHA256
-Get-FileHash .\ainpc-scenario-medieval\target\ainpc-scenario-medieval-1.0.0.jar -Algorithm SHA256
+Get-FileHash .\ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar -Algorithm SHA256
+Get-FileHash .\ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-1.0.0.jar -Algorithm SHA256
+Get-FileHash .\ainpc-api\build\libs\ainpc-api-1.0.0.jar -Algorithm SHA256
 ```
 
 ## 3. Inspectie JAR
@@ -141,13 +146,13 @@ Get-FileHash .\ainpc-scenario-medieval\target\ainpc-scenario-medieval-1.0.0.jar 
 Verifica resursele core:
 
 ```powershell
-jar tf .\ainpc-core-plugin\target\ainpc-core-plugin-1.0.0.jar | Select-String "plugin.yml|config.yml|quests.yml"
+jar tf .\ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar | Select-String "plugin.yml|config.yml|quests.yml"
 ```
 
 Verifica clasele principale:
 
 ```powershell
-jar tf .\ainpc-core-plugin\target\ainpc-core-plugin-1.0.0.jar | Select-String "ro/ainpc/AINPCPlugin.class|ro/ainpc/managers/NPCManager.class"
+jar tf .\ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar | Select-String "ro/ainpc/AINPCPlugin.class|ro/ainpc/managers/NPCManager.class"
 ```
 
 Bifeaza:
@@ -185,6 +190,16 @@ world_the_end/
 ```
 
 Nu edita `ainpc_data.db` cat timp serverul este pornit.
+
+Backup verificat cu restore-check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-backup-restore-check.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -ReleaseId "<release-id>"
+```
+
+Adauga `-IncludeWorlds` cand release-ul poate modifica entitati, structuri sau mapping in lume. Pastreaza `backup_zip`, `backup_zip_sha256` si `restore_report_path` in raportul de release.
 
 ## 5. Startup smoke
 
@@ -295,6 +310,38 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
   -RunTests
 ```
 
+Preflight automat fara player, pe server Paper deja pornit cu RCON activ:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPreflight `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
+Acest preflight ruleaza plugin load, demo mapping, definitii progression/quest pentru addonul medieval si `/ainpc audit quest offline`. El nu inlocuieste testul cu player real pentru `nearest`, accept/status/track si obiective in lume.
+
+Smoke automat asistat cu player online:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -PlayerName "NumeleTau" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPlayerSmoke `
+  -WaitForPlayerCheckpoints `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
+Acesta scrie `ainpc-quest-smoke-player-rcon-report.json` si devine evidenta principala pentru gate-ul `demo-playable`.
+
 Comenzi manuale minime:
 
 ```text
@@ -404,7 +451,26 @@ Bifeaza:
 - quest tracking nu produce spam vizual;
 - mesajele de eroare sunt potrivite pentru jucatori.
 
-## 13. Raport release
+## 13. API/addon freeze
+
+Ruleaza raportul de freeze pentru API si addonul medieval dupa build:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-api-addon-freeze.ps1 `
+  -ReleaseId "<release-id>" `
+  -FailOnWarnings
+```
+
+Bifeaza:
+
+- JAR-ul `ainpc-api` exista si are hash notat;
+- JAR-ul `ainpc-scenario-medieval` exista si are hash notat;
+- semnatura normalizata API este pastrata in raport;
+- `plugin.yml` din addon are `depend: [AINPCPlugin]`;
+- addonul contine `packs/medieval_quest.yml` si `config-template.yml`;
+- raportul `*-api-addon-freeze.json` are `ok=true`.
+
+## 14. Raport release
 
 Raport minim:
 
@@ -413,9 +479,10 @@ Release ID:
 Commit:
 Core JAR SHA256:
 Medieval addon SHA256:
+API JAR SHA256:
 Server:
 Paper/API:
-Teste Maven:
+Teste Gradle:
 Startup smoke:
 Mapping smoke:
 NPC smoke:
@@ -424,13 +491,37 @@ OpenAI mode:
 Audit final:
 Debugdump path:
 Backup path:
+Backup SHA256:
+Restore-check:
 Known issues:
 Decizie: release / hold
 ```
 
 Pastreaza raportul langa notitele de test sau in issue-ul intern.
 
-## 14. Rollback rapid
+Generator recomandat:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-report.ps1 `
+  -ReleaseId "<release-id>" `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -BackupReport "<backup-report-json>" `
+  -QuestRconReport "<ainpc-quest-smoke-rcon-report.json>" `
+  -QuestPlayerReport "<ainpc-quest-smoke-player-rcon-report.json>" `
+  -ApiAddonFreezeReport "<release-id-api-addon-freeze.json>" `
+  -TestsGradle "passed" `
+  -StartupSmoke "passed" `
+  -MappingSmoke "passed" `
+  -NpcSmoke "passed" `
+  -QuestSmoke "rcon-preflight-passed; player-smoke-passed" `
+  -OpenAiMode "fallback-local" `
+  -AuditFinal "passed" `
+  -Decision hold
+```
+
+Output-ul standard este in `.ai\release-reports\` si include JSON plus Markdown. Pentru release real, foloseste `-Decision release` doar cand nu mai exista gate-uri deschise; scriptul marcheaza warning daca decizia este `release`, dar raportul `QuestPlayerReport` sau `ApiAddonFreezeReport` lipseste ori nu are `ok=true`.
+
+## 15. Rollback rapid
 
 Daca release-ul esueaza pe server:
 
@@ -444,20 +535,24 @@ Daca release-ul esueaza pe server:
 
 Nu incerca sa repari manual DB-ul live ca parte din rollback.
 
+Pentru politici detaliate de backup, migration si rollback, foloseste `migration-si-backup.md`.
+
 ## Checklist scurt
 
 ```text
 [ ] Git status inteles
 [ ] Secrete verificate
 [ ] Documentatie relevanta actualizata
-[ ] mvn clean test trecut
-[ ] mvn package -DskipTests trecut
+[ ] gradlew clean test trecut
+[ ] gradlew assemble trecut
 [ ] JAR core exista
 [ ] JAR addon exista daca este inclus
 [ ] plugin.yml/config.yml/quests.yml exista in JAR
+[ ] API/addon freeze report trecut
 [ ] Hash-uri notate
 [ ] Server oprit inainte de copiere
 [ ] Backup plugins/AINPC facut
+[ ] Restore-check backup trecut
 [ ] Backup lume facut daca e necesar
 [ ] Pluginul apare in /plugins
 [ ] /ainpc raspunde
@@ -483,5 +578,6 @@ Release-ul este gata cand:
 - auditul final nu are erori critice;
 - smoke-ul relevant trece inainte si dupa restart;
 - backup-ul exista pentru date reale;
+- backup-ul are restore-check trecut;
 - raportul de release spune clar ce a fost testat si ce nu;
 - exista o cale de rollback fara editare DB live.

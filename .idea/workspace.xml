@@ -6,10 +6,25 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIConnectionProbe.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIConnectionProbe.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/addons/AddonRegistryTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/addons/AddonRegistryTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/progression/ProgressionDefinitionTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/progression/ProgressionDefinitionTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/spawn/HouseAllocationValidatorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/spawn/HouseAllocationValidatorTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/categorii/06-operare-hardening/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/06-operare-hardening/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/debugging-si-testare.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/debugging-si-testare.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/documentatie-lipsa.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/documentatie-lipsa.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/release-checklist.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/release-checklist.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/server-admin-runbook.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/server-admin-runbook.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/smoke-paper-quests.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/smoke-paper-quests.ps1" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -17,7 +32,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1128" />
+    <option name="cachedIndexableFilesCount" value="1142" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
@@ -86,6 +101,11 @@
         <option name="allowedToolsNames" />
         <option name="enabled" value="false" />
         <option name="name" value="ainpc-project-memory" />
+      </McpServerConfigurationProperties>
+      <McpServerConfigurationProperties>
+        <option name="allowedToolsNames" />
+        <option name="enabled" value="false" />
+        <option name="name" value="serena" />
       </McpServerConfigurationProperties>
     </urls>
   </component>
@@ -551,7 +571,15 @@
       <option name="project" value="LOCAL" />
       <updated>1779377969888</updated>
     </task>
-    <option name="localTasksCounter" value="41" />
+    <task id="LOCAL-00041" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1779465337945</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1779465337946</updated>
+    </task>
+    <option name="localTasksCounter" value="42" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

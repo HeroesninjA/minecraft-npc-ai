@@ -168,7 +168,7 @@ openai:
     log_response_preview: true
 ```
 
-Pentru testare pe server real, seteaza aceleasi valori in `plugins/AINPC/config.yml`, nu doar in resursa din proiect.
+Pentru testare pe server real, seteaza aceleasi valori in `plugins/AINPC/config.yml`, nu doar in resursa din proiect. Activeaza `check_on_startup` doar cand `OPENAI_API_KEY` sau `openai.api_key` este configurata; fara cheie, pluginul sare peste proba HTTP si foloseste fallback local.
 
 ## Debugging OpenAI
 

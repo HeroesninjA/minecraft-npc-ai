@@ -98,6 +98,12 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     ): CompletableFuture<String> {
         return capturePromptSnapshot(request).thenCompose { snapshot ->
             CompletableFuture.supplyAsync {
+                if (apiKey.isBlank()) {
+                    diagInfo("Sar peste cerere OpenAI: cheia API lipseste; folosesc fallback local.")
+                    recordFallback("missing_api_key")
+                    return@supplyAsync OpenAITextSupport.generateFallbackResponse(snapshot)
+                }
+
                 if (isInOfflineBackoffWindow()) {
                     val remainingSeconds = maxOf(0L, (offlineRetryAfterMillis - System.currentTimeMillis()) / 1000L)
                     diagInfo(
@@ -283,6 +289,12 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     fun generateAsync(prompt: String): CompletableFuture<String?> {
         return CompletableFuture.supplyAsync {
+            if (apiKey.isBlank()) {
+                diagInfo("Sar peste generateAsync: cheia API lipseste.")
+                recordFallback("missing_api_key")
+                return@supplyAsync null
+            }
+
             if (isInOfflineBackoffWindow()) {
                 diagInfo("Sar peste generateAsync din cauza backoff-ului activ.")
                 return@supplyAsync null
@@ -300,9 +312,16 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     fun runDiagnosticsAsync(reason: String) {
-        if (!plugin.config.getBoolean("openai.diagnostics.enabled", false) &&
-            !plugin.config.getBoolean("openai.diagnostics.check_on_startup", false)
-        ) {
+        val diagnosticsEnabled = plugin.config.getBoolean("openai.diagnostics.enabled", false)
+        val checkOnStartup = plugin.config.getBoolean("openai.diagnostics.check_on_startup", false)
+        val automaticCheck = reason == "startup" || reason == "reload"
+        if (!diagnosticsEnabled || automaticCheck && !checkOnStartup) {
+            return
+        }
+
+        if (apiKey.isBlank()) {
+            diagInfo("Sar peste diagnosticare OpenAI. reason=$reason: cheia API lipseste; fallback-ul local ramane activ.")
+            recordFallback("missing_api_key")
             return
         }
 

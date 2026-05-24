@@ -1,6 +1,6 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-05-22
+Actualizat: 2026-05-24
 
 ## Scop
 
@@ -3917,3 +3917,134 @@ Inventar dupa slice:
 
 Rollback:
 - sterge `DebugDumpNpcWorldBindingJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-159
+
+Data: 2026-05-23
+ID: KOT-159
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpStoryStateJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build targetat pentru fisierele slice-ului (`DebugDumpService.java`, `DebugDumpStoryStateJson.kt`) (PASS)
+- `.\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exportul JSON pentru `story-states.json` a fost mutat in Kotlin.
+- `DebugDumpStoryStateJson` pastreaza comportamentul existent pentru tabelele `region_story_state` si `place_story_state`, inclusiv counters si detectia JSON invalid.
+- `story-events.json` ramane in Java pentru un slice separat, deoarece include cross-linking cu progresiile.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 201 fisiere Kotlin, 4 fisiere Java (~98.0% Kotlin)
+
+Rollback:
+- sterge `DebugDumpStoryStateJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-160
+
+Data: 2026-05-24
+ID: KOT-160
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpStoryEventJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exportul JSON pentru `story-events.json` a fost mutat in Kotlin.
+- `DebugDumpStoryEventJson` pastreaza cross-linking-ul cu `player_quests`, inclusiv campul `progression_link` si counters pentru event/scope/template/code/link.
+- `DebugDumpService` ramane orchestratorul fisierelor de dump si delega acum atat `story-states.json`, cat si `story-events.json` catre helper-e Kotlin.
+- Validarea IntelliJ MCP targetata a expirat in tool dupa 120s; gate-ul conclusiv pentru slice ramane compilarea Gradle.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 202 fisiere Kotlin, 4 fisiere Java (~98.1% Kotlin)
+
+Rollback:
+- sterge `DebugDumpStoryEventJson.kt` si readauga metodele mutate in `DebugDumpService.java` din istoric
+
+### KOT-161
+
+Data: 2026-05-24
+ID: KOT-161
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 3
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpQuestDefinitionJson.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpStoryEventJson.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- Exportul JSON pentru `loaded-quest-definitions.json` a fost mutat in Kotlin.
+- `DebugDumpQuestDefinitionJson` pastreaza serializarea scenariilor, contractului efectiv, mecanicilor/progresiilor, rolurilor, obiectivelor si reward-urilor.
+- Filtrul `isLoadedQuestDefinitionCandidate` ramane disponibil static pentru auditul Java din `DebugDumpService`.
+- Warning-ul Kotlin pentru `scenario.baseType?.name` din `DebugDumpStoryEventJson` a fost curatat in acelasi slice.
+- Validarea IntelliJ MCP targetata a expirat in tool dupa 120s; gate-ul conclusiv pentru slice ramane compilarea Gradle.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 203 fisiere Kotlin, 4 fisiere Java (~98.1% Kotlin)
+
+Rollback:
+- sterge `DebugDumpQuestDefinitionJson.kt`, revino linia `loaded-quest-definitions.json` din `DebugDumpService.java` si readauga metodele mutate din istoric
+
+### KOT-162
+
+Data: 2026-05-24
+ID: KOT-162
+Status: validat local
+Zona: `ro.ainpc.debug`
+Tip: productie
+Risc: 4
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/DebugDumpQuestAudit.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/debug/DebugDumpService.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava` cu `JAVA_HOME` setat local la JDK 25 (PASS)
+
+Observatii:
+- `quest-audit-report.txt` este construit acum in Kotlin prin `DebugDumpQuestAudit`.
+- Auditul mutat include validarea quest templates, semantic references, stages/next_stage, persistenta `player_quests`, `quest_anchor_bindings`, JSON stocat si consistenta story/progression.
+- `DebugDumpService.java` ramane doar orchestratorul dump-ului si nu mai contine logica de audit quest.
+- O rescriere PowerShell intermediara a introdus BOM in `DebugDumpService.java`; a fost eliminat inainte de validarea finala.
+- Validarea IntelliJ MCP targetata a expirat in tool dupa 120s; gate-ul conclusiv pentru slice ramane compilarea Gradle.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 204 fisiere Kotlin, 4 fisiere Java (~98.1% Kotlin)
+
+Rollback:
+- sterge `DebugDumpQuestAudit.kt` si readauga metodele de audit quest in `DebugDumpService.java` din istoric

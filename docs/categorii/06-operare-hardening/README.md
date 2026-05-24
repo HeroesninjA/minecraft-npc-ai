@@ -9,6 +9,7 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 | Document | Rol |
 |---|---|
 | `../../server-admin-runbook.md` | Runbook pentru instalare, config minim, verificari, audit, debugdump si smoke test pe Paper |
+| `../../migration-si-backup.md` | Backup cu restore-check, migration si rollback operational |
 | `../../mcp-docker-server-mvp-si-faze.md` | Checklist pentru serverul MCP din Docker, integrare Codex/JetBrains, vector DB, watchers, backup si faze ulterioare |
 | `../../release-checklist.md` | Checklist pentru build, inspectie JAR, test Paper, audit, restart si rollback |
 | `../../audit.md` | Documentatie pentru `/ainpc audit` si backlog de verificari |
@@ -25,5 +26,4 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 
 ## Urmatoarele documente utile
 
-- Ghid de backup, restore si migration.
 - Politica pentru debug logs si date sensibile.
