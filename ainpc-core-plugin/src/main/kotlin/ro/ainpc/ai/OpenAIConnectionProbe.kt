@@ -17,6 +17,16 @@ object OpenAIConnectionProbe {
         httpClient: OkHttpClient,
         gson: Gson
     ): ConnectionStatus {
+        if (apiKey.isBlank()) {
+            return ConnectionStatus.unreachable(
+                model,
+                listOf(baseUrl),
+                null,
+                emptyList(),
+                listOf("Cheia OpenAI lipseste; seteaza OPENAI_API_KEY sau openai.api_key pentru proba HTTP.")
+            )
+        }
+
         val modelUrl = "$baseUrl/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8)
         val startedAt = System.nanoTime()
         val requestBuilder = Request.Builder()

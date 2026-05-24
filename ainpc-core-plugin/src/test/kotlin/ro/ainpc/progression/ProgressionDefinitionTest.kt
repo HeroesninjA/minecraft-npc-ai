@@ -16,15 +16,15 @@ class ProgressionDefinitionTest {
             "Contract de livrare",
             ScenarioEngine.ScenarioType.TRADE_DEAL
         )
-        scenario.setQuestCode("C01")
-        scenario.setQuestCategory("side")
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("village_contracts")
-        scenario.setProgressionKind("contract")
-        scenario.setProgressionLabel("Contracte de sat")
-        scenario.setProgressionSingularLabel("contract")
-        scenario.setProgressionPluralLabel("contracte")
-        scenario.setProgressionMaxActive(3)
+        scenario.questCode = "C01"
+        scenario.questCategory = "side"
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "village_contracts"
+        scenario.progressionKind = "contract"
+        scenario.progressionLabel = "Contracte de sat"
+        scenario.progressionSingularLabel = "contract"
+        scenario.progressionPluralLabel = "contracte"
+        scenario.progressionMaxActive = 3
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("collect_item", "PAPER", 6, "Aduna hartie"))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -47,12 +47,12 @@ class ProgressionDefinitionTest {
             "Contract de verificare",
             ScenarioEngine.ScenarioType.TRADE_DEAL
         )
-        scenario.setQuestCode("C02")
-        scenario.setQuestCategory("side")
-        scenario.setQuestScenarioKind("investigation")
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("village_contracts")
-        scenario.setProgressionKind("contract")
+        scenario.questCode = "C02"
+        scenario.questCategory = "side"
+        scenario.questScenarioKind = "investigation"
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "village_contracts"
+        scenario.progressionKind = "contract"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("inspect_node", "quest_board", 1, "Verifica avizierul."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -70,13 +70,13 @@ class ProgressionDefinitionTest {
             "Sarcina de patrula",
             ScenarioEngine.ScenarioType.DUTY
         )
-        scenario.setQuestCode("D01")
-        scenario.setQuestCategory("repeatable")
-        scenario.setQuestScenarioKind("duty")
-        scenario.setQuestRepeatable(true)
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("npc_duties")
-        scenario.setProgressionKind("duty")
+        scenario.questCode = "D01"
+        scenario.questCategory = "repeatable"
+        scenario.questScenarioKind = "duty"
+        scenario.isQuestRepeatable = true
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "npc_duties"
+        scenario.progressionKind = "duty"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("visit_region", "type:settlement", 1, "Confirma rondul."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -98,13 +98,13 @@ class ProgressionDefinitionTest {
             "Bounty local",
             ScenarioEngine.ScenarioType.BOUNTY
         )
-        scenario.setQuestCode("B01")
-        scenario.setQuestCategory("repeatable")
-        scenario.setQuestScenarioKind("hunt")
-        scenario.setQuestRepeatable(true)
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("local_bounties")
-        scenario.setProgressionKind("bounty")
+        scenario.questCode = "B01"
+        scenario.questCategory = "repeatable"
+        scenario.questScenarioKind = "hunt"
+        scenario.isQuestRepeatable = true
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "local_bounties"
+        scenario.progressionKind = "bounty"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("kill_mob", "SKELETON", 2, "Curata drumul."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -126,13 +126,13 @@ class ProgressionDefinitionTest {
             "Eveniment local",
             ScenarioEngine.ScenarioType.WORLD_EVENT
         )
-        scenario.setQuestCode("E01")
-        scenario.setQuestCategory("repeatable")
-        scenario.setQuestScenarioKind("event")
-        scenario.setQuestRepeatable(true)
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("village_events")
-        scenario.setProgressionKind("event")
+        scenario.questCode = "E01"
+        scenario.questCategory = "repeatable"
+        scenario.questScenarioKind = "event"
+        scenario.isQuestRepeatable = true
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "village_events"
+        scenario.progressionKind = "event"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("inspect_node", "quest_board", 1, "Verifica avizierul."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -154,12 +154,12 @@ class ProgressionDefinitionTest {
             "Tutorial de onboarding",
             ScenarioEngine.ScenarioType.TUTORIAL
         )
-        scenario.setQuestCode("T01")
-        scenario.setQuestCategory("side")
-        scenario.setQuestScenarioKind("tutorial")
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("onboarding")
-        scenario.setProgressionKind("tutorial")
+        scenario.questCode = "T01"
+        scenario.questCategory = "side"
+        scenario.questScenarioKind = "tutorial"
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "onboarding"
+        scenario.progressionKind = "tutorial"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("inspect_node", "quest_board", 1, "Inspecteaza avizierul."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
@@ -180,13 +180,13 @@ class ProgressionDefinitionTest {
             "Ritual local",
             ScenarioEngine.ScenarioType.RITUAL
         )
-        scenario.setQuestCode("R01")
-        scenario.setQuestCategory("repeatable")
-        scenario.setQuestScenarioKind("ritual")
-        scenario.setQuestRepeatable(true)
-        scenario.setProgressionEnabled(true)
-        scenario.setProgressionMechanicId("village_rituals")
-        scenario.setProgressionKind("ritual")
+        scenario.questCode = "R01"
+        scenario.questCategory = "repeatable"
+        scenario.questScenarioKind = "ritual"
+        scenario.isQuestRepeatable = true
+        scenario.isProgressionEnabled = true
+        scenario.progressionMechanicId = "village_rituals"
+        scenario.progressionKind = "ritual"
         scenario.addObjective(FeaturePackLoader.QuestEntryDefinition("inspect_node", "ritual_circle", 1, "Inspecteaza cercul ritualic."))
 
         val definition = ProgressionDefinition.fromScenarioDefinition(scenario)

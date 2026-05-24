@@ -181,7 +181,7 @@ class AddonRegistryTest {
             type,
             primaryScenario,
             runtimeModes,
-            listOf("demo"),
+            if (type == AddonType.SCENARIO) listOf("scenarios", "demo") else listOf("demo"),
             listOf()
         )
     }

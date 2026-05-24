@@ -31,7 +31,8 @@ openai:
     # Loguri detaliate pentru conectare, coduri HTTP, timing si modelul configurat.
     enabled: true
     # Ruleaza automat o verificare a modelului la startup si la reload.
-    check_on_startup: true
+    # Lasa false pe servere fara OPENAI_API_KEY ca startup-ul sa ramana curat si sa foloseasca fallback local.
+    check_on_startup: false
     # Logheaza sumarul promptului trimis spre model.
     log_prompt_summary: true
     # Logheaza un preview din raspunsul returnat de model.

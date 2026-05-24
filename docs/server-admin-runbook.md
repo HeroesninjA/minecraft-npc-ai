@@ -2,7 +2,7 @@
 
 Actualizat: 2026-05-04
 
-Status: ghid operational initial pentru administrarea unui server Paper cu AINPC. Nu inlocuieste `release-checklist.md`, `debugging-si-testare.md`, `audit.md` sau documentele de migration/backup care urmeaza.
+Status: ghid operational initial pentru administrarea unui server Paper cu AINPC. Nu inlocuieste `release-checklist.md`, `migration-si-backup.md`, `debugging-si-testare.md` sau `audit.md`.
 
 ## Scop
 
@@ -96,7 +96,7 @@ openai:
   model: "gpt-5.4-nano"
   diagnostics:
     enabled: true
-    check_on_startup: true
+    check_on_startup: false
 
 world_admin:
   enabled: true
@@ -119,6 +119,7 @@ Recomandare operationala:
 
 - pastreaza `openai.api_key` gol;
 - seteaza cheia in mediul serverului ca `OPENAI_API_KEY`;
+- activeaza `openai.diagnostics.check_on_startup` doar in staging/test sau cand exista cheie API configurata;
 - pastreaza `debug: false` pe server public;
 - activeaza debug doar temporar cand colectezi date.
 
@@ -303,7 +304,7 @@ Verificari:
 - `OPENAI_API_KEY` exista in mediul procesului serverului;
 - `openai.base_url` este `https://api.openai.com/v1`, daca folosesti configuratia standard;
 - `openai.model` este setat la modelul dorit;
-- `openai.diagnostics.check_on_startup` este activ in mediul de test;
+- `openai.diagnostics.check_on_startup` este activ in mediul de test doar cand exista cheie API;
 - serverul are acces la internet.
 
 Script util:
@@ -386,12 +387,44 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
   -PlayerName "NumeleTau"
 ```
 
+Pentru preflight quest automat prin RCON, fara player online:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPreflight `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
+Pentru quest smoke cu player online:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -PlayerName "NumeleTau" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPlayerSmoke `
+  -WaitForPlayerCheckpoints `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
 Scripturile:
 
 - pot construi JAR-urile;
 - copiaza pluginurile in `plugins/`;
 - genereaza fisiere cu comenzi de rulat in Paper;
 - genereaza raport cu hash-uri si verificari de baza.
+- pot rula preflight RCON pentru quest definitions si `audit quest offline`; parola RCON nu este scrisa in raport.
+- pot rula player smoke RCON pentru Q01 `nearest`, accept/status/track, iteme si audit final; parola RCON nu este scrisa in raport.
+
+Preflight-ul RCON verifica doar calea fara player. Pentru demo/release cu gameplay, ruleaza si player smoke cu jucator OP langa NPC-ul relevant.
 
 Pentru documentatia completa, vezi `scripts/README.md`.
 
@@ -414,7 +447,17 @@ plugins/AINPC/ainpc_data.db
 plugins/AINPC/debug-dumps/
 ```
 
-Documentul dedicat `migration-si-backup.md` ramane de creat pentru politici complete.
+Backup verificat cu restore-check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-backup-restore-check.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -ReleaseId "<release-id>"
+```
+
+Adauga `-IncludeWorlds` daca operatia poate modifica entitati, structuri sau mapping in lume. Pastreaza raportul `*-report.json` impreuna cu notitele de release.
+
+Politica completa este in `migration-si-backup.md`.
 
 ## Upgrade controlat
 
@@ -432,6 +475,27 @@ Flux recomandat:
 8. Pastreaza JAR-ul vechi pana cand noua versiune este verificata.
 
 Nu combina upgrade de JAR, editare DB si schimbare de config in acelasi pas daca poti evita.
+
+Pentru raportul final al upgrade-ului:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-api-addon-freeze.ps1 `
+  -ReleaseId "<release-id>" `
+  -FailOnWarnings
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-report.ps1 `
+  -ReleaseId "<release-id>" `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -BackupReport "<backup-report-json>" `
+  -QuestRconReport "<ainpc-quest-smoke-rcon-report.json>" `
+  -QuestPlayerReport "<ainpc-quest-smoke-player-rcon-report.json>" `
+  -ApiAddonFreezeReport "<release-id-api-addon-freeze.json>" `
+  -Decision hold
+```
+
+Pastreaza raportul Markdown si JSON impreuna cu backup-ul si notitele de smoke. Pentru `-Decision release`, ataseaza raportul player-smoke generat cu `smoke-paper-quests.ps1 -RunRconPlayerSmoke` si raportul API/addon freeze; altfel generatorul marcheaza gate warning.
 
 ## Troubleshooting rapid
 
@@ -465,6 +529,7 @@ Nu combina upgrade de JAR, editare DB si schimbare de config in acelasi pas daca
 | NPC duplicati | `prevenire-duplicare-npc.md` |
 | Mapping manual | `mapping.md`, `mapping-harti-manuale.md` |
 | Spawn order si rollback | `ordine-spawn-npc-cladiri-region-node.md` |
+| Backup, migration si restore-check | `migration-si-backup.md` |
 | Quest anchors | `quest-anchor-bindings.md` |
 | Release build/test | `release-checklist.md` |
 | JAR mare sau shade | `reducere-marime-jar.md` |
@@ -482,3 +547,4 @@ Un server de test este intr-o stare buna cand:
 - un NPC de test poate fi creat, listat si inspectat;
 - debugdump poate fi generat la nevoie;
 - backup-ul folderului `plugins/AINPC/` este facut inainte de operatii riscante.
+- backup-ul critic are restore-check trecut inainte de migration sau release pe date reale.

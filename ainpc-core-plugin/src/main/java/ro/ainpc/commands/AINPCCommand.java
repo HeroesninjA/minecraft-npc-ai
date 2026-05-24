@@ -1,5 +1,7 @@
 package ro.ainpc.commands;
 
+import static ro.ainpc.commands.AINPCCommandText.*;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
@@ -3077,17 +3079,6 @@ public class AINPCCommand implements CommandExecutor {
             || equalsIgnoreCase(row.packId() + ":" + row.definitionId(), normalized);
     }
 
-    private boolean equalsIgnoreCase(String left, String right) {
-        return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
-    }
-
-    private boolean sameNonBlankIgnoreCase(String left, String right) {
-        return left != null && right != null
-            && !left.isBlank()
-            && !right.isBlank()
-            && left.trim().equalsIgnoreCase(right.trim());
-    }
-
     private boolean questAnchorTargetExists(String anchorType, String anchorId) {
         WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
         if (worldAdmin == null || !worldAdmin.isEnabled()) {
@@ -5992,18 +5983,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String jsonString(JsonElement element, String key) {
-        if (element == null || !element.isJsonObject() || key == null || key.isBlank()) {
-            return "";
-        }
-        JsonElement value = element.getAsJsonObject().get(key);
-        return value != null && !value.isJsonNull() ? value.getAsString().trim() : "";
-    }
-
-    private String safeAuditValue(String value) {
-        return value == null ? "" : value.trim();
-    }
-
     private void auditQuestTemplates(AuditReport report) {
         FeaturePackLoader featurePackLoader = plugin.getFeaturePackLoader();
         if (featurePackLoader == null) {
@@ -6228,7 +6207,7 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         Set<String> knownPhases = quest.getPhases().stream()
-            .map(this::normalizeAuditKey)
+            .map(phase -> normalizeAuditKey(phase))
             .filter(phase -> !phase.isBlank())
             .collect(Collectors.toSet());
         boolean hasStagedObjective = false;
@@ -6487,7 +6466,7 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         boolean roleMatchesGiver = role.getRequiredProfessions().stream()
-            .map(this::normalizeAuditKey)
+            .map(profession -> normalizeAuditKey(profession))
             .anyMatch(giverProfession::equals);
         if (!roleMatchesGiver) {
             report.warn(label + " are QUEST_GIVER.required_professions diferit de quest.giver_profession.");
@@ -6663,19 +6642,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String questReferencePrefix(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int separator = trimmed.indexOf(':');
-        if (separator <= 0) {
-            return "";
-        }
-        return normalizeAuditKey(trimmed.substring(0, separator));
-    }
-
     private void validateQuestStoryAction(AuditReport report,
                                           String label,
                                           String type,
@@ -6715,39 +6681,6 @@ public class AINPCCommand implements CommandExecutor {
                     + "(quest/outcome/result/reason/state/mechanic/tag).");
             }
         }
-    }
-
-    private String normalizeStoryActionScope(String scope) {
-        String normalized = normalizeAuditKey(scope).replace('-', '_');
-        return switch (normalized) {
-            case "region", "world_region", "village", "settlement" -> "region";
-            case "place", "world_place", "location" -> "place";
-            default -> normalized;
-        };
-    }
-
-    private boolean hasAnyMetadata(Map<String, String> metadata, String... keys) {
-        if (metadata == null || metadata.isEmpty() || keys == null) {
-            return false;
-        }
-        for (String key : keys) {
-            if (key != null && !metadata.getOrDefault(key, "").isBlank()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasAnyMapEntry(Map<String, String> values, String... keys) {
-        if (values == null || values.isEmpty() || keys == null) {
-            return false;
-        }
-        for (String key : keys) {
-            if (key != null && !values.getOrDefault(key, "").isBlank()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String questEntryId(FeaturePackLoader.QuestEntryDefinition entry) {
@@ -7852,25 +7785,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String firstNonBlankFromMap(Map<String, String> values, String... keys) {
-        for (String key : keys) {
-            String value = values.get(key);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
     private boolean hasAnySemanticNode(Collection<WorldNodeInfo> nodes, String... expectedTokens) {
         for (WorldNodeInfo node : nodes) {
             if (nodeMatchesAny(node, expectedTokens)) {
@@ -7964,44 +7878,6 @@ public class AINPCCommand implements CommandExecutor {
     private String auditNpcLabel(AINPC npc) {
         String name = npc.getName() == null || npc.getName().isBlank() ? "<fara nume>" : npc.getName();
         return "NPC " + name + " (id=" + npc.getDatabaseId() + ")";
-    }
-
-    private String normalizeAuditKey(String value) {
-        return value == null ? "" : value.trim().toLowerCase().replace(' ', '_');
-    }
-
-    private static final class AuditReport {
-        private final List<String> errors = new ArrayList<>();
-        private final List<String> warnings = new ArrayList<>();
-        private final List<String> infos = new ArrayList<>();
-
-        private void error(String message) {
-            errors.add(message);
-        }
-
-        private void warn(String message) {
-            warnings.add(message);
-        }
-
-        private void info(String message) {
-            infos.add(message);
-        }
-    }
-
-    private record QuestAnchorBindingRow(
-        String playerUuid,
-        String templateId,
-        String objectiveKey,
-        String questCode,
-        String objectiveType,
-        String reference,
-        String anchorType,
-        String anchorId,
-        String anchorLabel,
-        long createdAt,
-        long updatedAt,
-        String status
-    ) {
     }
 
     /**
@@ -8547,10 +8423,6 @@ public class AINPCCommand implements CommandExecutor {
             && sameOptionalId(left.socialNodeId(), right.socialNodeId());
     }
 
-    private boolean sameOptionalId(String left, String right) {
-        return normalizeAuditKey(left).equals(normalizeAuditKey(right));
-    }
-
     private String formatNpcWorldBindingPlaces(NpcWorldBinding binding) {
         return "home=" + formatOptional(binding.homePlaceId())
             + " work=" + formatOptional(binding.workPlaceId())
@@ -9000,21 +8872,6 @@ public class AINPCCommand implements CommandExecutor {
             formatted += ",+" + (total - values.size());
         }
         return shortenBatchValue(formatted, 72);
-    }
-
-    private String shortenBatchValue(String value, int maxLength) {
-        if (value == null || value.isBlank()) {
-            return "-";
-        }
-        int safeMax = Math.max(8, maxLength);
-        String cleanValue = value.trim();
-        return cleanValue.length() <= safeMax
-            ? cleanValue
-            : cleanValue.substring(0, safeMax - 3) + "...";
-    }
-
-    private String valueOrDash(String value) {
-        return value == null || value.isBlank() ? "-" : value;
     }
 
     private void sendRepairMessages(CommandSender sender, List<String> messages, String color, int limit) {
@@ -9652,26 +9509,6 @@ public class AINPCCommand implements CommandExecutor {
         return String.format("%.1f blocuri", Math.sqrt(current.distanceSquared(target)));
     }
 
-    private String formatOnOff(boolean enabled) {
-        return enabled ? "pornit" : "oprit";
-    }
-
-    private int parseInt(String s, int defaultValue) {
-        try {
-            return Integer.parseInt(s);
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
-
-    private double parseDouble(String s, double defaultValue) {
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
-
     private Integer parseIntegerStrict(String value) {
         try {
             return Integer.valueOf(value);
@@ -9948,13 +9785,6 @@ public class AINPCCommand implements CommandExecutor {
         return type;
     }
 
-    private boolean isNoneSelector(String value) {
-        return value == null || value.isBlank()
-            || "-".equals(value)
-            || "none".equalsIgnoreCase(value)
-            || "null".equalsIgnoreCase(value);
-    }
-
     private WorldRegionInfo toRegionInfo(ro.ainpc.world.WorldRegion region) {
         return new WorldRegionInfo(
             region.getId(),
@@ -10007,42 +9837,6 @@ public class AINPCCommand implements CommandExecutor {
             node.getRadius(),
             node.getMetadata()
         );
-    }
-
-    private String formatBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        return minX + "," + minY + "," + minZ + " -> " + maxX + "," + maxY + "," + maxZ;
-    }
-
-    private String formatList(Collection<String> values) {
-        return values == null || values.isEmpty() ? "<gol>" : String.join(", ", values);
-    }
-
-    private String formatMap(Map<String, String> values) {
-        if (values == null || values.isEmpty()) {
-            return "<gol>";
-        }
-
-        return values.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .reduce((left, right) -> left + ", " + right)
-            .orElse("<gol>");
-    }
-
-    private String formatCountMap(Map<String, Integer> values) {
-        if (values == null || values.isEmpty()) {
-            return "<gol>";
-        }
-
-        return values.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .reduce((left, right) -> left + ", " + right)
-            .orElse("<gol>");
-    }
-
-    private String formatOptional(String value) {
-        return value == null || value.isBlank() ? "<nesetat>" : value;
     }
 
     private String formatOwnedLocation(AINPC.OwnedLocation location) {

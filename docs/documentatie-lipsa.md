@@ -8,7 +8,7 @@ Acest document listeaza documentatiile care lipsesc sau merita separate din docu
 
 | Document propus | De ce lipseste | Categorie |
 |---|---|---|
-| `migration-si-backup.md` | Urmeaza modele persistente noi; trebuie strategie de backup, migration si rollback | Operare |
+| `prompt-safety-guide.md` | Prompturile AI trebuie sa aiba reguli clare de context, limite si fallback inainte de public | Quest, story si AI |
 
 ## Prioritate medie
 
@@ -24,18 +24,17 @@ Acest document listeaza documentatiile care lipsesc sau merita separate din docu
 
 | Document propus | De ce lipseste | Categorie |
 |---|---|---|
-| `prompt-safety-guide.md` | Prompturile AI trebuie sa aiba reguli clare de context, limite si fallback | Quest, story si AI |
 | `performance-notes.md` | Indexarea si task-urile periodice pot avea impact pe servere mari | Operare |
 | `observability-and-logs.md` | Lipsesc conventii pentru loguri, debugdump si date sensibile | Operare |
 | `test-fixtures-and-demo-world.md` | Lipseste descrierea unui demo world minimal pentru teste manuale repetabile | Operare |
 
 ## Ordine recomandata
 
-1. `migration-si-backup.md`
-2. `story-state-service.md`
-3. `addon-developer-guide.md`
-4. `scenario-pack-schema.md`
-5. `prompt-safety-guide.md`
+1. `story-state-service.md`
+2. `addon-developer-guide.md`
+3. `scenario-pack-schema.md`
+4. `prompt-safety-guide.md`
+5. `performance-notes.md`
 
 Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru ca proiectul tocmai a inceput sa lege mapping-ul de questuri si AI context.
 
@@ -44,6 +43,7 @@ Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru
 | Document | Status |
 |---|---|
 | `release-checklist.md` | Creat ca checklist operational initial pentru build, inspectie JAR, Paper smoke, audit, restart, raport release si rollback rapid |
+| `migration-si-backup.md` | Creat ca runbook operational pentru backup cu restore-check, migration si rollback pe server Paper |
 | `npc-world-bindings.md` | Creat ca document canonic initial pentru legaturi persistente NPC-home/work/social, audit, migration si sincronizare cu `WorldPlace` |
 | `server-admin-runbook.md` | Creat ca ghid operational initial pentru instalare, config minim, comenzi de verificare, audit, debugdump, smoke test, backup rapid si troubleshooting |
 | `worldedit-integration-contract.md` | Creat ca document canonic initial pentru adapter optional WorldEdit, capabilitati, dry-run, commit, rollback si fallback fara dependinta hard |

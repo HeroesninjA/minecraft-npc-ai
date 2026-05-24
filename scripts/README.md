@@ -60,6 +60,8 @@ Ce face:
 
 - ruleaza context retrieval in etape: `900/8`, `1400/12`, `2200/14`;
 - opreste escaladarea cand output-ul pare suficient;
+- opreste retry-ul cand output-ul inutil se repeta identic;
+- scrie in summary `selected_useful`, `selected_failed`, `selected_failure_reason` si `context_tokens_present`;
 - aplica implicit auto-scope pe profil:
   - `code`: include `ainpc-core-plugin/src/main/`, `ainpc-api/src/main/`, `ainpc-scenario-medieval/src/main/`, `scripts/`;
   - `debug`: include codul + `docs/`;
@@ -130,8 +132,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-summary-report.ps
 Raportul include:
 
 - distributia attempt-urilor (`attempt1/2/3`);
-- medie `selected_token_budget` si `tokens_used`;
-- economii medii vs buget fix `2200`;
+- separat `usable_runs` si `failed_runs`;
+- medie `selected_token_budget` si `tokens_used` doar pentru rulari utile;
+- economii medii vs buget fix `2200` doar pentru rulari utile;
+- motive de esec (`failure_reason`) pentru output fara token metadata, fara hits sau sub prag;
 - breakdown pe profil (`code/debug/planning/full`).
 - optional CSV pentru analiza in Excel (`rows` + `profiles`).
 
@@ -151,6 +155,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly.ps1 `
   -NoTests `
   -UseAdaptiveThresholds `
   -SaveContextOutputs `
+  -WriteCsvReports
+```
+
+Pentru o masuratoare curata, fara istoric vechi:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly.ps1 `
+  -QueryFile ".ai\mcp-nightly-queries.txt" `
+  -OutputDir ".ai\nightly-clean" `
+  -Profile code `
+  -NoTests `
+  -FreshRun `
   -WriteCsvReports
 ```
 
@@ -176,6 +192,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly-matrix.ps
   -UseAdaptiveThresholds `
   -EnsureQueryTemplates `
   -SaveContextOutputs `
+  -WriteCsvReports
+```
+
+Pentru recalibrare token economy, foloseste `-FreshRun` ca sa stergi doar summary/report-urile generate anterior din `OutputRoot` si rapoartele globale din `ReportRoot`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\mcp-context-nightly-matrix.ps1 `
+  -OutputRoot ".ai\nightly-token-economy" `
+  -ReportRoot ".ai\token-economy-current" `
+  -Profiles code,debug,planning `
+  -NoTests `
+  -EnsureQueryTemplates `
+  -FreshRun `
   -WriteCsvReports
 ```
 
@@ -390,6 +419,34 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
   -SkipBuild
 ```
 
+Preflight automat prin RCON, fara player online:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPreflight `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
+Smoke asistat cu player online prin RCON:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -PlayerName "NumeleTau" `
+  -SkipBuild `
+  -NoCopy `
+  -RunRconPlayerSmoke `
+  -WaitForPlayerCheckpoints `
+  -RconHost "127.0.0.1" `
+  -RconPort 25575 `
+  -RconPassword "<parola-rcon>"
+```
+
 Ce face:
 
 - ruleaza `.\gradlew.bat assemble`, daca nu folosesti `-SkipBuild`
@@ -397,5 +454,105 @@ Ce face:
 - copiaza JAR-ul core si addonul medieval in `plugins/`
 - genereaza `ainpc-quest-smoke-commands.txt` in folderul serverului
 - genereaza `ainpc-quest-smoke-report.txt` cu hash-uri si verificari de baza
+- cu `-RunRconPreflight`, ruleaza automat plugin load, demo mapping, definitii progression/quest si `audit quest offline`
+- scrie raportul RCON in `ainpc-quest-smoke-rcon-report.json`; parola RCON nu este salvata in raport
+- cu `-RunRconPlayerSmoke`, verifica playerul online si ruleaza fluxul Q01 `nearest`/accept/status/track/give/turn-in
+- scrie raportul player smoke in `ainpc-quest-smoke-player-rcon-report.json`; parola RCON nu este salvata in raport
 
 Comenzile generate testeaza `/ainpc audit quest`, oferta/acceptarea unui quest cu `nearest`, tracking-ul si finalizarea rapida a Q01 cu iteme date prin `give`.
+
+Preflight-ul RCON valideaza partea fara player. Pentru `demo-playable`, foloseste `-RunRconPlayerSmoke`; cu `-WaitForPlayerCheckpoints`, scriptul se opreste inainte de pasii unde playerul trebuie pozitionat langa NPC.
+
+## Release Backup Restore Check
+
+Script: `scripts/release-backup-restore-check.ps1`
+
+Backup minim pentru release:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-backup-restore-check.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -ReleaseId "lts-rc1"
+```
+
+Cu lumi incluse:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-backup-restore-check.ps1 `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -ReleaseId "lts-rc1" `
+  -IncludeWorlds `
+  -WorldNames world,world_nether,world_the_end
+```
+
+Ce face:
+
+- copiaza `plugins/AINPC/`, JAR-urile AINPC din `plugins/` si `server.properties`;
+- optional copiaza lumile cerute;
+- creeaza o arhiva zip cu `backup-manifest.json`;
+- calculeaza SHA256 pentru arhiva si pentru fiecare fisier inclus;
+- face restore-check intr-un director temporar si verifica dimensiune + SHA256;
+- scrie `*-report.json` si `*-restore-check.json` langa arhiva.
+
+Arhiva poate contine config si DB reale. Trateaz-o ca artefact sensibil.
+
+## Release API/Add-on Freeze
+
+Script: `scripts/release-api-addon-freeze.ps1`
+
+Exemplu:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-api-addon-freeze.ps1 `
+  -ReleaseId "lts-rc1"
+```
+
+Ce face:
+
+- calculeaza hash SHA256 pentru JAR-ul `ainpc-api` si addonul medieval;
+- calculeaza hash SHA256 pentru sursele publice API normalizate;
+- listeaza declaratiile publice detectate in `ainpc-api`;
+- verifica intrari obligatorii in JAR-ul addonului: `plugin.yml`, `config-template.yml`, `packs/medieval_quest.yml` si clasele principale;
+- verifica intrari obligatorii in JAR-ul API pentru interfetele/DTO-urile publice;
+- verifica `plugin.yml` addon: dependinta core, main class si versiune expandata;
+- scrie `.ai\release-reports\<releaseId>-api-addon-freeze.json`;
+- scrie `.ai\release-reports\<releaseId>-api-addon-freeze.md`.
+
+Pentru gate strict, adauga `-FailOnWarnings`.
+
+## Release Report
+
+Script: `scripts/release-report.ps1`
+
+Exemplu pentru raport LTS/RC:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-report.ps1 `
+  -ReleaseId "lts-rc1" `
+  -ServerDir "C:\Minecraft\paper-test" `
+  -BackupReport "C:\Minecraft\paper-test\ainpc-release-backups\ainpc-release-backup-lts-rc1-report.json" `
+  -QuestRconReport "C:\Minecraft\paper-test\ainpc-quest-smoke-rcon-report.json" `
+  -QuestPlayerReport "C:\Minecraft\paper-test\ainpc-quest-smoke-player-rcon-report.json" `
+  -ApiAddonFreezeReport ".ai\release-reports\lts-rc1-api-addon-freeze.json" `
+  -TestsGradle "passed" `
+  -StartupSmoke "passed" `
+  -MappingSmoke "passed" `
+  -NpcSmoke "passed" `
+  -QuestSmoke "rcon-preflight-passed; player-smoke-passed" `
+  -OpenAiMode "fallback-local" `
+  -AuditFinal "passed" `
+  -Decision hold
+```
+
+Ce face:
+
+- calculeaza SHA256 pentru JAR-urile core, addon medieval si API;
+- citeste raportul backup/restore-check, daca este dat;
+- citeste raportul quest RCON, daca este dat;
+- citeste raportul quest player smoke, daca este dat;
+- citeste raportul API/addon freeze, daca este dat;
+- include commit, branch si `git status --short`;
+- scrie `.ai\release-reports\<releaseId>-release-report.json`;
+- scrie `.ai\release-reports\<releaseId>-release-report.md`.
+
+Foloseste `-Decision release` doar cand checklistul LTS este complet. Pentru lipsa artefactului core, `-FailOnMissingRequired` opreste scriptul cu exit non-zero.

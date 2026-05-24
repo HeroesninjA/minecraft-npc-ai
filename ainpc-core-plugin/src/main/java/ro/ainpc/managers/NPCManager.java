@@ -1373,7 +1373,7 @@ public class NPCManager {
             return;
         }
 
-        VillageSnapshot snapshot = analyzeVillage(chunk);
+        NpcVillageSnapshot snapshot = analyzeVillage(chunk);
         if (snapshot == null || snapshot.bedLocations().isEmpty()) {
             return;
         }
@@ -1458,7 +1458,7 @@ public class NPCManager {
         List<String> actions = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         List<String> errors = new ArrayList<>();
-        RepairCounters counters = new RepairCounters();
+        NpcRepairCounters counters = new NpcRepairCounters();
         Set<Integer> plannedDeletedNpcIds = new HashSet<>();
 
         repairSourceKeyDuplicateRows(apply, actions, warnings, errors, counters, plannedDeletedNpcIds);
@@ -1485,7 +1485,7 @@ public class NPCManager {
         List<String> actions = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         List<String> errors = new ArrayList<>();
-        RepairCounters counters = new RepairCounters();
+        NpcRepairCounters counters = new NpcRepairCounters();
 
         repairDuplicateLiveVillagers(apply, actions, warnings, counters);
 
@@ -1526,7 +1526,7 @@ public class NPCManager {
                                                 List<String> actions,
                                                 List<String> warnings,
                                                 List<String> errors,
-                                                RepairCounters counters) {
+                                                NpcRepairCounters counters) {
         List<ManagedVillagerAuditIssue> issues = auditPersistentSourceKeyIndex();
         counters.sourceKeyIndexIssues = issues.size();
         if (issues.isEmpty()) {
@@ -1580,7 +1580,7 @@ public class NPCManager {
                                               List<String> actions,
                                               List<String> warnings,
                                               List<String> errors,
-                                              RepairCounters counters,
+                                              NpcRepairCounters counters,
                                               Set<Integer> plannedDeletedNpcIds) {
         Map<String, List<AINPC>> bySourceKey = new HashMap<>();
         for (AINPC npc : List.copyOf(npcsByUuid.values())) {
@@ -1645,7 +1645,7 @@ public class NPCManager {
     private void repairNearbyNameDuplicateRows(boolean apply,
                                                List<String> actions,
                                                List<String> errors,
-                                               RepairCounters counters,
+                                               NpcRepairCounters counters,
                                                Set<Integer> plannedDeletedNpcIds) {
         Map<String, List<AINPC>> byName = new HashMap<>();
         for (AINPC npc : List.copyOf(npcsByUuid.values())) {
@@ -1746,7 +1746,7 @@ public class NPCManager {
     private void repairDuplicateLiveVillagers(boolean apply,
                                               List<String> actions,
                                               List<String> warnings,
-                                              RepairCounters counters) {
+                                              NpcRepairCounters counters) {
         Map<Integer, List<Villager>> byNpcId = new HashMap<>();
         Map<String, List<Villager>> bySourceKey = new HashMap<>();
 
@@ -1793,7 +1793,7 @@ public class NPCManager {
                                               List<Villager> villagers,
                                               boolean apply,
                                               List<String> actions,
-                                              RepairCounters counters,
+                                              NpcRepairCounters counters,
                                               Set<UUID> handledEntities) {
         List<Villager> activeVillagers = villagers.stream()
             .filter(Objects::nonNull)
@@ -1858,15 +1858,6 @@ public class NPCManager {
             .orElse(villagers.get(0));
     }
 
-    private static final class RepairCounters {
-        private int duplicateDbRows;
-        private int deletedDbRows;
-        private int duplicateEntities;
-        private int removedEntities;
-        private int reassociatedEntities;
-        private int sourceKeyIndexIssues;
-        private int reindexedSourceKeys;
-    }
 
     /**
      * Inregistreaza un NPC in cache
@@ -2471,7 +2462,7 @@ public class NPCManager {
             + floorToBlock(location.getZ());
     }
 
-    private VillageSnapshot analyzeVillage(Chunk chunk) {
+    private NpcVillageSnapshot analyzeVillage(Chunk chunk) {
         List<Location> anchors = new ArrayList<>();
         for (Entity entity : chunk.getEntities()) {
             if (entity instanceof Villager villager && villager.isAdult()) {
@@ -2499,7 +2490,7 @@ public class NPCManager {
             entity -> entity instanceof Villager
         ).size();
 
-        return new VillageSnapshot(center, bedLocations, villagerCount);
+        return new NpcVillageSnapshot(center, bedLocations, villagerCount);
     }
 
     private Location averageLocation(List<Location> locations) {
@@ -2555,7 +2546,7 @@ public class NPCManager {
         return beds;
     }
 
-    private Location findVillageSpawnLocation(VillageSnapshot snapshot, int offset) {
+    private Location findVillageSpawnLocation(NpcVillageSnapshot snapshot, int offset) {
         List<Location> beds = snapshot.bedLocations();
         if (beds.isEmpty()) {
             return null;
@@ -2622,9 +2613,6 @@ public class NPCManager {
 
         String plainName = PLAIN_TEXT.serialize(customName);
         return plainName == null ? null : plainName.trim();
-    }
-
-    private record VillageSnapshot(Location center, List<Location> bedLocations, int villagerCount) {
     }
 
     private AINPC createAutoProfile(Villager villager) {

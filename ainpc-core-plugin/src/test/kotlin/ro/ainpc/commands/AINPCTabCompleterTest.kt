@@ -27,7 +27,7 @@ class AINPCTabCompleterTest {
     } as CommandSender
 
     private fun tab(completer: AINPCTabCompleter, command: String, vararg args: String): List<String> {
-        return completer.onTabComplete(sender, TestCommand(command), command, args) ?: emptyList()
+        return completer.onTabComplete(sender, TestCommand(command), command, args.toList().toTypedArray()) ?: emptyList()
     }
 
     @Test

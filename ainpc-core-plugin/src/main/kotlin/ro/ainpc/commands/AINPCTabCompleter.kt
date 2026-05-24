@@ -15,7 +15,7 @@ import ro.ainpc.world.WorldRegionInfo
 import java.util.Arrays
 import java.util.stream.Collectors
 
-class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
+class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     override fun onTabComplete(
         sender: CommandSender,
         command: Command,
@@ -359,7 +359,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
 
     private fun getQuestAnchorPlayerSelectors(prefix: String): List<String> {
         val selectors = ArrayList(listOf("player:self"))
-        selectors.addAll(plugin.server.onlinePlayers.map { player -> "player:${player.name}" })
+        selectors.addAll(plugin?.server?.onlinePlayers?.map { player -> "player:${player.name}" }.orEmpty())
         return filterStartsWith(selectors, prefix)
     }
 
@@ -369,9 +369,9 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
     }
 
     private fun getQuestAnchorObjectiveIds(sender: CommandSender, playerSelector: String, progressionSelector: String, prefix: String): List<String> {
-        if (plugin.progressionService == null) return filterStartsWith(listOf("<objective_id>"), prefix)
+        val progressionService = plugin?.progressionService ?: return filterStartsWith(listOf("<objective_id>"), prefix)
         val targetPlayer = resolveQuestAnchorPlayer(sender, playerSelector) ?: return filterStartsWith(listOf("<objective_id>"), prefix)
-        val suggestions = plugin.progressionService.getObjectiveIdSuggestions(targetPlayer, progressionSelector)
+        val suggestions = progressionService.getObjectiveIdSuggestions(targetPlayer, progressionSelector)
         if (suggestions.isEmpty()) return filterStartsWith(listOf("<objective_id>"), prefix)
         return filterStartsWith(suggestions, prefix)
     }
@@ -384,12 +384,12 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
         var playerName = safeSelector
         val separator = playerName.indexOf(':')
         if (separator >= 0 && separator < playerName.length - 1) playerName = playerName.substring(separator + 1)
-        return plugin.server.getPlayerExact(playerName) ?: plugin.server.getPlayer(playerName)
+        return plugin?.server?.getPlayerExact(playerName) ?: plugin?.server?.getPlayer(playerName)
     }
 
     private fun getProgressionSelectors(prefix: String): List<String> {
-        if (plugin.progressionService == null) return listOf()
-        val selectors = plugin.progressionService.getDefinitions()
+        val progressionService = plugin?.progressionService ?: return listOf()
+        val selectors = progressionService.getDefinitions()
             .flatMap { definition ->
                 listOf(
                     definition.templateId(),
@@ -405,14 +405,14 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
     }
 
     private fun getNPCNames(prefix: String): List<String> {
-        return plugin.npcManager.allNPCs.stream()
+        return (plugin?.npcManager?.allNPCs ?: return listOf()).stream()
             .map(AINPC::name)
             .filter { name -> name.lowercase().startsWith(prefix.lowercase()) }
             .collect(Collectors.toList())
     }
 
     private fun getNPCIds(prefix: String): List<String> {
-        return plugin.npcManager.allNPCs.stream()
+        return (plugin?.npcManager?.allNPCs ?: return listOf()).stream()
             .map { npc -> npc.databaseId.toString() }
             .filter { id -> id.startsWith(prefix) }
             .sorted()
@@ -420,14 +420,14 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
     }
 
     private fun getOnlinePlayerNames(prefix: String): List<String> {
-        return plugin.server.onlinePlayers.stream()
+        return (plugin?.server?.onlinePlayers ?: return listOf()).stream()
             .map { p -> p.name }
             .filter { name -> name.lowercase().startsWith(prefix.lowercase()) }
             .collect(Collectors.toList())
     }
 
     private fun getRegionIds(prefix: String): List<String> {
-        return plugin.platform.worldAdmin.regions.stream()
+        return (plugin?.platform?.worldAdmin?.regions ?: return listOf()).stream()
             .map(WorldRegionInfo::id)
             .filter { id -> id.lowercase().startsWith(prefix.lowercase()) }
             .sorted()
@@ -435,11 +435,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
     }
 
     private fun getRegionIdsSafe(prefix: String): List<String> {
-        return if (plugin.platform.worldAdmin == null) listOf("<regionId>") else getRegionIds(prefix)
+        return if (plugin?.platform?.worldAdmin == null) listOf("<regionId>") else getRegionIds(prefix)
     }
 
     private fun getPlaceIds(prefix: String): List<String> {
-        return plugin.platform.worldAdmin.places.stream()
+        return (plugin?.platform?.worldAdmin?.places ?: return listOf()).stream()
             .map(WorldPlaceInfo::id)
             .filter { id -> id.lowercase().startsWith(prefix.lowercase()) }
             .sorted()
@@ -447,7 +447,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin) : TabCompleter {
     }
 
     private fun getPlaceIdsForRegion(regionSelector: String, prefix: String): List<String> {
-        return plugin.platform.worldAdmin.places.stream()
+        return (plugin?.platform?.worldAdmin?.places ?: return listOf()).stream()
             .filter { place -> place.regionId().equals(regionSelector, true) || place.id().lowercase().startsWith(regionSelector.lowercase() + ":") }
             .map(WorldPlaceInfo::id)
             .filter { id -> id.lowercase().startsWith(prefix.lowercase()) }
