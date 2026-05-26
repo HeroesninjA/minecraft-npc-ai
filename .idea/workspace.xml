@@ -6,22 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/NpcInteractionGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/NpcInteractionGui.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/plugin.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/PluginCommandDescriptorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/PluginCommandDescriptorTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/routine/RoutineEngineTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/routine/RoutineEngineTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/HouseAllocationPlannerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/HouseAllocationPlannerTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/WorldAdminServiceTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/WorldAdminServiceTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/categorii/00-stare-roadmap/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/00-stare-roadmap/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/faze-observatii-avertizari.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/implementat-deja.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/implementat-deja.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/kotlin-style-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-style-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -592,7 +577,15 @@
       <option name="project" value="LOCAL" />
       <updated>1779632312433</updated>
     </task>
-    <option name="localTasksCounter" value="44" />
+    <task id="LOCAL-00044" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1779788615805</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1779788615805</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
