@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-11
+Actualizat: 2026-05-25
 
 ## Exista deja
 
@@ -88,6 +88,8 @@ Actualizat: 2026-05-11
 - [x] Selectorii de progres accepta forme cu mecanica, de exemplu `village_contracts:C01`, `npc_duties:D01`, `local_bounties:B01`, `local_bounties:B02`, `village_events:E01`, `onboarding:T01` si `village_rituals:R01`
 - [x] Fatade initiale pentru progres generic: `/ainpc progression ...`, `/progression ...`, `/ainpc contract ...`, `/contract ...`, `/ainpc duty ...`, `/duty ...`, `/ainpc bounty ...`, `/bounty ...`, `/ainpc event ...`, `/event ...`, `/ainpc tutorial ...`, `/tutorial ...`, `/ainpc ritual ...`, `/ritual ...`
 - [x] Script `scripts/smoke-paper-quests.ps1` pentru pregatirea smoke test-ului Paper pe questuri
+- [x] Comenzi read-only `/ainpc demo status|next|definition|script|phases|evidence|runbook|smoke|summary|commands|restart [regionId] [player]` pentru readiness, blocaje, definitie demo functional, faze, dovezi, runbook, smoke check, lista compacta de comenzi, restart gate, sumar rapid si ghidul primului demo intern jucabil
+- [x] Moduri experimentale read-only `/ainpc demo experimental|experimental5|experimental25|experimental25deep|experimental25ops [regionId] [player]` pentru analiza interna voluminoasa inainte de stabilizare API
 - [x] `StoryContextService` initial si comanda `/ainpc story context`
 - [x] `StoryStateService` initial cu `region_story_state`, `place_story_state` si `story_events`
 - [x] Comenzi read-only `/ainpc story region`, `/ainpc story place` si `/ainpc story events`

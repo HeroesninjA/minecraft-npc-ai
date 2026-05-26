@@ -316,10 +316,24 @@ class WorldAdminServiceTest {
         assertNotNull(service.getPlace("demo_sat:ferma"))
         assertNotNull(service.getPlace("demo_sat:taverna"))
         assertNotNull(service.getPlace("demo_sat:altar"))
+        assertEquals("demo_mapping", service.getPlace("demo_sat:piata")!!.metadata()["source"])
+        assertEquals("social", service.getPlace("demo_sat:piata")!!.metadata()["role"])
+        assertEquals("work", service.getPlace("demo_sat:fierarie")!!.metadata()["role"])
+        assertEquals("blacksmith", service.getPlace("demo_sat:fierarie")!!.metadata()["profession"])
+        assertEquals("work", service.getPlace("demo_sat:ferma")!!.metadata()["role"])
+        assertEquals("farmer", service.getPlace("demo_sat:ferma")!!.metadata()["profession"])
+        assertEquals("social", service.getPlace("demo_sat:taverna")!!.metadata()["role"])
+        assertEquals("ritual", service.getPlace("demo_sat:altar")!!.metadata()["role"])
+        assertTrue(service.getPlace("demo_sat:altar")!!.hasTag("altar"))
+        assertTrue(service.getPlace("demo_sat:altar")!!.hasTag("sacred"))
         assertNotNull(service.getNode("demo_sat:piata:quest_board"))
         assertNotNull(service.getNode("demo_sat:altar:ritual_circle"))
         assertNotNull(service.getNode("demo_sat:fierarie:work_1"))
         assertNotNull(service.getNode("demo_sat:house_1:bed_1"))
+        assertEquals("quest_board", service.getNode("demo_sat:piata:quest_board")!!.metadata()["semantic"])
+        assertEquals("ritual_circle", service.getNode("demo_sat:altar:ritual_circle")!!.metadata()["semantic"])
+        assertEquals("work_anchor", service.getNode("demo_sat:fierarie:work_1")!!.metadata()["semantic"])
+        assertEquals("bed", service.getNode("demo_sat:house_1:bed_1")!!.metadata()["semantic"])
 
         val region = service.findRegion("world", 0, 64, 0)
         val currentPlace = service.findPlace("world", 0, 64, 0)
@@ -340,6 +354,22 @@ class WorldAdminServiceTest {
         assertEquals(30, reloadedService.nodeCount)
         assertNotNull(reloadedService.getNode("demo_sat:piata:quest_board"))
         assertNotNull(reloadedService.getNode("demo_sat:altar:ritual_circle"))
+    }
+
+    @Test
+    fun createDemoSettlementAllocatesNextRegionIdWhenDefaultAlreadyExists() {
+        val first = service.createDemoSettlement(null, "world", 0, 64, 0, -64, 320)
+        val second = service.createDemoSettlement(null, "world", 240, 64, 0, -64, 320)
+
+        assertEquals("demo_sat", first.regionId())
+        assertEquals("demo_sat_2", second.regionId())
+        assertNotNull(service.getRegion("demo_sat"))
+        assertNotNull(service.getRegion("demo_sat_2"))
+        assertEquals(2, service.regionCount)
+        assertEquals(18, service.placeCount)
+        assertEquals(60, service.nodeCount)
+        assertNotNull(service.getPlace("demo_sat_2:piata"))
+        assertNotNull(service.getNode("demo_sat_2:piata:quest_board"))
     }
 
     @Test

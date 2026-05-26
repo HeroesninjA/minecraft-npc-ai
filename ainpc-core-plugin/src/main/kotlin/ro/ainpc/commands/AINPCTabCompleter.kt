@@ -60,7 +60,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     5 -> completions.addAll(filterStartsWith(GENDERS, args[4]))
                     6 -> completions.addAll(filterStartsWith(ARCHETYPES, args[5]))
                 }
-                "delete", "info", "family", "tp" -> if (args.size == 2) completions.addAll(getNPCNames(args[1]))
+                "delete", "family", "tp" -> if (args.size == 2) completions.addAll(getNPCNames(args[1]))
+                "info" -> if (args.size == 2) {
+                    completions.addAll(filterStartsWith(listOf("nearest"), args[1]))
+                    completions.addAll(getNPCNames(args[1]))
+                }
                 "delete-id" -> {
                     if (args.size == 2) completions.addAll(getNPCIds(args[1])) else if (args.size == 3) completions.addAll(filterStartsWith(listOf("confirm"), args[2]))
                 }
@@ -90,6 +94,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     if (args.size == 2) completions.addAll(filterStartsWith(GUI_MODES, args[1]))
                     else if (args.size == 3 && isProgressionGuiMode(args[1])) completions.addAll(filterStartsWith(GUI_QUEST_FILTERS, args[2]))
                 }
+                "demo" -> {
+                    if (args.size == 2) completions.addAll(filterStartsWith(DEMO_COMMAND_ACTIONS, args[1]))
+                    else if (args.size == 3 && DEMO_COMMAND_REGION_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(getRegionIdsSafe(args[2]))
+                    else if (args.size == 4 && DEMO_COMMAND_PLAYER_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(getOnlinePlayerNamesSafe(args[3]))
+                }
                 "world" -> completions.addAll(completeWorldArgs(sender, args))
                 "patch" -> completions.addAll(completePatchArgs(args))
                 "wand" -> {
@@ -114,7 +123,10 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 "debugdump" -> if (args.size == 2) completions.addAll(filterStartsWith(DEBUG_DUMP_SCOPES, args[1]))
                 "routine" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(ROUTINE_ACTIONS, args[1]))
-                    else if (args.size == 3 && "status".equals(args[1], true)) completions.addAll(getNPCNames(args[2]))
+                    else if (args.size == 3 && "status".equals(args[1], true)) {
+                        completions.addAll(filterStartsWith(listOf("nearest"), args[2]))
+                        completions.addAll(getNPCNames(args[2]))
+                    }
                 }
                 "mood", "emotion" -> when (args.size) {
                     2 -> completions.addAll(getNPCNames(args[1]))
@@ -426,6 +438,10 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             .collect(Collectors.toList())
     }
 
+    private fun getOnlinePlayerNamesSafe(prefix: String): List<String> {
+        return if (plugin?.server == null) filterStartsWith(listOf("<player>"), prefix) else getOnlinePlayerNames(prefix)
+    }
+
     private fun getRegionIds(prefix: String): List<String> {
         return (plugin?.platform?.worldAdmin?.regions ?: return listOf()).stream()
             .map(WorldRegionInfo::id)
@@ -472,8 +488,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     }
 
     companion object {
-        private val SUBCOMMANDS = listOf("create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "world", "patch", "wand", "map", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test")
+        private val SUBCOMMANDS = listOf("create", "delete", "delete-id", "duplicates", "repair", "info", "gui", "quest", "progression", "contract", "duty", "bounty", "event", "tutorial", "ritual", "demo", "world", "patch", "wand", "map", "story", "migration", "audit", "debugdump", "list", "family", "routine", "mood", "tp", "reload", "test")
         private val GUI_MODES = listOf("main", "quest", "progresii", "progression", "story", "poveste", "world", "stats", "interact", "routine", "shop", "manager", "audit", "debug")
+        private val DEMO_COMMAND_ACTIONS = listOf("status", "check", "readiness", "next", "blockers", "todo", "definition", "criteria", "meaning", "script", "guide", "flow", "phases", "phase", "checklist", "roadmap", "evidence", "proof", "artifacts", "artefacts", "runbook", "guidebook", "smoke", "smoketest", "quickcheck", "summary", "overview", "recap", "commands", "cmds", "copy", "restart", "reloadcheck", "persistence", "experimental", "exp", "maxpack", "experimental5", "exp5", "fivepack", "experimental25", "exp25", "task25", "twentyfivepack", "experimental25deep", "exp25deep", "task25deep", "deep25", "experimental25ops", "exp25ops", "task25ops", "ops25")
+        private val DEMO_COMMAND_REGION_ACTIONS = listOf("status", "check", "readiness", "next", "blockers", "todo", "script", "guide", "flow", "phases", "phase", "checklist", "roadmap", "evidence", "proof", "artifacts", "artefacts", "runbook", "guidebook", "smoke", "smoketest", "quickcheck", "summary", "overview", "recap", "commands", "cmds", "copy", "restart", "reloadcheck", "persistence", "experimental", "exp", "maxpack", "experimental5", "exp5", "fivepack", "experimental25", "exp25", "task25", "twentyfivepack", "experimental25deep", "exp25deep", "task25deep", "deep25", "experimental25ops", "exp25ops", "task25ops", "ops25")
+        private val DEMO_COMMAND_PLAYER_ACTIONS = listOf("script", "guide", "flow", "phases", "phase", "checklist", "roadmap", "evidence", "proof", "artifacts", "artefacts", "runbook", "guidebook", "smoke", "smoketest", "quickcheck", "summary", "overview", "recap", "commands", "cmds", "copy", "experimental", "exp", "maxpack", "experimental5", "exp5", "fivepack", "experimental25", "exp25", "task25", "twentyfivepack", "experimental25deep", "exp25deep", "task25deep", "deep25", "experimental25ops", "exp25ops", "task25ops", "ops25")
         private val AUDIT_MODES = listOf("all", "npc", "world", "db", "spawn", "quest", "wand")
         private val AUDIT_QUEST_OPTIONS = listOf("strict", "full", "offline")
         private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai")

@@ -226,6 +226,7 @@ public class AINPCCommand implements CommandExecutor {
             case "event", "events", "eveniment", "evenimente" -> handleEvent(sender, args);
             case "tutorial", "tutorials", "onboarding" -> handleTutorial(sender, args);
             case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> handleRitual(sender, args);
+            case "demo" -> DemoReadinessCommand.handle(plugin, sender, args);
             case "world" -> handleWorld(sender, args);
             case "patch" -> handlePatch(sender, args);
             case "wand" -> handleWand(sender, args);
@@ -8950,7 +8951,7 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     /**
-     * /ainpc info [nume]
+     * /ainpc info [nume|nearest]
      */
     private boolean handleInfo(CommandSender sender, String[] args) {
         if (!sender.hasPermission("ainpc.info")) {
@@ -8960,7 +8961,7 @@ public class AINPCCommand implements CommandExecutor {
 
         AINPC npc;
         
-        if (args.length < 2) {
+        if (args.length < 2 || "nearest".equalsIgnoreCase(args[1])) {
             // Gaseste NPC-ul cel mai apropiat
             if (!(sender instanceof Player player)) {
                 plugin.getMessageUtils().send(sender, "&cSpecifica numele NPC-ului!");
@@ -9116,13 +9117,13 @@ public class AINPCCommand implements CommandExecutor {
 
     private boolean handleRoutineStatus(CommandSender sender, String[] args) {
         AINPC npc;
-        if (args.length >= 3) {
+        if (args.length >= 3 && !"nearest".equalsIgnoreCase(args[2])) {
             npc = plugin.getNpcManager().getNPCByName(args[2]);
         } else if (sender instanceof Player player) {
             List<AINPC> nearby = plugin.getNpcManager().getNPCsNear(player.getLocation(), 10);
             npc = nearby.isEmpty() ? null : nearby.get(0);
         } else {
-            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc routine status <numeNpc>");
+            plugin.getMessageUtils().send(sender, "&cUtilizare: /ainpc routine status <numeNpc|nearest>");
             return true;
         }
 
@@ -9178,7 +9179,7 @@ public class AINPCCommand implements CommandExecutor {
     private void sendRoutineUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
         plugin.getMessageUtils().send(sender, "&e/ainpc routine tick &7- ruleaza manual rutina pentru NPC-urile active");
-        plugin.getMessageUtils().send(sender, "&e/ainpc routine status [numeNpc] &7- previzualizeaza rutina unui NPC");
+        plugin.getMessageUtils().send(sender, "&e/ainpc routine status [numeNpc|nearest] &7- previzualizeaza rutina unui NPC");
     }
 
     /**
@@ -9425,6 +9426,8 @@ public class AINPCCommand implements CommandExecutor {
         plugin.getMessageUtils().send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa");
         plugin.getMessageUtils().send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]");
         plugin.getMessageUtils().send(sender, "&7  Listeaza ancorele semantice persistate pentru questuri");
+        plugin.getMessageUtils().send(sender, "&e/ainpc demo <definition|status|next|script|phases|evidence|runbook|smoke|summary|commands|restart|experimental|experimental5|experimental25|experimental25deep|experimental25ops> [regionId] [player]");
+        plugin.getMessageUtils().send(sender, "&7  Explica, verifica si ghideaza primul demo intern jucabil; modurile experimental sunt instabile");
         plugin.getMessageUtils().send(sender, "&e/ainpc list");
         plugin.getMessageUtils().send(sender, "&7  Lista toate NPC-urile");
         plugin.getMessageUtils().send(sender, "&e/ainpc world whereami [jucator]");

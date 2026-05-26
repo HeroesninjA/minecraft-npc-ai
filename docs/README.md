@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-05-21
+Actualizat: 2026-05-25
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -12,46 +12,47 @@ Ordinea recomandata pentru orientare:
 2. `faze-observatii-avertizari.md`
 3. `faze-urmatoare-categorii.md`
 4. `server-npc-mvp-si-faze.md`
-5. `mcp-docker-server-mvp-si-faze.md`
-6. `faze-urmatoare-250.md`
-7. `faze-urmatoare-250-partea-2.md`
-8. `playable-village-ux.md`
-9. `ordine-spawn-npc-cladiri-region-node.md`
-10. `simulare-sat-si-lume.md`
-11. `simulation-service.md`
-12. `simulation-service-partea-2.md`
-13. `simulation-service-partea-3.md`
-14. `simulation-service-partea-4.md`
-15. `environment-context-si-engine.md`
-16. `dialog-si-conversatii.md`
-17. `interactiuni.md`
-18. `gui-interfete.md`
-19. `ai-orchestrare-si-mecanici.md`
-20. `generare-automata-questuri-ai.md`
-21. `story-si-context-ai.md`
-22. `story-context-service.md`
-23. `progression-service.md`
-24. `player-onboarding-initiere.md`
-25. `lucru-alternat-quest-mapping-progression.md`
-26. `roadmap-orientativ.md`
-27. `server-admin-runbook.md`
-28. `release-checklist.md`
-29. `debugging-si-testare.md`
-30. `prevenire-duplicare-npc.md`
-31. `conversie-java-la-kotlin.md`
-32. `conversie-java-la-kotlin-partea-2.md`
-33. `conversie-java-la-kotlin-partea-3.md`
-34. `conversie-java-la-kotlin-partea-4.md`
-35. `conversie-java-la-kotlin-partea-5.md`
-36. `rezumat-conversie-java-la-kotlin.md`
-37. `kotlin-style-guide.md`
-38. `kotlin-interop-api-addonuri.md`
-39. `kotlin-paper-packaging-si-smoke.md`
-40. `kotlin-migration-tracker.md`
-41. `kotlin-code-review-checklist.md`
-42. `kotlin-coroutines-paper-policy.md`
-43. `kotlin-gradle-activation-plan.md`
-44. `kotlin-testing-strategy.md`
+5. `prim-demo-functionalitate-minima-diversa.md`
+6. `mcp-docker-server-mvp-si-faze.md`
+7. `faze-urmatoare-250.md`
+8. `faze-urmatoare-250-partea-2.md`
+9. `playable-village-ux.md`
+10. `ordine-spawn-npc-cladiri-region-node.md`
+11. `simulare-sat-si-lume.md`
+12. `simulation-service.md`
+13. `simulation-service-partea-2.md`
+14. `simulation-service-partea-3.md`
+15. `simulation-service-partea-4.md`
+16. `environment-context-si-engine.md`
+17. `dialog-si-conversatii.md`
+18. `interactiuni.md`
+19. `gui-interfete.md`
+20. `ai-orchestrare-si-mecanici.md`
+21. `generare-automata-questuri-ai.md`
+22. `story-si-context-ai.md`
+23. `story-context-service.md`
+24. `progression-service.md`
+25. `player-onboarding-initiere.md`
+26. `lucru-alternat-quest-mapping-progression.md`
+27. `roadmap-orientativ.md`
+28. `server-admin-runbook.md`
+29. `release-checklist.md`
+30. `debugging-si-testare.md`
+31. `prevenire-duplicare-npc.md`
+32. `conversie-java-la-kotlin.md`
+33. `conversie-java-la-kotlin-partea-2.md`
+34. `conversie-java-la-kotlin-partea-3.md`
+35. `conversie-java-la-kotlin-partea-4.md`
+36. `conversie-java-la-kotlin-partea-5.md`
+37. `rezumat-conversie-java-la-kotlin.md`
+38. `kotlin-style-guide.md`
+39. `kotlin-interop-api-addonuri.md`
+40. `kotlin-paper-packaging-si-smoke.md`
+41. `kotlin-migration-tracker.md`
+42. `kotlin-code-review-checklist.md`
+43. `kotlin-coroutines-paper-policy.md`
+44. `kotlin-gradle-activation-plan.md`
+45. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -76,7 +77,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 |---|---|---|---|
 | 0 | Baseline, audit si verificare stare curenta | `implementat-deja.md`, `audit.md`, `debugging-si-testare.md`, `analiza-erori-si-plan-rezolvare.md` | Functional initial; necesita resincronizare dupa schimbari mari |
 | 1 | World mapping si spawn order minim verificabil | `mapping.md`, `playable-village-ux.md`, `ordine-spawn-npc-cladiri-region-node.md`, `settlement-plan.md`, `generare-populatie-narativa.md`, `households-persistente.md`, `rutine-npc-si-timeline.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md` | Nucleu implementat initial; generatorul complet si simularea de comunitate lipsesc |
-| 2 | First playable demo intern | `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `generare-automata-questuri-ai.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
+| 2 | First playable demo intern | `prim-demo-functionalitate-minima-diversa.md`, `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `generare-automata-questuri-ai.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
 | 4 | Runtime scenarii extensibil | `questuri-avansate-v2.md`, `progression-service.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Registri initiali exista; integrarea reala in `ScenarioEngine`, validatorul complet si runtime-ul generic raman treptate |
 | 5 | Generare sate si authoring asistat | `settlement-plan.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper si patch planner read-only initial exista; generarea completa ramane viitoare |
@@ -115,6 +116,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `faze-urmatoare-250.md` | toate | Backlog operational cu urmatoarele 250 faze | Lista lunga pentru planificare; executa fazele in slice-uri mici, validate |
 | `faze-urmatoare-250-partea-2.md` | toate | Backlog operational F251-F500 pentru generare sate/cladiri, context, comportament realist si API | Continua lista lunga; prioritizeaza config validat, dry-run, context read-only si documentare API |
 | `server-npc-mvp-si-faze.md` | toate | Plan operational pentru versiunea minim functionala a serverului NPC si fazele ulterioare | Foloseste-l ca checklist de MVP Paper inainte de mecanici mari sau release public |
+| `prim-demo-functionalitate-minima-diversa.md` | 2 | Plan executabil pentru primul demo intern cu mapping, NPC, rutina, dialog, quest, progression, story si audit | Foloseste-l ca script de integrare minima diversa dupa ce MVP-ul Paper de baza porneste |
 | `mcp-docker-server-mvp-si-faze.md` | 0, 6 | Plan operational pentru versiunea minim functionala a serverului MCP din Docker si fazele ulterioare | Foloseste-l pentru setup, repair, backup, watcher si integrarea Codex/JetBrains |
 | `generare-ai-si-constructie-automata.md` | 5 | Directie pentru generare AI si template-uri | AI-ul trebuie sa genereze drafturi validate, nu sa execute direct modificari in lume |
 | `generare-automata-questuri-ai.md` | 2, 4 | Contract pentru generarea asistata de questuri cu AI | AI-ul produce `QuestDraft`, validatorul si adminul decid daca ajunge in pack |

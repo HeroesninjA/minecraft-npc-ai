@@ -1,9 +1,9 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-05-11
+Actualizat: 2026-05-25
 
 Status verificat:
-- build-ul multi-module trece cu `mvn test`
+- build-ul multi-module trece cu Gradle pe testele core si `assemble`
 - informatiile din acest fisier sunt bazate pe codul actual, nu pe viziunea de produs
 
 ## Module existente
@@ -477,6 +477,7 @@ Capabilitati implementate:
 - validare initiala pentru alocarea rezidentilor intr-o casa inainte de spawn batch
 - generare determinista initiala `WorldPlace house -> HouseAllocation -> NpcSpawnPlan`
 - generare determinista initiala `WorldRegion -> houses -> HouseAllocation list`
+- comenzi read-only `/ainpc demo status|script|phases|evidence|runbook|smoke|summary [regionId] [player]` pentru readiness-ul primului demo, faze D0-D9, ghid manual, dovezi milestone, runbook compact, smoke check, sumar rapid, mapping, NPC, bindings, quest/progression, story si pasi urmatori
 
 Scannerul vanilla detecteaza:
 
@@ -519,6 +520,7 @@ Comenzi principale disponibile:
 - `/ainpc delete`
 - `/ainpc info`
 - `/ainpc quest`
+- `/ainpc demo`
 - `/ainpc world`
 - `/ainpc patch`
 - `/ainpc story`
@@ -630,6 +632,7 @@ Proiectul are deja implementate:
 - patch planner read-only initial pentru `GapReport`, `PatchCandidate` si `PatchPlan`
 - `npc_world_bindings` initial pentru home/work/social place si node IDs
 - comanda pentru mapping demo minim in jurul jucatorului
+- comanda read-only pentru readiness-ul primului demo intern jucabil
 - rutina zilnica initiala peste `home/work/social anchors`
 - `HouseAllocation` initial pentru case cu mai multi rezidenti si spawn batch cu rollback practic
 - `spawn_batches`/`spawn_batch_steps` leaga pasii de `household_id` si pot jurnaliza dry-run-uri separat prin `spawn.batches.track_dry_runs`

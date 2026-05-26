@@ -152,7 +152,7 @@ class NpcInteractionGui : GuiScreen {
                     "&eRutina nearest",
                     "&7Afiseaza programul celui mai apropiat NPC."
                 ),
-                GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status") }
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
             )
         )
 

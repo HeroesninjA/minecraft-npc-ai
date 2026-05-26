@@ -91,9 +91,9 @@ class RoutineGui : GuiScreen {
                     GuiItemFactory.item(
                         Material.COMPASS,
                         "&eStatus nearest",
-                        "&7Ruleaza /ainpc routine status pentru cel mai apropiat NPC."
+                        "&7Ruleaza /ainpc routine status nearest pentru cel mai apropiat NPC."
                     ),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status") }
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
                 )
             } else {
                 GuiButton.disabled(

@@ -1,8 +1,8 @@
 # Faze, Observatii si Avertizari
 
-Actualizat: 2026-05-11
+Actualizat: 2026-05-25
 
-Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner, patch planner read-only si rollback global practic pentru spawn pe regiune.
+Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner, patch planner read-only, demo readiness/script read-only si rollback global practic pentru spawn pe regiune.
 
 ## Verdict
 
@@ -132,6 +132,13 @@ Dupa reload/restart:
 /ainpc audit world
 /ainpc audit spawn
 /ainpc world places demo_sat
+/ainpc demo status demo_sat
+/ainpc demo phases demo_sat <player>
+/ainpc demo script demo_sat <player>
+/ainpc demo evidence demo_sat <player>
+/ainpc demo runbook demo_sat <player>
+/ainpc demo smoke demo_sat <player>
+/ainpc demo summary demo_sat <player>
 ```
 
 ### Faza 1.2: Persistenta Dedicata Pentru Bindings
