@@ -9,51 +9,52 @@ Acest folder contine documentatia tehnica locala a proiectului. Documentele nu a
 Ordinea recomandata pentru orientare:
 
 1. `constitutie-proiect.md`
-2. `implementat-deja.md`
-3. `faze-observatii-avertizari.md`
-4. `faze-urmatoare-categorii.md`
-5. `server-npc-mvp-si-faze.md`
-6. `prim-demo-functionalitate-minima-diversa.md`
-7. `mcp-docker-server-mvp-si-faze.md`
-8. `faze-urmatoare-250.md`
-9. `faze-urmatoare-250-partea-2.md`
-10. `playable-village-ux.md`
-11. `ordine-spawn-npc-cladiri-region-node.md`
-12. `simulare-sat-si-lume.md`
-13. `simulation-service.md`
-14. `simulation-service-partea-2.md`
-15. `simulation-service-partea-3.md`
-16. `simulation-service-partea-4.md`
-17. `environment-context-si-engine.md`
-18. `dialog-si-conversatii.md`
-19. `interactiuni.md`
-20. `gui-interfete.md`
-21. `ai-orchestrare-si-mecanici.md`
-22. `generare-automata-questuri-ai.md`
-23. `story-si-context-ai.md`
-24. `story-context-service.md`
-25. `progression-service.md`
-26. `player-onboarding-initiere.md`
-27. `lucru-alternat-quest-mapping-progression.md`
-28. `roadmap-orientativ.md`
-29. `server-admin-runbook.md`
-30. `release-checklist.md`
-31. `debugging-si-testare.md`
-32. `prevenire-duplicare-npc.md`
-33. `conversie-java-la-kotlin.md`
-34. `conversie-java-la-kotlin-partea-2.md`
-35. `conversie-java-la-kotlin-partea-3.md`
-36. `conversie-java-la-kotlin-partea-4.md`
-37. `conversie-java-la-kotlin-partea-5.md`
-38. `rezumat-conversie-java-la-kotlin.md`
-39. `kotlin-style-guide.md`
-40. `kotlin-interop-api-addonuri.md`
-41. `kotlin-paper-packaging-si-smoke.md`
-42. `kotlin-migration-tracker.md`
-43. `kotlin-code-review-checklist.md`
-44. `kotlin-coroutines-paper-policy.md`
-45. `kotlin-gradle-activation-plan.md`
-46. `kotlin-testing-strategy.md`
+2. `audit-constitutie-proiect.md`
+3. `implementat-deja.md`
+4. `faze-observatii-avertizari.md`
+5. `faze-urmatoare-categorii.md`
+6. `server-npc-mvp-si-faze.md`
+7. `prim-demo-functionalitate-minima-diversa.md`
+8. `mcp-docker-server-mvp-si-faze.md`
+9. `faze-urmatoare-250.md`
+10. `faze-urmatoare-250-partea-2.md`
+11. `playable-village-ux.md`
+12. `ordine-spawn-npc-cladiri-region-node.md`
+13. `simulare-sat-si-lume.md`
+14. `simulation-service.md`
+15. `simulation-service-partea-2.md`
+16. `simulation-service-partea-3.md`
+17. `simulation-service-partea-4.md`
+18. `environment-context-si-engine.md`
+19. `dialog-si-conversatii.md`
+20. `interactiuni.md`
+21. `gui-interfete.md`
+22. `ai-orchestrare-si-mecanici.md`
+23. `generare-automata-questuri-ai.md`
+24. `story-si-context-ai.md`
+25. `story-context-service.md`
+26. `progression-service.md`
+27. `player-onboarding-initiere.md`
+28. `lucru-alternat-quest-mapping-progression.md`
+29. `roadmap-orientativ.md`
+30. `server-admin-runbook.md`
+31. `release-checklist.md`
+32. `debugging-si-testare.md`
+33. `prevenire-duplicare-npc.md`
+34. `conversie-java-la-kotlin.md`
+35. `conversie-java-la-kotlin-partea-2.md`
+36. `conversie-java-la-kotlin-partea-3.md`
+37. `conversie-java-la-kotlin-partea-4.md`
+38. `conversie-java-la-kotlin-partea-5.md`
+39. `rezumat-conversie-java-la-kotlin.md`
+40. `kotlin-style-guide.md`
+41. `kotlin-interop-api-addonuri.md`
+42. `kotlin-paper-packaging-si-smoke.md`
+43. `kotlin-migration-tracker.md`
+44. `kotlin-code-review-checklist.md`
+45. `kotlin-coroutines-paper-policy.md`
+46. `kotlin-gradle-activation-plan.md`
+47. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -88,7 +89,8 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 
 | Document | Faza | Rol | Observatie / avertizare |
 |---|---:|---|---|
-| `constitutie-proiect.md` | toate | Document constitutional pentru identitate, structura, directie, reguli si criterii de maturitate | Foloseste-l cand exista conflict intre backlog, idei noi si reguli de dezvoltare |
+| `constitutie-proiect.md` | toate | Document constitutional cu importanta ridicata pentru identitate, structura, directie, reguli si criterii de maturitate | Foloseste-l cand exista conflict intre backlog, idei noi si reguli de dezvoltare |
+| `audit-constitutie-proiect.md` | toate | Audit static al codului fata de constitutia proiectului | Foloseste-l ca backlog de conformitate pentru neutralizarea core-ului, feature flags, addon types si storage |
 | `analiza-erori-si-plan-rezolvare.md` | 0 | Raport tehnic si ordine de remediere | Foloseste-l ca backlog verificabil, nu ca lista automata de buguri active |
 | `ai-orchestrare-si-mecanici.md` | 2, 3, 4, 5 | Contract pentru AI transversal peste dialog, questuri, story, environment, reactii, generare si debug | Foloseste `AIOrchestrationService` ca orchestrator, nu ca god service de gameplay |
 | `audit.md` | 0, 6 | Documentatie pentru `/ainpc audit` si backlog securitate | Auditul runtime este read-only si nu dovedeste securitate completa |

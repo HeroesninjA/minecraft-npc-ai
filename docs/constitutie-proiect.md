@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-27
 
+Importanta: ridicata. Acest document este reper constitutional pentru arhitectura, directie, reguli de dezvoltare si decizii intre alternative.
+
 Acest document stabileste regulile de baza ale proiectului AINPC. Este document de orientare si control: cand exista conflict intre idei, backlog, implementari rapide sau documente vechi, acest document fixeaza directia generala, iar documentele de specialitate fixeaza detaliile.
 
 ## Articolul 1. Identitate
@@ -24,6 +26,7 @@ Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou 
 8. Documentatia descrie starea reala. Cand implementarea schimba statusul unei faze, se actualizeaza documentele canonice relevante.
 9. Configurabilitate explicita. Orice mecanica majora trebuie sa poata fi activata, dezactivata sau ajustata prin config, addon sau profil de scenariu, fara recompilare.
 10. Dezactivare completa. Orice caracteristica majora trebuie sa aiba o cale clara de dezactivare fara sa strice restul pluginului: AI, story, questuri, generare, GUI, rutine, simulare, world mapping, addonuri, integrari externe si storage avansat.
+11. Core neutru. Codul core trebuie sa ramana independent de tema, lore, epoca, stil vizual sau scenariu, astfel incat orice addon valid sa se poata potrivi fara schimbari in core. Core-ul poate include continut demo sau fallback, dar numai daca este marcat clar, configurabil si dezactivabil cand se activeaza un addon real.
 
 ## Articolul 3. Structura canonica
 
@@ -48,8 +51,10 @@ Regula de proprietate:
 - `ainpc-api` nu depinde de `ainpc-core-plugin`.
 - `ainpc-core-plugin` poate consuma `ainpc-api`, dar nu trebuie sa forteze addonurile sa cunoasca internals.
 - `ainpc-scenario-medieval` demonstreaza extensibilitatea, nu stabileste reguli globale pentru toate scenariile.
+- Core-ul nu trebuie sa hardcodeze continut medieval, story specific, textura, economie, lore sau reguli care apartin unui addon. Continutul demo din core este permis doar ca bootstrap verificabil si trebuie sa poata fi oprit cand un addon inlocuieste acel domeniu.
 - Addonurile trebuie sa declare tipul, dependintele, capabilitatile si feature flags pe care le activeaza.
 - Addonurile de resurse/textura si datapack-urile compatibile nu trebuie sa fie obligatorii pentru functionarea core-ului.
+- Cand un addon activ furnizeaza scenariu, story, questuri, resurse sau reguli, demo-ul echivalent din core trebuie sa intre in modul dezactivat, fallback sau explicit namespaced, fara coliziuni de ID-uri.
 - Documentele din radacina `docs/` raman canonice; `docs/categorii/` sunt indexuri de navigare.
 - Serverul MCP dedicat pluginului Paper trebuie sa ramana optional, local-first si securizat; el extinde observabilitatea si automatizarea, nu inlocuieste regulile runtime din core.
 
@@ -134,6 +139,8 @@ API-ul public trebuie sa fie mic, stabil si documentat.
 - Tipurile expuse din `ainpc-api` trebuie sa fie Java-friendly pana cand exista motiv explicit pentru contracte Kotlin-only.
 - Addonurile trebuie sa livreze propriul config template si propriile pack-uri de continut.
 - Core-ul ramane universal; scenariile si temele apartin addonurilor.
+- Core-ul ofera infrastructura: lifecycle, config, registri, persistenta, validare, audit, debug, comenzi, GUI generic si contracte. Addonurile ofera continutul: tema, poveste, questuri, resurse, texturi, reguli speciale si integrare datapack.
+- Continutul demo din core trebuie tratat ca exemplu de pornire, nu ca tema implicita permanenta. Configul trebuie sa permita `demo.enabled=false` sau un mecanism echivalent.
 - Breaking changes in API cer documentare, test de compatibilitate si motiv clar.
 - Un addon demonstrativ nu trebuie sa introduca dependinte obligatorii pentru core.
 - Configuratia trebuie gandita pe profiluri: core defaults, server profile, addon profile si scenario pack. Valorile implicite trebuie sa fie sigure si usor de explicat.

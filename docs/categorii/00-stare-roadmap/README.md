@@ -8,7 +8,8 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 
 | Document | Rol |
 |---|---|
-| `../../constitutie-proiect.md` | Document constitutional pentru identitate, structura, directie, reguli si criterii de maturitate |
+| `../../constitutie-proiect.md` | Document constitutional cu importanta ridicata pentru identitate, structura, directie, reguli si criterii de maturitate |
+| `../../audit-constitutie-proiect.md` | Audit static al codului fata de constitutia proiectului si backlog de conformitate |
 | `../../implementat-deja.md` | Sursa principala pentru ce este confirmat in cod |
 | `../../faze-observatii-avertizari.md` | Harta de control pe faze, observatii si avertizari |
 | `../../faze-urmatoare-categorii.md` | Sinteza operationala a fazelor urmatoare pe categorii si subcategorii |
@@ -21,13 +22,14 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 ## Citire recomandata
 
 1. `constitutie-proiect.md`
-2. `implementat-deja.md`
-3. `faze-observatii-avertizari.md`
-4. `faze-urmatoare-categorii.md`
-5. `server-npc-mvp-si-faze.md`
-6. `prim-demo-functionalitate-minima-diversa.md`
-7. `roadmap-orientativ.md`
-8. `TODO.md`
+2. `audit-constitutie-proiect.md`
+3. `implementat-deja.md`
+4. `faze-observatii-avertizari.md`
+5. `faze-urmatoare-categorii.md`
+6. `server-npc-mvp-si-faze.md`
+7. `prim-demo-functionalitate-minima-diversa.md`
+8. `roadmap-orientativ.md`
+9. `TODO.md`
 
 ## Avertizare
 
