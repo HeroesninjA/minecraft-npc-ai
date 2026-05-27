@@ -6,11 +6,11 @@ Acest document stabileste regulile de baza ale proiectului AINPC. Este document 
 
 ## Articolul 1. Identitate
 
-AINPC este un plugin Paper pentru Minecraft care construieste o lume cu NPC-uri persistente, sate lizibile, questuri, rutina, context narativ si integrare AI controlata.
+AINPC este un plugin Paper pentru Minecraft, modular, configurabil si flexibil, care construieste o lume cu NPC-uri persistente, sate lizibile, questuri, rutina, context narativ si integrare AI controlata.
 
 Scopul proiectului nu este sa adauge doar comenzi sau NPC-uri izolate. Scopul este sa produca un server in care playerul intelege rapid cine sunt NPC-urile, unde locuiesc, ce rol au, ce se intampla in sat si de ce actiunile sale conteaza.
 
-Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou trebuie sa intareasca experienta de joc, debugging-ul sau stabilitatea operationala.
+Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou trebuie sa intareasca experienta de joc, debugging-ul sau stabilitatea operationala. Flexibilitatea proiectului inseamna configuratii clare, module decuplate si extensii controlate, nu comportament implicit greu de inteles.
 
 ## Articolul 2. Principii obligatorii
 
@@ -22,6 +22,7 @@ Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou 
 6. Compatibilitate pentru addonuri. `ainpc-api` trebuie tratat ca suprafata publica; codul intern din core nu devine API doar pentru ca este accesibil.
 7. Test si audit pentru schimbari riscante. Orice schimbare care afecteaza spawn, DB, quest progress, packaging sau API trebuie sa aiba verificare explicita.
 8. Documentatia descrie starea reala. Cand implementarea schimba statusul unei faze, se actualizeaza documentele canonice relevante.
+9. Configurabilitate explicita. Orice mecanica majora trebuie sa poata fi activata, dezactivata sau ajustata prin config, addon sau profil de scenariu, fara recompilare.
 
 ## Articolul 3. Structura canonica
 
@@ -35,6 +36,7 @@ Structura principala a proiectului este:
 | `docs` | Sursa canonica pentru design, roadmap, runbook-uri si reguli de dezvoltare |
 | `scripts` | Automatizari locale pentru context MCP, release, smoke, backup si verificari operationale |
 | `data`, `.ai`, `.codex` | Context local, memorie MCP/Codex si artefacte operationale; nu sunt loc pentru secrete sau specificatii canonice de gameplay |
+| Server MCP pentru Paper | Directie viitoare pentru integrare controlata intre plugin, context, instrumente de administrare, debug, AI si automatizari externe |
 
 Regula de proprietate:
 
@@ -42,17 +44,20 @@ Regula de proprietate:
 - `ainpc-core-plugin` poate consuma `ainpc-api`, dar nu trebuie sa forteze addonurile sa cunoasca internals.
 - `ainpc-scenario-medieval` demonstreaza extensibilitatea, nu stabileste reguli globale pentru toate scenariile.
 - Documentele din radacina `docs/` raman canonice; `docs/categorii/` sunt indexuri de navigare.
+- Serverul MCP dedicat pluginului Paper trebuie sa ramana optional, local-first si securizat; el extinde observabilitatea si automatizarea, nu inlocuieste regulile runtime din core.
 
 ## Articolul 4. Directia de dezvoltare
 
-Directia proiectului se dezvolta in sase axe, in aceasta ordine de maturizare:
+Directia proiectului se dezvolta in opt axe, in aceasta ordine de maturizare:
 
 1. Baseline verificabil: build, audit, debugdump, documentatie, context MCP, teste si status real al codului.
 2. Sat jucabil: mapping semantic, regiuni, places, nodes, spawn controlat, households, rutine si interactiuni clare.
 3. Demo intern: player onboarding, dialog, questuri cap-coada, progression, story state, GUI si smoke pe server Paper.
 4. Modularizare publica: API stabil, addon registry, scenarii configurabile si contracte Java/Kotlin compatibile.
 5. Runtime extensibil: scenario runtime, triggers, conditions, actions, generare asistata de questuri si story context matur.
-6. Generare si productie: settlement plan, patch planner, template-uri, integrare optionala WorldEdit, hardening, backup, rollback si release public.
+6. Generare harti si structuri: settlement plan, template-uri, marker nodes, patch planner, integrare optionala WorldEdit si generare controlata de sate, cladiri, drumuri si zone semantice.
+7. Infrastructura server si date: server MCP dedicat pentru pluginul Paper, integrare MySQL, connection pooling prin HikariCP, backup, migration, audit si tooling operational.
+8. AI specializat si productie: model propriu sau fine-tuned pentru domeniul AINPC, raspunsuri ultra rapide aproape real-time, hardening, rollback si release public.
 
 Aceasta ordine nu interzice lucrul exploratoriu, dar interzice tratarea explorarii ca functionalitate stabila. Orice functie noua trebuie marcata clar ca design, initial, experimental sau production-ready.
 
@@ -80,6 +85,7 @@ AI-ul poate:
 - consuma context limitat si validat;
 - ajuta adminul sa inteleaga starea lumii;
 - genera drafturi care trec prin validatoare.
+- folosi in viitor un model specializat sau fine-tuned pentru vocabularul, regulile, questurile si contextul AINPC.
 
 AI-ul nu poate:
 
@@ -88,6 +94,8 @@ AI-ul nu poate:
 - decide progresul questului fara serviciu determinist;
 - primi secrete in prompturi, audit entries sau debugdump;
 - inlocui mapping-ul semantic validat de admin.
+
+Directia AI pe termen lung este latenta foarte mica: raspunsuri aproape real-time pentru interactiuni de joc, fara sa blocheze thread-ul principal Paper si fara sa sacrifice validarea determinista. Fine-tuning-ul sau modelul propriu devin acceptabile doar dupa ce exista dataset curat, evaluari, fallback local/extern si masuratori de latenta.
 
 ## Articolul 7. Reguli pentru date si persistenta
 
@@ -98,6 +106,8 @@ Persistenta trebuie tratata ca infrastructura critica.
 - Datele generate automat trebuie sa fie idempotente sau sa aiba mecanism de detectie a duplicatelor.
 - Identificatorii de quest, stage, objective, region, place, node si anchor trebuie sa fie stabili.
 - Debugdump si audit trebuie sa evite secretele si sa expuna suficient context pentru diagnostic.
+- SQLite poate ramane baza simpla pentru dezvoltare si demo, dar directia de productie include MySQL cu HikariCP pentru pooling, timeouts, health checks si configuratie clara.
+- Integrarea MySQL nu trebuie sa rupa migration, backup, teste locale sau compatibilitatea cu servere mici care folosesc storage local.
 
 ## Articolul 8. Reguli pentru gameplay
 
@@ -119,6 +129,7 @@ API-ul public trebuie sa fie mic, stabil si documentat.
 - Core-ul ramane universal; scenariile si temele apartin addonurilor.
 - Breaking changes in API cer documentare, test de compatibilitate si motiv clar.
 - Un addon demonstrativ nu trebuie sa introduca dependinte obligatorii pentru core.
+- Configuratia trebuie gandita pe profiluri: core defaults, server profile, addon profile si scenario pack. Valorile implicite trebuie sa fie sigure si usor de explicat.
 
 ## Articolul 10. Reguli pentru documentatie
 
@@ -186,7 +197,9 @@ Proiectul nu trebuie sa devina:
 - un plugin dependent de AI pentru reguli critice;
 - o colectie de documente care nu reflecta codul;
 - un core rigid care nu poate sustine addonuri;
+- un plugin greu de configurat sau imposibil de adaptat pe servere diferite;
 - un generator care modifica lumea fara validare;
+- un sistem de generare harti/structuri care ignora mapping-ul semantic si controlul adminului;
 - un server greu de reparat dupa spawn gresit, migration gresit sau config gresit.
 
-Directia corecta este un nucleu mic, verificabil si extensibil: sat clar, NPC-uri persistente, questuri functionale, context narativ, API stabil si automatizare controlata.
+Directia corecta este un nucleu mic, verificabil si extensibil: sat clar, NPC-uri persistente, questuri functionale, context narativ, API stabil, configuratie flexibila, infrastructura MCP/MySQL pregatita si automatizare controlata.
