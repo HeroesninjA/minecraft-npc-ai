@@ -1,6 +1,6 @@
 # Stare si Roadmap
 
-Actualizat: 2026-05-25
+Actualizat: 2026-05-27
 
 Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real al proiectului si ordinea de lucru.
 
@@ -8,6 +8,7 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 
 | Document | Rol |
 |---|---|
+| `../../constitutie-proiect.md` | Document constitutional pentru identitate, structura, directie, reguli si criterii de maturitate |
 | `../../implementat-deja.md` | Sursa principala pentru ce este confirmat in cod |
 | `../../faze-observatii-avertizari.md` | Harta de control pe faze, observatii si avertizari |
 | `../../faze-urmatoare-categorii.md` | Sinteza operationala a fazelor urmatoare pe categorii si subcategorii |
@@ -19,13 +20,14 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 
 ## Citire recomandata
 
-1. `implementat-deja.md`
-2. `faze-observatii-avertizari.md`
-3. `faze-urmatoare-categorii.md`
-4. `server-npc-mvp-si-faze.md`
-5. `prim-demo-functionalitate-minima-diversa.md`
-6. `roadmap-orientativ.md`
-7. `TODO.md`
+1. `constitutie-proiect.md`
+2. `implementat-deja.md`
+3. `faze-observatii-avertizari.md`
+4. `faze-urmatoare-categorii.md`
+5. `server-npc-mvp-si-faze.md`
+6. `prim-demo-functionalitate-minima-diversa.md`
+7. `roadmap-orientativ.md`
+8. `TODO.md`
 
 ## Avertizare
 

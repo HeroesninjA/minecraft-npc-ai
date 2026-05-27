@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-05-25
+Actualizat: 2026-05-27
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -8,51 +8,52 @@ Acest folder contine documentatia tehnica locala a proiectului. Documentele nu a
 
 Ordinea recomandata pentru orientare:
 
-1. `implementat-deja.md`
-2. `faze-observatii-avertizari.md`
-3. `faze-urmatoare-categorii.md`
-4. `server-npc-mvp-si-faze.md`
-5. `prim-demo-functionalitate-minima-diversa.md`
-6. `mcp-docker-server-mvp-si-faze.md`
-7. `faze-urmatoare-250.md`
-8. `faze-urmatoare-250-partea-2.md`
-9. `playable-village-ux.md`
-10. `ordine-spawn-npc-cladiri-region-node.md`
-11. `simulare-sat-si-lume.md`
-12. `simulation-service.md`
-13. `simulation-service-partea-2.md`
-14. `simulation-service-partea-3.md`
-15. `simulation-service-partea-4.md`
-16. `environment-context-si-engine.md`
-17. `dialog-si-conversatii.md`
-18. `interactiuni.md`
-19. `gui-interfete.md`
-20. `ai-orchestrare-si-mecanici.md`
-21. `generare-automata-questuri-ai.md`
-22. `story-si-context-ai.md`
-23. `story-context-service.md`
-24. `progression-service.md`
-25. `player-onboarding-initiere.md`
-26. `lucru-alternat-quest-mapping-progression.md`
-27. `roadmap-orientativ.md`
-28. `server-admin-runbook.md`
-29. `release-checklist.md`
-30. `debugging-si-testare.md`
-31. `prevenire-duplicare-npc.md`
-32. `conversie-java-la-kotlin.md`
-33. `conversie-java-la-kotlin-partea-2.md`
-34. `conversie-java-la-kotlin-partea-3.md`
-35. `conversie-java-la-kotlin-partea-4.md`
-36. `conversie-java-la-kotlin-partea-5.md`
-37. `rezumat-conversie-java-la-kotlin.md`
-38. `kotlin-style-guide.md`
-39. `kotlin-interop-api-addonuri.md`
-40. `kotlin-paper-packaging-si-smoke.md`
-41. `kotlin-migration-tracker.md`
-42. `kotlin-code-review-checklist.md`
-43. `kotlin-coroutines-paper-policy.md`
-44. `kotlin-gradle-activation-plan.md`
-45. `kotlin-testing-strategy.md`
+1. `constitutie-proiect.md`
+2. `implementat-deja.md`
+3. `faze-observatii-avertizari.md`
+4. `faze-urmatoare-categorii.md`
+5. `server-npc-mvp-si-faze.md`
+6. `prim-demo-functionalitate-minima-diversa.md`
+7. `mcp-docker-server-mvp-si-faze.md`
+8. `faze-urmatoare-250.md`
+9. `faze-urmatoare-250-partea-2.md`
+10. `playable-village-ux.md`
+11. `ordine-spawn-npc-cladiri-region-node.md`
+12. `simulare-sat-si-lume.md`
+13. `simulation-service.md`
+14. `simulation-service-partea-2.md`
+15. `simulation-service-partea-3.md`
+16. `simulation-service-partea-4.md`
+17. `environment-context-si-engine.md`
+18. `dialog-si-conversatii.md`
+19. `interactiuni.md`
+20. `gui-interfete.md`
+21. `ai-orchestrare-si-mecanici.md`
+22. `generare-automata-questuri-ai.md`
+23. `story-si-context-ai.md`
+24. `story-context-service.md`
+25. `progression-service.md`
+26. `player-onboarding-initiere.md`
+27. `lucru-alternat-quest-mapping-progression.md`
+28. `roadmap-orientativ.md`
+29. `server-admin-runbook.md`
+30. `release-checklist.md`
+31. `debugging-si-testare.md`
+32. `prevenire-duplicare-npc.md`
+33. `conversie-java-la-kotlin.md`
+34. `conversie-java-la-kotlin-partea-2.md`
+35. `conversie-java-la-kotlin-partea-3.md`
+36. `conversie-java-la-kotlin-partea-4.md`
+37. `conversie-java-la-kotlin-partea-5.md`
+38. `rezumat-conversie-java-la-kotlin.md`
+39. `kotlin-style-guide.md`
+40. `kotlin-interop-api-addonuri.md`
+41. `kotlin-paper-packaging-si-smoke.md`
+42. `kotlin-migration-tracker.md`
+43. `kotlin-code-review-checklist.md`
+44. `kotlin-coroutines-paper-policy.md`
+45. `kotlin-gradle-activation-plan.md`
+46. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -87,6 +88,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 
 | Document | Faza | Rol | Observatie / avertizare |
 |---|---:|---|---|
+| `constitutie-proiect.md` | toate | Document constitutional pentru identitate, structura, directie, reguli si criterii de maturitate | Foloseste-l cand exista conflict intre backlog, idei noi si reguli de dezvoltare |
 | `analiza-erori-si-plan-rezolvare.md` | 0 | Raport tehnic si ordine de remediere | Foloseste-l ca backlog verificabil, nu ca lista automata de buguri active |
 | `ai-orchestrare-si-mecanici.md` | 2, 3, 4, 5 | Contract pentru AI transversal peste dialog, questuri, story, environment, reactii, generare si debug | Foloseste `AIOrchestrationService` ca orchestrator, nu ca god service de gameplay |
 | `audit.md` | 0, 6 | Documentatie pentru `/ainpc audit` si backlog securitate | Auditul runtime este read-only si nu dovedeste securitate completa |
