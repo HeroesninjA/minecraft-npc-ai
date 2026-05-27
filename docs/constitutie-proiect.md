@@ -23,6 +23,7 @@ Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou 
 7. Test si audit pentru schimbari riscante. Orice schimbare care afecteaza spawn, DB, quest progress, packaging sau API trebuie sa aiba verificare explicita.
 8. Documentatia descrie starea reala. Cand implementarea schimba statusul unei faze, se actualizeaza documentele canonice relevante.
 9. Configurabilitate explicita. Orice mecanica majora trebuie sa poata fi activata, dezactivata sau ajustata prin config, addon sau profil de scenariu, fara recompilare.
+10. Dezactivare completa. Orice caracteristica majora trebuie sa aiba o cale clara de dezactivare fara sa strice restul pluginului: AI, story, questuri, generare, GUI, rutine, simulare, world mapping, addonuri, integrari externe si storage avansat.
 
 ## Articolul 3. Structura canonica
 
@@ -33,6 +34,10 @@ Structura principala a proiectului este:
 | `ainpc-api` | Contract public pentru addonuri, platform API, world info, addon registry si tipuri stabile expuse in afara core-ului |
 | `ainpc-core-plugin` | Implementarea principala Paper: comenzi, NPC, quest, story, progression, mapping, spawn, GUI, AI orchestration, debug si audit |
 | `ainpc-scenario-medieval` | Addon/scenariu exemplar pentru continut medieval si pachete de quest configurabile |
+| Addonuri de scenariu | Module care adauga reguli, quest packs, triggers, conditions, actions si comportament specific unei teme |
+| Addonuri de story | Module care adauga fire narative, personaje, reputatii, evenimente, dialoguri si stari narative |
+| Addonuri de resurse si textura | Pachete optionale pentru iteme, modele, sunete, texturi si prezentare vizuala compatibila cu serverul |
+| Datapack-uri compatibile | Directie de interoperabilitate pentru retete, loot tables, advancements, tags, worldgen sau continut vanilla-friendly |
 | `docs` | Sursa canonica pentru design, roadmap, runbook-uri si reguli de dezvoltare |
 | `scripts` | Automatizari locale pentru context MCP, release, smoke, backup si verificari operationale |
 | `data`, `.ai`, `.codex` | Context local, memorie MCP/Codex si artefacte operationale; nu sunt loc pentru secrete sau specificatii canonice de gameplay |
@@ -43,6 +48,8 @@ Regula de proprietate:
 - `ainpc-api` nu depinde de `ainpc-core-plugin`.
 - `ainpc-core-plugin` poate consuma `ainpc-api`, dar nu trebuie sa forteze addonurile sa cunoasca internals.
 - `ainpc-scenario-medieval` demonstreaza extensibilitatea, nu stabileste reguli globale pentru toate scenariile.
+- Addonurile trebuie sa declare tipul, dependintele, capabilitatile si feature flags pe care le activeaza.
+- Addonurile de resurse/textura si datapack-urile compatibile nu trebuie sa fie obligatorii pentru functionarea core-ului.
 - Documentele din radacina `docs/` raman canonice; `docs/categorii/` sunt indexuri de navigare.
 - Serverul MCP dedicat pluginului Paper trebuie sa ramana optional, local-first si securizat; el extinde observabilitatea si automatizarea, nu inlocuieste regulile runtime din core.
 
@@ -130,6 +137,9 @@ API-ul public trebuie sa fie mic, stabil si documentat.
 - Breaking changes in API cer documentare, test de compatibilitate si motiv clar.
 - Un addon demonstrativ nu trebuie sa introduca dependinte obligatorii pentru core.
 - Configuratia trebuie gandita pe profiluri: core defaults, server profile, addon profile si scenario pack. Valorile implicite trebuie sa fie sigure si usor de explicat.
+- Tipurile de addon planificate sunt: scenariu, story, resursa/textura si compatibilitate datapack. Tipurile pot fi combinate doar daca manifestul declara clar ce activeaza.
+- Addonurile de scenariu definesc continut si reguli jucabile. Addonurile de story definesc naratiune si stari. Addonurile de resursa/textura livreaza prezentare vizuala si audio. Compatibilitatea datapack trebuie sa ramana vanilla-friendly si optionala.
+- Fiecare addon trebuie sa poata fi dezactivat fara sa corupa datele existente; la dezactivare, core-ul trebuie sa raporteze clar ce questuri, story hooks, resurse sau datapack hooks lipsesc.
 
 ## Articolul 10. Reguli pentru documentatie
 
