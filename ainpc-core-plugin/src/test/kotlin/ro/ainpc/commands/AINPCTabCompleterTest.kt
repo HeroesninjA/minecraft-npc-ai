@@ -111,8 +111,18 @@ class AINPCTabCompleterTest {
         assertTrue(a.contains("validate"))
         assertTrue(tab(completer, "ainpc", "patch", "plan", "").contains("<regionId>"))
         val p = tab(completer, "ainpc", "patch", "plan", "demo_sat", "8", "")
-        assertTrue(p.contains("blacksmith"))
-        assertTrue(p.contains("blacksmith,farmer"))
+        assertTrue(p.contains("worker"))
+        assertTrue(p.contains("worker,caretaker"))
+        assertFalse(p.contains("blacksmith"))
+    }
+
+    @Test
+    fun completesCreateWithNeutralOccupationFallbacks() {
+        val completer = AINPCTabCompleter(null)
+        val occupations = tab(completer, "ainpc", "create", "Ana", "")
+        assertTrue(occupations.contains("worker"))
+        assertTrue(occupations.contains("caretaker"))
+        assertFalse(occupations.contains("fierar"))
     }
 
     @Test
@@ -170,6 +180,23 @@ class AINPCTabCompleterTest {
         assertTrue(c.contains("place"))
         assertTrue(c.contains("resident"))
         assertTrue(c.contains("list"))
+    }
+
+    @Test
+    fun hidesGenerationWorldActionsWhenGenerationFeatureIsDisabled() {
+        val completer = AINPCTabCompleter(null)
+
+        assertFalse(tab(completer, "ainpc", "").contains("create"))
+
+        val household = tab(completer, "ainpc", "world", "household", "")
+        assertTrue(household.contains("plan"))
+        assertFalse(household.contains("spawn"))
+
+        val settlement = tab(completer, "ainpc", "world", "settlement", "")
+        assertTrue(settlement.contains("plan"))
+        assertFalse(settlement.contains("spawn"))
+
+        assertFalse(tab(completer, "ainpc", "world", "demo", "").contains("create"))
     }
 
     @Test

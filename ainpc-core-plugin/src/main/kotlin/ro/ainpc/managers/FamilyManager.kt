@@ -16,7 +16,7 @@ class FamilyManager(private val plugin: AINPCPlugin) {
     private val random = Random()
 
     fun generateFamily(npc: AINPC) {
-        if (!plugin.config.getBoolean("family.auto_generate", true)) return
+        if (!plugin.config.getBoolean("family.auto_generate", false)) return
 
         val spouseChance = plugin.config.getInt("family.spouse_chance", 60)
         if (random.nextInt(100) < spouseChance && npc.age >= 20) generateSpouse(npc)
@@ -371,16 +371,15 @@ class FamilyManager(private val plugin: AINPCPlugin) {
 
     private fun getRandomOccupation(): String {
         val occupations = arrayOf(
-            "fermier", "fierar", "pescar", "negustor", "miner", "tamplar",
-            "soldat", "paznic", "brutar", "croitor", "alchimist", "medic"
+            "worker", "caretaker", "guide", "resident"
         )
         return occupations[random.nextInt(occupations.size)]
     }
 
     private fun getRandomActivity(): String {
         val activities = arrayOf(
-            "casa si copii", "gradinarit", "gatit", "tesut",
-            "ingrijirea familiei", "comertul local"
+            "casa si familie", "organizarea locuintei", "pregatiri zilnice",
+            "ingrijirea familiei", "ajutor pentru comunitate"
         )
         return activities[random.nextInt(activities.size)]
     }

@@ -51,7 +51,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             }
         }
 
-        if (!plugin.config.getBoolean("dialog.passive_listen_enabled", true)) {
+        if (!plugin.config.getBoolean("dialog.passive_listen_enabled", false)) {
             return null
         }
 
@@ -125,7 +125,9 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         npc.updateContext()
         npc.context.setInteractingPlayer(player)
         npc.context.lastPlayerMessage = message
-        plugin.scenarioEngine.recordNpcConversation(player, npc)
+        if (questFeatureEnabled()) {
+            plugin.scenarioEngine.recordNpcConversation(player, npc)
+        }
 
         if (handleQuestInteractionFromMessage(player, npc, message)) {
             return
@@ -173,6 +175,9 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     }
 
     private fun handleQuestInteractionFromMessage(player: Player, npc: AINPC, message: String): Boolean {
+        if (!questFeatureEnabled()) {
+            return false
+        }
         val intent = QUEST_INTENTS.resolve(
             message,
             isQuestDecisionContext(player, npc)
@@ -219,6 +224,9 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     }
 
     private fun isQuestDecisionContext(player: Player, npc: AINPC): Boolean {
+        if (!questFeatureEnabled()) {
+            return false
+        }
         if (!plugin.scenarioEngine.hasOfferedQuest(player)) {
             return false
         }
@@ -242,6 +250,8 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
         return first.name != null && first.name.equals(second.name, ignoreCase = true)
     }
+
+    private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)
 
     private fun refreshQuestNpc(npc: AINPC?): AINPC? {
         if (npc == null) {

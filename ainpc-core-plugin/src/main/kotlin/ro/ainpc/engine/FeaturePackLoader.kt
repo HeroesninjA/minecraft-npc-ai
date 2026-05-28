@@ -66,8 +66,8 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             loadPack(file, candidatePackIds)
         }
 
-        if (loadedPacks.isEmpty()) {
-            FeaturePackDefaults.loadDefaultMedievalPack(
+        if (loadedPacks.isEmpty() && plugin.config.getBoolean("feature_packs.allow_builtin_fallbacks", true)) {
+            FeaturePackDefaults.loadNeutralFallbackPack(
                 loadedPacks,
                 allTraits,
                 allProfessions,
@@ -92,20 +92,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
     }
 
     private fun saveDefaultPacks() {
-        saveResource("packs/medieval.yml")
-        saveResource("packs/modern.yml")
-        saveResource("packs/social.yml")
-    }
-
-    private fun saveResource(resourcePath: String) {
-        try {
-            val outFile = File(plugin.dataFolder, resourcePath)
-            if (!outFile.exists()) {
-                plugin.saveResource(resourcePath, false)
-            }
-        } catch (exception: Exception) {
-            plugin.debug("Nu s-a putut salva resursa: $resourcePath")
-        }
+        plugin.debug("Core-ul nu mai instaleaza pack-uri tematice implicite; continutul este livrat prin addonuri.")
     }
 
     private fun collectPackFiles(root: File, folder: File, files: MutableList<File>, allowAddonPacks: Boolean) {
@@ -153,6 +140,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             val id = config.getString("id", file.name.replace(".yml", "")) ?: file.name.replace(".yml", "")
             val name = config.getString("name", id) ?: id
             val description = config.getString("description", "") ?: ""
+            if (isDisabledCoreDemoPack(id, file)) {
+                plugin.logger.info("Feature pack demo din core ignorat deoarece demo.enabled=false: $id")
+                return
+            }
             if (isFeaturePackDisabled(id)) {
                 plugin.logger.info("Feature pack dezactivat prin addons.disabled: $id")
                 return
@@ -273,6 +264,18 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             .filter { value -> !value.isNullOrBlank() }
             .map { value -> value.trim().lowercase(Locale.ROOT) }
             .any { value -> value == normalized }
+    }
+
+    private fun isDisabledCoreDemoPack(id: String?, file: File): Boolean {
+        if (plugin.config.getBoolean("demo.enabled", true)) {
+            return false
+        }
+        val normalized = id?.trim()?.lowercase(Locale.ROOT).orEmpty()
+        if (normalized !in CORE_DEMO_PACK_IDS) {
+            return false
+        }
+        val parentName = file.parentFile?.name ?: return false
+        return parentName.equals("packs", ignoreCase = true)
     }
 
     private fun registerProgressionMechanic(pack: FeaturePack?, mechanic: ProgressionMechanicDefinition?) {
@@ -483,7 +486,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         var primaryScenario = if (addonSection != null) {
             addonSection.getBoolean("primary_scenario", false)
         } else {
-            addonType == AddonType.SCENARIO && "medieval".equals(pack.id, ignoreCase = true)
+            false
         }
         primaryScenario = primaryScenario && addonType == AddonType.SCENARIO && pack.hasScenarioDefinitions()
 
@@ -513,6 +516,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
         pack.addonDescriptor = descriptor
         plugin.platform.addonRegistry.registerDescriptor(descriptor)
+    }
+
+    companion object {
+        private val CORE_DEMO_PACK_IDS = setOf("medieval", "modern", "social")
     }
 
     class FeaturePack(

@@ -18,6 +18,9 @@ import ro.ainpc.AINPCPlugin
 class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         val from: Location = event.from
         val to: Location = event.to
         if (from.world == null || to.world == null) {
@@ -37,29 +40,44 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEntityDeath(event: EntityDeathEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         val killer = event.entity.killer ?: return
         plugin.scenarioEngine.recordMobKill(killer, event.entity)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEntityPickupItem(event: EntityPickupItemEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         val player = event.entity as? Player ?: return
         refreshInventoryProgressNextTick(player)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerDropItem(event: PlayerDropItemEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         refreshInventoryProgressNextTick(event.player)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onInventoryClick(event: InventoryClickEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         val player = event.whoClicked as? Player ?: return
         refreshInventoryProgressNextTick(player)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onInventoryDrag(event: InventoryDragEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
         val player = event.whoClicked as? Player ?: return
         refreshInventoryProgressNextTick(player)
     }
@@ -70,4 +88,6 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         }
         runLater({ plugin.scenarioEngine.recordInventoryChange(player) }, 1L)
     }
+
+    private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)
 }

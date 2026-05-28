@@ -173,33 +173,57 @@ public class AINPCCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if ("npcquest".equalsIgnoreCase(command.getName()) || "quest".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             String[] routedArgs = new String[args.length + 1];
             routedArgs[0] = "quest";
             System.arraycopy(args, 0, routedArgs, 1, args.length);
             return handleQuest(sender, routedArgs);
         }
         if ("progression".equalsIgnoreCase(command.getName()) || "progress".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.progression", true, "Progresia")) {
+                return true;
+            }
             return handleProgression(sender, routeDirectCommandToQuest(args));
         }
         if ("contract".equalsIgnoreCase(command.getName()) || "contracts".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleContract(sender, routeDirectCommandToQuest(args));
         }
         if ("duty".equalsIgnoreCase(command.getName()) || "duties".equalsIgnoreCase(command.getName())
             || "sarcina".equalsIgnoreCase(command.getName()) || "sarcini".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleDuty(sender, routeDirectCommandToQuest(args));
         }
         if ("bounty".equalsIgnoreCase(command.getName()) || "bounties".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleBounty(sender, routeDirectCommandToQuest(args));
         }
         if ("event".equalsIgnoreCase(command.getName()) || "events".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleEvent(sender, routeDirectCommandToQuest(args));
         }
         if ("tutorial".equalsIgnoreCase(command.getName()) || "tutorials".equalsIgnoreCase(command.getName())
             || "onboarding".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleTutorial(sender, routeDirectCommandToQuest(args));
         }
         if ("ritual".equalsIgnoreCase(command.getName()) || "rituals".equalsIgnoreCase(command.getName())
             || "ceremony".equalsIgnoreCase(command.getName()) || "ceremonies".equalsIgnoreCase(command.getName())) {
+            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) {
+                return true;
+            }
             return handleRitual(sender, routeDirectCommandToQuest(args));
         }
 
@@ -211,33 +235,33 @@ public class AINPCCommand implements CommandExecutor {
         String subCommand = args[0].toLowerCase();
 
         return switch (subCommand) {
-            case "create" -> handleCreate(sender, args);
+            case "create" -> ensureGenerationEnabled(sender, "Generarea NPC") && handleCreate(sender, args);
             case "delete", "remove" -> handleDelete(sender, args);
             case "delete-id" -> handleDeleteId(sender, args);
             case "duplicates" -> handleDuplicates(sender, args);
             case "repair" -> handleRepair(sender, args);
             case "info" -> handleInfo(sender, args);
-            case "gui" -> handleGui(sender, args);
-            case "quest" -> handleQuest(sender, args);
-            case "progression", "progress" -> handleProgression(sender, args);
-            case "contract", "contracts" -> handleContract(sender, args);
-            case "duty", "duties", "sarcina", "sarcini" -> handleDuty(sender, args);
-            case "bounty", "bounties" -> handleBounty(sender, args);
-            case "event", "events", "eveniment", "evenimente" -> handleEvent(sender, args);
-            case "tutorial", "tutorials", "onboarding" -> handleTutorial(sender, args);
-            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> handleRitual(sender, args);
+            case "gui" -> ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args);
+            case "quest" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleQuest(sender, args);
+            case "progression", "progress" -> ensureFeatureEnabled(sender, "features.progression", true, "Progresia") && handleProgression(sender, args);
+            case "contract", "contracts" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleContract(sender, args);
+            case "duty", "duties", "sarcina", "sarcini" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleDuty(sender, args);
+            case "bounty", "bounties" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleBounty(sender, args);
+            case "event", "events", "eveniment", "evenimente" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleEvent(sender, args);
+            case "tutorial", "tutorials", "onboarding" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleTutorial(sender, args);
+            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleRitual(sender, args);
             case "demo" -> DemoReadinessCommand.handle(plugin, sender, args);
-            case "world" -> handleWorld(sender, args);
-            case "patch" -> handlePatch(sender, args);
-            case "wand" -> handleWand(sender, args);
-            case "map" -> handleMap(sender, args);
-            case "story" -> handleStory(sender, args);
+            case "world" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWorld(sender, args);
+            case "patch" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handlePatch(sender, args);
+            case "wand" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWand(sender, args);
+            case "map" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleMap(sender, args);
+            case "story" -> ensureFeatureEnabled(sender, "features.story", true, "Story-ul") && handleStory(sender, args);
             case "migration" -> handleMigration(sender, args);
             case "audit" -> handleAudit(sender, args);
             case "debugdump" -> handleDebugDump(sender, args);
             case "list" -> handleList(sender, args);
             case "family" -> handleFamily(sender, args);
-            case "routine" -> handleRoutine(sender, args);
+            case "routine" -> ensureFeatureEnabled(sender, "features.routine", true, "Rutinele") && handleRoutine(sender, args);
             case "mood", "emotion" -> handleMood(sender, args);
             case "tp", "teleport" -> handleTeleport(sender, args);
             case "reload" -> handleReload(sender);
@@ -247,6 +271,20 @@ public class AINPCCommand implements CommandExecutor {
                 yield true;
             }
         };
+    }
+
+    private boolean ensureFeatureEnabled(CommandSender sender, String configPath, boolean defaultValue, String label) {
+        if (plugin.getConfig().getBoolean(configPath, defaultValue)) {
+            return true;
+        }
+        for (String message : featureDisabledMessages(configPath, label)) {
+            plugin.getMessageUtils().send(sender, message);
+        }
+        return false;
+    }
+
+    private boolean ensureGenerationEnabled(CommandSender sender, String label) {
+        return ensureFeatureEnabled(sender, "features.generation", false, label);
     }
 
     private String[] routeDirectCommandToQuest(String[] args) {
@@ -3477,6 +3515,16 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
+        if (!plugin.getConfig().getBoolean("demo.enabled", true)) {
+            plugin.getMessageUtils().send(sender, "&cContinutul demo din core este dezactivat.");
+            plugin.getMessageUtils().send(sender, "&7Activeaza &fdemo.enabled=true &7in config.yml sau foloseste mapping-ul livrat de addon.");
+            return true;
+        }
+
+        if (!ensureGenerationEnabled(sender, "Generarea demo")) {
+            return true;
+        }
+
         WorldCommandLocation origin = resolveWorldDemoLocation(sender);
         if (origin == null) {
             return true;
@@ -4080,6 +4128,9 @@ public class AINPCCommand implements CommandExecutor {
         sendAuditMessages(sender, "&eWarning-uri planner", planning.warnings());
 
         boolean shouldSpawn = "spawn".equalsIgnoreCase(args[2]);
+        if (shouldSpawn && !ensureGenerationEnabled(sender, "Generarea NPC")) {
+            return true;
+        }
         HouseholdSpawnResult result = shouldSpawn
             ? plugin.getNpcSpawnOrchestrator().spawnHousehold(allocation)
             : plugin.getNpcSpawnOrchestrator().dryRunHouseAllocation(allocation);
@@ -4293,6 +4344,9 @@ public class AINPCCommand implements CommandExecutor {
         sendAuditMessages(sender, "&eWarning-uri planner", planning.warnings());
 
         boolean shouldSpawn = "spawn".equalsIgnoreCase(args[2]);
+        if (shouldSpawn && !ensureGenerationEnabled(sender, "Generarea NPC")) {
+            return true;
+        }
         SettlementSpawnResult result = shouldSpawn
             ? plugin.getNpcSpawnOrchestrator().spawnSettlement(planning.allocations())
             : plugin.getNpcSpawnOrchestrator().dryRunSettlement(planning.allocations());

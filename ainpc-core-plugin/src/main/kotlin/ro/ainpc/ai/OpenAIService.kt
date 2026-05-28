@@ -97,6 +97,10 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         dbContext: DialogManager.PromptDbContext?
     ): CompletableFuture<String> {
         return capturePromptSnapshot(request).thenCompose { snapshot ->
+            if (!aiFeatureEnabled()) {
+                recordFallback("feature_disabled")
+                return@thenCompose CompletableFuture.completedFuture(OpenAITextSupport.generateFallbackResponse(snapshot))
+            }
             CompletableFuture.supplyAsync {
                 if (apiKey.isBlank()) {
                     diagInfo("Sar peste cerere OpenAI: cheia API lipseste; folosesc fallback local.")
@@ -221,6 +225,17 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     fun diagnoseConnection(ignored: Boolean): CompletableFuture<ConnectionStatus> {
+        if (!aiFeatureEnabled()) {
+            return CompletableFuture.completedFuture(
+                ConnectionStatus.unreachable(
+                    model,
+                    listOf(baseUrl),
+                    null,
+                    emptyList(),
+                    listOf("features.ai este dezactivat.")
+                )
+            )
+        }
         return CompletableFuture.supplyAsync { probeConnection() }
     }
 
@@ -288,6 +303,10 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     fun generateAsync(prompt: String): CompletableFuture<String?> {
+        if (!aiFeatureEnabled()) {
+            recordFallback("feature_disabled")
+            return CompletableFuture.completedFuture(null)
+        }
         return CompletableFuture.supplyAsync {
             if (apiKey.isBlank()) {
                 diagInfo("Sar peste generateAsync: cheia API lipseste.")
@@ -312,6 +331,10 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     fun runDiagnosticsAsync(reason: String) {
+        if (!aiFeatureEnabled()) {
+            recordFallback("feature_disabled")
+            return
+        }
         val diagnosticsEnabled = plugin.config.getBoolean("openai.diagnostics.enabled", false)
         val checkOnStartup = plugin.config.getBoolean("openai.diagnostics.check_on_startup", false)
         val automaticCheck = reason == "startup" || reason == "reload"
@@ -380,6 +403,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         return OpenAIConnectionProbe.probeConnection(model, baseUrl, apiKey, httpClient, gson)
     }
 
+    private fun aiFeatureEnabled(): Boolean = plugin.config.getBoolean("features.ai", false)
+
     @JvmOverloads
     fun captureDebugSnapshot(nowMillis: Long = System.currentTimeMillis()): OpenAIDebugSnapshot {
         return OpenAIDebugSnapshot(
@@ -444,6 +469,9 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     private fun logConfigurationDiagnostics() {
+        if (!aiFeatureEnabled()) {
+            return
+        }
         if (!plugin.config.getBoolean("openai.diagnostics.enabled", false)) {
             return
         }

@@ -110,32 +110,7 @@ class RoutineEngine {
     }
 
     private fun workStateFor(occupation: String?): NPCState {
-        val normalized = occupation?.lowercase() ?: ""
-        if (containsAny(normalized, "fermier", "farmer", "pastor")) {
-            return NPCState.FARMING
-        }
-        if (containsAny(normalized, "miner")) {
-            return NPCState.MINING
-        }
-        if (containsAny(normalized, "pescar", "fisher")) {
-            return NPCState.FISHING
-        }
-        if (containsAny(normalized, "fierar", "tamplar", "mason", "pietrar", "croitor", "brutar")) {
-            return NPCState.CRAFTING
-        }
-        if (containsAny(normalized, "soldat", "guard", "garda", "paznic")) {
-            return NPCState.GUARDING
-        }
         return NPCState.WORKING
-    }
-
-    private fun containsAny(text: String, vararg fragments: String): Boolean {
-        for (fragment in fragments) {
-            if (text.contains(fragment)) {
-                return true
-            }
-        }
-        return false
     }
 
     private fun hasAnchor(anchor: AINPC.OwnedLocation?): Boolean {

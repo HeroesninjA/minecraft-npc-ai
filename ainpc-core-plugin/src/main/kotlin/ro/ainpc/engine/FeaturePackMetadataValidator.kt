@@ -110,6 +110,9 @@ object FeaturePackMetadataValidator {
 
     private fun isKnownAddonType(value: String): Boolean {
         val normalized = normalize(value)
+        if (normalized in ADDON_TYPE_ALIASES) {
+            return true
+        }
         for (type in AddonType.entries) {
             if (type.id.equals(normalized, ignoreCase = true) || type.name.equals(normalized, ignoreCase = true)) {
                 return true
@@ -140,6 +143,21 @@ object FeaturePackMetadataValidator {
     }
 
     private fun normalize(value: String?): String = value?.trim()?.lowercase(Locale.ROOT) ?: ""
+
+    private val ADDON_TYPE_ALIASES = setOf(
+        "resources",
+        "resource_pack",
+        "resource-pack",
+        "textures",
+        "texture_pack",
+        "texture-pack",
+        "resource_texture",
+        "resource-texture",
+        "resources_textures",
+        "resources-textures",
+        "data_pack",
+        "data-pack",
+    )
 
     data class ValidationResult(val packId: String, val errors: List<String>, val warnings: List<String>) {
         fun packId(): String = packId

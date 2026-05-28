@@ -1,6 +1,7 @@
 package ro.ainpc.commands
 
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class AINPCCommandRoutingTest {
@@ -21,6 +22,17 @@ class AINPCCommandRoutingTest {
         assertArrayEquals(
             arrayOf("quest", "gui", "ritual_tracked"),
             route.invoke(command, arrayOf("ritual", "gui", "tracked"), "ritual") as Array<String>
+        )
+    }
+
+    @Test
+    fun formatsFeatureDisabledMessageWithConfigPath() {
+        assertEquals(
+            listOf(
+                "&cFunctia Questurile este dezactivata in configuratie.",
+                "&7Activeaza &ffeatures.quest=true &7in config.yml si ruleaza /ainpc reload."
+            ),
+            featureDisabledMessages("features.quest", "Questurile")
         )
     }
 }

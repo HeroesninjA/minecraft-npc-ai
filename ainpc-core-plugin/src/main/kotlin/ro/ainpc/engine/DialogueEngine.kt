@@ -315,43 +315,12 @@ class DialogueEngine(
         result = result.replace("{occupation}", npc.occupation ?: "locuitor")
         result = result.replace("{name}", npc.name)
 
-        val occupation = npc.occupation?.lowercase() ?: ""
-        result = result.replace("{professional_item}", getProfessionalItem(occupation))
-        result = result.replace("{professional_guess}", getProfessionalGuess(occupation))
-        result = result.replace("{professional_tool}", getProfessionalTool(occupation))
+        result = result.replace("{professional_item}", "obiect util")
+        result = result.replace("{professional_guess}", "ceva interesant")
+        result = result.replace("{professional_tool}", "unealta")
         result = result.replace("{family_member}", getRandomFamilyMember())
         result = result.replace("{npc_name}", "vecinul")
         return result
-    }
-
-    private fun getProfessionalItem(occupation: String): String = when (occupation) {
-        "fierar", "blacksmith" -> "unealta de metal"
-        "fermier", "farmer" -> "samanta sau unelte agricole"
-        "pescar", "fisherman" -> "nada sau plasa"
-        "bibliotecar", "librarian" -> "carte veche"
-        "miner" -> "minereu rar"
-        "soldat", "guard" -> "arma sau armura"
-        else -> "obiect ciudat"
-    }
-
-    private fun getProfessionalGuess(occupation: String): String = when (occupation) {
-        "fierar", "blacksmith" -> "un tip nou de otel"
-        "fermier", "farmer" -> "o planta straina"
-        "pescar", "fisherman" -> "un peste exotic"
-        "bibliotecar", "librarian" -> "cunostinte stravechi"
-        "miner" -> "un cristal magic"
-        "soldat", "guard" -> "o tehnica de lupta"
-        else -> "ceva misterios"
-    }
-
-    private fun getProfessionalTool(occupation: String): String = when (occupation) {
-        "fierar", "blacksmith" -> "ciocan"
-        "fermier", "farmer" -> "sapa"
-        "pescar", "fisherman" -> "undita"
-        "bibliotecar", "librarian" -> "condei"
-        "miner" -> "tarnacop"
-        "soldat", "guard" -> "sabie"
-        else -> "unealta"
     }
 
     private fun getRandomFamilyMember(): String {
@@ -397,7 +366,7 @@ class DialogueEngine(
         playerMessage: String
     ): CompletableFuture<String> {
         val prompt = StringBuilder()
-        prompt.append("Esti un NPC intr-un joc medieval.\n")
+        prompt.append("Esti un NPC intr-un server Minecraft configurabil prin addonuri.\n")
         prompt.append(npc.generateContextDescription()).append("\n")
         prompt.append(context.generateContextDescription()).append("\n")
         prompt.append("\nIntentia dialogului: ").append(intent.description).append("\n")

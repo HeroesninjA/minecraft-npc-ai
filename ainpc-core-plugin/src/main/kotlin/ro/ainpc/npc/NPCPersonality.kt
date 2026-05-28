@@ -174,7 +174,6 @@ class NPCPersonality {
                 "innocent", "inocent" -> NPCPersonality(0.4, 0.5, 0.6, 0.9, 0.2)
                 "orphan", "orfan" -> NPCPersonality(0.4, 0.5, 0.4, 0.6, 0.7)
                 "warrior", "razboinic" -> NPCPersonality(0.4, 0.8, 0.5, 0.3, 0.4)
-                "merchant", "negustor" -> NPCPersonality(0.6, 0.7, 0.8, 0.5, 0.3)
                 else -> generateRandom()
             }
         }

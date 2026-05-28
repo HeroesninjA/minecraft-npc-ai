@@ -49,13 +49,13 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
 
         val completions = ArrayList<String>()
         if (args.size == 1) {
-            completions.addAll(filterStartsWith(SUBCOMMANDS, args[0]))
+            completions.addAll(filterStartsWith(generationActions(SUBCOMMANDS), args[0]))
         } else if (args.size >= 2) {
             val subCommand = args[0].lowercase()
             when (subCommand) {
                 "create" -> when (args.size) {
                     2 -> completions.add("<nume>")
-                    3 -> completions.addAll(filterStartsWith(OCCUPATIONS, args[2]))
+                    3 -> completions.addAll(filterStartsWith(getProfessionSuggestions(), args[2]))
                     4 -> completions.addAll(listOf("20", "25", "30", "40", "50", "60"))
                     5 -> completions.addAll(filterStartsWith(GENDERS, args[4]))
                     6 -> completions.addAll(filterStartsWith(ARCHETYPES, args[5]))
@@ -206,7 +206,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 else if (args.size == 6 && "village".equals(args[2], true) && "import".equals(args[4], true)) completions.add("<regionId>")
             }
             "demo" -> {
-                if (args.size == 3) completions.addAll(filterStartsWith(DEMO_ACTIONS, args[2]))
+                if (args.size == 3) completions.addAll(filterStartsWith(generationActions(DEMO_ACTIONS), args[2]))
                 else if (args.size == 4 && "create".equals(args[2], true)) completions.add("<regionId>")
             }
             "bind" -> {
@@ -231,31 +231,68 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 else if ((args.size == 4 && "list".equals(args[2], true)) || (args.size == 5 && "place".equals(args[2], true))) completions.addAll(filterStartsWith(listOf("10", "20", "50"), args[args.size - 1]))
             }
             "household" -> {
-                if (args.size == 3) completions.addAll(filterStartsWith(HOUSEHOLD_ACTIONS, args[2]))
-                else if (args.size == 4 && HOUSEHOLD_PLAN_ACTIONS.any { it.equals(args[2], true) }) completions.addAll(getPlaceIds(args[3]))
+                val planActions = generationActions(HOUSEHOLD_PLAN_ACTIONS)
+                if (args.size == 3) completions.addAll(filterStartsWith(generationActions(HOUSEHOLD_ACTIONS), args[2]))
+                else if (args.size == 4 && planActions.any { it.equals(args[2], true) }) completions.addAll(getPlaceIds(args[3]))
                 else if (args.size == 4 && ("status".equals(args[2], true) || "place".equals(args[2], true))) completions.addAll(getPlaceIds(args[3]))
                 else if (args.size == 4 && "resident".equals(args[2], true)) {
                     completions.addAll(filterStartsWith(listOf("nearest"), args[3]))
                     completions.addAll(getNPCNames(args[3]))
                 } else if (args.size == 4 && "list".equals(args[2], true)) completions.addAll(filterStartsWith(listOf("10", "20", "50"), args[3]))
-                else if (args.size == 5 && HOUSEHOLD_PLAN_ACTIONS.any { it.equals(args[2], true) }) completions.addAll(filterStartsWith(listOf("1", "2", "3", "4"), args[4]))
+                else if (args.size == 5 && planActions.any { it.equals(args[2], true) }) completions.addAll(filterStartsWith(listOf("1", "2", "3", "4"), args[4]))
             }
             "settlement" -> {
-                if (args.size == 3) completions.addAll(filterStartsWith(SETTLEMENT_ACTIONS, args[2]))
-                else if (args.size == 4 && SETTLEMENT_ACTIONS.any { it.equals(args[2], true) }) completions.addAll(getRegionIds(args[3]))
-                else if (args.size == 5 && SETTLEMENT_ACTIONS.any { it.equals(args[2], true) }) completions.addAll(filterStartsWith(listOf("1", "2", "4", "8"), args[4]))
+                val settlementActions = generationActions(SETTLEMENT_ACTIONS)
+                if (args.size == 3) completions.addAll(filterStartsWith(settlementActions, args[2]))
+                else if (args.size == 4 && settlementActions.any { it.equals(args[2], true) }) completions.addAll(getRegionIds(args[3]))
+                else if (args.size == 5 && settlementActions.any { it.equals(args[2], true) }) completions.addAll(filterStartsWith(listOf("1", "2", "4", "8"), args[4]))
             }
         }
         return completions
     }
+
+    private fun generationActions(actions: List<String>): List<String> =
+        if (generationFeatureEnabled()) actions else actions.filterNot { it.equals("spawn", true) || it.equals("create", true) }
+
+    private fun generationFeatureEnabled(): Boolean = plugin?.config?.getBoolean("features.generation", false) == true
 
     private fun completePatchArgs(args: Array<String>): List<String> {
         val completions = ArrayList<String>()
         if (args.size == 2) completions.addAll(filterStartsWith(PATCH_ACTIONS, args[1]))
         else if (args.size == 3 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(getRegionIdsSafe(args[2]))
         else if (args.size == 4 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(filterStartsWith(PATCH_POPULATION_SUGGESTIONS, args[3]))
-        else if (args.size == 5 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(filterStartsWith(PATCH_PROFESSION_SUGGESTIONS, args[4]))
+        else if (args.size == 5 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(filterStartsWith(getPatchProfessionSuggestions(), args[4]))
         return completions
+    }
+
+    private fun getPatchProfessionSuggestions(): List<String> {
+        val loadedProfessions = getProfessionSuggestionsFromFeaturePacks()
+        if (loadedProfessions.isEmpty()) {
+            return NEUTRAL_PATCH_PROFESSION_SUGGESTIONS
+        }
+
+        val suggestions = LinkedHashSet<String>()
+        suggestions.addAll(loadedProfessions)
+        if (loadedProfessions.size >= 2) {
+            suggestions.add("${loadedProfessions[0]},${loadedProfessions[1]}")
+        }
+        return suggestions.toList()
+    }
+
+    private fun getProfessionSuggestions(): List<String> {
+        val loadedProfessions = getProfessionSuggestionsFromFeaturePacks()
+        return if (loadedProfessions.isEmpty()) NEUTRAL_PROFESSION_IDS else loadedProfessions
+    }
+
+    private fun getProfessionSuggestionsFromFeaturePacks(): List<String> {
+        val loadedProfessions = runCatching {
+            plugin?.featurePackLoader?.getAllProfessions()
+                ?.map { profession -> profession.id.trim() }
+                ?.filter { id -> id.isNotEmpty() }
+                ?.distinct()
+                ?.sorted()
+        }.getOrNull().orEmpty()
+        return loadedProfessions
     }
 
     private fun completeQuestArgs(questArgs: Array<String>): List<String> {
@@ -514,7 +551,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val WORLD_MODES = listOf("whereami", "places", "region", "place", "node", "scan", "demo", "bind", "bindings", "household", "settlement", "save")
         private val PATCH_ACTIONS = listOf("analyze", "plan", "validate")
         private val PATCH_POPULATION_SUGGESTIONS = listOf("4", "6", "8", "10", "12")
-        private val PATCH_PROFESSION_SUGGESTIONS = listOf("blacksmith", "farmer", "merchant", "innkeeper", "guard", "priest", "blacksmith,farmer", "blacksmith,farmer,merchant")
+        private val NEUTRAL_PROFESSION_IDS = listOf("worker", "caretaker", "guide")
+        private val NEUTRAL_PATCH_PROFESSION_SUGGESTIONS = NEUTRAL_PROFESSION_IDS + "worker,caretaker"
         private val WAND_ACTIONS = listOf("mode", "pos1", "pos2", "point", "status", "inspect", "clear", "reset")
         private val WAND_RESET_TARGETS = listOf("pos1", "pos2", "point", "all")
         private val WAND_MODES = listOf("region", "place", "node", "npc_bind", "quest_anchor")
@@ -535,9 +573,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val REGION_TYPES = Arrays.stream(RegionType.values()).map { it.id }.sorted().toList()
         private val PLACE_TYPES = Arrays.stream(PlaceType.values()).map { it.id }.sorted().toList()
         private val NODE_TYPES = Arrays.stream(WorldNodeType.values()).map { it.id }.sorted().toList()
-        private val OCCUPATIONS = listOf("fermier", "fierar", "pescar", "negustor", "miner", "tamplar", "soldat", "paznic", "brutar", "croitor", "alchimist", "bibliotecar", "preot", "cartograf", "macelar")
         private val GENDERS = listOf("male", "female")
-        private val ARCHETYPES = listOf("hero", "villain", "sage", "jester", "caregiver", "explorer", "rebel", "lover", "creator", "ruler", "magician", "innocent", "orphan", "warrior", "merchant")
+        private val ARCHETYPES = listOf("hero", "villain", "sage", "jester", "caregiver", "explorer", "rebel", "lover", "creator", "ruler", "magician", "innocent", "orphan", "warrior")
         private val EMOTIONS = listOf("happiness", "sadness", "anger", "fear", "surprise", "disgust", "trust", "anticipation")
     }
 }

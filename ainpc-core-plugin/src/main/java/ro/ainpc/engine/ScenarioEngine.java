@@ -115,12 +115,12 @@ public class ScenarioEngine {
         theft.addRole("THIEF", "Hotul care fura");
         theft.addRole("VICTIM", "Victima furtului");
         theft.addRole("WITNESS", "Martor la furt", true);
-        theft.addRole("GUARD", "Garda care intervine", true);
+        theft.addRole("RESPONDER", "NPC care intervine", true);
         theft.addPhase("PLANNING", "Hotul planuieste furtul");
         theft.addPhase("EXECUTION", "Furtul are loc");
         theft.addPhase("DISCOVERY", "Victima descopera furtul");
         theft.addPhase("CONFLICT", "Confruntare intre parti");
-        theft.addPhase("RESOLUTION", "Rezolvare - garda intervine sau hotul fuge");
+        theft.addPhase("RESOLUTION", "Rezolvare - cineva intervine sau hotul fuge");
         theft.setTriggerProbability(0.05);
         theft.setMinimumNpcCount(2);
         scenarioTemplates.put(ScenarioType.THEFT, theft);
@@ -4958,6 +4958,9 @@ public class ScenarioEngine {
     }
 
     private boolean shouldUseSimpleQuestForAllNpcs() {
+        if (!plugin.getConfig().getBoolean("demo.enabled", true)) {
+            return false;
+        }
         return getQuestSettings().getBoolean("simple_for_all_npcs", true);
     }
 
@@ -5022,83 +5025,19 @@ public class ScenarioEngine {
             professionName = "localnicul";
         }
 
-        SimpleQuestProfile defaultProfile = switch (professionId) {
-            case "blacksmith" -> new SimpleQuestProfile(
-                "Provizii pentru fierarie",
-                Material.IRON_INGOT,
-                3,
-                Material.IRON_SWORD,
-                1,
-                "Adu-mi " + formatQuestAmount(3, Material.IRON_INGOT),
-                npc.getName() + " are nevoie de fier pentru o arma noua."
-            );
-            case "farmer" -> new SimpleQuestProfile(
-                "Recolta de dimineata",
-                Material.WHEAT,
-                10,
-                Material.BREAD,
-                4,
-                "Adu-mi " + formatQuestAmount(10, Material.WHEAT),
-                npc.getName() + " are nevoie de provizii pentru hambar."
-            );
-            case "guard" -> new SimpleQuestProfile(
-                "Provizii pentru garda",
-                Material.ARROW,
-                8,
-                Material.SHIELD,
-                1,
-                "Adu-mi " + formatQuestAmount(8, Material.ARROW),
-                npc.getName() + " isi pregateste echipamentul pentru patrula."
-            );
-            case "merchant" -> new SimpleQuestProfile(
-                "Marfa pentru taraba",
-                Material.PAPER,
-                6,
-                Material.EMERALD,
-                2,
-                "Adu-mi " + formatQuestAmount(6, Material.PAPER),
-                npc.getName() + " vrea sa-si completeze registrele si ofertele."
-            );
-            case "innkeeper" -> new SimpleQuestProfile(
-                "Provizii pentru han",
-                Material.WHEAT,
-                6,
-                Material.COOKED_BEEF,
-                3,
-                "Adu-mi " + formatQuestAmount(6, Material.WHEAT),
-                npc.getName() + " pregateste mesele pentru calatorii din han."
-            );
-            case "priest" -> new SimpleQuestProfile(
-                "Pregatiri pentru altar",
-                Material.CANDLE,
-                4,
-                Material.EXPERIENCE_BOTTLE,
-                2,
-                "Adu-mi " + formatQuestAmount(4, Material.CANDLE),
-                npc.getName() + " are nevoie de lumina pentru altar."
-            );
-            case "healer" -> new SimpleQuestProfile(
-                "Ierburi pentru leacuri",
-                Material.DANDELION,
-                6,
-                Material.HONEY_BOTTLE,
-                2,
-                "Adu-mi " + formatQuestAmount(6, Material.DANDELION),
-                npc.getName() + " pregateste leacuri si ii lipsesc plantele."
-            );
-            default -> new SimpleQuestProfile(
-                resolveConfiguredSimpleQuestTitle(professionName),
-                resolveConfiguredQuestMaterial("simple.objective.item", Material.OAK_PLANKS),
-                Math.max(1, getQuestSettings().getInt("simple.objective.amount", 3)),
-                resolveConfiguredQuestMaterial("simple.reward.item", Material.EMERALD),
-                Math.max(1, getQuestSettings().getInt("simple.reward.amount", 1)),
-                "Adu-mi " + formatQuestAmount(
-                    Math.max(1, getQuestSettings().getInt("simple.objective.amount", 3)),
-                    resolveConfiguredQuestMaterial("simple.objective.item", Material.OAK_PLANKS)
-                ),
-                npc.getName() + " are nevoie de ajutor cu treburi obisnuite de " + professionName + "."
-            );
-        };
+        int objectiveAmount = Math.max(1, getQuestSettings().getInt("simple.objective.amount", 3));
+        Material objectiveMaterial = resolveConfiguredQuestMaterial("simple.objective.item", Material.OAK_PLANKS);
+        int rewardAmount = Math.max(1, getQuestSettings().getInt("simple.reward.amount", 1));
+        Material rewardMaterial = resolveConfiguredQuestMaterial("simple.reward.item", Material.EMERALD);
+        SimpleQuestProfile defaultProfile = new SimpleQuestProfile(
+            resolveConfiguredSimpleQuestTitle(professionName),
+            objectiveMaterial,
+            objectiveAmount,
+            rewardMaterial,
+            rewardAmount,
+            "Adu-mi " + formatQuestAmount(objectiveAmount, objectiveMaterial),
+            npc.getName() + " are nevoie de ajutor cu treburi obisnuite de " + professionName + "."
+        );
         return applyConfiguredSimpleQuestProfile(npc, professionId, professionName, defaultProfile);
     }
 
@@ -7247,7 +7186,8 @@ public class ScenarioEngine {
         return switch (roleId) {
             case "THIEF" -> scoreBoolean(personality.getConscientiousness() < 0.4
                 && personality.getAgreeableness() < 0.5, 40);
-            case "GUARD" -> scoreBoolean(matchesOccupation(npc, "guard", "soldier", "garda"), 45);
+            case "RESPONDER" -> scoreBoolean(personality.getConscientiousness() > 0.5
+                || emotions.getTrust() > 0.5, 30);
             case "AGGRESSOR" -> scoreBoolean(personality.getAgreeableness() < 0.4
                 || emotions.getAnger() > 0.5, 35);
             case "MEDIATOR" -> scoreBoolean(personality.getAgreeableness() > 0.6
@@ -7268,7 +7208,8 @@ public class ScenarioEngine {
                 || emotions.getAnger() > 0.45, 28);
             case "WITNESS" -> scoreBoolean(personality.getOpenness() > 0.45
                 || personality.getExtraversion() > 0.45, 20);
-            case "SELLER" -> scoreBoolean(matchesOccupation(npc, "merchant", "negustor"), 35);
+            case "SELLER" -> scoreBoolean(personality.getExtraversion() > 0.5
+                && personality.getConscientiousness() > 0.45, 25);
             case "BUYER" -> 10;
             default -> 0;
         };

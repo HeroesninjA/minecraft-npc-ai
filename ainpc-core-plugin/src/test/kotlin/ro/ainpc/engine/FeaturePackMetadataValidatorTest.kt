@@ -94,6 +94,27 @@ class FeaturePackMetadataValidatorTest {
         assertTrue(result.errors().any { error -> error.contains("capabilities trebuie sa fie lista") })
     }
 
+    @Test
+    @Throws(Exception::class)
+    fun acceptsConstitutionalAddonTypesAndAliases() {
+        for (type in listOf("story", "resource", "texture", "datapack", "resource_texture", "data-pack")) {
+            val result = FeaturePackMetadataValidator.validate(
+                load(
+                    """
+                    id: ${type.replace("-", "_")}
+                    addon:
+                      type: "$type"
+                      runtime_modes: ["standalone"]
+                    """
+                ),
+                File("$type.yml"),
+                RuntimeMode.STANDALONE
+            )
+
+            assertTrue(result.valid(), "Expected addon.type=$type to be accepted, errors=${result.errors()}")
+        }
+    }
+
     @Throws(InvalidConfigurationException::class)
     private fun load(content: String): YamlConfiguration {
         val configuration = YamlConfiguration()

@@ -37,7 +37,7 @@ class SchedulerCoordinator(
     private fun scheduleLifeSimulation() {
         val simulationTickSeconds = maxOf(10, plugin.config.getInt("simulation.tick_seconds", 30))
 
-        if (plugin.config.getBoolean("simulation.enabled", true)) {
+        if (featureEnabled("features.simulation", false) && plugin.config.getBoolean("simulation.enabled", false)) {
             plugin.server.scheduler.runTaskTimer(
                 plugin,
                 Runnable { plugin.npcManager.runLifeSimulationTick() },
@@ -50,7 +50,7 @@ class SchedulerCoordinator(
     private fun scheduleRoutine() {
         val routineTickSeconds = maxOf(20, plugin.config.getInt("routine.tick_seconds", 60))
 
-        if (plugin.config.getBoolean("routine.enabled", true)) {
+        if (featureEnabled("features.routine", false) && plugin.config.getBoolean("routine.enabled", false)) {
             plugin.server.scheduler.runTaskTimer(
                 plugin,
                 Runnable {
@@ -116,6 +116,9 @@ class SchedulerCoordinator(
     }
 
     private fun scheduleQuestTracking() {
+        if (!featureEnabled("features.quest", true)) {
+            return
+        }
         val refreshSeconds = maxOf(2, plugin.config.getInt("quest.tracking_refresh_seconds", 5))
         plugin.server.scheduler.runTaskTimer(
             plugin,
@@ -129,4 +132,7 @@ class SchedulerCoordinator(
             20L * refreshSeconds
         )
     }
+
+    private fun featureEnabled(path: String, defaultValue: Boolean): Boolean =
+        plugin.config.getBoolean(path, defaultValue)
 }

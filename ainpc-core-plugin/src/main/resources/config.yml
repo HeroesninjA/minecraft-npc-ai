@@ -43,6 +43,24 @@ ai:
   orchestration:
     enabled: false
 
+# Continut demo livrat de core. Core-ul trebuie sa ramana neutru; aceste setari
+# permit oprirea continutului demo cand un addon real preia scenariul/story-ul.
+demo:
+  enabled: false
+
+# Switch-uri globale pentru functii majore. Cand o functie este false, comenzile
+# publice trebuie sa raspunda explicit ca zona este dezactivata.
+features:
+  gui: true
+  quest: true
+  progression: true
+  story: true
+  mapping: true
+  routine: false
+  simulation: false
+  ai: false
+  generation: false
+
 # Setari spawn si jurnalizare batch
 spawn:
   batches:
@@ -74,6 +92,11 @@ addons:
 
 # Setari universale pentru feature packs incarcate de core sau instalate de addonuri.
 feature_packs:
+  # Retinut pentru compatibilitate cu configuratii vechi. Core-ul nu mai livreaza
+  # pack-uri tematice implicite; addonurile isi instaleaza propriul continut.
+  install_defaults: false
+  # Permite fallback-uri minimale din cod cand nu exista niciun pack incarcat.
+  allow_builtin_fallbacks: true
   # Valideaza pack-urile la startup si reload.
   validate_on_startup: true
   # Daca este true, un pack invalid opreste incarcarea continutului dependent.
@@ -109,7 +132,7 @@ npc:
 # Simulare de viata
 simulation:
   # Daca este activ, NPC-urile isi actualizeaza rutina si nevoile de baza periodic.
-  enabled: true
+  enabled: false
   # La cate secunde ruleaza un tick de simulare.
   tick_seconds: 30
   needs:
@@ -124,7 +147,7 @@ simulation:
 # Rutina zilnica
 routine:
   # Daca este activ, NPC-urile folosesc home/work/social anchors ca tinta zilnica.
-  enabled: true
+  enabled: false
   # La cate secunde se reevalueaza rutina.
   tick_seconds: 120
   # Teleportul ramane fallback pentru lumi diferite, distante mari sau pathfinding esuat.
@@ -178,8 +201,9 @@ dialog:
   show_name: true
   # Permite raspunsuri cu voce (text-to-speech, necesita setup extern)
   voice_enabled: false
-  # Daca e activ, NPC-urile pot raspunde si fara click, pe baza de proximitate
-  passive_listen_enabled: true
+  # Daca e activ, NPC-urile pot raspunde si fara click, pe baza de proximitate.
+  # Dezactivat implicit ca interactiunile automate sa fie opt-in.
+  passive_listen_enabled: false
   # Distanta maxima la care NPC-ul poate "auzi" chat-ul jucatorului
   passive_listen_radius: 8
   # Daca jucatorul este foarte aproape, cel mai apropiat NPC poate intra natural in dialog
@@ -188,7 +212,7 @@ dialog:
 # Setari familie
 family:
   # Permite NPC-urilor sa formeze familii automat
-  auto_generate: true
+  auto_generate: false
   # Sansa de a avea sot/sotie (%)
   spouse_chance: 60
   # Numar maxim de copii
@@ -200,7 +224,7 @@ family:
 villagers:
   auto_repopulate:
     # Daca este activ, pluginul mentine satele populate cu villageri noi atunci cand exista suficiente paturi.
-    enabled: true
+    enabled: false
     # Populatia minima pe care pluginul incearca sa o mentina intr-un sat activ.
     min_population: 6
     # Nu depaseste niciodata acest prag prin repopulare automata.
@@ -215,10 +239,29 @@ villagers:
 
 # Setari baza de date
 database:
-  # Tipul bazei de date (sqlite)
+  # Tipul bazei de date: sqlite | mysql.
+  # SQLite ramane default local. MySQL/HikariCP este pentru productie si trebuie activat explicit.
   type: "sqlite"
-  # Numele fisierului bazei de date
+  # Numele fisierului SQLite. Cheia veche database.filename este pastrata pentru compatibilitate.
   filename: "ainpc_data.db"
+  sqlite:
+    filename: "ainpc_data.db"
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    database: "ainpc"
+    username: "ainpc"
+    password: ""
+    # Recomandat pentru productie: seteaza parola in environment si lasa password gol.
+    password_env: "AINPC_MYSQL_PASSWORD"
+    use_ssl: false
+    allow_public_key_retrieval: true
+    pool:
+      maximum_pool_size: 10
+      minimum_idle: 1
+      connection_timeout_ms: 30000
+      idle_timeout_ms: 600000
+      max_lifetime_ms: 1800000
 
 # World Admin
 world_admin:

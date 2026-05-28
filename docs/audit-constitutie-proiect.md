@@ -1,4 +1,4 @@
-# Audit Conformitate cu Constitutia Proiectului
+﻿# Audit Conformitate cu Constitutia Proiectului
 
 Actualizat: 2026-05-27
 
@@ -24,13 +24,14 @@ Proiectul respecta partial constitutia: exista config pentru multe sisteme (`sim
 
 Neconformitatile principale sunt:
 
-1. `ainpc-core-plugin` inca livreaza si auto-copiaza pack-uri tematice (`medieval`, `modern`, `social`) din core.
-2. Core-ul are fallback medieval hardcodat in cod, nu doar in continut demo configurabil.
-3. Nu exista un switch constitutional clar de tip `demo.enabled=false` care sa opreasca tot demo-ul core.
-4. API-ul de addon nu contine tipurile constitutionale noi: story, resursa/textura, datapack.
-5. Addonul medieval separat este inregistrat ca `FEATURE`, desi functional este scenariu.
-6. `database.type` exista in config, dar codul initializeaza doar SQLite direct prin `DriverManager`; nu exista MySQL/HikariCP.
-7. GUI/story/quest nu au inca feature flags globale echivalente cu regula "orice caracteristica majora trebuie sa poata fi dezactivata".
+1. Core-ul nu mai livreaza pack-uri tematice in resursele proprii; `medieval` si `social` au fost mutate in addonul medieval, iar `modern` a fost arhivat ca demo istoric.
+2. Core-ul nu mai are fallback medieval hardcodat; fallback-ul intern a fost inlocuit cu `core_minimal`.
+3. `demo.enabled` controleaza quest fallback-ul simplu, comanda `/ainpc world demo create` si ignorarea pack-urilor demo root ramase din instalari vechi.
+4. API-ul de addon include acum tipurile constitutionale `STORY`, `RESOURCE`, `TEXTURE`, `DATAPACK`, cu aliases validate.
+5. Addonul medieval separat este inregistrat acum ca `SCENARIO`.
+6. `database.type` este respectat initial: SQLite ramane default, iar MySQL foloseste HikariCP configurabil. Portarea SQL completa ramane partiala.
+7. Exista `features.*` si gating initial pentru comenzile majore, dar serviciile interne sunt inca initializate chiar cand feature-ul este dezactivat.
+8. Euristicile tematice identificate in serviciile core analizate au fost neutralizate initial; in `src/main` mai raman doar denumiri tehnice/de loc precum `fierarie/forge`, nu profesii tematice hardcodate.
 
 ## Conformitati Confirmate
 
@@ -39,6 +40,8 @@ Neconformitatile principale sunt:
 | Addon registry dezactivabil | Conform partial | `ainpc-core-plugin/src/main/resources/config.yml` are `addons.enabled`, `addons.disabled`, `addons.strict_validation`; `AddonRegistry.isAddonEnabled` respinge addonuri dezactivate |
 | Feature packs cu metadata | Conform partial | `FeaturePackMetadataValidator` valideaza `addon.type`, `runtime_modes`, `capabilities`, `dependencies` |
 | Addon medieval separat | Conform partial | `ainpc-scenario-medieval` are plugin separat, config template si pack instalat in `packs/addons/ainpc-scenario-medieval` |
+| Tipuri addon constitutionale | Conform initial | `AddonType` include `STORY`, `RESOURCE`, `TEXTURE`, `DATAPACK`; validatorul accepta aliases ca `resource_texture` si `data-pack` |
+| Fallback intern neutru | Conform initial | `FeaturePackDefaults.loadNeutralFallbackPack` foloseste `core_minimal`, profesii generice si topologii neutre |
 | AI orchestration dezactivata implicit | Conform | `config.yml` are `ai.orchestration.enabled: false` |
 | Rutina si simulare dezactivabile | Conform partial | `config.yml` are `simulation.enabled` si `routine.enabled`; schedulerul verifica aceste flag-uri |
 | World admin dezactivabil | Conform partial | `config.yml` are `world_admin.enabled`; debugdump raporteaza disabled cand service-ul lipseste/dezactivat |
@@ -46,222 +49,231 @@ Neconformitatile principale sunt:
 
 ## Neconformitati si Riscuri
 
-### C-001: Core-ul livreaza pack-uri tematice in `ainpc-core-plugin`
+### C-001: Pack-uri tematice in core
 
-Severitate: ridicata  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: Core neutru; continut demo dezactivabil; addonurile ofera tema si poveste.
 
 Dovezi:
 
-- `ainpc-core-plugin/src/main/resources/packs/medieval.yml` contine `id: medieval`, `addon.type: scenario`, `primary_scenario: true` si continut medieval.
-- `ainpc-core-plugin/src/main/resources/packs/modern.yml` contine pachet de scenariu modern/post-apocaliptic.
-- `ainpc-core-plugin/src/main/resources/packs/social.yml` contine pachet de trasaturi sociale.
-- `FeaturePackLoader.saveDefaultPacks()` copiaza neconditionat `packs/medieval.yml`, `packs/modern.yml`, `packs/social.yml` in folderul de date.
+- `ainpc-core-plugin/src/main/resources/packs/` nu mai contine pack-uri tematice.
+- `ainpc-scenario-medieval/src/main/resources/packs/medieval.yml` si `social.yml` sunt livrate de addonul medieval.
+- `docs/arhiva/core-demo-packs/modern.yml` pastreaza pack-ul modern ca artefact istoric, nu ca resursa runtime core.
+- `FeaturePackLoader.saveDefaultPacks()` nu mai instaleaza pack-uri tematice implicite din core.
+- `FeaturePackLoader.isDisabledCoreDemoPack(...)` ignora pack-urile root `medieval`, `modern`, `social` cand `demo.enabled=false`, inclusiv daca au ramas copiate dintr-o instalare veche.
 
 Problema:
 
-Constitutia spune ca `core` trebuie sa ofere infrastructura, iar addonurile continutul. Pack-urile tematice din core fac ca `ainpc-core-plugin` sa livreze implicit continut de scenariu, inclusiv un primary scenario medieval.
+Constitutia spune ca `core` trebuie sa ofere infrastructura, iar addonurile continutul. Mutarea fizica a pack-urilor tematice scoate continutul de scenariu din JAR-ul core. Riscul ramas este operational: serverele existente pot avea inca fisiere vechi in `plugins/AINPC/packs`, dar acestea sunt ignorate cand `demo.enabled=false`.
 
 Recomandare:
 
-- Mutare `medieval.yml`, `modern.yml`, `social.yml` in addonuri separate sau intr-un folder de demo explicit.
-- Introducere config:
-
-```yaml
-demo:
-  enabled: false
-  install_core_packs: false
-feature_packs:
-  install_defaults: false
-  disabled: []
-```
-
-- Daca pack-urile raman temporar in core, toate ID-urile sa fie namespaced: `core_demo:medieval`, `core_demo:modern`, `core_demo:social`.
+- Pastreaza continutul tematic exclusiv in addonuri sau arhive docs, nu in resursele runtime core.
+- Adauga in viitor un addon demo dedicat pentru `modern` daca acel scenariu trebuie reactivat.
+- Adauga avertizare vizibila in audit/runtime pentru fisiere demo vechi aflate in root `packs/`.
 
 ### C-002: Fallback medieval hardcodat in cod
 
-Severitate: ridicata  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: Core neutru; demo/fallback dezactivabil.
 
 Dovezi:
 
-- `FeaturePackLoader.loadAllPacks()` apeleaza `FeaturePackDefaults.loadDefaultMedievalPack(...)` cand `loadedPacks` este gol.
-- `FeaturePackDefaults.loadDefaultMedievalPack` creeaza direct `FeaturePack("medieval", "Medieval", ...)`, traits si profesii ca `blacksmith`, `farmer`, `guard`, cu texte medievale.
+- `FeaturePackLoader.loadAllPacks()` apeleaza `FeaturePackDefaults.loadNeutralFallbackPack(...)` cand nu exista pack-uri si `feature_packs.allow_builtin_fallbacks=true`.
+- `FeaturePackDefaults.loadNeutralFallbackPack` creeaza `FeaturePack("core_minimal", "Core Minimal", ...)` cu profesii generice ca `worker`, `caretaker`, `guide`.
 
 Problema:
 
-Acesta nu este doar continut YAML, ci continut tematic compilat in core. Daca adminul sterge pack-urile sau dezactiveaza addonurile, core-ul poate reveni tot la fallback medieval.
+Fallback-ul medieval compilat a fost inlocuit. Ramane de verificat in smoke test ca serverul fara pack-uri porneste cu `core_minimal` si ca experienta ramane utila.
 
 Recomandare:
 
-- Inlocuire cu fallback neutru minim: `core_minimal`, `generic_worker`, `generic_guard`, `generic_social`.
-- Adaugare `demo.enabled` si `feature_packs.allow_builtin_fallbacks`.
-- Fallback-ul medieval sa fie mutat in addonul medieval sau intr-un addon demo separat.
+- Test dedicat pentru `FeaturePackDefaults.loadNeutralFallbackPack` exista initial.
+- Pastreaza orice continut tematic in addonuri, nu in fallback-ul compilat.
 
-### C-003: Nu exista un switch unic pentru oprirea demo-ului core
+### C-003: Switch unic pentru oprirea demo-ului core
 
-Severitate: medie-ridicata  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: Dezactivare completa; continut demo dezactivabil cand se activeaza alt addon.
 
 Dovezi:
 
-- `quests.yml` are `simple_for_all_npcs: true`.
-- `FeaturePackLoader.saveDefaultPacks()` instaleaza pack-uri default fara sa citeasca `demo.enabled`.
+- `quests.yml` are `simple_for_all_npcs: true`, dar `ScenarioEngine.shouldUseSimpleQuestForAllNpcs()` returneaza false cand `demo.enabled=false`.
+- `FeaturePackLoader.saveDefaultPacks()` nu mai instaleaza continut tematic din core.
 - `AINPCPlugin.loadQuestConfig()` salveaza `quests.yml` daca lipseste.
-- Configul are `addons.disabled`, dar nu exista `demo.enabled`, `core_demo.enabled` sau `feature_packs.install_defaults`.
+- `/ainpc world demo create` este blocat explicit cand `demo.enabled=false`.
 
 Problema:
 
-Exista mecanisme individuale, dar nu exista o regula operationala unica pentru "core demo off". Cand se introduce alt addon, adminul trebuie sa ghiceasca ce pack-uri, quest fallback-uri si demo mapping trebuie dezactivate.
+Regula operationala "core demo off" exista initial pentru quest fallback, comanda de mapping demo si pack-uri demo root ramase din instalari vechi.
 
 Recomandare:
 
-- Introducere `demo.enabled=false` ca switch global.
-- Legare `simple_for_all_npcs`, default packs si demo mapping de acest switch.
-- Cand un addon `SCENARIO` activ este primary, core demo trebuie sa se opreasca automat sau sa afiseze avertizare explicita.
+- Adauga audit/avertizare vizibil in `/ainpc audit` pentru pack-uri demo deja existente in folderul de date cand `demo.enabled=false`.
+- Cand un addon `SCENARIO` activ este primary, core demo ar trebui sa se opreasca automat sau sa afiseze avertizare explicita.
 
 ### C-004: Tipurile constitutionale de addon lipsesc din API
 
-Severitate: ridicata  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: tipuri addon scenariu, story, resursa/textura, datapack.
 
 Dovezi:
 
-- `AddonType` contine doar `CORE`, `SCENARIO`, `FEATURE`, `INTEGRATION`.
-- `FeaturePackMetadataValidator.isKnownAddonType` accepta doar valorile din `AddonType`.
+- `AddonType` contine `CORE`, `SCENARIO`, `STORY`, `RESOURCE`, `TEXTURE`, `DATAPACK`, `FEATURE`, `INTEGRATION`.
+- `FeaturePackMetadataValidator.isKnownAddonType` accepta aliases ca `resource_texture`, `resource-pack`, `texture-pack`, `data-pack`.
 
 Problema:
 
-Constitutia cere tipuri planificate: scenariu, story, resursa/textura si compatibilitate datapack. Codul nu poate declara sau valida in mod nativ `story`, `resource`, `texture`, `resource_texture`, `datapack`.
+Tipurile exista initial. Ramane de definit comportamentul complet pentru fiecare tip: capabilitati minime, lifecycle specializat, loading de resurse/texturi si reguli datapack.
 
 Recomandare:
 
-- Extindere `AddonType` cu:
-
-```kotlin
-STORY("story", "Story addon")
-RESOURCE("resource", "Addon de resurse")
-TEXTURE("texture", "Addon de textura")
-DATAPACK("datapack", "Compatibilitate datapack")
-```
-
-- Stabilire aliases pentru `resource_texture`, `resources`, `textures`.
 - Actualizare `AddonRegistry` ca fiecare tip sa aiba capabilitati minime validate.
+- Documentare contract API pentru fiecare tip.
 
 ### C-005: Addonul medieval separat este declarat ca `FEATURE`, nu `SCENARIO`
 
-Severitate: medie-ridicata  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: addonurile trebuie sa declare tipul si capabilitatile corect.
 
 Dovezi:
 
-- `MedievalScenarioAddon` foloseste `AddonType.FEATURE`.
+- `MedievalScenarioAddon` foloseste `AddonType.SCENARIO`.
 - `medieval_quest.yml` declara `addon.type: "scenario"` si `primary_scenario: true`.
 - Pluginul se numeste `AINPCScenarioMedieval`, iar descrierea spune ca livreaza scenariul medieval.
 
 Problema:
 
-Registrul vede pluginul addon ca feature, dar pack-ul pe care il instaleaza este scenariu. Aceasta diferenta poate afecta selectie primary scenario, audit, reguli de dezactivare si viitoare compatibilitate cu alte scenarii.
+Descriptorul pluginului si pack-ul sunt aliniate ca scenariu. Testele de registry/metadata si testele addonului medieval trec.
 
 Recomandare:
 
-- Schimbare descriptor addon medieval la `AddonType.SCENARIO`.
-- Capabilities minime: `scenarios`, `scenario-pack`, `pack-installer`, `addon-config-template`.
-- Adaugare test care confirma ca addonul medieval apare in `getDescriptors(AddonType.SCENARIO)`.
+- Test dedicat pentru descriptorul `MedievalScenarioAddon` exista initial.
+- Verifica in smoke Paper ca primary scenario se raporteaza corect cand addonul este activ.
 
-### C-006: `database.type` nu este respectat; lipseste MySQL/HikariCP
+### C-006: `database.type` si MySQL/HikariCP
 
-Severitate: medie  
+Severitate: partial remediata initial
+Status: partial remediat initial
 Reguli afectate: directia de productie include MySQL cu HikariCP; configurabilitate explicita.
 
 Dovezi:
 
-- `config.yml` are `database.type: "sqlite"`.
-- `DatabaseManager.initialize()` ignora `database.type`, incarca `org.sqlite.JDBC` si deschide `jdbc:sqlite:...`.
-- `ainpc-core-plugin/build.gradle` include `sqlite-jdbc`, dar nu include MySQL driver sau HikariCP.
+- `config.yml` are `database.type: "sqlite"`, `database.sqlite.filename` si sectiune `database.mysql` cu host, port, database, username, `password_env` si setari de pool.
+- `DatabaseManager.initialize()` citeste `database.type` si alege explicit intre SQLite si MySQL.
+- SQLite ramane backend-ul implicit si foloseste fisier local prin `database.sqlite.filename` sau cheia veche `database.filename`.
+- MySQL incarca `com.mysql.cj.jdbc.Driver`, construieste `HikariDataSource` si foloseste setarile `database.mysql.pool.*`.
+- `ainpc-core-plugin/build.gradle` include acum `sqlite-jdbc`, `HikariCP` si `mysql-connector-j`.
 
 Problema:
 
-Configuratia sugereaza un tip de baza de date, dar implementarea suporta efectiv doar SQLite. MySQL/HikariCP este directie viitoare in constitutie, deci acesta este un gap de roadmap, nu neaparat bug runtime.
+Providerul de conexiune este prezent, dar portarea SQL completa nu este finalizata. In codul runtime mai exista query-uri cu sintaxa SQLite (`ON CONFLICT ... DO UPDATE`) care trebuie transformate intr-un dialect comun sau in SQL specific providerului. Din acest motiv, MySQL este suport initial/infrastructural, nu productie completa.
 
 Recomandare:
 
-- Introducere `StorageProvider`/`DataSourceFactory`.
-- Config:
+- Extrage repository-urile la un strat de dialect (`SqlDialect`/`StorageProvider`) pentru upsert-uri, indexuri partiale si migration.
+- Adauga smoke test cu MySQL real sau containerizat inainte de a marca `database.type: mysql` ca production-ready.
+- Pastreaza SQLite ca default local si evita ca dependenta MySQL sa devina obligatorie operational.
 
-```yaml
-database:
-  type: "sqlite" # sqlite | mysql
-  sqlite:
-    filename: "ainpc_data.db"
-  mysql:
-    host: "127.0.0.1"
-    port: 3306
-    database: "ainpc"
-    username: ""
-    password_env: "AINPC_MYSQL_PASSWORD"
-    pool:
-      maximum_pool_size: 10
-      connection_timeout_ms: 30000
-```
+### C-007: Feature flags globale pentru caracteristici majore
 
-- HikariCP doar pentru MySQL sau pentru orice JDBC pool configurabil.
-
-### C-007: Nu toate caracteristicile majore au feature flags globale
-
-Severitate: medie  
+Severitate: medie
+Status: partial remediat, runtime gating extins
 Reguli afectate: orice caracteristica majora trebuie sa poata fi dezactivata.
 
 Dovezi:
 
 - Configul are flags pentru `simulation`, `routine`, `world_admin`, `addons`, `ai.orchestration`.
-- Nu exista sectiuni globale `gui.enabled`, `story.enabled`, `quest.enabled`, `progression.enabled`, `dialog.enabled` ca switch-uri complete.
+- Configul are acum `features.gui`, `features.quest`, `features.progression`, `features.story`, `features.mapping`, `features.routine`, `features.simulation`, `features.ai`, `features.generation`.
+- `AINPCCommand` blocheaza comenzile publice pentru `gui`, `quest`, `progression`, `story`, `world/patch/wand/map` si `routine` cand flag-ul aferent este false.
+- `AINPCCommand` cere acum `features.generation=true` pentru actiuni cu efect de generare/spawn: `/ainpc create`, `/ainpc world demo create`, `/ainpc world household spawn` si `/ainpc world settlement spawn`. Variantele read-only/plan raman disponibile sub `features.mapping`.
+- `AINPCTabCompleter` ascunde actiunile `create`, `spawn` si `world demo create` cand `features.generation=false`, dar pastreaza `plan` pentru fluxuri read-only.
+- `SchedulerCoordinator` nu mai porneste quest tracking, routine tick sau simulation tick cand flag-urile `features.quest`, `features.routine`, `features.simulation` sunt false.
+- `QuestObjectiveListener`, `NPCInteractionListener` si `NPCChatListener` nu mai trimit evenimente in `ScenarioEngine` cand `features.quest=false`.
+- `MappingWandListener` ignora wand-ul cand `features.mapping=false`.
+- `GuiInventoryListener` inchide/ignora GUI-urile AINPC cand `features.gui=false`.
 - `AINPCPlugin.onEnable()` initializeaza `scenarioEngine`, `progressionService`, `storyStateService`, `storyContextService`, `guiService`, `mappingWandService` neconditionat.
+- `docs/feature-flags-lifecycle.md` defineste regula obligatorie pentru no-op/read-only services inainte de oprirea initializarii reale.
 
 Problema:
 
-Unele functii pot fi limitate prin permisiuni sau sub-config, dar constitutia cere dezactivare clara pentru caracteristici majore. In starea curenta, un admin nu poate opri complet story/progression/GUI/quest runtime prin config unic.
+Comenzile, listenerele si taskurile majore sunt acum oprite operational prin config, dar serviciile interne sunt inca initializate. Acesta este un pas util runtime, nu o dezactivare completa la nivel de lifecycle/constructie servicii.
 
 Recomandare:
 
-- Adaugare `features:` central:
-
-```yaml
-features:
-  gui: true
-  quest: true
-  progression: true
-  story: true
-  mapping: true
-  routine: true
-  simulation: true
-  ai: false
-  generation: false
-```
-
-- Serviciile pot fi initializate in modul disabled/read-only, dar comenzile si GUI-urile trebuie sa raporteze explicit functia dezactivata.
+- Leaga initializarea serviciilor la `features.*` sau introdu mod disabled/read-only pentru fiecare serviciu.
+- Pastreaza gating-ul din listenere/taskuri ca protectie secundara chiar daca serviciile devin conditionale.
+- Testul pentru formatterul mesajului feature disabled exista initial; extinde ulterior cu harness Bukkit pentru rutele publice complete.
+- Nu lasa servicii `lateinit` neinitializate cat timp exista getters Java/Kotlin care pot fi apelate; foloseste intai no-op/read-only.
 
 ### C-008: Configul default activeaza sisteme automate cu impact in lume
 
-Severitate: medie  
+Severitate: remediata initial
+Status: remediat initial
 Reguli afectate: date validate inainte de automatizare; playability inainte de complexitate.
 
 Dovezi:
 
-- `villagers.auto_repopulate.enabled: true`.
-- `family.auto_generate: true`.
-- `dialog.passive_listen_enabled: true`.
-- `simulation.enabled: true`, `routine.enabled: true`.
+- `demo.enabled: false`.
+- `features.routine: false`, `features.simulation: false`.
+- `simulation.enabled: false`, `routine.enabled: false`.
+- `dialog.passive_listen_enabled: false`.
+- `family.auto_generate: false`.
+- `villagers.auto_repopulate.enabled: false`.
+- Codul foloseste fallback conservator (`false`) pentru `family.auto_generate`, `villagers.auto_repopulate.enabled`, `dialog.passive_listen_enabled`, `routine.enabled`, `features.routine` si `features.simulation` cand cheia lipseste.
+- `ConfigDefaultsTest` verifica aceste default-uri.
 
 Problema:
 
-Aceste defaults pot fi bune pentru demo, dar pentru "core neutru si flexibil" valorile implicite ar trebui sa fie conservative, mai ales cand se instaleaza un addon nou sau cand serverul are date reale.
+Default-urile automate cu impact in lume au fost schimbate la opt-in. Ramane ca profilurile explicite `demo | production | minimal` sa fie formalizate daca proiectul vrea moduri de instalare predefinite.
 
 Recomandare:
 
 - Profiluri explicite: `profile: demo | production | minimal`.
-- In `minimal` si `production`, sistemele automate sa fie off pana la configurare.
-- In `demo`, ele pot ramane on, dar sub `demo.enabled`.
+- In `minimal` si `production`, sistemele automate raman off pana la configurare.
+- In `demo`, ele pot fi activate explicit sub `demo.enabled` sau printr-un preset de addon demo.
+
+### C-009: Euristici tematice ramase in servicii core
+
+Severitate: remediata initial
+Status: remediat initial in `src/main`
+Reguli afectate: core neutru; core compatibil cu orice addon; demo dezactivabil.
+
+Dovezi:
+
+- `ScenarioEngine` nu mai contine profiluri simple hardcodate pentru `blacksmith`, `farmer`, `guard`; profilul simplu foloseste default generic si `profession_fallbacks` configurabil.
+- `ScenarioEngine` nu mai foloseste ocupatii hardcodate `guard/soldier/merchant` pentru scorul de roluri interne; rolul optional din scenariul de furt este `RESPONDER`, nu `GUARD`.
+- `quests.yml` nu mai livreaza `profession_fallbacks` tematice in core; exista test dedicat `QuestFallbackConfigTest`.
+- `WorldAdminService.createDemoVillage(...)` nu mai seteaza tag/metadata de profesie pentru `blacksmith`, `farmer` sau `priest`; locurile demo raman tehnice (`FORGE`, `FARM`, `CUSTOM`) si neutre la nivel de profesie.
+- `MappingIntentParser` pastreaza recunoasterea tehnica `forge`, dar nu mai seteaza tag/metadata `blacksmith`.
+- `VillageGapAnalyzer` nu mai presupune ca tipurile tehnice `FORGE/FARM/MARKET/TAVERN` satisfac profesii tematice; cere tag/metadata explicita din config/addon.
+- `DialogueEngine` nu mai produce placeholder-e profesionale tematice; foloseste valori neutre pentru fallback.
+- `RoutineEngine` nu mai deduce stari specializate din nume de profesie; munca generica foloseste `NPCState.WORKING`.
+- `AINPC` nu mai mapeaza ocupatii addon la profesii vizuale Minecraft; profesia vizuala trebuie ceruta explicit cu prefix `minecraft:` sau `villager:`.
+- `HouseAllocationPlanner` nu mai deduce ocupatii tematice din tipuri de loc fara metadata explicita; fallback-ul este `worker`.
+- `FamilyManager` nu mai genereaza automat ocupatii tematice pentru familie; fallback-ul foloseste `worker/caretaker/guide/resident`.
+- `NPCManager` nu mai infereaza ocupatii tematice din blocuri sau tipuri de loc, nu mai traduce profesii Villager in ocupatii romanesti si nu mai mapeaza ocupatii tematice la personalitati.
+- `CoreNeutralityStaticAuditTest` blocheaza reintroducerea termenilor de profesii tematice in `ainpc-core-plugin/src/main`.
+- `DialogueEngine` nu mai spune ca serverul este medieval in promptul AI; foloseste o formulare neutra despre server Minecraft configurabil prin addonuri.
+- `DemoReadinessCommand` nu mai cere explicit addonul medieval; textele cer generic addonul de scenariu.
+- In `src/main` mai apar doar termeni de loc/ID tehnic ca `fierarie`, `forja`, `forge` si lista legacy `CORE_DEMO_PACK_IDS` folosita pentru a ignora pack-uri demo vechi cand demo-ul este off.
+- `AINPCTabCompleter` a fost partial remediat: `/ainpc create` si `/ainpc patch ...` citesc profesii din feature packs, cu fallback neutru `worker/caretaker/guide`.
+
+Problema:
+
+Euristicile tematice identificate initial in serviciile core au fost neutralizate in codul runtime principal. Riscul ramas este de mentenanta: test fixtures, texte demo istorice si viitoare functionalitati pot reintroduce vocabular de scenariu in core daca nu folosesc pack-uri/addonuri/config.
+
+Recomandare:
+
+- Pastreaza vocabularul/profesiile/sugestiile tematice in capability-uri sau pack-uri addon.
+- Pastreaza in core doar mapari tehnice Minecraft strict necesare, cu nume neutre si configurabile.
+- Pastreaza regula de test/audit static pentru `src/main` care blocheaza reintroducerea termenilor de profesii tematice.
+- Auditeaza separat test fixtures si texte demo istorice, fara a le trata automat ca runtime core.
 
 ## Zone Care Par Conforme sau Acceptabile
 
@@ -269,11 +281,14 @@ Recomandare:
 
 AI-ul este in mare parte conform:
 
+- `features.ai` este false implicit.
 - `ai.orchestration.enabled` este false implicit.
+- `OpenAIService` nu ruleaza diagnostice, probe sau requesturi catre provider cand `features.ai=false`; raspunsurile folosesc fallback local/neutru.
+- `AIOrchestrationService.enabled()` cere atat `features.ai=true`, cat si `ai.orchestration.enabled=true`.
 - `AIOrchestrationPolicy` pare sa marcheze cazuri ca draft/validation.
 - `OpenAIService` are fallback local si diagnostice configurabile.
 
-Riscul ramas este operational: `OpenAIService` se initializeaza mereu si ruleaza diagnostice async la startup/reload. Configul `openai.diagnostics.check_on_startup: false` reduce riscul, dar o politica `features.ai=false` ar face intentia mai clara.
+Riscul ramas este lifecycle: `OpenAIService` se initializeaza inca pentru compatibilitate API, dar nu mai executa efecte externe cand `features.ai=false`.
 
 ### Generare harti si structuri
 
@@ -288,41 +303,43 @@ Addonul medieval separat este o directie buna:
 - instaleaza pack-ul in folder gestionat;
 - curata pack-ul gestionat la disable.
 
-Problema ramane ca exista in paralel continut medieval si in core.
+Continutul medieval principal este acum in addonul medieval, nu in resursele runtime core.
 
 ## Plan Recomandat de Remediere
 
 ### Faza 1: Neutralizare core demo
 
-1. Adauga `demo.enabled` si `feature_packs.install_defaults`.
-2. Opreste `saveDefaultPacks()` cand demo/default packs sunt disabled.
-3. Mutare `medieval.yml`, `modern.yml`, `social.yml` in addonuri sau `packs/demo/`.
-4. Inlocuire fallback medieval din `FeaturePackDefaults` cu fallback generic neutru.
+1. Adauga `demo.enabled` si `feature_packs.install_defaults`. Status: facut initial.
+2. Opreste `saveDefaultPacks()` cand demo/default packs sunt disabled si blocheaza quest fallback/world demo create cand `demo.enabled=false`. Status: facut initial.
+3. Mutare `medieval.yml`, `modern.yml`, `social.yml` in addonuri sau arhiva demo. Status: `medieval` si `social` mutate in addonul medieval; `modern` arhivat in `docs/arhiva/core-demo-packs/modern.yml`.
+4. Inlocuire fallback medieval din `FeaturePackDefaults` cu fallback generic neutru. Status: facut initial.
+5. Extrage euristicile tematice ramase din servicii core in addonuri sau config. Status: completari comenzi, simple quest fallback, roluri interne, mapping parser, demo village, patch analyzer, dialog, routine, villager profession mapping, house allocation, family generation si `NPCManager` facute initial. Ramane de facut un audit separat pentru test fixtures si texte demo istorice.
 
 ### Faza 2: API addon constitutional
 
-1. Extinde `AddonType` cu `STORY`, `RESOURCE`, `TEXTURE`, `DATAPACK`.
-2. Actualizeaza validatorul si registry-ul pentru capabilitati minime per tip.
-3. Schimba `MedievalScenarioAddon` la `AddonType.SCENARIO`.
-4. Adauga teste pentru tipuri, aliases, dezactivare si selectie primary scenario.
+1. Extinde `AddonType` cu `STORY`, `RESOURCE`, `TEXTURE`, `DATAPACK`. Status: facut initial.
+2. Actualizeaza validatorul si registry-ul pentru capabilitati minime per tip. Status: validator aliases facut; capabilitati minime ramase.
+3. Schimba `MedievalScenarioAddon` la `AddonType.SCENARIO`. Status: facut initial.
+4. Adauga teste pentru tipuri, aliases, dezactivare si selectie primary scenario. Status: teste aliases/metadata, fallback neutru si descriptor addon medieval facute.
 
 ### Faza 3: Feature flags globale
 
-1. Introduce `features.*` central.
-2. Leaga `quest`, `story`, `gui`, `progression`, `mapping`, `generation`, `ai` la initializare/comenzi/GUI.
-3. Cand o functie este disabled, comenzile trebuie sa raspunda clar, nu sa cada partial.
+1. Introduce `features.*` central. Status: facut initial.
+2. Leaga `quest`, `story`, `gui`, `progression`, `mapping`, `generation`, `ai` la initializare/comenzi/GUI. Status: comenzi majore facute initial; lifecycle/listenere ramase.
+3. Cand o functie este disabled, comenzile trebuie sa raspunda clar, nu sa cada partial. Status: facut initial pentru comenzile majore.
 
 ### Faza 4: Storage provider
 
-1. Extrage interfata de conexiune din `DatabaseManager`.
-2. Respecta `database.type`.
-3. Adauga MySQL + HikariCP ca optiune, nu ca dependinta operationala obligatorie.
-4. Pastreaza SQLite ca default pentru dev/demo.
+1. Extrage interfata de conexiune din `DatabaseManager`. Status: partial, selectia de provider exista in manager.
+2. Respecta `database.type`. Status: facut initial.
+3. Adauga MySQL + HikariCP ca optiune, nu ca dependinta operationala obligatorie. Status: facut initial.
+4. Pastreaza SQLite ca default pentru dev/demo. Status: facut initial.
+5. Portare dialect SQL pentru `ON CONFLICT`, indexuri partiale si migration. Status: ramas.
 
 ## Verdict
 
-Status: partial conform.
+Status: partial conform, cu remedieri initiale aplicate pentru C-001, C-002, C-004, C-005, C-008 si C-009, plus remediere infrastructurala initiala pentru C-006.
 
-Codul are directia corecta pentru addonuri si configurabilitate, dar inca poarta continut tematic in core si fallback medieval hardcodat. Cele mai importante remedieri sunt neutralizarea core-ului, adaugarea unui switch global pentru demo si extinderea API-ului de addon la tipurile constitutionale.
+Codul are directia corecta pentru addonuri si configurabilitate. Pack-urile tematice au fost scoase din resursele runtime core, fallback-ul medieval hardcodat a fost neutralizat, tipurile constitutionale de addon exista initial, addonul medieval separat este declarat ca scenariu, demo-ul core are un switch functional pentru pack-uri vechi/quest fallback/world demo create, comenzile majore au feature flags initiale, default-urile automate sunt conservative, euristicile tematice runtime identificate in core au fost neutralizate initial, iar storage-ul are selectie initiala SQLite/MySQL cu HikariCP. Cele mai importante remedieri ramase sunt lifecycle complet pentru feature flags si portarea completa a dialectului SQL pentru MySQL.
 
-Pana la remediere, `ainpc-core-plugin` trebuie tratat ca "core cu demo incorporat", nu ca "core complet neutru".
+Pana la legarea tuturor serviciilor interne de `features.*`, `ainpc-core-plugin` trebuie tratat ca "core neutru la nivel de continut runtime, dar partial dezactivabil la nivel de lifecycle".

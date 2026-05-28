@@ -31,7 +31,7 @@ class RoutineGui : GuiScreen {
         val player = context.player()
         val worldTime = player.world.time
         val adminView = player.hasPermission("ainpc.admin")
-        val routineEnabled = context.plugin().config.getBoolean("routine.enabled", true)
+        val routineEnabled = context.plugin().config.getBoolean("routine.enabled", false)
         val npcs = context.plugin().npcManager.getAllNPCs().stream()
             .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
             .limit(NPC_SLOTS.size.toLong())

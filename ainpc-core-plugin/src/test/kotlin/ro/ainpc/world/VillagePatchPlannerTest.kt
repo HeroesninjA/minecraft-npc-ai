@@ -128,7 +128,7 @@ class VillagePatchPlannerTest {
         service.createDemoSettlement("demo_sat", "world", 0, 64, 0, 0, 320)
         val options = PatchPlannerOptions.forTargetPopulation(
             6,
-            listOf("blacksmith", "farmer", "merchant", "innkeeper")
+            emptyList()
         )
 
         val report = VillageGapAnalyzer().analyze(service, "demo_sat", options)

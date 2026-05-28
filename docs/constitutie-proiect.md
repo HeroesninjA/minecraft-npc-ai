@@ -1,6 +1,6 @@
 # Constitutie Proiect AINPC
 
-Actualizat: 2026-05-27
+Actualizat: 2026-05-28
 
 Importanta: ridicata. Acest document este reper constitutional pentru arhitectura, directie, reguli de dezvoltare si decizii intre alternative.
 
@@ -27,6 +27,7 @@ Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou 
 9. Configurabilitate explicita. Orice mecanica majora trebuie sa poata fi activata, dezactivata sau ajustata prin config, addon sau profil de scenariu, fara recompilare.
 10. Dezactivare completa. Orice caracteristica majora trebuie sa aiba o cale clara de dezactivare fara sa strice restul pluginului: AI, story, questuri, generare, GUI, rutine, simulare, world mapping, addonuri, integrari externe si storage avansat.
 11. Core neutru. Codul core trebuie sa ramana independent de tema, lore, epoca, stil vizual sau scenariu, astfel incat orice addon valid sa se poata potrivi fara schimbari in core. Core-ul poate include continut demo sau fallback, dar numai daca este marcat clar, configurabil si dezactivabil cand se activeaza un addon real.
+12. Feature-uri neperturbatoare. O functionalitate noua nu are voie sa strige peste logica generala a pluginului, sa preia controlul implicit asupra gameplay-ului sau sa produca efecte deranjante pentru player/admin. Ea trebuie sa intre in sistem prin contracte clare, feature flag, audit si fallback, nu prin efecte ascunse.
 
 ## Articolul 3. Structura canonica
 
@@ -132,7 +133,64 @@ Gameplay-ul trebuie sa fie inteligibil pentru player si operabil pentru admin.
 - Rutinele si simularea trebuie sa aiba fallback-uri sigure cand pathfinding-ul sau mapping-ul lipseste.
 - Un feature este matur doar cand poate fi demonstrat in joc, inspectat prin comenzi/debug si acoperit minim de teste.
 
-## Articolul 9. Reguli pentru API si addonuri
+## Articolul 9. Reguli pentru feature-uri noi si sisteme neperturbatoare
+
+Feature-urile noi trebuie implementate ca extensii controlate ale arhitecturii, nu ca scurtaturi care suprascriu fluxurile existente.
+
+Reguli obligatorii:
+
+- Orice feature nou trebuie sa declare explicit ce domeniu atinge: NPC, mapping, quest, story, progression, GUI, routine, simulation, generation, AI, storage sau addon runtime.
+- Feature-ul trebuie sa aiba un flag, config, profil de addon sau mod experimental clar. Default-ul trebuie sa fie conservator daca feature-ul poate modifica lumea, DB-ul, progresul, rutina, story-ul sau interactiunea playerului.
+- Feature-ul nu trebuie sa porneasca efecte automate mari doar pentru ca pluginul s-a incarcat. Startup-ul poate pregati servicii, cache-uri si validatoare, dar actiunile cu impact trebuie sa fie opt-in sau pornite de un scheduler/config explicit.
+- Feature-ul nu trebuie sa blocheze thread-ul principal Paper cu AI, DB, scanari, pathfinding greu, generare sau network IO. Daca are nevoie de lucru greu, foloseste task-uri controlate, timeouts, rezumate si degradare sigura.
+- Feature-ul nu trebuie sa scrie direct in domeniul altui serviciu. Quest progress se modifica prin serviciul de quest/progression, story state prin story service, mapping prin world admin/mapping service, spawn prin orchestratorul de spawn, iar DB prin repository/service responsabil.
+- Feature-ul nu trebuie sa devina zgomotos: fara spam in chat, bossbar, actionbar, log sau GUI; fara notificari repetate; fara teleportari sau schimbari de stare vizibile fara motiv clar pentru player/admin.
+- Feature-ul trebuie sa fie inspectabil: status, audit, debugdump, log sumar sau test. Daca adminul nu poate vedea ce s-a intamplat si de ce, feature-ul nu este matur.
+- Feature-ul trebuie sa fie idempotent sau sa aiba protectii impotriva duplicarii, mai ales pentru spawn, repair, migration, mapping si generare.
+- Feature-ul trebuie sa degradeze curat cand lipsesc date: mapping absent, addon dezactivat, AI indisponibil, DB in eroare, player offline sau NPC despawnat. Degradarea corecta este no-op, warning auditabil sau rezultat read-only, nu exceptie vizibila sau stare corupta.
+- Feature-ul trebuie sa respecte core-ul neutru: vocabularul, profesiile, lore-ul, economia, rewards speciale si regulile de scenariu apartin addonurilor/configului, nu fallback-ului hardcodat.
+
+Regula de integrare:
+
+Un feature nou intra intai ca `preview`, `dryrun`, `read-only`, `experimental` sau `disabled by default` daca poate afecta lumea, datele sau experienta playerului. Devine comportament normal doar dupa test, audit/debug si documentatie.
+
+### Rolul `SimulationService`
+
+`SimulationService` este orchestratorul starii vii a NPC-urilor intre interactiunile directe cu playerul. Rolul lui este sa ruleze tick-ul de simulare, sa adune snapshot-uri, sa aplice decay/recovery pentru nevoi si sa expuna rezumate auditabile.
+
+`SimulationService` poate:
+
+- coordona tick-uri pentru NPC-uri active;
+- citi context local validat: timp, vreme, locatie, pericol, ancore, apropierea playerilor si snapshot semantic;
+- cere `DecisionEngine` sa calculeze actiunea probabila;
+- actualiza nevoi, stare curenta, scop curent si semnale interne ale NPC-ului;
+- produce `SimulationTickSummary`, `SimulationNpcSnapshot` si warning-uri pentru audit/debugdump;
+- oferi preview read-only pentru comenzi admin sau GUI.
+
+`SimulationService` nu poate:
+
+- porni questuri automat;
+- scrie direct story state;
+- acorda reward-uri;
+- genera cladiri, NPC-uri sau mapping;
+- decide progresul questurilor;
+- muta NPC-ul pe harta in locul `RoutineService`;
+- folosi AI ca autoritate pentru stare sau progres.
+
+Relatia corecta intre servicii:
+
+| Serviciu | Responsabilitate |
+|---|---|
+| `SimulationService` | Intentie, nevoi, stare si rezumat de tick |
+| `DecisionEngine` | Scoruri si alegerea actiunii probabile |
+| `RoutineService` | Locatia/tinta zilnica si deplasarea controlata intre ancore |
+| `ScenarioEngine` / progression | Progres quest, obiective, accept/complete/track |
+| `StoryStateService` | Stari narative si evenimente story persistente |
+| `WorldAdminService` / mapping | Regiuni, places, nodes, anchors si semantic world data |
+
+Simularea poate produce semnale pentru story, quest sau AI, dar semnalele sunt input-uri validate, nu comenzi. Orice efect jucabil pornit dintr-un semnal de simulare trebuie sa treaca prin serviciul responsabil si prin config/feature flag.
+
+## Articolul 10. Reguli pentru API si addonuri
 
 API-ul public trebuie sa fie mic, stabil si documentat.
 
@@ -148,7 +206,7 @@ API-ul public trebuie sa fie mic, stabil si documentat.
 - Addonurile de scenariu definesc continut si reguli jucabile. Addonurile de story definesc naratiune si stari. Addonurile de resursa/textura livreaza prezentare vizuala si audio. Compatibilitatea datapack trebuie sa ramana vanilla-friendly si optionala.
 - Fiecare addon trebuie sa poata fi dezactivat fara sa corupa datele existente; la dezactivare, core-ul trebuie sa raporteze clar ce questuri, story hooks, resurse sau datapack hooks lipsesc.
 
-## Articolul 10. Reguli pentru documentatie
+## Articolul 11. Reguli pentru documentatie
 
 Documentatia are trei nivele:
 
@@ -165,7 +223,7 @@ La schimbari importante, se actualizeaza cel putin:
 
 Documentele vechi se muta in `docs/arhiva/` doar cand exista inlocuitor canonic clar.
 
-## Articolul 11. Reguli de lucru
+## Articolul 12. Reguli de lucru
 
 Schimbarile trebuie livrate in slice-uri mici, verificabile.
 
@@ -179,7 +237,7 @@ Un slice bun are:
 
 Un slice riscant este unul care combina refactor, migration, gameplay nou si schimbari de API. Acestea trebuie separate.
 
-## Articolul 12. Definitia maturitatii
+## Articolul 13. Definitia maturitatii
 
 O functionalitate este considerata:
 
@@ -193,7 +251,7 @@ O functionalitate este considerata:
 
 Nicio functie nu trece la un nivel superior doar prin intentie. Trecerea se face prin dovada: test, smoke, audit, debugdump, documentatie sau demonstratie.
 
-## Articolul 13. Surse de adevar
+## Articolul 14. Surse de adevar
 
 Ordinea surselor de adevar este:
 
@@ -206,7 +264,7 @@ Ordinea surselor de adevar este:
 
 Cand documentatia si codul se contrazic, nu se presupune automat ca documentatia este corecta. Se verifica implementarea, se decide statusul real si se actualizeaza documentele.
 
-## Articolul 14. Linie rosie
+## Articolul 15. Linie rosie
 
 Proiectul nu trebuie sa devina:
 
@@ -218,5 +276,6 @@ Proiectul nu trebuie sa devina:
 - un generator care modifica lumea fara validare;
 - un sistem de generare harti/structuri care ignora mapping-ul semantic si controlul adminului;
 - un server greu de reparat dupa spawn gresit, migration gresit sau config gresit.
+- un set de feature-uri care se activeaza singure, spameaza playerul/adminul, muta NPC-uri fara explicatie sau modifica quest/story/storage fara serviciul responsabil.
 
 Directia corecta este un nucleu mic, verificabil si extensibil: sat clar, NPC-uri persistente, questuri functionale, context narativ, API stabil, configuratie flexibila, infrastructura MCP/MySQL pregatita si automatizare controlata.

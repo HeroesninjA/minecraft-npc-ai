@@ -167,6 +167,14 @@ class AddonRegistryTest {
         assertEquals("scenario-b", registry.primaryScenario!!.id)
     }
 
+    @Test
+    fun addonTypeAliasesMapToConstitutionalTypes() {
+        assertEquals(AddonType.STORY, AddonType.fromId("story"))
+        assertEquals(AddonType.RESOURCE, AddonType.fromId("resource_texture"))
+        assertEquals(AddonType.TEXTURE, AddonType.fromId("texture-pack"))
+        assertEquals(AddonType.DATAPACK, AddonType.fromId("data-pack"))
+    }
+
     private fun descriptor(id: String, runtimeModes: EnumSet<RuntimeMode>): AddonDescriptor {
         return descriptor(id, AddonType.FEATURE, false, runtimeModes)
     }

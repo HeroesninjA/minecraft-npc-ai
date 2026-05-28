@@ -119,14 +119,9 @@ object MappingIntentParser {
             type = PlaceType.HOUSE
             tags.addAll(listOf("home", "residential"))
             publicAccess = false
-            if (containsAny(normalized, "fierar", "blacksmith")) {
-                tags.add("blacksmith")
-                metadata["profession"] = "blacksmith"
-            }
-        } else if (containsAny(normalized, "fierarie", "forja", "fierar", "blacksmith", "forge")) {
+        } else if (containsAny(normalized, "fierarie", "forja", "forge")) {
             type = PlaceType.FORGE
-            tags.addAll(listOf("workplace", "blacksmith", "shop"))
-            metadata["profession"] = "blacksmith"
+            tags.addAll(listOf("workplace", "forge", "shop"))
             metadata["role"] = "work"
         } else if (containsAny(normalized, "taverna", "han", "inn", "tavern")) {
             type = PlaceType.TAVERN
@@ -139,7 +134,7 @@ object MappingIntentParser {
             type = PlaceType.FARM
             tags.addAll(listOf("farm", "workplace", "food"))
             metadata["role"] = "work"
-        } else if (containsAny(normalized, "magazin", "shop", "negustor")) {
+        } else if (containsAny(normalized, "magazin", "shop")) {
             type = PlaceType.SHOP
             tags.addAll(listOf("shop", "trade", "public"))
         } else if (containsAny(normalized, "tabara", "camp")) {

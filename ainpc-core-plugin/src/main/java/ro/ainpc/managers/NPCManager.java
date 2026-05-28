@@ -466,7 +466,7 @@ public class NPCManager {
                 registerEntity(npc, npc.getBukkitEntity());
             }
 
-            if (plugin.getConfig().getBoolean("family.auto_generate", true)) {
+            if (plugin.getConfig().getBoolean("family.auto_generate", false)) {
                 plugin.getFamilyManager().generateFamily(npc);
             }
 
@@ -1353,7 +1353,7 @@ public class NPCManager {
     }
 
     public void rebalanceLoadedVillages() {
-        if (!plugin.getConfig().getBoolean("villagers.auto_repopulate.enabled", true)) {
+        if (!plugin.getConfig().getBoolean("villagers.auto_repopulate.enabled", false)) {
             return;
         }
 
@@ -1369,7 +1369,7 @@ public class NPCManager {
             return;
         }
 
-        if (!plugin.getConfig().getBoolean("villagers.auto_repopulate.enabled", true)) {
+        if (!plugin.getConfig().getBoolean("villagers.auto_repopulate.enabled", false)) {
             return;
         }
 
@@ -2770,33 +2770,11 @@ public class NPCManager {
             return true;
         }
 
-        if ("fierar".equalsIgnoreCase(inferredOccupation)) {
-            return profession == Villager.Profession.ARMORER
-                || profession == Villager.Profession.TOOLSMITH
-                || profession == Villager.Profession.WEAPONSMITH;
-        }
-
         return false;
     }
 
     private String inferOccupationFromEnvironment(Villager villager) {
-        Material workstation = findNearbyWorkstation(villager.getLocation(), 4, 2);
-        if (workstation == null) {
-            return null;
-        }
-
-        return switch (workstation) {
-            case COMPOSTER -> "fermier";
-            case BLAST_FURNACE, SMITHING_TABLE, ANVIL, CHIPPED_ANVIL, DAMAGED_ANVIL, GRINDSTONE -> "fierar";
-            case BARREL, SMOKER, CAMPFIRE -> "hangiu";
-            case BREWING_STAND, CAULDRON -> "vindecator";
-            case LECTERN -> "preot";
-            case CARTOGRAPHY_TABLE -> "cartograf";
-            case STONECUTTER -> "pietrar";
-            case FLETCHING_TABLE -> "tamplar";
-            case BELL, CHEST -> "negustor";
-            default -> null;
-        };
+        return null;
     }
 
     private Material findNearbyWorkstation(Location center, int horizontalRadius, int verticalRadius) {
@@ -3218,19 +3196,7 @@ public class NPCManager {
     }
 
     private boolean matchesOccupationPlaceType(String occupation, PlaceType placeType) {
-        if (occupation == null || occupation.isBlank() || placeType == null) {
-            return false;
-        }
-
-        return switch (occupation.toLowerCase(Locale.ROOT)) {
-            case "fermier", "pastor" -> placeType == PlaceType.FARM;
-            case "fierar", "miner", "mestesugar", "tamplar", "pietrar" -> placeType == PlaceType.FORGE
-                || placeType == PlaceType.SHOP;
-            case "hangiu", "macelar" -> placeType == PlaceType.TAVERN || placeType == PlaceType.SHOP;
-            case "negustor" -> placeType == PlaceType.MARKET || placeType == PlaceType.SHOP || placeType == PlaceType.TAVERN;
-            case "soldat", "garda" -> placeType == PlaceType.CASTLE_ROOM || placeType == PlaceType.CAMP;
-            default -> false;
-        };
+        return false;
     }
 
     private boolean isGenericWorkPlaceType(PlaceType placeType) {
@@ -3425,47 +3391,10 @@ public class NPCManager {
     }
 
     private boolean matchesOccupationWorkstation(String occupation, Material material) {
-        if (occupation == null || occupation.isBlank()) {
-            return false;
-        }
-
-        return switch (occupation.toLowerCase(Locale.ROOT)) {
-            case "fermier", "pastor" -> material == Material.COMPOSTER;
-            case "fierar", "soldat", "miner" -> material == Material.BLAST_FURNACE
-                || material == Material.SMITHING_TABLE
-                || material == Material.ANVIL
-                || material == Material.CHIPPED_ANVIL
-                || material == Material.DAMAGED_ANVIL
-                || material == Material.GRINDSTONE;
-            case "hangiu", "negustor" -> material == Material.BARREL
-                || material == Material.SMOKER
-                || material == Material.CAMPFIRE
-                || material == Material.CHEST
-                || material == Material.BELL;
-            case "preot", "bibliotecar" -> material == Material.LECTERN;
-            case "vindecator" -> material == Material.BREWING_STAND || material == Material.CAULDRON;
-            case "cartograf" -> material == Material.CARTOGRAPHY_TABLE;
-            case "pietrar" -> material == Material.STONECUTTER;
-            case "tamplar" -> material == Material.FLETCHING_TABLE;
-            default -> false;
-        };
+        return isWorkstation(material);
     }
 
     private String describeWorkAnchor(String occupation, Material material) {
-        if (occupation != null && !occupation.isBlank()) {
-            return switch (occupation.toLowerCase(Locale.ROOT)) {
-                case "fermier", "pastor" -> "campul de lucru";
-                case "fierar", "soldat", "miner" -> "atelierul";
-                case "hangiu", "negustor" -> "taraba sau hanul";
-                case "preot", "bibliotecar" -> "lecternul si masa de lucru";
-                case "vindecator" -> "laboratorul de leacuri";
-                case "cartograf" -> "masa de cartografie";
-                case "pietrar" -> "atelierul de piatra";
-                case "tamplar" -> "bancul de tamplarie";
-                default -> material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
-            };
-        }
-
         return material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
     }
 
@@ -3485,38 +3414,6 @@ public class NPCManager {
     }
 
     private NPCPersonality generatePersonalityForProfession(Villager.Profession profession) {
-        if (profession == Villager.Profession.FARMER ||
-            profession == Villager.Profession.SHEPHERD ||
-            profession == Villager.Profession.BUTCHER) {
-            return NPCPersonality.fromArchetype("caregiver");
-        }
-
-        if (profession == Villager.Profession.LIBRARIAN ||
-            profession == Villager.Profession.CLERIC) {
-            return NPCPersonality.fromArchetype("sage");
-        }
-
-        if (profession == Villager.Profession.CARTOGRAPHER ||
-            profession == Villager.Profession.FISHERMAN) {
-            return NPCPersonality.fromArchetype("explorer");
-        }
-
-        if (profession == Villager.Profession.ARMORER ||
-            profession == Villager.Profession.WEAPONSMITH) {
-            return NPCPersonality.fromArchetype("warrior");
-        }
-
-        if (profession == Villager.Profession.TOOLSMITH ||
-            profession == Villager.Profession.FLETCHER ||
-            profession == Villager.Profession.LEATHERWORKER ||
-            profession == Villager.Profession.MASON) {
-            return NPCPersonality.fromArchetype("creator");
-        }
-
-        if (profession == Villager.Profession.NITWIT) {
-            return NPCPersonality.fromArchetype("jester");
-        }
-
         return NPCPersonality.generateRandom();
     }
 
@@ -3525,16 +3422,7 @@ public class NPCManager {
             return generatePersonalityForProfession(profession);
         }
 
-        return switch (occupation.toLowerCase(Locale.ROOT)) {
-            case "fermier", "pastor", "macelar" -> NPCPersonality.fromArchetype("caregiver");
-            case "preot", "vindecator", "bibliotecar" -> NPCPersonality.fromArchetype("sage");
-            case "cartograf", "pescar" -> NPCPersonality.fromArchetype("explorer");
-            case "fierar", "tamplar", "pietrar", "miner", "mestesugar" -> NPCPersonality.fromArchetype("creator");
-            case "soldat", "garda" -> NPCPersonality.fromArchetype("warrior");
-            case "negustor", "hangiu" -> NPCPersonality.fromArchetype("merchant");
-            case "localnic" -> NPCPersonality.fromArchetype("innocent");
-            default -> generatePersonalityForProfession(profession);
-        };
+        return generatePersonalityForProfession(profession);
     }
 
     private boolean isGenericOccupation(String occupation) {
@@ -3550,62 +3438,19 @@ public class NPCManager {
     }
 
     private String mapProfessionToOccupation(Villager.Profession profession) {
-        if (profession == Villager.Profession.FARMER) return "fermier";
-        if (profession == Villager.Profession.LIBRARIAN) return "bibliotecar";
-        if (profession == Villager.Profession.CLERIC) return "preot";
-        if (profession == Villager.Profession.ARMORER) return "fierar";
-        if (profession == Villager.Profession.BUTCHER) return "macelar";
-        if (profession == Villager.Profession.FISHERMAN) return "pescar";
-        if (profession == Villager.Profession.CARTOGRAPHER) return "cartograf";
-        if (profession == Villager.Profession.MASON) return "pietrar";
-        if (profession == Villager.Profession.FLETCHER) return "tamplar";
-        if (profession == Villager.Profession.TOOLSMITH) return "miner";
-        if (profession == Villager.Profession.WEAPONSMITH) return "soldat";
-        if (profession == Villager.Profession.LEATHERWORKER) return "mestesugar";
-        if (profession == Villager.Profession.SHEPHERD) return "pastor";
-        if (profession == Villager.Profession.NITWIT) return "localnic";
-        return "locuitor";
+        if (profession == null || profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) {
+            return "resident";
+        }
+        NamespacedKey key = org.bukkit.Registry.VILLAGER_PROFESSION.getKey(profession);
+        if (key == null) {
+            return "resident";
+        }
+        return "minecraft:" + key.getKey();
     }
 
     private String generateBackstory(String name, String occupation, Villager.Profession profession) {
-        if (profession == Villager.Profession.FARMER) {
-            return name + " lucreaza zilnic campurile satului si stie cand vine vremea recoltei.";
-        }
-
-        if (profession == Villager.Profession.LIBRARIAN) {
-            return name + " a invatat din multe carti si iubeste povestile vechi ale regiunii.";
-        }
-
-        if (profession == Villager.Profession.CLERIC) {
-            return name + " tine minte ritualurile satului si ofera sfaturi celor nelinistiti.";
-        }
-
-        if (profession == Villager.Profession.ARMORER ||
-            profession == Villager.Profession.WEAPONSMITH ||
-            profession == Villager.Profession.TOOLSMITH) {
-            return name + " isi petrece zilele la atelier, modeland fierul pentru comunitate.";
-        }
-
-        if (profession == Villager.Profession.CARTOGRAPHER) {
-            return name + " deseneaza drumuri, ruine si locuri uitate pentru cei care pleaca in aventura.";
-        }
-
-        if (profession == Villager.Profession.FISHERMAN) {
-            return name + " cunoaste raul, lacul si vremea mai bine decat oricine altcineva.";
-        }
-
-        if (profession == Villager.Profession.BUTCHER) {
-            return name + " se ocupa de proviziile satului si observa rapid orice lipsa din piata.";
-        }
-
-        if (profession == Villager.Profession.MASON ||
-            profession == Villager.Profession.FLETCHER ||
-            profession == Villager.Profession.LEATHERWORKER ||
-            profession == Villager.Profession.SHEPHERD) {
-            return name + " este un " + occupation + " respectat si isi ia meseria in serios.";
-        }
-
-        return name + " este mereu prin sat, ascultand zvonuri si observand tot ce se intampla.";
+        String safeOccupation = occupation == null || occupation.isBlank() ? "resident" : occupation;
+        return name + " are rolul " + safeOccupation + " si participa la viata comunitatii.";
     }
 
     private String buildProfileSummary(AINPC npc) {

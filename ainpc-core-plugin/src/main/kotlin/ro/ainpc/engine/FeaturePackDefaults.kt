@@ -6,119 +6,105 @@ import java.util.function.BiConsumer
 
 object FeaturePackDefaults {
     @JvmStatic
-    fun loadDefaultMedievalPack(
+    fun loadNeutralFallbackPack(
         loadedPacks: MutableMap<String, FeaturePackLoader.FeaturePack>,
         allTraits: MutableMap<String, FeaturePackLoader.TraitDefinition>,
         allProfessions: MutableMap<String, FeaturePackLoader.ProfessionDefinition>,
         registerTopology: BiConsumer<FeaturePackLoader.FeaturePack, FeaturePackLoader.TopologyDefinition>,
         registerPackDescriptor: BiConsumer<FeaturePackLoader.FeaturePack, ConfigurationSection?>,
     ) {
-        val medieval = FeaturePackLoader.FeaturePack("medieval", "Medieval", "Pachet pentru setari medievale")
+        val fallback = FeaturePackLoader.FeaturePack("core_minimal", "Core Minimal", "Fallback neutru minimal pentru servere fara pack-uri")
 
-        val greedy = FeaturePackLoader.TraitDefinition("greedy", "Lacom", "Doreste sa acumuleze bogatie")
-        greedy.addActionModifier("TRADE", 15)
-        greedy.addActionModifier("GIVE_ITEM", -20)
-        greedy.addEmotionModifier("happiness", 0.2)
-        allTraits["greedy"] = greedy
-        medieval.addTrait(greedy)
+        val practical = FeaturePackLoader.TraitDefinition("practical", "Practic", "Preferinta pentru actiuni utile si clare")
+        practical.addActionModifier("HELP", 15)
+        practical.addActionModifier("START_WORK", 10)
+        practical.addActionModifier("OBSERVE", 10)
+        practical.addEmotionModifier("happiness", 0.1)
+        allTraits["practical"] = practical
+        fallback.addTrait(practical)
 
-        val brave = FeaturePackLoader.TraitDefinition("brave", "Curajos", "Nu se teme de pericole")
-        brave.addActionModifier("FLEE", -30)
-        brave.addActionModifier("ATTACK", 20)
-        brave.addActionModifier("DEFEND", 15)
-        brave.addEmotionModifier("fear", -0.3)
-        allTraits["brave"] = brave
-        medieval.addTrait(brave)
+        val cautious = FeaturePackLoader.TraitDefinition("cautious", "Prudent", "Verifica situatia inainte sa actioneze")
+        cautious.addActionModifier("OBSERVE", 20)
+        cautious.addActionModifier("WARN", 15)
+        cautious.addActionModifier("FLEE", 5)
+        cautious.addEmotionModifier("fear", 0.1)
+        allTraits["cautious"] = cautious
+        fallback.addTrait(cautious)
 
-        val shy = FeaturePackLoader.TraitDefinition("shy", "Timid", "Evita interactiunile sociale")
-        shy.addActionModifier("GREET", -15)
-        shy.addActionModifier("SOCIALIZE", -20)
-        shy.addActionModifier("TALK", -10)
-        shy.addEmotionModifier("fear", 0.2)
-        allTraits["shy"] = shy
-        medieval.addTrait(shy)
-
-        val friendly = FeaturePackLoader.TraitDefinition("friendly", "Prietenos", "Iubeste sa interactioneze cu altii")
+        val friendly = FeaturePackLoader.TraitDefinition("friendly", "Prietenos", "Interactioneaza usor cu playerii si NPC-urile")
         friendly.addActionModifier("GREET", 20)
         friendly.addActionModifier("SOCIALIZE", 25)
         friendly.addActionModifier("HELP", 15)
         friendly.addEmotionModifier("happiness", 0.3)
         allTraits["friendly"] = friendly
-        medieval.addTrait(friendly)
+        fallback.addTrait(friendly)
 
-        val lazy = FeaturePackLoader.TraitDefinition("lazy", "Lenes", "Evita munca grea")
-        lazy.addActionModifier("START_WORK", -25)
-        lazy.addActionModifier("CONTINUE_WORK", -20)
-        lazy.addActionModifier("REST", 30)
-        allTraits["lazy"] = lazy
-        medieval.addTrait(lazy)
-
-        val hardworking = FeaturePackLoader.TraitDefinition("hardworking", "Harnic", "Iubeste sa munceasca")
+        val hardworking = FeaturePackLoader.TraitDefinition("hardworking", "Harnic", "Isi urmeaza rutina si sarcinile")
         hardworking.addActionModifier("START_WORK", 25)
         hardworking.addActionModifier("CONTINUE_WORK", 20)
         hardworking.addActionModifier("REST", -15)
         allTraits["hardworking"] = hardworking
-        medieval.addTrait(hardworking)
+        fallback.addTrait(hardworking)
 
-        val blacksmith = FeaturePackLoader.ProfessionDefinition("blacksmith", "Fierar", "Lucreaza metalul")
-        blacksmith.addScheduleEntry("MORNING", "Deschide atelierul")
-        blacksmith.addScheduleEntry("AFTERNOON", "Forjeaza unelte")
-        blacksmith.addScheduleEntry("EVENING", "Curata atelierul")
-        blacksmith.addScheduleEntry("NIGHT", "Doarme")
-        blacksmith.tools = listOf("ciocan", "nicovala", "clesti")
-        allProfessions["blacksmith"] = blacksmith
-        medieval.addProfession(blacksmith)
+        val worker = FeaturePackLoader.ProfessionDefinition("worker", "Lucrator", "Executa sarcini generale ale comunitatii")
+        worker.addScheduleEntry("MORNING", "Isi pregateste sarcinile")
+        worker.addScheduleEntry("AFTERNOON", "Lucreaza la obiective locale")
+        worker.addScheduleEntry("EVENING", "Incheie activitatea si se retrage")
+        worker.addScheduleEntry("NIGHT", "Se odihneste")
+        worker.tools = listOf("unealta", "materiale", "lista de sarcini")
+        allProfessions["worker"] = worker
+        fallback.addProfession(worker)
 
-        val farmer = FeaturePackLoader.ProfessionDefinition("farmer", "Fermier", "Cultiva pamantul")
-        farmer.addScheduleEntry("MORNING", "Se trezeste devreme, uda plantele")
-        farmer.addScheduleEntry("AFTERNOON", "Lucreaza campul")
-        farmer.addScheduleEntry("EVENING", "Hraneste animalele")
-        farmer.addScheduleEntry("NIGHT", "Doarme")
-        farmer.tools = listOf("sapa", "coasa", "galeata")
-        allProfessions["farmer"] = farmer
-        medieval.addProfession(farmer)
+        val caretaker = FeaturePackLoader.ProfessionDefinition("caretaker", "Ingrijitor", "Mentine locurile importante functionale")
+        caretaker.addScheduleEntry("MORNING", "Verifica locatiile importante")
+        caretaker.addScheduleEntry("AFTERNOON", "Repara si organizeaza resurse")
+        caretaker.addScheduleEntry("EVENING", "Raporteaza problemele observate")
+        caretaker.addScheduleEntry("NIGHT", "Se odihneste")
+        caretaker.tools = listOf("registru", "resurse", "trusa")
+        allProfessions["caretaker"] = caretaker
+        fallback.addProfession(caretaker)
 
-        val guard = FeaturePackLoader.ProfessionDefinition("guard", "Garda", "Pazeste si protejeaza")
-        guard.addScheduleEntry("MORNING", "Patruleaza")
-        guard.addScheduleEntry("AFTERNOON", "Pazeste poarta")
-        guard.addScheduleEntry("EVENING", "Patruleaza")
-        guard.addScheduleEntry("NIGHT", "Pazeste sau doarme in ture")
-        guard.tools = listOf("sabie", "scut", "lancie")
-        allProfessions["guard"] = guard
-        medieval.addProfession(guard)
+        val guide = FeaturePackLoader.ProfessionDefinition("guide", "Ghid", "Ajuta playerii sa inteleaga zona")
+        guide.addScheduleEntry("MORNING", "Observa traficul prin asezare")
+        guide.addScheduleEntry("AFTERNOON", "Ajuta vizitatorii")
+        guide.addScheduleEntry("EVENING", "Strange informatii locale")
+        guide.addScheduleEntry("NIGHT", "Se retrage")
+        guide.tools = listOf("harta", "notite", "semne")
+        allProfessions["guide"] = guide
+        fallback.addProfession(guide)
 
         val village = FeaturePackLoader.TopologyDefinition(
-            medieval.id,
-            "village_center",
-            "Sat deschis",
+            fallback.id,
+            "settlement_center",
+            "Centru de asezare",
             TopologyCategory.PLAINS,
-            "Asezare rurala activa, cu munca, schimb social si comunitate.",
+            "Zona centrala pentru activitati, orientare si interactiuni locale.",
         )
         village.biomes = listOf("PLAINS", "MEADOW", "SUNFLOWER_PLAINS")
         village.dialogueHints = listOf(
-            "vorbeste despre recolta, vecini si targ",
-            "pastreaza un ton practic si comunitar",
+            "vorbeste despre locuri, sarcini si oameni din zona",
+            "pastreaza un ton practic si usor de inteles",
         )
         village.suggestedTraits = listOf("friendly", "hardworking")
-        registerTopology.accept(medieval, village)
+        registerTopology.accept(fallback, village)
 
         val forestEdge = FeaturePackLoader.TopologyDefinition(
-            medieval.id,
-            "forest_edge",
-            "Margine de padure",
+            fallback.id,
+            "wild_edge",
+            "Margine de zona salbatica",
             TopologyCategory.FOREST,
-            "Zona de tranzitie intre sat si salbaticie, buna pentru avertismente si zvonuri.",
+            "Zona de tranzitie intre asezare si spatii mai putin controlate.",
         )
         forestEdge.biomes = listOf("FOREST", "BIRCH_FOREST", "DARK_FOREST")
         forestEdge.dialogueHints = listOf(
-            "accent pe prudenta, vanatoare si drumuri periculoase",
-            "discuta despre creaturi si lemnari",
+            "accent pe prudenta, orientare si resurse locale",
+            "discuta despre trasee, limite si riscuri",
         )
-        forestEdge.suggestedTraits = listOf("brave", "suspicious")
-        registerTopology.accept(medieval, forestEdge)
+        forestEdge.suggestedTraits = listOf("cautious", "practical")
+        registerTopology.accept(fallback, forestEdge)
 
-        registerPackDescriptor.accept(medieval, null)
-        loadedPacks["medieval"] = medieval
+        registerPackDescriptor.accept(fallback, null)
+        loadedPacks[fallback.id] = fallback
     }
 
     @JvmStatic

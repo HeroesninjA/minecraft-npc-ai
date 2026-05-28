@@ -12,12 +12,15 @@ import ro.ainpc.world.mapping.MappingWandMode
 class MappingWandListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (!plugin.config.getBoolean("features.mapping", true)) {
+            return
+        }
         if (event.hand != EquipmentSlot.HAND) {
             return
         }
         val player = event.player
         val service = plugin.mappingWandService
-        if (service == null || !service.isWandItem(event.item)) {
+        if (!service.isWandItem(event.item)) {
             return
         }
         if (!player.hasPermission("ainpc.admin")) {

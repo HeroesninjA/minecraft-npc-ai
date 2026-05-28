@@ -22,12 +22,12 @@ class RoutineEngineTest {
     @Test
     fun workHoursSendNpcToWorkAnchor() {
         val npc = npcWithAnchors()
-        npc.occupation = "fierar"
+        npc.occupation = "worker"
 
         val assignment = engine.assign(npc, 6000)
 
         assertEquals(RoutineSlot.WORK, assignment.slot())
-        assertEquals(NPCState.CRAFTING, assignment.targetState())
+        assertEquals(NPCState.WORKING, assignment.targetState())
         assertEquals(npc.workAnchor, assignment.targetAnchor())
     }
 
@@ -57,7 +57,7 @@ class RoutineEngineTest {
     @Test
     fun previewDayExposesStableGuiScheduleSlots() {
         val npc = npcWithAnchors()
-        npc.occupation = "fierar"
+        npc.occupation = "worker"
 
         val preview = engine.previewDay(npc)
 

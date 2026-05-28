@@ -26,6 +26,10 @@ class GuiInventoryListener(
         if (player !is Player) {
             return
         }
+        if (!guiFeatureEnabled()) {
+            player.closeInventory()
+            return
+        }
         if (event.rawSlot < 0 || event.rawSlot >= topInventory.size) {
             return
         }
@@ -44,6 +48,9 @@ class GuiInventoryListener(
         val topInventory = event.view.topInventory
         if (topInventory.holder is AINPCGuiHolder) {
             event.isCancelled = true
+            if (!guiFeatureEnabled()) {
+                event.whoClicked.closeInventory()
+            }
         }
     }
 
@@ -59,4 +66,6 @@ class GuiInventoryListener(
     fun onPlayerQuit(event: PlayerQuitEvent) {
         plugin.guiService.clearPlayerState(event.player.uniqueId)
     }
+
+    private fun guiFeatureEnabled(): Boolean = plugin.config.getBoolean("features.gui", true)
 }
