@@ -6,54 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/addons/AddonType.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/src/main/kotlin/ro/ainpc/addons/AddonType.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/orchestration/AIOrchestrationService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/orchestration/AIOrchestrationService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/bootstrap/SchedulerCoordinator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/bootstrap/SchedulerCoordinator.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCTabCompleter.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/database/DatabaseManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/database/DatabaseManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DialogueEngine.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DialogueEngine.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackDefaults.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackDefaults.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackLoader.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackLoader.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackMetadataValidator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackMetadataValidator.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/listeners/GuiInventoryListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/listeners/GuiInventoryListener.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/MappingWandListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/MappingWandListener.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCChatListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCChatListener.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCInteractionListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/NPCInteractionListener.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/QuestObjectiveListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/listeners/QuestObjectiveListener.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/FamilyManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/FamilyManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/AINPC.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/AINPC.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCPersonality.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCPersonality.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineEngine.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineEngine.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/HouseAllocationPlanner.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/spawn/HouseAllocationPlanner.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/WorldAdminService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/WorldAdminService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/mapping/MappingIntentParser.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/mapping/MappingIntentParser.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/patch/VillageGapAnalyzer.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/world/patch/VillageGapAnalyzer.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/config.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/packs/medieval.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/packs/modern.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/packs/social.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/quests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/resources/quests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/addons/AddonRegistryTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/addons/AddonRegistryTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCCommandRoutingTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCCommandRoutingTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/commands/AINPCTabCompleterTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/FeaturePackMetadataValidatorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/FeaturePackMetadataValidatorTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/routine/RoutineEngineTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/routine/RoutineEngineTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/VillagePatchPlannerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/VillagePatchPlannerTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/WorldAdminServiceTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/WorldAdminServiceTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/mapping/MappingIntentParserTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/test/kotlin/ro/ainpc/world/mapping/MappingIntentParserTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/AINPCScenarioMedievalPlugin.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/MedievalScenarioAddon.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-scenario-medieval/src/main/kotlin/ro/ainpc/addons/medieval/MedievalScenarioAddon.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audit-constitutie-proiect.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audit-constitutie-proiect.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/constitutie-proiect.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/constitutie-proiect.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +14,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1199" />
+    <option name="cachedIndexableFilesCount" value="1203" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">

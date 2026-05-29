@@ -28,6 +28,7 @@ Proiectul trebuie sa ramana jucabil inainte sa devina complex. Orice sistem nou 
 10. Dezactivare completa. Orice caracteristica majora trebuie sa aiba o cale clara de dezactivare fara sa strice restul pluginului: AI, story, questuri, generare, GUI, rutine, simulare, world mapping, addonuri, integrari externe si storage avansat.
 11. Core neutru. Codul core trebuie sa ramana independent de tema, lore, epoca, stil vizual sau scenariu, astfel incat orice addon valid sa se poata potrivi fara schimbari in core. Core-ul poate include continut demo sau fallback, dar numai daca este marcat clar, configurabil si dezactivabil cand se activeaza un addon real.
 12. Feature-uri neperturbatoare. O functionalitate noua nu are voie sa strige peste logica generala a pluginului, sa preia controlul implicit asupra gameplay-ului sau sa produca efecte deranjante pentru player/admin. Ea trebuie sa intre in sistem prin contracte clare, feature flag, audit si fallback, nu prin efecte ascunse.
+13. Core rigid, addonuri libere. Pluginul core trebuie sa fie mai strict, stabil si conservator decat addonurile, pentru compatibilitate universala intre servere, versiuni si scenarii. Addonurile pot avea libertate foarte mare de tema, reguli, economie, questuri, story, resurse si comportamente speciale, atata timp cat intra prin API/contracte declarate si pot fi izolate, dezactivate si inspectate.
 
 ## Articolul 3. Structura canonica
 
@@ -56,6 +57,8 @@ Regula de proprietate:
 - Addonurile trebuie sa declare tipul, dependintele, capabilitatile si feature flags pe care le activeaza.
 - Addonurile de resurse/textura si datapack-urile compatibile nu trebuie sa fie obligatorii pentru functionarea core-ului.
 - Cand un addon activ furnizeaza scenariu, story, questuri, resurse sau reguli, demo-ul echivalent din core trebuie sa intre in modul dezactivat, fallback sau explicit namespaced, fara coliziuni de ID-uri.
+- Core-ul este compatibilitatea comuna. Din acest motiv, feature-urile din core trebuie sa fie mai rigide: contracte stabile, fallback-uri neutre, comportament predictibil, configuratie explicita si dependinte minime.
+- Addonurile sunt zona de libertate creativa si mecanica. Ele pot rescrie tema, regulile de joc, economia, dialogul, questurile, story hooks, prezentarea vizuala si integrarea datapack, dar nu trebuie sa ceara schimbari in core pentru fiecare scenariu nou.
 - Documentele din radacina `docs/` raman canonice; `docs/categorii/` sunt indexuri de navigare.
 - Serverul MCP dedicat pluginului Paper trebuie sa ramana optional, local-first si securizat; el extinde observabilitatea si automatizarea, nu inlocuieste regulile runtime din core.
 
@@ -141,6 +144,7 @@ Reguli obligatorii:
 
 - Orice feature nou trebuie sa declare explicit ce domeniu atinge: NPC, mapping, quest, story, progression, GUI, routine, simulation, generation, AI, storage sau addon runtime.
 - Feature-ul trebuie sa aiba un flag, config, profil de addon sau mod experimental clar. Default-ul trebuie sa fie conservator daca feature-ul poate modifica lumea, DB-ul, progresul, rutina, story-ul sau interactiunea playerului.
+- Runtime-ul nu trebuie sa decida starea unui feature citind direct config-uri brute din surse diferite. Serviciile trebuie sa consume starea finala rezolvata de stratul central de config/addon/feature, ca decizia sa fie unica, determinista si auditabila.
 - Feature-ul nu trebuie sa porneasca efecte automate mari doar pentru ca pluginul s-a incarcat. Startup-ul poate pregati servicii, cache-uri si validatoare, dar actiunile cu impact trebuie sa fie opt-in sau pornite de un scheduler/config explicit.
 - Feature-ul nu trebuie sa blocheze thread-ul principal Paper cu AI, DB, scanari, pathfinding greu, generare sau network IO. Daca are nevoie de lucru greu, foloseste task-uri controlate, timeouts, rezumate si degradare sigura.
 - Feature-ul nu trebuie sa scrie direct in domeniul altui serviciu. Quest progress se modifica prin serviciul de quest/progression, story state prin story service, mapping prin world admin/mapping service, spawn prin orchestratorul de spawn, iar DB prin repository/service responsabil.
@@ -149,6 +153,8 @@ Reguli obligatorii:
 - Feature-ul trebuie sa fie idempotent sau sa aiba protectii impotriva duplicarii, mai ales pentru spawn, repair, migration, mapping si generare.
 - Feature-ul trebuie sa degradeze curat cand lipsesc date: mapping absent, addon dezactivat, AI indisponibil, DB in eroare, player offline sau NPC despawnat. Degradarea corecta este no-op, warning auditabil sau rezultat read-only, nu exceptie vizibila sau stare corupta.
 - Feature-ul trebuie sa respecte core-ul neutru: vocabularul, profesiile, lore-ul, economia, rewards speciale si regulile de scenariu apartin addonurilor/configului, nu fallback-ului hardcodat.
+- Daca feature-ul apartine core-ului, regula implicita este rigiditate controlata: suprafata mica, compatibilitate inapoi, default neutru, fara dependinte tematice si fara presupuneri despre addonurile instalate.
+- Daca feature-ul apartine unui addon, regula implicita este libertate maxima in interiorul domeniului declarat: addonul poate fi dramatic, specializat sau experimental, dar trebuie sa fie namespaced, dezactivabil, auditabil si limitat la contractele pe care le declara.
 
 Regula de integrare:
 
@@ -198,13 +204,34 @@ API-ul public trebuie sa fie mic, stabil si documentat.
 - Addonurile trebuie sa livreze propriul config template si propriile pack-uri de continut.
 - Core-ul ramane universal; scenariile si temele apartin addonurilor.
 - Core-ul ofera infrastructura: lifecycle, config, registri, persistenta, validare, audit, debug, comenzi, GUI generic si contracte. Addonurile ofera continutul: tema, poveste, questuri, resurse, texturi, reguli speciale si integrare datapack.
+- Core-ul nu concureaza cu addonurile la expresivitate. El trebuie sa ramana suficient de rigid incat orice server sa poata porni, testa, migra si diagnostica pluginul fara sa depinda de o tema sau de un scenariu anume.
+- Addonurile sunt locul pentru libertate aproape nelimitata: pot defini lumi, reguli neobisnuite, progresii, economii, reputatii, comportamente de NPC, UI specializat, resurse si pachete datapack, cu conditia sa nu rupa API-ul public, sa nu scrie peste namespace-ul altui addon si sa poata fi oprite fara coruperea datelor.
 - Continutul demo din core trebuie tratat ca exemplu de pornire, nu ca tema implicita permanenta. Configul trebuie sa permita `demo.enabled=false` sau un mecanism echivalent.
 - Breaking changes in API cer documentare, test de compatibilitate si motiv clar.
 - Un addon demonstrativ nu trebuie sa introduca dependinte obligatorii pentru core.
 - Configuratia trebuie gandita pe profiluri: core defaults, server profile, addon profile si scenario pack. Valorile implicite trebuie sa fie sigure si usor de explicat.
+- Deciziile finale despre feature-uri trebuie rezolvate central, nu prin config-uri independente care se pot contrazice. Core-ul, addonurile si pack-urile declara intentii, cerinte si limite; resolverul central calculeaza starea finala folosita de runtime.
 - Tipurile de addon planificate sunt: scenariu, story, resursa/textura si compatibilitate datapack. Tipurile pot fi combinate doar daca manifestul declara clar ce activeaza.
 - Addonurile de scenariu definesc continut si reguli jucabile. Addonurile de story definesc naratiune si stari. Addonurile de resursa/textura livreaza prezentare vizuala si audio. Compatibilitatea datapack trebuie sa ramana vanilla-friendly si optionala.
 - Fiecare addon trebuie sa poata fi dezactivat fara sa corupa datele existente; la dezactivare, core-ul trebuie sa raporteze clar ce questuri, story hooks, resurse sau datapack hooks lipsesc.
+
+### Rezolvarea feature-urilor, configului si addonurilor
+
+Core-ul, addonurile si pack-urile nu trebuie sa ia decizii finale independent pe baza propriilor config-uri brute. Orice feature major trebuie sa treaca printr-un strat central de rezolvare care combina:
+
+- default-urile core;
+- profilul serverului;
+- manifestele addonurilor;
+- pack-urile de scenariu;
+- dependintele, capabilitatile si conflictele declarate.
+
+Rezultatul trebuie sa fie un `RuntimeFeatureState` unic, determinist, inspectabil si folosit ca sursa de adevar in runtime.
+
+Addonurile nu citesc direct config-ul core pentru a decide daca un sistem este activ. Ele declara ce cer, ce ofera, ce conflicteaza si ce fallback accepta. Core-ul rezolva starea finala si porneste addonurile numai pe baza acestei stari.
+
+Addonurile pot cere activarea unui feature, dar nu pot forta singure activarea peste politica serverului. Server profile-ul si resolverul central au autoritatea finala.
+
+Conflictele nerezolvate trebuie sa blocheze activarea feature-ului afectat sau a addonului afectat, nu sa produca un runtime partial ambiguu. Resolverul trebuie sa poata raporta de ce un feature este `enabled`, `disabled`, `optional`, `blocked`, `fallback` sau `experimental`.
 
 ## Articolul 11. Reguli pentru documentatie
 
