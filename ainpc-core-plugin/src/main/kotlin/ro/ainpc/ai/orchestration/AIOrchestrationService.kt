@@ -39,7 +39,9 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         )
     }
 
-    fun enabled(): Boolean = plugin?.config?.getBoolean("ai.orchestration.enabled", false) == true
+    fun enabled(): Boolean =
+        plugin?.config?.getBoolean("features.ai", false) == true &&
+            plugin.config.getBoolean("ai.orchestration.enabled", false)
 
     private fun fallbackMessage(useCase: AIUseCase?): String =
         when (useCase ?: AIUseCase.DIALOGUE_REPLY) {

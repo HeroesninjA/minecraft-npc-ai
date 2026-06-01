@@ -463,6 +463,35 @@ Comenzile generate testeaza `/ainpc audit quest`, oferta/acceptarea unui quest c
 
 Preflight-ul RCON valideaza partea fara player. Pentru `demo-playable`, foloseste `-RunRconPlayerSmoke`; cu `-WaitForPlayerCheckpoints`, scriptul se opreste inainte de pasii unde playerul trebuie pozitionat langa NPC.
 
+## Demo Paper Evidence Validator
+
+Script: `scripts/validate-demo-paper-evidence.ps1`
+
+Template/check permissive:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\validate-demo-paper-evidence.ps1 `
+  -EvidenceFile ".ai\codex-250-demo-paper-evidence-template.md" `
+  -AllowPending
+```
+
+Evidence completat, gate strict:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\validate-demo-paper-evidence.ps1 `
+  -EvidenceFile ".ai\paper-evidence-filled.md" `
+  -FailOnWarnings `
+  -JsonOutFile ".ai\paper-evidence-validation.json"
+```
+
+Ce face:
+
+- verifica markerii de evidence pentru demo Paper live;
+- blocheaza `PENDING` cand nu folosesti `-AllowPending`;
+- detecteaza forme comune de secrete (`sk-...`, bearer token, api key, token, password, secret);
+- verifica decizia de release: `REMOVE`, `KEEP_INTERNAL` sau `PROMOTE`;
+- poate scrie rezultat JSON pentru audit.
+
 ## Release Backup Restore Check
 
 Script: `scripts/release-backup-restore-check.ps1`

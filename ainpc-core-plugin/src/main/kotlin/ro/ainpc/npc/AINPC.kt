@@ -5,6 +5,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
+import org.bukkit.Registry
 import org.bukkit.World
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
@@ -205,24 +206,15 @@ class AINPC(val plugin: AINPCPlugin?) {
 
     private val villagerProfession: Villager.Profession
         get() {
-            if (occupation == null) return Villager.Profession.NONE
-            return when (occupation!!.lowercase()) {
-                "locuitor", "villager", "resident" -> Villager.Profession.NONE
-                "localnic", "nitwit" -> Villager.Profession.NITWIT
-                "fermier", "farmer" -> Villager.Profession.FARMER
-                "bibliotecar", "librarian" -> Villager.Profession.LIBRARIAN
-                "preot", "cleric", "vindecator", "healer", "alchimist", "brewer" -> Villager.Profession.CLERIC
-                "fierar", "blacksmith", "armorer" -> Villager.Profession.ARMORER
-                "macelar", "butcher" -> Villager.Profession.BUTCHER
-                "pescar", "fisherman" -> Villager.Profession.FISHERMAN
-                "cartograf", "cartographer" -> Villager.Profession.CARTOGRAPHER
-                "pietrar", "mason", "negustor", "merchant" -> Villager.Profession.MASON
-                "tamplar", "fletcher" -> Villager.Profession.FLETCHER
-                "soldat", "soldier", "guard", "garda" -> Villager.Profession.WEAPONSMITH
-                "hangiu", "innkeeper", "hangiul" -> Villager.Profession.BUTCHER
-                "miner" -> Villager.Profession.TOOLSMITH
-                else -> Villager.Profession.NONE
-            }
+            val value = occupation?.lowercase()?.trim() ?: return Villager.Profession.NONE
+            val minecraftProfession = value
+                .removePrefix("minecraft:")
+                .removePrefix("villager:")
+                .takeIf { value.startsWith("minecraft:") || value.startsWith("villager:") }
+                ?: return Villager.Profession.NONE
+            return Registry.VILLAGER_PROFESSION
+                .get(NamespacedKey.minecraft(minecraftProfession.lowercase()))
+                ?: Villager.Profession.NONE
         }
 
     private fun shouldApplyProfessionToVillager(villager: Villager?): Boolean {

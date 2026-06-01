@@ -308,15 +308,7 @@ class VillageGapAnalyzer {
             return true
         }
 
-        return when (normalizedProfession) {
-            "blacksmith", "fierar", "armorer" -> place.placeType() == PlaceType.FORGE
-            "farmer", "fermier" -> place.placeType() == PlaceType.FARM
-            "merchant", "negustor" -> place.placeType() == PlaceType.MARKET || place.placeType() == PlaceType.SHOP
-            "innkeeper", "hangiu" -> place.placeType() == PlaceType.TAVERN
-            "guard", "garda", "soldat" -> place.hasTag("guard") || place.hasTag("barracks") || place.hasTag("watch")
-            "priest", "preot" -> place.hasTag("shrine") || place.hasTag("altar") || place.hasTag("temple")
-            else -> false
-        }
+        return false
     }
 
     private fun hasNode(nodes: Collection<WorldNodeInfo>, vararg tokens: String): Boolean {

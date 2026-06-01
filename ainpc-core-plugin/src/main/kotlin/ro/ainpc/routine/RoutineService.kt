@@ -18,7 +18,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
 
     fun runRoutineTick(): RoutineTickSummary {
         val total = plugin.npcManager.getNPCCount()
-        if (!plugin.config.getBoolean("routine.enabled", true)) {
+        if (!plugin.config.getBoolean("routine.enabled", false)) {
             return RoutineTickSummary.disabled(total)
         }
 

@@ -31,7 +31,7 @@ class RoutineGui : GuiScreen {
         val player = context.player()
         val worldTime = player.world.time
         val adminView = player.hasPermission("ainpc.admin")
-        val routineEnabled = context.plugin().config.getBoolean("routine.enabled", true)
+        val routineEnabled = context.plugin().config.getBoolean("routine.enabled", false)
         val npcs = context.plugin().npcManager.getAllNPCs().stream()
             .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
             .limit(NPC_SLOTS.size.toLong())
@@ -91,9 +91,9 @@ class RoutineGui : GuiScreen {
                     GuiItemFactory.item(
                         Material.COMPASS,
                         "&eStatus nearest",
-                        "&7Ruleaza /ainpc routine status pentru cel mai apropiat NPC."
+                        "&7Ruleaza /ainpc routine status nearest pentru cel mai apropiat NPC."
                     ),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status") }
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
                 )
             } else {
                 GuiButton.disabled(

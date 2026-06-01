@@ -7,6 +7,8 @@ import ro.ainpc.addons.AddonType
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.platform.features.RuntimeFeatureResolver
+import ro.ainpc.platform.features.RuntimeFeatureSnapshot
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMode
@@ -19,7 +21,9 @@ class AINPCPlatform(
 ) : AINPCPlatformApi {
     override val addonRegistry: AddonRegistry = AddonRegistry(this)
     val worldAdminService: WorldAdminService = WorldAdminService(plugin)
+    private val featureResolver: RuntimeFeatureResolver = RuntimeFeatureResolver()
     private var profile: PlatformProfile = PlatformProfile.fromConfig(plugin.config)
+    private var featureSnapshot: RuntimeFeatureSnapshot = featureResolver.resolve(plugin.config)
 
     fun initialize() {
         reloadFromConfig()
@@ -35,6 +39,7 @@ class AINPCPlatform(
             plugin.config.getStringList("addons.load_order")
         )
         worldAdminService.reloadFromConfig(plugin.config, profile)
+        refreshFeatureSnapshot()
     }
 
     private fun registerCoreDescriptor() {
@@ -52,6 +57,7 @@ class AINPCPlatform(
                 emptyList()
             )
         )
+        refreshFeatureSnapshot()
     }
 
     override val runtimeMode: RuntimeMode
@@ -84,8 +90,15 @@ class AINPCPlatform(
 
     fun getProfile(): PlatformProfile = profile
 
+    fun runtimeFeatures(): RuntimeFeatureSnapshot = featureSnapshot
+
     fun shutdown() {
         addonRegistry.shutdown()
+        refreshFeatureSnapshot()
+    }
+
+    private fun refreshFeatureSnapshot() {
+        featureSnapshot = featureResolver.resolve(plugin.config, profile, addonRegistry.descriptors)
     }
 
     private fun sanitizeRelativeDirectory(directory: String?): String {

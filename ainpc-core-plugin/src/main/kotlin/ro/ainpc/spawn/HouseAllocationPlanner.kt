@@ -324,20 +324,12 @@ class HouseAllocationPlanner {
         if (configuredProfession.isNotBlank()) {
             return configuredProfession
         }
-        return when (place.placeType()) {
-            PlaceType.FORGE -> "fierar"
-            PlaceType.FARM -> "fermier"
-            PlaceType.MARKET, PlaceType.SHOP -> "negustor"
-            PlaceType.TAVERN -> "hangiu"
-            PlaceType.CAMP -> "paznic"
-            else -> "locuitor"
-        }
+        return "worker"
     }
 
     private fun archetypeForWorkplace(place: WorldPlaceInfo): String = when (place.placeType()) {
         PlaceType.FORGE, PlaceType.FARM, PlaceType.SHOP -> "creator"
-        PlaceType.MARKET, PlaceType.TAVERN -> "merchant"
-        PlaceType.CAMP -> "warrior"
+        PlaceType.MARKET, PlaceType.TAVERN, PlaceType.CAMP -> "caregiver"
         else -> "caregiver"
     }
 

@@ -301,7 +301,7 @@ class WorldAdminService(
             regionMaxY,
             centerZ + 72
         )
-        region.setTags(listOf("demo", "village", "medieval", "first_playable", "spacious"))
+        region.setTags(listOf("demo", "village", "starter", "first_playable", "spacious"))
 
         createDemoNode(
             regionId, null, "village_center", WorldNodeType.MEETING_POINT,
@@ -375,10 +375,9 @@ class WorldAdminService(
         val forge = createDemoPlace(
             regionId, "fierarie", "Fierarie", resolvedWorldName, PlaceType.FORGE,
             centerX - 60, placeMinY, centerZ + 18, centerX - 38, placeMaxY, centerZ + 40,
-            listOf("demo", "forge", "workplace", "blacksmith", "shop"), createdPlaceIds
+            listOf("demo", "forge", "workplace", "shop"), createdPlaceIds
         )
         forge.putMetadata("role", "work")
-        forge.putMetadata("profession", "blacksmith")
         createDemoNode(
             regionId, forge.id, "workstation_1", WorldNodeType.WORKSTATION,
             resolvedWorldName, (centerX - 50).toDouble(), nodeY, (centerZ + 28).toDouble(), 3.0, createdNodeIds, "workstation"
@@ -398,7 +397,6 @@ class WorldAdminService(
             listOf("demo", "farm", "workplace"), createdPlaceIds
         )
         farm.putMetadata("role", "work")
-        farm.putMetadata("profession", "farmer")
         createDemoNode(
             regionId, farm.id, "work_1", WorldNodeType.WORK,
             resolvedWorldName, (centerX + 49).toDouble(), nodeY, (centerZ + 31).toDouble(), 6.0, createdNodeIds, "work_anchor"
@@ -433,7 +431,6 @@ class WorldAdminService(
             listOf("demo", "ritual", "altar", "shrine", "sacred", "public"), createdPlaceIds
         )
         shrine.putMetadata("role", "ritual")
-        shrine.putMetadata("profession", "priest")
         createDemoNode(
             regionId, shrine.id, "ritual_circle", WorldNodeType.PROGRESSION,
             resolvedWorldName, (centerX + 50).toDouble(), nodeY, (centerZ + 1).toDouble(), 5.0, createdNodeIds, "ritual_circle"

@@ -1,5 +1,7 @@
 package ro.ainpc.database
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import ro.ainpc.AINPCPlugin
 import java.io.File
 import java.lang.reflect.InvocationHandler
@@ -11,6 +13,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
+import javax.sql.DataSource
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -20,11 +23,15 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Supplier
 import java.util.logging.Level
 
+private const val MYSQL_DUPLICATE_KEY_NAME = 1061
+
 open class DatabaseManager(private val plugin: AINPCPlugin?) {
     private val databaseExecutor: ExecutorService =
         Executors.newSingleThreadExecutor(DatabaseThreadFactory())
     private val statementLock: ReentrantLock = ReentrantLock(true)
     private var connection: Connection? = null
+    private var dataSource: DataSource? = null
+    private var dialect: DatabaseDialect = DatabaseDialect.SQLITE
 
     fun initialize(): Boolean {
         return try {
@@ -34,22 +41,93 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             if (!plugin.dataFolder.exists()) {
                 plugin.dataFolder.mkdirs()
             }
-            val filename = plugin.config.getString("database.filename", "ainpc_data.db")
-            val dbFile = File(plugin.dataFolder, filename)
 
-            Class.forName("org.sqlite.JDBC")
-            connection = DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
-            enableForeignKeys()
-            configureSqlitePragmas()
+            dialect = DatabaseDialect.fromConfig(plugin.config.getString("database.type", "sqlite"))
+            connection = when (dialect) {
+                DatabaseDialect.SQLITE -> openSqliteConnection()
+                DatabaseDialect.MYSQL -> openMysqlConnection()
+            }
+            configureConnection()
             createTables()
-            plugin.logger.info("Baza de date initializata cu succes!")
+            plugin.logger.info("Baza de date initializata cu succes (${dialect.label}).")
             true
         } catch (e: ClassNotFoundException) {
-            plugin?.logger?.log(Level.SEVERE, "Driver SQLite negasit!", e)
+            plugin?.logger?.log(Level.SEVERE, "Driverul bazei de date este negasit!", e)
             false
         } catch (e: SQLException) {
             plugin?.logger?.log(Level.SEVERE, "Eroare la conectarea la baza de date!", e)
             false
+        }
+    }
+
+    @Throws(ClassNotFoundException::class, SQLException::class)
+    private fun openSqliteConnection(): Connection {
+        val filename = plugin!!.config.getString(
+            "database.sqlite.filename",
+            plugin.config.getString("database.filename", "ainpc_data.db")
+        )
+        val dbFile = File(plugin.dataFolder, filename)
+        Class.forName("org.sqlite.JDBC")
+        return DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
+    }
+
+    @Throws(ClassNotFoundException::class, SQLException::class)
+    private fun openMysqlConnection(): Connection {
+        val cfg = plugin!!.config
+        Class.forName("com.mysql.cj.jdbc.Driver")
+        val host = cfg.getString("database.mysql.host", "127.0.0.1")
+        val port = cfg.getInt("database.mysql.port", 3306)
+        val database = cfg.getString("database.mysql.database", "ainpc")
+        val username = cfg.getString("database.mysql.username", "ainpc")
+        val passwordEnv = cfg.getString("database.mysql.password_env", "AINPC_MYSQL_PASSWORD")
+        val password = passwordEnv
+            ?.takeIf { it.isNotBlank() }
+            ?.let { System.getenv(it) }
+            ?.takeIf { it.isNotBlank() }
+            ?: cfg.getString("database.mysql.password", "")
+            ?: ""
+        val useSsl = cfg.getBoolean("database.mysql.use_ssl", false)
+        val allowPublicKeyRetrieval = cfg.getBoolean("database.mysql.allow_public_key_retrieval", true)
+        val jdbcUrl =
+            "jdbc:mysql://$host:$port/$database" +
+                "?useUnicode=true&characterEncoding=utf8" +
+                "&useSSL=$useSsl" +
+                "&allowPublicKeyRetrieval=$allowPublicKeyRetrieval" +
+                "&serverTimezone=UTC"
+
+        val hikariConfig = HikariConfig().apply {
+            this.jdbcUrl = jdbcUrl
+            this.username = username
+            this.password = password
+            poolName = "AINPC-MySQL"
+            maximumPoolSize = cfg.getInt("database.mysql.pool.maximum_pool_size", 10).coerceAtLeast(1)
+            minimumIdle = cfg.getInt("database.mysql.pool.minimum_idle", 1).coerceAtLeast(0)
+            connectionTimeout = cfg.getLong("database.mysql.pool.connection_timeout_ms", 30000L)
+            idleTimeout = cfg.getLong("database.mysql.pool.idle_timeout_ms", 600000L)
+            maxLifetime = cfg.getLong("database.mysql.pool.max_lifetime_ms", 1800000L)
+            addDataSourceProperty("cachePrepStmts", "true")
+            addDataSourceProperty("prepStmtCacheSize", "250")
+            addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
+        }
+        val hikari = HikariDataSource(hikariConfig)
+        dataSource = hikari
+        return hikari.connection
+    }
+
+    @Throws(SQLException::class)
+    private fun configureConnection() {
+        when (dialect) {
+            DatabaseDialect.SQLITE -> {
+                enableForeignKeys()
+                configureSqlitePragmas()
+            }
+            DatabaseDialect.MYSQL -> {
+                enableForeignKeys()
+                plugin?.logger?.warning(
+                    "MySQL/HikariCP este activat. Suportul este initial si necesita validare pe server real; " +
+                        "SQLite ramane backend-ul stabil implicit."
+                )
+            }
         }
     }
 
@@ -59,8 +137,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS npcs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uuid TEXT UNIQUE NOT NULL,
+                    id ${autoIncrementPrimaryKey()},
+                    uuid ${shortText()} UNIQUE NOT NULL,
                     name TEXT NOT NULL,
                     display_name TEXT,
                     world TEXT NOT NULL,
@@ -127,7 +205,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS npc_source_keys (
-                    source_key TEXT PRIMARY KEY,
+                    source_key ${shortText(255)} PRIMARY KEY,
                     npc_id INTEGER NOT NULL UNIQUE,
                     source TEXT NOT NULL DEFAULT '',
                     created_at INTEGER NOT NULL,
@@ -136,7 +214,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_npc_source_keys_npc_id
                 ON npc_source_keys(npc_id)
@@ -146,7 +225,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 """
                 CREATE TABLE IF NOT EXISTS npc_traits (
                     npc_id INTEGER NOT NULL,
-                    trait_id TEXT NOT NULL,
+                    trait_id ${shortText(128)} NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (npc_id, trait_id),
                     FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
@@ -156,9 +235,9 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS npc_memories (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id ${autoIncrementPrimaryKey()},
                     npc_id INTEGER NOT NULL,
-                    player_uuid TEXT NOT NULL,
+                    player_uuid ${shortText()} NOT NULL,
                     player_name TEXT NOT NULL,
                     memory_type TEXT NOT NULL,
                     content TEXT NOT NULL,
@@ -170,7 +249,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_memories_npc_player 
                 ON npc_memories(npc_id, player_uuid)
@@ -179,7 +259,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS npc_relationships (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id ${autoIncrementPrimaryKey()},
                     npc_id INTEGER NOT NULL,
                     player_uuid TEXT NOT NULL,
                     player_name TEXT NOT NULL,
@@ -198,7 +278,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS npc_family (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id ${autoIncrementPrimaryKey()},
                     npc_id INTEGER NOT NULL,
                     related_npc_id INTEGER,
                     related_name TEXT NOT NULL,
@@ -213,7 +293,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS dialog_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id ${autoIncrementPrimaryKey()},
                     npc_id INTEGER NOT NULL,
                     player_uuid TEXT NOT NULL,
                     player_message TEXT NOT NULL,
@@ -224,7 +304,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_dialog_npc_player 
                 ON dialog_history(npc_id, player_uuid, created_at DESC)
@@ -233,14 +314,14 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS player_quests (
-                    player_uuid TEXT NOT NULL,
-                    template_id TEXT NOT NULL,
-                    quest_code TEXT NOT NULL DEFAULT '',
-                    status TEXT NOT NULL,
+                    player_uuid ${shortText()} NOT NULL,
+                    template_id ${shortText()} NOT NULL,
+                    quest_code ${shortText(128)} NOT NULL DEFAULT '',
+                    status ${shortText(64)} NOT NULL,
                     started_at INTEGER,
                     completed_at INTEGER,
-                    current_phase TEXT NOT NULL DEFAULT '',
-                    current_stage_id TEXT NOT NULL DEFAULT '',
+                    current_phase ${shortText(128)} NOT NULL DEFAULT '',
+                    current_stage_id ${shortText(128)} NOT NULL DEFAULT '',
                     objective_progress TEXT NOT NULL DEFAULT '{}',
                     quest_variables TEXT NOT NULL DEFAULT '{}',
                     updated_at INTEGER NOT NULL,
@@ -261,13 +342,15 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                   AND TRIM(COALESCE(current_phase, '')) <> ''
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_player_quests_player_status
                 ON player_quests(player_uuid, status)
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_player_quests_player_tracked
                 ON player_quests(player_uuid, tracked)
@@ -276,15 +359,15 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS quest_anchor_bindings (
-                    player_uuid TEXT NOT NULL,
-                    template_id TEXT NOT NULL,
-                    objective_key TEXT NOT NULL,
-                    quest_code TEXT NOT NULL DEFAULT '',
-                    objective_type TEXT NOT NULL,
-                    reference TEXT NOT NULL DEFAULT '',
-                    anchor_type TEXT NOT NULL,
-                    anchor_id TEXT NOT NULL,
-                    anchor_label TEXT NOT NULL DEFAULT '',
+                    player_uuid ${shortText()} NOT NULL,
+                    template_id ${shortText()} NOT NULL,
+                    objective_key ${shortText()} NOT NULL,
+                    quest_code ${shortText(128)} NOT NULL DEFAULT '',
+                    objective_type ${shortText(128)} NOT NULL,
+                    reference ${shortText(255)} NOT NULL DEFAULT '',
+                    anchor_type ${shortText(128)} NOT NULL,
+                    anchor_id ${shortText(255)} NOT NULL,
+                    anchor_label ${shortText(255)} NOT NULL DEFAULT '',
                     created_at INTEGER NOT NULL,
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY (player_uuid, template_id, objective_key),
@@ -294,7 +377,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute(
+            executeSchemaSql(
+                stmt,
                 """
                 CREATE INDEX IF NOT EXISTS idx_quest_anchor_bindings_anchor
                 ON quest_anchor_bindings(anchor_type, anchor_id)
@@ -320,9 +404,9 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_home_place ON npc_world_bindings(home_place_id)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_work_place ON npc_world_bindings(work_place_id)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_social_place ON npc_world_bindings(social_place_id)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_home_place ON npc_world_bindings(home_place_id)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_work_place ON npc_world_bindings(work_place_id)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_world_bindings_social_place ON npc_world_bindings(social_place_id)")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS spawn_batches (
@@ -345,8 +429,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_spawn_batches_scope ON spawn_batches(scope_type, scope_id, updated_at DESC)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_spawn_batches_status ON spawn_batches(status, updated_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_spawn_batches_scope ON spawn_batches(scope_type, scope_id, updated_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_spawn_batches_status ON spawn_batches(status, updated_at DESC)")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS spawn_batch_steps (
@@ -367,8 +451,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 """
             )
             ensureColumnExists("spawn_batch_steps", "household_id", "TEXT NOT NULL DEFAULT ''")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_key ON spawn_batch_steps(step_key, updated_at DESC)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_household ON spawn_batch_steps(household_id, updated_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_key ON spawn_batch_steps(step_key, updated_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_spawn_batch_steps_household ON spawn_batch_steps(household_id, updated_at DESC)")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS households (
@@ -385,14 +469,19 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute(
-                """
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_households_home_place_unique
-                ON households(home_place_id)
-                WHERE home_place_id <> ''
-                """
-            )
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_households_family_id ON households(family_id)")
+            if (dialect == DatabaseDialect.SQLITE) {
+                executeSchemaSql(
+                    stmt,
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_households_home_place_unique
+                    ON households(home_place_id)
+                    WHERE home_place_id <> ''
+                    """
+                )
+            } else {
+                executeSchemaSql(stmt, "CREATE INDEX idx_households_home_place_unique ON households(home_place_id)")
+            }
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_households_family_id ON households(family_id)")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS household_residents (
@@ -419,9 +508,14 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_npc_unique ON household_residents(npc_id) WHERE npc_id > 0")
-            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_source_key_unique ON household_residents(source_key) WHERE source_key <> ''")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_household_residents_household ON household_residents(household_id, status)")
+            if (dialect == DatabaseDialect.SQLITE) {
+                executeSchemaSql(stmt, "CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_npc_unique ON household_residents(npc_id) WHERE npc_id > 0")
+                executeSchemaSql(stmt, "CREATE UNIQUE INDEX IF NOT EXISTS idx_household_residents_source_key_unique ON household_residents(source_key) WHERE source_key <> ''")
+            } else {
+                executeSchemaSql(stmt, "CREATE INDEX idx_household_residents_npc_unique ON household_residents(npc_id)")
+                executeSchemaSql(stmt, "CREATE INDEX idx_household_residents_source_key_unique ON household_residents(source_key)")
+            }
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_household_residents_household ON household_residents(household_id, status)")
             stmt.executeUpdate(
                 """
                 UPDATE spawn_batch_steps
@@ -468,11 +562,11 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_place_story_state_region ON place_story_state(region_id)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_place_story_state_region ON place_story_state(region_id)")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS story_events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id ${autoIncrementPrimaryKey()},
                     scope_type TEXT NOT NULL,
                     scope_id TEXT NOT NULL,
                     region_id TEXT NOT NULL DEFAULT '',
@@ -490,9 +584,9 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 )
                 """
             )
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_story_events_scope ON story_events(scope_type, scope_id, created_at DESC)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_story_events_region ON story_events(region_id, created_at DESC)")
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_story_events_place ON story_events(place_id, created_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_scope ON story_events(scope_type, scope_id, created_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_region ON story_events(region_id, created_at DESC)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_place ON story_events(place_id, created_at DESC)")
             stmt.executeUpdate(
                 """
                 INSERT OR IGNORE INTO npc_personality (npc_id)
@@ -520,6 +614,15 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
 
     @Throws(SQLException::class)
     private fun hasColumn(tableName: String, columnName: String): Boolean {
+        if (dialect == DatabaseDialect.MYSQL) {
+            connection!!.metaData.getColumns(connection!!.catalog, null, tableName, columnName).use { rs ->
+                if (rs.next()) return true
+            }
+            connection!!.metaData.getColumns(connection!!.catalog, null, tableName, columnName.uppercase()).use { rs ->
+                if (rs.next()) return true
+            }
+            return false
+        }
         connection!!.createStatement().use { stmt ->
             stmt.executeQuery("PRAGMA table_info($tableName)").use { rs ->
                 while (rs.next()) {
@@ -532,7 +635,12 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
 
     @Throws(SQLException::class)
     private fun enableForeignKeys() {
-        connection!!.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys = ON") }
+        connection!!.createStatement().use { stmt ->
+            when (dialect) {
+                DatabaseDialect.SQLITE -> stmt.execute("PRAGMA foreign_keys = ON")
+                DatabaseDialect.MYSQL -> stmt.execute("SET FOREIGN_KEY_CHECKS = 1")
+            }
+        }
     }
 
     @Throws(SQLException::class)
@@ -541,6 +649,31 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             stmt.execute("PRAGMA busy_timeout = 5000")
             stmt.execute("PRAGMA journal_mode = WAL")
             stmt.execute("PRAGMA synchronous = NORMAL")
+        }
+    }
+
+    private fun autoIncrementPrimaryKey(): String =
+        DatabaseDialectSql.autoIncrementPrimaryKey(dialect)
+
+    private fun shortText(length: Int = 191): String =
+        DatabaseDialectSql.shortText(dialect, length)
+
+    private fun longText(): String =
+        DatabaseDialectSql.longText(dialect)
+
+    private fun translateSqlForDialect(sql: String): String =
+        DatabaseDialectSql.translateDml(sql, dialect)
+
+    @Throws(SQLException::class)
+    private fun executeSchemaSql(statement: Statement, sql: String) {
+        val effectiveSql = DatabaseDialectSql.translateSchema(sql, dialect)
+        try {
+            statement.execute(effectiveSql)
+        } catch (e: SQLException) {
+            if (dialect == DatabaseDialect.MYSQL && e.errorCode == MYSQL_DUPLICATE_KEY_NAME) {
+                return
+            }
+            throw e
         }
     }
 
@@ -568,6 +701,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                     connection!!.close()
                     plugin?.logger?.info("Conexiunea la baza de date a fost inchisa.")
                 }
+                (dataSource as? HikariDataSource)?.close()
+                dataSource = null
             } finally {
                 statementLock.unlock()
             }
@@ -583,7 +718,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     open fun prepareStatement(sql: String): PreparedStatement {
         statementLock.lock()
         return try {
-            wrapStatement(getConnection()!!.prepareStatement(sql))
+            wrapStatement(getConnection()!!.prepareStatement(translateSqlForDialect(sql)))
         } catch (e: SQLException) {
             statementLock.unlock()
             throw e
@@ -594,7 +729,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     open fun prepareStatement(sql: String, autoGeneratedKeys: Int): PreparedStatement {
         statementLock.lock()
         return try {
-            wrapStatement(getConnection()!!.prepareStatement(sql, autoGeneratedKeys))
+            wrapStatement(getConnection()!!.prepareStatement(translateSqlForDialect(sql), autoGeneratedKeys))
         } catch (e: SQLException) {
             statementLock.unlock()
             throw e
@@ -605,7 +740,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     fun executeUpdate(sql: String) {
         statementLock.lock()
         try {
-            getConnection()!!.createStatement().use { stmt -> stmt.executeUpdate(sql) }
+            getConnection()!!.createStatement().use { stmt -> stmt.executeUpdate(translateSqlForDialect(sql)) }
         } finally {
             statementLock.unlock()
         }

@@ -71,7 +71,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
 
         try {
             if (shouldInstallManagedPack(addonConfig)) {
-                syncManagedPack()
+                syncManagedPacks()
             } else {
                 removeManagedPack()
                 logger.info("Pack-ul medieval nu este instalat prin config-ul addonului.")
@@ -132,23 +132,24 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
     }
 
     @Throws(IOException::class)
-    private fun syncManagedPack() {
+    private fun syncManagedPacks() {
         val currentPlatform = platform ?: return
         val packDirectory = currentPlatform.packDirectory
         Files.createDirectories(packDirectory)
 
-        val legacyPack = packDirectory.resolve(PACK_FILE_NAME)
-        if (Files.exists(legacyPack)) {
-            removeManagedPack()
-            logger.info("Folosesc pack-ul medieval existent din folderul principal packs/.")
-            return
-        }
-
         val addonDirectory = managedPackDirectory
         Files.createDirectories(addonDirectory)
 
-        val managedPack = addonDirectory.resolve(PACK_FILE_NAME)
-        copyResource(PACK_RESOURCE_PATH, managedPack, StandardCopyOption.REPLACE_EXISTING)
+        for (pack in MANAGED_PACKS) {
+            val legacyPack = packDirectory.resolve(pack.fileName)
+            val managedPack = addonDirectory.resolve(pack.fileName)
+            if (Files.exists(legacyPack)) {
+                Files.deleteIfExists(managedPack)
+                logger.info("Folosesc pack-ul existent din folderul principal packs/: ${pack.fileName}")
+                continue
+            }
+            copyResource(pack.resourcePath, managedPack, StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     @Throws(IOException::class)
@@ -192,11 +193,16 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
     companion object {
         private const val CORE_PLUGIN_NAME = "AINPCPlugin"
         private const val ADDON_ID = "ainpc-scenario-medieval"
-        private const val PACK_FILE_NAME = "medieval_quest.yml"
-        private const val PACK_RESOURCE_PATH = "packs/medieval_quest.yml"
         private const val CONFIG_TEMPLATE_FILE_NAME = "config-template.yml"
         private const val CONFIG_FILE_NAME = "config.yml"
         private const val CONFIG_RESOURCE_PATH = CONFIG_TEMPLATE_FILE_NAME
         private const val MANAGED_PACK_FOLDER = "addons/$ADDON_ID"
+        private val MANAGED_PACKS = listOf(
+            ManagedPack("medieval.yml", "packs/medieval.yml"),
+            ManagedPack("social.yml", "packs/social.yml"),
+            ManagedPack("medieval_quest.yml", "packs/medieval_quest.yml"),
+        )
     }
+
+    private data class ManagedPack(val fileName: String, val resourcePath: String)
 }

@@ -27,7 +27,7 @@ class AINPCTabCompleterTest {
     } as CommandSender
 
     private fun tab(completer: AINPCTabCompleter, command: String, vararg args: String): List<String> {
-        return completer.onTabComplete(sender, TestCommand(command), command, args.toList().toTypedArray()) ?: emptyList()
+        return completer.onTabComplete(sender, TestCommand(command), command, args.toList().toTypedArray())
     }
 
     @Test
@@ -80,6 +80,29 @@ class AINPCTabCompleterTest {
     }
 
     @Test
+    fun completesNpcDemoInspectionAndRepairCommands() {
+        val completer = AINPCTabCompleter(null)
+
+        assertTrue(tab(completer, "ainpc", "").contains("list"))
+        assertTrue(tab(completer, "ainpc", "").contains("info"))
+        assertTrue(tab(completer, "ainpc", "").contains("duplicates"))
+        assertTrue(tab(completer, "ainpc", "info", "").contains("nearest"))
+        assertTrue(tab(completer, "ainpc", "audit", "").contains("npc"))
+        assertTrue(tab(completer, "ainpc", "repair", "").contains("duplicates"))
+        assertTrue(tab(completer, "ainpc", "repair", "duplicates", "").contains("dryrun"))
+        assertTrue(tab(completer, "ainpc", "debugdump", "").contains("npc"))
+    }
+
+    @Test
+    fun completesRoutineStatusNearestForDemoFlow() {
+        val completer = AINPCTabCompleter(null)
+
+        assertTrue(tab(completer, "ainpc", "routine", "").contains("status"))
+        assertTrue(tab(completer, "ainpc", "routine", "").contains("tick"))
+        assertTrue(tab(completer, "ainpc", "routine", "status", "").contains("nearest"))
+    }
+
+    @Test
     fun completesPatchPlannerActionsAndFallbackRegionHint() {
         val completer = AINPCTabCompleter(null)
         val a = tab(completer, "ainpc", "patch", "")
@@ -88,8 +111,18 @@ class AINPCTabCompleterTest {
         assertTrue(a.contains("validate"))
         assertTrue(tab(completer, "ainpc", "patch", "plan", "").contains("<regionId>"))
         val p = tab(completer, "ainpc", "patch", "plan", "demo_sat", "8", "")
-        assertTrue(p.contains("blacksmith"))
-        assertTrue(p.contains("blacksmith,farmer"))
+        assertTrue(p.contains("worker"))
+        assertTrue(p.contains("worker,caretaker"))
+        assertFalse(p.contains("blacksmith"))
+    }
+
+    @Test
+    fun completesCreateWithNeutralOccupationFallbacks() {
+        val completer = AINPCTabCompleter(null)
+        val occupations = tab(completer, "ainpc", "create", "Ana", "")
+        assertTrue(occupations.contains("worker"))
+        assertTrue(occupations.contains("caretaker"))
+        assertFalse(occupations.contains("fierar"))
     }
 
     @Test
@@ -147,6 +180,83 @@ class AINPCTabCompleterTest {
         assertTrue(c.contains("place"))
         assertTrue(c.contains("resident"))
         assertTrue(c.contains("list"))
+    }
+
+    @Test
+    fun hidesGenerationWorldActionsWhenGenerationFeatureIsDisabled() {
+        val completer = AINPCTabCompleter(null)
+
+        assertFalse(tab(completer, "ainpc", "").contains("create"))
+
+        val household = tab(completer, "ainpc", "world", "household", "")
+        assertTrue(household.contains("plan"))
+        assertFalse(household.contains("spawn"))
+
+        val settlement = tab(completer, "ainpc", "world", "settlement", "")
+        assertTrue(settlement.contains("plan"))
+        assertFalse(settlement.contains("spawn"))
+
+        assertFalse(tab(completer, "ainpc", "world", "demo", "").contains("create"))
+    }
+
+    @Test
+    fun completesDemoReadinessCommand() {
+        val completer = AINPCTabCompleter(null)
+        assertTrue(tab(completer, "ainpc", "").contains("demo"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("status"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("check"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("readiness"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("next"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("blockers"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("todo"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("definition"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("criteria"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("meaning"))
+        assertFalse(tab(completer, "ainpc", "demo", "definition", "").contains("<regionId>"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("script"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("guide"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("flow"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("phases"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("checklist"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("evidence"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("runbook"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("smoke"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("summary"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("commands"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("cmds"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("copy"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("restart"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("reloadcheck"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("persistence"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("experimental"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("exp"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("maxpack"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("experimental5"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("exp5"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("fivepack"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("experimental25"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("exp25"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("task25"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("experimental25deep"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("exp25deep"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("deep25"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("experimental25ops"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("exp25ops"))
+        assertTrue(tab(completer, "ainpc", "demo", "").contains("ops25"))
+        assertTrue(tab(completer, "ainpc", "demo", "script", "").contains("<regionId>"))
+        assertTrue(tab(completer, "ainpc", "demo", "script", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "phases", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "evidence", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "runbook", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "smoke", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "summary", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "commands", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "experimental", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "experimental5", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "experimental25", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "experimental25deep", "demo_sat", "").contains("<player>"))
+        assertTrue(tab(completer, "ainpc", "demo", "experimental25ops", "demo_sat", "").contains("<player>"))
+        assertFalse(tab(completer, "ainpc", "demo", "restart", "demo_sat", "").contains("<player>"))
     }
 
     @Test

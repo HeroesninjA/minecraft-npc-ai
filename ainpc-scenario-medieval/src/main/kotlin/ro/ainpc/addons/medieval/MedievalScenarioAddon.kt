@@ -13,10 +13,10 @@ class MedievalScenarioAddon(version: String) : AINPCAddon {
         "AINPC Scenario Medieval",
         version,
         "Addon plugin separat care livreaza pack-ul medieval_quest pentru core.",
-        AddonType.FEATURE,
-        false,
+        AddonType.SCENARIO,
+        true,
         EnumSet.allOf(RuntimeMode::class.java),
-        listOf("scenario-pack", "pack-installer", "addon-config-template"),
+        listOf("scenarios", "scenario-pack", "pack-installer", "addon-config-template"),
         listOf("ainpc-core")
     )
 

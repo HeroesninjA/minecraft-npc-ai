@@ -53,26 +53,28 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         npc.lookAt(player)
         npc.updateContext()
         npc.context.setInteractingPlayer(player)
-        plugin.scenarioEngine.recordNpcConversation(player, npc)
+        if (questFeatureEnabled()) {
+            plugin.scenarioEngine.recordNpcConversation(player, npc)
 
-        val questInteraction: ScenarioEngine.QuestInteractionResult = plugin.scenarioEngine.handleQuestInteraction(player, npc)
-        if (questInteraction.isHandled) {
-            if (questInteraction.shouldOpenConversation()) {
-                openOrRefreshConversation(player, npc)
-            }
+            val questInteraction: ScenarioEngine.QuestInteractionResult = plugin.scenarioEngine.handleQuestInteraction(player, npc)
+            if (questInteraction.isHandled) {
+                if (questInteraction.shouldOpenConversation()) {
+                    openOrRefreshConversation(player, npc)
+                }
 
-            for (npcMessage in questInteraction.npcMessages) {
-                messages().sendNPCMessage(player, npc.name, npcMessage)
-            }
-            for (systemMessage in questInteraction.systemMessages) {
-                messages().send(player, systemMessage)
-            }
-            if (questInteraction.shouldOpenConversation()) {
-                messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.name + ". Scrie 'pa' pentru a termina conversatia.)")
-            }
+                for (npcMessage in questInteraction.npcMessages) {
+                    messages().sendNPCMessage(player, npc.name, npcMessage)
+                }
+                for (systemMessage in questInteraction.systemMessages) {
+                    messages().send(player, systemMessage)
+                }
+                if (questInteraction.shouldOpenConversation()) {
+                    messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.name + ". Scrie 'pa' pentru a termina conversatia.)")
+                }
 
-            plugin.emotionManager.processEvent(npc, "player_approach", 1.0)
-            return
+                plugin.emotionManager.processEvent(npc, "player_approach", 1.0)
+                return
+            }
         }
 
         // Activeaza conversatia
@@ -150,4 +152,6 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             "*oftez* Ce vrei de la mine?"
         }
     }
+
+    private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)
 }

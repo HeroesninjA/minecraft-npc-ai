@@ -1,6 +1,6 @@
 # Kotlin Style Guide
 
-Actualizat: 2026-05-16
+Actualizat: 2026-05-25
 
 ## Scop
 
@@ -10,6 +10,8 @@ Se aplica dupa ce Kotlin este activat in Gradle si inainte ca fisierele `.kt` sa
 
 ## Principii
 
+- Tot codul nou de productie se scrie in Kotlin. Nu se adauga fisiere Java noi.
+- Daca un entry point Java existent trebuie atins pentru cablaj, schimbarea Java trebuie sa ramana minima, iar logica noua sta in Kotlin.
 - Kotlin trebuie sa faca intentia mai clara, nu doar codul mai scurt.
 - Codul critic Paper, DB si API public ramane explicit.
 - Java si Kotlin trebuie sa poata coexista fara adaptoare inutile.
@@ -160,7 +162,7 @@ Pentru API public sau cod consumat din Java:
 - prefera clasa sau `object`
 - daca folosesti top-level, seteaza nume JVM:
 
-```kotlin
+```text
 @file:JvmName("MappingIds")
 
 package ro.ainpc.world.mapping
