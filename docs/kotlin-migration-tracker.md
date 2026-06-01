@@ -1,6 +1,6 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-05-24
+Actualizat: 2026-06-01
 
 ## Scop
 
@@ -4593,3 +4593,367 @@ Inventar dupa slice:
 
 Rollback:
 - readauga helper-ele audit/story mutate in `AINPCCommand.java` si sterge implementarea lor din `AINPCCommandText.kt`
+
+### KOT-180
+
+Data: 2026-06-01
+ID: KOT-180
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie
+Risc: 2
+
+Fisiere adaugate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/ManagedVillagerAuditIssue.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/DuplicateRepairResult.kt`
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest` (PASS)
+
+Observatii:
+- Record-urile interne `ManagedVillagerAuditIssue` si `DuplicateRepairResult` au fost mutate din `NPCManager.java` in Kotlin top-level.
+- Accessorii Java-style (`error()`, `message()`, `applied()`, `actions()` etc.) au fost pastrati pentru call-site-urile Java existente.
+- Factory-urile `ManagedVillagerAuditIssue.error(...)` si `warning(...)` raman disponibile din Java prin `@JvmStatic`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~64.7% Kotlin dupa linii)
+
+Rollback:
+- readauga cele doua record-uri la finalul `NPCManager.java` si sterge fisierele Kotlin nou create
+
+### KOT-181
+
+Data: 2026-06-01
+ID: KOT-181
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.CoreNeutralityStaticAuditTest --tests ro.ainpc.StorageDialectStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele pure `parseIntegerStrict`, `parseDoubleStrict`, `overlaps`, `validBounds`, `matchesAnyToken` si `requiresWorkAnchor` au fost mutate in Kotlin.
+- Call-site-urile Java folosesc in continuare aceleasi nume prin static import-ul existent din `AINPCCommandText`.
+- Varargs si return types nullable raman compatibile cu Java (`Integer`/`Double` boxed).
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~64.8% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-182
+
+Data: 2026-06-01
+ID: KOT-182
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest` (PASS)
+
+Observatii:
+- Helper-ele de afisare `formatLocation` si `formatDistance` au fost mutate in Kotlin.
+- Comportamentul textelor existente a fost pastrat: `necunoscuta`, `alta lume`, respectiv formatul cu o zecimala.
+- Call-site-urile Java continua sa foloseasca aceleasi nume prin static import-ul `AINPCCommandText`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~64.8% Kotlin dupa linii)
+
+Rollback:
+- readauga `formatLocation` si `formatDistance` in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-183
+
+Data: 2026-06-01
+ID: KOT-183
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.world.VillagePatchPlannerTest` (PASS)
+
+Observatii:
+- Helper-ele pure `formatMappingPoint`, `joinArgs`, `parsePatchProfessionList` si `formatListOrNone` au fost mutate in Kotlin.
+- `joinArgs` pastreaza comportamentul de concatenare cu spatiu din indexul normalizat la minim 0.
+- `parsePatchProfessionList` pastreaza tratarea valorilor goale si `-` ca lista vida.
+- Rularea extinsa care a inclus `MappingDraftFactoryTest` a esuat in `createsAndAppliesPlaceDraftInsideSelectedRegion` pe assert-ul pentru tag-ul `blacksmith`; testul nu trece prin helper-ele mutate in acest slice.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~64.9% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-184
+
+Data: 2026-06-01
+ID: KOT-184
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.world.VillagePatchPlannerTest` (PASS)
+
+Observatii:
+- Formatter-ele pure `formatVillageGap`, `formatPatchCandidate` si `formatPatchPlan` au fost mutate in Kotlin.
+- Method references Java `this::...` au fost inlocuite cu lambda-uri simple catre helper-ele top-level.
+- Formatul textelor pentru patch gap/candidate/plan a ramas echivalent cu implementarea Java.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~64.9% Kotlin dupa linii)
+
+Rollback:
+- readauga formatter-ele mutate in `AINPCCommand.java` si revino lambda-urile la `this::...`
+
+### KOT-185
+
+Data: 2026-06-01
+ID: KOT-185
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.story.StoryStateServiceTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele `formatStoryEvent`, `formatStoryMetadata`, `inferRegionIdFromPlaceId`, `formatStoryTime`, `auditNpcLabel` si `sanitizeForChat` au fost mutate in Kotlin.
+- `formatStoryTime` pastreaza pattern-ul `yyyy-MM-dd HH:mm:ss` si `ZoneId.systemDefault()`.
+- Sanitizarea pentru chat pastreaza eliminarea `&` si inlocuirea newline/carriage return cu spatii.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.1% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-186
+
+Data: 2026-06-01
+ID: KOT-186
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele `formatWandSelectionPart`, `formatMappingDraftKind`, `isAuditOptionSupported`, `isStrictQuestAuditOption` si `auditModeLabel` au fost mutate in Kotlin.
+- Comportamentul pentru `wand clear punct` ramane mapat la `point`.
+- Label-ul de audit pastreaza formatul `mode option` cand optiunea este prezenta.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.1% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-187
+
+Data: 2026-06-01
+ID: KOT-187
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.progression.ProgressionSelectorTest --tests ro.ainpc.progression.ProgressionDefinitionTest` (PASS)
+
+Observatii:
+- Helper-ele quest/progression `progressionAliasLogFilter`, `isHelpMode`, `isQuestLogFilter`, `normalizeQuestLogFilter`, `isQuestAcceptMode`, `isQuestDeclineMode`, `commandLabelForKind` si `normalizeProgressionKind` au fost mutate in Kotlin.
+- Sinonimele romanesti si englezesti pentru filtrele quest log au fost pastrate.
+- Call-site-urile Java continua sa foloseasca aceleasi nume prin static import-ul `AINPCCommandText`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.3% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-188
+
+Data: 2026-06-01
+ID: KOT-188
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.commands.AINPCTabCompleterTest --tests ro.ainpc.world.NpcWorldBindingServiceTest --tests ro.ainpc.StorageDialectStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele `formatBatchNpcIdList`, `sameNearbyLocation`, `formatNpcIdentities`, `formatNpcIdentity`, `nodeLabel`, `npcBindingId`, `distanceSquaredToPlaceCenter`, `distanceSquared`, `placeCenterX`, `placeAnchorY` si `placeCenterZ` au fost mutate in Kotlin.
+- Formatul listelor de NPC-uri din batch pastreaza limita de 3 ID-uri si sufixul `,+N`.
+- Calculele pentru centrul/ancora unui place si distanta pana la node raman echivalente cu implementarea Java.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.4% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si sterge implementarile lor din `AINPCCommandText.kt`
+
+### KOT-189
+
+Data: 2026-06-01
+ID: KOT-189
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.engine.QuestScenarioContractTest --tests ro.ainpc.world.QuestAnchorResolverTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele quest/audit `questEntryStage`, `normalizeQuestStageCompletionMode`, `isSupportedQuestStageCompletionMode`, `normalizeQuestStageReference`, `semanticAnchorTypeForObjective`, `questEntryId`, `isLegacyObjectiveProgressKey`, `isSupportedQuestObjectiveType`, `normalizeQuestObjectiveType`, `normalizeQuestRewardType`, `formatObjectiveCandidates` si `lastSelectorSegment` au fost mutate in Kotlin.
+- Method references ramase catre `questEntryStage` au fost convertite in lambda-uri catre helperul top-level.
+- Normalizarile pentru tipuri de obiective/recompense si referinte stage pastreaza sinonimele existente.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.7% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si revino lambda-urile la `this::questEntryStage`
+
+### KOT-190
+
+Data: 2026-06-01
+ID: KOT-190
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.world.NpcWorldBindingServiceTest --tests ro.ainpc.world.HouseAllocationPlannerTest --tests ro.ainpc.StorageDialectStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele de clasificare si geometrie pentru mapping/world `isWorkplace`, `isSocialPlace`, `hasPendingOwner`, `placeInsideRegion`, `pointInsidePlace`, `pointInsideRegion`, `placesIntersect`, `isHousePlace`, `parseResidents`, `parsePositiveIntMetadata`, `hasAnySemanticNode` si `nodeMatchesAny` au fost mutate in Kotlin.
+- Method references din stream-uri pentru house/workplace/social place au fost convertite in lambda-uri catre helper-ele top-level Kotlin.
+- Logica pentru intersectii, includere in regiuni si metadate de rezidenti pastreaza comportamentul Java existent.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~65.9% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si revino lambda-urile la method references locale
+
+### KOT-191
+
+Data: 2026-06-01
+ID: KOT-191
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.world.QuestAnchorResolverTest --tests ro.ainpc.world.NpcWorldBindingServiceTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele `formatQuestAnchorBinding`, `generatedQuestObjectiveKey`, `displayQuestObjectiveKey`, `normalizeQuestObjectiveLookupKey`, `parseNpcIdSelector`, `bindingReferencesAnyPlace`, `sameMappingBinding`, `formatNpcWorldBindingPlaces`, `metadataListContains` si `formatOwnedLocation` au fost mutate in Kotlin.
+- Method references catre `displayQuestObjectiveKey` au fost convertite in lambda-uri catre helperul top-level.
+- Normalizarea cheilor de objective lookup, formatarea quest anchor bindings si comparatia binding-urilor NPC/world pastreaza comportamentul Java existent.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~66.0% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si revino lambda-urile la `this::displayQuestObjectiveKey`

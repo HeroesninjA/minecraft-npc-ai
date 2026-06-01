@@ -3744,33 +3744,4 @@ public class NPCManager {
 
         return nearby;
     }
-
-    public record ManagedVillagerAuditIssue(boolean error, String message) {
-        public static ManagedVillagerAuditIssue error(String message) {
-            return new ManagedVillagerAuditIssue(true, message);
-        }
-
-        public static ManagedVillagerAuditIssue warning(String message) {
-            return new ManagedVillagerAuditIssue(false, message);
-        }
-
-        public ManagedVillagerAuditIssue {
-            message = message == null ? "" : message;
-        }
-    }
-
-    public record DuplicateRepairResult(
-        boolean applied,
-        int duplicateDbRows,
-        int deletedDbRows,
-        int duplicateEntities,
-        int removedEntities,
-        int reassociatedEntities,
-        int sourceKeyIndexIssues,
-        int reindexedSourceKeys,
-        List<String> actions,
-        List<String> warnings,
-        List<String> errors
-    ) {
-    }
 }

@@ -78,10 +78,6 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -113,8 +109,6 @@ public class AINPCCommand implements CommandExecutor {
     private static final int QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT = 500;
     private static final int PROGRESSION_STORED_DEFAULT_LIMIT = 12;
     private static final int PROGRESSION_STORED_MAX_LIMIT = 50;
-    private static final DateTimeFormatter STORY_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final AINPCPlugin plugin;
 
     public AINPCCommand(AINPCPlugin plugin) {
@@ -716,20 +710,6 @@ public class AINPCCommand implements CommandExecutor {
         return routedArgs;
     }
 
-    private String progressionAliasLogFilter(String filter, String kind) {
-        String normalized = normalizeQuestLogFilter(filter);
-        return switch (normalized) {
-            case "current" -> kind + "_current";
-            case "active" -> kind + "_active";
-            case "offered" -> kind + "_offered";
-            case "tracked" -> kind + "_tracked";
-            case "completed" -> kind + "_completed";
-            case "failed" -> kind + "_failed";
-            case "archived" -> kind + "_archived";
-            default -> kind;
-        };
-    }
-
     private String progressionAliasSelector(String selector, String kind) {
         if (selector == null || selector.isBlank()
             || selector.contains(":")
@@ -740,18 +720,6 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         return plugin.getProgressionService().kindSelector(selector, kind);
-    }
-
-    private boolean isHelpMode(String value) {
-        if (value == null) {
-            return false;
-        }
-
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        return "help".equals(normalized)
-            || "usage".equals(normalized)
-            || "ajutor".equals(normalized)
-            || "?".equals(normalized);
     }
 
     private boolean handleQuest(CommandSender sender, String[] args) {
@@ -868,77 +836,6 @@ public class AINPCCommand implements CommandExecutor {
 
         Player targetPlayer = resolveQuestTargetPlayer(sender, args, playerArgIndex, usage);
         return targetPlayer != null ? new QuestLogRequest(targetPlayer, filter) : null;
-    }
-
-    private boolean isQuestLogFilter(String value) {
-        return !normalizeQuestLogFilter(value).isBlank();
-    }
-
-    private String normalizeQuestLogFilter(String value) {
-        String normalized = value == null ? "" : value.trim().toLowerCase();
-        return switch (normalized) {
-            case "all", "toate" -> "all";
-            case "current", "curent", "curente" -> "current";
-            case "active", "activ", "activeaza" -> "active";
-            case "offered", "oferit", "oferite" -> "offered";
-            case "tracked", "urmarit" -> "tracked";
-            case "quest", "questuri" -> "quest";
-            case "contract", "contracts", "contracte" -> "contract";
-            case "duty", "duties", "sarcina", "sarcini" -> "duty";
-            case "bounty", "bounties", "recompensa", "recompense" -> "bounty";
-            case "event", "events", "eveniment", "evenimente" -> "event";
-            case "tutorial", "tutorials", "onboarding", "indrumare" -> "tutorial";
-            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> "ritual";
-            case "contract_current", "contract_curent", "contracte_curente" -> "contract_current";
-            case "contract_active", "contract_activ", "contracte_active" -> "contract_active";
-            case "contract_offered", "contract_oferit", "contracte_oferite" -> "contract_offered";
-            case "contract_tracked", "contract_urmarit", "contracte_urmarite" -> "contract_tracked";
-            case "contract_completed", "contract_completat", "contracte_completate" -> "contract_completed";
-            case "contract_failed", "contract_esuat", "contracte_esuate" -> "contract_failed";
-            case "contract_archived", "contract_arhivat", "contracte_arhivate" -> "contract_archived";
-            case "duty_current", "duty_curent", "sarcini_curente" -> "duty_current";
-            case "duty_active", "duty_activ", "sarcini_active" -> "duty_active";
-            case "duty_offered", "duty_oferit", "sarcini_oferite" -> "duty_offered";
-            case "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> "duty_tracked";
-            case "duty_completed", "duty_completat", "sarcini_completate" -> "duty_completed";
-            case "duty_failed", "duty_esuat", "sarcini_esuate" -> "duty_failed";
-            case "duty_archived", "duty_arhivat", "sarcini_arhivate" -> "duty_archived";
-            case "bounty_current", "bounty_curent", "recompense_curente" -> "bounty_current";
-            case "bounty_active", "bounty_activ", "recompense_active" -> "bounty_active";
-            case "bounty_offered", "bounty_oferit", "recompense_oferite" -> "bounty_offered";
-            case "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> "bounty_tracked";
-            case "bounty_completed", "bounty_completat", "recompense_completate" -> "bounty_completed";
-            case "bounty_failed", "bounty_esuat", "recompense_esuate" -> "bounty_failed";
-            case "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> "bounty_archived";
-            case "event_current", "event_curent", "evenimente_curente" -> "event_current";
-            case "event_active", "event_activ", "evenimente_active" -> "event_active";
-            case "event_offered", "event_oferit", "evenimente_oferite" -> "event_offered";
-            case "event_tracked", "event_urmarit", "evenimente_urmarite" -> "event_tracked";
-            case "event_completed", "event_completat", "evenimente_completate" -> "event_completed";
-            case "event_failed", "event_esuat", "evenimente_esuate" -> "event_failed";
-            case "event_archived", "event_arhivat", "evenimente_arhivate" -> "event_archived";
-            case "tutorial_current", "tutorial_curent", "tutoriale_curente" -> "tutorial_current";
-            case "tutorial_active", "tutorial_activ", "tutoriale_active" -> "tutorial_active";
-            case "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> "tutorial_offered";
-            case "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> "tutorial_tracked";
-            case "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> "tutorial_completed";
-            case "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> "tutorial_failed";
-            case "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> "tutorial_archived";
-            case "ritual_current", "ritual_curent", "ritualuri_curente" -> "ritual_current";
-            case "ritual_active", "ritual_activ", "ritualuri_active" -> "ritual_active";
-            case "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> "ritual_offered";
-            case "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> "ritual_tracked";
-            case "ritual_completed", "ritual_completat", "ritualuri_completate" -> "ritual_completed";
-            case "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> "ritual_failed";
-            case "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> "ritual_archived";
-            case "main", "principal" -> "main";
-            case "side", "secundar", "secundare" -> "side";
-            case "repeatable", "repetabil", "repetabile" -> "repeatable";
-            case "completed", "complete", "completat", "finalizat", "finalizate" -> "completed";
-            case "failed", "esuat", "abandonat", "abandonate" -> "failed";
-            case "archived", "archive", "arhivat", "arhivate" -> "archived";
-            default -> "";
-        };
     }
 
     private boolean handleQuestTrack(CommandSender sender, String[] args) {
@@ -1723,15 +1620,6 @@ public class AINPCCommand implements CommandExecutor {
         );
     }
 
-    private String formatQuestAnchorBinding(QuestAnchorBindingRow row) {
-        return row.playerUuid() + " | " + row.templateId()
-            + " | " + row.objectiveKey()
-            + " | " + row.objectiveType()
-            + " -> " + row.anchorType() + ":" + row.anchorId()
-            + " (" + formatOptional(row.anchorLabel()) + ")"
-            + " | status=" + formatOptional(row.status());
-    }
-
     private AINPC resolveQuestNpcSelector(CommandSender sender, String npcSelector, Player targetPlayer, String action) {
         return resolveQuestNpcSelector(sender, npcSelector, targetPlayer, action, "");
     }
@@ -1830,39 +1718,6 @@ public class AINPCCommand implements CommandExecutor {
             "&aQuest-ul lui &e" + npc.getName() + " &aa fost declansat pentru &f" + targetPlayer.getName() + "&a."
         );
         return true;
-    }
-
-    private boolean isQuestAcceptMode(String mode) {
-        String normalized = mode == null ? "" : mode.toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "accept", "yes", "y", "da", "ok", "confirm" -> true;
-            default -> false;
-        };
-    }
-
-    private boolean isQuestDeclineMode(String mode) {
-        String normalized = mode == null ? "" : mode.toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "decline", "deny", "reject", "no", "n", "nu", "refuz" -> true;
-            default -> false;
-        };
-    }
-
-    private String commandLabelForKind(String progressionKind) {
-        String normalized = normalizeProgressionKind(progressionKind);
-        return switch (normalized) {
-            case "contract" -> "contract";
-            case "duty" -> "duty";
-            case "bounty" -> "bounty";
-            case "event" -> "event";
-            case "tutorial" -> "tutorial";
-            case "ritual" -> "ritual";
-            default -> "quest";
-        };
-    }
-
-    private String normalizeProgressionKind(String progressionKind) {
-        return progressionKind == null ? "" : progressionKind.trim().toLowerCase(Locale.ROOT);
     }
 
     private Player resolveQuestTargetPlayer(CommandSender sender, String[] args, int playerArgIndex, String usage) {
@@ -2380,51 +2235,6 @@ public class AINPCCommand implements CommandExecutor {
             + " &7source=&f" + formatOptional(state.source()));
     }
 
-    private String formatStoryEvent(StoryEvent event) {
-        String eventKey = event.eventKey().isBlank() ? "<no-key>" : event.eventKey();
-        String title = event.title().isBlank() ? "" : " - " + event.title();
-        String actor = event.actorType().isBlank() && event.actorId().isBlank()
-            ? ""
-            : " actor=" + formatOptional(event.actorType()) + ":" + formatOptional(event.actorId());
-        return "#" + event.id()
-            + " " + formatStoryTime(event.createdAt())
-            + " " + event.scopeType() + ":" + event.scopeId()
-            + " " + event.eventType() + "/" + eventKey
-            + title
-            + actor;
-    }
-
-    private String formatStoryMetadata(Map<String, String> metadata) {
-        if (metadata == null || metadata.isEmpty()) {
-            return "<gol>";
-        }
-
-        Map<String, String> storyMetadata = new HashMap<>();
-        for (Map.Entry<String, String> entry : metadata.entrySet()) {
-            String key = entry.getKey() != null ? entry.getKey().toLowerCase() : "";
-            if (key.contains("story") || key.contains("event") || key.contains("state")
-                || key.contains("tension") || key.contains("danger") || key.contains("conflict")) {
-                storyMetadata.put(entry.getKey(), entry.getValue());
-            }
-        }
-        return formatMap(storyMetadata);
-    }
-
-    private String inferRegionIdFromPlaceId(String placeId) {
-        if (placeId == null || placeId.isBlank() || !placeId.contains(":")) {
-            return "";
-        }
-        return placeId.substring(0, placeId.indexOf(':'));
-    }
-
-    private String formatStoryTime(long epochMillis) {
-        if (epochMillis <= 0L) {
-            return "<necunoscut>";
-        }
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault())
-            .format(STORY_TIME_FORMAT);
-    }
-
     private void sendStoryUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
         plugin.getMessageUtils().send(sender, "&e/ainpc story context [jucator] [numeNpc|nearest]");
@@ -2638,16 +2448,6 @@ public class AINPCCommand implements CommandExecutor {
             case "pos2" -> service.resetPos2(player);
             case "point", "punct" -> service.resetPoint(player);
             default -> null;
-        };
-    }
-
-    private String formatWandSelectionPart(String rawPart) {
-        String part = rawPart.toLowerCase(Locale.ROOT);
-        return switch (part) {
-            case "pos1" -> "pos1";
-            case "pos2" -> "pos2";
-            case "punct" -> "point";
-            default -> "point";
         };
     }
 
@@ -2916,7 +2716,7 @@ public class AINPCCommand implements CommandExecutor {
         if (objective == null) {
             List<String> candidates = objectives.values().stream()
                 .distinct()
-                .map(this::displayQuestObjectiveKey)
+                .map(objectiveCandidate -> displayQuestObjectiveKey(objectiveCandidate))
                 .filter(value -> !value.isBlank())
                 .distinct()
                 .limit(8)
@@ -2988,36 +2788,6 @@ public class AINPCCommand implements CommandExecutor {
         if (!normalized.isBlank()) {
             lookup.putIfAbsent(normalized, objective);
         }
-    }
-
-    private String generatedQuestObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective, int index) {
-        String entryId = objective.getEntryId();
-        if (entryId != null && !entryId.isBlank()) {
-            return entryId;
-        }
-        String type = normalizeQuestStageReference(firstNonBlank(objective.getType(), "objective"));
-        String itemId = normalizeQuestStageReference(firstNonBlank(objective.getItemId(), "entry"));
-        return type + ":" + itemId + ":" + index;
-    }
-
-    private String displayQuestObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective) {
-        String entryId = objective.getEntryId();
-        if (entryId != null && !entryId.isBlank()) {
-            return entryId;
-        }
-        return questEntryId(objective);
-    }
-
-    private String normalizeQuestObjectiveLookupKey(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        return value.trim()
-            .toLowerCase(Locale.ROOT)
-            .replace("minecraft:", "")
-            .replaceAll("[^\\p{L}\\p{Nd}:]+", "_")
-            .replaceAll("^_+|_+$", "")
-            .replaceAll("_+", "_");
     }
 
     private void recordConfirmedMappingDraft(CommandSender sender,
@@ -3143,21 +2913,6 @@ public class AINPCCommand implements CommandExecutor {
         );
     }
 
-    private String formatMappingPoint(MappingPoint point) {
-        return point == null ? "<nesetat>" : point.format();
-    }
-
-    private String joinArgs(String[] args, int startIndex) {
-        StringBuilder builder = new StringBuilder();
-        for (int index = Math.max(0, startIndex); index < args.length; index++) {
-            if (builder.length() > 0) {
-                builder.append(' ');
-            }
-            builder.append(args[index]);
-        }
-        return builder.toString();
-    }
-
     private boolean handleWorld(CommandSender sender, String[] args) {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.getMessageUtils().sendMessage(sender, "no_permission");
@@ -3241,20 +2996,6 @@ public class AINPCCommand implements CommandExecutor {
             "&7Read-only: produce GapReport si PatchPlan, fara constructie si fara scrieri in mapping.");
     }
 
-    private List<String> parsePatchProfessionList(String rawValue) {
-        if (rawValue == null || rawValue.isBlank() || "-".equals(rawValue)) {
-            return List.of();
-        }
-        List<String> professions = new ArrayList<>();
-        for (String part : rawValue.split(",")) {
-            String profession = part.trim();
-            if (!profession.isBlank()) {
-                professions.add(profession);
-            }
-        }
-        return List.copyOf(professions);
-    }
-
     private void sendPatchGapReport(CommandSender sender, GapReport report) {
         plugin.getMessageUtils().send(sender, "&6=== Patch Gap Report ===");
         plugin.getMessageUtils().send(sender, "&eRegiune: &f" + formatOptional(report.regionId()));
@@ -3270,20 +3011,11 @@ public class AINPCCommand implements CommandExecutor {
         sendAuditMessages(sender, "&cErori patch", report.errors());
         sendAuditMessages(sender, "&eWarning-uri patch", report.warnings());
         sendAuditMessages(sender, "&eGap-uri", report.gaps().stream()
-            .map(this::formatVillageGap)
+            .map(gap -> formatVillageGap(gap))
             .toList());
         if (report.success() && !report.hasGaps()) {
             plugin.getMessageUtils().send(sender, "&aNu sunt gap-uri evidente pentru optiunile curente.");
         }
-    }
-
-    private String formatVillageGap(VillageGap gap) {
-        return gap.type()
-            + " x" + gap.amount()
-            + (gap.targetPlaceId().isBlank() ? "" : " place=" + gap.targetPlaceId())
-            + (gap.reference().isBlank() ? "" : " ref=" + gap.reference())
-            + " severity=" + gap.severity()
-            + " - " + gap.reason();
     }
 
     private void sendPatchPlannerResult(CommandSender sender, PatchPlannerResult result, boolean validationView) {
@@ -3295,11 +3027,11 @@ public class AINPCCommand implements CommandExecutor {
         sendAuditMessages(sender, "&cErori planner", result.errors());
         sendAuditMessages(sender, "&eWarning-uri planner", result.warnings());
         sendAuditMessages(sender, "&eCandidati patch", result.candidates().stream()
-            .map(this::formatPatchCandidate)
+            .map(candidate -> formatPatchCandidate(candidate))
             .toList());
         sendAuditMessages(sender, validationView ? "&eValidare patch-uri" : "&ePatch-uri planificate",
             result.patchPlans().stream()
-                .map(this::formatPatchPlan)
+                .map(plan -> formatPatchPlan(plan))
                 .toList());
         if (validationView) {
             if (result.patchPlans().stream().allMatch(PatchPlan::valid)) {
@@ -3308,31 +3040,6 @@ public class AINPCCommand implements CommandExecutor {
                 plugin.getMessageUtils().send(sender, "&eUnele patch-uri sunt blocate de capabilitati lipsa.");
             }
         }
-    }
-
-    private String formatPatchCandidate(PatchCandidate candidate) {
-        return candidate.candidateId()
-            + " " + candidate.patchType().id()
-            + " priority=" + candidate.priority()
-            + " cost=" + candidate.cost()
-            + " risk=" + candidate.risk();
-    }
-
-    private String formatPatchPlan(PatchPlan plan) {
-        return plan.patchId()
-            + " " + plan.type().id()
-            + " mode=" + plan.buildMode().id()
-            + " status=" + plan.validationStatus()
-            + " places=" + formatListOrNone(plan.plannedPlaces())
-            + " nodes=" + formatListOrNone(plan.plannedNodes())
-            + (plan.errors().isEmpty() ? "" : " errors=" + String.join("; ", plan.errors()));
-    }
-
-    private String formatListOrNone(List<String> values) {
-        if (values == null || values.isEmpty()) {
-            return "-";
-        }
-        return String.join(", ", values);
     }
 
     private boolean handleWorldWhereAmI(CommandSender sender, String[] args) {
@@ -3998,17 +3705,6 @@ public class AINPCCommand implements CommandExecutor {
             .orElse(null);
     }
 
-    private Integer parseNpcIdSelector(String selector) {
-        if (selector == null || selector.isBlank()) {
-            return null;
-        }
-        String normalized = normalizeAuditKey(selector);
-        if (normalized.startsWith("npc_")) {
-            normalized = normalized.substring("npc_".length());
-        }
-        return parseIntegerStrict(normalized);
-    }
-
     private Set<String> resolveNpcWorldBindingPlaceIds(String selector) {
         WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
         if (worldAdmin == null || !worldAdmin.isEnabled()) {
@@ -4017,23 +3713,6 @@ public class AINPCCommand implements CommandExecutor {
         return findPlaceMatches(worldAdmin, selector).stream()
             .map(WorldPlaceInfo::id)
             .collect(Collectors.toCollection(HashSet::new));
-    }
-
-    private boolean bindingReferencesAnyPlace(NpcWorldBinding binding, Set<String> placeIds) {
-        if (binding == null || placeIds == null || placeIds.isEmpty()) {
-            return false;
-        }
-        for (String placeId : placeIds) {
-            if (placeId == null || placeId.isBlank()) {
-                continue;
-            }
-            if (placeId.equalsIgnoreCase(binding.homePlaceId())
-                || placeId.equalsIgnoreCase(binding.workPlaceId())
-                || placeId.equalsIgnoreCase(binding.socialPlaceId())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private WorldPlaceInfo findPlaceById(WorldAdminApi worldAdmin, String placeId) {
@@ -5184,21 +4863,6 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean isAuditOptionSupported(String mode, String option) {
-        if (option == null || option.isBlank()) {
-            return true;
-        }
-        return ("quest".equals(mode) || "all".equals(mode)) && isStrictQuestAuditOption(option);
-    }
-
-    private boolean isStrictQuestAuditOption(String option) {
-        return "strict".equals(option) || "full".equals(option) || "offline".equals(option);
-    }
-
-    private String auditModeLabel(String mode, String option) {
-        return option == null || option.isBlank() ? mode : mode + " " + option;
-    }
-
     private void sendAuditUsage(CommandSender sender) {
         plugin.getMessageUtils().send(sender, "&cUtilizare:");
         plugin.getMessageUtils().send(sender, "&e/ainpc audit &7- ruleaza toate verificarile");
@@ -5542,10 +5206,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String formatMappingDraftKind(MappingDraftKind kind) {
-        return kind != null ? kind.id() : "<nesetat>";
-    }
-
     private void auditWorldReadiness(AuditReport report,
                                      WorldAdminApi worldAdmin,
                                      List<WorldPlaceInfo> places,
@@ -5554,9 +5214,9 @@ public class AINPCCommand implements CommandExecutor {
             return;
         }
 
-        long houseCount = places.stream().filter(this::isHousePlace).count();
-        long workplaceCount = places.stream().filter(this::isWorkplace).count();
-        long socialPlaceCount = places.stream().filter(this::isSocialPlace).count();
+        long houseCount = places.stream().filter(place -> isHousePlace(place)).count();
+        long workplaceCount = places.stream().filter(place -> isWorkplace(place)).count();
+        long socialPlaceCount = places.stream().filter(place -> isSocialPlace(place)).count();
         long questNodeCount = nodes.stream().filter(node -> nodeMatchesAny(node,
             "quest_trigger", "quest_board", "inspect_node", "interaction")).count();
         long bedNodeCount = nodes.stream().filter(node -> nodeMatchesAny(node, "bed")).count();
@@ -5583,7 +5243,7 @@ public class AINPCCommand implements CommandExecutor {
             report.warn("Mapping-ul nu are quest/interaction nodes pentru obiective inspect_node.");
         }
 
-        for (WorldPlaceInfo house : places.stream().filter(this::isHousePlace).toList()) {
+        for (WorldPlaceInfo house : places.stream().filter(place -> isHousePlace(place)).toList()) {
             Collection<WorldNodeInfo> houseNodes = worldAdmin.getNodesForPlace(house.id());
             if (!hasAnySemanticNode(houseNodes, "bed", "home", "npc_spawn", "spawn")) {
                 report.warn("Casa " + house.id() + " nu are node bed/home/npc_spawn.");
@@ -6294,23 +5954,6 @@ public class AINPCCommand implements CommandExecutor {
         validateQuestStageDefinitions(report, label, quest, knownPhases);
     }
 
-    private String questEntryStage(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null) {
-            return "";
-        }
-
-        return firstNonBlank(
-            entry.getMetadata().get("stage_id"),
-            entry.getMetadata().get("stage"),
-            entry.getMetadata().get("phase"),
-            entry.getMetadata().get("current_stage_id"),
-            entry.getMetadata().get("current_phase"),
-            entry.getVariables().get("stage_id"),
-            entry.getVariables().get("stage"),
-            entry.getVariables().get("phase")
-        );
-    }
-
     private void validateQuestStageDefinitions(AuditReport report,
                                                String label,
                                                FeaturePackLoader.ScenarioDefinition quest,
@@ -6340,7 +5983,7 @@ public class AINPCCommand implements CommandExecutor {
             validateQuestStageNextStage(report, label, quest, stage, knownPhases, normalizedStageId);
 
             boolean stageHasObjectiveMetadata = quest.getObjectives().stream()
-                .map(this::questEntryStage)
+                .map(objective -> questEntryStage(objective))
                 .anyMatch(objectiveStage -> normalizeAuditKey(objectiveStage).equals(normalizedStageId));
             if (stage.getObjectiveIds().isEmpty()) {
                 if (!"phases".equalsIgnoreCase(stage.getMetadata().getOrDefault("source", ""))
@@ -6411,7 +6054,7 @@ public class AINPCCommand implements CommandExecutor {
                 return true;
             }
             return quest.getObjectives().stream()
-                .map(this::questEntryStage)
+                .map(objective -> questEntryStage(objective))
                 .anyMatch(objectiveStage -> normalizeAuditKey(objectiveStage).equals(normalizedStageId));
         }
         return false;
@@ -6460,33 +6103,6 @@ public class AINPCCommand implements CommandExecutor {
             }
         }
         return false;
-    }
-
-    private String normalizeQuestStageCompletionMode(String completionMode) {
-        String normalized = normalizeQuestStageReference(completionMode);
-        return switch (normalized) {
-            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
-            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
-            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
-            default -> normalized;
-        };
-    }
-
-    private boolean isSupportedQuestStageCompletionMode(String completionMode) {
-        return Set.of("all_objectives", "any_objective", "manual_turn_in").contains(completionMode);
-    }
-
-    private String normalizeQuestStageReference(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        return value.trim()
-            .toLowerCase(Locale.ROOT)
-            .replace("minecraft:", "")
-            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
-            .replaceAll("^_+|_+$", "")
-            .replaceAll("_+", "_");
     }
 
     private void validateQuestDialogues(AuditReport report,
@@ -6631,16 +6247,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String semanticAnchorTypeForObjective(String objectiveType) {
-        return switch (normalizeQuestObjectiveType(objectiveType)) {
-            case "visit_region" -> "region";
-            case "visit_place" -> "place";
-            case "inspect_node" -> "node";
-            case "talk_to_npc" -> "npc";
-            default -> "";
-        };
-    }
-
     private void validateQuestRewardEntry(AuditReport report,
                                           String entryLabel,
                                           FeaturePackLoader.QuestEntryDefinition entry) {
@@ -6738,17 +6344,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private String questEntryId(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null) {
-            return "<null>";
-        }
-        String entryId = entry.getMetadata().getOrDefault("entry_id", "");
-        if (!entryId.isBlank()) {
-            return entryId;
-        }
-        return entry.getType() + ":" + entry.getItemId();
-    }
-
     private void auditLegacyQuestProgressKeys(AuditReport report) throws SQLException {
         String sql = """
             SELECT player_uuid, template_id, objective_progress
@@ -6802,59 +6397,6 @@ public class AINPCCommand implements CommandExecutor {
                 }
             }
         }
-    }
-
-    private boolean isLegacyObjectiveProgressKey(String key) {
-        if (key == null || key.isBlank()) {
-            return false;
-        }
-
-        String[] parts = key.split(":");
-        if (parts.length < 3) {
-            return false;
-        }
-
-        String type = normalizeQuestObjectiveType(parts[0]);
-        if (!isSupportedQuestObjectiveType(type)) {
-            return false;
-        }
-
-        try {
-            return Integer.parseInt(parts[parts.length - 1]) >= 0;
-        } catch (NumberFormatException ignored) {
-            return false;
-        }
-    }
-
-    private boolean isSupportedQuestObjectiveType(String type) {
-        return switch (normalizeQuestObjectiveType(type)) {
-            case "collect_item", "deliver_to_npc", "talk_to_npc", "visit_region", "visit_place",
-                 "inspect_node", "kill_mob" -> true;
-            default -> false;
-        };
-    }
-
-    private String normalizeQuestObjectiveType(String type) {
-        String normalized = normalizeAuditKey(type);
-        return switch (normalized) {
-            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
-            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
-            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
-            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
-            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
-            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
-            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
-            default -> normalized;
-        };
-    }
-
-    private String normalizeQuestRewardType(String type) {
-        String normalized = normalizeAuditKey(type);
-        return switch (normalized) {
-            case "", "item", "reward_item" -> "item";
-            case "set_story_state", "record_story_event" -> normalized;
-            default -> normalized;
-        };
     }
 
     private void validateQuestAnchorRows(AuditReport report, List<QuestAnchorBindingRow> rows) {
@@ -6977,7 +6519,7 @@ public class AINPCCommand implements CommandExecutor {
         if (objective == null) {
             List<String> candidates = objectives.values().stream()
                 .distinct()
-                .map(this::displayQuestObjectiveKey)
+                .map(objectiveCandidate -> displayQuestObjectiveKey(objectiveCandidate))
                 .filter(value -> !value.isBlank())
                 .distinct()
                 .limit(8)
@@ -7012,22 +6554,6 @@ public class AINPCCommand implements CommandExecutor {
             return scenario;
         }
         return scenariosBySelector.get(normalizeQuestObjectiveLookupKey(lastSelectorSegment(row.templateId())));
-    }
-
-    private String formatObjectiveCandidates(List<String> candidates) {
-        if (candidates == null || candidates.isEmpty()) {
-            return ".";
-        }
-        return ". Obiective valide: " + String.join(", ", candidates) + ".";
-    }
-
-    private String lastSelectorSegment(String selector) {
-        String safeSelector = selector == null ? "" : selector.trim();
-        int separator = safeSelector.lastIndexOf(':');
-        if (separator < 0 || separator >= safeSelector.length() - 1) {
-            return safeSelector;
-        }
-        return safeSelector.substring(separator + 1);
     }
 
     private void validateQuestAnchorTarget(AuditReport report,
@@ -7722,158 +7248,6 @@ public class AINPCCommand implements CommandExecutor {
         return false;
     }
 
-    private boolean isWorkplace(WorldPlaceInfo place) {
-        return place.hasTag("work")
-            || place.hasTag("workplace")
-            || "work".equalsIgnoreCase(place.metadata().get("role"))
-            || "work".equalsIgnoreCase(place.metadata().get("purpose"))
-            || place.placeType() == PlaceType.FORGE
-            || place.placeType() == PlaceType.SHOP
-            || place.placeType() == PlaceType.FARM
-            || place.placeType() == PlaceType.MARKET
-            || place.placeType() == PlaceType.TAVERN;
-    }
-
-    private boolean isSocialPlace(WorldPlaceInfo place) {
-        return place.hasTag("social")
-            || place.hasTag("public")
-            || "social".equalsIgnoreCase(place.metadata().get("role"))
-            || "social".equalsIgnoreCase(place.metadata().get("purpose"))
-            || place.placeType() == PlaceType.MARKET
-            || place.placeType() == PlaceType.TAVERN
-            || place.placeType() == PlaceType.CAMP;
-    }
-
-    private boolean hasPendingOwner(WorldPlaceInfo place) {
-        String ownerStatus = place.metadata().getOrDefault("owner_status", "");
-        String ownerPending = place.metadata().getOrDefault("owner_pending", "");
-        return "pending".equalsIgnoreCase(ownerStatus)
-            || "true".equalsIgnoreCase(ownerPending)
-            || ("demo_mapping".equalsIgnoreCase(place.metadata().getOrDefault("source", ""))
-                && place.hasTag("demo"));
-    }
-
-    private boolean placeInsideRegion(WorldPlaceInfo place, WorldRegionInfo region) {
-        return place.worldName().equalsIgnoreCase(region.worldName())
-            && place.minX() >= region.minX()
-            && place.maxX() <= region.maxX()
-            && place.minY() >= region.minY()
-            && place.maxY() <= region.maxY()
-            && place.minZ() >= region.minZ()
-            && place.maxZ() <= region.maxZ();
-    }
-
-    private boolean pointInsidePlace(WorldNodeInfo node, WorldPlaceInfo place) {
-        return node.worldName().equalsIgnoreCase(place.worldName())
-            && node.x() >= place.minX()
-            && node.x() <= place.maxX()
-            && node.y() >= place.minY()
-            && node.y() <= place.maxY()
-            && node.z() >= place.minZ()
-            && node.z() <= place.maxZ();
-    }
-
-    private boolean pointInsideRegion(WorldNodeInfo node, WorldRegionInfo region) {
-        return node.worldName().equalsIgnoreCase(region.worldName())
-            && node.x() >= region.minX()
-            && node.x() <= region.maxX()
-            && node.y() >= region.minY()
-            && node.y() <= region.maxY()
-            && node.z() >= region.minZ()
-            && node.z() <= region.maxZ();
-    }
-
-    private boolean placesIntersect(WorldPlaceInfo left, WorldPlaceInfo right) {
-        return left.worldName().equalsIgnoreCase(right.worldName())
-            && overlaps(left.minX(), left.maxX(), right.minX(), right.maxX())
-            && overlaps(left.minY(), left.maxY(), right.minY(), right.maxY())
-            && overlaps(left.minZ(), left.maxZ(), right.minZ(), right.maxZ());
-    }
-
-    private boolean overlaps(int leftMin, int leftMax, int rightMin, int rightMax) {
-        return leftMax >= rightMin && rightMax >= leftMin;
-    }
-
-    private boolean validBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        return minX <= maxX && minY <= maxY && minZ <= maxZ;
-    }
-
-    private boolean isHousePlace(WorldPlaceInfo place) {
-        return place.placeType() == PlaceType.HOUSE
-            || place.hasTag("home")
-            || place.hasTag("house")
-            || "home".equalsIgnoreCase(place.metadata().get("role"))
-            || "home".equalsIgnoreCase(place.metadata().get("purpose"));
-    }
-
-    private List<String> parseResidents(WorldPlaceInfo place) {
-        String rawResidents = firstNonBlank(
-            place.metadata().get("residents"),
-            place.metadata().get("resident_npc_ids"),
-            place.metadata().get("resident_ids")
-        );
-        if (rawResidents.isBlank()) {
-            return List.of();
-        }
-
-        List<String> residents = new ArrayList<>();
-        for (String part : rawResidents.split("[,;]")) {
-            String resident = part.trim();
-            if (!resident.isBlank()) {
-                residents.add(resident);
-            }
-        }
-        return residents;
-    }
-
-    private Integer parsePositiveIntMetadata(WorldPlaceInfo place, String... keys) {
-        String rawValue = firstNonBlankFromMap(place.metadata(), keys);
-        if (rawValue.isBlank()) {
-            return null;
-        }
-
-        try {
-            int value = Integer.parseInt(rawValue.trim());
-            return value > 0 ? value : null;
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
-    }
-
-    private boolean hasAnySemanticNode(Collection<WorldNodeInfo> nodes, String... expectedTokens) {
-        for (WorldNodeInfo node : nodes) {
-            if (nodeMatchesAny(node, expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean nodeMatchesAny(WorldNodeInfo node, String... expectedTokens) {
-        if (matchesAnyToken(node.typeId(), expectedTokens)) {
-            return true;
-        }
-        for (Map.Entry<String, String> entry : node.metadata().entrySet()) {
-            if (matchesAnyToken(entry.getKey(), expectedTokens) || matchesAnyToken(entry.getValue(), expectedTokens)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean matchesAnyToken(String rawValue, String... expectedTokens) {
-        String value = normalizeAuditKey(rawValue).replace('-', '_');
-        if (value.isBlank()) {
-            return false;
-        }
-        for (String expectedToken : expectedTokens) {
-            if (value.equals(normalizeAuditKey(expectedToken).replace('-', '_'))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private AINPC findLoadedNpcBySelector(String selector) {
         String normalizedSelector = normalizeAuditKey(selector);
         if (normalizedSelector.isBlank()) {
@@ -7919,20 +7293,6 @@ public class AINPCCommand implements CommandExecutor {
             .filter(place -> ownedLocationInsidePlace(location, place))
             .findFirst()
             .orElse(null);
-    }
-
-    private boolean requiresWorkAnchor(String occupation) {
-        String normalized = normalizeAuditKey(occupation);
-        return !normalized.isBlank()
-            && !normalized.equals("locuitor")
-            && !normalized.equals("localnic")
-            && !normalized.equals("villager")
-            && !normalized.equals("resident");
-    }
-
-    private String auditNpcLabel(AINPC npc) {
-        String name = npc.getName() == null || npc.getName().isBlank() ? "<fara nume>" : npc.getName();
-        return "NPC " + name + " (id=" + npc.getDatabaseId() + ")";
     }
 
     /**
@@ -8469,24 +7829,6 @@ public class AINPCCommand implements CommandExecutor {
         );
     }
 
-    private boolean sameMappingBinding(NpcWorldBinding left, NpcWorldBinding right) {
-        return sameOptionalId(left.homePlaceId(), right.homePlaceId())
-            && sameOptionalId(left.workPlaceId(), right.workPlaceId())
-            && sameOptionalId(left.socialPlaceId(), right.socialPlaceId())
-            && sameOptionalId(left.homeNodeId(), right.homeNodeId())
-            && sameOptionalId(left.workNodeId(), right.workNodeId())
-            && sameOptionalId(left.socialNodeId(), right.socialNodeId());
-    }
-
-    private String formatNpcWorldBindingPlaces(NpcWorldBinding binding) {
-        return "home=" + formatOptional(binding.homePlaceId())
-            + " work=" + formatOptional(binding.workPlaceId())
-            + " social=" + formatOptional(binding.socialPlaceId())
-            + " nodes=" + formatOptional(binding.homeNodeId())
-            + "/" + formatOptional(binding.workNodeId())
-            + "/" + formatOptional(binding.socialNodeId());
-    }
-
     private int collectMappingMetadataRepairActions(WorldAdminApi worldAdmin,
                                                     List<String> actions,
                                                     List<String> warnings,
@@ -8534,23 +7876,6 @@ public class AINPCCommand implements CommandExecutor {
             }
         }
         return candidates;
-    }
-
-    private boolean metadataListContains(WorldPlaceInfo place, String key, String expected) {
-        String normalizedExpected = normalizeAuditKey(expected);
-        if (normalizedExpected.isBlank()) {
-            return false;
-        }
-        String raw = place.metadata().getOrDefault(key, "");
-        if (raw.isBlank()) {
-            return false;
-        }
-        for (String part : raw.split("[,;]")) {
-            if (normalizeAuditKey(part).equals(normalizedExpected)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean handleRepairSpawnBatch(CommandSender sender, String batchKey, String mode) {
@@ -8898,37 +8223,6 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
-    private String formatBatchNpcIdList(String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) {
-            return "-";
-        }
-        String[] tokens = rawValue.split(",");
-        List<String> values = new ArrayList<>();
-        for (String token : tokens) {
-            if (token == null || token.isBlank()) {
-                continue;
-            }
-            values.add(token.trim());
-            if (values.size() >= 3) {
-                break;
-            }
-        }
-        if (values.isEmpty()) {
-            return "-";
-        }
-        String formatted = String.join(",", values);
-        int total = 0;
-        for (String token : tokens) {
-            if (token != null && !token.isBlank()) {
-                total++;
-            }
-        }
-        if (total > values.size()) {
-            formatted += ",+" + (total - values.size());
-        }
-        return shortenBatchValue(formatted, 72);
-    }
-
     private void sendRepairMessages(CommandSender sender, List<String> messages, String color, int limit) {
         int safeLimit = Math.max(0, limit);
         int displayed = Math.min(safeLimit, messages.size());
@@ -8984,24 +8278,6 @@ public class AINPCCommand implements CommandExecutor {
                 }
             }
         }
-    }
-
-    private boolean sameNearbyLocation(Location left, Location right, double maxDistanceSquared) {
-        if (left == null || right == null || left.getWorld() == null || right.getWorld() == null) {
-            return false;
-        }
-        return left.getWorld().equals(right.getWorld()) && left.distanceSquared(right) <= maxDistanceSquared;
-    }
-
-    private String formatNpcIdentities(List<AINPC> npcs) {
-        return npcs.stream()
-            .map(this::formatNpcIdentity)
-            .toList()
-            .toString();
-    }
-
-    private String formatNpcIdentity(AINPC npc) {
-        return npc.getName() + "#" + npc.getDatabaseId();
     }
 
     /**
@@ -9420,17 +8696,6 @@ public class AINPCCommand implements CommandExecutor {
         return true;
     }
 
-    private String sanitizeForChat(String message) {
-        if (message == null || message.isBlank()) {
-            return "<gol>";
-        }
-        return message
-            .replace("&", "")
-            .replace('\n', ' ')
-            .replace('\r', ' ')
-            .trim();
-    }
-
     /**
      * Afiseaza mesajul de ajutor
      */
@@ -9549,38 +8814,6 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     // Metode helper
-
-    private String formatLocation(Location loc) {
-        if (loc == null) return "necunoscuta";
-        return String.format("%s (%.1f, %.1f, %.1f)", 
-            loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ());
-    }
-
-    private String formatDistance(Location current, Location target) {
-        if (current == null || target == null || current.getWorld() == null || target.getWorld() == null) {
-            return "necunoscuta";
-        }
-        if (!current.getWorld().equals(target.getWorld())) {
-            return "alta lume";
-        }
-        return String.format("%.1f blocuri", Math.sqrt(current.distanceSquared(target)));
-    }
-
-    private Integer parseIntegerStrict(String value) {
-        try {
-            return Integer.valueOf(value);
-        } catch (NumberFormatException exception) {
-            return null;
-        }
-    }
-
-    private Double parseDoubleStrict(String value) {
-        try {
-            return Double.valueOf(value);
-        } catch (NumberFormatException exception) {
-            return null;
-        }
-    }
 
     private Player requirePlayerSender(CommandSender sender) {
         if (sender instanceof Player player) {
@@ -9737,52 +8970,6 @@ public class AINPCCommand implements CommandExecutor {
         };
     }
 
-    private String nodeLabel(WorldNodeInfo node, String fallbackLabel) {
-        String explicitLabel = firstNonBlank(
-            node.metadata().get("label"),
-            node.metadata().get("name"),
-            node.metadata().get("display_name")
-        );
-        if (!explicitLabel.isBlank()) {
-            return explicitLabel;
-        }
-        return fallbackLabel == null || fallbackLabel.isBlank() ? node.id() : fallbackLabel;
-    }
-
-    private String npcBindingId(AINPC npc) {
-        if (npc.getDatabaseId() > 0) {
-            return "npc_" + npc.getDatabaseId();
-        }
-        if (npc.getUuid() != null) {
-            return npc.getUuid().toString();
-        }
-        return npc.getName();
-    }
-
-    private double distanceSquaredToPlaceCenter(WorldPlaceInfo place, WorldNodeInfo node) {
-        return distanceSquared(placeCenterX(place), placeAnchorY(place), placeCenterZ(place), node.x(), node.y(), node.z());
-    }
-
-    private double distanceSquared(double leftX, double leftY, double leftZ,
-                                   double rightX, double rightY, double rightZ) {
-        double dx = leftX - rightX;
-        double dy = leftY - rightY;
-        double dz = leftZ - rightZ;
-        return dx * dx + dy * dy + dz * dz;
-    }
-
-    private double placeCenterX(WorldPlaceInfo place) {
-        return (place.minX() + place.maxX()) / 2.0D;
-    }
-
-    private double placeAnchorY(WorldPlaceInfo place) {
-        return Math.min(place.maxY(), place.minY() + 1.0D);
-    }
-
-    private double placeCenterZ(WorldPlaceInfo place) {
-        return (place.minZ() + place.maxZ()) / 2.0D;
-    }
-
     private List<WorldRegionInfo> findRegionMatches(WorldAdminApi worldAdmin, String selector) {
         if (selector == null || selector.isBlank()) {
             return List.of();
@@ -9894,15 +9081,6 @@ public class AINPCCommand implements CommandExecutor {
             node.getRadius(),
             node.getMetadata()
         );
-    }
-
-    private String formatOwnedLocation(AINPC.OwnedLocation location) {
-        if (location == null) {
-            return "<nesetat>";
-        }
-        return location.label() + " [" + location.type() + "] "
-            + location.worldName() + " "
-            + String.format("%.1f, %.1f, %.1f", location.x(), location.y(), location.z());
     }
 
     private AINPC refreshQuestNpc(AINPC npc) {

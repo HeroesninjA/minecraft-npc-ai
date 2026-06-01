@@ -1,6 +1,6 @@
 ﻿# Audit Conformitate cu Constitutia Proiectului
 
-Actualizat: 2026-05-27
+Actualizat: 2026-05-29
 
 Importanta: ridicata. Acest document compara codul curent cu `constitutie-proiect.md` si listeaza zonele care nu respecta complet regulile constitutionale sau care sunt doar partial conforme.
 
@@ -12,6 +12,7 @@ Auditul verifica in special:
 - continut demo/fallback dezactivabil;
 - tipuri de addon: scenariu, story, resursa/textura, datapack;
 - feature flags pentru caracteristici majore;
+- rezolvare centralizata pentru starea finala a feature-urilor, configului si addonurilor;
 - storage SQLite/MySQL/HikariCP;
 - AI ca sistem asistiv, nu autoritate finala;
 - generare harti/structuri ca plan validat, nu executie directa necontrolata.
@@ -32,6 +33,7 @@ Neconformitatile principale sunt:
 6. `database.type` este respectat initial: SQLite ramane default, iar MySQL foloseste HikariCP configurabil. Portarea SQL completa ramane partiala.
 7. Exista `features.*` si gating initial pentru comenzile majore, dar serviciile interne sunt inca initializate chiar cand feature-ul este dezactivat.
 8. Euristicile tematice identificate in serviciile core analizate au fost neutralizate initial; in `src/main` mai raman doar denumiri tehnice/de loc precum `fierarie/forge`, nu profesii tematice hardcodate.
+9. Regula constitutionala noua pentru `RuntimeFeatureState` este partial pornita: modelul read-only si resolverul minim exista, dar codul inca foloseste citiri directe din `plugin.config`; nu exista inca audit/debugdump dedicat, migrare call sites sau graph complet pentru conflicte.
 
 ## Conformitati Confirmate
 
@@ -46,6 +48,7 @@ Neconformitatile principale sunt:
 | Rutina si simulare dezactivabile | Conform partial | `config.yml` are `simulation.enabled` si `routine.enabled`; schedulerul verifica aceste flag-uri |
 | World admin dezactivabil | Conform partial | `config.yml` are `world_admin.enabled`; debugdump raporteaza disabled cand service-ul lipseste/dezactivat |
 | Generare/patch planner controlat | Conform partial | patch planner si mapping sunt orientate pe analyze/plan/validate; nu apare executie directa larga in auditul static |
+| Config/addon metadata initiala | Conform partial | `AddonDescriptor` declara type/capabilities/dependencies; `FeaturePackMetadataValidator` valideaza addon type, runtime modes, capabilities si dependencies; `FeaturePackDependencyValidator` elimina pack-uri cu dependinte lipsa |
 
 ## Neconformitati si Riscuri
 
@@ -238,6 +241,39 @@ Recomandare:
 - In `minimal` si `production`, sistemele automate raman off pana la configurare.
 - In `demo`, ele pot fi activate explicit sub `demo.enabled` sau printr-un preset de addon demo.
 
+### C-010: Lipseste resolverul central pentru `RuntimeFeatureState`
+
+Severitate: medie-ridicata
+Status: partial pornit, resolver minim implementat
+Reguli afectate: rezolvarea centralizata a feature-urilor, configului si addonurilor; decizie determinista; conflicte nerezolvate blocate.
+
+Dovezi:
+
+- `docs/constitutie-proiect.md` cere ca deciziile finale despre feature-uri sa fie rezolvate central si expuse ca `RuntimeFeatureState`.
+- Exista model read-only initial in `ro.ainpc.platform.features`: `RuntimeFeatureKey`, `RuntimeFeatureStatus`, `RuntimeFeatureSource` si `RuntimeFeatureState`.
+- Exista `RuntimeFeatureResolver` si `RuntimeFeatureSnapshot` initiale, legate read-only in `AINPCPlatform.runtimeFeatures()`.
+- Nu exista inca `ConfigResolver` complet sau `DependencyGraph` in `ainpc-core-plugin/src/main` ori `ainpc-api/src/main`.
+- `AINPCCommand`, `SchedulerCoordinator`, `OpenAIService`, listenerele de quest/mapping/gui si alte servicii citesc direct chei precum `features.quest`, `features.mapping`, `features.ai`, `routine.enabled`, `simulation.enabled` din `plugin.config`.
+- `AINPCPlatform.reloadFromConfig()` configureaza `AddonRegistry` cu `addons.enabled`, `addons.disabled` si `addons.load_order` si produce un snapshot read-only, dar comenzile, schedulerul si listenerele nu il consuma inca.
+- `AddonDescriptor` expune `capabilities` si `dependencies`, iar `FeaturePackMetadataValidator`/`FeaturePackDependencyValidator` valideaza partial metadata, dar nu exista inca declaratii uniforme de `provides`, `requires`, `conflicts`, `fallback` sau `requested feature state`.
+- `AddonRegistry.registrationErrors(...)` verifica runtime mode, capability duplicata, capability `scenarios` pentru `SCENARIO`, dependinte goale/duplicate/self/disabled, dar nu verifica dependinte lipsa intre plugin addonuri active si nu detecteaza conflicte intre addonuri.
+
+Problema:
+
+Constitutia cere ca runtime-ul sa consume o decizie finala unica. Codul curent este inca in model mixt: unele decizii sunt validate la load, altele sunt citite local din config, iar addonurile/pack-urile au metadata partiala. Asta este acceptabil pentru faza curenta, dar nu este suficient pentru ecosistem mare de addonuri, primary scenario multiplu, conflicte de economie/story/quest sau preseturi de server.
+
+Riscul practic este aparitia unor configuratii care par valide individual, dar produc stare ambigua: un addon cere questuri, serverul le dezactiveaza, alt pack declara progresii dependente de story, iar runtime-ul afla problema abia cand o comanda sau un listener atinge zona respectiva.
+
+Recomandare:
+
+- Pastreaza modelul minim `RuntimeFeatureState` cu stari explicite: `enabled`, `disabled`, `optional`, `blocked`, `fallback`, `experimental`.
+- Extinde `RuntimeFeatureResolver` din strat read-only spre rezolvare reala pentru `core defaults`, `server profile`, `features.*`, `demo.enabled`, `addons.*`, manifestele addonurilor si metadata pack-urilor.
+- Nu opri direct citirile existente din config intr-o singura schimbare mare; adauga intai comanda/audit de inspectie peste resolverul read-only.
+- Extinde manifestele addon/pack cu campuri declarative mici: `provides`, `requires`, `conflicts`, `optional`, `fallback`.
+- Adauga audit runtime: pentru fiecare feature major, raporteaza starea finala, sursele care au influentat-o si motivul daca este blocat.
+- Pastreaza politica serverului ca autoritate finala: addonurile pot cere activare, dar nu pot forta peste server profile.
+- Dupa ce resolverul este stabil, muta gradual `ensureFeatureEnabled`, schedulerul, listenerele si serviciile de AI/routine/simulation pe `RuntimeFeatureState`.
+
 ### C-009: Euristici tematice ramase in servicii core
 
 Severitate: remediata initial
@@ -327,6 +363,9 @@ Continutul medieval principal este acum in addonul medieval, nu in resursele run
 1. Introduce `features.*` central. Status: facut initial.
 2. Leaga `quest`, `story`, `gui`, `progression`, `mapping`, `generation`, `ai` la initializare/comenzi/GUI. Status: comenzi majore facute initial; lifecycle/listenere ramase.
 3. Cand o functie este disabled, comenzile trebuie sa raspunda clar, nu sa cada partial. Status: facut initial pentru comenzile majore.
+4. Introdu `RuntimeFeatureState` si un resolver read-only pentru config/addon/pack metadata. Status: model si resolver minim facute initial; audit/debugdump ramas.
+5. Muta gradual comenzile, schedulerul si listenerele de la citiri directe `plugin.config.getBoolean("features.*")` la starea finala rezolvata. Status: ramas.
+6. Adauga raport de audit pentru feature-uri `enabled/disabled/optional/blocked/fallback/experimental`, cu motiv si surse. Status: ramas.
 
 ### Faza 4: Storage provider
 
@@ -340,6 +379,8 @@ Continutul medieval principal este acum in addonul medieval, nu in resursele run
 
 Status: partial conform, cu remedieri initiale aplicate pentru C-001, C-002, C-004, C-005, C-008 si C-009, plus remediere infrastructurala initiala pentru C-006.
 
-Codul are directia corecta pentru addonuri si configurabilitate. Pack-urile tematice au fost scoase din resursele runtime core, fallback-ul medieval hardcodat a fost neutralizat, tipurile constitutionale de addon exista initial, addonul medieval separat este declarat ca scenariu, demo-ul core are un switch functional pentru pack-uri vechi/quest fallback/world demo create, comenzile majore au feature flags initiale, default-urile automate sunt conservative, euristicile tematice runtime identificate in core au fost neutralizate initial, iar storage-ul are selectie initiala SQLite/MySQL cu HikariCP. Cele mai importante remedieri ramase sunt lifecycle complet pentru feature flags si portarea completa a dialectului SQL pentru MySQL.
+Codul are directia corecta pentru addonuri si configurabilitate. Pack-urile tematice au fost scoase din resursele runtime core, fallback-ul medieval hardcodat a fost neutralizat, tipurile constitutionale de addon exista initial, addonul medieval separat este declarat ca scenariu, demo-ul core are un switch functional pentru pack-uri vechi/quest fallback/world demo create, comenzile majore au feature flags initiale, default-urile automate sunt conservative, euristicile tematice runtime identificate in core au fost neutralizate initial, iar storage-ul are selectie initiala SQLite/MySQL cu HikariCP.
 
-Pana la legarea tuturor serviciilor interne de `features.*`, `ainpc-core-plugin` trebuie tratat ca "core neutru la nivel de continut runtime, dar partial dezactivabil la nivel de lifecycle".
+Cele mai importante remedieri ramase sunt lifecycle complet pentru feature flags, introducerea unui `RuntimeFeatureState` central pentru config/addon/pack resolution si portarea completa a dialectului SQL pentru MySQL.
+
+Pana la legarea tuturor serviciilor interne de `features.*` si apoi de `RuntimeFeatureState`, `ainpc-core-plugin` trebuie tratat ca "core neutru la nivel de continut runtime, dar partial dezactivabil la nivel de lifecycle si partial centralizat la nivel de decizie feature".

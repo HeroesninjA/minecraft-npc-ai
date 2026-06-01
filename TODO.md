@@ -137,6 +137,9 @@ Actualizat: 2026-05-25
 - [ ] Smoke test Paper pentru story fara quest, quest fara story si quest cu `record_story_event`
 - [x] Model read-only pentru `QuestDirectorDecision`, fara executie de progres
 - [ ] Modele si validator read-only pentru `QuestSeed`/`QuestDraft`
+- [x] Model read-only pentru `RuntimeFeatureState`: stari `enabled`/`disabled`/`optional`/`blocked`/`fallback`/`experimental`, motive si surse
+- [x] `FeatureResolver` initial care combina `features.*`, `demo.enabled`, profil server, addon registry si metadata pack-uri fara sa schimbe inca behavior-ul runtime
+- [ ] Audit/debugdump pentru starea finala a feature-urilor si motivele de blocare/fallback
 - [x] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
 - [x] Export/debugdump complet pentru `quest_anchor_bindings`
 - [x] Audit strict complet pentru `quest_anchor_bindings`, inclusiv validarea `objective_key` fata de definitia progresiei
@@ -232,6 +235,7 @@ Actualizat: 2026-05-25
 - [ ] Addonuri de integrare cu pluginuri externe
 - [ ] Feature packs noi pe langa medieval: social, modern, fantasy
 - [ ] Posibilitatea de a combina mai multe addonuri fara configuratie fragila
+- [ ] Resolver central pentru conflicte/dependinte addon: `provides`, `requires`, `conflicts`, `fallback` si politica serverului ca autoritate finala
 
 ## Admin si debug
 
