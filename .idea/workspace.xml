@@ -6,11 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/platform/AINPCPlatform.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/platform/AINPCPlatform.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audit-constitutie-proiect.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audit-constitutie-proiect.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" afterDir="false" />
     </list>
@@ -238,14 +234,6 @@
       <workItem from="1779290903875" duration="5930000" />
       <workItem from="1779332709167" duration="18000" />
       <workItem from="1779358652781" duration="16000" />
-    </task>
-    <task id="LOCAL-00002" summary="test">
-      <option name="closed" value="true" />
-      <created>1777130126260</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1777130126260</updated>
     </task>
     <task id="LOCAL-00003" summary="test">
       <option name="closed" value="true" />
@@ -631,7 +619,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780077536220</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1780310475841</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1780310475842</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

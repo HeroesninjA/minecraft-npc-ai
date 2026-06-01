@@ -281,19 +281,6 @@ public class AINPCCommand implements CommandExecutor {
         return ensureFeatureEnabled(sender, "features.generation", false, label);
     }
 
-    private String[] routeDirectCommandToQuest(String[] args) {
-        String[] routedArgs = new String[args.length + 1];
-        routedArgs[0] = "quest";
-        System.arraycopy(args, 0, routedArgs, 1, args.length);
-        return routedArgs;
-    }
-
-    private String[] routeSubcommandToQuest(String[] args) {
-        String[] routedArgs = args.clone();
-        routedArgs[0] = "quest";
-        return routedArgs;
-    }
-
     /**
      * /ainpc create <nume> [ocupatie] [varsta] [gen] [arhetip]
      */
@@ -555,14 +542,6 @@ public class AINPCCommand implements CommandExecutor {
                 "&eLimit maxim pentru afisare: &f" + PROGRESSION_STORED_MAX_LIMIT + "&e.");
         }
         return Math.max(1, Math.min(limit, PROGRESSION_STORED_MAX_LIMIT));
-    }
-
-    private String compactUuid(String uuid) {
-        if (uuid == null || uuid.isBlank()) {
-            return "<nesetat>";
-        }
-        String safeUuid = uuid.trim();
-        return safeUuid.length() > 8 ? safeUuid.substring(0, 8) : safeUuid;
     }
 
     private boolean handleContract(CommandSender sender, String[] args) {
@@ -2757,16 +2736,6 @@ public class AINPCCommand implements CommandExecutor {
         return null;
     }
 
-    private boolean storedProgressionMatchesDefinition(StoredProgression progression,
-                                                       ProgressionDefinition definition) {
-        return sameNonBlankIgnoreCase(progression.templateId(), definition.templateId())
-            || sameNonBlankIgnoreCase(progression.code(), definition.code())
-            || sameNonBlankIgnoreCase(progression.progressionId(), definition.progressionId())
-            || (sameNonBlankIgnoreCase(progression.packId(), definition.packId())
-                && sameNonBlankIgnoreCase(progression.definitionId(), definition.definitionId()))
-            || sameNonBlankIgnoreCase(progression.definitionId(), definition.definitionId());
-    }
-
     private Map<String, FeaturePackLoader.QuestEntryDefinition> collectObjectiveKeyLookup(
         FeaturePackLoader.ScenarioDefinition scenario) {
         Map<String, FeaturePackLoader.QuestEntryDefinition> lookup = new HashMap<>();
@@ -2876,16 +2845,6 @@ public class AINPCCommand implements CommandExecutor {
             return null;
         }
         return matches.get(0);
-    }
-
-    private boolean storedProgressionMatchesSelector(StoredProgression row, String selector) {
-        String normalized = selector == null ? "" : selector.trim();
-        return equalsIgnoreCase(row.templateId(), normalized)
-            || equalsIgnoreCase(row.code(), normalized)
-            || equalsIgnoreCase(row.progressionId(), normalized)
-            || equalsIgnoreCase(row.definitionId(), normalized)
-            || equalsIgnoreCase(row.mechanicId() + ":" + row.definitionId(), normalized)
-            || equalsIgnoreCase(row.packId() + ":" + row.definitionId(), normalized);
     }
 
     private boolean questAnchorTargetExists(String anchorType, String anchorId) {
@@ -5631,31 +5590,6 @@ public class AINPCCommand implements CommandExecutor {
         return keys;
     }
 
-    private boolean hasStoryEventProgressionKey(Set<String> keys,
-                                                String playerUuid,
-                                                String templateId,
-                                                String questCode) {
-        return keys.contains(storyEventProgressionKey(playerUuid, templateId))
-            || keys.contains(storyEventProgressionKey(playerUuid, questCode))
-            || keys.contains(storyEventProgressionKey("", templateId))
-            || keys.contains(storyEventProgressionKey("", questCode));
-    }
-
-    private void addStoryEventProgressionKey(Set<String> keys, String playerUuid, String selector) {
-        String key = storyEventProgressionKey(playerUuid, selector);
-        if (!key.isBlank()) {
-            keys.add(key);
-        }
-    }
-
-    private String storyEventProgressionKey(String playerUuid, String selector) {
-        String normalizedSelector = normalizeQuestObjectiveLookupKey(selector);
-        if (normalizedSelector.isBlank()) {
-            return "";
-        }
-        return safeAuditValue(playerUuid) + "|" + normalizedSelector;
-    }
-
     private FeaturePackLoader.ScenarioDefinition findScenarioForProgressionRow(
         String templateId,
         String questCode,
@@ -5676,18 +5610,6 @@ public class AINPCCommand implements CommandExecutor {
         return scenariosBySelector.get(normalizeQuestObjectiveLookupKey(lastSelectorSegment(templateId)));
     }
 
-    private boolean hasRecordStoryEventAction(FeaturePackLoader.ScenarioDefinition scenario) {
-        if (scenario == null) {
-            return false;
-        }
-        for (FeaturePackLoader.QuestEntryDefinition reward : scenario.getRewards()) {
-            if ("record_story_event".equals(normalizeQuestRewardType(reward.getType()))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private JsonElement parseStoredJsonObject(String rawValue) {
         String safeRawValue = rawValue == null || rawValue.isBlank() ? "{}" : rawValue;
         try {
@@ -5706,7 +5628,7 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         List<FeaturePackLoader.ScenarioDefinition> quests = featurePackLoader.getAllScenarios().stream()
-            .filter(this::isQuestAuditCandidate)
+            .filter(scenario -> isQuestAuditCandidate(scenario))
             .toList();
 
         report.info("Progression mechanics: "
@@ -5742,34 +5664,6 @@ public class AINPCCommand implements CommandExecutor {
             worldAdmin.getNodes()
         );
         return index.hasAnyCandidates() ? index : null;
-    }
-
-    private boolean isQuestAuditCandidate(FeaturePackLoader.ScenarioDefinition scenario) {
-        if (scenario == null) {
-            return false;
-        }
-        return scenario.getBaseType() == ScenarioEngine.ScenarioType.QUEST
-            || (scenario.isProgressionEnabled()
-                && (!scenario.getQuestCode().isBlank()
-                    || !scenario.getObjectives().isEmpty()
-                    || !scenario.getRewards().isEmpty()));
-    }
-
-    private Set<String> collectKnownQuestReferences(List<FeaturePackLoader.ScenarioDefinition> quests) {
-        Set<String> references = new HashSet<>();
-        for (FeaturePackLoader.ScenarioDefinition quest : quests) {
-            addQuestReference(references, quest.getId());
-            addQuestReference(references, quest.getPackId() + ":" + quest.getId());
-            addQuestReference(references, quest.getQuestCode());
-        }
-        return references;
-    }
-
-    private void addQuestReference(Set<String> references, String value) {
-        String normalized = normalizeAuditKey(value);
-        if (!normalized.isBlank()) {
-            references.add(normalized);
-        }
     }
 
     private void validateQuestTemplate(AuditReport report,
@@ -6039,70 +5933,6 @@ public class AINPCCommand implements CommandExecutor {
             report.warn(label + " stage " + stage.getId()
                 + " are next_stage catre o faza fara obiective runtime: " + nextStage + ".");
         }
-    }
-
-    private boolean isQuestRuntimeStage(FeaturePackLoader.ScenarioDefinition quest, String normalizedStageId) {
-        if (quest == null || normalizedStageId == null || normalizedStageId.isBlank()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : quest.getQuestStages()) {
-            if (stage == null || !normalizeAuditKey(stage.getId()).equals(normalizedStageId)) {
-                continue;
-            }
-            if (!stage.getObjectiveIds().isEmpty()) {
-                return true;
-            }
-            return quest.getObjectives().stream()
-                .map(objective -> questEntryStage(objective))
-                .anyMatch(objectiveStage -> normalizeAuditKey(objectiveStage).equals(normalizedStageId));
-        }
-        return false;
-    }
-
-    private Set<String> collectQuestObjectiveReferences(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        Set<String> references = new HashSet<>();
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (objective == null) {
-                continue;
-            }
-            references.add(normalizeQuestStageReference(objective.getEntryId()));
-            references.add(normalizeQuestStageReference(objective.getItemId()));
-        }
-        references.remove("");
-        return references;
-    }
-
-    private boolean questStageReferencesObjective(FeaturePackLoader.ScenarioDefinition quest,
-                                                  FeaturePackLoader.QuestEntryDefinition objective) {
-        if (quest == null || objective == null || quest.getQuestStages().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : quest.getQuestStages()) {
-            if (stageReferencesObjective(stage, objective)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
-                                             FeaturePackLoader.QuestEntryDefinition objective) {
-        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
-            return false;
-        }
-
-        String entryId = normalizeQuestStageReference(objective.getEntryId());
-        String itemId = normalizeQuestStageReference(objective.getItemId());
-        for (String objectiveId : stage.getObjectiveIds()) {
-            String normalizedObjective = normalizeQuestStageReference(objectiveId);
-            if (!normalizedObjective.isBlank()
-                && (normalizedObjective.equals(entryId) || normalizedObjective.equals(itemId))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void validateQuestDialogues(AuditReport report,
@@ -6600,22 +6430,6 @@ public class AINPCCommand implements CommandExecutor {
         }
     }
 
-    private boolean isQuestAnchorTypeCompatible(String objectiveType, String anchorType) {
-        String objective = normalizeAuditKey(objectiveType);
-        String anchor = normalizeAuditKey(anchorType);
-        if (objective.isBlank() || anchor.isBlank()) {
-            return true;
-        }
-
-        return switch (objective) {
-            case "visit_region" -> "region".equals(anchor);
-            case "visit_place" -> "place".equals(anchor);
-            case "inspect_node" -> "node".equals(anchor);
-            case "talk_to_npc" -> "npc".equals(anchor);
-            default -> true;
-        };
-    }
-
     private void auditDatabase(AuditReport report) {
         if (plugin.getDatabaseManager() == null) {
             report.error("DatabaseManager nu este initializat.");
@@ -6844,25 +6658,6 @@ public class AINPCCommand implements CommandExecutor {
                 report.error("NPC DB duplicat dupa profile_data.source_key=" + entry.getKey()
                     + " (" + entry.getValue().size() + "): " + entry.getValue() + ".");
             }
-        }
-    }
-
-    private String extractSourceKeyFromProfileData(String profileData) {
-        if (profileData == null || profileData.isBlank()) {
-            return "";
-        }
-
-        try {
-            JsonElement parsed = JsonParser.parseString(profileData);
-            if (parsed == null || !parsed.isJsonObject()) {
-                return "";
-            }
-            JsonElement sourceKey = parsed.getAsJsonObject().get("source_key");
-            return sourceKey != null && sourceKey.isJsonPrimitive()
-                ? sourceKey.getAsString().trim()
-                : "";
-        } catch (JsonSyntaxException exception) {
-            return "";
         }
     }
 
@@ -7273,17 +7068,6 @@ public class AINPCCommand implements CommandExecutor {
         return null;
     }
 
-    private boolean ownedLocationInsidePlace(AINPC.OwnedLocation location, WorldPlaceInfo place) {
-        return location != null
-            && place.worldName().equalsIgnoreCase(location.worldName())
-            && location.x() >= place.minX()
-            && location.x() <= place.maxX()
-            && location.y() >= place.minY()
-            && location.y() <= place.maxY()
-            && location.z() >= place.minZ()
-            && location.z() <= place.maxZ();
-    }
-
     private WorldPlaceInfo findPlaceContainingOwnedLocation(List<WorldPlaceInfo> places, AINPC.OwnedLocation location) {
         if (location == null) {
             return null;
@@ -7489,32 +7273,6 @@ public class AINPCCommand implements CommandExecutor {
             plugin.getMessageUtils().send(sender, "&aNu sunt actiuni de reparatie necesare.");
         }
         return true;
-    }
-
-    private boolean isNpcBindingRepairTarget(String value) {
-        return "npc-bindings".equalsIgnoreCase(value)
-            || "npc_bindings".equalsIgnoreCase(value)
-            || "world-bindings".equalsIgnoreCase(value)
-            || "world_bindings".equalsIgnoreCase(value);
-    }
-
-    private boolean isMappingMetadataRepairTarget(String value) {
-        return "mapping-metadata".equalsIgnoreCase(value)
-            || "mapping_metadata".equalsIgnoreCase(value)
-            || "metadata-mapping".equalsIgnoreCase(value)
-            || "metadata_mapping".equalsIgnoreCase(value);
-    }
-
-    private boolean isRepairBatchTarget(String value) {
-        return "batch".equalsIgnoreCase(value)
-            || "spawn-batch".equalsIgnoreCase(value)
-            || "spawn_batch".equalsIgnoreCase(value);
-    }
-
-    private boolean isRepairBatchListAction(String value) {
-        return "list".equalsIgnoreCase(value)
-            || "recent".equalsIgnoreCase(value)
-            || "history".equalsIgnoreCase(value);
     }
 
     private boolean handleRepairHouseholds(CommandSender sender, boolean apply) {
@@ -8926,48 +8684,6 @@ public class AINPCCommand implements CommandExecutor {
             }
         }
         return bestNode;
-    }
-
-    private int nodePriorityForAnchor(WorldNodeInfo node, String anchorRole) {
-        return switch (normalizeAuditKey(anchorRole)) {
-            case "home" -> {
-                if (nodeMatchesAny(node, "home", "house", "bed", "sleep", "pat")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "entrance", "door", "inside", "intrare", "usa")) {
-                    yield 2;
-                }
-                yield nodeMatchesAny(node, "interaction") ? 3 : -1;
-            }
-            case "work" -> {
-                if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "interaction", "counter", "desk")) {
-                    yield 2;
-                }
-                yield -1;
-            }
-            case "social" -> {
-                if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata", "fantana")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "interaction")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 2;
-                }
-                yield -1;
-            }
-            default -> -1;
-        };
     }
 
     private List<WorldRegionInfo> findRegionMatches(WorldAdminApi worldAdmin, String selector) {

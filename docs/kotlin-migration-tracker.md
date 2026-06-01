@@ -4957,3 +4957,93 @@ Inventar dupa slice:
 
 Rollback:
 - readauga helper-ele mutate in `AINPCCommand.java` si revino lambda-urile la `this::displayQuestObjectiveKey`
+
+### KOT-192
+
+Data: 2026-06-01
+ID: KOT-192
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.CoreNeutralityStaticAuditTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.world.QuestAnchorResolverTest --tests ro.ainpc.world.NpcWorldBindingServiceTest` (PASS)
+
+Observatii:
+- Helper-ele de audit/repair `hasStoryEventProgressionKey`, `addStoryEventProgressionKey`, `storyEventProgressionKey`, `hasRecordStoryEventAction`, `isQuestAuditCandidate`, `collectKnownQuestReferences`, `addQuestReference`, `isQuestAnchorTypeCompatible`, `ownedLocationInsidePlace`, `isNpcBindingRepairTarget`, `isMappingMetadataRepairTarget`, `isRepairBatchTarget` si `isRepairBatchListAction` au fost mutate in Kotlin.
+- Method reference-ul `this::isQuestAuditCandidate` a fost convertit in lambda catre helperul top-level.
+- Handler-ele si query-urile DB au ramas in Java; slice-ul muta doar predicate si normalizari deterministe.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~66.2% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java` si revino lambda-ul la `this::isQuestAuditCandidate`
+
+### KOT-193
+
+Data: 2026-06-01
+ID: KOT-193
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.CoreNeutralityStaticAuditTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.world.QuestAnchorResolverTest --tests ro.ainpc.world.NpcWorldBindingServiceTest --tests ro.ainpc.world.HouseAllocationPlannerTest` (PASS)
+
+Observatii:
+- Helper-ele quest audit/world `isQuestRuntimeStage`, `collectQuestObjectiveReferences`, `questStageReferencesObjective`, `stageReferencesObjective`, `extractSourceKeyFromProfileData` si `nodePriorityForAnchor` au fost mutate in Kotlin.
+- Validarea quest stages/objective references si scorarea nodurilor pentru ancore pastreaza aceleasi prioritati si normalizari.
+- Mutarea initiala a generat doua warning-uri Kotlin pentru conditii redundante; au fost curatate in acelasi slice inainte de gate-ul final.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~66.4% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java`
+
+### KOT-194
+
+Data: 2026-06-01
+ID: KOT-194
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:compileJava :ainpc-core-plugin:compileKotlin` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.commands.AINPCCommandRoutingTest --tests ro.ainpc.progression.ProgressionSelectorTest --tests ro.ainpc.progression.ProgressionDefinitionTest --tests ro.ainpc.world.QuestAnchorResolverTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS)
+
+Observatii:
+- Helper-ele `routeDirectCommandToQuest`, `routeSubcommandToQuest`, `compactUuid`, `storedProgressionMatchesDefinition` si `storedProgressionMatchesSelector` au fost mutate in Kotlin.
+- Rutarea complexa a aliasurilor progression ramane in Java deoarece inca depinde de `progressionAliasSelector`, care foloseste `plugin` si player lookup.
+- Semnaturile Kotlin top-level raman apelabile din Java prin static import-ul existent.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 229 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~66.5% Kotlin dupa linii)
+
+Rollback:
+- readauga helper-ele mutate in `AINPCCommand.java`
