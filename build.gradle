@@ -10,7 +10,6 @@ ext {
     sqliteVersion = property('sqliteVersion').toString()
     hikariVersion = property('hikariVersion').toString()
     mysqlConnectorVersion = property('mysqlConnectorVersion').toString()
-    okhttpVersion = property('okhttpVersion').toString()
     junitVersion = property('junitVersion').toString()
 }
 
@@ -68,5 +67,336 @@ subprojects {
 
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
+    }
+}
+
+def resolveIdeaLauncherPath(String ideaLauncherPath) {
+    def defaultPath = 'C:/Program Files/JetBrains/IntelliJ IDEA 2026.1/bin/idea.bat'
+    def launcher = file(ideaLauncherPath ?: System.getenv('IDEA_PATH') ?: defaultPath)
+
+    if (!launcher.exists()) {
+        def maybeDir = launcher
+        if (maybeDir.exists() && maybeDir.isDirectory()) {
+            def candidateExe = new File(maybeDir, 'bin/idea64.exe')
+            def candidateBat = new File(maybeDir, 'bin/idea.bat')
+            if (candidateExe.exists()) {
+                launcher = candidateExe
+            } else if (candidateBat.exists()) {
+                launcher = candidateBat
+            }
+        } else {
+            def parent = launcher.parentFile
+            if (parent?.exists()) {
+                def candidateExe = new File(parent, 'idea64.exe')
+                def candidateBat = new File(parent, 'idea.bat')
+                if (candidateExe.exists()) {
+                    launcher = candidateExe
+                } else if (candidateBat.exists()) {
+                    launcher = candidateBat
+                }
+            }
+        }
+    }
+
+    return launcher
+}
+
+def ideaLauncherCommand(File ideaLauncher, List<String> args) {
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        if (ideaLauncher.name.toLowerCase().endsWith('.bat')) {
+            def quotedLauncher = "\"${ideaLauncher.absolutePath.replace('"', '\\"')}\""
+            def quotedArgs = args.collect { "\"${it.replace('"', '\\"')}\"" }
+            return ['cmd', '/c', 'start', '""', quotedLauncher] + quotedArgs
+        }
+        def escapedLauncher = ideaLauncher.absolutePath.replace("'", "''")
+        def escapedArgs = args.collect { "'${it.replace("'", "''")}'" }.join(', ')
+        return ['powershell', '-NoProfile', '-Command', "Start-Process -FilePath '${escapedLauncher}' -ArgumentList ${escapedArgs}"]
+    }
+    return [ideaLauncher.absolutePath] + args
+}
+
+def findExecutableOnPath(String name) {
+    def pathValue = System.getenv('PATH') ?: ''
+    def candidateNames = [name]
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        candidateNames += ["${name}.bat", "${name}.exe"]
+    }
+    pathValue.split(File.pathSeparator).findResult { dir ->
+        candidateNames.find { candidate ->
+            def file = new File(dir, candidate)
+            if (file.exists()) {
+                return file
+            }
+            return null
+        }
+    }
+}
+
+// Task to gather Java sources into a single folder for conversion to Kotlin.
+task prepareJavaToKotlinConversion(type: Copy) {
+    group = 'conversion'
+    description = 'Collects Java source files from all modules into build/conversion/input for conversion.'
+    from(fileTree(rootDir) {
+        include '**/src/main/java/**/*.java'
+        include '**/src/test/java/**/*.java'
+        exclude '**/build/**'
+        exclude '**/.gradle/**'
+    })
+    into "$buildDir/conversion/input"
+}
+
+task convertJavaToKotlin {
+    group = 'conversion'
+    description = 'Experimental helper: runs an external Java->Kotlin converter on prepared input. Requires a separate converter CLI.'
+    dependsOn prepareJavaToKotlinConversion
+    outputs.dir "$buildDir/conversion/output"
+
+    doLast {
+        def converterCommand = project.findProperty('javaToKotlinConverterCommand') ?: System.getenv('JAVA_TO_KOTLIN_CONVERTER_COMMAND')
+        def converterArgsRaw = project.findProperty('javaToKotlinConverterArgs') ?: System.getenv('JAVA_TO_KOTLIN_CONVERTER_ARGS') ?: ''
+
+        if (!converterCommand) {
+            throw new GradleException('Please set the converter command via -PjavaToKotlinConverterCommand="<path>" or environment variable JAVA_TO_KOTLIN_CONVERTER_COMMAND.')
+        }
+
+        def inputDir = file("$buildDir/conversion/input")
+        def outputDir = file("$buildDir/conversion/output")
+        outputDir.mkdirs()
+
+        def args = converterArgsRaw.tokenize()
+        def inputArgPresent = args.any { it.contains('{input}') || it.contains(inputDir.absolutePath) }
+        def outputArgPresent = args.any { it.contains('{output}') || it.contains(outputDir.absolutePath) }
+
+        if (!inputArgPresent) {
+            args += inputDir.absolutePath
+        }
+        if (!outputArgPresent) {
+            args += outputDir.absolutePath
+        }
+
+        args = args.collect { it.replace('{input}', inputDir.absolutePath).replace('{output}', outputDir.absolutePath) }
+
+        println "Running converter command: ${converterCommand} ${args.join(' ')}"
+        exec {
+            commandLine = [converterCommand] + args
+            workingDir = rootDir
+            environment 'JAVA_TO_KOTLIN_CONVERTER_INPUT', inputDir.absolutePath
+            environment 'JAVA_TO_KOTLIN_CONVERTER_OUTPUT', outputDir.absolutePath
+        }
+        println "Conversion output written to ${outputDir.absolutePath}"
+    }
+}
+
+task ideaLauncherInfo {
+    group = 'conversion'
+    description = 'Prints the resolved IntelliJ IDEA launcher path for the current environment.'
+
+    doLast {
+        def configuredPath = project.findProperty('ideaLauncherPath') ?: System.getenv('IDEA_PATH')
+        def launcher = resolveIdeaLauncherPath(configuredPath)
+        println "Configured ideaLauncherPath / IDEA_PATH: ${configuredPath ?: '<none>'}"
+        println "Resolved IDEA launcher: ${launcher.absolutePath}"
+        println "Exists: ${launcher.exists()}"
+        if (!launcher.exists()) {
+            println 'Hint: pass -PideaLauncherPath="<path-to-idea.bat-or-idea64.exe>" or set IDEA_PATH.'
+        }
+    }
+}
+
+task openRemainingJavaInIdea(type: Exec) {
+    group = 'conversion'
+    description = 'Opens remaining Java source files from the prepared conversion input tree in IntelliJ IDEA.'
+    dependsOn prepareJavaToKotlinConversion
+
+    doFirst {
+        def configPath = project.findProperty('ideaLauncherPath') ?: System.getenv('IDEA_PATH')
+        def ideaLauncher = resolveIdeaLauncherPath(configPath)
+        if (!ideaLauncher.exists()) {
+            throw new GradleException("IntelliJ IDEA launcher not found. Set -PideaLauncherPath='<path>' or IDEA_PATH='<path>'.")
+        }
+
+        def javaFiles = fileTree(rootDir) {
+            include '**/src/main/java/**/*.java'
+            include '**/src/test/java/**/*.java'
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+        }.files.sort()
+
+        if (javaFiles.empty) {
+            throw new GradleException('No Java source files found to open.')
+        }
+
+        def inputRoot = file("$buildDir/conversion/input")
+        def targetFiles = javaFiles.collect { original ->
+            def relative = rootDir.toPath().relativize(original.toPath())
+            inputRoot.toPath().resolve(relative).toFile()
+        }
+
+        targetFiles.each { if (!it.exists()) {
+            throw new GradleException("Expected prepared input file not found: ${it.absolutePath}")
+        } }
+
+        println 'Opening remaining Java sources in IntelliJ IDEA:'
+        targetFiles.each { println " - ${it.absolutePath}" }
+
+        commandLine = ideaLauncherCommand(ideaLauncher, targetFiles.collect { it.absolutePath })
+        workingDir = rootDir
+    }
+}
+
+task openJavaToKotlinInputInIdea(type: Exec) {
+    group = 'conversion'
+    description = 'Opens the prepared Java conversion source tree in IntelliJ IDEA.'
+    dependsOn prepareJavaToKotlinConversion
+
+    doFirst {
+        def configPath = project.findProperty('ideaLauncherPath') ?: System.getenv('IDEA_PATH')
+        def ideaLauncher = resolveIdeaLauncherPath(configPath)
+        if (!ideaLauncher.exists()) {
+            throw new GradleException("IntelliJ IDEA launcher not found. Set -PideaLauncherPath='<path>' or IDEA_PATH='<path>' to the launcher.")
+        }
+
+        def target = project.hasProperty('ideaFileToOpen') ? file(project.property('ideaFileToOpen')) : file("$buildDir/conversion/input")
+        if (!target.exists()) {
+            throw new GradleException("Target path to open does not exist: ${target.absolutePath}")
+        }
+
+        def ideaLine = project.hasProperty('ideaLine') ? project.property('ideaLine').toString() : null
+        def ideaColumn = project.hasProperty('ideaColumn') ? project.property('ideaColumn').toString() : null
+
+        def args = []
+        if (target.isFile()) {
+            if (ideaLine) {
+                args += '--line'
+                args += ideaLine
+            }
+            if (ideaColumn) {
+                args += '--column'
+                args += ideaColumn
+            }
+            args += target.absolutePath
+        } else {
+            args += target.absolutePath
+            if (ideaLine || ideaColumn) {
+                println "Note: --line/--column is only applied when opening a file. Ignoring line/column values for directory target."
+            }
+        }
+
+        println "Opening conversion target in IntelliJ IDEA: ${target.absolutePath}"
+        commandLine = ideaLauncherCommand(ideaLauncher, args)
+        workingDir = rootDir
+    }
+}
+
+task conversionNextSteps {
+    group = 'conversion'
+    description = 'Summarizes remaining Java conversion work and recommended next steps.'
+    doLast {
+        def javaFiles = fileTree(rootDir) {
+            include '**/src/main/java/**/*.java'
+            include '**/src/test/java/**/*.java'
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+            exclude '**/target/**'
+            exclude '**/.idea/**'
+            exclude '**/node_modules/**'
+        }.files.sort()
+
+        println "Remaining Java source files: ${javaFiles.size()}"
+        javaFiles.each { f -> println " - ${rootDir.toPath().relativize(f.toPath())}" }
+
+        println '\nRecommended next steps:'
+        println '1. Run `.\\gradlew.bat prepareJavaToKotlinConversion` to refresh the conversion input tree.'
+        println '2. Run `.\\gradlew.bat openRemainingJavaInIdea` to open the remaining Java files directly in IntelliJ IDEA.'
+        println '3. In IDEA, convert each opened Java file using `Code | Convert Java File to Kotlin File` and review the results.'
+        println '4. Move the converted Kotlin files back into the original module source tree, replacing the Java sources as needed.'
+        println '5. Run `.\\gradlew.bat kotlinRatio` and `.\\gradlew.bat listJavaSources` after conversion to verify the remaining Java share.'
+        println '\nOptional automation:'
+        println ' - If you have a CLI converter, run `.\\gradlew.bat convertJavaToKotlin -PjavaToKotlinConverterCommand="<path>" -PjavaToKotlinConverterArgs="..."`.'
+        println ' - If IDEA is not installed at the default location, add `-PideaLauncherPath="C:/Program Files/JetBrains/IntelliJ IDEA 2026.1/bin/idea.bat"`.'
+    }
+}
+
+task javaToKotlinConverterInfo {
+    group = 'conversion'
+    description = 'Detects configured converter settings, PATH candidates, and IDEA launcher availability.'
+
+    doLast {
+        def configuredCommand = project.findProperty('javaToKotlinConverterCommand') ?: System.getenv('JAVA_TO_KOTLIN_CONVERTER_COMMAND')
+        def configuredArgs = project.findProperty('javaToKotlinConverterArgs') ?: System.getenv('JAVA_TO_KOTLIN_CONVERTER_ARGS')
+        def ideaPath = project.findProperty('ideaLauncherPath') ?: System.getenv('IDEA_PATH')
+        def ideaLauncher = resolveIdeaLauncherPath(ideaPath)
+
+        println "Configured converter command: ${configuredCommand ?: '<none>'}"
+        println "Configured converter args: ${configuredArgs ?: '<none>'}"
+        println "Resolved IDEA launcher: ${ideaLauncher.absolutePath}"
+        println "IDEA launcher exists: ${ideaLauncher.exists()}"
+
+        def candidates = ['j2k', 'java-to-kotlin', 'kotlinc', 'kotlin']
+        println '\nPATH converter candidates:'
+        candidates.each { candidate ->
+            def found = findExecutableOnPath(candidate)
+            println " - ${candidate}: ${found ? found.absolutePath : '<not found>'}"
+        }
+
+        println '\nIf you want to use a CLI converter, set `JAVA_TO_KOTLIN_CONVERTER_COMMAND` or `-PjavaToKotlinConverterCommand="<path>"`.'
+        println 'If you only need IntelliJ, use `openJavaToKotlinInputInIdea` or `openRemainingJavaInIdea`.'
+    }
+}
+
+task listJavaSources {
+    group = 'conversion'
+    description = 'Lists Java source files that would be converted.'
+
+    doLast {
+        def files = fileTree(rootDir) {
+            include '**/src/main/java/**/*.java'
+            include '**/src/test/java/**/*.java'
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+            exclude '**/target/**'
+            exclude '**/.idea/**'
+            exclude '**/node_modules/**'
+        }
+        println "Java sources found: ${files.files.size()}"
+        files.files.sort().each { f -> println " - ${rootDir.toPath().relativize(f.toPath())}" }
+    }
+}
+
+task kotlinRatio {
+    group = 'conversion'
+    description = 'Calculates Kotlin vs Java share in source files by count and line metrics.'
+
+    doLast {
+        def sources = fileTree(rootDir) {
+            include '**/*.kt'
+            include '**/*.java'
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+            exclude '**/.idea/**'
+            exclude '**/target/**'
+            exclude '**/node_modules/**'
+        }
+
+        def ktFiles = sources.matching { include '**/*.kt' }
+        def javaFiles = sources.matching { include '**/*.java' }
+
+        def ktLineCount = ktFiles.files.sum { file -> file.readLines().size() }
+        def javaLineCount = javaFiles.files.sum { file -> file.readLines().size() }
+
+        def totalFiles = ktFiles.files.size() + javaFiles.files.size()
+        def totalLines = ktLineCount + javaLineCount
+
+        def ktFilePct = totalFiles > 0 ? String.format('%.2f', ktFiles.files.size() * 100.0 / totalFiles) : '0.00'
+        def ktLinePct = totalLines > 0 ? String.format('%.2f', ktLineCount * 100.0 / totalLines) : '0.00'
+
+        println "Kotlin files: ${ktFiles.files.size()}"
+        println "Java files: ${javaFiles.files.size()}"
+        println "Total Kotlin+Java files: ${totalFiles}"
+        println "Kotlin file share: ${ktFilePct}%"
+        println "Kotlin lines: ${ktLineCount}"
+        println "Java lines: ${javaLineCount}"
+        println "Total Kotlin+Java lines: ${totalLines}"
+        println "Kotlin line share: ${ktLinePct}%"
     }
 }

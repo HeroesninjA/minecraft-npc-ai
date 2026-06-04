@@ -47,8 +47,8 @@ class MappingDraftFactoryTest {
         assertNotNull(place)
         assertEquals("sat:casa_fierarului", place!!.id())
         assertEquals(PlaceType.HOUSE, place.placeType())
-        assertTrue(place.tags().contains("blacksmith"))
-        assertEquals("blacksmith", place.metadata()["profession"])
+        assertTrue(place.tags().contains("fierar"))
+        assertEquals("fierar", place.metadata()["profession"])
         assertEquals(false, place.publicAccess())
     }
 

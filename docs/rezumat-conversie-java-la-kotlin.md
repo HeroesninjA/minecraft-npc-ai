@@ -1,6 +1,6 @@
 # Rezumat Conversie Java la Kotlin
 
-Actualizat: 2026-06-01
+Actualizat: 2026-06-04
 
 ## Scop
 
@@ -29,11 +29,11 @@ Status curent:
 - `ainpc-scenario-medieval` este migrat la Kotlin pe `src/main`
 - primul test Kotlin smoke exista in core si ruleaza cu JUnit 5
 - teste Java mutate in Kotlin (pana acum): `NPCNameGeneratorTest`, `ProgressionSelectorTest`, `AINPCTabCompleterTest`, `AINPCCommandRoutingTest`, `PluginCommandDescriptorTest`, `GuiKeyTest`, `QuestLogGuiFilterTest`, `MappingIntentParserTest`
-- primele clase Kotlin de productie sunt convertite in zonele `ai/orchestration`, `debug`, `engine`, `gui`, `progression`, `routine`, `spawn`, `world.mapping`, `world.patch` si `world.scan`
+- primele clase Kotlin de productie sunt convertite in zonele `ai/orchestration`, `commands`, `debug`, `engine`, `gui`, `progression`, `routine`, `spawn`, `world.mapping`, `world.patch` si `world.scan`
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent
 - smoke Paper nu a fost rulat local inca si ramane urmatorul gate runtime
-- inventar curent: 229 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 66.5% Kotlin dupa linii
+- inventar curent: 229 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 69.3% Kotlin dupa linii
 - fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
 
 ## Ideea principala

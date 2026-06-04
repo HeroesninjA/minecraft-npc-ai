@@ -99,7 +99,8 @@ ext {
     paperVersion = property('paperVersion').toString()
     gsonVersion = property('gsonVersion').toString()
     sqliteVersion = property('sqliteVersion').toString()
-    okhttpVersion = property('okhttpVersion').toString()
+    hikariVersion = property('hikariVersion').toString()
+    mysqlConnectorVersion = property('mysqlConnectorVersion').toString()
     junitVersion = property('junitVersion').toString()
 }
 ```

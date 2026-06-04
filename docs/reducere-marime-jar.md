@@ -1,6 +1,6 @@
 # Reducere Marime JAR
 
-Actualizat: 2026-04-28
+Actualizat: 2026-06-04
 
 ## Scop
 
@@ -22,6 +22,7 @@ Dimensiune observata pentru core:
 
 - `ainpc-core-plugin-1.0.0.jar`: aproximativ `16.6 MB`
 - `ainpc-core-plugin-1.0.0-shaded.jar`: aproximativ `16.6 MB`
+- build Gradle dupa Faza 2: `ainpc-core-plugin-1.0.0.jar` aproximativ `21.16 MB`
 
 Cele mai mari zone din JAR-ul core:
 
@@ -37,7 +38,8 @@ Interpretare:
 - codul propriu AINPC este sub 1 MB in JAR
 - resursele YAML sunt foarte mici
 - `sqlite-jdbc` este cauza principala a dimensiunii
-- OkHttp trage dupa el Okio si Kotlin stdlib
+- OkHttp a fost eliminat; Kotlin stdlib ramane necesar pentru codul Kotlin din core
+- build-ul Gradle include si driverele de storage configurate in runtime classpath, inclusiv SQLite/MySQL/Hikari
 
 ## Dependinte care umfla JAR-ul
 
@@ -51,6 +53,12 @@ org.jetbrains.kotlin:kotlin-stdlib
 com.google.code.gson:gson:2.11.0
 ro.ainpc:ainpc-api:1.0.0
 ```
+
+Nota 2026-06-04:
+
+- `com.squareup.okhttp3:okhttp` a fost eliminat din runtime classpath
+- `com.squareup.okio:*` nu mai apare in JAR-ul core reconstruit
+- proprietatea `okhttpVersion` a fost eliminata din configuratia Gradle
 
 Dimensiuni aproximative ale artifactelor locale:
 
@@ -138,6 +146,8 @@ Atentie:
 
 ## Faza 2: Inlocuieste OkHttp cu `java.net.http.HttpClient`
 
+Status 2026-06-04: implementat.
+
 Proiectul foloseste Java 21, deci are deja client HTTP modern in JDK:
 
 - `java.net.http.HttpClient`
@@ -152,18 +162,16 @@ Dependinte eliminate indirect:
 
 - `com.squareup.okio:okio`
 - `com.squareup.okio:okio-jvm`
-- `org.jetbrains.kotlin:kotlin-stdlib`
-- `org.jetbrains.kotlin:kotlin-stdlib-common`
-- `org.jetbrains.kotlin:kotlin-stdlib-jdk7`
-- `org.jetbrains.kotlin:kotlin-stdlib-jdk8`
 
 Impact estimat:
 
-- aproximativ `2.6 MB` mai putin in JAR
+- aproximativ `1.0-1.2 MB` mai putin in JAR
+- Kotlin stdlib ramane necesar cat timp core-ul contine cod Kotlin
 
 Clase afectate:
 
-- `ainpc-core-plugin/src/main/java/ro/ainpc/ai/OpenAIService.java`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIConnectionProbe.kt`
 
 Directie de refactorizare:
 
@@ -197,9 +205,16 @@ HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.o
 Verificari obligatorii dupa schimbare:
 
 ```powershell
-mvn clean test
-mvn package -DskipTests
+.\\gradlew.bat :ainpc-core-plugin:test --no-daemon
+.\\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:jar --no-daemon
 ```
+
+Rezultat local 2026-06-04:
+
+- `:ainpc-core-plugin:test` trece
+- `:ainpc-core-plugin:clean :ainpc-core-plugin:jar` trece
+- `jar tf ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar` nu mai gaseste pachete `okhttp3/` sau `okio/`
+- dimensiune JAR Gradle masurata: aproximativ `21.16 MB`
 
 Teste runtime recomandate:
 
@@ -385,9 +400,9 @@ Foloseste bugetul de `3 MB` doar dupa ce SQLite este externalizat.
 ## Ordine recomandata de implementare
 
 1. masoara dimensiunea curenta si salveaza baseline-ul
-2. inlocuieste OkHttp cu `java.net.http.HttpClient`
-3. elimina dependinta `okhttp` din `ainpc-core-plugin/pom.xml`
-4. ruleaza `mvn clean test` si `mvn package -DskipTests`
+2. inlocuieste OkHttp cu `java.net.http.HttpClient` - finalizat 2026-06-04
+3. elimina dependinta `okhttp` din `ainpc-core-plugin/build.gradle` - finalizat 2026-06-04
+4. ruleaza `.\\gradlew.bat :ainpc-core-plugin:test` si `.\\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:jar`
 5. externalizeaza `sqlite-jdbc` prin Paper library loader sau modul separat
 6. ruleaza test pe server Paper real
 7. abia apoi testeaza `minimizeJar`
