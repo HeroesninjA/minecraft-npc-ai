@@ -1,6 +1,6 @@
 # Reducere Marime JAR
 
-Actualizat: 2026-06-04
+Actualizat: 2026-06-05
 
 ## Scop
 
@@ -259,7 +259,58 @@ Risc:
 - depinde de suportul exact al serverului pentru library loading
 - trebuie testat pe serverul Paper tinta, nu doar cu Maven
 
-### Optiunea B: modul separat `ainpc-storage-sqlite`
+### Optiunea B: SpigotLibraryLoader
+
+Spigot poate incarca librarii declarate in `plugin.yml` prin mecanismul sau de library loading, raportat in loguri ca `SpigotLibraryLoader`.
+
+Aceasta varianta este similara ca obiectiv cu Paper library loader: JAR-ul pluginului nu mai contine dependinta grea, iar serverul o descarca si o leaga la classpath-ul pluginului la pornire.
+
+Directie:
+
+- scoate `sqlite-jdbc` din shaded JAR
+- pastreaza dependinta doar pentru compilare, de exemplu `compileOnly`/`provided`
+- declara dependinta in `plugin.yml` la cheia `libraries`
+- testeaza pornirea pe server Spigot/Paper real si verifica logurile pentru `SpigotLibraryLoader`
+
+Exemplu conceptual `plugin.yml`:
+
+```yaml
+libraries:
+  - org.xerial:sqlite-jdbc:3.45.1.0
+```
+
+Impact estimat:
+
+- `ainpc-core-plugin` scade cu aproximativ `12.8 MB`, daca `sqlite-jdbc` nu mai este shaded
+- serverul pastreaza dependinta separat, in cache-ul/librariile sale runtime
+
+Avantaj:
+
+- nu necesita modul separat de storage
+- pastreaza codul de persistenta SQLite in core, dar muta livrarea dependintei in runtime
+- este o solutie mai apropiata de ecosistemul Spigot pentru dependinte Maven simple
+
+Riscuri:
+
+- librariile trebuie sa fie coordonate Maven disponibile pentru loader-ul serverului
+- prima pornire poate depinde de acces la Maven Central sau de cache-ul serverului
+- functia trebuie tratata ca dependenta de implementarea si versiunea serverului tinta
+- daca serverul blocheaza descarcarea de librarii, pluginul nu va porni fara fallback sau dependinta shaded
+
+Verificari obligatorii:
+
+- sterge `org/sqlite/` din JAR-ul pluginului si confirma cu `jar tf`
+- porneste serverul fara copia locala shaded a `sqlite-jdbc`
+- confirma in log ca `SpigotLibraryLoader` descarca sau gaseste libraria
+- verifica initializarea bazei de date si crearea fisierului SQLite
+- ruleaza testele functionale de NPC, memorie si quest progress
+
+Recomandare:
+
+- foloseste aceasta optiune daca tinta principala include servere Spigot/Paper moderne si controlate
+- pastreaza varianta shaded sau modulul separat ca fallback pentru servere fara library loading stabil
+
+### Optiunea C: modul separat `ainpc-storage-sqlite`
 
 Se creeaza un modul/plugin separat pentru persistenta SQLite.
 
@@ -297,7 +348,7 @@ Risc:
 - refactorizare mai mare
 - necesita contracte stabile pentru persistenta
 
-### Optiunea C: storage local fara JDBC pentru modul minim
+### Optiunea D: storage local fara JDBC pentru modul minim
 
 Pentru un core foarte mic, se poate introduce un storage simplificat:
 
@@ -403,7 +454,7 @@ Foloseste bugetul de `3 MB` doar dupa ce SQLite este externalizat.
 2. inlocuieste OkHttp cu `java.net.http.HttpClient` - finalizat 2026-06-04
 3. elimina dependinta `okhttp` din `ainpc-core-plugin/build.gradle` - finalizat 2026-06-04
 4. ruleaza `.\\gradlew.bat :ainpc-core-plugin:test` si `.\\gradlew.bat :ainpc-core-plugin:clean :ainpc-core-plugin:jar`
-5. externalizeaza `sqlite-jdbc` prin Paper library loader sau modul separat
+5. externalizeaza `sqlite-jdbc` prin Paper library loader, SpigotLibraryLoader sau modul separat
 6. ruleaza test pe server Paper real
 7. abia apoi testeaza `minimizeJar`
 8. adauga un buget de dimensiune pentru JAR
@@ -438,7 +489,7 @@ Refactorizarea pentru reducerea JAR-ului este considerata terminata cand:
 Pentru acest proiect, cea mai buna strategie este:
 
 - pasul 1: inlocuieste OkHttp cu `java.net.http.HttpClient`
-- pasul 2: muta SQLite in runtime library sau intr-un modul separat de storage
+- pasul 2: muta SQLite in runtime library prin Paper/Spigot library loader sau intr-un modul separat de storage
 - pasul 3: pastreaza core-ul mic si lasa addonurile/storage-ul sa aduca dependinte grele doar cand sunt necesare
 
 Refactorizarea claselor mari ramane importanta pentru mentenanta, dar nu va reduce semnificativ JAR-ul. Dimensiunea actuala este o problema de dependinte, nu de cod propriu.

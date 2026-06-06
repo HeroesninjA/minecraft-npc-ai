@@ -401,7 +401,7 @@ public class AINPCCommand implements CommandExecutor {
 
         if (index < args.length) {
             Integer directLimit = parseIntegerStrict(args[index]);
-            String resolvedPlayerUuid = resolveProgressionStoredPlayerUuid(args[index]);
+            String resolvedPlayerUuid = resolveProgressionStoredPlayerUuid(args[index], this::findOnlinePlayer);
             if (directLimit != null) {
                 limit = clampProgressionStoredLimit(sender, directLimit);
                 index++;
@@ -509,24 +509,6 @@ public class AINPCCommand implements CommandExecutor {
                 + (progression.definitionResolved() ? "" : " definition=<missing>"));
     }
 
-    private String resolveProgressionStoredPlayerUuid(String selector) {
-        if (selector == null || selector.isBlank() || "all".equalsIgnoreCase(selector)) {
-            return "";
-        }
-
-        try {
-            return UUID.fromString(selector).toString();
-        } catch (IllegalArgumentException ignored) {
-            // Nu este UUID; incercam jucator online.
-        }
-
-        Player player = plugin.getServer().getPlayerExact(selector);
-        if (player == null) {
-            player = plugin.getServer().getPlayer(selector);
-        }
-        return player != null ? player.getUniqueId().toString() : null;
-    }
-
     private int clampProgressionStoredLimit(CommandSender sender, int limit) {
         if (limit <= 0) {
             plugin.getMessageUtils().send(sender, "&cLimit trebuie sa fie un numar pozitiv.");
@@ -599,66 +581,16 @@ public class AINPCCommand implements CommandExecutor {
     }
 
     private String[] routeProgressionAlias(String[] args, String kind) {
-        String[] routedArgs = routeSubcommandToQuest(args);
-        String normalizedKind = normalizeProgressionKind(kind);
-        if (routedArgs.length == 1) {
-            return new String[] {"quest", "log", normalizedKind};
-        }
-
-        String mode = routedArgs[1].toLowerCase(Locale.ROOT);
-        if ("log".equals(mode)) {
-            return routeProgressionAliasLogArgs(routedArgs, normalizedKind);
-        }
-        if ("gui".equals(mode)) {
-            return routeProgressionAliasGuiArgs(routedArgs, normalizedKind);
-        }
-
-        return routeProgressionAliasSelectorArgs(routedArgs, mode, normalizedKind);
-    }
-
-    private String[] routeProgressionAliasSelectorArgs(String[] args, String mode, String kind) {
-        String[] routedArgs = args.clone();
-        switch (mode) {
-            case "gui", "nearest", "accept", "yes", "y", "da", "ok", "confirm",
-                 "decline", "deny", "reject", "no", "n", "nu", "refuz",
-                 "reset", "complete", "anchors" -> {
-                return routedArgs;
-            }
-            case "status", "progress", "progres", "debug", "abandon" -> {
-                if (routedArgs.length > 2) {
-                    routedArgs[2] = progressionAliasSelector(routedArgs[2], kind);
-                }
-            }
-            case "track", "current" -> {
-                String rawAction = routedArgs.length > 2 ? routedArgs[2].toLowerCase(Locale.ROOT) : "";
-                String action = "start".equals(rawAction) || "stop".equals(rawAction) ? rawAction : "";
-                int selectorIndex = action.isBlank() ? 2 : 3;
-                if (!"stop".equals(action) && routedArgs.length > selectorIndex) {
-                    routedArgs[selectorIndex] = progressionAliasSelector(routedArgs[selectorIndex], kind);
-                }
-            }
-            default -> {
-                if (routedArgs.length == 2) {
-                    return new String[] {"quest", "status", progressionAliasSelector(routedArgs[1], kind)};
-                }
-                if (routedArgs.length == 3) {
-                    return new String[] {"quest", "status", progressionAliasSelector(routedArgs[1], kind), routedArgs[2]};
-                }
-            }
-        }
-        return routedArgs;
-    }
-
-    private String progressionAliasSelector(String selector, String kind) {
-        if (selector == null || selector.isBlank()
-            || selector.contains(":")
-            || "nearest".equalsIgnoreCase(selector)
-            || isTrackedQuestSelector(selector)
-            || findOnlinePlayer(selector) != null) {
-            return selector;
-        }
-
-        return plugin.getProgressionService().kindSelector(selector, kind);
+        return AINPCCommandText.routeProgressionAlias(
+            args,
+            kind,
+            (selector, selectorKind) -> AINPCCommandText.progressionAliasSelector(
+                selector,
+                selectorKind,
+                plugin != null ? plugin.getProgressionService() : null,
+                this::findOnlinePlayer
+            )
+        );
     }
 
     private boolean handleQuest(CommandSender sender, String[] args) {
@@ -1012,7 +944,11 @@ public class AINPCCommand implements CommandExecutor {
                                                            String progressionKind) {
         String npcSelector = args.length > 2 ? args[2] : "";
         int playerArgIndex = args.length > 2 ? 3 : -1;
-        if (args.length == 3 && shouldTreatQuestDecisionArgumentAsPlayer(args[2])) {
+        if (args.length == 3 && shouldTreatQuestDecisionArgumentAsPlayer(
+            args[2],
+            plugin.getNpcManager()::getNPCByName,
+            this::findOnlinePlayer
+        )) {
             npcSelector = "";
             playerArgIndex = 2;
         }
@@ -1034,17 +970,6 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         return new QuestDecisionTarget(targetPlayer, npc);
-    }
-
-    private boolean shouldTreatQuestDecisionArgumentAsPlayer(String argument) {
-        if (argument == null || argument.isBlank() || "nearest".equalsIgnoreCase(argument)) {
-            return false;
-        }
-        if (plugin.getNpcManager().getNPCByName(argument) != null) {
-            return false;
-        }
-
-        return findOnlinePlayer(argument) != null;
     }
 
     private AINPC resolveFlexibleQuestDecisionNpc(CommandSender sender,
@@ -1100,7 +1025,10 @@ public class AINPCCommand implements CommandExecutor {
             return true;
         }
 
-        if (shouldHandleAbandonAsQuestSelector(npcSelector)) {
+        if (shouldHandleAbandonAsQuestSelector(
+            npcSelector,
+            plugin.getNpcManager()::getNPCByName
+        )) {
             ScenarioEngine.QuestInteractionResult questInteraction =
                 plugin.getProgressionService().abandon(targetPlayer, npcSelector);
             if (!questInteraction.isHandled()) {
@@ -1145,16 +1073,6 @@ public class AINPCCommand implements CommandExecutor {
             "&eJucatorul &f" + targetPlayer.getName() + " &ea abandonat quest-ul lui &6" + npc.getName() + "&e."
         );
         return true;
-    }
-
-    private boolean shouldHandleAbandonAsQuestSelector(String selector) {
-        if (selector == null || selector.isBlank() || "nearest".equalsIgnoreCase(selector)) {
-            return false;
-        }
-        if (isTrackedQuestSelector(selector)) {
-            return true;
-        }
-        return plugin.getNpcManager().getNPCByName(selector) == null;
     }
 
     private boolean handleQuestDebug(CommandSender sender, String[] args) {
@@ -4672,7 +4590,15 @@ public class AINPCCommand implements CommandExecutor {
             );
         }
         if ("all".equals(mode) || "world".equals(mode)) {
-            auditWorld(report);
+            Set<String> loadedWorldNames = plugin.getServer().getWorlds().stream()
+                .map(World::getName)
+                .collect(Collectors.toSet());
+            auditWorld(
+                report,
+                plugin.getPlatform().getWorldAdmin(),
+                loadedWorldNames,
+                plugin.getNpcManager().getAllNPCs()
+            );
         }
         if ("all".equals(mode) || "db".equals(mode)) {
             auditDatabase(report);
@@ -4684,7 +4610,13 @@ public class AINPCCommand implements CommandExecutor {
             auditQuestAnchors(report, strictQuestAnchorAudit);
         }
         if ("all".equals(mode) || "world".equals(mode) || "wand".equals(mode)) {
-            auditMappingWandDrafts(report);
+            auditMappingWandDrafts(
+                report,
+                plugin.getMappingWandService(),
+                plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null,
+                plugin.getNpcManager().getAllNPCs(),
+                AUDIT_PREVIEW_LIMIT
+            );
         }
 
         sendAuditReport(sender, auditModeLabel(mode, option), report);
@@ -4727,152 +4659,6 @@ public class AINPCCommand implements CommandExecutor {
         }
 
         return true;
-    }
-
-    private void auditWorld(AuditReport report) {
-        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
-            report.warn("World admin este dezactivat sau indisponibil.");
-            return;
-        }
-
-        List<WorldRegionInfo> regions = new ArrayList<>(worldAdmin.getRegions());
-        List<WorldPlaceInfo> places = new ArrayList<>(worldAdmin.getPlaces());
-        List<WorldNodeInfo> nodes = new ArrayList<>(worldAdmin.getNodes());
-        report.info("World mapping: " + regions.size() + " regiuni, " + places.size()
-            + " places, " + nodes.size() + " nodes.");
-        if (regions.isEmpty()) {
-            report.warn("World admin este activ, dar mapping-ul nu are nicio regiune. NPC-urile si questurile folosesc doar fallback-uri de coordonate.");
-        } else if (places.isEmpty()) {
-            report.warn("World admin are regiuni, dar nu are places. Casele, locurile de munca si contextul semantic pentru NPC-uri sunt incomplete.");
-        }
-
-        Map<String, WorldRegionInfo> regionsById = new HashMap<>();
-        for (WorldRegionInfo region : regions) {
-            regionsById.put(region.id(), region);
-            if (plugin.getServer().getWorld(region.worldName()) == null) {
-                report.warn("Regiunea " + region.id() + " refera o lume neincarcata: " + region.worldName() + ".");
-            }
-            if (!validBounds(region.minX(), region.minY(), region.minZ(), region.maxX(), region.maxY(), region.maxZ())) {
-                report.error("Regiunea " + region.id() + " are bounds invalide.");
-            }
-        }
-
-        Map<String, WorldPlaceInfo> placesById = new HashMap<>();
-        Set<String> ownerWarnings = new HashSet<>();
-        for (WorldPlaceInfo place : places) {
-            placesById.put(place.id(), place);
-            WorldRegionInfo region = regionsById.get(place.regionId());
-            if (region == null) {
-                report.error("Place-ul " + place.id() + " refera regiunea inexistenta " + place.regionId() + ".");
-            } else if (!placeInsideRegion(place, region)) {
-                report.error("Place-ul " + place.id() + " nu este complet in regiunea " + region.id() + ".");
-            }
-
-            if (plugin.getServer().getWorld(place.worldName()) == null) {
-                report.warn("Place-ul " + place.id() + " refera o lume neincarcata: " + place.worldName() + ".");
-            }
-            if (!validBounds(place.minX(), place.minY(), place.minZ(), place.maxX(), place.maxY(), place.maxZ())) {
-                report.error("Place-ul " + place.id() + " are bounds invalide.");
-            }
-            if (place.placeType() == PlaceType.HOUSE && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
-                report.warn("Casa " + place.id() + " nu are owner_npc_id.");
-            }
-            if (!place.publicAccess() && place.ownerNpcId().isBlank() && !hasPendingOwner(place)) {
-                report.warn("Place-ul privat " + place.id() + " nu are owner_npc_id.");
-            }
-            if (!place.ownerNpcId().isBlank() && !ownerMatchesLoadedNpc(place.ownerNpcId(), plugin.getNpcManager().getAllNPCs())) {
-                String key = place.ownerNpcId() + "@" + place.id();
-                if (ownerWarnings.add(key)) {
-                    report.warn("Place-ul " + place.id() + " are owner_npc_id fara NPC incarcat potrivit: "
-                        + place.ownerNpcId() + ".");
-                }
-            }
-            if (isWorkplace(place) && worldAdmin.getNodesForPlace(place.id()).isEmpty()) {
-                report.warn("Locul de munca " + place.id() + " nu are nodes de interactiune.");
-            }
-        }
-
-        auditWorldReadiness(report, worldAdmin, places, nodes);
-
-        for (int i = 0; i < places.size(); i++) {
-            for (int j = i + 1; j < places.size(); j++) {
-                WorldPlaceInfo left = places.get(i);
-                WorldPlaceInfo right = places.get(j);
-                if (left.regionId().equalsIgnoreCase(right.regionId()) && placesIntersect(left, right)) {
-                    report.warn("Place-uri suprapuse in " + left.regionId() + ": "
-                        + left.id() + " si " + right.id() + ".");
-                }
-            }
-        }
-
-        for (WorldNodeInfo node : nodes) {
-            WorldRegionInfo region = regionsById.get(node.regionId());
-            if (region == null) {
-                report.error("Node-ul " + node.id() + " refera regiunea inexistenta " + node.regionId() + ".");
-            }
-
-            WorldPlaceInfo place = null;
-            if (node.placeId() != null && !node.placeId().isBlank()) {
-                place = placesById.get(node.placeId());
-                if (place == null) {
-                    report.error("Node-ul " + node.id() + " refera place-ul inexistent " + node.placeId() + ".");
-                } else if (!place.regionId().equalsIgnoreCase(node.regionId())) {
-                    report.error("Node-ul " + node.id() + " refera un place din alta regiune: " + node.placeId() + ".");
-                }
-            }
-
-            if (node.radius() <= 0) {
-                report.error("Node-ul " + node.id() + " are raza invalida: " + node.radius() + ".");
-            }
-            if (plugin.getServer().getWorld(node.worldName()) == null) {
-                report.warn("Node-ul " + node.id() + " refera o lume neincarcata: " + node.worldName() + ".");
-            }
-
-            if (place != null && !pointInsidePlace(node, place)) {
-                report.error("Node-ul " + node.id() + " nu este in interiorul place-ului " + place.id() + ".");
-            } else if (place == null && region != null && !pointInsideRegion(node, region)) {
-                report.error("Node-ul " + node.id() + " nu este in interiorul regiunii " + region.id() + ".");
-            }
-        }
-    }
-
-    private void auditMappingWandDrafts(AuditReport report) {
-        MappingWandService service = plugin.getMappingWandService();
-        if (service == null) {
-            report.warn("MappingWandService este indisponibil; nu pot audita draft-urile wand recente.");
-            return;
-        }
-
-        List<MappingWandService.MappingWandAuditEntry> entries = service.recentConfirmedDrafts();
-        report.info("Wand draft-uri confirmate recent: " + entries.size() + ".");
-        if (entries.isEmpty()) {
-            return;
-        }
-
-        WorldAdminApi worldAdmin = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        boolean canValidateWorld = worldAdmin != null && worldAdmin.isEnabled();
-        int limit = Math.min(AUDIT_PREVIEW_LIMIT, entries.size());
-        for (int i = 0; i < limit; i++) {
-            MappingWandService.MappingWandAuditEntry entry = entries.get(i);
-            report.info("Wand " + formatStoryTime(entry.confirmedAt())
-                + " player=" + entry.playerName()
-                + " kind=" + formatMappingDraftKind(entry.kind())
-                + " draft=" + formatOptional(entry.qualifiedId())
-                + " result=" + formatOptional(entry.resultId())
-                + " (" + formatOptional(entry.resultMessage()) + ").");
-            if (canValidateWorld) {
-                validateMappingWandAuditEntry(report, entry, worldAdmin, plugin.getNpcManager().getAllNPCs());
-            }
-        }
-
-        if (entries.size() > limit) {
-            report.info("Wand audit afiseaza ultimele " + limit + " din " + entries.size()
-                + " confirmari pastrate in memorie.");
-        }
-        if (!canValidateWorld) {
-            report.warn("World admin este dezactivat sau indisponibil; auditul wand nu poate valida tintele din mapping.");
-        }
     }
 
     private void auditSpawnOrder(AuditReport report) {

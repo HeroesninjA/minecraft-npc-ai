@@ -317,14 +317,14 @@ Recomandare:
 
 AI-ul este in mare parte conform:
 
-- `features.ai` este false implicit.
+- `features.ai` este true in config-ul livrat pentru acces runtime la API-ul AI; apelurile reale raman conditionate de cheia API configurata.
 - `ai.orchestration.enabled` este false implicit.
 - `OpenAIService` nu ruleaza diagnostice, probe sau requesturi catre provider cand `features.ai=false`; raspunsurile folosesc fallback local/neutru.
 - `AIOrchestrationService.enabled()` cere atat `features.ai=true`, cat si `ai.orchestration.enabled=true`.
 - `AIOrchestrationPolicy` pare sa marcheze cazuri ca draft/validation.
 - `OpenAIService` are fallback local si diagnostice configurabile.
 
-Riscul ramas este lifecycle: `OpenAIService` se initializeaza inca pentru compatibilitate API, dar nu mai executa efecte externe cand `features.ai=false`.
+Riscul ramas este lifecycle: `OpenAIService` se initializeaza inca pentru compatibilitate API; cand `features.ai=false`, nu executa efecte externe.
 
 ### Generare harti si structuri
 

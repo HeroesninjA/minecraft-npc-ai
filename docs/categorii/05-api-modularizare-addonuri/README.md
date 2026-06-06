@@ -1,6 +1,6 @@
 # API, Modularizare si Addonuri
 
-Actualizat: 2026-05-07
+Actualizat: 2026-06-04
 
 Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariile programabile.
 
@@ -10,6 +10,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 |---|---|
 | `../../documentatie-api.md` | Contract public curent |
 | `../../ai-orchestrare-si-mecanici.md` | Contract conceptual pentru `AIOrchestrationService`, tool calls si validare |
+| `../../spring-ai-mcp-serviciu-intern.md` | Directie pentru modulul sidecar `ainpc-mcp-service` si integrarea sa cu pluginul Paper |
 | `../../strategie-plugin-modular-si-scenarii-programabile.md` | Strategie pentru addonuri si scenarii |
 | `../../refactorizare-si-impartire-pe-module.md` | Plan de refactorizare si impartire pe module |
 | `../../rezumat-conversie-java-la-kotlin.md` | Rezumat pentru seria de conversie Java -> Kotlin |

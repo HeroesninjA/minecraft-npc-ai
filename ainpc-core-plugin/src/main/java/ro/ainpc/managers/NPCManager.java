@@ -1,8 +1,9 @@
 package ro.ainpc.managers;
 
+import static ro.ainpc.managers.NPCManagerText.*;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -30,7 +31,6 @@ import ro.ainpc.spawn.ResolvedNpcSpawnPlan;
 import ro.ainpc.utils.NPCNameGenerator;
 import ro.ainpc.world.NpcWorldBinding;
 import ro.ainpc.world.NpcWorldBindingService;
-import ro.ainpc.world.PlaceType;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlaceInfo;
 import ro.ainpc.world.WorldRegionInfo;
@@ -1936,15 +1936,6 @@ public class NPCManager {
             && candidate.getUuid().compareTo(current.getUuid()) < 0;
     }
 
-    private String normalizeSourceKey(String sourceKey) {
-        return sourceKey == null ? "" : sourceKey.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private String valueOrFallback(String value, String fallback) {
-        String safeValue = value == null ? "" : value.trim();
-        return safeValue.isBlank() ? fallback : safeValue;
-    }
-
     /**
      * Asociaza entitatea Bukkit cu NPC-ul
      */
@@ -2893,7 +2884,7 @@ public class NPCManager {
     }
 
     private AINPC.OwnedLocation findMappedHomeAnchor(AINPC npc, Location center) {
-        WorldPlaceInfo place = findBestMappedPlace(npc, center, this::isHomePlace);
+        WorldPlaceInfo place = findBestMappedPlace(npc, center, candidate -> isHomePlace(candidate));
         return place == null ? null : toOwnedLocation("home", place, findBestNodeForPlace(place, "home"));
     }
 
@@ -2903,7 +2894,7 @@ public class NPCManager {
     }
 
     private AINPC.OwnedLocation findMappedSocialAnchor(AINPC npc, Location center) {
-        WorldPlaceInfo place = findBestMappedPlace(npc, center, this::isSocialPlace);
+        WorldPlaceInfo place = findBestMappedPlace(npc, center, candidate -> isSocialPlace(candidate));
         if (place != null) {
             return toOwnedLocation("social", place, findBestNodeForPlace(place, "social"));
         }
@@ -3056,157 +3047,6 @@ public class NPCManager {
         return worldAdmin != null && worldAdmin.isEnabled() ? worldAdmin : null;
     }
 
-    private int nodePriority(WorldNodeInfo node, String anchorRole) {
-        if (node == null || anchorRole == null) {
-            return -1;
-        }
-
-        return switch (anchorRole.toLowerCase(Locale.ROOT)) {
-            case "home" -> {
-                if (nodeMatchesAny(node, "home", "house", "bed", "sleep", "pat")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "entrance", "door", "inside", "intrare", "usa")) {
-                    yield 2;
-                }
-                yield nodeMatchesAny(node, "interaction") ? 3 : -1;
-            }
-            case "work" -> {
-                if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "interaction", "counter", "desk")) {
-                    yield 2;
-                }
-                yield -1;
-            }
-            case "social" -> {
-                if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata", "fantana")) {
-                    yield 0;
-                }
-                if (nodeMatchesAny(node, "interaction")) {
-                    yield 1;
-                }
-                if (nodeMatchesAny(node, "npc_spawn", "spawn")) {
-                    yield 2;
-                }
-                yield -1;
-            }
-            default -> -1;
-        };
-    }
-
-    private boolean nodeMatchesAny(WorldNodeInfo node, String... expectedTokens) {
-        if (matchesAnyToken(node.typeId(), expectedTokens)) {
-            return true;
-        }
-
-        for (Map.Entry<String, String> entry : node.metadata().entrySet()) {
-            if (matchesAnyToken(entry.getKey(), expectedTokens) || matchesAnyToken(entry.getValue(), expectedTokens)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean matchesAnyToken(String rawValue, String... expectedTokens) {
-        String value = normalizeAnchorToken(rawValue);
-        if (value.isBlank()) {
-            return false;
-        }
-
-        for (String expectedToken : expectedTokens) {
-            String expected = normalizeAnchorToken(expectedToken);
-            if (value.equals(expected)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private String normalizeAnchorToken(String rawValue) {
-        return rawValue == null
-            ? ""
-            : rawValue.trim().toLowerCase(Locale.ROOT).replace(' ', '_').replace('-', '_');
-    }
-
-    private String nodeLabel(WorldNodeInfo node, String fallbackLabel) {
-        String explicitLabel = firstNonBlank(
-            node.metadata().get("label"),
-            node.metadata().get("name"),
-            node.metadata().get("display_name")
-        );
-        if (!explicitLabel.isBlank()) {
-            return explicitLabel;
-        }
-
-        return fallbackLabel == null || fallbackLabel.isBlank() ? node.id() : fallbackLabel;
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private boolean isHomePlace(WorldPlaceInfo place) {
-        return place.placeType() == PlaceType.HOUSE
-            || place.hasTag("home")
-            || place.hasTag("house")
-            || metadataEquals(place, "role", "home")
-            || metadataEquals(place, "purpose", "home");
-    }
-
-    private boolean isWorkPlace(WorldPlaceInfo place, String occupation) {
-        if (place.placeType() == PlaceType.HOUSE) {
-            return false;
-        }
-
-        return place.hasTag("work")
-            || place.hasTag("workplace")
-            || place.hasTag("job")
-            || metadataEquals(place, "role", "work")
-            || metadataEquals(place, "purpose", "work")
-            || matchesOccupationPlaceType(occupation, place.placeType())
-            || isGenericWorkPlaceType(place.placeType());
-    }
-
-    private boolean isSocialPlace(WorldPlaceInfo place) {
-        return place.placeType() == PlaceType.MARKET
-            || place.placeType() == PlaceType.TAVERN
-            || place.hasTag("social")
-            || place.hasTag("meeting")
-            || place.hasTag("meeting_point")
-            || place.hasTag("market")
-            || place.hasTag("well")
-            || metadataEquals(place, "role", "social")
-            || metadataEquals(place, "purpose", "social")
-            || metadataEquals(place, "anchor", "social");
-    }
-
-    private boolean matchesOccupationPlaceType(String occupation, PlaceType placeType) {
-        return false;
-    }
-
-    private boolean isGenericWorkPlaceType(PlaceType placeType) {
-        return placeType == PlaceType.FORGE
-            || placeType == PlaceType.SHOP
-            || placeType == PlaceType.FARM
-            || placeType == PlaceType.MARKET
-            || placeType == PlaceType.TAVERN;
-    }
-
     private boolean isOwnedByNpc(WorldPlaceInfo place, AINPC npc) {
         if (place.ownerNpcId().isBlank() || npc == null) {
             return false;
@@ -3227,44 +3067,8 @@ public class NPCManager {
         return !npcName.isBlank() && (owner.equals(npcName) || owner.equals("npc_" + npcName));
     }
 
-    private boolean metadataEquals(WorldPlaceInfo place, String key, String expectedValue) {
-        String value = place.metadata().get(key);
-        return value != null && value.equalsIgnoreCase(expectedValue);
-    }
-
     private String normalizeOwnerKey(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace(' ', '_');
-    }
-
-    private double distanceSquaredToPlaceCenter(WorldPlaceInfo place, Location location) {
-        double dx = placeCenterX(place) - location.getX();
-        double dy = placeAnchorY(place) - location.getY();
-        double dz = placeCenterZ(place) - location.getZ();
-        return dx * dx + dy * dy + dz * dz;
-    }
-
-    private double distanceSquaredToPlaceCenter(WorldPlaceInfo place, WorldNodeInfo node) {
-        return distanceSquared(placeCenterX(place), placeAnchorY(place), placeCenterZ(place), node.x(), node.y(), node.z());
-    }
-
-    private double distanceSquared(double leftX, double leftY, double leftZ,
-                                   double rightX, double rightY, double rightZ) {
-        double dx = leftX - rightX;
-        double dy = leftY - rightY;
-        double dz = leftZ - rightZ;
-        return dx * dx + dy * dy + dz * dz;
-    }
-
-    private double placeCenterX(WorldPlaceInfo place) {
-        return (place.minX() + place.maxX()) / 2.0D;
-    }
-
-    private double placeAnchorY(WorldPlaceInfo place) {
-        return Math.min(place.maxY(), place.minY() + 1.0D);
-    }
-
-    private double placeCenterZ(WorldPlaceInfo place) {
-        return (place.minZ() + place.maxZ()) / 2.0D;
     }
 
     private AINPC.OwnedLocation createFallbackHomeAnchor(AINPC npc, Location center) {
@@ -3616,38 +3420,6 @@ public class NPCManager {
             readDouble(anchorJson, "y", 0.0D),
             readDouble(anchorJson, "z", 0.0D)
         );
-    }
-
-    private int readInt(JsonObject json, String key, int fallback) {
-        JsonElement element = json.get(key);
-        return element != null && element.isJsonPrimitive() ? element.getAsInt() : fallback;
-    }
-
-    private long readLong(JsonObject json, String key, long fallback) {
-        JsonElement element = json.get(key);
-        return element != null && element.isJsonPrimitive() ? element.getAsLong() : fallback;
-    }
-
-    private double readDouble(JsonObject json, String key, double fallback) {
-        JsonElement element = json.get(key);
-        return element != null && element.isJsonPrimitive() ? element.getAsDouble() : fallback;
-    }
-
-    private String readString(JsonObject json, String key, String fallback) {
-        JsonElement element = json.get(key);
-        return element != null && element.isJsonPrimitive() ? element.getAsString() : fallback;
-    }
-
-    private String truncateProfileText(String text, int maxLength) {
-        if (text == null || text.length() <= maxLength) {
-            return text;
-        }
-
-        String truncated = text.substring(0, Math.max(0, maxLength - 3)).trim();
-        if (truncated.endsWith(".")) {
-            return truncated;
-        }
-        return truncated + "...";
     }
 
     public AINPC getNPCByUuid(UUID uuid) {

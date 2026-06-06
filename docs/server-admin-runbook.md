@@ -34,8 +34,8 @@ Foloseste acest document cand:
 | Permisiuni | OP sau `ainpc.admin` pentru comenzi administrative |
 | Plugin core | `ainpc-core-plugin-1.0.0.jar` |
 | Addon demo | `ainpc-scenario-medieval-1.0.0.jar`, optional dar util pentru quest smoke |
-| Config | `plugins/AINPC/config.yml` generat la prima pornire |
-| DB | `plugins/AINPC/ainpc_data.db` pentru SQLite |
+| Config | `plugins/AINPCPlugin/config.yml` generat la prima pornire |
+| DB | `plugins/AINPCPlugin/ainpc_data.db` pentru SQLite |
 
 Comenzile se ruleaza cu `/` in joc. In consola Paper se ruleaza fara `/`.
 
@@ -46,7 +46,7 @@ plugins/
   ainpc-core-plugin-1.0.0.jar
   ainpc-scenario-medieval-1.0.0.jar
 
-plugins/AINPC/
+plugins/AINPCPlugin/
   config.yml
   quests.yml
   ainpc_data.db
@@ -60,7 +60,7 @@ Regula: nu edita `ainpc_data.db` cat timp serverul este pornit.
 1. Opreste serverul Paper.
 2. Copiaza JAR-ul core in `plugins/`.
 3. Copiaza addonul medieval in `plugins/`, daca vrei quest demo.
-4. Porneste serverul o data ca sa genereze `plugins/AINPC/config.yml`.
+4. Porneste serverul o data ca sa genereze `plugins/AINPCPlugin/config.yml`.
 5. Opreste serverul.
 6. Editeaza configuratia minima.
 7. Porneste serverul.
@@ -69,14 +69,14 @@ Regula: nu edita `ainpc_data.db` cat timp serverul este pornit.
 Build local, daca JAR-urile nu exista:
 
 ```powershell
-mvn package -DskipTests
+.\gradlew.bat :ainpc-core-plugin:jar :ainpc-scenario-medieval:jar
 ```
 
 JAR-uri asteptate:
 
 ```text
-ainpc-core-plugin/target/ainpc-core-plugin-1.0.0.jar
-ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar
+ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar
+ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar
 ```
 
 ## Configuratie minima
@@ -84,7 +84,7 @@ ainpc-scenario-medieval/target/ainpc-scenario-medieval-1.0.0.jar
 Fisier runtime:
 
 ```text
-plugins/AINPC/config.yml
+plugins/AINPCPlugin/config.yml
 ```
 
 Setari care conteaza la prima pornire:
@@ -350,7 +350,7 @@ Debug dump:
 Artefacte asteptate:
 
 ```text
-plugins/AINPC/debug-dumps/debug-dump-YYYYMMDD-HHMMSS/
+plugins/AINPCPlugin/debug-dumps/debug-dump-YYYYMMDD-HHMMSS/
   audit.txt
   npcs.json
   world-mapping.json
@@ -433,7 +433,7 @@ Pentru documentatia completa, vezi `scripts/README.md`.
 Inainte de cleanup, migration manuala, upgrade sau test pe date reale:
 
 1. Opreste serverul.
-2. Copiaza folderul `plugins/AINPC/`.
+2. Copiaza folderul `plugins/AINPCPlugin/`.
 3. Copiaza lumea sau regiunea afectata, daca operatia poate modifica lumea.
 4. Noteaza versiunea JAR-urilor.
 5. Porneste serverul doar dupa ce backup-ul este confirmat.
@@ -441,10 +441,10 @@ Inainte de cleanup, migration manuala, upgrade sau test pe date reale:
 Minimum de copiat:
 
 ```text
-plugins/AINPC/config.yml
-plugins/AINPC/quests.yml
-plugins/AINPC/ainpc_data.db
-plugins/AINPC/debug-dumps/
+plugins/AINPCPlugin/config.yml
+plugins/AINPCPlugin/quests.yml
+plugins/AINPCPlugin/ainpc_data.db
+plugins/AINPCPlugin/debug-dumps/
 ```
 
 Backup verificat cu restore-check:
@@ -467,7 +467,7 @@ Flux recomandat:
 
 1. Citeste changelog-ul intern sau commit-ul care aduce noul JAR.
 2. Opreste serverul.
-3. Fa backup la `plugins/AINPC/` si la lumea de test.
+3. Fa backup la `plugins/AINPCPlugin/` si la lumea de test.
 4. Inlocuieste JAR-urile in `plugins/`.
 5. Porneste serverul.
 6. Ruleaza `/ainpc audit all`.
@@ -541,10 +541,11 @@ Un server de test este intr-o stare buna cand:
 
 - `/plugins` arata core-ul AINPC incarcat;
 - `/ainpc audit all` nu raporteaza erori critice;
-- `plugins/AINPC/config.yml` este configurat pentru mediul curent;
-- `plugins/AINPC/ainpc_data.db` exista;
+- `plugins/AINPCPlugin/config.yml` este configurat pentru mediul curent;
+- `plugins/AINPCPlugin/ainpc_data.db` exista;
 - mapping-ul minim este creat sau se intelege explicit ca lipseste;
 - un NPC de test poate fi creat, listat si inspectat;
 - debugdump poate fi generat la nevoie;
-- backup-ul folderului `plugins/AINPC/` este facut inainte de operatii riscante.
+- backup-ul folderului `plugins/AINPCPlugin/` este facut inainte de operatii riscante.
 - backup-ul critic are restore-check trecut inainte de migration sau release pe date reale.
+
