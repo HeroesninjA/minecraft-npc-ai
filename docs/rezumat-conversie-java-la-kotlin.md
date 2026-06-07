@@ -1,26 +1,27 @@
 # Rezumat Conversie Java la Kotlin
 
-Actualizat: 2026-06-06
+Actualizat: 2026-06-07
 
 ## Scop
 
-Acesta este rezumatul seriei:
+Acesta este rezumatul operational curent pentru conversia Java -> Kotlin.
 
-- `conversie-java-la-kotlin.md`
-- `conversie-java-la-kotlin-partea-2.md`
-- `conversie-java-la-kotlin-partea-3.md`
-- `conversie-java-la-kotlin-partea-4.md`
-- `conversie-java-la-kotlin-partea-5.md`
+Documentele initiale de strategie si runbook au fost arhivate in `arhiva/kotlin-migration/`, deoarece activarea Gradle/Kotlin si primele faze de migrare sunt deja incheiate:
+
+- `arhiva/kotlin-migration/conversie-java-la-kotlin.md`
+- `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-2.md`
+- `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-3.md`
+- `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-4.md`
+- `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-5.md`
 - `kotlin-style-guide.md`
 - `kotlin-interop-api-addonuri.md`
 - `kotlin-paper-packaging-si-smoke.md`
 - `kotlin-migration-tracker.md`
 - `kotlin-code-review-checklist.md`
 - `kotlin-coroutines-paper-policy.md`
-- `kotlin-gradle-activation-plan.md`
 - `kotlin-testing-strategy.md`
 
-Seria descrie cum se introduce Kotlin in proiectul AINPC dupa migrarea la Gradle, fara rescriere masiva si fara ruperea compatibilitatii cu Paper, addonul medieval sau API-ul public Java.
+Rezumatul descrie cum se continua migrarea fara rescriere masiva si fara ruperea compatibilitatii cu Paper, addonul medieval sau API-ul public Java.
 
 Status curent:
 
@@ -33,8 +34,22 @@ Status curent:
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent
 - smoke Paper nu a fost rulat local inca si ramane urmatorul gate runtime
-- inventar curent: 230 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 70.0% Kotlin dupa linii
+- inventar curent: 230 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 70.55% Kotlin dupa linii
 - fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+
+## Taskuri ramase estimate
+
+Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la finalizarea conversiei de productie la Kotlin in core.
+
+| Zona | Linii Java ramase | Taskuri estimate | Motiv |
+|---|---:|---:|---|
+| `AINPCCommand.java` | 6961 | 12 | Comenzi user/admin, routing, validari, mesaje, teste de comanda si compatibilitate Bukkit |
+| `ScenarioEngine.java` | 8083 | 14 | Runtime scenarii, validari, registri, actiuni, conditii, serializare si teste de motor |
+| `NPCManager.java` | 2985 | 1 | DB/persistenta, villager identity, spawn/repair, ancore, mapare world admin si extractii ramase |
+| Gate final si hardening | n/a | 6 | `clean build`, JAR audit, smoke Paper, addon medieval, cleanup helper-e temporare si documentatie finala |
+| Total | 18029 | 33 | Estimare pragmatica pentru slice-uri mici, reversibile si testabile |
+
+Numarul poate scadea daca ultimele clase mari sunt sparte in module Kotlin inainte de conversia finala. Nu recomand conversie monolitica pentru cele 3 fisiere ramase.
 
 ## Ideea principala
 
@@ -50,7 +65,7 @@ Directia recomandata:
 
 ## Partea 1: Strategie si faze mari
 
-Document: `conversie-java-la-kotlin.md`
+Document: `arhiva/kotlin-migration/conversie-java-la-kotlin.md`
 
 Rol:
 
@@ -68,7 +83,7 @@ Concluzie:
 
 ## Partea 2: Runbook operational
 
-Document: `conversie-java-la-kotlin-partea-2.md`
+Document: `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-2.md`
 
 Rol:
 
@@ -94,7 +109,7 @@ Concluzie:
 
 ## Partea 3: Retete concrete
 
-Document: `conversie-java-la-kotlin-partea-3.md`
+Document: `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-3.md`
 
 Rol:
 
@@ -119,7 +134,7 @@ Concluzie:
 
 ## Partea 4: Harta pe pachetele reale
 
-Document: `conversie-java-la-kotlin-partea-4.md`
+Document: `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-4.md`
 
 Rol:
 
@@ -157,7 +172,7 @@ Concluzie:
 
 ## Partea 5: Control, teste, smoke si rollback
 
-Document: `conversie-java-la-kotlin-partea-5.md`
+Document: `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-5.md`
 
 Rol:
 
@@ -181,19 +196,14 @@ Concluzie:
 
 ## Ordinea finala recomandata
 
-1. Pastreaza `ainpc-api` Java.
-2. Activeaza Kotlin doar in `ainpc-core-plugin`.
-3. Adauga un test Kotlin minim.
-4. Converteste 1-2 teste simple.
-5. Converteste un utilitar sau model intern mic.
-6. Converteste un validator sau selector cu teste.
-7. Ruleaza `clean build`.
-8. Ruleaza `assemble`.
-9. Inspecteaza JAR-ul core.
-10. Ruleaza smoke test Paper dupa prima clasa Kotlin de productie.
-11. Abia apoi continua cu pachete mai mari.
+1. Continua conversia prin slice-uri mici in cele 3 fisiere Java ramase: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`.
+2. Extrage mai intai modele, texte, validari si helper-e fara schimbari de comportament.
+3. Pastreaza `ainpc-api` stabil pentru consum Java; orice conversie API necesita test Java de consum.
+4. Ruleaza teste tinta dupa fiecare slice si `clean build` dupa fiecare grup de risc.
+5. Ruleaza `assemble`, audit JAR si smoke Paper inainte de a marca conversia core completa.
+6. Actualizeaza `kotlin-migration-tracker.md` si acest rezumat dupa fiecare slice relevant.
 
-## Documente auxiliare adaugate
+## Documente active
 
 | Document | Rol |
 |---|---|
@@ -203,8 +213,8 @@ Concluzie:
 | `kotlin-migration-tracker.md` | Tracker operational pentru slice-uri |
 | `kotlin-code-review-checklist.md` | Checklist de review pentru schimbari Kotlin |
 | `kotlin-coroutines-paper-policy.md` | Politica de amanare a coroutine in Paper |
-| `kotlin-gradle-activation-plan.md` | Plan exact pentru activarea Kotlin in Gradle |
 | `kotlin-testing-strategy.md` | Strategie de testare pentru conversii Kotlin |
+| `arhiva/kotlin-migration/README.md` | Index pentru documentele istorice arhivate |
 
 ## Comenzi esentiale
 
@@ -263,42 +273,34 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-quests.ps1 `
 - Nu continua daca JAR-ul Paper nu porneste.
 - Nu folosi `!!` ca solutie generala pentru nullability.
 
-## Definitia de gata pentru migrarea controlata
+## Definitia de gata pentru finalizarea conversiei
 
-Migrarea poate fi considerata pornita corect cand:
+Conversia core poate fi considerata finalizata cand:
 
-- Kotlin este activ in `ainpc-core-plugin`
-- exista cel putin un test Kotlin real
-- primele conversii mici sunt validate
+- cele 3 fisiere Java ramase din `ainpc-core-plugin/src/main/java` sunt eliminate sau justificate explicit ca API/interop Java
+- `ainpc-core-plugin/src/main/java` nu mai contine cod de productie Java migrabil
 - `.\gradlew.bat clean build` trece
-- JAR-ul core este inspectat
-- serverul Paper porneste cu core + addon medieval, cand exista mediu Paper local disponibil
+- `.\gradlew.bat assemble` produce JAR-uri core si addon valide
+- auditul JAR confirma runtime-ul Kotlin si lipsa claselor Java reziduale neasteptate
+- smoke Paper porneste cu core + addon medieval, cand exista mediu Paper local disponibil
 - `ainpc-api` ramane consumabil din Java
-
-Kotlin poate deveni default pentru cod nou in core doar dupa:
-
-- cel putin 10 fisiere convertite fara regresii
-- cel putin 3 pachete atinse
-- smoke Paper reusit
-- JAR audit clar
-- addon medieval incarcat
-- reguli de interop respectate
+- `kotlin-migration-tracker.md` are ultimul slice si gate-ul final documentate
 
 ## Citire rapida
 
 Daca vrei doar directia:
 
 - citeste acest rezumat
-- apoi `conversie-java-la-kotlin-partea-4.md`
+- apoi `kotlin-migration-tracker.md`
 
 Daca vrei sa implementezi:
 
-- citeste `conversie-java-la-kotlin-partea-2.md`
-- apoi `conversie-java-la-kotlin-partea-3.md`
-- foloseste `conversie-java-la-kotlin-partea-5.md` pentru tracking si verificari
+- citeste `kotlin-style-guide.md`
+- citeste `kotlin-interop-api-addonuri.md`
+- foloseste `kotlin-testing-strategy.md` si `kotlin-code-review-checklist.md`
 
 Daca iei decizii de arhitectura:
 
-- citeste `conversie-java-la-kotlin.md`
-- apoi `conversie-java-la-kotlin-partea-4.md`
-- apoi `conversie-java-la-kotlin-partea-5.md`
+- citeste `kotlin-interop-api-addonuri.md`
+- citeste `kotlin-coroutines-paper-policy.md`
+- consulta istoricul arhivat in `arhiva/kotlin-migration/` doar daca trebuie sa vezi rationamentul vechi

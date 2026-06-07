@@ -18,8 +18,8 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | `../../kotlin-interop-api-addonuri.md` | Contract Java interop pentru API si addonuri |
 | `../../kotlin-migration-tracker.md` | Tracker operational pentru slice-urile Kotlin |
 | `../../kotlin-code-review-checklist.md` | Checklist de review pentru schimbari Kotlin |
-| `../../kotlin-gradle-activation-plan.md` | Plan exact pentru activarea Kotlin in Gradle |
 | `../../kotlin-testing-strategy.md` | Strategie de testare pentru conversiile Kotlin |
+| `../../arhiva/kotlin-migration/README.md` | Index pentru istoricul arhivat al conversiei Kotlin |
 | `../../gui-interfete.md` | Contract pentru framework GUI intern, ecrane, snapshots, actiuni si extensibilitate |
 | `../../betonquest-directii-potrivite-pentru-ainpc.md` | Directii pentru runtime de questuri configurabile |
 | `../../reducere-marime-jar.md` | Impact asupra buildului si livrarii |

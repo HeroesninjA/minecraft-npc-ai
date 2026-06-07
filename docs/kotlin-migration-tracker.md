@@ -1,22 +1,24 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-06-06
+Actualizat: 2026-06-07
 
 ## Scop
 
 Acest document este trackerul operational pentru conversia Java -> Kotlin.
 
-Planul si regulile sunt definite in:
+Planul activ si regulile sunt definite in:
 
 - `rezumat-conversie-java-la-kotlin.md`
-- `conversie-java-la-kotlin.md`
-- `conversie-java-la-kotlin-partea-2.md`
-- `conversie-java-la-kotlin-partea-3.md`
-- `conversie-java-la-kotlin-partea-4.md`
-- `conversie-java-la-kotlin-partea-5.md`
 - `kotlin-style-guide.md`
 - `kotlin-interop-api-addonuri.md`
 - `kotlin-paper-packaging-si-smoke.md`
+- `kotlin-code-review-checklist.md`
+- `kotlin-coroutines-paper-policy.md`
+- `kotlin-testing-strategy.md`
+
+Istoricul de planificare este arhivat in:
+
+- `arhiva/kotlin-migration/README.md`
 
 Acest fisier tine evidenta concreta a slice-urilor.
 
@@ -33,6 +35,18 @@ Acest fisier tine evidenta concreta a slice-urilor.
 | Smoke Paper dupa Kotlin | neinceput |
 | `ainpc-api` convertit | in lucru (majoritar Kotlin; 3 interfețe Java pastrate pentru interop) |
 | `ainpc-scenario-medieval` convertit | validat local |
+
+## Taskuri ramase estimate
+
+Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la finalizarea conversiei de productie la Kotlin in core.
+
+| Zona | Linii Java ramase | Taskuri estimate |
+|---|---:|---:|
+| `AINPCCommand.java` | 6961 | 12 |
+| `ScenarioEngine.java` | 8083 | 14 |
+| `NPCManager.java` | 2985 | 1 |
+| Gate final si hardening | n/a | 6 |
+| Total | 18029 | 33 |
 
 ## Regula de actualizare
 
@@ -6174,3 +6188,967 @@ Inventar dupa slice:
 
 Rollback:
 - readauga helper-ele de distanta/centru `WorldPlaceInfo` in `NPCManager.java` si elimina testele de distanta din `NPCManagerTextTest`
+
+### KOT-232
+
+Data: 2026-06-06
+ID: KOT-232
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ele pure `isOwnedByNpc` si `normalizeOwnerKey` au fost mutate in Kotlin.
+- Testul `NPCManagerTextTest` acopera potrivirea ownership prin UUID, `npc_<databaseId>`, nume normalizat si cazurile negative.
+- `AINPC(null)` este suficient pentru test, deoarece helper-ul foloseste doar proprietati de model (`uuid`, `databaseId`, `name`).
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.1% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.23% Kotlin dupa linii
+
+Rollback:
+- readauga `isOwnedByNpc(WorldPlaceInfo, AINPC)` si `normalizeOwnerKey(String)` in `NPCManager.java` si elimina testele de ownership din `NPCManagerTextTest`
+
+### KOT-233
+
+Data: 2026-06-07
+ID: KOT-233
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ele pure `writeOwnedLocation` si `readOwnedLocation` au fost mutate in Kotlin.
+- Java pastreaza apelurile directe prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera round-trip JSON, anchor null fara scriere si respingerea anchor-ului cu world gol.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.1% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.27% Kotlin dupa linii
+
+Rollback:
+- readauga `writeOwnedLocation(JsonObject, String, AINPC.OwnedLocation)` si `readOwnedLocation(JsonObject, String)` in `NPCManager.java` si elimina testele JSON OwnedLocation din `NPCManagerTextTest`
+
+### KOT-234
+
+Data: 2026-06-07
+ID: KOT-234
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul pur `isGenericOccupation` a fost mutat in Kotlin.
+- Java pastreaza apelurile directe prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera valorile generice recunoscute (`locuitor`, `villager`, `resident`, `localnic`) si ocupatii specifice care trebuie sa ramana non-generice.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.2% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.28% Kotlin dupa linii
+
+Rollback:
+- readauga `isGenericOccupation(String)` in `NPCManager.java` si elimina testele de generic occupation din `NPCManagerTextTest`
+
+### KOT-235
+
+Data: 2026-06-07
+ID: KOT-235
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ele pure `isWorkstation`, `matchesOccupationWorkstation` si `describeWorkAnchor` au fost mutate in Kotlin.
+- `matchesOccupationWorkstation` si `describeWorkAnchor` pastreaza comportamentul Java existent: parametrul `occupation` este ignorat deliberat.
+- Testul `NPCManagerTextTest` acopera materiale workstation acceptate, material neacceptat si formatarea label-ului din `Material`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.2% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.31% Kotlin dupa linii
+
+Rollback:
+- readauga `isWorkstation(Material)`, `matchesOccupationWorkstation(String, Material)` si `describeWorkAnchor(String, Material)` in `NPCManager.java` si elimina testele workstation din `NPCManagerTextTest`
+
+### KOT-236
+
+Data: 2026-06-07
+ID: KOT-236
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul pur `resolveGender` a fost mutat in Kotlin.
+- Java pastreaza apelul direct prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` confirma ca doar `female` case-insensitive ramane special case, iar restul revine la `male`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.2% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.31% Kotlin dupa linii
+
+Rollback:
+- readauga `resolveGender(String)` in `NPCManager.java` si elimina testele de gender resolver din `NPCManagerTextTest`
+
+### KOT-237
+
+Data: 2026-06-07
+ID: KOT-237
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul pur `floorToBlock` a fost mutat in Kotlin.
+- Java pastreaza apelurile existente prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera explicit semantica `Math.floor`, inclusiv coordonate negative.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.2% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.32% Kotlin dupa linii
+
+Rollback:
+- readauga `floorToBlock(double)` in `NPCManager.java` si elimina testul `floorToBlockKeepsMathFloorSemantics` din `NPCManagerTextTest`
+
+### KOT-238
+
+Data: 2026-06-07
+ID: KOT-238
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul pur `safeNpcName` a fost mutat in Kotlin.
+- Java pastreaza apelurile existente prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera fallback-ul pentru NPC null, nume blank si nume valid.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.2% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.33% Kotlin dupa linii
+
+Rollback:
+- readauga `safeNpcName(AINPC)` in `NPCManager.java` si elimina testul `safeNpcNameFallsBackForMissingNames` din `NPCManagerTextTest`
+
+### KOT-239
+
+Data: 2026-06-07
+ID: KOT-239
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Decizia `shouldReplacePersistedSourceKeyOwner` a fost mutata in Kotlin.
+- Lookup-ul de stare `getNPCById(existingOwnerId)` ramane in `NPCManager.java`; Kotlin primeste doar `currentOwnerExists`.
+- Testul `NPCManagerTextTest` acopera candidat invalid, owner invalid, owner lipsa, candidat canonic cu ID mai mic si candidat necanonic cu ID mai mare.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.3% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.34% Kotlin dupa linii
+
+Rollback:
+- readauga `shouldReplacePersistedSourceKeyOwner(int, int)` in `NPCManager.java`, readu apelul vechi cu 2 parametri si elimina testul `sourceKeyOwnerReplacementKeepsCanonicalRules` din `NPCManagerTextTest`
+
+### KOT-240
+
+Data: 2026-06-07
+ID: KOT-240
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Comparatorii `isPreferredSourceKeyCandidate` si `isSameNpcRecord` au fost mutati in Kotlin.
+- Java pastreaza apelurile existente prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera prioritatea dupa `databaseId`, fallback-ul dupa UUID si echivalenta prin identitate, ID sau UUID.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.3% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.37% Kotlin dupa linii
+
+Rollback:
+- readauga `isPreferredSourceKeyCandidate(AINPC, AINPC)` si `isSameNpcRecord(AINPC, AINPC)` in `NPCManager.java` si elimina testele `sourceKeyCandidatePreferenceUsesDatabaseIdThenUuid` si `sameNpcRecordUsesIdentityDatabaseIdThenUuid` din `NPCManagerTextTest`
+
+### KOT-241
+
+Data: 2026-06-07
+ID: KOT-241
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul pur `generateBackstory` a fost mutat in Kotlin.
+- Semnatura Kotlin accepta `name` nullable pentru a pastra comportamentul de concatenare Java daca valoarea ajunge null.
+- Parametrul `profession` ramane ignorat deliberat, ca in Java; testul nu forteaza constante `Villager.Profession` in JUnit deoarece Bukkit poate necesita runtime server pentru initializare.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.3% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.38% Kotlin dupa linii
+
+Rollback:
+- readauga `generateBackstory(String, String, Villager.Profession)` in `NPCManager.java` si elimina testul `generatedBackstoryKeepsOccupationFallbackText` din `NPCManagerTextTest`
+
+### KOT-242
+
+Data: 2026-06-07
+ID: KOT-242
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ele pure `namesMatch` si `isNpcPlannedForDeletion` au fost mutate in Kotlin.
+- Java pastreaza apelurile existente prin import static catre `NPCManagerText`.
+- Testul `NPCManagerTextTest` acopera compararea case-insensitive/null-safe si verificarea ID-ului pozitiv prezent in setul de stergeri planificate.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.3% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.39% Kotlin dupa linii
+
+Rollback:
+- readauga `namesMatch(String, String)` si `isNpcPlannedForDeletion(AINPC, Set<Integer>)` in `NPCManager.java` si elimina testele `namesMatchIsCaseInsensitiveAndNullSafe` si `npcPlannedForDeletionRequiresPositiveIdInSet` din `NPCManagerTextTest`
+
+### KOT-243
+
+Data: 2026-06-07
+ID: KOT-243
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ele `isSameNpcLocation`, `formatLocation` si `buildVillageKey` au fost mutate in Kotlin.
+- Testul foloseste un `World` proxy minimal, fara dependinte noi, ca sa valideze `Location.world`, `distanceSquared`, formatarea cu `floorToBlock` si cheia grosiera de sat.
+- Java pastreaza apelurile existente prin import static catre `NPCManagerText`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.4% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.43% Kotlin dupa linii
+
+Rollback:
+- readauga `isSameNpcLocation(Location, Location)`, `formatLocation(Location)` si `buildVillageKey(Location)` in `NPCManager.java` si elimina testul `locationHelpersKeepWorldDistanceAndFloorRules` plus helper-ul de test `world(String)` din `NPCManagerTextTest`
+
+### KOT-244
+
+Data: 2026-06-07
+ID: KOT-244
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul `buildProfileSummary` a fost mutat in Kotlin.
+- Testul `NPCManagerTextTest` acopera fallback-ul pentru nume/ocupatie, varsta si gen implicite, trait dominant non-echilibrat si trunchierea `backstory`.
+- Java pastreaza apelul existent din `buildProfileData` prin import static catre `NPCManagerText`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.4% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.45% Kotlin dupa linii
+
+Rollback:
+- readauga `buildProfileSummary(AINPC)` in `NPCManager.java` si elimina testul `profileSummaryKeepsFallbacksTraitsAndBackstoryTruncation` din `NPCManagerTextTest`
+
+### KOT-245
+
+Data: 2026-06-07
+ID: KOT-245
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul `getVillagerDisplayName` a fost mutat in Kotlin.
+- `PlainTextComponentSerializer` este acum file-private in `NPCManagerText.kt`, iar campul static Java nefolosit a fost eliminat.
+- Testul foloseste un `Villager` proxy minimal pentru `customName()`, fara dependinte noi si fara server Bukkit.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.4% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.47% Kotlin dupa linii
+
+Rollback:
+- readauga `getVillagerDisplayName(Villager)` si campul static `PLAIN_TEXT` in `NPCManager.java`, elimina `PLAIN_TEXT` din `NPCManagerText.kt` si elimina testul `villagerDisplayNameSerializesAndTrimsCustomName` plus helper-ul de test `villager(Component?)`
+
+### KOT-246
+
+Data: 2026-06-07
+ID: KOT-246
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Helper-ul `buildSpawnState` a fost mutat in Kotlin.
+- Testul `NPCManagerTextTest` acopera campurile JSON stabile, coordonatele runtime, chunk key-urile cu `floorToBlock` si timestamp-ul `updated_at` in intervalul curent.
+- Java pastreaza apelul existent din `buildProfileData` prin import static catre `NPCManagerText`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.5% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.49% Kotlin dupa linii
+
+Rollback:
+- readauga `buildSpawnState(AINPC)` in `NPCManager.java` si elimina testul `spawnStateJsonKeepsRuntimeCoordinatesAndChunkKeys` din `NPCManagerTextTest`
+
+### KOT-247
+
+Data: 2026-06-07
+ID: KOT-247
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `generateUniqueAutoName`, `uniquifyNpcName`, `isNpcNameTaken`, `inferOccupationFromPrimaryScenario`, `mapProfessionToOccupation`, `buildProfileData`, `readPersistentString`, `isLegacyPluginVillager`, `matchesPersistentIdentity`
+- Filtru aplicat: fara DB, fara registry Bukkit/Paper runtime, fara acces direct la harti interne manager, fara `plugin` ca dependinta ascunsa
+- Input ales: `buildProfileData(AINPC)`, deoarece este JSON determinist din `AINPC`, cu o singura dependinta externa izolata explicit ca `Gson`
+
+Microtaskuri:
+- `buildProfileData` a fost mutat in Kotlin cu semnatura `buildProfileData(AINPC, Gson)`.
+- Apelul Java din `persistProfileData` a fost actualizat sa paseze campul existent `gson`.
+- Metoda Java duplicata a fost eliminata.
+- Testul `NPCManagerTextTest` parseaza JSON-ul rezultat si verifica campuri stabile din profil, `traits`, `spawn_state`, `simulation`, `personality`, `emotions` si `owned_locations`.
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Campul `gson` ramane in `NPCManager.java`, deoarece este folosit si pentru `fromJson` la hidratarea profilului.
+- Importul Java `JsonArray` ramas nefolosit a fost eliminat.
+- Testul evita compararea stringului JSON brut si valideaza structura parsata, pentru stabilitate fata de timestamp-ul `updated_at`.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.6% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.56% Kotlin dupa linii
+
+Rollback:
+- readauga `buildProfileData(AINPC)` in `NPCManager.java`, readu apelul `buildProfileData(npc)` in `persistProfileData`, elimina `buildProfileData(AINPC, Gson)` din `NPCManagerText.kt` si elimina testul `profileDataJsonKeepsNestedRuntimeAndProfileFields` din `NPCManagerTextTest`
+
+### KOT-248
+
+Data: 2026-06-07
+ID: KOT-248
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `inferOccupationFromPrimaryScenario`, `generatePersonalityForProfession`, `generatePersonalityForOccupation`, `mapProfessionToOccupation`
+- Filtru aplicat: fara `plugin`, fara registry Bukkit/Paper runtime, fara constante `Villager.Profession` in test JUnit
+- Input ales: `generatePersonalityForProfession` si `generatePersonalityForOccupation`, deoarece codul existent doar returneaza `NPCPersonality.generateRandom()`
+
+Microtaskuri:
+- `generatePersonalityForProfession` a fost mutat in Kotlin.
+- `generatePersonalityForOccupation` a fost mutat in Kotlin si pastreaza semnatura Java interop.
+- Metodele Java duplicate au fost eliminate.
+- Testul `NPCManagerTextTest` valideaza invariantul rezultatului randomizat: toate trait-urile raman clamp-uite in intervalul `0.0..1.0`.
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- `occupation` si `profession` raman parametri pastrati pentru compatibilitate, dar sunt ignorati deliberat ca in comportamentul Java actual.
+- Testul paseaza `profession = null` pentru a evita initializarea runtime Bukkit in JUnit.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.6% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.58% Kotlin dupa linii
+
+Rollback:
+- readauga `generatePersonalityForProfession(Villager.Profession)` si `generatePersonalityForOccupation(String, Villager.Profession)` in `NPCManager.java` si elimina testul `generatedPersonalityHelpersReturnClampedTraits` din `NPCManagerTextTest`
+
+### KOT-249
+
+Data: 2026-06-07
+ID: KOT-249
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `sortRepairCandidates`, `markNpcPlannedForDeletion`, `generateUniqueAutoName`, `uniquifyNpcName`, `isNpcNameTaken`
+- Filtru aplicat: fara acces la harta interna `npcsByUuid` in helper-ul Kotlin, fara generator random de nume in acelasi slice, fara dependinte Bukkit runtime
+- Input ales: `sortRepairCandidates` si `markNpcPlannedForDeletion`, deoarece sunt calcule pure/mutatii explicite pe `AINPC` si `MutableSet<Int>`
+
+Microtaskuri:
+- `sortRepairCandidates` a fost mutat in Kotlin.
+- `markNpcPlannedForDeletion` a fost mutat in Kotlin.
+- Metodele Java duplicate au fost eliminate.
+- Testul `NPCManagerTextTest` valideaza ordinea dupa `databaseId`, apoi UUID, si faptul ca doar ID-urile pozitive sunt marcate pentru stergere.
+
+Gate local:
+- IntelliJ build pe `NPCManagerText.kt`, `NPCManager.java` si `NPCManagerTextTest.kt` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:compileKotlin :ainpc-core-plugin:compileJava :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest --tests ro.ainpc.StorageDialectStaticAuditTest --tests ro.ainpc.CoreNeutralityStaticAuditTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Sortarea foloseste `databaseId` crescator si apoi UUID, pastrand intentia comparatorului Java.
+- `markNpcPlannedForDeletion` ramane o mutatie explicita pe setul primit, fara dependinte pe manager.
+
+Inventar dupa slice:
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java (~98.7% Kotlin dupa numar de fisiere; ~70.7% Kotlin dupa linii)
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.60% Kotlin dupa linii
+
+Rollback:
+- readauga `sortRepairCandidates(List<AINPC>)` si `markNpcPlannedForDeletion(AINPC, Set<Integer>)` in `NPCManager.java` si elimina testul `repairCandidateHelpersSortAndMarkByCanonicalIds` din `NPCManagerTextTest`
+
+### KOT-250
+
+Data: 2026-06-07
+ID: KOT-250
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `shouldPreferEnvironmentOccupation`, `inferOccupationFromEnvironment`, `mapProfessionToOccupation`, `findNearbyWorkstation`
+- Filtru aplicat: fara scanare world, fara `Registry` Bukkit in test JUnit, fara dependinta pe `plugin`
+- Input ales: `shouldPreferEnvironmentOccupation`, deoarece este o regula determinista pentru alegerea ocupatiei si nu depinde de Paper runtime
+
+Microtaskuri:
+- `shouldPreferEnvironmentOccupation` a fost mutat in Kotlin cu semnatura Java interop.
+- Metoda Java duplicata a fost eliminata din `NPCManager.java`.
+- Testul `NPCManagerTextTest` valideaza cazurile null/blank, ocupatie generica, match case-insensitive si ocupatie mapata diferita.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+
+Observatii:
+- Parametrul `profession` ramane in semnatura pentru compatibilitate cu apelul existent din Java, dar nu influenteaza regula actuala.
+- Estimarea ramasa a fost actualizata la 39 taskuri: `NPCManager.java` scade de la 8 la 7 taskuri estimate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.144 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.36% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.62% Kotlin dupa linii
+
+Rollback:
+- readauga `shouldPreferEnvironmentOccupation(Villager.Profession, String, String)` in `NPCManager.java` si elimina testul `environmentOccupationPreferenceOnlyOverridesGenericOrSameMappedOccupation` din `NPCManagerTextTest`
+
+### KOT-251
+
+Data: 2026-06-07
+ID: KOT-251
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `createFallbackHomeAnchor`, `createFallbackWorkAnchor`, `findNearestHomeAnchor`, `findNearestWorkAnchor`, `findNearestSocialAnchor`
+- Filtru aplicat: fara scanare block/world, fara `Tag.BEDS`, fara predicate Bukkit runtime, fara acces la `plugin`
+- Input ales: `createFallbackHomeAnchor` si `createFallbackWorkAnchor`, deoarece sunt constructori deterministi pentru `AINPC.OwnedLocation`
+
+Microtaskuri:
+- `createFallbackHomeAnchor` a fost mutat in Kotlin.
+- `createFallbackWorkAnchor` a fost mutat in Kotlin.
+- Metodele Java duplicate au fost eliminate din `NPCManager.java`.
+- Testul `NPCManagerTextTest` valideaza tipul, label-ul, world-ul si coordonatele pentru ancore fallback home/work.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Label-ul pentru work anchor pastreaza fallback-ul pentru ocupatii generice (`resident`, `villager`, `locuitor`, `localnic`).
+- Estimarea ramasa a fost actualizata la 38 taskuri: `NPCManager.java` scade de la 7 la 6 taskuri estimate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.117 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.4% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.64% Kotlin dupa linii
+
+Rollback:
+- readauga `createFallbackHomeAnchor(AINPC, Location)` si `createFallbackWorkAnchor(AINPC, Location)` in `NPCManager.java` si elimina testul `fallbackAnchorsUseNpcNameOccupationAndCenterCoordinates` din `NPCManagerTextTest`
+
+### KOT-252
+
+Data: 2026-06-07
+ID: KOT-252
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `createVillagerSeededRandom`, `inferOccupationFromEnvironment`, `applyThemeDefaults`, `resolveOccupationForVillager`
+- Filtru aplicat: fara `plugin`, fara feature pack loader, fara registry Bukkit, fara scanare world/block
+- Input ales: `createVillagerSeededRandom` si `inferOccupationFromEnvironment`, deoarece sunt helper-e auto-profile mici si testabile cu proxy JUnit
+
+Microtaskuri:
+- `createVillagerSeededRandom` a fost mutat in Kotlin si pastreaza seed-ul bazat pe XOR-ul UUID-ului.
+- `inferOccupationFromEnvironment` a fost mutat in Kotlin ca placeholder explicit `null`.
+- Metodele Java duplicate au fost eliminate din `NPCManager.java`.
+- Testul `NPCManagerTextTest` valideaza secventa determinista `Random` si faptul ca inferenta environment ramane dezactivata.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Proxy-ul JUnit pentru `Villager` a fost extins doar cu `getUniqueId`, fara runtime Paper.
+- Estimarea ramasa a fost actualizata la 37 taskuri: `NPCManager.java` scade de la 6 la 5 taskuri estimate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.109 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.41% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.65% Kotlin dupa linii
+
+Rollback:
+- readauga `createVillagerSeededRandom(Villager)` si `inferOccupationFromEnvironment(Villager)` in `NPCManager.java`, apoi elimina testul `villagerSeededRandomUsesUuidBitsAndEnvironmentInferenceStaysDisabled` din `NPCManagerTextTest`
+
+### KOT-253
+
+Data: 2026-06-07
+ID: KOT-253
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `resolveOccupationForVillager`, `mapProfessionToOccupation`, `inferOccupationFromPrimaryScenario`
+- Filtru aplicat: fara `Registry` Bukkit in test, fara `plugin`, fara feature pack loader; doar decizia pura pe valori deja calculate
+- Input ales: `resolveOccupationChoice`, helper nou Kotlin extras din ordinea de decizie a `resolveOccupationForVillager`
+
+Microtaskuri:
+- Logica de alegere intre ocupatia mapata, ocupatia inferata si ocupatia din tema a fost mutata in Kotlin.
+- `resolveOccupationForVillager` din Java calculeaza doar inputurile dependente de Bukkit/plugin si delega decizia la Kotlin.
+- Testul `NPCManagerTextTest` valideaza prioritatea mapped non-generic, inferred preferat, themed fallback si fallback generic final.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- `inferOccupationFromPrimaryScenario` ramane in Java deoarece depinde de `plugin.getFeaturePackLoader()`.
+- Estimarea ramasa a fost actualizata la 36 taskuri: `NPCManager.java` scade de la 5 la 4 taskuri estimate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.094 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.44% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.67% Kotlin dupa linii
+
+Rollback:
+- readauga ramurile de decizie direct in `resolveOccupationForVillager` din `NPCManager.java`, apoi elimina `resolveOccupationChoice` si testul `occupationChoicePreservesMappedInferredAndThemedPriority`
+
+### KOT-254
+
+Data: 2026-06-07
+ID: KOT-254
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `toOwnedLocation`, `findBestNodeForPlace`, `findBestRegionNode`
+- Filtru aplicat: fara `WorldAdminApi`, fara `plugin`, fara cautare in registri/noduri runtime
+- Input ales: overload-urile `toOwnedLocation`, deoarece transforma determinist `WorldPlaceInfo`/`WorldNodeInfo` in `AINPC.OwnedLocation`
+
+Microtaskuri:
+- `toOwnedLocation(String, WorldPlaceInfo, WorldNodeInfo)` a fost mutat in Kotlin.
+- `toOwnedLocation(String, WorldNodeInfo, String)` a fost mutat in Kotlin.
+- Metodele Java duplicate au fost eliminate din `NPCManager.java`.
+- Testul `NPCManagerTextTest` valideaza conversia din place center, conversia prin node preferat si fallback-ul de label pentru node.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Selectia celui mai bun node ramane in Java deoarece depinde de `WorldAdminApi`; conversia finala a anchor-ului este acum Kotlin.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.057 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.5% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.70% Kotlin dupa linii
+
+Rollback:
+- readauga overload-urile `toOwnedLocation` in `NPCManager.java`, elimina overload-urile Kotlin si testul `ownedLocationConversionUsesPlaceCenterOrPreferredNode`
+
+### KOT-255
+
+Data: 2026-06-07
+ID: KOT-255
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `uniquifyNpcName`, `generateUniqueAutoName`, `isNpcNameTaken`
+- Filtru aplicat: fara `NPCNameGenerator`, fara acces direct la `npcsByUuid`, fara randomizare in helper-ul Kotlin
+- Input ales: `uniquifyNpcName`, deoarece este o bucla determinista peste un `Predicate<String>` Java interop
+
+Microtaskuri:
+- `uniquifyNpcName` a fost mutat in Kotlin cu semnatura `Predicate<String>`.
+- La finalul KOT-255, `generateUniqueAutoName` din Java pasa `this::isNpcNameTaken` catre helper-ul Kotlin; dupa KOT-257 nu mai exista metoda Java dedicata `isNpcNameTaken`.
+- Metoda Java duplicata a fost eliminata.
+- Testul `NPCManagerTextTest` valideaza trim-ul, fallback-ul `NPC` si primul suffix liber.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- La finalul KOT-255, `generateUniqueAutoName` ramasese in Java; a fost mutat ulterior in Kotlin prin KOT-256.
+- Estimarea ramasa a fost actualizata la 34 taskuri: `NPCManager.java` scade de la 4 la 2 taskuri estimate dupa KOT-254 si KOT-255.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.057 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.5% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.70% Kotlin dupa linii
+
+Rollback:
+- readauga `uniquifyNpcName(String)` in `NPCManager.java`, readu apelul `uniquifyNpcName(NPCNameGenerator.randomName(gender, random))`, elimina `uniquifyNpcName(String?, Predicate<String>)` din Kotlin si testul `uniquifyNpcNameTrimsFallbacksAndAppendsFirstFreeSuffix`
+
+### KOT-256
+
+Data: 2026-06-07
+ID: KOT-256
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `generateUniqueAutoName`, `isNpcNameTaken`, `applyThemeDefaults`, `mapProfessionToOccupation`
+- Filtru aplicat: fara acces direct la `npcsByUuid`, fara DB, fara `plugin`, fara `Registry` Bukkit
+- Input ales: `generateUniqueAutoName`, deoarece poate primi `Predicate<String>` pentru verificarea numelor ocupate si ramane determinist peste `NPCNameGenerator` + `Random`
+
+Microtaskuri:
+- `generateUniqueAutoName` a fost mutat in Kotlin cu semnatura `Predicate<String>`.
+- La finalul KOT-256, `applyAutoProfile` pasa `this::isNpcNameTaken` catre helper-ul Kotlin; dupa KOT-257 paseaza o lambda catre helper-ul Kotlin cu `npcsByUuid.values()`.
+- Importul Java direct pentru `NPCNameGenerator` a fost eliminat din `NPCManager.java`.
+- Testul `NPCManagerTextTest` valideaza alegerea primului nume liber din lista predefinita shuffle-uita determinist.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- La finalul KOT-256, `isNpcNameTaken` ramasese in Java; a fost mutat ulterior in Kotlin prin KOT-257.
+- Estimarea ramasa a fost actualizata la 33 taskuri: `NPCManager.java` scade de la 2 la 1 task estimat.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.044 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.53% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.72% Kotlin dupa linii
+
+Rollback:
+- readauga `generateUniqueAutoName(String, Random)` in `NPCManager.java`, readu apelul `generateUniqueAutoName(gender, random)`, elimina `generateUniqueAutoName(String?, Random, Predicate<String>)` din Kotlin si testul `generatedAutoNameUsesFirstFreeShuffledPredefinedName`
+
+### KOT-257
+
+Data: 2026-06-07
+ID: KOT-257
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/managers/NPCManagerTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `isNpcNameTaken`, `applyThemeDefaults`, `mapProfessionToOccupation`, `findNearestBlock`
+- Filtru aplicat: fara DB, fara `plugin`, fara `Registry` Bukkit, fara world/block scan
+- Input ales: `isNpcNameTaken`, deoarece poate primi colectia `AINPC` ca input explicit si ramane o comparatie determinista
+
+Microtaskuri:
+- Logica `isNpcNameTaken` a fost mutata in Kotlin cu semnatura `isNpcNameTaken(String?, Collection<AINPC>)`.
+- `applyAutoProfile` din Java paseaza un predicate lambda catre `generateUniqueAutoName`, folosind `npcsByUuid.values()`.
+- Metoda Java privata `isNpcNameTaken(String)` a fost eliminata.
+- Testul `NPCManagerTextTest` valideaza blank-safety, trim si comparatia case-insensitive.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.managers.NPCManagerTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+
+Observatii:
+- Estimarea macro ramane 33 taskuri, deoarece in `NPCManager.java` ramane un task mare riscant pe DB/Paper/world runtime; acest slice doar inchide ultimul helper sigur mic din zona auto-profile.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 18.029 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.55% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 596 fisiere Kotlin, 3 fisiere Java, 84.73% Kotlin dupa linii
+
+Rollback:
+- readauga `isNpcNameTaken(String)` in `NPCManager.java`, readu apelul `generateUniqueAutoName(gender, random, this::isNpcNameTaken)`, elimina `isNpcNameTaken(String?, Collection<AINPC>)` din Kotlin si testul `npcNameTakenIsBlankSafeTrimmedAndCaseInsensitive`
