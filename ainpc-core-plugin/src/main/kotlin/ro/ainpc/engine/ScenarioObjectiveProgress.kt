@@ -1,6 +1,7 @@
 package ro.ainpc.engine
 
 import org.bukkit.Material
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
@@ -311,4 +312,22 @@ fun simulateAddMaterial(contents: Array<ItemStack?>?, material: Material?, amoun
     }
 
     return remaining <= 0
+}
+
+fun resolveObjectiveCurrentProgress(
+    player: Player?,
+    objective: FeaturePackLoader.QuestEntryDefinition?,
+    progress: PlayerQuestProgress?,
+    index: Int,
+): Int {
+    if (objective == null) return 0
+    val requiredAmount = maxOf(1, objective.amount)
+    if (player != null && usesInventoryProgress(objective)) {
+        val material = resolveQuestMaterial(objective)
+        if (material != null) {
+            return minOf(requiredAmount, countMaterial(player.inventory, material))
+        }
+    }
+    if (progress == null) return 0
+    return minOf(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index))
 }

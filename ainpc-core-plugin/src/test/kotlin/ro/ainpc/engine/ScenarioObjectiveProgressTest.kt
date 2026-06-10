@@ -263,6 +263,31 @@ class ScenarioObjectiveProgressTest {
         assertFalse(simulateAddMaterial(null, null, 5))
     }
 
+    @Test
+    fun resolveObjectiveCurrentProgressReturnsZeroForNullObjective() {
+        assertEquals(0, resolveObjectiveCurrentProgress(null, null, null, 0))
+    }
+
+    @Test
+    fun resolveObjectiveCurrentProgressReturnsZeroForNullProgressWhenNotInventory() {
+        val objective = objective(type = "talk", itemId = "guard", amount = 5)
+        assertEquals(0, resolveObjectiveCurrentProgress(null, objective, null, 0))
+    }
+
+    @Test
+    fun resolveObjectiveCurrentProgressUsesReadObjectiveProgressForNullPlayer() {
+        val objective = objective(type = "collect", itemId = "log", amount = 5)
+        val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 3), mapOf())
+        assertEquals(3, resolveObjectiveCurrentProgress(null, objective, progress, 0))
+    }
+
+    @Test
+    fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
+        val objective = objective(type = "collect", itemId = "log", amount = 5)
+        val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())
+        assertEquals(5, resolveObjectiveCurrentProgress(null, objective, progress, 0))
+    }
+
     private fun objective(
         type: String? = "collect_item",
         itemId: String? = "item",

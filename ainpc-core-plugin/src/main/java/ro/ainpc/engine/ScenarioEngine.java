@@ -47,6 +47,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveProgress
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
@@ -5023,29 +5024,6 @@ public class ScenarioEngine {
         }
 
         return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
-    }
-
-    private int resolveObjectiveCurrentProgress(Player player,
-                                                FeaturePackLoader.QuestEntryDefinition objective,
-                                                PlayerQuestProgress progress,
-                                                int index) {
-        if (objective == null) {
-            return 0;
-        }
-
-        int requiredAmount = Math.max(1, objective.getAmount());
-        if (player != null && usesInventoryProgress(objective)) {
-            Material material = resolveQuestMaterial(objective);
-            if (material != null) {
-                return Math.min(requiredAmount, countMaterial(player.getInventory(), material));
-            }
-        }
-
-        if (progress == null) {
-            return 0;
-        }
-
-        return Math.min(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index));
     }
 
     private List<String> grantQuestRewards(Player player, List<FeaturePackLoader.QuestEntryDefinition> rewards) {
