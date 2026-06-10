@@ -6,9 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,7 +13,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1211" />
+    <option name="cachedIndexableFilesCount" value="1551" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
@@ -132,7 +129,7 @@
     &quot;project.structure.last.edited&quot;: &quot;Problems&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.LLMThirdPartyAiProvidersConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AcpAgentsConfigurable&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
@@ -234,30 +231,6 @@
       <workItem from="1779290903875" duration="5930000" />
       <workItem from="1779332709167" duration="18000" />
       <workItem from="1779358652781" duration="16000" />
-    </task>
-    <task id="LOCAL-00003" summary="test">
-      <option name="closed" value="true" />
-      <created>1777187777064</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1777187777064</updated>
-    </task>
-    <task id="LOCAL-00004" summary="test">
-      <option name="closed" value="true" />
-      <created>1777192716007</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1777192716007</updated>
-    </task>
-    <task id="LOCAL-00005" summary="test">
-      <option name="closed" value="true" />
-      <created>1777192929672</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1777192929672</updated>
     </task>
     <task id="LOCAL-00006" summary="test">
       <option name="closed" value="true" />
@@ -627,11 +600,41 @@
       <option name="project" value="LOCAL" />
       <updated>1780310475842</updated>
     </task>
-    <option name="localTasksCounter" value="52" />
+    <task id="LOCAL-00052" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1780311219097</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1780311219097</updated>
+    </task>
+    <task id="LOCAL-00053" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1780774126463</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1780774126463</updated>
+    </task>
+    <task id="LOCAL-00054" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1780843030089</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1780843030089</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="dependencySupport" implementationName="executable:docker" />
+    <option featureType="dependencySupport" implementationName="java:net.kyori:adventure-api" />
+    <option featureType="dependencySupport" implementationName="executable:kubectl" />
+    <option featureType="dependencySupport" implementationName="java:io.papermc.paper:paper-api" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">

@@ -224,7 +224,9 @@ object OpenAITextSupport {
     fun isReadTimeout(throwable: Throwable?): Boolean {
         var current = throwable
         while (current != null) {
-            if (current is java.net.SocketTimeoutException) {
+            if (current is java.net.SocketTimeoutException
+                || current is java.net.http.HttpTimeoutException
+            ) {
                 return true
             }
             current = current.cause
@@ -242,6 +244,7 @@ object OpenAITextSupport {
                 || current is java.net.PortUnreachableException
                 || current is java.net.SocketException
                 || current is java.net.SocketTimeoutException
+                || current is java.net.http.HttpTimeoutException
             ) {
                 return true
             }

@@ -2,21 +2,21 @@ package ro.ainpc.ai
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
 import java.io.IOException
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
 /**
  * Serviciu pentru comunicarea cu OpenAI Responses API.
  */
 class OpenAIService(private val plugin: AINPCPlugin) {
-    private val httpClient: OkHttpClient
+    private val httpClient: HttpClient
     private val gson = Gson()
     private val baseUrl: String
     private val apiKey: String
@@ -80,10 +80,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         temperature = plugin.config.getDouble("openai.temperature", 0.7)
         storeResponses = plugin.config.getBoolean("openai.store", false)
 
-        httpClient = OkHttpClient.Builder()
-            .connectTimeout(connectTimeoutSeconds.toLong(), TimeUnit.SECONDS)
-            .readTimeout(readTimeoutSeconds.toLong(), TimeUnit.SECONDS)
-            .writeTimeout(writeTimeoutSeconds.toLong(), TimeUnit.SECONDS)
+        httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds.toLong()))
             .build()
 
         logConfigurationDiagnostics()
@@ -166,26 +164,28 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         }
 
         val request = newRequestBuilder("$baseUrl/responses")
-            .post(gson.toJson(requestBody).toRequestBody(JSON))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
             .build()
 
         plugin.debug("Trimitere cerere OpenAI: " + prompt.substring(0, minOf(100, prompt.length)) + "...")
         val startedAt = System.nanoTime()
 
-        httpClient.newCall(request).execute().use { response ->
+        try {
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             val elapsedMs = OpenAITextSupport.nanosToMillis(startedAt)
-            val responseBody = response.body?.string().orEmpty()
+            val responseBody = response.body().orEmpty()
 
-            if (!response.isSuccessful) {
+            if (response.statusCode() !in 200..299) {
                 val errorMessage = OpenAITextSupport.extractOpenAIErrorMessage(gson, responseBody)
                 diagWarning(
                     "Responses esuat: url=$baseUrl" +
-                        ", status=${response.code}" +
+                        ", status=${response.statusCode()}" +
                         ", ms=$elapsedMs" +
                         ", body=\"${OpenAITextSupport.abbreviate(responseBody, 220)}\""
                 )
                 throw IOException(
-                    "OpenAI a returnat HTTP ${response.code}" +
+                    "OpenAI a returnat HTTP ${response.statusCode()}" +
                         if (errorMessage.isBlank()) "" else ": $errorMessage"
                 )
             }
@@ -205,12 +205,15 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             plugin.debug("Raspuns OpenAI: $generatedText")
 
             return generatedText
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw IOException("Cererea OpenAI a fost intrerupta.", e)
         }
     }
 
-    private fun newRequestBuilder(url: String): Request.Builder {
-        val builder = Request.Builder()
-            .url(url)
+    private fun newRequestBuilder(url: String): HttpRequest.Builder {
+        val builder = HttpRequest.newBuilder(URI.create(url))
+            .timeout(Duration.ofSeconds(readTimeoutSeconds.toLong()))
             .header("Accept", "application/json")
 
         if (apiKey.isNotBlank()) {
@@ -502,7 +505,5 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         }
     }
 
-    private companion object {
-        val JSON = "application/json".toMediaType()
-    }
+    private companion object
 }

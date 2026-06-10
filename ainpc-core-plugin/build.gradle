@@ -9,7 +9,6 @@ dependencies {
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
     implementation "com.zaxxer:HikariCP:${hikariVersion}"
     implementation "com.mysql:mysql-connector-j:${mysqlConnectorVersion}"
-    implementation "com.squareup.okhttp3:okhttp:${okhttpVersion}"
     testImplementation "io.papermc.paper:paper-api:${paperVersion}"
 }
 

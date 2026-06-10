@@ -58,7 +58,7 @@ features:
   mapping: true
   routine: false
   simulation: false
-  ai: false
+  ai: true
   generation: false
 
 # Setari spawn si jurnalizare batch

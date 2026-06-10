@@ -182,6 +182,19 @@ class MappingDraftFactory {
         val command = "/ainpc world place create " + region.id() + " " + localId + " " + suggestion.typeId() + " " +
             bounds.minX() + " " + bounds.minY() + " " + bounds.minZ() + " " +
             bounds.maxX() + " " + bounds.maxY() + " " + bounds.maxZ()
+
+        val tags = ArrayList(suggestion.tags())
+        val metadata = LinkedHashMap(suggestion.metadata())
+        val residentialOccupation = inferResidentialOccupation(description, suggestion.typeId())
+        if (residentialOccupation.isNotBlank()) {
+            if (tags.none { it.equals(residentialOccupation, ignoreCase = true) }) {
+                tags.add(residentialOccupation)
+            }
+            if (!metadata.containsKey("profession")) {
+                metadata["profession"] = residentialOccupation
+            }
+        }
+
         return MappingDraft(
             playerId,
             MappingDraftKind.PLACE,
@@ -203,8 +216,8 @@ class MappingDraftFactory {
             0.0,
             0.0,
             suggestion.radius(),
-            suggestion.tags(),
-            suggestion.metadata(),
+            tags,
+            metadata,
             warnings,
             command
         )
@@ -433,6 +446,62 @@ class MappingDraftFactory {
             index++
         }
         return "${safeBase}_$index"
+    }
+
+    private fun inferResidentialOccupation(description: String?, typeId: String?): String {
+        if (!PlaceType.HOUSE.id.equals(typeId, ignoreCase = true)) {
+            return ""
+        }
+        val tokens = MappingIntentParser.normalize(description)
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+        if (tokens.isEmpty()) {
+            return ""
+        }
+
+        for (index in tokens.indices) {
+            if (isHomeToken(tokens[index]) && index + 1 < tokens.size) {
+                val next = normalizeOccupationToken(tokens[index + 1])
+                if (next.isNotBlank()) {
+                    return next
+                }
+            }
+            if (isHomeToken(tokens[index]) && index > 0) {
+                val previous = normalizeOccupationToken(tokens[index - 1])
+                if (previous.isNotBlank()) {
+                    return previous
+                }
+            }
+        }
+        return ""
+    }
+
+    private fun isHomeToken(token: String?): Boolean {
+        return when (token?.lowercase(Locale.ROOT) ?: "") {
+            "casa", "locuinta", "house", "home", "residence" -> true
+            else -> false
+        }
+    }
+
+    private fun normalizeOccupationToken(token: String?): String {
+        val normalized = MappingIntentParser.slugOrFallback(token, "").trim('_')
+        if (normalized.length < 3 || isResidentialOccupationFiller(normalized)) {
+            return ""
+        }
+        val suffixes = listOf("ului", "ului", "ilor", "elor", "ului", "ului", "ului", "ui", "ul")
+        for (suffix in suffixes) {
+            if (normalized.length > suffix.length + 2 && normalized.endsWith(suffix)) {
+                return normalized.removeSuffix(suffix)
+            }
+        }
+        return normalized
+    }
+
+    private fun isResidentialOccupationFiller(token: String?): Boolean {
+        return when (token?.lowercase(Locale.ROOT) ?: "") {
+            "aici", "este", "pentru", "lui", "of", "the", "un", "o", "al", "a" -> true
+            else -> false
+        }
     }
 
     private fun parseNpcBindIntent(description: String?): NpcBindIntent {
