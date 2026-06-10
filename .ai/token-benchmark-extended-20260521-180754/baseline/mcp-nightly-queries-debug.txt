@@ -1,0 +1,11 @@
+﻿# debug profile queries (extended)
+quest debugdump anchors audit
+story context state events debug
+spawn audit duplicate npc investigate
+DebugDumpWorldJson world mapping semantic index
+DebugDumpStoryProgression objective state mismatch
+DebugDumpNpcJson serialization consistency
+DebugDumpIO write failure path handling
+DebugDumpFormatting output truncation alignment
+OpenAIConnectionProbe timeout connectivity debug
+scheduler diagnose startup fallback status

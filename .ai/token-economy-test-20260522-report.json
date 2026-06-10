@@ -1,0 +1,85 @@
+﻿{
+    "generated_at":  "2026-05-22T18:13:51.2659952+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai",
+    "file_pattern":  "token-economy-test-20260522-summary.jsonl",
+    "files_scanned":  1,
+    "runs":  4,
+    "attempt_distribution":  {
+                                 "attempt1":  4,
+                                 "attempt2":  0,
+                                 "attempt3":  0,
+                                 "attempt1_pct":  100
+                             },
+    "averages":  {
+                     "selected_budget":  900,
+                     "tokens_used":  475.75,
+                     "savings_vs_2200_budget":  1300,
+                     "savings_vs_2200_used":  1724.25
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "code",
+                           "runs":  1,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  516,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  2736,
+                           "p50_output_length":  2736,
+                           "p75_output_length":  2736,
+                           "recommended_min_chars_for_success":  495,
+                           "recommendation_source":  "profile_default"
+                       },
+                       {
+                           "profile":  "debug",
+                           "runs":  1,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  235,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  1136,
+                           "p50_output_length":  1136,
+                           "p75_output_length":  1136,
+                           "recommended_min_chars_for_success":  352,
+                           "recommendation_source":  "profile_default"
+                       },
+                       {
+                           "profile":  "planning",
+                           "runs":  2,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  576,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  2426,
+                           "p50_output_length":  2426,
+                           "p75_output_length":  2686,
+                           "recommended_min_chars_for_success":  715,
+                           "recommendation_source":  "profile_default"
+                       }
+                   ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "runs":  1,
+                                                   "min_chars_for_success_recommended":  495,
+                                                   "source":  "profile_default",
+                                                   "attempt1_pct":  100
+                                               },
+                                               {
+                                                   "profile":  "debug",
+                                                   "runs":  1,
+                                                   "min_chars_for_success_recommended":  352,
+                                                   "source":  "profile_default",
+                                                   "attempt1_pct":  100
+                                               },
+                                               {
+                                                   "profile":  "planning",
+                                                   "runs":  2,
+                                                   "min_chars_for_success_recommended":  715,
+                                                   "source":  "profile_default",
+                                                   "attempt1_pct":  100
+                                               }
+                                           ]
+                        }
+}

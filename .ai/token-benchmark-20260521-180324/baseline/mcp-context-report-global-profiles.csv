@@ -1,0 +1,4 @@
+﻿"profile","runs","attempt1_pct","avg_budget","avg_used","avg_savings_vs_2200_budget","avg_output_length","p50_output_length","p75_output_length","recommended_min_chars_for_success","recommendation_source"
+"code","3","100","2200","318","0","1346.33","1351","1359","450","profile_default"
+"debug","3","100","2200","636","0","2439.33","2438","2443","320","profile_default"
+"planning","3","100","2200","1060","0","3884","3886","3886","650","profile_default"

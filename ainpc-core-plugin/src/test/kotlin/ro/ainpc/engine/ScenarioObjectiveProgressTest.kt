@@ -205,6 +205,43 @@ class ScenarioObjectiveProgressTest {
         assertEquals(1, progress["obj1"])
     }
 
+    @Test
+    fun countMaterialReturnsZeroForNullInputs() {
+        assertEquals(0, countMaterial(null, null))
+    }
+
+    @Test
+    fun removeMaterialHandlesNullInputsGracefully() {
+        removeMaterial(null, null, 5)
+        removeMaterial(null, null, 0)
+        removeMaterial(null, null, -1)
+    }
+
+    @Test
+    fun buildObjectiveProgressSnapshotReturnsEmptyMapForNullTemplate() {
+        assertEquals(emptyMap<String, Int>(), buildObjectiveProgressSnapshot(null, null, null))
+    }
+
+    @Test
+    fun buildObjectiveProgressSnapshotReturnsEmptyMapForTemplateWithNoObjectives() {
+        val template = questTemplate()
+        assertEquals(emptyMap<String, Int>(), buildObjectiveProgressSnapshot(null, template, null))
+    }
+
+    @Test
+    fun buildObjectiveProgressSnapshotDelegatesToFourParamOverload() {
+        val template = questTemplate()
+        template.setObjectives(listOf(objective(type = "collect", itemId = "log", amount = 5)))
+        val result = buildObjectiveProgressSnapshot(null, template, null)
+        val expected = buildObjectiveProgressSnapshot(null, template, null, "")
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun buildCompletedObjectiveProgressReturnsEmptyForNullTemplate() {
+        assertEquals(emptyMap<String, Int>(), buildCompletedObjectiveProgress(null, null))
+    }
+
     private fun objective(
         type: String? = "collect_item",
         itemId: String? = "item",

@@ -1,0 +1,17 @@
+﻿MCP_READY tools=16 resources=4 collection=ainpc_code retrieval=hybrid
+QUERY QuestTemplateSelector progression objective
+
+CONTEXT profile=code retrieval=hybrid query="QuestTemplateSelector progression objective" tokens=516/900
+
+CODE:
+- ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestTemplateSelector.kt [ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestTemplateSelector.kt#0] distance=0.51054823 keyword=84 hybrid=16.99: package ro.ainpc.engine import java.util.Locale import java.util.function.Predicate class QuestTemplateSelector private constructor() { companion object { @JvmStatic fun selectConfiguredTemplate( templates: List<ScenarioEngine.ScenarioTemplate?>?, available: Predicate<ScenarioEngine.ScenarioTemplate>?, completed: Predicate<ScenarioEngine.ScenarioTemplate>? ): ScenarioEngine.ScenarioTemplate? { if (templates.isNull...
+- ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionObjectiveSnapshot.kt [ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionObjectiveSnapshot.kt#1] keyword=40 hybrid=11.8907: ...quiredAmountValue fun complete(): Boolean = completeValue fun active(): Boolean = activeValue companion object { @JvmStatic fun fromQuestGuiObjective(objective: ScenarioEngine.QuestGuiObjective?): ProgressionObjectiveSnapshot { if (objective == null) { return ProgressionObjectiveSnapshot("", "", "", "", "", "", "", "", 0, 1, false, false) } return ProgressionObjectiveSnapshot( objective.key(), objective.type(),...
+- ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java [ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java#316] keyword=34 hybrid=11.266: setProgressionEnabled(boolean progressionEnabled) { this.progressionEnabled = progressionEnabled; } public String getProgressionMechanicId() { return progressionMechanicId; } public void setProgressionMechanicId(String progressionMechanicId) { this.progressionMechanicId = progressionMechanicId == null ? "" : progressionMechanicId; } public String getProgressionKind() { return progressionKind; } public void setProg...
+- ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionFilter.kt [ainpc-core-plugin/src/main/kotlin/ro/ainpc/progression/ProgressionFilter.kt#2] keyword=28 hybrid=10.6019: eted", "complete", "completat" -> return "completed".equals(progression.status(), ignoreCase = true) "failed", "abandoned", "abandonat" -> return "failed".equals(progression.status(), ignoreCase = true) "archived", "arhivat" -> return progression.archived() "tracked", "urmarit" -> return progression.tracked() "resolved", "definition_resolved" -> return progression.definitionResolved() "unresolved", "missing_defini...
+
+RULES:
+
+CHANGELOG:
+
+MEMORY:
+

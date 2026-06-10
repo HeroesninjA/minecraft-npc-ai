@@ -1,0 +1,21 @@
+﻿AINPC Paper mapping smoke preparation
+Generated: 2026-05-03 19:44:55 +03:00
+Repo: C:\Users\HeroesninjA\IdeaProjects\test
+Server: C:\Users\HeroesninjA\IdeaProjects\test\debug-logs\smoke-script-test
+Plugins dir: C:\Users\HeroesninjA\IdeaProjects\test\debug-logs\smoke-script-test\plugins
+Region: demo_sat
+Build skipped: True
+Tests requested: False
+Copy skipped: False
+
+Core jar: C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\target\ainpc-core-plugin-1.0.0.jar
+Core SHA256: F1353395B38CB91BA94FE0E44B2A234E70543FA6ECB502543BECDD027C079E88
+Medieval jar: C:\Users\HeroesninjA\IdeaProjects\test\ainpc-scenario-medieval\target\ainpc-scenario-medieval-1.0.0.jar
+Medieval SHA256: 81A2698030A7490CFDB79D15CCFF9BF0194AB65E4FB40952F9D59D737E04AF3D
+
+Server jar found: False
+eula.txt found: False
+server.properties found: False
+
+Next file with commands:
+C:\Users\HeroesninjA\IdeaProjects\test\debug-logs\smoke-script-test\ainpc-mapping-smoke-commands.txt

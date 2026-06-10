@@ -1,0 +1,4 @@
+﻿"file","generated_at","query","profile","retrieval","selected_attempt","selected_token_budget","selected_top_k","context_tokens_used","context_token_budget","output_length","token_savings_vs_2200_budget","token_savings_vs_2200_used","auto_scope"
+"C:\Users\HeroesninjA\IdeaProjects\test\.ai\nightly-smoke\code\mcp-context-nightly-summary-code.jsonl","2026-05-21T17:48:11.8499723+03:00","NPCManager createNPC","code","hybrid","1","900","8","129","900","814","1300","2071","True"
+"C:\Users\HeroesninjA\IdeaProjects\test\.ai\nightly-smoke\code\mcp-context-nightly-summary-code.jsonl","2026-05-21T17:48:12.5106483+03:00","QuestTemplateSelector progression objective","code","hybrid","1","900","8","516","900","2725","1300","1684","True"
+"C:\Users\HeroesninjA\IdeaProjects\test\.ai\nightly-smoke\code\mcp-context-nightly-summary-code.jsonl","2026-05-21T17:48:13.1614957+03:00","ScenarioEngine progression selector","code","hybrid","1","900","8","129","900","850","1300","2071","True"

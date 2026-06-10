@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.engine.ScenarioStageProgressTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-10T17:27:15.881Z" hostname="DESKTOP-FJTPE3F" time="0.003">
+  <properties/>
+  <testcase name="objectiveListedInAnyStageScansTemplateStages()" classname="ro.ainpc.engine.ScenarioStageProgressTest" time="0.001"/>
+  <testcase name="stageReferencesObjectiveMatchesEntryIdOrItemId()" classname="ro.ainpc.engine.ScenarioStageProgressTest" time="0.001"/>
+  <testcase name="phasesMatchUsesReferenceNormalizationAndRejectsBlankInput()" classname="ro.ainpc.engine.ScenarioStageProgressTest" time="0.0"/>
+  <testcase name="stageCompletionModeAliasesNormalizeToCanonicalValues()" classname="ro.ainpc.engine.ScenarioStageProgressTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

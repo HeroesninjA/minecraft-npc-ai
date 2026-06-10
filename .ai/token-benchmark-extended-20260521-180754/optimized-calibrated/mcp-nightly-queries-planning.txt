@@ -1,0 +1,11 @@
+﻿# planning profile queries (extended)
+roadmap faze prioritati
+mcp docker server mvp faze
+release checklist gate-uri
+codex preflight workflow repair strategy
+context pack staged budgets policy
+session sync watcher maintenance plan
+backup restore test-restore rollout plan
+nightly matrix automation governance
+scheduler fallback startup risk mitigation
+adaptive thresholds calibration roadmap

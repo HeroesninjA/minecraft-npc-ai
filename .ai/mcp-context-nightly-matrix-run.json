@@ -1,0 +1,43 @@
+﻿{
+    "generated_at":  "2026-06-10T17:03:30.2652820+03:00",
+    "output_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly",
+    "report_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai",
+    "profiles":  [
+                     "code",
+                     "debug",
+                     "planning"
+                 ],
+    "created_query_templates":  [
+
+                                ],
+    "profile_runs":  [
+                         {
+                             "profile":  "code",
+                             "success":  true,
+                             "queries_total":  3,
+                             "queries_succeeded":  3,
+                             "queries_failed":  0,
+                             "run_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code\\mcp-context-nightly-run.json",
+                             "report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code\\mcp-context-report-code.json"
+                         },
+                         {
+                             "profile":  "debug",
+                             "success":  true,
+                             "queries_total":  3,
+                             "queries_succeeded":  3,
+                             "queries_failed":  0,
+                             "run_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug\\mcp-context-nightly-run.json",
+                             "report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug\\mcp-context-report-debug.json"
+                         },
+                         {
+                             "profile":  "planning",
+                             "success":  true,
+                             "queries_total":  3,
+                             "queries_succeeded":  3,
+                             "queries_failed":  0,
+                             "run_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning\\mcp-context-nightly-run.json",
+                             "report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning\\mcp-context-report-planning.json"
+                         }
+                     ],
+    "global_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\mcp-context-report-global.json"
+}

@@ -1,0 +1,171 @@
+﻿{
+    "benchmark_folder":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-extended-20260521-180754",
+    "extended_queries_per_profile":  10,
+    "totals":  {
+                   "baseline_total_used":  20046,
+                   "optimized_warmup_total_used":  14543,
+                   "optimized_calibrated_total_used":  14543,
+                   "saved_vs_warmup":  5503,
+                   "saved_vs_calibrated":  5503,
+                   "saved_vs_warmup_pct":  27.45,
+                   "saved_vs_calibrated_pct":  27.45
+               },
+    "comparisons":  [
+                        {
+                            "comparison":  "baseline_vs_optimized_warmup",
+                            "runs":  30,
+                            "baseline_avg_used":  668.2,
+                            "optimized_avg_used":  484.77,
+                            "avg_used_saved":  183.43,
+                            "avg_used_saved_pct":  27.45,
+                            "baseline_avg_budget":  2200,
+                            "optimized_avg_budget":  900,
+                            "avg_budget_saved":  1300,
+                            "avg_budget_saved_pct":  59.09,
+                            "baseline_attempt1_pct":  100,
+                            "optimized_attempt1_pct":  100,
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "baseline_avg_used":  312,
+                                                   "optimized_avg_used":  293.7,
+                                                   "used_saved":  18.3,
+                                                   "used_saved_pct":  5.87,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               },
+                                               {
+                                                   "profile":  "debug",
+                                                   "baseline_avg_used":  634.5,
+                                                   "optimized_avg_used":  571.7,
+                                                   "used_saved":  62.8,
+                                                   "used_saved_pct":  9.9,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               },
+                                               {
+                                                   "profile":  "planning",
+                                                   "baseline_avg_used":  1058.1,
+                                                   "optimized_avg_used":  588.9,
+                                                   "used_saved":  469.2,
+                                                   "used_saved_pct":  44.34,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               }
+                                           ]
+                        },
+                        {
+                            "comparison":  "baseline_vs_optimized_calibrated",
+                            "runs":  30,
+                            "baseline_avg_used":  668.2,
+                            "optimized_avg_used":  484.77,
+                            "avg_used_saved":  183.43,
+                            "avg_used_saved_pct":  27.45,
+                            "baseline_avg_budget":  2200,
+                            "optimized_avg_budget":  900,
+                            "avg_budget_saved":  1300,
+                            "avg_budget_saved_pct":  59.09,
+                            "baseline_attempt1_pct":  100,
+                            "optimized_attempt1_pct":  100,
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "baseline_avg_used":  312,
+                                                   "optimized_avg_used":  293.7,
+                                                   "used_saved":  18.3,
+                                                   "used_saved_pct":  5.87,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               },
+                                               {
+                                                   "profile":  "debug",
+                                                   "baseline_avg_used":  634.5,
+                                                   "optimized_avg_used":  571.7,
+                                                   "used_saved":  62.8,
+                                                   "used_saved_pct":  9.9,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               },
+                                               {
+                                                   "profile":  "planning",
+                                                   "baseline_avg_used":  1058.1,
+                                                   "optimized_avg_used":  588.9,
+                                                   "used_saved":  469.2,
+                                                   "used_saved_pct":  44.34,
+                                                   "baseline_avg_budget":  2200,
+                                                   "optimized_avg_budget":  900,
+                                                   "budget_saved":  1300,
+                                                   "budget_saved_pct":  59.09
+                                               }
+                                           ]
+                        }
+                    ],
+    "warmup_recommendations":  [
+                                   {
+                                       "profile":  "code",
+                                       "recommended_min_chars":  495,
+                                       "source":  "profile_default_adjusted_by_attempt1_pct",
+                                       "attempt1_pct":  100,
+                                       "runs":  10
+                                   },
+                                   {
+                                       "profile":  "debug",
+                                       "recommended_min_chars":  352,
+                                       "source":  "profile_default_adjusted_by_attempt1_pct",
+                                       "attempt1_pct":  100,
+                                       "runs":  10
+                                   },
+                                   {
+                                       "profile":  "planning",
+                                       "recommended_min_chars":  715,
+                                       "source":  "profile_default_adjusted_by_attempt1_pct",
+                                       "attempt1_pct":  100,
+                                       "runs":  10
+                                   }
+                               ],
+    "calibrated_run_min_chars_source_counts":  [
+                                                   {
+                                                       "source":  "adaptive-report",
+                                                       "count":  30
+                                                   }
+                                               ],
+    "calibrated_run_min_chars_by_profile":  [
+                                                {
+                                                    "profile":  "code",
+                                                    "unique_min_values":  [
+                                                                              495
+                                                                          ],
+                                                    "unique_sources":  [
+                                                                           "adaptive-report"
+                                                                       ]
+                                                },
+                                                {
+                                                    "profile":  "debug",
+                                                    "unique_min_values":  [
+                                                                              352
+                                                                          ],
+                                                    "unique_sources":  [
+                                                                           "adaptive-report"
+                                                                       ]
+                                                },
+                                                {
+                                                    "profile":  "planning",
+                                                    "unique_min_values":  [
+                                                                              715
+                                                                          ],
+                                                    "unique_sources":  [
+                                                                           "adaptive-report"
+                                                                       ]
+                                                }
+                                            ]
+}

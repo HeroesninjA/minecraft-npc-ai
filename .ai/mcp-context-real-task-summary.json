@@ -1,0 +1,44 @@
+﻿{
+    "generated_at":  "2026-05-21T18:36:12.6391214+03:00",
+    "query":  "Debug prompt model fallback openai debugdump",
+    "profile":  "code",
+    "retrieval":  "hybrid",
+    "collection":  "ainpc_code",
+    "auto_scope":  true,
+    "min_chars_for_success":  495,
+    "min_chars_source":  "profile-default",
+    "adaptive_thresholds_enabled":  false,
+    "adaptive_report_path":  "",
+    "selected_attempt":  1,
+    "selected_token_budget":  900,
+    "selected_top_k":  8,
+    "output_length":  869,
+    "context_tokens_used":  129,
+    "context_token_budget":  900,
+    "include":  [
+                    "ainpc-core-plugin/src/main/",
+                    "ainpc-api/src/main/",
+                    "ainpc-scenario-medieval/src/main/",
+                    "scripts/"
+                ],
+    "exclude":  [
+                    "ainpc-core-plugin/src/test/",
+                    "ainpc-api/src/test/",
+                    "ainpc-scenario-medieval/src/test/",
+                    "target/",
+                    "build/",
+                    ".gradle/",
+                    ".kotlin/",
+                    ".idea/",
+                    "node_modules/"
+                ],
+    "attempts":  [
+                     {
+                         "attempt":  1,
+                         "token_budget":  900,
+                         "top_k":  8,
+                         "output_length":  869,
+                         "useful":  true
+                     }
+                 ]
+}

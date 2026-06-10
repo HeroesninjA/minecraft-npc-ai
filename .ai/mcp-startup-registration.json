@@ -1,0 +1,9 @@
+﻿{
+    "updated_at":  "2026-05-21T18:00:36.9759924+03:00",
+    "project_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test",
+    "startup_file":  "C:\\Users\\HeroesninjA\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\AINPC-MCP-Context-Nightly.cmd",
+    "launcher_script":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\scripts\\mcp-context-nightly-matrix-launcher.ps1",
+    "applied":  true,
+    "removed":  false,
+    "note":  "startup_file_created_or_updated"
+}

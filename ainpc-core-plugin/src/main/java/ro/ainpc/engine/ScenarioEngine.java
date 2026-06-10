@@ -42,6 +42,10 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveQuestObjectiveS
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldConsumeObjectiveItem;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldShowObjectiveForCurrentStage;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.usesInventoryProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildCompletedObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveProgressSnapshot;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.progressionReference;
@@ -3730,60 +3734,7 @@ public class ScenarioEngine {
 
     
 
-    private Map<String, Integer> buildObjectiveProgressSnapshot(PlayerInventory inventory,
-                                                                ScenarioTemplate template,
-                                                                Map<String, Integer> existingProgress) {
-        return buildObjectiveProgressSnapshot(inventory, template, existingProgress, "");
-    }
 
-    private Map<String, Integer> buildObjectiveProgressSnapshot(PlayerInventory inventory,
-                                                                ScenarioTemplate template,
-                                                                Map<String, Integer> existingProgress,
-                                                                String currentPhase) {
-        LinkedHashMap<String, Integer> snapshot = new LinkedHashMap<>();
-        if (template == null || template.getObjectives().isEmpty()) {
-            return snapshot;
-        }
-
-        Map<String, Integer> existingValues = existingProgress != null ? existingProgress : Map.of();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            String objectiveKey = buildObjectiveKey(objective, index);
-            int progressValue = readObjectiveProgress(existingValues, objective, index);
-
-            Material material = resolveQuestMaterial(objective);
-            if (inventory != null
-                && material != null
-                && usesInventoryProgress(objective)
-                && isObjectiveActiveForPhase(template, currentPhase, objective)) {
-                progressValue = Math.min(objective.getAmount(), countMaterial(inventory, material));
-            } else {
-                progressValue = Math.min(objective.getAmount(), progressValue);
-            }
-
-            snapshot.put(objectiveKey, progressValue);
-        }
-
-        return Collections.unmodifiableMap(snapshot);
-    }
-
-    private Map<String, Integer> buildCompletedObjectiveProgress(ScenarioTemplate template,
-                                                                 Map<String, Integer> existingProgress) {
-        LinkedHashMap<String, Integer> completedProgress = new LinkedHashMap<>(
-            buildObjectiveProgressSnapshot(null, template, existingProgress)
-        );
-        if (template == null) {
-            return Collections.unmodifiableMap(completedProgress);
-        }
-
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            completedProgress.put(buildObjectiveKey(objective, index), Math.max(0, objective.getAmount()));
-        }
-        return Collections.unmodifiableMap(completedProgress);
-    }
 
     private WorldRegion findCurrentRegion(Location location) {
         if (location == null || location.getWorld() == null || plugin.getPlatform() == null) {
@@ -5645,45 +5596,6 @@ public class ScenarioEngine {
             return npc.getUuid().toString();
         }
         return template != null ? template.getTemplateId() : "quest";
-    }
-
-    private int countMaterial(PlayerInventory inventory, Material material) {
-        if (inventory == null || material == null) {
-            return 0;
-        }
-
-        int total = 0;
-        for (ItemStack stack : inventory.getStorageContents()) {
-            if (stack != null && stack.getType() == material) {
-                total += stack.getAmount();
-            }
-        }
-        return total;
-    }
-
-    private void removeMaterial(PlayerInventory inventory, Material material, int amount) {
-        if (inventory == null || material == null || amount <= 0) {
-            return;
-        }
-
-        ItemStack[] contents = inventory.getStorageContents();
-        int remaining = amount;
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack == null || stack.getType() != material) {
-                continue;
-            }
-
-            if (stack.getAmount() <= remaining) {
-                remaining -= stack.getAmount();
-                contents[i] = null;
-            } else {
-                stack.setAmount(stack.getAmount() - remaining);
-                remaining = 0;
-            }
-        }
-
-        inventory.setStorageContents(contents);
     }
 
     /**

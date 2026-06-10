@@ -1,0 +1,11 @@
+﻿# code profile queries (extended)
+NPCManager createNPC
+QuestTemplateSelector progression objective
+ScenarioEngine progression selector
+DatabaseManager createTables ensureColumnExists
+AIOrchestrationService AIOrchestrationPolicy
+OpenAIPromptBuilder OpenAIPromptSnapshotFactory
+AddonRegistry registerDescriptor registerAddon
+AINPCTabCompleter completeQuestArgs progression alias
+SchedulerCoordinator startup registration
+WorldAdminApi WorldRegionInfo WorldPlaceInfo

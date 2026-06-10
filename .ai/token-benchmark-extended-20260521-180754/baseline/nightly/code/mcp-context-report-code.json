@@ -1,0 +1,45 @@
+﻿{
+    "generated_at":  "2026-05-21T18:09:00.7746472+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-extended-20260521-180754\\baseline\\nightly\\code",
+    "file_pattern":  "*mcp-context*summary*.json*",
+    "files_scanned":  1,
+    "runs":  10,
+    "attempt_distribution":  {
+                                 "attempt1":  10,
+                                 "attempt2":  0,
+                                 "attempt3":  0,
+                                 "attempt1_pct":  100
+                             },
+    "averages":  {
+                     "selected_budget":  2200,
+                     "tokens_used":  312,
+                     "savings_vs_2200_budget":  0,
+                     "savings_vs_2200_used":  1888
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "code",
+                           "runs":  10,
+                           "attempt1_pct":  100,
+                           "avg_budget":  2200,
+                           "avg_used":  312,
+                           "avg_savings_vs_2200_budget":  0,
+                           "avg_output_length":  1340.6,
+                           "p50_output_length":  1336,
+                           "p75_output_length":  1366,
+                           "recommended_min_chars_for_success":  495,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "runs":  10,
+                                                   "min_chars_for_success_recommended":  495,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  100
+                                               }
+                                           ]
+                        }
+}

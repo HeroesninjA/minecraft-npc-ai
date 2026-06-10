@@ -1,0 +1,4 @@
+﻿# planning profile queries
+roadmap faze prioritati
+mcp docker server mvp faze
+release checklist gate-uri

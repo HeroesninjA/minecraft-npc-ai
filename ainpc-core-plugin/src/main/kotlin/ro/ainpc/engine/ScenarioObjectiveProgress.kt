@@ -1,6 +1,10 @@
 package ro.ainpc.engine
 
+import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.PlayerInventory
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
+import java.util.Collections
 import java.util.Locale
 
 fun matchesObjectiveType(objective: FeaturePackLoader.QuestEntryDefinition?, expectedType: String?): Boolean =
@@ -165,4 +169,84 @@ fun incrementObjectiveProgress(
     if (updatedValue == currentValue) return false
     progressByObjective[objectiveKey] = updatedValue
     return true
+}
+
+fun countMaterial(inventory: PlayerInventory?, material: Material?): Int {
+    if (inventory == null || material == null) return 0
+    var total = 0
+    for (stack in inventory.storageContents) {
+        if (stack != null && stack.type == material) {
+            total += stack.amount
+        }
+    }
+    return total
+}
+
+fun removeMaterial(inventory: PlayerInventory?, material: Material?, amount: Int) {
+    if (inventory == null || material == null || amount <= 0) return
+    val contents = inventory.storageContents
+    var remaining = amount
+    for (i in contents.indices) {
+        if (remaining <= 0) break
+        val stack = contents[i] ?: continue
+        if (stack.type != material) continue
+        if (stack.amount <= remaining) {
+            remaining -= stack.amount
+            contents[i] = null
+        } else {
+            stack.amount = stack.amount - remaining
+            remaining = 0
+        }
+    }
+    inventory.storageContents = contents
+}
+
+fun buildObjectiveProgressSnapshot(
+    inventory: PlayerInventory?,
+    template: ScenarioEngine.ScenarioTemplate?,
+    existingProgress: Map<String, Int>?,
+): Map<String, Int> =
+    buildObjectiveProgressSnapshot(inventory, template, existingProgress, "")
+
+fun buildObjectiveProgressSnapshot(
+    inventory: PlayerInventory?,
+    template: ScenarioEngine.ScenarioTemplate?,
+    existingProgress: Map<String, Int>?,
+    currentPhase: String,
+): Map<String, Int> {
+    val snapshot = LinkedHashMap<String, Int>()
+    if (template == null || template.objectives.isEmpty()) return snapshot
+    val existingValues = existingProgress ?: emptyMap()
+    val objectives = template.objectives
+    for ((index, objective) in objectives.withIndex()) {
+        val objectiveKey = buildObjectiveKey(objective, index)
+        var progressValue = readObjectiveProgress(existingValues, objective, index)
+        val material = resolveQuestMaterial(objective)
+        if (inventory != null
+            && material != null
+            && usesInventoryProgress(objective)
+            && isObjectiveActiveForPhase(template, currentPhase, objective)
+        ) {
+            progressValue = minOf(objective.amount, countMaterial(inventory, material))
+        } else {
+            progressValue = minOf(objective.amount, progressValue)
+        }
+        snapshot[objectiveKey] = progressValue
+    }
+    return Collections.unmodifiableMap(snapshot)
+}
+
+fun buildCompletedObjectiveProgress(
+    template: ScenarioEngine.ScenarioTemplate?,
+    existingProgress: Map<String, Int>?,
+): Map<String, Int> {
+    val completedProgress = LinkedHashMap(
+        buildObjectiveProgressSnapshot(null, template, existingProgress)
+    )
+    if (template == null) return Collections.unmodifiableMap(completedProgress)
+    val objectives = template.objectives
+    for ((index, objective) in objectives.withIndex()) {
+        completedProgress[buildObjectiveKey(objective, index)] = maxOf(0, objective.amount)
+    }
+    return Collections.unmodifiableMap(completedProgress)
 }

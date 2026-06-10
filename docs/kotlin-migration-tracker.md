@@ -43,10 +43,10 @@ Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la fin
 | Zona | Linii Java ramase | Taskuri estimate |
 |---|---:|---:|
 | `AINPCCommand.java` | 6267 | 12 |
-| `ScenarioEngine.java` | 6086 | 3 |
+| `ScenarioEngine.java` | 5922 | 3 |
 | `NPCManager.java` | 2566 | 1 |
 | Gate final si hardening | n/a | 6 |
-| Total | 14919 | 22 |
+| Total | 14755 | 22 |
 
 ## Regula de actualizare
 
@@ -7789,3 +7789,49 @@ Inventar dupa slice:
 
 Rollback:
 - elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`, readauga `shouldInspectObjectiveForCurrentStage`
+
+### KOT-272
+
+Data: 2026-06-10
+ID: KOT-272
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioObjectiveProgressTest.kt`
+
+Input selectat / filtrat:
+- Candidati analizati: `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot` (2 overloads), `buildCompletedObjectiveProgress`
+- Cluster de progres obiectiv cu inventar Bukkit (~89 linii Java → ~65 linii Kotlin)
+- Dependente: `resolveQuestMaterial` (deja in `ScenarioEngineText.kt`), `usesInventoryProgress`, `buildObjectiveKey`, `readObjectiveProgress`, `isObjectiveActiveForPhase` (toate deja in Kotlin)
+
+Microtaskuri:
+- `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot` x2, `buildCompletedObjectiveProgress` mutate in Kotlin (`ScenarioObjectiveProgress.kt`).
+- Metodele Java private eliminate din `ScenarioEngine.java`.
+- Importuri statice `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot`, `buildCompletedObjectiveProgress` adaugate.
+- `ScenarioEngine.java` redus de la 5998 la 5922 linii; `ScenarioObjectiveProgress.kt` marit de la 168 la ~220 linii.
+- Teste noi: 6 cazuri (null/edge-case pentru countMaterial, removeMaterial, snapshot, completed).
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioObjectiveProgressTest` (PASS, 28 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (86.01% Kotlin lines, +0.07% fata de KOT-271)
+
+Observatii:
+- `PlayerInventory`/`Material`/`ItemStack` importate in Kotlin — primele referinte directe la Bukkit API in Kotlinul de productie.
+- Tipurile Bukkit (`PlayerInventory?`, `Material?`) sunt nullable — pastreaza acelasi contract ca versiunea Java.
+- `simulateRemoveMaterial` (care lucreaza pe `ItemStack[]` direct) ramane in Java — nu face parte din acest cluster.
+- Testele pentru calea fericita (PlayerInventory cu continut real) necesita MockBukkit/PaperAPI test framework — nu au fost adaugate in acest slice.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.755 (6267 + 5922 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 86.01% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`

@@ -1,0 +1,15 @@
+﻿{
+    "generated_at":  "2026-06-10T17:03:26.9603348+03:00",
+    "query_file":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\mcp-nightly-queries-debug.txt",
+    "output_dir":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug",
+    "summary_jsonl":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug\\mcp-context-nightly-summary-debug.jsonl",
+    "aggregated_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug\\mcp-context-report-debug.json",
+    "profile":  "debug",
+    "retrieval":  "hybrid",
+    "queries_total":  3,
+    "queries_succeeded":  3,
+    "queries_failed":  0,
+    "failures":  [
+
+                 ]
+}

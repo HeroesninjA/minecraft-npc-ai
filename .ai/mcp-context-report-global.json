@@ -1,0 +1,118 @@
+﻿{
+    "generated_at":  "2026-06-10T17:03:30.2364871+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly",
+    "file_pattern":  "*mcp-context-nightly-summary-*.jsonl",
+    "files_scanned":  3,
+    "runs":  211,
+    "usable_runs":  168,
+    "failed_runs":  43,
+    "usable_run_pct":  79.62,
+    "attempt_distribution":  {
+                                 "attempt1":  170,
+                                 "attempt2":  17,
+                                 "attempt3":  24,
+                                 "attempt1_pct":  80.57,
+                                 "usable_attempt1":  167,
+                                 "usable_attempt2":  1,
+                                 "usable_attempt3":  0,
+                                 "usable_attempt1_pct":  99.4
+                             },
+    "averages":  {
+                     "selected_budget":  902.98,
+                     "tokens_used":  469.62,
+                     "savings_vs_2200_budget":  1297.02,
+                     "savings_vs_2200_used":  1730.38
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "code",
+                           "runs":  72,
+                           "usable_runs":  57,
+                           "failed_runs":  15,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  296.47,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  1642.56,
+                           "p50_output_length":  850,
+                           "p75_output_length":  3316,
+                           "recommended_min_chars_for_success":  544,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       },
+                       {
+                           "profile":  "debug",
+                           "runs":  72,
+                           "usable_runs":  57,
+                           "failed_runs":  15,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  579,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  2719.54,
+                           "p50_output_length":  2946,
+                           "p75_output_length":  2963,
+                           "recommended_min_chars_for_success":  387,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       },
+                       {
+                           "profile":  "planning",
+                           "runs":  67,
+                           "usable_runs":  54,
+                           "failed_runs":  13,
+                           "attempt1_pct":  98.15,
+                           "avg_budget":  909.26,
+                           "avg_used":  536.93,
+                           "avg_savings_vs_2200_budget":  1290.74,
+                           "avg_output_length":  2222.19,
+                           "p50_output_length":  1867,
+                           "p75_output_length":  2897,
+                           "recommended_min_chars_for_success":  787,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "failures_by_reason":  [
+                               {
+                                   "reason":  "legacy-missing-token-metadata",
+                                   "count":  27
+                               },
+                               {
+                                   "reason":  "below-min-chars",
+                                   "count":  9
+                               },
+                               {
+                                   "reason":  "missing-token-metadata",
+                                   "count":  7
+                               }
+                           ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "runs":  72,
+                                                   "usable_runs":  57,
+                                                   "failed_runs":  15,
+                                                   "min_chars_for_success_recommended":  544,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  100
+                                               },
+                                               {
+                                                   "profile":  "debug",
+                                                   "runs":  72,
+                                                   "usable_runs":  57,
+                                                   "failed_runs":  15,
+                                                   "min_chars_for_success_recommended":  387,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  100
+                                               },
+                                               {
+                                                   "profile":  "planning",
+                                                   "runs":  67,
+                                                   "usable_runs":  54,
+                                                   "failed_runs":  13,
+                                                   "min_chars_for_success_recommended":  787,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  98.15
+                                               }
+                                           ]
+                        }
+}

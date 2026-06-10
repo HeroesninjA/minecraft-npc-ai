@@ -1,0 +1,12 @@
+{
+    "mcpServers":  {
+                       "ainpc-project-memory":  {
+                                                    "transport":  "streamable_http",
+                                                    "url":  "http://127.0.0.1:3000/mcp"
+                                                },
+                       "serena":  {
+                                      "transport":  "streamable_http",
+                                      "url":  "http://127.0.0.1:9121/mcp"
+                                  }
+                   }
+}

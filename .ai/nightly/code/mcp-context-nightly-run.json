@@ -1,0 +1,15 @@
+﻿{
+    "generated_at":  "2026-06-10T17:03:24.5667708+03:00",
+    "query_file":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\mcp-nightly-queries-code.txt",
+    "output_dir":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code",
+    "summary_jsonl":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code\\mcp-context-nightly-summary-code.jsonl",
+    "aggregated_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code\\mcp-context-report-code.json",
+    "profile":  "code",
+    "retrieval":  "hybrid",
+    "queries_total":  3,
+    "queries_succeeded":  3,
+    "queries_failed":  0,
+    "failures":  [
+
+                 ]
+}
