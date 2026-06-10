@@ -6,18 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/categorii/05-api-modularizare-addonuri/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/categorii/05-api-modularizare-addonuri/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conversie-java-la-kotlin-partea-2.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conversie-java-la-kotlin-partea-3.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conversie-java-la-kotlin-partea-4.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conversie-java-la-kotlin-partea-5.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conversie-java-la-kotlin.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/documentatie-lipsa.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/documentatie-lipsa.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/kotlin-gradle-activation-plan.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/kotlin-migration-tracker.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/rezumat-conversie-java-la-kotlin.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,7 +13,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1536" />
+    <option name="cachedIndexableFilesCount" value="1551" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
@@ -243,14 +231,6 @@
       <workItem from="1779290903875" duration="5930000" />
       <workItem from="1779332709167" duration="18000" />
       <workItem from="1779358652781" duration="16000" />
-    </task>
-    <task id="LOCAL-00005" summary="test">
-      <option name="closed" value="true" />
-      <created>1777192929672</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1777192929672</updated>
     </task>
     <task id="LOCAL-00006" summary="test">
       <option name="closed" value="true" />
@@ -636,7 +616,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780774126463</updated>
     </task>
-    <option name="localTasksCounter" value="54" />
+    <task id="LOCAL-00054" summary="migration kotline">
+      <option name="closed" value="true" />
+      <created>1780843030089</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1780843030089</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
