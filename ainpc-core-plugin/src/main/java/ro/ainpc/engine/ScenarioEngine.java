@@ -52,6 +52,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjective
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
 import static ro.ainpc.engine.QuestLogFilterKt.parseQuestLogFilter;
+import static ro.ainpc.engine.QuestLogFilterKt.questLogStatusPriority;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.progressionReference;
@@ -2696,7 +2697,7 @@ public class ScenarioEngine {
             .comparingInt((PlayerQuestProgress progress) -> isTrackedQuest(playerId, progress) ? 0 : 1)
             .thenComparingInt(progress -> questLogCategoryPriority(resolveTemplateForProgress(progress, null)))
             .thenComparing(progress -> resolveProgressionMechanicSortKey(resolveTemplateForProgress(progress, null)))
-            .thenComparingInt(this::questLogStatusPriority)
+            .thenComparingInt(QuestLogFilterKt::questLogStatusPriority)
             .thenComparing(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .thenComparing(progress -> progress.templateId() != null ? progress.templateId() : "");
     }
@@ -2718,19 +2719,6 @@ public class ScenarioEngine {
             return mechanicKey;
         }
         return template != null ? normalizeReference(resolveProgressionMechanicDisplay(template)) : "";
-    }
-
-    private int questLogStatusPriority(PlayerQuestProgress progress) {
-        if (progress == null) {
-            return 3;
-        }
-        if (progress.isActive()) {
-            return 0;
-        }
-        if (progress.isOffered()) {
-            return 1;
-        }
-        return 2;
     }
 
     private String questLogCurrentGroupLabel(UUID playerId, ScenarioTemplate template, PlayerQuestProgress progress) {

@@ -268,3 +268,10 @@ fun parseQuestLogFilter(filter: String?): QuestLogFilter {
         else -> QuestLogFilter.SUMMARY
     }
 }
+
+fun questLogStatusPriority(progress: PlayerQuestProgress?): Int {
+    if (progress == null) return 3
+    if (progress.isActive()) return 0
+    if (progress.isOffered()) return 1
+    return 2
+}

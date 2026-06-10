@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.ConfigDefaultsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:52.963Z" hostname="DESKTOP-FJTPE3F" time="0.12">
+  <properties/>
+  <testcase name="coreDefaultsKeepAutomaticWorldImpactOptIn()" classname="ro.ainpc.ConfigDefaultsTest" time="0.096"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

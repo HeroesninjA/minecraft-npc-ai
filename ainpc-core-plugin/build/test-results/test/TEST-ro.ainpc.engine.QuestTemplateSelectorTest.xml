@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.engine.QuestTemplateSelectorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:54.641Z" hostname="DESKTOP-FJTPE3F" time="0.007">
+  <properties/>
+  <testcase name="prefersFirstAvailableUncompletedQuestOverEarlierCompletedQuest()" classname="ro.ainpc.engine.QuestTemplateSelectorTest" time="0.002"/>
+  <testcase name="keepsCompletedAvailableQuestWhenNoFreshQuestExists()" classname="ro.ainpc.engine.QuestTemplateSelectorTest" time="0.0"/>
+  <testcase name="filtersMixedNpcTemplatesByProgressionKind()" classname="ro.ainpc.engine.QuestTemplateSelectorTest" time="0.001"/>
+  <testcase name="returnsFirstUnavailableQuestWhenNothingIsAvailable()" classname="ro.ainpc.engine.QuestTemplateSelectorTest" time="0.0"/>
+  <testcase name="skipsUnavailableEarlierQuestWhenLaterQuestIsAvailable()" classname="ro.ainpc.engine.QuestTemplateSelectorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

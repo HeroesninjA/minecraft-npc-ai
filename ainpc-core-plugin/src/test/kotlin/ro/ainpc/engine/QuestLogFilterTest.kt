@@ -1,6 +1,8 @@
 package ro.ainpc.engine
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class QuestLogFilterTest {
@@ -218,5 +220,38 @@ class QuestLogFilterTest {
     fun parseReturnsSummaryForWhitespaceFilter() {
         assertEquals(QuestLogFilter.SUMMARY, parseQuestLogFilter("   "))
         assertEquals(QuestLogFilter.SUMMARY, parseQuestLogFilter("\t\n"))
+    }
+
+    @Test
+    fun questLogStatusPriorityReturns3ForNull() {
+        assertEquals(3, questLogStatusPriority(null))
+    }
+
+    @Test
+    fun questLogStatusPriorityReturns0ForActive() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertTrue(p.isActive())
+        assertEquals(0, questLogStatusPriority(p))
+    }
+
+    @Test
+    fun questLogStatusPriorityReturns1ForOffered() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.OFFERED, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertTrue(p.isOffered())
+        assertEquals(1, questLogStatusPriority(p))
+    }
+
+    @Test
+    fun questLogStatusPriorityReturns2ForFailed() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.FAILED, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertEquals(2, questLogStatusPriority(p))
+    }
+
+    @Test
+    fun questLogStatusPriorityReturns2ForCompleted() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.COMPLETED, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertFalse(p.isActive())
+        assertFalse(p.isOffered())
+        assertEquals(2, questLogStatusPriority(p))
     }
 }
