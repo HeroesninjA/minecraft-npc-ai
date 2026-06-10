@@ -30,11 +30,17 @@ import static ro.ainpc.engine.ScenarioEngineTextKt.sanitizeConfigKey;
 import static ro.ainpc.engine.ScenarioEngineTextKt.valueOrFallback;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveKey;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.carryLegacyObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasInventoryObjective;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasObjectiveType;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.incrementObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesObjectiveReference;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesObjectiveType;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.normalizeObjectiveType;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.objectiveKeyCandidates;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.readObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveQuestObjectiveState;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldConsumeObjectiveItem;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldShowObjectiveForCurrentStage;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.usesInventoryProgress;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
@@ -3722,33 +3728,7 @@ public class ScenarioEngine {
         return null;
     }
 
-    private boolean hasObjectiveType(ScenarioTemplate template, String type) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            if (matchesObjectiveType(objective, type)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean hasInventoryObjective(ScenarioTemplate template) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            if (usesInventoryProgress(objective)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    
 
     private Map<String, Integer> buildObjectiveProgressSnapshot(PlayerInventory inventory,
                                                                 ScenarioTemplate template,
@@ -3803,19 +3783,6 @@ public class ScenarioEngine {
             completedProgress.put(buildObjectiveKey(objective, index), Math.max(0, objective.getAmount()));
         }
         return Collections.unmodifiableMap(completedProgress);
-    }
-
-    private boolean incrementObjectiveProgress(Map<String, Integer> progressByObjective,
-                                               String objectiveKey,
-                                               int objectiveAmount) {
-        int currentValue = Math.max(0, progressByObjective.getOrDefault(objectiveKey, 0));
-        int updatedValue = Math.min(Math.max(1, objectiveAmount), currentValue + 1);
-        if (updatedValue == currentValue) {
-            return false;
-        }
-
-        progressByObjective.put(objectiveKey, updatedValue);
-        return true;
     }
 
     private WorldRegion findCurrentRegion(Location location) {
@@ -4055,22 +4022,6 @@ public class ScenarioEngine {
             entity.getType().name(),
             humanizeItemId(entity.getType().name())
         );
-    }
-
-    private boolean matchesObjectiveReference(String reference, String... candidates) {
-        String normalizedReference = normalizeReference(stripObjectivePrefix(reference));
-        if (normalizedReference.isBlank() || candidates == null || candidates.length == 0) {
-            return false;
-        }
-
-        for (String candidate : candidates) {
-            String normalizedCandidate = normalizeReference(candidate);
-            if (!normalizedCandidate.isBlank() && normalizedCandidate.equals(normalizedReference)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private ScenarioTemplate findQuestTemplateForNpc(AINPC npc) {
@@ -4583,59 +4534,6 @@ public class ScenarioEngine {
         }
 
         return lines;
-    }
-
-    private QuestObjectiveState resolveQuestObjectiveState(PlayerQuestProgress progress,
-                                                           int currentAmount,
-                                                           int requiredAmount,
-                                                           boolean activeForStage) {
-        QuestStatus status = progress != null ? progress.status() : QuestStatus.NOT_STARTED;
-        return resolveQuestObjectiveState(status, currentAmount, requiredAmount, activeForStage);
-    }
-
-    private QuestObjectiveState resolveQuestObjectiveState(QuestStatus status,
-                                                           int currentAmount,
-                                                           int requiredAmount,
-                                                           boolean activeForStage) {
-        int safeRequiredAmount = Math.max(1, requiredAmount);
-        int safeCurrentAmount = Math.max(0, currentAmount);
-        if (safeCurrentAmount >= safeRequiredAmount || status == QuestStatus.COMPLETED) {
-            return QuestObjectiveState.COMPLETED;
-        }
-        if (status == QuestStatus.FAILED) {
-            return QuestObjectiveState.FAILED;
-        }
-        if (!activeForStage || status == QuestStatus.NOT_STARTED || status == QuestStatus.OFFERED) {
-            return QuestObjectiveState.PENDING;
-        }
-        if (safeCurrentAmount > 0) {
-            return QuestObjectiveState.IN_PROGRESS;
-        }
-        return QuestObjectiveState.STARTED;
-    }
-
-    private boolean shouldShowObjectiveForCurrentStage(ScenarioTemplate template,
-                                                       PlayerQuestProgress progress,
-                                                       FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-        if (progress == null || areObjectivesSatisfied(template, progress.objectiveProgress())) {
-            return true;
-        }
-        return isObjectiveActiveForProgress(template, progress, objective);
-    }
-
-    private boolean shouldInspectObjectiveForCurrentStage(ScenarioTemplate template,
-                                                          PlayerQuestProgress progress,
-                                                          FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-        if (progress == null || areObjectivesSatisfied(template, progress.objectiveProgress())) {
-            return true;
-        }
-        return isObjectiveActiveForProgress(template, progress, objective);
     }
 
     private List<String> buildQuestTrackingLines(ScenarioTemplate template,
@@ -5167,7 +5065,7 @@ public class ScenarioEngine {
         List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
         for (int index = 0; index < objectives.size(); index++) {
             FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldInspectObjectiveForCurrentStage(template, progress, objective)) {
+            if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) {
                 continue;
             }
             int requiredAmount = Math.max(1, objective.getAmount());
