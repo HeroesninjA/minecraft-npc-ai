@@ -48,6 +48,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
@@ -4908,27 +4909,6 @@ public class ScenarioEngine {
             return QuestDialogueContext.READY;
         }
         return progress.isOffered() ? QuestDialogueContext.OFFERED : QuestDialogueContext.ACTIVE;
-    }
-
-    private QuestInventoryCheck inspectQuestInventory(PlayerInventory inventory,
-                                                      List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        List<String> missingItems = new ArrayList<>();
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            Material material = resolveQuestMaterial(objective);
-            if (material == null) {
-                missingItems.add(formatQuestEntry(objective));
-                continue;
-            }
-
-            int currentAmount = countMaterial(inventory, material);
-            if (currentAmount < objective.getAmount()) {
-                int missingAmount = objective.getAmount() - currentAmount;
-                missingItems.add(formatQuestAmount(missingAmount, material));
-            }
-        }
-
-        return new QuestInventoryCheck(missingItems.isEmpty(), missingItems);
     }
 
     private QuestObjectiveCheck inspectQuestObjectives(Player player,

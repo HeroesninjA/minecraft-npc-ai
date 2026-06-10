@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.world.HouseAllocationPlannerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.842Z" hostname="DESKTOP-FJTPE3F" time="0.041">
+<testsuite name="ro.ainpc.world.HouseAllocationPlannerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:28:27.905Z" hostname="DESKTOP-FJTPE3F" time="0.039">
   <properties/>
   <testcase name="capsRequestedResidentsToDemoHouseNodeCapacity()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.019"/>
   <testcase name="plansSettlementFromAllDemoHouses()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.008"/>
   <testcase name="reportsInvalidSettlementSelectorsWithoutAllocations()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.002"/>
-  <testcase name="plansSettlementSubsetWithClearLimitWarning()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.003"/>
+  <testcase name="plansSettlementSubsetWithClearLimitWarning()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.002"/>
   <testcase name="givesEveryDemoSettlementResidentHomeWorkAndSocialAnchors()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.004"/>
   <testcase name="plansValidHouseholdFromDemoMapping()" classname="ro.ainpc.world.HouseAllocationPlannerTest" time="0.003"/>
   <system-out><![CDATA[]]></system-out>

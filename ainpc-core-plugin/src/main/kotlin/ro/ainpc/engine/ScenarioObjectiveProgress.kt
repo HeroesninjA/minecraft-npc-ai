@@ -332,6 +332,25 @@ fun resolveObjectiveCurrentProgress(
     return minOf(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index))
 }
 
+fun inspectQuestInventory(
+    inventory: PlayerInventory?,
+    objectives: List<QuestEntryDefinition>,
+): QuestInventoryCheck {
+    val missingItems = mutableListOf<String>()
+    for (objective in objectives) {
+        val material = resolveQuestMaterial(objective) ?: run {
+            missingItems.add(formatQuestEntry(objective))
+            continue
+        }
+        val currentAmount = countMaterial(inventory, material)
+        if (currentAmount < objective.amount) {
+            val missingAmount = objective.amount - currentAmount
+            missingItems.add(formatQuestAmount(missingAmount, material))
+        }
+    }
+    return QuestInventoryCheck(missingItems.isEmpty(), missingItems)
+}
+
 fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List<String> {
     val notes = mutableListOf<String>()
     for (reward in rewards) {

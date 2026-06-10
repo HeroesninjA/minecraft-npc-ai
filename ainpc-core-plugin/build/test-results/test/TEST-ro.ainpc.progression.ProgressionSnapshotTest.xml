@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.progression.ProgressionSnapshotTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.750Z" hostname="DESKTOP-FJTPE3F" time="0.014">
+<testsuite name="ro.ainpc.progression.ProgressionSnapshotTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:28:27.790Z" hostname="DESKTOP-FJTPE3F" time="0.009">
   <properties/>
   <testcase name="guiSnapshotCanConvertQuestEntriesToProgressionEntries()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.005"/>
-  <testcase name="progressSnapshotCanRepresentNotHandledResult()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.007"/>
+  <testcase name="progressSnapshotCanRepresentNotHandledResult()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.001"/>
   <testcase name="progressSnapshotCanCarryObjectiveSnapshots()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.0"/>
   <testcase name="statusSnapshotPreservesNormalizedSelectorAndMessages()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.001"/>
   <testcase name="statusSnapshotCanCarryStructuredEntryData()" classname="ro.ainpc.progression.ProgressionSnapshotTest" time="0.0"/>

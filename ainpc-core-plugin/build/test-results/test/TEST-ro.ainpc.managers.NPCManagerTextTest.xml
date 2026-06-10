@@ -1,39 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.managers.NPCManagerTextTest" tests="34" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.441Z" hostname="DESKTOP-FJTPE3F" time="0.158">
+<testsuite name="ro.ainpc.managers.NPCManagerTextTest" tests="34" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:28:27.387Z" hostname="DESKTOP-FJTPE3F" time="0.205">
   <properties/>
-  <testcase name="sameNpcRecordUsesIdentityDatabaseIdThenUuid()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.005"/>
-  <testcase name="safeNpcNameFallsBackForMissingNames()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="sameNpcRecordUsesIdentityDatabaseIdThenUuid()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.007"/>
+  <testcase name="safeNpcNameFallsBackForMissingNames()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
   <testcase name="sourceKeyOwnerReplacementKeepsCanonicalRules()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="generatedBackstoryKeepsOccupationFallbackText()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="floorToBlockKeepsMathFloorSemantics()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="ownedLocationConversionUsesPlaceCenterOrPreferredNode()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="npcNameTakenIsBlankSafeTrimmedAndCaseInsensitive()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="generatedBackstoryKeepsOccupationFallbackText()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="floorToBlockKeepsMathFloorSemantics()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="ownedLocationConversionUsesPlaceCenterOrPreferredNode()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="npcNameTakenIsBlankSafeTrimmedAndCaseInsensitive()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="workstationHelpersKeepMaterialRulesAndLabelFormatting()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="jsonReadersUseFallbackForMissingOrNonPrimitiveValues()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="locationHelpersKeepWorldDistanceAndFloorRules()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.056"/>
-  <testcase name="placeCenterDistanceUsesHorizontalCenterAndAnchorY()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="genericOccupationRecognizesOnlyFallbackRoles()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="profileDataJsonKeepsNestedRuntimeAndProfileFields()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.009"/>
+  <testcase name="jsonReadersUseFallbackForMissingOrNonPrimitiveValues()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
+  <testcase name="locationHelpersKeepWorldDistanceAndFloorRules()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.09"/>
+  <testcase name="placeCenterDistanceUsesHorizontalCenterAndAnchorY()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="genericOccupationRecognizesOnlyFallbackRoles()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="profileDataJsonKeepsNestedRuntimeAndProfileFields()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.01"/>
   <testcase name="nodePriorityKeepsAnchorRoleOrdering()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="uniquifyNpcNameTrimsFallbacksAndAppendsFirstFreeSuffix()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
-  <testcase name="nodeMatchingNormalizesTypeAndMetadataTokens()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="npcPlannedForDeletionRequiresPositiveIdInSet()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="uniquifyNpcNameTrimsFallbacksAndAppendsFirstFreeSuffix()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.003"/>
+  <testcase name="nodeMatchingNormalizesTypeAndMetadataTokens()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="npcPlannedForDeletionRequiresPositiveIdInSet()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="genderResolverKeepsFemaleOnlySpecialCase()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="fallbackAnchorsUseNpcNameOccupationAndCenterCoordinates()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="fallbackAnchorsUseNpcNameOccupationAndCenterCoordinates()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="namesMatchIsCaseInsensitiveAndNullSafe()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
-  <testcase name="villagerSeededRandomUsesUuidBitsAndEnvironmentInferenceStaysDisabled()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.05"/>
-  <testcase name="placeClassificationKeepsHomeWorkAndSocialRules()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="villagerSeededRandomUsesUuidBitsAndEnvironmentInferenceStaysDisabled()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.06"/>
+  <testcase name="placeClassificationKeepsHomeWorkAndSocialRules()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="spawnStateJsonKeepsRuntimeCoordinatesAndChunkKeys()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="occupationChoicePreservesMappedInferredAndThemedPriority()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="occupationChoicePreservesMappedInferredAndThemedPriority()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
   <testcase name="repairCandidateHelpersSortAndMarkByCanonicalIds()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
-  <testcase name="generatedAutoNameUsesFirstFreeShuffledPredefinedName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.003"/>
-  <testcase name="villagerDisplayNameSerializesAndTrimsCustomName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.007"/>
-  <testcase name="ownershipMatchesUuidDatabaseIdAndNormalizedName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
+  <testcase name="generatedAutoNameUsesFirstFreeShuffledPredefinedName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
+  <testcase name="villagerDisplayNameSerializesAndTrimsCustomName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.008"/>
+  <testcase name="ownershipMatchesUuidDatabaseIdAndNormalizedName()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="profileSummaryKeepsFallbacksTraitsAndBackstoryTruncation()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="ownedLocationJsonRoundTripsAndRejectsBlankWorld()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="sourceKeyCandidatePreferenceUsesDatabaseIdThenUuid()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
-  <testcase name="nodeLabelPrefersMetadataThenFallbackThenId()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.002"/>
-  <testcase name="generatedPersonalityHelpersReturnClampedTraits()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="sourceKeyCandidatePreferenceUsesDatabaseIdThenUuid()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
+  <testcase name="nodeLabelPrefersMetadataThenFallbackThenId()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
+  <testcase name="generatedPersonalityHelpersReturnClampedTraits()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.001"/>
   <testcase name="environmentOccupationPreferenceOnlyOverridesGenericOrSameMappedOccupation()" classname="ro.ainpc.managers.NPCManagerTextTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

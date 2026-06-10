@@ -282,6 +282,21 @@ class ScenarioObjectiveProgressTest {
     }
 
     @Test
+    fun inspectQuestInventoryReturnsSuccessForEmptyObjectives() {
+        val result = inspectQuestInventory(null, emptyList())
+        assertTrue(result.complete())
+        assertTrue(result.missingItems().isEmpty())
+    }
+
+    @Test
+    fun inspectQuestInventoryReportsMissingForNullMaterial() {
+        val objective = objective(type = "unknown", itemId = "ghost_material", amount = 5)
+        val result = inspectQuestInventory(null, listOf(objective))
+        assertFalse(result.complete())
+        assertTrue(result.missingItems().any { it.contains("ghost") })
+    }
+
+    @Test
     fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 5)
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())
