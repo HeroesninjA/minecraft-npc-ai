@@ -46,6 +46,10 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildCompletedObjectiv
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveProgressSnapshot;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.progressionReference;
@@ -5085,81 +5089,6 @@ public class ScenarioEngine {
         }
 
         return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
-    }
-
-    private ItemStack[] cloneStorageContents(PlayerInventory inventory) {
-        ItemStack[] contents = inventory.getStorageContents();
-        ItemStack[] clone = new ItemStack[contents.length];
-        for (int i = 0; i < contents.length; i++) {
-            clone[i] = contents[i] != null ? contents[i].clone() : null;
-        }
-        return clone;
-    }
-
-    private void simulateQuestObjectiveConsumption(ItemStack[] contents,
-                                                   List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        if (contents == null || objectives == null || objectives.isEmpty()) {
-            return;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (!shouldConsumeObjectiveItem(objective)) {
-                continue;
-            }
-            Material material = resolveQuestMaterial(objective);
-            if (material != null) {
-                simulateRemoveMaterial(contents, material, objective.getAmount());
-            }
-        }
-    }
-
-    private void simulateRemoveMaterial(ItemStack[] contents, Material material, int amount) {
-        int remaining = Math.max(0, amount);
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack == null || stack.getType() != material) {
-                continue;
-            }
-
-            if (stack.getAmount() <= remaining) {
-                remaining -= stack.getAmount();
-                contents[i] = null;
-            } else {
-                stack.setAmount(stack.getAmount() - remaining);
-                remaining = 0;
-            }
-        }
-    }
-
-    private boolean simulateAddMaterial(ItemStack[] contents, Material material, int amount) {
-        int remaining = Math.max(0, amount);
-        int maxStackSize = Math.max(1, material.getMaxStackSize());
-
-        for (ItemStack stack : contents) {
-            if (remaining <= 0) {
-                return true;
-            }
-            if (stack == null || stack.getType() != material || stack.getAmount() >= maxStackSize) {
-                continue;
-            }
-
-            int added = Math.min(remaining, maxStackSize - stack.getAmount());
-            stack.setAmount(stack.getAmount() + added);
-            remaining -= added;
-        }
-
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack != null && stack.getType() != Material.AIR) {
-                continue;
-            }
-
-            int added = Math.min(remaining, maxStackSize);
-            contents[i] = new ItemStack(material, added);
-            remaining -= added;
-        }
-
-        return remaining <= 0;
     }
 
     private int resolveObjectiveCurrentProgress(Player player,

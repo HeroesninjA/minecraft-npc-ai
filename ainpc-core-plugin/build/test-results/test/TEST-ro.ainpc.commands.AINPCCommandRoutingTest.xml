@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.commands.AINPCCommandRoutingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T17:27:15.415Z" hostname="DESKTOP-FJTPE3F" time="0.037">
-  <properties/>
-  <testcase name="formatsFeatureDisabledMessageWithConfigPath()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.004"/>
-  <testcase name="routesProgressionAliasGuiToKindFilter()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.031"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

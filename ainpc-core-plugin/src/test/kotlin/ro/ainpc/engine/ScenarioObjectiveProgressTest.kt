@@ -242,6 +242,27 @@ class ScenarioObjectiveProgressTest {
         assertEquals(emptyMap<String, Int>(), buildCompletedObjectiveProgress(null, null))
     }
 
+    @Test
+    fun cloneStorageContentsReturnsEmptyArrayForNullInventory() {
+        assertTrue(cloneStorageContents(null).isEmpty())
+    }
+
+    @Test
+    fun simulateQuestObjectiveConsumptionHandlesNullInputs() {
+        simulateQuestObjectiveConsumption(null, null)
+        simulateQuestObjectiveConsumption(null, emptyList())
+    }
+
+    @Test
+    fun simulateRemoveMaterialHandlesNullContents() {
+        simulateRemoveMaterial(null, null, 5)
+    }
+
+    @Test
+    fun simulateAddMaterialReturnsFalseForNullInputs() {
+        assertFalse(simulateAddMaterial(null, null, 5))
+    }
+
     private fun objective(
         type: String? = "collect_item",
         itemId: String? = "item",

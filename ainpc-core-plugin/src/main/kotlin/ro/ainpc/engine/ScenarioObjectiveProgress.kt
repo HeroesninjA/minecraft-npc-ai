@@ -250,3 +250,65 @@ fun buildCompletedObjectiveProgress(
     }
     return Collections.unmodifiableMap(completedProgress)
 }
+
+fun cloneStorageContents(inventory: PlayerInventory?): Array<ItemStack?> {
+    if (inventory == null) return emptyArray()
+    val contents = inventory.storageContents
+    return Array(contents.size) { i -> contents[i]?.clone() }
+}
+
+fun simulateQuestObjectiveConsumption(
+    contents: Array<ItemStack?>?,
+    objectives: List<FeaturePackLoader.QuestEntryDefinition>?,
+) {
+    if (contents == null || objectives.isNullOrEmpty()) return
+    for (objective in objectives) {
+        if (!shouldConsumeObjectiveItem(objective)) continue
+        val material = resolveQuestMaterial(objective)
+        if (material != null) {
+            simulateRemoveMaterial(contents, material, objective.amount)
+        }
+    }
+}
+
+fun simulateRemoveMaterial(contents: Array<ItemStack?>?, material: Material?, amount: Int) {
+    if (contents == null || material == null) return
+    var remaining = maxOf(0, amount)
+    for (i in contents.indices) {
+        if (remaining <= 0) break
+        val stack = contents[i] ?: continue
+        if (stack.type != material) continue
+        if (stack.amount <= remaining) {
+            remaining -= stack.amount
+            contents[i] = null
+        } else {
+            stack.amount = stack.amount - remaining
+            remaining = 0
+        }
+    }
+}
+
+fun simulateAddMaterial(contents: Array<ItemStack?>?, material: Material?, amount: Int): Boolean {
+    if (contents == null || material == null) return false
+    var remaining = maxOf(0, amount)
+    val maxStackSize = maxOf(1, material.maxStackSize)
+
+    for (stack in contents) {
+        if (remaining <= 0) return true
+        if (stack == null || stack.type != material || stack.amount >= maxStackSize) continue
+        val added = minOf(remaining, maxStackSize - stack.amount)
+        stack.amount = stack.amount + added
+        remaining -= added
+    }
+
+    for (i in contents.indices) {
+        if (remaining <= 0) break
+        val stack = contents[i]
+        if (stack != null && stack.type != Material.AIR) continue
+        val added = minOf(remaining, maxStackSize)
+        contents[i] = ItemStack(material, added)
+        remaining -= added
+    }
+
+    return remaining <= 0
+}
