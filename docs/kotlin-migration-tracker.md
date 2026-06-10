@@ -43,10 +43,10 @@ Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la fin
 | Zona | Linii Java ramase | Taskuri estimate |
 |---|---:|---:|
 | `AINPCCommand.java` | 6267 | 12 |
-| `ScenarioEngine.java` | 5862 | 3 |
+| `ScenarioEngine.java` | 5797 | 3 |
 | `NPCManager.java` | 2566 | 1 |
 | Gate final si hardening | n/a | 6 |
-| Total | 14695 | 22 |
+| Total | 14630 | 22 |
 
 ## Regula de actualizare
 
@@ -7870,7 +7870,6 @@ Gate local:
 
 Observatii:
 - `simulateRemoveMaterial` (pe `Array<ItemStack?>`) este distincta de `removeMaterial` (pe `PlayerInventory`) — overload prin tipul parametrului.
-- Nu s-a extras `parseQuestLogFilter` sau `questLogMatches` — clusterul de quest log filter este mai mare (~250+ linii) si `questLogMatches` depinde de mai multe metode private din `ScenarioEngine`.
 - Testele pentru calea fericita (ItemStack[] cu continut real) necesita crearea de obiecte Bukkit — nu au fost adaugate in acest slice.
 
 Inventar dupa slice:
@@ -7881,3 +7880,43 @@ Inventar dupa slice:
 
 Rollback:
 - elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`
+
+### KOT-274
+
+Data: 2026-06-10
+ID: KOT-274
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestLogFilter.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/QuestLogFilterTest.kt`
+
+Input selectat / filtrat:
+- Candidat: `parseQuestLogFilter` (~65 linii Java)
+- Mapare string → `QuestLogFilter` enum, zero dependente de metode private din `ScenarioEngine`
+- `QuestLogFilter` deja in Kotlin (enum cu 63 de valori), `normalizeReference` deja in `ScenarioEngineText.kt`
+
+Microtaskuri:
+- `parseQuestLogFilter` mutata in Kotlin (`QuestLogFilter.kt`) ca functie top-level.
+- Metoda Java privata eliminata din `ScenarioEngine.java`.
+- Import static `parseQuestLogFilter` din `QuestLogFilterKt` adaugat.
+- `ScenarioEngine.java` redus de la 5862 la 5797 linii; `QuestLogFilter.kt` marit de la 203 la 263 linii.
+- Fisier de test nou: `QuestLogFilterTest.kt` cu 28 de cazuri.
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.QuestLogFilterTest` (PASS, 28 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (86.16% Kotlin lines, +0.08% fata de KOT-273)
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.630 (6267 + 5797 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 86.16% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina `parseQuestLogFilter` din `QuestLogFilter.kt`, readauga metoda Java in `ScenarioEngine.java`, elimina importul static `QuestLogFilterKt`

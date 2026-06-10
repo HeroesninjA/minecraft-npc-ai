@@ -50,6 +50,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
+import static ro.ainpc.engine.QuestLogFilterKt.parseQuestLogFilter;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.progressionReference;
@@ -2519,73 +2520,6 @@ public class ScenarioEngine {
         return archivedQuests.values().stream()
             .filter(PlayerQuestProgress::isCompleted)
             .anyMatch(progress -> matchesQuestReference(progress, questReference, resolveTemplateForProgress(progress, null)));
-    }
-
-    private QuestLogFilter parseQuestLogFilter(String filter) {
-        String normalized = normalizeReference(filter);
-        return switch (normalized) {
-            case "all", "toate" -> QuestLogFilter.ALL;
-            case "current", "curent", "curente" -> QuestLogFilter.CURRENT;
-            case "active", "activ" -> QuestLogFilter.ACTIVE;
-            case "offered", "oferit", "oferite" -> QuestLogFilter.OFFERED;
-            case "tracked", "urmarit" -> QuestLogFilter.TRACKED;
-            case "quest", "questuri" -> QuestLogFilter.QUEST_KIND;
-            case "contract", "contracts", "contracte" -> QuestLogFilter.CONTRACT_KIND;
-            case "duty", "duties", "sarcina", "sarcini" -> QuestLogFilter.DUTY_KIND;
-            case "bounty", "bounties", "recompensa", "recompense" -> QuestLogFilter.BOUNTY_KIND;
-            case "event", "events", "eveniment", "evenimente" -> QuestLogFilter.EVENT_KIND;
-            case "tutorial", "tutorials", "onboarding", "indrumare" -> QuestLogFilter.TUTORIAL_KIND;
-            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> QuestLogFilter.RITUAL_KIND;
-            case "contract_current", "contract_curent", "contracte_curente" -> QuestLogFilter.CONTRACT_CURRENT;
-            case "contract_active", "contract_activ", "contracte_active" -> QuestLogFilter.CONTRACT_ACTIVE;
-            case "contract_offered", "contract_oferit", "contracte_oferite" -> QuestLogFilter.CONTRACT_OFFERED;
-            case "contract_tracked", "contract_urmarit", "contracte_urmarite" -> QuestLogFilter.CONTRACT_TRACKED;
-            case "contract_completed", "contract_completat", "contracte_completate" -> QuestLogFilter.CONTRACT_COMPLETED;
-            case "contract_failed", "contract_esuat", "contracte_esuate" -> QuestLogFilter.CONTRACT_FAILED;
-            case "contract_archived", "contract_arhivat", "contracte_arhivate" -> QuestLogFilter.CONTRACT_ARCHIVED;
-            case "duty_current", "duty_curent", "sarcini_curente" -> QuestLogFilter.DUTY_CURRENT;
-            case "duty_active", "duty_activ", "sarcini_active" -> QuestLogFilter.DUTY_ACTIVE;
-            case "duty_offered", "duty_oferit", "sarcini_oferite" -> QuestLogFilter.DUTY_OFFERED;
-            case "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> QuestLogFilter.DUTY_TRACKED;
-            case "duty_completed", "duty_completat", "sarcini_completate" -> QuestLogFilter.DUTY_COMPLETED;
-            case "duty_failed", "duty_esuat", "sarcini_esuate" -> QuestLogFilter.DUTY_FAILED;
-            case "duty_archived", "duty_arhivat", "sarcini_arhivate" -> QuestLogFilter.DUTY_ARCHIVED;
-            case "bounty_current", "bounty_curent", "recompense_curente" -> QuestLogFilter.BOUNTY_CURRENT;
-            case "bounty_active", "bounty_activ", "recompense_active" -> QuestLogFilter.BOUNTY_ACTIVE;
-            case "bounty_offered", "bounty_oferit", "recompense_oferite" -> QuestLogFilter.BOUNTY_OFFERED;
-            case "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> QuestLogFilter.BOUNTY_TRACKED;
-            case "bounty_completed", "bounty_completat", "recompense_completate" -> QuestLogFilter.BOUNTY_COMPLETED;
-            case "bounty_failed", "bounty_esuat", "recompense_esuate" -> QuestLogFilter.BOUNTY_FAILED;
-            case "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> QuestLogFilter.BOUNTY_ARCHIVED;
-            case "event_current", "event_curent", "evenimente_curente" -> QuestLogFilter.EVENT_CURRENT;
-            case "event_active", "event_activ", "evenimente_active" -> QuestLogFilter.EVENT_ACTIVE;
-            case "event_offered", "event_oferit", "evenimente_oferite" -> QuestLogFilter.EVENT_OFFERED;
-            case "event_tracked", "event_urmarit", "evenimente_urmarite" -> QuestLogFilter.EVENT_TRACKED;
-            case "event_completed", "event_completat", "evenimente_completate" -> QuestLogFilter.EVENT_COMPLETED;
-            case "event_failed", "event_esuat", "evenimente_esuate" -> QuestLogFilter.EVENT_FAILED;
-            case "event_archived", "event_arhivat", "evenimente_arhivate" -> QuestLogFilter.EVENT_ARCHIVED;
-            case "tutorial_current", "tutorial_curent", "tutoriale_curente" -> QuestLogFilter.TUTORIAL_CURRENT;
-            case "tutorial_active", "tutorial_activ", "tutoriale_active" -> QuestLogFilter.TUTORIAL_ACTIVE;
-            case "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> QuestLogFilter.TUTORIAL_OFFERED;
-            case "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> QuestLogFilter.TUTORIAL_TRACKED;
-            case "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> QuestLogFilter.TUTORIAL_COMPLETED;
-            case "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> QuestLogFilter.TUTORIAL_FAILED;
-            case "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> QuestLogFilter.TUTORIAL_ARCHIVED;
-            case "ritual_current", "ritual_curent", "ritualuri_curente" -> QuestLogFilter.RITUAL_CURRENT;
-            case "ritual_active", "ritual_activ", "ritualuri_active" -> QuestLogFilter.RITUAL_ACTIVE;
-            case "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> QuestLogFilter.RITUAL_OFFERED;
-            case "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> QuestLogFilter.RITUAL_TRACKED;
-            case "ritual_completed", "ritual_completat", "ritualuri_completate" -> QuestLogFilter.RITUAL_COMPLETED;
-            case "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> QuestLogFilter.RITUAL_FAILED;
-            case "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> QuestLogFilter.RITUAL_ARCHIVED;
-            case "main", "principal" -> QuestLogFilter.MAIN;
-            case "side", "secundar", "secundare" -> QuestLogFilter.SIDE;
-            case "repeatable", "repetabil", "repetabile" -> QuestLogFilter.REPEATABLE;
-            case "completed", "complete", "completat", "finalizat", "finalizate" -> QuestLogFilter.COMPLETED;
-            case "failed", "esuat", "abandonat", "abandonate" -> QuestLogFilter.FAILED;
-            case "archived", "archive", "arhivat", "arhivate" -> QuestLogFilter.ARCHIVED;
-            default -> QuestLogFilter.SUMMARY;
-        };
     }
 
     private boolean questLogMatches(UUID playerId,

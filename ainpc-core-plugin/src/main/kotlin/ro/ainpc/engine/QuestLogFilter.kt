@@ -201,3 +201,70 @@ enum class QuestLogFilter(
         -> false
     }
 }
+
+fun parseQuestLogFilter(filter: String?): QuestLogFilter {
+    val normalized = normalizeReference(filter)
+    return when (normalized) {
+        "all", "toate" -> QuestLogFilter.ALL
+        "current", "curent", "curente" -> QuestLogFilter.CURRENT
+        "active", "activ" -> QuestLogFilter.ACTIVE
+        "offered", "oferit", "oferite" -> QuestLogFilter.OFFERED
+        "tracked", "urmarit" -> QuestLogFilter.TRACKED
+        "quest", "questuri" -> QuestLogFilter.QUEST_KIND
+        "contract", "contracts", "contracte" -> QuestLogFilter.CONTRACT_KIND
+        "duty", "duties", "sarcina", "sarcini" -> QuestLogFilter.DUTY_KIND
+        "bounty", "bounties", "recompensa", "recompense" -> QuestLogFilter.BOUNTY_KIND
+        "event", "events", "eveniment", "evenimente" -> QuestLogFilter.EVENT_KIND
+        "tutorial", "tutorials", "onboarding", "indrumare" -> QuestLogFilter.TUTORIAL_KIND
+        "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> QuestLogFilter.RITUAL_KIND
+        "contract_current", "contract_curent", "contracte_curente" -> QuestLogFilter.CONTRACT_CURRENT
+        "contract_active", "contract_activ", "contracte_active" -> QuestLogFilter.CONTRACT_ACTIVE
+        "contract_offered", "contract_oferit", "contracte_oferite" -> QuestLogFilter.CONTRACT_OFFERED
+        "contract_tracked", "contract_urmarit", "contracte_urmarite" -> QuestLogFilter.CONTRACT_TRACKED
+        "contract_completed", "contract_completat", "contracte_completate" -> QuestLogFilter.CONTRACT_COMPLETED
+        "contract_failed", "contract_esuat", "contracte_esuate" -> QuestLogFilter.CONTRACT_FAILED
+        "contract_archived", "contract_arhivat", "contracte_arhivate" -> QuestLogFilter.CONTRACT_ARCHIVED
+        "duty_current", "duty_curent", "sarcini_curente" -> QuestLogFilter.DUTY_CURRENT
+        "duty_active", "duty_activ", "sarcini_active" -> QuestLogFilter.DUTY_ACTIVE
+        "duty_offered", "duty_oferit", "sarcini_oferite" -> QuestLogFilter.DUTY_OFFERED
+        "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> QuestLogFilter.DUTY_TRACKED
+        "duty_completed", "duty_completat", "sarcini_completate" -> QuestLogFilter.DUTY_COMPLETED
+        "duty_failed", "duty_esuat", "sarcini_esuate" -> QuestLogFilter.DUTY_FAILED
+        "duty_archived", "duty_arhivat", "sarcini_arhivate" -> QuestLogFilter.DUTY_ARCHIVED
+        "bounty_current", "bounty_curent", "recompense_curente" -> QuestLogFilter.BOUNTY_CURRENT
+        "bounty_active", "bounty_activ", "recompense_active" -> QuestLogFilter.BOUNTY_ACTIVE
+        "bounty_offered", "bounty_oferit", "recompense_oferite" -> QuestLogFilter.BOUNTY_OFFERED
+        "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> QuestLogFilter.BOUNTY_TRACKED
+        "bounty_completed", "bounty_completat", "recompense_completate" -> QuestLogFilter.BOUNTY_COMPLETED
+        "bounty_failed", "bounty_esuat", "recompense_esuate" -> QuestLogFilter.BOUNTY_FAILED
+        "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> QuestLogFilter.BOUNTY_ARCHIVED
+        "event_current", "event_curent", "evenimente_curente" -> QuestLogFilter.EVENT_CURRENT
+        "event_active", "event_activ", "evenimente_active" -> QuestLogFilter.EVENT_ACTIVE
+        "event_offered", "event_oferit", "evenimente_oferite" -> QuestLogFilter.EVENT_OFFERED
+        "event_tracked", "event_urmarit", "evenimente_urmarite" -> QuestLogFilter.EVENT_TRACKED
+        "event_completed", "event_completat", "evenimente_completate" -> QuestLogFilter.EVENT_COMPLETED
+        "event_failed", "event_esuat", "evenimente_esuate" -> QuestLogFilter.EVENT_FAILED
+        "event_archived", "event_arhivat", "evenimente_arhivate" -> QuestLogFilter.EVENT_ARCHIVED
+        "tutorial_current", "tutorial_curent", "tutoriale_curente" -> QuestLogFilter.TUTORIAL_CURRENT
+        "tutorial_active", "tutorial_activ", "tutoriale_active" -> QuestLogFilter.TUTORIAL_ACTIVE
+        "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> QuestLogFilter.TUTORIAL_OFFERED
+        "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> QuestLogFilter.TUTORIAL_TRACKED
+        "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> QuestLogFilter.TUTORIAL_COMPLETED
+        "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> QuestLogFilter.TUTORIAL_FAILED
+        "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> QuestLogFilter.TUTORIAL_ARCHIVED
+        "ritual_current", "ritual_curent", "ritualuri_curente" -> QuestLogFilter.RITUAL_CURRENT
+        "ritual_active", "ritual_activ", "ritualuri_active" -> QuestLogFilter.RITUAL_ACTIVE
+        "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> QuestLogFilter.RITUAL_OFFERED
+        "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> QuestLogFilter.RITUAL_TRACKED
+        "ritual_completed", "ritual_completat", "ritualuri_completate" -> QuestLogFilter.RITUAL_COMPLETED
+        "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> QuestLogFilter.RITUAL_FAILED
+        "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> QuestLogFilter.RITUAL_ARCHIVED
+        "main", "principal" -> QuestLogFilter.MAIN
+        "side", "secundar", "secundare" -> QuestLogFilter.SIDE
+        "repeatable", "repetabil", "repetabile" -> QuestLogFilter.REPEATABLE
+        "completed", "complete", "completat", "finalizat", "finalizate" -> QuestLogFilter.COMPLETED
+        "failed", "esuat", "abandonat", "abandonate" -> QuestLogFilter.FAILED
+        "archived", "archive", "arhivat", "arhivate" -> QuestLogFilter.ARCHIVED
+        else -> QuestLogFilter.SUMMARY
+    }
+}
