@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.platform.features.RuntimeFeatureResolverTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:55.036Z" hostname="DESKTOP-FJTPE3F" time="0.013">
+<testsuite name="ro.ainpc.platform.features.RuntimeFeatureResolverTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.602Z" hostname="DESKTOP-FJTPE3F" time="0.015">
   <properties/>
   <testcase name="resolverAppliesConfigOverridesWithoutChangingRuntimeBehavior()" classname="ro.ainpc.platform.features.RuntimeFeatureResolverTest" time="0.008"/>
-  <testcase name="resolverIncludesAddonCapabilitySources()" classname="ro.ainpc.platform.features.RuntimeFeatureResolverTest" time="0.001"/>
+  <testcase name="resolverIncludesAddonCapabilitySources()" classname="ro.ainpc.platform.features.RuntimeFeatureResolverTest" time="0.002"/>
   <testcase name="resolverIncludesServerProfileSources()" classname="ro.ainpc.platform.features.RuntimeFeatureResolverTest" time="0.002"/>
   <testcase name="resolverUsesShippedDefaultsWhenConfigIsMissing()" classname="ro.ainpc.platform.features.RuntimeFeatureResolverTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>

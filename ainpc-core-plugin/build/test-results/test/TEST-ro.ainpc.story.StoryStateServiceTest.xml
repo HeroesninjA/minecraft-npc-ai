@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.story.StoryStateServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:55.295Z" hostname="DESKTOP-FJTPE3F" time="0.015">
+<testsuite name="ro.ainpc.story.StoryStateServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.829Z" hostname="DESKTOP-FJTPE3F" time="0.012">
   <properties/>
-  <testcase name="recordsRegionalStoryVisibleFromRegionScope()" classname="ro.ainpc.story.StoryStateServiceTest" time="0.013"/>
+  <testcase name="recordsRegionalStoryVisibleFromRegionScope()" classname="ro.ainpc.story.StoryStateServiceTest" time="0.01"/>
   <testcase name="recordsLocalPlaceStoryWithoutNpcTarget()" classname="ro.ainpc.story.StoryStateServiceTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

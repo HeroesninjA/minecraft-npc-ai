@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.spawn.HouseholdPersistenceServiceTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:55.238Z" hostname="DESKTOP-FJTPE3F" time="0.048">
+<testsuite name="ro.ainpc.spawn.HouseholdPersistenceServiceTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.782Z" hostname="DESKTOP-FJTPE3F" time="0.039">
   <properties/>
-  <testcase name="savesHouseholdAndResidentRows()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.013"/>
-  <testcase name="repairsDuplicateResidentRowsByNpcId()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.01"/>
-  <testcase name="backfillsHouseholdFromMetadataResidentIds()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.009"/>
-  <testcase name="movedResidentIsRemovedFromPreviousHousehold()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.004"/>
-  <testcase name="backfillsHouseholdFromNpcWorldBindings()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.008"/>
-  <testcase name="recalculatesResidentCountsForSelectedHouseholds()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.003"/>
+  <testcase name="savesHouseholdAndResidentRows()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.01"/>
+  <testcase name="repairsDuplicateResidentRowsByNpcId()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.009"/>
+  <testcase name="backfillsHouseholdFromMetadataResidentIds()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.008"/>
+  <testcase name="movedResidentIsRemovedFromPreviousHousehold()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.003"/>
+  <testcase name="backfillsHouseholdFromNpcWorldBindings()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.006"/>
+  <testcase name="recalculatesResidentCountsForSelectedHouseholds()" classname="ro.ainpc.spawn.HouseholdPersistenceServiceTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

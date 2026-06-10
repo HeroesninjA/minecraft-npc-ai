@@ -331,3 +331,21 @@ fun resolveObjectiveCurrentProgress(
     if (progress == null) return 0
     return minOf(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index))
 }
+
+fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List<String> {
+    val notes = mutableListOf<String>()
+    for (reward in rewards) {
+        if (isQuestStoryAction(reward)) continue
+        val material = resolveQuestMaterial(reward) ?: run {
+            notes.add("&cRecompensa invalida in configuratie: &f${reward.itemId}")
+            continue
+        }
+        val rewardStack = ItemStack(material, reward.amount)
+        val leftovers = player.inventory.addItem(rewardStack)
+        if (leftovers.isNotEmpty()) {
+            leftovers.values.forEach { leftover -> player.world.dropItemNaturally(player.location, leftover) }
+            notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.")
+        }
+    }
+    return notes
+}

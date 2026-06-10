@@ -47,6 +47,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveProgress
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
@@ -5012,30 +5013,6 @@ public class ScenarioEngine {
         }
 
         return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
-    }
-
-    private List<String> grantQuestRewards(Player player, List<FeaturePackLoader.QuestEntryDefinition> rewards) {
-        List<String> notes = new ArrayList<>();
-        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
-            if (isQuestStoryAction(reward)) {
-                continue;
-            }
-
-            Material material = resolveQuestMaterial(reward);
-            if (material == null) {
-                notes.add("&cRecompensa invalida in configuratie: &f" + reward.getItemId());
-                continue;
-            }
-
-            ItemStack rewardStack = new ItemStack(material, reward.getAmount());
-            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(rewardStack);
-            if (!leftovers.isEmpty()) {
-                leftovers.values().forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
-                notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.");
-            }
-        }
-
-        return notes;
     }
 
     private List<String> applyQuestStoryActions(Player player,

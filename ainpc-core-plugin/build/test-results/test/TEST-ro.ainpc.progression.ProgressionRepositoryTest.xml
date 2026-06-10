@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.progression.ProgressionRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:55.062Z" hostname="DESKTOP-FJTPE3F" time="0.135">
+<testsuite name="ro.ainpc.progression.ProgressionRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:52.629Z" hostname="DESKTOP-FJTPE3F" time="0.116">
   <properties/>
-  <testcase name="summarizesStoredProgressions()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.115"/>
-  <testcase name="savesAndUpdatesManualAnchorBinding()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.004"/>
-  <testcase name="readsStoredProgressionsWithResolvedDefinitionMetadata()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
-  <testcase name="readsAnchorBindingsForProgressionByTemplateOrQuestCode()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.004"/>
+  <testcase name="summarizesStoredProgressions()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.097"/>
+  <testcase name="savesAndUpdatesManualAnchorBinding()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
+  <testcase name="readsStoredProgressionsWithResolvedDefinitionMetadata()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
+  <testcase name="readsAnchorBindingsForProgressionByTemplateOrQuestCode()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
   <testcase name="readsAnchorBindingsByAnchorAndPlayer()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
-  <testcase name="filtersStoredProgressionsByPlayerStatusAndMechanic()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.005"/>
+  <testcase name="filtersStoredProgressionsByPlayerStatusAndMechanic()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.004"/>
   <testcase name="usesStableFallbackMetadataWhenDefinitionIsMissing()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.

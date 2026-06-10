@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.commands.AINPCCommandRoutingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T18:51:54.353Z" hostname="DESKTOP-FJTPE3F" time="0.037">
+<testsuite name="ro.ainpc.commands.AINPCCommandRoutingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:13:51.979Z" hostname="DESKTOP-FJTPE3F" time="0.033">
   <properties/>
-  <testcase name="formatsFeatureDisabledMessageWithConfigPath()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.004"/>
-  <testcase name="routesProgressionAliasGuiToKindFilter()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.032"/>
+  <testcase name="formatsFeatureDisabledMessageWithConfigPath()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.003"/>
+  <testcase name="routesProgressionAliasGuiToKindFilter()" classname="ro.ainpc.commands.AINPCCommandRoutingTest" time="0.028"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
