@@ -1,6 +1,6 @@
 # Rezumat Conversie Java la Kotlin
 
-Actualizat: 2026-06-07
+Actualizat: 2026-06-08
 
 ## Scop
 
@@ -34,20 +34,20 @@ Status curent:
 - `.\gradlew.bat clean build` trece dupa prima conversie de productie
 - JAR-ul core are `plugin.yml` corect, clasele Kotlin de productie si runtime Kotlin prezent
 - smoke Paper nu a fost rulat local inca si ramane urmatorul gate runtime
-- inventar curent: 230 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 70.55% Kotlin dupa linii
+- inventar curent: 236 fisiere Kotlin si 3 fisiere Java in `ainpc-core-plugin/src/main`, aproximativ 98.7% Kotlin dupa numar de fisiere si aproximativ 71.65% Kotlin dupa linii
 - fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
 
 ## Taskuri ramase estimate
 
-Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la finalizarea conversiei de productie la Kotlin in core.
+Estimare operationala la 2026-06-10: mai sunt aproximativ 22 taskuri pana la finalizarea conversiei de productie la Kotlin in core.
 
 | Zona | Linii Java ramase | Taskuri estimate | Motiv |
 |---|---:|---:|---|
-| `AINPCCommand.java` | 6961 | 12 | Comenzi user/admin, routing, validari, mesaje, teste de comanda si compatibilitate Bukkit |
-| `ScenarioEngine.java` | 8083 | 14 | Runtime scenarii, validari, registri, actiuni, conditii, serializare si teste de motor |
-| `NPCManager.java` | 2985 | 1 | DB/persistenta, villager identity, spawn/repair, ancore, mapare world admin si extractii ramase |
+| `AINPCCommand.java` | 6267 | 12 | Comenzi user/admin, routing, validari, mesaje, teste de comanda si compatibilitate Bukkit |
+| `ScenarioEngine.java` | 6086 | 3 | Runtime scenarii, validari, registri, actiuni, conditii, serializare si teste de motor |
+| `NPCManager.java` | 2566 | 1 | DB/persistenta, villager identity, spawn/repair, ancore, mapare world admin si extractii ramase |
 | Gate final si hardening | n/a | 6 | `clean build`, JAR audit, smoke Paper, addon medieval, cleanup helper-e temporare si documentatie finala |
-| Total | 18029 | 33 | Estimare pragmatica pentru slice-uri mici, reversibile si testabile |
+| Total | 14919 | 22 | Estimare pragmatica pentru slice-uri mici, reversibile si testabile |
 
 Numarul poate scadea daca ultimele clase mari sunt sparte in module Kotlin inainte de conversia finala. Nu recomand conversie monolitica pentru cele 3 fisiere ramase.
 

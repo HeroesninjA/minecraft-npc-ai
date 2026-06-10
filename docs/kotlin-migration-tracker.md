@@ -1,6 +1,6 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-06-07
+Actualizat: 2026-06-10
 
 ## Scop
 
@@ -42,11 +42,11 @@ Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la fin
 
 | Zona | Linii Java ramase | Taskuri estimate |
 |---|---:|---:|
-| `AINPCCommand.java` | 6961 | 12 |
-| `ScenarioEngine.java` | 8083 | 14 |
-| `NPCManager.java` | 2985 | 1 |
+| `AINPCCommand.java` | 6267 | 12 |
+| `ScenarioEngine.java` | 6086 | 3 |
+| `NPCManager.java` | 2566 | 1 |
 | Gate final si hardening | n/a | 6 |
-| Total | 18029 | 33 |
+| Total | 14919 | 22 |
 
 ## Regula de actualizare
 
@@ -7152,3 +7152,594 @@ Inventar dupa slice:
 
 Rollback:
 - readauga `isNpcNameTaken(String)` in `NPCManager.java`, readu apelul `generateUniqueAutoName(gender, random, this::isNpcNameTaken)`, elimina `isNpcNameTaken(String?, Collection<AINPC>)` din Kotlin si testul `npcNameTakenIsBlankSafeTrimmedAndCaseInsensitive`
+
+### KOT-258
+
+Data: 2026-06-07
+ID: KOT-258
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestTrackingModels.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/QuestTrackingModelsTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `formatHorizontalDirection`, `formatVerticalHint`, `formatQuestTrackingCoordinates`, `formatQuestAnchorType`, `normalizeTrackingAnchorType`, `center`, `formatQuestPhase`, plus helper-e `ScenarioEngine` legate de runtime quest/story
+- Filtru aplicat: fara DB, fara `plugin`, fara acces la Bukkit runtime mutable, fara inventar/player mutation
+- Input ales: helper-ele pure de quest tracking/phase formatting, deoarece au input explicit, output determinist si sunt deja consumate intern de `ScenarioEngine`
+
+Microtaskuri:
+- Helper-ele pure de tracking au fost mutate in Kotlin in `QuestTrackingModels.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `QuestTrackingModelsKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Testul `QuestTrackingModelsTest` valideaza bucket-urile de directie, pragul vertical, coordonatele rotunjite, normalizarea tipurilor de anchor si formatarea fazelor quest.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `QuestTrackingModels.kt`, `ScenarioEngine.java`, `QuestTrackingModelsTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 32 taskuri: `ScenarioEngine.java` scade de la 14 la 13 taskuri estimate.
+- Pentru numararea liniilor Java se foloseste metoda bazata pe newline, comparabila cu `kotlinRatio`; `Measure-Object -Line` din PowerShell poate subraporta in fisiere mari cu anumite terminatoare.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.965 in working tree curent
+- `ainpc-core-plugin/src/main`: 230 fisiere Kotlin, 3 fisiere Java, 70.66% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 597 fisiere Kotlin, 3 fisiere Java, 84.80% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `formatHorizontalDirection`, `formatVerticalHint`, `formatQuestTrackingCoordinates`, `formatQuestAnchorType`, `normalizeTrackingAnchorType`, `center` si `formatQuestPhase` in `ScenarioEngine.java`, elimina importurile statice `QuestTrackingModelsKt`, sterge helper-ele Kotlin si testul `QuestTrackingModelsTest`
+
+### KOT-259
+
+Data: 2026-06-07
+ID: KOT-259
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioEngineText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioEngineTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `formatQuestAmount`, `joinNaturally`, `humanizeItemId`, `formatQuestEntry`, `resolveQuestTitle`
+- Filtru aplicat: fara `FeaturePackLoader.QuestEntryDefinition`, fara `ScenarioTemplate`, fara `resolveQuestMaterial`, fara acces la stare de motor
+- Input ales: `formatQuestAmount`, `joinNaturally`, `humanizeItemId`, deoarece sunt helper-e de text cu input explicit si comportament determinist
+
+Microtaskuri:
+- Helper-ele de text quest au fost mutate in Kotlin in `ScenarioEngineText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioEngineTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Testul `ScenarioEngineTextTest` valideaza fallback-ul `item`, pluralizarea `amount x item`, lista naturala cu `si` si humanizarea `ITEM_ID`.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `QuestTrackingModels.kt`, `ScenarioEngineText.kt`, `ScenarioEngine.java`, `QuestTrackingModelsTest.kt`, `ScenarioEngineTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 31 taskuri: `ScenarioEngine.java` scade de la 13 la 12 taskuri estimate.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.938 in working tree curent
+- `ainpc-core-plugin/src/main`: 231 fisiere Kotlin, 3 fisiere Java, 70.71% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 599 fisiere Kotlin, 3 fisiere Java, 84.82% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `formatQuestAmount`, `joinNaturally` si `humanizeItemId` in `ScenarioEngine.java`, elimina importurile statice `ScenarioEngineTextKt`, sterge `ScenarioEngineText.kt` si `ScenarioEngineTextTest.kt`
+
+### KOT-260
+
+Data: 2026-06-07
+ID: KOT-260
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioStoryText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioStoryTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `normalizeReference`, `stripObjectivePrefix`, `normalizeStoryScope`, `detectStoryTargetScope`, `cleanStoryId`, `parseStoryList`, `firstNonBlank`, `scoreBoolean`, `normalize`
+- Filtru aplicat: fara DB, fara `plugin`, fara `Player`, fara `AINPC`, fara `FeaturePackLoader.QuestEntryDefinition`, fara mutatii de progres quest
+- Input ales: helper-ele pure de reference/story text, deoarece au input explicit, output determinist si sunt folosite transversal in `ScenarioEngine`
+
+Microtaskuri:
+- Helper-ele pure de reference/story text au fost mutate in Kotlin in `ScenarioStoryText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioStoryTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Referinta Java `this::normalizeReference` a fost convertita la `ScenarioStoryTextKt::normalizeReference`, deoarece helper-ul nu mai este metoda de instanta.
+- Testul `ScenarioStoryTextTest` valideaza normalizarea referintelor, strip pentru prefixe cunoscute, scope-uri story, curatarea ID-urilor, parsarea listelor si `firstNonBlank`.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioStoryText.kt`, `ScenarioEngine.java`, `ScenarioStoryTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 30 taskuri: `ScenarioEngine.java` scade de la 12 la 11 taskuri estimate.
+- Primul test Gradle a expus eroarea de interop `this::normalizeReference`; a fost corectata prin referinta statica la `ScenarioStoryTextKt::normalizeReference`, apoi testele au trecut.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.851 in working tree curent
+- `ainpc-core-plugin/src/main`: 232 fisiere Kotlin, 3 fisiere Java, 70.86% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 601 fisiere Kotlin, 3 fisiere Java, 84.91% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `normalizeReference`, `stripObjectivePrefix`, `normalizeStoryScope`, `detectStoryTargetScope`, `cleanStoryId`, `parseStoryList` si `firstNonBlank` in `ScenarioEngine.java`, readu `this::normalizeReference`, elimina importurile statice `ScenarioStoryTextKt`, sterge `ScenarioStoryText.kt` si `ScenarioStoryTextTest.kt`
+
+### KOT-261
+
+Data: 2026-06-07
+ID: KOT-261
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioObjectiveProgressTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `normalizeObjectiveType`, `matchesObjectiveType`, `usesInventoryProgress`, `shouldConsumeObjectiveItem`, `buildObjectiveKey`, `buildLegacyObjectiveKey`, `objectiveKeyCandidates`, `readObjectiveProgress`, `carryLegacyObjectiveProgress`, `normalizeObjectiveEntryId`, `scoreBoolean`, `normalize`
+- Filtru aplicat: fara DB, fara `plugin`, fara `PlayerInventory`, fara material resolution, fara progres runtime in afara hartii explicite `progressByObjective`
+- Input ales: helper-ele de objective progress key/progress, deoarece sunt deterministe, accepta input explicit si pot fi validate prin `FeaturePackLoader.QuestEntryDefinition`
+
+Microtaskuri:
+- Helper-ele de objective type/key/progress au fost mutate in Kotlin in `ScenarioObjectiveProgress.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioObjectiveProgressKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Referinta Java `this::usesInventoryProgress` a fost convertita la `ScenarioObjectiveProgressKt::usesInventoryProgress`, deoarece helper-ul nu mai este metoda de instanta.
+- `buildLegacyObjectiveKey` pastreaza formatul legacy trim + lowercase, fara `normalizeReference`, ca sa nu schimbe cheile salvate anterior.
+- Testul `ScenarioObjectiveProgressTest` valideaza alias-uri de tip, chei stabile vs legacy, citirea progresului non-negativ si carry legacy doar cand cheia stabila lipseste.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioObjectiveProgress.kt`, `ScenarioEngine.java`, `ScenarioObjectiveProgressTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 29 taskuri: `ScenarioEngine.java` scade de la 11 la 10 taskuri estimate.
+- Primul test Gradle a expus eroarea de interop `this::usesInventoryProgress`; a fost corectata prin referinta statica la `ScenarioObjectiveProgressKt::usesInventoryProgress`, apoi testele au trecut.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.761 in working tree curent
+- `ainpc-core-plugin/src/main`: 233 fisiere Kotlin, 3 fisiere Java, 71.01% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 603 fisiere Kotlin, 3 fisiere Java, 85.00% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `matchesObjectiveType`, `normalizeObjectiveType`, `usesInventoryProgress`, `shouldConsumeObjectiveItem`, `buildObjectiveKey`, `buildLegacyObjectiveKey`, `objectiveKeyCandidates`, `readObjectiveProgress`, `carryLegacyObjectiveProgress` si `normalizeObjectiveEntryId` in `ScenarioEngine.java`, readu `this::usesInventoryProgress`, elimina importurile statice `ScenarioObjectiveProgressKt`, sterge `ScenarioObjectiveProgress.kt` si `ScenarioObjectiveProgressTest.kt`
+
+### KOT-262
+
+Data: 2026-06-07
+ID: KOT-262
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioRoleScoring.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioRoleScoringTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `scoreBoolean`, `normalize`, helper-ele de role scoring si comparatii de ocupatie
+- Filtru aplicat: fara `plugin`, fara `AINPC`, fara `NPCPersonality`, fara selectie de roluri, fara mutatii de stare
+- Input ales: `scoreBoolean` si normalizarea simpla `trim().lowercase(Locale.ROOT)`, deoarece au input explicit si comportament determinist
+
+Microtaskuri:
+- Helper-ul `scoreBoolean` a fost mutat in Kotlin in `ScenarioRoleScoring.kt`.
+- Helper-ul Java generic `normalize` a fost inlocuit cu `normalizeScenarioToken`, pentru a evita expunerea unui nume Kotlin prea ambiguu.
+- Apelurile din `ScenarioEngine.java` care comparau ocupatii/profesii folosesc acum `normalizeScenarioToken`.
+- Testul `ScenarioRoleScoringTest` valideaza scoring-ul boolean si normalizarea token-urilor fara schimbarea spatiilor interne.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioRoleScoring.kt`, `ScenarioEngine.java`, `ScenarioRoleScoringTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa ramane 29 taskuri, deoarece slice-ul elimina un helper foarte mic si nu reduce inca un task macro separat din `ScenarioEngine.java`.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.755 in working tree curent
+- `ainpc-core-plugin/src/main`: 234 fisiere Kotlin, 3 fisiere Java, 71.02% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 605 fisiere Kotlin, 3 fisiere Java, 85.00% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `scoreBoolean` si `normalize` in `ScenarioEngine.java`, readu apelurile `normalize(...)`, elimina importurile statice `ScenarioRoleScoringKt`, sterge `ScenarioRoleScoring.kt` si `ScenarioRoleScoringTest.kt`
+
+### KOT-263
+
+Data: 2026-06-07
+ID: KOT-263
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioEngineText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioEngineTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `formatQuestStatus`, `describeQuestProgress`, `resolveQuestTitle`, `normalizeStageCompletionMode`, `phasesMatch`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit runtime, fara `ScenarioTemplate`, fara mutatii de quest progress
+- Input ales: `formatQuestStatus` si `describeQuestProgress`, deoarece sunt helper-e de prezentare cu input explicit (`QuestStatus`, `PlayerQuestProgress`)
+
+Microtaskuri:
+- `formatQuestStatus` si `describeQuestProgress` au fost mutate in Kotlin in `ScenarioEngineText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioEngineTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Testul `ScenarioEngineTextTest` valideaza etichetele statusurilor si descrierea progresului cu preferinta pentru `questCode`, apoi `templateId`.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioEngineText.kt`, `ScenarioEngine.java`, `ScenarioEngineTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa ramane 29 taskuri, deoarece slice-ul muta helper-e mici de text si nu reduce inca un task macro separat din `ScenarioEngine.java`.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.731 in working tree curent
+- `ainpc-core-plugin/src/main`: 234 fisiere Kotlin, 3 fisiere Java, 71.06% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 605 fisiere Kotlin, 3 fisiere Java, 85.03% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `formatQuestStatus` si `describeQuestProgress` in `ScenarioEngine.java`, elimina importurile statice aferente din `ScenarioEngineTextKt` si sterge testele adaugate in `ScenarioEngineTextTest`
+
+### KOT-264
+
+Data: 2026-06-07
+ID: KOT-264
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioStageProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioStageProgressTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `normalizeStageCompletionMode`, `phasesMatch`, `stageReferencesObjective`, `objectiveListedInAnyStage`, `canonicalQuestPhase`, `findQuestStage`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit runtime, fara mutatii de quest progress, fara cautare de stage pe template complet
+- Input ales: helper-ele pure de stage/phase/objective reference, deoarece lucreaza pe input explicit si sunt testabile prin `QuestStageDefinition`, `QuestEntryDefinition` si `ScenarioTemplate`
+
+Microtaskuri:
+- Helper-ele de stage/phase/objective reference au fost mutate in Kotlin in `ScenarioStageProgress.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioStageProgressKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Testul `ScenarioStageProgressTest` valideaza alias-uri de completion mode, compararea fazelor normalizate, match pe `entry_id` sau `itemId` si scanarea stage-urilor din `ScenarioTemplate`.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioStageProgress.kt`, `ScenarioEngine.java`, `ScenarioStageProgressTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 28 taskuri: `ScenarioEngine.java` scade de la 10 la 9 taskuri estimate.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.695 in working tree curent
+- `ainpc-core-plugin/src/main`: 235 fisiere Kotlin, 3 fisiere Java, 71.12% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 607 fisiere Kotlin, 3 fisiere Java, 85.07% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `stageReferencesObjective`, `objectiveListedInAnyStage`, `normalizeStageCompletionMode` si `phasesMatch` in `ScenarioEngine.java`, elimina importurile statice `ScenarioStageProgressKt`, sterge `ScenarioStageProgress.kt` si `ScenarioStageProgressTest.kt`
+
+### KOT-265
+
+Data: 2026-06-07
+ID: KOT-265
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioStoryText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioStoryTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `getQuestEntryMetadata`, `normalizeStoryActionType`, `isQuestStoryAction`, `resolveStoryActionTarget`, `applyQuestStoryActions`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit runtime, fara `Player`, fara `AINPC`, fara service call catre story state
+- Input ales: helper-ele pure de story action metadata/type, deoarece lucreaza pe `QuestEntryDefinition` si sunt testabile direct
+
+Microtaskuri:
+- `getQuestEntryMetadata`, `normalizeStoryActionType` si `isQuestStoryAction` au fost mutate in Kotlin in `ScenarioStoryText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioStoryTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Referinta Java `this::isQuestStoryAction` a fost convertita la `ScenarioStoryTextKt::isQuestStoryAction`, deoarece helper-ul nu mai este metoda de instanta.
+- Testul `ScenarioStoryTextTest` valideaza alias-uri de story action, detectarea actiunilor story si lookup-ul metadata direct/normalizat.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioStoryText.kt`, `ScenarioEngine.java`, `ScenarioStoryTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 27 taskuri: `ScenarioEngine.java` scade de la 9 la 8 taskuri estimate.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.654 in working tree curent
+- `ainpc-core-plugin/src/main`: 235 fisiere Kotlin, 3 fisiere Java, 71.19% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 607 fisiere Kotlin, 3 fisiere Java, 85.11% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `getQuestEntryMetadata`, `normalizeStoryActionType` si `isQuestStoryAction` in `ScenarioEngine.java`, readu `this::isQuestStoryAction`, elimina importurile statice aferente din `ScenarioStoryTextKt` si sterge testele adaugate in `ScenarioStoryTextTest`
+
+### KOT-266
+
+Data: 2026-06-08
+ID: KOT-266
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioEngineText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioEngineTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `applyQuestFallbackPlaceholders`, `sanitizeConfigKey`, `capitalizeProgressionLabel`, `resolveQuestTitle`, `resolveConfiguredSimpleQuestTitle`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit runtime, fara `ConfigurationSection`, fara configuratie live
+- Input ales: helper-ele pure de text/config quest fallback, deoarece folosesc input explicit si pot fi testate direct
+
+Microtaskuri:
+- `applyQuestFallbackPlaceholders`, `sanitizeConfigKey`, `capitalizeProgressionLabel` si `resolveQuestTitle` au fost mutate in Kotlin in `ScenarioEngineText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioEngineTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Testul `ScenarioEngineTextTest` valideaza placeholder defaults/values, sanitizarea cheilor config, capitalizarea etichetelor si formatul titlului quest.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio` (PASS)
+- IDE build pe `ScenarioEngineText.kt`, `ScenarioEngine.java`, `ScenarioEngineTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 26 taskuri: `ScenarioEngine.java` scade de la 8 la 7 taskuri estimate.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.615 in working tree curent
+- `ainpc-core-plugin/src/main`: 235 fisiere Kotlin, 3 fisiere Java, 71.26% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 607 fisiere Kotlin, 3 fisiere Java, 85.15% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `applyQuestFallbackPlaceholders`, `sanitizeConfigKey`, `capitalizeProgressionLabel` si `resolveQuestTitle` in `ScenarioEngine.java`, elimina importurile statice aferente din `ScenarioEngineTextKt` si sterge testele adaugate in `ScenarioEngineTextTest`
+
+### KOT-267
+
+Data: 2026-06-08
+ID: KOT-267
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioEngineText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioEngineTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `formatObjectiveProgressLabel`, `formatMissingObjective`, `formatObjectiveTargetLabel`, `formatQuestEntry`, `resolveQuestMaterial`, `resolveProgressionMechanicDisplay`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit scheduler/runtime, fara `Player`, fara `PlayerInventory`, fara configuratie live
+- Input ales: helper-ele pure de formatare quest entry/objective si rezolvare `Material`, deoarece folosesc doar `QuestEntryDefinition`, `Material.matchMaterial` si helper-e Kotlin deja migrate
+
+Microtaskuri:
+- `formatObjectiveProgressLabel`, `formatMissingObjective`, `formatObjectiveTargetLabel`, `formatQuestEntry` si `resolveQuestMaterial` au fost mutate in Kotlin in `ScenarioEngineText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioEngineTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- Referintele Java `this::formatQuestEntry` au fost convertite la `ScenarioEngineTextKt::formatQuestEntry`, deoarece formatterul nu mai este metoda de instanta.
+- Testul `ScenarioEngineTextTest` valideaza rezolvarea materialelor Bukkit, label-uri de progres, obiective lipsa, target-uri cu prefix, story action metadata si fallback-uri custom.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioEngineTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio --console=plain` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 25 taskuri: `ScenarioEngine.java` scade de la 7 la 6 taskuri estimate.
+- Prima rulare a testului tintit a esuat pe doua method references Java ramase ca `this::formatQuestEntry`; au fost corectate la `ScenarioEngineTextKt::formatQuestEntry`, apoi gate-ul a trecut.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.522 in working tree curent
+- `ainpc-core-plugin/src/main`: 235 fisiere Kotlin, 3 fisiere Java, 71.42% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 607 fisiere Kotlin, 3 fisiere Java, 85.24% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `formatObjectiveProgressLabel`, `formatMissingObjective`, `formatObjectiveTargetLabel`, `resolveQuestMaterial` si `formatQuestEntry` in `ScenarioEngine.java`, readu `this::formatQuestEntry`, elimina importurile statice aferente din `ScenarioEngineTextKt` si sterge testele adaugate in `ScenarioEngineTextTest`
+
+### KOT-268
+
+Data: 2026-06-08
+ID: KOT-268
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioEngineText.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioEngineTextTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `formatStageCompletionMode`, `valueOrFallback`, `formatDuration`, `formatQuestDebugTime`, `formatOptional`, `formatQuestDebugMap`, `formatQuestLogMechanicCounts`, `parseQuestLogFilter`
+- Filtru aplicat: fara `plugin`, fara DB, fara Bukkit scheduler/runtime, fara `Player`, fara `PlayerInventory`, fara mutatii de quest progress
+- Input ales: formatterele pure de text/debug quest log, deoarece folosesc doar valori primitive, `Map` si helper-e Kotlin deja migrate
+
+Microtaskuri:
+- `formatStageCompletionMode`, `valueOrFallback`, `formatDuration`, `formatQuestDebugTime`, `formatOptional`, `formatQuestDebugMap` si `formatQuestLogMechanicCounts` au fost mutate in Kotlin in `ScenarioEngineText.kt`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioEngineTextKt` si nu mai contine implementari private duplicate pentru aceste helper-e.
+- `parseQuestLogFilter` a fost lasat in Java deoarece depinde de enum-ul intern de filtrare si este mai mare decat un formatter simplu.
+- Testul `ScenarioEngineTextTest` valideaza etichetele stage completion, fallback-uri pentru valori goale, durate rotunjite, map debug sortat/limitat si sortarea case-insensitive a mechanic counts.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioEngineTextTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio --console=plain` (PASS)
+- IDE build pe `ScenarioEngineText.kt`, `ScenarioEngine.java`, `ScenarioEngineTextTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 24 taskuri: `ScenarioEngine.java` scade de la 6 la 5 taskuri estimate.
+- Prima rulare a testului tintit a esuat din cauza inferentei `emptyMap()` in test; a fost corectata la `emptyMap<String, Any?>()` si gate-ul a trecut.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.465 in working tree curent
+- `ainpc-core-plugin/src/main`: 235 fisiere Kotlin, 3 fisiere Java, 71.51% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 607 fisiere Kotlin, 3 fisiere Java, 85.30% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `formatStageCompletionMode`, `valueOrFallback`, `formatDuration`, `formatQuestDebugTime`, `formatOptional`, `formatQuestDebugMap` si `formatQuestLogMechanicCounts` in `ScenarioEngine.java`, elimina importurile statice aferente din `ScenarioEngineTextKt` si sterge testele adaugate in `ScenarioEngineTextTest`
+
+### KOT-269
+
+Data: 2026-06-08
+ID: KOT-269
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioQuestReferences.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioQuestReferencesTest.kt`
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `isTrackedQuestSelector`, `matchesQuestReference`, `buildProgressionReferenceCandidates`, `addProgressionReferenceCandidate`, `extractProgressionDefinitionId`, `progressionReference`, `parseQuestLogFilter`
+- Filtru aplicat: fara DB, fara Bukkit scheduler/runtime, fara `Player`, fara mutatii de quest progress, fara acces direct la registrul Java de template-uri
+- Input ales: helper-ele pure de referinte quest/progression, cu `ScenarioTemplate` pasat explicit catre Kotlin; `parseQuestLogFilter` a fost exclus deoarece este mare si legat de enum-ul intern `QuestLogFilter`
+
+Microtaskuri:
+- `isTrackedQuestSelector`, `matchesQuestReference`, `buildProgressionReferenceCandidates`, `extractProgressionDefinitionId` si `progressionReference` au fost mutate in Kotlin in `ScenarioQuestReferences.kt`.
+- `ScenarioEngine.java` rezolva in continuare template-ul prin `resolveTemplateForProgress`, apoi paseaza template-ul explicit catre `matchesQuestReference`.
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioQuestReferencesKt` si nu mai contine implementari private duplicate pentru helper-ele mutate.
+- Testul `ScenarioQuestReferencesTest` valideaza aliases tracked/current, regulile legacy pentru `pack:id`, concatenarea referintelor, ordinea candidatilor si match-ul normalizat.
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioQuestReferencesTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.ScenarioStageProgressTest --tests ro.ainpc.engine.ScenarioQuestReferencesTest` (PASS, cu `JAVA_HOME` setat local la JDK 25)
+- `.\\gradlew.bat kotlinRatio --console=plain` (PASS)
+- IDE build pe `ScenarioQuestReferences.kt`, `ScenarioEngine.java`, `ScenarioQuestReferencesTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 23 taskuri: `ScenarioEngine.java` scade de la 5 la 4 taskuri estimate.
+- Mutarea nu schimba responsabilitatea de lookup runtime: registrul de template-uri ramane in Java, Kotlin primeste doar input explicit.
+- Warning-urile Kotlin aparute la testul Gradle sunt in fisiere existente (`QuestAnchorResolver`, `NPCChatListener`, `ProgressionDefinition`, `ProgressionService`) si nu in helper-ele modificate.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 17.383 in working tree curent
+- `ainpc-core-plugin/src/main`: 236 fisiere Kotlin, 3 fisiere Java, 71.65% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 609 fisiere Kotlin, 3 fisiere Java, 85.38% Kotlin dupa linii
+
+Rollback:
+- readauga helper-ele private `isTrackedQuestSelector`, `matchesQuestReference`, `buildProgressionReferenceCandidates`, `addProgressionReferenceCandidate`, `extractProgressionDefinitionId` si `progressionReference` in `ScenarioEngine.java`, readu apelurile `matchesQuestReference(progress, questReference)`, elimina importurile statice `ScenarioQuestReferencesKt` si sterge `ScenarioQuestReferences.kt` / `ScenarioQuestReferencesTest.kt`
+
+### KOT-270
+
+Data: 2026-06-10
+ID: KOT-270
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 3
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioQuestPhase.kt` (nou)
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioQuestPhaseTest.kt` (nou)
+- `docs/kotlin-migration-tracker.md`
+- `docs/rezumat-conversie-java-la-kotlin.md`
+
+Input selectat / filtrat:
+- Candidati analizati: `resolveQuestPhase` (4 overloads), `resolveActiveQuestPhase`, `resolveActiveStagedQuestPhase`, `hasStagedObjectives`, `getObjectiveStage`, `getOrderedObjectiveStages`, `getLastObjectiveStage`, `findMatchingObjectiveStage`, `findFirstIncompleteObjectiveStage`, `findNextIncompleteObjectiveStage`, `findExplicitNextObjectiveStage`, `findNextIncompleteObjectiveStageAfter`, `areObjectivesSatisfiedForStage`, `isObjectiveActiveForProgress`, `isObjectiveActiveForPhase`, `getFirstObjectiveStage`, `hasExplicitStageObjectiveIds`, `findQuestStage`, `stageCompletionMode`, `canonicalQuestPhase`, `getFirstQuestPhase`, `getDefaultActiveQuestPhase`, `getLastQuestPhase`, `getQuestWorkPhase`, `getReadyToTurnInQuestPhase`, `findQuestPhaseByKeywords`, `isQuestIntroOrAcceptancePhase`, `isQuestReadyOrTerminalPhase`, `isQuestCompletionPhase`, `areObjectivesSatisfied`
+- Filtru aplicat: fara DB, fara Bukkit scheduler/runtime, fara `Player`, fara mutatii de quest progress
+- Input ales: tot clusterul de rezolutie faza/stage (33+ metode, ~369 linii) — formeaza un cluster coerent de dependente circulare intre metode, greu de divizat
+
+Microtaskuri:
+- Toate metodele de rezolutie faza/stage au fost mutate in Kotlin in `ScenarioQuestPhase.kt` (369 linii).
+- `ScenarioEngine.java` foloseste importuri statice catre `ScenarioQuestPhaseKt` si nu mai contine implementarile originale.
+- Testul `ScenarioQuestPhaseTest` (343 linii, 43 teste) valideaza: rezolutia fazei pentru toate statusurile, staged vs unstaged objectives, stage ordering, stage satisfaction (all/any mode), phase classification keywords, phase matching, si edge cases (null template/stage/progress).
+
+Gate local:
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioQuestPhaseTest` (PASS)
+- `.\\gradlew.bat :ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioStageProgressTest --tests ro.ainpc.engine.ScenarioQuestReferencesTest --tests ro.ainpc.engine.ScenarioEngineTextTest --tests ro.ainpc.engine.ScenarioStoryTextTest --tests ro.ainpc.engine.ScenarioObjectiveProgressTest --tests ro.ainpc.engine.ScenarioRoleScoringTest --tests ro.ainpc.engine.QuestTrackingModelsTest --tests ro.ainpc.engine.ScenarioQuestPhaseTest` (PASS)
+- `.\\gradlew.bat kotlinRatio --console=plain` (PASS)
+- IDE build pe `ScenarioQuestPhase.kt`, `ScenarioEngine.java`, `ScenarioQuestPhaseTest.kt` (PASS)
+
+Observatii:
+- Estimarea ramasa scade la 22 taskuri: `ScenarioEngine.java` scade de la 4 la 3 taskuri estimate.
+- Mutarea reduce `ScenarioEngine.java` de la ~6900 la ~6086 linii (849 linii eliminate, dar ~369 linii adaugate in Kotlin → extractie neta ~480 linii).
+- Dupa acest slice, `ScenarioEngine.java` ramane cu ~6086 linii Java; urmatorii candidati: `hasObjectiveType`/matchers, objective progress snapshot, quest log filter.
+- A fost necesara ajustarea `hasStagedObjectives` sa nu returneze `false` cand `objectives` este gol dar exista `questStages` (fix in Kotlin).
+- Warning-urile Kotlin sunt pre-existente in alte fisiere, nu in cele noi.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java ramase in cele 3 fisiere: 14.919 (6267 + 6086 + 2566)
+- `ainpc-core-plugin/src/main`: 237 fisiere Kotlin, 3 fisiere Java, ~72% Kotlin dupa linii
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 85.84% Kotlin dupa linii
+
+Rollback:
+- sterge `ScenarioQuestPhase.kt` si `ScenarioQuestPhaseTest.kt`, readauga metodele de rezolutie faza in `ScenarioEngine.java`, elimina importurile statice `ScenarioQuestPhaseKt`
