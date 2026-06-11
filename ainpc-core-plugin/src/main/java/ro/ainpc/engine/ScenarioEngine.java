@@ -96,6 +96,14 @@ import static ro.ainpc.engine.ScenarioStoryTextKt.normalizeStoryScope;
 import static ro.ainpc.engine.ScenarioStoryTextKt.parseStoryList;
 import static ro.ainpc.engine.ScenarioStoryTextKt.stripObjectivePrefix;
 
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicDefinition;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicKey;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicDisplay;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionPluralLabel;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionSingularLabel;
+import static ro.ainpc.engine.ScenarioProgressionKt.progressionKindMatches;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicSortKey;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.configuration.ConfigurationSection;
@@ -1284,7 +1292,7 @@ public class ScenarioEngine {
         String selector = questLogActionSelector(template, viewProgress);
         String title = template != null ? resolveQuestTitle(template) : valueOrFallback(viewProgress.templateId(), "Quest necunoscut");
         String category = template != null ? resolveQuestCategory(template).displayName() : "Necunoscut";
-        String mechanic = template != null ? resolveProgressionMechanicDisplay(template) : "Necunoscuta";
+        String mechanic = template != null ? resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) : "Necunoscuta";
         String statusDisplay = formatQuestStatus(viewProgress != null ? viewProgress.status() : QuestStatus.NOT_STARTED);
         String currentStageId = "";
         if (viewProgress != null) {
@@ -1591,7 +1599,7 @@ public class ScenarioEngine {
             return QuestInteractionResult.handled(false, List.of(), systemMessages);
         }
 
-        systemMessages.add("&e" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + ": &f" + resolveQuestTitle(template));
+        systemMessages.add("&e" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + ": &f" + resolveQuestTitle(template));
         if (!template.getProgressionMechanicId().isBlank()) {
             systemMessages.add("&7Mecanica: &f" + template.getProgressionMechanicId()
                 + (template.getProgressionLabel().isBlank() ? "" : " &7(" + template.getProgressionLabel() + ")"));
@@ -2346,8 +2354,8 @@ public class ScenarioEngine {
             int activeInMechanic = countCurrentProgressionsInMechanic(playerId, template, template.getTemplateId());
             if (activeInMechanic >= mechanicLimit) {
                 issues.add("Ai deja " + activeInMechanic + " "
-                    + resolveProgressionPluralLabel(template) + " curente in "
-                    + resolveProgressionMechanicDisplay(template) + " (limita " + mechanicLimit + ").");
+                    + resolveProgressionPluralLabel(plugin.getFeaturePackLoader(), template) + " curente in "
+                    + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) + " (limita " + mechanicLimit + ").");
             }
         }
 
@@ -2385,7 +2393,7 @@ public class ScenarioEngine {
             return template.getProgressionMaxActive();
         }
 
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(plugin.getFeaturePackLoader(), template);
         if (mechanic == null || !mechanic.isProgressEnabled()) {
             return 0;
         }
@@ -2395,7 +2403,7 @@ public class ScenarioEngine {
     private int countCurrentProgressionsInMechanic(UUID playerId,
                                                    ScenarioTemplate template,
                                                    String excludedTemplateId) {
-        String mechanicKey = resolveProgressionMechanicKey(template);
+        String mechanicKey = resolveProgressionMechanicKey(plugin.getFeaturePackLoader(), template);
         if (mechanicKey.isBlank()) {
             return 0;
         }
@@ -2406,92 +2414,15 @@ public class ScenarioEngine {
                 continue;
             }
 
-            ScenarioTemplate activeTemplate = resolveTemplateForProgress(progress, null);
-            if (mechanicKey.equals(resolveProgressionMechanicKey(activeTemplate))) {
+            ScenarioTemplate t = resolveTemplateForProgress(progress, null);
+            if (mechanicKey.equals(resolveProgressionMechanicKey(plugin.getFeaturePackLoader(), t))) {
                 count++;
             }
         }
         return count;
     }
 
-    private String resolveProgressionMechanicKey(ScenarioTemplate template) {
-        if (template == null || template.getProgressionMechanicId().isBlank()) {
-            return "";
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null) {
-            return normalizeReference(mechanic.getPackId()) + ":" + normalizeReference(mechanic.getId());
-        }
-
-        String packId = template.getSourcePackId();
-        return normalizeReference(packId) + ":" + normalizeReference(template.getProgressionMechanicId());
-    }
-
-    private FeaturePackLoader.ProgressionMechanicDefinition resolveProgressionMechanicDefinition(ScenarioTemplate template) {
-        if (template == null || template.getProgressionMechanicId().isBlank()
-            || plugin.getFeaturePackLoader() == null) {
-            return null;
-        }
-
-        return plugin.getFeaturePackLoader().findProgressionMechanicDefinition(
-            template.getSourcePackId(),
-            template.getProgressionMechanicId()
-        );
-    }
-
-    private String resolveProgressionMechanicDisplay(ScenarioTemplate template) {
-        if (template == null) {
-            return "mecanica de progres";
-        }
-
-        if (!template.getProgressionLabel().isBlank()) {
-            return template.getProgressionLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getLabel().isBlank()) {
-            return mechanic.getLabel();
-        }
-
-        return template.getProgressionMechanicId().isBlank()
-            ? "mecanica de progres"
-            : template.getProgressionMechanicId();
-    }
-
-    private String resolveProgressionPluralLabel(ScenarioTemplate template) {
-        if (template == null) {
-            return "progresii";
-        }
-
-        if (!template.getProgressionPluralLabel().isBlank()) {
-            return template.getProgressionPluralLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getPluralLabel().isBlank()) {
-            return mechanic.getPluralLabel();
-        }
-
-        return "progresii";
-    }
-
-    private String resolveProgressionSingularLabel(ScenarioTemplate template) {
-        if (template == null) {
-            return "progresie";
-        }
-
-        if (!template.getProgressionSingularLabel().isBlank()) {
-            return template.getProgressionSingularLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getSingularLabel().isBlank()) {
-            return mechanic.getSingularLabel();
-        }
-
-        return "progresie";
-    }
+    
 
     private int countCurrentQuestsInCategory(UUID playerId,
                                              QuestScenarioContract.Category category,
@@ -2553,31 +2484,31 @@ public class ScenarioEngine {
             case ARCHIVED -> archived || progress.status().isArchived();
             case QUEST_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "quest");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "quest");
             }
             case CONTRACT_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "contract");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "contract");
             }
             case DUTY_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "duty");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "duty");
             }
             case BOUNTY_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "bounty");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "bounty");
             }
             case EVENT_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "event");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "event");
             }
             case TUTORIAL_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "tutorial");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "tutorial");
             }
             case RITUAL_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "ritual");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "ritual");
             }
             case CONTRACT_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "contract");
@@ -2639,7 +2570,7 @@ public class ScenarioEngine {
 
     private boolean questLogMatchesProgressionKind(PlayerQuestProgress progress, String expectedKind) {
         ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-        return template != null && progressionKindMatches(template, expectedKind);
+        return template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, expectedKind);
     }
 
     private List<String> buildQuestLogSummaryLines(UUID playerId, List<PlayerQuestProgress> currentProgresses) {
@@ -2671,7 +2602,7 @@ public class ScenarioEngine {
             }
             QuestScenarioContract.Category category = resolveQuestCategory(template);
             categoryCounts.merge(category, 1, Integer::sum);
-            mechanicCounts.merge(resolveProgressionMechanicDisplay(template), 1, Integer::sum);
+            mechanicCounts.merge(resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template), 1, Integer::sum);
         }
 
         List<String> lines = new ArrayList<>();
@@ -2693,19 +2624,11 @@ public class ScenarioEngine {
         return lines;
     }
 
-    private boolean progressionKindMatches(ScenarioTemplate template, String expectedKind) {
-        return QuestTemplateSelector.matchesProgressionKind(
-            template,
-            expectedKind,
-            resolveProgressionMechanicDisplay(template)
-        );
-    }
-
     private Comparator<PlayerQuestProgress> questLogCurrentComparator(UUID playerId) {
         return Comparator
             .comparingInt((PlayerQuestProgress progress) -> isTrackedQuest(playerId, progress) ? 0 : 1)
             .thenComparingInt(progress -> questLogCategoryPriority(resolveTemplateForProgress(progress, null)))
-            .thenComparing(progress -> resolveProgressionMechanicSortKey(resolveTemplateForProgress(progress, null)))
+            .thenComparing(progress -> resolveProgressionMechanicSortKey(plugin.getFeaturePackLoader(), resolveTemplateForProgress(progress, null)))
             .thenComparingInt(QuestLogFilterKt::questLogStatusPriority)
             .thenComparing(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .thenComparing(progress -> progress.templateId() != null ? progress.templateId() : "");
@@ -2722,25 +2645,17 @@ public class ScenarioEngine {
         };
     }
 
-    private String resolveProgressionMechanicSortKey(ScenarioTemplate template) {
-        String mechanicKey = resolveProgressionMechanicKey(template);
-        if (!mechanicKey.isBlank()) {
-            return mechanicKey;
-        }
-        return template != null ? normalizeReference(resolveProgressionMechanicDisplay(template)) : "";
-    }
-
     private String questLogCurrentGroupLabel(UUID playerId, ScenarioTemplate template, PlayerQuestProgress progress) {
         if (isTrackedQuest(playerId, progress)) {
             if (template == null) {
                 return "&b--- Progresie urmarita ---";
             }
-            return "&b--- " + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " urmarit ---";
+            return "&b--- " + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " urmarit ---";
         }
         if (template == null) {
             return "&e--- Template lipsa ---";
         }
-        return "&e--- " + resolveProgressionMechanicDisplay(template) + " ---";
+        return "&e--- " + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) + " ---";
     }
 
     private String formatQuestLogArchivedLine(UUID playerId,
@@ -2754,7 +2669,7 @@ public class ScenarioEngine {
             .append(")");
         if (template != null) {
             line.append(" &8[")
-                .append(resolveProgressionMechanicDisplay(template))
+                .append(resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template))
                 .append(" / ")
                 .append(resolveQuestCategory(template).displayName())
                 .append("]");
@@ -3941,7 +3856,7 @@ public class ScenarioEngine {
 
     private boolean matchesProgressionKindFilter(ScenarioTemplate template, String progressionKind) {
         String expected = normalizeReference(progressionKind);
-        return expected.isBlank() || progressionKindMatches(template, expected);
+        return expected.isBlank() || progressionKindMatches(plugin.getFeaturePackLoader(), template, expected);
     }
 
     private boolean shouldUseSimpleQuestForAllNpcs() {
@@ -4184,15 +4099,15 @@ public class ScenarioEngine {
 
     private List<String> buildQuestBriefingMessages(ScenarioTemplate template) {
         List<String> lines = new ArrayList<>();
-        String progressionLabel = capitalizeProgressionLabel(resolveProgressionSingularLabel(template));
+        String progressionLabel = capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template));
         lines.add("&6[" + progressionLabel + "] &f" + resolveQuestTitle(template));
 
         String questGiver = resolveProfessionName(template.getQuestGiverProfession());
         if (!questGiver.isBlank()) {
             lines.add("&7Dat de: &f" + questGiver);
         }
-        if (!resolveProgressionMechanicDisplay(template).isBlank()) {
-            lines.add("&7Mecanica: &f" + resolveProgressionMechanicDisplay(template));
+        if (!resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template).isBlank()) {
+            lines.add("&7Mecanica: &f" + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template));
         }
         QuestScenarioContract contract = template.getQuestContract();
         if (contract != null) {
@@ -4232,7 +4147,7 @@ public class ScenarioEngine {
         }
 
         if (progress == null || progress.status() == QuestStatus.NOT_STARTED) {
-            lines.add("&7Nu ai acceptat inca acest " + resolveProgressionSingularLabel(template) + ".");
+            lines.add("&7Nu ai acceptat inca acest " + resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template) + ".");
             if (npcName != null && !npcName.isBlank()) {
                 lines.add("&eAcceptare: &fScrie &ada&f/&aaccept &fsau foloseste &a/npcquest accept " + npcName);
             }
@@ -4256,7 +4171,7 @@ public class ScenarioEngine {
 
             QuestObjectiveCheck objectiveCheck = inspectQuestObjectives(player, template, progress, null, false);
             if (player == null) {
-                lines.add("&7" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " activ.");
+                lines.add("&7" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " activ.");
             } else if (objectiveCheck.complete()) {
                 lines.add("&aAi indeplinit toate obiectivele. Revino la NPC pentru finalizare.");
             } else {
@@ -4272,9 +4187,9 @@ public class ScenarioEngine {
         }
 
         if (progress.isCompleted()) {
-            lines.add("&a" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " finalizat.");
+            lines.add("&a" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " finalizat.");
         } else if (progress.status() == QuestStatus.FAILED) {
-            lines.add("&c" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " abandonat sau esuat.");
+            lines.add("&c" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " abandonat sau esuat.");
             lines.add("&7Poti cere din nou progresia daca vrei sa reincepi.");
         }
 

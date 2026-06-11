@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.ai.OpenAIConnectionProbeTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:19:40.986Z" hostname="DESKTOP-FJTPE3F" time="0.129">
-  <properties/>
-  <testcase name="blankApiKeySkipsHttpProbe()" classname="ro.ainpc.ai.OpenAIConnectionProbeTest" time="0.129"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
