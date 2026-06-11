@@ -5,6 +5,8 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
+import ro.ainpc.npc.AINPC
+import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
 import java.util.Collections
 import java.util.Locale
 
@@ -384,6 +386,37 @@ fun inspectQuestRewardDelivery(
         }
     }
     return if (issues.isEmpty()) QuestRewardCheck.allowed() else QuestRewardCheck.blocked(issues)
+}
+
+fun inspectQuestObjectives(
+    player: Player?,
+    template: ScenarioTemplate?,
+    progress: PlayerQuestProgress?,
+    npc: AINPC?,
+    requireTurnInInteraction: Boolean,
+): QuestObjectiveCheck {
+    if (template == null || template.objectives.isEmpty()) {
+        return QuestObjectiveCheck(true, emptyList())
+    }
+
+    val missingObjectives = mutableListOf<String>()
+    val objectives = template.objectives
+    for ((index, objective) in objectives.withIndex()) {
+        if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) continue
+        val requiredAmount = maxOf(1, objective.amount)
+        var currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index)
+        if (requireTurnInInteraction
+            && matchesObjectiveType(objective, "deliver_to_npc")
+            && npc == null
+            && currentAmount >= requiredAmount
+        ) {
+            currentAmount = 0
+        }
+        if (currentAmount < requiredAmount) {
+            missingObjectives.add(formatMissingObjective(objective, currentAmount, requiredAmount))
+        }
+    }
+    return QuestObjectiveCheck(missingObjectives.isEmpty(), missingObjectives)
 }
 
 fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List<String> {

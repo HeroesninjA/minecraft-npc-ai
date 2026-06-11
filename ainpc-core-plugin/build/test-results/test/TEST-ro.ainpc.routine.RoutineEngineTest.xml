@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.routine.RoutineEngineTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.691Z" hostname="DESKTOP-FJTPE3F" time="0.005">
+  <properties/>
+  <testcase name="eveningWithoutSocialAnchorReturnsHome()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="afternoonWithoutWorkAnchorFallsBackToSocialAnchor()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.001"/>
+  <testcase name="lowSocialNeedUsesSocialAnchorOutsideNight()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="workHoursSendNpcToWorkAnchor()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.001"/>
+  <testcase name="missingWorkAnchorFallsBackToSocialAnchor()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="unsafeNeedsOverrideWorkAndSocialSlots()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="negativeWorldTimeNormalizesIntoNightSchedule()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="previewDayExposesStableGuiScheduleSlots()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.001"/>
+  <testcase name="missingAllAnchorsFallsBackToIdleWithClearReason()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <testcase name="nightSendsNpcHomeToSleep()" classname="ro.ainpc.routine.RoutineEngineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

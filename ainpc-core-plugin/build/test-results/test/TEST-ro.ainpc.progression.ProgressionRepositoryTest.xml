@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.progression.ProgressionRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.552Z" hostname="DESKTOP-FJTPE3F" time="0.117">
+  <properties/>
+  <testcase name="summarizesStoredProgressions()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.1"/>
+  <testcase name="savesAndUpdatesManualAnchorBinding()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
+  <testcase name="readsStoredProgressionsWithResolvedDefinitionMetadata()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
+  <testcase name="readsAnchorBindingsForProgressionByTemplateOrQuestCode()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
+  <testcase name="readsAnchorBindingsByAnchorAndPlayer()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
+  <testcase name="filtersStoredProgressionsByPlayerStatusAndMechanic()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.004"/>
+  <testcase name="usesStableFallbackMetadataWhenDefinitionIsMissing()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

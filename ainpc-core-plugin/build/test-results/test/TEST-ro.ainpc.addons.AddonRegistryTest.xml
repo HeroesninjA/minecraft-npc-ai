@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.addons.AddonRegistryTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:45.602Z" hostname="DESKTOP-FJTPE3F" time="0.039">
+  <properties/>
+  <testcase name="loadOrderSortsScenariosAndPrimaryFallback()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.011"/>
+  <testcase name="addonTypeAliasesMapToConstitutionalTypes()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.002"/>
+  <testcase name="strictValidationRejectsSelfDependency()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.017"/>
+  <testcase name="disabledRegistryStillKeepsCoreDescriptorEnabled()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <testcase name="nonStrictValidationAllowsMinimalDescriptorMetadata()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <testcase name="strictValidationRejectsScenarioWithoutScenariosCapability()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <testcase name="strictValidationRejectsDependencyDisabledInConfig()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <testcase name="skipsDisabledAddonDescriptors()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <testcase name="strictValidationRejectsUnsupportedRuntimeMode()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Jun 11, 2026 9:05:45 AM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+WARNING: [AINPC AddonRegistry] Descriptor respins id=self-dependency-addon origin=plugin-addon: dependency circulara pe sine: self-dependency-addon
+Jun 11, 2026 9:05:45 AM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+WARNING: [AINPC AddonRegistry] Descriptor respins id=scenario-without-capability origin=plugin-addon: addon SCENARIO fara capability 'scenarios'
+Jun 11, 2026 9:05:45 AM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+WARNING: [AINPC AddonRegistry] Descriptor respins id=consumer-addon origin=plugin-addon: dependency dezactivata prin configuratie: shared-lib
+Jun 11, 2026 9:05:45 AM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+WARNING: [AINPC AddonRegistry] Descriptor respins id=demo-addon origin=plugin-addon: addon dezactivat prin configuratie: demo-addon
+Jun 11, 2026 9:05:45 AM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+WARNING: [AINPC AddonRegistry] Descriptor respins id=advanced-only origin=plugin-addon: runtime incompatibil: curent=standalone, suportat=advanced
+]]></system-err>
+</testsuite>

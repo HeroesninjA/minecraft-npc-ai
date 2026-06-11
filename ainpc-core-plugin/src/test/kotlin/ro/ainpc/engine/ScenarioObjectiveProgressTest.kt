@@ -332,6 +332,42 @@ class ScenarioObjectiveProgressTest {
     }
 
     @Test
+    fun inspectQuestObjectivesReturnsCompleteForNullTemplate() {
+        val result = inspectQuestObjectives(null, null, null, null, false)
+        assertTrue(result.complete())
+        assertTrue(result.missingObjectives().isEmpty())
+    }
+
+    @Test
+    fun inspectQuestObjectivesReturnsCompleteForEmptyObjectives() {
+        val template = questTemplate()
+        val result = inspectQuestObjectives(null, template, null, null, false)
+        assertTrue(result.complete())
+        assertTrue(result.missingObjectives().isEmpty())
+    }
+
+    @Test
+    fun inspectQuestObjectivesReportsMissingForObjectiveWithProgressZero() {
+        val objective = objective(type = "collect", itemId = "log", amount = 3)
+        val template = questTemplate()
+        template.objectives.add(objective)
+        val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        val result = inspectQuestObjectives(null, template, progress, null, false)
+        assertFalse(result.complete())
+        assertTrue(result.missingObjectives().isNotEmpty())
+    }
+
+    @Test
+    fun inspectQuestObjectivesReturnsCompleteWhenProgressMatchesAmount() {
+        val objective = objective(type = "collect", itemId = "log", amount = 3)
+        val template = questTemplate()
+        template.objectives.add(objective)
+        val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 3), emptyMap())
+        val result = inspectQuestObjectives(null, template, progress, null, false)
+        assertTrue(result.complete())
+    }
+
+    @Test
     fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 5)
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())

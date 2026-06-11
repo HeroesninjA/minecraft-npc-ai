@@ -50,6 +50,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.consumeQuestObjectives;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestObjectives;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestRewardDelivery;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
@@ -4911,38 +4912,6 @@ public class ScenarioEngine {
             return QuestDialogueContext.READY;
         }
         return progress.isOffered() ? QuestDialogueContext.OFFERED : QuestDialogueContext.ACTIVE;
-    }
-
-    private QuestObjectiveCheck inspectQuestObjectives(Player player,
-                                                       ScenarioTemplate template,
-                                                       PlayerQuestProgress progress,
-                                                       AINPC npc,
-                                                       boolean requireTurnInInteraction) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return new QuestObjectiveCheck(true, List.of());
-        }
-
-        List<String> missingObjectives = new ArrayList<>();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) {
-                continue;
-            }
-            int requiredAmount = Math.max(1, objective.getAmount());
-            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
-            if (requireTurnInInteraction
-                && matchesObjectiveType(objective, "deliver_to_npc")
-                && npc == null
-                && currentAmount >= requiredAmount) {
-                currentAmount = 0;
-            }
-            if (currentAmount < requiredAmount) {
-                missingObjectives.add(formatMissingObjective(objective, currentAmount, requiredAmount));
-            }
-        }
-
-        return new QuestObjectiveCheck(missingObjectives.isEmpty(), List.copyOf(missingObjectives));
     }
 
     private List<String> applyQuestStoryActions(Player player,
