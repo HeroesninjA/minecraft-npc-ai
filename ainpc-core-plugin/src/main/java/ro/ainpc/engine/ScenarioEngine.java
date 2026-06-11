@@ -50,6 +50,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasBoundAnchor;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.consumeQuestObjectives;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesStoredQuestNpc;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesBoundAnchor;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestObjectives;
@@ -3712,37 +3713,6 @@ public class ScenarioEngine {
         }
 
         return false;
-    }
-
-    private boolean matchesStoredQuestNpc(PlayerQuestProgress progress, AINPC npc) {
-        if (progress == null || npc == null) {
-            return false;
-        }
-
-        Map<String, String> questVariables = progress.questVariables();
-        if (questVariables.isEmpty()) {
-            return false;
-        }
-
-        String storedUuid = questVariables.get("quest_giver_uuid");
-        if (storedUuid != null && npc.getUuid() != null && storedUuid.equalsIgnoreCase(npc.getUuid().toString())) {
-            return true;
-        }
-
-        String storedDatabaseId = questVariables.get("quest_giver_db_id");
-        if (storedDatabaseId != null && npc.getDatabaseId() > 0 && storedDatabaseId.equals(String.valueOf(npc.getDatabaseId()))) {
-            return true;
-        }
-
-        return matchesObjectiveReference(
-            questVariables.get("quest_giver_name"),
-            npc.getName(),
-            npc.getDisplayName()
-        ) || matchesObjectiveReference(
-            questVariables.get("quest_giver_display_name"),
-            npc.getName(),
-            npc.getDisplayName()
-        );
     }
 
     private boolean matchesRegionObjective(FeaturePackLoader.QuestEntryDefinition objective, WorldRegion region) {

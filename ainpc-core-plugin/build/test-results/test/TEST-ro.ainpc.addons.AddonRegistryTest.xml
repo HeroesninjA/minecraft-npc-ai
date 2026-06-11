@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.addons.AddonRegistryTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:31.967Z" hostname="DESKTOP-FJTPE3F" time="0.031">
+<testsuite name="ro.ainpc.addons.AddonRegistryTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:19:40.953Z" hostname="DESKTOP-FJTPE3F" time="0.033">
   <properties/>
-  <testcase name="loadOrderSortsScenariosAndPrimaryFallback()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.009"/>
+  <testcase name="loadOrderSortsScenariosAndPrimaryFallback()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.01"/>
   <testcase name="addonTypeAliasesMapToConstitutionalTypes()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
-  <testcase name="strictValidationRejectsSelfDependency()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.013"/>
-  <testcase name="disabledRegistryStillKeepsCoreDescriptorEnabled()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.0"/>
+  <testcase name="strictValidationRejectsSelfDependency()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.014"/>
+  <testcase name="disabledRegistryStillKeepsCoreDescriptorEnabled()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <testcase name="nonStrictValidationAllowsMinimalDescriptorMetadata()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <testcase name="strictValidationRejectsScenarioWithoutScenariosCapability()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <testcase name="strictValidationRejectsDependencyDisabledInConfig()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <testcase name="skipsDisabledAddonDescriptors()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <testcase name="strictValidationRejectsUnsupportedRuntimeMode()" classname="ro.ainpc.addons.AddonRegistryTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[Jun 11, 2026 3:09:31 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+  <system-err><![CDATA[Jun 11, 2026 3:19:40 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
 WARNING: [AINPC AddonRegistry] Descriptor respins id=self-dependency-addon origin=plugin-addon: dependency circulara pe sine: self-dependency-addon
-Jun 11, 2026 3:09:31 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+Jun 11, 2026 3:19:40 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
 WARNING: [AINPC AddonRegistry] Descriptor respins id=scenario-without-capability origin=plugin-addon: addon SCENARIO fara capability 'scenarios'
-Jun 11, 2026 3:09:31 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+Jun 11, 2026 3:19:40 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
 WARNING: [AINPC AddonRegistry] Descriptor respins id=consumer-addon origin=plugin-addon: dependency dezactivata prin configuratie: shared-lib
-Jun 11, 2026 3:09:31 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+Jun 11, 2026 3:19:40 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
 WARNING: [AINPC AddonRegistry] Descriptor respins id=demo-addon origin=plugin-addon: addon dezactivat prin configuratie: demo-addon
-Jun 11, 2026 3:09:31 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
+Jun 11, 2026 3:19:40 PM ro.ainpc.addons.AddonRegistry logRegistrationRejection
 WARNING: [AINPC AddonRegistry] Descriptor respins id=advanced-only origin=plugin-addon: runtime incompatibil: curent=standalone, suportat=advanced
 ]]></system-err>
 </testsuite>

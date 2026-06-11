@@ -407,6 +407,28 @@ fun matchesBoundAnchor(
         && matchesObjectiveReference(anchorId, candidateId ?: "")
 }
 
+fun matchesStoredQuestNpc(progress: PlayerQuestProgress?, npc: AINPC?): Boolean {
+    if (progress == null || npc == null) return false
+    val questVariables = progress.questVariables()
+    if (questVariables.isEmpty()) return false
+
+    val storedUuid = questVariables["quest_giver_uuid"]
+    if (storedUuid != null && npc.uuid != null && storedUuid.equals(npc.uuid.toString(), ignoreCase = true)) return true
+
+    val storedDatabaseId = questVariables["quest_giver_db_id"]
+    if (storedDatabaseId != null && npc.databaseId > 0 && storedDatabaseId == npc.databaseId.toString()) return true
+
+    return matchesObjectiveReference(
+        questVariables["quest_giver_name"],
+        npc.name ?: "",
+        npc.displayName ?: "",
+    ) || matchesObjectiveReference(
+        questVariables["quest_giver_display_name"],
+        npc.name ?: "",
+        npc.displayName ?: "",
+    )
+}
+
 fun inspectQuestObjectives(
     player: Player?,
     template: ScenarioTemplate?,

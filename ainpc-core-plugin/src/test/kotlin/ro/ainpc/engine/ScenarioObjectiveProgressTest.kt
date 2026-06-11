@@ -398,6 +398,17 @@ class ScenarioObjectiveProgressTest {
     }
 
     @Test
+    fun matchesStoredQuestNpcReturnsFalseForNullProgress() {
+        assertFalse(matchesStoredQuestNpc(null, null))
+    }
+
+    @Test
+    fun matchesStoredQuestNpcReturnsFalseForEmptyQuestVariables() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertFalse(matchesStoredQuestNpc(p, null))
+    }
+
+    @Test
     fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 5)
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())

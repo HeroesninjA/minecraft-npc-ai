@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.commands.CodexDemoBacklogTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.211Z" hostname="DESKTOP-FJTPE3F" time="0.049">
+<testsuite name="ro.ainpc.commands.CodexDemoBacklogTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:19:41.199Z" hostname="DESKTOP-FJTPE3F" time="0.049">
   <properties/>
-  <testcase name="codexPaperEvidenceTemplateCapturesRequiredLiveProof()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.004"/>
+  <testcase name="codexPaperEvidenceTemplateCapturesRequiredLiveProof()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
   <testcase name="codexPaperEvidenceValidatorDocumentsStrictEvidenceGate()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.001"/>
-  <testcase name="codexDemoBacklogKeepsStableMachineReadableShape()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.006"/>
-  <testcase name="codexDemoMilestonesReferenceExistingBacklogTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
-  <testcase name="codexFastExperimentalBacklogKeepsStableShapeAndSafetyMarkers()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.006"/>
-  <testcase name="codexFinalCompletionReportClosesBacklogWithExplicitLiveGate()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.007"/>
+  <testcase name="codexDemoBacklogKeepsStableMachineReadableShape()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.007"/>
+  <testcase name="codexDemoMilestonesReferenceExistingBacklogTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.005"/>
+  <testcase name="codexFastExperimentalBacklogKeepsStableShapeAndSafetyMarkers()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.005"/>
+  <testcase name="codexFinalCompletionReportClosesBacklogWithExplicitLiveGate()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.006"/>
   <testcase name="codexPaperLiveChecklistDocumentsMixedAndLiveVerification()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.001"/>
-  <testcase name="codexDemoReportIndexReferencesExistingReports()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.001"/>
+  <testcase name="codexDemoReportIndexReferencesExistingReports()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.002"/>
   <testcase name="codexDemoBatchEightTracksRemainingSafeSessionTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
-  <testcase name="codexDemoBatchSevenTracksExactlyNinetyNineBacklogTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.002"/>
+  <testcase name="codexDemoBatchSevenTracksExactlyNinetyNineBacklogTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
   <testcase name="codexFastExperimentalGuideDocumentsExplicitOperatingRules()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.001"/>
-  <testcase name="codexPaperRestartRunbookCoversRestartGateTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.002"/>
+  <testcase name="codexPaperRestartRunbookCoversRestartGateTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
   <testcase name="codexDemoBacklogCoversExpectedDemoAreas()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.002"/>
-  <testcase name="codexReleaseFreezeChecklistCoversCodexReleaseTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.003"/>
+  <testcase name="codexReleaseFreezeChecklistCoversCodexReleaseTasks()" classname="ro.ainpc.commands.CodexDemoBacklogTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.world.VillagePatchPlannerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:33.133Z" hostname="DESKTOP-FJTPE3F" time="0.02">
+<testsuite name="ro.ainpc.world.VillagePatchPlannerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:19:42.115Z" hostname="DESKTOP-FJTPE3F" time="0.019">
   <properties/>
   <testcase name="demoMappingHasNoRequiredPatchForInitialPlayablePopulation()" classname="ro.ainpc.world.VillagePatchPlannerTest" time="0.008"/>
   <testcase name="analyzerFindsCapacityProfessionSocialAndQuestGaps()" classname="ro.ainpc.world.VillagePatchPlannerTest" time="0.003"/>
   <testcase name="plannerTurnsGapsIntoReadOnlyPatchPlans()" classname="ro.ainpc.world.VillagePatchPlannerTest" time="0.008"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+  <system-err><![CDATA[Jun 11, 2026 3:19:42 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 2 places, 1 noduri. Auto-index: activ.
-Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:19:42 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 1 noduri. Auto-index: activ.
 ]]></system-err>
 </testsuite>

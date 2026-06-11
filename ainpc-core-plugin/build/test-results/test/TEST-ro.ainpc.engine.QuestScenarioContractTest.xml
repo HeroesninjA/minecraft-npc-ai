@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.QuestScenarioContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.380Z" hostname="DESKTOP-FJTPE3F" time="0.004">
+<testsuite name="ro.ainpc.engine.QuestScenarioContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:19:41.370Z" hostname="DESKTOP-FJTPE3F" time="0.004">
   <properties/>
   <testcase name="infersFetchContractFromCollectObjectives()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
   <testcase name="supportsRitualScenarioKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
-  <testcase name="supportsDutyScenarioKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
+  <testcase name="supportsDutyScenarioKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
   <testcase name="supportsEventScenarioKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
-  <testcase name="explicitMetadataOverridesInference()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
-  <testcase name="supportsInvestigationContractKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
+  <testcase name="explicitMetadataOverridesInference()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
+  <testcase name="supportsInvestigationContractKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
   <testcase name="supportsTutorialScenarioKind()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
-  <testcase name="questEntryDefinitionCarriesActionMetadata()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.0"/>
+  <testcase name="questEntryDefinitionCarriesActionMetadata()" classname="ro.ainpc.engine.QuestScenarioContractTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
