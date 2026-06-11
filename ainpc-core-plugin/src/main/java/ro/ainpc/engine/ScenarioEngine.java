@@ -103,6 +103,8 @@ import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionPluralLabe
 import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionSingularLabel;
 import static ro.ainpc.engine.ScenarioProgressionKt.progressionKindMatches;
 import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicSortKey;
+import static ro.ainpc.engine.ScenarioQuestCategoryKt.resolveQuestCategory;
+import static ro.ainpc.engine.ScenarioQuestCategoryKt.questLogCategoryPriority;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -2364,11 +2366,6 @@ public class ScenarioEngine {
             : QuestAvailability.unavailable(issues);
     }
 
-    private QuestScenarioContract.Category resolveQuestCategory(ScenarioTemplate template) {
-        QuestScenarioContract contract = template != null ? template.getQuestContract() : null;
-        return contract != null ? contract.category() : QuestScenarioContract.Category.SIDE;
-    }
-
     private int getQuestCategoryLimit(QuestScenarioContract.Category category) {
         String key = switch (category != null ? category : QuestScenarioContract.Category.SIDE) {
             case MAIN -> "main";
@@ -2632,17 +2629,6 @@ public class ScenarioEngine {
             .thenComparingInt(QuestLogFilterKt::questLogStatusPriority)
             .thenComparing(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .thenComparing(progress -> progress.templateId() != null ? progress.templateId() : "");
-    }
-
-    private int questLogCategoryPriority(ScenarioTemplate template) {
-        if (template == null) {
-            return 3;
-        }
-        return switch (resolveQuestCategory(template)) {
-            case MAIN -> 0;
-            case SIDE -> 1;
-            case REPEATABLE -> 2;
-        };
     }
 
     private String questLogCurrentGroupLabel(UUID playerId, ScenarioTemplate template, PlayerQuestProgress progress) {
