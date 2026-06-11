@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.world.NpcWorldBindingServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.824Z" hostname="DESKTOP-FJTPE3F" time="0.005">
+<testsuite name="ro.ainpc.world.NpcWorldBindingServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.994Z" hostname="DESKTOP-FJTPE3F" time="0.005">
   <properties/>
   <testcase name="savesAndReadsNpcWorldBinding()" classname="ro.ainpc.world.NpcWorldBindingServiceTest" time="0.004"/>
   <testcase name="mergeMissingFieldsPreservesExistingWorkAndSocialBinding()" classname="ro.ainpc.world.NpcWorldBindingServiceTest" time="0.001"/>

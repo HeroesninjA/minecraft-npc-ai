@@ -57,6 +57,7 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjective
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
 import static ro.ainpc.engine.QuestLogFilterKt.parseQuestLogFilter;
+import static ro.ainpc.engine.QuestLogFilterKt.questLogActionSelector;
 import static ro.ainpc.engine.QuestLogFilterKt.questLogStatusPriority;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
 import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
@@ -2788,28 +2789,6 @@ public class ScenarioEngine {
         }
 
         return List.of("&8Actiuni: &7" + String.join(" &8| &7", commands));
-    }
-
-    private String questLogActionSelector(ScenarioTemplate template, PlayerQuestProgress progress) {
-        if (template != null) {
-            String code = progress != null && progress.questCode() != null && !progress.questCode().isBlank()
-                ? progress.questCode()
-                : template.getQuestCode();
-            String selector = progressionReference(template.getProgressionMechanicId(), code);
-            if (!selector.isBlank()) {
-                return selector;
-            }
-        }
-        if (progress != null && progress.questCode() != null && !progress.questCode().isBlank()) {
-            return progress.questCode();
-        }
-        if (template != null && template.getQuestCode() != null && !template.getQuestCode().isBlank()) {
-            return template.getQuestCode();
-        }
-        if (progress != null && progress.templateId() != null && !progress.templateId().isBlank()) {
-            return progress.templateId();
-        }
-        return template != null && template.getTemplateId() != null ? template.getTemplateId() : "";
     }
 
     private List<PlayerQuestProgress> getRecentArchivedQuestProgress(UUID playerId, int limit) {

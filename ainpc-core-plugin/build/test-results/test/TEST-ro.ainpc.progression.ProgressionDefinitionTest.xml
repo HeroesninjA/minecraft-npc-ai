@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.progression.ProgressionDefinitionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.543Z" hostname="DESKTOP-FJTPE3F" time="0.003">
+<testsuite name="ro.ainpc.progression.ProgressionDefinitionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.675Z" hostname="DESKTOP-FJTPE3F" time="0.003">
   <properties/>
-  <testcase name="preservesTutorialProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.001"/>
-  <testcase name="preservesDutyProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
+  <testcase name="preservesTutorialProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
+  <testcase name="preservesDutyProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.001"/>
   <testcase name="preservesEventProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
   <testcase name="buildsGenericDefinitionFromScenarioDefinition()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
-  <testcase name="preservesBountyProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.001"/>
+  <testcase name="preservesBountyProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
   <testcase name="preservesRitualProgressionMetadata()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
   <testcase name="preservesInvestigationScenarioKindForContracts()" classname="ro.ainpc.progression.ProgressionDefinitionTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>

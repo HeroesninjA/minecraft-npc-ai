@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.utils.NPCNameGeneratorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.771Z" hostname="DESKTOP-FJTPE3F" time="0.001">
+<testsuite name="ro.ainpc.utils.NPCNameGeneratorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.933Z" hostname="DESKTOP-FJTPE3F" time="0.0">
   <properties/>
-  <testcase name="predefinedNamePoolContainsHundredsOfUniqueNames()" classname="ro.ainpc.utils.NPCNameGeneratorTest" time="0.001"/>
+  <testcase name="predefinedNamePoolContainsHundredsOfUniqueNames()" classname="ro.ainpc.utils.NPCNameGeneratorTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioEngine.ScenarioType
 
 class QuestLogFilterTest {
     @Test
@@ -253,5 +255,39 @@ class QuestLogFilterTest {
         assertFalse(p.isActive())
         assertFalse(p.isOffered())
         assertEquals(2, questLogStatusPriority(p))
+    }
+
+    @Test
+    fun questLogActionSelectorUsesProgressionReferenceWhenTemplateHasMechanic() {
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.setQuestCode("test_quest")
+        val result = questLogActionSelector(template, null)
+        assertTrue(result.contains("test_quest"))
+        assertTrue(result.contains("quest"))
+    }
+
+    @Test
+    fun questLogActionSelectorReturnsQuestCodeDirectlyWhenMechanicBlank() {
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.setProgressionMechanicId("")
+        template.setQuestCode("direct_code")
+        assertEquals("direct_code", questLogActionSelector(template, null))
+    }
+
+    @Test
+    fun questLogActionSelectorReturnsProgressQuestCodeWhenTemplateNull() {
+        val progress = PlayerQuestProgress("t1", "my_code", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertEquals("my_code", questLogActionSelector(null, progress))
+    }
+
+    @Test
+    fun questLogActionSelectorReturnsProgressTemplateIdAsFallback() {
+        val progress = PlayerQuestProgress("fallback_id", null, QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertEquals("fallback_id", questLogActionSelector(null, progress))
+    }
+
+    @Test
+    fun questLogActionSelectorReturnsEmptyWhenAllNull() {
+        assertEquals("", questLogActionSelector(null, null))
     }
 }

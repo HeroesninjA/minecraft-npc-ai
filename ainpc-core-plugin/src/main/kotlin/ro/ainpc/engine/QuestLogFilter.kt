@@ -275,3 +275,15 @@ fun questLogStatusPriority(progress: PlayerQuestProgress?): Int {
     if (progress.isOffered()) return 1
     return 2
 }
+
+fun questLogActionSelector(template: ScenarioEngine.ScenarioTemplate?, progress: PlayerQuestProgress?): String {
+    if (template != null) {
+        val code = progress?.questCode()?.takeIf { it.isNotBlank() } ?: template.questCode
+        val selector = progressionReference(template.progressionMechanicId, code)
+        if (selector.isNotBlank()) return selector
+    }
+    progress?.questCode()?.takeIf { it.isNotBlank() }?.let { return it }
+    template?.questCode?.takeIf { it.isNotBlank() }?.let { return it }
+    progress?.templateId()?.takeIf { it.isNotBlank() }?.let { return it }
+    return template?.templateId ?: ""
+}

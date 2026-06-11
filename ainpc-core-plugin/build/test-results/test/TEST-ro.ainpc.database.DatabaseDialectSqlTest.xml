@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.database.DatabaseDialectSqlTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:45.956Z" hostname="DESKTOP-FJTPE3F" time="0.011">
+<testsuite name="ro.ainpc.database.DatabaseDialectSqlTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.167Z" hostname="DESKTOP-FJTPE3F" time="0.011">
   <properties/>
   <testcase name="removesCreateIndexIfNotExistsForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.002"/>
   <testcase name="rendersAutoIncrementPrimaryKeyByDialect()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="parsesSupportedDatabaseTypes()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
-  <testcase name="translatesLegacySqliteInsertOrDmlForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="translatesSqliteDatetimeExpressionsForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="rendersTextColumnTypesByDialect()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="translatesSqliteScalarMinMaxForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="rejectsUnknownDatabaseType()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
-  <testcase name="translatesSqliteLimitMaxForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
-  <testcase name="translatesSimpleSqliteOnConflictUpsertForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
+  <testcase name="parsesSupportedDatabaseTypes()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
+  <testcase name="translatesLegacySqliteInsertOrDmlForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
+  <testcase name="translatesSqliteDatetimeExpressionsForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
+  <testcase name="rendersTextColumnTypesByDialect()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
+  <testcase name="translatesSqliteScalarMinMaxForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.0"/>
+  <testcase name="rejectsUnknownDatabaseType()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.002"/>
+  <testcase name="translatesSqliteLimitMaxForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
+  <testcase name="translatesSimpleSqliteOnConflictUpsertForMysqlOnly()" classname="ro.ainpc.database.DatabaseDialectSqlTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

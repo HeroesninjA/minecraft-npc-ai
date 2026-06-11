@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.ScenarioQuestReferencesTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.325Z" hostname="DESKTOP-FJTPE3F" time="0.005">
+<testsuite name="ro.ainpc.engine.ScenarioQuestReferencesTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.485Z" hostname="DESKTOP-FJTPE3F" time="0.002">
   <properties/>
-  <testcase name="trackedQuestSelectorsAcceptLegacyAliases()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.001"/>
-  <testcase name="progressionReferenceCandidatesIncludeProgressAndTemplateAliasesInStableOrder()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.001"/>
+  <testcase name="trackedQuestSelectorsAcceptLegacyAliases()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.0"/>
+  <testcase name="progressionReferenceCandidatesIncludeProgressAndTemplateAliasesInStableOrder()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.0"/>
   <testcase name="questReferenceMatchingUsesNormalizedCandidateAliases()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.001"/>
   <testcase name="progressionDefinitionIdsKeepLegacySeparatorRules()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.0"/>
   <testcase name="progressionReferencesTrimAndSkipBlankParts()" classname="ro.ainpc.engine.ScenarioQuestReferencesTest" time="0.0"/>

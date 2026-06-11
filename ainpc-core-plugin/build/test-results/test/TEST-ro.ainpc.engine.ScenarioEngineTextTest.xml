@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.ScenarioEngineTextTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-06-11T06:05:46.100Z" hostname="DESKTOP-FJTPE3F" time="0.154">
+<testsuite name="ro.ainpc.engine.ScenarioEngineTextTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.300Z" hostname="DESKTOP-FJTPE3F" time="0.138">
   <properties/>
   <testcase name="questStatusKeepsLegacyDisplayLabels()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.002"/>
-  <testcase name="joinNaturallyUsesRomanianConnector()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
+  <testcase name="joinNaturallyUsesRomanianConnector()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
   <testcase name="describeQuestProgressPrefersQuestCodeThenTemplateId()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
-  <testcase name="questMaterialResolutionUsesBukkitMaterialWhenAvailable()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.103"/>
+  <testcase name="questMaterialResolutionUsesBukkitMaterialWhenAvailable()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.091"/>
   <testcase name="questEntryFormattingKeepsObjectiveStoryAndFallbackBranches()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.003"/>
   <testcase name="questLogMechanicCountsFormatsEmptyAndCaseInsensitiveSortedCounts()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
-  <testcase name="missingObjectiveTextKeepsAmountsAndTargetFallbacks()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
-  <testcase name="progressionLabelCapitalizationKeepsLegacyFallbacks()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
-  <testcase name="questAmountFormatsMaterialNamesAndFallbackItem()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
+  <testcase name="missingObjectiveTextKeepsAmountsAndTargetFallbacks()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
+  <testcase name="progressionLabelCapitalizationKeepsLegacyFallbacks()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
+  <testcase name="questAmountFormatsMaterialNamesAndFallbackItem()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
   <testcase name="questDebugMapFormatsSortedLimitedRows()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
   <testcase name="configKeysAreLowercaseUnderscoreAndAsciiSafe()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
   <testcase name="questFallbackPlaceholdersUseProvidedValuesAndDefaults()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.03"/>
-  <testcase name="humanizeItemIdKeepsLegacyLowercaseSpacing()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
-  <testcase name="fallbackAndOptionalFormattingKeepLegacyBlankHandling()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
+  <testcase name="humanizeItemIdKeepsLegacyLowercaseSpacing()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
+  <testcase name="fallbackAndOptionalFormattingKeepLegacyBlankHandling()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
   <testcase name="stageCompletionModesUseLegacyDisplayLabels()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
-  <testcase name="objectiveProgressLabelsKeepLegacyWording()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
+  <testcase name="objectiveProgressLabelsKeepLegacyWording()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
   <testcase name="resolveQuestTitleUsesQuestCodePrefixWhenAvailable()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.0"/>
-  <testcase name="durationFormattingRoundsUpToReadableUnits()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.002"/>
+  <testcase name="durationFormattingRoundsUpToReadableUnits()" classname="ro.ainpc.engine.ScenarioEngineTextTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
