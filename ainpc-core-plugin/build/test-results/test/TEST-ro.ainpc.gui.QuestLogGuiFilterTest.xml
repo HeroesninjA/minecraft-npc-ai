@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.gui.QuestLogGuiFilterTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.499Z" hostname="DESKTOP-FJTPE3F" time="0.003">
+<testsuite name="ro.ainpc.gui.QuestLogGuiFilterTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.604Z" hostname="DESKTOP-FJTPE3F" time="0.004">
   <properties/>
   <testcase name="preservesUnknownFilterForScenarioEngineFallback()" classname="ro.ainpc.gui.QuestLogGuiFilterTest" time="0.001"/>
-  <testcase name="exposesStablePrimaryFilterOrderForQuestLogRow()" classname="ro.ainpc.gui.QuestLogGuiFilterTest" time="0.001"/>
-  <testcase name="normalizesSupportedGuiQuestFilters()" classname="ro.ainpc.gui.QuestLogGuiFilterTest" time="0.0"/>
+  <testcase name="exposesStablePrimaryFilterOrderForQuestLogRow()" classname="ro.ainpc.gui.QuestLogGuiFilterTest" time="0.0"/>
+  <testcase name="normalizesSupportedGuiQuestFilters()" classname="ro.ainpc.gui.QuestLogGuiFilterTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.ScenarioRoleScoringTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.488Z" hostname="DESKTOP-FJTPE3F" time="0.0">
+<testsuite name="ro.ainpc.engine.ScenarioRoleScoringTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.593Z" hostname="DESKTOP-FJTPE3F" time="0.0">
   <properties/>
   <testcase name="normalizeScenarioTokenTrimsAndLowercasesWithoutChangingInternalSpacing()" classname="ro.ainpc.engine.ScenarioRoleScoringTest" time="0.0"/>
   <testcase name="scoreBooleanReturnsConfiguredScoreOnlyWhenConditionMatches()" classname="ro.ainpc.engine.ScenarioRoleScoringTest" time="0.0"/>

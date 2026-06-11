@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.progression.ProgressionRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.686Z" hostname="DESKTOP-FJTPE3F" time="0.133">
+<testsuite name="ro.ainpc.progression.ProgressionRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.796Z" hostname="DESKTOP-FJTPE3F" time="0.118">
   <properties/>
-  <testcase name="summarizesStoredProgressions()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.111"/>
+  <testcase name="summarizesStoredProgressions()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.097"/>
   <testcase name="savesAndUpdatesManualAnchorBinding()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.004"/>
-  <testcase name="readsStoredProgressionsWithResolvedDefinitionMetadata()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
+  <testcase name="readsStoredProgressionsWithResolvedDefinitionMetadata()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
   <testcase name="readsAnchorBindingsForProgressionByTemplateOrQuestCode()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
   <testcase name="readsAnchorBindingsByAnchorAndPlayer()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
   <testcase name="filtersStoredProgressionsByPlayerStatusAndMechanic()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.005"/>
-  <testcase name="usesStableFallbackMetadataWhenDefinitionIsMissing()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.003"/>
+  <testcase name="usesStableFallbackMetadataWhenDefinitionIsMissing()" classname="ro.ainpc.progression.ProgressionRepositoryTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.ConfigDefaultsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:48.609Z" hostname="DESKTOP-FJTPE3F" time="0.116">
+<testsuite name="ro.ainpc.ConfigDefaultsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:30.726Z" hostname="DESKTOP-FJTPE3F" time="0.113">
   <properties/>
-  <testcase name="coreDefaultsKeepAutomaticWorldImpactOptIn()" classname="ro.ainpc.ConfigDefaultsTest" time="0.098"/>
+  <testcase name="coreDefaultsKeepAutomaticWorldImpactOptIn()" classname="ro.ainpc.ConfigDefaultsTest" time="0.095"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

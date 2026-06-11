@@ -48,8 +48,10 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasBoundAnchor;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.consumeQuestObjectives;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesBoundAnchor;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestObjectives;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestRewardDelivery;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
@@ -3845,28 +3847,6 @@ public class ScenarioEngine {
         candidates.addAll(node.getMetadata().keySet());
         candidates.addAll(node.getMetadata().values());
         return matchesObjectiveReference(reference, candidates.toArray(String[]::new));
-    }
-
-    private boolean hasBoundAnchor(PlayerQuestProgress progress, String objectiveKey) {
-        if (progress == null || objectiveKey == null || objectiveKey.isBlank()) {
-            return false;
-        }
-        return !progress.questVariables().getOrDefault("anchor." + objectiveKey + ".id", "").isBlank();
-    }
-
-    private boolean matchesBoundAnchor(PlayerQuestProgress progress,
-                                       String objectiveKey,
-                                       String expectedAnchorType,
-                                       String candidateId) {
-        if (progress == null || objectiveKey == null || candidateId == null || candidateId.isBlank()) {
-            return false;
-        }
-
-        String prefix = "anchor." + objectiveKey;
-        String anchorType = progress.questVariables().getOrDefault(prefix + ".type", "");
-        String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
-        return matchesObjectiveReference(anchorType, expectedAnchorType)
-            && matchesObjectiveReference(anchorId, candidateId);
     }
 
     private boolean matchesMobObjective(FeaturePackLoader.QuestEntryDefinition objective, Entity entity) {

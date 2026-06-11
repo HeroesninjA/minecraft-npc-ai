@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.commands.PluginCommandDescriptorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.152Z" hostname="DESKTOP-FJTPE3F" time="0.014">
+<testsuite name="ro.ainpc.commands.PluginCommandDescriptorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.260Z" hostname="DESKTOP-FJTPE3F" time="0.015">
   <properties/>
-  <testcase name="infoCommandSupportsExplicitNearestSelector()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.002"/>
+  <testcase name="infoCommandSupportsExplicitNearestSelector()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.001"/>
   <testcase name="pluginYmlDeclaresProgressionAndContractCommandFacades()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.006"/>
   <testcase name="mainHelpMentionsAllDemoCommandFamilies()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.004"/>
   <testcase name="npcInteractionGuiKeepsNearestRoutineCommandExplicit()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.001"/>
-  <testcase name="routineCommandsKeepNearestStatusExplicit()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.001"/>
+  <testcase name="routineCommandsKeepNearestStatusExplicit()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

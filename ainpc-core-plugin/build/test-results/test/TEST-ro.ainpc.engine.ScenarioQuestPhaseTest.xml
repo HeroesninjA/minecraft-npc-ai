@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.ScenarioQuestPhaseTest" tests="43" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.463Z" hostname="DESKTOP-FJTPE3F" time="0.022">
+<testsuite name="ro.ainpc.engine.ScenarioQuestPhaseTest" tests="43" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.570Z" hostname="DESKTOP-FJTPE3F" time="0.02">
   <properties/>
   <testcase name="hasStagedObjectivesDetectsStageMetadata()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="areObjectivesSatisfiedForStageWithAllObjectivesMode()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
-  <testcase name="hasStagedObjectivesDetectsExplicitStageIds()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
+  <testcase name="hasStagedObjectivesDetectsExplicitStageIds()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="resolveQuestPhaseFailedPreservesExisting()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="getLastObjectiveStageReturnsLast()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="findQuestStageMatchesById()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
-  <testcase name="getObjectiveStageExtractsFromMetadataAndVariables()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="getObjectiveStageExtractsFromMetadataAndVariables()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseActiveWithObjectivesNotYetSatisfiedReturnsWorkPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseActiveSwitchesToReadyWhenAllSatisfied()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="resolveQuestPhaseNotStartedReturnsEmpty()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
@@ -16,34 +16,34 @@
   <testcase name="isQuestCompletionPhaseDetectsKeywords()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="getFirstQuestPhaseReturnsFirst()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="areObjectivesSatisfiedForStageWithAnyObjectiveMode()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
-  <testcase name="findMatchingObjectiveStageMatchesByPhasesMatch()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
+  <testcase name="findMatchingObjectiveStageMatchesByPhasesMatch()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="resolveQuestPhaseCompletedReturnsLastPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="hasExplicitStageObjectiveIdsDetectsPopulatedStages()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="isQuestReadyOrTerminalPhaseDetectsKeywords()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="getLastQuestPhaseReturnsLast()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="isQuestReadyOrTerminalPhaseDetectsKeywords()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="getLastQuestPhaseReturnsLast()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="canonicalQuestPhaseWithNullTemplateReturnsTrimmedInput()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="isObjectiveActiveForPhaseWithoutStagesAlwaysTrue()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="getFirstObjectiveStageReturnsFirstStage()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="areObjectivesSatisfiedNullTemplateReturnsTrue()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="stageCompletionModeReadsFromStage()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="getQuestWorkPhaseFindsSemanticPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="getQuestWorkPhaseFindsSemanticPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="getDefaultActiveQuestPhaseReturnsSecondOrFirst()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseEmptyTemplateOrStatus()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseActiveWithStagesAdvancesCorrectly()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.002"/>
   <testcase name="resolveQuestPhaseFailedReturnsExistingOrDefault()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="isObjectiveActiveForPhaseWithStagedObjectives()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="resolveQuestPhaseOfferedReturnsFirstPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="resolveQuestPhaseOfferedPreservesExistingPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="areObjectivesSatisfiedChecksAll()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="resolveQuestPhaseOfferedPreservesExistingPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="areObjectivesSatisfiedChecksAll()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseActiveChoosesWorkPhaseWhenObjectivesNotSatisfied()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="isQuestIntroOrAcceptancePhaseDetectsKeywords()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="getReadyToTurnInQuestPhaseFallsBackToLastNonCompletionPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="canonicalQuestPhaseMatchesAgainstTemplatePhases()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="resolveQuestPhaseWithPlayerQuestProgress()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <testcase name="getOrderedObjectiveStagesReturnsUniqueStages()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
-  <testcase name="findFirstIncompleteObjectiveStageReturnsFirstUnfinished()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.002"/>
+  <testcase name="findFirstIncompleteObjectiveStageReturnsFirstUnfinished()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
   <testcase name="getReadyToTurnInQuestPhaseFindsReturnPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
-  <testcase name="resolveQuestPhaseActiveWithCompletedObjectivesReturnsReadyPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.001"/>
+  <testcase name="resolveQuestPhaseActiveWithCompletedObjectivesReturnsReadyPhase()" classname="ro.ainpc.engine.ScenarioQuestPhaseTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

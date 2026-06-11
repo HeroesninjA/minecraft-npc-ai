@@ -368,6 +368,36 @@ class ScenarioObjectiveProgressTest {
     }
 
     @Test
+    fun hasBoundAnchorReturnsFalseForNullProgress() {
+        assertFalse(hasBoundAnchor(null, "key"))
+    }
+
+    @Test
+    fun hasBoundAnchorReturnsFalseForNullKey() {
+        val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
+        assertFalse(hasBoundAnchor(p, null))
+    }
+
+    @Test
+    fun hasBoundAnchorReturnsTrueWhenAnchorIdPresent() {
+        val vars = mapOf("anchor.obj1.id" to "npc_1")
+        val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), vars)
+        assertTrue(hasBoundAnchor(p, "obj1"))
+    }
+
+    @Test
+    fun matchesBoundAnchorReturnsFalseForNullInputs() {
+        assertFalse(matchesBoundAnchor(null, null, null, null))
+    }
+
+    @Test
+    fun matchesBoundAnchorReturnsTrueWhenBothTypeAndIdMatch() {
+        val vars = mapOf("anchor.obj1.type" to "npc", "anchor.obj1.id" to "guard_1")
+        val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), vars)
+        assertTrue(matchesBoundAnchor(p, "obj1", "npc", "guard_1"))
+    }
+
+    @Test
     fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 5)
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())

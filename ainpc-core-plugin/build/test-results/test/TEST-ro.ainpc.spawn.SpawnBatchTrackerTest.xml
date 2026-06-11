@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.spawn.SpawnBatchTrackerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.911Z" hostname="DESKTOP-FJTPE3F" time="0.004">
+<testsuite name="ro.ainpc.spawn.SpawnBatchTrackerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:33.006Z" hostname="DESKTOP-FJTPE3F" time="0.002">
   <properties/>
-  <testcase name="normalizesBatchStatusFiltersForOperationalListing()" classname="ro.ainpc.spawn.SpawnBatchTrackerTest" time="0.002"/>
+  <testcase name="normalizesBatchStatusFiltersForOperationalListing()" classname="ro.ainpc.spawn.SpawnBatchTrackerTest" time="0.001"/>
   <testcase name="parsesDebugFriendlyNpcIdsForRollback()" classname="ro.ainpc.spawn.SpawnBatchTrackerTest" time="0.0"/>
-  <testcase name="ignoresBlankOrMalformedNpcIds()" classname="ro.ainpc.spawn.SpawnBatchTrackerTest" time="0.001"/>
+  <testcase name="ignoresBlankOrMalformedNpcIds()" classname="ro.ainpc.spawn.SpawnBatchTrackerTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

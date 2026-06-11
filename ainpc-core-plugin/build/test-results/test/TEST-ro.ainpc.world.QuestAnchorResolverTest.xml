@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.world.QuestAnchorResolverTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:51Z" hostname="DESKTOP-FJTPE3F" time="0.026">
+<testsuite name="ro.ainpc.world.QuestAnchorResolverTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:33.091Z" hostname="DESKTOP-FJTPE3F" time="0.026">
   <properties/>
-  <testcase name="resolvesMarketContractAnchorsFromTagsAndNodeSemantic()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.011"/>
+  <testcase name="resolvesMarketContractAnchorsFromTagsAndNodeSemantic()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.009"/>
   <testcase name="reportsMissingSemanticAnchor()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
   <testcase name="usesStableYamlEntryIdsForAnchorKeys()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
   <testcase name="resolvesBountyFarmAnchorFromPlaceTag()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
   <testcase name="resolvesStableRegionAnchorFromTypeReference()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
-  <testcase name="resolvesRitualAnchorsFromTagAndNodeSemantic()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
-  <testcase name="resolvesPlaceAndNodeAnchorsFromQuestObjectives()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.002"/>
+  <testcase name="resolvesRitualAnchorsFromTagAndNodeSemantic()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.003"/>
+  <testcase name="resolvesPlaceAndNodeAnchorsFromQuestObjectives()" classname="ro.ainpc.world.QuestAnchorResolverTest" time="0.003"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+  <system-err><![CDATA[Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 1 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 0 places, 0 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 0 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 0 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 0 places, 0 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 1 noduri. Auto-index: activ.
-Jun 11, 2026 2:57:51 PM ro.ainpc.world.WorldAdminService reloadFromConfig
+Jun 11, 2026 3:09:33 PM ro.ainpc.world.WorldAdminService reloadFromConfig
 INFO: World admin incarcat: 1 regiuni, 1 places, 1 noduri. Auto-index: activ.
 ]]></system-err>
 </testsuite>

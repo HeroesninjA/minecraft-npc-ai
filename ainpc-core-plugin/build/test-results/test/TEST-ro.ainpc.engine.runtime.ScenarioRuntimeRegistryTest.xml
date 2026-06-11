@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.493Z" hostname="DESKTOP-FJTPE3F" time="0.005">
+<testsuite name="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.598Z" hostname="DESKTOP-FJTPE3F" time="0.005">
   <properties/>
-  <testcase name="executionContextAndDefinitionSanitizeMaps()" classname="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" time="0.002"/>
+  <testcase name="executionContextAndDefinitionSanitizeMaps()" classname="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" time="0.001"/>
   <testcase name="validateActionAcceptsRegisteredHandlerAndWarnsForMissingStableId()" classname="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" time="0.002"/>
   <testcase name="validateActionReportsMissingHandler()" classname="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" time="0.0"/>
   <testcase name="actionRegistryNormalizesLookupAndRejectsDuplicateHandlers()" classname="ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest" time="0.0"/>

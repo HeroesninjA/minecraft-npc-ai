@@ -388,6 +388,25 @@ fun inspectQuestRewardDelivery(
     return if (issues.isEmpty()) QuestRewardCheck.allowed() else QuestRewardCheck.blocked(issues)
 }
 
+fun hasBoundAnchor(progress: PlayerQuestProgress?, objectiveKey: String?): Boolean {
+    if (progress == null || objectiveKey.isNullOrBlank()) return false
+    return progress.questVariables()["anchor.${objectiveKey}.id"]?.isNotBlank() ?: false
+}
+
+fun matchesBoundAnchor(
+    progress: PlayerQuestProgress?,
+    objectiveKey: String?,
+    expectedAnchorType: String?,
+    candidateId: String?,
+): Boolean {
+    if (progress == null || objectiveKey == null || candidateId.isNullOrBlank()) return false
+    val prefix = "anchor.$objectiveKey"
+    val anchorType = progress.questVariables()["$prefix.type"] ?: ""
+    val anchorId = progress.questVariables()["$prefix.id"] ?: ""
+    return matchesObjectiveReference(anchorType, expectedAnchorType ?: "")
+        && matchesObjectiveReference(anchorId, candidateId ?: "")
+}
+
 fun inspectQuestObjectives(
     player: Player?,
     template: ScenarioTemplate?,

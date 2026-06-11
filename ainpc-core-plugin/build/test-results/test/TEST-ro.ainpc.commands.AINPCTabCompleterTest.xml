@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.commands.AINPCTabCompleterTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-06-11T11:57:50.059Z" hostname="DESKTOP-FJTPE3F" time="0.041">
+<testsuite name="ro.ainpc.commands.AINPCTabCompleterTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-06-11T12:09:32.173Z" hostname="DESKTOP-FJTPE3F" time="0.038">
   <properties/>
-  <testcase name="completesRoutineStatusNearestForDemoFlow()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.012"/>
+  <testcase name="completesRoutineStatusNearestForDemoFlow()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.01"/>
   <testcase name="completesAuditQuestStrictOption()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesPatchPlannerActionsAndFallbackRegionHint()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.002"/>
-  <testcase name="completesAuditWandMode()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.001"/>
+  <testcase name="completesAuditWandMode()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesMappingWandAndDraftCommands()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
-  <testcase name="completesMigrationHouseholdActions()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
-  <testcase name="hidesGenerationWorldActionsWhenGenerationFeatureIsDisabled()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.001"/>
+  <testcase name="completesMigrationHouseholdActions()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.001"/>
+  <testcase name="hidesGenerationWorldActionsWhenGenerationFeatureIsDisabled()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesCreateWithNeutralOccupationFallbacks()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
-  <testcase name="completesHouseholdRepairActions()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.001"/>
+  <testcase name="completesHouseholdRepairActions()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesProgressionGuiAliasesWithRelativeFilters()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesNpcBindingRepairTargets()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.0"/>
   <testcase name="completesGlobalProgressionGuiWithKindFilters()" classname="ro.ainpc.commands.AINPCTabCompleterTest" time="0.002"/>
