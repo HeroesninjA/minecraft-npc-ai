@@ -1,60 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.ScenarioObjectiveProgressTest" tests="54" skipped="0" failures="0" errors="0" timestamp="2026-06-11T14:22:25.466Z" hostname="DESKTOP-FJTPE3F" time="0.043">
+<testsuite name="ro.ainpc.engine.ScenarioObjectiveProgressTest" tests="54" skipped="0" failures="0" errors="0" timestamp="2026-06-11T14:29:09.263Z" hostname="DESKTOP-FJTPE3F" time="0.047">
   <properties/>
-  <testcase name="countMaterialReturnsZeroForNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="countMaterialReturnsZeroForNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="resolveQuestObjectiveStateWithStatusCompletedWhenProgressMet()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="inspectQuestRewardDeliveryReturnsBlockedForNullInventoryWithRealReward()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.002"/>
+  <testcase name="inspectQuestRewardDeliveryReturnsBlockedForNullInventoryWithRealReward()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.003"/>
   <testcase name="shouldShowObjectiveForCurrentStageReturnsTrueWhenProgressNull()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.002"/>
-  <testcase name="resolveObjectiveCurrentProgressReturnsZeroForNullProgressWhenNotInventory()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="resolveObjectiveCurrentProgressReturnsZeroForNullProgressWhenNotInventory()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="resolveObjectiveCurrentProgressUsesReadObjectiveProgressForNullPlayer()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.002"/>
-  <testcase name="resolveObjectiveCurrentProgressReturnsZeroForNullObjective()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="resolveObjectiveCurrentProgressReturnsZeroForNullObjective()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="readObjectiveProgressUsesMaxNonNegativeCandidateValue()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="matchesBoundAnchorReturnsFalseForNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="resolveQuestObjectiveStateWithProgressReturnsCompletedWhenProgressMet()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="buildObjectiveProgressSnapshotReturnsEmptyMapForTemplateWithNoObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="buildObjectiveProgressSnapshotReturnsEmptyMapForTemplateWithNoObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="resolveQuestObjectiveStateShowsInProgressWhenPartialAndActive()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="objectiveTypeAliasesNormalizeToCanonicalTypes()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="objectiveKeysPreferStableEntryIdAndKeepLegacyLowercaseFormat()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="hasBoundAnchorReturnsFalseForNullProgress()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="hasBoundAnchorReturnsFalseForNullProgress()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="incrementObjectiveProgressCapsAtObjectiveAmountWhenCurrentExceeds()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="consumeQuestObjectivesDoesNothingForNullInventory()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="matchesStoredQuestNpcReturnsFalseForEmptyQuestVariables()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForEmptyRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="incrementObjectiveProgressIncrementsFromZero()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="simulateQuestObjectiveConsumptionHandlesNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="hasBoundAnchorReturnsTrueWhenAnchorIdPresent()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="matchesStoredQuestNpcReturnsFalseForEmptyQuestVariables()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForEmptyRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="incrementObjectiveProgressIncrementsFromZero()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="simulateQuestObjectiveConsumptionHandlesNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="hasBoundAnchorReturnsTrueWhenAnchorIdPresent()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="shouldShowObjectiveForCurrentStageReturnsTrueForNonStagedTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForOnlyStoryRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForOnlyStoryRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="inspectQuestInventoryReportsMissingForNullMaterial()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="matchesObjectiveReferenceHandlesPrefixedReferences()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="incrementObjectiveProgressIgnoresNegativeCurrentValue()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="matchesObjectiveReferenceHandlesPrefixedReferences()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="incrementObjectiveProgressIgnoresNegativeCurrentValue()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="inspectQuestObjectivesReturnsCompleteForNullTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="incrementObjectiveProgressReturnsFalseWhenAtMaxIncremented()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="incrementObjectiveProgressReturnsFalseWhenAtMaxIncremented()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="resolveObjectiveCurrentProgressCapsAtObjectiveAmount()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="resolveQuestObjectiveStateWithStatusPendingWhenNotActiveForStage()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="resolveQuestObjectiveStateWithStatusPendingWhenNotActiveForStage()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="inspectQuestInventoryReturnsSuccessForEmptyObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="carryLegacyObjectiveProgressCopiesPositiveLegacyValueOnlyWhenStableMissing()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="matchesObjectiveReferenceMatchesNormalizedReferences()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="buildObjectiveProgressSnapshotReturnsEmptyMapForNullTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="hasInventoryObjectiveDetectsInventoryUsingObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="carryLegacyObjectiveProgressCopiesPositiveLegacyValueOnlyWhenStableMissing()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="matchesObjectiveReferenceMatchesNormalizedReferences()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="buildObjectiveProgressSnapshotReturnsEmptyMapForNullTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="hasInventoryObjectiveDetectsInventoryUsingObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="matchesBoundAnchorReturnsTrueWhenBothTypeAndIdMatch()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForNullRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="inspectQuestObjectivesReturnsCompleteWhenProgressMatchesAmount()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="resolveQuestObjectiveStateShowsStartedWhenZeroAndActive()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="inspectQuestRewardDeliveryReturnsAllowedForNullRewards()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="inspectQuestObjectivesReturnsCompleteWhenProgressMatchesAmount()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="resolveQuestObjectiveStateShowsStartedWhenZeroAndActive()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="simulateAddMaterialReturnsFalseForNullInputs()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="resolveQuestObjectiveStateWithNullProgressDefaultsToNotStarted()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="buildCompletedObjectiveProgressReturnsEmptyForNullTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="hasObjectiveTypeReturnsTrueWhenMatchingTypeExists()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="resolveQuestObjectiveStateWithNullProgressDefaultsToNotStarted()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="buildCompletedObjectiveProgressReturnsEmptyForNullTemplate()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="hasObjectiveTypeReturnsTrueWhenMatchingTypeExists()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="hasBoundAnchorReturnsFalseForNullKey()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <testcase name="buildObjectiveProgressSnapshotDelegatesToFourParamOverload()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="matchesStoredQuestNpcReturnsFalseForNullProgress()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="matchesStoredQuestNpcReturnsFalseForNullProgress()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="removeMaterialHandlesNullInputsGracefully()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="simulateRemoveMaterialHandlesNullContents()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
-  <testcase name="inspectQuestObjectivesReportsMissingForObjectiveWithProgressZero()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
+  <testcase name="simulateRemoveMaterialHandlesNullContents()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="inspectQuestObjectivesReportsMissingForObjectiveWithProgressZero()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="cloneStorageContentsReturnsEmptyArrayForNullInventory()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.002"/>
   <testcase name="resolveQuestObjectiveStateWithProgressReturnsPendingWhenNotActiveForStage()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
   <testcase name="resolveQuestObjectiveStateWithStatusFailed()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
-  <testcase name="inspectQuestObjectivesReturnsCompleteForEmptyObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.001"/>
+  <testcase name="inspectQuestObjectivesReturnsCompleteForEmptyObjectives()" classname="ro.ainpc.engine.ScenarioObjectiveProgressTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

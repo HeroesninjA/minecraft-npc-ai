@@ -105,6 +105,9 @@ import static ro.ainpc.engine.ScenarioProgressionKt.progressionKindMatches;
 import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicSortKey;
 import static ro.ainpc.engine.ScenarioQuestCategoryKt.resolveQuestCategory;
 import static ro.ainpc.engine.ScenarioQuestCategoryKt.questLogCategoryPriority;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesQuestGiver;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesNpcObjective;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesProfessionReference;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -498,7 +501,7 @@ public class ScenarioEngine {
             );
         }
 
-        if (requiresQuestGiverTurnIn(template) && !matchesQuestGiver(npc, template)) {
+        if (requiresQuestGiverTurnIn(template) && !matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
             return QuestInteractionResult.handled(
                 true,
                 buildQuestNpcMessages(
@@ -1046,7 +1049,7 @@ public class ScenarioEngine {
             ScenarioTemplate fallbackTemplate = resolveTemplateForProgress(progress, null);
             if (fallbackTemplate != null
                 && matchesProgressionKindFilter(fallbackTemplate, progressionKind)
-                && matchesQuestGiver(fallbackNpc, fallbackTemplate)) {
+                && matchesQuestGiver(plugin.getFeaturePackLoader(), fallbackNpc, fallbackTemplate)) {
                 return fallbackNpc;
             }
         }
@@ -3250,7 +3253,7 @@ public class ScenarioEngine {
             if (!matchesObjectiveType(objective, "talk_to_npc")) {
                 continue;
             }
-            if (!matchesNpcObjective(objective, npc, template, progress)) {
+            if (!matchesNpcObjective(plugin.getFeaturePackLoader(), objective, npc, template, progress)) {
                 continue;
             }
 
@@ -3590,32 +3593,6 @@ public class ScenarioEngine {
         );
     }
 
-    private boolean matchesNpcObjective(FeaturePackLoader.QuestEntryDefinition objective,
-                                        AINPC npc,
-                                        ScenarioTemplate template,
-                                        PlayerQuestProgress progress) {
-        if (objective == null || npc == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return matchesStoredQuestNpc(progress, npc) || matchesQuestGiver(npc, template);
-        }
-
-        if (matchesObjectiveReference(reference, npc.getName(), npc.getDisplayName(), npc.getOccupation())) {
-            return true;
-        }
-        if (npc.getUuid() != null && matchesObjectiveReference(reference, npc.getUuid().toString())) {
-            return true;
-        }
-        if (npc.getDatabaseId() > 0 && matchesObjectiveReference(reference, String.valueOf(npc.getDatabaseId()))) {
-            return true;
-        }
-
-        return false;
-    }
-
     private boolean matchesRegionObjective(FeaturePackLoader.QuestEntryDefinition objective, WorldRegion region) {
         if (objective == null || region == null) {
             return false;
@@ -3753,7 +3730,7 @@ public class ScenarioEngine {
 
         List<ScenarioTemplate> configuredTemplates = questTemplates.stream()
             .filter(ScenarioTemplate::hasQuestBriefing)
-            .filter(template -> matchesQuestGiver(npc, template))
+            .filter(template -> matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template))
             .filter(template -> matchesProgressionKindFilter(template, progressionKind))
             .toList();
         if (!configuredTemplates.isEmpty()) {
@@ -3791,7 +3768,7 @@ public class ScenarioEngine {
             if (template != null
                 && template.hasQuestBriefing()
                 && matchesProgressionKindFilter(template, progressionKind)
-                && matchesQuestGiver(npc, template)) {
+                && matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
                 return template;
             }
         }
@@ -3816,7 +3793,7 @@ public class ScenarioEngine {
             return null;
         }
 
-        if (matchesQuestGiver(npc, template)) {
+        if (matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
             return template;
         }
 
@@ -3832,7 +3809,7 @@ public class ScenarioEngine {
         for (int index = 0; index < objectives.size(); index++) {
             FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
             if (matchesObjectiveType(objective, "talk_to_npc")
-                && matchesNpcObjective(objective, npc, template, progress)) {
+                && matchesNpcObjective(plugin.getFeaturePackLoader(), objective, npc, template, progress)) {
                 return true;
             }
         }
@@ -4029,58 +4006,6 @@ public class ScenarioEngine {
 
         Material material = Material.matchMaterial(configuredValue.trim().toUpperCase(Locale.ROOT));
         return material != null ? material : fallback;
-    }
-
-    private boolean matchesQuestGiver(AINPC npc, ScenarioTemplate template) {
-        if (npc == null || template == null) {
-            return false;
-        }
-
-        if (!template.getQuestGiverProfession().isBlank()
-            && !matchesProfessionReference(npc, List.of(template.getQuestGiverProfession()))) {
-            return false;
-        }
-
-        ScenarioRoleRule questGiverRole = template.getRoles().get("QUEST_GIVER");
-        if (questGiverRole == null) {
-            return true;
-        }
-
-        if (!questGiverRole.getRequiredProfessions().isEmpty()
-            && !matchesProfessionReference(npc, questGiverRole.getRequiredProfessions())) {
-            return false;
-        }
-
-        return questGiverRole.getPreferredProfessions().isEmpty()
-            || matchesProfessionReference(npc, questGiverRole.getPreferredProfessions());
-    }
-
-    private boolean matchesProfessionReference(AINPC npc, List<String> references) {
-        if (npc == null || references == null || references.isEmpty()) {
-            return false;
-        }
-
-        String occupation = npc.getOccupation();
-        if (occupation == null || occupation.isBlank()) {
-            return false;
-        }
-
-        FeaturePackLoader loader = plugin.getFeaturePackLoader();
-        for (String reference : references) {
-            if (reference == null || reference.isBlank()) {
-                continue;
-            }
-
-            if (loader != null && loader.matchesProfession(occupation, reference)) {
-                return true;
-            }
-
-            if (normalizeScenarioToken(occupation).equals(normalizeScenarioToken(reference))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private List<String> buildQuestBriefingMessages(ScenarioTemplate template) {
