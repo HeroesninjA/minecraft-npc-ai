@@ -297,6 +297,41 @@ class ScenarioObjectiveProgressTest {
     }
 
     @Test
+    fun consumeQuestObjectivesDoesNothingForNullInventory() {
+        val objective = objective(type = "collect", itemId = "log", amount = 3)
+        consumeQuestObjectives(null, listOf(objective))
+    }
+
+    @Test
+    fun inspectQuestRewardDeliveryReturnsAllowedForNullRewards() {
+        val result = inspectQuestRewardDelivery(null, emptyList(), null)
+        assertTrue(result.canGrant())
+    }
+
+
+
+    @Test
+    fun inspectQuestRewardDeliveryReturnsAllowedForEmptyRewards() {
+        val result = inspectQuestRewardDelivery(null, emptyList(), emptyList())
+        assertTrue(result.canGrant())
+    }
+
+    @Test
+    fun inspectQuestRewardDeliveryReturnsBlockedForNullInventoryWithRealReward() {
+        val reward = objective(type = "collect", itemId = "diamond", amount = 1)
+        val result = inspectQuestRewardDelivery(null, emptyList(), listOf(reward))
+        assertFalse(result.canGrant())
+        assertTrue(result.issues().any { it.contains("Inventarul") })
+    }
+
+    @Test
+    fun inspectQuestRewardDeliveryReturnsAllowedForOnlyStoryRewards() {
+        val reward = objective(type = "set_story_state", itemId = "flag_king", amount = 1)
+        val result = inspectQuestRewardDelivery(null, emptyList(), listOf(reward))
+        assertTrue(result.canGrant())
+    }
+
+    @Test
     fun resolveObjectiveCurrentProgressCapsAtObjectiveAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 5)
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 10), mapOf())

@@ -5,7 +5,215 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="52782eb4-912c-4ded-8ff6-bb0d4cd42144" name="Changes" comment="migration kotline">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/mcp-context-nightly-matrix-run.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/mcp-context-nightly-matrix-run.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/mcp-context-report-global-profiles.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/mcp-context-report-global-profiles.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/mcp-context-report-global-rows.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/mcp-context-report-global-rows.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/mcp-context-report-global.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/mcp-context-report-global.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-nightly-run.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-nightly-run.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-nightly-summary-code.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-nightly-summary-code.jsonl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code-profiles.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code-profiles.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code-rows.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code-rows.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/code/mcp-context-report-code.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-nightly-run.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-nightly-run.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-nightly-summary-debug.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-nightly-summary-debug.jsonl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug-profiles.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug-profiles.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug-rows.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug-rows.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/debug/mcp-context-report-debug.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-nightly-run.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-nightly-run.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-nightly-summary-planning.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-nightly-summary-planning.jsonl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning-profiles.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning-profiles.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning-rows.csv" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning-rows.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning.json" beforeDir="false" afterPath="$PROJECT_DIR$/.ai/nightly/planning/mcp-context-report-planning.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.5.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.5.1/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.5.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.5.1/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.5.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-api/build/kotlin/compileKotlin/cacheable/last-build.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-api/build/kotlin/compileKotlin/cacheable/last-build.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ActiveScenario.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiEntry.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiEntry.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiObjective.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiObjective.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiSnapshot.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiSnapshot.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiStage.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestGuiStage.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestInteractionResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestTrackingMarker.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$QuestTrackingMarker.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioRoleRule.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioTemplate.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine$ScenarioType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/java/main/ro/ainpc/engine/ScenarioEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/kotlin/main/ro/ainpc/engine/ScenarioObjectiveProgressKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/classes/kotlin/main/ro/ainpc/engine/ScenarioObjectiveProgressKt.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.s" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.s" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/last-build.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileKotlin/cacheable/last-build.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileTestKotlin/cacheable/last-build.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileTestKotlin/cacheable/last-build.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileTestKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/kotlin/compileTestKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/-Rdq65M7F0I/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/0L8aqe4RRWA/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/2ztsHlr1MOc/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/3MupvL9Y6eU/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/53RcdVjtf5k/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/2jgUn63Q_5Y.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/6UcWJtqyaRk.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/6jRave-DZ3c.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/86_OXuK7t1A.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/ee1WSb2OUu4.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5TVcTUuvrsw/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5g-HAfh0ZNY/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/5rsNdrlabtI/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/6LViHXoej08/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8KpotSXELBY/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/E5y77DSXI9g.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/WHYrNViH2NQ.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/ZMma-h3cLCw.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/bCBAv0YgXPk.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/jyoSlnaUJOk.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/oo-pUEHi8M8.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8YWlP_bJozg/stbSgsKvGbs.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/8eywlVxjEoE/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/9j6UywNOSnk/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/A2zw74k4kt0/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/BSCTcK8S-Xw/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/CMYG9N5cqRI/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/CkNCoumNCFQ/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/DI4ckqX5EU4/INOpA10ylXg.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/DI4ckqX5EU4/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/DI4ckqX5EU4/mEvfXbX_BhI.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/E9HcQiLLerM/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/Ekj9SzRSiqQ/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/HiNUGsI4Zgo/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/Jf7mP9qLDJs/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/K_H9srJHbT8/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/KiOt8DvVvVY/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/KstQPS-3qxs/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/McDt_5rqXsI/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/NqyryXa7Do8/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/OEoChBU4mzw/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/OT20c4GW52E/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/PkosTZ1mWsg/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/Py2zbxYadT8/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/RkbYvo8bj9U/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/Ss2eeu1xV9w/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/Szp7CT_zKGA/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/TtxTcfd1ZDU/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/VB-Eecc3TRA/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/VjfWHagZhdY/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/W6EOITbFB1Q/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/dsjNhnsUz5M/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/fT7Y06aHJIc/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/fq0xr91fuTc/-elJoZiRog4.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/fq0xr91fuTc/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/fvei37I5ask/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/gesCgZLW_YM/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/jCfJ1VUkNqA/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/jXSJNaVWpwk/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/0AaKUi2lqCg.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/FsRSSrnxzxY.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/Lua7SG-_6dk.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/d70eCRfI_dg.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/jM7bFJP_4aQ.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/rmIGD26O81Y.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/rryk-VVt4Zw.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/lCuJiN_usEI/uSCB4tJyO5w.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/oVF2yn-I858/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/pLHkxq8vn6U/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/q8O4aKUYdIM/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/r2ZlyL27hMk/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/runZy5xyeIc/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/sm98GthWLk4/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/sykBSzKYndU/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/ueJxJeUbJ2k/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/vM8stPEAVt4/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/vSb-FnLPjEc/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/xQuLaa0niE0/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/xZ8Tx-w1Tls/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/xZ8Tx-w1Tls/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/z-mCbb_p19Q/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/zff3R-OoseM/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/reports/tests/test/zqap2Rs8b9I/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.ConfigDefaultsTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.CoreNeutralityStaticAuditTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.StorageDialectStaticAuditTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.addons.AddonRegistryTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.ai.OpenAIConnectionProbeTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.ai.orchestration.AIOrchestrationServiceTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.commands.AINPCCommandRoutingTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.commands.AINPCTabCompleterTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.commands.CodexDemoBacklogTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.commands.PluginCommandDescriptorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.database.DatabaseDialectSqlTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.debug.DebugDumpOutputContractTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.debug.DebugDumpSecretsTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.debug.WorldMappingSemanticIndexTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.FeaturePackDefaultsTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.FeaturePackDependencyValidatorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.FeaturePackMetadataValidatorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestDecisionIntentResolverTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestDirectorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestFallbackConfigTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestLogFilterTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestScenarioContractTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestTemplateSelectorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.QuestTrackingModelsTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioEngineTextTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioObjectiveProgressTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioObjectiveProgressTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioQuestPhaseTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioQuestReferencesTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioRoleScoringTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioStageProgressTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.ScenarioStoryTextTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.engine.runtime.ScenarioRuntimeRegistryTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.gui.GuiKeyTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.gui.QuestLogGuiFilterTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.gui.QuestLogGuiPageTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.kotlincheck.KotlinToolchainTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.managers.NPCManagerTextTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.npc.AINPCProfileDefaultsTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.platform.features.RuntimeFeatureResolverTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.platform.features.RuntimeFeatureStateTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.progression.ProgressionDefinitionTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.progression.ProgressionFilterTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.progression.ProgressionRepositoryTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.progression.ProgressionSelectorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.progression.ProgressionSnapshotTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.routine.RoutineEngineTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.spawn.HouseAllocationTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.spawn.HouseAllocationValidatorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.spawn.HouseholdPersistenceServiceTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.spawn.SpawnBatchPlanHasherTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.spawn.SpawnBatchTrackerTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.story.StoryStateServiceTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.utils.NPCNameGeneratorTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.HouseAllocationPlannerTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.MappingDraftFactoryTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.NpcWorldBindingServiceTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.QuestAnchorResolverTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.SemanticVillageMapperTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.VillagePatchPlannerTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.WorldAdminServiceTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/TEST-ro.ainpc.world.mapping.MappingIntentParserTest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/binary/output-events.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/binary/output-events.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/binary/results-generic.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/test-results/test/binary/results-generic.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/build/tmp/compileJava/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/build/tmp/compileJava/previous-compilation-data.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt" beforeDir="false" afterPath="$PROJECT_DIR$/ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -13,7 +221,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1551" />
+    <option name="cachedIndexableFilesCount" value="1554" />
   </component>
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">

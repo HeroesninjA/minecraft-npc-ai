@@ -1,2 +1,2 @@
 ﻿"profile","runs","usable_runs","failed_runs","attempt1_pct","avg_budget","avg_used","avg_savings_vs_2200_budget","avg_output_length","p50_output_length","p75_output_length","recommended_min_chars_for_success","recommendation_source"
-"code","75","60","15","100","900","294.55","1300","1633.58","850","3316","544","profile_default_adjusted_by_attempt1_pct"
+"code","78","63","15","100","900","298.95","1300","1655.68","850","3316","544","profile_default_adjusted_by_attempt1_pct"

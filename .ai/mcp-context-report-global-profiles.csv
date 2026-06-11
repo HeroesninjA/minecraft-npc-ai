@@ -1,4 +1,4 @@
 ﻿"profile","runs","usable_runs","failed_runs","attempt1_pct","avg_budget","avg_used","avg_savings_vs_2200_budget","avg_output_length","p50_output_length","p75_output_length","recommended_min_chars_for_success","recommendation_source"
-"code","72","57","15","100","900","296.47","1300","1642.56","850","3316","544","profile_default_adjusted_by_attempt1_pct"
-"debug","72","57","15","100","900","579","1300","2719.54","2946","2963","387","profile_default_adjusted_by_attempt1_pct"
-"planning","67","54","13","98.15","909.26","536.93","1290.74","2222.19","1867","2897","787","profile_default_adjusted_by_attempt1_pct"
+"code","75","60","15","100","900","301","1300","1665.32","850","3316","544","profile_default_adjusted_by_attempt1_pct"
+"debug","75","60","15","100","900","579","1300","2719.42","2946","2963","387","profile_default_adjusted_by_attempt1_pct"
+"planning","70","57","13","98.25","908.77","536.72","1291.23","2222.16","1867","2897","787","profile_default_adjusted_by_attempt1_pct"

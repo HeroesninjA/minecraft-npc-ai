@@ -351,6 +351,41 @@ fun inspectQuestInventory(
     return QuestInventoryCheck(missingItems.isEmpty(), missingItems)
 }
 
+fun consumeQuestObjectives(inventory: PlayerInventory?, objectives: List<QuestEntryDefinition>) {
+    for (objective in objectives) {
+        if (!shouldConsumeObjectiveItem(objective)) continue
+        val material = resolveQuestMaterial(objective) ?: continue
+        removeMaterial(inventory, material, objective.amount)
+    }
+}
+
+fun inspectQuestRewardDelivery(
+    inventory: PlayerInventory?,
+    objectivesToConsume: List<QuestEntryDefinition>?,
+    rewards: List<QuestEntryDefinition>?,
+): QuestRewardCheck {
+    if (rewards.isNullOrEmpty()) return QuestRewardCheck.allowed()
+    if (rewards.none { !isQuestStoryAction(it) }) return QuestRewardCheck.allowed()
+    if (inventory == null) return QuestRewardCheck.blocked(listOf("Inventarul jucatorului nu poate fi verificat."))
+
+    val issues = mutableListOf<String>()
+    val simulatedStorage = cloneStorageContents(inventory)
+    simulateQuestObjectiveConsumption(simulatedStorage, objectivesToConsume)
+
+    for (reward in rewards) {
+        if (isQuestStoryAction(reward)) continue
+        val material = resolveQuestMaterial(reward) ?: run {
+            issues.add("Recompensa invalida in configuratie: ${reward.itemId ?: "necunoscut"}")
+            continue
+        }
+        val amount = maxOf(1, reward.amount)
+        if (!simulateAddMaterial(simulatedStorage, material, amount)) {
+            issues.add("Fa loc pentru ${formatQuestAmount(amount, material)}.")
+        }
+    }
+    return if (issues.isEmpty()) QuestRewardCheck.allowed() else QuestRewardCheck.blocked(issues)
+}
+
 fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List<String> {
     val notes = mutableListOf<String>()
     for (reward in rewards) {

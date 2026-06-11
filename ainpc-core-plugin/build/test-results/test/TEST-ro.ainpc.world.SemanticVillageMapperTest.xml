@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.world.SemanticVillageMapperTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-10T19:28:28.003Z" hostname="DESKTOP-FJTPE3F" time="0.016">
-  <properties/>
-  <testcase name="importScanCreatesSemanticRegionPlacesAndNodes()" classname="ro.ainpc.world.SemanticVillageMapperTest" time="0.014"/>
-  <testcase name="importScanRejectsEmptyVillageSignals()" classname="ro.ainpc.world.SemanticVillageMapperTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

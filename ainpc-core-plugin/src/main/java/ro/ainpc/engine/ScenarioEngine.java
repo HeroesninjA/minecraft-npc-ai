@@ -48,7 +48,9 @@ import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.consumeQuestObjectives;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestRewardDelivery;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
 import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
@@ -4941,58 +4943,6 @@ public class ScenarioEngine {
         }
 
         return new QuestObjectiveCheck(missingObjectives.isEmpty(), List.copyOf(missingObjectives));
-    }
-
-    private void consumeQuestObjectives(PlayerInventory inventory,
-                                        List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (!shouldConsumeObjectiveItem(objective)) {
-                continue;
-            }
-            Material material = resolveQuestMaterial(objective);
-            if (material == null) {
-                continue;
-            }
-            removeMaterial(inventory, material, objective.getAmount());
-        }
-    }
-
-    private QuestRewardCheck inspectQuestRewardDelivery(PlayerInventory inventory,
-                                                        List<FeaturePackLoader.QuestEntryDefinition> objectivesToConsume,
-                                                        List<FeaturePackLoader.QuestEntryDefinition> rewards) {
-        if (rewards == null || rewards.isEmpty()) {
-            return QuestRewardCheck.allowed();
-        }
-        boolean hasInventoryReward = rewards.stream().anyMatch(reward -> !isQuestStoryAction(reward));
-        if (!hasInventoryReward) {
-            return QuestRewardCheck.allowed();
-        }
-        if (inventory == null) {
-            return QuestRewardCheck.blocked(List.of("Inventarul jucatorului nu poate fi verificat."));
-        }
-
-        List<String> issues = new ArrayList<>();
-        ItemStack[] simulatedStorage = cloneStorageContents(inventory);
-        simulateQuestObjectiveConsumption(simulatedStorage, objectivesToConsume);
-
-        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
-            if (isQuestStoryAction(reward)) {
-                continue;
-            }
-
-            Material material = resolveQuestMaterial(reward);
-            if (material == null) {
-                issues.add("Recompensa invalida in configuratie: " + (reward != null ? reward.getItemId() : "necunoscut"));
-                continue;
-            }
-
-            int amount = Math.max(1, reward.getAmount());
-            if (!simulateAddMaterial(simulatedStorage, material, amount)) {
-                issues.add("Fa loc pentru " + formatQuestAmount(amount, material) + ".");
-            }
-        }
-
-        return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
     }
 
     private List<String> applyQuestStoryActions(Player player,
