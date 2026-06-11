@@ -108,6 +108,10 @@ import static ro.ainpc.engine.ScenarioQuestCategoryKt.questLogCategoryPriority;
 import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesQuestGiver;
 import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesNpcObjective;
 import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesProfessionReference;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.buildInitialQuestNpcFallbackMessages;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.buildQuestOfferMessage;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.resolveInitialQuestDialogueContext;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.shouldAutoAcceptOnOffer;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -2039,22 +2043,6 @@ public class ScenarioEngine {
         return shouldAutoAcceptOnOffer(template)
             ? setActiveQuestProgress(playerId, player, template)
             : setOfferedQuestProgress(playerId, player, template);
-    }
-
-    private QuestDialogueContext resolveInitialQuestDialogueContext(ScenarioTemplate template) {
-        return shouldAutoAcceptOnOffer(template) ? QuestDialogueContext.ACCEPTED : QuestDialogueContext.OFFER;
-    }
-
-    private List<String> buildInitialQuestNpcFallbackMessages(ScenarioTemplate template) {
-        return shouldAutoAcceptOnOffer(template)
-            ? List.of("Bine. Ma bazez pe tine.", "Intoarce-te cand ai terminat.")
-            : List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template));
-    }
-
-    private boolean shouldAutoAcceptOnOffer(ScenarioTemplate template) {
-        return template != null
-            && template.getQuestContract() != null
-            && template.getQuestContract().autoAcceptOnOffer();
     }
 
     private PlayerQuestProgress setCurrentQuestProgress(UUID playerId,
@@ -4594,28 +4582,6 @@ public class ScenarioEngine {
         String verticalHint = formatVerticalHint(dy);
         return "&7la &e" + Math.round(distance) + " blocuri &7spre &f" + direction
             + verticalHint + " &8(" + coordinates + ")";
-    }
-
-    private String buildQuestOfferMessage(ScenarioTemplate template) {
-        List<String> objectives = template.getObjectives().stream()
-            .map(ScenarioEngineTextKt::formatQuestEntry)
-            .toList();
-        if (objectives.isEmpty()) {
-            return template.getDescription().isBlank()
-                ? "Am nevoie de ajutorul tau."
-                : template.getDescription();
-        }
-
-        boolean deliveryQuest = template.getObjectives().stream().allMatch(ScenarioObjectiveProgressKt::usesInventoryProgress);
-        if (deliveryQuest) {
-            return "Adu-mi " + joinNaturally(objectives) + " si te rasplatesc cum se cuvine.";
-        }
-
-        if (!template.getDescription().isBlank()) {
-            return template.getDescription();
-        }
-
-        return "Ai de facut urmatoarele: " + joinNaturally(objectives) + ".";
     }
 
     private List<String> buildQuestNpcMessages(ScenarioTemplate template,

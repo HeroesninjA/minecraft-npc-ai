@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.engine.ScenarioStoryTextTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-11T15:17:10.751Z" hostname="DESKTOP-FJTPE3F" time="0.003">
+  <properties/>
+  <testcase name="stripObjectivePrefixRemovesKnownQuestPrefixesOnly()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.0"/>
+  <testcase name="storyScopeHelpersNormalizeAliasesAndCleanScopedIds()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.001"/>
+  <testcase name="questEntryMetadataPrefersDirectKeysThenNormalizedKeys()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.0"/>
+  <testcase name="parseStoryListTrimsAndSkipsBlankParts()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.0"/>
+  <testcase name="storyActionTypesNormalizeKnownAliasesOnly()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.0"/>
+  <testcase name="firstNonBlankReturnsOriginalFirstNonBlankValue()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.0"/>
+  <testcase name="normalizeReferenceRemovesMinecraftPrefixAndPunctuation()" classname="ro.ainpc.engine.ScenarioStoryTextTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
