@@ -1,0 +1,15 @@
+﻿{
+    "generated_at":  "2026-06-11T06:12:20.6260175+03:00",
+    "query_file":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\mcp-nightly-queries-planning.txt",
+    "output_dir":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning",
+    "summary_jsonl":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning\\mcp-context-nightly-summary-planning.jsonl",
+    "aggregated_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning\\mcp-context-report-planning.json",
+    "profile":  "planning",
+    "retrieval":  "hybrid",
+    "queries_total":  3,
+    "queries_succeeded":  3,
+    "queries_failed":  0,
+    "failures":  [
+
+                 ]
+}

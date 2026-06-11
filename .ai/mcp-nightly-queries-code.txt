@@ -1,0 +1,4 @@
+﻿# code profile queries
+NPCManager createNPC
+QuestTemplateSelector progression objective
+ScenarioEngine progression selector

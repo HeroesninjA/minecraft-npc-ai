@@ -1,0 +1,23 @@
+﻿{
+    "generated_at":  "2026-05-21T18:18:08.4453481+03:00",
+    "output_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721\\optimized-calibrated\\nightly",
+    "report_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721\\optimized-calibrated",
+    "profiles":  [
+                     "full"
+                 ],
+    "created_query_templates":  [
+
+                                ],
+    "profile_runs":  [
+                         {
+                             "profile":  "full",
+                             "success":  true,
+                             "queries_total":  10,
+                             "queries_succeeded":  10,
+                             "queries_failed":  0,
+                             "run_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721\\optimized-calibrated\\nightly\\full\\mcp-context-nightly-run.json",
+                             "report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721\\optimized-calibrated\\nightly\\full\\mcp-context-report-full.json"
+                         }
+                     ],
+    "global_report":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721\\optimized-calibrated\\mcp-context-report-global.json"
+}

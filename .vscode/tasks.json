@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Gradle: build",
+      "type": "shell",
+      "command": ".\\gradlew.bat build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Gradle: test",
+      "type": "shell",
+      "command": ".\\gradlew.bat test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test"
+    },
+    {
+      "label": "Gradle: clean",
+      "type": "shell",
+      "command": ".\\gradlew.bat clean",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+    ,
+    {
+      "label": "Gradle: prepare Java->Kotlin",
+      "type": "shell",
+      "command": ".\\gradlew.bat prepareJavaToKotlinConversion",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Gradle: convert Java->Kotlin (experimental)",
+      "type": "shell",
+      "command": ".\\gradlew.bat convertJavaToKotlin -PjavaToKotlinConverterCommand=\"<path>\" -PjavaToKotlinConverterArgs=\"<args>\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Gradle: open conversion input in IntelliJ",
+      "type": "shell",
+      "command": ".\\gradlew.bat openJavaToKotlinInputInIdea",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

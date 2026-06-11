@@ -1,0 +1,45 @@
+﻿{
+    "generated_at":  "2026-05-21T18:16:00.0087776+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-20260521-181409\\optimized-warmup\\nightly",
+    "file_pattern":  "*mcp-context-nightly-summary-*.jsonl",
+    "files_scanned":  1,
+    "runs":  20,
+    "attempt_distribution":  {
+                                 "attempt1":  0,
+                                 "attempt2":  0,
+                                 "attempt3":  20,
+                                 "attempt1_pct":  0
+                             },
+    "averages":  {
+                     "selected_budget":  2200,
+                     "tokens_used":  null,
+                     "savings_vs_2200_budget":  0,
+                     "savings_vs_2200_used":  null
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "full",
+                           "runs":  20,
+                           "attempt1_pct":  0,
+                           "avg_budget":  2200,
+                           "avg_used":  null,
+                           "avg_savings_vs_2200_budget":  0,
+                           "avg_output_length":  470,
+                           "p50_output_length":  470,
+                           "p75_output_length":  472,
+                           "recommended_min_chars_for_success":  329,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "full",
+                                                   "runs":  20,
+                                                   "min_chars_for_success_recommended":  329,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  0
+                                               }
+                                           ]
+                        }
+}

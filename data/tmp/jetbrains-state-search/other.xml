@@ -1,0 +1,76 @@
+<application>
+  <component name="FileEditorProviderManager">{}</component>
+  <component name="LangManager">
+    <option name="languageName" value="JAVA" />
+  </component>
+  <component name="NotRoamableUiSettings">
+    <option name="fontSize" value="12.0" />
+    <option name="presentationModeIdeScale" value="1.75" />
+  </component>
+  <component name="PropertyService"><![CDATA[{
+  "keyToString": {
+    "InstalledPluginsSearchHistory": "agent",
+    "LAST_EXTRACTOR_SCRIPTS_CLEANUP_VERSION/data/aggregators": "IU-261.22158.277",
+    "MarketplacePluginsSearchHistory": "codex\ncode\nco\nc\nc/suggested",
+    "NextRunPlatformUpdateBuild": "IU-261.24374.151",
+    "NextRunPlatformUpdateSelfBuild": "IU-261.22158.277",
+    "NextRunPlatformUpdateVersion": "2026.1.2",
+    "PluginConfigurable.selectionTab": "1",
+    "RunOnceActivity.AIPromoWindowAdvisorPreheat": "true",
+    "RunOnceActivity.MCP settings loaded": "true",
+    "RunOnceActivity.TerminalFontSettingsService.fixStoredNonMonospacedFonts": "true",
+    "RunOnceActivity.TerminalOptionsProvider.TerminalEngineMigration.2026.1": "true",
+    "RunOnceActivity.VFSInitializationConditionsToFusReporter": "true",
+    "RunOnceActivity.gateway.wsl.native.mode.default.set": "true",
+    "RunOnceActivity.git.modal.commit.toggle": "true",
+    "RunOnceActivity.llm.claude.code.byok.migration": "true",
+    "RunOnceActivity.reset.auto.reparse.settings.to.default": "true",
+    "RunOnceActivity.set.default.devcontainer.project.open.action": "true",
+    "SettingsSearchHistory": "agent",
+    "TextEditorWithPreview.SplitterProportionKey": "0.22066326",
+    "WelcomeFeature.SHORT_WELCOME_GUIDE_SHOWN": "true",
+    "ask.about.ctrl.y.shortcut.v2": "true",
+    "build.toolwindow.Build Output.selection.state": "com.intellij.build.BuildTreeConsoleView",
+    "build.toolwindow.run.selection.state": "com.intellij.build.BuildTreeConsoleView",
+    "evlsprt3.261": "6",
+    "experimental.ui.first.switch": "true",
+    "experimental.ui.on.first.startup": "true",
+    "experimental.ui.used.version": "261.22158.277",
+    "fileTypeChangedCounter": "5",
+    "fontSizeToResetConsole": "13.0",
+    "fontSizeToResetEditor": "13.0",
+    "git.working.trees.stop.showing.new.badge": "true",
+    "got.it.tooltip.Plugins Auto-Update": "1",
+    "got.it.tooltip.database.cloud.explorer.promo": "1",
+    "got.it.tooltip.settings.sync.in.settings": "1",
+    "ide.islands.ab3": "true",
+    "ide.islands.new.darcula": "true",
+    "installed.kotlin.plugin.version": "261.22158.277-IJ",
+    "kotlin.lastUpdateCheck": "1779463765717",
+    "llm.installer.last.toolwindow.state": "AI_ASSISTANT",
+    "migrated.non.roamable.values.from.general.settings": "true",
+    "previousColorScheme": "_@user_Islands Dark",
+    "registry.to.advanced.settings.migration.build": "IU-261.22158.277",
+    "trial.state.last.availability.check": "1779518892315",
+    "trial.state.last.availability.state": "false",
+    "trial.state.last.color.state.clicked": "true",
+    "trial.state.last.state": "FREE",
+    "ts.lib.d.ts.version": "5.9.3"
+  },
+  "keyToStringList": {
+    "fileTypeDetectors": [
+      "com.intellij.ide.scratch.ScratchFileServiceImpl$Detector",
+      "com.intellij.database.vfs.DbStorageFileType$Detector",
+      "com.demonwav.mcdev.nbt.filetype.NbtFileTypeDetector",
+      "com.intellij.docker.dockerFile.DockerFileTypeDetector",
+      "org.jetbrains.plugins.textmate.TextMateFileType$TextMateFileDetector"
+    ]
+  }
+}]]></component>
+  <component name="ReworkedTerminalUsage">{
+  &quot;firstIdeSessionMoment&quot;: {
+    &quot;type&quot;: &quot;org.jetbrains.plugins.terminal.TerminalFirstIdeSessionMoment.Version&quot;,
+    &quot;build&quot;: &quot;IU-261.22158.277&quot;
+  }
+}</component>
+</application>

@@ -43,10 +43,10 @@ Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la fin
 | Zona | Linii Java ramase | Taskuri estimate |
 |---|---:|---:|
 | `AINPCCommand.java` | 6267 | 12 |
-| `ScenarioEngine.java` | 6086 | 3 |
+| `ScenarioEngine.java` | 5797 | 3 |
 | `NPCManager.java` | 2566 | 1 |
 | Gate final si hardening | n/a | 6 |
-| Total | 14919 | 22 |
+| Total | 14630 | 22 |
 
 ## Regula de actualizare
 
@@ -7743,3 +7743,180 @@ Inventar dupa slice:
 
 Rollback:
 - sterge `ScenarioQuestPhase.kt` si `ScenarioQuestPhaseTest.kt`, readauga metodele de rezolutie faza in `ScenarioEngine.java`, elimina importurile statice `ScenarioQuestPhaseKt`
+
+### KOT-271
+
+Data: 2026-06-10
+ID: KOT-271
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioObjectiveProgressTest.kt`
+
+Input selectat / filtrat:
+- Candidati analizati: `hasObjectiveType`, `hasInventoryObjective`, `matchesObjectiveReference`, `resolveQuestObjectiveState` (2 overloads), `shouldShowObjectiveForCurrentStage`, `shouldInspectObjectiveForCurrentStage` (identic cu `shouldShowObjectiveForCurrentStage`), `incrementObjectiveProgress`, `buildCompletedObjectiveProgress` (amânat — depinde de `buildObjectiveProgressSnapshot` care foloseste Bukkit API)
+- Filtru aplicat: fara Bukkit `PlayerInventory`/`Material`, fara `Player`, fara DB, fara metode private care depind de alte metode private neextrase
+- Input ales: 7 metode pure (~75 linii Java) → 60 linii Kotlin
+
+Microtaskuri:
+- `hasObjectiveType`, `hasInventoryObjective`, `matchesObjectiveReference`, `resolveQuestObjectiveState` x2, `shouldShowObjectiveForCurrentStage`, `incrementObjectiveProgress` mutate in Kotlin.
+- `shouldInspectObjectiveForCurrentStage` eliminata (era identica cu `shouldShowObjectiveForCurrentStage`); call-site-ul unic (linia 5170) redirectionat.
+- `ScenarioEngine.java` redus de la 6086 la 5998 linii; `ScenarioObjectiveProgress.kt` marit de la 103 la 168 linii.
+- Testele noi (15 cazuri) valideaza: matching tip obiectiv, matching referinta obiectiv, stari obiectiv (COMPLETED/FAILED/PENDING/IN_PROGRESS/STARTED), filtru etapa, increment progress cu cap la amount.
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioObjectiveProgressTest` (PASS, 22 teste)
+- `.\\gradlew.bat test --rerun-tasks` (PASS, 385 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (85.94% Kotlin lines)
+
+Observatii:
+- `matchesObjectiveReference` nu mai foloseste `stripObjectivePrefix` — functia `stripObjectivePrefix` din `ScenarioStoryText.kt` nu include prefixele "objective"/"step"/"questentry"/"task" pe care le avea versiunea Java privata originala.
+- `incrementObjectiveProgress` poate scadea valoarea curenta daca depaseste `objectiveAmount` (capat superior).
+- `buildCompletedObjectiveProgress` amânat pentru un viitor slice — depinde de `buildObjectiveProgressSnapshot` care foloseste `PlayerInventory` si `Material` (Bukkit).
+- `shouldInspectObjectiveForCurrentStage` era duplicat exact al `shouldShowObjectiveForCurrentStage` — consolidat.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.831 (6267 + 5998 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 85.94% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`, readauga `shouldInspectObjectiveForCurrentStage`
+
+### KOT-272
+
+Data: 2026-06-10
+ID: KOT-272
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioObjectiveProgressTest.kt`
+
+Input selectat / filtrat:
+- Candidati analizati: `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot` (2 overloads), `buildCompletedObjectiveProgress`
+- Cluster de progres obiectiv cu inventar Bukkit (~89 linii Java → ~65 linii Kotlin)
+- Dependente: `resolveQuestMaterial` (deja in `ScenarioEngineText.kt`), `usesInventoryProgress`, `buildObjectiveKey`, `readObjectiveProgress`, `isObjectiveActiveForPhase` (toate deja in Kotlin)
+
+Microtaskuri:
+- `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot` x2, `buildCompletedObjectiveProgress` mutate in Kotlin (`ScenarioObjectiveProgress.kt`).
+- Metodele Java private eliminate din `ScenarioEngine.java`.
+- Importuri statice `countMaterial`, `removeMaterial`, `buildObjectiveProgressSnapshot`, `buildCompletedObjectiveProgress` adaugate.
+- `ScenarioEngine.java` redus de la 5998 la 5922 linii; `ScenarioObjectiveProgress.kt` marit de la 168 la ~220 linii.
+- Teste noi: 6 cazuri (null/edge-case pentru countMaterial, removeMaterial, snapshot, completed).
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioObjectiveProgressTest` (PASS, 28 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (86.01% Kotlin lines, +0.07% fata de KOT-271)
+
+Observatii:
+- `PlayerInventory`/`Material`/`ItemStack` importate in Kotlin — primele referinte directe la Bukkit API in Kotlinul de productie.
+- Tipurile Bukkit (`PlayerInventory?`, `Material?`) sunt nullable — pastreaza acelasi contract ca versiunea Java.
+- `simulateRemoveMaterial` (care lucreaza pe `ItemStack[]` direct) ramane in Java — nu face parte din acest cluster.
+- Testele pentru calea fericita (PlayerInventory cu continut real) necesita MockBukkit/PaperAPI test framework — nu au fost adaugate in acest slice.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.695 (6267 + 5862 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 86.08% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`
+
+### KOT-273
+
+Data: 2026-06-10
+ID: KOT-273
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/ScenarioObjectiveProgress.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/ScenarioObjectiveProgressTest.kt`
+
+Input selectat / filtrat:
+- Candidati analizati: `cloneStorageContents`, `simulateQuestObjectiveConsumption`, `simulateRemoveMaterial` (pe `ItemStack[]`), `simulateAddMaterial`
+- Cluster de simulare inventar (~70 linii Java → ~50 linii Kotlin)
+- Operatii pure pe `Array<ItemStack?>` — fara dependente de stare `ScenarioEngine`
+- Dependente: `shouldConsumeObjectiveItem` (deja in `ScenarioObjectiveProgress.kt`), `resolveQuestMaterial` (deja in `ScenarioEngineText.kt`)
+
+Microtaskuri:
+- `cloneStorageContents`, `simulateQuestObjectiveConsumption`, `simulateRemoveMaterial`, `simulateAddMaterial` mutate in Kotlin (`ScenarioObjectiveProgress.kt`).
+- Metodele Java private eliminate din `ScenarioEngine.java`.
+- Importuri statice adaugate pentru toate cele 4 functii.
+- `ScenarioEngine.java` redus de la 5922 la 5862 linii; `ScenarioObjectiveProgress.kt` marit de la 252 la 279 linii.
+- Teste noi: 5 cazuri (null/edge-case pentru cloneStorageContents, simulateConsumption, simulateRemove, simulateAdd).
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.ScenarioObjectiveProgressTest` (PASS, 33 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (86.08% Kotlin lines, +0.07% fata de KOT-272)
+
+Observatii:
+- `simulateRemoveMaterial` (pe `Array<ItemStack?>`) este distincta de `removeMaterial` (pe `PlayerInventory`) — overload prin tipul parametrului.
+- Testele pentru calea fericita (ItemStack[] cu continut real) necesita crearea de obiecte Bukkit — nu au fost adaugate in acest slice.
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.695 (6267 + 5862 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 86.08% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina functiile adaugate din `ScenarioObjectiveProgress.kt`, readauga metodele Java in `ScenarioEngine.java`, elimina importurile statice `ScenarioObjectiveProgressKt`
+
+### KOT-274
+
+Data: 2026-06-10
+ID: KOT-274
+Status: validat local
+Zona: `ro.ainpc.engine`
+Tip: productie + test
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/QuestLogFilter.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/engine/ScenarioEngine.java`
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/QuestLogFilterTest.kt`
+
+Input selectat / filtrat:
+- Candidat: `parseQuestLogFilter` (~65 linii Java)
+- Mapare string → `QuestLogFilter` enum, zero dependente de metode private din `ScenarioEngine`
+- `QuestLogFilter` deja in Kotlin (enum cu 63 de valori), `normalizeReference` deja in `ScenarioEngineText.kt`
+
+Microtaskuri:
+- `parseQuestLogFilter` mutata in Kotlin (`QuestLogFilter.kt`) ca functie top-level.
+- Metoda Java privata eliminata din `ScenarioEngine.java`.
+- Import static `parseQuestLogFilter` din `QuestLogFilterKt` adaugat.
+- `ScenarioEngine.java` redus de la 5862 la 5797 linii; `QuestLogFilter.kt` marit de la 203 la 263 linii.
+- Fisier de test nou: `QuestLogFilterTest.kt` cu 28 de cazuri.
+
+Gate local:
+- `.\\gradlew.bat ainpc-core-plugin:test --tests ro.ainpc.engine.QuestLogFilterTest` (PASS, 28 teste)
+- `.\\gradlew.bat compileKotlin compileJava --rerun-tasks` (PASS)
+- `.\\gradlew.bat kotlinRatio` (86.16% Kotlin lines, +0.08% fata de KOT-273)
+
+Inventar dupa slice:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 14.630 (6267 + 5797 + 2566)
+- global Gradle `kotlinRatio`: 611 fisiere Kotlin, 3 fisiere Java, 86.16% Kotlin dupa linii
+- taskuri estimate ramase: `ScenarioEngine` 3, `AINPCCommand` 12, `NPCManager` 1, gate 6 = 22 total
+
+Rollback:
+- elimina `parseQuestLogFilter` din `QuestLogFilter.kt`, readauga metoda Java in `ScenarioEngine.java`, elimina importul static `QuestLogFilterKt`

@@ -1,0 +1,14 @@
+﻿MCP_READY tools=16 resources=4 collection=ainpc_code retrieval=hybrid
+QUERY NPCManager createNPC
+
+CONTEXT profile=code retrieval=hybrid query="NPCManager createNPC" tokens=129/900
+
+CODE:
+- ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java [ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java#1] keyword=84 hybrid=16.328: ....util.concurrent.ConcurrentHashMap; import java.util.function.Predicate; /** * Manager pentru toate NPC-urile AI din plugin */ public class NPCManager { private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText(); private final AINPCPlugin plugin; private final Gson gson; private final Map<UUID, AINPC> npcsByUuid; private final Map<Integer, AINPC> npcsById; private fi...
+
+RULES:
+
+CHANGELOG:
+
+MEMORY:
+

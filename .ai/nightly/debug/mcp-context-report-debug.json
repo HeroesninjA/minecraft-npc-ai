@@ -1,0 +1,70 @@
+﻿{
+    "generated_at":  "2026-06-11T06:12:18.3904861+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\debug",
+    "file_pattern":  "*mcp-context*summary*.json*",
+    "files_scanned":  1,
+    "runs":  75,
+    "usable_runs":  60,
+    "failed_runs":  15,
+    "usable_run_pct":  80,
+    "attempt_distribution":  {
+                                 "attempt1":  60,
+                                 "attempt2":  6,
+                                 "attempt3":  9,
+                                 "attempt1_pct":  80,
+                                 "usable_attempt1":  60,
+                                 "usable_attempt2":  0,
+                                 "usable_attempt3":  0,
+                                 "usable_attempt1_pct":  100
+                             },
+    "averages":  {
+                     "selected_budget":  900,
+                     "tokens_used":  579,
+                     "savings_vs_2200_budget":  1300,
+                     "savings_vs_2200_used":  1621
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "debug",
+                           "runs":  75,
+                           "usable_runs":  60,
+                           "failed_runs":  15,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  579,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  2719.42,
+                           "p50_output_length":  2946,
+                           "p75_output_length":  2963,
+                           "recommended_min_chars_for_success":  387,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "failures_by_reason":  [
+                               {
+                                   "reason":  "legacy-missing-token-metadata",
+                                   "count":  9
+                               },
+                               {
+                                   "reason":  "below-min-chars",
+                                   "count":  3
+                               },
+                               {
+                                   "reason":  "missing-token-metadata",
+                                   "count":  3
+                               }
+                           ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "debug",
+                                                   "runs":  75,
+                                                   "usable_runs":  60,
+                                                   "failed_runs":  15,
+                                                   "min_chars_for_success_recommended":  387,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  100
+                                               }
+                                           ]
+                        }
+}

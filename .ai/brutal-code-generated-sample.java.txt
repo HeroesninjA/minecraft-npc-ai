@@ -1,0 +1,1572 @@
+public final class MassiveGenerated {
+  private MassiveGenerated() {}
+  public static int selfCheck() {
+    int sum = 0;
+    sum += unit1();
+    sum += unit2();
+    sum += unit3();
+    sum += unit4();
+    sum += unit5();
+    sum += unit6();
+    sum += unit7();
+    sum += unit8();
+    sum += unit9();
+    sum += unit10();
+    sum += unit11();
+    sum += unit12();
+    sum += unit13();
+    sum += unit14();
+    sum += unit15();
+    sum += unit16();
+    sum += unit17();
+    sum += unit18();
+    sum += unit19();
+    sum += unit20();
+    sum += unit21();
+    sum += unit22();
+    sum += unit23();
+    sum += unit24();
+    sum += unit25();
+    sum += unit26();
+    sum += unit27();
+    sum += unit28();
+    sum += unit29();
+    sum += unit30();
+    sum += unit31();
+    sum += unit32();
+    sum += unit33();
+    sum += unit34();
+    sum += unit35();
+    sum += unit36();
+    sum += unit37();
+    sum += unit38();
+    sum += unit39();
+    sum += unit40();
+    sum += unit41();
+    sum += unit42();
+    sum += unit43();
+    sum += unit44();
+    sum += unit45();
+    sum += unit46();
+    sum += unit47();
+    sum += unit48();
+    sum += unit49();
+    sum += unit50();
+    sum += unit51();
+    sum += unit52();
+    sum += unit53();
+    sum += unit54();
+    sum += unit55();
+    sum += unit56();
+    sum += unit57();
+    sum += unit58();
+    sum += unit59();
+    sum += unit60();
+    sum += unit61();
+    sum += unit62();
+    sum += unit63();
+    sum += unit64();
+    sum += unit65();
+    sum += unit66();
+    sum += unit67();
+    sum += unit68();
+    sum += unit69();
+    sum += unit70();
+    sum += unit71();
+    sum += unit72();
+    sum += unit73();
+    sum += unit74();
+    sum += unit75();
+    sum += unit76();
+    sum += unit77();
+    sum += unit78();
+    sum += unit79();
+    sum += unit80();
+    sum += unit81();
+    sum += unit82();
+    sum += unit83();
+    sum += unit84();
+    sum += unit85();
+    sum += unit86();
+    sum += unit87();
+    sum += unit88();
+    sum += unit89();
+    sum += unit90();
+    sum += unit91();
+    sum += unit92();
+    sum += unit93();
+    sum += unit94();
+    sum += unit95();
+    sum += unit96();
+    sum += unit97();
+    sum += unit98();
+    sum += unit99();
+    sum += unit100();
+    sum += unit101();
+    sum += unit102();
+    sum += unit103();
+    sum += unit104();
+    sum += unit105();
+    sum += unit106();
+    sum += unit107();
+    sum += unit108();
+    sum += unit109();
+    sum += unit110();
+    sum += unit111();
+    sum += unit112();
+    sum += unit113();
+    sum += unit114();
+    sum += unit115();
+    sum += unit116();
+    sum += unit117();
+    sum += unit118();
+    sum += unit119();
+    sum += unit120();
+    sum += unit121();
+    sum += unit122();
+    sum += unit123();
+    sum += unit124();
+    sum += unit125();
+    sum += unit126();
+    sum += unit127();
+    sum += unit128();
+    sum += unit129();
+    sum += unit130();
+    sum += unit131();
+    sum += unit132();
+    sum += unit133();
+    sum += unit134();
+    sum += unit135();
+    sum += unit136();
+    sum += unit137();
+    sum += unit138();
+    sum += unit139();
+    sum += unit140();
+    sum += unit141();
+    sum += unit142();
+    sum += unit143();
+    sum += unit144();
+    sum += unit145();
+    sum += unit146();
+    sum += unit147();
+    sum += unit148();
+    sum += unit149();
+    sum += unit150();
+    sum += unit151();
+    sum += unit152();
+    sum += unit153();
+    sum += unit154();
+    sum += unit155();
+    sum += unit156();
+    sum += unit157();
+    sum += unit158();
+    sum += unit159();
+    sum += unit160();
+    sum += unit161();
+    sum += unit162();
+    sum += unit163();
+    sum += unit164();
+    sum += unit165();
+    sum += unit166();
+    sum += unit167();
+    sum += unit168();
+    sum += unit169();
+    sum += unit170();
+    sum += unit171();
+    sum += unit172();
+    sum += unit173();
+    sum += unit174();
+    sum += unit175();
+    sum += unit176();
+    sum += unit177();
+    sum += unit178();
+    sum += unit179();
+    sum += unit180();
+    sum += unit181();
+    sum += unit182();
+    sum += unit183();
+    sum += unit184();
+    sum += unit185();
+    sum += unit186();
+    sum += unit187();
+    sum += unit188();
+    sum += unit189();
+    sum += unit190();
+    sum += unit191();
+    sum += unit192();
+    sum += unit193();
+    sum += unit194();
+    sum += unit195();
+    sum += unit196();
+    sum += unit197();
+    sum += unit198();
+    sum += unit199();
+    sum += unit200();
+    sum += unit201();
+    sum += unit202();
+    sum += unit203();
+    sum += unit204();
+    sum += unit205();
+    sum += unit206();
+    sum += unit207();
+    sum += unit208();
+    sum += unit209();
+    sum += unit210();
+    sum += unit211();
+    sum += unit212();
+    sum += unit213();
+    sum += unit214();
+    sum += unit215();
+    sum += unit216();
+    sum += unit217();
+    sum += unit218();
+    sum += unit219();
+    sum += unit220();
+    sum += unit221();
+    sum += unit222();
+    sum += unit223();
+    sum += unit224();
+    sum += unit225();
+    sum += unit226();
+    sum += unit227();
+    sum += unit228();
+    sum += unit229();
+    sum += unit230();
+    sum += unit231();
+    sum += unit232();
+    sum += unit233();
+    sum += unit234();
+    sum += unit235();
+    sum += unit236();
+    sum += unit237();
+    sum += unit238();
+    sum += unit239();
+    sum += unit240();
+    sum += unit241();
+    sum += unit242();
+    sum += unit243();
+    sum += unit244();
+    sum += unit245();
+    sum += unit246();
+    sum += unit247();
+    sum += unit248();
+    sum += unit249();
+    sum += unit250();
+    sum += unit251();
+    sum += unit252();
+    sum += unit253();
+    sum += unit254();
+    sum += unit255();
+    sum += unit256();
+    sum += unit257();
+    sum += unit258();
+    sum += unit259();
+    sum += unit260();
+    return sum;
+  }
+  public static void main(String[] args) {
+    int value = selfCheck();
+    if (value != 33930) { throw new IllegalStateException("bad sum: " + value); }
+    System.out.println("OK " + value);
+  }
+  private static int unit1() {
+    int base = 1;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit2() {
+    int base = 2;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit3() {
+    int base = 3;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit4() {
+    int base = 4;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit5() {
+    int base = 5;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit6() {
+    int base = 6;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit7() {
+    int base = 7;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit8() {
+    int base = 8;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit9() {
+    int base = 9;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit10() {
+    int base = 10;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit11() {
+    int base = 11;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit12() {
+    int base = 12;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit13() {
+    int base = 13;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit14() {
+    int base = 14;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit15() {
+    int base = 15;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit16() {
+    int base = 16;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit17() {
+    int base = 17;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit18() {
+    int base = 18;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit19() {
+    int base = 19;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit20() {
+    int base = 20;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit21() {
+    int base = 21;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit22() {
+    int base = 22;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit23() {
+    int base = 23;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit24() {
+    int base = 24;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit25() {
+    int base = 25;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit26() {
+    int base = 26;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit27() {
+    int base = 27;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit28() {
+    int base = 28;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit29() {
+    int base = 29;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit30() {
+    int base = 30;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit31() {
+    int base = 31;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit32() {
+    int base = 32;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit33() {
+    int base = 33;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit34() {
+    int base = 34;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit35() {
+    int base = 35;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit36() {
+    int base = 36;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit37() {
+    int base = 37;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit38() {
+    int base = 38;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit39() {
+    int base = 39;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit40() {
+    int base = 40;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit41() {
+    int base = 41;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit42() {
+    int base = 42;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit43() {
+    int base = 43;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit44() {
+    int base = 44;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit45() {
+    int base = 45;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit46() {
+    int base = 46;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit47() {
+    int base = 47;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit48() {
+    int base = 48;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit49() {
+    int base = 49;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit50() {
+    int base = 50;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit51() {
+    int base = 51;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit52() {
+    int base = 52;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit53() {
+    int base = 53;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit54() {
+    int base = 54;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit55() {
+    int base = 55;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit56() {
+    int base = 56;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit57() {
+    int base = 57;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit58() {
+    int base = 58;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit59() {
+    int base = 59;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit60() {
+    int base = 60;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit61() {
+    int base = 61;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit62() {
+    int base = 62;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit63() {
+    int base = 63;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit64() {
+    int base = 64;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit65() {
+    int base = 65;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit66() {
+    int base = 66;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit67() {
+    int base = 67;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit68() {
+    int base = 68;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit69() {
+    int base = 69;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit70() {
+    int base = 70;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit71() {
+    int base = 71;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit72() {
+    int base = 72;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit73() {
+    int base = 73;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit74() {
+    int base = 74;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit75() {
+    int base = 75;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit76() {
+    int base = 76;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit77() {
+    int base = 77;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit78() {
+    int base = 78;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit79() {
+    int base = 79;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit80() {
+    int base = 80;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit81() {
+    int base = 81;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit82() {
+    int base = 82;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit83() {
+    int base = 83;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit84() {
+    int base = 84;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit85() {
+    int base = 85;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit86() {
+    int base = 86;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit87() {
+    int base = 87;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit88() {
+    int base = 88;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit89() {
+    int base = 89;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit90() {
+    int base = 90;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit91() {
+    int base = 91;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit92() {
+    int base = 92;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit93() {
+    int base = 93;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit94() {
+    int base = 94;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit95() {
+    int base = 95;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit96() {
+    int base = 96;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit97() {
+    int base = 97;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit98() {
+    int base = 98;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit99() {
+    int base = 99;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit100() {
+    int base = 100;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit101() {
+    int base = 101;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit102() {
+    int base = 102;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit103() {
+    int base = 103;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit104() {
+    int base = 104;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit105() {
+    int base = 105;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit106() {
+    int base = 106;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit107() {
+    int base = 107;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit108() {
+    int base = 108;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit109() {
+    int base = 109;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit110() {
+    int base = 110;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit111() {
+    int base = 111;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit112() {
+    int base = 112;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit113() {
+    int base = 113;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit114() {
+    int base = 114;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit115() {
+    int base = 115;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit116() {
+    int base = 116;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit117() {
+    int base = 117;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit118() {
+    int base = 118;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit119() {
+    int base = 119;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit120() {
+    int base = 120;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit121() {
+    int base = 121;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit122() {
+    int base = 122;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit123() {
+    int base = 123;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit124() {
+    int base = 124;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit125() {
+    int base = 125;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit126() {
+    int base = 126;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit127() {
+    int base = 127;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit128() {
+    int base = 128;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit129() {
+    int base = 129;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit130() {
+    int base = 130;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit131() {
+    int base = 131;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit132() {
+    int base = 132;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit133() {
+    int base = 133;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit134() {
+    int base = 134;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit135() {
+    int base = 135;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit136() {
+    int base = 136;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit137() {
+    int base = 137;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit138() {
+    int base = 138;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit139() {
+    int base = 139;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit140() {
+    int base = 140;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit141() {
+    int base = 141;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit142() {
+    int base = 142;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit143() {
+    int base = 143;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit144() {
+    int base = 144;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit145() {
+    int base = 145;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit146() {
+    int base = 146;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit147() {
+    int base = 147;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit148() {
+    int base = 148;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit149() {
+    int base = 149;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit150() {
+    int base = 150;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit151() {
+    int base = 151;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit152() {
+    int base = 152;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit153() {
+    int base = 153;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit154() {
+    int base = 154;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit155() {
+    int base = 155;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit156() {
+    int base = 156;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit157() {
+    int base = 157;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit158() {
+    int base = 158;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit159() {
+    int base = 159;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit160() {
+    int base = 160;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit161() {
+    int base = 161;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit162() {
+    int base = 162;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit163() {
+    int base = 163;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit164() {
+    int base = 164;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit165() {
+    int base = 165;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit166() {
+    int base = 166;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit167() {
+    int base = 167;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit168() {
+    int base = 168;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit169() {
+    int base = 169;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit170() {
+    int base = 170;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit171() {
+    int base = 171;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit172() {
+    int base = 172;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit173() {
+    int base = 173;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit174() {
+    int base = 174;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit175() {
+    int base = 175;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit176() {
+    int base = 176;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit177() {
+    int base = 177;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit178() {
+    int base = 178;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit179() {
+    int base = 179;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit180() {
+    int base = 180;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit181() {
+    int base = 181;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit182() {
+    int base = 182;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit183() {
+    int base = 183;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit184() {
+    int base = 184;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit185() {
+    int base = 185;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit186() {
+    int base = 186;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit187() {
+    int base = 187;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit188() {
+    int base = 188;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit189() {
+    int base = 189;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit190() {
+    int base = 190;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit191() {
+    int base = 191;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit192() {
+    int base = 192;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit193() {
+    int base = 193;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit194() {
+    int base = 194;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit195() {
+    int base = 195;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit196() {
+    int base = 196;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit197() {
+    int base = 197;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit198() {
+    int base = 198;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit199() {
+    int base = 199;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit200() {
+    int base = 200;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit201() {
+    int base = 201;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit202() {
+    int base = 202;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit203() {
+    int base = 203;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit204() {
+    int base = 204;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit205() {
+    int base = 205;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit206() {
+    int base = 206;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit207() {
+    int base = 207;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit208() {
+    int base = 208;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit209() {
+    int base = 209;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit210() {
+    int base = 210;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit211() {
+    int base = 211;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit212() {
+    int base = 212;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit213() {
+    int base = 213;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit214() {
+    int base = 214;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit215() {
+    int base = 215;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit216() {
+    int base = 216;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit217() {
+    int base = 217;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit218() {
+    int base = 218;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit219() {
+    int base = 219;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit220() {
+    int base = 220;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit221() {
+    int base = 221;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit222() {
+    int base = 222;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit223() {
+    int base = 223;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit224() {
+    int base = 224;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit225() {
+    int base = 225;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit226() {
+    int base = 226;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit227() {
+    int base = 227;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit228() {
+    int base = 228;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit229() {
+    int base = 229;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit230() {
+    int base = 230;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit231() {
+    int base = 231;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit232() {
+    int base = 232;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit233() {
+    int base = 233;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit234() {
+    int base = 234;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit235() {
+    int base = 235;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit236() {
+    int base = 236;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit237() {
+    int base = 237;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit238() {
+    int base = 238;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit239() {
+    int base = 239;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit240() {
+    int base = 240;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit241() {
+    int base = 241;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit242() {
+    int base = 242;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit243() {
+    int base = 243;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit244() {
+    int base = 244;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit245() {
+    int base = 245;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit246() {
+    int base = 246;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit247() {
+    int base = 247;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit248() {
+    int base = 248;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit249() {
+    int base = 249;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit250() {
+    int base = 250;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit251() {
+    int base = 251;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit252() {
+    int base = 252;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit253() {
+    int base = 253;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit254() {
+    int base = 254;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit255() {
+    int base = 255;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit256() {
+    int base = 256;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit257() {
+    int base = 257;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit258() {
+    int base = 258;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit259() {
+    int base = 259;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+  private static int unit260() {
+    int base = 260;
+    int adjusted = base + 1;
+    return adjusted - 1;
+  }
+}

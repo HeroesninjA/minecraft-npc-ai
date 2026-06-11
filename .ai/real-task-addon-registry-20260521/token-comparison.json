@@ -1,0 +1,24 @@
+﻿{
+    "generated_at":  "2026-05-21T18:27:39.9501445+03:00",
+    "task":  "AddonRegistry validation dependencies/capabilities/runtime",
+    "query":  "AddonRegistry validate addon dependencies capabilities runtime mode compatibility clear messages",
+    "optimized":  {
+                      "selected_budget":  900,
+                      "top_k":  8,
+                      "used_tokens":  258,
+                      "output_length":  1546,
+                      "attempt":  1
+                  },
+    "baseline":  {
+                     "selected_budget":  2200,
+                     "top_k":  14,
+                     "used_tokens":  318,
+                     "output_length":  1473,
+                     "attempt":  1
+                 },
+    "savings":  {
+                    "used_tokens_saved":  60,
+                    "used_tokens_saved_pct":  18.87,
+                    "budget_saved":  1300
+                }
+}

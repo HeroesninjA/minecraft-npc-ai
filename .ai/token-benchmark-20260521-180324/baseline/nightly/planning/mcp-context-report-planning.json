@@ -1,0 +1,45 @@
+﻿{
+    "generated_at":  "2026-05-21T18:03:46.8580498+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-20260521-180324\\baseline\\nightly\\planning",
+    "file_pattern":  "*mcp-context*summary*.json*",
+    "files_scanned":  1,
+    "runs":  3,
+    "attempt_distribution":  {
+                                 "attempt1":  3,
+                                 "attempt2":  0,
+                                 "attempt3":  0,
+                                 "attempt1_pct":  100
+                             },
+    "averages":  {
+                     "selected_budget":  2200,
+                     "tokens_used":  1060,
+                     "savings_vs_2200_budget":  0,
+                     "savings_vs_2200_used":  1140
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "planning",
+                           "runs":  3,
+                           "attempt1_pct":  100,
+                           "avg_budget":  2200,
+                           "avg_used":  1060,
+                           "avg_savings_vs_2200_budget":  0,
+                           "avg_output_length":  3884,
+                           "p50_output_length":  3886,
+                           "p75_output_length":  3886,
+                           "recommended_min_chars_for_success":  650,
+                           "recommendation_source":  "profile_default"
+                       }
+                   ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "planning",
+                                                   "runs":  3,
+                                                   "min_chars_for_success_recommended":  650,
+                                                   "source":  "profile_default",
+                                                   "attempt1_pct":  100
+                                               }
+                                           ]
+                        }
+}

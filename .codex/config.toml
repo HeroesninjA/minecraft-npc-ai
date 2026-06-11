@@ -1,0 +1,28 @@
+[mcp_servers.ainpc-project-memory]
+url = "http://127.0.0.1:3000/mcp"
+[mcp_servers.serena]
+url = "http://127.0.0.1:9121/mcp"
+startup_timeout_sec = 30
+[mcp_servers.ainpc-project-memory.tools.project_status]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.rules_list]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.changelog_search]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.changelog_add]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.memory_add]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.rules_set]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.context_pack]
+approval_mode = "approve"
+
+[mcp_servers.ainpc-project-memory.tools.memory_search]
+approval_mode = "approve"

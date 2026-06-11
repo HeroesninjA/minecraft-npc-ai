@@ -1,0 +1,33 @@
+# ========================================
+# Quest-uri fallback si preconfigurari implicite
+# ========================================
+
+# Daca este activ si demo.enabled=true in config.yml, NPC-urile fara quest definit
+# in pack-uri ofera un quest simplu in functie de profesia lor.
+simple_for_all_npcs: true
+
+# Configurare neutra pentru quest-urile fallback. Addonurile pot livra profiluri
+# specifice prin propriul config/pack; core-ul nu trebuie sa impuna o tema.
+# Placeholdere disponibile:
+# {npc}, {profession}, {objective}, {reward}
+profession_fallbacks:
+  default:
+    title: "Ajutor rapid"
+    objective:
+      item: "OAK_PLANKS"
+      amount: 3
+      prompt: "Adu-mi {objective}"
+    reward:
+      item: "EMERALD"
+      amount: 1
+    hint: "{npc} are nevoie de ajutor cu treburi obisnuite de {profession}."
+
+# Fallback generic final, folosit daca lipseste o profesie configurata de addon.
+simple:
+  title: "Ajutor rapid"
+  objective:
+    item: "OAK_PLANKS"
+    amount: 3
+  reward:
+    item: "EMERALD"
+    amount: 1

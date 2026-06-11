@@ -1,0 +1,45 @@
+﻿{
+    "generated_at":  "2026-05-21T17:48:13.2930201+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code",
+    "file_pattern":  "*mcp-context*summary*.json*",
+    "files_scanned":  2,
+    "runs":  9,
+    "attempt_distribution":  {
+                                 "attempt1":  9,
+                                 "attempt2":  0,
+                                 "attempt3":  0,
+                                 "attempt1_pct":  100
+                             },
+    "averages":  {
+                     "selected_budget":  900,
+                     "tokens_used":  258,
+                     "savings_vs_2200_budget":  1300,
+                     "savings_vs_2200_used":  1942
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "code",
+                           "runs":  9,
+                           "attempt1_pct":  100,
+                           "avg_budget":  900,
+                           "avg_used":  258,
+                           "avg_savings_vs_2200_budget":  1300,
+                           "avg_output_length":  1463,
+                           "p50_output_length":  850,
+                           "p75_output_length":  2725,
+                           "recommended_min_chars_for_success":  495,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "code",
+                                                   "runs":  9,
+                                                   "min_chars_for_success_recommended":  495,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  100
+                                               }
+                                           ]
+                        }
+}

@@ -1,0 +1,66 @@
+﻿{
+    "generated_at":  "2026-06-11T06:12:20.6155464+03:00",
+    "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\planning",
+    "file_pattern":  "*mcp-context*summary*.json*",
+    "files_scanned":  1,
+    "runs":  70,
+    "usable_runs":  57,
+    "failed_runs":  13,
+    "usable_run_pct":  81.43,
+    "attempt_distribution":  {
+                                 "attempt1":  59,
+                                 "attempt2":  5,
+                                 "attempt3":  6,
+                                 "attempt1_pct":  84.29,
+                                 "usable_attempt1":  56,
+                                 "usable_attempt2":  1,
+                                 "usable_attempt3":  0,
+                                 "usable_attempt1_pct":  98.25
+                             },
+    "averages":  {
+                     "selected_budget":  908.77,
+                     "tokens_used":  536.72,
+                     "savings_vs_2200_budget":  1291.23,
+                     "savings_vs_2200_used":  1663.28
+                 },
+    "by_profile":  [
+                       {
+                           "profile":  "planning",
+                           "runs":  70,
+                           "usable_runs":  57,
+                           "failed_runs":  13,
+                           "attempt1_pct":  98.25,
+                           "avg_budget":  908.77,
+                           "avg_used":  536.72,
+                           "avg_savings_vs_2200_budget":  1291.23,
+                           "avg_output_length":  2222.16,
+                           "p50_output_length":  1867,
+                           "p75_output_length":  2897,
+                           "recommended_min_chars_for_success":  787,
+                           "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
+                       }
+                   ],
+    "failures_by_reason":  [
+                               {
+                                   "reason":  "legacy-missing-token-metadata",
+                                   "count":  9
+                               },
+                               {
+                                   "reason":  "missing-token-metadata",
+                                   "count":  4
+                               }
+                           ],
+    "recommendations":  {
+                            "by_profile":  [
+                                               {
+                                                   "profile":  "planning",
+                                                   "runs":  70,
+                                                   "usable_runs":  57,
+                                                   "failed_runs":  13,
+                                                   "min_chars_for_success_recommended":  787,
+                                                   "source":  "profile_default_adjusted_by_attempt1_pct",
+                                                   "attempt1_pct":  98.25
+                                               }
+                                           ]
+                        }
+}

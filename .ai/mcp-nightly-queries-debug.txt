@@ -1,0 +1,4 @@
+﻿# debug profile queries
+quest debugdump anchors audit
+story context state events debug
+spawn audit duplicate npc investigate

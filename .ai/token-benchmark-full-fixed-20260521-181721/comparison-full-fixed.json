@@ -1,0 +1,64 @@
+﻿{
+    "benchmark_folder":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\token-benchmark-full-fixed-20260521-181721",
+    "query_count":  10,
+    "comparisons":  [
+                        {
+                            "comparison":  "baseline_vs_optimized_warmup",
+                            "runs":  10,
+                            "baseline_avg_used":  742,
+                            "optimized_avg_used":  505.9,
+                            "avg_used_saved":  236.1,
+                            "avg_used_saved_pct":  31.82,
+                            "baseline_avg_budget":  2200,
+                            "optimized_avg_budget":  900,
+                            "avg_budget_saved":  1300,
+                            "avg_budget_saved_pct":  59.09,
+                            "baseline_attempt1_pct":  100,
+                            "optimized_attempt1_pct":  100
+                        },
+                        {
+                            "comparison":  "baseline_vs_optimized_calibrated",
+                            "runs":  10,
+                            "baseline_avg_used":  742,
+                            "optimized_avg_used":  518.8,
+                            "avg_used_saved":  223.2,
+                            "avg_used_saved_pct":  30.08,
+                            "baseline_avg_budget":  2200,
+                            "optimized_avg_budget":  900,
+                            "avg_budget_saved":  1300,
+                            "avg_budget_saved_pct":  59.09,
+                            "baseline_attempt1_pct":  100,
+                            "optimized_attempt1_pct":  100
+                        }
+                    ],
+    "totals":  {
+                   "baseline_total_used":  7420,
+                   "optimized_warmup_total_used":  5059,
+                   "optimized_calibrated_total_used":  5188,
+                   "saved_vs_warmup":  2361,
+                   "saved_vs_warmup_pct":  31.82,
+                   "saved_vs_calibrated":  2232,
+                   "saved_vs_calibrated_pct":  30.08
+               },
+    "warmup_recommendations":  [
+                                   {
+                                       "profile":  "full",
+                                       "runs":  10,
+                                       "min_chars_for_success_recommended":  880,
+                                       "source":  "profile_default_adjusted_by_attempt1_pct",
+                                       "attempt1_pct":  100
+                                   }
+                               ],
+    "calibrated_min_chars_source_counts":  [
+                                               {
+                                                   "source":  "adaptive-report",
+                                                   "count":  10
+                                               }
+                                           ],
+    "calibrated_min_chars_values":  [
+                                        {
+                                            "min_chars":  880,
+                                            "count":  10
+                                        }
+                                    ]
+}

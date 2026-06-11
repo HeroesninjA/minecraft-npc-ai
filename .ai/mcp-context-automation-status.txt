@@ -1,0 +1,10 @@
+﻿status=ok
+data_fresh=True
+scheduler_healthy=False
+startup_fallback_present=True
+matrix_failed_profiles=
+matrix_profiles=code
+matrix_total_queries=3
+matrix_failed_queries=0
+report_runs=3
+report_attempt1_pct=100

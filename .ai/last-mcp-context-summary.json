@@ -1,0 +1,41 @@
+﻿{
+    "generated_at":  "2026-05-21T13:50:19.0618559+03:00",
+    "query":  "NPCManager createNPC",
+    "profile":  "code",
+    "retrieval":  "hybrid",
+    "collection":  "ainpc_code",
+    "auto_scope":  true,
+    "min_chars_for_success":  450,
+    "selected_attempt":  1,
+    "selected_token_budget":  900,
+    "selected_top_k":  8,
+    "output_length":  814,
+    "context_tokens_used":  129,
+    "context_token_budget":  900,
+    "include":  [
+                    "ainpc-core-plugin/src/main/",
+                    "ainpc-api/src/main/",
+                    "ainpc-scenario-medieval/src/main/",
+                    "scripts/"
+                ],
+    "exclude":  [
+                    "ainpc-core-plugin/src/test/",
+                    "ainpc-api/src/test/",
+                    "ainpc-scenario-medieval/src/test/",
+                    "target/",
+                    "build/",
+                    ".gradle/",
+                    ".kotlin/",
+                    ".idea/",
+                    "node_modules/"
+                ],
+    "attempts":  [
+                     {
+                         "attempt":  1,
+                         "token_budget":  900,
+                         "top_k":  8,
+                         "output_length":  814,
+                         "useful":  true
+                     }
+                 ]
+}

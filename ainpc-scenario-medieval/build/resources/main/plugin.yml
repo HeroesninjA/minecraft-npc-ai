@@ -1,0 +1,7 @@
+name: AINPCScenarioMedieval
+version: 1.0.0
+main: ro.ainpc.addons.medieval.AINPCScenarioMedievalPlugin
+api-version: '1.21'
+authors: [v0]
+description: Addon separat care livreaza scenariul medieval pentru AINPC Core
+depend: [AINPCPlugin]

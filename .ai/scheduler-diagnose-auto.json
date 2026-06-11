@@ -1,0 +1,25 @@
+﻿{
+    "generated_at":  "2026-05-21T17:53:12.8791066+03:00",
+    "host":  "DESKTOP-FJTPE3F",
+    "os_version":  "Microsoft Windows NT 10.0.26200.0",
+    "user":  "DESKTOP-FJTPE3F\\CodexSandboxOffline",
+    "is_admin":  false,
+    "schtasks_path":  "C:\\WINDOWS\\System32\\\\schtasks.exe",
+    "schedule_service":  {
+                             "exists":  true,
+                             "status":  "Running",
+                             "start_type":  "Automatic"
+                         },
+    "probes":  {
+                   "query":  {
+                                 "ok":  false,
+                                 "exit_code":  null,
+                                 "output":  "ERROR: The system cannot find the path specified."
+                             },
+                   "create_delete":  {
+                                         "ok":  false,
+                                         "exit_code":  null,
+                                         "output":  "ERROR: The system cannot find the path specified."
+                                     }
+               }
+}

@@ -1,0 +1,108 @@
+﻿{
+    "generated_at":  "2026-05-21T18:02:13.3619449+03:00",
+    "project_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.",
+    "ai_dir":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai",
+    "fresh_hours":  30,
+    "overall_status":  "ok",
+    "checks":  {
+                   "data_fresh":  true,
+                   "scheduler_healthy":  false,
+                   "startup_fallback_present":  true,
+                   "matrix_failed_profiles":  [
+
+                                              ]
+               },
+    "files":  {
+                  "matrix_run":  {
+                                     "exists":  true,
+                                     "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai\\mcp-context-nightly-matrix-run.json",
+                                     "last_write_utc":  "2026-05-21T14:48:13.3763871Z",
+                                     "age_hours":  0.23,
+                                     "fresh":  true,
+                                     "error":  ""
+                                 },
+                  "global_report":  {
+                                        "exists":  true,
+                                        "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai\\mcp-context-report-global.json",
+                                        "last_write_utc":  "2026-05-21T14:48:13.3693812Z",
+                                        "age_hours":  0.23,
+                                        "fresh":  true,
+                                        "error":  ""
+                                    },
+                  "global_rows_csv":  {
+                                          "exists":  true,
+                                          "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai\\mcp-context-report-global-rows.csv",
+                                          "last_write_utc":  "2026-05-21T14:48:13.3713873Z",
+                                          "age_hours":  0.23,
+                                          "fresh":  true,
+                                          "error":  ""
+                                      },
+                  "global_profiles_csv":  {
+                                              "exists":  true,
+                                              "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai\\mcp-context-report-global-profiles.csv",
+                                              "last_write_utc":  "2026-05-21T14:48:13.3733866Z",
+                                              "age_hours":  0.23,
+                                              "fresh":  true,
+                                              "error":  ""
+                                          },
+                  "startup_file":  {
+                                       "exists":  false,
+                                       "path":  "C:\\Users\\HeroesninjA\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\AINPC-MCP-Context-Nightly.cmd",
+                                       "last_write_utc":  "",
+                                       "age_hours":  null,
+                                       "fresh":  false,
+                                       "error":  "Access is denied"
+                                   },
+                  "startup_registration_state":  {
+                                                     "exists":  true,
+                                                     "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\.ai\\mcp-startup-registration.json",
+                                                     "last_write_utc":  "2026-05-21T15:00:36.9938092Z",
+                                                     "age_hours":  0.03,
+                                                     "fresh":  true,
+                                                     "error":  ""
+                                                 },
+                  "scheduler_diagnose":  {
+                                             "exists":  true,
+                                             "path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\scheduler-diagnose-auto.json",
+                                             "last_write_utc":  "2026-05-21T14:53:12.9041723Z",
+                                             "age_hours":  0.15,
+                                             "fresh":  true,
+                                             "error":  ""
+                                         }
+              },
+    "summaries":  {
+                      "matrix":  {
+                                     "profiles":  [
+                                                      "code"
+                                                  ],
+                                     "failed_profiles":  [
+
+                                                         ],
+                                     "total_queries":  3,
+                                     "failed_queries":  0
+                                 },
+                      "report":  {
+                                     "runs":  3,
+                                     "attempt1_pct":  100,
+                                     "profiles":  [
+                                                      "code"
+                                                  ]
+                                 },
+                      "scheduler":  {
+                                        "diagnose_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\scheduler-diagnose-auto.json",
+                                        "service_running":  true,
+                                        "query_ok":  false,
+                                        "create_ok":  false,
+                                        "is_admin":  false
+                                    },
+                      "startup_registration":  {
+                                                   "updated_at":  "2026-05-21T18:00:36.9759924+03:00",
+                                                   "project_root":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test",
+                                                   "startup_file":  "C:\\Users\\HeroesninjA\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\AINPC-MCP-Context-Nightly.cmd",
+                                                   "launcher_script":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.\\scripts\\mcp-context-nightly-matrix-launcher.ps1",
+                                                   "applied":  true,
+                                                   "removed":  false,
+                                                   "note":  "startup_file_created_or_updated"
+                                               }
+                  }
+}
