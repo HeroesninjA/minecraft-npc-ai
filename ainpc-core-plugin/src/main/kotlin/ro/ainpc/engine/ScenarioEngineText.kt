@@ -4,7 +4,7 @@ import org.bukkit.Material
 import ro.ainpc.npc.AINPC
 import java.util.Locale
 
-fun applyQuestFallbackPlaceholders(
+internal fun applyQuestFallbackPlaceholders(
     value: String?,
     npc: AINPC?,
     professionName: String?,
@@ -22,7 +22,7 @@ fun applyQuestFallbackPlaceholders(
         .replace("{reward}", rewardText ?: "o recompensa")
 }
 
-fun sanitizeConfigKey(value: String?): String =
+internal fun sanitizeConfigKey(value: String?): String =
     normalizeScenarioToken(value)
         .replace('-', '_')
         .replace(' ', '_')
@@ -111,7 +111,7 @@ fun formatQuestLogMechanicCounts(mechanicCounts: Map<String, Int>?): String {
         .joinToString("&7, &f") { "${it.key}=${it.value}" }
 }
 
-fun resolveQuestMaterial(entry: FeaturePackLoader.QuestEntryDefinition?): Material? {
+internal fun resolveQuestMaterial(entry: FeaturePackLoader.QuestEntryDefinition?): Material? {
     if (entry == null || entry.itemId.isBlank()) {
         return null
     }
@@ -140,7 +140,7 @@ fun formatObjectiveProgressLabel(objective: FeaturePackLoader.QuestEntryDefiniti
     }
 }
 
-fun formatMissingObjective(
+internal fun formatMissingObjective(
     objective: FeaturePackLoader.QuestEntryDefinition?,
     currentAmount: Int,
     requiredAmount: Int,
@@ -171,7 +171,7 @@ fun formatMissingObjective(
     }
 }
 
-fun formatObjectiveTargetLabel(
+private fun formatObjectiveTargetLabel(
     objective: FeaturePackLoader.QuestEntryDefinition?,
     fallback: String,
 ): String {
@@ -236,7 +236,7 @@ fun formatQuestStatus(status: QuestStatus?): String =
         QuestStatus.FAILED -> "Esuat"
     }
 
-fun describeQuestProgress(progress: PlayerQuestProgress?): String {
+internal fun describeQuestProgress(progress: PlayerQuestProgress?): String {
     if (progress == null) {
         return "necunoscut"
     }
@@ -249,12 +249,12 @@ fun describeQuestProgress(progress: PlayerQuestProgress?): String {
     }
 }
 
-fun formatQuestAmount(amount: Int, material: Material?): String {
+internal fun formatQuestAmount(amount: Int, material: Material?): String {
     val itemName = material?.name?.let(::humanizeItemId) ?: "item"
     return if (amount > 1) "${amount}x $itemName" else itemName
 }
 
-fun joinNaturally(parts: List<String>?): String {
+internal fun joinNaturally(parts: List<String>?): String {
     if (parts.isNullOrEmpty()) {
         return ""
     }
@@ -271,7 +271,7 @@ fun joinNaturally(parts: List<String>?): String {
     return parts.dropLast(1).joinToString(", ") + " si " + last
 }
 
-fun humanizeItemId(itemId: String?): String =
+internal fun humanizeItemId(itemId: String?): String =
     if (itemId.isNullOrBlank()) {
         "item"
     } else {

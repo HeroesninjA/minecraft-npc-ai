@@ -3143,3 +3143,33 @@ fun shortenBatchValue(value: String?, maxLength: Int): String {
 
 fun valueOrDash(value: String?): String =
     if (value.isNullOrBlank()) "-" else value
+
+fun readQuestAnchorBindingRow(rs: ResultSet): QuestAnchorBindingRow =
+    QuestAnchorBindingRow(
+        rs.getString("player_uuid"),
+        rs.getString("template_id"),
+        rs.getString("objective_key"),
+        rs.getString("quest_code"),
+        rs.getString("objective_type"),
+        rs.getString("reference"),
+        rs.getString("anchor_type"),
+        rs.getString("anchor_id"),
+        rs.getString("anchor_label"),
+        rs.getLong("created_at"),
+        rs.getLong("updated_at"),
+        rs.getString("status"),
+    )
+
+fun resetWandSelectionPart(
+    service: MappingWandService,
+    player: Player,
+    rawPart: String,
+): MappingWandService.MappingWandSession? {
+    val part = rawPart.lowercase(Locale.ROOT)
+    return when (part) {
+        "pos1" -> service.resetPos1(player)
+        "pos2" -> service.resetPos2(player)
+        "point", "punct" -> service.resetPoint(player)
+        else -> null
+    }
+}

@@ -1,39 +1,39 @@
 ﻿{
-    "generated_at":  "2026-06-11T06:12:21.0074990+03:00",
+    "generated_at":  "2026-06-13T11:00:12.0422098+03:00",
     "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly",
     "file_pattern":  "*mcp-context-nightly-summary-*.jsonl",
     "files_scanned":  3,
-    "runs":  220,
-    "usable_runs":  177,
+    "runs":  238,
+    "usable_runs":  195,
     "failed_runs":  43,
-    "usable_run_pct":  80.45,
+    "usable_run_pct":  81.93,
     "attempt_distribution":  {
-                                 "attempt1":  179,
+                                 "attempt1":  197,
                                  "attempt2":  17,
                                  "attempt3":  24,
-                                 "attempt1_pct":  81.36,
-                                 "usable_attempt1":  176,
+                                 "attempt1_pct":  82.77,
+                                 "usable_attempt1":  194,
                                  "usable_attempt2":  1,
                                  "usable_attempt3":  0,
-                                 "usable_attempt1_pct":  99.44
+                                 "usable_attempt1_pct":  99.49
                              },
     "averages":  {
-                     "selected_budget":  902.82,
-                     "tokens_used":  471.15,
-                     "savings_vs_2200_budget":  1297.18,
-                     "savings_vs_2200_used":  1728.85
+                     "selected_budget":  902.56,
+                     "tokens_used":  473.78,
+                     "savings_vs_2200_budget":  1297.44,
+                     "savings_vs_2200_used":  1726.22
                  },
     "by_profile":  [
                        {
                            "profile":  "code",
-                           "runs":  75,
-                           "usable_runs":  60,
+                           "runs":  81,
+                           "usable_runs":  66,
                            "failed_runs":  15,
                            "attempt1_pct":  100,
                            "avg_budget":  900,
-                           "avg_used":  301,
+                           "avg_used":  308.82,
                            "avg_savings_vs_2200_budget":  1300,
-                           "avg_output_length":  1665.32,
+                           "avg_output_length":  1704.65,
                            "p50_output_length":  850,
                            "p75_output_length":  3316,
                            "recommended_min_chars_for_success":  544,
@@ -41,14 +41,14 @@
                        },
                        {
                            "profile":  "debug",
-                           "runs":  75,
-                           "usable_runs":  60,
+                           "runs":  81,
+                           "usable_runs":  66,
                            "failed_runs":  15,
                            "attempt1_pct":  100,
                            "avg_budget":  900,
                            "avg_used":  579,
                            "avg_savings_vs_2200_budget":  1300,
-                           "avg_output_length":  2719.42,
+                           "avg_output_length":  2719.2,
                            "p50_output_length":  2946,
                            "p75_output_length":  2963,
                            "recommended_min_chars_for_success":  387,
@@ -56,15 +56,15 @@
                        },
                        {
                            "profile":  "planning",
-                           "runs":  70,
-                           "usable_runs":  57,
+                           "runs":  76,
+                           "usable_runs":  63,
                            "failed_runs":  13,
-                           "attempt1_pct":  98.25,
-                           "avg_budget":  908.77,
-                           "avg_used":  536.72,
-                           "avg_savings_vs_2200_budget":  1291.23,
-                           "avg_output_length":  2222.16,
-                           "p50_output_length":  1867,
+                           "attempt1_pct":  98.41,
+                           "avg_budget":  907.94,
+                           "avg_used":  536.37,
+                           "avg_savings_vs_2200_budget":  1292.06,
+                           "avg_output_length":  2222.11,
+                           "p50_output_length":  1886,
                            "p75_output_length":  2897,
                            "recommended_min_chars_for_success":  787,
                            "recommendation_source":  "profile_default_adjusted_by_attempt1_pct"
@@ -88,8 +88,8 @@
                             "by_profile":  [
                                                {
                                                    "profile":  "code",
-                                                   "runs":  75,
-                                                   "usable_runs":  60,
+                                                   "runs":  81,
+                                                   "usable_runs":  66,
                                                    "failed_runs":  15,
                                                    "min_chars_for_success_recommended":  544,
                                                    "source":  "profile_default_adjusted_by_attempt1_pct",
@@ -97,8 +97,8 @@
                                                },
                                                {
                                                    "profile":  "debug",
-                                                   "runs":  75,
-                                                   "usable_runs":  60,
+                                                   "runs":  81,
+                                                   "usable_runs":  66,
                                                    "failed_runs":  15,
                                                    "min_chars_for_success_recommended":  387,
                                                    "source":  "profile_default_adjusted_by_attempt1_pct",
@@ -106,12 +106,12 @@
                                                },
                                                {
                                                    "profile":  "planning",
-                                                   "runs":  70,
-                                                   "usable_runs":  57,
+                                                   "runs":  76,
+                                                   "usable_runs":  63,
                                                    "failed_runs":  13,
                                                    "min_chars_for_success_recommended":  787,
                                                    "source":  "profile_default_adjusted_by_attempt1_pct",
-                                                   "attempt1_pct":  98.25
+                                                   "attempt1_pct":  98.41
                                                }
                                            ]
                         }

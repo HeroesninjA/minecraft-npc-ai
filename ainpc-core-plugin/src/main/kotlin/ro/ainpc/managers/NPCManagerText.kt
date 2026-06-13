@@ -6,12 +6,21 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.Tag
+import org.bukkit.World
+import org.bukkit.block.Block
+import org.bukkit.block.data.BlockData
+import org.bukkit.block.data.type.Bed
 import org.bukkit.entity.Villager
+import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.utils.NPCNameGenerator
+import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
@@ -737,4 +746,241 @@ fun markNpcPlannedForDeletion(npc: AINPC?, plannedDeletedNpcIds: MutableSet<Int>
     if (npc != null && npc.databaseId > 0) {
         plannedDeletedNpcIds.add(npc.databaseId)
     }
+}
+
+fun averageLocation(locations: List<Location>): Location {
+    var x = 0.0
+    var y = 0.0
+    var z = 0.0
+    val world = locations[0].world
+
+    for (location in locations) {
+        x += location.x
+        y += location.y
+        z += location.z
+    }
+
+    val count = locations.size
+    return Location(world, x / count, y / count, z / count)
+}
+
+fun belongsToChunk(npc: AINPC, chunk: Chunk): Boolean {
+    if (npc.worldName == null) {
+        return false
+    }
+
+    if (npc.worldName != chunk.world.name) {
+        return false
+    }
+
+    val chunkX = floorToBlock(npc.x) shr 4
+    val chunkZ = floorToBlock(npc.z) shr 4
+    return chunk.x == chunkX && chunk.z == chunkZ
+}
+
+fun inferWorldBindingFromAnchors(npc: AINPC, worldAdmin: WorldAdminApi): NpcWorldBinding? {
+    val homePlace = inferPlaceFromAnchor(worldAdmin, npc.homeAnchor)
+    val workPlace = inferPlaceFromAnchor(worldAdmin, npc.workAnchor)
+    val socialPlace = inferPlaceFromAnchor(worldAdmin, npc.socialAnchor)
+    if (homePlace == null && workPlace == null && socialPlace == null) {
+        return null
+    }
+
+    val homeNode = inferNodeFromAnchor(worldAdmin, npc.homeAnchor, homePlace)
+    val workNode = inferNodeFromAnchor(worldAdmin, npc.workAnchor, workPlace)
+    val socialNode = inferNodeFromAnchor(worldAdmin, npc.socialAnchor, socialPlace)
+
+    return NpcWorldBinding(
+        npc.databaseId,
+        npc.uuid.toString(),
+        npc.name,
+        homePlace?.id() ?: "",
+        workPlace?.id() ?: "",
+        socialPlace?.id() ?: "",
+        homeNode?.id() ?: "",
+        workNode?.id() ?: "",
+        socialNode?.id() ?: "",
+        "",
+        "profile_backfill",
+        0L,
+        0L,
+    )
+}
+
+fun anchorFromBinding(worldAdmin: WorldAdminApi, placeId: String?, nodeId: String?, role: String): AINPC.OwnedLocation? {
+    val place = if (placeId.isNullOrBlank()) null else worldAdmin.getPlace(placeId)
+    val node = if (nodeId.isNullOrBlank()) null else worldAdmin.getNode(nodeId)
+    if (node != null) {
+        val label = place?.displayName() ?: node.id()
+        return AINPC.OwnedLocation(
+            role,
+            nodeLabel(node, label),
+            node.worldName(),
+            node.x(),
+            node.y(),
+            node.z(),
+        )
+    }
+    if (place == null) {
+        return null
+    }
+
+    return AINPC.OwnedLocation(
+        role,
+        place.displayName(),
+        place.worldName(),
+        placeCenterX(place),
+        placeAnchorY(place),
+        placeCenterZ(place),
+    )
+}
+
+fun inferPlaceFromAnchor(worldAdmin: WorldAdminApi?, anchor: AINPC.OwnedLocation?): WorldPlaceInfo? {
+    if (worldAdmin == null || anchor == null || anchor.worldName().isBlank()) {
+        return null
+    }
+    return worldAdmin.findPlace(
+        anchor.worldName(),
+        floor(anchor.x()).toInt(),
+        floor(anchor.y()).toInt(),
+        floor(anchor.z()).toInt(),
+    )
+}
+
+fun inferNodeFromAnchor(worldAdmin: WorldAdminApi?, anchor: AINPC.OwnedLocation?, place: WorldPlaceInfo?): WorldNodeInfo? {
+    if (worldAdmin == null || anchor == null || anchor.worldName().isBlank()) {
+        return null
+    }
+
+    return worldAdmin.findNodesNear(anchor.worldName(), anchor.x(), anchor.y(), anchor.z(), 2.5, 5)
+        .stream()
+        .filter { node -> place == null || node.placeId().isBlank() || node.placeId().equals(place.id(), ignoreCase = true) }
+        .findFirst()
+        .orElse(null)
+}
+
+fun findBedLocations(center: Location?, radius: Int, verticalRadius: Int): List<Location> {
+    if (center == null || center.world == null) return emptyList()
+    val seenBeds = HashSet<String>()
+    val beds = ArrayList<Location>()
+    val centerX = floorToBlock(center.x)
+    val centerY = floorToBlock(center.y)
+    val centerZ = floorToBlock(center.z)
+    for (dx in -radius..radius) {
+        for (dy in -verticalRadius..verticalRadius) {
+            for (dz in -radius..radius) {
+                val block = center.world.getBlockAt(centerX + dx, centerY + dy, centerZ + dz)
+                if (!Tag.BEDS.isTagged(block.type)) continue
+                val blockData = block.blockData
+                if (blockData is Bed && blockData.part != Bed.Part.HEAD) continue
+                val key = "${block.x}:${block.y}:${block.z}"
+                if (seenBeds.add(key)) {
+                    beds.add(block.location)
+                }
+            }
+        }
+    }
+    return beds
+}
+
+fun findVillageSpawnLocation(snapshot: NpcVillageSnapshot?, offset: Int): Location? {
+    if (snapshot == null) return null
+    val beds = snapshot.bedLocations()
+    if (beds.isEmpty()) return null
+    val bed = beds[offset % beds.size]
+    val world = bed.world ?: return null
+    val candidates = arrayOf(
+        intArrayOf(0, 0), intArrayOf(1, 0), intArrayOf(-1, 0),
+        intArrayOf(0, 1), intArrayOf(0, -1), intArrayOf(2, 0),
+        intArrayOf(-2, 0), intArrayOf(0, 2), intArrayOf(0, -2)
+    )
+    for (candidate in candidates) {
+        val spawn = bed.clone().add(candidate[0] + 0.5, 1.0, candidate[1] + 0.5)
+        val feet = world.getBlockAt(floorToBlock(spawn.x), floorToBlock(spawn.y), floorToBlock(spawn.z))
+        val head = world.getBlockAt(floorToBlock(spawn.x), floorToBlock(spawn.y) + 1, floorToBlock(spawn.z))
+        val ground = world.getBlockAt(floorToBlock(spawn.x), floorToBlock(spawn.y) - 1, floorToBlock(spawn.z))
+        if (feet.isPassable && head.isPassable && !ground.isPassable) {
+            return spawn
+        }
+    }
+    return snapshot.center().clone().add(0.5, 0.0, 0.5)
+}
+
+fun mapProfessionToOccupation(profession: Villager.Profession?): String {
+    if (profession == null || profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) {
+        return "resident"
+    }
+    val key = org.bukkit.Registry.VILLAGER_PROFESSION.getKey(profession)
+    if (key == null) return "resident"
+    return "minecraft:${key.key}"
+}
+
+fun findNearestBlock(center: Location?, horizontalRadius: Int, verticalRadius: Int, predicate: Predicate<Block>): Block? {
+    if (center == null || center.world == null) return null
+    var bestBlock: Block? = null
+    var bestDistanceSquared = Double.MAX_VALUE
+    val centerX = floorToBlock(center.x)
+    val centerY = floorToBlock(center.y)
+    val centerZ = floorToBlock(center.z)
+    for (dx in -horizontalRadius..horizontalRadius) {
+        for (dy in -verticalRadius..verticalRadius) {
+            for (dz in -horizontalRadius..horizontalRadius) {
+                val block = center.world.getBlockAt(centerX + dx, centerY + dy, centerZ + dz)
+                if (!predicate.test(block)) continue
+                val distanceSquared = block.location.distanceSquared(center)
+                if (distanceSquared < bestDistanceSquared) {
+                    bestDistanceSquared = distanceSquared
+                    bestBlock = block
+                }
+            }
+        }
+    }
+    return bestBlock
+}
+
+fun findNearestHomeAnchor(center: Location?): AINPC.OwnedLocation? {
+    val bed = findNearestBlock(center, 8, 4) { block ->
+        if (!Tag.BEDS.isTagged(block.type)) return@findNearestBlock false
+        val blockData = block.blockData
+        blockData !is Bed || blockData.part == Bed.Part.HEAD
+    }
+    return bed?.let {
+        AINPC.OwnedLocation("home", "casa de langa pat", it.world.name, it.x + 0.5, it.y.toDouble(), it.z + 0.5)
+    }
+}
+
+fun findNearestWorkAnchor(center: Location?, occupation: String?): AINPC.OwnedLocation? {
+    var workstation = findNearestBlock(center, 6, 3) { block -> matchesOccupationWorkstation(occupation, block.type) }
+    if (workstation == null) {
+        workstation = findNearestBlock(center, 6, 3) { block -> isWorkstation(block.type) }
+    }
+    return workstation?.let {
+        AINPC.OwnedLocation("work", describeWorkAnchor(occupation, it.type), it.world.name, it.x + 0.5, it.y.toDouble(), it.z + 0.5)
+    }
+}
+
+fun findNearestSocialAnchor(center: Location?): AINPC.OwnedLocation? {
+    val socialSpot = findNearestBlock(center, 12, 4) { block -> block.type == Material.BELL }
+    return socialSpot?.let {
+        AINPC.OwnedLocation("social", "piata satului", it.world.name, it.x + 0.5, it.y.toDouble(), it.z + 0.5)
+    }
+}
+
+fun findNearbyWorkstation(center: Location?, horizontalRadius: Int, verticalRadius: Int): Material? {
+    if (center == null || center.world == null) return null
+    val materialWeights = HashMap<Material, Int>()
+    val centerX = floorToBlock(center.x)
+    val centerY = floorToBlock(center.y)
+    val centerZ = floorToBlock(center.z)
+    for (dx in -horizontalRadius..horizontalRadius) {
+        for (dy in -verticalRadius..verticalRadius) {
+            for (dz in -horizontalRadius..horizontalRadius) {
+                val block = center.world.getBlockAt(centerX + dx, centerY + dy, centerZ + dz)
+                val type = block.type
+                if (!isWorkstation(type)) continue
+                materialWeights.merge(type, 1, Int::plus)
+            }
+        }
+    }
+    return materialWeights.entries.maxByOrNull { it.value }?.key
 }

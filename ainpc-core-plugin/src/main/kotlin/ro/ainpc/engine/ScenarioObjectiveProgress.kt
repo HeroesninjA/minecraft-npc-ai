@@ -10,6 +10,8 @@ import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
 import java.util.Collections
 import java.util.Locale
 
+// --- Type matching ---
+
 fun matchesObjectiveType(objective: FeaturePackLoader.QuestEntryDefinition?, expectedType: String?): Boolean =
     objective != null && normalizeObjectiveType(objective.type) == normalizeObjectiveType(expectedType)
 
@@ -25,6 +27,8 @@ fun normalizeObjectiveType(type: String?): String =
         else -> normalized
     }
 
+// --- Inventory progress ---
+
 fun usesInventoryProgress(objective: FeaturePackLoader.QuestEntryDefinition?): Boolean {
     val objectiveType = normalizeObjectiveType(objective?.type)
     return objectiveType == "collect_item" || objectiveType == "deliver_to_npc"
@@ -32,6 +36,8 @@ fun usesInventoryProgress(objective: FeaturePackLoader.QuestEntryDefinition?): B
 
 fun shouldConsumeObjectiveItem(objective: FeaturePackLoader.QuestEntryDefinition?): Boolean =
     usesInventoryProgress(objective)
+
+// --- Key building ---
 
 fun buildObjectiveKey(objective: FeaturePackLoader.QuestEntryDefinition?, index: Int): String {
     val entryId = normalizeObjectiveEntryId(objective?.entryId)
@@ -65,6 +71,8 @@ fun objectiveKeyCandidates(objective: FeaturePackLoader.QuestEntryDefinition?, i
         listOf(stableKey, legacyKey)
     }
 }
+
+// --- Progress reading ---
 
 fun readObjectiveProgress(
     objectiveProgress: Map<String, Int>?,
@@ -110,11 +118,15 @@ fun normalizeObjectiveEntryId(entryId: String?): String = entryId?.trim() ?: ""
 private fun normalizeLegacyObjectiveToken(value: String): String =
     value.trim().lowercase(Locale.ROOT)
 
+// --- Feature checks ---
+
 fun hasObjectiveType(template: ScenarioEngine.ScenarioTemplate?, type: String?): Boolean =
     template?.objectives?.any { matchesObjectiveType(it, type) } == true
 
 fun hasInventoryObjective(template: ScenarioEngine.ScenarioTemplate?): Boolean =
     template?.objectives?.any { usesInventoryProgress(it) } == true
+
+// --- Reference matching ---
 
 fun matchesObjectiveReference(reference: String?, vararg candidates: String): Boolean {
     val normalizedReference = normalizeReference(reference)
@@ -124,6 +136,8 @@ fun matchesObjectiveReference(reference: String?, vararg candidates: String): Bo
         normalizedCandidate.isNotBlank() && normalizedCandidate == normalizedReference
     }
 }
+
+// --- State resolution ---
 
 fun resolveQuestObjectiveState(
     progress: PlayerQuestProgress?,
@@ -152,6 +166,8 @@ fun resolveQuestObjectiveState(
     }
 }
 
+// --- Stage filtering ---
+
 fun shouldShowObjectiveForCurrentStage(
     template: ScenarioEngine.ScenarioTemplate?,
     progress: PlayerQuestProgress?,
@@ -161,6 +177,8 @@ fun shouldShowObjectiveForCurrentStage(
     if (progress == null || areObjectivesSatisfied(template, progress.objectiveProgress())) return true
     return isObjectiveActiveForProgress(template, progress, objective)
 }
+
+// --- Progress increment ---
 
 fun incrementObjectiveProgress(
     progressByObjective: MutableMap<String, Int>,
@@ -173,6 +191,8 @@ fun incrementObjectiveProgress(
     progressByObjective[objectiveKey] = updatedValue
     return true
 }
+
+// --- Inventory operations ---
 
 fun countMaterial(inventory: PlayerInventory?, material: Material?): Int {
     if (inventory == null || material == null) return 0
@@ -254,11 +274,15 @@ fun buildCompletedObjectiveProgress(
     return Collections.unmodifiableMap(completedProgress)
 }
 
+// --- Snapshot building ---
+
 fun cloneStorageContents(inventory: PlayerInventory?): Array<ItemStack?> {
     if (inventory == null) return emptyArray()
     val contents = inventory.storageContents
     return Array(contents.size) { i -> contents[i]?.clone() }
 }
+
+// --- Simulation ---
 
 fun simulateQuestObjectiveConsumption(
     contents: Array<ItemStack?>?,
@@ -316,6 +340,8 @@ fun simulateAddMaterial(contents: Array<ItemStack?>?, material: Material?, amoun
     return remaining <= 0
 }
 
+// --- Current progress ---
+
 fun resolveObjectiveCurrentProgress(
     player: Player?,
     objective: FeaturePackLoader.QuestEntryDefinition?,
@@ -333,6 +359,8 @@ fun resolveObjectiveCurrentProgress(
     if (progress == null) return 0
     return minOf(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index))
 }
+
+// --- Inventory inspection ---
 
 fun inspectQuestInventory(
     inventory: PlayerInventory?,
@@ -388,6 +416,8 @@ fun inspectQuestRewardDelivery(
     return if (issues.isEmpty()) QuestRewardCheck.allowed() else QuestRewardCheck.blocked(issues)
 }
 
+// --- Anchor matching ---
+
 fun hasBoundAnchor(progress: PlayerQuestProgress?, objectiveKey: String?): Boolean {
     if (progress == null || objectiveKey.isNullOrBlank()) return false
     return progress.questVariables()["anchor.${objectiveKey}.id"]?.isNotBlank() ?: false
@@ -429,6 +459,8 @@ fun matchesStoredQuestNpc(progress: PlayerQuestProgress?, npc: AINPC?): Boolean 
     )
 }
 
+// --- Quest inspection ---
+
 fun inspectQuestObjectives(
     player: Player?,
     template: ScenarioTemplate?,
@@ -459,6 +491,8 @@ fun inspectQuestObjectives(
     }
     return QuestObjectiveCheck(missingObjectives.isEmpty(), missingObjectives)
 }
+
+// --- Reward granting ---
 
 fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List<String> {
     val notes = mutableListOf<String>()

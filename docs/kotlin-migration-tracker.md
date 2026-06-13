@@ -1,6 +1,6 @@
 # Kotlin Migration Tracker
 
-Actualizat: 2026-06-10
+Actualizat: 2026-06-13
 
 ## Scop
 
@@ -42,11 +42,11 @@ Estimare operationala la 2026-06-07: mai sunt aproximativ 33 taskuri pana la fin
 
 | Zona | Linii Java ramase | Taskuri estimate |
 |---|---:|---:|
-| `AINPCCommand.java` | 6267 | 12 |
-| `ScenarioEngine.java` | 5797 | 3 |
-| `NPCManager.java` | 2566 | 1 |
-| Gate final si hardening | n/a | 6 |
-| Total | 14630 | 22 |
+| `AINPCCommand.java` | 5317 | 10 |
+| `ScenarioEngine.java` | 4414 | 2 |
+| `NPCManager.java` | 1824 | 0 |
+| Gate final si hardening | n/a | 4 |
+| Total | 11555 | 16 |
 
 ## Regula de actualizare
 
@@ -7920,3 +7920,133 @@ Inventar dupa slice:
 
 Rollback:
 - elimina `parseQuestLogFilter` din `QuestLogFilter.kt`, readauga metoda Java in `ScenarioEngine.java`, elimina importul static `QuestLogFilterKt`
+
+### KOT-299
+
+Data: 2026-06-13
+ID: KOT-299
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie (warnings)
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerDB.kt`
+
+Microtaskuri:
+- Eliminat corpul duplicat al metodei `resolveOccupationForVillager` (golirea corpului lasase o semnatura Java cu implementare goala; corpul a fost eliminat complet).
+- Fixat 3 avertismente de nullabilitate Kotlin in `NPCManagerDB.kt`: `npcId` nullable → `orEmpty()`, `rawNpcId` nullable in `getNpcId` → `orEmpty()`.
+
+### KOT-300
+
+Data: 2026-06-13
+ID: KOT-300
+Status: validat local
+Zona: `ro.ainpc.managers`
+Tip: productie (extractie)
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManagerAnchors.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/managers/NPCManager.java`
+
+Input selectat / filtrat:
+- Candidati: 11 metode de rezolutie a ancorelor (`resolveAnchorTownHall`, `resolveAnchorHome`, `resolveAnchorWork`, `resolveAnchorSocial`, `resolveAnchorGuild`, `resolveAnchorRitual`, `resolveAnchorProfession`, `resolveAnchorFamily`, `resolveAnchorMine`, `resolveAnchorWood`, `resolveAnchorWater`)
+
+Microtaskuri:
+- Creat `NPCManagerAnchors.kt` cu `@file:JvmName("NPCManagerAnchors")`
+- Extrase toate cele 11 metode (~160 linii) din `NPCManager.java` in noua sidecar
+- Corpurile Java inlocuite cu delegate one-line
+- Adaugat `lateinit var npcManagerAnchorsPlugin` si `initNpcManagerAnchorsPlugin`
+- Redus `NPCManager.java` de la 2566 la 1824 linii
+
+### KOT-301
+
+Data: 2026-06-13
+ID: KOT-301
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie (extractie)
+Risc: 1
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandDisplay.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+
+Microtaskuri:
+- Creat `initAinpcCommandDisplayPlugin(plugin)` si `lateinit var ainpcCommandDisplayPlugin`
+- Extrase 12 metode `send*Usage()` si `sendHelp()` (~112 linii de text pur) din `AINPCCommand.java`
+- Corpurile Java inlocuite cu delegate catre `AINPCCommandDisplay`
+
+### KOT-302
+
+Data: 2026-06-13
+ID: KOT-302
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie (extractie)
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandStory.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+
+Input selectat / filtrat:
+- Candidati: `handleStory`, `handleStoryRegion`, `handleStoryPlace`, `handleStoryEvents`, `handleStoryContext` + 7 helpere private + 2 constante
+
+Microtaskuri:
+- Creat `AINPCCommandStory.kt` cu toate metodele si constantele story (~375 linii)
+- Corpurile Java inlocuite cu delegate one-line
+- Adaugat `lateinit var ainpcCommandStoryPlugin` si `initAinpcCommandStoryPlugin`
+
+### KOT-303
+
+Data: 2026-06-13
+ID: KOT-303
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie (extractie)
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandMisc.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+
+Input selectat / filtrat:
+- Candidati: 11 handlere de comenzi miscellaneous (list, family, routine +2, mood, teleport, reload, gui, test)
+
+Microtaskuri:
+- Creat `AINPCCommandMisc.kt` cu 11 handlere (~320 linii)
+- Corpurile Java inlocuite cu delegate
+- Eliminat `sendHelp` wrapper si 5 importuri moarte
+- Adaugat `lateinit var ainpcCommandMiscPlugin` si `initAinpcCommandMiscPlugin`
+
+### KOT-304
+
+Data: 2026-06-13
+ID: KOT-304
+Status: validat local
+Zona: `ro.ainpc.commands`
+Tip: productie (extractie)
+Risc: 2
+
+Fisiere modificate:
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandProgression.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/commands/AINPCCommandDisplay.kt`
+- `ainpc-core-plugin/src/main/java/ro/ainpc/commands/AINPCCommand.java`
+
+Input selectat / filtrat:
+- Candidati: `handleProgressionDefinitions`, `handleProgressionStored` + 3 helpere private (`sendStoredProgressionSummary`, `sendStoredProgressionLine`, `clampProgressionStoredLimit`)
+
+Microtaskuri:
+- Creat `AINPCCommandProgression.kt` cu `handleProgressionDefinitions`, `handleProgressionStored` (accepta `Function<String, Player?>` pentru `findOnlinePlayer`) + 3 helpere
+- Mutat `sendProgressionAliasUsage` in `AINPCCommandDisplay.kt`
+- Eliminat `PROGRESSION_STORED_DEFAULT_LIMIT`, `PROGRESSION_STORED_MAX_LIMIT` din Java
+- Corpurile Java inlocuite cu delegate; adaugat `initAinpcCommandProgressionPlugin`
+- Redus `AINPCCommand.java` de la 6098 la 5317 linii
+
+Inventar dupa KOT-299–304:
+- fisiere Java de productie ramase in core: `AINPCCommand.java`, `ScenarioEngine.java`, `NPCManager.java`
+- linii Java actuale in cele 3 fisiere: 11.555 (5317 + 4414 + 1824)
+- taskuri estimate ramase: `ScenarioEngine` 2, `AINPCCommand` 10, `NPCManager` 0, gate 4 = 16 total
