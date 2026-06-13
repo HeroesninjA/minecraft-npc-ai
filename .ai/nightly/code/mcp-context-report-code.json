@@ -1,39 +1,39 @@
 ﻿{
-    "generated_at":  "2026-06-11T06:12:16.0699597+03:00",
+    "generated_at":  "2026-06-13T11:00:07.3717269+03:00",
     "input_path":  "C:\\Users\\HeroesninjA\\IdeaProjects\\test\\.ai\\nightly\\code",
     "file_pattern":  "*mcp-context*summary*.json*",
     "files_scanned":  2,
-    "runs":  78,
-    "usable_runs":  63,
+    "runs":  84,
+    "usable_runs":  69,
     "failed_runs":  15,
-    "usable_run_pct":  80.77,
+    "usable_run_pct":  82.14,
     "attempt_distribution":  {
-                                 "attempt1":  63,
+                                 "attempt1":  69,
                                  "attempt2":  6,
                                  "attempt3":  9,
-                                 "attempt1_pct":  80.77,
-                                 "usable_attempt1":  63,
+                                 "attempt1_pct":  82.14,
+                                 "usable_attempt1":  69,
                                  "usable_attempt2":  0,
                                  "usable_attempt3":  0,
                                  "usable_attempt1_pct":  100
                              },
     "averages":  {
                      "selected_budget":  900,
-                     "tokens_used":  298.95,
+                     "tokens_used":  306.61,
                      "savings_vs_2200_budget":  1300,
-                     "savings_vs_2200_used":  1901.05
+                     "savings_vs_2200_used":  1893.39
                  },
     "by_profile":  [
                        {
                            "profile":  "code",
-                           "runs":  78,
-                           "usable_runs":  63,
+                           "runs":  84,
+                           "usable_runs":  69,
                            "failed_runs":  15,
                            "attempt1_pct":  100,
                            "avg_budget":  900,
-                           "avg_used":  298.95,
+                           "avg_used":  306.61,
                            "avg_savings_vs_2200_budget":  1300,
-                           "avg_output_length":  1655.68,
+                           "avg_output_length":  1694.14,
                            "p50_output_length":  850,
                            "p75_output_length":  3316,
                            "recommended_min_chars_for_success":  544,
@@ -54,8 +54,8 @@
                             "by_profile":  [
                                                {
                                                    "profile":  "code",
-                                                   "runs":  78,
-                                                   "usable_runs":  63,
+                                                   "runs":  84,
+                                                   "usable_runs":  69,
                                                    "failed_runs":  15,
                                                    "min_chars_for_success_recommended":  544,
                                                    "source":  "profile_default_adjusted_by_attempt1_pct",

@@ -4,22 +4,14 @@ import static ro.ainpc.managers.NPCManagerText.*;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Tag;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.type.Bed;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Villager;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import ro.ainpc.AINPCPlugin;
 import ro.ainpc.api.WorldAdminApi;
-import ro.ainpc.engine.FeaturePackLoader;
 import ro.ainpc.npc.AINPC;
 import ro.ainpc.npc.NPCEmotions;
 import ro.ainpc.npc.NPCPersonality;
@@ -29,8 +21,6 @@ import ro.ainpc.world.NpcWorldBinding;
 import ro.ainpc.world.NpcWorldBindingService;
 import ro.ainpc.world.WorldNodeInfo;
 import ro.ainpc.world.WorldPlaceInfo;
-import ro.ainpc.world.WorldRegionInfo;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -41,15 +31,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
-
 /**
  * Manager pentru toate NPC-urile AI din plugin
  */
@@ -71,6 +58,9 @@ public class NPCManager {
         this.npcsByEntityId = new ConcurrentHashMap<>();
         this.npcsBySourceKey = new ConcurrentHashMap<>();
         this.villagePopulationCooldowns = new ConcurrentHashMap<>();
+        NPCManagerVillagerLookup.initVillagerLookupPlugin(plugin);
+        NPCManagerDB.initNpcManagerDbPlugin(plugin);
+        NPCManagerAnchors.initNpcManagerAnchorsPlugin(plugin);
     }
 
     /**
@@ -271,7 +261,7 @@ public class NPCManager {
         }
 
         applyThemeDefaults(npc);
-        boolean anchorsChanged = ensureSimulationAnchors(npc, villager.getLocation());
+        boolean anchorsChanged = NPCManagerAnchors.ensureSimulationAnchors(npc, villager.getLocation());
 
         if (occupationChanged || anchorsChanged) {
             saveNPC(npc, false);
@@ -452,7 +442,7 @@ public class NPCManager {
             return null;
         }
 
-        ensureSimulationAnchors(npc, location);
+        NPCManagerAnchors.ensureSimulationAnchors(npc, location);
 
         if (saveNPC(npc)) {
             registerNPC(npc);
@@ -515,7 +505,7 @@ public class NPCManager {
         npc.setSocialAnchor(resolvedPlan.socialAnchor());
 
         applyThemeDefaults(npc);
-        ensureSimulationAnchors(npc, spawnLocation);
+        NPCManagerAnchors.ensureSimulationAnchors(npc, spawnLocation);
 
         if (!npc.spawn()) {
             return null;
@@ -611,26 +601,7 @@ public class NPCManager {
      * Salveaza personalitatea NPC-ului
      */
     private boolean savePersonality(AINPC npc) {
-        String sql = """
-            INSERT OR REPLACE INTO npc_personality
-            (npc_id, openness, conscientiousness, extraversion, agreeableness, neuroticism)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """;
-
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            NPCPersonality p = npc.getPersonality();
-            stmt.setInt(1, npc.getDatabaseId());
-            stmt.setDouble(2, p.getOpenness());
-            stmt.setDouble(3, p.getConscientiousness());
-            stmt.setDouble(4, p.getExtraversion());
-            stmt.setDouble(5, p.getAgreeableness());
-            stmt.setDouble(6, p.getNeuroticism());
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Eroare la salvarea personalitatii: " + e.getMessage());
-            return false;
-        }
+        return NPCManagerDB.savePersonality(npc);
     }
 
     /**
@@ -645,86 +616,15 @@ public class NPCManager {
     }
 
     private boolean saveEmotionsRow(AINPC npc) {
-        String sql = """
-            INSERT OR REPLACE INTO npc_emotions
-            (npc_id, happiness, sadness, anger, fear, surprise, disgust, trust, anticipation, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """;
-
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            NPCEmotions e = npc.getEmotions();
-            stmt.setInt(1, npc.getDatabaseId());
-            stmt.setDouble(2, e.getHappiness());
-            stmt.setDouble(3, e.getSadness());
-            stmt.setDouble(4, e.getAnger());
-            stmt.setDouble(5, e.getFear());
-            stmt.setDouble(6, e.getSurprise());
-            stmt.setDouble(7, e.getDisgust());
-            stmt.setDouble(8, e.getTrust());
-            stmt.setDouble(9, e.getAnticipation());
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Eroare la salvarea emotiilor: " + e.getMessage());
-            return false;
-        }
+        return NPCManagerDB.saveEmotionsRow(npc);
     }
 
     private void loadTraits(AINPC npc) throws SQLException {
-        String sql = """
-            SELECT trait_id
-            FROM npc_traits
-            WHERE npc_id = ?
-            ORDER BY trait_id ASC
-        """;
-
-        List<String> traits = new ArrayList<>();
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setInt(1, npc.getDatabaseId());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    traits.add(rs.getString("trait_id"));
-                }
-            }
-        }
-
-        npc.setTraits(traits);
+        NPCManagerDB.loadTraits(npc);
     }
 
     private boolean saveTraits(AINPC npc) {
-        String deleteSql = "DELETE FROM npc_traits WHERE npc_id = ?";
-        String insertSql = """
-            INSERT OR IGNORE INTO npc_traits (npc_id, trait_id)
-            VALUES (?, ?)
-        """;
-
-        try (PreparedStatement deleteStmt = plugin.getDatabaseManager().prepareStatement(deleteSql)) {
-            deleteStmt.setInt(1, npc.getDatabaseId());
-            deleteStmt.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Eroare la stergerea traits pentru profilul NPC: " + e.getMessage());
-            return false;
-        }
-
-        if (npc.getTraits() == null || npc.getTraits().isEmpty()) {
-            return true;
-        }
-
-        try (PreparedStatement insertStmt = plugin.getDatabaseManager().prepareStatement(insertSql)) {
-            for (String traitId : npc.getTraits()) {
-                if (traitId == null || traitId.isBlank()) {
-                    continue;
-                }
-                insertStmt.setInt(1, npc.getDatabaseId());
-                insertStmt.setString(2, traitId);
-                insertStmt.addBatch();
-            }
-            insertStmt.executeBatch();
-            return true;
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Eroare la salvarea traits pentru profilul NPC: " + e.getMessage());
-            return false;
-        }
+        return NPCManagerDB.saveTraits(npc);
     }
 
     private boolean saveProfile(AINPC npc) {
@@ -828,93 +728,27 @@ public class NPCManager {
     }
 
     private void deleteOtherPersistentSourceKeys(int npcId, String normalizedSourceKey) throws SQLException {
-        String sql = """
-            DELETE FROM npc_source_keys
-            WHERE npc_id = ?
-              AND source_key <> ?
-        """;
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setInt(1, npcId);
-            stmt.setString(2, normalizedSourceKey);
-            stmt.executeUpdate();
-        }
+        NPCManagerDB.deleteOtherPersistentSourceKeys(npcId, normalizedSourceKey);
     }
 
     private boolean deletePersistentSourceKey(int npcId) {
-        if (npcId <= 0) {
-            return true;
-        }
-
-        String sql = "DELETE FROM npc_source_keys WHERE npc_id = ?";
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setInt(1, npcId);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Eroare la stergerea source_key persistent pentru NPC #" + npcId
-                + ": " + e.getMessage());
-            return false;
-        }
+        return NPCManagerDB.deletePersistentSourceKey(npcId);
     }
 
     private void insertSourceKeyOwner(String normalizedSourceKey, int npcId, String source) throws SQLException {
-        String sql = """
-            INSERT INTO npc_source_keys (source_key, npc_id, source, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        """;
-        long now = System.currentTimeMillis();
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setString(1, normalizedSourceKey);
-            stmt.setInt(2, npcId);
-            stmt.setString(3, source != null ? source : "");
-            stmt.setLong(4, now);
-            stmt.setLong(5, now);
-            stmt.executeUpdate();
-        }
+        NPCManagerDB.insertSourceKeyOwner(normalizedSourceKey, npcId, source);
     }
 
     private void updateSourceKeyOwner(String normalizedSourceKey, int npcId, String source) throws SQLException {
-        String sql = """
-            UPDATE npc_source_keys
-            SET npc_id = ?,
-                source = ?,
-                updated_at = ?
-            WHERE source_key = ?
-        """;
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setInt(1, npcId);
-            stmt.setString(2, source != null ? source : "");
-            stmt.setLong(3, System.currentTimeMillis());
-            stmt.setString(4, normalizedSourceKey);
-            stmt.executeUpdate();
-        }
+        NPCManagerDB.updateSourceKeyOwner(normalizedSourceKey, npcId, source);
     }
 
     private Integer findPersistedSourceKeyOwnerId(String sourceKey) throws SQLException {
-        String normalizedSourceKey = normalizeSourceKey(sourceKey);
-        if (normalizedSourceKey.isBlank()) {
-            return null;
-        }
-
-        String sql = "SELECT npc_id FROM npc_source_keys WHERE source_key = ?";
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            stmt.setString(1, normalizedSourceKey);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("npc_id");
-                }
-            }
-        }
-        return null;
+        return NPCManagerDB.findPersistedSourceKeyOwnerId(sourceKey);
     }
 
     private Integer findPersistedSourceKeyOwnerIdQuietly(String sourceKey) {
-        try {
-            return findPersistedSourceKeyOwnerId(sourceKey);
-        } catch (SQLException e) {
-            plugin.debug("Nu pot citi indexul source_key persistent: " + e.getMessage());
-            return null;
-        }
+        return NPCManagerDB.findPersistedSourceKeyOwnerIdQuietly(sourceKey);
     }
 
     public int ensureAllNPCsHaveProfiles() {
@@ -964,32 +798,7 @@ public class NPCManager {
     }
 
     private NpcWorldBinding inferWorldBindingFromAnchors(AINPC npc, WorldAdminApi worldAdmin) {
-        WorldPlaceInfo homePlace = inferPlaceFromAnchor(worldAdmin, npc.getHomeAnchor());
-        WorldPlaceInfo workPlace = inferPlaceFromAnchor(worldAdmin, npc.getWorkAnchor());
-        WorldPlaceInfo socialPlace = inferPlaceFromAnchor(worldAdmin, npc.getSocialAnchor());
-        if (homePlace == null && workPlace == null && socialPlace == null) {
-            return null;
-        }
-
-        WorldNodeInfo homeNode = inferNodeFromAnchor(worldAdmin, npc.getHomeAnchor(), homePlace);
-        WorldNodeInfo workNode = inferNodeFromAnchor(worldAdmin, npc.getWorkAnchor(), workPlace);
-        WorldNodeInfo socialNode = inferNodeFromAnchor(worldAdmin, npc.getSocialAnchor(), socialPlace);
-
-        return new NpcWorldBinding(
-            npc.getDatabaseId(),
-            npc.getUuid() != null ? npc.getUuid().toString() : "",
-            npc.getName(),
-            homePlace != null ? homePlace.id() : "",
-            workPlace != null ? workPlace.id() : "",
-            socialPlace != null ? socialPlace.id() : "",
-            homeNode != null ? homeNode.id() : "",
-            workNode != null ? workNode.id() : "",
-            socialNode != null ? socialNode.id() : "",
-            "",
-            "profile_backfill",
-            0L,
-            0L
-        );
+        return NPCManagerText.inferWorldBindingFromAnchors(npc, worldAdmin);
     }
 
     private void applyWorldBindingAnchors(AINPC npc, NpcWorldBinding binding) {
@@ -1021,57 +830,17 @@ public class NPCManager {
                                                   String placeId,
                                                   String nodeId,
                                                   String role) {
-        WorldPlaceInfo place = placeId == null || placeId.isBlank() ? null : worldAdmin.getPlace(placeId);
-        WorldNodeInfo node = nodeId == null || nodeId.isBlank() ? null : worldAdmin.getNode(nodeId);
-        if (node != null) {
-            String label = place != null ? place.displayName() : node.id();
-            return new AINPC.OwnedLocation(
-                role,
-                nodeLabel(node, label),
-                node.worldName(),
-                node.x(),
-                node.y(),
-                node.z()
-            );
-        }
-        if (place == null) {
-            return null;
-        }
-
-        return new AINPC.OwnedLocation(
-            role,
-            place.displayName(),
-            place.worldName(),
-            placeCenterX(place),
-            placeAnchorY(place),
-            placeCenterZ(place)
-        );
+        return NPCManagerText.anchorFromBinding(worldAdmin, placeId, nodeId, role);
     }
 
     private WorldPlaceInfo inferPlaceFromAnchor(WorldAdminApi worldAdmin, AINPC.OwnedLocation anchor) {
-        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
-            return null;
-        }
-        return worldAdmin.findPlace(
-            anchor.worldName(),
-            (int) Math.floor(anchor.x()),
-            (int) Math.floor(anchor.y()),
-            (int) Math.floor(anchor.z())
-        );
+        return NPCManagerText.inferPlaceFromAnchor(worldAdmin, anchor);
     }
 
     private WorldNodeInfo inferNodeFromAnchor(WorldAdminApi worldAdmin,
                                               AINPC.OwnedLocation anchor,
                                               WorldPlaceInfo place) {
-        if (worldAdmin == null || anchor == null || anchor.worldName() == null || anchor.worldName().isBlank()) {
-            return null;
-        }
-
-        return worldAdmin.findNodesNear(anchor.worldName(), anchor.x(), anchor.y(), anchor.z(), 2.5D, 5)
-            .stream()
-            .filter(node -> place == null || node.placeId().isBlank() || node.placeId().equalsIgnoreCase(place.id()))
-            .findFirst()
-            .orElse(null);
+        return NPCManagerText.inferNodeFromAnchor(worldAdmin, anchor, place);
     }
 
     /**
@@ -1548,10 +1317,7 @@ public class NPCManager {
     }
 
     private int clearPersistentSourceKeys() throws SQLException {
-        String sql = "DELETE FROM npc_source_keys";
-        try (PreparedStatement stmt = plugin.getDatabaseManager().prepareStatement(sql)) {
-            return stmt.executeUpdate();
-        }
+        return NPCManagerDB.clearPersistentSourceKeys();
     }
 
     private void repairSourceKeyDuplicateRows(boolean apply,
@@ -1937,21 +1703,7 @@ public class NPCManager {
     }
 
     private Villager choosePreferredVillager(AINPC npc, Villager currentVillager, Villager incomingVillager) {
-        UUID storedUuid = npc.getUuid();
-        if (storedUuid != null && incomingVillager.getUniqueId().equals(storedUuid)) {
-            return incomingVillager;
-        }
-        if (storedUuid != null && currentVillager.getUniqueId().equals(storedUuid)) {
-            return currentVillager;
-        }
-
-        int npcId = npc.getDatabaseId();
-        int incomingNpcId = readPersistentNpcId(incomingVillager);
-        int currentNpcId = readPersistentNpcId(currentVillager);
-        if (npcId > 0 && incomingNpcId == npcId && currentNpcId != npcId) {
-            return incomingVillager;
-        }
-        return currentVillager;
+        return NPCManagerVillagerLookup.choosePreferredVillager(npc, currentVillager, incomingVillager);
     }
 
     private void removeDuplicateVillager(Villager villager, AINPC npc) {
@@ -2021,148 +1773,39 @@ public class NPCManager {
     }
 
     private boolean isChunkLoaded(AINPC npc) {
-        World world = plugin.getServer().getWorld(npc.getWorldName());
-        if (world == null) {
-            return false;
-        }
-
-        int chunkX = floorToBlock(npc.getX()) >> 4;
-        int chunkZ = floorToBlock(npc.getZ()) >> 4;
-        return world.isChunkLoaded(chunkX, chunkZ);
+        return NPCManagerVillagerLookup.isChunkLoaded(npc);
     }
 
     private boolean belongsToChunk(AINPC npc, Chunk chunk) {
-        if (npc.getWorldName() == null || chunk.getWorld() == null) {
-            return false;
-        }
-
-        if (!npc.getWorldName().equals(chunk.getWorld().getName())) {
-            return false;
-        }
-
-        int chunkX = floorToBlock(npc.getX()) >> 4;
-        int chunkZ = floorToBlock(npc.getZ()) >> 4;
-        return chunk.getX() == chunkX && chunk.getZ() == chunkZ;
+        return NPCManagerText.belongsToChunk(npc, chunk);
     }
 
     private Villager findVillagerForNPC(AINPC npc, Chunk preferredChunk) {
-        Villager exactMatch = preferredChunk == null
-            ? findVillagerByUuid(npc.getUuid())
-            : findVillagerByUuid(preferredChunk, npc.getUuid());
-        if (exactMatch != null) {
-            return exactMatch;
-        }
-
-        Villager persistentMatch = preferredChunk == null
-            ? findVillagerByPersistentIdentity(npc)
-            : findVillagerByPersistentIdentity(preferredChunk, npc);
-        if (persistentMatch != null) {
-            return persistentMatch;
-        }
-
-        return preferredChunk == null
-            ? findLegacyVillager(npc)
-            : findLegacyVillager(npc, preferredChunk);
+        return NPCManagerVillagerLookup.findVillagerForNPC(npc, preferredChunk);
     }
 
     private Villager findVillagerByUuid(UUID uuid) {
-        for (World world : plugin.getServer().getWorlds()) {
-            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                if (villager.getUniqueId().equals(uuid)) {
-                    return villager;
-                }
-            }
-        }
-        return null;
+        return NPCManagerVillagerLookup.findVillagerByUuid(uuid);
     }
 
     private Villager findVillagerByPersistentIdentity(AINPC npc) {
-        if (npc == null) {
-            return null;
-        }
-
-        for (World world : plugin.getServer().getWorlds()) {
-            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                if (matchesPersistentIdentity(villager, npc)) {
-                    return villager;
-                }
-            }
-        }
-        return null;
+        return NPCManagerVillagerLookup.findVillagerByPersistentIdentity(npc);
     }
 
     private Villager findVillagerByPersistentIdentity(Chunk chunk, AINPC npc) {
-        if (chunk == null || npc == null) {
-            return null;
-        }
-
-        for (Entity entity : chunk.getEntities()) {
-            if (entity instanceof Villager villager && matchesPersistentIdentity(villager, npc)) {
-                return villager;
-            }
-        }
-        return null;
+        return NPCManagerVillagerLookup.findVillagerByPersistentIdentity(chunk, npc);
     }
 
     private Villager findVillagerByUuid(Chunk chunk, UUID uuid) {
-        for (Entity entity : chunk.getEntities()) {
-            if (entity instanceof Villager villager && villager.getUniqueId().equals(uuid)) {
-                return villager;
-            }
-        }
-        return null;
+        return NPCManagerVillagerLookup.findVillagerByUuid(chunk, uuid);
     }
 
     private Villager findLegacyVillager(AINPC npc) {
-        Location expectedLocation = npc.getLocation();
-        if (expectedLocation == null || expectedLocation.getWorld() == null) {
-            return null;
-        }
-
-        for (Villager villager : expectedLocation.getWorld().getEntitiesByClass(Villager.class)) {
-            if (!isLegacyPluginVillager(villager)) {
-                continue;
-            }
-
-            if (!isSameNpcLocation(expectedLocation, villager.getLocation())) {
-                continue;
-            }
-
-            String villagerName = getVillagerDisplayName(villager);
-            if (namesMatch(npc.getDisplayName(), villagerName) || namesMatch(npc.getName(), villagerName)) {
-                return villager;
-            }
-        }
-
-        return null;
+        return NPCManagerVillagerLookup.findLegacyVillager(npc);
     }
 
     private Villager findLegacyVillager(AINPC npc, Chunk chunk) {
-        Location expectedLocation = npc.getLocation();
-        if (expectedLocation == null || expectedLocation.getWorld() == null) {
-            return null;
-        }
-
-        for (Entity entity : chunk.getEntities()) {
-            if (!(entity instanceof Villager villager)) {
-                continue;
-            }
-
-            if (!isLegacyPluginVillager(villager)) {
-                continue;
-            }
-
-            if (!isSameNpcLocation(expectedLocation, villager.getLocation())) {
-                continue;
-            }
-
-            String villagerName = getVillagerDisplayName(villager);
-            if (namesMatch(npc.getDisplayName(), villagerName) || namesMatch(npc.getName(), villagerName)) {
-                return villager;
-            }
-        }
-
-        return null;
+        return NPCManagerVillagerLookup.findLegacyVillager(npc, chunk);
     }
 
     private AINPC findLegacyNPCForVillager(Villager villager) {
@@ -2205,64 +1848,31 @@ public class NPCManager {
     }
 
     private boolean matchesPersistentIdentity(Villager villager, AINPC npc) {
-        if (villager == null || npc == null) {
-            return false;
-        }
-
-        int storedNpcId = readPersistentNpcId(villager);
-        if (storedNpcId > 0 && storedNpcId == npc.getDatabaseId()) {
-            return true;
-        }
-
-        String storedUuid = readPersistentString(villager, AINPC.PDC_UUID_KEY);
-        if (npc.getUuid() != null && storedUuid.equalsIgnoreCase(npc.getUuid().toString())) {
-            return true;
-        }
-
-        String storedSourceKey = readPersistentString(villager, AINPC.PDC_SOURCE_KEY);
-        return !storedSourceKey.isBlank() && storedSourceKey.equalsIgnoreCase(npc.getSourceKey());
+        return NPCManagerVillagerLookup.matchesPersistentIdentity(villager, npc);
     }
 
     private boolean isPendingManagedVillager(Villager villager) {
-        return isMarkedAinpcVillager(villager) && readPersistentNpcId(villager) <= 0;
+        return NPCManagerVillagerLookup.isPendingManagedVillager(villager);
     }
 
     private boolean isMarkedAinpcVillager(Villager villager) {
-        if (villager == null) {
-            return false;
-        }
-        PersistentDataContainer data = villager.getPersistentDataContainer();
-        Integer managed = data.get(persistentKey(AINPC.PDC_MANAGED_KEY), PersistentDataType.INTEGER);
-        return managed != null && managed == 1;
+        return NPCManagerVillagerLookup.isMarkedAinpcVillager(villager);
     }
 
     private int readPersistentNpcId(Villager villager) {
-        if (villager == null) {
-            return 0;
-        }
-        Integer npcId = villager.getPersistentDataContainer()
-            .get(persistentKey(AINPC.PDC_DATABASE_ID_KEY), PersistentDataType.INTEGER);
-        return npcId != null ? npcId : 0;
+        return NPCManagerVillagerLookup.readPersistentNpcId(villager);
     }
 
     private String readPersistentString(Villager villager, String key) {
-        if (villager == null || key == null || key.isBlank()) {
-            return "";
-        }
-        String value = villager.getPersistentDataContainer()
-            .get(persistentKey(key), PersistentDataType.STRING);
-        return value == null ? "" : value.trim();
+        return NPCManagerVillagerLookup.readPersistentString(villager, key);
     }
 
     private NamespacedKey persistentKey(String key) {
-        return new NamespacedKey(plugin, key);
+        return NPCManagerVillagerLookup.persistentKey(key);
     }
 
     private boolean isLegacyPluginVillager(Villager villager) {
-        return isMarkedAinpcVillager(villager)
-            || !villager.hasAI()
-            || villager.isInvulnerable()
-            || villager.isSilent();
+        return NPCManagerVillagerLookup.isLegacyPluginVillager(villager);
     }
 
     private AINPC findEquivalentActiveNPC(AINPC target) {
@@ -2356,112 +1966,26 @@ public class NPCManager {
     }
 
     private Location averageLocation(List<Location> locations) {
-        double x = 0.0;
-        double y = 0.0;
-        double z = 0.0;
-        World world = locations.get(0).getWorld();
-
-        for (Location location : locations) {
-            x += location.getX();
-            y += location.getY();
-            z += location.getZ();
-        }
-
-        int count = locations.size();
-        return new Location(world, x / count, y / count, z / count);
+        return NPCManagerText.averageLocation(locations);
     }
 
     private List<Location> findBedLocations(Location center, int radius, int verticalRadius) {
-        if (center == null || center.getWorld() == null) {
-            return Collections.emptyList();
-        }
-
-        Set<String> seenBeds = new HashSet<>();
-        List<Location> beds = new ArrayList<>();
-
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -verticalRadius; dy <= verticalRadius; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    Block block = center.getWorld().getBlockAt(
-                        floorToBlock(center.getX()) + dx,
-                        floorToBlock(center.getY()) + dy,
-                        floorToBlock(center.getZ()) + dz
-                    );
-
-                    if (!Tag.BEDS.isTagged(block.getType())) {
-                        continue;
-                    }
-
-                    BlockData blockData = block.getBlockData();
-                    if (blockData instanceof Bed bedData && bedData.getPart() != Bed.Part.HEAD) {
-                        continue;
-                    }
-
-                    String key = block.getX() + ":" + block.getY() + ":" + block.getZ();
-                    if (seenBeds.add(key)) {
-                        beds.add(block.getLocation());
-                    }
-                }
-            }
-        }
-
-        return beds;
+        return NPCManagerText.findBedLocations(center, radius, verticalRadius);
     }
 
     private Location findVillageSpawnLocation(NpcVillageSnapshot snapshot, int offset) {
-        List<Location> beds = snapshot.bedLocations();
-        if (beds.isEmpty()) {
-            return null;
-        }
-
-        Location bed = beds.get(offset % beds.size());
-        World world = bed.getWorld();
-        if (world == null) {
-            return null;
-        }
-
-        int[][] candidates = new int[][]{
-            {0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {2, 0}, {-2, 0}, {0, 2}, {0, -2}
-        };
-
-        for (int[] candidate : candidates) {
-            Location spawn = bed.clone().add(candidate[0] + 0.5, 1.0, candidate[1] + 0.5);
-            Block feet = world.getBlockAt(floorToBlock(spawn.getX()), floorToBlock(spawn.getY()), floorToBlock(spawn.getZ()));
-            Block head = world.getBlockAt(floorToBlock(spawn.getX()), floorToBlock(spawn.getY()) + 1, floorToBlock(spawn.getZ()));
-            Block ground = world.getBlockAt(floorToBlock(spawn.getX()), floorToBlock(spawn.getY()) - 1, floorToBlock(spawn.getZ()));
-            if (feet.isPassable() && head.isPassable() && !ground.isPassable()) {
-                return spawn;
-            }
-        }
-
-        return snapshot.center().clone().add(0.5, 0.0, 0.5);
+        return NPCManagerText.findVillageSpawnLocation(snapshot, offset);
     }
 
     private Villager spawnNaturalVillageVillager(Location location) {
-        if (location == null || location.getWorld() == null) {
-            return null;
-        }
-
-        try {
-            return location.getWorld().spawn(location, Villager.class, villager -> {
-                villager.setAdult();
-                villager.setProfession(Villager.Profession.NONE);
-                villager.setVillagerType(Villager.Type.PLAINS);
-                villager.setPersistent(true);
-                villager.setRemoveWhenFarAway(false);
-            });
-        } catch (Exception exception) {
-            plugin.getLogger().warning("Nu am putut genera un villager nou pentru sat la "
-                + formatLocation(location) + ": " + exception.getMessage());
-            return null;
-        }
+        return NPCManagerDB.spawnNaturalVillageVillager(location);
     }
 
     private AINPC createAutoProfile(Villager villager) {
         AINPC npc = new AINPC(plugin);
         applyAutoProfile(npc, villager);
         npc.attachToVillager(villager);
-        ensureSimulationAnchors(npc, villager.getLocation());
+        NPCManagerAnchors.ensureSimulationAnchors(npc, villager.getLocation());
 
         if (!saveNPC(npc)) {
             return null;
@@ -2503,389 +2027,15 @@ public class NPCManager {
     }
 
     private void applyThemeDefaults(AINPC npc) {
-        if (npc == null || plugin.getFeaturePackLoader() == null) {
-            return;
-        }
-
-        FeaturePackLoader.ProfessionDefinition profession =
-            plugin.getFeaturePackLoader().findPrimaryScenarioProfession(npc.getOccupation());
-        if (profession == null || profession.getSuggestedTraits().isEmpty()) {
-            return;
-        }
-
-        if (npc.getTraits() != null && !npc.getTraits().isEmpty()) {
-            return;
-        }
-
-        List<String> candidates = new ArrayList<>(profession.getSuggestedTraits());
-        Random random = new Random(
-            npc.getUuid().getMostSignificantBits()
-                ^ npc.getUuid().getLeastSignificantBits()
-                ^ profession.getId().hashCode()
-        );
-        Collections.shuffle(candidates, random);
-
-        int traitsToAssign = Math.min(2, candidates.size());
-        for (int i = 0; i < traitsToAssign; i++) {
-            npc.addTrait(candidates.get(i));
-        }
-    }
-
-    private String resolveOccupationForVillager(Villager villager, Random random) {
-        String mappedOccupation = mapProfessionToOccupation(villager.getProfession());
-        String inferredOccupation = inferOccupationFromEnvironment(villager);
-        String themedOccupation = isGenericOccupation(mappedOccupation) && (inferredOccupation == null || inferredOccupation.isBlank())
-            ? inferOccupationFromPrimaryScenario(random)
-            : null;
-        return resolveOccupationChoice(villager.getProfession(), mappedOccupation, inferredOccupation, themedOccupation);
-    }
-
-    private Material findNearbyWorkstation(Location center, int horizontalRadius, int verticalRadius) {
-        if (center == null || center.getWorld() == null) {
-            return null;
-        }
-
-        Map<Material, Integer> materialWeights = new HashMap<>();
-        for (int dx = -horizontalRadius; dx <= horizontalRadius; dx++) {
-            for (int dy = -verticalRadius; dy <= verticalRadius; dy++) {
-                for (int dz = -horizontalRadius; dz <= horizontalRadius; dz++) {
-                    Block block = center.getWorld().getBlockAt(
-                        floorToBlock(center.getX()) + dx,
-                        floorToBlock(center.getY()) + dy,
-                        floorToBlock(center.getZ()) + dz
-                    );
-                    Material type = block.getType();
-                    if (!isWorkstation(type)) {
-                        continue;
-                    }
-                    materialWeights.merge(type, 1, Integer::sum);
-                }
-            }
-        }
-
-        return materialWeights.entrySet().stream()
-            .max(Map.Entry.comparingByValue())
-            .map(Map.Entry::getKey)
-            .orElse(null);
+        NPCManagerDB.applyThemeDefaults(npc);
     }
 
     public boolean ensureSimulationAnchors(AINPC npc) {
-        return ensureSimulationAnchors(npc, npc != null ? npc.getLocation() : null);
+        return NPCManagerAnchors.ensureSimulationAnchors(npc, npc != null ? npc.getLocation() : null);
     }
 
-    private boolean ensureSimulationAnchors(AINPC npc, Location center) {
-        if (npc == null || center == null || center.getWorld() == null) {
-            return false;
-        }
-
-        boolean changed = false;
-        if (npc.getHomeAnchor() == null) {
-            npc.setHomeAnchor(resolveHomeAnchor(npc, center));
-            changed = npc.getHomeAnchor() != null;
-        }
-
-        if (npc.getWorkAnchor() == null) {
-            npc.setWorkAnchor(resolveWorkAnchor(npc, center));
-            changed = npc.getWorkAnchor() != null || changed;
-        }
-
-        if (npc.getSocialAnchor() == null) {
-            npc.setSocialAnchor(resolveSocialAnchor(npc, center));
-            changed = npc.getSocialAnchor() != null || changed;
-        }
-
-        return changed;
-    }
-
-    private AINPC.OwnedLocation resolveHomeAnchor(AINPC npc, Location center) {
-        AINPC.OwnedLocation mappedHome = findMappedHomeAnchor(npc, center);
-        if (mappedHome != null) {
-            return mappedHome;
-        }
-
-        AINPC.OwnedLocation physicalHome = findNearestHomeAnchor(center);
-        if (physicalHome != null) {
-            return physicalHome;
-        }
-
-        return createFallbackHomeAnchor(npc, center);
-    }
-
-    private AINPC.OwnedLocation resolveWorkAnchor(AINPC npc, Location center) {
-        AINPC.OwnedLocation mappedWork = findMappedWorkAnchor(npc, center);
-        if (mappedWork != null) {
-            return mappedWork;
-        }
-
-        AINPC.OwnedLocation physicalWork = findNearestWorkAnchor(center, npc.getOccupation());
-        if (physicalWork != null) {
-            return physicalWork;
-        }
-
-        return createFallbackWorkAnchor(npc, center);
-    }
-
-    private AINPC.OwnedLocation resolveSocialAnchor(AINPC npc, Location center) {
-        AINPC.OwnedLocation mappedSocial = findMappedSocialAnchor(npc, center);
-        if (mappedSocial != null) {
-            return mappedSocial;
-        }
-
-        return findNearestSocialAnchor(center);
-    }
-
-    private AINPC.OwnedLocation findMappedHomeAnchor(AINPC npc, Location center) {
-        WorldPlaceInfo place = findBestMappedPlace(npc, center, candidate -> isHomePlace(candidate));
-        return place == null ? null : toOwnedLocation("home", place, findBestNodeForPlace(place, "home"));
-    }
-
-    private AINPC.OwnedLocation findMappedWorkAnchor(AINPC npc, Location center) {
-        WorldPlaceInfo place = findBestMappedPlace(npc, center, candidate -> isWorkPlace(candidate, npc.getOccupation()));
-        return place == null ? null : toOwnedLocation("work", place, findBestNodeForPlace(place, "work"));
-    }
-
-    private AINPC.OwnedLocation findMappedSocialAnchor(AINPC npc, Location center) {
-        WorldPlaceInfo place = findBestMappedPlace(npc, center, candidate -> isSocialPlace(candidate));
-        if (place != null) {
-            return toOwnedLocation("social", place, findBestNodeForPlace(place, "social"));
-        }
-
-        WorldNodeInfo regionNode = findBestRegionNode(center, "social");
-        return regionNode == null ? null : toOwnedLocation("social", regionNode, "punct social");
-    }
-
-    private WorldPlaceInfo findBestMappedPlace(AINPC npc,
-                                               Location center,
-                                               Predicate<WorldPlaceInfo> placePredicate) {
-        if (plugin.getPlatform() == null) {
-            return null;
-        }
-
-        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
-        if (worldAdmin == null || !worldAdmin.isEnabled()) {
-            return null;
-        }
-
-        WorldPlaceInfo bestPlace = null;
-        double bestScore = Double.MAX_VALUE;
-        String worldName = center.getWorld().getName();
-        int blockX = center.getBlockX();
-        int blockY = center.getBlockY();
-        int blockZ = center.getBlockZ();
-
-        for (WorldPlaceInfo place : worldAdmin.getPlaces()) {
-            if (place == null || !place.worldName().equalsIgnoreCase(worldName) || !placePredicate.test(place)) {
-                continue;
-            }
-
-            double distanceSquared = distanceSquaredToPlaceCenter(place, center);
-            double score;
-            if (isOwnedByNpc(place, npc)) {
-                score = distanceSquared;
-            } else if (place.contains(worldName, blockX, blockY, blockZ)) {
-                score = 10_000D + distanceSquared;
-            } else if (distanceSquared <= 32D * 32D) {
-                score = 20_000D + distanceSquared;
-            } else {
-                continue;
-            }
-
-            if (score < bestScore) {
-                bestScore = score;
-                bestPlace = place;
-            }
-        }
-
-        return bestPlace;
-    }
-
-    private WorldNodeInfo findBestNodeForPlace(WorldPlaceInfo place, String anchorRole) {
-        WorldAdminApi worldAdmin = getEnabledWorldAdmin();
-        if (worldAdmin == null || place == null) {
-            return null;
-        }
-
-        WorldNodeInfo bestNode = null;
-        double bestScore = Double.MAX_VALUE;
-        for (WorldNodeInfo node : worldAdmin.getNodesForPlace(place.id())) {
-            int priority = nodePriority(node, anchorRole);
-            if (priority < 0) {
-                continue;
-            }
-
-            double score = priority * 100_000D + distanceSquaredToPlaceCenter(place, node);
-            if (score < bestScore) {
-                bestScore = score;
-                bestNode = node;
-            }
-        }
-
-        return bestNode;
-    }
-
-    private WorldNodeInfo findBestRegionNode(Location center, String anchorRole) {
-        WorldAdminApi worldAdmin = getEnabledWorldAdmin();
-        if (worldAdmin == null || center == null || center.getWorld() == null) {
-            return null;
-        }
-
-        WorldNodeInfo bestNode = null;
-        double bestScore = Double.MAX_VALUE;
-        String worldName = center.getWorld().getName();
-        WorldRegionInfo region = worldAdmin.findRegion(worldName, center.getBlockX(), center.getBlockY(), center.getBlockZ());
-        String regionId = region != null ? region.id() : "";
-
-        for (WorldNodeInfo node : worldAdmin.getNodes()) {
-            if (!node.worldName().equalsIgnoreCase(worldName)) {
-                continue;
-            }
-            if (!regionId.isBlank() && !node.regionId().equalsIgnoreCase(regionId)) {
-                continue;
-            }
-
-            int priority = nodePriority(node, anchorRole);
-            if (priority < 0) {
-                continue;
-            }
-
-            double distanceSquared = distanceSquared(node.x(), node.y(), node.z(), center.getX(), center.getY(), center.getZ());
-            if (regionId.isBlank() && distanceSquared > 32D * 32D) {
-                continue;
-            }
-
-            double score = priority * 100_000D + distanceSquared;
-            if (score < bestScore) {
-                bestScore = score;
-                bestNode = node;
-            }
-        }
-
-        return bestNode;
-    }
-
-    private WorldAdminApi getEnabledWorldAdmin() {
-        if (plugin.getPlatform() == null) {
-            return null;
-        }
-
-        WorldAdminApi worldAdmin = plugin.getPlatform().getWorldAdmin();
-        return worldAdmin != null && worldAdmin.isEnabled() ? worldAdmin : null;
-    }
-
-    private AINPC.OwnedLocation findNearestHomeAnchor(Location center) {
-        Block bed = findNearestBlock(center, 8, 4, block -> {
-            if (!Tag.BEDS.isTagged(block.getType())) {
-                return false;
-            }
-            BlockData blockData = block.getBlockData();
-            return !(blockData instanceof Bed bedData) || bedData.getPart() == Bed.Part.HEAD;
-        });
-
-        if (bed == null) {
-            return null;
-        }
-
-        return new AINPC.OwnedLocation(
-            "home",
-            "casa de langa pat",
-            bed.getWorld().getName(),
-            bed.getX() + 0.5D,
-            bed.getY(),
-            bed.getZ() + 0.5D
-        );
-    }
-
-    private AINPC.OwnedLocation findNearestWorkAnchor(Location center, String occupation) {
-        Block workstation = findNearestBlock(center, 6, 3, block -> matchesOccupationWorkstation(occupation, block.getType()));
-        if (workstation == null) {
-            workstation = findNearestBlock(center, 6, 3, block -> isWorkstation(block.getType()));
-        }
-        if (workstation == null) {
-            return null;
-        }
-
-        return new AINPC.OwnedLocation(
-            "work",
-            describeWorkAnchor(occupation, workstation.getType()),
-            workstation.getWorld().getName(),
-            workstation.getX() + 0.5D,
-            workstation.getY(),
-            workstation.getZ() + 0.5D
-        );
-    }
-
-    private AINPC.OwnedLocation findNearestSocialAnchor(Location center) {
-        Block socialSpot = findNearestBlock(center, 12, 4, block -> block.getType() == Material.BELL);
-        if (socialSpot == null) {
-            return null;
-        }
-
-        return new AINPC.OwnedLocation(
-            "social",
-            "piata satului",
-            socialSpot.getWorld().getName(),
-            socialSpot.getX() + 0.5D,
-            socialSpot.getY(),
-            socialSpot.getZ() + 0.5D
-        );
-    }
-
-    private Block findNearestBlock(Location center, int horizontalRadius, int verticalRadius,
-                                   java.util.function.Predicate<Block> predicate) {
-        if (center == null || center.getWorld() == null) {
-            return null;
-        }
-
-        Block bestBlock = null;
-        double bestDistanceSquared = Double.MAX_VALUE;
-        int centerX = floorToBlock(center.getX());
-        int centerY = floorToBlock(center.getY());
-        int centerZ = floorToBlock(center.getZ());
-
-        for (int dx = -horizontalRadius; dx <= horizontalRadius; dx++) {
-            for (int dy = -verticalRadius; dy <= verticalRadius; dy++) {
-                for (int dz = -horizontalRadius; dz <= horizontalRadius; dz++) {
-                    Block block = center.getWorld().getBlockAt(centerX + dx, centerY + dy, centerZ + dz);
-                    if (!predicate.test(block)) {
-                        continue;
-                    }
-
-                    double distanceSquared = block.getLocation().distanceSquared(center);
-                    if (distanceSquared < bestDistanceSquared) {
-                        bestDistanceSquared = distanceSquared;
-                        bestBlock = block;
-                    }
-                }
-            }
-        }
-
-        return bestBlock;
-    }
-
-    private String inferOccupationFromPrimaryScenario(Random random) {
-        if (plugin.getFeaturePackLoader() == null) {
-            return null;
-        }
-
-        FeaturePackLoader.FeaturePack pack = plugin.getFeaturePackLoader().getPrimaryScenarioPack();
-        if (pack == null || pack.getProfessions().isEmpty()) {
-            return null;
-        }
-
-        List<FeaturePackLoader.ProfessionDefinition> professions = new ArrayList<>(pack.getProfessions());
-        Collections.shuffle(professions, random);
-        return professions.get(0).getName().toLowerCase(Locale.ROOT);
-    }
-
-    private String mapProfessionToOccupation(Villager.Profession profession) {
-        if (profession == null || profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) {
-            return "resident";
-        }
-        NamespacedKey key = org.bukkit.Registry.VILLAGER_PROFESSION.getKey(profession);
-        if (key == null) {
-            return "resident";
-        }
-        return "minecraft:" + key.getKey();
+    private String resolveOccupationForVillager(Villager villager, Random random) {
+        return NPCManagerDB.resolveOccupationForVillager(villager, random);
     }
 
     public AINPC getNPCByUuid(UUID uuid) {
