@@ -13,6 +13,10 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
+import ro.ainpc.world.mapping.MappingDraft
+import ro.ainpc.world.mapping.MappingDraftKind
+import ro.ainpc.world.mapping.MappingWandMode
+import ro.ainpc.world.mapping.MappingWandService
 
 lateinit var ainpcCommandMiscPlugin: AINPCPlugin
 
@@ -337,6 +341,337 @@ fun handleCreate(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Personalitate: &f" + npc.personality.getDominantTraits())
     } else {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&cEroare la crearea NPC-ului!")
+    }
+    return true
+}
+
+fun handleDelete(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 2) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc delete <nume>")
+        return true
+    }
+    val name = args[1]
+    val npc = ainpcCommandMiscPlugin.npcManager.getNPCByName(name)
+    if (npc == null) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "npc_not_found")
+        return true
+    }
+    if (ainpcCommandMiscPlugin.npcManager.deleteNPC(npc)) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "npc_deleted", mapOf("name" to name))
+    } else {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cEroare la stergerea NPC-ului!")
+    }
+    return true
+}
+
+fun handleDeleteId(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 2) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc delete-id <id> confirm")
+        return true
+    }
+    val npcId = parseIntegerStrict(args[1])
+    if (npcId == null || npcId <= 0) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cID NPC invalid: &f" + args[1])
+        return true
+    }
+    val npc = ainpcCommandMiscPlugin.npcManager.getNPCById(npcId)
+    if (npc == null) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cNu exista NPC incarcat cu ID-ul: &f$npcId")
+        return true
+    }
+    if (args.size < 3 || !args[2].equals("confirm", ignoreCase = true)) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender,
+            "&eNPC selectat: &f${npc.name} &7(id=&f${npc.databaseId}&7, source=&f${formatOptional(npc.sourceKey)}&7)")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&eLocatie: &f${formatLocation(npc.location)}")
+        ainpcCommandMiscPlugin.messageUtils.send(sender,
+            "&cPentru stergere definitiva ruleaza: &f/ainpc delete-id $npcId confirm")
+        return true
+    }
+    if (ainpcCommandMiscPlugin.npcManager.deleteNPC(npc)) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aNPC sters dupa ID: &f${npc.name}#$npcId")
+    } else {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cEroare la stergerea NPC-ului cu ID: &f$npcId")
+    }
+    return true
+}
+
+fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val npc = if (args.size < 2 || args[1].equals("nearest", ignoreCase = true)) {
+        val player = sender as? Player ?: run {
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&cSpecifica numele NPC-ului!")
+            return true
+        }
+        val nearby = ainpcCommandMiscPlugin.npcManager.getNPCsNear(player.location, 10.0)
+        if (nearby.isEmpty()) {
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&cNu exista NPC-uri in apropiere!")
+            return true
+        }
+        nearby[0]
+    } else {
+        ainpcCommandMiscPlugin.npcManager.getNPCByName(args[1])
+    }
+    if (npc == null) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "npc_not_found")
+        return true
+    }
+    npc.updateContext()
+    val msg = ainpcCommandMiscPlugin.messageUtils
+    msg.send(sender, "&6=== Informatii NPC ===")
+    msg.send(sender, "&eNume: &f" + npc.name)
+    msg.send(sender, "&eID: &f" + npc.databaseId)
+    msg.send(sender, "&eVarsta: &f" + npc.age + " ani")
+    msg.send(sender, "&eGen: &f" + if (npc.gender == "male") "Barbat" else "Femeie")
+    if (npc.occupation != null) {
+        msg.send(sender, "&eOcupatie: &f" + npc.occupation)
+    }
+    msg.send(sender, "&eLocatie: &f" + formatLocation(npc.location))
+    val topCat = npc.context?.topologyCategory
+    if (topCat != null) {
+        msg.send(sender, "&eTopologie: &f" + topCat.displayName)
+    }
+    msg.send(sender, "")
+    msg.send(sender, "&ePersonalitate: &f" + npc.personality.getDominantTraits())
+    msg.send(sender, "&eEmotie: &f" + npc.emotions.getShortDescription())
+    msg.send(sender, "&eProfil creat: &f" + if (npc.profileCreated) "da" else "nu")
+    msg.send(sender, "&eSursa profil: &f" + npc.profileSource)
+    if (npc.profileSummary != null && !npc.profileSummary.isBlank()) {
+        msg.send(sender, "&eRezumat profil: &f" + npc.profileSummary)
+    }
+    if (npc.backstory != null) {
+        msg.send(sender, "")
+        msg.send(sender, "&ePoveste: &f" + npc.backstory)
+    }
+    return true
+}
+
+fun handleDuplicates(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+
+    val npcs = ArrayList(ainpcCommandMiscPlugin.npcManager.allNPCs)
+    val msg = ainpcCommandMiscPlugin.messageUtils
+    msg.send(sender, "&6=== Duplicate NPC - raport ===")
+    msg.send(sender, "&eNPC-uri incarcate: &f" + npcs.size)
+
+    val findings = mutableListOf<String>()
+    collectSourceKeyDuplicateFindings(npcs, findings)
+    collectNearbyNameDuplicateFindings(npcs, findings)
+    for (issue in ainpcCommandMiscPlugin.npcManager.auditManagedVillagerEntities()) {
+        findings.add((if (issue.error()) "&c" else "&e") + issue.message())
+    }
+    for (issue in ainpcCommandMiscPlugin.npcManager.auditPersistentSourceKeyIndex()) {
+        findings.add((if (issue.error()) "&c" else "&e") + issue.message())
+    }
+
+    if (findings.isEmpty()) {
+        msg.send(sender, "&aNu am gasit duplicate evidente in NPCManager, entitati live sau indexul source_key.")
+        return true
+    }
+
+    val limit = minOf(12, findings.size)
+    for (index in 0 until limit) {
+        msg.send(sender, findings[index])
+    }
+    if (findings.size > limit) {
+        msg.send(sender, "&7... inca &f" + (findings.size - limit) + " &7probleme. Ruleaza &f/ainpc audit npc &7si &f/ainpc debugdump npc&7.")
+    }
+    msg.send(sender, "&7Cleanup sigur: &f/ainpc delete-id <id> confirm")
+    return true
+}
+
+fun handleWand(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+
+    val player = sender as? Player ?: run {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+        return true
+    }
+
+    val service = ainpcCommandMiscPlugin.mappingWandService
+
+    if (args.size == 1) {
+        val session = service.start(player, MappingWandMode.PLACE)
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aMapping wand activat in modul &f" + session.mode().id() + "&a.")
+        sendWandStatus(sender, session)
+        return true
+    }
+
+    val action = args[1].lowercase()
+    when (action) {
+        "mode" -> {
+            if (args.size != 3) {
+                sendWandUsage(sender)
+                return true
+            }
+            val mode = MappingWandMode.fromId(args[2]).orElse(null)
+            if (mode == null) {
+                ainpcCommandMiscPlugin.messageUtils.send(sender,
+                    "&cMod wand invalid. Optiuni: &fregion, place, node, npc_bind, quest_anchor")
+                return true
+            }
+            val session = service.setMode(player, mode)
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&aMapping wand setat pe modul &f" + session.mode().id() + "&a.")
+            sendWandStatus(sender, session)
+            return true
+        }
+        "pos1" -> {
+            val session = service.setPos1(player, pointFromPlayer(player))
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&aWand pos1 setat la pozitia ta.")
+            sendWandStatus(sender, session)
+            service.showSelectionPreview(player, session)
+            return true
+        }
+        "pos2" -> {
+            val session = service.setPos2(player, pointFromPlayer(player))
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&aWand pos2 setat la pozitia ta.")
+            sendWandStatus(sender, session)
+            service.showSelectionPreview(player, session)
+            return true
+        }
+        "point", "punct" -> {
+            val session = service.setPoint(player, pointFromPlayer(player))
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&aWand point setat la pozitia ta.")
+            sendWandStatus(sender, session)
+            service.showSelectionPreview(player, session)
+            return true
+        }
+        "status", "inspect" -> {
+            sendWandStatus(sender, service.ensureSession(player))
+            return true
+        }
+        "clear", "reset" -> {
+            if (args.size == 2 || (args.size == 3 && "all".equals(args[2], ignoreCase = true))) {
+                service.clear(player.uniqueId)
+                ainpcCommandMiscPlugin.messageUtils.send(sender, "&aSelectia wand a fost curatata.")
+                return true
+            }
+            if (args.size == 3) {
+                val session = resetWandSelectionPart(service, player, args[2])
+                if (session == null) {
+                    ainpcCommandMiscPlugin.messageUtils.send(sender,
+                        "&cParte wand invalida. Optiuni: &fpos1, pos2, point, all")
+                    return true
+                }
+                ainpcCommandMiscPlugin.messageUtils.send(sender,
+                    "&aWand " + formatWandSelectionPart(args[2]) + " a fost resetat.")
+                sendWandStatus(sender, session)
+                return true
+            }
+            sendWandUsage(sender)
+            return true
+        }
+        else -> {
+            sendWandUsage(sender)
+            return true
+        }
+    }
+}
+
+fun handleMap(
+    sender: CommandSender,
+    args: Array<String>,
+    applyNpcBindDraft: (CommandSender, MappingDraft) -> Boolean,
+    applyQuestAnchorDraft: (CommandSender, Player, MappingDraft) -> Boolean,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+
+    val player = sender as? Player ?: run {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+        return true
+    }
+
+    val service = ainpcCommandMiscPlugin.mappingWandService
+
+    if (args.size == 1) {
+        sendMapUsage(sender)
+        return true
+    }
+
+    val action = args[1].lowercase()
+    if (action == "preview") {
+        val draft = service.session(player.uniqueId)
+            .map { it.draft() }
+            .orElse(null)
+        if (draft == null) {
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista draft mapping. Ruleaza &f/ainpc map <descriere>&7.")
+            return true
+        }
+        sendMappingDraft(sender, draft)
+        service.showDraftPreview(player, draft)
+        return true
+    }
+    if (action == "cancel" || action == "anuleaza") {
+        service.cancelDraft(player.uniqueId)
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aDraft-ul mapping a fost anulat.")
+        return true
+    }
+    if (action == "confirm" || action == "confirma") {
+        val draft = service.session(player.uniqueId)
+            .map { it.draft() }
+            .orElse(null)
+        if (draft != null && draft.isNpcBind()) {
+            if (applyNpcBindDraft(sender, draft)) {
+                service.cancelDraft(player.uniqueId)
+            }
+            return true
+        }
+        if (draft != null && draft.isQuestAnchor()) {
+            if (applyQuestAnchorDraft(sender, player, draft)) {
+                service.cancelDraft(player.uniqueId)
+            }
+            return true
+        }
+        try {
+            val result = service.confirmDraft(player, ainpcCommandMiscPlugin.platform.worldAdminService)
+            ainpcCommandMiscPlugin.messageUtils.send(sender,
+                "&a" + result.message() + ": &f" + result.createdId() + "&a.")
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc audit world &7si apoi &f/ainpc world save&7.")
+        } catch (exception: IllegalArgumentException) {
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&c" + exception.message)
+        }
+        return true
+    }
+
+    val explicitKind = MappingDraftKind.fromId(action).orElse(null)
+    val descriptionStart = if (explicitKind != null) 2 else 1
+    if (descriptionStart >= args.size) {
+        sendMapUsage(sender)
+        return true
+    }
+
+    val description = joinArgs(args, descriptionStart)
+    try {
+        val draft = service.createDraft(
+            player,
+            explicitKind,
+            description,
+            ainpcCommandMiscPlugin.platform.worldAdminService
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aDraft mapping creat. Verifica preview-ul inainte de confirmare.")
+        sendMappingDraft(sender, draft)
+        service.showDraftPreview(player, draft)
+    } catch (exception: IllegalArgumentException) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&c" + exception.message)
     }
     return true
 }
