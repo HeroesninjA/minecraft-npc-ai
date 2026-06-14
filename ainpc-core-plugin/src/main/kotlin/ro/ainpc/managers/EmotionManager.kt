@@ -35,7 +35,7 @@ class EmotionManager(private val plugin: AINPCPlugin) {
     fun decayEmotions() {
         val decayRate = plugin.config.getDouble("emotions.change_rate", 0.1)
 
-        for (npc in plugin.npcManager.allNPCs) {
+        for (npc in plugin.npcManager.getAllNPCs()) {
             npc.emotions.decay(decayRate)
             npc.updateDisplayName()
         }

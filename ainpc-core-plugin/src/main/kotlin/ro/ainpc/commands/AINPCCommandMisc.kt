@@ -30,7 +30,7 @@ fun handleList(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
-    val npcs = ainpcCommandMiscPlugin.npcManager.allNPCs
+    val npcs = ainpcCommandMiscPlugin.npcManager.getAllNPCs()
     if (npcs.isEmpty()) {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista NPC-uri create.")
         return true
@@ -462,7 +462,7 @@ fun handleDuplicates(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
-    val npcs = ArrayList(ainpcCommandMiscPlugin.npcManager.allNPCs)
+    val npcs = ArrayList(ainpcCommandMiscPlugin.npcManager.getAllNPCs())
     val msg = ainpcCommandMiscPlugin.messageUtils
     msg.send(sender, "&6=== Duplicate NPC - raport ===")
     msg.send(sender, "&eNPC-uri incarcate: &f" + npcs.size)

@@ -264,7 +264,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         var scannedNpcs = 0; var candidates = 0; var missingBindings = 0; var divergentBindings = 0; var savedBindings = 0
         try {
             val existingBindings = loadNpcWorldBindingsById()
-            for (npc in plugin.npcManager.allNPCs) {
+            for (npc in plugin.npcManager.getAllNPCs()) {
                 if (npc == null || npc.databaseId <= 0) continue
                 scannedNpcs++
                 val inferred = inferNpcWorldBindingFromProfile(npc, worldAdmin, "profile_repair") ?: continue
@@ -1090,11 +1090,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val report = AuditReport()
         if (mode in setOf("all", "npc")) {
             val loadedWorlds = plugin.server.worlds.map { it.name }.toSet()
-            auditNpcs(report, plugin.npcManager.allNPCs.toList(), loadedWorlds, plugin.npcManager.auditManagedVillagerEntities(), plugin.npcManager.auditPersistentSourceKeyIndex())
+            auditNpcs(report, plugin.npcManager.getAllNPCs().toList(), loadedWorlds, plugin.npcManager.auditManagedVillagerEntities(), plugin.npcManager.auditPersistentSourceKeyIndex())
         }
         if (mode in setOf("all", "world")) {
             val loadedWorlds = plugin.server.worlds.map { it.name }.toSet()
-            auditWorld(report, plugin.platform.worldAdmin, loadedWorlds, plugin.npcManager.allNPCs.toList())
+            auditWorld(report, plugin.platform.worldAdmin, loadedWorlds, plugin.npcManager.getAllNPCs().toList())
         }
         if (mode in setOf("all", "db")) auditDatabase(report)
         if (mode in setOf("all", "spawn")) auditSpawnOrder(report)
@@ -1132,7 +1132,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean = handleDebugDumpStory(sender, args)
     private fun sendNpcWorldBindingDetails(sender: CommandSender, binding: NpcWorldBinding) {
         val worldAdmin = if (plugin.platform != null) plugin.platform.worldAdmin else null
-        val loadedNpc = findLoadedNpcBySelector(plugin.npcManager.allNPCs.toList(), "npc_" + binding.npcId())
+        val loadedNpc = findLoadedNpcBySelector(plugin.npcManager.getAllNPCs().toList(), "npc_" + binding.npcId())
         plugin.messageUtils.send(sender, "&6=== NPC World Binding ===")
         plugin.messageUtils.send(sender, "&eNPC: &f#" + binding.npcId() + " " + formatOptional(binding.npcName()) + " &7uuid=&f" + formatOptional(binding.npcUuid()))
         plugin.messageUtils.send(sender, "&eSursa: &f" + formatOptional(binding.source()) + " &7family=&f" + formatOptional(binding.familyId()))
@@ -1164,7 +1164,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun resolveNpcWorldBinding(sender: CommandSender, selector: String): NpcWorldBinding? {
         var loadedNpc: AINPC? = null
         if (selector.equals("nearest", ignoreCase = true)) { loadedNpc = resolveWorldBindNpc(sender, selector); if (loadedNpc == null) return null }
-        else loadedNpc = findLoadedNpcBySelector(plugin.npcManager.allNPCs.toList(), selector)
+        else loadedNpc = findLoadedNpcBySelector(plugin.npcManager.getAllNPCs().toList(), selector)
         if (loadedNpc != null && loadedNpc.databaseId > 0) return plugin.npcWorldBindingService!!.getBinding(loadedNpc.databaseId).orElse(null)
         val npcId = parseNpcIdSelector(selector)
         if (npcId != null && npcId > 0) return plugin.npcWorldBindingService!!.getBinding(npcId).orElse(null)
@@ -1398,7 +1398,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!isQuestAnchorTypeCompatible(objectiveType, anchorType)) { plugin.messageUtils.send(sender, "&cTip incompatibil: objective_type=$objectiveType, anchor_type=$anchorType."); return false }
         if (!validateQuestAnchorObjectiveAgainstDefinition(sender, progression, objectiveKey, objectiveType)) return false
         val worldAdmin = if (plugin.platform != null) plugin.platform.worldAdmin else null
-        if (worldAdmin == null || !questAnchorTargetExists(anchorType, anchorId, worldAdmin, plugin.npcManager.allNPCs.toList())) { plugin.messageUtils.send(sender, "&cAncora din draft nu mai exista in mapping: &e$anchorType:$anchorId&c."); return false }
+        if (worldAdmin == null || !questAnchorTargetExists(anchorType, anchorId, worldAdmin, plugin.npcManager.getAllNPCs().toList())) { plugin.messageUtils.send(sender, "&cAncora din draft nu mai exista in mapping: &e$anchorType:$anchorId&c."); return false }
         val now = System.currentTimeMillis()
         try { plugin.progressionService.saveAnchorBinding(ProgressionAnchorBinding(targetPlayerUuid, progression.templateId(), objectiveKey, progression.code(), objectiveType, reference, anchorType, anchorId, anchorLabel, now, now, progression.status())) }
         catch (e: Exception) { plugin.messageUtils.send(sender, "&cNu am putut salva quest_anchor_bindings: " + e.message); return false }
@@ -1529,7 +1529,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             for (residentSelector in parseResidents(place)) {
                 if (inputs.size >= safeLimit) break
                 var npcId = parseNpcIdSelector(residentSelector)
-                if (npcId == null || npcId <= 0) { val npc = findLoadedNpcBySelector(plugin.npcManager.allNPCs.toList(), residentSelector); if (npc != null && npc.databaseId > 0) npcId = npc.databaseId }
+                if (npcId == null || npcId <= 0) { val npc = findLoadedNpcBySelector(plugin.npcManager.getAllNPCs().toList(), residentSelector); if (npc != null && npc.databaseId > 0) npcId = npc.databaseId }
                 if (npcId == null || npcId <= 0) { if (warnings.size < AUDIT_PREVIEW_LIMIT) warnings.add("Nu pot rezolva resident_npc_ids=$residentSelector pentru ${place.id()}."); continue }
                 if (seen.add(place.id() + ":" + npcId)) inputs.add(HouseholdPersistenceService.MetadataResidentBackfillInput(place.id(), familyId, npcId))
             }

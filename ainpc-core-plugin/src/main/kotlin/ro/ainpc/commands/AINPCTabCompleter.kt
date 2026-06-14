@@ -454,14 +454,14 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     }
 
     private fun getNPCNames(prefix: String): List<String> {
-        return (plugin?.npcManager?.allNPCs ?: return listOf()).stream()
+        return (plugin?.npcManager?.getAllNPCs() ?: return listOf()).stream()
             .map(AINPC::name)
             .filter { name -> name.lowercase().startsWith(prefix.lowercase()) }
             .collect(Collectors.toList())
     }
 
     private fun getNPCIds(prefix: String): List<String> {
-        return (plugin?.npcManager?.allNPCs ?: return listOf()).stream()
+        return (plugin?.npcManager?.getAllNPCs() ?: return listOf()).stream()
             .map { npc -> npc.databaseId.toString() }
             .filter { id -> id.startsWith(prefix) }
             .sorted()

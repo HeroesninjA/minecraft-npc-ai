@@ -38,7 +38,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
         val teleportEnabled = plugin.config.getBoolean("routine.teleport_enabled", true)
         val now = System.currentTimeMillis()
 
-        for (npc in plugin.npcManager.allNPCs) {
+        for (npc in plugin.npcManager.getAllNPCs()) {
             if (!npc.isSpawned()) {
                 continue
             }

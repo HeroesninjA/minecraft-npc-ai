@@ -35,7 +35,7 @@ class NpcManagerGui : GuiScreen {
                 Material.NAME_TAG,
                 "&6Manager NPC",
                 listOf(
-                    "&7Total NPC-uri: &f${context.plugin().npcManager.npcCount}",
+                    "&7Total NPC-uri: &f${context.plugin().npcManager.getNPCCount()}",
                     "&7Click: /ainpc info",
                     "&7Right click: /ainpc tp",
                     "&7Shift click: routine/family"

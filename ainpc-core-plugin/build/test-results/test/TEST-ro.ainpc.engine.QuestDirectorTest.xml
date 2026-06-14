@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ro.ainpc.engine.QuestDirectorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-14T12:55:45.970Z" hostname="DESKTOP-FJTPE3F" time="0.028">
+<testsuite name="ro.ainpc.engine.QuestDirectorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-14T14:18:44.235Z" hostname="DESKTOP-FJTPE3F" time="0.016">
   <properties/>
-  <testcase name="storyDemandWithPreferredMechanicSelectsReadOnlyCandidate()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.017"/>
-  <testcase name="storyDemandSelectsMatchingProgressionDefinitionReadOnly()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.004"/>
+  <testcase name="storyDemandWithPreferredMechanicSelectsReadOnlyCandidate()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.011"/>
+  <testcase name="storyDemandSelectsMatchingProgressionDefinitionReadOnly()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.001"/>
   <testcase name="decisionIsImmutableAndNeverRuntimeExecutable()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.001"/>
   <testcase name="emptyStoryContextDoesNotStartQuestSelection()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.0"/>
   <testcase name="storyDemandSuggestsSeedWhenNoTemplateMatchesAndSeedIsAllowed()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.001"/>
   <testcase name="storyConditionBlockExplainsMissingCondition()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.0"/>
-  <testcase name="blockingReasonsWinBeforeTemplateSelection()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.001"/>
-  <testcase name="storyDemandBlocksWhenNoTemplateMatchesAndSeedIsNotAllowed()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.001"/>
+  <testcase name="blockingReasonsWinBeforeTemplateSelection()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.0"/>
+  <testcase name="storyDemandBlocksWhenNoTemplateMatchesAndSeedIsNotAllowed()" classname="ro.ainpc.engine.QuestDirectorTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

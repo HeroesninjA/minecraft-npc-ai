@@ -43,7 +43,7 @@ class RoutineGui : GuiScreen {
                 if (routineEnabled) Material.CLOCK else Material.GRAY_DYE,
                 if (routineEnabled) "&eRutine NPC" else "&7Rutine dezactivate",
                 listOf(
-                    "&7NPC-uri afisate: &f${npcs.size}&7/&f${context.plugin().npcManager.npcCount}",
+                    "&7NPC-uri afisate: &f${npcs.size}&7/&f${context.plugin().npcManager.getNPCCount()}",
                     "&7Timp world: &f${formatWorldTime(worldTime)}",
                     "&7Click card: status rutina.",
                     "&7Right click card: info NPC."
