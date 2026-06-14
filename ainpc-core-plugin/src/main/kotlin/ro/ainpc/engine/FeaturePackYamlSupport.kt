@@ -153,7 +153,7 @@ object FeaturePackYamlSupport {
     ) {
         for (scenarioId in section.getKeys(false)) {
             val scenarioSection = section.getConfigurationSection(scenarioId) ?: continue
-            val baseType = ScenarioEngine.ScenarioType.fromId(
+            val baseType = ScenarioType.fromId(
                 scenarioSection.getString("base_type", scenarioSection.getString("type", "QUEST")) ?: "QUEST",
             )
 
@@ -168,7 +168,7 @@ object FeaturePackYamlSupport {
             scenario.minimumNpcCount = scenarioSection.getInt("min_npcs", 2).coerceAtLeast(1)
             scenario.isRequiresPlayer = scenarioSection.getBoolean(
                 "requires_player",
-                baseType == ScenarioEngine.ScenarioType.QUEST,
+                baseType == ScenarioType.QUEST,
             )
             scenario.isReplaceBaseType = scenarioSection.getBoolean("replace_base_type", false)
             scenario.hint = scenarioSection.getString("hint", "") ?: ""
@@ -450,7 +450,7 @@ object FeaturePackYamlSupport {
         }
 
         val hasProgressSection = progressSection != null
-        val legacyQuestProgress = hasQuestSection || scenario.baseType == ScenarioEngine.ScenarioType.QUEST
+        val legacyQuestProgress = hasQuestSection || scenario.baseType == ScenarioType.QUEST
         scenario.isProgressionEnabled = if (hasProgressSection) {
             progressSection.getBoolean("enabled", progressSection.getBoolean("progress", true))
         } else {

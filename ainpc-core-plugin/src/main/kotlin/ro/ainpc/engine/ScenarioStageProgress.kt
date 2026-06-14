@@ -16,7 +16,7 @@ fun stageReferencesObjective(
 }
 
 fun objectiveListedInAnyStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     objective: FeaturePackLoader.QuestEntryDefinition?,
 ): Boolean {
     if (template == null || objective == null || template.questStages.isEmpty()) {

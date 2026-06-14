@@ -3,12 +3,12 @@ package ro.ainpc.engine
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 
-fun requiresQuestGiverTurnIn(template: ScenarioEngine.ScenarioTemplate?): Boolean {
+fun requiresQuestGiverTurnIn(template: ScenarioTemplate?): Boolean {
     val contract = template?.questContract
     return contract == null || contract.completionMode() == QuestScenarioContract.CompletionMode.RETURN_TO_GIVER
 }
 
-fun findObjectiveStageId(template: ScenarioEngine.ScenarioTemplate?, objective: QuestEntryDefinition?): String {
+fun findObjectiveStageId(template: ScenarioTemplate?, objective: QuestEntryDefinition?): String {
     val explicitStage = canonicalQuestPhase(template, getObjectiveStage(objective))
     if (explicitStage.isNotBlank()) return explicitStage
     if (template == null || objective == null || template.questStages.isEmpty()) return ""

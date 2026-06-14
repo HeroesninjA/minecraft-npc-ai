@@ -2064,7 +2064,7 @@ private class DemoReadinessService(private val plugin: AINPCPlugin) {
                     (node.placeId().isNotBlank() && regionPlaceIds.contains(node.placeId().lowercase()))
         }
 
-        val npcList = plugin.npcManager.allNPCs.toList()
+        val npcList = plugin.npcManager.getAllNPCs().toList()
         val bindings = loadBindings()
         val regionBindings = bindings.filter { it.touchesAnyPlace(regionPlaceIds) }
         val regionBindingNpcIds = regionBindings.map { it.npcId() }.toSet()

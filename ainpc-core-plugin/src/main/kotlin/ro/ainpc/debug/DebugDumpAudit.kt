@@ -15,7 +15,7 @@ object DebugDumpAudit {
         if (npcManager == null) {
             errors.add("NPCManager indisponibil.")
         } else {
-            for (npc in npcManager.allNPCs) {
+            for (npc in npcManager.getAllNPCs()) {
                 val label = npc.name + "#" + npc.databaseId
                 if (npc.homeAnchor == null) {
                     warnings.add("$label nu are homeAnchor.")
@@ -82,7 +82,7 @@ object DebugDumpAudit {
             return null
         }
 
-        for (npc in npcManager.allNPCs) {
+        for (npc in npcManager.getAllNPCs()) {
             if (normalizedSelector.equals(npc.uuid.toString(), ignoreCase = true)) {
                 return npc
             }

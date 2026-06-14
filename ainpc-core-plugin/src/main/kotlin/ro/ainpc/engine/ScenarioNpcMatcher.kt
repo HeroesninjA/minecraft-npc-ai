@@ -1,7 +1,7 @@
 package ro.ainpc.engine
 
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
-import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioTemplate
 import ro.ainpc.npc.AINPC
 
 fun matchesProfessionReference(

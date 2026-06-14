@@ -3,32 +3,32 @@ package ro.ainpc.engine
 import org.bukkit.entity.Player
 import ro.ainpc.npc.AINPC
 
-fun canTriggerScenario(template: ScenarioEngine.ScenarioTemplate?, npcs: List<AINPC>, players: List<Player>): Boolean {
+fun canTriggerScenario(template: ScenarioTemplate?, npcs: List<AINPC>, players: List<Player>): Boolean {
     if (template == null) return false
-    if (template.requiresPlayer() && players.isEmpty()) return false
+    if (template.requiresPlayer && players.isEmpty()) return false
     if (npcs.size < template.minimumNpcCount) return false
     if (!canAssignMandatoryRoles(template, npcs, players)) return false
     return when (template.type) {
-        ScenarioEngine.ScenarioType.ROMANCE -> hasMixedGenders(npcs)
-        ScenarioEngine.ScenarioType.CONFLICT -> hasConflictingPersonalities(npcs)
+        ScenarioType.ROMANCE -> hasMixedGenders(npcs)
+        ScenarioType.CONFLICT -> hasConflictingPersonalities(npcs)
         else -> true
     }
 }
 
 fun canAssignMandatoryRoles(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     npcs: List<AINPC>,
     players: List<Player>,
 ): Boolean {
     if (template == null) return false
-    val requiredPlayers = template.playerRoles.stream()
-        .filter { role: ScenarioEngine.ScenarioRoleRule -> !role.isOptional }
+    val requiredPlayers = template.getPlayerRoles().stream()
+        .filter { role: ScenarioRoleRule -> !role.optional }
         .count()
     if (players.size < requiredPlayers) return false
 
     val availableNpcs = npcs.toMutableList()
-    for (role in template.npcRoles) {
-        if (role.isOptional) continue
+    for (role in template.getNpcRoles()) {
+        if (role.optional) continue
         val selected = selectBestNpcForRole(availableNpcs, role)
         if (selected != null) {
             availableNpcs.remove(selected)
@@ -59,7 +59,7 @@ fun hasConflictingPersonalities(npcs: List<AINPC>): Boolean {
     return false
 }
 
-fun selectBestNpcForRole(candidates: List<AINPC>, role: ScenarioEngine.ScenarioRoleRule): AINPC? {
+fun selectBestNpcForRole(candidates: List<AINPC>, role: ScenarioRoleRule): AINPC? {
     if (candidates.isEmpty()) return null
     var bestNpc: AINPC? = null
     var bestScore = Int.MIN_VALUE
@@ -73,7 +73,7 @@ fun selectBestNpcForRole(candidates: List<AINPC>, role: ScenarioEngine.ScenarioR
     return if (bestScore == Int.MIN_VALUE) null else bestNpc
 }
 
-fun scoreNpcForRole(npc: AINPC, role: ScenarioEngine.ScenarioRoleRule): Int {
+fun scoreNpcForRole(npc: AINPC, role: ScenarioRoleRule): Int {
     if (!hasRequiredProfessions(npc, role.requiredProfessions)) return Int.MIN_VALUE
     if (!hasRequiredTraits(npc, role.requiredTraits)) return Int.MIN_VALUE
 

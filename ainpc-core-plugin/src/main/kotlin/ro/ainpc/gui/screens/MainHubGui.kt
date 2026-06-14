@@ -31,7 +31,7 @@ class MainHubGui : GuiScreen {
                 "&6AINPC Hub",
                 listOf(
                     "&7Jucator: &f${player.name}",
-                    "&7NPC-uri incarcate: &f${context.plugin().npcManager.npcCount}",
+                    "&7NPC-uri incarcate: &f${context.plugin().npcManager.getNPCCount()}",
                     "&7World mapping: &f${worldAdmin.regionCount} regiuni, " +
                         "${worldAdmin.placeCount} places, ${worldAdmin.nodeCount} noduri",
                     "&7Locatie: &f${location.world.name} ${location.blockX}, ${location.blockY}, ${location.blockZ}"

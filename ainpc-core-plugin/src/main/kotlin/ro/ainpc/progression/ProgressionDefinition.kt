@@ -2,7 +2,7 @@ package ro.ainpc.progression
 
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.QuestScenarioContract
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import java.util.Locale
 
 class ProgressionDefinition(
@@ -120,7 +120,7 @@ class ProgressionDefinition(
             if (scenario == null) {
                 return false
             }
-            return scenario.baseType == ScenarioEngine.ScenarioType.QUEST ||
+            return scenario.baseType == ScenarioType.QUEST ||
                 (scenario.isProgressionEnabled &&
                     (scenario.questCode.isNotBlank() ||
                         scenario.objectives.isNotEmpty() ||

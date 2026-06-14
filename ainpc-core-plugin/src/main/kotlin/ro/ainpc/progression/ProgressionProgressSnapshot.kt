@@ -1,6 +1,6 @@
 package ro.ainpc.progression
 
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 
 class ProgressionProgressSnapshot(
     private val handledValue: Boolean,
@@ -59,11 +59,11 @@ class ProgressionProgressSnapshot(
     fun objectives(): List<ProgressionObjectiveSnapshot> = objectivesValue
     fun systemMessages(): List<String> = systemMessagesValue
 
-    fun toQuestInteractionResult(): ScenarioEngine.QuestInteractionResult {
+    fun toQuestInteractionResult(): QuestInteractionResult {
         if (!handledValue) {
-            return ScenarioEngine.QuestInteractionResult.notHandled()
+            return QuestInteractionResult.notHandled()
         }
-        return ScenarioEngine.QuestInteractionResult.handled(false, emptyList(), systemMessagesValue)
+        return QuestInteractionResult.handled(false, emptyList(), systemMessagesValue)
     }
 
     fun completedObjectiveCount(): Int = objectivesValue.count { it.complete() }
@@ -73,15 +73,15 @@ class ProgressionProgressSnapshot(
         fun fromResult(
             playerName: String?,
             selector: ProgressionSelector?,
-            result: ScenarioEngine.QuestInteractionResult?
+            result: QuestInteractionResult?
         ): ProgressionProgressSnapshot = fromResult(playerName, selector, result, null, null)
 
         @JvmStatic
         fun fromResult(
             playerName: String?,
             selector: ProgressionSelector?,
-            result: ScenarioEngine.QuestInteractionResult?,
-            entry: ScenarioEngine.QuestGuiEntry?,
+            result: QuestInteractionResult?,
+            entry: QuestGuiEntry?,
             definition: ProgressionDefinition?
         ): ProgressionProgressSnapshot {
             if (result == null || !result.isHandled) {
@@ -110,9 +110,9 @@ class ProgressionProgressSnapshot(
             }
 
             val objectiveSnapshots = if (entry == null) {
-                emptyList()
+                emptyList<ProgressionObjectiveSnapshot>()
             } else {
-                entry.objectives().map { ProgressionObjectiveSnapshot.fromQuestGuiObjective(it) }
+                entry.objectives.map { ProgressionObjectiveSnapshot.fromQuestGuiObjective(it) }
             }
 
             return ProgressionProgressSnapshot(
@@ -120,20 +120,20 @@ class ProgressionProgressSnapshot(
                 playerName,
                 selector?.raw() ?: "",
                 selector?.commandSelector() ?: "",
-                valueOrFallback(definition?.progressionId(), entry?.selector() ?: ""),
-                entry?.templateId() ?: "",
-                entry?.questCode() ?: "",
-                entry?.title() ?: "",
-                entry?.statusDisplay() ?: "",
-                entry?.mechanicDisplay() ?: "",
-                entry?.tracked() == true,
-                entry?.current() == true,
-                entry?.active() == true,
-                entry?.offered() == true,
-                entry?.archived() == true,
-                entry?.missingTemplate() == true,
-                entry?.currentStageId() ?: "",
-                entry?.currentStageLabel() ?: "",
+                valueOrFallback(definition?.progressionId(), entry?.selector ?: ""),
+                entry?.templateId ?: "",
+                entry?.questCode ?: "",
+                entry?.title ?: "",
+                entry?.statusDisplay ?: "",
+                entry?.mechanicDisplay ?: "",
+                entry?.tracked == true,
+                entry?.current == true,
+                entry?.active == true,
+                entry?.offered == true,
+                entry?.archived == true,
+                entry?.missingTemplate == true,
+                entry?.currentStageId ?: "",
+                entry?.currentStageLabel ?: "",
                 objectiveSnapshots,
                 result.systemMessages
             )

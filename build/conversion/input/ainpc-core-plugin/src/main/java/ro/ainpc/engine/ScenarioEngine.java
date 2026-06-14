@@ -1,5 +1,159 @@
 package ro.ainpc.engine;
 
+import static ro.ainpc.engine.QuestTrackingModelsKt.center;
+import static ro.ainpc.engine.QuestTrackingModelsKt.formatHorizontalDirection;
+import static ro.ainpc.engine.QuestTrackingModelsKt.formatQuestAnchorType;
+import static ro.ainpc.engine.QuestTrackingModelsKt.formatQuestPhase;
+import static ro.ainpc.engine.QuestTrackingModelsKt.formatQuestTrackingCoordinates;
+import static ro.ainpc.engine.QuestTrackingModelsKt.formatVerticalHint;
+import static ro.ainpc.engine.QuestTrackingModelsKt.normalizeTrackingAnchorType;
+import static ro.ainpc.engine.ScenarioEngineTextKt.capitalizeProgressionLabel;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatDuration;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatObjectiveProgressLabel;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatOptional;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatQuestDebugMap;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatQuestDebugTime;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatQuestLogMechanicCounts;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatQuestEntry;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatStageCompletionMode;
+import static ro.ainpc.engine.ScenarioEngineTextKt.formatQuestStatus;
+import static ro.ainpc.engine.ScenarioEngineTextKt.resolveQuestTitle;
+import static ro.ainpc.engine.ScenarioEngineTextKt.valueOrFallback;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveKey;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.carryLegacyObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasInventoryObjective;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasObjectiveType;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.incrementObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesObjectiveReference;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesObjectiveType;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.normalizeObjectiveType;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.objectiveKeyCandidates;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.readObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveQuestObjectiveState;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldConsumeObjectiveItem;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.shouldShowObjectiveForCurrentStage;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.usesInventoryProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildCompletedObjectiveProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.buildObjectiveProgressSnapshot;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.countMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.removeMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.cloneStorageContents;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.grantQuestRewards;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.hasBoundAnchor;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.consumeQuestObjectives;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesStoredQuestNpc;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestInventory;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.matchesBoundAnchor;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestObjectives;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.inspectQuestRewardDelivery;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.resolveObjectiveCurrentProgress;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateQuestObjectiveConsumption;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateRemoveMaterial;
+import static ro.ainpc.engine.ScenarioObjectiveProgressKt.simulateAddMaterial;
+import static ro.ainpc.engine.QuestLogFilterKt.parseQuestLogFilter;
+import static ro.ainpc.engine.QuestLogFilterKt.questLogActionSelector;
+import static ro.ainpc.engine.QuestLogFilterKt.questLogStatusPriority;
+import static ro.ainpc.engine.ScenarioQuestReferencesKt.isTrackedQuestSelector;
+import static ro.ainpc.engine.ScenarioQuestReferencesKt.matchesQuestReference;
+import static ro.ainpc.engine.ScenarioQuestReferencesKt.progressionReference;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.areObjectivesSatisfied;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.areObjectivesSatisfiedForStage;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.canonicalQuestPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.findMatchingObjectiveStage;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getDefaultActiveQuestPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getFirstQuestPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getLastQuestPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getObjectiveStage;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getQuestWorkPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.getReadyToTurnInQuestPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.hasStagedObjectives;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.isObjectiveActiveForPhase;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.isObjectiveActiveForProgress;
+import static ro.ainpc.engine.ScenarioQuestPhaseKt.resolveQuestPhase;
+import static ro.ainpc.engine.ScenarioRoleScoringKt.normalizeScenarioToken;
+import static ro.ainpc.engine.ScenarioRoleScoringKt.scoreBoolean;
+import static ro.ainpc.engine.ScenarioStageProgressKt.normalizeStageCompletionMode;
+import static ro.ainpc.engine.ScenarioStageProgressKt.objectiveListedInAnyStage;
+import static ro.ainpc.engine.ScenarioStageProgressKt.phasesMatch;
+import static ro.ainpc.engine.ScenarioStageProgressKt.stageReferencesObjective;
+import static ro.ainpc.engine.ScenarioStoryTextKt.cleanStoryId;
+import static ro.ainpc.engine.ScenarioStoryTextKt.detectStoryTargetScope;
+import static ro.ainpc.engine.ScenarioStoryTextKt.firstNonBlank;
+import static ro.ainpc.engine.ScenarioStoryTextKt.getQuestEntryMetadata;
+import static ro.ainpc.engine.ScenarioStoryTextKt.isQuestStoryAction;
+import static ro.ainpc.engine.ScenarioStoryTextKt.normalizeReference;
+import static ro.ainpc.engine.ScenarioStoryTextKt.normalizeStoryActionType;
+import static ro.ainpc.engine.ScenarioStoryTextKt.normalizeStoryScope;
+import static ro.ainpc.engine.ScenarioStoryTextKt.parseStoryList;
+import static ro.ainpc.engine.ScenarioStoryTextKt.stripObjectivePrefix;
+
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicDefinition;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicKey;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicDisplay;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionPluralLabel;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionSingularLabel;
+import static ro.ainpc.engine.ScenarioProgressionKt.progressionKindMatches;
+import static ro.ainpc.engine.ScenarioProgressionKt.resolveProgressionMechanicSortKey;
+import static ro.ainpc.engine.ScenarioQuestCategoryKt.resolveQuestCategory;
+import static ro.ainpc.engine.ScenarioQuestCategoryKt.questLogCategoryPriority;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesQuestGiver;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesNpcObjective;
+import static ro.ainpc.engine.ScenarioNpcMatcherKt.matchesProfessionReference;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.buildInitialQuestNpcFallbackMessages;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.buildQuestOfferMessage;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.resolveInitialQuestDialogueContext;
+import static ro.ainpc.engine.ScenarioQuestOfferKt.shouldAutoAcceptOnOffer;
+import static ro.ainpc.engine.ScenarioObjectiveMatcherKt.matchesMobObjective;
+import static ro.ainpc.engine.ScenarioObjectiveMatcherKt.matchesNodeObjective;
+import static ro.ainpc.engine.ScenarioObjectiveMatcherKt.matchesPlaceObjective;
+import static ro.ainpc.engine.ScenarioObjectiveMatcherKt.matchesRegionObjective;
+import static ro.ainpc.engine.ScenarioQuestRulesKt.findObjectiveStageId;
+import static ro.ainpc.engine.ScenarioQuestRulesKt.getQuestCategoryLimit;
+import static ro.ainpc.engine.ScenarioQuestRulesKt.requiresQuestGiverTurnIn;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.baseRoleScore;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.canAssignMandatoryRoles;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.canTriggerScenario;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.hasConflictingPersonalities;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.hasMixedGenders;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.hasRequiredProfessions;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.hasRequiredTraits;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.matchesOccupation;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.scoreNpcForRole;
+import static ro.ainpc.engine.ScenarioRoleAssignmentKt.selectBestNpcForRole;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.buildQuestCompletionKey;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.buildStoryActionData;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.describeGenericQuestTrackingHint;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.isQuestAnchorVariableKey;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.readNullableLong;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.readTextOrEmpty;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.remainingQuestCooldownMillis;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.resolveQuestNpcName;
+import static ro.ainpc.engine.ScenarioEngineUtilsKt.storyActorId;
+import static ro.ainpc.engine.ScenarioQuestDisplayKt.buildObjectiveProgressLines;
+import static ro.ainpc.engine.ScenarioQuestDisplayKt.buildQuestNpcMessages;
+import static ro.ainpc.engine.ScenarioQuestDisplayKt.buildQuestProgressDetailLines;
+import static ro.ainpc.engine.ScenarioQuestDisplayKt.resolveQuestDialogueMessages;
+import static ro.ainpc.engine.ScenarioQuestDisplayKt.resolveStatusDialogueContext;
+import static ro.ainpc.engine.ScenarioTrackingDisplayKt.buildQuestTrackingMarker;
+import static ro.ainpc.engine.ScenarioTrackingDisplayKt.formatQuestTrackingActionBar;
+import static ro.ainpc.engine.ScenarioTrackingDisplayKt.formatQuestTrackingPosition;
+import static ro.ainpc.engine.ScenarioTrackingDisplayKt.formatQuestTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingDisplayKt.toQuestTrackingLocation;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.buildQuestTrackingLines;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.describeObjectiveTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.describeQuestGiverTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveNextQuestTrackingStep;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveNpcByAnchorId;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveNpcTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveQuestAnchorLocation;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveQuestAnchorTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveQuestGiverNpc;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.resolveQuestGiverTrackingTarget;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.targetFromPlace;
+import static ro.ainpc.engine.ScenarioTrackingResolutionKt.targetFromRegion;
+import static ro.ainpc.engine.ScenarioStageVariablesKt.seedQuestStageVariables;
+import static ro.ainpc.engine.ScenarioStageVariablesKt.buildQuestStageTransitionVariables;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.configuration.ConfigurationSection;
@@ -37,7 +191,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +221,8 @@ public class ScenarioEngine {
 
     public ScenarioEngine(AINPCPlugin plugin) {
         this.plugin = plugin;
+        ScenarioTrackingResolutionKt.setEnginePlugin(plugin);
+        ScenarioSimpleQuestKt.initSimpleQuestPlugin(plugin);
         this.gson = new Gson();
         this.activeScenarios = new ConcurrentHashMap<>();
         this.scenarioTemplates = new EnumMap<>(ScenarioType.class);
@@ -393,7 +548,7 @@ public class ScenarioEngine {
             );
         }
 
-        if (requiresQuestGiverTurnIn(template) && !matchesQuestGiver(npc, template)) {
+        if (requiresQuestGiverTurnIn(template) && !matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
             return QuestInteractionResult.handled(
                 true,
                 buildQuestNpcMessages(
@@ -490,7 +645,7 @@ public class ScenarioEngine {
 
         PlayerQuestProgress currentProgress = getCurrentQuestProgress(playerId, template.getTemplateId());
         PlayerQuestProgress completedProgress = getCompletedQuestProgress(playerId, template.getTemplateId());
-        if (completedProgress != null && !template.isQuestRepeatable()) {
+        if (completedProgress != null && !template.getQuestRepeatable()) {
             return QuestInteractionResult.handled(
                 true,
                 buildQuestNpcMessages(
@@ -941,7 +1096,7 @@ public class ScenarioEngine {
             ScenarioTemplate fallbackTemplate = resolveTemplateForProgress(progress, null);
             if (fallbackTemplate != null
                 && matchesProgressionKindFilter(fallbackTemplate, progressionKind)
-                && matchesQuestGiver(fallbackNpc, fallbackTemplate)) {
+                && matchesQuestGiver(plugin.getFeaturePackLoader(), fallbackNpc, fallbackTemplate)) {
                 return fallbackNpc;
             }
         }
@@ -958,10 +1113,6 @@ public class ScenarioEngine {
         return template != null && template.hasQuestBriefing();
     }
 
-    private boolean requiresQuestGiverTurnIn(ScenarioTemplate template) {
-        QuestScenarioContract contract = template != null ? template.getQuestContract() : null;
-        return contract == null || contract.completionMode() == QuestScenarioContract.CompletionMode.RETURN_TO_GIVER;
-    }
 
     public QuestInteractionResult getQuestStatus(Player player, AINPC npc) {
         if (player == null || npc == null) {
@@ -1189,7 +1340,7 @@ public class ScenarioEngine {
         String selector = questLogActionSelector(template, viewProgress);
         String title = template != null ? resolveQuestTitle(template) : valueOrFallback(viewProgress.templateId(), "Quest necunoscut");
         String category = template != null ? resolveQuestCategory(template).displayName() : "Necunoscut";
-        String mechanic = template != null ? resolveProgressionMechanicDisplay(template) : "Necunoscuta";
+        String mechanic = template != null ? resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) : "Necunoscuta";
         String statusDisplay = formatQuestStatus(viewProgress != null ? viewProgress.status() : QuestStatus.NOT_STARTED);
         String currentStageId = "";
         if (viewProgress != null) {
@@ -1224,7 +1375,7 @@ public class ScenarioEngine {
             statusLines,
             template != null ? buildQuestGuiObjectives(player, template, viewProgress) : List.of(),
             template != null ? buildQuestGuiStages(template, viewProgress, currentStageId) : List.of(),
-            template != null ? template.getRewards().stream().map(this::formatQuestEntry).toList() : List.of(),
+            template != null ? template.getRewards().stream().map(ScenarioEngineTextKt::formatQuestEntry).toList() : List.of(),
             buildQuestLogActionLines(player, playerId, template, viewProgress, adminView)
         );
     }
@@ -1318,33 +1469,6 @@ public class ScenarioEngine {
         return stages;
     }
 
-    private String findObjectiveStageId(ScenarioTemplate template, FeaturePackLoader.QuestEntryDefinition objective) {
-        String explicitStage = canonicalQuestPhase(template, getObjectiveStage(objective));
-        if (!explicitStage.isBlank()) {
-            return explicitStage;
-        }
-        if (template == null || objective == null || template.getQuestStages().isEmpty()) {
-            return "";
-        }
-        for (FeaturePackLoader.QuestStageDefinition stage : template.getQuestStages()) {
-            if (stageReferencesObjective(stage, objective)) {
-                return stage.getId();
-            }
-        }
-        return "";
-    }
-
-    private String formatStageCompletionMode(String completionMode) {
-        return switch (normalizeStageCompletionMode(completionMode)) {
-            case "any_objective" -> "Orice obiectiv";
-            case "manual_turn_in" -> "Returnare manuala";
-            default -> "Toate obiectivele";
-        };
-    }
-
-    private String valueOrFallback(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
-    }
 
     public QuestInteractionResult getQuestStatus(Player player, String questReference) {
         if (player == null || questReference == null || questReference.isBlank()) {
@@ -1508,7 +1632,7 @@ public class ScenarioEngine {
             return QuestInteractionResult.handled(false, List.of(), systemMessages);
         }
 
-        systemMessages.add("&e" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + ": &f" + resolveQuestTitle(template));
+        systemMessages.add("&e" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + ": &f" + resolveQuestTitle(template));
         if (!template.getProgressionMechanicId().isBlank()) {
             systemMessages.add("&7Mecanica: &f" + template.getProgressionMechanicId()
                 + (template.getProgressionLabel().isBlank() ? "" : " &7(" + template.getProgressionLabel() + ")"));
@@ -1726,8 +1850,8 @@ public class ScenarioEngine {
             return false;
         }
 
-        Location targetLocation = marker.location();
-        plugin.getMessageUtils().sendActionBar(player, marker.actionBarMessage());
+        Location targetLocation = marker.getLocation();
+        plugin.getMessageUtils().sendActionBar(player, marker.getActionBarMessage());
         spawnQuestTrackingParticles(player, marker);
         if (targetLocation.getWorld().equals(player.getWorld())) {
             player.setCompassTarget(targetLocation);
@@ -1744,7 +1868,7 @@ public class ScenarioEngine {
             return;
         }
 
-        Location targetLocation = marker.location();
+        Location targetLocation = marker.getLocation();
         if (!targetLocation.getWorld().equals(player.getWorld())) {
             return;
         }
@@ -1945,22 +2069,6 @@ public class ScenarioEngine {
             : setOfferedQuestProgress(playerId, player, template);
     }
 
-    private QuestDialogueContext resolveInitialQuestDialogueContext(ScenarioTemplate template) {
-        return shouldAutoAcceptOnOffer(template) ? QuestDialogueContext.ACCEPTED : QuestDialogueContext.OFFER;
-    }
-
-    private List<String> buildInitialQuestNpcFallbackMessages(ScenarioTemplate template) {
-        return shouldAutoAcceptOnOffer(template)
-            ? List.of("Bine. Ma bazez pe tine.", "Intoarce-te cand ai terminat.")
-            : List.of("Am o treaba pentru tine.", buildQuestOfferMessage(template));
-    }
-
-    private boolean shouldAutoAcceptOnOffer(ScenarioTemplate template) {
-        return template != null
-            && template.getQuestContract() != null
-            && template.getQuestContract().autoAcceptOnOffer();
-    }
-
     private PlayerQuestProgress setCurrentQuestProgress(UUID playerId,
                                                         Player player,
                                                         ScenarioTemplate template,
@@ -2136,14 +2244,6 @@ public class ScenarioEngine {
         return includeArchived ? getArchivedQuestProgress(playerId, trackedTemplateId) : null;
     }
 
-    private boolean isTrackedQuestSelector(String questReference) {
-        String normalized = normalizeReference(questReference);
-        return "tracked".equals(normalized)
-            || "current".equals(normalized)
-            || "curent".equals(normalized)
-            || "urmarit".equals(normalized);
-    }
-
     private PlayerQuestProgress findQuestProgressByReference(UUID playerId,
                                                              String questReference,
                                                              boolean includeArchived) {
@@ -2152,7 +2252,7 @@ public class ScenarioEngine {
         }
 
         for (PlayerQuestProgress progress : getCurrentQuestProgress(playerId)) {
-            if (matchesQuestReference(progress, questReference)) {
+            if (matchesQuestReference(progress, questReference, resolveTemplateForProgress(progress, null))) {
                 return progress;
             }
         }
@@ -2167,7 +2267,7 @@ public class ScenarioEngine {
         }
 
         return archivedQuests.values().stream()
-            .filter(progress -> matchesQuestReference(progress, questReference))
+            .filter(progress -> matchesQuestReference(progress, questReference, resolveTemplateForProgress(progress, null)))
             .sorted(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .findFirst()
             .orElse(null);
@@ -2239,7 +2339,7 @@ public class ScenarioEngine {
         List<String> issues = new ArrayList<>();
         PlayerQuestProgress completedProgress = getCompletedQuestProgress(playerId, template.getTemplateId());
         if (completedProgress != null) {
-            if (!template.isQuestRepeatable()) {
+            if (!template.getQuestRepeatable()) {
                 issues.add("Quest deja completat.");
             } else {
                 long remainingCooldownMillis = remainingQuestCooldownMillis(template, completedProgress);
@@ -2259,7 +2359,7 @@ public class ScenarioEngine {
         }
 
         QuestScenarioContract.Category category = resolveQuestCategory(template);
-        int categoryLimit = getQuestCategoryLimit(category);
+        int categoryLimit = getQuestCategoryLimit(category, plugin);
         int activeInCategory = countCurrentQuestsInCategory(playerId, category, template.getTemplateId());
         if (activeInCategory >= categoryLimit) {
             issues.add("Ai deja " + activeInCategory + " questuri curente din categoria "
@@ -2271,8 +2371,8 @@ public class ScenarioEngine {
             int activeInMechanic = countCurrentProgressionsInMechanic(playerId, template, template.getTemplateId());
             if (activeInMechanic >= mechanicLimit) {
                 issues.add("Ai deja " + activeInMechanic + " "
-                    + resolveProgressionPluralLabel(template) + " curente in "
-                    + resolveProgressionMechanicDisplay(template) + " (limita " + mechanicLimit + ").");
+                    + resolveProgressionPluralLabel(plugin.getFeaturePackLoader(), template) + " curente in "
+                    + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) + " (limita " + mechanicLimit + ").");
             }
         }
 
@@ -2281,27 +2381,9 @@ public class ScenarioEngine {
             : QuestAvailability.unavailable(issues);
     }
 
-    private QuestScenarioContract.Category resolveQuestCategory(ScenarioTemplate template) {
-        QuestScenarioContract contract = template != null ? template.getQuestContract() : null;
-        return contract != null ? contract.category() : QuestScenarioContract.Category.SIDE;
-    }
-
-    private int getQuestCategoryLimit(QuestScenarioContract.Category category) {
-        String key = switch (category != null ? category : QuestScenarioContract.Category.SIDE) {
-            case MAIN -> "main";
-            case SIDE -> "side";
-            case REPEATABLE -> "repeatable";
-        };
-        int defaultLimit = switch (category != null ? category : QuestScenarioContract.Category.SIDE) {
-            case MAIN -> 1;
-            case SIDE -> 3;
-            case REPEATABLE -> 2;
-        };
-        return Math.max(0, plugin.getConfig().getInt("quest.max_active." + key, defaultLimit));
-    }
 
     private int getProgressionMechanicLimit(ScenarioTemplate template) {
-        if (template == null || !template.isProgressionEnabled()
+        if (template == null || !template.getProgressionEnabled()
             || template.getProgressionMechanicId().isBlank()) {
             return 0;
         }
@@ -2310,7 +2392,7 @@ public class ScenarioEngine {
             return template.getProgressionMaxActive();
         }
 
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
+        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(plugin.getFeaturePackLoader(), template);
         if (mechanic == null || !mechanic.isProgressEnabled()) {
             return 0;
         }
@@ -2320,7 +2402,7 @@ public class ScenarioEngine {
     private int countCurrentProgressionsInMechanic(UUID playerId,
                                                    ScenarioTemplate template,
                                                    String excludedTemplateId) {
-        String mechanicKey = resolveProgressionMechanicKey(template);
+        String mechanicKey = resolveProgressionMechanicKey(plugin.getFeaturePackLoader(), template);
         if (mechanicKey.isBlank()) {
             return 0;
         }
@@ -2331,104 +2413,15 @@ public class ScenarioEngine {
                 continue;
             }
 
-            ScenarioTemplate activeTemplate = resolveTemplateForProgress(progress, null);
-            if (mechanicKey.equals(resolveProgressionMechanicKey(activeTemplate))) {
+            ScenarioTemplate t = resolveTemplateForProgress(progress, null);
+            if (mechanicKey.equals(resolveProgressionMechanicKey(plugin.getFeaturePackLoader(), t))) {
                 count++;
             }
         }
         return count;
     }
 
-    private String resolveProgressionMechanicKey(ScenarioTemplate template) {
-        if (template == null || template.getProgressionMechanicId().isBlank()) {
-            return "";
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null) {
-            return normalizeReference(mechanic.getPackId()) + ":" + normalizeReference(mechanic.getId());
-        }
-
-        String packId = template.getSourcePackId();
-        return normalizeReference(packId) + ":" + normalizeReference(template.getProgressionMechanicId());
-    }
-
-    private FeaturePackLoader.ProgressionMechanicDefinition resolveProgressionMechanicDefinition(ScenarioTemplate template) {
-        if (template == null || template.getProgressionMechanicId().isBlank()
-            || plugin.getFeaturePackLoader() == null) {
-            return null;
-        }
-
-        return plugin.getFeaturePackLoader().findProgressionMechanicDefinition(
-            template.getSourcePackId(),
-            template.getProgressionMechanicId()
-        );
-    }
-
-    private String resolveProgressionMechanicDisplay(ScenarioTemplate template) {
-        if (template == null) {
-            return "mecanica de progres";
-        }
-
-        if (!template.getProgressionLabel().isBlank()) {
-            return template.getProgressionLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getLabel().isBlank()) {
-            return mechanic.getLabel();
-        }
-
-        return template.getProgressionMechanicId().isBlank()
-            ? "mecanica de progres"
-            : template.getProgressionMechanicId();
-    }
-
-    private String resolveProgressionPluralLabel(ScenarioTemplate template) {
-        if (template == null) {
-            return "progresii";
-        }
-
-        if (!template.getProgressionPluralLabel().isBlank()) {
-            return template.getProgressionPluralLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getPluralLabel().isBlank()) {
-            return mechanic.getPluralLabel();
-        }
-
-        return "progresii";
-    }
-
-    private String resolveProgressionSingularLabel(ScenarioTemplate template) {
-        if (template == null) {
-            return "progresie";
-        }
-
-        if (!template.getProgressionSingularLabel().isBlank()) {
-            return template.getProgressionSingularLabel();
-        }
-
-        FeaturePackLoader.ProgressionMechanicDefinition mechanic = resolveProgressionMechanicDefinition(template);
-        if (mechanic != null && !mechanic.getSingularLabel().isBlank()) {
-            return mechanic.getSingularLabel();
-        }
-
-        return "progresie";
-    }
-
-    private String capitalizeProgressionLabel(String label) {
-        if (label == null || label.isBlank()) {
-            return "Progresie";
-        }
-
-        String trimmed = label.trim();
-        if (trimmed.length() == 1) {
-            return trimmed.toUpperCase(Locale.ROOT);
-        }
-        return trimmed.substring(0, 1).toUpperCase(Locale.ROOT) + trimmed.substring(1);
-    }
+    
 
     private int countCurrentQuestsInCategory(UUID playerId,
                                              QuestScenarioContract.Category category,
@@ -2447,18 +2440,6 @@ public class ScenarioEngine {
         return count;
     }
 
-    private long remainingQuestCooldownMillis(ScenarioTemplate template, PlayerQuestProgress completedProgress) {
-        if (template == null || completedProgress == null || template.getQuestCooldownSeconds() <= 0) {
-            return 0L;
-        }
-
-        long completedAt = completedProgress.completedAt() > 0
-            ? completedProgress.completedAt()
-            : completedProgress.updatedAt();
-        long elapsedMillis = Math.max(0L, System.currentTimeMillis() - completedAt);
-        return Math.max(0L, template.getQuestCooldownSeconds() * 1000L - elapsedMillis);
-    }
-
     private boolean hasCompletedQuest(UUID playerId, String questReference) {
         Map<String, PlayerQuestProgress> archivedQuests = archivedPlayerQuests.get(playerId);
         if (archivedQuests == null || archivedQuests.isEmpty()) {
@@ -2467,190 +2448,7 @@ public class ScenarioEngine {
 
         return archivedQuests.values().stream()
             .filter(PlayerQuestProgress::isCompleted)
-            .anyMatch(progress -> matchesQuestReference(progress, questReference));
-    }
-
-    private boolean matchesQuestReference(PlayerQuestProgress progress, String questReference) {
-        String normalizedReference = normalizeReference(questReference);
-        if (progress == null || normalizedReference.isBlank()) {
-            return false;
-        }
-
-        for (String candidate : buildProgressionReferenceCandidates(progress)) {
-            if (normalizedReference.equals(normalizeReference(candidate))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private List<String> buildProgressionReferenceCandidates(PlayerQuestProgress progress) {
-        if (progress == null) {
-            return List.of();
-        }
-
-        LinkedHashSet<String> candidates = new LinkedHashSet<>();
-        addProgressionReferenceCandidate(candidates, progress.templateId());
-        addProgressionReferenceCandidate(candidates, progress.questCode());
-
-        String definitionId = extractProgressionDefinitionId(progress.templateId());
-        addProgressionReferenceCandidate(candidates, definitionId);
-
-        ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-        if (template != null) {
-            addProgressionReferenceCandidate(candidates, template.getTemplateId());
-            addProgressionReferenceCandidate(candidates, template.getQuestCode());
-            definitionId = extractProgressionDefinitionId(template.getTemplateId());
-            addProgressionReferenceCandidate(candidates, definitionId);
-
-            String code = firstNonBlank(progress.questCode(), template.getQuestCode(), definitionId);
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionMechanicId(), code));
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionMechanicId(), definitionId));
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionKind(), code));
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getProgressionKind(), definitionId));
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getSourcePackId(), template.getProgressionMechanicId(), code));
-            addProgressionReferenceCandidate(candidates, progressionReference(template.getSourcePackId(), template.getProgressionMechanicId(), definitionId));
-        }
-
-        return new ArrayList<>(candidates);
-    }
-
-    private void addProgressionReferenceCandidate(Set<String> candidates, String value) {
-        if (value != null && !value.isBlank()) {
-            candidates.add(value);
-        }
-    }
-
-    private String extractProgressionDefinitionId(String templateId) {
-        if (templateId == null || templateId.isBlank()) {
-            return "";
-        }
-
-        int separator = templateId.indexOf(':');
-        return separator >= 0 && separator < templateId.length() - 1
-            ? templateId.substring(separator + 1)
-            : templateId;
-    }
-
-    private String progressionReference(String... parts) {
-        if (parts == null || parts.length == 0) {
-            return "";
-        }
-
-        List<String> cleanParts = new ArrayList<>();
-        for (String part : parts) {
-            if (part != null && !part.isBlank()) {
-                cleanParts.add(part.trim());
-            }
-        }
-        return cleanParts.isEmpty() ? "" : String.join(":", cleanParts);
-    }
-
-    private String formatDuration(long durationMillis) {
-        long totalSeconds = Math.max(1L, (durationMillis + 999L) / 1000L);
-        long hours = totalSeconds / 3600L;
-        long minutes = (totalSeconds % 3600L) / 60L;
-        long seconds = totalSeconds % 60L;
-
-        if (hours > 0) {
-            return hours + "h " + minutes + "m";
-        }
-        if (minutes > 0) {
-            return minutes + "m " + seconds + "s";
-        }
-        return seconds + "s";
-    }
-
-    private String formatQuestDebugTime(long epochMillis) {
-        return epochMillis > 0L ? String.valueOf(epochMillis) : "<gol>";
-    }
-
-    private String formatOptional(String value) {
-        return value == null || value.isBlank() ? "<gol>" : value;
-    }
-
-    private List<String> formatQuestDebugMap(Map<String, ?> values, int limit) {
-        if (values == null || values.isEmpty()) {
-            return List.of("&7- &f<gol>");
-        }
-
-        int maxRows = Math.max(1, limit);
-        List<String> lines = new ArrayList<>();
-        values.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .limit(maxRows)
-            .forEach(entry -> lines.add("&7- &f" + entry.getKey() + " &7= &f" + entry.getValue()));
-        if (values.size() > maxRows) {
-            lines.add("&7- &f... inca " + (values.size() - maxRows) + " valori");
-        }
-        return lines;
-    }
-
-    private QuestLogFilter parseQuestLogFilter(String filter) {
-        String normalized = normalizeReference(filter);
-        return switch (normalized) {
-            case "all", "toate" -> QuestLogFilter.ALL;
-            case "current", "curent", "curente" -> QuestLogFilter.CURRENT;
-            case "active", "activ" -> QuestLogFilter.ACTIVE;
-            case "offered", "oferit", "oferite" -> QuestLogFilter.OFFERED;
-            case "tracked", "urmarit" -> QuestLogFilter.TRACKED;
-            case "quest", "questuri" -> QuestLogFilter.QUEST_KIND;
-            case "contract", "contracts", "contracte" -> QuestLogFilter.CONTRACT_KIND;
-            case "duty", "duties", "sarcina", "sarcini" -> QuestLogFilter.DUTY_KIND;
-            case "bounty", "bounties", "recompensa", "recompense" -> QuestLogFilter.BOUNTY_KIND;
-            case "event", "events", "eveniment", "evenimente" -> QuestLogFilter.EVENT_KIND;
-            case "tutorial", "tutorials", "onboarding", "indrumare" -> QuestLogFilter.TUTORIAL_KIND;
-            case "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> QuestLogFilter.RITUAL_KIND;
-            case "contract_current", "contract_curent", "contracte_curente" -> QuestLogFilter.CONTRACT_CURRENT;
-            case "contract_active", "contract_activ", "contracte_active" -> QuestLogFilter.CONTRACT_ACTIVE;
-            case "contract_offered", "contract_oferit", "contracte_oferite" -> QuestLogFilter.CONTRACT_OFFERED;
-            case "contract_tracked", "contract_urmarit", "contracte_urmarite" -> QuestLogFilter.CONTRACT_TRACKED;
-            case "contract_completed", "contract_completat", "contracte_completate" -> QuestLogFilter.CONTRACT_COMPLETED;
-            case "contract_failed", "contract_esuat", "contracte_esuate" -> QuestLogFilter.CONTRACT_FAILED;
-            case "contract_archived", "contract_arhivat", "contracte_arhivate" -> QuestLogFilter.CONTRACT_ARCHIVED;
-            case "duty_current", "duty_curent", "sarcini_curente" -> QuestLogFilter.DUTY_CURRENT;
-            case "duty_active", "duty_activ", "sarcini_active" -> QuestLogFilter.DUTY_ACTIVE;
-            case "duty_offered", "duty_oferit", "sarcini_oferite" -> QuestLogFilter.DUTY_OFFERED;
-            case "duty_tracked", "duty_urmarit", "sarcini_urmarite" -> QuestLogFilter.DUTY_TRACKED;
-            case "duty_completed", "duty_completat", "sarcini_completate" -> QuestLogFilter.DUTY_COMPLETED;
-            case "duty_failed", "duty_esuat", "sarcini_esuate" -> QuestLogFilter.DUTY_FAILED;
-            case "duty_archived", "duty_arhivat", "sarcini_arhivate" -> QuestLogFilter.DUTY_ARCHIVED;
-            case "bounty_current", "bounty_curent", "recompense_curente" -> QuestLogFilter.BOUNTY_CURRENT;
-            case "bounty_active", "bounty_activ", "recompense_active" -> QuestLogFilter.BOUNTY_ACTIVE;
-            case "bounty_offered", "bounty_oferit", "recompense_oferite" -> QuestLogFilter.BOUNTY_OFFERED;
-            case "bounty_tracked", "bounty_urmarit", "recompense_urmarite" -> QuestLogFilter.BOUNTY_TRACKED;
-            case "bounty_completed", "bounty_completat", "recompense_completate" -> QuestLogFilter.BOUNTY_COMPLETED;
-            case "bounty_failed", "bounty_esuat", "recompense_esuate" -> QuestLogFilter.BOUNTY_FAILED;
-            case "bounty_archived", "bounty_arhivat", "recompense_arhivate" -> QuestLogFilter.BOUNTY_ARCHIVED;
-            case "event_current", "event_curent", "evenimente_curente" -> QuestLogFilter.EVENT_CURRENT;
-            case "event_active", "event_activ", "evenimente_active" -> QuestLogFilter.EVENT_ACTIVE;
-            case "event_offered", "event_oferit", "evenimente_oferite" -> QuestLogFilter.EVENT_OFFERED;
-            case "event_tracked", "event_urmarit", "evenimente_urmarite" -> QuestLogFilter.EVENT_TRACKED;
-            case "event_completed", "event_completat", "evenimente_completate" -> QuestLogFilter.EVENT_COMPLETED;
-            case "event_failed", "event_esuat", "evenimente_esuate" -> QuestLogFilter.EVENT_FAILED;
-            case "event_archived", "event_arhivat", "evenimente_arhivate" -> QuestLogFilter.EVENT_ARCHIVED;
-            case "tutorial_current", "tutorial_curent", "tutoriale_curente" -> QuestLogFilter.TUTORIAL_CURRENT;
-            case "tutorial_active", "tutorial_activ", "tutoriale_active" -> QuestLogFilter.TUTORIAL_ACTIVE;
-            case "tutorial_offered", "tutorial_oferit", "tutoriale_oferite" -> QuestLogFilter.TUTORIAL_OFFERED;
-            case "tutorial_tracked", "tutorial_urmarit", "tutoriale_urmarite" -> QuestLogFilter.TUTORIAL_TRACKED;
-            case "tutorial_completed", "tutorial_completat", "tutoriale_completate" -> QuestLogFilter.TUTORIAL_COMPLETED;
-            case "tutorial_failed", "tutorial_esuat", "tutoriale_esuate" -> QuestLogFilter.TUTORIAL_FAILED;
-            case "tutorial_archived", "tutorial_arhivat", "tutoriale_arhivate" -> QuestLogFilter.TUTORIAL_ARCHIVED;
-            case "ritual_current", "ritual_curent", "ritualuri_curente" -> QuestLogFilter.RITUAL_CURRENT;
-            case "ritual_active", "ritual_activ", "ritualuri_active" -> QuestLogFilter.RITUAL_ACTIVE;
-            case "ritual_offered", "ritual_oferit", "ritualuri_oferite" -> QuestLogFilter.RITUAL_OFFERED;
-            case "ritual_tracked", "ritual_urmarit", "ritualuri_urmarite" -> QuestLogFilter.RITUAL_TRACKED;
-            case "ritual_completed", "ritual_completat", "ritualuri_completate" -> QuestLogFilter.RITUAL_COMPLETED;
-            case "ritual_failed", "ritual_esuat", "ritualuri_esuate" -> QuestLogFilter.RITUAL_FAILED;
-            case "ritual_archived", "ritual_arhivat", "ritualuri_arhivate" -> QuestLogFilter.RITUAL_ARCHIVED;
-            case "main", "principal" -> QuestLogFilter.MAIN;
-            case "side", "secundar", "secundare" -> QuestLogFilter.SIDE;
-            case "repeatable", "repetabil", "repetabile" -> QuestLogFilter.REPEATABLE;
-            case "completed", "complete", "completat", "finalizat", "finalizate" -> QuestLogFilter.COMPLETED;
-            case "failed", "esuat", "abandonat", "abandonate" -> QuestLogFilter.FAILED;
-            case "archived", "archive", "arhivat", "arhivate" -> QuestLogFilter.ARCHIVED;
-            default -> QuestLogFilter.SUMMARY;
-        };
+            .anyMatch(progress -> matchesQuestReference(progress, questReference, resolveTemplateForProgress(progress, null)));
     }
 
     private boolean questLogMatches(UUID playerId,
@@ -2673,31 +2471,31 @@ public class ScenarioEngine {
             case ARCHIVED -> archived || progress.status().isArchived();
             case QUEST_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "quest");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "quest");
             }
             case CONTRACT_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "contract");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "contract");
             }
             case DUTY_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "duty");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "duty");
             }
             case BOUNTY_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "bounty");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "bounty");
             }
             case EVENT_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "event");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "event");
             }
             case TUTORIAL_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "tutorial");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "tutorial");
             }
             case RITUAL_KIND -> {
                 ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-                yield template != null && progressionKindMatches(template, "ritual");
+                yield template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, "ritual");
             }
             case CONTRACT_CURRENT -> !archived && progress.isCurrent() && questLogMatchesProgressionKind(progress, "contract");
             case CONTRACT_ACTIVE -> !archived && progress.isActive() && questLogMatchesProgressionKind(progress, "contract");
@@ -2759,7 +2557,7 @@ public class ScenarioEngine {
 
     private boolean questLogMatchesProgressionKind(PlayerQuestProgress progress, String expectedKind) {
         ScenarioTemplate template = resolveTemplateForProgress(progress, null);
-        return template != null && progressionKindMatches(template, expectedKind);
+        return template != null && progressionKindMatches(plugin.getFeaturePackLoader(), template, expectedKind);
     }
 
     private List<String> buildQuestLogSummaryLines(UUID playerId, List<PlayerQuestProgress> currentProgresses) {
@@ -2791,7 +2589,7 @@ public class ScenarioEngine {
             }
             QuestScenarioContract.Category category = resolveQuestCategory(template);
             categoryCounts.merge(category, 1, Integer::sum);
-            mechanicCounts.merge(resolveProgressionMechanicDisplay(template), 1, Integer::sum);
+            mechanicCounts.merge(resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template), 1, Integer::sum);
         }
 
         List<String> lines = new ArrayList<>();
@@ -2813,66 +2611,14 @@ public class ScenarioEngine {
         return lines;
     }
 
-    private String formatQuestLogMechanicCounts(Map<String, Integer> mechanicCounts) {
-        if (mechanicCounts == null || mechanicCounts.isEmpty()) {
-            return "<gol>";
-        }
-
-        List<String> parts = new ArrayList<>();
-        mechanicCounts.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
-            .forEach(entry -> parts.add(entry.getKey() + "=" + entry.getValue()));
-        return String.join("&7, &f", parts);
-    }
-
-    private boolean progressionKindMatches(ScenarioTemplate template, String expectedKind) {
-        return QuestTemplateSelector.matchesProgressionKind(
-            template,
-            expectedKind,
-            resolveProgressionMechanicDisplay(template)
-        );
-    }
-
     private Comparator<PlayerQuestProgress> questLogCurrentComparator(UUID playerId) {
         return Comparator
             .comparingInt((PlayerQuestProgress progress) -> isTrackedQuest(playerId, progress) ? 0 : 1)
             .thenComparingInt(progress -> questLogCategoryPriority(resolveTemplateForProgress(progress, null)))
-            .thenComparing(progress -> resolveProgressionMechanicSortKey(resolveTemplateForProgress(progress, null)))
-            .thenComparingInt(this::questLogStatusPriority)
+            .thenComparing(progress -> resolveProgressionMechanicSortKey(plugin.getFeaturePackLoader(), resolveTemplateForProgress(progress, null)))
+            .thenComparingInt(QuestLogFilterKt::questLogStatusPriority)
             .thenComparing(Comparator.comparingLong(PlayerQuestProgress::updatedAt).reversed())
             .thenComparing(progress -> progress.templateId() != null ? progress.templateId() : "");
-    }
-
-    private int questLogCategoryPriority(ScenarioTemplate template) {
-        if (template == null) {
-            return 3;
-        }
-        return switch (resolveQuestCategory(template)) {
-            case MAIN -> 0;
-            case SIDE -> 1;
-            case REPEATABLE -> 2;
-        };
-    }
-
-    private String resolveProgressionMechanicSortKey(ScenarioTemplate template) {
-        String mechanicKey = resolveProgressionMechanicKey(template);
-        if (!mechanicKey.isBlank()) {
-            return mechanicKey;
-        }
-        return template != null ? normalizeReference(resolveProgressionMechanicDisplay(template)) : "";
-    }
-
-    private int questLogStatusPriority(PlayerQuestProgress progress) {
-        if (progress == null) {
-            return 3;
-        }
-        if (progress.isActive()) {
-            return 0;
-        }
-        if (progress.isOffered()) {
-            return 1;
-        }
-        return 2;
     }
 
     private String questLogCurrentGroupLabel(UUID playerId, ScenarioTemplate template, PlayerQuestProgress progress) {
@@ -2880,12 +2626,12 @@ public class ScenarioEngine {
             if (template == null) {
                 return "&b--- Progresie urmarita ---";
             }
-            return "&b--- " + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " urmarit ---";
+            return "&b--- " + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " urmarit ---";
         }
         if (template == null) {
             return "&e--- Template lipsa ---";
         }
-        return "&e--- " + resolveProgressionMechanicDisplay(template) + " ---";
+        return "&e--- " + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template) + " ---";
     }
 
     private String formatQuestLogArchivedLine(UUID playerId,
@@ -2899,7 +2645,7 @@ public class ScenarioEngine {
             .append(")");
         if (template != null) {
             line.append(" &8[")
-                .append(resolveProgressionMechanicDisplay(template))
+                .append(resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template))
                 .append(" / ")
                 .append(resolveQuestCategory(template).displayName())
                 .append("]");
@@ -2937,28 +2683,6 @@ public class ScenarioEngine {
         }
 
         return List.of("&8Actiuni: &7" + String.join(" &8| &7", commands));
-    }
-
-    private String questLogActionSelector(ScenarioTemplate template, PlayerQuestProgress progress) {
-        if (template != null) {
-            String code = progress != null && progress.questCode() != null && !progress.questCode().isBlank()
-                ? progress.questCode()
-                : template.getQuestCode();
-            String selector = progressionReference(template.getProgressionMechanicId(), code);
-            if (!selector.isBlank()) {
-                return selector;
-            }
-        }
-        if (progress != null && progress.questCode() != null && !progress.questCode().isBlank()) {
-            return progress.questCode();
-        }
-        if (template != null && template.getQuestCode() != null && !template.getQuestCode().isBlank()) {
-            return template.getQuestCode();
-        }
-        if (progress != null && progress.templateId() != null && !progress.templateId().isBlank()) {
-            return progress.templateId();
-        }
-        return template != null && template.getTemplateId() != null ? template.getTemplateId() : "";
     }
 
     private List<PlayerQuestProgress> getRecentArchivedQuestProgress(UUID playerId, int limit) {
@@ -3019,12 +2743,6 @@ public class ScenarioEngine {
             archivedPlayerQuests.remove(playerId);
         }
         return removed;
-    }
-
-    private String buildQuestCompletionKey(UUID playerId, String templateId) {
-        return (playerId != null ? playerId.toString() : "unknown")
-            + "::"
-            + (templateId != null ? templateId : "");
     }
 
     private void loadPersistedQuestProgress() {
@@ -3416,16 +3134,6 @@ public class ScenarioEngine {
         }
     }
 
-    private long readNullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? 0L : value;
-    }
-
-    private String readTextOrEmpty(ResultSet rs, String column) throws SQLException {
-        String value = rs.getString(column);
-        return value != null ? value : "";
-    }
-
     private Map<String, Integer> parseObjectiveProgress(String json) {
         return parseJsonMap(json, OBJECTIVE_PROGRESS_TYPE);
     }
@@ -3516,7 +3224,7 @@ public class ScenarioEngine {
             if (!matchesObjectiveType(objective, "talk_to_npc")) {
                 continue;
             }
-            if (!matchesNpcObjective(objective, npc, template, progress)) {
+            if (!matchesNpcObjective(plugin.getFeaturePackLoader(), objective, npc, template, progress)) {
                 continue;
             }
 
@@ -3669,23 +3377,6 @@ public class ScenarioEngine {
         return updatedProgress;
     }
 
-    private boolean isQuestAnchorVariableKey(String key) {
-        return key != null && (key.startsWith("anchor.") || "quest_anchor_count".equals(key));
-    }
-
-    private String resolveQuestNpcName(PlayerQuestProgress progress) {
-        if (progress == null || progress.questVariables().isEmpty()) {
-            return "";
-        }
-
-        String displayName = progress.questVariables().getOrDefault("quest_giver_display_name", "");
-        if (!displayName.isBlank()) {
-            return displayName;
-        }
-
-        return progress.questVariables().getOrDefault("quest_giver_name", "");
-    }
-
     private PlayerQuestProgress updateTrackedQuestProgress(UUID playerId,
                                                            ScenarioTemplate template,
                                                            PlayerQuestProgress progress,
@@ -3724,628 +3415,6 @@ public class ScenarioEngine {
         return updatedProgress;
     }
 
-    private Map<String, String> seedQuestStageVariables(ScenarioTemplate template,
-                                                        QuestStatus status,
-                                                        String currentPhase,
-                                                        Map<String, String> questVariables,
-                                                        long timestamp) {
-        Map<String, String> safeVariables = questVariables != null ? questVariables : Map.of();
-        if (status != QuestStatus.ACTIVE || !hasStagedObjectives(template)) {
-            return safeVariables;
-        }
-
-        String currentStage = findMatchingObjectiveStage(template, currentPhase);
-        if (currentStage.isBlank()) {
-            return safeVariables;
-        }
-
-        Map<String, String> updatedVariables = new LinkedHashMap<>(safeVariables);
-        updatedVariables.put("stage.current", currentStage);
-        String normalizedStage = normalizeReference(currentStage);
-        if (!normalizedStage.isBlank()) {
-            updatedVariables.putIfAbsent("stage.started_at." + normalizedStage, String.valueOf(timestamp));
-        }
-        return updatedVariables;
-    }
-
-    private Map<String, String> buildQuestStageTransitionVariables(ScenarioTemplate template,
-                                                                   PlayerQuestProgress progress,
-                                                                   String updatedPhase,
-                                                                   Map<String, Integer> objectiveProgress) {
-        if (progress == null) {
-            return Map.of();
-        }
-
-        Map<String, String> updatedVariables = seedQuestStageVariables(
-            template,
-            progress.status(),
-            updatedPhase,
-            progress.questVariables(),
-            System.currentTimeMillis()
-        );
-        if (!hasStagedObjectives(template) || progress.status() != QuestStatus.ACTIVE) {
-            return updatedVariables;
-        }
-
-        String previousStage = findMatchingObjectiveStage(template, progress.currentPhase());
-        String currentStage = findMatchingObjectiveStage(template, updatedPhase);
-        if (previousStage.isBlank() || currentStage.isBlank() || phasesMatch(previousStage, currentStage)) {
-            return updatedVariables;
-        }
-
-        Map<String, String> transitionVariables = new LinkedHashMap<>(updatedVariables);
-        long now = System.currentTimeMillis();
-        transitionVariables.put("stage.previous", previousStage);
-        transitionVariables.put("stage.changed_at", String.valueOf(now));
-
-        if (areObjectivesSatisfiedForStage(template, previousStage, objectiveProgress)) {
-            String normalizedPreviousStage = normalizeReference(previousStage);
-            if (!normalizedPreviousStage.isBlank()) {
-                transitionVariables.put("stage.completed." + normalizedPreviousStage, "true");
-                transitionVariables.putIfAbsent("stage.completed_at." + normalizedPreviousStage, String.valueOf(now));
-            }
-            transitionVariables.put("stage.last_completed", previousStage);
-        }
-
-        return transitionVariables;
-    }
-
-    private String resolveQuestPhase(ScenarioTemplate template,
-                                     QuestStatus status,
-                                     PlayerQuestProgress existingProgress) {
-        Map<String, Integer> objectiveProgress = existingProgress != null ? existingProgress.objectiveProgress() : Map.of();
-        String existingPhase = existingProgress != null ? existingProgress.currentPhase() : "";
-        return resolveQuestPhase(template, status, existingPhase, objectiveProgress);
-    }
-
-    private String resolveQuestPhase(ScenarioTemplate template,
-                                     QuestStatus status,
-                                     PlayerQuestProgress existingProgress,
-                                     Map<String, Integer> objectiveProgress) {
-        String existingPhase = existingProgress != null ? existingProgress.currentPhase() : "";
-        return resolveQuestPhase(template, status, existingPhase, objectiveProgress);
-    }
-
-    private String resolveQuestPhase(ScenarioTemplate template,
-                                     QuestStatus status,
-                                     String existingPhase,
-                                     Map<String, Integer> objectiveProgress) {
-        if (template == null || status == null) {
-            return "";
-        }
-
-        String safeExistingPhase = existingPhase != null ? existingPhase : "";
-        return switch (status) {
-            case NOT_STARTED -> "";
-            case OFFERED -> !safeExistingPhase.isBlank() ? safeExistingPhase : getFirstQuestPhase(template);
-            case ACTIVE -> resolveActiveQuestPhase(template, safeExistingPhase, objectiveProgress);
-            case COMPLETED -> {
-                String lastPhase = getLastQuestPhase(template);
-                yield !lastPhase.isBlank() ? lastPhase : safeExistingPhase;
-            }
-            case FAILED -> !safeExistingPhase.isBlank() ? safeExistingPhase : getDefaultActiveQuestPhase(template);
-        };
-    }
-
-    private String resolveActiveQuestPhase(ScenarioTemplate template,
-                                           String existingPhase,
-                                           Map<String, Integer> objectiveProgress) {
-        if (hasStagedObjectives(template)) {
-            return resolveActiveStagedQuestPhase(template, existingPhase, objectiveProgress);
-        }
-
-        if (areObjectivesSatisfied(template, objectiveProgress)) {
-            String readyPhase = getReadyToTurnInQuestPhase(template);
-            if (!readyPhase.isBlank()) {
-                return readyPhase;
-            }
-        }
-
-        String workPhase = getQuestWorkPhase(template);
-        if (!existingPhase.isBlank()
-            && !isQuestIntroOrAcceptancePhase(existingPhase)
-            && !isQuestReadyOrTerminalPhase(existingPhase)) {
-            return existingPhase;
-        }
-
-        if (!workPhase.isBlank()) {
-            return workPhase;
-        }
-
-        return getDefaultActiveQuestPhase(template);
-    }
-
-    private String resolveActiveStagedQuestPhase(ScenarioTemplate template,
-                                                 String existingPhase,
-                                                 Map<String, Integer> objectiveProgress) {
-        if (areObjectivesSatisfied(template, objectiveProgress)) {
-            String readyPhase = getReadyToTurnInQuestPhase(template);
-            return !readyPhase.isBlank() ? readyPhase : firstNonBlank(existingPhase, getLastObjectiveStage(template));
-        }
-
-        List<String> objectiveStages = getOrderedObjectiveStages(template);
-        if (objectiveStages.isEmpty()) {
-            String workPhase = getQuestWorkPhase(template);
-            return !workPhase.isBlank() ? workPhase : getDefaultActiveQuestPhase(template);
-        }
-
-        String currentStage = findMatchingObjectiveStage(template, existingPhase);
-        if (currentStage.isBlank()
-            || isQuestIntroOrAcceptancePhase(existingPhase)
-            || isQuestCompletionPhase(existingPhase)) {
-            return firstNonBlank(
-                findFirstIncompleteObjectiveStage(template, objectiveProgress),
-                objectiveStages.get(0)
-            );
-        }
-
-        if (areObjectivesSatisfiedForStage(template, currentStage, objectiveProgress)) {
-            String nextStage = findNextIncompleteObjectiveStage(template, currentStage, objectiveProgress);
-            if (!nextStage.isBlank()) {
-                return nextStage;
-            }
-
-            String firstIncompleteStage = findFirstIncompleteObjectiveStage(template, objectiveProgress);
-            if (!firstIncompleteStage.isBlank()) {
-                return firstIncompleteStage;
-            }
-
-            String readyPhase = getReadyToTurnInQuestPhase(template);
-            return !readyPhase.isBlank() ? readyPhase : currentStage;
-        }
-
-        return currentStage;
-    }
-
-    private boolean hasStagedObjectives(ScenarioTemplate template) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            if (!getObjectiveStage(objective).isBlank()) {
-                return true;
-            }
-        }
-        return hasExplicitStageObjectiveIds(template);
-    }
-
-    private String getObjectiveStage(FeaturePackLoader.QuestEntryDefinition objective) {
-        if (objective == null) {
-            return "";
-        }
-
-        return firstNonBlank(
-            getQuestEntryMetadata(objective, "stage_id", "stage", "phase", "current_stage_id", "current_phase"),
-            objective.getVariables().getOrDefault("stage_id", ""),
-            objective.getVariables().getOrDefault("stage", ""),
-            objective.getVariables().getOrDefault("phase", "")
-        );
-    }
-
-    private List<String> getOrderedObjectiveStages(ScenarioTemplate template) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return List.of();
-        }
-
-        List<String> stages = new ArrayList<>();
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            String stage = canonicalQuestPhase(template, getObjectiveStage(objective));
-            if (!stage.isBlank() && stages.stream().noneMatch(existing -> phasesMatch(existing, stage))) {
-                stages.add(stage);
-            }
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stageDefinition : template.getQuestStages()) {
-            if (stageDefinition == null || stageDefinition.getObjectiveIds().isEmpty()) {
-                continue;
-            }
-            String stage = canonicalQuestPhase(template, stageDefinition.getId());
-            if (!stage.isBlank() && stages.stream().noneMatch(existing -> phasesMatch(existing, stage))) {
-                stages.add(stage);
-            }
-        }
-        return List.copyOf(stages);
-    }
-
-    private String getLastObjectiveStage(ScenarioTemplate template) {
-        List<String> stages = getOrderedObjectiveStages(template);
-        return stages.isEmpty() ? "" : stages.get(stages.size() - 1);
-    }
-
-    private String findMatchingObjectiveStage(ScenarioTemplate template, String phase) {
-        if (phase == null || phase.isBlank()) {
-            return "";
-        }
-
-        for (String stage : getOrderedObjectiveStages(template)) {
-            if (phasesMatch(stage, phase)) {
-                return stage;
-            }
-        }
-        return "";
-    }
-
-    private String findFirstIncompleteObjectiveStage(ScenarioTemplate template,
-                                                     Map<String, Integer> objectiveProgress) {
-        for (String stage : getOrderedObjectiveStages(template)) {
-            if (!areObjectivesSatisfiedForStage(template, stage, objectiveProgress)) {
-                return stage;
-            }
-        }
-        return "";
-    }
-
-    private String findNextIncompleteObjectiveStage(ScenarioTemplate template,
-                                                    String currentStage,
-                                                    Map<String, Integer> objectiveProgress) {
-        String explicitNextStage = findExplicitNextObjectiveStage(template, currentStage, objectiveProgress);
-        if (!explicitNextStage.isBlank()) {
-            return explicitNextStage;
-        }
-
-        List<String> stages = getOrderedObjectiveStages(template);
-        return findNextIncompleteObjectiveStageAfter(template, stages, currentStage, objectiveProgress);
-    }
-
-    private String findExplicitNextObjectiveStage(ScenarioTemplate template,
-                                                  String currentStage,
-                                                  Map<String, Integer> objectiveProgress) {
-        FeaturePackLoader.QuestStageDefinition currentStageDefinition = findQuestStage(template, currentStage);
-        String nextStageId = currentStageDefinition != null ? currentStageDefinition.getNextStageId() : "";
-        if (nextStageId == null || nextStageId.isBlank()) {
-            return "";
-        }
-
-        String matchedNextStage = findMatchingObjectiveStage(template, nextStageId);
-        if (matchedNextStage.isBlank() || phasesMatch(matchedNextStage, currentStage)) {
-            return "";
-        }
-
-        if (!areObjectivesSatisfiedForStage(template, matchedNextStage, objectiveProgress)) {
-            return matchedNextStage;
-        }
-
-        return findNextIncompleteObjectiveStageAfter(
-            template,
-            getOrderedObjectiveStages(template),
-            matchedNextStage,
-            objectiveProgress
-        );
-    }
-
-    private String findNextIncompleteObjectiveStageAfter(ScenarioTemplate template,
-                                                         List<String> stages,
-                                                         String currentStage,
-                                                         Map<String, Integer> objectiveProgress) {
-        boolean afterCurrent = currentStage == null || currentStage.isBlank();
-        for (String stage : stages) {
-            if (!afterCurrent) {
-                afterCurrent = phasesMatch(stage, currentStage);
-                continue;
-            }
-            if (!areObjectivesSatisfiedForStage(template, stage, objectiveProgress)) {
-                return stage;
-            }
-        }
-        return "";
-    }
-
-    private boolean areObjectivesSatisfiedForStage(ScenarioTemplate template,
-                                                   String stage,
-                                                   Map<String, Integer> objectiveProgress) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return true;
-        }
-
-        Map<String, Integer> safeProgress = objectiveProgress != null ? objectiveProgress : Map.of();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        boolean hasObjectiveForStage = false;
-        boolean hasCompletedObjectiveForStage = false;
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!isObjectiveActiveForPhase(template, stage, objective)) {
-                continue;
-            }
-            hasObjectiveForStage = true;
-            boolean objectiveComplete = readObjectiveProgress(safeProgress, objective, index) >= Math.max(1, objective.getAmount());
-            hasCompletedObjectiveForStage |= objectiveComplete;
-            if ("all_objectives".equals(stageCompletionMode(template, stage)) && !objectiveComplete) {
-                return false;
-            }
-        }
-
-        String completionMode = stageCompletionMode(template, stage);
-        return switch (completionMode) {
-            case "any_objective" -> hasCompletedObjectiveForStage;
-            case "manual_turn_in" -> hasObjectiveForStage && hasCompletedObjectiveForStage
-                && objectives.stream()
-                    .filter(objective -> isObjectiveActiveForPhase(template, stage, objective))
-                    .allMatch(objective -> {
-                        int index = objectives.indexOf(objective);
-                        return readObjectiveProgress(safeProgress, objective, index) >= Math.max(1, objective.getAmount());
-                    });
-            default -> hasObjectiveForStage;
-        };
-    }
-
-    private boolean isObjectiveActiveForProgress(ScenarioTemplate template,
-                                                 PlayerQuestProgress progress,
-                                                 FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-
-        String phase = progress != null ? progress.currentPhase() : "";
-        if (phase.isBlank() && progress != null) {
-            phase = resolveQuestPhase(template, progress.status(), progress);
-        }
-        return isObjectiveActiveForPhase(template, phase, objective);
-    }
-
-    private boolean isObjectiveActiveForPhase(ScenarioTemplate template,
-                                              String phase,
-                                              FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-
-        String effectivePhase = phase != null ? phase : "";
-        if (effectivePhase.isBlank()) {
-            effectivePhase = firstNonBlank(findFirstIncompleteObjectiveStage(template, Map.of()), getFirstObjectiveStage(template));
-        }
-
-        String objectiveStage = canonicalQuestPhase(template, getObjectiveStage(objective));
-        if (!objectiveStage.isBlank()) {
-            return phasesMatch(objectiveStage, effectivePhase);
-        }
-
-        if (!hasExplicitStageObjectiveIds(template)) {
-            return true;
-        }
-
-        FeaturePackLoader.QuestStageDefinition stage = findQuestStage(template, effectivePhase);
-        if (stageReferencesObjective(stage, objective)) {
-            return true;
-        }
-
-        return !objectiveListedInAnyStage(template, objective);
-    }
-
-    private String getFirstObjectiveStage(ScenarioTemplate template) {
-        List<String> stages = getOrderedObjectiveStages(template);
-        return stages.isEmpty() ? "" : stages.get(0);
-    }
-
-    private boolean hasExplicitStageObjectiveIds(ScenarioTemplate template) {
-        if (template == null || template.getQuestStages().isEmpty()) {
-            return false;
-        }
-
-        return template.getQuestStages().stream()
-            .anyMatch(stage -> stage != null && !stage.getObjectiveIds().isEmpty());
-    }
-
-    private FeaturePackLoader.QuestStageDefinition findQuestStage(ScenarioTemplate template, String stageId) {
-        if (template == null || stageId == null || stageId.isBlank()) {
-            return null;
-        }
-
-        for (FeaturePackLoader.QuestStageDefinition stage : template.getQuestStages()) {
-            if (stage != null && phasesMatch(stage.getId(), stageId)) {
-                return stage;
-            }
-        }
-        return null;
-    }
-
-    private boolean stageReferencesObjective(FeaturePackLoader.QuestStageDefinition stage,
-                                             FeaturePackLoader.QuestEntryDefinition objective) {
-        if (stage == null || objective == null || stage.getObjectiveIds().isEmpty()) {
-            return false;
-        }
-
-        String objectiveId = normalizeReference(objective.getEntryId());
-        String itemId = normalizeReference(objective.getItemId());
-        return stage.getObjectiveIds().stream()
-            .map(this::normalizeReference)
-            .anyMatch(reference -> !reference.isBlank()
-                && (reference.equals(objectiveId) || reference.equals(itemId)));
-    }
-
-    private boolean objectiveListedInAnyStage(ScenarioTemplate template,
-                                              FeaturePackLoader.QuestEntryDefinition objective) {
-        if (template == null || objective == null || template.getQuestStages().isEmpty()) {
-            return false;
-        }
-
-        return template.getQuestStages().stream()
-            .anyMatch(stage -> stageReferencesObjective(stage, objective));
-    }
-
-    private String stageCompletionMode(ScenarioTemplate template, String stageId) {
-        FeaturePackLoader.QuestStageDefinition stage = findQuestStage(template, stageId);
-        String completionMode = normalizeStageCompletionMode(stage != null ? stage.getCompletionMode() : "");
-        return completionMode.isBlank() ? "all_objectives" : completionMode;
-    }
-
-    private String normalizeStageCompletionMode(String mode) {
-        String completionMode = normalizeReference(mode);
-        return switch (completionMode) {
-            case "", "all", "all_objective", "all_objectives", "allobjective", "allobjectives" -> "all_objectives";
-            case "any", "any_objective", "any_objectives", "anyobjective", "anyobjectives" -> "any_objective";
-            case "manual", "manual_turn_in", "manualturnin", "turn_in", "turnin" -> "manual_turn_in";
-            default -> completionMode;
-        };
-    }
-
-    private String canonicalQuestPhase(ScenarioTemplate template, String phase) {
-        if (phase == null || phase.isBlank()) {
-            return "";
-        }
-
-        for (String templatePhase : template != null ? template.getPhases() : List.<String>of()) {
-            if (phasesMatch(templatePhase, phase)) {
-                return templatePhase;
-            }
-        }
-        return phase.trim();
-    }
-
-    private boolean phasesMatch(String first, String second) {
-        String normalizedFirst = normalizeReference(first);
-        String normalizedSecond = normalizeReference(second);
-        return !normalizedFirst.isBlank() && normalizedFirst.equals(normalizedSecond);
-    }
-
-    private String getFirstQuestPhase(ScenarioTemplate template) {
-        return template != null && !template.getPhases().isEmpty() ? template.getPhases().get(0) : "";
-    }
-
-    private String getDefaultActiveQuestPhase(ScenarioTemplate template) {
-        if (template == null || template.getPhases().isEmpty()) {
-            return "";
-        }
-
-        return template.getPhases().size() > 1 ? template.getPhases().get(1) : template.getPhases().get(0);
-    }
-
-    private String getLastQuestPhase(ScenarioTemplate template) {
-        return template != null && !template.getPhases().isEmpty()
-            ? template.getPhases().get(template.getPhases().size() - 1)
-            : "";
-    }
-
-    private String getQuestWorkPhase(ScenarioTemplate template) {
-        if (template == null || template.getPhases().isEmpty()) {
-            return "";
-        }
-
-        String semanticPhase = findQuestPhaseByKeywords(
-            template,
-            "gather",
-            "journey",
-            "work",
-            "active",
-            "travel",
-            "hunt",
-            "inspect",
-            "deliver"
-        );
-        if (!semanticPhase.isBlank()) {
-            return semanticPhase;
-        }
-
-        List<String> phases = template.getPhases();
-        for (int index = 1; index < phases.size(); index++) {
-            String phase = phases.get(index);
-            if (!isQuestIntroOrAcceptancePhase(phase) && !isQuestReadyOrTerminalPhase(phase)) {
-                return phase;
-            }
-        }
-
-        for (int index = 1; index < phases.size(); index++) {
-            String phase = phases.get(index);
-            if (!isQuestReadyOrTerminalPhase(phase)) {
-                return phase;
-            }
-        }
-
-        return getDefaultActiveQuestPhase(template);
-    }
-
-    private String getReadyToTurnInQuestPhase(ScenarioTemplate template) {
-        if (template == null || template.getPhases().isEmpty()) {
-            return "";
-        }
-
-        String semanticPhase = findQuestPhaseByKeywords(
-            template,
-            "return",
-            "turn_in",
-            "turnin",
-            "report",
-            "handoff",
-            "hand_in"
-        );
-        if (!semanticPhase.isBlank()) {
-            return semanticPhase;
-        }
-
-        List<String> phases = template.getPhases();
-        String lastPhase = getLastQuestPhase(template);
-        if (phases.size() > 1 && isQuestCompletionPhase(lastPhase)) {
-            return phases.get(phases.size() - 2);
-        }
-
-        return lastPhase;
-    }
-
-    private String findQuestPhaseByKeywords(ScenarioTemplate template, String... keywords) {
-        if (template == null || keywords == null || keywords.length == 0) {
-            return "";
-        }
-
-        for (String phase : template.getPhases()) {
-            String normalizedPhase = normalizeReference(phase);
-            if (normalizedPhase.isBlank()) {
-                continue;
-            }
-
-            for (String keyword : keywords) {
-                String normalizedKeyword = normalizeReference(keyword);
-                if (!normalizedKeyword.isBlank() && normalizedPhase.contains(normalizedKeyword)) {
-                    return phase;
-                }
-            }
-        }
-
-        return "";
-    }
-
-    private boolean isQuestIntroOrAcceptancePhase(String phase) {
-        String normalizedPhase = normalizeReference(phase);
-        return normalizedPhase.contains("intro")
-            || normalizedPhase.contains("offer")
-            || normalizedPhase.contains("accept");
-    }
-
-    private boolean isQuestReadyOrTerminalPhase(String phase) {
-        String normalizedPhase = normalizeReference(phase);
-        return normalizedPhase.contains("return")
-            || normalizedPhase.contains("turn_in")
-            || normalizedPhase.contains("turnin")
-            || normalizedPhase.contains("report")
-            || isQuestCompletionPhase(phase);
-    }
-
-    private boolean isQuestCompletionPhase(String phase) {
-        String normalizedPhase = normalizeReference(phase);
-        return normalizedPhase.contains("completion")
-            || normalizedPhase.contains("complete")
-            || normalizedPhase.contains("completed")
-            || normalizedPhase.contains("final")
-            || normalizedPhase.contains("ending")
-            || normalizedPhase.contains("resolution");
-    }
-
-    private boolean areObjectivesSatisfied(ScenarioTemplate template, Map<String, Integer> objectiveProgress) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return true;
-        }
-
-        Map<String, Integer> safeProgress = objectiveProgress != null ? objectiveProgress : Map.of();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (readObjectiveProgress(safeProgress, objective, index) < objective.getAmount()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private ScenarioTemplate resolveTemplateForProgress(PlayerQuestProgress progress, AINPC npcContext) {
         if (progress == null || progress.templateId() == null || progress.templateId().isBlank()) {
             return null;
@@ -4369,199 +3438,9 @@ public class ScenarioEngine {
         return null;
     }
 
-    private boolean hasObjectiveType(ScenarioTemplate template, String type) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return false;
-        }
+    
 
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            if (matchesObjectiveType(objective, type)) {
-                return true;
-            }
-        }
 
-        return false;
-    }
-
-    private boolean hasInventoryObjective(ScenarioTemplate template) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return false;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : template.getObjectives()) {
-            if (usesInventoryProgress(objective)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean matchesObjectiveType(FeaturePackLoader.QuestEntryDefinition objective, String expectedType) {
-        if (objective == null) {
-            return false;
-        }
-
-        return normalizeObjectiveType(objective.getType()).equals(normalizeObjectiveType(expectedType));
-    }
-
-    private String normalizeObjectiveType(String type) {
-        String normalized = normalizeReference(type);
-        return switch (normalized) {
-            case "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item";
-            case "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc";
-            case "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc";
-            case "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region";
-            case "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place";
-            case "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node";
-            case "kill", "slay", "defeat", "kill_mob" -> "kill_mob";
-            default -> normalized;
-        };
-    }
-
-    private boolean usesInventoryProgress(FeaturePackLoader.QuestEntryDefinition objective) {
-        String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
-        return "collect_item".equals(objectiveType) || "deliver_to_npc".equals(objectiveType);
-    }
-
-    private boolean shouldConsumeObjectiveItem(FeaturePackLoader.QuestEntryDefinition objective) {
-        return usesInventoryProgress(objective);
-    }
-
-    private Map<String, Integer> buildObjectiveProgressSnapshot(PlayerInventory inventory,
-                                                                ScenarioTemplate template,
-                                                                Map<String, Integer> existingProgress) {
-        return buildObjectiveProgressSnapshot(inventory, template, existingProgress, "");
-    }
-
-    private Map<String, Integer> buildObjectiveProgressSnapshot(PlayerInventory inventory,
-                                                                ScenarioTemplate template,
-                                                                Map<String, Integer> existingProgress,
-                                                                String currentPhase) {
-        LinkedHashMap<String, Integer> snapshot = new LinkedHashMap<>();
-        if (template == null || template.getObjectives().isEmpty()) {
-            return snapshot;
-        }
-
-        Map<String, Integer> existingValues = existingProgress != null ? existingProgress : Map.of();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            String objectiveKey = buildObjectiveKey(objective, index);
-            int progressValue = readObjectiveProgress(existingValues, objective, index);
-
-            Material material = resolveQuestMaterial(objective);
-            if (inventory != null
-                && material != null
-                && usesInventoryProgress(objective)
-                && isObjectiveActiveForPhase(template, currentPhase, objective)) {
-                progressValue = Math.min(objective.getAmount(), countMaterial(inventory, material));
-            } else {
-                progressValue = Math.min(objective.getAmount(), progressValue);
-            }
-
-            snapshot.put(objectiveKey, progressValue);
-        }
-
-        return Collections.unmodifiableMap(snapshot);
-    }
-
-    private Map<String, Integer> buildCompletedObjectiveProgress(ScenarioTemplate template,
-                                                                 Map<String, Integer> existingProgress) {
-        LinkedHashMap<String, Integer> completedProgress = new LinkedHashMap<>(
-            buildObjectiveProgressSnapshot(null, template, existingProgress)
-        );
-        if (template == null) {
-            return Collections.unmodifiableMap(completedProgress);
-        }
-
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            completedProgress.put(buildObjectiveKey(objective, index), Math.max(0, objective.getAmount()));
-        }
-        return Collections.unmodifiableMap(completedProgress);
-    }
-
-    private String buildObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective, int index) {
-        String entryId = objective != null ? normalizeObjectiveEntryId(objective.getEntryId()) : "";
-        if (!entryId.isBlank()) {
-            return entryId;
-        }
-
-        return buildLegacyObjectiveKey(objective, index);
-    }
-
-    private String buildLegacyObjectiveKey(FeaturePackLoader.QuestEntryDefinition objective, int index) {
-        String type = objective != null && objective.getType() != null && !objective.getType().isBlank()
-            ? normalize(objective.getType())
-            : "objective";
-        String itemId = objective != null && objective.getItemId() != null && !objective.getItemId().isBlank()
-            ? normalize(objective.getItemId())
-            : "entry";
-        return type + ":" + itemId + ":" + index;
-    }
-
-    private List<String> objectiveKeyCandidates(FeaturePackLoader.QuestEntryDefinition objective, int index) {
-        String stableKey = buildObjectiveKey(objective, index);
-        String legacyKey = buildLegacyObjectiveKey(objective, index);
-        if (stableKey.equals(legacyKey)) {
-            return List.of(stableKey);
-        }
-        return List.of(stableKey, legacyKey);
-    }
-
-    private int readObjectiveProgress(Map<String, Integer> objectiveProgress,
-                                      FeaturePackLoader.QuestEntryDefinition objective,
-                                      int index) {
-        if (objectiveProgress == null || objectiveProgress.isEmpty()) {
-            return 0;
-        }
-
-        int value = 0;
-        for (String key : objectiveKeyCandidates(objective, index)) {
-            value = Math.max(value, Math.max(0, objectiveProgress.getOrDefault(key, 0)));
-        }
-        return value;
-    }
-
-    private boolean carryLegacyObjectiveProgress(Map<String, Integer> progressByObjective,
-                                                 FeaturePackLoader.QuestEntryDefinition objective,
-                                                 int index) {
-        if (progressByObjective == null || objective == null) {
-            return false;
-        }
-
-        String stableKey = buildObjectiveKey(objective, index);
-        String legacyKey = buildLegacyObjectiveKey(objective, index);
-        if (stableKey.equals(legacyKey) || progressByObjective.containsKey(stableKey)) {
-            return false;
-        }
-
-        Integer legacyValue = progressByObjective.get(legacyKey);
-        if (legacyValue != null && legacyValue > 0) {
-            progressByObjective.put(stableKey, legacyValue);
-            return true;
-        }
-        return false;
-    }
-
-    private String normalizeObjectiveEntryId(String entryId) {
-        return entryId == null ? "" : entryId.trim();
-    }
-
-    private boolean incrementObjectiveProgress(Map<String, Integer> progressByObjective,
-                                               String objectiveKey,
-                                               int objectiveAmount) {
-        int currentValue = Math.max(0, progressByObjective.getOrDefault(objectiveKey, 0));
-        int updatedValue = Math.min(Math.max(1, objectiveAmount), currentValue + 1);
-        if (updatedValue == currentValue) {
-            return false;
-        }
-
-        progressByObjective.put(objectiveKey, updatedValue);
-        return true;
-    }
 
     private WorldRegion findCurrentRegion(Location location) {
         if (location == null || location.getWorld() == null || plugin.getPlatform() == null) {
@@ -4602,253 +3481,6 @@ public class ScenarioEngine {
         );
     }
 
-    private boolean matchesNpcObjective(FeaturePackLoader.QuestEntryDefinition objective,
-                                        AINPC npc,
-                                        ScenarioTemplate template,
-                                        PlayerQuestProgress progress) {
-        if (objective == null || npc == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return matchesStoredQuestNpc(progress, npc) || matchesQuestGiver(npc, template);
-        }
-
-        if (matchesObjectiveReference(reference, npc.getName(), npc.getDisplayName(), npc.getOccupation())) {
-            return true;
-        }
-        if (npc.getUuid() != null && matchesObjectiveReference(reference, npc.getUuid().toString())) {
-            return true;
-        }
-        if (npc.getDatabaseId() > 0 && matchesObjectiveReference(reference, String.valueOf(npc.getDatabaseId()))) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean matchesStoredQuestNpc(PlayerQuestProgress progress, AINPC npc) {
-        if (progress == null || npc == null) {
-            return false;
-        }
-
-        Map<String, String> questVariables = progress.questVariables();
-        if (questVariables.isEmpty()) {
-            return false;
-        }
-
-        String storedUuid = questVariables.get("quest_giver_uuid");
-        if (storedUuid != null && npc.getUuid() != null && storedUuid.equalsIgnoreCase(npc.getUuid().toString())) {
-            return true;
-        }
-
-        String storedDatabaseId = questVariables.get("quest_giver_db_id");
-        if (storedDatabaseId != null && npc.getDatabaseId() > 0 && storedDatabaseId.equals(String.valueOf(npc.getDatabaseId()))) {
-            return true;
-        }
-
-        return matchesObjectiveReference(
-            questVariables.get("quest_giver_name"),
-            npc.getName(),
-            npc.getDisplayName()
-        ) || matchesObjectiveReference(
-            questVariables.get("quest_giver_display_name"),
-            npc.getName(),
-            npc.getDisplayName()
-        );
-    }
-
-    private boolean matchesRegionObjective(FeaturePackLoader.QuestEntryDefinition objective, WorldRegion region) {
-        if (objective == null || region == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return true;
-        }
-
-        List<String> candidates = new ArrayList<>();
-        candidates.add(region.getId());
-        candidates.add(region.getName());
-        if (region.getType() != null) {
-            candidates.add(region.getType().getId());
-            candidates.add(region.getType().name());
-        }
-        candidates.addAll(region.getTags());
-        return matchesObjectiveReference(reference, candidates.toArray(String[]::new));
-    }
-
-    private boolean matchesRegionObjective(PlayerQuestProgress progress,
-                                           FeaturePackLoader.QuestEntryDefinition objective,
-                                           int index,
-                                           WorldRegion region) {
-        for (String objectiveKey : objectiveKeyCandidates(objective, index)) {
-            if (hasBoundAnchor(progress, objectiveKey)) {
-                return matchesBoundAnchor(progress, objectiveKey, "region", region != null ? region.getId() : "");
-            }
-        }
-        return matchesRegionObjective(objective, region);
-    }
-
-    private boolean matchesPlaceObjective(PlayerQuestProgress progress,
-                                          FeaturePackLoader.QuestEntryDefinition objective,
-                                          int index,
-                                          WorldPlace place) {
-        for (String objectiveKey : objectiveKeyCandidates(objective, index)) {
-            if (hasBoundAnchor(progress, objectiveKey)) {
-                return matchesBoundAnchor(progress, objectiveKey, "place", place != null ? place.getId() : "");
-            }
-        }
-        return matchesPlaceObjective(objective, place);
-    }
-
-    private boolean matchesNodeObjective(PlayerQuestProgress progress,
-                                         FeaturePackLoader.QuestEntryDefinition objective,
-                                         int index,
-                                         WorldNode node) {
-        for (String objectiveKey : objectiveKeyCandidates(objective, index)) {
-            if (hasBoundAnchor(progress, objectiveKey)) {
-                return matchesBoundAnchor(progress, objectiveKey, "node", node != null ? node.getId() : "");
-            }
-        }
-        return matchesNodeObjective(objective, node);
-    }
-
-    private boolean matchesPlaceObjective(FeaturePackLoader.QuestEntryDefinition objective, WorldPlace place) {
-        if (objective == null || place == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return true;
-        }
-
-        List<String> candidates = new ArrayList<>();
-        candidates.add(place.getId());
-        candidates.add(place.getDisplayName());
-        candidates.add(place.getRegionId());
-        if (place.getPlaceType() != null) {
-            candidates.add(place.getPlaceType().getId());
-            candidates.add(place.getPlaceType().name());
-        }
-        candidates.addAll(place.getTags());
-        candidates.addAll(place.getMetadata().keySet());
-        candidates.addAll(place.getMetadata().values());
-        return matchesObjectiveReference(reference, candidates.toArray(String[]::new));
-    }
-
-    private boolean matchesNodeObjective(FeaturePackLoader.QuestEntryDefinition objective, WorldNode node) {
-        if (objective == null || node == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return true;
-        }
-
-        List<String> candidates = new ArrayList<>();
-        candidates.add(node.getId());
-        candidates.add(node.getRegionId());
-        candidates.add(node.getPlaceId());
-        if (node.getType() != null) {
-            candidates.add(node.getType().getId());
-            candidates.add(node.getType().name());
-        }
-        candidates.addAll(node.getMetadata().keySet());
-        candidates.addAll(node.getMetadata().values());
-        return matchesObjectiveReference(reference, candidates.toArray(String[]::new));
-    }
-
-    private boolean hasBoundAnchor(PlayerQuestProgress progress, String objectiveKey) {
-        if (progress == null || objectiveKey == null || objectiveKey.isBlank()) {
-            return false;
-        }
-        return !progress.questVariables().getOrDefault("anchor." + objectiveKey + ".id", "").isBlank();
-    }
-
-    private boolean matchesBoundAnchor(PlayerQuestProgress progress,
-                                       String objectiveKey,
-                                       String expectedAnchorType,
-                                       String candidateId) {
-        if (progress == null || objectiveKey == null || candidateId == null || candidateId.isBlank()) {
-            return false;
-        }
-
-        String prefix = "anchor." + objectiveKey;
-        String anchorType = progress.questVariables().getOrDefault(prefix + ".type", "");
-        String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
-        return matchesObjectiveReference(anchorType, expectedAnchorType)
-            && matchesObjectiveReference(anchorId, candidateId);
-    }
-
-    private boolean matchesMobObjective(FeaturePackLoader.QuestEntryDefinition objective, Entity entity) {
-        if (objective == null || entity == null) {
-            return false;
-        }
-
-        String reference = objective.getItemId();
-        if (reference == null || reference.isBlank()) {
-            return true;
-        }
-
-        return matchesObjectiveReference(
-            reference,
-            entity.getType().name(),
-            humanizeItemId(entity.getType().name())
-        );
-    }
-
-    private boolean matchesObjectiveReference(String reference, String... candidates) {
-        String normalizedReference = normalizeReference(stripObjectivePrefix(reference));
-        if (normalizedReference.isBlank() || candidates == null || candidates.length == 0) {
-            return false;
-        }
-
-        for (String candidate : candidates) {
-            String normalizedCandidate = normalizeReference(candidate);
-            if (!normalizedCandidate.isBlank() && normalizedCandidate.equals(normalizedReference)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private String stripObjectivePrefix(String reference) {
-        if (reference == null || reference.isBlank()) {
-            return "";
-        }
-
-        String trimmed = reference.trim();
-        int prefixSeparator = trimmed.indexOf(':');
-        if (prefixSeparator <= 0) {
-            return trimmed;
-        }
-
-        String prefix = normalizeReference(trimmed.substring(0, prefixSeparator));
-        return switch (prefix) {
-            case "npc", "name", "profession", "region", "place", "node", "tag", "type", "mob", "entity" ->
-                trimmed.substring(prefixSeparator + 1);
-            default -> trimmed;
-        };
-    }
-
-    private String normalizeReference(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        return value.toLowerCase(Locale.ROOT)
-            .replace("minecraft:", "")
-            .replaceAll("[^\\p{L}\\p{Nd}]+", "_")
-            .replaceAll("^_+|_+$", "")
-            .replaceAll("_+", "_");
-    }
-
     private ScenarioTemplate findQuestTemplateForNpc(AINPC npc) {
         return findQuestTemplateForNpc(npc, null);
     }
@@ -4865,7 +3497,7 @@ public class ScenarioEngine {
 
         List<ScenarioTemplate> configuredTemplates = questTemplates.stream()
             .filter(ScenarioTemplate::hasQuestBriefing)
-            .filter(template -> matchesQuestGiver(npc, template))
+            .filter(template -> matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template))
             .filter(template -> matchesProgressionKindFilter(template, progressionKind))
             .toList();
         if (!configuredTemplates.isEmpty()) {
@@ -4903,7 +3535,7 @@ public class ScenarioEngine {
             if (template != null
                 && template.hasQuestBriefing()
                 && matchesProgressionKindFilter(template, progressionKind)
-                && matchesQuestGiver(npc, template)) {
+                && matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
                 return template;
             }
         }
@@ -4928,7 +3560,7 @@ public class ScenarioEngine {
             return null;
         }
 
-        if (matchesQuestGiver(npc, template)) {
+        if (matchesQuestGiver(plugin.getFeaturePackLoader(), npc, template)) {
             return template;
         }
 
@@ -4944,7 +3576,7 @@ public class ScenarioEngine {
         for (int index = 0; index < objectives.size(); index++) {
             FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
             if (matchesObjectiveType(objective, "talk_to_npc")
-                && matchesNpcObjective(objective, npc, template, progress)) {
+                && matchesNpcObjective(plugin.getFeaturePackLoader(), objective, npc, template, progress)) {
                 return true;
             }
         }
@@ -4954,279 +3586,60 @@ public class ScenarioEngine {
 
     private boolean matchesProgressionKindFilter(ScenarioTemplate template, String progressionKind) {
         String expected = normalizeReference(progressionKind);
-        return expected.isBlank() || progressionKindMatches(template, expected);
+        return expected.isBlank() || progressionKindMatches(plugin.getFeaturePackLoader(), template, expected);
     }
 
     private boolean shouldUseSimpleQuestForAllNpcs() {
-        if (!plugin.getConfig().getBoolean("demo.enabled", true)) {
-            return false;
-        }
-        return getQuestSettings().getBoolean("simple_for_all_npcs", true);
+        return ScenarioSimpleQuestKt.shouldUseSimpleQuestForAllNpcs();
     }
 
     private ScenarioTemplate buildSimpleQuestTemplate(AINPC npc) {
-        if (npc == null) {
-            return null;
-        }
-
-        FeaturePackLoader.ProfessionDefinition profession = resolveQuestProfession(npc);
-        SimpleQuestProfile questProfile = resolveSimpleQuestProfile(npc, profession);
-        String npcIdentifier = npc.getDatabaseId() > 0
-            ? String.valueOf(npc.getDatabaseId())
-            : npc.getUuid().toString();
-
-        ScenarioTemplate template = new ScenarioTemplate(ScenarioType.QUEST);
-        template.setTemplateId("simple_npc_quest:" + npcIdentifier);
-        template.setDisplayName(questProfile.title());
-        template.setDescription(questProfile.objectivePrompt() + " si iti dau "
-            + formatQuestAmount(questProfile.rewardAmount(), questProfile.rewardMaterial()) + ".");
-        template.setHint(questProfile.hint());
-        template.setQuestGiverProfession(profession != null ? profession.getId() : npc.getOccupation());
-        template.setRequiresPlayer(true);
-        template.setMinimumNpcCount(1);
-        template.setObjectives(List.of(new FeaturePackLoader.QuestEntryDefinition(
-            "collect_item",
-            questProfile.objectiveMaterial().name(),
-            questProfile.objectiveAmount(),
-            questProfile.objectivePrompt() + "."
-        )));
-        template.setRewards(List.of(new FeaturePackLoader.QuestEntryDefinition(
-            "item",
-            questProfile.rewardMaterial().name(),
-            questProfile.rewardAmount(),
-            "Primesti " + formatQuestAmount(questProfile.rewardAmount(), questProfile.rewardMaterial()) + "."
-        )));
-        template.setQuestContract(QuestScenarioContract.fromQuestEntries(
-            "fetch",
-            "explicit",
-            "return_to_giver",
-            "next_objective",
-            List.of("fallback", "simple"),
-            template.getObjectives()
-        ));
-        return template;
+        return ScenarioSimpleQuestKt.buildSimpleQuestTemplate(npc);
     }
 
     private FeaturePackLoader.ProfessionDefinition resolveQuestProfession(AINPC npc) {
-        if (npc == null || plugin.getFeaturePackLoader() == null) {
-            return null;
-        }
-
-        return plugin.getFeaturePackLoader().findPrimaryScenarioProfession(npc.getOccupation());
+        return ScenarioSimpleQuestKt.resolveQuestProfession(npc);
     }
 
     private SimpleQuestProfile resolveSimpleQuestProfile(AINPC npc,
                                                          FeaturePackLoader.ProfessionDefinition profession) {
-        String professionId = profession != null ? normalize(profession.getId()) : "";
-        String professionName = profession != null && profession.getName() != null && !profession.getName().isBlank()
-            ? profession.getName()
-            : npc.getOccupation();
-        if (professionName == null || professionName.isBlank()) {
-            professionName = "localnicul";
-        }
-
-        int objectiveAmount = Math.max(1, getQuestSettings().getInt("simple.objective.amount", 3));
-        Material objectiveMaterial = resolveConfiguredQuestMaterial("simple.objective.item", Material.OAK_PLANKS);
-        int rewardAmount = Math.max(1, getQuestSettings().getInt("simple.reward.amount", 1));
-        Material rewardMaterial = resolveConfiguredQuestMaterial("simple.reward.item", Material.EMERALD);
-        SimpleQuestProfile defaultProfile = new SimpleQuestProfile(
-            resolveConfiguredSimpleQuestTitle(professionName),
-            objectiveMaterial,
-            objectiveAmount,
-            rewardMaterial,
-            rewardAmount,
-            "Adu-mi " + formatQuestAmount(objectiveAmount, objectiveMaterial),
-            npc.getName() + " are nevoie de ajutor cu treburi obisnuite de " + professionName + "."
-        );
-        return applyConfiguredSimpleQuestProfile(npc, professionId, professionName, defaultProfile);
+        return ScenarioSimpleQuestKt.resolveSimpleQuestProfile(npc, profession);
     }
 
     private SimpleQuestProfile applyConfiguredSimpleQuestProfile(AINPC npc,
                                                                  String professionId,
                                                                  String professionName,
                                                                  SimpleQuestProfile fallbackProfile) {
-        ConfigurationSection section = resolveProfessionFallbackSection(professionId, professionName);
-        if (section == null) {
-            return fallbackProfile;
-        }
-
-        Material objectiveMaterial = resolveConfiguredQuestMaterialValue(
-            section.getString("objective.item"),
-            fallbackProfile.objectiveMaterial()
-        );
-        int objectiveAmount = Math.max(1, section.getInt("objective.amount", fallbackProfile.objectiveAmount()));
-
-        Material rewardMaterial = resolveConfiguredQuestMaterialValue(
-            section.getString("reward.item"),
-            fallbackProfile.rewardMaterial()
-        );
-        int rewardAmount = Math.max(1, section.getInt("reward.amount", fallbackProfile.rewardAmount()));
-
-        String objectiveText = formatQuestAmount(objectiveAmount, objectiveMaterial);
-        String rewardText = formatQuestAmount(rewardAmount, rewardMaterial);
-        String title = applyQuestFallbackPlaceholders(
-            section.getString("title", fallbackProfile.title()),
-            npc,
-            professionName,
-            objectiveText,
-            rewardText
-        );
-        String objectivePrompt = applyQuestFallbackPlaceholders(
-            section.getString("objective.prompt", "Adu-mi " + objectiveText),
-            npc,
-            professionName,
-            objectiveText,
-            rewardText
-        );
-        String hint = applyQuestFallbackPlaceholders(
-            section.getString("hint", fallbackProfile.hint()),
-            npc,
-            professionName,
-            objectiveText,
-            rewardText
-        );
-
-        return new SimpleQuestProfile(
-            title,
-            objectiveMaterial,
-            objectiveAmount,
-            rewardMaterial,
-            rewardAmount,
-            objectivePrompt,
-            hint
-        );
+        return ScenarioSimpleQuestKt.applyConfiguredSimpleQuestProfile(npc, professionId, professionName, fallbackProfile);
     }
 
     private ConfigurationSection resolveProfessionFallbackSection(String professionId, String professionName) {
-        ConfigurationSection root = getQuestSettings().getConfigurationSection("profession_fallbacks");
-        if (root == null) {
-            return null;
-        }
-
-        if (professionId != null && !professionId.isBlank()) {
-            ConfigurationSection byId = root.getConfigurationSection(sanitizeConfigKey(professionId));
-            if (byId != null) {
-                return byId;
-            }
-        }
-
-        if (professionName != null && !professionName.isBlank()) {
-            ConfigurationSection byName = root.getConfigurationSection(sanitizeConfigKey(professionName));
-            if (byName != null) {
-                return byName;
-            }
-        }
-
-        return root.getConfigurationSection("default");
-    }
-
-    private String applyQuestFallbackPlaceholders(String value,
-                                                  AINPC npc,
-                                                  String professionName,
-                                                  String objectiveText,
-                                                  String rewardText) {
-        if (value == null || value.isBlank()) {
-            return value == null ? "" : value;
-        }
-
-        return value
-            .replace("{npc}", npc != null ? npc.getName() : "NPC")
-            .replace("{profession}", professionName != null && !professionName.isBlank() ? professionName : "localnic")
-            .replace("{objective}", objectiveText != null ? objectiveText : "materiale")
-            .replace("{reward}", rewardText != null ? rewardText : "o recompensa");
-    }
-
-    private String sanitizeConfigKey(String value) {
-        String normalized = normalize(value).replace('-', '_').replace(' ', '_');
-        return normalized.replaceAll("[^a-z0-9_]", "");
+        return ScenarioSimpleQuestKt.resolveProfessionFallbackSection(professionId, professionName);
     }
 
     private String resolveConfiguredSimpleQuestTitle(String professionName) {
-        String configuredTitle = getQuestSettings().getString("simple.title", "Ajutor rapid");
-        if (professionName == null || professionName.isBlank()) {
-            return configuredTitle;
-        }
-
-        return configuredTitle + " - " + professionName;
+        return ScenarioSimpleQuestKt.resolveConfiguredSimpleQuestTitle(professionName);
     }
 
     private Material resolveConfiguredQuestMaterial(String path, Material fallback) {
-        String configuredValue = getQuestSettings().getString(path, fallback.name());
-        return resolveConfiguredQuestMaterialValue(configuredValue, fallback);
+        return ScenarioSimpleQuestKt.resolveConfiguredQuestMaterial(path, fallback);
     }
 
     private Material resolveConfiguredQuestMaterialValue(String configuredValue, Material fallback) {
-        if (configuredValue == null || configuredValue.isBlank()) {
-            return fallback;
-        }
-
-        Material material = Material.matchMaterial(configuredValue.trim().toUpperCase(Locale.ROOT));
-        return material != null ? material : fallback;
-    }
-
-    private boolean matchesQuestGiver(AINPC npc, ScenarioTemplate template) {
-        if (npc == null || template == null) {
-            return false;
-        }
-
-        if (!template.getQuestGiverProfession().isBlank()
-            && !matchesProfessionReference(npc, List.of(template.getQuestGiverProfession()))) {
-            return false;
-        }
-
-        ScenarioRoleRule questGiverRole = template.getRoles().get("QUEST_GIVER");
-        if (questGiverRole == null) {
-            return true;
-        }
-
-        if (!questGiverRole.getRequiredProfessions().isEmpty()
-            && !matchesProfessionReference(npc, questGiverRole.getRequiredProfessions())) {
-            return false;
-        }
-
-        return questGiverRole.getPreferredProfessions().isEmpty()
-            || matchesProfessionReference(npc, questGiverRole.getPreferredProfessions());
-    }
-
-    private boolean matchesProfessionReference(AINPC npc, List<String> references) {
-        if (npc == null || references == null || references.isEmpty()) {
-            return false;
-        }
-
-        String occupation = npc.getOccupation();
-        if (occupation == null || occupation.isBlank()) {
-            return false;
-        }
-
-        FeaturePackLoader loader = plugin.getFeaturePackLoader();
-        for (String reference : references) {
-            if (reference == null || reference.isBlank()) {
-                continue;
-            }
-
-            if (loader != null && loader.matchesProfession(occupation, reference)) {
-                return true;
-            }
-
-            if (normalize(occupation).equals(normalize(reference))) {
-                return true;
-            }
-        }
-
-        return false;
+        return ScenarioSimpleQuestKt.resolveConfiguredQuestMaterialValue(configuredValue, fallback);
     }
 
     private List<String> buildQuestBriefingMessages(ScenarioTemplate template) {
         List<String> lines = new ArrayList<>();
-        String progressionLabel = capitalizeProgressionLabel(resolveProgressionSingularLabel(template));
+        String progressionLabel = capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template));
         lines.add("&6[" + progressionLabel + "] &f" + resolveQuestTitle(template));
 
         String questGiver = resolveProfessionName(template.getQuestGiverProfession());
         if (!questGiver.isBlank()) {
             lines.add("&7Dat de: &f" + questGiver);
         }
-        if (!resolveProgressionMechanicDisplay(template).isBlank()) {
-            lines.add("&7Mecanica: &f" + resolveProgressionMechanicDisplay(template));
+        if (!resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template).isBlank()) {
+            lines.add("&7Mecanica: &f" + resolveProgressionMechanicDisplay(plugin.getFeaturePackLoader(), template));
         }
         QuestScenarioContract contract = template.getQuestContract();
         if (contract != null) {
@@ -5266,7 +3679,7 @@ public class ScenarioEngine {
         }
 
         if (progress == null || progress.status() == QuestStatus.NOT_STARTED) {
-            lines.add("&7Nu ai acceptat inca acest " + resolveProgressionSingularLabel(template) + ".");
+            lines.add("&7Nu ai acceptat inca acest " + resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template) + ".");
             if (npcName != null && !npcName.isBlank()) {
                 lines.add("&eAcceptare: &fScrie &ada&f/&aaccept &fsau foloseste &a/npcquest accept " + npcName);
             }
@@ -5290,7 +3703,7 @@ public class ScenarioEngine {
 
             QuestObjectiveCheck objectiveCheck = inspectQuestObjectives(player, template, progress, null, false);
             if (player == null) {
-                lines.add("&7" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " activ.");
+                lines.add("&7" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " activ.");
             } else if (objectiveCheck.complete()) {
                 lines.add("&aAi indeplinit toate obiectivele. Revino la NPC pentru finalizare.");
             } else {
@@ -5306,1006 +3719,13 @@ public class ScenarioEngine {
         }
 
         if (progress.isCompleted()) {
-            lines.add("&a" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " finalizat.");
+            lines.add("&a" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " finalizat.");
         } else if (progress.status() == QuestStatus.FAILED) {
-            lines.add("&c" + capitalizeProgressionLabel(resolveProgressionSingularLabel(template)) + " abandonat sau esuat.");
+            lines.add("&c" + capitalizeProgressionLabel(resolveProgressionSingularLabel(plugin.getFeaturePackLoader(), template)) + " abandonat sau esuat.");
             lines.add("&7Poti cere din nou progresia daca vrei sa reincepi.");
         }
 
         return lines;
-    }
-
-    private String formatQuestStatus(QuestStatus status) {
-        if (status == null) {
-            return "Necunoscut";
-        }
-
-        return switch (status) {
-            case NOT_STARTED -> "Disponibil";
-            case OFFERED -> "Oferit, asteapta acceptarea";
-            case ACTIVE -> "Activ";
-            case COMPLETED -> "Completat";
-            case FAILED -> "Esuat";
-        };
-    }
-
-    private List<String> buildObjectiveProgressLines(ScenarioTemplate template, PlayerQuestProgress progress, Player player) {
-        if (template == null || progress == null || template.getObjectives().isEmpty()) {
-            return List.of();
-        }
-
-        List<String> lines = new ArrayList<>();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            boolean activeForStage = shouldShowObjectiveForCurrentStage(template, progress, objective);
-            if (!activeForStage) {
-                continue;
-            }
-            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
-            int requiredAmount = Math.max(1, objective.getAmount());
-            String label = formatObjectiveProgressLabel(objective);
-            QuestObjectiveState state = resolveQuestObjectiveState(progress, currentAmount, requiredAmount, activeForStage);
-            lines.add("&7- &f" + label + ": &e" + Math.min(currentAmount, requiredAmount)
-                + "&7/&f" + requiredAmount + " &8(" + state.displayName() + ")");
-        }
-
-        return lines;
-    }
-
-    private List<String> buildQuestProgressDetailLines(Player player,
-                                                       ScenarioTemplate template,
-                                                       PlayerQuestProgress progress) {
-        if (template == null || progress == null || template.getObjectives().isEmpty()) {
-            return List.of();
-        }
-
-        List<String> lines = new ArrayList<>();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            String objectiveKey = buildObjectiveKey(objective, index);
-            int requiredAmount = Math.max(1, objective.getAmount());
-            int currentAmount = progress.isCurrent()
-                ? resolveObjectiveCurrentProgress(player, objective, progress, index)
-                : readObjectiveProgress(progress.objectiveProgress(), objective, index);
-            boolean activeForStage = shouldShowObjectiveForCurrentStage(template, progress, objective);
-            QuestObjectiveState state = resolveQuestObjectiveState(progress, currentAmount, requiredAmount, activeForStage);
-            String stageId = findObjectiveStageId(template, objective);
-
-            StringBuilder line = new StringBuilder("&7- &f")
-                .append(formatObjectiveProgressLabel(objective))
-                .append(" &8[")
-                .append(objectiveKey)
-                .append("]")
-                .append(" &7stare=&f")
-                .append(state.displayName())
-                .append(" &7progres=&e")
-                .append(Math.min(currentAmount, requiredAmount))
-                .append("&7/&f")
-                .append(requiredAmount);
-            if (!stageId.isBlank()) {
-                line.append(" &7stage=&f").append(formatQuestPhase(stageId));
-            }
-            if (!activeForStage) {
-                line.append(" &8(inactiv)");
-            }
-            lines.add(line.toString());
-        }
-
-        return lines;
-    }
-
-    private QuestObjectiveState resolveQuestObjectiveState(PlayerQuestProgress progress,
-                                                           int currentAmount,
-                                                           int requiredAmount,
-                                                           boolean activeForStage) {
-        QuestStatus status = progress != null ? progress.status() : QuestStatus.NOT_STARTED;
-        return resolveQuestObjectiveState(status, currentAmount, requiredAmount, activeForStage);
-    }
-
-    private QuestObjectiveState resolveQuestObjectiveState(QuestStatus status,
-                                                           int currentAmount,
-                                                           int requiredAmount,
-                                                           boolean activeForStage) {
-        int safeRequiredAmount = Math.max(1, requiredAmount);
-        int safeCurrentAmount = Math.max(0, currentAmount);
-        if (safeCurrentAmount >= safeRequiredAmount || status == QuestStatus.COMPLETED) {
-            return QuestObjectiveState.COMPLETED;
-        }
-        if (status == QuestStatus.FAILED) {
-            return QuestObjectiveState.FAILED;
-        }
-        if (!activeForStage || status == QuestStatus.NOT_STARTED || status == QuestStatus.OFFERED) {
-            return QuestObjectiveState.PENDING;
-        }
-        if (safeCurrentAmount > 0) {
-            return QuestObjectiveState.IN_PROGRESS;
-        }
-        return QuestObjectiveState.STARTED;
-    }
-
-    private boolean shouldShowObjectiveForCurrentStage(ScenarioTemplate template,
-                                                       PlayerQuestProgress progress,
-                                                       FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-        if (progress == null || areObjectivesSatisfied(template, progress.objectiveProgress())) {
-            return true;
-        }
-        return isObjectiveActiveForProgress(template, progress, objective);
-    }
-
-    private boolean shouldInspectObjectiveForCurrentStage(ScenarioTemplate template,
-                                                          PlayerQuestProgress progress,
-                                                          FeaturePackLoader.QuestEntryDefinition objective) {
-        if (!hasStagedObjectives(template)) {
-            return true;
-        }
-        if (progress == null || areObjectivesSatisfied(template, progress.objectiveProgress())) {
-            return true;
-        }
-        return isObjectiveActiveForProgress(template, progress, objective);
-    }
-
-    private List<String> buildQuestTrackingLines(ScenarioTemplate template,
-                                                 PlayerQuestProgress progress,
-                                                 Player player) {
-        if (template == null || progress == null || template.getObjectives().isEmpty()) {
-            return List.of();
-        }
-
-        List<String> lines = new ArrayList<>();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) {
-                continue;
-            }
-            String objectiveKey = buildObjectiveKey(objective, index);
-            int requiredAmount = Math.max(1, objective != null ? objective.getAmount() : 1);
-            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
-            if (currentAmount >= requiredAmount) {
-                continue;
-            }
-
-            String objectiveLabel = formatMissingObjective(objective, currentAmount, requiredAmount);
-            String targetHint = describeObjectiveTrackingTarget(progress, objectiveKey, objective, index, player);
-            if (targetHint.isBlank()) {
-                targetHint = describeGenericQuestTrackingHint(objective);
-            }
-
-            if (targetHint.isBlank()) {
-                lines.add("&7- &f" + objectiveLabel);
-            } else {
-                lines.add("&7- &f" + objectiveLabel + " &8-> " + targetHint);
-            }
-        }
-
-        return lines;
-    }
-
-    private QuestTrackingStep resolveNextQuestTrackingStep(ScenarioTemplate template,
-                                                           PlayerQuestProgress progress,
-                                                           Player player) {
-        if (template == null || progress == null || template.getObjectives().isEmpty()) {
-            return null;
-        }
-
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldShowObjectiveForCurrentStage(template, progress, objective)) {
-                continue;
-            }
-            int requiredAmount = Math.max(1, objective != null ? objective.getAmount() : 1);
-            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
-            if (currentAmount >= requiredAmount) {
-                continue;
-            }
-
-            QuestTrackingTarget target = resolveQuestAnchorTrackingTarget(progress, objective, index);
-            String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
-            if (target == null && "deliver_to_npc".equals(objectiveType)) {
-                target = resolveQuestGiverTrackingTarget(progress);
-            }
-            if (target != null && target.hasLocation()) {
-                return new QuestTrackingStep(formatMissingObjective(objective, currentAmount, requiredAmount), target);
-            }
-        }
-
-        return null;
-    }
-
-    private String describeObjectiveTrackingTarget(PlayerQuestProgress progress,
-                                                   String objectiveKey,
-                                                   FeaturePackLoader.QuestEntryDefinition objective,
-                                                   int index,
-                                                   Player player) {
-        QuestTrackingTarget target = resolveQuestAnchorTrackingTarget(progress, objective, index);
-        if (target != null) {
-            return formatQuestTrackingTarget(target, player);
-        }
-
-        String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
-        if ("deliver_to_npc".equals(objectiveType)) {
-            return describeQuestGiverTrackingTarget(progress, player);
-        }
-
-        return "";
-    }
-
-    private String describeGenericQuestTrackingHint(FeaturePackLoader.QuestEntryDefinition objective) {
-        String objectiveType = normalizeObjectiveType(objective != null ? objective.getType() : "");
-        return switch (objectiveType) {
-            case "collect_item" -> "&7aduna obiectele cerute";
-            case "deliver_to_npc" -> "&7intoarce-te la NPC-ul questului";
-            case "talk_to_npc" -> "&7cauta NPC-ul tintit";
-            case "visit_region", "visit_place", "inspect_node" -> "&cancora lipsa in mapping";
-            case "kill_mob" -> "&7cauta inamicul tintit";
-            default -> "&7continua obiectivul";
-        };
-    }
-
-    private QuestTrackingTarget resolveQuestAnchorTrackingTarget(PlayerQuestProgress progress,
-                                                                 FeaturePackLoader.QuestEntryDefinition objective,
-                                                                 int index) {
-        for (String objectiveKey : objectiveKeyCandidates(objective, index)) {
-            QuestTrackingTarget target = resolveQuestAnchorTrackingTarget(progress, objectiveKey);
-            if (target != null) {
-                return target;
-            }
-        }
-        return null;
-    }
-
-    private QuestTrackingTarget resolveQuestAnchorTrackingTarget(PlayerQuestProgress progress, String objectiveKey) {
-        if (!hasBoundAnchor(progress, objectiveKey)) {
-            return null;
-        }
-
-        String prefix = "anchor." + objectiveKey;
-        String anchorType = progress.questVariables().getOrDefault(prefix + ".type", "");
-        String anchorId = progress.questVariables().getOrDefault(prefix + ".id", "");
-        String label = progress.questVariables().getOrDefault(prefix + ".label", "");
-        QuestTrackingTarget locatedTarget = resolveQuestAnchorLocation(anchorType, anchorId, label);
-        if (locatedTarget != null) {
-            return locatedTarget;
-        }
-
-        return new QuestTrackingTarget(anchorType, anchorId, label, "", 0.0, 0.0, 0.0, false);
-    }
-
-    private QuestTrackingTarget resolveQuestAnchorLocation(String anchorType, String anchorId, String label) {
-        String normalizedType = normalizeTrackingAnchorType(anchorType);
-        if (normalizedType.isBlank() || anchorId == null || anchorId.isBlank()) {
-            return null;
-        }
-
-        if ("npc".equals(normalizedType)) {
-            return resolveNpcTrackingTarget(anchorId, label);
-        }
-
-        WorldAdminApi worldAdminApi = plugin.getPlatform() != null ? plugin.getPlatform().getWorldAdmin() : null;
-        if (worldAdminApi == null) {
-            return null;
-        }
-
-        return switch (normalizedType) {
-            case "region" -> {
-                WorldRegionInfo region = worldAdminApi.getRegion(anchorId);
-                yield region != null
-                    ? targetFromRegion(region, label)
-                    : null;
-            }
-            case "place" -> {
-                WorldPlaceInfo place = worldAdminApi.getPlace(anchorId);
-                yield place != null
-                    ? targetFromPlace(place, label)
-                    : null;
-            }
-            case "node" -> {
-                WorldNodeInfo node = worldAdminApi.getNode(anchorId);
-                yield node != null
-                    ? new QuestTrackingTarget(
-                        "node",
-                        node.id(),
-                        label == null || label.isBlank() ? node.typeId() : label,
-                        node.worldName(),
-                        node.x(),
-                        node.y(),
-                        node.z(),
-                        true
-                    )
-                    : null;
-            }
-            default -> null;
-        };
-    }
-
-    private QuestTrackingTarget targetFromRegion(WorldRegionInfo region, String label) {
-        return new QuestTrackingTarget(
-            "region",
-            region.id(),
-            label == null || label.isBlank() ? region.name() : label,
-            region.worldName(),
-            center(region.minX(), region.maxX()),
-            center(region.minY(), region.maxY()),
-            center(region.minZ(), region.maxZ()),
-            true
-        );
-    }
-
-    private QuestTrackingTarget targetFromPlace(WorldPlaceInfo place, String label) {
-        return new QuestTrackingTarget(
-            "place",
-            place.id(),
-            label == null || label.isBlank() ? place.displayName() : label,
-            place.worldName(),
-            center(place.minX(), place.maxX()),
-            center(place.minY(), place.maxY()),
-            center(place.minZ(), place.maxZ()),
-            true
-        );
-    }
-
-    private QuestTrackingTarget resolveNpcTrackingTarget(String anchorId, String label) {
-        AINPC npc = resolveNpcByAnchorId(anchorId);
-        if (npc == null && label != null && !label.isBlank()) {
-            npc = plugin.getNpcManager() != null ? plugin.getNpcManager().getNPCByName(label) : null;
-        }
-        if (npc == null) {
-            return null;
-        }
-
-        Location location = npc.getLocation();
-        if (location == null || location.getWorld() == null) {
-            return null;
-        }
-
-        return new QuestTrackingTarget(
-            "npc",
-            anchorId,
-            label == null || label.isBlank() ? npc.getName() : label,
-            location.getWorld().getName(),
-            location.getX(),
-            location.getY(),
-            location.getZ(),
-            true
-        );
-    }
-
-    private String describeQuestGiverTrackingTarget(PlayerQuestProgress progress, Player player) {
-        QuestTrackingTarget target = resolveQuestGiverTrackingTarget(progress);
-        if (target != null) {
-            return formatQuestTrackingTarget(target, player);
-        }
-
-        String label = resolveQuestNpcName(progress);
-        return label.isBlank() ? "" : "&b" + label + " &7(NPC quest)";
-    }
-
-    private QuestTrackingTarget resolveQuestGiverTrackingTarget(PlayerQuestProgress progress) {
-        AINPC questGiver = resolveQuestGiverNpc(progress);
-        if (questGiver == null) {
-            return null;
-        }
-
-        Location location = questGiver.getLocation();
-        if (location == null || location.getWorld() == null) {
-            return null;
-        }
-
-        String label = resolveQuestNpcName(progress);
-        String anchorId = questGiver.getUuid() != null
-            ? questGiver.getUuid().toString()
-            : String.valueOf(questGiver.getDatabaseId());
-        return new QuestTrackingTarget(
-            "npc",
-            anchorId,
-            label.isBlank() ? questGiver.getName() : label,
-            location.getWorld().getName(),
-            location.getX(),
-            location.getY(),
-            location.getZ(),
-            true
-        );
-    }
-
-    private AINPC resolveQuestGiverNpc(PlayerQuestProgress progress) {
-        if (progress == null || progress.questVariables().isEmpty() || plugin.getNpcManager() == null) {
-            return null;
-        }
-
-        String uuid = progress.questVariables().getOrDefault("quest_giver_uuid", "");
-        AINPC npc = resolveNpcByAnchorId(uuid);
-        if (npc != null) {
-            return npc;
-        }
-
-        String databaseId = progress.questVariables().getOrDefault("quest_giver_db_id", "");
-        npc = resolveNpcByAnchorId(databaseId);
-        if (npc != null) {
-            return npc;
-        }
-
-        String name = progress.questVariables().getOrDefault("quest_giver_name", "");
-        if (!name.isBlank()) {
-            npc = plugin.getNpcManager().getNPCByName(name);
-            if (npc != null) {
-                return npc;
-            }
-        }
-
-        String displayName = progress.questVariables().getOrDefault("quest_giver_display_name", "");
-        return displayName.isBlank() ? null : plugin.getNpcManager().getNPCByName(displayName);
-    }
-
-    private AINPC resolveNpcByAnchorId(String anchorId) {
-        if (anchorId == null || anchorId.isBlank() || plugin.getNpcManager() == null) {
-            return null;
-        }
-
-        try {
-            AINPC npc = plugin.getNpcManager().getNPCByUuid(UUID.fromString(anchorId));
-            if (npc != null) {
-                return npc;
-            }
-        } catch (IllegalArgumentException ignored) {
-            // Nu este UUID; incercam ID numeric sau nume.
-        }
-
-        try {
-            int databaseId = Integer.parseInt(anchorId);
-            AINPC npc = plugin.getNpcManager().getNPCById(databaseId);
-            if (npc != null) {
-                return npc;
-            }
-        } catch (NumberFormatException ignored) {
-            // Nu este ID numeric.
-        }
-
-        return plugin.getNpcManager().getNPCByName(anchorId);
-    }
-
-    private String formatQuestTrackingTarget(QuestTrackingTarget target, Player player) {
-        if (target == null) {
-            return "";
-        }
-
-        String label = target.label() != null && !target.label().isBlank()
-            ? target.label()
-            : (target.anchorId() != null && !target.anchorId().isBlank()
-                ? target.anchorId()
-                : formatQuestAnchorType(target.anchorType()));
-        String type = formatQuestAnchorType(target.anchorType());
-        if (!target.hasLocation()) {
-            return "&b" + label + " &7(" + type + ", locatie necunoscuta)";
-        }
-
-        return "&b" + label + " &7(" + type + ") " + formatQuestTrackingPosition(target, player);
-    }
-
-    private QuestTrackingMarker buildQuestTrackingMarker(String objectiveLabel,
-                                                         QuestTrackingTarget target,
-                                                         Player player) {
-        Location location = toQuestTrackingLocation(target);
-        if (location == null) {
-            return null;
-        }
-
-        String label = target.label() != null && !target.label().isBlank()
-            ? target.label()
-            : formatQuestAnchorType(target.anchorType());
-        return new QuestTrackingMarker(
-            objectiveLabel,
-            label,
-            formatQuestAnchorType(target.anchorType()),
-            location,
-            formatQuestTrackingActionBar(label, target, player)
-        );
-    }
-
-    private Location toQuestTrackingLocation(QuestTrackingTarget target) {
-        if (target == null || !target.hasLocation() || target.worldName().isBlank()) {
-            return null;
-        }
-
-        org.bukkit.World world = Bukkit.getWorld(target.worldName());
-        if (world == null) {
-            return null;
-        }
-
-        return new Location(world, target.x(), target.y(), target.z());
-    }
-
-    private String formatQuestTrackingActionBar(String label, QuestTrackingTarget target, Player player) {
-        Location playerLocation = player != null ? player.getLocation() : null;
-        String targetLabel = label == null || label.isBlank() ? "tinta questului" : label;
-        if (playerLocation == null || playerLocation.getWorld() == null || target.worldName().isBlank()) {
-            return "&6Quest &8| &f" + targetLabel;
-        }
-
-        String playerWorldName = playerLocation.getWorld().getName();
-        if (!target.worldName().equalsIgnoreCase(playerWorldName)) {
-            return "&6Quest &8| &f" + targetLabel + " &7in lumea &e" + target.worldName();
-        }
-
-        double dx = target.x() - playerLocation.getX();
-        double dy = target.y() - playerLocation.getY();
-        double dz = target.z() - playerLocation.getZ();
-        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance < 2.0) {
-            return "&aQuest &8| &f" + targetLabel + " &aeste aici";
-        }
-
-        return "&6Quest &8| &f" + targetLabel + " &7- &e" + Math.round(distance)
-            + " blocuri &7spre &b" + formatHorizontalDirection(dx, dz)
-            + formatVerticalHint(dy);
-    }
-
-    private String formatQuestTrackingPosition(QuestTrackingTarget target, Player player) {
-        String coordinates = formatQuestTrackingCoordinates(target);
-        Location playerLocation = player != null ? player.getLocation() : null;
-        if (playerLocation == null || playerLocation.getWorld() == null || target.worldName().isBlank()) {
-            return "&8(" + coordinates + ")";
-        }
-
-        String playerWorldName = playerLocation.getWorld().getName();
-        if (!target.worldName().equalsIgnoreCase(playerWorldName)) {
-            return "&7in lumea &f" + target.worldName() + " &8(" + coordinates + ")";
-        }
-
-        double dx = target.x() - playerLocation.getX();
-        double dy = target.y() - playerLocation.getY();
-        double dz = target.z() - playerLocation.getZ();
-        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance < 2.0) {
-            return "&ala pozitia ta &8(" + coordinates + ")";
-        }
-
-        String direction = formatHorizontalDirection(dx, dz);
-        String verticalHint = formatVerticalHint(dy);
-        return "&7la &e" + Math.round(distance) + " blocuri &7spre &f" + direction
-            + verticalHint + " &8(" + coordinates + ")";
-    }
-
-    private String formatHorizontalDirection(double dx, double dz) {
-        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-        if (horizontalDistance < 1.0) {
-            return "aceeasi coloana";
-        }
-
-        double degrees = Math.toDegrees(Math.atan2(dz, dx));
-        if (degrees < 0.0) {
-            degrees += 360.0;
-        }
-
-        String[] directions = {
-            "est", "sud-est", "sud", "sud-vest",
-            "vest", "nord-vest", "nord", "nord-est"
-        };
-        int index = (int) Math.round(degrees / 45.0) % directions.length;
-        return directions[index];
-    }
-
-    private String formatVerticalHint(double dy) {
-        long blocks = Math.round(dy);
-        if (Math.abs(blocks) < 4) {
-            return "";
-        }
-
-        return blocks > 0
-            ? " &7si cu &f" + blocks + " blocuri mai sus"
-            : " &7si cu &f" + Math.abs(blocks) + " blocuri mai jos";
-    }
-
-    private String formatQuestTrackingCoordinates(QuestTrackingTarget target) {
-        return target.worldName() + " "
-            + Math.round(target.x()) + " "
-            + Math.round(target.y()) + " "
-            + Math.round(target.z());
-    }
-
-    private String formatQuestAnchorType(String anchorType) {
-        return switch (normalizeTrackingAnchorType(anchorType)) {
-            case "region" -> "regiune";
-            case "place" -> "loc";
-            case "node" -> "punct";
-            case "npc" -> "npc";
-            default -> anchorType == null || anchorType.isBlank() ? "tinta" : anchorType;
-        };
-    }
-
-    private String normalizeTrackingAnchorType(String anchorType) {
-        return anchorType == null ? "" : anchorType.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private double center(double min, double max) {
-        return (min + max) / 2.0;
-    }
-
-    private String formatQuestPhase(String phaseId) {
-        if (phaseId == null || phaseId.isBlank()) {
-            return "";
-        }
-
-        String[] parts = phaseId.toLowerCase(Locale.ROOT).replace('-', '_').split("_+");
-        List<String> words = new ArrayList<>();
-        for (String part : parts) {
-            if (part.isBlank()) {
-                continue;
-            }
-            words.add(Character.toUpperCase(part.charAt(0)) + part.substring(1));
-        }
-
-        return words.isEmpty() ? phaseId : String.join(" ", words);
-    }
-
-    private String describeQuestProgress(PlayerQuestProgress progress) {
-        if (progress == null) {
-            return "necunoscut";
-        }
-
-        if (progress.questCode() != null && !progress.questCode().isBlank()) {
-            return progress.questCode() + " (" + formatQuestStatus(progress.status()) + ")";
-        }
-
-        return progress.templateId() + " (" + formatQuestStatus(progress.status()) + ")";
-    }
-
-    private String buildQuestOfferMessage(ScenarioTemplate template) {
-        List<String> objectives = template.getObjectives().stream()
-            .map(this::formatQuestEntry)
-            .toList();
-        if (objectives.isEmpty()) {
-            return template.getDescription().isBlank()
-                ? "Am nevoie de ajutorul tau."
-                : template.getDescription();
-        }
-
-        boolean deliveryQuest = template.getObjectives().stream().allMatch(this::usesInventoryProgress);
-        if (deliveryQuest) {
-            return "Adu-mi " + joinNaturally(objectives) + " si te rasplatesc cum se cuvine.";
-        }
-
-        if (!template.getDescription().isBlank()) {
-            return template.getDescription();
-        }
-
-        return "Ai de facut urmatoarele: " + joinNaturally(objectives) + ".";
-    }
-
-    private List<String> buildQuestNpcMessages(ScenarioTemplate template,
-                                               PlayerQuestProgress progress,
-                                               QuestDialogueContext context,
-                                               List<String> fallback) {
-        List<String> configuredMessages = resolveQuestDialogueMessages(template, progress, context);
-        return configuredMessages.isEmpty() ? fallback : configuredMessages;
-    }
-
-    private List<String> resolveQuestDialogueMessages(ScenarioTemplate template,
-                                                      PlayerQuestProgress progress,
-                                                      QuestDialogueContext context) {
-        if (template == null || context == null || template.getQuestDialogues().isEmpty()) {
-            return List.of();
-        }
-
-        List<String> keys = new ArrayList<>();
-        keys.addAll(context.dialogueKeys());
-        if (progress != null && progress.currentPhase() != null && !progress.currentPhase().isBlank()) {
-            keys.add("phase." + progress.currentPhase());
-            keys.add(progress.currentPhase());
-        }
-
-        for (String key : keys) {
-            List<String> lines = template.getQuestDialogueLines(key);
-            if (!lines.isEmpty()) {
-                return lines;
-            }
-        }
-
-        return List.of();
-    }
-
-    private QuestDialogueContext resolveStatusDialogueContext(Player player,
-                                                              ScenarioTemplate template,
-                                                              PlayerQuestProgress progress) {
-        if (progress == null) {
-            return QuestDialogueContext.OFFER;
-        }
-        if (progress.isCompleted()) {
-            return QuestDialogueContext.COMPLETED;
-        }
-        if (progress.status() == QuestStatus.FAILED) {
-            return QuestDialogueContext.FAILED;
-        }
-        if (progress.isActive()
-            && inspectQuestObjectives(player, template, progress, null, false).complete()) {
-            return QuestDialogueContext.READY;
-        }
-        return progress.isOffered() ? QuestDialogueContext.OFFERED : QuestDialogueContext.ACTIVE;
-    }
-
-    private QuestInventoryCheck inspectQuestInventory(PlayerInventory inventory,
-                                                      List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        List<String> missingItems = new ArrayList<>();
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            Material material = resolveQuestMaterial(objective);
-            if (material == null) {
-                missingItems.add(formatQuestEntry(objective));
-                continue;
-            }
-
-            int currentAmount = countMaterial(inventory, material);
-            if (currentAmount < objective.getAmount()) {
-                int missingAmount = objective.getAmount() - currentAmount;
-                missingItems.add(formatQuestAmount(missingAmount, material));
-            }
-        }
-
-        return new QuestInventoryCheck(missingItems.isEmpty(), missingItems);
-    }
-
-    private QuestObjectiveCheck inspectQuestObjectives(Player player,
-                                                       ScenarioTemplate template,
-                                                       PlayerQuestProgress progress,
-                                                       AINPC npc,
-                                                       boolean requireTurnInInteraction) {
-        if (template == null || template.getObjectives().isEmpty()) {
-            return new QuestObjectiveCheck(true, List.of());
-        }
-
-        List<String> missingObjectives = new ArrayList<>();
-        List<FeaturePackLoader.QuestEntryDefinition> objectives = template.getObjectives();
-        for (int index = 0; index < objectives.size(); index++) {
-            FeaturePackLoader.QuestEntryDefinition objective = objectives.get(index);
-            if (!shouldInspectObjectiveForCurrentStage(template, progress, objective)) {
-                continue;
-            }
-            int requiredAmount = Math.max(1, objective.getAmount());
-            int currentAmount = resolveObjectiveCurrentProgress(player, objective, progress, index);
-            if (requireTurnInInteraction
-                && matchesObjectiveType(objective, "deliver_to_npc")
-                && npc == null
-                && currentAmount >= requiredAmount) {
-                currentAmount = 0;
-            }
-            if (currentAmount < requiredAmount) {
-                missingObjectives.add(formatMissingObjective(objective, currentAmount, requiredAmount));
-            }
-        }
-
-        return new QuestObjectiveCheck(missingObjectives.isEmpty(), List.copyOf(missingObjectives));
-    }
-
-    private void consumeQuestObjectives(PlayerInventory inventory,
-                                        List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (!shouldConsumeObjectiveItem(objective)) {
-                continue;
-            }
-            Material material = resolveQuestMaterial(objective);
-            if (material == null) {
-                continue;
-            }
-            removeMaterial(inventory, material, objective.getAmount());
-        }
-    }
-
-    private QuestRewardCheck inspectQuestRewardDelivery(PlayerInventory inventory,
-                                                        List<FeaturePackLoader.QuestEntryDefinition> objectivesToConsume,
-                                                        List<FeaturePackLoader.QuestEntryDefinition> rewards) {
-        if (rewards == null || rewards.isEmpty()) {
-            return QuestRewardCheck.allowed();
-        }
-        boolean hasInventoryReward = rewards.stream().anyMatch(reward -> !isQuestStoryAction(reward));
-        if (!hasInventoryReward) {
-            return QuestRewardCheck.allowed();
-        }
-        if (inventory == null) {
-            return QuestRewardCheck.blocked(List.of("Inventarul jucatorului nu poate fi verificat."));
-        }
-
-        List<String> issues = new ArrayList<>();
-        ItemStack[] simulatedStorage = cloneStorageContents(inventory);
-        simulateQuestObjectiveConsumption(simulatedStorage, objectivesToConsume);
-
-        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
-            if (isQuestStoryAction(reward)) {
-                continue;
-            }
-
-            Material material = resolveQuestMaterial(reward);
-            if (material == null) {
-                issues.add("Recompensa invalida in configuratie: " + (reward != null ? reward.getItemId() : "necunoscut"));
-                continue;
-            }
-
-            int amount = Math.max(1, reward.getAmount());
-            if (!simulateAddMaterial(simulatedStorage, material, amount)) {
-                issues.add("Fa loc pentru " + formatQuestAmount(amount, material) + ".");
-            }
-        }
-
-        return issues.isEmpty() ? QuestRewardCheck.allowed() : QuestRewardCheck.blocked(issues);
-    }
-
-    private ItemStack[] cloneStorageContents(PlayerInventory inventory) {
-        ItemStack[] contents = inventory.getStorageContents();
-        ItemStack[] clone = new ItemStack[contents.length];
-        for (int i = 0; i < contents.length; i++) {
-            clone[i] = contents[i] != null ? contents[i].clone() : null;
-        }
-        return clone;
-    }
-
-    private void simulateQuestObjectiveConsumption(ItemStack[] contents,
-                                                   List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-        if (contents == null || objectives == null || objectives.isEmpty()) {
-            return;
-        }
-
-        for (FeaturePackLoader.QuestEntryDefinition objective : objectives) {
-            if (!shouldConsumeObjectiveItem(objective)) {
-                continue;
-            }
-            Material material = resolveQuestMaterial(objective);
-            if (material != null) {
-                simulateRemoveMaterial(contents, material, objective.getAmount());
-            }
-        }
-    }
-
-    private void simulateRemoveMaterial(ItemStack[] contents, Material material, int amount) {
-        int remaining = Math.max(0, amount);
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack == null || stack.getType() != material) {
-                continue;
-            }
-
-            if (stack.getAmount() <= remaining) {
-                remaining -= stack.getAmount();
-                contents[i] = null;
-            } else {
-                stack.setAmount(stack.getAmount() - remaining);
-                remaining = 0;
-            }
-        }
-    }
-
-    private boolean simulateAddMaterial(ItemStack[] contents, Material material, int amount) {
-        int remaining = Math.max(0, amount);
-        int maxStackSize = Math.max(1, material.getMaxStackSize());
-
-        for (ItemStack stack : contents) {
-            if (remaining <= 0) {
-                return true;
-            }
-            if (stack == null || stack.getType() != material || stack.getAmount() >= maxStackSize) {
-                continue;
-            }
-
-            int added = Math.min(remaining, maxStackSize - stack.getAmount());
-            stack.setAmount(stack.getAmount() + added);
-            remaining -= added;
-        }
-
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack != null && stack.getType() != Material.AIR) {
-                continue;
-            }
-
-            int added = Math.min(remaining, maxStackSize);
-            contents[i] = new ItemStack(material, added);
-            remaining -= added;
-        }
-
-        return remaining <= 0;
-    }
-
-    private int resolveObjectiveCurrentProgress(Player player,
-                                                FeaturePackLoader.QuestEntryDefinition objective,
-                                                PlayerQuestProgress progress,
-                                                int index) {
-        if (objective == null) {
-            return 0;
-        }
-
-        int requiredAmount = Math.max(1, objective.getAmount());
-        if (player != null && usesInventoryProgress(objective)) {
-            Material material = resolveQuestMaterial(objective);
-            if (material != null) {
-                return Math.min(requiredAmount, countMaterial(player.getInventory(), material));
-            }
-        }
-
-        if (progress == null) {
-            return 0;
-        }
-
-        return Math.min(requiredAmount, readObjectiveProgress(progress.objectiveProgress(), objective, index));
-    }
-
-    private String formatObjectiveProgressLabel(FeaturePackLoader.QuestEntryDefinition objective) {
-        if (objective == null) {
-            return "obiectiv";
-        }
-
-        String objectiveType = normalizeObjectiveType(objective.getType());
-        Material material = resolveQuestMaterial(objective);
-        return switch (objectiveType) {
-            case "collect_item", "deliver_to_npc" -> material != null
-                ? humanizeItemId(material.name())
-                : humanizeItemId(objective.getItemId());
-            case "talk_to_npc" -> "vorbeste cu " + formatObjectiveTargetLabel(objective, "npc-ul");
-            case "visit_region" -> "viziteaza " + formatObjectiveTargetLabel(objective, "regiunea");
-            case "visit_place" -> "viziteaza " + formatObjectiveTargetLabel(objective, "locul");
-            case "inspect_node" -> "inspecteaza " + formatObjectiveTargetLabel(objective, "punctul");
-            case "kill_mob" -> "ucide " + formatObjectiveTargetLabel(objective, "inamicul");
-            default -> !objective.getDescription().isBlank() ? objective.getDescription() : humanizeItemId(objective.getItemId());
-        };
-    }
-
-    private String formatMissingObjective(FeaturePackLoader.QuestEntryDefinition objective,
-                                          int currentAmount,
-                                          int requiredAmount) {
-        if (objective == null) {
-            return "obiectiv necunoscut";
-        }
-
-        int missingAmount = Math.max(0, requiredAmount - currentAmount);
-        String objectiveType = normalizeObjectiveType(objective.getType());
-        Material material = resolveQuestMaterial(objective);
-        return switch (objectiveType) {
-            case "collect_item", "deliver_to_npc" -> material != null
-                ? formatQuestAmount(Math.max(1, missingAmount), material)
-                : formatQuestEntry(objective);
-            case "talk_to_npc" -> "vorbeste cu " + formatObjectiveTargetLabel(objective, "npc-ul tintit");
-            case "visit_region" -> "viziteaza " + formatObjectiveTargetLabel(objective, "regiunea tintita");
-            case "visit_place" -> "viziteaza " + formatObjectiveTargetLabel(objective, "locul tintit");
-            case "inspect_node" -> "inspecteaza " + formatObjectiveTargetLabel(objective, "punctul tintit");
-            case "kill_mob" -> "ucide " + (missingAmount > 1
-                ? missingAmount + "x " + formatObjectiveTargetLabel(objective, "inamicul tintit")
-                : formatObjectiveTargetLabel(objective, "inamicul tintit"));
-            default -> formatQuestEntry(objective);
-        };
-    }
-
-    private String formatObjectiveTargetLabel(FeaturePackLoader.QuestEntryDefinition objective, String fallback) {
-        if (objective == null || objective.getItemId() == null || objective.getItemId().isBlank()) {
-            return fallback;
-        }
-
-        return humanizeItemId(stripObjectivePrefix(objective.getItemId()));
-    }
-
-    private List<String> grantQuestRewards(Player player, List<FeaturePackLoader.QuestEntryDefinition> rewards) {
-        List<String> notes = new ArrayList<>();
-        for (FeaturePackLoader.QuestEntryDefinition reward : rewards) {
-            if (isQuestStoryAction(reward)) {
-                continue;
-            }
-
-            Material material = resolveQuestMaterial(reward);
-            if (material == null) {
-                notes.add("&cRecompensa invalida in configuratie: &f" + reward.getItemId());
-                continue;
-            }
-
-            ItemStack rewardStack = new ItemStack(material, reward.getAmount());
-            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(rewardStack);
-            if (!leftovers.isEmpty()) {
-                leftovers.values().forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
-                notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.");
-            }
-        }
-
-        return notes;
     }
 
     private List<String> applyQuestStoryActions(Player player,
@@ -6317,7 +3737,7 @@ public class ScenarioEngine {
             return List.of();
         }
 
-        boolean hasStoryAction = rewards.stream().anyMatch(this::isQuestStoryAction);
+        boolean hasStoryAction = rewards.stream().anyMatch(ScenarioStoryTextKt::isQuestStoryAction);
         if (!hasStoryAction) {
             return List.of();
         }
@@ -6453,21 +3873,6 @@ public class ScenarioEngine {
         );
 
         notes.add("&7Story event inregistrat: &f" + target.scopeType() + ":" + target.scopeId() + " &7-> &f" + eventType);
-    }
-
-    private boolean isQuestStoryAction(FeaturePackLoader.QuestEntryDefinition entry) {
-        return !normalizeStoryActionType(entry).isBlank();
-    }
-
-    private String normalizeStoryActionType(FeaturePackLoader.QuestEntryDefinition entry) {
-        String normalized = normalizeReference(entry != null ? entry.getType() : "");
-        return switch (normalized) {
-            case "set_story_state", "setstorystate", "story_state", "set_story_flag", "story_flag", "set_flag" ->
-                "set_story_state";
-            case "record_story_event", "recordstoryevent", "story_event", "record_event", "event" ->
-                "record_story_event";
-            default -> "";
-        };
     }
 
     private StoryActionTarget resolveStoryActionTarget(FeaturePackLoader.QuestEntryDefinition action,
@@ -6645,42 +4050,6 @@ public class ScenarioEngine {
         return "";
     }
 
-    private String normalizeStoryScope(String scope) {
-        String normalized = normalizeReference(scope);
-        return switch (normalized) {
-            case "region", "regional" -> "region";
-            case "place", "local", "location" -> "place";
-            default -> "";
-        };
-    }
-
-    private String detectStoryTargetScope(String targetValue) {
-        if (targetValue == null || targetValue.isBlank()) {
-            return "";
-        }
-
-        int separator = targetValue.indexOf(':');
-        if (separator <= 0) {
-            return "";
-        }
-
-        String prefix = normalizeReference(targetValue.substring(0, separator));
-        return "region".equals(prefix) || "place".equals(prefix) ? prefix : "";
-    }
-
-    private String cleanStoryId(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        String trimmed = value.trim();
-        String targetScope = detectStoryTargetScope(trimmed);
-        if (!targetScope.isBlank()) {
-            return trimmed.substring(trimmed.indexOf(':') + 1).trim();
-        }
-        return trimmed;
-    }
-
     private String resolveRegionIdForPlace(String placeId, Player player) {
         if (placeId == null || placeId.isBlank()) {
             return "";
@@ -6713,176 +4082,6 @@ public class ScenarioEngine {
         return place != null ? place.getId() : "";
     }
 
-    private Map<String, String> buildStoryActionData(Map<String, String> configured,
-                                                     ScenarioTemplate template,
-                                                     Player player,
-                                                     AINPC npc) {
-        Map<String, String> data = new LinkedHashMap<>();
-        if (configured != null) {
-            data.putAll(configured);
-        }
-        if (template != null) {
-            data.putIfAbsent("quest_template", template.getTemplateId());
-            data.putIfAbsent("quest_code", template.getQuestCode());
-        }
-        if (player != null) {
-            data.putIfAbsent("player_uuid", player.getUniqueId().toString());
-            data.putIfAbsent("player_name", player.getName());
-        }
-        if (npc != null) {
-            data.putIfAbsent("npc_name", npc.getName());
-            if (npc.getUuid() != null) {
-                data.putIfAbsent("npc_uuid", npc.getUuid().toString());
-            }
-        }
-        return data;
-    }
-
-    private List<String> parseStoryList(String value) {
-        if (value == null || value.isBlank()) {
-            return List.of();
-        }
-
-        List<String> values = new ArrayList<>();
-        for (String part : value.split(",")) {
-            String trimmed = part.trim();
-            if (!trimmed.isBlank()) {
-                values.add(trimmed);
-            }
-        }
-        return values;
-    }
-
-    private String getQuestEntryMetadata(FeaturePackLoader.QuestEntryDefinition entry, String... keys) {
-        if (entry == null || keys == null || keys.length == 0) {
-            return "";
-        }
-
-        Map<String, String> metadata = entry.getMetadata();
-        for (String key : keys) {
-            if (key == null || key.isBlank()) {
-                continue;
-            }
-
-            String directValue = metadata.get(key);
-            if (directValue != null && !directValue.isBlank()) {
-                return directValue;
-            }
-
-            String normalizedKey = normalizeReference(key);
-            for (Map.Entry<String, String> metadataEntry : metadata.entrySet()) {
-                if (normalizeReference(metadataEntry.getKey()).equals(normalizedKey)
-                    && metadataEntry.getValue() != null
-                    && !metadataEntry.getValue().isBlank()) {
-                    return metadataEntry.getValue();
-                }
-            }
-        }
-
-        return "";
-    }
-
-    private String storyActorId(Player player, AINPC npc, ScenarioTemplate template) {
-        if (player != null) {
-            return player.getUniqueId().toString();
-        }
-        if (npc != null && npc.getUuid() != null) {
-            return npc.getUuid().toString();
-        }
-        return template != null ? template.getTemplateId() : "quest";
-    }
-
-    private String firstNonBlank(String... values) {
-        if (values == null) {
-            return "";
-        }
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private Material resolveQuestMaterial(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null || entry.getItemId() == null || entry.getItemId().isBlank()) {
-            return null;
-        }
-
-        return Material.matchMaterial(entry.getItemId());
-    }
-
-    private int countMaterial(PlayerInventory inventory, Material material) {
-        if (inventory == null || material == null) {
-            return 0;
-        }
-
-        int total = 0;
-        for (ItemStack stack : inventory.getStorageContents()) {
-            if (stack != null && stack.getType() == material) {
-                total += stack.getAmount();
-            }
-        }
-        return total;
-    }
-
-    private void removeMaterial(PlayerInventory inventory, Material material, int amount) {
-        if (inventory == null || material == null || amount <= 0) {
-            return;
-        }
-
-        ItemStack[] contents = inventory.getStorageContents();
-        int remaining = amount;
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack == null || stack.getType() != material) {
-                continue;
-            }
-
-            if (stack.getAmount() <= remaining) {
-                remaining -= stack.getAmount();
-                contents[i] = null;
-            } else {
-                stack.setAmount(stack.getAmount() - remaining);
-                remaining = 0;
-            }
-        }
-
-        inventory.setStorageContents(contents);
-    }
-
-    private String formatQuestAmount(int amount, Material material) {
-        String itemName = material == null ? "item" : humanizeItemId(material.name());
-        return amount > 1 ? amount + "x " + itemName : itemName;
-    }
-
-    private String resolveQuestTitle(ScenarioTemplate template) {
-        if (template == null) {
-            return "";
-        }
-
-        return template.getQuestCode().isBlank()
-            ? template.getDisplayName()
-            : template.getQuestCode() + " - " + template.getDisplayName();
-    }
-
-    private String joinNaturally(List<String> parts) {
-        if (parts == null || parts.isEmpty()) {
-            return "";
-        }
-
-        if (parts.size() == 1) {
-            return parts.get(0);
-        }
-
-        if (parts.size() == 2) {
-            return parts.get(0) + " si " + parts.get(1);
-        }
-
-        String last = parts.get(parts.size() - 1);
-        return String.join(", ", parts.subList(0, parts.size() - 1)) + " si " + last;
-    }
-
     /**
      * Evalueaza daca ar trebui sa inceapa un scenariu nou.
      */
@@ -6905,90 +4104,6 @@ public class ScenarioEngine {
                 startScenario(template, npcs, nearbyPlayers);
             }
         }
-    }
-
-    /**
-     * Verifica daca un scenariu poate fi declansat.
-     */
-    private boolean canTriggerScenario(ScenarioTemplate template, List<AINPC> npcs, List<Player> players) {
-        if (template.requiresPlayer() && players.isEmpty()) {
-            return false;
-        }
-
-        if (npcs.size() < template.getMinimumNpcCount()) {
-            return false;
-        }
-
-        if (!canAssignMandatoryRoles(template, npcs, players)) {
-            return false;
-        }
-
-        return switch (template.getType()) {
-            case ROMANCE -> hasMixedGenders(npcs);
-            case CONFLICT -> hasConflictingPersonalities(npcs);
-            default -> true;
-        };
-    }
-
-    private boolean canAssignMandatoryRoles(ScenarioTemplate template, List<AINPC> npcs, List<Player> players) {
-        long requiredPlayers = template.getPlayerRoles().stream()
-            .filter(role -> !role.isOptional())
-            .count();
-        if (players.size() < requiredPlayers) {
-            return false;
-        }
-
-        List<AINPC> availableNpcs = new ArrayList<>(npcs);
-        for (ScenarioRoleRule role : template.getNpcRoles()) {
-            if (role.isOptional()) {
-                continue;
-            }
-
-            AINPC selected = selectBestNpcForRole(availableNpcs, role);
-            if (selected != null) {
-                availableNpcs.remove(selected);
-                continue;
-            }
-
-            if (availableNpcs.isEmpty() || role.hasHardRequirements()) {
-                return false;
-            }
-
-            availableNpcs.remove(0);
-        }
-
-        return true;
-    }
-
-    private boolean hasMixedGenders(List<AINPC> npcs) {
-        boolean hasMale = npcs.stream().anyMatch(npc -> "male".equalsIgnoreCase(npc.getGender()));
-        boolean hasFemale = npcs.stream().anyMatch(npc -> "female".equalsIgnoreCase(npc.getGender()));
-        return hasMale && hasFemale;
-    }
-
-    /**
-     * Verifica daca exista personalitati conflictuale.
-     */
-    private boolean hasConflictingPersonalities(List<AINPC> npcs) {
-        for (AINPC npc1 : npcs) {
-            for (AINPC npc2 : npcs) {
-                if (npc1 == npc2) {
-                    continue;
-                }
-
-                NPCPersonality p1 = npc1.getPersonality();
-                NPCPersonality p2 = npc2.getPersonality();
-
-                if (Math.abs(p1.getAgreeableness() - p2.getAgreeableness()) > 0.5) {
-                    return true;
-                }
-
-                if (p1.getNeuroticism() > 0.7 && p2.getNeuroticism() > 0.7) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -7028,7 +4143,7 @@ public class ScenarioEngine {
 
         for (ScenarioRoleRule role : template.getPlayerRoles()) {
             if (availablePlayers.isEmpty()) {
-                if (!role.isOptional()) {
+                if (!role.getOptional()) {
                     plugin.debug("Scenariul " + template.getDisplayName() + " nu are jucator pentru rolul " + role.getId());
                     return false;
                 }
@@ -7050,7 +4165,7 @@ public class ScenarioEngine {
                 continue;
             }
 
-            if (role.isOptional()) {
+            if (role.getOptional()) {
                 optionalFallback.add(role);
             } else {
                 mandatoryFallback.add(role);
@@ -7095,167 +4210,8 @@ public class ScenarioEngine {
         return true;
     }
 
-    private AINPC selectBestNpcForRole(List<AINPC> candidates, ScenarioRoleRule role) {
-        if (candidates.isEmpty()) {
-            return null;
-        }
-
-        AINPC bestNpc = null;
-        int bestScore = Integer.MIN_VALUE;
-
-        for (AINPC npc : candidates) {
-            int score = scoreNpcForRole(npc, role);
-            if (score > bestScore) {
-                bestNpc = npc;
-                bestScore = score;
-            }
-        }
-
-        return bestScore == Integer.MIN_VALUE ? null : bestNpc;
-    }
-
-    private int scoreNpcForRole(AINPC npc, ScenarioRoleRule role) {
-        if (!hasRequiredProfessions(npc, role.getRequiredProfessions())) {
-            return Integer.MIN_VALUE;
-        }
-
-        if (!hasRequiredTraits(npc, role.getRequiredTraits())) {
-            return Integer.MIN_VALUE;
-        }
-
-        int score = baseRoleScore(npc, role.getId());
-
-        if (!role.getPreferredProfessions().isEmpty()) {
-            boolean professionMatch = role.getPreferredProfessions().stream()
-                .anyMatch(reference -> plugin.getFeaturePackLoader() != null
-                    && plugin.getFeaturePackLoader().matchesProfession(npc.getOccupation(), reference));
-            score += professionMatch ? 90 : -15;
-        }
-
-        for (String preferredTrait : role.getPreferredTraits()) {
-            if (npc.hasTrait(preferredTrait)) {
-                score += 25;
-            }
-        }
-
-        return score;
-    }
-
-    private boolean hasRequiredProfessions(AINPC npc, List<String> requiredProfessions) {
-        if (requiredProfessions == null || requiredProfessions.isEmpty()) {
-            return true;
-        }
-
-        String occupation = npc.getOccupation();
-        if (occupation == null || occupation.isBlank()) {
-            return false;
-        }
-
-        FeaturePackLoader loader = plugin.getFeaturePackLoader();
-        for (String requiredProfession : requiredProfessions) {
-            if (loader != null && loader.matchesProfession(occupation, requiredProfession)) {
-                return true;
-            }
-
-            if (normalize(occupation).equals(normalize(requiredProfession))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean hasRequiredTraits(AINPC npc, List<String> requiredTraits) {
-        if (requiredTraits == null || requiredTraits.isEmpty()) {
-            return true;
-        }
-
-        for (String requiredTrait : requiredTraits) {
-            if (!npc.hasTrait(requiredTrait)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private int baseRoleScore(AINPC npc, String roleId) {
-        NPCPersonality personality = npc.getPersonality();
-        NPCEmotions emotions = npc.getEmotions();
-
-        return switch (roleId) {
-            case "THIEF" -> scoreBoolean(personality.getConscientiousness() < 0.4
-                && personality.getAgreeableness() < 0.5, 40);
-            case "RESPONDER" -> scoreBoolean(personality.getConscientiousness() > 0.5
-                || emotions.getTrust() > 0.5, 30);
-            case "AGGRESSOR" -> scoreBoolean(personality.getAgreeableness() < 0.4
-                || emotions.getAnger() > 0.5, 35);
-            case "MEDIATOR" -> scoreBoolean(personality.getAgreeableness() > 0.6
-                && personality.getExtraversion() > 0.5, 35);
-            case "COWARD" -> scoreBoolean(personality.getNeuroticism() > 0.6
-                || emotions.getFear() > 0.5, 35);
-            case "LEADER" -> scoreBoolean(personality.getExtraversion() > 0.6
-                && personality.getConscientiousness() > 0.5, 35);
-            case "HOST" -> scoreBoolean(personality.getExtraversion() > 0.5
-                && personality.getAgreeableness() > 0.5, 30);
-            case "SUITOR" -> scoreBoolean(personality.getExtraversion() > 0.5, 25);
-            case "ORIGINATOR" -> scoreBoolean(personality.getOpenness() > 0.6, 25);
-            case "QUEST_GIVER" -> scoreBoolean(personality.getAgreeableness() > 0.45
-                || personality.getExtraversion() > 0.45, 30);
-            case "HELPER" -> scoreBoolean(personality.getAgreeableness() > 0.5
-                || emotions.getTrust() > 0.55, 28);
-            case "ANTAGONIST" -> scoreBoolean(personality.getAgreeableness() < 0.45
-                || emotions.getAnger() > 0.45, 28);
-            case "WITNESS" -> scoreBoolean(personality.getOpenness() > 0.45
-                || personality.getExtraversion() > 0.45, 20);
-            case "SELLER" -> scoreBoolean(personality.getExtraversion() > 0.5
-                && personality.getConscientiousness() > 0.45, 25);
-            case "BUYER" -> 10;
-            default -> 0;
-        };
-    }
-
-    private boolean matchesOccupation(AINPC npc, String... references) {
-        if (references == null || references.length == 0) {
-            return false;
-        }
-
-        String occupation = npc.getOccupation();
-        if (occupation == null || occupation.isBlank()) {
-            return false;
-        }
-
-        FeaturePackLoader loader = plugin.getFeaturePackLoader();
-        for (String reference : references) {
-            if (loader != null && loader.matchesProfession(occupation, reference)) {
-                return true;
-            }
-
-            if (normalize(occupation).equals(normalize(reference))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private int scoreBoolean(boolean condition, int positiveScore) {
-        return condition ? positiveScore : 0;
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-    }
-
     private ConfigurationSection getQuestSettings() {
-        ConfigurationSection questFile = plugin.getQuestConfig();
-        if (questFile != null) {
-            ConfigurationSection nested = questFile.getConfigurationSection("quests");
-            return nested != null ? nested : questFile;
-        }
-
-        ConfigurationSection nested = plugin.getConfig().getConfigurationSection("quests");
-        return nested != null ? nested : plugin.getConfig();
+        return ScenarioSimpleQuestKt.getQuestSettings();
     }
 
     /**
@@ -7373,51 +4329,6 @@ public class ScenarioEngine {
         return professionReference;
     }
 
-    private String formatQuestEntry(FeaturePackLoader.QuestEntryDefinition entry) {
-        if (entry == null) {
-            return "";
-        }
-
-        if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
-            return entry.getDescription();
-        }
-
-        String objectiveType = normalizeObjectiveType(entry.getType());
-        Material material = resolveQuestMaterial(entry);
-        return switch (objectiveType) {
-            case "collect_item", "deliver_to_npc" -> material != null
-                ? formatQuestAmount(entry.getAmount(), material)
-                : (entry.getAmount() > 1 ? entry.getAmount() + "x " + humanizeItemId(entry.getItemId()) : humanizeItemId(entry.getItemId()));
-            case "talk_to_npc" -> "Vorbeste cu " + formatObjectiveTargetLabel(entry, "NPC-ul tintit");
-            case "visit_region" -> "Viziteaza " + formatObjectiveTargetLabel(entry, "regiunea tintita");
-            case "visit_place" -> "Viziteaza " + formatObjectiveTargetLabel(entry, "locul tintit");
-            case "inspect_node" -> "Inspecteaza " + formatObjectiveTargetLabel(entry, "punctul tintit");
-            case "kill_mob" -> "Ucide " + (entry.getAmount() > 1
-                ? entry.getAmount() + "x " + formatObjectiveTargetLabel(entry, "inamicul tintit")
-                : formatObjectiveTargetLabel(entry, "inamicul tintit"));
-            case "set_story_state" -> {
-                String stateKey = firstNonBlank(getQuestEntryMetadata(entry, "state_key", "state", "flag", "value"), entry.getItemId());
-                yield "Actualizeaza story state" + (!stateKey.isBlank() ? ": " + stateKey : "");
-            }
-            case "record_story_event" -> {
-                String eventType = firstNonBlank(getQuestEntryMetadata(entry, "event_type", "type_id"), "quest_completed");
-                yield "Inregistreaza story event: " + eventType;
-            }
-            default -> {
-                String itemName = humanizeItemId(entry.getItemId());
-                yield entry.getAmount() > 1 ? entry.getAmount() + "x " + itemName : itemName;
-            }
-        };
-    }
-
-    private String humanizeItemId(String itemId) {
-        if (itemId == null || itemId.isBlank()) {
-            return "item";
-        }
-
-        return itemId.toLowerCase(Locale.ROOT).replace('_', ' ');
-    }
-
     public void advanceScenario(UUID scenarioId) {
         ActiveScenario scenario = activeScenarios.get(scenarioId);
         if (scenario == null) {
@@ -7482,602 +4393,4 @@ public class ScenarioEngine {
         return null;
     }
 
-    public enum ScenarioType {
-        THEFT("Furt"),
-        CONFLICT("Conflict"),
-        CELEBRATION("Sarbatoare"),
-        EMERGENCY("Urgenta"),
-        ROMANCE("Romantism"),
-        TRADE_DEAL("Afacere"),
-        DUTY("Sarcina"),
-        BOUNTY("Bounty local"),
-        WORLD_EVENT("Eveniment local"),
-        TUTORIAL("Tutorial"),
-        RITUAL("Ritual"),
-        QUEST("Misiune"),
-        GOSSIP_SPREAD("Raspandirea zvonurilor");
-
-        private final String displayName;
-
-        ScenarioType(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-
-        public static ScenarioType fromId(String value) {
-            if (value == null || value.isBlank()) {
-                return QUEST;
-            }
-
-            for (ScenarioType type : values()) {
-                if (type.name().equalsIgnoreCase(value) || type.displayName.equalsIgnoreCase(value)) {
-                    return type;
-                }
-            }
-
-            String normalized = value.trim().toLowerCase(Locale.ROOT).replace('-', '_').replace(" ", "_");
-            if ("datorie".equals(normalized) || "sarcina".equals(normalized) || "npc_duty".equals(normalized)) {
-                return DUTY;
-            }
-            if ("bounty".equals(normalized) || "bounties".equals(normalized)
-                || "local_bounty".equals(normalized) || "local_bounties".equals(normalized)
-                || "recompensa".equals(normalized) || "recompense".equals(normalized)) {
-                return BOUNTY;
-            }
-            if ("event".equals(normalized) || "events".equals(normalized)
-                || "eveniment".equals(normalized) || "evenimente".equals(normalized)
-                || "world_event".equals(normalized) || "local_event".equals(normalized)
-                || "village_event".equals(normalized) || "village_events".equals(normalized)) {
-                return WORLD_EVENT;
-            }
-            if ("tutorial".equals(normalized) || "tutorials".equals(normalized)
-                || "onboarding".equals(normalized) || "indrumare".equals(normalized)) {
-                return TUTORIAL;
-            }
-            if ("ritual".equals(normalized) || "rituals".equals(normalized)
-                || "ceremony".equals(normalized) || "ceremonies".equals(normalized)
-                || "ceremonie".equals(normalized) || "ceremonii".equals(normalized)
-                || "village_ritual".equals(normalized) || "village_rituals".equals(normalized)) {
-                return RITUAL;
-            }
-
-            return QUEST;
-        }
-    }
-
-    public static class ScenarioTemplate {
-        private final ScenarioType type;
-        private final Map<String, ScenarioRoleRule> roles;
-        private final List<String> phases;
-        private String templateId;
-        private String displayName;
-        private String description;
-        private String sourcePackId;
-        private String hint;
-        private List<String> preferredTopologies;
-        private List<String> narrativeHints;
-        private boolean progressionEnabled;
-        private String progressionMechanicId;
-        private String progressionKind;
-        private String progressionLabel;
-        private String progressionSingularLabel;
-        private String progressionPluralLabel;
-        private int progressionMaxActive;
-        private String questCode;
-        private String questGiverProfession;
-        private List<String> questPrerequisites;
-        private boolean questRepeatable;
-        private long questCooldownSeconds;
-        private Map<String, List<String>> questDialogues;
-        private List<FeaturePackLoader.QuestStageDefinition> questStages;
-        private QuestScenarioContract questContract;
-        private List<FeaturePackLoader.QuestEntryDefinition> objectives;
-        private List<FeaturePackLoader.QuestEntryDefinition> rewards;
-        private double triggerProbability;
-        private int minimumNpcCount;
-        private boolean requiresPlayer;
-
-        public ScenarioTemplate(ScenarioType type) {
-            this.type = type;
-            this.roles = new LinkedHashMap<>();
-            this.phases = new ArrayList<>();
-            this.templateId = type.name().toLowerCase(Locale.ROOT);
-            this.displayName = type.getDisplayName();
-            this.description = "";
-            this.sourcePackId = "core";
-            this.hint = "";
-            this.preferredTopologies = new ArrayList<>();
-            this.narrativeHints = new ArrayList<>();
-            this.progressionEnabled = type == ScenarioType.QUEST;
-            this.progressionMechanicId = type == ScenarioType.QUEST ? "quest" : "";
-            this.progressionKind = type == ScenarioType.QUEST ? "quest" : "";
-            this.progressionLabel = type == ScenarioType.QUEST ? "Quest" : "";
-            this.progressionSingularLabel = "quest";
-            this.progressionPluralLabel = "questuri";
-            this.progressionMaxActive = 0;
-            this.questCode = "";
-            this.questGiverProfession = "";
-            this.questPrerequisites = new ArrayList<>();
-            this.questRepeatable = false;
-            this.questCooldownSeconds = 0L;
-            this.questDialogues = new LinkedHashMap<>();
-            this.questStages = new ArrayList<>();
-            this.questContract = QuestScenarioContract.defaultContract();
-            this.objectives = new ArrayList<>();
-            this.rewards = new ArrayList<>();
-            this.triggerProbability = 0.05;
-            this.minimumNpcCount = 2;
-            this.requiresPlayer = false;
-        }
-
-        public void addRole(String roleId, String description) {
-            addRole(roleId, description, false);
-        }
-
-        public void addRole(String roleId, String description, boolean optional) {
-            addRole(new ScenarioRoleRule(roleId, description, false, optional));
-        }
-
-        public void addPlayerRole(String roleId, String description) {
-            addRole(new ScenarioRoleRule(roleId, description, true, false));
-        }
-
-        public void addRole(ScenarioRoleRule role) {
-            roles.put(role.getId(), role);
-        }
-
-        public void addPhase(String phaseId, String description) {
-            phases.add(phaseId);
-        }
-
-        public ScenarioType getType() { return type; }
-        public Map<String, ScenarioRoleRule> getRoles() { return roles; }
-        public List<String> getPhases() { return phases; }
-        public double getTriggerProbability() { return triggerProbability; }
-        public void setTriggerProbability(double triggerProbability) { this.triggerProbability = triggerProbability; }
-        public int getMinimumNpcCount() { return minimumNpcCount; }
-        public void setMinimumNpcCount(int minimumNpcCount) { this.minimumNpcCount = minimumNpcCount; }
-        public boolean requiresPlayer() { return requiresPlayer; }
-        public void setRequiresPlayer(boolean requiresPlayer) { this.requiresPlayer = requiresPlayer; }
-        public String getTemplateId() { return templateId; }
-        public void setTemplateId(String templateId) { this.templateId = templateId; }
-        public String getDisplayName() { return displayName; }
-        public void setDisplayName(String displayName) { this.displayName = displayName; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-        public String getSourcePackId() { return sourcePackId; }
-        public void setSourcePackId(String sourcePackId) { this.sourcePackId = sourcePackId; }
-        public String getHint() { return hint; }
-        public void setHint(String hint) { this.hint = hint == null ? "" : hint; }
-        public List<String> getPreferredTopologies() { return preferredTopologies; }
-        public void setPreferredTopologies(List<String> preferredTopologies) {
-            this.preferredTopologies = preferredTopologies != null ? preferredTopologies : new ArrayList<>();
-        }
-        public List<String> getNarrativeHints() { return narrativeHints; }
-        public void setNarrativeHints(List<String> narrativeHints) {
-            this.narrativeHints = narrativeHints != null ? narrativeHints : new ArrayList<>();
-        }
-        public boolean isProgressionEnabled() { return progressionEnabled; }
-        public void setProgressionEnabled(boolean progressionEnabled) { this.progressionEnabled = progressionEnabled; }
-        public String getProgressionMechanicId() { return progressionMechanicId; }
-        public void setProgressionMechanicId(String progressionMechanicId) {
-            this.progressionMechanicId = progressionMechanicId == null ? "" : progressionMechanicId;
-        }
-        public String getProgressionKind() { return progressionKind; }
-        public void setProgressionKind(String progressionKind) {
-            this.progressionKind = progressionKind == null ? "" : progressionKind;
-        }
-        public String getProgressionLabel() { return progressionLabel; }
-        public void setProgressionLabel(String progressionLabel) {
-            this.progressionLabel = progressionLabel == null ? "" : progressionLabel;
-        }
-        public String getProgressionSingularLabel() { return progressionSingularLabel; }
-        public void setProgressionSingularLabel(String progressionSingularLabel) {
-            this.progressionSingularLabel = progressionSingularLabel == null ? "" : progressionSingularLabel;
-        }
-        public String getProgressionPluralLabel() { return progressionPluralLabel; }
-        public void setProgressionPluralLabel(String progressionPluralLabel) {
-            this.progressionPluralLabel = progressionPluralLabel == null ? "" : progressionPluralLabel;
-        }
-        public int getProgressionMaxActive() { return progressionMaxActive; }
-        public void setProgressionMaxActive(int progressionMaxActive) {
-            this.progressionMaxActive = Math.max(0, progressionMaxActive);
-        }
-        public String getQuestCode() { return questCode; }
-        public void setQuestCode(String questCode) { this.questCode = questCode == null ? "" : questCode; }
-        public String getQuestGiverProfession() { return questGiverProfession; }
-        public void setQuestGiverProfession(String questGiverProfession) {
-            this.questGiverProfession = questGiverProfession == null ? "" : questGiverProfession;
-        }
-        public List<String> getQuestPrerequisites() { return questPrerequisites; }
-        public void setQuestPrerequisites(List<String> questPrerequisites) {
-            this.questPrerequisites = questPrerequisites != null ? new ArrayList<>(questPrerequisites) : new ArrayList<>();
-        }
-        public boolean isQuestRepeatable() { return questRepeatable; }
-        public void setQuestRepeatable(boolean questRepeatable) { this.questRepeatable = questRepeatable; }
-        public long getQuestCooldownSeconds() { return questCooldownSeconds; }
-        public void setQuestCooldownSeconds(long questCooldownSeconds) {
-            this.questCooldownSeconds = Math.max(0L, questCooldownSeconds);
-        }
-        public Map<String, List<String>> getQuestDialogues() { return questDialogues; }
-        public void setQuestDialogues(Map<String, List<String>> questDialogues) {
-            this.questDialogues = new LinkedHashMap<>();
-            if (questDialogues == null) {
-                return;
-            }
-
-            for (Map.Entry<String, List<String>> entry : questDialogues.entrySet()) {
-                String key = normalizeQuestDialogueKey(entry.getKey());
-                List<String> lines = entry.getValue();
-                if (!key.isBlank() && lines != null && !lines.isEmpty()) {
-                    this.questDialogues.put(key, List.copyOf(lines));
-                }
-            }
-        }
-        public List<String> getQuestDialogueLines(String key) {
-            return questDialogues.getOrDefault(normalizeQuestDialogueKey(key), List.of());
-        }
-        public List<FeaturePackLoader.QuestStageDefinition> getQuestStages() { return questStages; }
-        public void setQuestStages(List<FeaturePackLoader.QuestStageDefinition> questStages) {
-            this.questStages = questStages != null ? new ArrayList<>(questStages) : new ArrayList<>();
-        }
-        public QuestScenarioContract getQuestContract() { return questContract; }
-        public void setQuestContract(QuestScenarioContract questContract) {
-            this.questContract = questContract != null ? questContract : QuestScenarioContract.defaultContract();
-        }
-        public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
-        public void setObjectives(List<FeaturePackLoader.QuestEntryDefinition> objectives) {
-            this.objectives = objectives != null ? new ArrayList<>(objectives) : new ArrayList<>();
-        }
-        public List<FeaturePackLoader.QuestEntryDefinition> getRewards() { return rewards; }
-        public void setRewards(List<FeaturePackLoader.QuestEntryDefinition> rewards) {
-            this.rewards = rewards != null ? new ArrayList<>(rewards) : new ArrayList<>();
-        }
-        public boolean hasQuestBriefing() {
-            return !questCode.isBlank() || !objectives.isEmpty() || !rewards.isEmpty();
-        }
-
-        private static String normalizeQuestDialogueKey(String key) {
-            return key == null ? "" : key.trim().toLowerCase(Locale.ROOT).replace('-', '_');
-        }
-
-        public List<ScenarioRoleRule> getNpcRoles() {
-            return roles.values().stream()
-                .filter(role -> !role.isPlayerRole())
-                .sorted(Comparator.comparing(ScenarioRoleRule::isOptional)
-                    .thenComparing(role -> !role.hasHardRequirements())
-                    .thenComparing(ScenarioRoleRule::getId))
-                .toList();
-        }
-
-        public List<ScenarioRoleRule> getPlayerRoles() {
-            return roles.values().stream()
-                .filter(ScenarioRoleRule::isPlayerRole)
-                .toList();
-        }
-    }
-
-    public static class ScenarioRoleRule {
-        private final String id;
-        private final String description;
-        private final boolean playerRole;
-        private final boolean optional;
-        private List<String> requiredProfessions;
-        private List<String> preferredProfessions;
-        private List<String> requiredTraits;
-        private List<String> preferredTraits;
-
-        public ScenarioRoleRule(String id, String description, boolean playerRole, boolean optional) {
-            this.id = id;
-            this.description = description;
-            this.playerRole = playerRole;
-            this.optional = optional;
-            this.requiredProfessions = new ArrayList<>();
-            this.preferredProfessions = new ArrayList<>();
-            this.requiredTraits = new ArrayList<>();
-            this.preferredTraits = new ArrayList<>();
-        }
-
-        public String getId() { return id; }
-        public String getDescription() { return description; }
-        public boolean isPlayerRole() { return playerRole; }
-        public boolean isOptional() { return optional; }
-        public List<String> getRequiredProfessions() { return requiredProfessions; }
-        public void setRequiredProfessions(List<String> requiredProfessions) {
-            this.requiredProfessions = requiredProfessions != null ? requiredProfessions : Collections.emptyList();
-        }
-        public List<String> getPreferredProfessions() { return preferredProfessions; }
-        public void setPreferredProfessions(List<String> preferredProfessions) {
-            this.preferredProfessions = preferredProfessions != null ? preferredProfessions : Collections.emptyList();
-        }
-        public List<String> getRequiredTraits() { return requiredTraits; }
-        public void setRequiredTraits(List<String> requiredTraits) {
-            this.requiredTraits = requiredTraits != null ? requiredTraits : Collections.emptyList();
-        }
-        public List<String> getPreferredTraits() { return preferredTraits; }
-        public void setPreferredTraits(List<String> preferredTraits) {
-            this.preferredTraits = preferredTraits != null ? preferredTraits : Collections.emptyList();
-        }
-        public boolean hasHardRequirements() {
-            return !requiredProfessions.isEmpty() || !requiredTraits.isEmpty();
-        }
-    }
-
-    public static class ActiveScenario {
-        private final UUID id;
-        private final ScenarioType type;
-        private final String templateId;
-        private final String displayName;
-        private final String hint;
-        private final String questCode;
-        private final String questGiverProfession;
-        private final List<FeaturePackLoader.QuestEntryDefinition> objectives;
-        private final List<FeaturePackLoader.QuestEntryDefinition> rewards;
-        private final Map<UUID, String> npcRoles;
-        private final Map<UUID, String> playerRoles;
-        private String currentPhase;
-        private final long startTime;
-
-        public ActiveScenario(UUID id, ScenarioTemplate template) {
-            this.id = id;
-            this.type = template.getType();
-            this.templateId = template.getTemplateId();
-            this.displayName = template.getDisplayName();
-            this.hint = template.getHint();
-            this.questCode = template.getQuestCode();
-            this.questGiverProfession = template.getQuestGiverProfession();
-            this.objectives = new ArrayList<>(template.getObjectives());
-            this.rewards = new ArrayList<>(template.getRewards());
-            this.npcRoles = new HashMap<>();
-            this.playerRoles = new HashMap<>();
-            this.startTime = System.currentTimeMillis();
-        }
-
-        public void assignNPCRole(UUID npcId, String role) {
-            npcRoles.put(npcId, role);
-        }
-
-        public void assignPlayerRole(UUID playerId, String role) {
-            playerRoles.put(playerId, role);
-        }
-
-        public boolean hasNPCRole(UUID npcId) {
-            return npcRoles.containsKey(npcId);
-        }
-
-        public UUID getId() { return id; }
-        public ScenarioType getType() { return type; }
-        public String getTemplateId() { return templateId; }
-        public String getDisplayName() { return displayName; }
-        public String getHint() { return hint; }
-        public String getQuestCode() { return questCode; }
-        public String getQuestGiverProfession() { return questGiverProfession; }
-        public List<FeaturePackLoader.QuestEntryDefinition> getObjectives() { return objectives; }
-        public List<FeaturePackLoader.QuestEntryDefinition> getRewards() { return rewards; }
-        public boolean hasQuestBriefing() {
-            return !questCode.isBlank() || !objectives.isEmpty() || !rewards.isEmpty();
-        }
-        public Map<UUID, String> getNpcRoles() { return npcRoles; }
-        public Map<UUID, String> getPlayerRoles() { return playerRoles; }
-        public String getCurrentPhase() { return currentPhase; }
-        public void setCurrentPhase(String currentPhase) { this.currentPhase = currentPhase; }
-        public long getStartTime() { return startTime; }
-    }
-
-    public record QuestGuiSnapshot(
-        boolean handled,
-        String playerName,
-        String filterLabel,
-        List<String> summaryLines,
-        List<QuestGuiEntry> currentEntries,
-        List<QuestGuiEntry> archivedEntries,
-        long totalMatchingArchived
-    ) {
-        public QuestGuiSnapshot {
-            playerName = playerName == null ? "" : playerName;
-            filterLabel = filterLabel == null ? "" : filterLabel;
-            summaryLines = List.copyOf(summaryLines != null ? summaryLines : List.of());
-            currentEntries = List.copyOf(currentEntries != null ? currentEntries : List.of());
-            archivedEntries = List.copyOf(archivedEntries != null ? archivedEntries : List.of());
-            totalMatchingArchived = Math.max(0L, totalMatchingArchived);
-        }
-
-        public static QuestGuiSnapshot empty() {
-            return new QuestGuiSnapshot(false, "", "", List.of(), List.of(), List.of(), 0L);
-        }
-
-        public List<QuestGuiEntry> allEntries() {
-            List<QuestGuiEntry> entries = new ArrayList<>(currentEntries);
-            entries.addAll(archivedEntries);
-            return List.copyOf(entries);
-        }
-    }
-
-    public record QuestGuiEntry(
-        String selector,
-        String templateId,
-        String questCode,
-        String title,
-        String statusDisplay,
-        String categoryDisplay,
-        String mechanicDisplay,
-        boolean tracked,
-        boolean current,
-        boolean active,
-        boolean offered,
-        boolean archived,
-        boolean missingTemplate,
-        String currentStageId,
-        String currentStageLabel,
-        long updatedAt,
-        String questGiverName,
-        List<String> statusLines,
-        List<QuestGuiObjective> objectives,
-        List<QuestGuiStage> stages,
-        List<String> rewardLines,
-        List<String> actionLines
-    ) {
-        public QuestGuiEntry {
-            selector = selector == null ? "" : selector;
-            templateId = templateId == null ? "" : templateId;
-            questCode = questCode == null ? "" : questCode;
-            title = title == null ? "" : title;
-            statusDisplay = statusDisplay == null ? "" : statusDisplay;
-            categoryDisplay = categoryDisplay == null ? "" : categoryDisplay;
-            mechanicDisplay = mechanicDisplay == null ? "" : mechanicDisplay;
-            currentStageId = currentStageId == null ? "" : currentStageId;
-            currentStageLabel = currentStageLabel == null ? "" : currentStageLabel;
-            questGiverName = questGiverName == null ? "" : questGiverName;
-            statusLines = List.copyOf(statusLines != null ? statusLines : List.of());
-            objectives = List.copyOf(objectives != null ? objectives : List.of());
-            stages = List.copyOf(stages != null ? stages : List.of());
-            rewardLines = List.copyOf(rewardLines != null ? rewardLines : List.of());
-            actionLines = List.copyOf(actionLines != null ? actionLines : List.of());
-        }
-    }
-
-    public record QuestGuiObjective(
-        String key,
-        String type,
-        String label,
-        String description,
-        String stageId,
-        String stageLabel,
-        String stateId,
-        String stateDisplay,
-        int currentAmount,
-        int requiredAmount,
-        boolean complete,
-        boolean active
-    ) {
-        public QuestGuiObjective(String key,
-                                 String type,
-                                 String label,
-                                 String description,
-                                 String stageId,
-                                 String stageLabel,
-                                 int currentAmount,
-                                 int requiredAmount,
-                                 boolean complete,
-                                 boolean active) {
-            this(
-                key,
-                type,
-                label,
-                description,
-                stageId,
-                stageLabel,
-                legacyObjectiveState(currentAmount, requiredAmount, complete, active).id(),
-                legacyObjectiveState(currentAmount, requiredAmount, complete, active).displayName(),
-                currentAmount,
-                requiredAmount,
-                complete,
-                active
-            );
-        }
-
-        public QuestGuiObjective {
-            key = key == null ? "" : key;
-            type = type == null ? "" : type;
-            label = label == null ? "" : label;
-            description = description == null ? "" : description;
-            stageId = stageId == null ? "" : stageId;
-            stageLabel = stageLabel == null ? "" : stageLabel;
-            stateId = stateId == null ? "" : stateId;
-            stateDisplay = stateDisplay == null ? "" : stateDisplay;
-            currentAmount = Math.max(0, currentAmount);
-            requiredAmount = Math.max(1, requiredAmount);
-        }
-
-        private static QuestObjectiveState legacyObjectiveState(int currentAmount,
-                                                                int requiredAmount,
-                                                                boolean complete,
-                                                                boolean active) {
-            if (complete || Math.max(0, currentAmount) >= Math.max(1, requiredAmount)) {
-                return QuestObjectiveState.COMPLETED;
-            }
-            if (!active) {
-                return QuestObjectiveState.PENDING;
-            }
-            if (currentAmount > 0) {
-                return QuestObjectiveState.IN_PROGRESS;
-            }
-            return QuestObjectiveState.STARTED;
-        }
-    }
-
-    public record QuestGuiStage(
-        String id,
-        String label,
-        String description,
-        String completionMode,
-        String nextStageId,
-        boolean active,
-        boolean complete,
-        List<String> objectiveIds
-    ) {
-        public QuestGuiStage {
-            id = id == null ? "" : id;
-            label = label == null ? "" : label;
-            description = description == null ? "" : description;
-            completionMode = completionMode == null ? "" : completionMode;
-            nextStageId = nextStageId == null ? "" : nextStageId;
-            objectiveIds = List.copyOf(objectiveIds != null ? objectiveIds : List.of());
-        }
-    }
-
-    public record QuestTrackingMarker(
-        String objectiveLabel,
-        String targetLabel,
-        String anchorType,
-        Location location,
-        String actionBarMessage
-    ) {
-        public QuestTrackingMarker {
-            objectiveLabel = objectiveLabel == null ? "" : objectiveLabel;
-            targetLabel = targetLabel == null ? "" : targetLabel;
-            anchorType = anchorType == null ? "" : anchorType;
-            location = location != null ? location.clone() : null;
-            actionBarMessage = actionBarMessage == null ? "" : actionBarMessage;
-        }
-
-        public boolean hasLocation() {
-            return location != null && location.getWorld() != null;
-        }
-    }
-
-    public static class QuestInteractionResult {
-        private final boolean handled;
-        private final boolean openConversation;
-        private final List<String> npcMessages;
-        private final List<String> systemMessages;
-
-        private QuestInteractionResult(boolean handled,
-                                       boolean openConversation,
-                                       List<String> npcMessages,
-                                       List<String> systemMessages) {
-            this.handled = handled;
-            this.openConversation = openConversation;
-            this.npcMessages = npcMessages != null ? List.copyOf(npcMessages) : List.of();
-            this.systemMessages = systemMessages != null ? List.copyOf(systemMessages) : List.of();
-        }
-
-        public static QuestInteractionResult notHandled() {
-            return new QuestInteractionResult(false, false, List.of(), List.of());
-        }
-
-        public static QuestInteractionResult handled(boolean openConversation,
-                                                     List<String> npcMessages,
-                                                     List<String> systemMessages) {
-            return new QuestInteractionResult(true, openConversation, npcMessages, systemMessages);
-        }
-
-        public boolean isHandled() { return handled; }
-        public boolean shouldOpenConversation() { return openConversation; }
-        public List<String> getNpcMessages() { return npcMessages; }
-        public List<String> getSystemMessages() { return systemMessages; }
-    }
 }

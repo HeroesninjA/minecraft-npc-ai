@@ -1,6 +1,6 @@
 package ro.ainpc.progression
 
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import java.util.Locale
 
 class ProgressionGuiEntry(
@@ -142,43 +142,43 @@ class ProgressionGuiEntry(
     companion object {
         @JvmStatic
         fun fromQuestGuiEntry(
-            entry: ScenarioEngine.QuestGuiEntry?,
+            entry: QuestGuiEntry?,
             definition: ProgressionDefinition?
         ): ProgressionGuiEntry {
             if (entry == null) {
                 return empty()
             }
             return ProgressionGuiEntry(
-                entry.selector(),
-                valueOrFallback(definition?.progressionId(), entry.selector()),
+                entry.selector,
+                valueOrFallback(definition?.progressionId(), entry.selector),
                 definition?.packId() ?: "",
                 definition?.mechanicId() ?: "",
                 definition?.kind() ?: "",
                 definition?.definitionId() ?: "",
-                entry.templateId(),
-                entry.questCode(),
-                entry.title(),
-                entry.statusDisplay(),
-                entry.categoryDisplay(),
-                entry.mechanicDisplay(),
-                definition?.label() ?: entry.mechanicDisplay(),
+                entry.templateId,
+                entry.questCode,
+                entry.title,
+                entry.statusDisplay,
+                entry.categoryDisplay,
+                entry.mechanicDisplay,
+                definition?.label() ?: entry.mechanicDisplay,
                 definition?.singularLabel() ?: "",
-                definition?.pluralLabel() ?: entry.mechanicDisplay(),
-                entry.tracked(),
-                entry.current(),
-                entry.active(),
-                entry.offered(),
-                entry.archived(),
-                entry.missingTemplate(),
-                entry.currentStageId(),
-                entry.currentStageLabel(),
-                entry.updatedAt(),
-                entry.questGiverName(),
-                entry.statusLines(),
-                entry.objectives().map { ProgressionObjectiveSnapshot.fromQuestGuiObjective(it) },
-                entry.stages().map { ProgressionStageSnapshot.fromQuestGuiStage(it) },
-                entry.rewardLines(),
-                entry.actionLines()
+                definition?.pluralLabel() ?: entry.mechanicDisplay,
+                entry.tracked,
+                entry.current,
+                entry.active,
+                entry.offered,
+                entry.archived,
+                entry.missingTemplate,
+                entry.currentStageId,
+                entry.currentStageLabel,
+                entry.updatedAt,
+                entry.questGiverName,
+                entry.statusLines,
+                entry.objectives.map { ProgressionObjectiveSnapshot.fromQuestGuiObjective(it) },
+                entry.stages.map { ProgressionStageSnapshot.fromQuestGuiStage(it) },
+                entry.rewardLines,
+                entry.actionLines
             )
         }
 

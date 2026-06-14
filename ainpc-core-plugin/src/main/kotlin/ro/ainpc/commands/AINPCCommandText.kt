@@ -34,7 +34,7 @@ import ro.ainpc.world.WorldPlace
 import ro.ainpc.world.WorldRegion
 import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.engine.FeaturePackLoader
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.time.Instant
@@ -2234,7 +2234,7 @@ fun describeCurrentRow(rs: ResultSet): String {
 
 fun isQuestAuditCandidate(scenario: FeaturePackLoader.ScenarioDefinition?): Boolean =
     scenario != null &&
-        (scenario.baseType == ScenarioEngine.ScenarioType.QUEST ||
+        (scenario.baseType == ScenarioType.QUEST ||
             (scenario.isProgressionEnabled &&
                 (scenario.questCode.isNotBlank() ||
                     scenario.objectives.isNotEmpty() ||

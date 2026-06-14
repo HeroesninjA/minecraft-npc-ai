@@ -6,7 +6,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.npc.AINPC
-import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioTemplate
 import java.util.Collections
 import java.util.Locale
 
@@ -120,10 +120,10 @@ private fun normalizeLegacyObjectiveToken(value: String): String =
 
 // --- Feature checks ---
 
-fun hasObjectiveType(template: ScenarioEngine.ScenarioTemplate?, type: String?): Boolean =
+fun hasObjectiveType(template: ScenarioTemplate?, type: String?): Boolean =
     template?.objectives?.any { matchesObjectiveType(it, type) } == true
 
-fun hasInventoryObjective(template: ScenarioEngine.ScenarioTemplate?): Boolean =
+fun hasInventoryObjective(template: ScenarioTemplate?): Boolean =
     template?.objectives?.any { usesInventoryProgress(it) } == true
 
 // --- Reference matching ---
@@ -169,7 +169,7 @@ fun resolveQuestObjectiveState(
 // --- Stage filtering ---
 
 fun shouldShowObjectiveForCurrentStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     objective: QuestEntryDefinition?,
 ): Boolean {
@@ -226,14 +226,14 @@ fun removeMaterial(inventory: PlayerInventory?, material: Material?, amount: Int
 
 fun buildObjectiveProgressSnapshot(
     inventory: PlayerInventory?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     existingProgress: Map<String, Int>?,
 ): Map<String, Int> =
     buildObjectiveProgressSnapshot(inventory, template, existingProgress, "")
 
 fun buildObjectiveProgressSnapshot(
     inventory: PlayerInventory?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     existingProgress: Map<String, Int>?,
     currentPhase: String,
 ): Map<String, Int> {
@@ -260,7 +260,7 @@ fun buildObjectiveProgressSnapshot(
 }
 
 fun buildCompletedObjectiveProgress(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     existingProgress: Map<String, Int>?,
 ): Map<String, Int> {
     val completedProgress = LinkedHashMap(

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.CoreNeutralityStaticAuditTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-14T14:18:42.588Z" hostname="DESKTOP-FJTPE3F" time="0.533">
+  <properties/>
+  <testcase name="mainRuntimeDoesNotReintroduceThematicProfessionTerms()" classname="ro.ainpc.CoreNeutralityStaticAuditTest" time="0.533"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -10,7 +10,7 @@ import java.util.UUID
 lateinit var enginePlugin: AINPCPlugin
 
 fun buildQuestTrackingLines(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     player: Player?,
 ): List<String> {
@@ -30,7 +30,7 @@ fun buildQuestTrackingLines(
 }
 
 fun resolveNextQuestTrackingStep(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     player: Player?,
 ): QuestTrackingStep? {

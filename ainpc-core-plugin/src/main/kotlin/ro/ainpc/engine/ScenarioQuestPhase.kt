@@ -4,7 +4,7 @@ import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.engine.FeaturePackLoader.QuestStageDefinition
 
 fun resolveQuestPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     status: QuestStatus?,
     existingProgress: PlayerQuestProgress?,
 ): String {
@@ -14,7 +14,7 @@ fun resolveQuestPhase(
 }
 
 fun resolveQuestPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     status: QuestStatus?,
     existingProgress: PlayerQuestProgress?,
     objectiveProgress: Map<String, Int>,
@@ -24,7 +24,7 @@ fun resolveQuestPhase(
 }
 
 fun resolveQuestPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     status: QuestStatus?,
     existingPhase: String?,
     objectiveProgress: Map<String, Int>,
@@ -45,7 +45,7 @@ fun resolveQuestPhase(
 }
 
 fun resolveActiveQuestPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     existingPhase: String,
     objectiveProgress: Map<String, Int>,
 ): String {
@@ -71,7 +71,7 @@ fun resolveActiveQuestPhase(
 }
 
 fun resolveActiveStagedQuestPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     existingPhase: String,
     objectiveProgress: Map<String, Int>,
 ): String {
@@ -111,7 +111,7 @@ fun resolveActiveStagedQuestPhase(
     return currentStage
 }
 
-fun hasStagedObjectives(template: ScenarioEngine.ScenarioTemplate?): Boolean {
+fun hasStagedObjectives(template: ScenarioTemplate?): Boolean {
     if (template == null) return false
 
     for (objective in template.objectives) {
@@ -131,7 +131,7 @@ fun getObjectiveStage(objective: QuestEntryDefinition?): String {
     )
 }
 
-fun getOrderedObjectiveStages(template: ScenarioEngine.ScenarioTemplate?): List<String> {
+fun getOrderedObjectiveStages(template: ScenarioTemplate?): List<String> {
     if (template == null || template.objectives.isEmpty()) return emptyList()
 
     val stages = mutableListOf<String>()
@@ -153,12 +153,12 @@ fun getOrderedObjectiveStages(template: ScenarioEngine.ScenarioTemplate?): List<
     return stages.toList()
 }
 
-fun getLastObjectiveStage(template: ScenarioEngine.ScenarioTemplate?): String {
+fun getLastObjectiveStage(template: ScenarioTemplate?): String {
     val stages = getOrderedObjectiveStages(template)
     return if (stages.isEmpty()) "" else stages.last()
 }
 
-fun findMatchingObjectiveStage(template: ScenarioEngine.ScenarioTemplate?, phase: String?): String {
+fun findMatchingObjectiveStage(template: ScenarioTemplate?, phase: String?): String {
     if (phase.isNullOrBlank()) return ""
 
     for (stage in getOrderedObjectiveStages(template)) {
@@ -168,7 +168,7 @@ fun findMatchingObjectiveStage(template: ScenarioEngine.ScenarioTemplate?, phase
 }
 
 fun findFirstIncompleteObjectiveStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     objectiveProgress: Map<String, Int>,
 ): String {
     for (stage in getOrderedObjectiveStages(template)) {
@@ -178,7 +178,7 @@ fun findFirstIncompleteObjectiveStage(
 }
 
 fun findNextIncompleteObjectiveStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     currentStage: String,
     objectiveProgress: Map<String, Int>,
 ): String {
@@ -190,7 +190,7 @@ fun findNextIncompleteObjectiveStage(
 }
 
 fun findExplicitNextObjectiveStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     currentStage: String,
     objectiveProgress: Map<String, Int>,
 ): String {
@@ -212,7 +212,7 @@ fun findExplicitNextObjectiveStage(
 }
 
 fun findNextIncompleteObjectiveStageAfter(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     stages: List<String>,
     currentStage: String?,
     objectiveProgress: Map<String, Int>,
@@ -229,7 +229,7 @@ fun findNextIncompleteObjectiveStageAfter(
 }
 
 fun areObjectivesSatisfiedForStage(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     stage: String,
     objectiveProgress: Map<String, Int>,
 ): Boolean {
@@ -262,7 +262,7 @@ fun areObjectivesSatisfiedForStage(
 }
 
 fun isObjectiveActiveForProgress(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     objective: QuestEntryDefinition?,
 ): Boolean {
@@ -279,7 +279,7 @@ fun isObjectiveActiveForProgress(
 }
 
 fun isObjectiveActiveForPhase(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     phase: String?,
     objective: QuestEntryDefinition?,
 ): Boolean {
@@ -298,17 +298,17 @@ fun isObjectiveActiveForPhase(
     return !objectiveListedInAnyStage(template, objective)
 }
 
-fun getFirstObjectiveStage(template: ScenarioEngine.ScenarioTemplate?): String {
+fun getFirstObjectiveStage(template: ScenarioTemplate?): String {
     val stages = getOrderedObjectiveStages(template)
     return if (stages.isEmpty()) "" else stages[0]
 }
 
-fun hasExplicitStageObjectiveIds(template: ScenarioEngine.ScenarioTemplate?): Boolean {
+fun hasExplicitStageObjectiveIds(template: ScenarioTemplate?): Boolean {
     if (template == null || template.questStages.isEmpty()) return false
     return template.questStages.any { it != null && it.objectiveIds.isNotEmpty() }
 }
 
-fun findQuestStage(template: ScenarioEngine.ScenarioTemplate?, stageId: String?): QuestStageDefinition? {
+fun findQuestStage(template: ScenarioTemplate?, stageId: String?): QuestStageDefinition? {
     if (template == null || stageId.isNullOrBlank()) return null
 
     for (stage in template.questStages) {
@@ -317,13 +317,13 @@ fun findQuestStage(template: ScenarioEngine.ScenarioTemplate?, stageId: String?)
     return null
 }
 
-fun stageCompletionMode(template: ScenarioEngine.ScenarioTemplate?, stageId: String): String {
+fun stageCompletionMode(template: ScenarioTemplate?, stageId: String): String {
     val stage = findQuestStage(template, stageId)
     val completionMode = normalizeStageCompletionMode(stage?.completionMode)
     return if (completionMode.isBlank()) "all_objectives" else completionMode
 }
 
-fun canonicalQuestPhase(template: ScenarioEngine.ScenarioTemplate?, phase: String?): String {
+fun canonicalQuestPhase(template: ScenarioTemplate?, phase: String?): String {
     if (phase.isNullOrBlank()) return ""
 
     for (templatePhase in template?.phases ?: emptyList()) {
@@ -332,18 +332,18 @@ fun canonicalQuestPhase(template: ScenarioEngine.ScenarioTemplate?, phase: Strin
     return phase.trim()
 }
 
-fun getFirstQuestPhase(template: ScenarioEngine.ScenarioTemplate?): String =
+fun getFirstQuestPhase(template: ScenarioTemplate?): String =
     if (template != null && template.phases.isNotEmpty()) template.phases[0] else ""
 
-fun getDefaultActiveQuestPhase(template: ScenarioEngine.ScenarioTemplate?): String {
+fun getDefaultActiveQuestPhase(template: ScenarioTemplate?): String {
     if (template == null || template.phases.isEmpty()) return ""
     return if (template.phases.size > 1) template.phases[1] else template.phases[0]
 }
 
-fun getLastQuestPhase(template: ScenarioEngine.ScenarioTemplate?): String =
+fun getLastQuestPhase(template: ScenarioTemplate?): String =
     if (template != null && template.phases.isNotEmpty()) template.phases.last() else ""
 
-fun getQuestWorkPhase(template: ScenarioEngine.ScenarioTemplate?): String {
+fun getQuestWorkPhase(template: ScenarioTemplate?): String {
     if (template == null || template.phases.isEmpty()) return ""
 
     val semanticPhase = findQuestPhaseByKeywords(
@@ -366,7 +366,7 @@ fun getQuestWorkPhase(template: ScenarioEngine.ScenarioTemplate?): String {
     return getDefaultActiveQuestPhase(template)
 }
 
-fun getReadyToTurnInQuestPhase(template: ScenarioEngine.ScenarioTemplate?): String {
+fun getReadyToTurnInQuestPhase(template: ScenarioTemplate?): String {
     if (template == null || template.phases.isEmpty()) return ""
 
     val semanticPhase = findQuestPhaseByKeywords(
@@ -384,7 +384,7 @@ fun getReadyToTurnInQuestPhase(template: ScenarioEngine.ScenarioTemplate?): Stri
     return lastPhase
 }
 
-fun findQuestPhaseByKeywords(template: ScenarioEngine.ScenarioTemplate?, vararg keywords: String): String {
+fun findQuestPhaseByKeywords(template: ScenarioTemplate?, vararg keywords: String): String {
     if (template == null || keywords.isEmpty()) return ""
 
     for (phase in template.phases) {
@@ -425,7 +425,7 @@ fun isQuestCompletionPhase(phase: String?): Boolean {
 }
 
 fun areObjectivesSatisfied(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     objectiveProgress: Map<String, Int>,
 ): Boolean {
     if (template == null || template.objectives.isEmpty()) return true

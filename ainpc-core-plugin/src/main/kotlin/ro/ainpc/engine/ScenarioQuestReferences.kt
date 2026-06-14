@@ -9,7 +9,7 @@ fun isTrackedQuestSelector(questReference: String?): Boolean =
 fun matchesQuestReference(
     progress: PlayerQuestProgress?,
     questReference: String?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
 ): Boolean {
     val normalizedReference = normalizeReference(questReference)
     if (progress == null || normalizedReference.isBlank()) {
@@ -22,7 +22,7 @@ fun matchesQuestReference(
 
 fun buildProgressionReferenceCandidates(
     progress: PlayerQuestProgress?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
 ): List<String> {
     if (progress == null) {
         return emptyList()

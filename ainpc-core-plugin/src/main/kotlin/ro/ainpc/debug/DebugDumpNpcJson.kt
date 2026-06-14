@@ -10,7 +10,7 @@ object DebugDumpNpcJson {
     fun buildNpcsJson(plugin: AINPCPlugin): JsonArray {
         val npcs = JsonArray()
         val manager = runCatching { plugin.npcManager }.getOrNull() ?: return npcs
-        manager.allNPCs
+        manager.getAllNPCs()
             .sortedBy { it.databaseId }
             .forEach { npcs.add(toNpcJson(it)) }
         return npcs

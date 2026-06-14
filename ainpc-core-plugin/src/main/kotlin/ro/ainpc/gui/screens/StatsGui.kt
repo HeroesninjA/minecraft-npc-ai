@@ -50,7 +50,7 @@ class StatsGui : GuiScreen {
                 Material.VILLAGER_SPAWN_EGG,
                 "&aNPC-uri",
                 listOf(
-                    "&7Total incarcat: &f${context.plugin().npcManager.npcCount}",
+                    "&7Total incarcat: &f${context.plugin().npcManager.getNPCCount()}",
                     "&7In apropiere: &f${nearbyNpcs.size}",
                     "&7Raza snapshot: &f24 block-uri"
                 )

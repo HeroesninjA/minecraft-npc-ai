@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.commands.PluginCommandDescriptorTest" tests="5" skipped="0" failures="3" errors="0" timestamp="2026-06-14T14:18:44.149Z" hostname="DESKTOP-FJTPE3F" time="0.016">
+  <properties/>
+  <testcase name="infoCommandSupportsExplicitNearestSelector()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.001">
+    <failure message="org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+	at ro.ainpc.commands.PluginCommandDescriptorTest.infoCommandSupportsExplicitNearestSelector(PluginCommandDescriptorTest.kt:67)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+</failure>
+  </testcase>
+  <testcase name="pluginYmlDeclaresProgressionAndContractCommandFacades()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.006"/>
+  <testcase name="mainHelpMentionsAllDemoCommandFamilies()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.001">
+    <failure message="org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+	at ro.ainpc.commands.PluginCommandDescriptorTest.mainHelpMentionsAllDemoCommandFamilies(PluginCommandDescriptorTest.kt:37)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+</failure>
+  </testcase>
+  <testcase name="npcInteractionGuiKeepsNearestRoutineCommandExplicit()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.005"/>
+  <testcase name="routineCommandsKeepNearestStatusExplicit()" classname="ro.ainpc.commands.PluginCommandDescriptorTest" time="0.002">
+    <failure message="org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: AINPCCommand.java should exist ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+	at ro.ainpc.commands.PluginCommandDescriptorTest.routineCommandsKeepNearestStatusExplicit(PluginCommandDescriptorTest.kt:79)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

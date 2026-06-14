@@ -1,6 +1,6 @@
 package ro.ainpc.engine
 
-import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioTemplate
 
 fun shouldAutoAcceptOnOffer(template: ScenarioTemplate?): Boolean =
     template?.questContract?.autoAcceptOnOffer() == true

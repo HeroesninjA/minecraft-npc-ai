@@ -55,7 +55,7 @@ class ScenarioEngineTextTest {
     fun resolveQuestTitleUsesQuestCodePrefixWhenAvailable() {
         assertEquals("", resolveQuestTitle(null))
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
+        val template = ScenarioTemplate(ScenarioType.QUEST)
         template.displayName = "Ajutor rapid"
         assertEquals("Ajutor rapid", resolveQuestTitle(template))
 

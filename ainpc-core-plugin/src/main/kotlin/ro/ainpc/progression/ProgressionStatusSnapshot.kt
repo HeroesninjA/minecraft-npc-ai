@@ -1,6 +1,6 @@
 package ro.ainpc.progression
 
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 
 class ProgressionStatusSnapshot(
     private val handledValue: Boolean,
@@ -56,11 +56,11 @@ class ProgressionStatusSnapshot(
     fun currentStageLabel(): String = currentStageLabelValue
     fun systemMessages(): List<String> = systemMessagesValue
 
-    fun toQuestInteractionResult(): ScenarioEngine.QuestInteractionResult {
+    fun toQuestInteractionResult(): QuestInteractionResult {
         if (!handledValue) {
-            return ScenarioEngine.QuestInteractionResult.notHandled()
+            return QuestInteractionResult.notHandled()
         }
-        return ScenarioEngine.QuestInteractionResult.handled(false, emptyList(), systemMessagesValue)
+        return QuestInteractionResult.handled(false, emptyList(), systemMessagesValue)
     }
 
     companion object {
@@ -68,15 +68,15 @@ class ProgressionStatusSnapshot(
         fun fromResult(
             playerName: String?,
             selector: ProgressionSelector?,
-            result: ScenarioEngine.QuestInteractionResult?
+            result: QuestInteractionResult?
         ): ProgressionStatusSnapshot = fromResult(playerName, selector, result, null, null)
 
         @JvmStatic
         fun fromResult(
             playerName: String?,
             selector: ProgressionSelector?,
-            result: ScenarioEngine.QuestInteractionResult?,
-            entry: ScenarioEngine.QuestGuiEntry?,
+            result: QuestInteractionResult?,
+            entry: QuestGuiEntry?,
             definition: ProgressionDefinition?
         ): ProgressionStatusSnapshot {
             if (result == null || !result.isHandled) {
@@ -108,20 +108,20 @@ class ProgressionStatusSnapshot(
                 playerName,
                 selector?.raw() ?: "",
                 selector?.commandSelector() ?: "",
-                valueOrFallback(definition?.progressionId(), entry?.selector() ?: ""),
-                entry?.templateId() ?: "",
-                entry?.questCode() ?: "",
-                entry?.title() ?: "",
-                entry?.statusDisplay() ?: "",
-                entry?.mechanicDisplay() ?: "",
-                entry?.tracked() == true,
-                entry?.current() == true,
-                entry?.active() == true,
-                entry?.offered() == true,
-                entry?.archived() == true,
-                entry?.missingTemplate() == true,
-                entry?.currentStageId() ?: "",
-                entry?.currentStageLabel() ?: "",
+                valueOrFallback(definition?.progressionId(), entry?.selector ?: ""),
+                entry?.templateId ?: "",
+                entry?.questCode ?: "",
+                entry?.title ?: "",
+                entry?.statusDisplay ?: "",
+                entry?.mechanicDisplay ?: "",
+                entry?.tracked == true,
+                entry?.current == true,
+                entry?.active == true,
+                entry?.offered == true,
+                entry?.archived == true,
+                entry?.missingTemplate == true,
+                entry?.currentStageId ?: "",
+                entry?.currentStageLabel ?: "",
                 result.systemMessages
             )
         }

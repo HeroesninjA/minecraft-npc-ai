@@ -14,11 +14,11 @@ fun formatQuestTrackingTarget(target: QuestTrackingTarget?, player: Player?): St
     return "&b$label &7($type) ${formatQuestTrackingPosition(target, player)}"
 }
 
-fun buildQuestTrackingMarker(objectiveLabel: String, target: QuestTrackingTarget?, player: Player?): ScenarioEngine.QuestTrackingMarker? {
+fun buildQuestTrackingMarker(objectiveLabel: String, target: QuestTrackingTarget?, player: Player?): QuestTrackingMarker? {
     val location = toQuestTrackingLocation(target) ?: return null
     val label = if (!target!!.label().isNullOrBlank()) target.label()
     else formatQuestAnchorType(target.anchorType())
-    return ScenarioEngine.QuestTrackingMarker(
+    return QuestTrackingMarker(
         objectiveLabel,
         label,
         formatQuestAnchorType(target.anchorType()),

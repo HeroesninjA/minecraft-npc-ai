@@ -274,7 +274,7 @@ private fun resolveStoryContextNpc(sender: CommandSender, npcSelector: String?, 
     if (npcSelector.isNullOrBlank()) return null
 
     if ("nearest".equals(npcSelector, ignoreCase = true)) {
-        val nearestNpc = findNearestQuestNpc(targetPlayer)
+        val nearestNpc = storyFindNearestQuestNpc(targetPlayer)
         if (nearestNpc == null) {
             ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu exista NPC-uri active in apropierea jucatorului.")
         }
@@ -288,11 +288,11 @@ private fun resolveStoryContextNpc(sender: CommandSender, npcSelector: String?, 
     return npc
 }
 
-private fun findNearestQuestNpc(targetPlayer: Player): AINPC? {
-    return findNearestQuestNpc(targetPlayer, "")
+private fun storyFindNearestQuestNpc(targetPlayer: Player): AINPC? {
+    return storyFindNearestQuestNpc(targetPlayer, "")
 }
 
-private fun findNearestQuestNpc(targetPlayer: Player, progressionKind: String): AINPC? {
+private fun storyFindNearestQuestNpc(targetPlayer: Player, progressionKind: String): AINPC? {
     if (targetPlayer == null) return null
 
     return ainpcCommandStoryPlugin.npcManager.getActiveNPCsNear(targetPlayer.location, 16.0)

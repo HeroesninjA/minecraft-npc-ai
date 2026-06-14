@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.QuestAnchorResolver
 import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioType
 import ro.ainpc.platform.PlatformProfile
 import ro.ainpc.platform.RuntimeMode
 import java.util.logging.Logger
@@ -53,8 +55,8 @@ class QuestAnchorResolverTest {
                             role: "inspect"
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition("visit_place", "tag:blacksmith", 1, ""),
                 FeaturePackLoader.QuestEntryDefinition("inspect_node", "node:satul_central:fierarie:anvil", 1, "")
@@ -92,8 +94,8 @@ class QuestAnchorResolverTest {
                       tags: [blacksmith]
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition(
                     "visit_place",
@@ -131,8 +133,8 @@ class QuestAnchorResolverTest {
                   tags: [demo, medieval]
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition(
                     "visit_region",
@@ -185,8 +187,8 @@ class QuestAnchorResolverTest {
                             semantic: "quest_board"
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.TRADE_DEAL)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.TRADE_DEAL)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition(
                     "visit_place",
@@ -241,8 +243,8 @@ class QuestAnchorResolverTest {
                         profession: "farmer"
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.BOUNTY)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.BOUNTY)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition(
                     "visit_place",
@@ -296,8 +298,8 @@ class QuestAnchorResolverTest {
                             semantic: "ritual_circle"
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.RITUAL)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.RITUAL)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition(
                     "visit_place",
@@ -343,8 +345,8 @@ class QuestAnchorResolverTest {
                   max: { x: 100, y: 90, z: 100 }
             """), profile())
 
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
-        template.setObjectives(
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.objectives = (
             listOf(
                 FeaturePackLoader.QuestEntryDefinition("visit_place", "tag:blacksmith", 1, "")
             )

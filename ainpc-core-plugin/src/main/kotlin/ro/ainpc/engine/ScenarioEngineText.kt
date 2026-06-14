@@ -41,7 +41,7 @@ fun capitalizeProgressionLabel(label: String?): String {
     }
 }
 
-fun resolveQuestTitle(template: ScenarioEngine.ScenarioTemplate?): String {
+fun resolveQuestTitle(template: ScenarioTemplate?): String {
     if (template == null) {
         return ""
     }

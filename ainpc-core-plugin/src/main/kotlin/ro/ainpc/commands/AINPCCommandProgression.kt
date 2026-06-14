@@ -8,7 +8,10 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.progression.StoredProgression
 import ro.ainpc.progression.StoredProgressionSummary
+
 import java.sql.SQLException
+import java.util.Locale
+import java.util.function.BiFunction
 import java.util.function.Function
 
 lateinit var ainpcCommandProgressionPlugin: AINPCPlugin
@@ -187,6 +190,65 @@ private fun clampProgressionStoredLimit(sender: CommandSender, limit: Int): Int 
         ainpcCommandProgressionPlugin.messageUtils.send(sender, "&eLimit maxim pentru afisare: &f$PROGRESSION_STORED_MAX_LIMIT&e.")
     }
     return maxOf(1, minOf(limit, PROGRESSION_STORED_MAX_LIMIT))
+}
+
+fun handleProgression(
+    sender: CommandSender,
+    args: Array<String>,
+    handleQuest: (CommandSender, Array<String>) -> Boolean,
+    findOnlinePlayer: (String) -> Player?,
+): Boolean {
+    if (args.size < 2 || isHelpMode(args[1])) {
+        sendProgressionUsage(sender)
+        return true
+    }
+    val mode = args[1].lowercase(Locale.ROOT)
+    return when (mode) {
+        "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
+        "stored", "store", "state", "states", "progressions" -> handleProgressionStored(sender, args, "", findOnlinePlayer)
+        else -> handleQuest(sender, routeSubcommandToQuest(args))
+    }
+}
+
+fun handleProgressionAlias(
+    sender: CommandSender,
+    args: Array<String>,
+    alias: ProgressionAliasConfig,
+    handleQuest: (CommandSender, Array<String>) -> Boolean,
+    handleNearestQuest: (CommandSender, Array<String>, String, String) -> Boolean,
+    handleAcceptQuest: (CommandSender, Array<String>, String, String) -> Boolean,
+    handleDeclineQuest: (CommandSender, Array<String>, String, String) -> Boolean,
+    findOnlinePlayer: (String) -> Player?,
+): Boolean {
+    if (args.size > 1 && isHelpMode(args[1])) {
+        sendProgressionAliasUsage(sender, alias)
+        return true
+    }
+    if (args.size > 1) {
+        val mode = args[1].lowercase(Locale.ROOT)
+        if (mode in setOf("definitions", "definition", "defs")) {
+            return handleProgressionDefinitions(sender,
+                if (args.size == 2) arrayOf("progression", "definitions", alias.kind()) else args)
+        }
+        if (mode in setOf("stored", "store", "state", "states", "progressions")) {
+            return handleProgressionStored(sender, args, alias.kind(), findOnlinePlayer)
+        }
+        if (mode == "nearest") {
+            return handleNearestQuest(sender, args, alias.kind(), alias.displayLabel())
+        }
+        if (isQuestAcceptMode(mode)) {
+            return handleAcceptQuest(sender, args, alias.kind(),
+                "&cUtilizare: /ainpc ${alias.command()} accept [numeNpc|nearest] [jucator]")
+        }
+        if (isQuestDeclineMode(mode)) {
+            return handleDeclineQuest(sender, args, alias.kind(),
+                "&cUtilizare: /ainpc ${alias.command()} decline [numeNpc|nearest] [jucator]")
+        }
+    }
+    val selectorMapper = BiFunction<String, String, String> { selector, selectorKind ->
+        progressionAliasSelector(selector, selectorKind, ainpcCommandProgressionPlugin.progressionService, findOnlinePlayer)
+    }
+    return handleQuest(sender, routeProgressionAlias(args, alias.kind(), selectorMapper))
 }
 
 private const val PROGRESSION_STORED_DEFAULT_LIMIT = 12
