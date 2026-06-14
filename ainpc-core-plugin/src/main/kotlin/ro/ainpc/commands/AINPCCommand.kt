@@ -583,7 +583,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun resolveFlexibleQuestDecisionNpc(sender: CommandSender, npcSelector: String?, targetPlayer: Player, action: String, progressionKind: String): AINPC? {
         if (!npcSelector.isNullOrBlank()) return resolveQuestNpcSelector(sender, npcSelector, targetPlayer, action, progressionKind)
-        var npc = plugin.scenarioEngine.resolveActiveQuestNpc(targetPlayer, progressionKind)
+        var npc: AINPC? = plugin.scenarioEngine.resolveActiveQuestNpc(targetPlayer, progressionKind)
         if (npc != null) { questDebug("Quest  a folosit NPC-ul questului curent: " + npc.name); return npc }
         npc = findNearestQuestNpc(targetPlayer, progressionKind)
         if (npc != null) { questDebug("Quest  fara selector a ales cel mai apropiat NPC: " + npc.name); return npc }
