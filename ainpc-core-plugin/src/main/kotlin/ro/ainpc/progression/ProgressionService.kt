@@ -175,11 +175,11 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         return scenarioEngine().getQuestTrack(player, commandSelector(selector))
     }
 
-    fun startTracking(player: Player, selector: String): QuestTrackingMarker {
+    fun startTracking(player: Player, selector: String): QuestTrackingMarker? {
         return scenarioEngine().startQuestTracking(player, commandSelector(selector))
     }
 
-    fun getTrackingMarker(player: Player, selector: String): QuestTrackingMarker {
+    fun getTrackingMarker(player: Player, selector: String): QuestTrackingMarker? {
         return scenarioEngine().getQuestTrackingMarker(player, commandSelector(selector))
     }
 

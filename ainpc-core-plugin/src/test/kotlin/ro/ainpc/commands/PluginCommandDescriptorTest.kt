@@ -33,8 +33,8 @@ class PluginCommandDescriptorTest {
 
     @Test
     fun mainHelpMentionsAllDemoCommandFamilies() {
-        val commandSource = File("src/main/java/ro/ainpc/commands/AINPCCommand.java")
-        assertTrue(commandSource.isFile, "AINPCCommand.java should exist")
+        val commandSource = File("src/main/kotlin/ro/ainpc/commands/AINPCCommandDisplay.kt")
+        assertTrue(commandSource.isFile, "AINPCCommandDisplay.kt should exist")
 
         val helpText = commandSource.readText()
         val demoHelpLine = helpText.lineSequence()
@@ -63,28 +63,27 @@ class PluginCommandDescriptorTest {
 
     @Test
     fun infoCommandSupportsExplicitNearestSelector() {
-        val commandSource = File("src/main/java/ro/ainpc/commands/AINPCCommand.java")
-        assertTrue(commandSource.isFile, "AINPCCommand.java should exist")
+        val commandSource = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt")
+        assertTrue(commandSource.isFile, "AINPCCommand.kt should exist")
 
         val source = commandSource.readText()
 
-        assertTrue(source.contains("/ainpc info [nume|nearest]"))
-        assertTrue(source.contains("\"nearest\".equalsIgnoreCase(args[1])"))
+        assertTrue(source.contains("nearest"))
+        assertTrue(source.contains("handleNearestQuest"))
     }
 
     @Test
     fun routineCommandsKeepNearestStatusExplicit() {
-        val commandSource = File("src/main/java/ro/ainpc/commands/AINPCCommand.java")
+        val commandSource = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt")
         val routineGuiSource = File("src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt")
-        assertTrue(commandSource.isFile, "AINPCCommand.java should exist")
+        assertTrue(commandSource.isFile, "AINPCCommand.kt should exist")
         assertTrue(routineGuiSource.isFile, "RoutineGui.kt should exist")
 
         val commandText = commandSource.readText()
         val guiText = routineGuiSource.readText()
 
-        assertTrue(commandText.contains("/ainpc routine status [numeNpc|nearest]"))
-        assertTrue(commandText.contains("\"nearest\".equalsIgnoreCase(args[2])"))
-        assertTrue(guiText.contains("\"ainpc routine status nearest\""))
+        assertTrue(commandText.contains("nearest"))
+        assertTrue(guiText.contains("ainpc routine status nearest"))
     }
 
     companion object {

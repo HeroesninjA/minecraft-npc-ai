@@ -49,6 +49,7 @@ for line in r.stdout.splitlines():
     name = m.group(5)
     ps_raw = m.group(6)
     if name == 'ScenarioEngine': continue
+    if name in ('getStoryContextService', 'setStoryContextService'): continue  # property handles these
     if 'lambda' in name: continue
     
     params = []

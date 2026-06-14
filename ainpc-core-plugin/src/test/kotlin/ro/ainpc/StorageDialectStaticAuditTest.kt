@@ -31,9 +31,8 @@ class StorageDialectStaticAuditTest {
         assertEquals(
             mapOf(
                 "ON_CONFLICT" to mapOf(
-                    "java/ro/ainpc/engine/ScenarioEngine.java" to 1,
-                    "java/ro/ainpc/managers/NPCManager.java" to 1,
                     "kotlin/ro/ainpc/ai/DialogManager.kt" to 1,
+                    "kotlin/ro/ainpc/managers/NPCManager.kt" to 1,
                     "kotlin/ro/ainpc/progression/ProgressionRepository.kt" to 1,
                     "kotlin/ro/ainpc/spawn/HouseholdPersistenceServiceState.kt" to 4,
                     "kotlin/ro/ainpc/spawn/SpawnBatchTracker.kt" to 2,
@@ -41,8 +40,8 @@ class StorageDialectStaticAuditTest {
                     "kotlin/ro/ainpc/world/NpcWorldBindingService.kt" to 1
                 ),
                 "INSERT_OR" to mapOf(
-                    "java/ro/ainpc/managers/NPCManager.java" to 3,
-                    "kotlin/ro/ainpc/database/DatabaseManager.kt" to 2
+                    "kotlin/ro/ainpc/database/DatabaseManager.kt" to 2,
+                    "kotlin/ro/ainpc/managers/NPCManagerDB.kt" to 3
                 ),
                 "SQLITE_DATETIME" to mapOf(
                     "kotlin/ro/ainpc/managers/MemoryManager.kt" to 3
