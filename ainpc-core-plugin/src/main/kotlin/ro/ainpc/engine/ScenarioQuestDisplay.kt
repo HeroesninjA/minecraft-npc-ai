@@ -3,7 +3,7 @@ package ro.ainpc.engine
 import org.bukkit.entity.Player
 
 fun buildQuestNpcMessages(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     context: QuestDialogueContext?,
     fallback: List<String>,
@@ -13,7 +13,7 @@ fun buildQuestNpcMessages(
 }
 
 fun resolveQuestDialogueMessages(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     context: QuestDialogueContext?,
 ): List<String> {
@@ -33,7 +33,7 @@ fun resolveQuestDialogueMessages(
 
 fun resolveStatusDialogueContext(
     player: Player?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
 ): QuestDialogueContext {
     if (progress == null) return QuestDialogueContext.OFFER
@@ -46,7 +46,7 @@ fun resolveStatusDialogueContext(
 }
 
 fun buildObjectiveProgressLines(
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
     player: Player?,
 ): List<String> {
@@ -64,7 +64,7 @@ fun buildObjectiveProgressLines(
 
 fun buildQuestProgressDetailLines(
     player: Player?,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
 ): List<String> {
     if (template == null || progress == null || template.objectives.isEmpty()) return listOf()

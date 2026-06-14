@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.ScenarioType
 
 class ProgressionDefinitionTest {
     @Test
@@ -14,7 +15,7 @@ class ProgressionDefinitionTest {
             "C01",
             "Hartie pentru negustor",
             "Contract de livrare",
-            ScenarioEngine.ScenarioType.TRADE_DEAL
+            ScenarioType.TRADE_DEAL
         )
         scenario.questCode = "C01"
         scenario.questCategory = "side"
@@ -45,7 +46,7 @@ class ProgressionDefinitionTest {
             "C02",
             "Avizierul Pietei",
             "Contract de verificare",
-            ScenarioEngine.ScenarioType.TRADE_DEAL
+            ScenarioType.TRADE_DEAL
         )
         scenario.questCode = "C02"
         scenario.questCategory = "side"
@@ -68,7 +69,7 @@ class ProgressionDefinitionTest {
             "D01",
             "Rondul Strajerului",
             "Sarcina de patrula",
-            ScenarioEngine.ScenarioType.DUTY
+            ScenarioType.DUTY
         )
         scenario.questCode = "D01"
         scenario.questCategory = "repeatable"
@@ -96,7 +97,7 @@ class ProgressionDefinitionTest {
             "B01",
             "Recompensa Drumului Vechi",
             "Bounty local",
-            ScenarioEngine.ScenarioType.BOUNTY
+            ScenarioType.BOUNTY
         )
         scenario.questCode = "B01"
         scenario.questCategory = "repeatable"
@@ -124,7 +125,7 @@ class ProgressionDefinitionTest {
             "E01",
             "Alarma Fantanii din Piata",
             "Eveniment local",
-            ScenarioEngine.ScenarioType.WORLD_EVENT
+            ScenarioType.WORLD_EVENT
         )
         scenario.questCode = "E01"
         scenario.questCategory = "repeatable"
@@ -152,7 +153,7 @@ class ProgressionDefinitionTest {
             "T01",
             "Indrumarea Avizierului",
             "Tutorial de onboarding",
-            ScenarioEngine.ScenarioType.TUTORIAL
+            ScenarioType.TUTORIAL
         )
         scenario.questCode = "T01"
         scenario.questCategory = "side"
@@ -178,7 +179,7 @@ class ProgressionDefinitionTest {
             "R01",
             "Luminile Vechiului Altar",
             "Ritual local",
-            ScenarioEngine.ScenarioType.RITUAL
+            ScenarioType.RITUAL
         )
         scenario.questCode = "R01"
         scenario.questCategory = "repeatable"

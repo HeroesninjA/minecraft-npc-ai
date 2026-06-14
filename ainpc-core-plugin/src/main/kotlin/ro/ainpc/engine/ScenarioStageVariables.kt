@@ -3,7 +3,7 @@ package ro.ainpc.engine
 import java.util.LinkedHashMap
 
 fun seedQuestStageVariables(
-    template: ScenarioEngine.ScenarioTemplate,
+    template: ScenarioTemplate,
     status: QuestStatus?,
     currentPhase: String,
     questVariables: Map<String, String>?,
@@ -25,7 +25,7 @@ fun seedQuestStageVariables(
 }
 
 fun buildQuestStageTransitionVariables(
-    template: ScenarioEngine.ScenarioTemplate,
+    template: ScenarioTemplate,
     progress: PlayerQuestProgress?,
     updatedPhase: String,
     objectiveProgress: Map<String, Int>,

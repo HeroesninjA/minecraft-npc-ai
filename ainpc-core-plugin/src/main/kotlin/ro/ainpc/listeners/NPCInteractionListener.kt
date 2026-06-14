@@ -8,7 +8,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.NPCRelationship
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import ro.ainpc.npc.AINPC
 import java.util.concurrent.CompletableFuture
 
@@ -56,7 +56,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         if (questFeatureEnabled()) {
             plugin.scenarioEngine.recordNpcConversation(player, npc)
 
-            val questInteraction: ScenarioEngine.QuestInteractionResult = plugin.scenarioEngine.handleQuestInteraction(player, npc)
+            val questInteraction: QuestInteractionResult = plugin.scenarioEngine.handleQuestInteraction(player, npc)
             if (questInteraction.isHandled) {
                 if (questInteraction.shouldOpenConversation()) {
                     openOrRefreshConversation(player, npc)

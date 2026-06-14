@@ -1,7 +1,7 @@
 package ro.ainpc.engine
 
 import ro.ainpc.engine.FeaturePackLoader.ProgressionMechanicDefinition
-import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
+import ro.ainpc.engine.ScenarioTemplate
 
 fun resolveProgressionMechanicDefinition(
     loader: FeaturePackLoader?,

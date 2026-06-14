@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import ro.ainpc.engine.ScenarioEngine.ScenarioTemplate
-import ro.ainpc.engine.ScenarioEngine.ScenarioType
 
 class QuestLogFilterTest {
     @Test
@@ -260,7 +258,7 @@ class QuestLogFilterTest {
     @Test
     fun questLogActionSelectorUsesProgressionReferenceWhenTemplateHasMechanic() {
         val template = ScenarioTemplate(ScenarioType.QUEST)
-        template.setQuestCode("test_quest")
+        template.questCode = ("test_quest")
         val result = questLogActionSelector(template, null)
         assertTrue(result.contains("test_quest"))
         assertTrue(result.contains("quest"))
@@ -269,8 +267,8 @@ class QuestLogFilterTest {
     @Test
     fun questLogActionSelectorReturnsQuestCodeDirectlyWhenMechanicBlank() {
         val template = ScenarioTemplate(ScenarioType.QUEST)
-        template.setProgressionMechanicId("")
-        template.setQuestCode("direct_code")
+        template.progressionMechanicId = ("")
+        template.questCode = ("direct_code")
         assertEquals("direct_code", questLogActionSelector(template, null))
     }
 

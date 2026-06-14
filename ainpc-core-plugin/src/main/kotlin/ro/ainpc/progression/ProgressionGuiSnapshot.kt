@@ -1,6 +1,6 @@
 package ro.ainpc.progression
 
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import java.util.function.Function
 
 class ProgressionGuiSnapshot(
@@ -40,28 +40,28 @@ class ProgressionGuiSnapshot(
 
         @JvmStatic
         fun fromQuestGuiSnapshot(
-            snapshot: ScenarioEngine.QuestGuiSnapshot?,
-            definitionResolver: Function<ScenarioEngine.QuestGuiEntry, ProgressionDefinition?>?
+            snapshot: QuestGuiSnapshot?,
+            definitionResolver: Function<QuestGuiEntry, ProgressionDefinition?>?
         ): ProgressionGuiSnapshot {
-            if (snapshot == null || !snapshot.handled()) {
+            if (snapshot == null || !snapshot.handled) {
                 return empty()
             }
 
-            val safeResolver: Function<ScenarioEngine.QuestGuiEntry, ProgressionDefinition?> =
-                definitionResolver ?: Function { _: ScenarioEngine.QuestGuiEntry -> null }
+            val safeResolver: Function<QuestGuiEntry, ProgressionDefinition?> =
+                definitionResolver ?: Function { _: QuestGuiEntry -> null }
 
             return ProgressionGuiSnapshot(
                 true,
-                snapshot.playerName(),
-                snapshot.filterLabel(),
-                snapshot.summaryLines(),
-                snapshot.currentEntries().map { entry ->
+                snapshot.playerName,
+                snapshot.filterLabel,
+                snapshot.summaryLines,
+                snapshot.currentEntries.map { entry ->
                     ProgressionGuiEntry.fromQuestGuiEntry(entry, safeResolver.apply(entry))
                 },
-                snapshot.archivedEntries().map { entry ->
+                snapshot.archivedEntries.map { entry ->
                     ProgressionGuiEntry.fromQuestGuiEntry(entry, safeResolver.apply(entry))
                 },
-                snapshot.totalMatchingArchived()
+                snapshot.totalMatchingArchived
             )
         }
 

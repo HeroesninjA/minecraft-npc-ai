@@ -105,8 +105,8 @@ class ScenarioQuestReferencesTest {
         sourcePackId: String,
         mechanicId: String,
         progressionKind: String,
-    ): ScenarioEngine.ScenarioTemplate =
-        ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST).apply {
+    ): ScenarioTemplate =
+        ScenarioTemplate(ScenarioType.QUEST).apply {
             this.templateId = templateId
             this.questCode = questCode
             this.sourcePackId = sourcePackId

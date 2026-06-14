@@ -9,7 +9,7 @@ fun buildQuestCompletionKey(playerId: java.util.UUID?, templateId: String?): Str
 
 fun buildStoryActionData(
     configured: Map<String, String>,
-    template: ScenarioEngine.ScenarioTemplate?,
+    template: ScenarioTemplate?,
     player: Player?,
     npc: AINPC?,
 ): Map<String, String> {
@@ -31,7 +31,7 @@ fun buildStoryActionData(
     return data
 }
 
-fun storyActorId(player: Player?, npc: AINPC?, template: ScenarioEngine.ScenarioTemplate?): String {
+fun storyActorId(player: Player?, npc: AINPC?, template: ScenarioTemplate?): String {
     if (player != null) return player.uniqueId.toString()
     if (npc != null && npc.uuid != null) return npc.uuid.toString()
     return template?.templateId ?: "quest"
@@ -69,7 +69,7 @@ fun readTextOrEmpty(rs: ResultSet, column: String): String {
     return value ?: ""
 }
 
-fun remainingQuestCooldownMillis(template: ScenarioEngine.ScenarioTemplate?, completedProgress: PlayerQuestProgress?): Long {
+fun remainingQuestCooldownMillis(template: ScenarioTemplate?, completedProgress: PlayerQuestProgress?): Long {
     if (template == null || completedProgress == null || template.questCooldownSeconds <= 0) return 0L
     val completedAt = if (completedProgress.completedAt() > 0) completedProgress.completedAt() else completedProgress.updatedAt()
     val elapsedMillis = kotlin.math.max(0L, System.currentTimeMillis() - completedAt)

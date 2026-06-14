@@ -39,8 +39,8 @@ class ScenarioStageProgressTest {
 
     @Test
     fun objectiveListedInAnyStageScansTemplateStages() {
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
-        template.setQuestStages(listOf(stage("talk.guard"), stage("collect.logs")))
+        val template = ScenarioTemplate(ScenarioType.QUEST)
+        template.questStages = (listOf(stage("talk.guard"), stage("collect.logs")))
 
         assertTrue(objectiveListedInAnyStage(template, objective(itemId = "OAK_LOG", entryId = "collect.logs")))
         assertFalse(objectiveListedInAnyStage(template, objective(itemId = "DIAMOND", entryId = "collect.diamond")))

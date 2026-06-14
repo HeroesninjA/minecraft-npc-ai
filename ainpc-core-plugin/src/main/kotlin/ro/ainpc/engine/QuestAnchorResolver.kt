@@ -16,7 +16,7 @@ class QuestAnchorResolver(
     private val npcs: Collection<AINPC> = npcs?.toList() ?: listOf()
 
     fun resolve(
-        template: ScenarioEngine.ScenarioTemplate?,
+        template: ScenarioTemplate?,
         playerLocation: Location?,
         questGiver: AINPC?
     ): ResolvedQuestAnchors {

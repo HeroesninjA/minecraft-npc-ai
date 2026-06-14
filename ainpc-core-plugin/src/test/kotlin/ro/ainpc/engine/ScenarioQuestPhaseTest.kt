@@ -34,25 +34,25 @@ class ScenarioQuestPhaseTest {
     @Test
     fun resolveQuestPhaseActiveWithObjectivesNotYetSatisfiedReturnsWorkPhase() {
         val template = questTemplate("intro", "gather", "return")
-        template.setObjectives(listOf(objective("item", "LOG", 3)))
+        template.objectives = (listOf(objective("item", "LOG", 3)))
         assertEquals("gather", resolveQuestPhase(template, QuestStatus.ACTIVE, "", mapOf<String, Int>()))
     }
 
     @Test
     fun resolveQuestPhaseActiveWithCompletedObjectivesReturnsReadyPhase() {
         val template = questTemplate("intro", "gather", "return")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
+        template.objectives = (listOf(objective("item", "LOG", 1)))
         assertEquals("return", resolveQuestPhase(template, QuestStatus.ACTIVE, "", mapOf("item:log:0" to 1)))
     }
 
     @Test
     fun resolveQuestPhaseActiveWithStagesAdvancesCorrectly() {
         val template = questTemplate("intro", "stage1", "stage2", "return")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "stage1"),
             objectiveWithStage("item", "IRON", 1, "stage2"),
         ))
-        template.setQuestStages(listOf(
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("stage1", "", "all_objectives", listOf("stage1_obj"), emptyMap()),
             FeaturePackLoader.QuestStageDefinition("stage2", "", "all_objectives", listOf("stage2_obj"), emptyMap()),
         ))
@@ -81,19 +81,19 @@ class ScenarioQuestPhaseTest {
     @Test
     fun hasStagedObjectivesDetectsStageMetadata() {
         val template = questTemplate("intro", "stage1")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
+        template.objectives = (listOf(objective("item", "LOG", 1)))
         assertFalse(hasStagedObjectives(template))
         assertFalse(hasStagedObjectives(null))
 
-        template.setObjectives(listOf(objectiveWithStage("item", "LOG", 1, "stage1")))
+        template.objectives = (listOf(objectiveWithStage("item", "LOG", 1, "stage1")))
         assertTrue(hasStagedObjectives(template))
     }
 
     @Test
     fun hasStagedObjectivesDetectsExplicitStageIds() {
         val template = questTemplate("intro", "stage1")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
-        template.setQuestStages(listOf(
+        template.objectives = (listOf(objective("item", "LOG", 1)))
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("stage1", "", "all_objectives", listOf("obj1"), emptyMap()),
         ))
         assertTrue(hasStagedObjectives(template))
@@ -116,7 +116,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun getOrderedObjectiveStagesReturnsUniqueStages() {
         val template = questTemplate("intro", "s1", "s2", "s3")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "s1"),
             objectiveWithStage("item", "IRON", 1, "s2"),
             objectiveWithStage("item", "GOLD", 1, "s2"),
@@ -131,7 +131,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun findMatchingObjectiveStageMatchesByPhasesMatch() {
         val template = questTemplate("intro", "stage_1", "stage_2")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "stage_1"),
             objectiveWithStage("item", "IRON", 1, "stage_2"),
         ))
@@ -144,7 +144,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun findFirstIncompleteObjectiveStageReturnsFirstUnfinished() {
         val template = questTemplate("intro", "s1", "s2")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "s1"),
             objectiveWithStage("item", "IRON", 1, "s2"),
         ))
@@ -157,8 +157,8 @@ class ScenarioQuestPhaseTest {
     @Test
     fun areObjectivesSatisfiedForStageWithAllObjectivesMode() {
         val template = questTemplate("intro", "s1")
-        template.setObjectives(listOf(objectiveWithStage("item", "WOOD", 2, "s1")))
-        template.setQuestStages(listOf(
+        template.objectives = (listOf(objectiveWithStage("item", "WOOD", 2, "s1")))
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("s1", "", "all_objectives", listOf("obj1"), emptyMap()),
         ))
 
@@ -169,11 +169,11 @@ class ScenarioQuestPhaseTest {
     @Test
     fun areObjectivesSatisfiedForStageWithAnyObjectiveMode() {
         val template = questTemplate("intro", "s1")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 3, "s1"),
             objectiveWithStage("item", "STONE", 5, "s1"),
         ))
-        template.setQuestStages(listOf(
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("s1", "", "any_objective", listOf("obj1"), emptyMap()),
         ))
 
@@ -184,7 +184,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun isObjectiveActiveForPhaseWithStagedObjectives() {
         val template = questTemplate("intro", "s1", "s2")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "s1"),
             objectiveWithStage("item", "IRON", 1, "s2"),
         ))
@@ -291,7 +291,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun areObjectivesSatisfiedChecksAll() {
         val template = questTemplate("intro", "gather")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             FeaturePackLoader.QuestEntryDefinition("item", "LOG", 3, ""),
             FeaturePackLoader.QuestEntryDefinition("item", "STONE", 5, ""),
         ))
@@ -314,7 +314,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun resolveQuestPhaseWithPlayerQuestProgress() {
         val template = questTemplate("intro", "gather", "return")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
+        template.objectives = (listOf(objective("item", "LOG", 1)))
 
         val progress = PlayerQuestProgress("test", "", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("item:log:0" to 1), emptyMap())
         assertEquals("return", resolveQuestPhase(template, progress.status(), progress))
@@ -323,7 +323,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun getFirstObjectiveStageReturnsFirstStage() {
         val template = questTemplate("intro", "s1", "s2")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "s1"),
             objectiveWithStage("item", "IRON", 1, "s2"),
         ))
@@ -334,7 +334,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun getLastObjectiveStageReturnsLast() {
         val template = questTemplate("intro", "s1", "s2")
-        template.setObjectives(listOf(
+        template.objectives = (listOf(
             objectiveWithStage("item", "WOOD", 1, "s1"),
             objectiveWithStage("item", "IRON", 1, "s2"),
         ))
@@ -345,8 +345,8 @@ class ScenarioQuestPhaseTest {
     fun findQuestStageMatchesById() {
         val stage = FeaturePackLoader.QuestStageDefinition("stage_1", "desc", "all_objectives", listOf("obj1"), emptyMap())
         val template = questTemplate("intro")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
-        template.setQuestStages(listOf(stage))
+        template.objectives = (listOf(objective("item", "LOG", 1)))
+        template.questStages = (listOf(stage))
 
         assertEquals(stage, findQuestStage(template, "stage_1"))
         assertEquals(stage, findQuestStage(template, "Stage 1"))
@@ -357,7 +357,7 @@ class ScenarioQuestPhaseTest {
     @Test
     fun stageCompletionModeReadsFromStage() {
         val template = questTemplate("intro", "s1")
-        template.setQuestStages(listOf(
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("s1", "", "any_objective", listOf("obj1"), emptyMap()),
         ))
 
@@ -370,9 +370,9 @@ class ScenarioQuestPhaseTest {
     fun hasExplicitStageObjectiveIdsDetectsPopulatedStages() {
         assertFalse(hasExplicitStageObjectiveIds(null))
         val template = questTemplate("intro")
-        template.setObjectives(listOf(objective("item", "LOG", 1)))
+        template.objectives = (listOf(objective("item", "LOG", 1)))
         assertFalse(hasExplicitStageObjectiveIds(template))
-        template.setQuestStages(listOf(
+        template.questStages = (listOf(
             FeaturePackLoader.QuestStageDefinition("s1", "", "all_objectives", listOf("obj1"), emptyMap()),
         ))
         assertTrue(hasExplicitStageObjectiveIds(template))
@@ -381,19 +381,19 @@ class ScenarioQuestPhaseTest {
     @Test
     fun resolveQuestPhaseActiveChoosesWorkPhaseWhenObjectivesNotSatisfied() {
         val template = questTemplate("intro", "journey", "return")
-        template.setObjectives(listOf(objective("item", "GOLD", 1)))
+        template.objectives = (listOf(objective("item", "GOLD", 1)))
         assertEquals("journey", resolveQuestPhase(template, QuestStatus.ACTIVE, "", mapOf<String, Int>()))
     }
 
     @Test
     fun resolveQuestPhaseActiveSwitchesToReadyWhenAllSatisfied() {
         val template = questTemplate("intro", "hunt", "report")
-        template.setObjectives(listOf(objective("item", "BONE", 1)))
+        template.objectives = (listOf(objective("item", "BONE", 1)))
         assertEquals("report", resolveQuestPhase(template, QuestStatus.ACTIVE, "hunt", mapOf("item:bone:0" to 1)))
     }
 
-    private fun questTemplate(vararg phases: String): ScenarioEngine.ScenarioTemplate {
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
+    private fun questTemplate(vararg phases: String): ScenarioTemplate {
+        val template = ScenarioTemplate(ScenarioType.QUEST)
         template.phases.addAll(phases)
         return template
     }

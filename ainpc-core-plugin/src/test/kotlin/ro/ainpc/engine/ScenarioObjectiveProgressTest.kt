@@ -83,7 +83,7 @@ class ScenarioObjectiveProgressTest {
     @Test
     fun hasObjectiveTypeReturnsTrueWhenMatchingTypeExists() {
         val template = questTemplate("phase1")
-        template.setObjectives(listOf(objective(type = "FETCH"), objective(type = "talk")))
+        template.objectives = (listOf(objective(type = "FETCH"), objective(type = "talk")))
         assertTrue(hasObjectiveType(template, "collect_item"))
         assertFalse(hasObjectiveType(template, "kill_mob"))
         assertFalse(hasObjectiveType(null, "collect_item"))
@@ -92,10 +92,10 @@ class ScenarioObjectiveProgressTest {
     @Test
     fun hasInventoryObjectiveDetectsInventoryUsingObjectives() {
         val template = questTemplate("phase1")
-        template.setObjectives(listOf(objective(type = "FETCH"), objective(type = "talk")))
+        template.objectives = (listOf(objective(type = "FETCH"), objective(type = "talk")))
         assertTrue(hasInventoryObjective(template))
         val talkOnly = questTemplate("phase1")
-        talkOnly.setObjectives(listOf(objective(type = "talk")))
+        talkOnly.objectives = (listOf(objective(type = "talk")))
         assertFalse(hasInventoryObjective(talkOnly))
         assertFalse(hasInventoryObjective(null))
     }
@@ -164,14 +164,14 @@ class ScenarioObjectiveProgressTest {
     @Test
     fun shouldShowObjectiveForCurrentStageReturnsTrueForNonStagedTemplate() {
         val template = questTemplate("phase1")
-        template.setObjectives(listOf(objective()))
+        template.objectives = (listOf(objective()))
         assertTrue(shouldShowObjectiveForCurrentStage(template, null, objective()))
     }
 
     @Test
     fun shouldShowObjectiveForCurrentStageReturnsTrueWhenProgressNull() {
         val template = questTemplate("phase1", "phase2")
-        template.setObjectives(listOf(objective()))
+        template.objectives = (listOf(objective()))
         assertTrue(shouldShowObjectiveForCurrentStage(template, null, objective()))
     }
 
@@ -231,7 +231,7 @@ class ScenarioObjectiveProgressTest {
     @Test
     fun buildObjectiveProgressSnapshotDelegatesToFourParamOverload() {
         val template = questTemplate()
-        template.setObjectives(listOf(objective(type = "collect", itemId = "log", amount = 5)))
+        template.objectives = (listOf(objective(type = "collect", itemId = "log", amount = 5)))
         val result = buildObjectiveProgressSnapshot(null, template, null)
         val expected = buildObjectiveProgressSnapshot(null, template, null, "")
         assertEquals(expected, result)
@@ -350,7 +350,7 @@ class ScenarioObjectiveProgressTest {
     fun inspectQuestObjectivesReportsMissingForObjectiveWithProgressZero() {
         val objective = objective(type = "collect", itemId = "log", amount = 3)
         val template = questTemplate()
-        template.objectives.add(objective)
+        template.objectives = template.objectives + objective
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
         val result = inspectQuestObjectives(null, template, progress, null, false)
         assertFalse(result.complete())
@@ -361,7 +361,7 @@ class ScenarioObjectiveProgressTest {
     fun inspectQuestObjectivesReturnsCompleteWhenProgressMatchesAmount() {
         val objective = objective(type = "collect", itemId = "log", amount = 3)
         val template = questTemplate()
-        template.objectives.add(objective)
+        template.objectives = template.objectives + objective
         val progress = PlayerQuestProgress("t1", "q1", QuestStatus.ACTIVE, 0L, 0L, 0L, "", mapOf("collect:log:0" to 3), emptyMap())
         val result = inspectQuestObjectives(null, template, progress, null, false)
         assertTrue(result.complete())
@@ -431,8 +431,8 @@ class ScenarioObjectiveProgressTest {
             emptyMap(),
         )
 
-    private fun questTemplate(vararg phases: String): ScenarioEngine.ScenarioTemplate {
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
+    private fun questTemplate(vararg phases: String): ScenarioTemplate {
+        val template = ScenarioTemplate(ScenarioType.QUEST)
         template.phases.addAll(phases)
         return template
     }

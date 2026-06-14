@@ -3,7 +3,7 @@ package ro.ainpc.progression
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 import java.sql.SQLException
 import java.util.Comparator
 import java.util.LinkedHashSet
@@ -18,11 +18,11 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         this::getDefinitions
     )
 
-    fun getLog(player: Player, filter: String, adminView: Boolean): ScenarioEngine.QuestInteractionResult {
+    fun getLog(player: Player, filter: String, adminView: Boolean): QuestInteractionResult {
         return scenarioEngine().getQuestLog(player, filter, adminView)
     }
 
-    fun getGuiSnapshot(player: Player, filter: String, adminView: Boolean): ScenarioEngine.QuestGuiSnapshot {
+    fun getGuiSnapshot(player: Player, filter: String, adminView: Boolean): QuestGuiSnapshot {
         return scenarioEngine().getQuestGuiSnapshot(player, filter, adminView)
     }
 
@@ -123,22 +123,22 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         repository.saveAnchorBinding(binding)
     }
 
-    fun getStatus(player: Player, selector: String): ScenarioEngine.QuestInteractionResult {
+    fun getStatus(player: Player, selector: String): QuestInteractionResult {
         return getStatusSnapshot(player, selector).toQuestInteractionResult()
     }
 
-    fun getDebug(player: Player, selector: String): ScenarioEngine.QuestInteractionResult {
+    fun getDebug(player: Player, selector: String): QuestInteractionResult {
         return scenarioEngine().getQuestDebug(player, commandSelector(selector))
     }
 
-    fun getProgress(player: Player, selector: String): ScenarioEngine.QuestInteractionResult {
+    fun getProgress(player: Player, selector: String): QuestInteractionResult {
         return getProgressSnapshot(player, selector).toQuestInteractionResult()
     }
 
     fun getStatusSnapshot(player: Player?, selector: String): ProgressionStatusSnapshot {
         val progressionSelector = parseSelector(selector)
         val result = if (player == null) {
-            ScenarioEngine.QuestInteractionResult.notHandled()
+            QuestInteractionResult.notHandled()
         } else {
             scenarioEngine().getQuestStatus(player, progressionSelector.commandSelector())
         }
@@ -156,7 +156,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     fun getProgressSnapshot(player: Player?, selector: String): ProgressionProgressSnapshot {
         val progressionSelector = parseSelector(selector)
         val result = if (player == null) {
-            ScenarioEngine.QuestInteractionResult.notHandled()
+            QuestInteractionResult.notHandled()
         } else {
             scenarioEngine().getQuestProgress(player, progressionSelector.commandSelector())
         }
@@ -171,25 +171,25 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         )
     }
 
-    fun getTrack(player: Player, selector: String): ScenarioEngine.QuestInteractionResult {
+    fun getTrack(player: Player, selector: String): QuestInteractionResult {
         return scenarioEngine().getQuestTrack(player, commandSelector(selector))
     }
 
-    fun startTracking(player: Player, selector: String): ScenarioEngine.QuestTrackingMarker {
+    fun startTracking(player: Player, selector: String): QuestTrackingMarker {
         return scenarioEngine().startQuestTracking(player, commandSelector(selector))
     }
 
-    fun getTrackingMarker(player: Player, selector: String): ScenarioEngine.QuestTrackingMarker {
+    fun getTrackingMarker(player: Player, selector: String): QuestTrackingMarker {
         return scenarioEngine().getQuestTrackingMarker(player, commandSelector(selector))
     }
 
     fun stopTracking(player: Player): Boolean = scenarioEngine().stopQuestTracking(player)
 
-    fun applyTrackingMarker(player: Player, trackingMarker: ScenarioEngine.QuestTrackingMarker): Boolean {
+    fun applyTrackingMarker(player: Player, trackingMarker: QuestTrackingMarker): Boolean {
         return scenarioEngine().applyQuestTrackingMarker(player, trackingMarker)
     }
 
-    fun abandon(player: Player, selector: String): ScenarioEngine.QuestInteractionResult {
+    fun abandon(player: Player, selector: String): QuestInteractionResult {
         return scenarioEngine().abandonQuest(player, commandSelector(selector))
     }
 
@@ -209,23 +209,23 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     private fun scenarioEngine(): ScenarioEngine = plugin.scenarioEngine
 
-    private fun findEntry(player: Player?, selector: ProgressionSelector?): ScenarioEngine.QuestGuiEntry? {
+    private fun findEntry(player: Player?, selector: ProgressionSelector?): QuestGuiEntry? {
         if (player == null) {
             return null
         }
 
         val snapshot = scenarioEngine().getQuestGuiSnapshot(player, "all", true)
-        if (snapshot == null || !snapshot.handled()) {
+        if (snapshot == null || !snapshot.handled) {
             return null
         }
 
         val entries = snapshot.allEntries()
         if (selector == null || selector.isEmpty()) {
             return entries.stream()
-                .filter(ScenarioEngine.QuestGuiEntry::tracked)
+                .filter(QuestGuiEntry::tracked)
                 .findFirst()
-                .or { entries.stream().filter(ScenarioEngine.QuestGuiEntry::current).findFirst() }
-                .or { entries.stream().filter(ScenarioEngine.QuestGuiEntry::active).findFirst() }
+                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
+                .or { entries.stream().filter(QuestGuiEntry::active).findFirst() }
                 .orElse(null)
         }
 
@@ -233,14 +233,14 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             val raw = selector.raw().lowercase(Locale.ROOT)
             if (raw == "current" || raw == "curent") {
                 return entries.stream()
-                    .filter(ScenarioEngine.QuestGuiEntry::current)
+                    .filter(QuestGuiEntry::current)
                     .findFirst()
                     .orElse(null)
             }
             return entries.stream()
-                .filter(ScenarioEngine.QuestGuiEntry::tracked)
+                .filter(QuestGuiEntry::tracked)
                 .findFirst()
-                .or { entries.stream().filter(ScenarioEngine.QuestGuiEntry::current).findFirst() }
+                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
                 .orElse(null)
         }
 
@@ -250,7 +250,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             .orElse(null)
     }
 
-    private fun entryMatchesSelector(entry: ScenarioEngine.QuestGuiEntry?, selector: ProgressionSelector?): Boolean {
+    private fun entryMatchesSelector(entry: QuestGuiEntry?, selector: ProgressionSelector?): Boolean {
         if (entry == null || selector == null || selector.commandSelector().isBlank()) {
             return false
         }
@@ -261,11 +261,11 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             .anyMatch { candidate -> normalized == candidate }
     }
 
-    private fun entrySelectorCandidates(entry: ScenarioEngine.QuestGuiEntry): Set<String> {
+    private fun entrySelectorCandidates(entry: QuestGuiEntry): Set<String> {
         val candidates = LinkedHashSet<String>()
-        addCandidate(candidates, entry.selector())
-        addCandidate(candidates, entry.templateId())
-        addCandidate(candidates, entry.questCode())
+        addCandidate(candidates, entry.selector)
+        addCandidate(candidates, entry.templateId)
+        addCandidate(candidates, entry.questCode)
 
         val definition = findDefinitionForEntry(entry)
         if (definition != null) {
@@ -284,13 +284,13 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         return candidates
     }
 
-    private fun findDefinitionForEntry(entry: ScenarioEngine.QuestGuiEntry?): ProgressionDefinition? {
+    private fun findDefinitionForEntry(entry: QuestGuiEntry?): ProgressionDefinition? {
         if (entry == null) {
             return null
         }
 
         val byTemplate = getDefinitions().stream()
-            .filter { definition -> equalsIgnoreCase(definition.templateId(), entry.templateId()) }
+            .filter { definition -> equalsIgnoreCase(definition.templateId(), entry.templateId) }
             .findFirst()
         if (byTemplate.isPresent) {
             return byTemplate.get()
@@ -298,7 +298,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
         return getDefinitions().stream()
             .filter { definition -> definition.code().isNotBlank() }
-            .filter { definition -> equalsIgnoreCase(definition.code(), entry.questCode()) }
+            .filter { definition -> equalsIgnoreCase(definition.code(), entry.questCode) }
             .findFirst()
             .orElse(null)
     }

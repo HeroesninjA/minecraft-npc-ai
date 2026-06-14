@@ -29,20 +29,20 @@ fun shouldUseSimpleQuestForAllNpcs(): Boolean {
     return getQuestSettings().getBoolean("simple_for_all_npcs", true)
 }
 
-fun buildSimpleQuestTemplate(npc: AINPC?): ScenarioEngine.ScenarioTemplate? {
+fun buildSimpleQuestTemplate(npc: AINPC?): ScenarioTemplate? {
     if (npc == null) return null
     val profession = resolveQuestProfession(npc)
     val questProfile = resolveSimpleQuestProfile(npc, profession)
     val npcIdentifier = if (npc.databaseId > 0) npc.databaseId.toString() else npc.uuid.toString()
-    val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
+    val template = ScenarioTemplate(ScenarioType.QUEST)
     template.templateId = "simple_npc_quest:$npcIdentifier"
     template.displayName = questProfile.title()
     template.description = questProfile.objectivePrompt() + " si iti dau " + formatQuestAmount(questProfile.rewardAmount(), questProfile.rewardMaterial()) + "."
     template.hint = questProfile.hint()
-    template.questGiverProfession = profession?.id ?: npc.occupation
-    template.setRequiresPlayer(true)
+    template.questGiverProfession = profession?.id ?: npc.occupation ?: ""
+    template.requiresPlayer = true
     template.minimumNpcCount = 1
-    template.objectives = listOf(
+    template.objectives = mutableListOf(
         FeaturePackLoader.QuestEntryDefinition(
             "collect_item",
             questProfile.objectiveMaterial().name,
@@ -50,7 +50,7 @@ fun buildSimpleQuestTemplate(npc: AINPC?): ScenarioEngine.ScenarioTemplate? {
             questProfile.objectivePrompt() + ".",
         ),
     )
-    template.rewards = listOf(
+    template.rewards = mutableListOf(
         FeaturePackLoader.QuestEntryDefinition(
             "item",
             questProfile.rewardMaterial().name,

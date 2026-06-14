@@ -1,6 +1,6 @@
 package ro.ainpc.progression
 
-import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.*
 
 class ProgressionObjectiveSnapshot(
     key: String?,
@@ -42,23 +42,23 @@ class ProgressionObjectiveSnapshot(
 
     companion object {
         @JvmStatic
-        fun fromQuestGuiObjective(objective: ScenarioEngine.QuestGuiObjective?): ProgressionObjectiveSnapshot {
+        fun fromQuestGuiObjective(objective: QuestGuiObjective?): ProgressionObjectiveSnapshot {
             if (objective == null) {
                 return ProgressionObjectiveSnapshot("", "", "", "", "", "", "", "", 0, 1, false, false)
             }
             return ProgressionObjectiveSnapshot(
-                objective.key(),
-                objective.type(),
-                objective.label(),
-                objective.description(),
-                objective.stageId(),
-                objective.stageLabel(),
-                objective.stateId(),
-                objective.stateDisplay(),
-                objective.currentAmount(),
-                objective.requiredAmount(),
-                objective.complete(),
-                objective.active()
+                objective.key,
+                objective.type,
+                objective.label,
+                objective.description,
+                objective.stageId,
+                objective.stageLabel,
+                objective.stateId,
+                objective.stateDisplay,
+                objective.currentAmount,
+                objective.requiredAmount,
+                objective.complete,
+                objective.active
             )
         }
 

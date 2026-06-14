@@ -4,12 +4,17 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import ro.ainpc.engine.QuestGuiEntry
+import ro.ainpc.engine.QuestGuiObjective
+import ro.ainpc.engine.QuestGuiSnapshot
+import ro.ainpc.engine.QuestGuiStage
+import ro.ainpc.engine.QuestInteractionResult
 import ro.ainpc.engine.ScenarioEngine
 
 class ProgressionSnapshotTest {
     @Test
     fun statusSnapshotPreservesNormalizedSelectorAndMessages() {
-        val result = ScenarioEngine.QuestInteractionResult.handled(
+        val result = QuestInteractionResult.handled(
             false,
             listOf(),
             listOf("&6=== Progression Status ===", "&eJucator: &fHero")
@@ -26,7 +31,7 @@ class ProgressionSnapshotTest {
 
     @Test
     fun statusSnapshotCanCarryStructuredEntryData() {
-        val entry = ScenarioEngine.QuestGuiEntry(
+        val entry = QuestGuiEntry(
             "village_contracts:C01", "medieval:C01", "C01", "Hartie pentru negustor", "Activ", "Secundar", "Contracte de sat",
             true, true, true, false, false, false, "RETURN", "Returnare", 123L, "Negustor",
             listOf(), listOf(), listOf(), listOf(), listOf()
@@ -40,7 +45,7 @@ class ProgressionSnapshotTest {
         val snapshot = ProgressionStatusSnapshot.fromResult(
             "Hero",
             ProgressionSelector.parse("contract:C01"),
-            ScenarioEngine.QuestInteractionResult.handled(false, listOf(), listOf("ok")),
+            QuestInteractionResult.handled(false, listOf(), listOf("ok")),
             entry,
             definition
         )
@@ -57,7 +62,7 @@ class ProgressionSnapshotTest {
         val snapshot = ProgressionProgressSnapshot.fromResult(
             "Hero",
             ProgressionSelector.parse("missing"),
-            ScenarioEngine.QuestInteractionResult.notHandled()
+            QuestInteractionResult.notHandled()
         )
 
         assertFalse(snapshot.handled())
@@ -67,11 +72,11 @@ class ProgressionSnapshotTest {
 
     @Test
     fun progressSnapshotCanCarryObjectiveSnapshots() {
-        val objective = ScenarioEngine.QuestGuiObjective(
+        val objective = QuestGuiObjective(
             "collect_paper", "collect_item", "Aduna hartie", "Aduna hartie pentru negustor", "COLLECT", "Colectare",
             "in_progress", "In progres", 3, 6, false, true
         )
-        val entry = ScenarioEngine.QuestGuiEntry(
+        val entry = QuestGuiEntry(
             "village_contracts:C01", "medieval:C01", "C01", "Hartie pentru negustor", "Activ", "Secundar", "Contracte de sat",
             false, true, true, false, false, false, "COLLECT", "Colectare", 123L, "Negustor",
             listOf(), listOf(objective), listOf(), listOf(), listOf()
@@ -80,7 +85,7 @@ class ProgressionSnapshotTest {
         val snapshot = ProgressionProgressSnapshot.fromResult(
             "Hero",
             ProgressionSelector.parse("village_contracts:C01"),
-            ScenarioEngine.QuestInteractionResult.handled(false, listOf(), listOf("ok")),
+            QuestInteractionResult.handled(false, listOf(), listOf("ok")),
             entry,
             null
         )
@@ -93,14 +98,14 @@ class ProgressionSnapshotTest {
 
     @Test
     fun guiSnapshotCanConvertQuestEntriesToProgressionEntries() {
-        val objective = ScenarioEngine.QuestGuiObjective(
+        val objective = QuestGuiObjective(
             "return_goods", "deliver_to_npc", "Returneaza marfa", "Returneaza marfa la negustor", "RETURN", "Returnare",
             "completed", "Completat", 1, 1, true, true
         )
-        val stage = ScenarioEngine.QuestGuiStage(
+        val stage = QuestGuiStage(
             "RETURN", "Returnare", "Duce obiectele inapoi", "all_objectives", "", true, true, listOf("return_goods")
         )
-        val entry = ScenarioEngine.QuestGuiEntry(
+        val entry = QuestGuiEntry(
             "village_contracts:C01", "medieval:C01", "C01", "Hartie pentru negustor", "Activ", "Secundar", "Contracte de sat",
             true, true, true, false, false, false, "RETURN", "Returnare", 123L, "Negustor",
             listOf("status"), listOf(objective), listOf(stage), listOf("reward"), listOf("action")
@@ -110,7 +115,7 @@ class ProgressionSnapshotTest {
             "Hartie pentru negustor", "", "side", "trade", "TRADE_DEAL", "Contracte de sat", "contract", "contracte",
             3, 1, 1, 1, false, true
         )
-        val questSnapshot = ScenarioEngine.QuestGuiSnapshot(
+        val questSnapshot = QuestGuiSnapshot(
             true, "Hero", "Contracte", listOf("summary"), listOf(entry), listOf(), 0
         )
 

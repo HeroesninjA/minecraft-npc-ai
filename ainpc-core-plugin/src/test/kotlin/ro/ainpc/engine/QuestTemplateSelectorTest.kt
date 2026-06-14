@@ -88,14 +88,14 @@ class QuestTemplateSelectorTest {
         assertFalse(QuestTemplateSelector.matchesProgressionKind(ritual, "duty", "Ritualuri locale"))
     }
 
-    private fun template(id: String): ScenarioEngine.ScenarioTemplate {
-        val template = ScenarioEngine.ScenarioTemplate(ScenarioEngine.ScenarioType.QUEST)
+    private fun template(id: String): ScenarioTemplate {
+        val template = ScenarioTemplate(ScenarioType.QUEST)
         template.templateId = id
         template.displayName = id
         return template
     }
 
-    private fun progressionTemplate(id: String, kind: String, mechanic: String, singular: String, plural: String): ScenarioEngine.ScenarioTemplate {
+    private fun progressionTemplate(id: String, kind: String, mechanic: String, singular: String, plural: String): ScenarioTemplate {
         val template = template(id)
         template.progressionKind = kind
         template.progressionMechanicId = mechanic

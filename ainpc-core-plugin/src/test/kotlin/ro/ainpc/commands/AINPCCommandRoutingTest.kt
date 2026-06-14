@@ -7,21 +7,17 @@ import org.junit.jupiter.api.Test
 class AINPCCommandRoutingTest {
     @Test
     fun routesProgressionAliasGuiToKindFilter() {
-        val command = AINPCCommand(null)
-        val route = AINPCCommand::class.java.getDeclaredMethod("routeProgressionAlias", Array<String>::class.java, String::class.java)
-        route.isAccessible = true
-
         assertArrayEquals(
             arrayOf("quest", "gui", "contract"),
-            route.invoke(command, arrayOf("contract", "gui"), "contract") as Array<String>
+            routeProgressionAlias(arrayOf("contract", "gui"), "contract") { s, s2 -> s }
         )
         assertArrayEquals(
             arrayOf("quest", "gui", "contract_active"),
-            route.invoke(command, arrayOf("contract", "gui", "active"), "contract") as Array<String>
+            routeProgressionAlias(arrayOf("contract", "gui", "active"), "contract") { s, s2 -> s }
         )
         assertArrayEquals(
             arrayOf("quest", "gui", "ritual_tracked"),
-            route.invoke(command, arrayOf("ritual", "gui", "tracked"), "ritual") as Array<String>
+            routeProgressionAlias(arrayOf("ritual", "gui", "tracked"), "ritual") { s, s2 -> s }
         )
     }
 

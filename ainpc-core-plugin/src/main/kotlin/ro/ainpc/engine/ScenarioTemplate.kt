@@ -1,0 +1,84 @@
+package ro.ainpc.engine
+
+import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
+import ro.ainpc.engine.FeaturePackLoader.QuestStageDefinition
+import java.util.Locale
+
+class ScenarioTemplate(val type: ScenarioType) {
+    val roles: MutableMap<String, ScenarioRoleRule> = LinkedHashMap()
+    val phases: MutableList<String> = ArrayList()
+    var templateId: String = type.name.lowercase(Locale.ROOT)
+    var displayName: String = type.displayName
+    var description: String = ""
+    var sourcePackId: String = "core"
+    var hint: String = ""
+    var preferredTopologies: MutableList<String> = ArrayList()
+    var narrativeHints: MutableList<String> = ArrayList()
+    var progressionEnabled: Boolean = type == ScenarioType.QUEST
+    var progressionMechanicId: String = if (type == ScenarioType.QUEST) "quest" else ""
+    var progressionKind: String = if (type == ScenarioType.QUEST) "quest" else ""
+    var progressionLabel: String = if (type == ScenarioType.QUEST) "Quest" else ""
+    var progressionSingularLabel: String = "quest"
+    var progressionPluralLabel: String = "questuri"
+    var progressionMaxActive: Int = 0
+    var questCode: String = ""
+    var questGiverProfession: String = ""
+    var questPrerequisites: MutableList<String> = ArrayList()
+    var questRepeatable: Boolean = false
+    var questCooldownSeconds: Long = 0L
+    var questDialogues: MutableMap<String, List<String>> = LinkedHashMap()
+    var questStages: List<QuestStageDefinition> = ArrayList()
+    var questContract: QuestScenarioContract = QuestScenarioContract.defaultContract()
+    var objectives: List<QuestEntryDefinition> = ArrayList()
+    var rewards: List<QuestEntryDefinition> = ArrayList()
+    var triggerProbability: Double = 0.05
+    var minimumNpcCount: Int = 2
+    var requiresPlayer: Boolean = false
+
+    fun addRole(roleId: String, description: String) {
+        addRole(ScenarioRoleRule(roleId, description, false, false))
+    }
+
+    fun addRole(roleId: String, description: String, optional: Boolean) {
+        addRole(ScenarioRoleRule(roleId, description, false, optional))
+    }
+
+    fun addPlayerRole(roleId: String, description: String) {
+        addRole(ScenarioRoleRule(roleId, description, true, false))
+    }
+
+    fun addRole(role: ScenarioRoleRule) {
+        roles[role.id] = role
+    }
+
+    fun addPhase(phaseId: String, description: String) {
+        phases.add(phaseId)
+    }
+
+    fun getNpcRoles(): List<ScenarioRoleRule> = roles.values
+        .filter { !it.playerRole }
+        .sortedWith(compareBy<ScenarioRoleRule> { it.optional }.thenByDescending { it.hasHardRequirements() }.thenBy { it.id })
+
+    fun getPlayerRoles(): List<ScenarioRoleRule> = roles.values.filter { it.playerRole }
+
+    fun hasQuestBriefing(): Boolean = questCode.isNotBlank() || objectives.isNotEmpty() || rewards.isNotEmpty()
+
+    fun getQuestDialogueLines(key: String): List<String> = questDialogues[normalizeQuestDialogueKey(key)] ?: emptyList()
+
+    fun applyQuestDialogues(dialogues: Map<String, List<String>>?) {
+        questDialogues.clear()
+        if (dialogues == null) return
+        for ((key, lines) in dialogues) {
+            val normalizedKey = normalizeQuestDialogueKey(key)
+            if (normalizedKey.isNotBlank() && lines != null && lines.isNotEmpty()) {
+                questDialogues[normalizedKey] = lines.toList()
+            }
+        }
+    }
+
+    companion object {
+        private fun normalizeQuestDialogueKey(key: String?): String {
+            return key?.trim()?.lowercase(Locale.ROOT)?.replace('-', '_') ?: ""
+        }
+    }
+}

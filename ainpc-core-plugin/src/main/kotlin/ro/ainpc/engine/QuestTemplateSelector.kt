@@ -7,18 +7,18 @@ class QuestTemplateSelector private constructor() {
     companion object {
         @JvmStatic
         fun selectConfiguredTemplate(
-            templates: List<ScenarioEngine.ScenarioTemplate?>?,
-            available: Predicate<ScenarioEngine.ScenarioTemplate>?,
-            completed: Predicate<ScenarioEngine.ScenarioTemplate>?
-        ): ScenarioEngine.ScenarioTemplate? {
+            templates: List<ScenarioTemplate?>?,
+            available: Predicate<ScenarioTemplate>?,
+            completed: Predicate<ScenarioTemplate>?
+        ): ScenarioTemplate? {
             if (templates.isNullOrEmpty()) {
                 return null
             }
 
             val safeAvailable = available ?: Predicate { true }
             val safeCompleted = completed ?: Predicate { false }
-            var firstAvailableCompletedTemplate: ScenarioEngine.ScenarioTemplate? = null
-            var firstUnavailableTemplate: ScenarioEngine.ScenarioTemplate? = null
+            var firstAvailableCompletedTemplate: ScenarioTemplate? = null
+            var firstUnavailableTemplate: ScenarioTemplate? = null
 
             for (template in templates) {
                 if (template == null) {
@@ -46,7 +46,7 @@ class QuestTemplateSelector private constructor() {
 
         @JvmStatic
         fun matchesProgressionKind(
-            template: ScenarioEngine.ScenarioTemplate?,
+            template: ScenarioTemplate?,
             expectedKind: String?,
             mechanicDisplay: String?
         ): Boolean {
@@ -56,10 +56,10 @@ class QuestTemplateSelector private constructor() {
 
             val expected = normalize(expectedKind)
             val candidates = listOf(
-                template.getProgressionKind(),
-                template.getProgressionMechanicId(),
-                template.getProgressionSingularLabel(),
-                template.getProgressionPluralLabel(),
+                template.progressionKind,
+                template.progressionMechanicId,
+                template.progressionSingularLabel,
+                template.progressionPluralLabel,
                 mechanicDisplay
             )
             for (candidate in candidates) {

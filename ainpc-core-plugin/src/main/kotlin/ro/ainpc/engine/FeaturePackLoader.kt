@@ -667,7 +667,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val id: String,
         val name: String,
         val description: String,
-        val baseType: ScenarioEngine.ScenarioType,
+        val baseType: ScenarioType,
     ) {
         val roles: MutableMap<String, ScenarioRoleDefinition> = LinkedHashMap()
         val objectives: MutableList<QuestEntryDefinition> = ArrayList()

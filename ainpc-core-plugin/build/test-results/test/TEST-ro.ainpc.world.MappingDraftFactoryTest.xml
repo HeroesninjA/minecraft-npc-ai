@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ro.ainpc.world.MappingDraftFactoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-14T12:55:46.936Z" hostname="DESKTOP-FJTPE3F" time="0.03">
+  <properties/>
+  <testcase name="createsNpcBindDraftForSelectedPlaceAndRole()" classname="ro.ainpc.world.MappingDraftFactoryTest" time="0.009"/>
+  <testcase name="createsAndAppliesPlaceDraftInsideSelectedRegion()" classname="ro.ainpc.world.MappingDraftFactoryTest" time="0.013"/>
+  <testcase name="createsAndAppliesNodeDraftInCurrentPlace()" classname="ro.ainpc.world.MappingDraftFactoryTest" time="0.004"/>
+  <testcase name="createsQuestAnchorDraftForSelectedNodeAndProgressionContext()" classname="ro.ainpc.world.MappingDraftFactoryTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
