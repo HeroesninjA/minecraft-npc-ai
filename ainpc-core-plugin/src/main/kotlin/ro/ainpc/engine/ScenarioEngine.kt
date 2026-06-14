@@ -35,10 +35,6 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
 
     init { loadScenarioTemplates() }
 
-    fun getStoryContextService(): StoryContextService = TODO()
-    fun setStoryContextService(p0: StoryContextService) {
-        TODO()
-    }
     fun reloadTemplates() {
         TODO()
     }
@@ -125,7 +121,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     }
     private fun markQuestFailed(p0: UUID, p1: ScenarioTemplate): PlayerQuestProgress = TODO()
     private fun getCurrentQuestProgress(p0: UUID, p1: String): PlayerQuestProgress = TODO()
-    private fun getCurrentQuestProgress(p0: UUID): List<ro.ainpc.engine.PlayerQuestProgress> = TODO()
+    private fun getCurrentQuestProgress(p0: UUID): List<PlayerQuestProgress> = TODO()
     private fun selectQuestProgressForTracking(p0: UUID, p1: String): PlayerQuestProgress = TODO()
     private fun selectQuestProgressForProgress(p0: UUID, p1: String): PlayerQuestProgress = TODO()
     private fun getTrackedQuestProgress(p0: UUID, p1: Boolean): PlayerQuestProgress = TODO()
@@ -147,13 +143,13 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun hasCompletedQuest(p0: UUID, p1: String): Boolean = TODO()
     private fun questLogMatches(p0: UUID, p1: PlayerQuestProgress, p2: QuestLogFilter, p3: Boolean): Boolean = TODO()
     private fun questLogMatchesProgressionKind(p0: PlayerQuestProgress, p1: String): Boolean = TODO()
-    private fun buildQuestLogSummaryLines(p0: UUID, p1: List<ro.ainpc.engine.PlayerQuestProgress>): List<String> = TODO()
-    private fun questLogCurrentComparator(p0: UUID): Comparator<ro.ainpc.engine.PlayerQuestProgress> = TODO()
+    private fun buildQuestLogSummaryLines(p0: UUID, p1: List<PlayerQuestProgress>): List<String> = TODO()
+    private fun questLogCurrentComparator(p0: UUID): Comparator<PlayerQuestProgress> = TODO()
     private fun questLogCurrentGroupLabel(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress): String = TODO()
     private fun formatQuestLogArchivedLine(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress, p3: String): String = TODO()
     private fun buildQuestLogActionLines(p0: Player, p1: UUID, p2: ScenarioTemplate, p3: PlayerQuestProgress, p4: Boolean): List<String> = TODO()
-    private fun getRecentArchivedQuestProgress(p0: UUID, p1: Int): List<ro.ainpc.engine.PlayerQuestProgress> = TODO()
-    private fun getArchivedQuestProgress(p0: UUID): List<ro.ainpc.engine.PlayerQuestProgress> = TODO()
+    private fun getRecentArchivedQuestProgress(p0: UUID, p1: Int): List<PlayerQuestProgress> = TODO()
+    private fun getArchivedQuestProgress(p0: UUID): List<PlayerQuestProgress> = TODO()
     private fun archiveQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
         TODO()
     }
@@ -169,8 +165,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun persistQuestProgressAsync(p0: UUID, p1: PlayerQuestProgress) {
         TODO()
     }
-    private fun snapshotQuestProgress(): Map<java.util.UUID, java.util.List<ro.ainpc.engine.PlayerQuestProgress>> = TODO()
-    private fun persistQuestProgressSnapshot(p0: Map<java.util.UUID, *java.util.List<ro.ainpc.engine.PlayerQuestProgress>>) {
+    private fun snapshotQuestProgress(): Map<UUID, List<PlayerQuestProgress>> = TODO()
+    private fun persistQuestProgressSnapshot(p0: Map<UUID, List<PlayerQuestProgress>>) {
         TODO()
     }
     private fun persistQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
@@ -241,14 +237,14 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun resolveRegionIdForPlace(p0: String, p1: Player): String = TODO()
     private fun findCurrentRegionId(p0: Player): String = TODO()
     private fun findCurrentPlaceId(p0: Player): String = TODO()
-    fun evaluateScenarioTriggers(p0: List<ro.ainpc.npc.AINPC>, p1: List<*org.bukkit.entity.Player>) {
+    fun evaluateScenarioTriggers(p0: List<AINPC>, p1: List<Player>) {
         TODO()
     }
-    private fun startScenario(p0: ScenarioTemplate, p1: List<ro.ainpc.npc.AINPC>, p2: List<*org.bukkit.entity.Player>) {
+    private fun startScenario(p0: ScenarioTemplate, p1: List<AINPC>, p2: List<Player>) {
         TODO()
     }
-    private fun assignRoles(p0: ActiveScenario, p1: ScenarioTemplate, p2: List<ro.ainpc.npc.AINPC>, p3: List<*org.bukkit.entity.Player>): Boolean = TODO()
-    private fun assignFallbackRoles(p0: ActiveScenario, p1: List<ro.ainpc.engine.ScenarioRoleRule>, p2: List<ro.ainpc.npc.AINPC>, p3: Random, p4: Boolean): Boolean = TODO()
+    private fun assignRoles(p0: ActiveScenario, p1: ScenarioTemplate, p2: List<AINPC>, p3: List<Player>): Boolean = TODO()
+    private fun assignFallbackRoles(p0: ActiveScenario, p1: List<ScenarioRoleRule>, p2: List<AINPC>, p3: Random, p4: Boolean): Boolean = TODO()
     private fun getQuestSettings(): ConfigurationSection = TODO()
     private fun notifyParticipants(p0: ActiveScenario) {
         TODO()
@@ -272,6 +268,6 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun createScenarioMemories(p0: ActiveScenario) {
         TODO()
     }
-    fun getActiveScenarios(): Map<java.util.UUID, ro.ainpc.engine.ActiveScenario> = TODO()
+    fun getActiveScenarios(): Map<UUID, ActiveScenario> = TODO()
     fun getNPCScenario(p0: UUID): ActiveScenario = TODO()
 }
