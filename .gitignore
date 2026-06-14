@@ -1,3 +1,42 @@
-# MCP local indexing/changelog state
+# ===== Build output =====
+build/
+target/
+bin/
+out/
+.gradle/
+
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ===== Kotlin =====
+.kotlin/
+
+# ===== MCP / AI artifacts =====
+.ai/
 .mcp-index-manifest.json
 .mcp-changelog-state.json
+
+# ===== Serena =====
+.serena/cache/
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ===== Misc =====
+*.log
+*.tmp
+null
+New Text Document.txt
+
+# ===== Conversion temp =====
+conversion/
+debug-logs/
+data/
+docs.text

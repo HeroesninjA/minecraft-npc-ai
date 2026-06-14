@@ -1,4 +1,0 @@
-﻿# One query per line
-# Lines starting with # are ignored
-NPCManager createNPC
-QuestTemplateSelector progression objective
