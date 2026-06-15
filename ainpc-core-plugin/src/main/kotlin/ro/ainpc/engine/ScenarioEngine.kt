@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.engine
 
 import com.google.gson.Gson
@@ -756,8 +757,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 return questGiver
             }
         }
-        @Suppress("UNCHECKED_CAST")
-        return null as AINPC
+        return null
     }
     fun resolveActiveQuestNpc(p0: Player, p1: String): AINPC? = resolveActiveQuestNpc(p0, p1, null)
     fun resolveActiveQuestNpc(p0: Player, p1: AINPC): AINPC? = resolveActiveQuestNpc(p0, "", p1)

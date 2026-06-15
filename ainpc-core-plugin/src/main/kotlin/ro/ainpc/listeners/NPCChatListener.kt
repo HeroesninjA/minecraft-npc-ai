@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.listeners
 
 import io.papermc.paper.event.player.AsyncChatEvent

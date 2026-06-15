@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 @file:JvmName("AINPCCommandStory")
 
 package ro.ainpc.commands
@@ -49,7 +50,7 @@ fun handleStory(sender: CommandSender, args: Array<String>): Boolean {
 }
 
 private fun getEnabledWorldAdmin(): WorldAdminApi? {
-    val worldAdmin = ainpcCommandStoryPlugin.platform?.worldAdmin
+    val worldAdmin = ainpcCommandStoryPlugin.platform.worldAdmin
     return if (worldAdmin != null && worldAdmin.isEnabled) worldAdmin else null
 }
 

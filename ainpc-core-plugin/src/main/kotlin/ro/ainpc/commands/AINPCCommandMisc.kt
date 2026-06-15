@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 @file:JvmName("AINPCCommandMisc")
 
 package ro.ainpc.commands

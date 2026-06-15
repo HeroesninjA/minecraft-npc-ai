@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 @file:JvmName("AINPCCommandQuest")
 
 package ro.ainpc.commands
@@ -1007,7 +1008,7 @@ fun queryQuestAnchorBindings(
     }
 
     val statement = sql.toString()
-    val stmt = ainpcCommandQuestPlugin.databaseManager!!.prepareStatement(statement)
+    val stmt = ainpcCommandQuestPlugin.databaseManager.prepareStatement(statement)
     try {
         var index = 1
         for (parameter in parameters) {

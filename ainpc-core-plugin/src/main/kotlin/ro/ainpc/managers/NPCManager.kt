@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.managers
 
 import com.google.gson.Gson
@@ -671,7 +672,7 @@ class NPCManager(
 
     fun backfillWorldBindingsFromAnchors(): Int {
         val bindings = plugin.npcWorldBindingService
-        val worldAdmin = plugin.platform?.worldAdmin
+        val worldAdmin = plugin.platform.worldAdmin
         if (bindings == null || worldAdmin == null || !worldAdmin.isEnabled) {
             return 0
         }
@@ -701,7 +702,7 @@ class NPCManager(
     }
 
     private fun applyWorldBindingAnchors(npc: AINPC, binding: NpcWorldBinding) {
-        val worldAdmin: WorldAdminApi? = plugin.platform?.worldAdmin
+        val worldAdmin: WorldAdminApi? = plugin.platform.worldAdmin
         if (worldAdmin == null || !worldAdmin.isEnabled) {
             return
         }

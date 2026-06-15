@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.engine
 
 import org.bukkit.Location
@@ -29,7 +30,7 @@ class QuestAnchorResolver(
         val objectives = template.objectives
         for (index in objectives.indices) {
             val objective = objectives[index]
-            val objectiveType = normalizeObjectiveType(objective?.type ?: "")
+            val objectiveType = normalizeObjectiveType(objective.type ?: "")
             val objectiveKey = buildObjectiveKey(objective, index)
             val reference = objective?.itemId ?: ""
 

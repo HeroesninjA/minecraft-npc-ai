@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.progression
 
 import ro.ainpc.engine.FeaturePackLoader
@@ -102,7 +103,7 @@ class ProgressionDefinition(
                 scenario.description,
                 contract.category().name.lowercase(Locale.ROOT),
                 contract.kind().name.lowercase(Locale.ROOT),
-                scenario.baseType?.name ?: "",
+                scenario.baseType.name ?: "",
                 label,
                 singularLabel,
                 pluralLabel,
