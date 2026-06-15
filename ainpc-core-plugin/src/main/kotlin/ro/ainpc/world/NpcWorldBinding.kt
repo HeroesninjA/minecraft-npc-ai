@@ -80,7 +80,7 @@ class NpcWorldBinding(
 
             return NpcWorldBinding(
                 npc.databaseId,
-                npc.uuid?.toString().orEmpty(),
+                npc.uuid.toString().orEmpty(),
                 npc.name,
                 plan.homePlaceId(),
                 plan.workPlaceId(),

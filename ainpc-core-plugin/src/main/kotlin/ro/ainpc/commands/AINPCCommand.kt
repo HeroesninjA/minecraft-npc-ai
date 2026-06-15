@@ -328,7 +328,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.send(sender, "&6=== Spawn Batch List (filter=&f" + filter + "&6) ===")
             if (batches.isEmpty()) { plugin.messageUtils.send(sender, "&7Nu exista batch-uri."); return true }
             @Suppress("UNCHECKED_CAST")
-            val batchList = batches as List<SpawnBatchTracker.BatchRecord>
+            val batchList = batches
             for (b in batchList) sendSpawnBatchSummary(sender, b)
         } catch (e: SQLException) { plugin.messageUtils.send(sender, "&cEroare: " + e.message) }
         return true
@@ -906,7 +906,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             if (workPlace != null) worldAdmin.bindNpcToWorkPlace(workPlace.id(), bindingId, npc.name)
             if (socialPlace != null) worldAdmin.bindNpcToSocialPlace(socialPlace.id(), bindingId, npc.name)
         } catch (e: IllegalArgumentException) { plugin.messageUtils.send(sender, "&c" + e.message); return true }
-        saveNpcWorldBinding(sender, NpcWorldBinding(npc.databaseId, npc.uuid?.toString() ?: "", npc.name, homePlace.id(), workPlace?.id() ?: "", socialPlace?.id() ?: "", homeNode?.id() ?: "", workNode?.id() ?: "", socialNode?.id() ?: "", "", "manual_bind", 0L, 0L), true)
+        saveNpcWorldBinding(sender, NpcWorldBinding(npc.databaseId, npc.uuid.toString() ?: "", npc.name, homePlace.id(), workPlace?.id() ?: "", socialPlace?.id() ?: "", homeNode?.id() ?: "", workNode?.id() ?: "", socialNode?.id() ?: "", "", "manual_bind", 0L, 0L), true)
         plugin.messageUtils.send(sender, "&aNPC-ul &f" + npc.name + " &aa fost legat la mapping.")
         plugin.messageUtils.send(sender, "&eHome: &f" + formatOwnedLocation(npc.homeAnchor))
         if (workPlace != null) plugin.messageUtils.send(sender, "&eWork: &f" + formatOwnedLocation(npc.workAnchor))
@@ -1371,7 +1371,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         try { when (role) { "home" -> worldAdmin.bindNpcToHomePlace(place.id(), bindingId, npc.name); "work" -> worldAdmin.bindNpcToWorkPlace(place.id(), bindingId, npc.name); "social" -> worldAdmin.bindNpcToSocialPlace(place.id(), bindingId, npc.name) } }
         catch (e: IllegalArgumentException) { npc.homeAnchor = prevHome; npc.workAnchor = prevWork; npc.socialAnchor = prevSocial; if (!plugin.npcManager.saveNPC(npc, false)) plugin.messageUtils.send(sender, "&eWarning: &fNu am putut restaura ancorele NPC dupa esecul bind-ului."); plugin.messageUtils.send(sender, "&c" + e.message); return false }
         val node = findBestAnchorNodeForPlace(worldAdmin, place, role)
-        saveNpcWorldBinding(sender, NpcWorldBinding(npc.databaseId, npc.uuid?.toString() ?: "", npc.name, if (role == "home") place.id() else "", if (role == "work") place.id() else "", if (role == "social") place.id() else "", if (role == "home" && node != null) node.id() else "", if (role == "work" && node != null) node.id() else "", if (role == "social" && node != null) node.id() else "", "", "wand_bind", 0L, 0L), true)
+        saveNpcWorldBinding(sender, NpcWorldBinding(npc.databaseId, npc.uuid.toString() ?: "", npc.name, if (role == "home") place.id() else "", if (role == "work") place.id() else "", if (role == "social") place.id() else "", if (role == "home" && node != null) node.id() else "", if (role == "work" && node != null) node.id() else "", if (role == "social" && node != null) node.id() else "", "", "wand_bind", 0L, 0L), true)
         plugin.messageUtils.send(sender, "&aNPC-ul &f" + npc.name + " &aa fost legat la &f$role &ain &f" + place.id() + "&a.")
         plugin.messageUtils.send(sender, "&eAncora: &f" + formatOwnedLocation(anchor))
         recordConfirmedMappingDraft(sender, draft, "$bindingId:$role:${place.id()}", "NPC bind confirmat")
