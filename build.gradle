@@ -11,6 +11,11 @@ ext {
     hikariVersion = property('hikariVersion').toString()
     mysqlConnectorVersion = property('mysqlConnectorVersion').toString()
     junitVersion = property('junitVersion').toString()
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += ['-Xsuppress-warning=UNNECESSARY_SAFE_CALL', '-Xsuppress-warning=UNUSED_ELVIS']
+        }
+    }
 }
 
 allprojects {
