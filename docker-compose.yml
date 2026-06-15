@@ -1,0 +1,32 @@
+services:
+  paper:
+    image: itzg/minecraft-server:latest
+    container_name: ainpc-demo
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER
+      VERSION: "1.21.4"
+      MEMORY: "2G"
+      ONLINE_MODE: "FALSE"
+      DIFFICULTY: peaceful
+      MODE: creative
+      SPAWN_PROTECTION: "0"
+      VIEW_DISTANCE: 8
+      SIMULATION_DISTANCE: 8
+      ALLOW_FLIGHT: "TRUE"
+      MAX_PLAYERS: 5
+      MOTD: "AINPC Demo - SAT DEMO"
+      ENABLE_RCON: "TRUE"
+      RCON_PASSWORD: "demo"
+      RCON_PORT: 25575
+      OVERRIDE_SERVER_PROPERTIES: "TRUE"
+      ANNOUNCE_PLAYER_ACHIEVEMENTS: "FALSE"
+      GENERATE_STRUCTURES: "FALSE"
+    volumes:
+      - ./paper-data/plugins:/plugins
+      - ./paper-data/world:/world
+      - ./paper-data/world_nether:/world_nether
+      - ./paper-data/world_the_end:/world_the_end
+    restart: unless-stopped
