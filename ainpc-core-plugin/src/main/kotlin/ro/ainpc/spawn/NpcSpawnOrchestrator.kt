@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.spawn
 
 import org.bukkit.Bukkit

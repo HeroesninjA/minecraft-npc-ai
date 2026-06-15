@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.engine
 
 import ro.ainpc.engine.ScenarioTemplate

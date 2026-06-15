@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.routine
 
 import com.destroystokyo.paper.entity.Pathfinder

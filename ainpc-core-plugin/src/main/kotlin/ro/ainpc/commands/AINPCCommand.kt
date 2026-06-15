@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.commands
 
 import com.google.gson.JsonElement
@@ -255,8 +256,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     private fun handleRepairNpcBindings(sender: CommandSender, apply: Boolean): Boolean {
-        if (plugin.npcWorldBindingService == null) { plugin.messageUtils.send(sender, "&cNpcWorldBindingService indisponibil."); return true }
-        val worldAdmin = plugin.platform?.worldAdmin ?: run { plugin.messageUtils.send(sender, "&cWorld admin indisponibil."); return true }
+        val worldAdmin = plugin.platform.worldAdmin ?: run { plugin.messageUtils.send(sender, "&cWorld admin indisponibil."); return true }
         if (!worldAdmin.isEnabled) { plugin.messageUtils.send(sender, "&cWorld admin dezactivat."); return true }
         val actions = mutableListOf<String>()
         val warnings = mutableListOf<String>()
@@ -275,7 +275,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 else continue
                 candidates++
                 actions.add((if (apply) "Salvez" else "Ar salva") + " npc_world_bindings pentru " + npc.name + "#" + npc.databaseId + ": " + formatNpcWorldBindingPlaces(proposed) + ".")
-                if (apply) { plugin.npcWorldBindingService!!.saveBinding(proposed); savedBindings++ }
+                if (apply) { plugin.npcWorldBindingService.saveBinding(proposed); savedBindings++ }
             }
         } catch (e: Exception) { errors.add("Repair npc-bindings esuat: " + e.message) }
         plugin.messageUtils.send(sender, if (apply) "&6=== Repair npc_world_bindings - APPLY ===" else "&6=== Repair npc_world_bindings - DRYRUN ===")
@@ -288,17 +288,16 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     private fun handleRepairMappingMetadata(sender: CommandSender, apply: Boolean): Boolean {
-        if (plugin.npcWorldBindingService == null) { plugin.messageUtils.send(sender, "&cNpcWorldBindingService indisponibil."); return true }
-        val worldAdmin = plugin.platform?.worldAdmin ?: run { plugin.messageUtils.send(sender, "&cWorld admin indisponibil."); return true }
-        val worldAdminService = plugin.platform?.worldAdminService ?: run { plugin.messageUtils.send(sender, "&cWorld admin service indisponibil."); return true }
+        val worldAdmin = plugin.platform.worldAdmin ?: run { plugin.messageUtils.send(sender, "&cWorld admin indisponibil."); return true }
+        val worldAdminService = plugin.platform.worldAdminService ?: run { plugin.messageUtils.send(sender, "&cWorld admin service indisponibil."); return true }
         if (!worldAdmin.isEnabled || !worldAdminService.isEnabled) { plugin.messageUtils.send(sender, "&cWorld admin dezactivat."); return true }
         val actions = mutableListOf<String>()
         val warnings = mutableListOf<String>()
         val errors = mutableListOf<String>()
         var scannedBindings = 0; var candidates = 0; var appliedUpdates = 0
         try {
-            val totalBindings = plugin.npcWorldBindingService!!.countBindings()
-            val bindings = plugin.npcWorldBindingService!!.listBindings(maxOf(NPC_WORLD_BINDING_LOOKUP_LIMIT, totalBindings))
+            val totalBindings = plugin.npcWorldBindingService.countBindings()
+            val bindings = plugin.npcWorldBindingService.listBindings(maxOf(NPC_WORLD_BINDING_LOOKUP_LIMIT, totalBindings))
             if (totalBindings > bindings.size) warnings.add("Scanate primele " + bindings.size + " din " + totalBindings + ".")
             for (binding in bindings) {
                 scannedBindings++; val ns = "npc_" + binding.npcId(); val nl = firstNonBlank(binding.npcName(), ns)
@@ -362,7 +361,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun loadNpcWorldBindingsById(): Map<Int, NpcWorldBinding> {
         val map = mutableMapOf<Int, NpcWorldBinding>()
         if (plugin.npcWorldBindingService == null) return map
-        val list = plugin.npcWorldBindingService!!.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT)
+        val list = plugin.npcWorldBindingService.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT)
         for (b in list) map[b.npcId()] = b
         return map
     }
@@ -919,7 +918,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     // -- World Bindings ---------------------------------------------
     private fun handleWorldBindings(sender: CommandSender, args: Array<String>): Boolean {
-        if (plugin.npcWorldBindingService == null) { plugin.messageUtils.send(sender, "&cNpcWorldBindingService este indisponibil."); return true }
         if (args.size == 2) return sendNpcWorldBindingsList(sender, NPC_WORLD_BINDING_DEFAULT_LIMIT)
         if (args.size == 3) {
             val directLimit = parseIntegerStrict(args[2])
@@ -946,8 +944,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun sendNpcWorldBindingsList(sender: CommandSender, limit: Int): Boolean {
         try {
-            val total = plugin.npcWorldBindingService!!.countBindings()
-            val bindings = plugin.npcWorldBindingService!!.listBindings(limit)
+            val total = plugin.npcWorldBindingService.countBindings()
+            val bindings = plugin.npcWorldBindingService.listBindings(limit)
             plugin.messageUtils.send(sender, "&6=== NPC World Bindings ===")
             plugin.messageUtils.send(sender, "&eRanduri: &f" + bindings.size + "/" + total)
             if (bindings.isEmpty()) { plugin.messageUtils.send(sender, "&7Nu exista binding-uri NPC-world persistate."); return true }
@@ -970,8 +968,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         try {
             val resolvedPlaceIds = resolveNpcWorldBindingPlaceIds(placeSelector)
             val placeIds = if (resolvedPlaceIds.isEmpty()) setOf(placeSelector) else resolvedPlaceIds
-            val totalRows = plugin.npcWorldBindingService!!.countBindings()
-            val matches = plugin.npcWorldBindingService!!.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT).filter { bindingReferencesAnyPlace(it, placeIds) }.sortedWith(compareBy<NpcWorldBinding> { if (it.npcName().isBlank()) "~" else it.npcName() }.thenBy { it.npcId() })
+            val totalRows = plugin.npcWorldBindingService.countBindings()
+            val matches = plugin.npcWorldBindingService.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT).filter { bindingReferencesAnyPlace(it, placeIds) }.sortedWith(compareBy<NpcWorldBinding> { if (it.npcName().isBlank()) "~" else it.npcName() }.thenBy { it.npcId() })
             plugin.messageUtils.send(sender, "&6=== NPC World Bindings: Place ===")
             plugin.messageUtils.send(sender, "&ePlace selector: &f" + placeSelector)
             plugin.messageUtils.send(sender, "&ePlace IDs: &f" + formatList(placeIds))
@@ -1165,12 +1163,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         var loadedNpc: AINPC? = null
         if (selector.equals("nearest", ignoreCase = true)) { loadedNpc = resolveWorldBindNpc(sender, selector); if (loadedNpc == null) return null }
         else loadedNpc = findLoadedNpcBySelector(plugin.npcManager.getAllNPCs().toList(), selector)
-        if (loadedNpc != null && loadedNpc.databaseId > 0) return plugin.npcWorldBindingService!!.getBinding(loadedNpc.databaseId).orElse(null)
+        if (loadedNpc != null && loadedNpc.databaseId > 0) return plugin.npcWorldBindingService.getBinding(loadedNpc.databaseId).orElse(null)
         val npcId = parseNpcIdSelector(selector)
-        if (npcId != null && npcId > 0) return plugin.npcWorldBindingService!!.getBinding(npcId).orElse(null)
+        if (npcId != null && npcId > 0) return plugin.npcWorldBindingService.getBinding(npcId).orElse(null)
         val normalized = normalizeAuditKey(selector)
         if (normalized.isBlank()) return null
-        return plugin.npcWorldBindingService!!.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT).firstOrNull { normalized == normalizeAuditKey(it.npcName()) || normalized == normalizeAuditKey(it.npcUuid()) || normalized == "npc_" + it.npcId() }
+        return plugin.npcWorldBindingService.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT).firstOrNull { normalized == normalizeAuditKey(it.npcName()) || normalized == normalizeAuditKey(it.npcUuid()) || normalized == "npc_" + it.npcId() }
     }
 
     private fun resolveNpcWorldBindingPlaceIds(selector: String): Set<String> {
@@ -1347,8 +1345,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun saveNpcWorldBinding(sender: CommandSender, binding: NpcWorldBinding, mergeExisting: Boolean): Boolean {
         if (plugin.npcWorldBindingService == null) { plugin.messageUtils.send(sender, "&eWarning: &fnpc_world_bindings nu este disponibil; ramane fallback-ul profile_data/metadata."); return false }
         try {
-            val toSave = if (mergeExisting) plugin.npcWorldBindingService!!.getBinding(binding.npcId()).map { binding.mergeMissingFrom(it) }.orElse(binding) else binding
-            plugin.npcWorldBindingService!!.saveBinding(toSave)
+            val toSave = if (mergeExisting) plugin.npcWorldBindingService.getBinding(binding.npcId()).map { binding.mergeMissingFrom(it) }.orElse(binding) else binding
+            plugin.npcWorldBindingService.saveBinding(toSave)
             return true
         } catch (e: Exception) { plugin.messageUtils.send(sender, "&eWarning: &fNu am putut salva npc_world_bindings pentru npc_id=" + binding.npcId() + ": " + e.message); return false }
     }

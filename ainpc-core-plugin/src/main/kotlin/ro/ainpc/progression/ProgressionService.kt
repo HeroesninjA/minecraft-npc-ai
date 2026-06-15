@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.progression
 
 import org.bukkit.entity.Player

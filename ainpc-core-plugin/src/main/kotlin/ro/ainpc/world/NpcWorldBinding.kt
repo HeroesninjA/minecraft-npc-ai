@@ -1,3 +1,4 @@
+@file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.world
 
 import ro.ainpc.npc.AINPC
