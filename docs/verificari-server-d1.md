@@ -35,7 +35,7 @@ Acest fisier ar trebui sa contina definitii din addonul medieval:
 
 ## T010: Config rutina si simulare
 
-Verificati in `plugins/AINPC/config.yml` (pe SERVER, nu in proiect):
+IMPORTANT: In config.yml implicit, `routine: false` si `simulation: false`. Pentru demo, **editati manual** `plugins/AINPC/config.yml`:
 
 ```yaml
 features:
@@ -43,8 +43,9 @@ features:
   simulation: true
 ```
 
-Comanda de test pe server:
+Apoi:
 ```
+/ainpc reload
 /ainpc routine status nearest    # Trebuie sa raspunda (chiar daca nu exista NPC)
 ```
 

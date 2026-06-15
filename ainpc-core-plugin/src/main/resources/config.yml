@@ -56,8 +56,8 @@ features:
   progression: true
   story: true
   mapping: true
-  routine: true
-  simulation: true
+  routine: false
+  simulation: false
   ai: true
   generation: false
 
