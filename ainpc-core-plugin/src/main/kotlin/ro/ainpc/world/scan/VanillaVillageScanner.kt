@@ -88,17 +88,13 @@ class VanillaVillageScanner {
     private fun clamp(value: Int, min: Int, max: Int): Int = maxOf(min, minOf(max, value))
 
     companion object {
-        @JvmField
-        val DEFAULT_HORIZONTAL_RADIUS = 48
+        const val DEFAULT_HORIZONTAL_RADIUS = 48
 
-        @JvmField
-        val DEFAULT_VERTICAL_RADIUS = 16
+        const val DEFAULT_VERTICAL_RADIUS = 16
 
-        @JvmField
-        val MAX_HORIZONTAL_RADIUS = 96
+        const val MAX_HORIZONTAL_RADIUS = 96
 
-        @JvmField
-        val MAX_VERTICAL_RADIUS = 32
+        const val MAX_VERTICAL_RADIUS = 32
 
         private val WORKSTATIONS = EnumSet.of(
             Material.BARREL,

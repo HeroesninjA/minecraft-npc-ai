@@ -159,7 +159,6 @@ enum class NPCAction(
 
     companion object {
         // Actiune extra pentru compatibilitate
-        @JvmField
         val HELP: NPCAction = GIVE_ITEM
     }
 }

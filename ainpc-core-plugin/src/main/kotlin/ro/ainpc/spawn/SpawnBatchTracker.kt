@@ -461,16 +461,12 @@ class SpawnBatchTracker(
         )
 
     companion object {
-        @JvmField
         val STATUS_RUNNING: String = "RUNNING"
 
-        @JvmField
         val STATUS_SUCCEEDED: String = "SUCCEEDED"
 
-        @JvmField
         val STATUS_FAILED: String = "FAILED"
 
-        @JvmField
         val STATUS_ROLLED_BACK: String = "ROLLED_BACK"
 
         @JvmStatic
