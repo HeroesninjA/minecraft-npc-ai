@@ -1,6 +1,5 @@
 # RCON client for Minecraft Paper server
-# Usage: . .\scripts\rcon-client.ps1
-# Then: Send-Rcon "list" or Invoke-RconCommands @("cmd1","cmd2")
+# Usage: Connect-Rcon ; Send-Rcon "list" ; Disconnect-Rcon
 
 $script:rconStream = $null
 $script:rconRequestId = 1
@@ -61,7 +60,16 @@ function Receive-RconPacket {
     param($Stream)
     
     $lenBuf = New-Object byte[] 4
-    $Stream.Read($lenBuf, 0, 4) | Out-Null
+    try {
+        $read = 0
+        while ($read -lt 4) {
+            $r = $Stream.Read($lenBuf, $read, 4 - $read)
+            if ($r -le 0) { return $null }
+            $read += $r
+        }
+    } catch {
+        return $null
+    }
     $len = [System.BitConverter]::ToInt32($lenBuf, 0)
     
     if ($len -le 0 -or $len -gt 4096) { return $null }
@@ -127,5 +135,3 @@ function Invoke-RconCommands {
     }
     return $results
 }
-
-Export-ModuleMember -Function Connect-Rcon, Disconnect-Rcon, Send-Rcon, Invoke-RconCommands

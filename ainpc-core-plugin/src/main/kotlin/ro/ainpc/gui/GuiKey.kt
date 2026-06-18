@@ -11,6 +11,7 @@ enum class GuiKey(
     QUEST("quest", "Progresii"),
     QUEST_DETAIL("quest_detail", "Detalii progresie"),
     STORY("story", "Story"),
+    AUTHORING("authoring", "Authoring"),
     WORLD("world", "World"),
     STATS("stats", "Statistici"),
     INTERACT("interact", "Interactiune NPC"),
@@ -41,6 +42,7 @@ enum class GuiKey(
                 "questdetail", "quest_details", "quest_detalii", "detalii_quest",
                 "progression_detail", "progression_details", "progresie_detalii", "detalii_progresie" -> "quest_detail"
                 "poveste", "story_state", "story_context", "narativ" -> "story"
+                "authoring", "quest_authoring", "progress_authoring", "authoring_view" -> "authoring"
                 "map", "lume" -> "world"
                 "stat", "statistics", "statistici" -> "stats"
                 "npc", "interaction", "interactiune", "nearest" -> "interact"

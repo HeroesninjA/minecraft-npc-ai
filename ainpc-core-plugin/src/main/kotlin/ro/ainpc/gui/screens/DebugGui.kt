@@ -2,7 +2,6 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -36,13 +35,18 @@ class DebugGui : GuiScreen {
         dumpButton(context, 13, "quest", Material.WRITABLE_BOOK, "&dDebugdump quest")
         dumpButton(context, 14, "story", Material.AMETHYST_SHARD, "&dDebugdump story")
         dumpButton(context, 15, "openai", Material.ENDER_EYE, "&aDebugdump OpenAI")
+        context.button(
+            17,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest authoring", "&7Snapshot read-only pentru story, mapping si progresie."),
+            ) { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
+        )
 
         context.button(
             16,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.LIME_DYE, "&aTest OpenAI", "&7Ruleaza /ainpc test."),
-                GuiAction { click -> click.service().runCommand(click.player(), "ainpc test") }
-            )
+            ) { click -> click.service().runCommand(click.player(), "ainpc test") }
         )
 
         GuiNavigation.addStandardControls(context, key())
@@ -54,8 +58,7 @@ class DebugGui : GuiScreen {
             slot,
             GuiButton.enabled(
                 GuiItemFactory.item(material, title, "&7Ruleaza /ainpc debugdump $scope."),
-                GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump $scope") }
-            )
+            ) { click -> click.service().runCommand(click.player(), "ainpc debugdump $scope") }
         )
     }
 }

@@ -1,6 +1,6 @@
 # World Mapping si Spawn
 
-Actualizat: 2026-05-09
+Actualizat: 2026-06-16
 
 Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, spawn order, case si bindings.
 
@@ -16,6 +16,9 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 | `../../npc-world-bindings.md` | Tabela dedicata pentru legaturi NPC -> home/work/social places si nodes |
 | `../../ordine-spawn-npc-cladiri-region-node.md` | v2 pentru spawn order, household, generator si rollback |
 | `../../settlement-plan.md` | Contract pentru planul complet de regiune inainte de mapping/populatie/spawn |
+| `../../structuri-exterioare-satului.md` | Definitii semantice pentru structuri din afara satului: castel, padure, fantana, casa izolata, mini-sat, sat de barbari, dungeon si extensii |
+| `../../mediu-test-controlat-sat-si-structuri-exterioare.md` | Fixture demo/test temporar pentru sat predefinit, structuri exterioare si ancore stabile de validare; nu trebuie sa ramana hardcodat in core |
+| `../../schema-scenariu-predefinit-testare.md` | Schema pentru scenariu de test cu cladiri controlate, NPC-uri controlate, relatii, context semantic si quest/story peste fixture |
 | `../../generare-populatie-narativa.md` | Contract pentru nume, roluri, familii si distributie home/work/social inainte de spawn |
 | `../../households-persistente.md` | Contract pentru household-uri persistente si rezidenti, peste mapping si `npc_world_bindings` |
 | `../../gui-interfete.md` | Directie pentru World GUI: whereami, regions, places, nodes, household/settlement plan si audit vizual |

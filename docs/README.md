@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-06-07
+Actualizat: 2026-06-16
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -78,7 +78,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | 2 | First playable demo intern | `prim-demo-functionalitate-minima-diversa.md`, `playable-village-ux.md`, `roadmap-orientativ.md`, `pregatire-questuri-avansate.md`, `questuri-avansate-v2.md`, `progression-service.md`, `player-onboarding-initiere.md`, `dialog-si-conversatii.md`, `interactiuni.md`, `gui-interfete.md`, `ai-orchestrare-si-mecanici.md`, `generare-automata-questuri-ai.md`, `story-si-context-ai.md`, `story-context-service.md`, `environment-context-si-engine.md`, `reactie-npc-jucator.md`, `simulare-sat-si-lume.md`, `simulation-service.md`, `simulation-service-partea-2.md`, `simulation-service-partea-3.md`, `simulation-service-partea-4.md`, `betonquest-directii-potrivite-pentru-ainpc.md` | Organizare interna pe componente, mecanici si ordine de dezvoltare; story context si story persistence exista initial, continutul demo jucabil lipseste; release-ul public ramane amanat pana la gate-uri de maturitate |
 | 3 | Modularizare, API si addonuri | `documentatie-api.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `refactorizare-si-impartire-pe-module.md` | Baza exista; contractele trebuie stabilizate |
 | 4 | Runtime scenarii extensibil | `questuri-avansate-v2.md`, `progression-service.md`, `story-si-context-ai.md`, `npc-uri-temporare-si-episodice.md`, `mapping.md` | Registri initiali exista; integrarea reala in `ScenarioEngine`, validatorul complet si runtime-ul generic raman treptate |
-| 5 | Generare sate si authoring asistat | `settlement-plan.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper si patch planner read-only initial exista; generarea completa ramane viitoare |
+| 5 | Generare sate si authoring asistat | `settlement-plan.md`, `structuri-exterioare-satului.md`, `patch-planner.md`, `template-cladiri-si-marker-nodes.md`, `worldedit-integration-contract.md`, `generare-sate-fara-worldedit.md`, `generare-sate-worldedit-si-npc.md`, `generare-ai-si-constructie-automata.md`, `story-si-context-ai.md` | Scanner/mapper si patch planner read-only initial exista; generarea completa ramane viitoare |
 | 6 | Hardening productie si livrare | `server-admin-runbook.md`, `release-checklist.md`, `reducere-marime-jar.md`, `audit.md`, `debugging-si-testare.md`, `gui-interfete.md`, `prevenire-duplicare-npc.md` | Backlog tehnic; nu bloca demo-ul matur fara motiv, dar este obligatoriu inainte de productie publica |
 
 ## Index documente
@@ -128,6 +128,8 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `mapping.md` | 1, 4, 5 | Stare, limitari, reguli de consum si evolutie pentru regiuni/places/nodes | Mapping-ul poate exista in cod, dar serverul poate avea 0 regiuni pana la config/import |
 | `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual, strat semantic validat de admin si directia wand + prompturi naturale | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
 | `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Redirect istoric catre `mapping.md` | Pastreaza-l doar pentru linkuri vechi; continutul canonic este in `mapping.md` |
+| `mediu-test-controlat-sat-si-structuri-exterioare.md` | 1, 2, 5, 6 | Contract pentru fixture/demo test temporar cu sat predefinit si structuri exterioare controlate | Este cod de test/fixture si nu trebuie sa ramana continut hardcodat in core final |
+| `schema-scenariu-predefinit-testare.md` | 1, 2, 4, 5, 6 | Schema pentru scenariu predefinit de testare cu cladiri, NPC-uri, relatii, context semantic, structuri exterioare si quest/story | Este cod de test/fixture temporar; nu introduce lore final sau continut implicit in core |
 | `migration-si-backup.md` | 0, 6 | Runbook pentru backup cu restore-check, migration si rollback operational | Nu rula migration sau cleanup pe date reale fara backup verificat |
 | `npc-uri-temporare-si-episodice.md` | 4 | NPC-uri temporare, episodice si non-villager | Pastreaza persistenta light separata de NPC-urile permanente |
 | `ordine-spawn-npc-cladiri-region-node.md` | 1, 5, 6 | v2 pentru fazele urmatoare de spawn order | v1 este arhivat in `arhiva/`; v2 se concentreaza pe generator, planuri, persistenta, migration si rollback |
@@ -148,6 +150,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `rutine-npc-si-timeline.md` | 1, 4 | Rutine zilnice, timeline si hook-uri | Rutina actuala foloseste pathfinding Paper unde poate si teleport doar ca fallback |
 | `server-admin-runbook.md` | 0, 6 | Ghid operational pentru instalare, config minim, audit, debugdump si smoke test pe Paper | Nu edita DB live; foloseste backup inainte de cleanup sau upgrade |
 | `settlement-plan.md` | 1, 5 | Contract pentru planul complet de regiune/sat inainte de mapping, populatie, spawn sau patch/build | Design initial; planul trebuie validat si inspectat inainte de commit |
+| `structuri-exterioare-satului.md` | 1, 4, 5 | Taxonomie si reguli pentru castel, padure, fantana, casa izolata, mini-sat, sat de barbari, dungeon si alte structuri din afara satului | Design operational; structurile trebuie sa produca mapping semantic, nodes, tags si validare inainte de quest/spawn/build |
 | `simulation-service.md` | 1, 2 | Contract tehnic pentru tick-ul periodic de simulare NPC, nevoi, scoring, stare, rutina si persistenta | In cod este inca serviciu logic distribuit intre scheduler, NPC manager, decision engine si routine service |
 | `simulation-service-partea-2.md` | 1, 2, 6 | Plan de extractie si hardening pentru `SimulationService`: API, summary, preview, comenzi, audit, debugdump, teste si performanta | Design pentru pasul urmator; primele etape trebuie sa fie refactorizare fara schimbare functionala |
 | `simulation-service-partea-3.md` | 2, 4, 6 | Design avansat pentru semnale de simulare, evenimente controlate, agregare pe settlement si consumatori quest/story/AI | Semnalele trebuie sa fie read-only pana exista consumatori expliciti, cooldown, audit si debugdump |

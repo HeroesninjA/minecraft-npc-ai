@@ -1,6 +1,6 @@
 # Quest, Story si AI
 
-Actualizat: 2026-06-04
+Actualizat: 2026-06-16
 
 Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-ul asistat.
 
@@ -19,6 +19,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
 | `../../spring-ai-mcp-serviciu-intern.md` | Design pentru Spring AI MCP ca sidecar runtime intern, cu tool-uri read-only initiale si fallback |
 | `../../generare-automata-questuri-ai.md` | Contract pentru `QuestSeed`, `QuestDraft`, validare, review admin si export YAML dezactivat |
+| `../../schema-scenariu-predefinit-testare.md` | Schema pentru scenariu predefinit de testare cu sat, NPC-uri, relatii, context semantic si questuri story smoke |
 | `../../quest-anchor-bindings.md` | Contract DB pentru ancore semantice de quest |
 | `../../story-context-service.md` | Context narativ read-only pentru prompt si debugging |
 | `../../story-si-context-ai.md` | Legatura `mapping -> indexare -> quest -> story -> AI` |

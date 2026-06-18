@@ -1,5 +1,7 @@
 param(
-    [switch]$Quick
+    [switch]$Quick,
+    [switch]$Smoke,      # ruleaza si smoke testul automat dupa pornire
+    [string]$PlayerName = "Hero"
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,5 +79,13 @@ Write-Host "║  /ainpc world demo create demo_sat   ║" -ForegroundColor Green
 Write-Host "║  /ainpc world settlement spawn ...   ║" -ForegroundColor Green
 Write-Host "╚══════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
+
+# Smoke test optional
+if ($Smoke) {
+    Write-Host "=== Smoke test automat..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 10
+    & ".\scripts\smoke-demo-complet.ps1" -Rcon -RconHost localhost -RconPort 25575 -RconPass demo -PlayerName $PlayerName -Quick -NoBackup
+}
+
 Write-Host "Pentru a opri: docker compose down"
 Write-Host "Pentru a vedea log-ul: docker compose logs -f"

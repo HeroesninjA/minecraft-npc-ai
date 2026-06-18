@@ -549,3 +549,5 @@ Un server de test este intr-o stare buna cand:
 - backup-ul folderului `plugins/AINPCPlugin/` este facut inainte de operatii riscante.
 - backup-ul critic are restore-check trecut inainte de migration sau release pe date reale.
 
+
+

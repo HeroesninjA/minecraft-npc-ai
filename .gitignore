@@ -40,3 +40,7 @@ conversion/
 debug-logs/
 data/
 docs.text
+paper-data/
+
+# ===== Credentiale server =====
+docs/server-credentials.md

@@ -4,15 +4,14 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryAction
-import org.bukkit.inventory.Inventory
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.gui.screens.AuditGui
 import ro.ainpc.gui.screens.ConfirmActionGui
 import ro.ainpc.gui.screens.DebugGui
 import ro.ainpc.gui.screens.MainHubGui
-import ro.ainpc.gui.screens.NpcInteractionGui
 import ro.ainpc.gui.screens.NpcManagerGui
 import ro.ainpc.gui.screens.PlaceholderGui
+import ro.ainpc.gui.screens.QuestAuthoringGui
 import ro.ainpc.gui.screens.QuestDetailGui
 import ro.ainpc.gui.screens.QuestLogGui
 import ro.ainpc.gui.screens.RoutineGui
@@ -30,6 +29,8 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val screens: MutableMap<GuiKey, GuiScreen> = EnumMap(GuiKey::class.java)
     private val questDetailSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questDetailFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val authoringQuestSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val authoringMechanicIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questLogFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questLogPages: ConcurrentMap<UUID, Int> = ConcurrentHashMap()
     private val confirmRequests: ConcurrentMap<UUID, ConfirmRequest> = ConcurrentHashMap()
@@ -41,11 +42,12 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(StoryGui())
         register(WorldHubGui())
         register(StatsGui())
-        register(NpcInteractionGui())
+        // register(NpcInteractionGui())  // Dezactivat temporar — deschidea automat la right-click
         register(RoutineGui())
         register(NpcManagerGui())
         register(AuditGui())
         register(DebugGui())
+        register(QuestAuthoringGui())
         register(ConfirmActionGui())
         register(PlaceholderGui(GuiKey.SHOP, "Shop NPC", "Nu exista inca un serviciu shop conectat."))
     }
@@ -104,6 +106,72 @@ class GuiService(private val plugin: AINPCPlugin) {
         open(player, GuiKey.QUEST_DETAIL)
     }
 
+    fun openAuthoring(player: Player?, questSelector: String?, mechanicId: String?) {
+        if (player == null) {
+            return
+        }
+        if (!questSelector.isNullOrBlank()) {
+            authoringQuestSelectors[player.uniqueId] = questSelector
+        } else {
+            authoringQuestSelectors.remove(player.uniqueId)
+        }
+        if (!mechanicId.isNullOrBlank()) {
+            authoringMechanicIds[player.uniqueId] = mechanicId
+        } else {
+            authoringMechanicIds.remove(player.uniqueId)
+        }
+        open(player, GuiKey.AUTHORING)
+    }
+
+    fun getAuthoringQuestSelector(player: Player?): String {
+        if (player == null) {
+            return ""
+        }
+        return authoringQuestSelectors.getOrDefault(player.uniqueId, "")
+    }
+
+    fun getAuthoringMechanicId(player: Player?): String {
+        if (player == null) {
+            return ""
+        }
+        return authoringMechanicIds.getOrDefault(player.uniqueId, "")
+    }
+
+    fun clearAuthoringSelection(player: Player?) {
+        if (player == null) {
+            return
+        }
+        authoringQuestSelectors.remove(player.uniqueId)
+        authoringMechanicIds.remove(player.uniqueId)
+        open(player, GuiKey.AUTHORING)
+    }
+
+    fun cycleAuthoringQuestSelector(player: Player?, step: Int) {
+        if (player == null) {
+            return
+        }
+        val selectors = AuthoringSelectionSupport.questSelectorOptions(plugin.progressionService.getDefinitions())
+        if (selectors.isEmpty()) {
+            return
+        }
+        val currentSelector = getAuthoringQuestSelector(player)
+        authoringQuestSelectors[player.uniqueId] = AuthoringSelectionSupport.cycle(selectors, currentSelector, step)
+        open(player, GuiKey.AUTHORING)
+    }
+
+    fun cycleAuthoringMechanicId(player: Player?, step: Int) {
+        if (player == null) {
+            return
+        }
+        val mechanics = AuthoringSelectionSupport.mechanicOptions(plugin.progressionService.getDefinitions())
+        if (mechanics.isEmpty()) {
+            return
+        }
+        val currentMechanicId = getAuthoringMechanicId(player)
+        authoringMechanicIds[player.uniqueId] = AuthoringSelectionSupport.cycle(mechanics, currentMechanicId, step)
+        open(player, GuiKey.AUTHORING)
+    }
+
     fun getQuestDetailSelector(player: Player?): String {
         if (player == null) {
             return ""
@@ -159,6 +227,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         sessionManager.closePlayer(playerId)
         questDetailSelectors.remove(playerId)
         questDetailFilters.remove(playerId)
+        authoringQuestSelectors.remove(playerId)
+        authoringMechanicIds.remove(playerId)
         questLogFilters.remove(playerId)
         questLogPages.remove(playerId)
         confirmRequests.remove(playerId)
@@ -278,6 +348,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.MAIN -> hasAny(player, "ainpc.admin", "ainpc.gui")
             GuiKey.QUEST, GuiKey.QUEST_DETAIL -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
             GuiKey.STORY -> hasAny(player, "ainpc.admin", "ainpc.gui.story")
+            GuiKey.AUTHORING -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
             GuiKey.WORLD -> hasAny(player, "ainpc.admin", "ainpc.gui.world")
             GuiKey.STATS -> hasAny(player, "ainpc.admin", "ainpc.gui.stats", "ainpc.info")
             GuiKey.INTERACT -> hasAny(player, "ainpc.admin", "ainpc.gui.interact", "ainpc.talk")

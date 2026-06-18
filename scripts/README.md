@@ -3,8 +3,8 @@
 ## Pornire rapida
 
 ```powershell
-# 1. Docker (recomandat) — porneste un server Paper curat
-.\scripts\setup-docker-demo.ps1
+# 1. Docker (recomandat) — porneste un server Paper curat si ruleaza smoke testul
+.\scripts\setup-docker-demo.ps1 -Smoke -PlayerName Hero
 # Apoi conecteaza-te in Minecraft la localhost:25565
 
 # 2. Smoke test complet cu RCON (automat, pe Docker)
@@ -16,7 +16,10 @@
 # 4. Testare interactiva ghidata
 .\scripts\test-demo.ps1 -Interactive
 
-# 5. Oprire Docker
+# 5. Validator dovezi Paper (Demo Paper Evidence Validator)
+.\scripts\validate-demo-paper-evidence.ps1 -EvidenceDir "./evidence" -AllowPending -FailOnWarnings -JsonOutFile "./report.json"
+
+# 6. Oprire Docker
 docker compose down
 ```
 
@@ -29,6 +32,7 @@ docker compose down
 | Deploy | `deploy-demo.ps1` | Copiaza JAR-urile pe un server Paper existent |
 | Test | `test-demo.ps1 -Interactive` | Ghid interactiv pas-cu-pas |
 | RCON | `rcon-client.ps1` | Conectare RCON la server Paper |
+| Evidence | `validate-demo-paper-evidence.ps1` | Demo Paper Evidence Validator - valideaza si genereaza dovezi milestone |
 
 ## Smoke test automat
 

@@ -73,6 +73,8 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
                 }
 
                 plugin.emotionManager.processEvent(npc, "player_approach", 1.0)
+
+                // GUI-ul de interactiuni nu se deschide automat la click pe NPC.
                 return
             }
         }

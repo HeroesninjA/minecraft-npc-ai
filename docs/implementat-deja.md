@@ -458,6 +458,9 @@ Capabilitati implementate:
 - comenzi admin pentru inspectie si creare manuala
 - comanda `/ainpc world demo create [regionId]` pentru generare rapida de mapping demo semantic la pozitia jucatorului sau, din consola/RCON, la spawn-ul lumii
 - mapping-ul demo foloseste un layout semantic mai spatios pentru case, piata, locuri de munca si altar, dar nu construieste blocuri fizice si nu niveleaza terenul
+- model canonic, catalog de blueprint-uri si validator read-only pentru structuri exterioare satului: castel, padure, fantana, casa izolata, mini-sat, asezare de factiune, dungeon si extensii
+- comanda `/ainpc world outside <types|blueprint|plan|report|validate> [type|baseId|regionId]` pentru blueprint-uri, planuri text read-only si inspectia mapping-ului semantic minim al structurilor exterioare
+- comanda `/ainpc world fixture <plan|validate> [prefix]` pentru plan si validare read-only ale mediului controlat de test: sat predefinit, cladiri/places, nodes, structuri exterioare si offset-uri relative, fara WorldEdit, build fizic, spawn sau progress automat
 - comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
 - comanda `/ainpc wand` pentru selectie manuala pos1/pos2/punct in harta construita
 - comanda `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` cu parser determinist, `preview`, `confirm` si `cancel`
@@ -507,6 +510,7 @@ Limitari actuale:
 - NPC-urile salveaza ancore de locatie si pot fi legate manual la places, dar nu au inca `homePlaceId` sau `workPlaceId` persistent explicit
 - `visit_place` si `inspect_node` exista initial cu `QuestAnchorResolver` si persistenta dedicata `quest_anchor_bindings`
 - scannerul vanilla, mapperul semantic si patch planner-ul read-only exista initial, dar generatorul complet de sate/cladiri si patch-urile native nu sunt inca implementate ca pipeline complet
+- structurile exterioare satului au catalog de blueprint-uri si validator read-only initial, dar nu au inca pipeline de create/build/spawn sau persistenta separata de `StructurePlan`
 - exista `HouseAllocation` ca model intern, dar generatorul complet nu il produce inca automat dintr-un `SettlementPlan`
 - household plannerul actual este minim si determinist; nu genereaza inca familii narative complexe sau populatie pe tot satul
 - settlement spawn ruleaza household-uri secvential, se opreste la prima eroare si sterge NPC-urile create in household-uri anterioare
@@ -630,6 +634,8 @@ Proiectul are deja implementate:
 - audit/debugdump initial pentru story state persistent si story events
 - scanare vanilla initiala si import semantic pentru world mapping
 - patch planner read-only initial pentru `GapReport`, `PatchCandidate` si `PatchPlan`
+- catalog de blueprint-uri, plan text read-only si validator initial pentru structuri exterioare satului prin `/ainpc world outside types|blueprint|plan|report|validate ...`
+- plan si validare read-only pentru mediu controlat de test prin `/ainpc world fixture plan|validate [prefix]`, fara WorldEdit, build fizic, spawn NPC/mobi sau quest progress automat
 - `npc_world_bindings` initial pentru home/work/social place si node IDs
 - comanda pentru mapping demo minim in jurul jucatorului
 - comanda read-only pentru readiness-ul primului demo intern jucabil

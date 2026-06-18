@@ -97,6 +97,7 @@ class DebugDumpOutputContractTest {
             "quest-anchor-bindings.json",
             "story-states.json",
             "story-events.json",
+            "authoring.txt",
             "openai.txt",
             "recent-server-log.txt"
         )

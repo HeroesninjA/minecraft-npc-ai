@@ -3,30 +3,36 @@ services:
     image: itzg/minecraft-server:latest
     container_name: ainpc-demo
     ports:
-      - "25565:25565"
+      - "${SERVER_PORT:-25565}:25565"
+      - "${RCON_PORT:-25575}:25575"
     environment:
       EULA: "TRUE"
       TYPE: PAPER
-      VERSION: "1.21.4"
-      MEMORY: "2G"
-      ONLINE_MODE: "FALSE"
-      DIFFICULTY: peaceful
-      MODE: creative
+      VERSION: "${MC_VERSION:-1.21.4}"
+      MEMORY: "${MEMORY:-2G}"
+      ONLINE_MODE: "${ONLINE_MODE:-FALSE}"
+      DIFFICULTY: "${DIFFICULTY:-peaceful}"
+      MODE: "${MODE:-creative}"
       SPAWN_PROTECTION: "0"
-      VIEW_DISTANCE: 8
-      SIMULATION_DISTANCE: 8
+      VIEW_DISTANCE: "${VIEW_DISTANCE:-8}"
+      SIMULATION_DISTANCE: "${SIMULATION_DISTANCE:-8}"
       ALLOW_FLIGHT: "TRUE"
-      MAX_PLAYERS: 5
-      MOTD: "AINPC Demo - SAT DEMO"
-      ENABLE_RCON: "TRUE"
-      RCON_PASSWORD: "demo"
-      RCON_PORT: 25575
+      MAX_PLAYERS: "${MAX_PLAYERS:-5}"
+      MOTD: "${MOTD:-AINPC Demo - SAT DEMO}"
+      ENABLE_RCON: "${ENABLE_RCON:-TRUE}"
+      RCON_PASSWORD: "${RCON_PASSWORD:-demo}"
+      RCON_PORT: "${RCON_PORT:-25575}"
       OVERRIDE_SERVER_PROPERTIES: "TRUE"
       ANNOUNCE_PLAYER_ACHIEVEMENTS: "FALSE"
-      GENERATE_STRUCTURES: "FALSE"
+      GENERATE_STRUCTURES: "TRUE"
+      LEVEL_TYPE: FLAT
+      GENERATOR_SETTINGS: '{"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains","structures":{"structures":{"minecraft:village_plains":{},"minecraft:village_snowy":{},"minecraft:village_savanna":{},"minecraft:village_desert":{},"minecraft:village_taiga":{}}}}'
     volumes:
       - ./paper-data/plugins:/plugins
+      - ./paper-data/data:/data
       - ./paper-data/world:/world
       - ./paper-data/world_nether:/world_nether
       - ./paper-data/world_the_end:/world_the_end
     restart: unless-stopped
+    env_file:
+      - .env

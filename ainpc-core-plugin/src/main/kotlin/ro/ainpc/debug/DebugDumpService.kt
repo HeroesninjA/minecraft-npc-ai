@@ -80,6 +80,9 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         if (normalizedScope == "all" || normalizedScope == "openai") {
             writeText(dumpRoot.resolve("openai.txt"), buildOpenAiInfo())
         }
+        if (normalizedScope == "all" || normalizedScope == "authoring") {
+            writeText(dumpRoot.resolve("authoring.txt"), DebugDumpAuthoringText.buildAuthoringText(plugin, null))
+        }
 
         writeText(dumpRoot.resolve("recent-server-log.txt"), readRecentServerLog())
         return DebugDumpResult(dumpRoot, normalizedScope)
