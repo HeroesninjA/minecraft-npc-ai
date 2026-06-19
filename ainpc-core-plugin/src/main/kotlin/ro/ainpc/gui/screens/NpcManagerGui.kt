@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Location
 import org.bukkit.Material
+import ro.ainpc.AINPCPlugin
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -36,10 +37,19 @@ class NpcManagerGui : GuiScreen {
                 "&6Manager NPC",
                 listOf(
                     "&7Total NPC-uri: &f${context.plugin().npcManager.getNPCCount()}",
+                    "&7Spawned: &f${npcs.count { it.isSpawned() }}",
+                    "&7Despawned: &f${npcs.count { !it.isSpawned() }}",
                     "&7Click: /ainpc info",
                     "&7Right click: /ainpc tp",
                     "&7Shift click: routine/family"
                 )
+            )
+        )
+        context.button(
+            5,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.PAPER, "&9NPC diagnostics", npcDiagnosticsLore(context.plugin())),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump npc") }
             )
         )
 
@@ -111,6 +121,19 @@ class NpcManagerGui : GuiScreen {
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun npcDiagnosticsLore(plugin: AINPCPlugin): List<String> {
+        val total = plugin.npcManager.getNPCCount()
+        val spawned = plugin.npcManager.getAllNPCs().count { it.isSpawned() }
+        val idle = plugin.npcManager.getAllNPCs().count { !it.isSpawned() }
+        return listOf(
+            "&7Total NPC-uri: &f$total",
+            "&7Spawned: &f$spawned",
+            "&7Despawned: &f$idle",
+            "&7Audit: &f/ainpc audit npc",
+            "&7Dump: &f/ainpc debugdump npc"
+        )
     }
 
     private fun npcLore(npc: AINPC, routine: RoutineAssignment): List<String> {

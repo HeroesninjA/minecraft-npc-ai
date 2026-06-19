@@ -186,6 +186,15 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     )
                 }
 
+                "population" -> {
+                    if (args.size == 2) completions.addAll(filterStartsWith(POPULATION_ACTIONS, args[1]))
+                    else if (args.size >= 3 && "plan".equals(args[1], true)) {
+                        if (args.size == 3) completions.addAll(getRegionIdsSafe(args[2]))
+                        else if (args.size == 4) completions.addAll(filterStartsWith(listOf("6", "8", "10", "12"), args[3]))
+                        else if (args.size == 5) completions.add("<seed>")
+                    }
+                }
+
                 "audit" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(AUDIT_MODES, args[1]))
                     else if (args.size == 3 && ("quest".equals(args[1], true) || "all".equals(
@@ -510,6 +519,15 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     completions.addAll(getOnlinePlayerNames(questArgs[1]))
                 } else if (questMode == "gui") {
                     completions.addAll(filterStartsWith(GUI_QUEST_FILTERS, questArgs[1]))
+                } else if (questMode == "authoring") {
+                    if (questArgs.size == 2) {
+                        completions.addAll(AuthoringCommandSupport.modeSuggestions(questArgs[1]))
+                        completions.addAll(getAuthoringSelectorSuggestions(questArgs[1]))
+                    } else if (questArgs.size == 3 && "dump".equals(questArgs[1], true)) {
+                        completions.addAll(getAuthoringSelectorSuggestions(questArgs[2]))
+                    } else if (questArgs.size == 4 && "dump".equals(questArgs[1], true)) {
+                        completions.addAll(getAuthoringMechanicSuggestions(questArgs[3]))
+                    }
                 } else if (questMode == "definitions" || questMode == "defs") {
                     completions.addAll(filterStartsWith(PROGRESSION_DEFINITION_FILTERS, questArgs[1]))
                 } else if (questMode == "stored" || questMode == "state" || questMode == "progressions") {
@@ -781,6 +799,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "map",
             "story",
             "migration",
+            "population",
             "audit",
             "debugdump",
             "list",
@@ -959,6 +978,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai")
         private val MIGRATION_TARGETS = listOf("households")
         private val MIGRATION_MODES = listOf("dryrun", "apply")
+        private val POPULATION_ACTIONS = listOf("plan", "inspect")
         private val REPAIR_TARGETS =
             listOf("duplicates", "households", "npc-bindings", "mapping-metadata", "batch", "spawn-batch")
         private val REPAIR_MODES = listOf("dryrun", "apply")
@@ -970,6 +990,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val ROUTINE_ACTIONS = listOf("tick", "status")
         private val QUEST_MODES = listOf(
             "gui",
+            "authoring",
             "log",
             "track",
             "current",

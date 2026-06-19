@@ -45,6 +45,7 @@ class PluginCommandDescriptorTest {
         EXPECTED_DEMO_HELP_TOKENS.forEach { token ->
             assertTrue(demoHelpLine.contains(token), "Main help should mention demo token '$token'")
         }
+        assertTrue(helpText.contains("/ainpc quest authoring"), "Main help should mention quest authoring alias")
     }
 
     @Test

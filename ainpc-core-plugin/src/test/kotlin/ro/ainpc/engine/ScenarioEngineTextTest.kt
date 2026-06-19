@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import ro.ainpc.npc.AINPC
+import java.io.File
 
 class ScenarioEngineTextTest {
     @Test
@@ -168,6 +169,15 @@ class ScenarioEngineTextTest {
             formatQuestEntry(entry("record_story_event", "", metadata = mapOf("event_type" to "quest_started"))),
         )
         assertEquals("2x custom token", formatQuestEntry(entry("custom_type", "CUSTOM_TOKEN", 2)))
+    }
+
+    @Test
+    fun questDebugIncludesAuthoringDecisionSummary() {
+        val source = File("src/main/kotlin/ro/ainpc/engine/ScenarioEngine.kt").readText()
+
+        assertEquals(true, source.contains("&eAuthoring: &f"))
+        assertEquals(true, source.contains("authoringSnapshot.decisionStatus()"))
+        assertEquals(true, source.contains("authoringSnapshot.selectedProgressionId()"))
     }
 
     @Test

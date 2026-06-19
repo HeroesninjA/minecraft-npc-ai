@@ -1,6 +1,6 @@
 # Documentatie
 
-Actualizat: 2026-06-16
+Actualizat: 2026-06-18
 
 Acest folder contine documentatia tehnica locala a proiectului. Documentele nu au toate acelasi rol: unele descriu ce exista deja in cod, altele sunt design pentru faze viitoare.
 
@@ -36,21 +36,22 @@ Ordinea recomandata pentru orientare:
 26. `story-si-context-ai.md`
 27. `story-context-service.md`
 28. `progression-service.md`
-29. `player-onboarding-initiere.md`
-30. `lucru-alternat-quest-mapping-progression.md`
-31. `roadmap-orientativ.md`
-32. `server-admin-runbook.md`
-33. `release-checklist.md`
-34. `debugging-si-testare.md`
-35. `prevenire-duplicare-npc.md`
-36. `rezumat-conversie-java-la-kotlin.md`
-37. `kotlin-migration-tracker.md`
-38. `kotlin-style-guide.md`
-39. `kotlin-interop-api-addonuri.md`
-40. `kotlin-paper-packaging-si-smoke.md`
-41. `kotlin-code-review-checklist.md`
-42. `kotlin-coroutines-paper-policy.md`
-43. `kotlin-testing-strategy.md`
+29. `api-events-listeners-triggers.md`
+30. `player-onboarding-initiere.md`
+31. `lucru-alternat-quest-mapping-progression.md`
+32. `roadmap-orientativ.md`
+33. `server-admin-runbook.md`
+34. `release-checklist.md`
+35. `debugging-si-testare.md`
+36. `prevenire-duplicare-npc.md`
+37. `rezumat-conversie-java-la-kotlin.md`
+38. `kotlin-migration-tracker.md`
+39. `kotlin-style-guide.md`
+40. `kotlin-interop-api-addonuri.md`
+41. `kotlin-paper-packaging-si-smoke.md`
+42. `kotlin-code-review-checklist.md`
+43. `kotlin-coroutines-paper-policy.md`
+44. `kotlin-testing-strategy.md`
 
 ## Navigare pe categorii
 
@@ -104,6 +105,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `arhiva/kotlin-migration/README.md` | 3, 6 | Arhiva planurilor initiale Kotlin | Istoric pentru planurile KOT-001 si strategia initiala; nu este document operational curent |
 | `dialog-si-conversatii.md` | 2, 4, 5 | Evolutia dialogului pe masura ce avanseaza quest, story, environment, memorie si reputatie | Dialogul formuleaza raspunsuri peste context validat; nu trebuie sa decida progres sau reward-uri |
 | `documentatie-api.md` | 3 | Contract public curent | Nu trata clasele interne core ca API stabil pentru addonuri |
+| `api-events-listeners-triggers.md` | 3, 4 | Contract pentru event-uri publice, listener-e si trigger-e peste quest, story, dialog, NPC si context | Lifecycle-ul public initial pentru progression, offer, objective progress si stage change exista; restul evenimentelor raman backlog |
 | `addon-config-template.md` | 3 | Separarea config core vs config addon | Core-ul ramane universal, addonurile isi livreaza propriul template |
 | `documentatie-lipsa.md` | toate | Idei de documentatie lipsa si prioritate | Foloseste-l ca backlog de documentatie, nu ca status de implementare |
 | `environment-context-si-engine.md` | 2, 4, 5 | Contract pentru context read-only de mediu si EnvironmentEngine viitor | Implementeaza intai `EnvironmentContextService`; `EnvironmentEngine` complet ramane pentru questuri sistemice si world events |
@@ -129,6 +131,7 @@ Pentru documente care lipsesc sau merita separate, vezi `documentatie-lipsa.md`.
 | `mapping-harti-manuale.md` | 1, 4, 5 | Ghid pentru harti construite manual, strat semantic validat de admin si directia wand + prompturi naturale | Detectia automata poate propune zone, dar nu trebuie tratata ca adevar semantic |
 | `mapping-pentru-implementari-ulterioare.md` | 4, 5 | Redirect istoric catre `mapping.md` | Pastreaza-l doar pentru linkuri vechi; continutul canonic este in `mapping.md` |
 | `mediu-test-controlat-sat-si-structuri-exterioare.md` | 1, 2, 5, 6 | Contract pentru fixture/demo test temporar cu sat predefinit si structuri exterioare controlate | Este cod de test/fixture si nu trebuie sa ramana continut hardcodat in core final |
+| `json-yaml-contract.md` | 1, 2, 4, 5, 6 | Contract pentru integrarea scripturilor JSON si YAML cu pattern-uri lizibile, normalizare si compatibilitate | JSON si YAML sunt doar reprezentari; modelul intern si regulile de versiune raman comune |
 | `schema-scenariu-predefinit-testare.md` | 1, 2, 4, 5, 6 | Schema pentru scenariu predefinit de testare cu cladiri, NPC-uri, relatii, context semantic, structuri exterioare si quest/story | Este cod de test/fixture temporar; nu introduce lore final sau continut implicit in core |
 | `migration-si-backup.md` | 0, 6 | Runbook pentru backup cu restore-check, migration si rollback operational | Nu rula migration sau cleanup pe date reale fara backup verificat |
 | `npc-uri-temporare-si-episodice.md` | 4 | NPC-uri temporare, episodice si non-villager | Pastreaza persistenta light separata de NPC-urile permanente |

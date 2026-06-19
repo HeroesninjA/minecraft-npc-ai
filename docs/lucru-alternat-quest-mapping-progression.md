@@ -1,6 +1,28 @@
 # Lucru Alternat: Quest, Mapping, Story, ProgressionService si GUI
 
-Actualizat: 2026-05-11
+Actualizat: 2026-06-18
+
+## Navigare rapida
+
+- `docs/mapping.md`
+- `docs/npc-world-bindings.md`
+- `docs/questuri-avansate-v2.md`
+- `docs/quest-anchor-bindings.md`
+- `docs/progression-service.md`
+- `docs/story-si-context-ai.md`
+- `docs/generare-automata-questuri-ai.md`
+- `docs/gui-interfete.md`
+- `docs/debugging-si-testare.md`
+- `docs/patch-planner.md`
+
+## Stare curenta
+
+- [x] `QuestLogGui`, `QuestDetailGui` si `QuestAuthoringGui` expun diagnostice read-only pentru progresie si authoring.
+- [x] `WorldHubGui`, `StoryGui`, `DebugGui` si `MainHubGui` expun carduri compacte pentru mapping, story, build si version snapshot.
+- [x] `debugdump quest`, `debugdump story`, `debugdump mapping`, `debugdump npc`, `debugdump ai` si `/npc version` sunt conectate.
+- [x] `build-info.properties` si `BuildVersionInfo` expun versiunea, hash-ul si timestamp-ul ultimului build.
+- [x] Documentele canonice au linkuri inverse si documentul coordonator are navigare rapida.
+- [ ] `DebugGui` poate primi inca shortcut-uri suplimentare pentru audit sau history, daca apar necesitati simple.
 
 ## Scop
 
@@ -50,6 +72,41 @@ mapping concret
 | GUI system | Prezentare si control sigur peste snapshot-uri, comenzi validate, audit si debug | Nu muta logica din `ScenarioEngine`, `ProgressionService`, `WorldAdminApi` sau DB in inventare |
 | AI authoring | Produce `QuestDraft`, texte, motivatie si explicatii peste context validat | Nu porneste questuri live, nu scrie config live si nu modifica story/progres direct |
 | Patch Planner | Produce `GapReport` si `PatchPlan` read-only cand mapping-ul nu sustine continutul dorit | Nu construieste si nu scrie mapping pana nu exista commit/builder validat |
+
+## Documente conectate
+
+Acest document este un strat de coordonare. Implementarea reala si regulile detaliate vin din documentele canonice de mai jos:
+
+| Document | Rol in aceasta documentatie |
+|---|---|
+| `docs/mapping.md` | baza pentru regiuni, places, nodes si ancorele semantice folosite de questuri |
+| `docs/npc-world-bindings.md` | sursa pentru home/work/social bindings si validarea rutinei NPC |
+| `docs/questuri-avansate-v2.md` | defineste structura questurilor, obiectivele, stages si diversitatea gameplay-ului |
+| `docs/quest-anchor-bindings.md` | ofera contractul pentru ancorele persistente ale progresiilor |
+| `docs/progression-service.md` | descrie runtime-ul generic care unifica quest, contract, duty, bounty, event, tutorial si ritual |
+| `docs/story-si-context-ai.md` | conecteaza story context cu selectia de quest si cu efectele narative |
+| `docs/generare-automata-questuri-ai.md` | limitele pentru `QuestSeed`, `QuestDraft`, validare si export controlat |
+| `docs/gui-interfete.md` | contractul pentru ecranele GUI peste quest, progression, world, NPC, audit si debug |
+| `docs/debugging-si-testare.md` | smoke tests, audit si debugdump folosite ca verificare pentru fiecare slice |
+| `docs/patch-planner.md` | analiză read-only a gap-urilor de mapping înainte de a construi conținut nou |
+
+Folosire practica:
+
+- cand lipsește maparea, citește `docs/mapping.md` și `docs/patch-planner.md`;
+- cand lipsește contextul narativ, citește `docs/story-si-context-ai.md`;
+- cand trebuie unificată logica de progres, citește `docs/progression-service.md` și `docs/questuri-avansate-v2.md`;
+- cand trebuie vizibilitate în UI, citește `docs/gui-interfete.md`;
+- cand trebuie validare sau smoke, citește `docs/debugging-si-testare.md`.
+
+## Stare implementata
+
+Pana la acest punct, alternanta a fost conectata si in cod prin:
+
+- `QuestLogGui`, `QuestDetailGui` si `QuestAuthoringGui` pentru progresie, selectie si authoring read-only;
+- `WorldHubGui`, `StoryGui`, `DebugGui` si `MainHubGui` pentru navigare, mapping, story, debug si shortcut-uri;
+- `debugdump quest`, `debugdump story`, `debugdump mapping`, `debugdump npc`, `debugdump ai` si `/npc version` pentru observabilitate directa;
+- metadata de build expusa prin `build-info.properties`, `BuildVersionInfo` si carduri compacte in GUI;
+- documentele canonice legate in ambele sensuri prin secțiunea de documente conectate.
 
 ## Regula story vs quest
 
@@ -803,6 +860,16 @@ Decision:
 - Debug/audit: fiecare request AI trebuie auditat fara secrete, iar exportul trece prin `/ainpc audit quest strict`.
 - Limita: AI-ul nu acorda reward-uri, nu modifica story/progres si nu inventeaza obiective fara listener.
 
+`AI-QUEST-DOC-02 - Quest authoring read-only, GUI si dump` documenteaza partea operativa:
+
+- Mapping: selectorul de quest si mecanica sunt tratate ca selectie explicita, nu ca sursa de executie.
+- Story: snapshot-ul de authoring expune contextul narativ, dar ramane doar lectura.
+- Quest/progression: `QuestAuthoringService` si `QuestAuthoringSnapshot` sunt stratul de inspectie pentru `QuestSeed` si `QuestDraft`.
+- GUI/comenzi: `/ainpc authoring`, `next`, `prev`, `clear`, `reset` si `dump` folosesc acelasi flow, iar GUI-ul retine selecția per-player.
+- Persistenta: starea authoring este temporara pe jucator; nu exista inca persistenta dedicata pentru draft-uri validate.
+- Debug/audit: `/ainpc debugdump authoring` expune acelasi snapshot in text pentru review rapid.
+- Limita: fluxul este intentionat read-only; nu creeaza, nu publica si nu activeaza questuri live.
+
 ## Urmatoarele 100 de faze recomandate
 
 Aceste faze sunt intentionat mici. Fiecare faza trebuie sa lase in urma cel putin o verificare: test automat, comanda Paper rulabila, audit, debugdump sau actualizare GUI.
@@ -867,7 +934,7 @@ Aceste faze sunt intentionat mici. Fiecare faza trebuie sa lase in urma cel puti
 58. F058 - Ruleaza R01 prin `/ainpc ritual` si verifica altarul demo.
 59. F059 - Verifica limitele `max_active` intre questuri si mecanici non-quest.
 60. F060 - Verifica `progression stored all` dupa toate mecanicile rulate.
-61. F061 - Extinde `ProgressionService` cu metoda read-only pentru obiectivele unei progresii stocate.
+61. F061 - Finalizat 2026-06-18: extinde `ProgressionService` cu metoda read-only pentru obiectivele unei progresii stocate.
 62. F062 - Muta formatarile comune de status/progress din comenzi in snapshot-uri reutilizabile.
 63. F063 - Adauga selector comun pentru `tracked/current/templateId/questCode` reutilizat de comenzi si GUI.
 64. F064 - Adauga API read-only pentru anchors pe obiectiv, nu doar pe progresie.
@@ -903,7 +970,7 @@ Aceste faze sunt intentionat mici. Fiecare faza trebuie sa lase in urma cel puti
 94. F094 - Adauga distributie determinista pe work places dupa ocupatie.
 95. F095 - Adauga distributie determinista pe social places dupa regiune.
 96. F096 - Expune planul narativ in comanda dry-run inainte de spawn.
-97. F097 - Scrie planul narativ in debugdump fara sa modifice DB.
+97. F097 - Finalizat 2026-06-18: scrie planul narativ in debugdump fara sa modifice DB.
 98. F098 - Ruleaza smoke Paper pentru populatie generata pe regiune mica.
 99. F099 - Stabileste criteriile de release `paper-test` pentru mapping/progression/gui.
 100. F100 - Marcheaza demo-ul ca matur doar dupa smoke Paper complet, restart, audit, debugdump si raport documentat.
@@ -933,8 +1000,6 @@ Aceste faze continua aceeasi alternanta, dar introduc explicit patch planner, st
 119. F119 - Adauga smoke Paper pentru un quest exportat din draft si activat manual pe server de test.
 120. F120 - Abia dupa F111-F119, leaga `AIOrchestrationService` la use case-ul `QUEST_DRAFT`.
 
-## Continuare story dupa F120
-
 Aceste faze trateaza story-ul ca fir principal al alternantei, nu ca efect secundar al questurilor.
 
 121. F121 - Finalizat 2026-05-11: creeaza raport de smoke pentru `story_only`: story state/event exista, dar `player_quests` ramane neschimbat.
@@ -952,6 +1017,412 @@ Aceste faze trateaza story-ul ca fir principal al alternantei, nu ca efect secun
 133. F133 - Finalizat 2026-05-11: adauga caz story blocant: `QuestDirectorDecision.blocked` explica story condition lipsa.
 134. F134 - Finalizat 2026-05-11: adauga sectiune in smoke report pentru prioritatea `Progression > Story > Memory > AI text`.
 135. F135 - Marcheaza story lane ca matur doar dupa reload, debugdump, audit, GUI read-only si cel putin un caz story-only verificat.
+
+## Continuare dupa F135
+
+Aceasta continuare pastreaza alternanta dintre mapping, story, quest/progression, `ProgressionService` si GUI. Fiecare faza trebuie sa ramana mica si verificabila pe Paper sau prin audit/read-only.
+
+136. F136 - Definește un `ProgressionGuiSnapshot` comun pentru quest, contract, duty, bounty, event, tutorial și ritual.
+137. F137 - Grupează progresiile în GUI după `kind` și `mechanic`, cu comportament identic între text și ecran.
+138. F138 - Extragă un strat read-only pentru definițiile generice de progresie, reutilizat de comenzi și GUI.
+139. F139 - Standardizează selectorii `tracked`, `current`, `templateId` și `questCode` într-un singur flux de rezolvare.
+140. F140 - Adaugă sumar generic pentru progresii active, tracked, arhivate și fără definiție încărcată.
+141. F141 - Extinde `QuestDetailGui` cu stage, objectives, anchors și story effects declarate.
+142. F142 - Adaugă puntea dintre `WorldHubGui` și progresiile active ale contextului curent de regiune sau place.
+143. F143 - Integrează în `RoutineGui` home/work/social bindings și scurtătura către diagnosticul de binding.
+144. F144 - Întărește `/ainpc audit quest` cu verificări stricte pentru `objective_id`, template și bindings persistente.
+145. F145 - Extinde `debugdump story` cu lanțul de evenimente și motivul pentru care un quest a fost sau nu a fost creat.
+146. F146 - Adaugă `debugdump progression` cu statistici pe kind, mecanică și stare de persistență.
+147. F147 - Standardizează lookup-ul de ancore pe `region`, `place`, `node` și `npc`, cu fallback explicat în audit.
+148. F148 - Verifică fluxul story-driven printr-un NPC interaction path care selectează un quest existent, nu un draft AI.
+149. F149 - Introdu un caz `story_only` vizibil în story UI și debugdump, dar absent din quest log și progression.
+150. F150 - Introdu un caz `writes_story` în care completarea questului scrie un eveniment narativ explicit și auditabil.
+151. F151 - Confirmă un caz `quest_only` pentru tutorial sau duty, fără efecte narative și fără `story_events` noi.
+152. F152 - Rulează un `GapReport` focalizat pe quest triggers, social hubs, workplaces și entrance nodes pentru o regiune demo.
+153. F153 - Leagă `PatchPlanner` de validarea ancorelor lipsă, dar păstrează totul read-only până există builder stabil.
+154. F154 - Adaugă un ecran admin de audit compact care agregă mapping, quest/progression, story și binding diagnostics.
+155. F155 - Extinde exportul generic în JSON și validează că poate fi citit după reload fără pierderi de semnificație.
+156. F156 - Extrage citirea read-only a progresiilor curente și tracked într-un strat comun între `ProgressionService` și GUI.
+157. F157 - Leagă selecția de quest de `StoryContextSnapshot` și documentează clar rezultatele `candidate_found`, `seed_suggested` și `blocked`.
+158. F158 - Verifică smoke-ul complet după restart pentru mapping, quest, story și GUI, cu raport standardizat.
+159. F159 - Închide ciclul cu sincronizarea TODO/docs/changelog, astfel încât faza următoare să pornească dintr-o stare documentată și verificabilă.
+160. F160 - Pregătește următorul pachet de alternanță pentru extinderea `ProgressionService` fără a rupe contractele deja validate.
+
+## Continuare dupa F160
+
+Seria următoare păstrează aceeași regulă: slice mic, legat de mapping, story, progresie și GUI, cu o verificare clară la final.
+
+161. F161 - Definește un contract read-only pentru progresii pe regiune și place, fără query direct din DB în GUI.
+162. F162 - Adaugă un sumar de progresie pe NPC, astfel încât home/work/social să poată fi urmărite în contextul rutinei.
+163. F163 - Grupează progresiile active după ancoră și mecanică, cu aceeași ordine în CLI, audit și GUI.
+164. F164 - Extinde `ProgressionService` cu un API de lookup pentru obiectivele curente ale unei progresii.
+165. F165 - Standardizează statusul unei progresii la nivel de snapshot: offered, active, tracked, completed, archived.
+166. F166 - Leagă `QuestDetailGui` de snapshot-ul generic de progresie, fără fallback la citiri ad-hoc din YAML.
+167. F167 - Adaugă afișare explicită pentru reward și story effects în detaliul de progresie, doar dacă sunt declarate.
+168. F168 - Extinde `WorldHubGui` cu progresiile apropiate de regiunea curentă, dar doar ca prezentare read-only.
+169. F169 - Adaugă un shortcut GUI către `/ainpc progression stored` pentru debug rapid și comparare cu snapshot-ul afișat.
+170. F170 - Întărește auditul pentru progresii fără definiție încărcată și explică clar dacă lipsa este de mapping sau de registry.
+171. F171 - Adaugă audit pentru ancore duplicate pe aceeași progresie și fă diferența între binding intenționat și coliziune.
+172. F172 - Standardizează `objective_id` în toate rapoartele, GUI-urile și dump-urile pentru aceeași progresie.
+173. F173 - Verifică fluxul story-driven când aceeași stare narativă poate produce mai multe candidate quests, dar doar unul este expus.
+174. F174 - Adaugă o regulă de blocare pentru `QuestDirector` când un quest candidat ar încălca cooldown, max active sau constraints de mapping.
+175. F175 - Introdu un caz testabil pentru `seed_suggested`, unde output-ul rămâne draft și nu pornește nimic live.
+176. F176 - Adaugă un caz testabil pentru `no_action`, unde story-ul este valid, dar nu cere quest sau progresie.
+177. F177 - Adaugă un caz testabil pentru `blocked`, unde lipsa de ancore sau de context este explicată în output și în debugdump.
+178. F178 - Extinde `debugdump quest` cu motivul rezolvării unei ancore, inclusiv fallback-ul folosit.
+179. F179 - Extinde `debugdump world` cu legătura dintre place, node și progresiile care îl consumă.
+180. F180 - Adaugă o vedere de audit pentru `player-progressions.json`, astfel încât exportul să poată fi verificat fără deschidere manuală.
+181. F181 - Leagă `PatchPlanner` de un raport scurt în GUI admin, nu doar de comenzi text, pentru gaps de mapping.
+182. F182 - Adaugă un smoke flow pentru `quest_only` după reload, cu verificare explicită că story-ul rămâne neschimbat.
+183. F183 - Adaugă un smoke flow pentru `writes_story` după reload, cu verificare explicită a evenimentului narativ persistat.
+184. F184 - Adaugă un smoke flow pentru `story_only` după reload, cu verificare explicită că nu apare progresie nouă.
+185. F185 - Închide această etapă cu un raport sintetic care compară mapping, story și progression înainte și după restart.
+
+## Continuare dupa F185
+
+Seria aceasta păstrează părțile mici și verificabile. Fiecare fază trebuie să confirme un singur contract clar, nu să deschidă o migrare mare.
+
+186. F186 - Definește un snapshot comun pentru `QuestDirectorDecision` și expune-l read-only în debug și GUI admin.
+187. F187 - Adaugă un raport compact pentru candidate quests, astfel încât să se poată vedea de ce a fost ales sau respins fiecare candidat.
+188. F188 - Standardizează modul în care `blocked` explică lipsa de mapping, lipsa de story sau conflictul de cooldown.
+189. F189 - Leagă `QuestDirector` de un set minim de teste deterministe pentru `candidate_found`, `seed_suggested`, `no_action` și `blocked`.
+190. F190 - Extinde `StoryContextSnapshot` cu surse explicite pentru regiune, place și event chain, fără a introduce scriere automată.
+191. F191 - Adaugă un ecran story-readonly în GUI care arată context, sursă și ultimul efect narativ, fără editare.
+192. F192 - Integrează `QuestDetailGui` cu story links explicite, astfel încât efectele narative declarate să poată fi urmărite rapid.
+193. F193 - Adaugă un tab de audit pentru mapping gaps care separă lipsa de place, node, NPC binding și quest anchor.
+194. F194 - Extinde `debugdump world` cu lista de noduri relevante pentru questing și indicatorul de acoperire semantică.
+195. F195 - Adaugă un raport de consistență pentru `npc_world_bindings` și `quest_anchor_bindings` în aceeași execuție de audit.
+196. F196 - Standardizează exportul pentru progresii stocate, astfel încât `player-progressions.json` să includă `kind`, `mechanic` și `status`.
+197. F197 - Adaugă un comparator read-only între snapshot-ul GUI și exportul JSON, pentru a detecta discrepanțe fără editare manuală.
+198. F198 - Refactorizează citirea progresiilor curente într-un API comun pentru quest, contract, duty, bounty, event, tutorial și ritual.
+199. F199 - Adaugă un flow de validare pentru obiective cu multiple ancore, cu fallback clar și ordonat.
+200. F200 - Verifică un quest complet care trece prin două ancore diferite, dar produce un singur progres final valid.
+201. F201 - Adaugă un smoke pentru progresii cu reward declarate, astfel încât reward-ul să fie observabil după finalizare și reload.
+202. F202 - Adaugă un smoke pentru progresii fără reward, dar cu efect story, și documentează clar comportamentul așteptat.
+203. F203 - Standardizează mesajele de eroare pentru `QuestAnchorResolver`, astfel încât să indice sursa lipsă și acțiunea sigură următoare.
+204. F204 - Extinde `PatchPlanner` cu un rezumat de impact pentru questuri care cer social hub, work node sau entrance node.
+205. F205 - Adaugă un raport de diferență între mapping-ul necesar și mapping-ul existent pentru un quest seed ales manual.
+206. F206 - Leagă `ProgressionService` de un test de regresie pentru selectorii `tracked` și `current` după reload.
+207. F207 - Adaugă o verificare GUI pentru filtrarea după mecanică, astfel încât aceeași listă să apară identic în `quest`, `contract` și `progression`.
+208. F208 - Integrează `RoutineGui` cu diagnosticul de binding și cu un shortcut la `npc_world_bindings` pentru NPC-ul selectat.
+209. F209 - Adaugă o verificare de coerență între `debugdump story` și `debugdump quest` pentru questurile care scriu evenimente narative.
+210. F210 - Închide seria cu un raport de stare care spune clar ce părți sunt gata pentru următoarea extracție sau extindere.
+
+## Continuare dupa F210
+
+Seria următoare rămâne strict incrementală: un contract nou sau o verificare nouă pe fază, fără să deschidă mutări mari de runtime.
+
+211. F211 - Definește un snapshot de diagnostic pentru progresiile fără definiție încărcată și expune-l în audit.
+212. F212 - Adaugă un raport de consistență între `ProgressionService` și GUI pentru statusurile `offered`, `active`, `tracked`, `completed` și `archived`.
+213. F213 - Extinde `QuestDetailGui` cu un indicator clar pentru ce ancoră a fost rezolvată și ce fallback a fost folosit.
+214. F214 - Integrează story links în GUI-ul de detaliu pentru a diferenția între efect narativ, context narativ și lipsă de story.
+215. F215 - Adaugă un ecran admin read-only pentru `QuestDirectorDecision`, cu motive, warnings și candidate template IDs.
+216. F216 - Standardizează raportarea candidaților respinși când lipsesc `region`, `place`, `node` sau `npc` ancore.
+217. F217 - Leagă `StoryContextService` de un test determinist care confirmă că contextul nu scrie progresie.
+218. F218 - Adaugă un smoke flow pentru `story_driven` în care același story state produce un quest candidat fără activare live.
+219. F219 - Extinde `debugdump story` cu explicarea exactă a lanțului care a generat candidatul sau blocarea.
+220. F220 - Adaugă un raport de diferență pentru quest seeds între mapping-ul cerut și mapping-ul disponibil în regiunea demo.
+221. F221 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit, astfel încât gap-urile să fie vizibile fără comenzi text.
+222. F222 - Standardizează exportul `quest-anchor-bindings.json` și validează că aceeași ancora apare identic în audit și dump.
+223. F223 - Adaugă un test de regresie pentru selectoarele de progresie `templateId` și `questCode` după reload și rename intern.
+224. F224 - Extinde filtrarea GUI pentru mecanici astfel încât `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual` să rămână aliniate.
+225. F225 - Adaugă o verificare pentru progresii cu mai multe objective_id-uri și confirmă ordinea de rezolvare în snapshot.
+226. F226 - Adaugă un smoke pentru progresii cu două etape, cu verificare explicită că stage transitions sunt stabile după reload.
+227. F227 - Adaugă un raport pentru ancorele care revin prin fallback la `place` sau `region`, cu justificare în debug.
+228. F228 - Standardizează mesajele de eroare pentru GUI când snapshot-ul nu găsește o progresie sau o ancoră persistentă.
+229. F229 - Adaugă un audit combinat pentru `npc_world_bindings`, `quest_anchor_bindings` și `player-progressions.json` în aceeași execuție.
+230. F230 - Verifică un flow complet în care `writes_story` produce și quest log, și story event, și export vizibil în debugdump.
+231. F231 - Adaugă un flow complet pentru `quest_only` cu confirmare că story context rămâne doar informativ.
+232. F232 - Adaugă un flow complet pentru `story_only` cu confirmare că GUI-ul arată contextul, dar nu oferă progresie.
+233. F233 - Leagă `WorldHubGui` de o vedere compactă a nodurilor relevante pentru questing și a progresiilor apropiate.
+234. F234 - Adaugă un raport sintetic pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` în același debug bundle.
+235. F235 - Închide seria cu o notă de stare care spune dacă fazele următoare pot începe extracția unui contract comun sau trebuie mai întâi întărit auditul.
+
+236. F236 - Definește un snapshot read-only pentru progresiile fără `story_context_id` și expune-l în debugdump.
+237. F237 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru obiectivele active.
+238. F238 - Standardizează mesajele pentru ancorele rezolvate prin fallback, astfel încât GUI-ul să arate motivul exact.
+239. F239 - Integrează `StoryContextService` cu un audit care confirmă că un context narativ nu creează progresii duplicate.
+240. F240 - Adaugă o verificare pentru questurile care au `npc` și `place` dar lipsesc `node`, cu recomandare clară de remediere.
+241. F241 - Extinde `QuestDirectorDecision` cu un rezumat compact pentru motivele de acceptare și de respingere.
+242. F242 - Adaugă un smoke flow pentru `quest_only` în care story-ul rămâne informativ, dar nu influențează lista de progresii.
+243. F243 - Leagă `ProgressionService` de un test de regresie pentru ordinea obiectivelor după reload și rename intern.
+244. F244 - Adaugă un raport de consistență pentru mecanicile afișate în `quest`, `contract`, `duty` și `bounty`.
+245. F245 - Extinde `WorldHubGui` cu o listă compactă a questurilor apropiate de NPC-ul selectat.
+246. F246 - Standardizează exportul `progression-gui-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+247. F247 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că ancorele active rămân stabile după reload.
+248. F248 - Integrează `PatchPlanner` cu un rezumat vizibil în GUI-ul de audit pentru gap-urile de mapping.
+249. F249 - Adaugă un smoke pentru `story_only` în care GUI-ul arată contextul narativ, dar fără call-to-action de progresie.
+250. F250 - Extinde `DebugDump` cu explicarea lanțului de decizie pentru o progresie activă aleasă manual.
+251. F251 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără a fi reactivabile accidental.
+252. F252 - Leagă `QuestDetailGui` de un indicator clar pentru starea `tracked` versus `current`.
+253. F253 - Standardizează mesajele pentru candidații respinși când lipsesc `region` sau `place` din mapping.
+254. F254 - Adaugă un raport combinat pentru `QuestDirectorDecision`, `GapReport` și `ProgressionGuiSnapshot` într-un singur bundle.
+255. F255 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+256. F256 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența între context narativ și progresie activă.
+257. F257 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea următoare sigură atunci când o ancoră lipsește.
+258. F258 - Adaugă un audit al progresiilor fără `quest_code` și indică explicit dacă problema este de mapping sau de import.
+259. F259 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived`.
+260. F260 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+261. F261 - Definește un snapshot de diagnostic pentru questurile fără `objective_id` și expune-l în `debugdump`.
+262. F262 - Adaugă un raport de aliniere între `QuestDirectorDecision` și `QuestDetailGui` pentru alegerile respinse.
+263. F263 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să arate clar nivelul folosit.
+264. F264 - Integrează `StoryContextService` cu o verificare read-only care confirmă că story-ul nu suprascrie progresia existentă.
+265. F265 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân vizibile după reload.
+266. F266 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `current` și `tracked` după mutare internă.
+267. F267 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+268. F268 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul curent și de locurile relevante.
+269. F269 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+270. F270 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+271. F271 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+272. F272 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu creează acțiune de progresie.
+273. F273 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimului update.
+274. F274 - Adaugă o verificare read-only pentru progresiile `completed`, astfel încât să fie vizibile fără să afecteze starea.
+275. F275 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+276. F276 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+277. F277 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+278. F278 - Introdu un test de regresie pentru selecția `questCode` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+279. F279 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+280. F280 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+281. F281 - Adaugă un audit al progresiilor fără `templateId` și indică explicit dacă problema este de mapping sau de import.
+282. F282 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+283. F283 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+284. F284 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+285. F285 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+286. F286 - Definește un snapshot read-only pentru questurile fără `quest_code` și expune-l în `debugdump`.
+287. F287 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile active.
+288. F288 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede motivul și nivelul folosit.
+289. F289 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu creează progresii duplicate după reload.
+290. F290 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că lista de obiective rămâne stabilă după restart.
+291. F291 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `offered` și `active` după rename intern.
+292. F292 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+293. F293 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+294. F294 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+295. F295 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu modifică ancorele persistente.
+296. F296 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+297. F297 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu creează acțiune de progresie.
+298. F298 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+299. F299 - Adaugă o verificare read-only pentru progresiile `completed`, astfel încât să fie vizibile fără să afecteze starea.
+300. F300 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+301. F301 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+302. F302 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+303. F303 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+304. F304 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+305. F305 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+306. F306 - Adaugă un audit al progresiilor fără `objective_id` și indică explicit dacă problema este de mapping sau de import.
+307. F307 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+308. F308 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+309. F309 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+310. F310 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+311. F311 - Definește un snapshot read-only pentru progresiile fără `templateId` și expune-l în `debugdump`.
+312. F312 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile complete.
+313. F313 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+314. F314 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie o progresie deja existentă după reload.
+315. F315 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele și statusurile rămân stabile după restart.
+316. F316 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `tracked` și `completed` după rename intern.
+317. F317 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+318. F318 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+319. F319 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+320. F320 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+321. F321 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+322. F322 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+323. F323 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+324. F324 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+325. F325 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+326. F326 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+327. F327 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+328. F328 - Introdu un test de regresie pentru selecția `questCode` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+329. F329 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+330. F330 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+331. F331 - Adaugă un audit al progresiilor fără `story_context_id` și indică explicit dacă problema este de mapping sau de import.
+332. F332 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+333. F333 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+334. F334 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+335. F335 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+336. F336 - Definește un snapshot read-only pentru progresiile fără `questCode` și expune-l în `debugdump`.
+337. F337 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile inactive.
+338. F338 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+339. F339 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+340. F340 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că statusurile rămân stabile după restart.
+341. F341 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `active` și `archived` după rename intern.
+342. F342 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+343. F343 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+344. F344 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+345. F345 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+346. F346 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+347. F347 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+348. F348 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+349. F349 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+350. F350 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+351. F351 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+352. F352 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+353. F353 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+354. F354 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+355. F355 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+356. F356 - Adaugă un audit al progresiilor fără `story_context_id` și indică explicit dacă problema este de mapping sau de import.
+357. F357 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+358. F358 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+359. F359 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+360. F360 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+361. F361 - Definește un snapshot read-only pentru progresiile fără `questCode` și expune-l în `debugdump`.
+362. F362 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile cu status `active`.
+363. F363 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+364. F364 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+365. F365 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că statusurile rămân stabile după restart.
+366. F366 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `tracked` și `completed` după rename intern.
+367. F367 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+368. F368 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+369. F369 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+370. F370 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+371. F371 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+372. F372 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+373. F373 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+374. F374 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+375. F375 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+376. F376 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+377. F377 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+378. F378 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+379. F379 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+380. F380 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+381. F381 - Adaugă un audit al progresiilor fără `story_context_id` și indică explicit dacă problema este de mapping sau de import.
+382. F382 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+383. F383 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+384. F384 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+385. F385 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+386. F386 - Definește un snapshot read-only pentru progresiile fără `story_context_id` și expune-l în `debugdump`.
+387. F387 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile cu status `tracked`.
+388. F388 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+389. F389 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+390. F390 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân stabile după restart.
+391. F391 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `active` și `completed` după rename intern.
+392. F392 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+393. F393 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+394. F394 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+395. F395 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+396. F396 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+397. F397 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+398. F398 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+399. F399 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+400. F400 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+401. F401 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+402. F402 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+403. F403 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+404. F404 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+405. F405 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+406. F406 - Adaugă un audit al progresiilor fără `questCode` și indică explicit dacă problema este de mapping sau de import.
+407. F407 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+408. F408 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+409. F409 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+410. F410 - Închide seria cu o notă de stare despre ce parte poate fi extrasă într-un contract comun și ce parte mai cere întărirea auditului.
+
+411. F411 - Definește un snapshot read-only pentru progresiile fără `questCode` și expune-l în `debugdump`.
+412. F412 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile cu status `tracked`.
+413. F413 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+414. F414 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+415. F415 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân stabile după restart.
+416. F416 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `active` și `completed` după rename intern.
+417. F417 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+418. F418 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+419. F419 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+420. F420 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+421. F421 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+422. F422 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+423. F423 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+424. F424 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+425. F425 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+426. F426 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+427. F427 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+428. F428 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+429. F429 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+430. F430 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+431. F431 - Fă un audit al progresiilor fără `story_context_id` și marchează explicit dacă problema vine din mapping sau din import.
+432. F432 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+433. F433 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+434. F434 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+435. F435 - Închide seria cu o notă de stare despre ce poate fi extras într-un contract comun și ce mai cere întărirea auditului.
+
+436. F436 - Definește un snapshot read-only pentru progresiile fără `questCode` și expune-l în `debugdump`.
+437. F437 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile cu status `completed`.
+438. F438 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+439. F439 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+440. F440 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân stabile după restart.
+441. F441 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `tracked` și `archived` după rename intern.
+442. F442 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+443. F443 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+444. F444 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+445. F445 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+446. F446 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+447. F447 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+448. F448 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+449. F449 - Adaugă o verificare read-only pentru progresiile `active`, astfel încât să fie vizibile fără să afecteze starea.
+450. F450 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+451. F451 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+452. F452 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+453. F453 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+454. F454 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+455. F455 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+456. F456 - Adaugă un audit al progresiilor fără `questCode` și indică explicit dacă problema este de mapping sau de import.
+457. F457 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+458. F458 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+459. F459 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+460. F460 - Închide seria cu o notă de stare despre ce poate fi extras într-un contract comun și ce mai cere întărirea auditului.
+
+461. F461 - Definește un snapshot read-only pentru progresiile fără `story_context_id` și expune-l în `debugdump`.
+462. F462 - Adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile cu status `active`.
+463. F463 - Standardizează mesajele pentru fallback-ul de ancore astfel încât auditul să indice limpede nivelul și motivul.
+464. F464 - Integrează `StoryContextService` cu o verificare care confirmă că story-ul nu rescrie progresia după reload.
+465. F465 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân stabile după restart.
+466. F466 - Extinde `ProgressionService` cu un test de regresie pentru selectoarele `tracked` și `completed` după rename intern.
+467. F467 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+468. F468 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+469. F469 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+470. F470 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+471. F471 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+472. F472 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+473. F473 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+474. F474 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+475. F475 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+476. F476 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+477. F477 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+478. F478 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+479. F479 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+480. F480 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+481. F481 - Fă un audit al progresiilor fără `story_context_id` și marchează explicit dacă problema vine din mapping sau din import.
+482. F482 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+483. F483 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+484. F484 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+485. F485 - Închide seria cu o notă de stare despre ce poate fi extras într-un contract comun și ce mai cere întărirea auditului.
+
+486. F486 - Finalizat 2026-06-19: definește un snapshot read-only pentru progresiile fără legătură story și expune-l în `debugdump`.
+487. F487 - Finalizat 2026-06-19: adaugă un raport de aliniere între `QuestDetailGui` și `ProgressionGuiSnapshot` pentru progresiile active și urmărite.
+488. F488 - Finalizat 2026-06-19: standardizează mesajele pentru fallback-ul de ancore astfel încât GUI-ul și auditul să indice limpede nivelul și motivul.
+489. F489 - Finalizat 2026-06-19: integrează `StoryContextService` cu o verificare read-only care compară story-ul și progresia fără cale de scriere.
+490. F490 - Adaugă un smoke flow pentru `quest_only` cu confirmarea că obiectivele rămân stabile după restart.
+491. F491 - Finalizat 2026-06-19: extinde `ProgressionService` cu regresie pentru selectoarele `active` și `completed` după rename intern.
+492. F492 - Adaugă un raport de consistență pentru mecanicile `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` și `ritual`.
+493. F493 - Leagă `WorldHubGui` de o listă compactă cu questurile apropiate de NPC-ul selectat și de locurile relevante.
+494. F494 - Standardizează exportul `quest-director-decision.json` și confirmă că aceeași decizie apare identic în audit și dump.
+495. F495 - Adaugă o verificare pentru `quest_anchor_bindings` care confirmă că fallback-ul nu schimbă ancorele persistente.
+496. F496 - Integrează `PatchPlanner` cu un mesaj scurt în GUI-ul de audit pentru gap-urile care blochează un quest seed.
+497. F497 - Adaugă un smoke pentru `story_only` în care contextul narativ este inspectabil, dar nu generează acțiune de progresie.
+498. F498 - Extinde `DebugDump` cu un lanț de decizie compact pentru o progresie activă și motivul ultimei schimbări.
+499. F499 - Adaugă o verificare read-only pentru progresiile `archived`, astfel încât să fie vizibile fără să afecteze starea.
+500. F500 - Leagă `QuestDetailGui` de un indicator clar pentru obiectivul rezolvat și obiectivul curent.
+501. F501 - Standardizează mesajele pentru candidații respinși când lipsesc `node` sau `npc` din mapping.
+502. F502 - Adaugă un raport combinat pentru `GapReport`, `QuestDirectorDecision` și `ProgressionGuiSnapshot` într-un singur bundle.
+503. F503 - Introdu un test de regresie pentru selecția `templateId` după reload, cu confirmarea că rename-ul intern nu rupe snapshot-ul.
+504. F504 - Adaugă un smoke flow pentru `story_driven` care confirmă diferența dintre candidat narativ și progresie activă.
+505. F505 - Extinde GUI-ul de detaliu cu un mesaj scurt despre acțiunea sigură următoare atunci când lipsește `place`.
+506. F506 - Fă un audit al progresiilor fără `story_context_id` și marchează explicit dacă problema vine din mapping sau din import.
+507. F507 - Leagă `ProgressionService` de un raport final care separă clar `offered`, `active`, `tracked`, `completed` și `archived` după refresh.
+508. F508 - Standardizează exportul `progression-snapshot.json` și validează că aceeași progresie apare identic în audit și dump.
+509. F509 - Adaugă o verificare pentru questurile cu mai multe obiective și confirmă ordinea lor stabilă după reload.
+510. F510 - Închide seria cu o notă de stare despre ce poate fi extras într-un contract comun și ce mai cere întărirea auditului.
 
 ## Gate pentru demo playable matur
 

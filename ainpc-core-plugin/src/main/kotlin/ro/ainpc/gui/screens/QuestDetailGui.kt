@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -31,10 +32,20 @@ class QuestDetailGui : GuiScreen {
         val adminView = context.player().hasPermission("ainpc.admin")
         val detailFilter = context.service().getQuestDetailFilter(context.player())
         var snapshot = context.plugin().progressionService.getProgressionGuiSnapshot(context.player(), detailFilter, adminView)
-        var optionalEntry = findEntry(snapshot, selector)
+        var optionalEntry = context.plugin().progressionService.findProgressionGuiEntry(
+            context.player(),
+            detailFilter,
+            adminView,
+            selector
+        )
         if (optionalEntry == null && !detailFilter.equals("all", ignoreCase = true)) {
             snapshot = context.plugin().progressionService.getProgressionGuiSnapshot(context.player(), "all", adminView)
-            optionalEntry = findEntry(snapshot, selector)
+            optionalEntry = context.plugin().progressionService.findProgressionGuiEntry(
+                context.player(),
+                "all",
+                adminView,
+                selector
+            )
         }
         if (optionalEntry == null) {
             renderMissingQuest(context, selector, detailFilter)
@@ -45,7 +56,10 @@ class QuestDetailGui : GuiScreen {
         val anchors = loadAnchorBindings(context, entry)
         context.item(4, GuiItemFactory.item(headerMaterial(entry), "&e${GuiItemFactory.compact(entry.title(), 40)}", headerLore(entry)))
 
+        renderSelectionDiagnostics(context, entry)
+        renderSnapshotAlignmentCard(context, entry, snapshot, selector, detailFilter)
         renderDiagnosticCards(context, entry)
+        renderAuthoringCard(context, entry)
         renderAnchorDiagnostics(context, entry, anchors, adminView)
         renderObjectives(context, entry, anchors)
         renderStages(context, entry)
@@ -54,28 +68,16 @@ class QuestDetailGui : GuiScreen {
         context.fillEmpty(GuiItemFactory.filler())
     }
 
-    private fun findEntry(snapshot: ProgressionGuiSnapshot?, selector: String?): ProgressionGuiEntry? {
-        if (snapshot == null || selector.isNullOrBlank()) {
-            return null
-        }
-        val normalized = selector.trim()
-        return snapshot.allEntries().firstOrNull { entry ->
-            matches(normalized, entry.guiDetailSelector()) ||
-                matches(normalized, entry.commandSelector()) ||
-                matches(normalized, entry.selector()) ||
-                matches(normalized, entry.progressionId()) ||
-                matches(normalized, "${entry.mechanicId()}:${entry.code()}") ||
-                matches(normalized, "${entry.mechanicId()}:${entry.definitionId()}") ||
-                matches(normalized, "${entry.kind()}:${entry.code()}") ||
-                matches(normalized, "${entry.kind()}:${entry.definitionId()}") ||
-                matches(normalized, entry.code()) ||
-                matches(normalized, entry.templateId()) ||
-                matches(normalized, entry.definitionId())
-        }
+    private fun renderSelectionDiagnostics(context: GuiRenderContext, entry: ProgressionGuiEntry) {
+        context.item(
+            5,
+            GuiItemFactory.item(
+                Material.COMPARATOR,
+                "&bSelection detail",
+                entry.detailDiagnosticLines().map { line -> "&7${line}" }.take(8)
+            )
+        )
     }
-
-    private fun matches(left: String?, right: String?): Boolean =
-        left != null && right != null && right.isNotBlank() && left.equals(right, ignoreCase = true)
 
     private fun renderObjectives(
         context: GuiRenderContext,
@@ -137,6 +139,83 @@ class QuestDetailGui : GuiScreen {
                 Material.OAK_SIGN,
                 "&aActiuni sugerate",
                 compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.", 5)
+            )
+        )
+    }
+
+    private fun renderSnapshotAlignmentCard(
+        context: GuiRenderContext,
+        entry: ProgressionGuiEntry,
+        snapshot: ProgressionGuiSnapshot,
+        selector: String,
+        detailFilter: String
+    ) {
+        val snapshotEntry = snapshot.findEntry(selector)
+        val matchedSelector = snapshotEntry?.selector() ?: ""
+        val currentMatches = snapshot.currentEntries().any { candidate ->
+            candidate.selector().equals(selector, ignoreCase = true) ||
+                candidate.commandSelector().equals(selector, ignoreCase = true) ||
+                candidate.guiDetailSelector().equals(selector, ignoreCase = true)
+        }
+        val archivedMatches = snapshot.archivedEntries().any { candidate ->
+            candidate.selector().equals(selector, ignoreCase = true) ||
+                candidate.commandSelector().equals(selector, ignoreCase = true) ||
+                candidate.guiDetailSelector().equals(selector, ignoreCase = true)
+        }
+        val lore = listOf(
+            "&7Snapshot handled: &f${snapshot.handled()}",
+            "&7Filter: &f${valueOrUnknown(detailFilter)}",
+            "&7Matched selector: &f${valueOrUnknown(matchedSelector)}",
+            "&7Current entries: &f${snapshot.currentEntries().size}",
+            "&7Archived entries: &f${snapshot.archivedEntries().size}",
+            "&7Selected current: &f$currentMatches",
+            "&7Selected archived: &f$archivedMatches",
+            "&7UI tracked: &f${entry.tracked()}",
+            "&7UI active: &f${entry.active()}",
+            "&7UI completed: &f${entry.archived()}",
+            "&8Click-through uses the same selector and filter chain."
+        )
+        context.item(
+            3,
+            GuiItemFactory.item(
+                if (snapshotEntry != null && snapshotEntry.active()) Material.LIME_DYE else Material.COMPASS,
+                "&bSnapshot alignment",
+                lore
+            )
+        )
+    }
+
+    private fun renderAuthoringCard(context: GuiRenderContext, entry: ProgressionGuiEntry) {
+        val storyContext = context.plugin().storyContextService.buildForPlayer(context.player())
+        val authoringSnapshot = context.plugin().authoringService.analyze(
+            storyContext,
+            context.plugin().progressionService.getDefinitions(),
+            entry.selector(),
+            entry.mechanicId(),
+            storyContext.worldContext().currentRegion()?.id(),
+            storyContext.worldContext().currentPlace()?.id(),
+            true,
+            emptyList()
+        )
+        context.button(
+            7,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ENCHANTED_BOOK,
+                    "&bAuthoring",
+                    listOf(
+                        "&7Decision: &f${authoringSnapshot.decisionStatus()}",
+                        "&7Reason: &f${valueOrUnknown(authoringSnapshot.decisionReason())}",
+                        "&7Selector: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
+                        "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
+                        "&7Seed mode: &f${valueOrUnknown(authoringSnapshot.seedStoryMode())}",
+                        "&7Warnings: &f${authoringSnapshot.warnings.size}",
+                        "&8Click: deschide authoring GUI."
+                    )
+                ),
+                GuiAction { click ->
+                    click.service().openAuthoring(click.player(), entry.selector(), entry.mechanicId())
+                }
             )
         )
     }
@@ -377,6 +456,7 @@ class QuestDetailGui : GuiScreen {
                 lore.add(
                     "&7- &f${GuiItemFactory.compact(anchor.objectiveKey(), 14)} &8-> &f${GuiItemFactory.compact(anchor.anchorSelector(), 24)}"
                 )
+                lore.add("&8  rezolvare: &f${anchor.displayLabelResolution()} &8(${anchor.displayLabelSource()})")
             }
         }
         lore.add(if (adminView) "&8Click: lista ancorele in chat" else "&8Read-only pentru progresia ta.")
@@ -464,6 +544,8 @@ class QuestDetailGui : GuiScreen {
         }
         return lore
     }
+
+    private fun valueOrUnknown(value: String): String = value.ifBlank { "unknown" }
 
     private companion object {
         val OBJECTIVE_SLOTS = intArrayOf(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25)

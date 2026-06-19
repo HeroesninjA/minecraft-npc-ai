@@ -1,6 +1,6 @@
 # API, Modularizare si Addonuri
 
-Actualizat: 2026-06-04
+Actualizat: 2026-06-18
 
 Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariile programabile.
 
@@ -9,6 +9,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | Document | Rol |
 |---|---|
 | `../../documentatie-api.md` | Contract public curent |
+| `../../api-events-listeners-triggers.md` | Contract pentru event-uri publice, listener-e si trigger-e peste quest, story, dialog, NPC si context |
 | `../../ai-orchestrare-si-mecanici.md` | Contract conceptual pentru `AIOrchestrationService`, tool calls si validare |
 | `../../spring-ai-mcp-serviciu-intern.md` | Directie pentru modulul sidecar `ainpc-mcp-service` si integrarea sa cu pluginul Paper |
 | `../../strategie-plugin-modular-si-scenarii-programabile.md` | Strategie pentru addonuri si scenarii |
@@ -27,6 +28,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 ## Zone neacoperite complet
 
 - Registrii runtime pentru scenarii exista initial in core, dar nu sunt inca API public stabil pentru addonuri.
+- Evenimentele custom publice pentru quest, story, dialog, NPC si context sunt documentate; lifecycle-ul initial de progression, offer, objective progress si stage change exista in `ainpc-api`, iar restul evenimentelor raman backlog.
 - Ghid oficial pentru dezvoltatorii de addonuri.
 - Compatibilitate intre versiuni API.
 - Contract clar pentru `capabilities` si `dependencies`.

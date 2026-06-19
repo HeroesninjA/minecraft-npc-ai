@@ -34,6 +34,10 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         )
     }
 
+    fun findProgressionGuiEntry(player: Player, filter: String, adminView: Boolean, selector: String?): ProgressionGuiEntry? {
+        return getProgressionGuiSnapshot(player, filter, adminView).findEntry(selector)
+    }
+
     fun getDefinitions(): List<ProgressionDefinition> {
         val featurePackLoader = plugin.featurePackLoader ?: return listOf()
 
@@ -94,6 +98,13 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         return repository.summarize(playerUuid, filter)
     }
 
+    fun getStoredProgressionObjectives(player: Player?, selector: String?): List<QuestGuiObjective> {
+        if (player == null || selector.isNullOrBlank()) return listOf()
+        val progressionSelector = parseSelector(selector)
+        val entry = findEntry(player, progressionSelector)
+        return entry?.objectives?.toList() ?: emptyList()
+    }
+
     @Throws(SQLException::class)
     fun getAnchorBindings(playerUuid: String?, templateId: String?, limit: Int): List<ProgressionAnchorBinding> {
         return repository.findAnchorBindings(playerUuid, templateId, limit)
@@ -143,14 +154,13 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         } else {
             scenarioEngine().getQuestStatus(player, progressionSelector.commandSelector())
         }
-        val entry = findEntry(player, progressionSelector)
-        val definition = findDefinitionForEntry(entry)
+        val entryContext = resolveEntryContext(player, progressionSelector)
         return ProgressionStatusSnapshot.fromResult(
             player?.name ?: "",
             progressionSelector,
             result,
-            entry,
-            definition
+            entryContext.first,
+            entryContext.second
         )
     }
 
@@ -161,14 +171,13 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         } else {
             scenarioEngine().getQuestProgress(player, progressionSelector.commandSelector())
         }
-        val entry = findEntry(player, progressionSelector)
-        val definition = findDefinitionForEntry(entry)
+        val entryContext = resolveEntryContext(player, progressionSelector)
         return ProgressionProgressSnapshot.fromResult(
             player?.name ?: "",
             progressionSelector,
             result,
-            entry,
-            definition
+            entryContext.first,
+            entryContext.second
         )
     }
 
@@ -210,6 +219,14 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     private fun scenarioEngine(): ScenarioEngine = plugin.scenarioEngine
 
+    private fun resolveEntryContext(
+        player: Player?,
+        selector: ProgressionSelector?
+    ): Pair<QuestGuiEntry?, ProgressionDefinition?> {
+        val entry = findEntry(player, selector)
+        return entry to findDefinitionForEntry(entry)
+    }
+
     private fun findEntry(player: Player?, selector: ProgressionSelector?): QuestGuiEntry? {
         if (player == null) {
             return null
@@ -227,6 +244,21 @@ class ProgressionService(private val plugin: AINPCPlugin) {
                 .findFirst()
                 .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
                 .or { entries.stream().filter(QuestGuiEntry::active).findFirst() }
+                .orElse(null)
+        }
+
+        if (selector.isActiveAlias()) {
+            return entries.stream()
+                .filter(QuestGuiEntry::active)
+                .findFirst()
+                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
+                .orElse(null)
+        }
+
+        if (selector.isCompletedAlias()) {
+            return entries.stream()
+                .filter(QuestGuiEntry::archived)
+                .findFirst()
                 .orElse(null)
         }
 

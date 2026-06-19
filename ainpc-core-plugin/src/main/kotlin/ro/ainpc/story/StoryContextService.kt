@@ -2,8 +2,16 @@
 package ro.ainpc.story
 
 import org.bukkit.Location
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.context.WorldContextBuiltEvent
+import ro.ainpc.api.events.context.WorldContextBuiltEventPayload
+import ro.ainpc.api.events.story.StoryContextBuiltEvent
+import ro.ainpc.api.events.story.StoryContextBuiltEventPayload
+import ro.ainpc.api.events.story.StorySignalCollectedEvent
+import ro.ainpc.api.events.story.StorySignalCollectedEventPayload
 import ro.ainpc.database.DatabaseManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.world.WorldContextSnapshot
@@ -49,7 +57,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             persistentPlaceState,
             recentStoryEvents
         )
-        return StoryContextSnapshot(
+        val snapshot = StoryContextSnapshot(
             npc?.name ?: "",
             npc?.occupation ?: "",
             player?.name ?: "",
@@ -61,6 +69,8 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             storySignals,
             warnings
         )
+        publishStoryContextBuilt(snapshot, npc, player, worldContext, storySignals, warnings)
+        return snapshot
     }
 
     fun buildForPlayer(player: Player): StoryContextSnapshot = buildForNpc(null, player)
@@ -82,6 +92,8 @@ class StoryContextService(private val plugin: AINPCPlugin) {
 
         if (snapshot.isEmpty()) {
             warnings.add("world context is empty; world admin may be disabled or unmapped")
+        } else {
+            publishWorldContextBuilt(snapshot, npc)
         }
         warnings.addAll(snapshot.warnings())
         return snapshot
@@ -230,6 +242,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         if (worldContext == null || worldContext.isEmpty()) {
             addActiveQuestAnchorSignals(signals, activeQuestAnchors)
             addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents)
+            publishStorySignalsCollected(worldContext, ArrayList(signals), mapOf("collectionMode" to "minimal"))
             return ArrayList(signals)
         }
 
@@ -270,7 +283,9 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         addActiveQuestAnchorSignals(signals, activeQuestAnchors)
         addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents)
 
-        return ArrayList(signals)
+        val collectedSignals = ArrayList(signals)
+        publishStorySignalsCollected(worldContext, collectedSignals, mapOf("collectionMode" to "full"))
+        return collectedSignals
     }
 
     private fun addPersistentStorySignals(
@@ -376,6 +391,71 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         signals.add("$key=$value")
     }
 
+    private fun publishStoryContextBuilt(
+        snapshot: StoryContextSnapshot,
+        npc: AINPC?,
+        player: Player?,
+        worldContext: WorldContextSnapshot?,
+        signals: List<String>,
+        warnings: List<String>
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        Bukkit.getPluginManager().callEvent(
+            StoryContextBuiltEvent(
+                StoryContextBuiltEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.SYSTEM,
+                    if (npc != null) "npc" else "player",
+                    snapshot.subjectNpcName(),
+                    snapshot.subjectNpcOccupation(),
+                    snapshot.playerName(),
+                    worldContext != null && !worldContext.isEmpty(),
+                    worldContext?.currentRegion()?.id().orEmpty(),
+                    worldContext?.currentPlace()?.id().orEmpty(),
+                    signals.size,
+                    signals,
+                    warnings,
+                    mapOf(
+                        "source" to "StoryContextService",
+                        "hasPlayer" to (player != null).toString()
+                    )
+                )
+            )
+        )
+    }
+
+    private fun publishStorySignalsCollected(
+        worldContext: WorldContextSnapshot?,
+        signals: List<String>,
+        metadata: Map<String, String>
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val regionId = worldContext?.currentRegion()?.id().orEmpty()
+        val placeId = worldContext?.currentPlace()?.id().orEmpty()
+        Bukkit.getPluginManager().callEvent(
+            StorySignalCollectedEvent(
+                StorySignalCollectedEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.SYSTEM,
+                    if (worldContext != null && !worldContext.isEmpty()) "full" else "minimal",
+                    regionId,
+                    placeId,
+                    signals.size,
+                    signals,
+                    metadata
+                )
+            )
+        )
+    }
+
     private fun limit(values: List<String>?, maxSize: Int): List<String> {
         if (values.isNullOrEmpty()) {
             return listOf()
@@ -390,6 +470,31 @@ class StoryContextService(private val plugin: AINPCPlugin) {
     private fun readText(resultSet: ResultSet, column: String): String {
         val value = resultSet.getString(column)
         return value ?: ""
+    }
+
+    private fun publishWorldContextBuilt(snapshot: WorldContextSnapshot, npc: AINPC?) {
+        if (!plugin.config.getBoolean("events.context_events_enabled", false)) return
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val region = snapshot.currentRegion()
+        val place = snapshot.currentPlace()
+        val npcId = if (npc != null) npc.databaseId.toString() else ""
+        val npcName = npc?.name ?: ""
+        val event = WorldContextBuiltEvent(
+            WorldContextBuiltEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc?.location?.world?.name ?: npc?.worldName ?: "",
+                region?.id(),
+                place?.id(),
+                snapshot.nearbyPlaces().size,
+                snapshot.nearbyNodes().size,
+                npcId.takeIf { it.isNotBlank() },
+                npcName.takeIf { it.isNotBlank() },
+                mapOf("source" to "StoryContextService")
+            )
+        )
+        Bukkit.getPluginManager().callEvent(event)
     }
 
     companion object {

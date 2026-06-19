@@ -16,6 +16,7 @@ import ro.ainpc.database.DatabaseManager
 import ro.ainpc.engine.DecisionEngine
 import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.engine.FeaturePackLoader
+import ro.ainpc.engine.QuestAuthoringService
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.gui.GuiService
 import ro.ainpc.listeners.ListenerRegistry
@@ -26,6 +27,7 @@ import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.platform.AINPCPlatform
 import ro.ainpc.progression.ProgressionService
+import ro.ainpc.debug.RecentEventsBuffer
 import ro.ainpc.routine.RoutineService
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
@@ -91,10 +93,13 @@ class AINPCPlugin : JavaPlugin() {
         private set
     lateinit var storyStateService: StoryStateService
         private set
+    lateinit var authoringService: QuestAuthoringService
+        private set
     lateinit var guiService: GuiService
         private set
     lateinit var mappingWandService: MappingWandService
         private set
+    lateinit var recentEventsBuffer: RecentEventsBuffer
 
     override fun onEnable() {
         instance = this
@@ -153,6 +158,7 @@ class AINPCPlugin : JavaPlugin() {
         progressionService = ProgressionService(this)
         storyStateService = StoryStateService(this)
         storyContextService = StoryContextService(this)
+        authoringService = QuestAuthoringService()
         guiService = GuiService(this)
         mappingWandService = MappingWandService(this)
 
@@ -166,6 +172,7 @@ class AINPCPlugin : JavaPlugin() {
         }
         ainpcCommand.setExecutor(command)
         ainpcCommand.setTabCompleter(AINPCTabCompleter(this))
+        registerAliasCommand("npc", command)
         registerAliasCommand("npcquest", command)
         registerAliasCommand("quest", command)
         registerAliasCommand("progression", command)

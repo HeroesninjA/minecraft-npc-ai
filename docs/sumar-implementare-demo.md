@@ -42,6 +42,7 @@ Actualizat: 2026-06-15
 **D5: Quest + Progression** — 6 taskuri
 - 16 quest-uri definite in addonul medieval
 - Quest clasic, progression non-quest, tracking
+- Authoring read-only pentru questuri, cu GUI, dump si validare
 
 **D6: Story Context** — 4 taskuri
 - Context narativ, story events, debugdump
@@ -114,6 +115,7 @@ ainpc-core-plugin/src/main/kotlin/ro/ainpc/
     AINPCCommand.kt           -- Comanda principala + rutare
     AINPCCommandDisplay.kt    -- Helperi de afisare comenzi
     AINPCCommandMisc.kt       -- Handlere diverse (list, routine, tp)
+    AuthoringCommandSupport.kt-- Parser, plan si selectie pentru authoring
     AINPCCommandProgression.kt-- Handlere progresie
     AINPCCommandQuest.kt      -- Handlere quest-uri
     AINPCCommandStory.kt      -- Handlere story

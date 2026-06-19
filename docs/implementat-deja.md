@@ -149,12 +149,28 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
   - manager NPC admin cu info/teleport
   - audit GUI care ruleaza comenzile audit existente
   - debug GUI care ruleaza `debugdump` si `test`
-  - confirmare pentru actiuni destructive
-  - shop placeholder pregatit pentru provider dedicat
+- confirmare pentru actiuni destructive
+- shop placeholder pregatit pentru provider dedicat
 
 Limitare actuala:
 
 - GUI-ul este un wrapper peste comenzi si servicii existente; paginarea exista initial in quest log, dar lipsesc inca target selection avansat si shop/economie reala.
+
+## Quest authoring asistat, read-only
+
+Exista un flux initial de authoring pentru questuri, gandit strict ca inspectie si validare:
+
+- `QuestSeed`, `QuestDraft`, `QuestDraftValidationReport` si `QuestDraftValidator` definesc contractul read-only pentru seed/draft/validare, cu blocaj explicit pentru coordonate brute, tipuri necunoscute si export direct
+- `QuestSeedFactory` construieste seed-ul din `QuestDirectorDecision`, `StoryContextSnapshot` si `ProgressionDefinition`, fara a activa runtime live
+- `QuestAuthoringService` si `QuestAuthoringSnapshot` ofera o vedere stabila peste state-ul de authoring, inclusiv selectorul de quest si mecanica cerute explicit
+- comanda `/ainpc authoring` deschide GUI-ul de authoring sau produce `dump` text, cu fallback la selecția curenta din GUI pentru player
+- subcomenzile `next`, `prev`, `clear` si `reset` muta sau reseteaza selectorul de authoring pe jucator, iar `dump` poate primi override explicit pentru `questSelector` si `mechanicId`
+- `DebugDumpAuthoringText` si `/ainpc debugdump authoring` expun acelasi snapshot in format text pentru audit si debugging
+- `GuiService` pastreaza starea authoring per-player, iar `QuestAuthoringGui` afiseaza selectorul, mecanica si butoane pentru cicare/resete
+
+Limitare actuala:
+
+- authoring-ul ramane read-only; nu scrie questuri live, nu modifica story/progress si nu porneste reward-uri sau efecte runtime.
 
 ## Memorie, relatii si emotii
 

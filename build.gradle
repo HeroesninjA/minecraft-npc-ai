@@ -18,6 +18,46 @@ ext {
     }
 }
 
+def resolveGitHash() {
+    def gitDir = file('.git')
+    if (!gitDir.exists()) {
+        return 'unknown'
+    }
+
+    def headFile = new File(gitDir, 'HEAD')
+    if (!headFile.exists()) {
+        return 'unknown'
+    }
+
+    def headValue = headFile.getText('UTF-8').trim()
+    if (headValue.startsWith('ref: ')) {
+        def refPath = headValue.substring(5).trim()
+        def refFile = new File(gitDir, refPath)
+        if (refFile.exists()) {
+            def refHash = refFile.getText('UTF-8').trim()
+            return refHash ? refHash.take(12) : 'unknown'
+        }
+
+        def packedRefs = new File(gitDir, 'packed-refs')
+        if (packedRefs.exists()) {
+            def packedMatch = packedRefs.readLines('UTF-8').find { line ->
+                line && !line.startsWith('#') && !line.startsWith('^') && line.endsWith(" ${refPath}")
+            }
+            if (packedMatch) {
+                return packedMatch.split(/\s+/)[0].take(12)
+            }
+        }
+        return 'unknown'
+    }
+
+    return headValue ==~ /[0-9a-fA-F]{7,40}/ ? headValue.take(12) : 'unknown'
+}
+
+def resolveBuildTimestamp() {
+    return java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+}
+
 allprojects {
     group = rootProject.property('projectGroup').toString()
     version = rootProject.property('projectVersion').toString()
@@ -63,10 +103,19 @@ subprojects {
 
     tasks.withType(ProcessResources).configureEach {
         def expandedProjectVersion = project.version.toString()
+        def buildHash = resolveGitHash()
+        def buildTimestamp = resolveBuildTimestamp()
         filteringCharset = 'UTF-8'
         inputs.property('projectVersion', expandedProjectVersion)
-        filesMatching('plugin.yml') {
-            expand(project: [version: expandedProjectVersion])
+        inputs.property('buildHash', buildHash)
+        inputs.property('buildTimestamp', buildTimestamp)
+        filesMatching(['plugin.yml', 'build-info.properties']) {
+            expand(
+                project: [version: expandedProjectVersion],
+                version: expandedProjectVersion,
+                buildHash: buildHash,
+                buildTimestamp: buildTimestamp
+            )
         }
     }
 

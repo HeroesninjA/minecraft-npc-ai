@@ -23,6 +23,7 @@ fun sendQuestUsage(sender: CommandSender) {
     )
     msg.send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]")
     msg.send(sender, "&e/ainpc quest status")
+    msg.send(sender, "&e/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]")
     msg.send(sender, "&e/ainpc quest <numeNpc> [jucator]")
     msg.send(sender, "&e/ainpc quest nearest [jucator]")
     msg.send(sender, "&e/ainpc quest accept|da [numeNpc|nearest] [jucator]")
@@ -208,6 +209,8 @@ fun sendRoutineUsage(sender: CommandSender) {
 fun sendHelp(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&6=== AI NPC Plugin - Comenzi ===")
+    msg.send(sender, "&e/npc version")
+    msg.send(sender, "&7  Afiseaza ultima versiune, hash-ul ultimului build si data/ora buildului")
     msg.send(sender, "&e/ainpc create <nume> [ocupatie] [varsta] [gen] [arhetip]")
     msg.send(sender, "&7  Creeaza un NPC nou la locatia ta")
     msg.send(sender, "&e/ainpc delete <nume>")
@@ -235,6 +238,8 @@ fun sendHelp(sender: CommandSender) {
     )
     msg.send(sender, "&e/ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]")
     msg.send(sender, "&7  Deschide snapshot-ul read-only de authoring sau il afiseaza filtrat in chat")
+    msg.send(sender, "&e/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]")
+    msg.send(sender, "&7  Alias quest-side pentru authoring-ul read-only si dump-ul text")
     msg.send(sender, "&e/ainpc quest <numeNpc> [jucator]")
     msg.send(sender, "&7  Declanseaza manual quest-ul unui NPC")
     msg.send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|active|all]")

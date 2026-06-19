@@ -36,6 +36,16 @@ class ProgressionSelector(
 
     fun isTrackedAlias(): Boolean = trackedAliasValue
 
+    fun isActiveAlias(): Boolean {
+        return normalizedValue.equals("active", ignoreCase = true) || normalizedValue.equals("activ", ignoreCase = true)
+    }
+
+    fun isCompletedAlias(): Boolean {
+        return normalizedValue.equals("completed", ignoreCase = true) ||
+            normalizedValue.equals("complete", ignoreCase = true) ||
+            normalizedValue.equals("completat", ignoreCase = true)
+    }
+
     fun commandSelector(): String = normalizedValue
 
     override fun equals(other: Any?): Boolean {
@@ -82,6 +92,12 @@ class ProgressionSelector(
             val lower = raw.lowercase(Locale.ROOT)
             if (isTrackedAlias(lower)) {
                 return ProgressionSelector(raw, "tracked", "", "", "tracked", true)
+            }
+            if (lower == "active" || lower == "activ") {
+                return ProgressionSelector(raw, "active", "", "", "active", false)
+            }
+            if (lower == "completed" || lower == "complete" || lower == "completat") {
+                return ProgressionSelector(raw, "completed", "", "", "completed", false)
             }
 
             val parts = SELECTOR_SEPARATOR.split(raw, -1)

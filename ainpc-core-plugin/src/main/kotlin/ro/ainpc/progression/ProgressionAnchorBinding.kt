@@ -68,6 +68,24 @@ class ProgressionAnchorBinding(
         return anchorIdValue
     }
 
+    fun displayLabelSource(): String {
+        return when {
+            anchorLabelValue.isNotBlank() -> "anchorLabel"
+            referenceValue.isNotBlank() -> "reference"
+            anchorIdValue.isNotBlank() -> "anchorId"
+            else -> "missing"
+        }
+    }
+
+    fun displayLabelResolution(): String {
+        return when (displayLabelSource()) {
+            "anchorLabel" -> "label explicit"
+            "reference" -> "fallback reference"
+            "anchorId" -> "fallback anchorId"
+            else -> "no display label"
+        }
+    }
+
     companion object {
         private fun normalize(value: String?): String = valueOrEmpty(value).lowercase(Locale.ROOT)
 

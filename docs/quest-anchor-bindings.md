@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 Status: implementat initial in cod, cu audit strict si comanda admin read-only.
 
 ## Scop

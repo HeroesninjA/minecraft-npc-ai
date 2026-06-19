@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-10
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 ## Scop
 
 Acest document descrie sistemul de mapping ca document canonic unic:

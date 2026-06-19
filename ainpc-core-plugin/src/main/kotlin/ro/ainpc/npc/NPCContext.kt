@@ -4,12 +4,18 @@ package ro.ainpc.npc
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.context.NPCContextUpdatedEvent
+import ro.ainpc.api.events.context.NPCContextUpdatedEventPayload
+import ro.ainpc.api.events.context.WorldContextBuiltEvent
+import ro.ainpc.api.events.context.WorldContextBuiltEventPayload
 import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.topology.TopologyCategory
 import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
 import java.util.ArrayList
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.min
 
 /**
@@ -114,6 +120,7 @@ class NPCContext(
         syncSimulationState(npcLocation)
         updateNearbyEntities(npcLocation)
         updateWorldContextSnapshot(npcLocation)
+        publishNpcContextUpdated("update_from_world")
     }
 
     /**
@@ -163,9 +170,13 @@ class NPCContext(
             return
         }
 
-        worldContextSnapshot = WorldContextSnapshotBuilder(
+        val snapshot = WorldContextSnapshotBuilder(
             npc.plugin.platform.worldAdminService
         ).build(npcLocation, npc, nearbyNPCs)
+        worldContextSnapshot = snapshot
+        if (!snapshot.isEmpty()) {
+            publishWorldContextBuilt(snapshot)
+        }
     }
 
     fun syncSimulationState(npcLocation: Location?) {
@@ -358,7 +369,60 @@ class NPCContext(
             "ENEMY" -> "dusman - nu vreau sa am de-a face"
             "FAMILY" -> "familie - rudenie de sange"
             "SPOUSE" -> "sot/sotie - partener de viata"
-            else -> "necunoscut"
+        else -> "necunoscut"
         }
+    }
+
+    private fun publishNpcContextUpdated(reason: String) {
+        val pl = npc.plugin ?: return
+        if (!pl.config.getBoolean("events.context_events_enabled", false)) return
+        if (!pl.config.getBoolean("events.public_api_enabled", true)) return
+        val event = NPCContextUpdatedEvent(
+            NPCContextUpdatedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                timeOfDay,
+                weather,
+                isIndoors,
+                isAtHome,
+                isAtWork,
+                isAtSocialSpot,
+                nearbyPlayers.size,
+                nearbyNPCs.size,
+                interactingPlayer != null,
+                reason,
+                mapOf("source" to "NPCContext")
+            )
+        )
+        pl.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishWorldContextBuilt(snapshot: WorldContextSnapshot) {
+        val pl = npc.plugin ?: return
+        if (!pl.config.getBoolean("events.context_events_enabled", false)) return
+        if (!pl.config.getBoolean("events.public_api_enabled", true)) return
+        val region = snapshot.currentRegion()
+        val place = snapshot.currentPlace()
+        val worldName = npc.location?.world?.name ?: npc.worldName ?: ""
+        val event = WorldContextBuiltEvent(
+            WorldContextBuiltEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                worldName,
+                region?.id(),
+                place?.id(),
+                snapshot.nearbyPlaces().size,
+                snapshot.nearbyNodes().size,
+                npc.databaseId.toString(),
+                npc.name,
+                mapOf("source" to "NPCContext")
+            )
+        )
+        pl.server.pluginManager.callEvent(event)
     }
 }

@@ -4,6 +4,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.version.BuildVersionInfo
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -23,6 +24,7 @@ class MainHubGui : GuiScreen {
         val player = context.player()
         val worldAdmin: WorldAdminApi = context.plugin().platform.worldAdmin
         val location: Location = player.location
+        val versionSnapshot = BuildVersionInfo.capture(context.plugin())
 
         context.item(
             4,
@@ -35,6 +37,18 @@ class MainHubGui : GuiScreen {
                     "&7World mapping: &f${worldAdmin.regionCount} regiuni, " +
                         "${worldAdmin.placeCount} places, ${worldAdmin.nodeCount} noduri",
                     "&7Locatie: &f${location.world.name} ${location.blockX}, ${location.blockY}, ${location.blockZ}"
+                )
+            )
+        )
+        context.item(
+            5,
+            GuiItemFactory.item(
+                Material.PAPER,
+                "&aVersion snapshot",
+                listOf(
+                    "&7Ultima versiune: &f${versionSnapshot.version}",
+                    "&7Build hash: &f${versionSnapshot.buildHash}",
+                    "&7Build timestamp: &f${versionSnapshot.buildTimestamp}"
                 )
             )
         )
@@ -119,6 +133,21 @@ class MainHubGui : GuiScreen {
             Material.SPYGLASS,
             "&9Debug",
             listOf("&7Debugdump si test OpenAI.")
+        )
+        openButton(
+            context,
+            31,
+            GuiKey.AUTHORING,
+            Material.ENCHANTED_BOOK,
+            "&bAuthoring",
+            listOf("&7Snapshot story, mapping si progresie pentru quest design.")
+        )
+        context.button(
+            32,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.NAME_TAG, "&eVersion", "&7Ruleaza /npc version."),
+                GuiAction { click -> click.service().runCommand(click.player(), "npc version") }
+            )
         )
 
         if (context.service().canOpen(player, GuiKey.DEBUG)) {

@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 Status: document canonic pentru directia V2. Versiunea veche este pastrata pentru istoric in `arhiva/questuri-avansate-v1.md`.
 
 ## Scop

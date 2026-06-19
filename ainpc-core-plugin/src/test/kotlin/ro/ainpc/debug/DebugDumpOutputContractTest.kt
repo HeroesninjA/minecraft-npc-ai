@@ -59,6 +59,7 @@ class DebugDumpOutputContractTest {
     fun storyExportsContainStateAndEventRowsContracts() {
         val stateSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryStateJson.kt").readText()
         val eventSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryEventJson.kt").readText()
+        val gapSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryProgressionGapJson.kt").readText()
 
         listOf("\"regions_by_mode\"", "\"regions_by_state\"", "\"places_by_region\"", "\"places_by_state\"").forEach { token ->
             assertTrue(stateSource.contains(token), "Missing story state token $token")
@@ -66,6 +67,7 @@ class DebugDumpOutputContractTest {
         listOf("\"rows\"", "\"by_event_type\"", "\"by_progression_link\"").forEach { token ->
             assertTrue(eventSource.contains(token), "Missing story event token $token")
         }
+        assertTrue(gapSource.contains("buildStoryProgressionGapJson"), "Missing story progression gap export contract")
     }
 
     @Test
@@ -84,6 +86,8 @@ class DebugDumpOutputContractTest {
             "server.txt",
             "config-sanitized.yml",
             "audit.txt",
+            "quest.txt",
+            "mapping.txt",
             "npcs.json",
             "world-mapping.json",
             "npc-world-bindings.json",
@@ -97,9 +101,12 @@ class DebugDumpOutputContractTest {
             "quest-anchor-bindings.json",
             "story-states.json",
             "story-events.json",
+            "story-progression-gaps.json",
             "authoring.txt",
             "openai.txt",
-            "recent-server-log.txt"
+            "recent-server-log.txt",
+            "recent-public-events.txt",
+            "narrative-plans.json"
         )
     }
 }

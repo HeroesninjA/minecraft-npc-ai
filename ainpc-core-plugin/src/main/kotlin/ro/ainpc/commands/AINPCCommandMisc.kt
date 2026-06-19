@@ -278,16 +278,6 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
     val request = AuthoringCommandSupport.parse(args)
     val plan = AuthoringCommandSupport.plan(request)
     val player = sender as? Player
-    val effectiveQuestSelector = when {
-        !request.questSelector.isNullOrBlank() -> request.questSelector
-        player != null -> ainpcCommandMiscPlugin.guiService.getAuthoringQuestSelector(player)
-        else -> null
-    }
-    val effectiveMechanicId = when {
-        !request.mechanicId.isNullOrBlank() -> request.mechanicId
-        player != null -> ainpcCommandMiscPlugin.guiService.getAuthoringMechanicId(player)
-        else -> null
-    }
     if (sender is Player) {
         if (!ainpcCommandMiscPlugin.guiService.canOpen(sender, GuiKey.AUTHORING)) {
             ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
@@ -319,11 +309,17 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
+    val resolvedDumpSelection = AuthoringCommandSupport.resolveDumpSelection(
+        request,
+        player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringQuestSelector(it) },
+        player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringMechanicId(it) }
+    )
+
     val text = DebugDumpAuthoringText.buildAuthoringText(
         ainpcCommandMiscPlugin,
         player,
-        effectiveQuestSelector,
-        effectiveMechanicId
+        resolvedDumpSelection.questSelector,
+        resolvedDumpSelection.mechanicId
     )
     ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Quest Authoring Dump ===")
     for (line in text.split('\n')) {
@@ -508,7 +504,7 @@ fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
         msg.send(sender, "&eOcupatie: &f" + npc.occupation)
     }
     msg.send(sender, "&eLocatie: &f" + formatLocation(npc.location))
-    val topCat = npc.context?.topologyCategory
+    val topCat = npc.context.topologyCategory
     if (topCat != null) {
         msg.send(sender, "&eTopologie: &f" + topCat.displayName)
     }

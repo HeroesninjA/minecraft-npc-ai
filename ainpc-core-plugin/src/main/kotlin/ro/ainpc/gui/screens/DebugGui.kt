@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.gui.GuiButton
+import ro.ainpc.version.BuildVersionInfo
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
@@ -17,6 +18,7 @@ class DebugGui : GuiScreen {
     override fun size(player: Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
+        val versionSnapshot = BuildVersionInfo.capture(context.plugin())
         context.item(
             4,
             GuiItemFactory.item(
@@ -25,6 +27,18 @@ class DebugGui : GuiScreen {
                 listOf(
                     "&7Debugdump ramane read-only.",
                     "&7Fisierele si rezultatele sunt raportate in chat/consola."
+                )
+            )
+        )
+        context.item(
+            5,
+            GuiItemFactory.item(
+                Material.PAPER,
+                "&aVersion snapshot",
+                listOf(
+                    "&7Ultima versiune: &f${versionSnapshot.version}",
+                    "&7Build hash: &f${versionSnapshot.buildHash}",
+                    "&7Build timestamp: &f${versionSnapshot.buildTimestamp}"
                 )
             )
         )
@@ -40,6 +54,25 @@ class DebugGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest authoring", "&7Snapshot read-only pentru story, mapping si progresie."),
             ) { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
+        )
+
+        context.button(
+            6,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.NAME_TAG, "&eVersion", "&7Ruleaza /npc version."),
+            ) { click -> click.service().runCommand(click.player(), "npc version") }
+        )
+        context.button(
+            7,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.REDSTONE_TORCH, "&cQuest audit", "&7Ruleaza /ainpc audit quest."),
+            ) { click -> click.service().runCommand(click.player(), "ainpc audit quest") }
+        )
+        context.button(
+            8,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.COMPASS, "&bWorld audit", "&7Ruleaza /ainpc audit world."),
+            ) { click -> click.service().runCommand(click.player(), "ainpc audit world") }
         )
 
         context.button(

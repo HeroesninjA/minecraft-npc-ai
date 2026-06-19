@@ -16,6 +16,8 @@ import org.bukkit.entity.Villager
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpService
+import ro.ainpc.debug.DebugDumpMappingText
+import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.debug.WorldMappingSemanticIndex
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.*
@@ -29,14 +31,17 @@ import ro.ainpc.spawn.HouseAllocation
 import ro.ainpc.spawn.HouseAllocationPlanner
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.HouseholdSpawnResult
+import ro.ainpc.spawn.NarrativeGenerator
 import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.NpcSpawnResult
+import ro.ainpc.spawn.PopulationPlan
 import ro.ainpc.spawn.SettlementSpawnResult
 import ro.ainpc.spawn.SpawnBatchTracker
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.story.StoryEvent
+import ro.ainpc.version.BuildVersionInfo
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.NpcWorldBinding
@@ -170,6 +175,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "info" -> handleInfo(sender, args)
             "gui" -> ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)
             "authoring" -> handleAuthoring(sender, args)
+            "version" -> handleVersion(sender)
             "quest" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleQuest(sender, args)
             "progression", "progress" -> ensureFeatureEnabled(
                 sender,
@@ -231,6 +237,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
             "story" -> ensureFeatureEnabled(sender, "features.story", true, "Story-ul") && handleStory(sender, args)
             "migration" -> handleMigration(sender, args)
+            "population" -> handlePopulation(sender, args)
             "audit" -> handleAudit(sender, args)
             "debugdump" -> handleDebugDump(sender, args)
             "list" -> handleList(sender, args)
@@ -266,6 +273,15 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun ensureGenerationEnabled(sender: CommandSender, label: String): Boolean {
         return ensureFeatureEnabled(sender, "features.generation", false, label)
+    }
+
+    private fun handleVersion(sender: CommandSender): Boolean {
+        val versionSnapshot = BuildVersionInfo.capture(plugin)
+        plugin.messageUtils.send(sender, "&6=== AINPC Version ===")
+        plugin.messageUtils.send(sender, "&eUltima versiune: &f${versionSnapshot.version}")
+        plugin.messageUtils.send(sender, "&eHash ultimul build: &f${versionSnapshot.buildHash}")
+        plugin.messageUtils.send(sender, "&eData si ora buildului: &f${versionSnapshot.buildTimestamp}")
+        return true
     }
 
     // -- Repair -----------------------------------------------------
@@ -623,6 +639,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "anchors" -> handleQuestAnchors(sender, args)
             "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
             "gui" -> handleQuestGui(sender, args)
+            "authoring" -> handleAuthoring(sender, arrayOf("authoring", *args.drop(2).toTypedArray()))
             "log" -> handleQuestLog(sender, args)
             "track", "current" -> handleQuestTrack(sender, args)
             "nearest" -> handleNearestQuest(sender, args)
@@ -1736,6 +1753,100 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         return true
     }
 
+    // -- Population --------------------------------------------------
+    private fun handlePopulation(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (args.size < 3) {
+            sendPopulationUsage(sender); return true
+        }
+        return when (args[1].lowercase()) {
+            "plan" -> handlePopulationPlan(sender, args)
+            "inspect" -> handlePopulationInspect(sender, args)
+            else -> { sendPopulationUsage(sender); true }
+        }
+    }
+
+    private fun sendPopulationUsage(sender: CommandSender) {
+        plugin.messageUtils.send(sender, "&6=== /ainpc population ===")
+        plugin.messageUtils.send(sender, "&e/ainpc population plan <regionId> [targetPopulation] [seed] &7- Generate narrative population plan")
+        plugin.messageUtils.send(sender, "&e/ainpc population inspect <regionId> &7- Inspect last generated plan")
+    }
+
+    private var lastPopulationPlan: PopulationPlan? = null
+
+    private fun handlePopulationPlan(sender: CommandSender, args: Array<String>): Boolean {
+        val worldAdmin = plugin.platform?.worldAdminService
+        if (worldAdmin == null || !worldAdmin.isEnabled) {
+            plugin.messageUtils.send(sender, "&cWorld admin este dezactivat."); return true
+        }
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc population plan <regionId> [targetPopulation] [seed]"); return true
+        }
+        val regionId = args[2]
+        var targetPopulation = 0
+        var seed: String? = null
+        if (args.size >= 4) {
+            val parsed = parseIntegerStrict(args[3])
+            if (parsed != null && parsed > 0) targetPopulation = parsed else seed = args[3]
+        }
+        if (args.size >= 5) seed = args[4]
+
+        plugin.messageUtils.send(sender, "&7Generare plan narativ pentru &f$regionId&7...")
+        val result = NarrativeGenerator().generatePopulationPlan(
+            worldAdmin, regionId,
+            if (targetPopulation > 0) targetPopulation else null,
+            seed
+        )
+        if (!result.success()) {
+            plugin.messageUtils.send(sender, "&cNu am putut genera planul narativ.")
+            sendAuditMessages(sender, "&cErori", result.errors())
+            return true
+        }
+        val plan = result.plan() ?: return true
+        lastPopulationPlan = plan
+
+        plugin.messageUtils.send(sender, "&6=== Population Plan: &f${plan.planId} &6===")
+        plugin.messageUtils.send(sender, "&eRegiune: &f${plan.regionId}")
+        plugin.messageUtils.send(sender, "&eTema: &f${plan.themeId}")
+        plugin.messageUtils.send(sender, "&eSeed: &f${plan.seed}")
+        plugin.messageUtils.send(sender, "&ePopulatie tinta: &f${plan.targetPopulation}")
+        plugin.messageUtils.send(sender, "&eHousehold-uri: &f${plan.households.size}")
+        plugin.messageUtils.send(sender, "&eTotal rezidenti: &f${plan.totalResidents()}")
+
+        for (household in plan.households) {
+            plugin.messageUtils.send(sender, "\n&7[${household.familyType}] &f${household.homePlaceId} &7(cap=${household.capacity}, family=${household.familyId})")
+            for (resident in household.residents) {
+                val questTag = if (resident.questRole != "none") " &5[${resident.questRole}]" else ""
+                val workTag = if (resident.profession.isNotBlank()) " &8(${resident.profession}, ${resident.socialRole})" else ""
+                plugin.messageUtils.send(sender, "  &e${resident.displayName} &7- ${resident.relationRole}$workTag$questTag")
+                plugin.messageUtils.send(sender, "    &7home=&f${resident.homePlaceId} &7work=&f${if (resident.workPlaceId.isNotBlank()) resident.workPlaceId else "~"} &7social=&f${if (resident.socialPlaceId.isNotBlank()) resident.socialPlaceId else "~"}")
+            }
+        }
+
+        if (plan.unassignedWorkplaces.isNotEmpty()) {
+            plugin.messageUtils.send(sender, "\n&7Locuri de munca neatribuite: &f${plan.unassignedWorkplaces.joinToString(", ")}")
+        }
+        sendAuditMessages(sender, "&eWarning-uri", result.warnings())
+        plugin.messageUtils.send(sender, "\n&7Pentru conversie in HouseAllocation: &f/ainpc population inspect ${plan.regionId}")
+        return true
+    }
+
+    private fun handlePopulationInspect(sender: CommandSender, args: Array<String>): Boolean {
+        val plan = lastPopulationPlan ?: run {
+            plugin.messageUtils.send(sender, "&cNu exista un plan generat. Ruleaza mai intai /ainpc population plan <regionId>."); return true
+        }
+        val allocations = plan.toHouseAllocations()
+        plugin.messageUtils.send(sender, "&6=== Population Plan -> HouseAllocations ===")
+        plugin.messageUtils.send(sender, "&ePlan: &f${plan.planId} &7-> &f${allocations.size} &eHouseAllocation-uri")
+        for (allocation in allocations) {
+            sendHouseholdAllocationSummary(sender, allocation)
+        }
+        plugin.messageUtils.send(sender, "\n&7Pentru spawn: &f/ainpc world settlement spawn ${plan.regionId}")
+        return true
+    }
+
     // -- Migration --------------------------------------------------
     private fun handleMigration(sender: CommandSender, args: Array<String>): Boolean {
         if (!sender.hasPermission("ainpc.admin")) {
@@ -1830,6 +1941,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "mapping" -> handleDebugDumpMapping(sender, args)
             "story" -> handleDebugDumpStory(sender, args)
             "authoring" -> handleDebugDumpAuthoring(sender, args)
+            "ai", "openai" -> handleDebugDumpAi(sender, args)
             else -> {
                 sendDebugDumpUsage(sender); true
             }
@@ -1846,6 +1958,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&e/ainpc debugdump mapping &7- Dump full mapping")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump story &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
     }
 
     private fun handleDebugDumpWorld(sender: CommandSender, args: Array<String>): Boolean {
@@ -1917,34 +2030,64 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             return true
         }
         plugin.messageUtils.send(sender, "&6=== Full Mapping Dump ===")
-        plugin.messageUtils.send(
-            sender,
-            "&eRegiuni: &f${worldAdmin.regionCount}, Places: &f${worldAdmin.placeCount}, Noduri: &f${worldAdmin.nodeCount}"
-        )
-        for (region in worldAdmin.regions) {
-            plugin.messageUtils.send(sender, "&6  Region: &f${region.id()} &e${region.name()}")
-            for (place in worldAdmin.getPlaces(region.id())) {
-                plugin.messageUtils.send(
-                    sender,
-                    "&7    Place: &f${place.id()} &e${place.displayName()} &7[${place.placeType()}]"
-                )
-                for (node in worldAdmin.getNodesForPlace(place.id())) {
-                    plugin.messageUtils.send(sender, "&8      Node: &f${node.id()} &7[${node.typeId()}]")
-                }
+        val text = DebugDumpMappingText.buildMappingText(plugin)
+        for (line in text.split("\n")) {
+            if (line.isNotBlank()) {
+                plugin.messageUtils.send(sender, "&7$line")
             }
         }
         return true
     }
 
     private fun handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean {
-        val scenarios = plugin.scenarioEngine.getActiveScenarios()
+        val text = DebugDumpStoryText.buildStoryText(plugin)
         plugin.messageUtils.send(sender, "&6=== Story Dump ===")
-        plugin.messageUtils.send(sender, "&eScenarii active: &f${scenarios.size}")
-        for ((id, scenario) in scenarios) {
-            plugin.messageUtils.send(
-                sender,
-                "&e  ${scenario.displayName} &7(id=&f${id.toString().take(8)}&7, phase=&f${scenario.currentPhase}&7)"
-            )
+        for (line in text.split("\n")) {
+            if (line.isNotBlank()) {
+                plugin.messageUtils.send(sender, "&7$line")
+            }
+        }
+        return true
+    }
+
+    private fun handleDebugDumpAi(sender: CommandSender, args: Array<String>): Boolean {
+        val snapshot = plugin.openAIService.captureDebugSnapshot()
+        val interactions = snapshot.recentInteractions
+
+        val versionSnapshot = BuildVersionInfo.capture(plugin)
+        plugin.messageUtils.send(sender, "&6=== AI Debug ===")
+        plugin.messageUtils.send(sender, "&eModel: &f${snapshot.model}")
+        plugin.messageUtils.send(sender, "&eAPI Key: &f${if (snapshot.apiKeyPresent) "prezent" else "LIPSESTE"}")
+        plugin.messageUtils.send(sender, "&eBuild version: &f${versionSnapshot.version}")
+        plugin.messageUtils.send(sender, "&eBuild hash: &f${versionSnapshot.buildHash}")
+        plugin.messageUtils.send(sender, "&eBuild timestamp: &f${versionSnapshot.buildTimestamp}")
+        plugin.messageUtils.send(sender, "&eBackoff: &f${if (snapshot.backoffActive) "activ (${snapshot.backoffRemainingSeconds}s)" else "inactiv"}")
+        plugin.messageUtils.send(sender, "&eLast prompt: &f${snapshot.lastPromptChars} chars")
+        plugin.messageUtils.send(sender, "&eLast response: &f${snapshot.lastResponseChars} chars")
+        if (snapshot.lastFailureMessage.isNotBlank()) plugin.messageUtils.send(sender, "&cLast error: &f${snapshot.lastFailureMessage}")
+        if (snapshot.lastFallbackReason.isNotBlank()) plugin.messageUtils.send(sender, "&eLast fallback: &f${snapshot.lastFallbackReason}")
+
+        plugin.messageUtils.send(sender, "\n&6=== Recent AI Interactions (${interactions.size}) ===")
+        if (interactions.isEmpty()) {
+            plugin.messageUtils.send(sender, "&7Nicio interactiune AI inregistrata.")
+            return true
+        }
+        for ((index, interaction) in interactions.withIndex()) {
+            val time = java.time.Instant.ofEpochMilli(interaction.requestAtMillis)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDateTime()
+                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
+            val status = when {
+                interaction.hadError -> "&cERROR"
+                interaction.wasFallback -> "&eFALLBACK"
+                else -> "&aOK"
+            }
+            plugin.messageUtils.send(sender, "&7#${index + 1} [$time] $status &f${interaction.npcName} &7<-> &f${interaction.playerName}")
+            plugin.messageUtils.send(sender, "&7  prompt: &f${interaction.promptChars}c &7response: &f${interaction.responseChars}c")
+            if (interaction.wasFallback) plugin.messageUtils.send(sender, "&7  fallback: &f${interaction.fallbackReason ?: "N/A"}")
+            if (interaction.hadError) plugin.messageUtils.send(sender, "&7  error: &f${interaction.errorMessage ?: "N/A"}")
+            if (interaction.promptPreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  prompt: &7${interaction.promptPreview}")
+            if (interaction.responsePreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  response: &7${interaction.responsePreview}")
         }
         return true
     }

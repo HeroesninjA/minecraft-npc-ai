@@ -6,6 +6,9 @@ import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Mob
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.npc.AINPCRoutineChangedEvent
+import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import java.util.UUID
@@ -58,6 +61,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 skippedInvalidTarget++
                 continue
             }
+            val previousActivity = npc.plannedRoutineActivity
             val assignment = routineEngine.assign(npc, currentWorld.time)
             evaluated++
             val npcId = npc.uuid
@@ -65,6 +69,9 @@ class RoutineService(private val plugin: AINPCPlugin) {
             npc.plannedRoutineActivity = assignment.activity() ?: ""
             npc.currentGoal = assignment.goal() ?: ""
             npc.changeState(assignment.targetState() ?: NPCState.IDLE)
+            if (previousActivity != npc.plannedRoutineActivity) {
+                publishRoutineChanged(npc, previousActivity, npc.plannedRoutineActivity, currentWorld.time)
+            }
 
             if (!assignment.hasTargetAnchor()) {
                 skippedMissingTarget++
@@ -155,5 +162,24 @@ class RoutineService(private val plugin: AINPCPlugin) {
         pathfinder.setCanOpenDoors(true)
         pathfinder.setCanPassDoors(true)
         return pathfinder.moveTo(target, speed)
+    }
+
+    private fun publishRoutineChanged(npc: AINPC, previousActivity: String?, newActivity: String, worldTime: Long) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = AINPCRoutineChangedEvent(
+            AINPCRoutineChangedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                previousActivity,
+                newActivity,
+                worldTime,
+                mapOf("source" to "RoutineService")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 }

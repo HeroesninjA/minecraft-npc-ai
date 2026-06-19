@@ -27,6 +27,26 @@ class ProgressionGuiSnapshot(
     fun archivedEntries(): List<ProgressionGuiEntry> = archivedEntriesValue
     fun totalMatchingArchived(): Long = totalMatchingArchivedValue
 
+    fun findEntry(selector: String?): ProgressionGuiEntry? {
+        if (selector.isNullOrBlank()) {
+            return currentEntriesValue.firstOrNull()
+        }
+        val normalized = selector.trim()
+        return allEntries().firstOrNull { entry ->
+            entry.selector().equals(normalized, ignoreCase = true) ||
+                entry.commandSelector().equals(normalized, ignoreCase = true) ||
+                entry.guiDetailSelector().equals(normalized, ignoreCase = true) ||
+                entry.progressionId().equals(normalized, ignoreCase = true) ||
+                entry.code().equals(normalized, ignoreCase = true) ||
+                entry.templateId().equals(normalized, ignoreCase = true) ||
+                entry.definitionId().equals(normalized, ignoreCase = true) ||
+                "${entry.mechanicId()}:${entry.code()}".equals(normalized, ignoreCase = true) ||
+                "${entry.mechanicId()}:${entry.definitionId()}".equals(normalized, ignoreCase = true) ||
+                "${entry.kind()}:${entry.code()}".equals(normalized, ignoreCase = true) ||
+                "${entry.kind()}:${entry.definitionId()}".equals(normalized, ignoreCase = true)
+        }
+    }
+
     fun allEntries(): List<ProgressionGuiEntry> {
         val entries = ArrayList(currentEntriesValue)
         entries.addAll(archivedEntriesValue)

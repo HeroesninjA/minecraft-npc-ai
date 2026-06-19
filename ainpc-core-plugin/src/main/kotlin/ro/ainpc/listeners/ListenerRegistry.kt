@@ -2,6 +2,7 @@ package ro.ainpc.listeners
 
 import org.bukkit.event.Listener
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.debug.RecentEventsBuffer
 import ro.ainpc.gui.listeners.GuiInventoryListener
 
 /**
@@ -16,6 +17,9 @@ class ListenerRegistry(private val plugin: AINPCPlugin) {
         register(VillagerLifecycleListener(plugin))
         register(MappingWandListener(plugin))
         register(GuiInventoryListener(plugin))
+        plugin.recentEventsBuffer = RecentEventsBuffer(plugin)
+        plugin.recentEventsBuffer.configure(plugin.config.getInt("events.debug_recent_event_buffer", 100))
+        register(plugin.recentEventsBuffer)
     }
 
     private fun register(listener: Listener) {
