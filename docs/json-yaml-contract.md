@@ -299,6 +299,116 @@ Această formă este acceptabilă doar dacă normalizarea internă produce aceea
 - Schimbarea semnificației unui trigger cere versiune nouă.
 - Eliminarea unui hook existent cere perioadă de tranziție.
 
+## Quest și mapping
+
+Pentru fișierele care descriu questuri și mapping semantic, contractul trebuie să păstreze separarea dintre intenție și rezolvare.
+
+### Quest
+
+- `quest` descrie intenția de gameplay.
+- `objectives` sau `steps` descriu ordinea logică.
+- `trigger` marchează momentul de activare.
+- `hook` trimite execuția către logica runtime.
+- Tinta nu trebuie să depindă doar de coordonate brute.
+
+Exemplu:
+
+```yaml
+type: quest
+version: 1
+meta:
+  id: quest_intro_market
+spec:
+  objectives:
+    - id: visit_market
+      trigger: quest.started
+      hook: bind_place_target
+      target:
+        kind: place
+        ref: tag:market
+```
+
+### Mapping
+
+- `mapping` descrie rezolvarea semantică a țintelor.
+- `region`, `place` și `node` trebuie să rămână tipuri distincte.
+- `tags` și `metadata` sunt baza pentru potrivire flexibilă.
+- Rezultatul resolverului trebuie să fie stabil și auditat.
+- Mapping-ul poate fi exportat în JSON sau YAML fără schimbare de semnificație.
+
+Exemplu:
+
+```json
+{
+  "type": "mapping",
+  "version": 1,
+  "meta": {
+    "id": "market_center"
+  },
+  "spec": {
+    "places": [
+      {
+        "id": "village_market",
+        "tags": ["market", "town_center"]
+      }
+    ]
+  }
+}
+```
+
+### Regulă comună
+
+- Quest-ul consumă mapping-ul prin identificatori semantici, nu prin coordonate.
+- Mapping-ul rămâne sursa de adevăr pentru localizare și ancore.
+- JSON și YAML trebuie să producă aceeași structură internă după normalizare.
+
+### Flux end-to-end
+
+1. Quest-ul declară obiectivul și intenția.
+2. Trigger-ul pornește obiectivul la un eveniment runtime.
+3. Hook-ul cere rezolvarea semantică a țintei.
+4. Mapping-ul întoarce un `region`, `place` sau `node` valid.
+5. Runtime-ul execută logica fără să depindă de formatul fizic al fișierului.
+
+Exemplu complet:
+
+```yaml
+# quest.yaml
+type: quest
+version: 1
+meta:
+  id: quest_intro_market
+spec:
+  objectives:
+    - id: reach_market
+      trigger: quest.started
+      hook: resolve_place_target
+      target:
+        kind: place
+        ref: tag:market
+```
+
+```yaml
+# mapping.yaml
+type: mapping
+version: 1
+meta:
+  id: market_center
+spec:
+  places:
+    - id: village_market
+      tags: [market, town_center]
+      metadata:
+        npc_service: merchant
+```
+
+Normalizare așteptată:
+
+- obiectivul `reach_market` devine o cerere semantică de tip `place`;
+- `tag:market` se rezolvă la `village_market`;
+- `resolve_place_target` primește un `place` stabil, nu o coordonată hardcodată;
+- aceeași intenție poate fi serializată identic în JSON fără să se schimbe rezultatul.
+
 ## Matrice de compatibilitate
 
 | Schimbare | Compatibilitate | Observație |
@@ -309,6 +419,104 @@ Această formă este acceptabilă doar dacă normalizarea internă produce aceea
 | Mutare de secțiune | Parțial | Necesită normalizare și documentare clară |
 | Schimbare de tip | Nu | Necesită versiune nouă sau adaptor |
 | Eliminare de câmp obligatoriu | Nu | Necesită roadmap de migrare |
+
+## Faze de implementare
+
+### Faza I - Contract minim
+
+Scop: stabilim un model comun pentru JSON și YAML.
+
+Livrabile:
+
+- `type`, `version`, `meta`, `spec` ca structură standard;
+- normalizare internă unică;
+- validare structurală de bază;
+- exemple simple pentru `quest` și `mapping`.
+
+Gate:
+
+- un fișier JSON și unul YAML produc aceeași structură internă;
+- câmpurile obligatorii sunt validate identic în ambele formate.
+
+### Faza II - Eventuri, trigger și hook
+
+Scop: introducem fluxul de execuție declarativă.
+
+Livrabile:
+
+- liste de evenimente ordonate;
+- mapări de trigger-uri către hook-uri;
+- suport pentru aliasuri și formate alternative;
+- normalizare la aceeași reprezentare logică.
+
+Gate:
+
+- aceeași semnificație poate fi exprimată ca listă sau map;
+- runtime-ul primește aceeași structură internă.
+
+### Faza III - Quest și mapping semantic
+
+Scop: legăm intenția quest-ului de rezolvarea semantică a mapping-ului.
+
+Livrabile:
+
+- exemple `quest.yaml` și `mapping.yaml`;
+- rezolvare prin `region`, `place`, `node`;
+- fallback controlat pentru ținte ambigue;
+- contract clar pentru `trigger`, `hook` și `target`.
+
+Gate:
+
+- quest-ul nu mai depinde de coordonate brute;
+- mapping-ul rămâne sursa de adevăr pentru ancore.
+
+### Faza IV - Migrare și compatibilitate
+
+Scop: păstrăm continuitatea între versiuni.
+
+Livrabile:
+
+- aliasuri pentru câmpuri redenumite;
+- reguli de deprecated;
+- matrice de compatibilitate pentru schimbări frecvente;
+- adaptor pentru formatul vechi când este necesar.
+
+Gate:
+
+- niciun consumator existent nu este rupt de o schimbare de nume;
+- eliminarea unui câmp are perioada de tranziție documentată.
+
+### Faza V - Integrare runtime și tooling
+
+Scop: conectăm contractul la fluxul real de utilizare.
+
+Livrabile:
+
+- parser comun pentru JSON și YAML;
+- integrare cu quest runtime;
+- export/read-only debug pentru validare;
+- documente exemple pentru authors și admins.
+
+Gate:
+
+- runtime-ul consumă doar modelul normalizat;
+- utilizatorii pot edita în formatul preferat fără diferențe semantice.
+
+### Faza VI - Hardening și extindere
+
+Scop: pregătim contractul pentru extensii viitoare fără blocaje.
+
+Livrabile:
+
+- extensii opționale pe `spec`;
+- reguli pentru enum-uri și fallback;
+- suport pentru hook-uri suplimentare;
+- testare pe cazuri limită și regresii.
+
+Gate:
+
+- adăugarea de date noi nu rupe compatibilitatea;
+- extensiile rămân lizibile și validate.
 
 ## Legături cu documentația existentă
 

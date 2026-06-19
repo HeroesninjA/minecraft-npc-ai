@@ -102,6 +102,8 @@ Reguli:
 - `quest_anchor_bindings` ramane legatura persistenta intre template si mapping concret;
 - story events trebuie sa poata indica regiunea, place-ul sau node-ul relevant.
 
+Pentru reprezentarea in JSON/YAML, foloseste `docs/json-yaml-contract.md`: quest-ul isi pastreaza intentia si obiectivele, iar mapping-ul ramane stratul semantic de rezolvare.
+
 Livrabile:
 
 - audit mai clar pentru ancore lipsa sau ambigue;

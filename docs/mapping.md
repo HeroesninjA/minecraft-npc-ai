@@ -795,6 +795,8 @@ Starea actuala:
 
 Urmatorul pas este ca `/quest track` si mesajele de obiectiv sa foloseasca aceste ancore pentru indicii clare.
 
+Contractul de reprezentare in JSON/YAML este documentat in `docs/json-yaml-contract.md`; mapping-ul ramane sursa de adevar pentru rezolvarea semantica, iar quest-ul il consuma.
+
 ### Generare de sate, castele, pesteri si structuri
 
 Mapping-ul este puntea dintre constructie si gameplay.
