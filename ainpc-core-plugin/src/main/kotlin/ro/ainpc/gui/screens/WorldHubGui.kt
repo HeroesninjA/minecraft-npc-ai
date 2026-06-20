@@ -15,6 +15,7 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.gui.GuiService
 import ro.ainpc.progression.ProgressionAnchorBinding
+import ro.ainpc.progression.ProgressionFormatUtil
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
 import ro.ainpc.world.WorldNodeInfo
@@ -87,6 +88,36 @@ class WorldHubGui : GuiScreen {
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", regionLore(region)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)))
         context.item(12, GuiItemFactory.item(Material.TARGET, "&dNode curent", nodeLore(node)))
+        if (place != null) {
+            val placeProgressions = runCatching {
+                context.plugin().progressionService.getProgressionsByAnchor("place", place.id(), 3)
+            }.getOrDefault(emptyList())
+            if (placeProgressions.isNotEmpty()) {
+                context.item(
+                    16,
+                    GuiItemFactory.item(
+                        Material.LIME_DYE,
+                        "&aProgresii pe acest place",
+                        placeProgressions.map { "&7- &f${ProgressionFormatUtil.formatOptional(it.progressionId())} &7(${ProgressionFormatUtil.formatOptional(it.status())})" }
+                    )
+                )
+            }
+        }
+        if (node != null) {
+            val nodeProgressions = runCatching {
+                context.plugin().progressionService.getProgressionsByAnchor("node", node.id(), 3)
+            }.getOrDefault(emptyList())
+            if (nodeProgressions.isNotEmpty()) {
+                context.item(
+                    17,
+                    GuiItemFactory.item(
+                        Material.LIME_DYE,
+                        "&aProgresii pe acest node",
+                        nodeProgressions.map { "&7- &f${ProgressionFormatUtil.formatOptional(it.progressionId())} &7(${ProgressionFormatUtil.formatOptional(it.status())})" }
+                    )
+                )
+            }
+        }
         context.button(
             13,
             if (context.service().canOpen(player, GuiKey.QUEST)) {

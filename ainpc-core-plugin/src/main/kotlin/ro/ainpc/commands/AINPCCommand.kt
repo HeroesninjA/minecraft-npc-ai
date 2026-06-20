@@ -277,10 +277,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun handleVersion(sender: CommandSender): Boolean {
         val versionSnapshot = BuildVersionInfo.capture(plugin)
-        plugin.messageUtils.send(sender, "&6=== AINPC Version ===")
-        plugin.messageUtils.send(sender, "&eUltima versiune: &f${versionSnapshot.version}")
-        plugin.messageUtils.send(sender, "&eHash ultimul build: &f${versionSnapshot.buildHash}")
-        plugin.messageUtils.send(sender, "&eData si ora buildului: &f${versionSnapshot.buildTimestamp}")
+        BuildVersionInfo.formatSnapshot(versionSnapshot).forEach { line ->
+            plugin.messageUtils.send(sender, line)
+        }
         return true
     }
 
@@ -637,6 +636,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         questDebug("Parsare quest mode='' sender=" + sender.name)
         return when (mode) {
             "anchors" -> handleQuestAnchors(sender, args)
+            "objectives" -> handleQuestObjectives(sender, args)
             "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
             "gui" -> handleQuestGui(sender, args)
             "authoring" -> handleAuthoring(sender, arrayOf("authoring", *args.drop(2).toTypedArray()))
@@ -3056,11 +3056,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             ignoreCase = true
         )
 
-    private fun isStrictQuestAuditOption(option: String): Boolean = option == "strict" || option == "stricta"
+    private fun isStrictQuestAuditOption(option: String): Boolean =
+        option == "strict" || option == "stricta" || option == "full" || option == "offline"
 
     private fun isAuditOptionSupported(mode: String, option: String): Boolean {
         if (option.isBlank()) return true
-        return mode == "quest" && isStrictQuestAuditOption(option)
+        return (mode == "quest" || mode == "all") && isStrictQuestAuditOption(option)
     }
 
     private fun questDebug(message: String) {

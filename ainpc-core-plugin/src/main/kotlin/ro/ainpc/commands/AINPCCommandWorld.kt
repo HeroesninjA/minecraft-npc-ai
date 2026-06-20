@@ -859,6 +859,30 @@ fun handleWorldPlaceCreate(sender: CommandSender, args: Array<String>): Boolean 
     return true
 }
 
+fun handleWorldPlaceRemove(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place remove <placeId>")
+        return true
+    }
+
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    if (!worldAdmin.isEnabled) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
+        return true
+    }
+
+    val placeId = args[3].trim()
+    val removed = worldAdmin.removePlace(placeId)
+    if (!removed) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cPlace-ul &e$placeId &cnu a fost gasit.")
+        return true
+    }
+
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&aPlace sters: &f$placeId")
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
+    return true
+}
+
 fun handleWorldRegion(
     sender: CommandSender,
     args: Array<String>,
@@ -953,11 +977,18 @@ fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     if (action == "create") {
         return handleWorldPlaceCreate(sender, args)
     }
+    if (action == "remove" || action == "delete") {
+        return handleWorldPlaceRemove(sender, args)
+    }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place info <placeId>")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place <info|create|remove> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
+        )
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc world place remove <placeId>"
         )
         return true
     }

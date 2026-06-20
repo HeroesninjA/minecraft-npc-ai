@@ -32,20 +32,10 @@ class QuestDetailGui : GuiScreen {
         val adminView = context.player().hasPermission("ainpc.admin")
         val detailFilter = context.service().getQuestDetailFilter(context.player())
         var snapshot = context.plugin().progressionService.getProgressionGuiSnapshot(context.player(), detailFilter, adminView)
-        var optionalEntry = context.plugin().progressionService.findProgressionGuiEntry(
-            context.player(),
-            detailFilter,
-            adminView,
-            selector
-        )
+        var optionalEntry = context.plugin().progressionService.findEntry(context.player(), selector, adminView)
         if (optionalEntry == null && !detailFilter.equals("all", ignoreCase = true)) {
             snapshot = context.plugin().progressionService.getProgressionGuiSnapshot(context.player(), "all", adminView)
-            optionalEntry = context.plugin().progressionService.findProgressionGuiEntry(
-                context.player(),
-                "all",
-                adminView,
-                selector
-            )
+            optionalEntry = context.plugin().progressionService.findEntry(context.player(), selector, adminView)
         }
         if (optionalEntry == null) {
             renderMissingQuest(context, selector, detailFilter)
@@ -494,7 +484,7 @@ class QuestDetailGui : GuiScreen {
         }
         val matchedAnchor = matchingAnchor(objective, anchors)
         if (matchedAnchor != null) {
-            lore.add("&7Ancora: &f${GuiItemFactory.compact(matchedAnchor.anchorSelector(), 30)}")
+            lore.add("&7Ancora: &f${matchedAnchor.anchorType()}:${GuiItemFactory.compact(matchedAnchor.anchorId(), 24)}")
         }
         lore.add(if (objective.active()) "&eActiv in etapa curenta." else "&8Inactiv in etapa curenta.")
         lore.addAll(GuiItemFactory.wrapLore(objective.description(), "&7"))

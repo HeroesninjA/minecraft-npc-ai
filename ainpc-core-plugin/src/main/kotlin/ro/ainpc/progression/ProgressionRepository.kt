@@ -95,6 +95,178 @@ class ProgressionRepository(
     }
 
     @Throws(SQLException::class)
+    fun findAnchorBindingsForObjective(
+        playerUuid: String?,
+        templateId: String?,
+        objectiveKey: String?,
+        limit: Int
+    ): List<ProgressionAnchorBinding> {
+        return queryAnchorBindings(playerUuid, templateId, "", "", "", limit, objectiveKey)
+    }
+
+    @Throws(SQLException::class)
+    fun findProgressionsByAnchor(
+        anchorType: String?,
+        anchorId: String?,
+        limit: Int
+    ): List<StoredProgression> {
+        if (statementProvider == null) return listOf()
+
+        val safeAnchorType = valueOrEmpty(anchorType)
+        val safeAnchorId = valueOrEmpty(anchorId)
+        if (safeAnchorType.isBlank() || safeAnchorId.isBlank()) return listOf()
+
+        val definitions = definitions()
+        val sql = """
+            SELECT DISTINCT p.player_uuid, p.template_id, p.quest_code, p.status,
+                   p.started_at, p.completed_at, p.current_phase, p.current_stage_id,
+                   p.objective_progress, p.quest_variables, p.updated_at, p.tracked
+            FROM player_quests p
+            INNER JOIN quest_anchor_bindings b
+              ON b.player_uuid = p.player_uuid
+             AND b.template_id = p.template_id
+            WHERE LOWER(b.anchor_type) = ?
+              AND LOWER(b.anchor_id) = ?
+            ORDER BY p.updated_at DESC
+        """.trimIndent()
+
+        val safeLimit = if (limit > 0) minOf(limit, 200) else 50
+        statementProvider.prepareStatement(sql).use { statement ->
+            statement.setString(1, safeAnchorType.lowercase(Locale.ROOT))
+            statement.setString(2, safeAnchorId.lowercase(Locale.ROOT))
+
+            statement.executeQuery().use { resultSet ->
+                val rows = mutableListOf<StoredProgression>()
+                while (resultSet.next()) {
+                    rows.add(toStoredProgression(resultSet, definitions))
+                }
+                return rows.take(safeLimit)
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    fun searchProgressionsByAnchor(
+        query: String?,
+        anchorTypes: List<String>?,
+        limit: Int
+    ): List<StoredProgression> {
+        if (statementProvider == null) return listOf()
+
+        val safeQuery = valueOrEmpty(query)
+        if (safeQuery.isBlank()) return listOf()
+
+        val definitions = definitions()
+        val sql = StringBuilder("""
+            SELECT DISTINCT p.player_uuid, p.template_id, p.quest_code, p.status,
+                   p.started_at, p.completed_at, p.current_phase, p.current_stage_id,
+                   p.objective_progress, p.quest_variables, p.updated_at, p.tracked
+            FROM player_quests p
+            INNER JOIN quest_anchor_bindings b
+              ON b.player_uuid = p.player_uuid
+             AND b.template_id = p.template_id
+            WHERE (LOWER(b.anchor_id) LIKE ? OR LOWER(b.anchor_label) LIKE ?)
+        """.trimIndent())
+
+        val likePattern = "%${safeQuery.lowercase(Locale.ROOT)}%"
+        val parameters = mutableListOf(likePattern, likePattern)
+
+        if (!anchorTypes.isNullOrEmpty()) {
+            val placeholders = anchorTypes.map { "?" }.joinToString(", ")
+            sql.append(" AND LOWER(b.anchor_type) IN ($placeholders)")
+            parameters.addAll(anchorTypes.map { it.lowercase(Locale.ROOT) })
+        }
+        sql.append(" ORDER BY p.updated_at DESC")
+
+        val safeLimit = if (limit > 0) minOf(limit, 100) else 20
+        statementProvider.prepareStatement(sql.toString()).use { statement ->
+            var index = 1
+            for (param in parameters) {
+                statement.setString(index++, param)
+            }
+
+            statement.executeQuery().use { resultSet ->
+                val rows = mutableListOf<StoredProgression>()
+                while (resultSet.next()) {
+                    rows.add(toStoredProgression(resultSet, definitions))
+                }
+                return rows.take(safeLimit)
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    fun findProgressionsByAnchorGrouped(
+        playerUuid: String?,
+        limitPerAnchor: Int
+    ): Map<String, List<StoredProgression>> {
+        if (statementProvider == null) return emptyMap()
+
+        val safePlayerUuid = valueOrEmpty(playerUuid)
+        val definitions = definitions()
+        val sql = StringBuilder("""
+            SELECT b.anchor_type, b.anchor_id,
+                   p.player_uuid, p.template_id, p.quest_code, p.status,
+                   p.started_at, p.completed_at, p.current_phase, p.current_stage_id,
+                   p.objective_progress, p.quest_variables, p.updated_at, p.tracked
+            FROM quest_anchor_bindings b
+            INNER JOIN player_quests p
+              ON p.player_uuid = b.player_uuid
+             AND p.template_id = b.template_id
+            WHERE p.status IN ('active', 'offered')
+        """.trimIndent())
+
+        val parameters = mutableListOf<String>()
+        if (safePlayerUuid.isNotBlank()) {
+            sql.append(" AND p.player_uuid = ?")
+            parameters.add(safePlayerUuid)
+        }
+        sql.append(" ORDER BY b.anchor_type, b.anchor_id, p.updated_at DESC")
+
+        statementProvider.prepareStatement(sql.toString()).use { statement ->
+            var index = 1
+            for (param in parameters) {
+                statement.setString(index++, param)
+            }
+
+            statement.executeQuery().use { resultSet ->
+                val grouped = LinkedHashMap<String, MutableList<StoredProgression>>()
+                while (resultSet.next()) {
+                    val anchorType = valueOrEmpty(resultSet.getString("anchor_type"))
+                    val anchorId = valueOrEmpty(resultSet.getString("anchor_id"))
+                    val key = "$anchorType:$anchorId"
+                    val list = grouped.getOrPut(key) { mutableListOf() }
+                    if (list.size < limitPerAnchor) {
+                        list.add(toStoredProgression(resultSet, definitions))
+                    }
+                }
+                return grouped.toMap()
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    fun deleteAnchorBinding(playerUuid: String?, templateId: String?, objectiveKey: String?) {
+        if (statementProvider == null) {
+            throw SQLException("StatementProvider indisponibil")
+        }
+        val safePlayerUuid = valueOrEmpty(playerUuid)
+        val safeTemplateId = valueOrEmpty(templateId)
+        val safeObjectiveKey = valueOrEmpty(objectiveKey)
+        if (safePlayerUuid.isBlank() || safeTemplateId.isBlank() || safeObjectiveKey.isBlank()) {
+            throw IllegalArgumentException("Parametri insuficienti pentru stergerea binding-ului.")
+        }
+
+        val sql = "DELETE FROM quest_anchor_bindings WHERE player_uuid = ? AND template_id = ? AND objective_key = ?"
+        statementProvider.prepareStatement(sql).use { statement ->
+            statement.setString(1, safePlayerUuid)
+            statement.setString(2, safeTemplateId)
+            statement.setString(3, safeObjectiveKey)
+            statement.executeUpdate()
+        }
+    }
+
+    @Throws(SQLException::class)
     fun saveAnchorBinding(binding: ProgressionAnchorBinding?) {
         if (statementProvider == null) {
             throw SQLException("StatementProvider indisponibil")
@@ -189,7 +361,8 @@ class ProgressionRepository(
         questCode: String?,
         anchorType: String?,
         anchorId: String?,
-        limit: Int
+        limit: Int,
+        objectiveKey: String? = null
     ): List<ProgressionAnchorBinding> {
         if (statementProvider == null) {
             return listOf()
@@ -200,6 +373,7 @@ class ProgressionRepository(
         val safeQuestCode = valueOrEmpty(questCode)
         val safeAnchorType = valueOrEmpty(anchorType)
         val safeAnchorId = valueOrEmpty(anchorId)
+        val safeObjectiveKey = valueOrEmpty(objectiveKey)
         val sql = StringBuilder(
             """
             SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
@@ -230,6 +404,10 @@ class ProgressionRepository(
         if (safeAnchorId.isNotBlank()) {
             sql.append(" AND LOWER(b.anchor_id) = ?")
             parameters.add(safeAnchorId.lowercase(Locale.ROOT))
+        }
+        if (safeObjectiveKey.isNotBlank()) {
+            sql.append(" AND LOWER(b.objective_key) = ?")
+            parameters.add(safeObjectiveKey.lowercase(Locale.ROOT))
         }
         sql.append(" ORDER BY b.updated_at DESC, b.template_id, b.objective_key LIMIT ?")
 

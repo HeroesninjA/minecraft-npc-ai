@@ -11,6 +11,16 @@ object DebugDumpQuestText {
         val anchors = DebugDumpProgressionJson.buildQuestAnchorBindingsJson(plugin)
         val auditReport = DebugDumpQuestAudit.buildQuestAuditReportText(plugin)
 
+        return buildQuestText(progression, questProgress, anchors, auditReport)
+    }
+
+    @JvmStatic
+    fun buildQuestText(
+        progression: JsonObject,
+        questProgress: JsonObject,
+        anchors: JsonObject,
+        auditReport: String,
+    ): String {
         val sb = StringBuilder()
         sb.append("AINPC Quest Dump\n")
         appendProgressionSummary(sb, progression)

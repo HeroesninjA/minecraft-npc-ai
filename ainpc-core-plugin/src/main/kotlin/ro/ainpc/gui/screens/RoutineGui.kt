@@ -145,6 +145,23 @@ class RoutineGui : GuiScreen {
             }
         )
 
+        context.button(
+            49,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.CHAINMAIL_BOOTS,
+                    "&6NpcWorldBindings",
+                    listOf(
+                        "&7Listeaza NPC bindings din aceasta regiune.",
+                        "&8Click: lista bindings in chat"
+                    )
+                ),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc world bindings")
+                }
+            )
+        )
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
@@ -198,19 +215,24 @@ class RoutineGui : GuiScreen {
             return
         }
         lore.add(
-            "&7Mapping place: &f" + compactBindingTriple(
-                binding.homePlaceId(),
-                binding.workPlaceId(),
-                binding.socialPlaceId()
-            )
+            "&7Home: &f${shortValue(binding.homePlaceId())}" +
+                " &7Work: &f${shortValue(binding.workPlaceId())}" +
+                " &7Social: &f${shortValue(binding.socialPlaceId())}"
         )
         lore.add(
-            "&7Mapping node: &f" + compactBindingTriple(
-                binding.homeNodeId(),
-                binding.workNodeId(),
-                binding.socialNodeId()
-            )
+            "&7Node home: &f${shortValue(binding.homeNodeId())}" +
+                " &7Node work: &f${shortValue(binding.workNodeId())}" +
+                " &7Node social: &f${shortValue(binding.socialNodeId())}"
         )
+        if (binding.homePlaceId().isNotBlank()) {
+            lore.add("&8Cmd: /ainpc world place ${binding.homePlaceId()}")
+        }
+        if (binding.workPlaceId().isNotBlank()) {
+            lore.add("&8Cmd: /ainpc world place ${binding.workPlaceId()}")
+        }
+        if (binding.socialPlaceId().isNotBlank()) {
+            lore.add("&8Cmd: /ainpc world place ${binding.socialPlaceId()}")
+        }
     }
 
     private fun compactBindingTriple(home: String?, work: String?, social: String?): String =

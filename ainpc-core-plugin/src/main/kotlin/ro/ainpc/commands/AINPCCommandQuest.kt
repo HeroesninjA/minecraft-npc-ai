@@ -886,6 +886,38 @@ fun resolveFlexibleQuestDecisionNpc(
     return null
 }
 
+fun handleQuestObjectives(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 3) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cUtilizare: /ainpc quest objectives <selector> [jucator]")
+        return true
+    }
+
+    val selector = args[2]
+    val targetPlayer = resolveQuestTargetPlayer(sender, args, 3,
+        "&cUtilizare: /ainpc quest objectives <selector> [jucator]") ?: return true
+
+    val suggestions = ainpcCommandQuestPlugin.progressionService
+        .getObjectiveIdSuggestions(targetPlayer, selector)
+    if (suggestions.isEmpty()) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&7Nu exista obiective mapabile pentru selectorul &f$selector&7.")
+        return true
+    }
+
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&6=== Obiective mapabile ===")
+    ainpcCommandQuestPlugin.messageUtils.send(sender,
+        "&eSelector: &f$selector &7(&f${suggestions.size}&7 obiective)")
+    for (suggestion in suggestions) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&7- &f$suggestion")
+    }
+    return true
+}
+
 fun handleQuestAnchors(
     sender: CommandSender,
     args: Array<String>,
@@ -897,6 +929,10 @@ fun handleQuestAnchors(
     if (ainpcCommandQuestPlugin.databaseManager == null) {
         ainpcCommandQuestPlugin.messageUtils.send(sender, "&cDatabaseManager nu este initializat.")
         return true
+    }
+
+    if (args.size > 2 && args[2].equals("remove", ignoreCase = true)) {
+        return handleAnchorRemove(sender, args)
     }
 
     var playerUuid = ""
@@ -934,6 +970,34 @@ fun handleQuestAnchors(
         ainpcCommandQuestPlugin.logger.warning("Nu am putut lista quest_anchor_bindings: ${exception.message}")
         ainpcCommandQuestPlugin.messageUtils.send(sender,
             "&cNu am putut lista quest anchor bindings: ${exception.message}")
+    }
+    return true
+}
+
+private fun handleAnchorRemove(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 5) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cUtilizare: /ainpc quest anchors remove <jucator|uuid> <templateId> <objectiveKey>")
+        return true
+    }
+    val playerUuid = resolveQuestAnchorPlayerUuid(sender, args[3]) ?: return true
+    val templateId = args[4].trim()
+    val objectiveKey = if (args.size > 5) args[5].trim() else ""
+
+    if (templateId.isBlank() || objectiveKey.isBlank()) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cUtilizare: /ainpc quest anchors remove <jucator|uuid> <templateId> <objectiveKey>")
+        return true
+    }
+
+    try {
+        ainpcCommandQuestPlugin.progressionService.deleteAnchorBinding(playerUuid, templateId, objectiveKey)
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&aAnchor binding sters: &f$playerUuid &7/ &f$templateId &7/ &f$objectiveKey")
+    } catch (exception: SQLException) {
+        ainpcCommandQuestPlugin.logger.warning("Nu am putut sterge anchor binding: ${exception.message}")
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cNu am putut sterge anchor binding: ${exception.message}")
     }
     return true
 }

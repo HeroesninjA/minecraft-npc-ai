@@ -1,8 +1,8 @@
 # Arhiva Kotlin Migration
 
-Actualizat: 2026-06-07
+Actualizat: 2026-06-20
 
-Acest folder pastreaza documentele istorice ale conversiei Java -> Kotlin. Ele nu mai sunt documente operationale active; directia curenta este in `../../rezumat-conversie-java-la-kotlin.md`, iar executia curenta este in `../../kotlin-migration-tracker.md`.
+Acest folder pastreaza documentele istorice ale conversiei Java -> Kotlin. Nu mai contine documente operationale active.
 
 ## Documente arhivate
 
@@ -12,9 +12,9 @@ Acest folder pastreaza documentele istorice ale conversiei Java -> Kotlin. Ele n
 | `conversie-java-la-kotlin-partea-2.md` | Runbook initial, inlocuit de tracker si checklist-uri |
 | `conversie-java-la-kotlin-partea-3.md` | Retete initiale Gradle/Kotlin, deja aplicate in build |
 | `conversie-java-la-kotlin-partea-4.md` | Harta initiala pe pachete, depasita de statusul curent al conversiei |
-| `conversie-java-la-kotlin-partea-5.md` | Tracker initial, inlocuit de `../../kotlin-migration-tracker.md` |
+| `conversie-java-la-kotlin-partea-5.md` | Tracker initial, inlocuit de `README.md` |
 | `kotlin-gradle-activation-plan.md` | Plan de activare Gradle finalizat; Kotlin este deja activ in build |
 
 ## Regula de folosire
 
-Consulta aceste documente doar pentru istoric sau rationale vechi. Pentru taskuri noi de conversie foloseste documentele active din `../../README.md`.
+Consulta aceste documente doar pentru istoric sau rationale vechi.

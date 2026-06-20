@@ -2,7 +2,6 @@ package ro.ainpc
 
 import org.bukkit.command.PluginCommand
 import org.bukkit.configuration.file.FileConfiguration
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.ServicePriority
 import org.bukkit.plugin.java.JavaPlugin
 import ro.ainpc.ai.DialogManager
@@ -18,6 +17,7 @@ import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.QuestAuthoringService
 import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.engine.ScriptConfigurationLoader
 import ro.ainpc.gui.GuiService
 import ro.ainpc.listeners.ListenerRegistry
 import ro.ainpc.managers.ConversationSessionManager
@@ -27,8 +27,8 @@ import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.platform.AINPCPlatform
 import ro.ainpc.progression.ProgressionService
-import ro.ainpc.debug.RecentEventsBuffer
 import ro.ainpc.routine.RoutineService
+import ro.ainpc.debug.RecentEventsBuffer
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
 import ro.ainpc.story.StoryContextService
@@ -246,14 +246,15 @@ class AINPCPlugin : JavaPlugin() {
         if (::scenarioEngine.isInitialized) scenarioEngine.reloadTemplates()
         storyStateService = StoryStateService(this)
         storyContextService = StoryContextService(this)
+        if (::progressionService.isInitialized) progressionService.invalidateDefinitionCache()
         if (::npcManager.isInitialized) npcManager.ensureAllNPCsHaveProfiles()
     }
 
     private fun loadQuestConfig() {
-        if (!dataFolder.exists()) dataFolder.mkdirs()
-        questConfigFile = File(dataFolder, "quests.yml")
-        if (!questConfigFile.exists()) saveResource("quests.yml", false)
-        questConfig = YamlConfiguration.loadConfiguration(questConfigFile)
+        val loaded = ScriptConfigurationLoader.loadQuestConfiguration(this)
+        questConfigFile = loaded.first
+        questConfig = loaded.second
+        logger.info("Quest config incarcat din ${questConfigFile.name}")
     }
 
     private fun registerAliasCommand(name: String, command: AINPCCommand) {

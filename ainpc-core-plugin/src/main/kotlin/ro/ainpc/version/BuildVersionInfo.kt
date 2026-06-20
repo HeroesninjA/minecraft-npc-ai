@@ -18,6 +18,16 @@ object BuildVersionInfo {
         return BuildVersionSnapshot(version, buildHash, buildTimestamp)
     }
 
+    @JvmStatic
+    fun formatSnapshot(snapshot: BuildVersionSnapshot): List<String> {
+        return listOf(
+            "&6=== AINPC Version ===",
+            "&eUltima versiune: &f${snapshot.version}",
+            "&eHash ultimul build: &f${snapshot.buildHash}",
+            "&eData si ora buildului: &f${snapshot.buildTimestamp}",
+        )
+    }
+
     private fun String?.resolvedOr(fallback: String): String {
         val trimmed = this?.trim().orEmpty()
         if (trimmed.isBlank()) {

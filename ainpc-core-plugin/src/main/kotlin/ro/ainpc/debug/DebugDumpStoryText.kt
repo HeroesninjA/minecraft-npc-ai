@@ -14,13 +14,23 @@ object DebugDumpStoryText {
         val events = DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson)
         val progressionGaps = DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJson(plugin)
 
+        return buildStoryText(scenarios.values.toList(), states, events, progressionGaps)
+    }
+
+    @JvmStatic
+    fun buildStoryText(
+        scenarios: List<ActiveScenario>,
+        states: JsonObject,
+        events: JsonObject,
+        progressionGaps: JsonObject,
+    ): String {
         val sb = StringBuilder()
         sb.append("AINPC Story Dump\n")
         sb.append("Active scenarios: ").append(scenarios.size).append("\n")
         appendStateSummary(sb, states)
         appendEventSummary(sb, events)
         appendGapSummary(sb, progressionGaps)
-        appendScenarios(sb, scenarios.values.filterIsInstance<ActiveScenario>())
+        appendScenarios(sb, scenarios)
         return DebugDumpSecrets.redactText(sb.toString())
     }
 

@@ -9,7 +9,7 @@ class QuestDetailGuiAuthoringTest {
     fun questDetailGuiExposesAuthoringSummaryCard() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/QuestDetailGui.kt").readText()
 
-        assertTrue(source.contains("findProgressionGuiEntry("))
+        assertTrue(source.contains("findEntry(context.player(), selector, adminView)") || source.contains("findProgressionGuiEntry("))
         assertTrue(source.contains("renderSelectionDiagnostics(context, entry)"))
         assertTrue(source.contains("renderAuthoringCard(context, entry)"))
         assertTrue(source.contains("context.plugin().authoringService.analyze("))

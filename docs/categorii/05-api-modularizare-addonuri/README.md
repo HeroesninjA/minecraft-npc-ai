@@ -14,10 +14,10 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | `../../spring-ai-mcp-serviciu-intern.md` | Directie pentru modulul sidecar `ainpc-mcp-service` si integrarea sa cu pluginul Paper |
 | `../../strategie-plugin-modular-si-scenarii-programabile.md` | Strategie pentru addonuri si scenarii |
 | `../../refactorizare-si-impartire-pe-module.md` | Plan de refactorizare si impartire pe module |
-| `../../rezumat-conversie-java-la-kotlin.md` | Rezumat pentru seria de conversie Java -> Kotlin |
+| `../../arhiva/kotlin-migration/README.md` | Istoric pentru seria de conversie Java -> Kotlin |
 | `../../kotlin-style-guide.md` | Reguli de stil Kotlin pentru codul AINPC |
 | `../../kotlin-interop-api-addonuri.md` | Contract Java interop pentru API si addonuri |
-| `../../kotlin-migration-tracker.md` | Tracker operational pentru slice-urile Kotlin |
+| `../../arhiva/kotlin-migration/README.md` | Istoric pentru trackerul Kotlin |
 | `../../kotlin-code-review-checklist.md` | Checklist de review pentru schimbari Kotlin |
 | `../../kotlin-testing-strategy.md` | Strategie de testare pentru conversiile Kotlin |
 | `../../arhiva/kotlin-migration/README.md` | Index pentru istoricul arhivat al conversiei Kotlin |
@@ -34,3 +34,7 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 - Contract clar pentru `capabilities` si `dependencies`.
 - Template minim de addon.
 - Conversia `ainpc-api` la Kotlin este amanata pana exista teste Java de consum si motiv clar.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

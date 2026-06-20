@@ -63,3 +63,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 - Document dedicat pentru tranzactie DB completa pe spawn de regiune.
 - Document dedicat pentru migration/backfill mapping.
 - Document dedicat pentru `spawn_batches` si retry idempotent settlement/household.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

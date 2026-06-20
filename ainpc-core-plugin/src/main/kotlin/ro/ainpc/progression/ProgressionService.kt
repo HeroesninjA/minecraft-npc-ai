@@ -19,6 +19,36 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         this::getDefinitions
     )
 
+    private var cachedDefinitions: List<ProgressionDefinition>? = null
+    private var cachedDefinitionsTime: Long = 0L
+    private val cacheTtlMs: Long = 30_000L
+
+    fun invalidateDefinitionCache() {
+        cachedDefinitions = null
+        cachedDefinitionsTime = 0L
+    }
+
+    private fun loadDefinitions(): List<ProgressionDefinition> {
+        val now = System.currentTimeMillis()
+        if (cachedDefinitions != null && now - cachedDefinitionsTime < cacheTtlMs) {
+            return cachedDefinitions!!
+        }
+        val featurePackLoader = plugin.featurePackLoader ?: return listOf()
+        val definitions = featurePackLoader.getAllScenarios().stream()
+            .filter(ProgressionDefinition::isProgressionCandidate)
+            .map(ProgressionDefinition::fromScenarioDefinition)
+            .sorted(
+                Comparator
+                    .comparing(ProgressionDefinition::packId, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(ProgressionDefinition::mechanicId, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(ProgressionDefinition::definitionId, String.CASE_INSENSITIVE_ORDER)
+            )
+            .toList()
+        cachedDefinitions = definitions
+        cachedDefinitionsTime = now
+        return definitions
+    }
+
     fun getLog(player: Player, filter: String, adminView: Boolean): QuestInteractionResult {
         return scenarioEngine().getQuestLog(player, filter, adminView)
     }
@@ -39,18 +69,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     }
 
     fun getDefinitions(): List<ProgressionDefinition> {
-        val featurePackLoader = plugin.featurePackLoader ?: return listOf()
-
-        return featurePackLoader.getAllScenarios().stream()
-            .filter(ProgressionDefinition::isProgressionCandidate)
-            .map(ProgressionDefinition::fromScenarioDefinition)
-            .sorted(
-                Comparator
-                    .comparing(ProgressionDefinition::packId, String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(ProgressionDefinition::mechanicId, String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(ProgressionDefinition::definitionId, String.CASE_INSENSITIVE_ORDER)
-            )
-            .toList()
+        return loadDefinitions()
     }
 
     fun getDefinitions(filter: String): List<ProgressionDefinition> {
@@ -128,6 +147,93 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         limit: Int
     ): List<ProgressionAnchorBinding> {
         return repository.findAnchorBindingsForAnchor(playerUuid, anchorType, anchorId, limit)
+    }
+
+    fun findDuplicateDefinitions(): Map<String, List<ProgressionDefinition>> {
+        val definitions = getDefinitions()
+        val grouped = LinkedHashMap<String, MutableList<ProgressionDefinition>>()
+        for (definition in definitions) {
+            val key = "${definition.mechanicId()}:${definition.definitionId()}".lowercase(Locale.ROOT)
+            grouped.getOrPut(key) { mutableListOf() }.add(definition)
+        }
+        return grouped.filter { it.value.size > 1 }
+    }
+
+    fun findDuplicateCodes(): Map<String, List<ProgressionDefinition>> {
+        val definitions = getDefinitions()
+        val grouped = LinkedHashMap<String, MutableList<ProgressionDefinition>>()
+        for (definition in definitions) {
+            val code = definition.code().lowercase(Locale.ROOT)
+            if (code.isNotBlank()) {
+                grouped.getOrPut(code) { mutableListOf() }.add(definition)
+            }
+        }
+        return grouped.filter { it.value.size > 1 }
+    }
+
+    @Throws(SQLException::class)
+    fun findUnresolvedProgressions(playerUuid: String?, limit: Int): List<StoredProgression> {
+        val all = repository.find(playerUuid, "", 0)
+        val unresolved = all.filter { !it.definitionResolved() }
+        return if (limit > 0) unresolved.take(limit) else unresolved
+    }
+
+    fun buildUnresolvedReport(playerUuid: String?): String {
+        val unresolved = runCatching { findUnresolvedProgressions(playerUuid, 50) }.getOrNull()
+            ?: return "Nu am putut citi progresiile persistate."
+        if (unresolved.isEmpty()) {
+            return "Toate progresiile au definitie incarcata."
+        }
+        val sb = StringBuilder()
+        sb.appendLine("Progresii fara definitie incarcata: ${unresolved.size}")
+        for (progression in unresolved) {
+            val playerLabel = ProgressionFormatUtil.compactUuid(progression.playerUuid())
+            sb.appendLine("  $playerLabel | ${progression.templateId()} | ${progression.code()} | ${progression.status()} | ${ProgressionFormatUtil.formatStoryTime(progression.updatedAt())}")
+        }
+        return sb.toString()
+    }
+
+    @Throws(SQLException::class)
+    fun getAnchorBindingsForObjective(
+        playerUuid: String?,
+        templateId: String?,
+        objectiveKey: String?,
+        limit: Int
+    ): List<ProgressionAnchorBinding> {
+        return repository.findAnchorBindingsForObjective(playerUuid, templateId, objectiveKey, limit)
+    }
+
+    @Throws(SQLException::class)
+    fun getProgressionsByAnchor(anchorType: String?, anchorId: String?, limit: Int): List<StoredProgression> {
+        return repository.findProgressionsByAnchor(anchorType, anchorId, limit)
+    }
+
+    @Throws(SQLException::class)
+    fun getProgressionSummaryForAnchor(
+        anchorType: String?,
+        anchorId: String?
+    ): StoredProgressionSummary {
+        val progressions = repository.findProgressionsByAnchor(anchorType, anchorId, 0)
+        return StoredProgressionSummary.from(progressions)
+    }
+
+    @Throws(SQLException::class)
+    fun getProgressionsGroupedByAnchor(playerUuid: String?, limitPerAnchor: Int): Map<String, List<StoredProgression>> {
+        return repository.findProgressionsByAnchorGrouped(playerUuid, limitPerAnchor)
+    }
+
+    @Throws(SQLException::class)
+    fun getProgressionsByAnchorQuery(
+        query: String?,
+        anchorTypes: List<String>?,
+        limit: Int
+    ): List<StoredProgression> {
+        return repository.searchProgressionsByAnchor(query, anchorTypes, limit)
+    }
+
+    @Throws(SQLException::class)
+    fun deleteAnchorBinding(playerUuid: String?, templateId: String?, objectiveKey: String?) {
+        repository.deleteAnchorBinding(playerUuid, templateId, objectiveKey)
     }
 
     @Throws(SQLException::class)
@@ -215,6 +321,54 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     fun parseSelector(selector: String): ProgressionSelector = ProgressionSelector.parse(selector)
 
+    fun findEntry(player: Player, selector: String): ProgressionGuiEntry? {
+        val entry = findEntry(player, parseSelector(selector))
+        return entry?.let { ProgressionGuiEntry.fromQuestGuiEntry(it, findDefinitionForEntry(it)) }
+    }
+
+    fun findEntry(player: Player, selector: String, adminView: Boolean): ProgressionGuiEntry? {
+        val progressionSelector = parseSelector(selector)
+        val snapshot = scenarioEngine().getQuestGuiSnapshot(player, "all", adminView)
+        if (snapshot == null || !snapshot.handled) return null
+        val rawEntry = resolveEntry(snapshot.allEntries(), progressionSelector)
+        return rawEntry?.let { ProgressionGuiEntry.fromQuestGuiEntry(it, findDefinitionForEntry(it)) }
+    }
+
+    @Throws(SQLException::class)
+    fun findStoredEntry(playerUuid: String?, selector: String?): StoredProgression? {
+        val progressionSelector = parseSelector(selector.orEmpty())
+        if (progressionSelector.isEmpty()) return null
+
+        val stored = repository.find(playerUuid, "", 0)
+        val normalized = progressionSelector.commandSelector().lowercase(Locale.ROOT)
+
+        return stored.firstOrNull { progression ->
+            storedMatchesSelector(progression, normalized)
+        }
+    }
+
+    private fun storedMatchesSelector(progression: StoredProgression, normalized: String): Boolean {
+        for (candidate in storedSelectorCandidates(progression)) {
+            if (candidate.lowercase(Locale.ROOT) == normalized) return true
+        }
+        return false
+    }
+
+    private fun storedSelectorCandidates(progression: StoredProgression): Set<String> {
+        val candidates = LinkedHashSet<String>()
+        addCandidate(candidates, progression.progressionId())
+        addCandidate(candidates, progression.templateId())
+        addCandidate(candidates, progression.code())
+        addCandidate(candidates, progression.definitionId())
+        addCandidate(candidates, progression.kind() + ":" + progression.definitionId())
+        addCandidate(candidates, progression.kind() + ":" + progression.code())
+        addCandidate(candidates, progression.mechanicId() + ":" + progression.definitionId())
+        addCandidate(candidates, progression.mechanicId() + ":" + progression.code())
+        addCandidate(candidates, progression.packId() + ":" + progression.mechanicId() + ":" + progression.definitionId())
+        addCandidate(candidates, progression.packId() + ":" + progression.mechanicId() + ":" + progression.code())
+        return candidates
+    }
+
     private fun commandSelector(selector: String): String = parseSelector(selector).commandSelector()
 
     private fun scenarioEngine(): ScenarioEngine = plugin.scenarioEngine
@@ -228,16 +382,15 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     }
 
     private fun findEntry(player: Player?, selector: ProgressionSelector?): QuestGuiEntry? {
-        if (player == null) {
-            return null
-        }
+        if (player == null) return null
 
         val snapshot = scenarioEngine().getQuestGuiSnapshot(player, "all", true)
-        if (snapshot == null || !snapshot.handled) {
-            return null
-        }
+        if (snapshot == null || !snapshot.handled) return null
 
-        val entries = snapshot.allEntries()
+        return resolveEntry(snapshot.allEntries(), selector)
+    }
+
+    private fun resolveEntry(entries: List<QuestGuiEntry>, selector: ProgressionSelector?): QuestGuiEntry? {
         if (selector == null || selector.isEmpty()) {
             return entries.stream()
                 .filter(QuestGuiEntry::tracked)

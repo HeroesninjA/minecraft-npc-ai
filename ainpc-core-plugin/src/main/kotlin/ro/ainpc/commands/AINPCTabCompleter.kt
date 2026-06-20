@@ -511,8 +511,10 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 } else if (questMode == "progress" || questMode == "progres") {
                     completions.addAll(filterStartsWith(listOf("tracked", "current"), questArgs[1]))
                     completions.addAll(getOnlinePlayerNames(questArgs[1]))
+                } else if (questMode == "objectives") {
+                    completions.addAll(getOnlinePlayerNames(questArgs[1]))
                 } else if (questMode == "anchors") {
-                    completions.addAll(filterStartsWith(listOf("all"), questArgs[1]))
+                    completions.addAll(filterStartsWith(listOf("all", "remove"), questArgs[1]))
                     completions.addAll(getOnlinePlayerNames(questArgs[1]))
                 } else if (questMode == "log") {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[1]))
@@ -549,7 +551,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 } else if (questMode == "progress" || questMode == "progres") {
                     completions.addAll(getOnlinePlayerNames(questArgs[2]))
                 } else if (questMode == "anchors") {
-                    completions.add("<templateId|questCode>")
+                    if ("remove".equals(questArgs[1], true)) {
+                        completions.addAll(getOnlinePlayerNames(questArgs[2]))
+                    } else {
+                        completions.add("<templateId|questCode>")
+                    }
                 } else if (questMode == "log") {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[2]))
                     completions.addAll(getOnlinePlayerNames(questArgs[2]))
@@ -806,6 +812,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "family",
             "routine",
             "mood",
+            "version",
             "tp",
             "reload",
             "test"
@@ -1008,6 +1015,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "reset",
             "complete",
             "anchors",
+            "objectives",
             "definitions",
             "defs",
             "stored",
@@ -1175,7 +1183,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             ExteriorStructureBlueprintCatalog.all().map { blueprint -> blueprint.typeId() }.sorted()
         private val FIXTURE_ACTIONS = listOf("plan", "validate", "apply", "populate")
         private val FIXTURE_PREFIXES = listOf("test_", "demo_", "fixture_")
-        private val PLACE_ACTIONS = listOf("info", "create")
+        private val PLACE_ACTIONS = listOf("info", "create", "remove")
         private val NODE_ACTIONS = listOf("create")
         private val SCAN_TARGETS = listOf("village")
         private val DEMO_ACTIONS = listOf("create")

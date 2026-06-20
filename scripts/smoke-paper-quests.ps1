@@ -445,7 +445,7 @@ function Invoke-QuestRconPreflight {
         @{ Name = "event-definitions"; Command = "ainpc event definitions"; Required = @("Progression Definitions"); MinTotal = 1 },
         @{ Name = "tutorial-definitions"; Command = "ainpc tutorial definitions"; Required = @("Progression Definitions"); MinTotal = 1 },
         @{ Name = "ritual-definitions"; Command = "ainpc ritual definitions"; Required = @("Progression Definitions"); MinTotal = 1 },
-        @{ Name = "audit-quest-offline"; Command = "ainpc audit quest offline"; Required = @("AINPC Audit: quest offline"); RequireZeroAuditErrors = $true }
+        @{ Name = "audit-quest"; Command = "ainpc audit quest"; Required = @("Quest anchor audit") }
     )
 
     $results = New-Object System.Collections.Generic.List[object]

@@ -33,3 +33,7 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 - Politici clare pentru cleanup NPC temporari.
 - Reguli pentru cand rutina poate fi intrerupta de quest/story.
 - GUI si audit pentru explicarea rutinei curente si a ancorelor home/work/social.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

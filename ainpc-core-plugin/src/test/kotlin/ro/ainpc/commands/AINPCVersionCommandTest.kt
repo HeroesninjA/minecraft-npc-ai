@@ -16,7 +16,7 @@ class AINPCVersionCommandTest {
         assertTrue(!pluginSource.contains("""registerAliasCommand("version", command)"""))
         assertTrue(commandSource.contains(""""version" -> handleVersion(sender)"""))
         assertTrue(helpSource.contains("""msg.send(sender, "&e/npc version")"""))
-        assertTrue(!tabSource.contains(""""version","""))
+        assertTrue(tabSource.contains(""""version","""))
         assertTrue(pluginYaml.contains("npc:"))
         assertTrue(pluginYaml.contains("aliases: [ai]"))
         assertTrue(!pluginYaml.contains("""

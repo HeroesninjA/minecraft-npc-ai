@@ -2331,7 +2331,34 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             p3.startedAt(), p3.completedAt(), System.currentTimeMillis(), p3.currentPhase(),
             p3.objectiveProgress(), updatedVariables)
         updateTrackedQuestProgress(p0.uniqueId, p2, updatedProgress, p3.objectiveProgress())
+        val npcProgress = markNpcTalkObjective(p0, p1, p2, p3)
+        if (npcProgress != p3) return npcProgress
         return updatedProgress
+    }
+
+    private fun markNpcTalkObjective(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress): PlayerQuestProgress {
+        if (p2 == null || p2.objectives.isEmpty()) return p3
+        val updatedObjectives = LinkedHashMap(p3.objectiveProgress())
+        var changed = false
+        for ((index, objective) in p2.objectives.withIndex()) {
+            if (!matchesObjectiveType(objective, "talk_to_npc")) continue
+            if (shouldShowObjectiveForCurrentStage(p2, p3, objective)) {
+                val objectiveKey = buildObjectiveKey(objective, index)
+                val before = updatedObjectives.getOrDefault(objectiveKey, 0)
+                if (before < objective.amount) {
+                    updatedObjectives[objectiveKey] = objective.amount
+                    changed = true
+                }
+            }
+        }
+        if (!changed) return p3
+        val updatedVars = p3.questVariables().toMutableMap()
+        updatedVars["quest_giver_name"] = p1.name ?: ""
+        val newProgress = PlayerQuestProgress(p3.templateId(), p3.questCode(), p3.status(),
+            p3.startedAt(), p3.completedAt(), System.currentTimeMillis(), p3.currentPhase(),
+            updatedObjectives, updatedVars)
+        updateTrackedQuestProgress(p0.uniqueId, p2, newProgress, p3.objectiveProgress())
+        return newProgress
     }
     private fun buildQuestUnavailableResult(p0: ScenarioTemplate, p1: QuestAnchorResolver.ResolvedQuestAnchors): QuestInteractionResult {
         val issues = p1.formatIssues()

@@ -758,6 +758,25 @@ class WorldAdminService(
         }
     }
 
+    fun removePlace(placeId: String?): Boolean {
+        val normalizedId = normalizeBindingValue(placeId)
+        val place = placesById[normalizedId] ?: return false
+        placesById.remove(normalizedId)
+        placesByRegion[place.regionId]?.remove(place)
+        val regionNodes = nodesByRegion[place.regionId]
+        if (regionNodes != null) {
+            val nodesToRemove = regionNodes.filter { it.placeId == normalizedId }
+            for (node in nodesToRemove) {
+                nodesById.remove(node.id)
+                nodesByPlace.remove(node.id)
+                regionNodes.remove(node)
+            }
+        }
+        nodesByPlace.remove(normalizedId)
+        dirty = true
+        return true
+    }
+
     fun registerNode(node: WorldNode) {
         nodesById[node.id] = node
         nodesByRegion.getOrPut(node.regionId) { ArrayList() }.add(node)

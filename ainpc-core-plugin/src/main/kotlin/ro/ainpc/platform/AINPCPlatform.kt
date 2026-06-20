@@ -7,11 +7,14 @@ import ro.ainpc.addons.AddonType
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.engine.ScriptConfigurationLoader
 import ro.ainpc.platform.features.RuntimeFeatureResolver
 import ro.ainpc.platform.features.RuntimeFeatureSnapshot
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMode
+import org.bukkit.configuration.file.YamlConfiguration
+import java.io.File
 import java.nio.file.Path
 import java.util.EnumSet
 import java.util.Locale
@@ -38,7 +41,7 @@ class AINPCPlatform(
             plugin.config.getStringList("addons.disabled"),
             plugin.config.getStringList("addons.load_order")
         )
-        worldAdminService.reloadFromConfig(plugin.config, profile)
+        worldAdminService.reloadFromConfig(mergeWorldAdminOverlay(plugin.config), profile)
         refreshFeatureSnapshot()
     }
 
@@ -99,6 +102,38 @@ class AINPCPlatform(
 
     private fun refreshFeatureSnapshot() {
         featureSnapshot = featureResolver.resolve(plugin.config, profile, addonRegistry.descriptors)
+    }
+
+    private fun mergeWorldAdminOverlay(baseConfig: org.bukkit.configuration.file.FileConfiguration): org.bukkit.configuration.file.FileConfiguration {
+        val mergedConfig = YamlConfiguration()
+        mergedConfig.loadFromString(baseConfig.saveToString())
+
+        val overlayFile = findWorldAdminOverlayFile() ?: return mergedConfig
+        val overlayConfig = ScriptConfigurationLoader.loadConfiguration(overlayFile)
+        val overlaySection = overlayConfig.getConfigurationSection("world_admin")
+            ?: overlayConfig.getConfigurationSection("world-admin")
+            ?: overlayConfig.getConfigurationSection("mapping")
+            ?: overlayConfig
+        ScriptConfigurationLoader.mergeSection(mergedConfig, "world_admin", overlaySection)
+        return mergedConfig
+    }
+
+    private fun findWorldAdminOverlayFile(): File? {
+        val candidates = listOf(
+            "world-admin.json",
+            "world-admin.yml",
+            "world-admin.yaml",
+            "world_admin.json",
+            "world_admin.yml",
+            "world_admin.yaml",
+        )
+        for (candidate in candidates) {
+            val file = File(plugin.dataFolder, candidate)
+            if (file.exists()) {
+                return file
+            }
+        }
+        return null
     }
 
     private fun sanitizeRelativeDirectory(directory: String?): String {

@@ -9,7 +9,7 @@ class WorldHubGuiMappingTest {
     fun worldHubGuiExposesMappingDiagnosticsAndDebugDumpShortcut() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/WorldHubGui.kt").readText()
 
-        assertTrue(source.contains("DebugDumpMappingText.buildMappingText(context.plugin())"))
+        assertTrue(source.contains("DebugDumpMappingText.buildMappingText(plugin)"))
         assertTrue(source.contains("ainpc debugdump mapping"))
         assertTrue(source.contains("Mapping diagnostics"))
     }

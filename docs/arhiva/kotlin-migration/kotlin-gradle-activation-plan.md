@@ -8,7 +8,7 @@ Acest document descrie exact cum se activeaza Kotlin in build-ul Gradle curent, 
 
 Este documentul de executie pentru primul slice real al migrarii:
 
-- KOT-001 din `kotlin-migration-tracker.md`
+- KOT-001 din `README.md`
 - Faza K din `conversie-java-la-kotlin-partea-3.md`
 - F001 din `conversie-java-la-kotlin-partea-4.md`
 

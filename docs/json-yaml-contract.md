@@ -177,6 +177,12 @@ a:
 - Normalizarea produce același model intern.
 - Restul sistemului consumă doar modelul intern.
 - Exportul poate genera fie JSON, fie YAML, dar nu trebuie să schimbe semantica.
+- Loaderul runtime poate citi `quests.json` sau `quests.yml` fără să schimbe contractul logic.
+- Mapping-ul world admin poate fi încărcat și din `world-admin.json` sau `world-admin.yml` ca overlay opțional peste config-ul de bază.
+- Debug dump-ul expune și `quests-snapshot.json` ca imagine read-only a config-ului încărcat.
+- Debug dump-ul expune și `mapping-snapshot.json` ca imagine normalizată a world mapping-ului și a surselor overlay.
+
+Exemple concrete sunt în `docs/json-yaml-contract-exemple.md`.
 
 Astfel, compatibilitatea este păstrată, iar oamenii pot lucra în formatul care li se potrivește mai bine.
 

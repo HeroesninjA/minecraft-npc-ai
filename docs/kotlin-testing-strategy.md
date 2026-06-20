@@ -8,7 +8,7 @@ Acest document defineste strategia de testare pentru conversia Java -> Kotlin.
 
 Se foloseste impreuna cu:
 
-- `kotlin-migration-tracker.md`
+- `arhiva/kotlin-migration/README.md`
 - `kotlin-code-review-checklist.md`
 - `kotlin-paper-packaging-si-smoke.md`
 

@@ -168,7 +168,8 @@ routine:
   # Daca NPC-ul ajunge foarte departe de ancora, rutina il poate corecta chiar daca e in cooldown.
   force_teleport_distance: 96.0
 
-# Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
+# Quest-urile fallback si preconfigurarile implicite sunt in quests.yml.
+# Mapping-ul world_admin poate fi suprascris optional din world-admin.json/yml.
 quest:
   # Limite pentru questuri curente per jucator, pe categorii de runtime.
   max_active:

@@ -11,8 +11,8 @@ class DebugDumpStoryTextTest {
 
         assertTrue(source.contains("DebugDumpStoryStateJson.buildStoryStatesJson(plugin)"))
         assertTrue(source.contains("DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson)"))
-        assertTrue(source.contains("Active scenario details:"))
-        assertTrue(source.contains("scenarios.values.filterIsInstance<ActiveScenario>()"))
+        assertTrue(source.contains("Active scenarios"))
+        assertTrue(source.contains("scenarios.values.toList()"))
         assertTrue(source.contains("Progression cross-link available:"))
         assertTrue(source.contains("Story event progression links:"))
         assertTrue(source.contains("Story progression gaps:"))

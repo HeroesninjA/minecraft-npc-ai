@@ -39,6 +39,14 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             writeText(dumpRoot.resolve("mapping.txt"), DebugDumpMappingText.buildMappingText(plugin))
             writeJson(dumpRoot.resolve("world-mapping.json"), DebugDumpWorldJson.buildWorldMappingJson(plugin))
             writeJson(
+                dumpRoot.resolve("mapping-snapshot.json"),
+                DebugDumpMappingSnapshotJson.buildMappingSnapshotJson(plugin),
+            )
+            writeJson(
+                dumpRoot.resolve("world-admin-snapshot.json"),
+                DebugDumpWorldAdminJson.buildWorldAdminSnapshotJson(plugin),
+            )
+            writeJson(
                 dumpRoot.resolve("npc-world-bindings.json"),
                 DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJson(plugin),
             )
@@ -54,10 +62,18 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
                 dumpRoot.resolve("quests.yml"),
                 plugin.questConfig.saveToString(),
             )
+            writeJson(
+                dumpRoot.resolve("quests-snapshot.json"),
+                DebugDumpQuestConfigJson.buildQuestConfigSnapshotJson(plugin),
+            )
             writeText(dumpRoot.resolve("quest-audit-report.txt"), DebugDumpQuestAudit.buildQuestAuditReportText(plugin))
             writeJson(
                 dumpRoot.resolve("loaded-quest-definitions.json"),
                 DebugDumpQuestDefinitionJson.buildLoadedQuestDefinitionsJson(plugin, gson),
+            )
+            writeJson(
+                dumpRoot.resolve("quest-mapping-contract.json"),
+                DebugDumpQuestMappingContractJson.buildQuestMappingContractJson(plugin, gson),
             )
             writeJson(
                 dumpRoot.resolve("player-progressions.json"),
@@ -89,6 +105,12 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         }
         if (normalizedScope == "all" || normalizedScope == "authoring") {
             writeText(dumpRoot.resolve("authoring.txt"), DebugDumpAuthoringText.buildAuthoringText(plugin, null))
+        }
+        if (normalizedScope == "all" || normalizedScope == "quest") {
+            writeJson(
+                dumpRoot.resolve("quest-director-decision.json"),
+                DebugDumpQuestDirectorJson.buildQuestDirectorSnapshotJson(plugin),
+            )
         }
         if (normalizedScope == "all") {
             writeJson(

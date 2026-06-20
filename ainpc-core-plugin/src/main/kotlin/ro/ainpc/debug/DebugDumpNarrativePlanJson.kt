@@ -10,9 +10,13 @@ import ro.ainpc.spawn.PopulationPlan
 object DebugDumpNarrativePlanJson {
     @JvmStatic
     fun buildNarrativePlanJson(plugin: AINPCPlugin): JsonObject {
+        return buildNarrativePlanJson(runCatching { plugin.platform.worldAdmin }.getOrNull())
+    }
+
+    @JvmStatic
+    fun buildNarrativePlanJson(worldAdmin: WorldAdminApi?): JsonObject {
         val root = JsonObject()
         root.addProperty("source_type", "narrative_generator")
-        val worldAdmin: WorldAdminApi? = runCatching { plugin.platform.worldAdmin }.getOrNull()
         if (worldAdmin == null || !worldAdmin.isEnabled) {
             root.addProperty("available", false)
             root.addProperty("error", "World admin indisponibil")

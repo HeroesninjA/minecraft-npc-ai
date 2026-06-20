@@ -26,3 +26,5 @@ Motiv:
 ## Regula
 
 Documentele de categorie sunt indexuri, nu surse primare. Cand schimbi o functionalitate, actualizeaza documentul canonic si apoi indexul categoriei doar daca se schimba rolul sau prioritatea lui.
+
+Pentru relatii explicite intre documente, foloseste `../../relatii-documentatie.md`.

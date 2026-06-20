@@ -30,3 +30,7 @@ Generarea trebuie sa produca mai intai planuri validate, apoi mapping, apoi spaw
 ## Urmatoarele documente utile
 
 - Contract pentru builder nativ si executie fizica fara WorldEdit.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

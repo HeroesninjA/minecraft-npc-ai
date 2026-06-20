@@ -68,6 +68,23 @@ class ProgressionProgressSnapshot(
 
     fun completedObjectiveCount(): Int = objectivesValue.count { it.complete() }
 
+    fun toChatLines(): List<String> {
+        if (!handledValue) {
+            return listOf("&cProgresul nu a putut fi citit.")
+        }
+        val lines = mutableListOf<String>()
+        lines.addAll(systemMessagesValue)
+        if (objectivesValue.isNotEmpty()) {
+            val completed = completedObjectiveCount()
+            lines.add("&7Obiective: &f$completed/${objectivesValue.size} completate")
+            for ((index, objective) in objectivesValue.withIndex()) {
+                val prefix = if (objective.complete()) "&a✔" else "&7○"
+                lines.add("$prefix &f${objective.label()}")
+            }
+        }
+        return lines
+    }
+
     companion object {
         @JvmStatic
         fun fromResult(

@@ -73,3 +73,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - Ghid de prompturi sigure pentru generare story si dialog.
 - Specificatie completa si validator pentru actiunile `set_story_state` si `record_story_event`.
 - Contract complet pentru `DialogueContextSnapshot`, dialogue nodes si choices validate.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

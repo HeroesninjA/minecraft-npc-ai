@@ -1,10 +1,5 @@
 package ro.ainpc.debug
 
-import org.bukkit.Bukkit
-import org.bukkit.event.Event
-import org.bukkit.event.EventHandler
-import org.bukkit.event.EventPriority
-import org.bukkit.event.Listener
 import org.bukkit.plugin.Plugin
 import java.time.Instant
 import java.time.ZoneId
@@ -12,7 +7,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedDeque
 
-class RecentEventsBuffer(private val plugin: Plugin) : Listener {
+class RecentEventsBuffer(private val plugin: Plugin) {
     private val buffer: ConcurrentLinkedDeque<RecentEvent> = ConcurrentLinkedDeque()
     private var capacity: Int = 100
 
@@ -26,8 +21,7 @@ class RecentEventsBuffer(private val plugin: Plugin) : Listener {
         trimToCapacity()
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    fun onPublicEvent(event: Event) {
+    fun addEvent(event: org.bukkit.event.Event) {
         if (capacity <= 0) return
         val name = event.eventName
         if (!AINPC_EVENT_PREFIXES.any { name.startsWith(it) }) return
