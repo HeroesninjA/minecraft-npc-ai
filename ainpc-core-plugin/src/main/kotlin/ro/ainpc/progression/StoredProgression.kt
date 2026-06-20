@@ -83,6 +83,23 @@ class StoredProgression(
     fun archived(): Boolean =
         "completed".equals(statusValue, ignoreCase = true) || "failed".equals(statusValue, ignoreCase = true)
 
+    fun toChatLine(): List<String> {
+        val lines = mutableListOf<String>()
+        lines.add("&e${ProgressionFormatUtil.formatOptional(progressionIdValue)}" +
+            " &7player=&f${ProgressionFormatUtil.compactUuid(playerUuidValue)}" +
+            " &7status=&f${ProgressionFormatUtil.formatOptional(statusValue)}" +
+            " &7kind=&f${ProgressionFormatUtil.formatOptional(kindValue)}" +
+            (if (scenarioKindValue.isBlank()) "" else " &7scenario=&f$scenarioKindValue") +
+            (if (trackedValue) " &btracked" else ""))
+        lines.add("&8  template=${ProgressionFormatUtil.formatOptional(templateIdValue)}" +
+            " code=${ProgressionFormatUtil.formatOptional(codeValue)}" +
+            " mechanic=${ProgressionFormatUtil.formatOptional(mechanicIdValue)}" +
+            " stage=${ProgressionFormatUtil.formatOptional(currentStageIdValue)}" +
+            " updated=${ProgressionFormatUtil.formatStoryTime(updatedAtValue)}" +
+            (if (definitionResolvedValue) "" else " definition=<missing>"))
+        return lines
+    }
+
     companion object {
         private fun jsonOrEmptyObject(value: String?): String {
             val safeValue = valueOrEmpty(value)

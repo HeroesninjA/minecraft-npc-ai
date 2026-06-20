@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-10
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 ## Scop
 
 Acest document descrie sistemul de mapping ca document canonic unic:
@@ -792,6 +794,8 @@ Starea actuala:
 - `quest_anchor_bindings` persista initial ancorele de quest
 
 Urmatorul pas este ca `/quest track` si mesajele de obiectiv sa foloseasca aceste ancore pentru indicii clare.
+
+Contractul de reprezentare in JSON/YAML este documentat in `docs/json-yaml-contract.md`; mapping-ul ramane sursa de adevar pentru rezolvarea semantica, iar quest-ul il consuma.
 
 ### Generare de sate, castele, pesteri si structuri
 

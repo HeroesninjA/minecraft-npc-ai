@@ -12,7 +12,7 @@ object DebugDumpFormatting {
         }
 
         return when (val normalized = scope.trim().lowercase()) {
-            "all", "npc", "world", "quest", "story", "openai" -> normalized
+            "all", "npc", "world", "quest", "story", "openai", "authoring" -> normalized
             else -> "all"
         }
     }

@@ -46,7 +46,7 @@ ai:
 # Continut demo livrat de core. Core-ul trebuie sa ramana neutru; aceste setari
 # permit oprirea continutului demo cand un addon real preia scenariul/story-ul.
 demo:
-  enabled: false
+  enabled: true
 
 # Switch-uri globale pentru functii majore. Cand o functie este false, comenzile
 # publice trebuie sa raspunda explicit ca zona este dezactivata.
@@ -56,10 +56,10 @@ features:
   progression: true
   story: true
   mapping: true
-  routine: false
-  simulation: false
+  routine: true
+  simulation: true
   ai: true
-  generation: false
+  generation: true
 
 # Setari spawn si jurnalizare batch
 spawn:
@@ -168,7 +168,8 @@ routine:
   # Daca NPC-ul ajunge foarte departe de ancora, rutina il poate corecta chiar daca e in cooldown.
   force_teleport_distance: 96.0
 
-# Quest-urile fallback si preconfigurarile implicite sunt in quests.yml
+# Quest-urile fallback si preconfigurarile implicite sunt in quests.yml.
+# Mapping-ul world_admin poate fi suprascris optional din world-admin.json/yml.
 quest:
   # Limite pentru questuri curente per jucator, pe categorii de runtime.
   max_active:

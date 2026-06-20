@@ -324,7 +324,7 @@ class HouseAllocationPlanner {
         if (configuredProfession.isNotBlank()) {
             return configuredProfession
         }
-        return "worker"
+        return "Locuitor"
     }
 
     private fun archetypeForWorkplace(place: WorldPlaceInfo): String = when (place.placeType()) {
@@ -350,9 +350,9 @@ class HouseAllocationPlanner {
 
     private fun buildNpcName(house: WorldPlaceInfo, index: Int): String {
         val offset = abs(house.id().hashCode())
-        val stem = NAME_STEMS[(offset + index) % NAME_STEMS.size]
-        val suffix = normalizeId(localId(house.id())).replace("_", "")
-        return "${stem}_${suffix}_${index + 1}"
+        val firstName = NAME_STEMS[(offset + index) % NAME_STEMS.size]
+        val surname = SURNAME_STEMS[(offset + index + house.id().length) % SURNAME_STEMS.size]
+        return "${firstName} ${surname}"
     }
 
     private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int {
@@ -500,7 +500,13 @@ class HouseAllocationPlanner {
     companion object {
         private val NAME_STEMS: List<String> = listOf(
             "Ion", "Maria", "Andrei", "Elena", "Gabriel", "Madalina", "Vlad", "Ana",
-            "Stefan", "Irina", "Radu", "Ioana"
+            "Stefan", "Irina", "Radu", "Ioana", "Mihai", "Catalin", "Adriana", "Daniel",
+            "Nicolae", "Florina", "Alexandru", "Cristina", "Vasile", "Laura", "Petru", "Alina",
+            "Gheorghe", "Raluca", "Sorin", "Diana", "Mircea", "Oana"
+        )
+        private val SURNAME_STEMS: List<String> = listOf(
+            "Popescu", "Ionescu", "Georgescu", "Dumitrescu", "Marinescu", "Constantinescu",
+            "Radulescu", "Stefanescu", "Florescu", "Barbulescu", "Dobrescu", "Lupulescu"
         )
     }
 }

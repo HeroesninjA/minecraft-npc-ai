@@ -49,6 +49,20 @@ class StoredProgressionSummary(
     fun byScenarioKind(): Map<String, Int> = byScenarioKindValue
     fun byBaseType(): Map<String, Int> = byBaseTypeValue
 
+    fun toChatSummaryLines(): List<String> {
+        val lines = mutableListOf<String>()
+        lines.add("&7Jucatori=&f$playerCountValue" +
+            " &7current=&f$currentCountValue" +
+            " &7archived=&f$archivedCountValue" +
+            " &7tracked=&f$trackedCountValue" +
+            " &7unresolved=&f$unresolvedDefinitionCountValue")
+        lines.add("&7Status: &f${ProgressionFormatUtil.formatCountMap(byStatusValue)}")
+        lines.add("&7Mecanici: &f${ProgressionFormatUtil.formatCountMap(byMechanicValue)}")
+        lines.add("&7Scenarii: &f${ProgressionFormatUtil.formatCountMap(byScenarioKindValue)}" +
+            " &7base=&f${ProgressionFormatUtil.formatCountMap(byBaseTypeValue)}")
+        return lines
+    }
+
     companion object {
         @JvmStatic
         fun from(progressions: Collection<StoredProgression?>?): StoredProgressionSummary {

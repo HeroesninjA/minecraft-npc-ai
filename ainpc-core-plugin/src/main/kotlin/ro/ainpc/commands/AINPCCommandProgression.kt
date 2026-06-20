@@ -149,36 +149,15 @@ fun handleProgressionStored(
 }
 
 private fun sendStoredProgressionSummary(sender: CommandSender, summary: StoredProgressionSummary) {
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&7Jucatori=&f${summary.playerCount()}" +
-            " &7current=&f${summary.currentCount()}" +
-            " &7archived=&f${summary.archivedCount()}" +
-            " &7tracked=&f${summary.trackedCount()}" +
-            " &7unresolved=&f${summary.unresolvedDefinitionCount()}")
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&7Status: &f${formatCountMap(summary.byStatus())}")
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&7Mecanici: &f${formatCountMap(summary.byMechanic())}")
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&7Scenarii: &f${formatCountMap(summary.byScenarioKind())}" +
-            " &7base=&f${formatCountMap(summary.byBaseType())}")
+    for (line in summary.toChatSummaryLines()) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, line)
+    }
 }
 
 private fun sendStoredProgressionLine(sender: CommandSender, progression: StoredProgression) {
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&e${progression.progressionId()}" +
-            " &7player=&f${compactUuid(progression.playerUuid())}" +
-            " &7status=&f${formatOptional(progression.status())}" +
-            " &7kind=&f${formatOptional(progression.kind())}" +
-            (if (progression.scenarioKind().isBlank()) "" else " &7scenario=&f${progression.scenarioKind()}") +
-            (if (progression.tracked()) " &btracked" else ""))
-    ainpcCommandProgressionPlugin.messageUtils.send(sender,
-        "&8  template=${formatOptional(progression.templateId())}" +
-            " code=${formatOptional(progression.code())}" +
-            " mechanic=${formatOptional(progression.mechanicId())}" +
-            " stage=${formatOptional(progression.currentStageId())}" +
-            " updated=${formatStoryTime(progression.updatedAt())}" +
-            (if (progression.definitionResolved()) "" else " definition=<missing>"))
+    for (line in progression.toChatLine()) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, line)
+    }
 }
 
 private fun clampProgressionStoredLimit(sender: CommandSender, limit: Int): Int {

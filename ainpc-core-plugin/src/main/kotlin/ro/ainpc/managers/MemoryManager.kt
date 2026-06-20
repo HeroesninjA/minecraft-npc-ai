@@ -2,6 +2,9 @@ package ro.ainpc.managers
 
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.npc.AINPCMemoryRecordedEvent
+import ro.ainpc.api.events.npc.AINPCMemoryRecordedEventPayload
 import ro.ainpc.npc.AINPC
 import java.sql.SQLException
 import java.time.LocalDateTime
@@ -54,6 +57,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
 
             plugin.debug("Amintire creata pentru ${npc.name} despre $playerName")
             cleanExcessMemories(npc, playerUuid)
+            publishMemoryRecorded(npc, playerUuid, playerName, memoryType, emotionalImpact, importance)
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la crearea amintirii: ${e.message}")
         }
@@ -352,5 +356,26 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             }
 
         fun getImportanceStars(): String = "★".repeat(minOf(5, importance)) + "☆".repeat(maxOf(0, 5 - importance))
+    }
+
+    private fun publishMemoryRecorded(npc: AINPC, playerUuid: UUID, playerName: String?, memoryType: String, emotionalImpact: Double, importance: Int) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = AINPCMemoryRecordedEvent(
+            AINPCMemoryRecordedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                playerUuid,
+                playerName,
+                memoryType,
+                emotionalImpact,
+                importance,
+                mapOf("source" to "MemoryManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 }

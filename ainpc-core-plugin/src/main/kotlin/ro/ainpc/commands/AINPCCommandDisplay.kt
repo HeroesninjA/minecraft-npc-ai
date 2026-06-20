@@ -17,9 +17,13 @@ fun initAinpcCommandDisplayPlugin(plugin: AINPCPlugin) {
 fun sendQuestUsage(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&cUtilizare:")
-    msg.send(sender, "&e/ainpc quest log [jucator] [active|current|tracked|quest|contract|duty|bounty|event|main|side|repeatable|completed|failed|archived|all]")
+    msg.send(
+        sender,
+        "&e/ainpc quest log [jucator] [active|current|tracked|quest|contract|duty|bounty|event|main|side|repeatable|completed|failed|archived|all]"
+    )
     msg.send(sender, "&e/ainpc quest track [start|stop] [questCode|templateId] [jucator]")
     msg.send(sender, "&e/ainpc quest status")
+    msg.send(sender, "&e/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]")
     msg.send(sender, "&e/ainpc quest <numeNpc> [jucator]")
     msg.send(sender, "&e/ainpc quest nearest [jucator]")
     msg.send(sender, "&e/ainpc quest accept|da [numeNpc|nearest] [jucator]")
@@ -37,15 +41,24 @@ fun sendProgressionUsage(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&cUtilizare:")
     msg.send(sender, "&e/ainpc progression gui [quest|contract|duty|bounty|event|tutorial|ritual|active|all]")
-    msg.send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|tutorial|ritual|active|completed|all]")
+    msg.send(
+        sender,
+        "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|tutorial|ritual|active|completed|all]"
+    )
     msg.send(sender, "&e/ainpc progression definitions [filter]")
     msg.send(sender, "&e/ainpc progression stored [jucator|uuid|all] [filter] [limit]")
     msg.send(sender, "&e/ainpc progression status <tracked|selector> [jucator]")
     msg.send(sender, "&e/ainpc progression progress [tracked|selector] [jucator]")
     msg.send(sender, "&e/ainpc progression track [start|stop] [selector] [jucator]")
     msg.send(sender, "&e/ainpc progression abandon <tracked|selector> [jucator]")
-    msg.send(sender, "&7Selector exemple: &fQ01&7, &fside_quests:Q07&7, &fvillage_contracts:C01&7, &fnpc_duties:D01&7, &flocal_bounties:B01&7, &fvillage_events:E01&7, &fonboarding:T01&7, &fvillage_rituals:R01&7.")
-    msg.send(sender, "&7Filtre exemple: &fkind:contract&7, &fkind:duty&7, &fkind:bounty&7, &fkind:event&7, &fkind:tutorial&7, &fkind:ritual&7, &fscenario:investigation&7, &fbase:TRADE_DEAL&7.")
+    msg.send(
+        sender,
+        "&7Selector exemple: &fQ01&7, &fside_quests:Q07&7, &fvillage_contracts:C01&7, &fnpc_duties:D01&7, &flocal_bounties:B01&7, &fvillage_events:E01&7, &fonboarding:T01&7, &fvillage_rituals:R01&7."
+    )
+    msg.send(
+        sender,
+        "&7Filtre exemple: &fkind:contract&7, &fkind:duty&7, &fkind:bounty&7, &fkind:event&7, &fkind:tutorial&7, &fkind:ritual&7, &fscenario:investigation&7, &fbase:TRADE_DEAL&7."
+    )
 }
 
 fun sendProgressionAliasUsage(sender: CommandSender, alias: ProgressionAliasConfig) {
@@ -59,8 +72,14 @@ fun sendProgressionAliasUsage(sender: CommandSender, alias: ProgressionAliasConf
     msg.send(sender, "&e/ainpc ${alias.command()} progress <selector> [jucator]")
     msg.send(sender, "&e/ainpc ${alias.command()} track [start|stop] [selector] [jucator]")
     msg.send(sender, "&e/ainpc ${alias.command()} abandon <selector> [jucator]")
-    msg.send(sender, "&7Selector scurt: &f${alias.shortSelectorExample()} &7devine &f${alias.kind()}:${alias.shortSelectorExample()}&7.")
-    msg.send(sender, "&7Filtre exemple: &fkind:${alias.kind()}&7, &fmechanic:${alias.mechanicExample()}&7, &fbase:${alias.baseTypeExample()}&7.")
+    msg.send(
+        sender,
+        "&7Selector scurt: &f${alias.shortSelectorExample()} &7devine &f${alias.kind()}:${alias.shortSelectorExample()}&7."
+    )
+    msg.send(
+        sender,
+        "&7Filtre exemple: &fkind:${alias.kind()}&7, &fmechanic:${alias.mechanicExample()}&7, &fbase:${alias.baseTypeExample()}&7."
+    )
 }
 
 fun sendStoryUsage(sender: CommandSender) {
@@ -80,14 +99,20 @@ fun sendWandUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc wand mode <region|place|node|npc_bind|quest_anchor>")
     msg.send(sender, "&e/ainpc wand <pos1|pos2|point|status|inspect>")
     msg.send(sender, "&e/ainpc wand <clear|reset> [pos1|pos2|point|all]")
-    msg.send(sender, "&7Click stanga/dreapta cu wand-ul seteaza pos1/pos2; in modurile node/npc_bind/quest_anchor seteaza punctul.")
+    msg.send(
+        sender,
+        "&7Click stanga/dreapta cu wand-ul seteaza pos1/pos2; in modurile node/npc_bind/quest_anchor seteaza punctul."
+    )
 }
 
 fun sendMapUsage(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&cUtilizare:")
     msg.send(sender, "&e/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>")
-    msg.send(sender, "&e/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]")
+    msg.send(
+        sender,
+        "&e/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]"
+    )
     msg.send(sender, "&e/ainpc map <descriere> &7(foloseste modul wand curent)")
     msg.send(sender, "&e/ainpc map preview")
     msg.send(sender, "&e/ainpc map confirm")
@@ -100,8 +125,10 @@ fun sendPatchUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc patch analyze <regionId> [targetPopulation] [profesiiCSV]")
     msg.send(sender, "&e/ainpc patch plan <regionId> [targetPopulation] [profesiiCSV]")
     msg.send(sender, "&e/ainpc patch validate <regionId> [targetPopulation] [profesiiCSV]")
-    msg.send(sender,
-        "&7Read-only: produce GapReport si PatchPlan, fara constructie si fara scrieri in mapping.")
+    msg.send(
+        sender,
+        "&7Read-only: produce GapReport si PatchPlan, fara constructie si fara scrieri in mapping."
+    )
 }
 
 fun sendWorldUsage(sender: CommandSender) {
@@ -145,8 +172,10 @@ fun sendWorldHouseholdUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc world household place <homePlaceId>")
     msg.send(sender, "&e/ainpc world household resident <npcId|numeNpc|nearest>")
     msg.send(sender, "&e/ainpc world household list [limit]")
-    msg.send(sender,
-        "&7Comenzile status/place/resident/list sunt read-only si inspecteaza tabelele households.")
+    msg.send(
+        sender,
+        "&7Comenzile status/place/resident/list sunt read-only si inspecteaza tabelele households."
+    )
 }
 
 fun sendMigrationUsage(sender: CommandSender) {
@@ -180,6 +209,8 @@ fun sendRoutineUsage(sender: CommandSender) {
 fun sendHelp(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&6=== AI NPC Plugin - Comenzi ===")
+    msg.send(sender, "&e/npc version")
+    msg.send(sender, "&7  Afiseaza ultima versiune, hash-ul ultimului build si data/ora buildului")
     msg.send(sender, "&e/ainpc create <nume> [ocupatie] [varsta] [gen] [arhetip]")
     msg.send(sender, "&7  Creeaza un NPC nou la locatia ta")
     msg.send(sender, "&e/ainpc delete <nume>")
@@ -201,7 +232,14 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&e/ainpc info [nume]")
     msg.send(sender, "&7  Afiseaza informatii despre un NPC")
     msg.send(sender, "&e/ainpc gui [quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
-    msg.send(sender, "&7  Deschide hub-ul GUI sau un ecran specific; questFilter poate fi quest/contract/duty/bounty/event/tutorial/ritual")
+    msg.send(
+        sender,
+        "&7  Deschide hub-ul GUI sau un ecran specific; questFilter poate fi quest/contract/duty/bounty/event/tutorial/ritual"
+    )
+    msg.send(sender, "&e/ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]")
+    msg.send(sender, "&7  Deschide snapshot-ul read-only de authoring sau il afiseaza filtrat in chat")
+    msg.send(sender, "&e/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]")
+    msg.send(sender, "&7  Alias quest-side pentru authoring-ul read-only si dump-ul text")
     msg.send(sender, "&e/ainpc quest <numeNpc> [jucator]")
     msg.send(sender, "&7  Declanseaza manual quest-ul unui NPC")
     msg.send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|active|all]")
@@ -224,14 +262,24 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa")
     msg.send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]")
     msg.send(sender, "&7  Listeaza ancorele semantice persistate pentru questuri")
-    msg.send(sender, "&e/ainpc demo <definition|status|next|script|phases|evidence|runbook|smoke|summary|commands|restart|experimental|experimental5|experimental25|experimental25deep|experimental25ops> [regionId] [player]")
-    msg.send(sender, "&7  Explica, verifica si ghideaza primul demo intern jucabil; modurile experimental sunt instabile")
+    msg.send(
+        sender,
+        "&e/ainpc demo <definition|status|next|script|phases|evidence|runbook|smoke|summary|commands|restart|experimental|experimental5|experimental25|experimental25deep|experimental25ops> [regionId] [player]"
+    )
+    msg.send(
+        sender,
+        "&7  Explica, verifica si ghideaza primul demo intern jucabil; modurile experimental sunt instabile"
+    )
     msg.send(sender, "&e/ainpc list")
     msg.send(sender, "&7  Lista toate NPC-urile")
     msg.send(sender, "&e/ainpc world whereami [jucator]")
     msg.send(sender, "&7  Arata regiunea, place-ul si node-urile active pentru o locatie")
     msg.send(sender, "&e/ainpc world places [regionId]")
     msg.send(sender, "&7  Listeaza place-urile mapate")
+    msg.send(sender, "&e/ainpc world outside <types|blueprint|plan|report|validate> [type|baseId|regionId]")
+    msg.send(sender, "&7  Listeaza blueprint-uri si inspecteaza read-only structuri exterioare satului")
+            msg.send(sender, "&e/ainpc world fixture <plan|validate|apply|populate|context> [prefix]")
+    msg.send(sender, "&7  Afiseaza sau valideaza read-only satul controlat si structurile exterioare de test")
     msg.send(sender, "&e/ainpc world region info <regionId>")
     msg.send(sender, "&7  Arata detalii despre o regiune mapata")
     msg.send(sender, "&e/ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>")
@@ -315,11 +363,26 @@ fun sendMappingDraft(sender: CommandSender, draft: MappingDraft) {
     msg.send(sender, "&eTip semantic: &f${draft.typeId()}")
     if (draft.isBox()) {
         msg.send(sender, "&eLume: &f${draft.worldName()}")
-        msg.send(sender, "&eBounds: &f${formatBounds(draft.minX(), draft.minY(), draft.minZ(), draft.maxX(), draft.maxY(), draft.maxZ())}")
+        msg.send(
+            sender,
+            "&eBounds: &f${
+                formatBounds(
+                    draft.minX(),
+                    draft.minY(),
+                    draft.minZ(),
+                    draft.maxX(),
+                    draft.maxY(),
+                    draft.maxZ()
+                )
+            }"
+        )
     } else if (draft.isNode()) {
         msg.send(sender, "&eRegiune: &f${draft.regionId()}")
         msg.send(sender, "&ePlace: &f${formatOptional(draft.placeId())}")
-        msg.send(sender, "&ePozitie: &f${String.format(Locale.ROOT, "%.1f, %.1f, %.1f", draft.x(), draft.y(), draft.z())}")
+        msg.send(
+            sender,
+            "&ePozitie: &f${String.format(Locale.ROOT, "%.1f, %.1f, %.1f", draft.x(), draft.y(), draft.z())}"
+        )
         msg.send(sender, "&eRaza: &f${String.format(Locale.ROOT, "%.1f", draft.radius())}")
     } else if (draft.isNpcBind()) {
         msg.send(sender, "&eNPC selector: &f${draft.metadata().getOrDefault("npc_selector", "<nesetat>")}")
@@ -331,7 +394,12 @@ fun sendMappingDraft(sender: CommandSender, draft: MappingDraft) {
         msg.send(sender, "&eProgresie: &f${draft.metadata().getOrDefault("progression_selector", "<nesetat>")}")
         msg.send(sender, "&eObjective ID: &f${draft.metadata().getOrDefault("objective_key", "<nesetat>")}")
         msg.send(sender, "&eObjective type: &f${draft.metadata().getOrDefault("objective_type", "<nesetat>")}")
-        msg.send(sender, "&eAncora: &f${draft.metadata().getOrDefault("anchor_type", "?")}:${draft.metadata().getOrDefault("anchor_id", "?")}")
+        msg.send(
+            sender,
+            "&eAncora: &f${draft.metadata().getOrDefault("anchor_type", "?")}:${
+                draft.metadata().getOrDefault("anchor_id", "?")
+            }"
+        )
     }
     msg.send(sender, "&eTag-uri: &f${formatList(draft.tags())}")
     msg.send(sender, "&eMetadata: &f${formatMap(draft.metadata())}")

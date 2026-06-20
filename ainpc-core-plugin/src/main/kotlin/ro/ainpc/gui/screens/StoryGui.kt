@@ -3,13 +3,16 @@ package ro.ainpc.gui.screens
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryEvent
@@ -38,6 +41,24 @@ class StoryGui : GuiScreen {
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
         context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
+        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression verification", progressionVerificationLore(context)))
+        context.button(
+            13,
+            if (context.player().hasPermission("ainpc.admin")) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.PAPER, "&dStory diagnostics", storyDiagnosticsLore(context.plugin())),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump story") }
+                )
+            } else {
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&7Story diagnostics",
+                        storyDiagnosticsLore(context.plugin())
+                    )
+                )
+            }
+        )
 
         commandButton(
             context,
@@ -135,6 +156,15 @@ class StoryGui : GuiScreen {
         return lore
     }
 
+    private fun storyDiagnosticsLore(plugin: AINPCPlugin): List<String> {
+        return DebugDumpStoryText.buildStoryText(plugin)
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .take(6)
+            .map { "&7$it" }
+            .toList()
+    }
+
     private fun regionLore(region: WorldRegionInfo?, state: RegionStoryState?): List<String> {
         if (region == null) {
             return listOf("&7Nu exista regiune mapata aici.")
@@ -191,6 +221,26 @@ class StoryGui : GuiScreen {
         for (event in snapshot.events.take(4)) {
             lore.add("&8- &f${GuiItemFactory.compact("${event.eventType()} ${event.eventKey()}", 28)}")
         }
+        return lore
+    }
+
+    private fun progressionVerificationLore(context: GuiRenderContext): List<String> {
+        val player = context.player()
+        val storyContext = context.plugin().storyContextService.buildForPlayer(player)
+        val progressionSnapshot = context.plugin().progressionService.getProgressionGuiSnapshot(
+            player,
+            "all",
+            player.hasPermission("ainpc.admin")
+        )
+        val lore = ArrayList<String>()
+        lore.add("&7Story context read-only: &f${!storyContext.isEmpty()}")
+        lore.add("&7Story anchors: &f${storyContext.activeQuestAnchors().size}")
+        lore.add("&7Story warnings: &f${storyContext.warnings().size}")
+        lore.add("&7Progression snapshot handled: &f${progressionSnapshot.handled()}")
+        lore.add("&7Current progressions: &f${progressionSnapshot.currentEntries().size}")
+        lore.add("&7Archived progressions: &f${progressionSnapshot.archivedEntries().size}")
+        lore.add("&7Verification mode: &fread-only story + read-only progression")
+        lore.add("&8Nu exista cale de scriere in acest card.")
         return lore
     }
 

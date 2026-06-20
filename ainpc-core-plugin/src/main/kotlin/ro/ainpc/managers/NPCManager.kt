@@ -11,6 +11,15 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.Villager
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.npc.AINPCDeathEvent
+import ro.ainpc.api.events.npc.AINPCDeathEventPayload
+import ro.ainpc.api.events.npc.AINPCDiscoveredEvent
+import ro.ainpc.api.events.npc.AINPCDiscoveredEventPayload
+import ro.ainpc.api.events.npc.AINPCProfileRefreshedEvent
+import ro.ainpc.api.events.npc.AINPCProfileRefreshedEventPayload
+import ro.ainpc.api.events.npc.AINPCSpawnedEvent
+import ro.ainpc.api.events.npc.AINPCSpawnedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
@@ -223,7 +232,8 @@ class NPCManager(
         applyThemeDefaults(npc)
         val anchorsChanged = ensureSimulationAnchors(npc, villager.location)
 
-        if (occupationChanged || anchorsChanged) {
+        val profileChanged = occupationChanged || anchorsChanged
+        if (profileChanged) {
             saveNPC(npc, false)
             if (occupationChanged) {
                 plugin.debug("Profilul villagerului '" + npc.name + "' a fost actualizat la ocupatia: " + npc.occupation)
@@ -231,6 +241,7 @@ class NPCManager(
                 plugin.debug("Profilul villagerului '" + npc.name + "' a primit casa/loc de munca automat.")
             }
         }
+        publishNpcProfileRefreshed(npc, villager, if (profileChanged) "updated" else "checked")
     }
 
     @Throws(SQLException::class)
@@ -389,6 +400,11 @@ class NPCManager(
 
         applyThemeDefaults(npc)
 
+        if (!publishNpcSpawned(npc, location)) {
+            plugin.debug("Spawn NPC '" + npc.name + "' a fost anulat de un listener.")
+            return null
+        }
+
         if (!npc.spawn()) {
             return null
         }
@@ -456,6 +472,11 @@ class NPCManager(
 
         applyThemeDefaults(npc)
         ensureSimulationAnchors(npc, spawnLocation)
+
+        if (!publishNpcSpawned(npc, spawnLocation)) {
+            plugin.debug("Spawn NPC din plan '" + npc.name + "' a fost anulat de un listener.")
+            return null
+        }
 
         if (!npc.spawn()) {
             return null
@@ -1503,6 +1524,9 @@ class NPCManager(
             return
         }
 
+        val location = entity.location
+        publishNpcDeath(npc, location)
+
         npcsByEntityId.remove(entity.uniqueId)
         npc.markEntityUnavailable()
         persistNpcRuntimeStateAsync(npc, "entity death")
@@ -1772,6 +1796,7 @@ class NPCManager(
         }
 
         plugin.debug("Villager-ul " + npc.name + " a primit profil AI automat.")
+        publishNpcDiscovered(npc, villager, "villager_discovered")
         return npc
     }
 
@@ -1808,6 +1833,87 @@ class NPCManager(
 
     fun ensureSimulationAnchors(npc: AINPC): Boolean {
         return ensureSimulationAnchors(npc, npc?.location)
+    }
+
+    private fun publishNpcDiscovered(npc: AINPC, villager: Villager, reason: String) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val loc = villager.location
+        val event = AINPCDiscoveredEvent(
+            AINPCDiscoveredEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                loc.world.name,
+                loc.x, loc.y, loc.z,
+                reason,
+                mapOf("source" to "NPCManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishNpcSpawned(npc: AINPC, location: Location): Boolean {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return true
+        val event = AINPCSpawnedEvent(
+            AINPCSpawnedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                location.world.name,
+                location.x, location.y, location.z,
+                npc.occupation,
+                mapOf("source" to "NPCManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+        return !event.isCancelled
+    }
+
+    private fun publishNpcProfileRefreshed(npc: AINPC, villager: Villager, refreshReason: String) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val loc = villager.location
+        val event = AINPCProfileRefreshedEvent(
+            AINPCProfileRefreshedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                npc.occupation,
+                npc.profileSource,
+                npc.profileVersion,
+                npc.backstory,
+                refreshReason,
+                mapOf("source" to "NPCManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishNpcDeath(npc: AINPC, location: Location) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = AINPCDeathEvent(
+            AINPCDeathEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                location.world.name,
+                location.x, location.y, location.z,
+                null,
+                mapOf("source" to "NPCManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 
     fun getNPCByUuid(uuid: UUID): AINPC? {

@@ -359,6 +359,7 @@ class WorldAdminService(
         )
         market.putMetadata("role", "social")
         market.putMetadata("layout_profile", "spacious_playable")
+        market.putMetadata("profession", "Negustor")
         createDemoNode(
             regionId, market.id, "meeting_point_1", WorldNodeType.MEETING_POINT,
             resolvedWorldName, centerX.toDouble(), nodeY, centerZ.toDouble(), 7.0, createdNodeIds, "meeting_point"
@@ -378,6 +379,7 @@ class WorldAdminService(
             listOf("demo", "forge", "workplace", "shop"), createdPlaceIds
         )
         forge.putMetadata("role", "work")
+        forge.putMetadata("profession", "Fierar")
         createDemoNode(
             regionId, forge.id, "workstation_1", WorldNodeType.WORKSTATION,
             resolvedWorldName, (centerX - 50).toDouble(), nodeY, (centerZ + 28).toDouble(), 3.0, createdNodeIds, "workstation"
@@ -397,6 +399,7 @@ class WorldAdminService(
             listOf("demo", "farm", "workplace"), createdPlaceIds
         )
         farm.putMetadata("role", "work")
+        farm.putMetadata("profession", "Fermier")
         createDemoNode(
             regionId, farm.id, "work_1", WorldNodeType.WORK,
             resolvedWorldName, (centerX + 49).toDouble(), nodeY, (centerZ + 31).toDouble(), 6.0, createdNodeIds, "work_anchor"
@@ -412,6 +415,7 @@ class WorldAdminService(
             listOf("demo", "tavern", "public", "social"), createdPlaceIds
         )
         tavern.putMetadata("role", "social")
+        tavern.putMetadata("profession", "Hangiu")
         createDemoNode(
             regionId, tavern.id, "entrance_1", WorldNodeType.ENTRANCE,
             resolvedWorldName, centerX.toDouble(), nodeY, (centerZ + 38).toDouble(), 3.0, createdNodeIds, "entrance"
@@ -752,6 +756,25 @@ class WorldAdminService(
         if (autoIndexEnabled) {
             mappingIndex.indexPlace(place)
         }
+    }
+
+    fun removePlace(placeId: String?): Boolean {
+        val normalizedId = normalizeBindingValue(placeId)
+        val place = placesById[normalizedId] ?: return false
+        placesById.remove(normalizedId)
+        placesByRegion[place.regionId]?.remove(place)
+        val regionNodes = nodesByRegion[place.regionId]
+        if (regionNodes != null) {
+            val nodesToRemove = regionNodes.filter { it.placeId == normalizedId }
+            for (node in nodesToRemove) {
+                nodesById.remove(node.id)
+                nodesByPlace.remove(node.id)
+                regionNodes.remove(node)
+            }
+        }
+        nodesByPlace.remove(normalizedId)
+        dirty = true
+        return true
     }
 
     fun registerNode(node: WorldNode) {

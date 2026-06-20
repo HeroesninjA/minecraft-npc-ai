@@ -14,6 +14,23 @@ Formatul este orientat pe intrari scurte, verificabile:
 
 ### Added
 
+- `quest.txt` in debug dumps now summarizes `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, and the quest audit report contract.
+- `mapping.txt` in debug dumps now summarizes world mapping and NPC/world binding coverage alongside the JSON exports.
+- `WorldHubGui` now exposes a compact mapping snapshot and a shortcut to `debugdump mapping`.
+- `StoryGui` now exposes story diagnostics and a shortcut to `debugdump story`.
+- `/npc version` now reports the plugin version, last build hash, and build timestamp from generated build metadata without conflicting with Paper commands.
+- `QuestLogGui` now exposes quest diagnostics and a shortcut to `debugdump quest`.
+- `QuestAuthoringGui` now exposes authoring diagnostics and a shortcut to `authoring dump`.
+- `NpcManagerGui` now exposes NPC diagnostics and a shortcut to `debugdump npc`.
+- `debugdump ai` now includes build version, build hash, and build timestamp metadata.
+- `DebugGui` now shows a build snapshot card and a shortcut to `/npc version`.
+- `DebugGui` now exposes a shortcut to `/ainpc audit quest`.
+- `DebugGui` now exposes a shortcut to `/ainpc audit world`.
+- `MainHubGui` now shows a build snapshot card and a shortcut to `/npc version`.
+- `QuestDetailGui` now exposes selection diagnostics and read-only progress detail context.
+- `docs/lucru-alternat-quest-mapping-progression.md` now has quick navigation, backlinks, and a live implementation checklist.
+- `debugdump story` text summary now includes `story_events` breakdowns by type, scope, quest template, and quest code, aligned with the JSON dump.
+- `story.txt` in debug dumps and `debugdump story` text summary now includes story state breakdowns (`regions_by_*`, `places_by_*`) plus progression cross-link status from `story_events`.
 - Mecanica medievala `npc_duties` si sarcina `D01 - Rondul Strajerului`, cu `base_type: DUTY`, progres `kind=duty`, obiective mapate si story event regional.
 - `ScenarioType.DUTY`, `QuestScenarioContract.Kind.DUTY` si fatadele `/ainpc duty ...` / `/duty ...` pentru inspectarea sarcinilor NPC prin runtime-ul comun.
 - Mecanica medievala `local_bounties` si scenariul `B01 - Recompensa Drumului Vechi`, cu `base_type: BOUNTY`, progres `kind=bounty`, obiectiv `kill_mob` si story event regional.

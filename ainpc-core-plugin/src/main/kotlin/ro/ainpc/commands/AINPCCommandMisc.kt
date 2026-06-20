@@ -10,6 +10,7 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.debug.DebugDumpAuthoringText
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
@@ -265,6 +266,71 @@ fun handleGui(sender: CommandSender, args: Array<String>): Boolean {
     return true
 }
 
+fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size > 4) {
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]"
+        )
+        return true
+    }
+
+    val request = AuthoringCommandSupport.parse(args)
+    val plan = AuthoringCommandSupport.plan(request)
+    val player = sender as? Player
+    if (sender is Player) {
+        if (!ainpcCommandMiscPlugin.guiService.canOpen(sender, GuiKey.AUTHORING)) {
+            ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
+        if (request.mode == AuthoringCommandRequest.Mode.CLEAR) {
+            ainpcCommandMiscPlugin.guiService.clearAuthoringSelection(sender)
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&aAuthoring selection a fost resetata.")
+            return true
+        }
+        if (request.mode == AuthoringCommandRequest.Mode.PREV) {
+            ainpcCommandMiscPlugin.guiService.cycleAuthoringQuestSelector(sender, -1)
+            return true
+        }
+        if (request.mode == AuthoringCommandRequest.Mode.NEXT) {
+            ainpcCommandMiscPlugin.guiService.cycleAuthoringQuestSelector(sender, 1)
+            return true
+        }
+        if (request.mode == AuthoringCommandRequest.Mode.OPEN) {
+            ainpcCommandMiscPlugin.guiService.openAuthoring(sender, request.questSelector, request.mechanicId)
+            return true
+        }
+    }
+    if (plan.requiresPlayer) {
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&cAuthoring GUI commands necesita un player; foloseste /ainpc authoring dump pentru text."
+        )
+        return true
+    }
+
+    val resolvedDumpSelection = AuthoringCommandSupport.resolveDumpSelection(
+        request,
+        player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringQuestSelector(it) },
+        player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringMechanicId(it) }
+    )
+
+    val text = DebugDumpAuthoringText.buildAuthoringText(
+        ainpcCommandMiscPlugin,
+        player,
+        resolvedDumpSelection.questSelector,
+        resolvedDumpSelection.mechanicId
+    )
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Quest Authoring Dump ===")
+    for (line in text.split('\n')) {
+        if (line.isBlank()) {
+            continue
+        }
+        ainpcCommandMiscPlugin.messageUtils.send(sender, line)
+    }
+    return true
+}
+
 fun handleTest(sender: CommandSender): Boolean {
     if (!sender.hasPermission("ainpc.admin")) {
         ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
@@ -438,7 +504,7 @@ fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
         msg.send(sender, "&eOcupatie: &f" + npc.occupation)
     }
     msg.send(sender, "&eLocatie: &f" + formatLocation(npc.location))
-    val topCat = npc.context?.topologyCategory
+    val topCat = npc.context.topologyCategory
     if (topCat != null) {
         msg.send(sender, "&eTopologie: &f" + topCat.displayName)
     }

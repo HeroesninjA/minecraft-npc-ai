@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 Status: document canonic si implementare initiala read-only pentru `VillageGapAnalyzer`, `VillagePatchPlanner` si comanda `/ainpc patch analyze|plan|validate`. Patch planner-ul produce `GapReport`, `PatchCandidate` si `PatchPlan`; builder-ul fizic si commit-ul de mapping nu sunt implementate.
 
 ## Scop

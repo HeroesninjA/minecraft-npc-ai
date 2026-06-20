@@ -5,8 +5,12 @@ import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.World
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.npc.AINPCEmotionChangedEvent
+import ro.ainpc.api.events.npc.AINPCEmotionChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCEmotions
+import java.util.UUID
 
 /**
  * Manager pentru sistemul de emotii al NPC-urilor
@@ -17,6 +21,7 @@ class EmotionManager(private val plugin: AINPCPlugin) {
      */
     fun applyEmotion(npc: AINPC, emotion: String, intensity: Double) {
         runEmotionUpdate {
+            val previousEmotion = npc.emotions.dominantEmotion
             npc.emotions.applyEmotion(emotion, intensity)
             npc.updateDisplayName()
 
@@ -26,6 +31,7 @@ class EmotionManager(private val plugin: AINPCPlugin) {
 
             persistEmotionsAsync(npc)
             plugin.debug("Emotie aplicata pentru " + npc.name + ": " + emotion + " (" + intensity + ")")
+            publishEmotionChanged(npc, emotion, intensity, previousEmotion, "apply")
         }
     }
 
@@ -208,6 +214,7 @@ class EmotionManager(private val plugin: AINPCPlugin) {
      */
     fun setMood(npc: AINPC, emotion: String, intensity: Double) {
         runEmotionUpdate {
+            val previousEmotion = npc.emotions.dominantEmotion
             val emotions: NPCEmotions = npc.emotions
             emotions.happiness = if (emotion == "happiness") intensity else 0.3
             emotions.sadness = if (emotion == "sadness") intensity else 0.0
@@ -221,6 +228,7 @@ class EmotionManager(private val plugin: AINPCPlugin) {
             npc.updateDisplayName()
             showEmotionParticles(npc, emotion, intensity)
             persistEmotionsAsync(npc)
+            publishEmotionChanged(npc, emotion, intensity, previousEmotion, "set_mood")
         }
     }
 
@@ -260,5 +268,25 @@ class EmotionManager(private val plugin: AINPCPlugin) {
         if (value > 0.4) return "destul de"
         if (value > 0.2) return "putin"
         return ""
+    }
+
+    private fun publishEmotionChanged(npc: AINPC, emotion: String, intensity: Double, previousEmotion: String?, triggerType: String) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = AINPCEmotionChangedEvent(
+            AINPCEmotionChangedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                emotion,
+                intensity,
+                previousEmotion,
+                triggerType,
+                mapOf("source" to "EmotionManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 }

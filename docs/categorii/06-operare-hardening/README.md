@@ -28,3 +28,7 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 ## Urmatoarele documente utile
 
 - Politica pentru debug logs si date sensibile.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

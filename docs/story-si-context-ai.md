@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 Status: design pentru faze urmatoare, cu Faza A implementata initial, Faza B implementata initial la nivel de quest anchors, `StoryContextService` implementat initial read-only si Faza C implementata initial la nivel de schema, serviciu si actiuni de quest pentru story state.
 
 ## Scop

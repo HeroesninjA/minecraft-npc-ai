@@ -34,3 +34,7 @@ Foloseste aceasta categorie ca punct de pornire pentru a intelege statusul real 
 ## Avertizare
 
 `roadmap-orientativ.md` este documentul de organizare interna pentru ordinea de lucru. `implementat-deja.md` este sursa de adevar pentru ce exista in cod.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

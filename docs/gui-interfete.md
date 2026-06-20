@@ -2,9 +2,11 @@
 
 Actualizat: 2026-05-11
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 ## Scop
 
-Acest document descrie implementarea unui strat GUI profesional pentru AINPC: quest GUI, world GUI, statistici, shop, manager admin, debug, audit si interactiune NPC.
+Acest document descrie implementarea unui strat GUI profesional pentru AINPC: quest GUI, world GUI, statistici, shop, manager admin, debug, audit, interactiune NPC si authoring read-only.
 
 Regula principala:
 
@@ -14,7 +16,7 @@ Serviciile existente raman sursa de adevar.
 Click-ul din GUI nu modifica stare fara validare runtime.
 ```
 
-GUI-ul trebuie sa faca sistemul mai usor de folosit pe server, dar nu trebuie sa mute logica din `ScenarioEngine`, `WorldAdminApi`, `DialogManager`, `StoryContextService`, audit sau debugdump in clasele de inventar.
+GUI-ul trebuie sa faca sistemul mai usor de folosit pe server, dar nu trebuie sa mute logica din `ScenarioEngine`, `WorldAdminApi`, `DialogManager`, `StoryContextService`, `QuestAuthoringService`, audit sau debugdump in clasele de inventar.
 
 ## Status curent
 
@@ -26,11 +28,12 @@ Implementat initial:
 - anulare click/drag in inventarele AINPC si curatare sesiune la close/quit;
 - `/ainpc gui [main|quest|story|world|stats|interact|routine|shop|manager|audit|debug]`;
 - `/ainpc gui quest <filter>` pentru deschidere directa a quest log-ului filtrat;
+- `/ainpc authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]` pentru inspectie read-only;
 - `/quest gui [filter]`;
 - tab-completion pentru `/ainpc gui`, `/ainpc gui quest <filter>` si `/quest gui <filter>`;
 - permisiuni `ainpc.gui.*` in `plugin.yml`;
 - `ScenarioEngine.getQuestGuiSnapshot(...)` ca snapshot read-only pentru GUI;
-- hub principal, quest log navigabil, detalii quest, story snapshot read-only, world context, statistici, interactiune NPC, manager NPC, audit si debug;
+- hub principal, quest log navigabil, detalii quest, story snapshot read-only, world context, statistici, interactiune NPC, manager NPC, audit, debug si authoring read-only;
 - filtre interactive in `QuestLogGui` pentru `all`, `active`, `quest`, `contract`, `duty`, `bounty`, `event`, `tutorial` si `ritual`, cu stare per jucator;
 - `QuestLogGui` grupeaza randurile dupa mecanica si pagineaza lista prin `QuestLogGuiPage`, cu pagina curenta pastrata in `GuiService`;
 - `QuestLogGui` combina intrarile curente si arhivate returnate de snapshot, iar `QuestDetailGui` pastreaza filtrul sursa pentru detalii stabile dupa click;
@@ -52,6 +55,7 @@ Implementat initial:
 - `NpcManagerGui` afiseaza pe carduri rutina calculata, nevoile si ancorele home/work/social, cu actiuni rapide pentru info, teleport, familie si routine status;
 - `WorldHubGui` afiseaza sumarul `ProgressionGuiSnapshot`, deschide log-ul filtrat de progresii si expune ancorele locale citite prin `ProgressionService` pentru diagnostic mapping/quest;
 - `StoryGui` afiseaza read-only region state, place state si ultimele story events pentru locatia curenta, folosind `StoryStateService`;
+- `QuestAuthoringGui` afiseaza selectorul de quest si mecanica, permite ciclare/reset pe player si expune snapshot-ul read-only de authoring pentru inspectie si dump;
 - `WorldHubGui` cere confirmare pentru scan sat, demo mapping si save mapping;
 - `DebugGui` expune toate scope-urile principale de debugdump: all, npc, world, quest, story si openai;
 - `QuestDetailGui` cu obiective, stage-uri, recompense, tracking, status, debug admin si abandon cu confirmare;
@@ -62,6 +66,7 @@ Comenzile text raman fallback si sunt folosite de butoanele GUI pentru actiuni v
 
 - `/quest log`, `/quest status`, `/quest track`;
 - `/ainpc quest anchors`, `/ainpc quest debug`;
+- `/ainpc authoring dump`, `/ainpc debugdump authoring`;
 - `/ainpc world whereami`, `places`, `region`, `place`, `node`, `scan`, `demo`, `bind`, `household`, `settlement`, `save`;
 - `/ainpc story context`, `region`, `place`, `events`;
 - `/ainpc audit`, `audit npc`, `audit world`, `audit db`, `audit spawn`, `audit quest`;
@@ -278,7 +283,7 @@ Permisiuni recomandate:
 | `ainpc.gui.debug` | Debug GUI admin |
 | `ainpc.gui.audit` | Audit GUI admin |
 
-Pentru compatibilitate, `ainpc.admin`, `ainpc.quest`, `ainpc.info`, `ainpc.talk` si permisiunile dedicate precum `ainpc.gui.story` pot activa implicit parti din GUI. `StoryGui` ramane read-only chiar si cand este deschis de admin.
+Pentru compatibilitate, `ainpc.admin`, `ainpc.quest`, `ainpc.info`, `ainpc.talk` si permisiunile dedicate precum `ainpc.gui.story` pot activa implicit parti din GUI. `QuestAuthoringGui` foloseste acelasi gate `ainpc.gui.debug` ca debug-ul admin si ramane read-only chiar si cand este deschis de admin.
 
 ## Hub principal
 
@@ -306,6 +311,7 @@ Iteme recomandate:
 | 14 | `EMERALD` | Shop |
 | 15 | `CLOCK` | Rutine NPC |
 | 16 | `AMETHYST_SHARD` | Story snapshot |
+| 17 | `BOOKSHELF` | Authoring read-only |
 | 28 | `NAME_TAG` | Manager NPC |
 | 29 | `REDSTONE_TORCH` | Audit |
 | 30 | `SPYGLASS` | Debug |
@@ -815,8 +821,10 @@ GUI-ul trebuie sa respecte:
 | Debug GUI | `DebugDumpService`, OpenAI test, runtime summaries |
 | Audit GUI | audit logic din `AINPCCommand` sau viitor `AuditService` |
 | NPC Interaction GUI | `ConversationSessionManager`, `ScenarioEngine`, `DialogManager`, `MemoryManager`, `EmotionManager` |
+| Authoring GUI | `GuiService`, `QuestAuthoringService`, `QuestSeedFactory`, `StoryContextService`, `ProgressionService` |
 
 Recomandare importanta: auditul din `AINPCCommand` trebuie extras treptat intr-un `AuditService`, ca GUI-ul si comanda text sa foloseasca acelasi contract.
+Authoring-ul GUI trebuie sa ramana strict read-only; orice export sau validare mai grea trebuie sa treaca prin helperii de command/debug, nu prin click-uri care schimba runtime-ul.
 
 ## Faze de implementare
 

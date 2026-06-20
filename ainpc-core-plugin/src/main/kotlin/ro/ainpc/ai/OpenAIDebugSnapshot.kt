@@ -1,5 +1,20 @@
 package ro.ainpc.ai
 
+data class OpenAIDebugInteraction(
+    val npcName: String,
+    val playerName: String,
+    val requestAtMillis: Long,
+    val responseAtMillis: Long,
+    val promptChars: Int,
+    val responseChars: Int,
+    val promptPreview: String,
+    val responsePreview: String,
+    val wasFallback: Boolean,
+    val fallbackReason: String?,
+    val hadError: Boolean,
+    val errorMessage: String?
+)
+
 data class OpenAIDebugSnapshot(
     val baseUrl: String,
     val model: String,
@@ -27,7 +42,8 @@ data class OpenAIDebugSnapshot(
     val lastFailureAtMillis: Long,
     val lastFailureMessage: String,
     val lastFallbackAtMillis: Long,
-    val lastFallbackReason: String
+    val lastFallbackReason: String,
+    val recentInteractions: List<OpenAIDebugInteraction>
 ) {
     val backoffActive: Boolean
         get() = nowMillis < offlineRetryAfterMillis

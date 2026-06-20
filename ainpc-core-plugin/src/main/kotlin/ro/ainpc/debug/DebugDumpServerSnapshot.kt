@@ -28,8 +28,10 @@ object DebugDumpServerSnapshot {
         sb.append("- server.txt\n")
         sb.append("- config-sanitized.yml\n")
         sb.append("- audit.txt\n")
-        sb.append("- npcs.json, world-mapping.json, npc-world-bindings.json, households.json, spawn-batches.json, quests.yml, quest-audit-report.txt, loaded-quest-definitions.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n")
+        sb.append("- quest.txt, mapping.txt, npcs.json, world-mapping.json, mapping-snapshot.json, world-admin-snapshot.json, npc-world-bindings.json, households.json, spawn-batches.json, quests.yml, quests-snapshot.json, quest-audit-report.txt, loaded-quest-definitions.json, quest-mapping-contract.json, player-progressions.json, player-quest-progress.json, quest-anchor-bindings.json, story-states.json, story-events.json, openai.txt depending on scope\n")
         sb.append("- recent-server-log.txt\n")
+        sb.append("- recent-public-events.txt\n")
+        sb.append("- narrative-plans.json (when scope=all)\n")
         return sb.toString()
     }
 

@@ -11,11 +11,26 @@ import ro.ainpc.progression.ProgressionDefinition
 object DebugDumpQuestDefinitionJson {
     @JvmStatic
     fun buildLoadedQuestDefinitionsJson(plugin: AINPCPlugin, gson: Gson): JsonObject {
+        val featurePackLoader = runCatching { plugin.featurePackLoader }.getOrNull()
+        val progressionService = runCatching { plugin.progressionService }.getOrNull()
+        return buildLoadedQuestDefinitionsJson(
+            featurePackLoader?.getAllScenarios(),
+            progressionService?.getDefinitions(),
+            featurePackLoader?.getAllProgressionMechanics(),
+            gson,
+        )
+    }
+
+    @JvmStatic
+    fun buildLoadedQuestDefinitionsJson(
+        scenarios: Collection<FeaturePackLoader.ScenarioDefinition>?,
+        progressionDefinitions: Collection<ProgressionDefinition>?,
+        progressionMechanics: Collection<FeaturePackLoader.ProgressionMechanicDefinition>?,
+        gson: Gson,
+    ): JsonObject {
         val root = JsonObject()
         root.addProperty("source", "FeaturePackLoader#getAllScenarios")
-
-        val featurePackLoader = runCatching { plugin.featurePackLoader }.getOrNull()
-        if (featurePackLoader == null) {
+        if (scenarios == null) {
             root.addProperty("available", false)
             root.addProperty("error", "FeaturePackLoader indisponibil")
             root.addProperty("scenario_count", 0)
@@ -25,13 +40,12 @@ object DebugDumpQuestDefinitionJson {
         }
 
         root.addProperty("available", true)
-        val scenarios = featurePackLoader.getAllScenarios()
-            .sortedWith(
-                compareBy<FeaturePackLoader.ScenarioDefinition>(
-                    { scenario -> DebugDumpSupport.valueOrEmpty(scenario.packId) },
-                    { scenario -> DebugDumpSupport.valueOrEmpty(scenario.id) },
-                ),
-            )
+        val sortedScenarios = scenarios.sortedWith(
+            compareBy<FeaturePackLoader.ScenarioDefinition>(
+                { scenario -> DebugDumpSupport.valueOrEmpty(scenario.packId) },
+                { scenario -> DebugDumpSupport.valueOrEmpty(scenario.id) },
+            ),
+        )
 
         val rows = JsonArray()
         val byPack = LinkedHashMap<String, Int>()
@@ -39,7 +53,7 @@ object DebugDumpQuestDefinitionJson {
         val byKind = LinkedHashMap<String, Int>()
         val byMechanic = LinkedHashMap<String, Int>()
 
-        for (scenario in scenarios) {
+        for (scenario in sortedScenarios) {
             if (!isLoadedQuestDefinitionCandidate(scenario)) {
                 continue
             }
@@ -55,20 +69,17 @@ object DebugDumpQuestDefinitionJson {
             )
         }
 
-        val progressionService = runCatching { plugin.progressionService }.getOrNull()
-        val progressionDefinitions = progressionService?.getDefinitions() ?: emptyList()
-
-        root.addProperty("scenario_count", scenarios.size)
+        root.addProperty("scenario_count", sortedScenarios.size)
         root.addProperty("quest_count", rows.size())
-        root.addProperty("progression_mechanic_count", featurePackLoader.getAllProgressionMechanics().size)
-        root.addProperty("progression_definition_count", progressionDefinitions.size)
+        root.addProperty("progression_mechanic_count", progressionMechanics?.size ?: 0)
+        root.addProperty("progression_definition_count", progressionDefinitions?.size ?: 0)
         root.add("by_pack", DebugDumpSupport.countMapJson(byPack))
         root.add("by_category", DebugDumpSupport.countMapJson(byCategory))
         root.add("by_kind", DebugDumpSupport.countMapJson(byKind))
         root.add("by_mechanic", DebugDumpSupport.countMapJson(byMechanic))
         root.add(
             "progression_mechanics",
-            progressionMechanicsJson(featurePackLoader.getAllProgressionMechanics(), gson)
+            progressionMechanicsJson(progressionMechanics, gson)
         )
         root.add("progression_definitions", progressionDefinitionsJson(progressionDefinitions))
         root.add("rows", rows)

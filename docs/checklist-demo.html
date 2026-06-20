@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Demo AINPC - Lista de Verificare</title>
+<style>
+body { font-family: monospace; max-width: 900px; margin: 20px auto; padding: 0 20px; background: #1a1a2e; color: #e0e0e0; }
+h1 { color: #00d4aa; border-bottom: 2px solid #00d4aa; padding-bottom: 10px; }
+h2 { color: #0f9b8e; margin-top: 30px; cursor: pointer; }
+h2:hover { color: #00d4aa; }
+h3 { color: #888; margin: 5px 0; font-size: 14px; }
+.task { padding: 8px 12px; margin: 4px 0; border-radius: 4px; border-left: 3px solid #444; background: #16213e; }
+.task:hover { background: #1a2744; }
+.task.pass { border-left-color: #00d4aa; }
+.task.fail { border-left-color: #ff6b6b; }
+.task.pending { border-left-color: #ffd93d; }
+.task .id { color: #00d4aa; font-weight: bold; width: 70px; display: inline-block; }
+.task .status { cursor: pointer; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin-left: 10px; }
+.task .status.pass { background: #00d4aa; color: #000; }
+.task .status.fail { background: #ff6b6b; color: #000; }
+.task .status.pending { background: #ffd93d; color: #000; }
+.controls { margin: 10px 0; }
+.controls button { padding: 5px 15px; margin-right: 10px; border: none; border-radius: 3px; cursor: pointer; font-family: monospace; }
+.controls button:hover { opacity: 0.8; }
+.btn-pass { background: #00d4aa; color: #000; }
+.btn-fail { background: #ff6b6b; color: #000; }
+.btn-pending { background: #ffd93d; color: #000; }
+.summary { position: sticky; top: 0; background: #1a1a2e; padding: 10px 0; border-bottom: 1px solid #333; }
+
+.quest-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+.quest-table th { background: #0f3460; padding: 8px; text-align: left; color: #00d4aa; border: 1px solid #333; }
+.quest-table td { padding: 6px 8px; border: 1px solid #333; }
+.quest-table tr:hover { background: #1a2744; }
+</style>
+</head>
+<body>
+<div class="summary">
+  <h1>Demo AINPC - Lista de Verificare</h1>
+  <div id="progressBar" style="height: 6px; background: #333; border-radius: 3px; margin: 10px 0;">
+    <div id="progressFill" style="height: 100%; width: 0%; background: #00d4aa; border-radius: 3px; transition: width 0.3s;"></div>
+  </div>
+  <div id="progressText" style="color: #888; font-size: 14px;">0/50 taskuri completate</div>
+</div>
+  <div class="controls">
+    <strong>Status:</strong>
+    <span class="status pass" onclick="setAll('pass')">PASS la toate</span>
+    <span class="status pending" onclick="setAll('pending')">Reset</span>
+  </div>
+
+<h2>D0: Scope & Baseline</h2>
+<div id="d0"></div>
+
+<h2>D1: Build & Config</h2>
+<div id="d1"></div>
+
+<h2>D2: Mapping demo_sat</h2>
+<div id="d2"></div>
+
+<h2>D3: NPC Population & Bindings</h2>
+<div id="d3"></div>
+
+<h2>D4: Routine & UX</h2>
+<div id="d4"></div>
+
+<h2>D5: Quest + Progression</h2>
+<div id="d5"></div>
+
+<h2>D6: Story Context</h2>
+<div id="d6"></div>
+
+<h2>D7: Dialog & AI Fallback</h2>
+<div id="d7"></div>
+
+<h2>D8: Restart & Persistenta</h2>
+<div id="d8"></div>
+
+<h2>D9: Demo Script Final</h2>
+<div id="d9"></div>
+
+<h2>Quest-uri Disponibile (16)</h2>
+<table class="quest-table">
+  <tr><th>ID</th><th>Nume</th><th>Tip</th><th>Mecanica</th></tr>
+  <tr><td>Q01-Q08</td><td>Quest-uri clasice</td><td>QUEST</td><td>main_quests, side_quests</td></tr>
+  <tr><td>C01-C02</td><td>Contracte</td><td>TRADE_DEAL</td><td>village_contracts</td></tr>
+  <tr><td>D01</td><td>Datorie</td><td>DUTY</td><td>npc_duties</td></tr>
+  <tr><td>B01-B02</td><td>Bounty-uri</td><td>BOUNTY</td><td>local_bounties</td></tr>
+  <tr><td>E01</td><td>Eveniment</td><td>WORLD_EVENT</td><td>village_events</td></tr>
+  <tr><td>T01</td><td>Tutorial</td><td>TUTORIAL</td><td>onboarding</td></tr>
+  <tr><td>R01</td><td>Ritual</td><td>RITUAL</td><td>village_rituals</td></tr>
+</table>
+
+<script>
+const tasks = {
+  d0: [
+    { id: "T001", desc: "Server dedicat si variabile de mediu", doc: "docs/env-prim-demo.md" },
+    { id: "T002", desc: "Definirea criteriilor de gata", doc: "docs/criterii-gata-prim-demo.md" },
+    { id: "T003", desc: "Inventar comenzi existente", doc: "docs/inventar-comenzi-prim-demo.md" },
+    { id: "T004", desc: "Backup initial", doc: "docs/procedura-backup-prim-demo.md" }
+  ],
+  d1: [
+    { id: "T005", desc: "Build curat (gradlew clean build)", cmd: "./gradlew.bat clean build" },
+    { id: "T006", desc: "Artefacte JAR verificate" },
+    { id: "T007", desc: "Config minima YAML (routine/simulation)", cmd: "plugins/AINPC/config.yml" },
+    { id: "T008", desc: "Verificare incarcare plugin", cmd: "/plugins, /ainpc, /ainpc audit db" },
+    { id: "T009", desc: "Config quest-uri (quests.yml)", cmd: "plugins/AINPC/quests.yml" },
+    { id: "T010", desc: "Config rutina si simulare activate", cmd: "features.routine=true, features.simulation=true" }
+  ],
+  d2: [
+    { id: "T011", desc: "Creare harta demo (world demo create)", cmd: "/ainpc world demo create demo_sat" },
+    { id: "T012", desc: "Verificare regiuni si locuri", cmd: "/ainpc world places demo_sat" },
+    { id: "T013", desc: "Verificare noduri", cmd: "/ainpc world region info demo_sat" },
+    { id: "T014", desc: "Salvare harta", cmd: "/ainpc world save" },
+    { id: "T015", desc: "Auto-index verificare", cmd: "world_admin.auto_index.enabled" },
+    { id: "T016", desc: "World audit", cmd: "/ainpc audit world" },
+    { id: "T017", desc: "Persistenta mapping dupa restart", cmd: "restart + verificare" }
+  ],
+  d3: [
+    { id: "T018", desc: "Planificare asezare", cmd: "/ainpc world settlement plan demo_sat 5" },
+    { id: "T019", desc: "Spawn asezare", cmd: "/ainpc world settlement spawn demo_sat 5" },
+    { id: "T020", desc: "Verificare NPC-uri", cmd: "/ainpc list" },
+    { id: "T021", desc: "NPC bindings (home/work/social)", cmd: "/ainpc world bindings <npc>" },
+    { id: "T022", desc: "Audit NPC", cmd: "/ainpc audit npc" },
+    { id: "T023", desc: "Audit spawn", cmd: "/ainpc audit spawn" },
+    { id: "T024", desc: "NPC persist dupa restart", cmd: "restart + /ainpc list" }
+  ],
+  d4: [
+    { id: "T025", desc: "Rutina NPC inspectabila", cmd: "/ainpc routine status nearest" },
+    { id: "T026", desc: "Tick rutina", cmd: "/ainpc routine tick" },
+    { id: "T027", desc: "Interactiune click dreapta", cmd: "click pe NPC" },
+    { id: "T028", desc: "NPC moves (nu sare haotic)", cmd: "observa 1-2 minute" },
+    { id: "T029", desc: "GUI hub functioneaza", cmd: "/ainpc gui" },
+    { id: "T030", desc: "Nearest selector explicit", cmd: "/ainpc info nearest" }
+  ],
+  d5: [
+    { id: "T031", desc: "Quest clasic (accept + inspect)", cmd: "/ainpc quest accept nearest" },
+    { id: "T032", desc: "Quest status inspectabil", cmd: "/ainpc quest status nearest" },
+    { id: "T033", desc: "Progression non-quest listata", cmd: "/ainpc progression definitions" },
+    { id: "T034", desc: "Progression stored inspectabila", cmd: "/ainpc progression stored <player>" },
+    { id: "T035", desc: "Quest tracking functioneaza", cmd: "/ainpc quest track start" },
+    { id: "T036", desc: "Questuri nu depind de AI", cmd: "test fara OPENAI_API_KEY" }
+  ],
+  d6: [
+    { id: "T037", desc: "Story context inspectabil", cmd: "/ainpc story context" },
+    { id: "T038", desc: "Story region", cmd: "/ainpc story region demo_sat" },
+    { id: "T039", desc: "Story events", cmd: "/ainpc story events" },
+    { id: "T040", desc: "Debugdump story fara secrete", cmd: "/ainpc debugdump story" }
+  ],
+  d7: [
+    { id: "T041", desc: "Dialog cu NPC", cmd: "click dreapta + mesaj" },
+    { id: "T042", desc: "Fallback AI fara API key", cmd: "test fara OPENAI_API_KEY" },
+    { id: "T043", desc: "Debug OpenAI script", cmd: "scripts/debug-openai.ps1" }
+  ],
+  d8: [
+    { id: "T044", desc: "Smoke test mapping", cmd: "scripts/smoke-paper-mapping.ps1" },
+    { id: "T045", desc: "Smoke test quests", cmd: "scripts/smoke-paper-quests.ps1" },
+    { id: "T046", desc: "Comenzi demo (toate)", cmd: "/ainpc demo <comanda>" },
+    { id: "T047", desc: "Restart gate", cmd: "/ainpc demo restart demo_sat" }
+  ],
+  d9: [
+    { id: "T048", desc: "Audit final fara secrete", cmd: "/ainpc audit all, /ainpc debugdump all" },
+    { id: "T049", desc: "Script demo complet (20 pasi)", cmd: "demo script complet" },
+    { id: "T050", desc: "Documentare concluzie", cmd: "ce a mers, ce n-a mers" }
+  ]
+};
+
+const STATES = { pass: "pass", fail: "fail", pending: "pending" };
+
+function renderTasks(containerId, taskList, phase) {
+  const container = document.getElementById(containerId);
+  taskList.forEach((t, i) => {
+    const div = document.createElement("div");
+    div.className = "task pending";
+    div.id = phase + "-" + i;
+    div.innerHTML = `<span class="id">${t.id}</span> ${t.desc}
+      <span class="status pending" onclick="event.stopPropagation(); toggle('${phase}-${i}')">PENDING</span>`;
+    if (t.cmd) div.innerHTML += ` <span style="color:#888;font-size:12px">${t.cmd}</span>`;
+    if (t.doc) div.innerHTML += ` <span style="color:#888;font-size:12px">${t.doc}</span>`;
+    div.onclick = function() { toggle(this.id); };
+    container.appendChild(div);
+  });
+}
+
+function toggle(id) {
+  const el = document.getElementById(id);
+  const current = el.classList.contains("pass") ? "pass" : el.classList.contains("fail") ? "fail" : "pending";
+  const next = current === "pass" ? "fail" : current === "fail" ? "pending" : "pass";
+  el.className = "task " + next;
+  el.querySelector(".status").className = "status " + next;
+  el.querySelector(".status").textContent = next.toUpperCase();
+  updateProgress();
+}
+
+function setAll(state) {
+  document.querySelectorAll(".task").forEach(el => {
+    el.className = "task " + state;
+    el.querySelector(".status").className = "status " + state;
+    el.querySelector(".status").textContent = state.toUpperCase();
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll(".task");
+  const done = document.querySelectorAll(".task.pass");
+  const pct = Math.round(done.length / all.length * 100);
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressText").textContent = done.length + "/" + all.length + " taskuri completate";
+}
+
+// Render all phases
+for (const [phase, taskList] of Object.entries(tasks)) {
+  renderTasks(phase, taskList, phase);
+}
+updateProgress();
+</script>
+</body>
+</html>

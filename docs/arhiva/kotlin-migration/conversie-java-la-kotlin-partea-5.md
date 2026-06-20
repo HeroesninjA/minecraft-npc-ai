@@ -8,7 +8,7 @@ Acest document continua seria Java -> Kotlin cu partea de control al executiei: 
 
 Partile anterioare definesc strategia, runbook-ul, retetele si harta pe pachete. Partea 5 este documentul de folosit cand conversia chiar incepe si trebuie masurata.
 
-Nota operationala: statusul real pe slice-uri active (KOT-001+), inclusiv ultimele conversii si gate-urile rulate, este mentinut in `kotlin-migration-tracker.md`.
+Nota operationala: statusul real pe slice-uri active (KOT-001+), inclusiv ultimele conversii si gate-urile rulate, este mentinut in `README.md`.
 
 ## Regula principala
 

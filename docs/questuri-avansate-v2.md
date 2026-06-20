@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 Status: document canonic pentru directia V2. Versiunea veche este pastrata pentru istoric in `arhiva/questuri-avansate-v1.md`.
 
 ## Scop
@@ -99,6 +101,8 @@ Reguli:
 - `inspect_node` trebuie sa tina de node ID, tag sau metadata auditabila;
 - `quest_anchor_bindings` ramane legatura persistenta intre template si mapping concret;
 - story events trebuie sa poata indica regiunea, place-ul sau node-ul relevant.
+
+Pentru reprezentarea in JSON/YAML, foloseste `docs/json-yaml-contract.md`: quest-ul isi pastreaza intentia si obiectivele, iar mapping-ul ramane stratul semantic de rezolvare.
 
 Livrabile:
 

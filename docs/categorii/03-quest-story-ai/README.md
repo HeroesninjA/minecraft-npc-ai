@@ -1,6 +1,6 @@
 # Quest, Story si AI
 
-Actualizat: 2026-06-04
+Actualizat: 2026-06-18
 
 Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-ul asistat.
 
@@ -12,13 +12,17 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../pregatire-questuri-avansate.md` | Pregatiri si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate-v2.md` | Faze V2 pentru diversitate de questuri, mapping, progres generic si mecanici non-quest |
 | `../../progression-service.md` | Directie pentru motor generic de progres peste questuri, contracte, datorii, evenimente, tutoriale si ritualuri |
+| `../../api-events-listeners-triggers.md` | Contract pentru trigger-ele si event-urile publice necesare intre quest, story, dialog, NPC si context |
 | `../../lucru-alternat-quest-mapping-progression.md` | Protocol de lucru alternat intre mapping, questuri concrete, story, GUI system si extractii mici spre `ProgressionService` |
+| `../../implementat-deja.md` | Rezumatul functionalitatii deja confirmate in cod, inclusiv authoring-ul read-only si GUI-ul aferent |
 | `../../dialog-si-conversatii.md` | Evolutia dialogului pe masura ce avanseaza quest, story, environment si reputatie |
 | `../../interactiuni.md` | Fluxul click/chat/sesiune, ascultare pasiva si intentii de quest inaintea dialogului liber |
 | `../../gui-interfete.md` | Directie pentru Quest GUI, NPC interaction GUI si suprafete vizuale peste quest/story |
 | `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
 | `../../spring-ai-mcp-serviciu-intern.md` | Design pentru Spring AI MCP ca sidecar runtime intern, cu tool-uri read-only initiale si fallback |
 | `../../generare-automata-questuri-ai.md` | Contract pentru `QuestSeed`, `QuestDraft`, validare, review admin si export YAML dezactivat |
+| `../../lucru-alternat-quest-mapping-progression.md` | Include slice-ul `AI-QUEST-DOC-02` pentru authoring read-only, GUI, dump si selectie per-player |
+| `../../schema-scenariu-predefinit-testare.md` | Schema pentru scenariu predefinit de testare cu sat, NPC-uri, relatii, context semantic si questuri story smoke |
 | `../../quest-anchor-bindings.md` | Contract DB pentru ancore semantice de quest |
 | `../../story-context-service.md` | Context narativ read-only pentru prompt si debugging |
 | `../../story-si-context-ai.md` | Legatura `mapping -> indexare -> quest -> story -> AI` |
@@ -31,6 +35,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 
 - Questurile de baza sunt functionale.
 - `ProgressionService` este directia recomandata pentru a folosi runtime-ul de quest ca motor generic de progres in addonuri, inclusiv pentru mecanici care nu se numesc quest.
+- Authoring-ul read-only pentru questuri exista initial ca strat de inspectie, validare si debug, nu ca executie live.
 - Pregatirea pentru questuri avansate a inceput: `objective_id` stabil exista initial, cu fallback pentru progres legacy.
 - Auditul strict pentru continut avansat exista initial: obiective/reward-uri necunoscute si story actions incomplete sunt raportate ca erori.
 - Q06 medieval exista initial ca primul quest pe mapping: `visit_place`, `inspect_node`, `talk_to_npc`, stages `INVESTIGATION/RETURN` si `record_story_event`.
@@ -48,6 +53,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - `/ainpc quest anchors` si `/ainpc audit quest` exista initial pentru inspectie read-only.
 - `StoryContextService` si `/ainpc story context` exista initial ca strat read-only peste mapping, quest anchors si story state persistent.
 - `StoryStateService` exista initial pentru `region_story_state`, `place_story_state` si `story_events`.
+- Event-urile publice custom pentru quest/story/dialog/NPC/context sunt documentate; lifecycle-ul initial pentru progression, offer, objective progress si stage change folosesc deja `callEvent`, iar restul raman backlog.
 - `/ainpc story region`, `/ainpc story place` si `/ainpc story events` exista initial pentru inspectia read-only a story state-ului persistent.
 - Actiunile de quest `set_story_state` si `record_story_event` exista initial.
 - `/ainpc audit quest` verifica initial si quest templates, nu doar binding-uri.
@@ -67,3 +73,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - Ghid de prompturi sigure pentru generare story si dialog.
 - Specificatie completa si validator pentru actiunile `set_story_state` si `record_story_event`.
 - Contract complet pentru `DialogueContextSnapshot`, dialogue nodes si choices validate.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

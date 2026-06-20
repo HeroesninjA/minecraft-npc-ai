@@ -354,6 +354,33 @@ object DebugDumpQuestAudit {
         } catch (exception: SQLException) {
             warnings.add("Nu pot valida statusul player_quests.tracked: ${exception.message}")
         }
+
+        val timestampSql = """
+            SELECT player_uuid, template_id, started_at, completed_at, updated_at
+            FROM player_quests
+            WHERE completed_at < started_at
+               OR (completed_at > 0 AND started_at <= 0)
+               OR updated_at <= 0
+            ORDER BY player_uuid, template_id
+            LIMIT 20
+        """.trimIndent()
+        try {
+            databaseManager.prepareStatement(timestampSql).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    while (resultSet.next()) {
+                        warnings.add(
+                            "player_quests timestamp invalid pentru " +
+                                resultSet.getString("player_uuid") + " " + resultSet.getString("template_id") +
+                                ": started=" + resultSet.getLong("started_at") +
+                                " completed=" + resultSet.getLong("completed_at") +
+                                " updated=" + resultSet.getLong("updated_at") + "."
+                        )
+                    }
+                }
+            }
+        } catch (exception: SQLException) {
+            warnings.add("Nu pot valida timestamp-urile din player_quests: ${exception.message}")
+        }
     }
 
     private fun auditQuestAnchorPersistence(
@@ -409,6 +436,66 @@ object DebugDumpQuestAudit {
             }
         } catch (exception: SQLException) {
             warnings.add("Nu pot valida ancorele orfane: ${exception.message}")
+        }
+
+        val anchorSourceSql = """
+            SELECT reference, COUNT(*) AS cnt
+            FROM quest_anchor_bindings
+            WHERE reference IS NOT NULL AND reference != ''
+            GROUP BY reference
+            ORDER BY cnt DESC
+            LIMIT 20
+        """.trimIndent()
+        try {
+            databaseManager.prepareStatement(anchorSourceSql).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    var semanticCount = 0
+                    var manualCount = 0
+                    while (resultSet.next()) {
+                        val ref = resultSet.getString("reference")
+                        val cnt = resultSet.getInt("cnt")
+                        if (ref.startsWith("tag:") || ref.startsWith("semantic:") || ref.startsWith("type:")) {
+                            semanticCount += cnt
+                        } else {
+                            manualCount += cnt
+                        }
+                    }
+                    if (manualCount > 0) {
+                        warnings.add(
+                            "Ancore manuale (fara referinta tag/semantic/type): $manualCount. " +
+                                "Ancore semantice/automate: $semanticCount."
+                        )
+                    }
+                }
+            }
+        } catch (exception: SQLException) {
+            warnings.add("Nu pot analiza sursa ancorelor: ${exception.message}")
+        }
+
+        val orphanTimestampsSql = """
+            SELECT player_uuid, template_id, created_at, updated_at
+            FROM quest_anchor_bindings
+            WHERE updated_at < created_at
+               OR created_at <= 0
+               OR updated_at <= 0
+            ORDER BY player_uuid, template_id
+            LIMIT 20
+        """.trimIndent()
+        try {
+            databaseManager.prepareStatement(orphanTimestampsSql).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    while (resultSet.next()) {
+                        warnings.add(
+                            "quest_anchor_bindings timestamp invalid pentru " +
+                                resultSet.getString("player_uuid") + " " + resultSet.getString("template_id") +
+                                ": created_at=" + resultSet.getLong("created_at") +
+                                " updated_at=" + resultSet.getLong("updated_at") + "."
+                        )
+                    }
+                }
+            }
+        } catch (exception: SQLException) {
+            warnings.add("Nu pot valida timestamp-urile din quest_anchor_bindings: ${exception.message}")
         }
     }
 

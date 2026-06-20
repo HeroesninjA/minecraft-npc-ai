@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-07
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 ## Scop
 
 `npc_world_bindings` este tabela dedicata pentru legatura dintre NPC-uri si mapping-ul semantic.

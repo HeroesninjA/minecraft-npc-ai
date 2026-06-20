@@ -44,6 +44,22 @@ class ProgressionSelectorTest {
     }
 
     @Test
+    fun parsesActiveAlias() {
+        val selector = ProgressionSelector.parse("active")
+
+        assertEquals("active", selector.commandSelector())
+        assertTrue(selector.isActiveAlias())
+    }
+
+    @Test
+    fun parsesCompletedAlias() {
+        val selector = ProgressionSelector.parse("completed")
+
+        assertEquals("completed", selector.commandSelector())
+        assertTrue(selector.isCompletedAlias())
+    }
+
+    @Test
     fun prefixesShortContractAlias() {
         val selector = ProgressionSelector.forContractAlias("C01")
 

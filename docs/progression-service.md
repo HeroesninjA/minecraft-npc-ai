@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
+
 ## Scop
 
 `ProgressionService` este directia de refactorizare pentru partea de quest runtime. Scopul este ca sistemul actual de questuri sa devina un motor generic de progres pentru mai multe mecanici de gameplay, nu doar pentru scenarii numite explicit "quest".

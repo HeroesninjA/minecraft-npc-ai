@@ -123,7 +123,7 @@ Actualizat: 2026-05-25
 - [ ] Pass Paper pe playable village: teren plat, case distantate, NPC-uri cu home/work/social clare, rutina inspectabila si fara fuga haotica
 - [ ] Smoke test Paper pentru flux wand complet: `region`/`place`/`node`/`npc_bind`/`quest_anchor`, audit, save si reload
 - [ ] Smoke test Paper pentru `/ainpc world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`
-- [ ] Generator narativ pentru populatie pe regiune: nume, roluri, familii si distributie pe case/work/social
+- [x] Generator narativ pentru populatie pe regiune: PopulationPlan, ResidentNarrativePlan, narrative name generation cu NPCNameGenerator, profession mapping (fierar/fermier/negustor/hangiu/gardian), socialRole/questRole assignment, backstory generation, family structures, capacitate case, seed determinist, comenzi `/ainpc population plan <regionId> [pop] [seed]` si `inspect` cu conversie in HouseAllocation
 - [ ] Smoke test Paper pentru Q01-Q05: oferta, acceptare, progres, completare, reward
 - [ ] Smoke test Paper pentru Q06-Q08 pe mapping demo si NPC-uri medievale
 - [ ] Smoke test Paper pentru C02 pe mapping demo prin `/ainpc contract ...` si `/ainpc progression stored ...`
@@ -136,7 +136,7 @@ Actualizat: 2026-05-25
 - [ ] Smoke test Paper pentru `/ainpc patch analyze|plan|validate` pe `demo_sat`
 - [ ] Smoke test Paper pentru story fara quest, quest fara story si quest cu `record_story_event`
 - [x] Model read-only pentru `QuestDirectorDecision`, fara executie de progres
-- [ ] Modele si validator read-only pentru `QuestSeed`/`QuestDraft`
+- [x] Modele si validator read-only pentru `QuestSeed`/`QuestDraft`
 - [x] Model read-only pentru `RuntimeFeatureState`: stari `enabled`/`disabled`/`optional`/`blocked`/`fallback`/`experimental`, motive si surse
 - [x] `FeatureResolver` initial care combina `features.*`, `demo.enabled`, profil server, addon registry si metadata pack-uri fara sa schimbe inca behavior-ul runtime
 - [ ] Audit/debugdump pentru starea finala a feature-urilor si motivele de blocare/fallback
@@ -169,8 +169,8 @@ Actualizat: 2026-05-25
 - [ ] economie / monede
 - [ ] progresie jucator
 - [ ] factiuni sau afiliere regionala
-- [ ] Comenzi de debug si inspectie pentru:
-- [ ] prompt AI
+- [x] Comenzi de debug si inspectie pentru:
+- [x] prompt AI (interactiuni prin `/ainpc debugdump ai`)
 - [ ] scenarii active
 - [x] quest progress
 - [x] validare initiala quest templates prin `/ainpc audit quest`
@@ -242,6 +242,7 @@ Actualizat: 2026-05-25
 - [ ] Comenzi mai bune pentru inspectarea starii unui NPC
 - [x] Audit/debugdump dedicat pentru story state si story events
 - [x] Debug pentru prompt, model AI si raspuns fallback
+- [x] Istoric interactiuni AI prin `/ainpc debugdump ai`
 - [ ] Reload sigur pentru config, pack-uri si scenarii
 - [ ] Mesaje de eroare mai clare pentru configuratii invalide
 

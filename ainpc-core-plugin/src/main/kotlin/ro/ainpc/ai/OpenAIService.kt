@@ -64,6 +64,11 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     @Volatile
     private var lastFallbackReason = ""
 
+    private val interactionHistory = java.util.concurrent.ConcurrentLinkedDeque<OpenAIDebugInteraction>()
+    private val maxInteractionHistory = 50
+    private var pendingNpcName: String = ""
+    private var pendingPlayerName: String = ""
+
     init {
         baseUrl = OpenAITextSupport.sanitizeBaseUrl(
             plugin.config.getString("openai.base_url", "https://api.openai.com/v1")
@@ -94,16 +99,22 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         relationship: NPCRelationship?,
         dbContext: DialogManager.PromptDbContext?
     ): CompletableFuture<String> {
+        pendingNpcName = request.npc().name
+        pendingPlayerName = request.player().name
         return capturePromptSnapshot(request).thenCompose { snapshot ->
             if (!aiFeatureEnabled()) {
+                val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
                 recordFallback("feature_disabled")
-                return@thenCompose CompletableFuture.completedFuture(OpenAITextSupport.generateFallbackResponse(snapshot))
+                recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "feature_disabled")
+                return@thenCompose CompletableFuture.completedFuture(fallback)
             }
             CompletableFuture.supplyAsync {
                 if (apiKey.isBlank()) {
                     diagInfo("Sar peste cerere OpenAI: cheia API lipseste; folosesc fallback local.")
                     recordFallback("missing_api_key")
-                    return@supplyAsync OpenAITextSupport.generateFallbackResponse(snapshot)
+                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
+                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "missing_api_key")
+                    return@supplyAsync fallback
                 }
 
                 if (isInOfflineBackoffWindow()) {
@@ -113,24 +124,31 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                             remainingSeconds + "s."
                     )
                     recordFallback("offline_backoff_active (${remainingSeconds}s remaining)")
-                    return@supplyAsync OpenAITextSupport.generateFallbackResponse(snapshot)
+                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
+                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "offline_backoff")
+                    return@supplyAsync fallback
                 }
 
+                val prompt = try {
+                    OpenAIPromptBuilder.buildPrompt(snapshot, recentHistory, relevantMemories, relationship, dbContext)
+                } catch (e: Exception) {
+                    handleGenerationFailure(e)
+                    recordFallback("prompt_build_error: ${OpenAITextSupport.compactExceptionMessage(e)}")
+                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
+                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "prompt_build_error")
+                    return@supplyAsync fallback
+                }
                 try {
-                    val prompt = OpenAIPromptBuilder.buildPrompt(
-                        snapshot,
-                        recentHistory,
-                        relevantMemories,
-                        relationship,
-                        dbContext
-                    )
                     val response = callOpenAI(prompt, snapshot.npcName())
+                    recordInteractionSuccess(pendingNpcName, pendingPlayerName, prompt, response)
                     clearOfflineState()
                     response
                 } catch (e: Exception) {
                     handleGenerationFailure(e)
                     recordFallback("exception: ${OpenAITextSupport.compactExceptionMessage(e)}")
-                    OpenAITextSupport.generateFallbackResponse(snapshot)
+                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
+                    recordInteractionError(pendingNpcName, pendingPlayerName, prompt, fallback, OpenAITextSupport.compactExceptionMessage(e))
+                    fallback
                 }
             }
         }
@@ -437,8 +455,79 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             lastFailureAtMillis = lastFailureAtMillis,
             lastFailureMessage = lastFailureMessage,
             lastFallbackAtMillis = lastFallbackAtMillis,
-            lastFallbackReason = lastFallbackReason
+            lastFallbackReason = lastFallbackReason,
+            recentInteractions = getRecentInteractions()
         )
+    }
+
+    fun getRecentInteractions(): List<OpenAIDebugInteraction> {
+        return interactionHistory.toList().reversed()
+    }
+
+    private fun recordInteractionSuccess(npcName: String, playerName: String, prompt: String, response: String) {
+        interactionHistory.addFirst(
+            OpenAIDebugInteraction(
+                npcName = npcName,
+                playerName = playerName,
+                requestAtMillis = lastRequestAtMillis,
+                responseAtMillis = lastResponseAtMillis,
+                promptChars = prompt.length,
+                responseChars = response.length,
+                promptPreview = OpenAITextSupport.abbreviate(prompt, 180),
+                responsePreview = OpenAITextSupport.abbreviate(response, 180),
+                wasFallback = false,
+                fallbackReason = null,
+                hadError = false,
+                errorMessage = null
+            )
+        )
+        trimInteractionHistory()
+    }
+
+    private fun recordInteractionFallback(npcName: String, playerName: String, fallbackResponse: String, reason: String) {
+        interactionHistory.addFirst(
+            OpenAIDebugInteraction(
+                npcName = npcName,
+                playerName = playerName,
+                requestAtMillis = lastRequestAtMillis,
+                responseAtMillis = System.currentTimeMillis(),
+                promptChars = 0,
+                responseChars = fallbackResponse.length,
+                promptPreview = "",
+                responsePreview = OpenAITextSupport.abbreviate(fallbackResponse, 180),
+                wasFallback = true,
+                fallbackReason = reason,
+                hadError = false,
+                errorMessage = null
+            )
+        )
+        trimInteractionHistory()
+    }
+
+    private fun recordInteractionError(npcName: String, playerName: String, prompt: String, fallbackResponse: String, errorMessage: String) {
+        interactionHistory.addFirst(
+            OpenAIDebugInteraction(
+                npcName = npcName,
+                playerName = playerName,
+                requestAtMillis = lastRequestAtMillis,
+                responseAtMillis = System.currentTimeMillis(),
+                promptChars = prompt.length,
+                responseChars = fallbackResponse.length,
+                promptPreview = OpenAITextSupport.abbreviate(prompt, 180),
+                responsePreview = OpenAITextSupport.abbreviate(fallbackResponse, 180),
+                wasFallback = true,
+                fallbackReason = errorMessage,
+                hadError = true,
+                errorMessage = errorMessage
+            )
+        )
+        trimInteractionHistory()
+    }
+
+    private fun trimInteractionHistory() {
+        while (interactionHistory.size > maxInteractionHistory) {
+            interactionHistory.removeLast()
+        }
     }
 
     private fun recordPrompt(prompt: String) {

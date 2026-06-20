@@ -10,10 +10,22 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.player.PlayerQuitEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.dialog.DialogIntentResolvedEvent
+import ro.ainpc.api.events.dialog.DialogIntentResolvedEventPayload
+import ro.ainpc.api.events.dialog.DialogMessageReceivedEvent
+import ro.ainpc.api.events.dialog.DialogMessageReceivedEventPayload
+import ro.ainpc.api.events.dialog.DialogResponseGeneratedEvent
+import ro.ainpc.api.events.dialog.DialogResponseGeneratedEventPayload
+import ro.ainpc.api.events.dialog.DialogSessionEndedEvent
+import ro.ainpc.api.events.dialog.DialogSessionEndedEventPayload
+import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
+import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.npc.AINPC
 import java.util.Comparator
+import java.util.UUID
 
 /**
  * Listener dedicat chat-ului privat dintre jucator si NPC.
@@ -39,6 +51,10 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
+        val partner = conversations().getConversationPartner(event.player)
+        if (partner != null) {
+            publishDialogSessionEnded(event.player, partner, "quit")
+        }
         conversations().clearConversation(event.player)
     }
 
@@ -46,6 +62,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         val activeNpc = conversations().getConversationPartner(player)
         if (activeNpc != null) {
             if (conversations().isExpired(player, CONVERSATION_TIMEOUT_MILLIS)) {
+                publishDialogSessionEnded(player, activeNpc, "timeout")
                 conversations().clearConversation(player)
             } else {
                 return buildTarget(player, activeNpc, true, true, "active_session", 1)
@@ -114,6 +131,17 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
 
         if (!target.explicitConversation()) {
+            if (!publishDialogSessionStarted(
+                player,
+                npc,
+                target.directAddress(),
+                target.explicitConversation(),
+                target.triggerReason(),
+                target.nearbyNpcCount(),
+                target.distanceToNpc()
+            )) {
+                return
+            }
             beginConversationSession(player, npc).exceptionally { ex ->
                 plugin.logger.warning("Nu am putut initializa sesiunea de conversatie pentru " + npc.name + ": " + ex.message)
                 false
@@ -130,7 +158,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             plugin.scenarioEngine.recordNpcConversation(player, npc)
         }
 
-        if (handleQuestInteractionFromMessage(player, npc, message)) {
+        if (handleQuestInteractionFromMessage(player, npc, message, target)) {
             return
         }
 
@@ -139,6 +167,9 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             return
         }
 
+        if (!publishDialogMessageReceived(player, npc, message, target)) {
+            return
+        }
         messages().send(player, "&7Tu: &f$message")
         messages().send(player, "&8" + npc.name + " se gandeste...")
 
@@ -160,6 +191,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
                     return@runSync
                 }
 
+                publishDialogResponseGenerated(player, npc, target, result)
                 when (result.status) {
                     DialogManager.DialogStatus.SUCCESS -> messages().sendNPCMessage(player, npc.name, result.response ?: "")
                     DialogManager.DialogStatus.COOLDOWN -> messages().sendMessage(player, "cooldown")
@@ -175,7 +207,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
     }
 
-    private fun handleQuestInteractionFromMessage(player: Player, npc: AINPC, message: String): Boolean {
+    private fun handleQuestInteractionFromMessage(player: Player, npc: AINPC, message: String, target: ResolvedDialogTarget): Boolean {
         if (!questFeatureEnabled()) {
             return false
         }
@@ -187,6 +219,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             return false
         }
 
+        publishDialogIntentResolved(player, npc, message, intent, target)
         val questNpc = refreshQuestNpc(resolveQuestNpcForIntent(player, npc, intent)) ?: return false
 
         val questInteraction = when (intent) {
@@ -288,6 +321,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     private fun normalize(value: String): String = QuestDecisionIntentResolver.normalize(value)
 
     private fun endConversation(player: Player, npc: AINPC) {
+        publishDialogSessionEnded(player, npc, "goodbye")
         conversations().clearConversation(player)
         messages().sendNPCMessage(player, npc.name, getGoodbyeMessage(npc))
         messages().send(player, "&7&o(Conversatia cu " + npc.name + " s-a incheiat.)")
@@ -333,6 +367,143 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         fun triggerReason(): String = triggerReason
         fun nearbyNpcCount(): Int = nearbyNpcCount
         fun distanceToNpc(): Double = distanceToNpc
+    }
+
+    private fun publishDialogSessionStarted(
+        player: Player,
+        npc: AINPC,
+        directAddress: Boolean,
+        explicitConversation: Boolean,
+        triggerReason: String,
+        nearbyNpcCount: Int,
+        distanceToNpc: Double
+    ): Boolean {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return true
+        val event = DialogSessionStartedEvent(
+            DialogSessionStartedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                directAddress,
+                explicitConversation,
+                triggerReason,
+                nearbyNpcCount,
+                distanceToNpc,
+                mapOf("source" to "NPCChatListener")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+        return !event.isCancelled
+    }
+
+    private fun publishDialogMessageReceived(player: Player, npc: AINPC, message: String, target: ResolvedDialogTarget): Boolean {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return true
+        val event = DialogMessageReceivedEvent(
+            DialogMessageReceivedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                message,
+                target.directAddress(),
+                target.explicitConversation(),
+                target.triggerReason(),
+                target.nearbyNpcCount(),
+                target.distanceToNpc(),
+                mapOf("source" to "NPCChatListener")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+        return !event.isCancelled
+    }
+
+    private fun publishDialogIntentResolved(
+        player: Player,
+        npc: AINPC,
+        message: String,
+        intent: QuestDecisionIntentResolver.Intent,
+        target: ResolvedDialogTarget
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = DialogIntentResolvedEvent(
+            DialogIntentResolvedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                message,
+                normalize(message),
+                intent.name,
+                target.directAddress(),
+                target.explicitConversation(),
+                target.triggerReason(),
+                target.nearbyNpcCount(),
+                target.distanceToNpc(),
+                mapOf("source" to "NPCChatListener")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishDialogResponseGenerated(player: Player, npc: AINPC, target: ResolvedDialogTarget, result: DialogManager.DialogResult) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val preview = result.response?.take(140).orEmpty()
+        val event = DialogResponseGeneratedEvent(
+            DialogResponseGeneratedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.NPC,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                result.status.name,
+                preview,
+                target.directAddress(),
+                target.explicitConversation(),
+                target.triggerReason(),
+                mapOf("source" to "DialogManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishDialogSessionEnded(player: Player, npc: AINPC, endReason: String) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = DialogSessionEndedEvent(
+            DialogSessionEndedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                endReason,
+                mapOf("source" to "NPCChatListener")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 
     companion object {

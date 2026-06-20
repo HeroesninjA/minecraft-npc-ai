@@ -17,3 +17,7 @@ Aceasta categorie acopera sursele externe, materialele brute si documentele isto
 ## Regula
 
 Referintele nu sunt specificatii de implementare. Daca o idee devine decizie tehnica, trebuie mutata sau rezumata intr-un document canonic din categoria potrivita.
+
+## Relatii
+
+Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.

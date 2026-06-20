@@ -3,7 +3,13 @@ package ro.ainpc.story
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
+import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.story.StoryEventRecordedEvent
+import ro.ainpc.api.events.story.StoryEventRecordedEventPayload
+import ro.ainpc.api.events.story.StoryStateChangedEvent
+import ro.ainpc.api.events.story.StoryStateChangedEventPayload
 import ro.ainpc.database.DatabaseManager
 import ro.ainpc.world.StoryMode
 import java.lang.reflect.Type
@@ -13,22 +19,26 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.util.LinkedHashMap
 import java.util.Optional
+import java.util.UUID
 import java.util.logging.Logger
 
 class StoryStateService {
     private val databaseManager: DatabaseManager?
     private val logger: Logger
     private val gson: Gson
+    private val plugin: AINPCPlugin?
 
     constructor(plugin: AINPCPlugin?) : this(
         if (plugin != null) plugin.databaseManager else null,
-        if (plugin != null) plugin.logger else null
+        if (plugin != null) plugin.logger else null,
+        plugin
     )
 
-    internal constructor(databaseManager: DatabaseManager?, logger: Logger?) {
+    internal constructor(databaseManager: DatabaseManager?, logger: Logger?, plugin: AINPCPlugin? = null) {
         this.databaseManager = databaseManager
         this.logger = logger ?: Logger.getLogger(StoryStateService::class.java.name)
         this.gson = Gson()
+        this.plugin = plugin
     }
 
     @Throws(SQLException::class)
@@ -63,6 +73,7 @@ class StoryStateService {
         source: String?
     ): RegionStoryState {
         val normalizedRegionId = requireId(regionId, "regionId")
+        val previousState = runCatching { getRegionState(normalizedRegionId).orElse(null) }.getOrNull()
         val now = now()
         val sql = """
             INSERT INTO region_story_state (
@@ -99,7 +110,7 @@ class StoryStateService {
             statement.executeUpdate()
         }
 
-        return RegionStoryState(
+        val currentState = RegionStoryState(
             normalizedRegionId,
             normalizedMode,
             normalizedStateKey,
@@ -110,6 +121,20 @@ class StoryStateService {
             normalizedUpdatedBy,
             normalizedSource
         )
+        publishStoryStateChanged(
+            "region",
+            normalizedRegionId,
+            normalizedRegionId,
+            "",
+            previousState,
+            currentState,
+            normalizedUpdatedBy,
+            normalizedSource,
+            mapOf(
+                "regionId" to normalizedRegionId
+            )
+        )
+        return currentState
     }
 
     @Throws(SQLException::class)
@@ -143,6 +168,7 @@ class StoryStateService {
         source: String?
     ): PlaceStoryState {
         val normalizedPlaceId = requireId(placeId, "placeId")
+        val previousState = runCatching { getPlaceState(normalizedPlaceId).orElse(null) }.getOrNull()
         val now = now()
         val sql = """
             INSERT INTO place_story_state (
@@ -176,7 +202,7 @@ class StoryStateService {
             statement.executeUpdate()
         }
 
-        return PlaceStoryState(
+        val currentState = PlaceStoryState(
             normalizedPlaceId,
             normalizedRegionId,
             normalizedStateKey,
@@ -186,6 +212,21 @@ class StoryStateService {
             normalizedUpdatedBy,
             normalizedSource
         )
+        publishStoryStateChanged(
+            "place",
+            normalizedPlaceId,
+            normalizedRegionId,
+            normalizedPlaceId,
+            previousState,
+            currentState,
+            normalizedUpdatedBy,
+            normalizedSource,
+            mapOf(
+                "placeId" to normalizedPlaceId,
+                "regionId" to normalizedRegionId
+            )
+        )
+        return currentState
     }
 
     @Throws(SQLException::class)
@@ -252,7 +293,7 @@ class StoryStateService {
             }
         }
 
-        return StoryEvent(
+        val storyEvent = StoryEvent(
             id,
             normalizedScopeType,
             normalizedScopeId,
@@ -269,6 +310,14 @@ class StoryStateService {
             normalizedNpcId,
             createdAt
         )
+        publishStoryEventRecorded(
+            storyEvent,
+            mapOf(
+                "scopeType" to normalizedScopeType,
+                "scopeId" to normalizedScopeId
+            )
+        )
+        return storyEvent
     }
 
     @Throws(SQLException::class)
@@ -443,6 +492,99 @@ class StoryStateService {
     }
 
     private fun now(): Long = System.currentTimeMillis()
+
+    private fun publishStoryStateChanged(
+        scopeType: String,
+        scopeId: String,
+        regionId: String,
+        placeId: String,
+        previousState: Any?,
+        currentState: Any?,
+        updatedBy: String,
+        origin: String,
+        metadata: Map<String, String>
+    ) {
+        if (plugin == null || !plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+        if (currentState == null) {
+            return
+        }
+
+        val changed = when {
+            previousState == null -> true
+            previousState is RegionStoryState && currentState is RegionStoryState ->
+                previousState.stateKey() != currentState.stateKey() ||
+                    previousState.storyMode() != currentState.storyMode() ||
+                    previousState.storyPool() != currentState.storyPool() ||
+                    previousState.variables() != currentState.variables() ||
+                    previousState.updatedBy() != currentState.updatedBy() ||
+                    previousState.source() != currentState.source()
+
+            previousState is PlaceStoryState && currentState is PlaceStoryState ->
+                previousState.stateKey() != currentState.stateKey() ||
+                    previousState.regionId() != currentState.regionId() ||
+                    previousState.variables() != currentState.variables() ||
+                    previousState.updatedBy() != currentState.updatedBy() ||
+                    previousState.source() != currentState.source()
+
+            else -> true
+        }
+        if (!changed) {
+            return
+        }
+
+        Bukkit.getPluginManager().callEvent(
+            StoryStateChangedEvent(
+                StoryStateChangedEventPayload(
+                    UUID.randomUUID(),
+                    now(),
+                    AINPCEventSource.SYSTEM,
+                    scopeType,
+                    scopeId,
+                    regionId,
+                    placeId,
+                    if (previousState is RegionStoryState) previousState.stateKey() else if (previousState is PlaceStoryState) previousState.stateKey() else "",
+                    if (currentState is RegionStoryState) currentState.stateKey() else if (currentState is PlaceStoryState) currentState.stateKey() else "",
+                    if (currentState is RegionStoryState) currentState.storyMode().id else StoryMode.EVOLUTIVE.id,
+                    updatedBy,
+                    origin,
+                    if (currentState is RegionStoryState) currentState.storyPool() else null,
+                    metadata
+                )
+            )
+        )
+    }
+
+    private fun publishStoryEventRecorded(storyEvent: StoryEvent, metadata: Map<String, String>) {
+        if (plugin == null || !plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        Bukkit.getPluginManager().callEvent(
+            StoryEventRecordedEvent(
+                StoryEventRecordedEventPayload(
+                    UUID.randomUUID(),
+                    now(),
+                    AINPCEventSource.SYSTEM,
+                    storyEvent.id(),
+                    storyEvent.scopeType(),
+                    storyEvent.scopeId(),
+                    storyEvent.regionId(),
+                    storyEvent.placeId(),
+                    storyEvent.eventType(),
+                    storyEvent.eventKey(),
+                    storyEvent.title(),
+                    storyEvent.description(),
+                    storyEvent.actorType(),
+                    storyEvent.actorId(),
+                    storyEvent.playerUuid(),
+                    storyEvent.npcId(),
+                    metadata
+                )
+            )
+        )
+    }
 
     companion object {
         private val STRING_MAP_TYPE: Type = object : TypeToken<LinkedHashMap<String, String>>() {}.type

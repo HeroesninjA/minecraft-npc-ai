@@ -38,6 +38,17 @@ class ProgressionFilterTest {
     }
 
     @Test
+    fun matchesCompletedStoredProgressionByStatusAlias() {
+        val progression = completedStoredProgression()
+
+        assertTrue(ProgressionFilter.matchesStored(progression, "completed"))
+        assertTrue(ProgressionFilter.matchesStored(progression, "complete"))
+        assertTrue(ProgressionFilter.matchesStored(progression, "completat"))
+        assertTrue(ProgressionFilter.matchesStored(progression, "archived"))
+        assertFalse(ProgressionFilter.matchesStored(progression, "active"))
+    }
+
+    @Test
     fun matchesDutyProgressionsByGenericMetadata() {
         val definition = ProgressionDefinition(
             "medieval:npc_duties:D01", "medieval", "npc_duties", "duty", "D01", "medieval:D01", "D01",
@@ -130,6 +141,15 @@ class ProgressionFilterTest {
             "player-1", "medieval:village_contracts:C02", "medieval", "village_contracts", "contract", "side",
             "investigation", "TRADE_DEAL", "C02", "medieval:C02", "C02", "active", 100L, 0L,
             "MARKET_CHECK", "MARKET_CHECK", "{}", "{}", 150L, true, true,
+            "Contracte de sat", "contract", "contracte", "player_quests"
+        )
+    }
+
+    private fun completedStoredProgression(): StoredProgression {
+        return StoredProgression(
+            "player-2", "medieval:village_contracts:C02", "medieval", "village_contracts", "contract", "side",
+            "investigation", "TRADE_DEAL", "C02", "medieval:C02", "C02", "completed", 100L, 150L,
+            "RETURN", "RETURN", "{}", "{}", 180L, false, true,
             "Contracte de sat", "contract", "contracte", "player_quests"
         )
     }

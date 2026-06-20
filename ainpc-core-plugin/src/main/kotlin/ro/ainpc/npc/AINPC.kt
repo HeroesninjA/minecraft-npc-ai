@@ -376,19 +376,14 @@ class AINPC(val plugin: AINPCPlugin?) {
     companion object {
         private val LEGACY_SERIALIZER: LegacyComponentSerializer = LegacyComponentSerializer.legacySection()
 
-        @JvmField
         val PDC_MANAGED_KEY: String = "npc_managed"
 
-        @JvmField
         val PDC_DATABASE_ID_KEY: String = "npc_database_id"
 
-        @JvmField
         val PDC_UUID_KEY: String = "npc_uuid"
 
-        @JvmField
         val PDC_NAME_KEY: String = "npc_name"
 
-        @JvmField
         val PDC_SOURCE_KEY: String = "npc_source_key"
     }
 }

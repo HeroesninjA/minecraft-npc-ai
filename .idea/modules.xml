@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-api/ainpc-parent.ainpc-api.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-api/ainpc-parent.ainpc-api.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-api/ainpc-parent.ainpc-api.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-api/ainpc-parent.ainpc-api.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-core-plugin/ainpc-parent.ainpc-core-plugin.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ainpc-scenario-medieval/ainpc-parent.ainpc-scenario-medieval.main.iml" />

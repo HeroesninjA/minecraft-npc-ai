@@ -66,11 +66,11 @@ Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru
 | `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-3.md` | Arhivat; retete concrete pentru Gradle Kotlin, conversii si interop |
 | `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-4.md` | Arhivat; harta pe pachetele reale din repo |
 | `arhiva/kotlin-migration/conversie-java-la-kotlin-partea-5.md` | Arhivat; tracking initial, teste, JAR audit, smoke si rollback |
-| `rezumat-conversie-java-la-kotlin.md` | Creat ca rezumat al celor 5 parti |
+| `arhiva/kotlin-migration/README.md` | Istoric pentru rezumatul migrarii Kotlin |
 | `kotlin-style-guide.md` | Creat ca document de stil Kotlin pentru proiect |
 | `kotlin-interop-api-addonuri.md` | Creat ca document de compatibilitate Java/API/addonuri |
 | `kotlin-paper-packaging-si-smoke.md` | Creat ca runbook pentru runtime Kotlin, JAR audit si Paper smoke |
-| `kotlin-migration-tracker.md` | Creat ca tracker operational pentru slice-urile Kotlin |
+| `arhiva/kotlin-migration/README.md` | Istoric pentru trackerul operational Kotlin |
 | `kotlin-code-review-checklist.md` | Creat ca checklist de review pentru schimbari Kotlin |
 | `kotlin-coroutines-paper-policy.md` | Creat ca politica pentru coroutine in context Paper |
 | `arhiva/kotlin-migration/kotlin-gradle-activation-plan.md` | Arhivat; plan exact pentru activarea Kotlin in Gradle |

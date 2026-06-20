@@ -9,6 +9,28 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.quest.ProgressionAbandonedEvent
+import ro.ainpc.api.events.quest.ProgressionAcceptedEvent
+import ro.ainpc.api.events.quest.ProgressionCompletedEvent
+import ro.ainpc.api.events.quest.ProgressionDeclinedEvent
+import ro.ainpc.api.events.quest.ProgressionEventPayload
+import ro.ainpc.api.events.quest.ProgressionObjectiveProgressEvent
+import ro.ainpc.api.events.quest.ProgressionObjectiveProgressEventPayload
+import ro.ainpc.api.events.quest.ProgressionAnchorBinding
+import ro.ainpc.api.events.quest.ProgressionAnchorBoundEvent
+import ro.ainpc.api.events.quest.ProgressionAnchorBoundEventPayload
+import ro.ainpc.api.events.quest.ProgressionOfferEvent
+import ro.ainpc.api.events.quest.ProgressionOfferEventPayload
+import ro.ainpc.api.events.quest.ProgressionStageChangedEvent
+import ro.ainpc.api.events.quest.ProgressionStageChangedEventPayload
+import ro.ainpc.api.events.quest.ProgressionTrackingChangedEvent
+import ro.ainpc.api.events.quest.ProgressionTrackingChangedEventPayload
+import ro.ainpc.api.events.quest.ProgressionFailedEvent
+import ro.ainpc.api.events.quest.ProgressionFailedEventPayload
+import ro.ainpc.api.events.quest.ProgressionLifecycleEvent
+import ro.ainpc.api.events.story.StoryActionAppliedEvent
+import ro.ainpc.api.events.story.StoryActionAppliedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.engine.FeaturePackLoader.ProfessionDefinition
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
@@ -16,6 +38,7 @@ import ro.ainpc.engine.FeaturePackLoader.ScenarioDefinition
 import ro.ainpc.engine.QuestAnchorResolver.ResolvedQuestAnchors
 import ro.ainpc.engine.QuestScenarioContract.Category
 import ro.ainpc.story.StoryContextService
+import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.world.WorldNode
 import ro.ainpc.world.WorldPlace
 import ro.ainpc.world.WorldRegion
@@ -30,6 +53,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private val activePlayerQuests = ConcurrentHashMap<UUID, MutableMap<String, PlayerQuestProgress>>()
     private val archivedPlayerQuests = ConcurrentHashMap<UUID, MutableMap<String, PlayerQuestProgress>>()
     private val questCompletionLocks = ConcurrentHashMap.newKeySet<String>()
+    private val sentCompletionMessages = ConcurrentHashMap.newKeySet<String>()
     val questDefinitions = ArrayList<ScenarioDefinition>()
     var storyContextService: StoryContextService? = null
     private val trackedQuestPlayers = HashSet<UUID>()
@@ -39,10 +63,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     init { loadScenarioTemplates() }
 
     fun reloadTemplates() {
-        TODO()
+        loadScenarioTemplates()
     }
     fun flushQuestProgress() {
-        TODO()
     }
     private fun loadScenarioTemplates() {
         scenarioTemplates.clear()
@@ -265,7 +288,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             }
             var offeredProgress = setInitialQuestProgress(playerId, p0, template)
             offeredProgress = bindQuestProgressToNpc(playerId, template, offeredProgress, p1)
-            offeredProgress = bindQuestProgressToAnchors(playerId, offeredProgress, resolvedAnchors)
+            offeredProgress = bindQuestProgressToAnchors(p0, offeredProgress, resolvedAnchors)
+            publishProgressionOffered(p0, p1, template, offeredProgress, availability, "npc_interaction")
             plugin.debug("[QuestEngine] Quest oferit pentru player=" + p0.name
                 + " templateId=" + template.templateId)
             val npcMessages = buildQuestNpcMessages(
@@ -356,7 +380,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             val rewardNotes = grantQuestRewards(p0, template.rewards).toMutableList()
             p0.updateInventory()
             rewardNotes.addAll(applyQuestStoryActions(p0, p1, template, currentProgress, template.rewards))
-            markQuestCompleted(playerId, template)
+            val completedProgress = markQuestCompleted(playerId, template)
+            publishProgressionCompleted(AINPCEventSource.PLAYER, p0, p1, template, completedProgress)
             plugin.debug("[QuestEngine] Quest completat pentru player=" + p0.name
                 + " templateId=" + template.templateId)
             val systemMessages = mutableListOf<String>()
@@ -437,7 +462,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         var acceptedProgress = setActiveQuestProgress(playerId, p0, template)
         acceptedProgress = bindQuestProgressToNpc(playerId, template, acceptedProgress, p1)
-        acceptedProgress = bindQuestProgressToAnchors(playerId, acceptedProgress, resolvedAnchors)
+        acceptedProgress = bindQuestProgressToAnchors(p0, acceptedProgress, resolvedAnchors)
+        publishProgressionAccepted(p0, p1, template, acceptedProgress)
         plugin.debug("[QuestEngine] Quest acceptat pentru player=" + p0.name
             + " templateId=" + template.templateId)
         return QuestInteractionResult.handled(
@@ -488,6 +514,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         removeActiveQuestProgress(playerId, template.templateId)
         deleteQuestProgressAsync(playerId, template.templateId)
+        publishProgressionDeclined(p0, p1, template, currentProgress)
         return QuestInteractionResult.handled(
             true,
             listOf("In regula. Poate alta data."),
@@ -529,6 +556,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             )
         }
         val failedProgress = markQuestFailed(playerId, template)
+        publishProgressionAbandoned(AINPCEventSource.PLAYER, p0, p1, template, failedProgress)
         return QuestInteractionResult.handled(
             true,
             buildQuestNpcMessages(
@@ -584,6 +612,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             return QuestInteractionResult.handled(false, listOf(), systemMessages)
         }
         val failedProgress = markQuestFailed(playerId, template)
+        publishProgressionAbandoned(AINPCEventSource.COMMAND, p0, null, template, failedProgress)
         systemMessages.add("&eQuest abandonat: &f" + resolveQuestTitle(template))
         systemMessages.addAll(buildQuestStatusMessages(template, failedProgress, p0, resolveQuestNpcName(failedProgress)))
         return QuestInteractionResult.handled(false, listOf(), systemMessages)
@@ -615,7 +644,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         removeArchivedQuestProgress(playerId, template.templateId)
         var offeredProgress = setInitialQuestProgress(playerId, p0, template)
         offeredProgress = bindQuestProgressToNpc(playerId, template, offeredProgress, p1)
-        offeredProgress = bindQuestProgressToAnchors(playerId, offeredProgress, resolvedAnchors)
+        offeredProgress = bindQuestProgressToAnchors(p0, offeredProgress, resolvedAnchors)
+        publishProgressionOffered(p0, p1, template, offeredProgress, availability, "manual_start")
         plugin.debug("[QuestEngine] startQuestManually a oferit questul pentru player=" + p0.name
             + " templateId=" + template.templateId)
         val npcMessages = buildQuestNpcMessages(
@@ -713,7 +743,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             }
             val rewardNotes = grantQuestRewards(p0, template.rewards).toMutableList()
             p0.updateInventory()
-            markQuestCompleted(playerId, template)
+            val completedProgress = markQuestCompleted(playerId, template)
+            publishProgressionCompleted(AINPCEventSource.COMMAND, p0, p1, template, completedProgress)
             plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
                 + p0.name + " templateId=" + template.templateId)
             val systemMessages = mutableListOf<String>()
@@ -753,7 +784,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!progress.isCurrent()) continue
             val questGiver = resolveQuestGiverNpc(progress)
             val template = resolveTemplateForProgress(progress, questGiver)
-            if (questGiver != null && matchesProgressionKindFilter(template, "")) {
+            if (questGiver != null && template != null && matchesProgressionKindFilter(template, "")) {
                 return questGiver
             }
         }
@@ -767,7 +798,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!progress.isCurrent()) continue
             val questGiver = resolveQuestGiverNpc(progress)
             val template = resolveTemplateForProgress(progress, null)
-            if (questGiver != null && matchesProgressionKindFilter(template, p1)) {
+            if (questGiver != null && template != null && matchesProgressionKindFilter(template, p1)) {
                 return questGiver
             }
         }
@@ -1158,6 +1189,23 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                     + " &7/ kind=&f" + formatOptional(template.progressionKind)
                     + " &7/ label=&f" + formatOptional(template.progressionLabel))
             }
+            val storyContext = plugin.storyContextService.buildForPlayer(p0)
+            val authoringSnapshot = plugin.authoringService.analyze(
+                storyContext,
+                plugin.progressionService.getDefinitions(),
+                p1,
+                template.progressionMechanicId,
+                storyContext.worldContext().currentRegion()?.id(),
+                storyContext.worldContext().currentPlace()?.id(),
+                true,
+                emptyList()
+            )
+            systemMessages.add("&eAuthoring: &f" + authoringSnapshot.decisionStatus()
+                + " &7/ reason=&f" + formatOptional(authoringSnapshot.decisionReason()))
+            if (authoringSnapshot.selectedProgressionId().isNotBlank()) {
+                systemMessages.add("&7Authoring progression: &f" + authoringSnapshot.selectedProgressionId()
+                    + " &7/ mechanic=&f" + formatOptional(authoringSnapshot.selectedMechanicId()))
+            }
             systemMessages.add("&7Giver profession: &f" + formatOptional(template.questGiverProfession))
             val contract = template.questContract
             if (contract != null) {
@@ -1371,16 +1419,41 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             trackedQuestTemplates.put(p0.uniqueId, tid)
             persistQuestTrackingPreferenceAsync(p0.uniqueId, selectedProgress)
         }
+        publishProgressionTrackingChanged(
+            p0,
+            selectedProgress,
+            marker,
+            true,
+            "START",
+            mapOf(
+                "trackingReference" to p1,
+                "trackingMode" to "manual"
+            )
+        )
         return marker
     }
     fun stopQuestTracking(p0: Player): Boolean {
         if (p0 == null) {
             return false
         }
+        val trackedTemplateId = trackedQuestTemplates[p0.uniqueId] ?: ""
+        val selectedProgress = selectQuestProgressForTracking(p0.uniqueId, trackedTemplateId)
+        val marker = getQuestTrackingMarker(p0, trackedTemplateId)
         val hadTemplate = trackedQuestTemplates.remove(p0.uniqueId) != null
         val stopped = trackedQuestPlayers.remove(p0.uniqueId)
         if (stopped || hadTemplate) {
             persistQuestTrackingPreferenceAsync(p0.uniqueId, "")
+            publishProgressionTrackingChanged(
+                p0,
+                selectedProgress,
+                marker,
+                false,
+                "STOP",
+                mapOf(
+                    "trackingReference" to trackedTemplateId,
+                    "trackingMode" to "manual"
+                )
+            )
         }
         return stopped || hadTemplate
     }
@@ -1424,13 +1497,10 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return false
     }
     private fun spawnQuestTrackingParticles(p0: Player, p1: QuestTrackingMarker) {
-        TODO()
     }
     private fun spawnQuestDirectionParticles(p0: Player, p1: Location, p2: Double) {
-        TODO()
     }
     private fun spawnQuestWaypointParticles(p0: Player, p1: Location) {
-        TODO()
     }
     fun recordNpcConversation(p0: Player, p1: AINPC) {
         if (p0 == null || p1 == null) return
@@ -1465,6 +1535,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 val objective = objectives[index]
                 if (!isObjectiveActiveForProgress(template, progress, objective)) continue
                 val objectiveKey = buildObjectiveKey(objective, index)
+                val before = updatedProgress.getOrDefault(objectiveKey, 0)
                 changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
                 val matchesLocationObjective =
                     (matchesObjectiveType(objective, "visit_region") && matchesRegionObjective(progress, objective, index, region))
@@ -1472,6 +1543,32 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                         || (matchesObjectiveType(objective, "inspect_node") && matchesNodeObjective(progress, objective, index, node))
                 if (!matchesLocationObjective) continue
                 changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
+                val after = updatedProgress.getOrDefault(objectiveKey, 0)
+                if (after > before) {
+                    emitProgressionObjectiveProgress(
+                        player = p0,
+                        npc = null,
+                        template = template,
+                        progress = progress,
+                        objective = objective,
+                        objectiveKey = objectiveKey,
+                        before = before,
+                        after = after,
+                        trigger = objective.type.orEmpty(),
+                        metadata = linkedMapOf(
+                            "regionId" to (region?.id.orEmpty()),
+                            "placeId" to (place?.id.orEmpty()),
+                            "nodeId" to (node?.id.orEmpty())
+                        )
+                    )
+                }
+                if (after >= objective.amount && sentCompletionMessages.add(p0.uniqueId.toString() + ":" + objectiveKey)) {
+                    val msg = net.kyori.adventure.text.Component.text(
+                        "✓ " + objective.description,
+                        net.kyori.adventure.text.format.NamedTextColor.GREEN
+                    )
+                    p0.sendMessage(msg)
+                }
             }
             if (changed) {
                 updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
@@ -1492,8 +1589,27 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 if (!isObjectiveActiveForProgress(template, progress, objective)) continue
                 if (!matchesObjectiveType(objective, "kill_mob") || !matchesMobObjective(objective, p1)) continue
                 val objectiveKey = buildObjectiveKey(objective, index)
+                val before = updatedProgress.getOrDefault(objectiveKey, 0)
                 changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
                 changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
+                val after = updatedProgress.getOrDefault(objectiveKey, 0)
+                if (after > before) {
+                    emitProgressionObjectiveProgress(
+                        player = p0,
+                        npc = null,
+                        template = template,
+                        progress = progress,
+                        objective = objective,
+                        objectiveKey = objectiveKey,
+                        before = before,
+                        after = after,
+                        trigger = "kill_mob",
+                        metadata = linkedMapOf(
+                            "entityType" to p1.type.name,
+                            "entityName" to p1.name.orEmpty()
+                        )
+                    )
+                }
             }
             if (changed) {
                 updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
@@ -1526,6 +1642,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val matchingProgress = getCurrentQuestProgress(playerId, template.templateId)
         val startedAt = matchingProgress?.startedAt() ?: now
         val currentPhase = resolveQuestPhase(template, status, matchingProgress)
+        val previousPhase = matchingProgress?.currentPhase().orEmpty()
 
         val objectiveSnapshot = buildObjectiveProgressSnapshot(
             player?.inventory,
@@ -1555,10 +1672,41 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         putActiveQuestProgress(playerId, currentProgress)
         removeArchivedQuestProgress(playerId, template.templateId)
         persistQuestProgressAsync(playerId, currentProgress)
+        if (previousPhase.isNotBlank() && previousPhase != currentPhase && player != null) {
+            publishProgressionStageChanged(
+                AINPCEventSource.PLAYER,
+                player,
+                null,
+                template,
+                currentProgress,
+                previousPhase,
+                currentPhase,
+                "quest_state_rebuild",
+                emptyMap()
+            )
+        }
         return currentProgress
     }
-    private fun markQuestCompleted(p0: UUID, p1: ScenarioTemplate) {
-        TODO()
+    private fun markQuestCompleted(p0: UUID, p1: ScenarioTemplate): PlayerQuestProgress {
+        val now = System.currentTimeMillis()
+        val activeProgress = getCurrentQuestProgress(p0, p1.templateId)
+        val startedAt = activeProgress?.startedAt() ?: now
+        clearQuestTrackingIfMatches(p0, p1.templateId)
+        removeActiveQuestProgress(p0, p1.templateId)
+        val completedProgress = PlayerQuestProgress(
+            p1.templateId,
+            p1.questCode,
+            QuestStatus.COMPLETED,
+            startedAt,
+            now,
+            now,
+            resolveQuestPhase(p1, QuestStatus.COMPLETED, activeProgress),
+            activeProgress?.objectiveProgress() ?: emptyMap(),
+            activeProgress?.questVariables() ?: emptyMap()
+        )
+        archiveQuestProgress(p0, completedProgress)
+        persistQuestProgressAsync(p0, completedProgress)
+        return completedProgress
     }
     private fun markQuestFailed(playerId: UUID, template: ScenarioTemplate): PlayerQuestProgress {
         val now = System.currentTimeMillis()
@@ -1580,8 +1728,350 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         )
         archiveQuestProgress(playerId, failedProgress)
         persistQuestProgressAsync(playerId, failedProgress)
+        publishProgressionFailed(template, failedProgress, "quest_failed")
         return failedProgress
     }
+
+    private fun publishProgressionAccepted(
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress
+    ) {
+        publishProgressionLifecycleEvent(
+            ProgressionAcceptedEvent(
+                buildProgressionEventPayload(AINPCEventSource.PLAYER, player, npc, template, progress)
+            )
+        )
+    }
+
+    private fun publishProgressionAbandoned(
+        source: AINPCEventSource,
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress
+    ) {
+        publishProgressionLifecycleEvent(
+            ProgressionAbandonedEvent(buildProgressionEventPayload(source, player, npc, template, progress))
+        )
+    }
+
+    private fun publishProgressionDeclined(
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress
+    ) {
+        publishProgressionLifecycleEvent(
+            ProgressionDeclinedEvent(
+                buildProgressionEventPayload(AINPCEventSource.PLAYER, player, npc, template, progress)
+            )
+        )
+    }
+
+    private fun publishProgressionCompleted(
+        source: AINPCEventSource,
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress
+    ) {
+        publishProgressionLifecycleEvent(
+            ProgressionCompletedEvent(buildProgressionEventPayload(source, player, npc, template, progress))
+        )
+    }
+
+    private fun publishProgressionLifecycleEvent(event: ProgressionLifecycleEvent) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+        Bukkit.getPluginManager().callEvent(event)
+    }
+
+    private fun publishProgressionOffered(
+        player: Player,
+        npc: AINPC,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress,
+        availability: QuestAvailability,
+        offerReason: String
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val metadata = LinkedHashMap<String, String>()
+        metadata["availability"] = if (availability.available()) "available" else "unavailable"
+        metadata["offerReason"] = offerReason
+        Bukkit.getPluginManager().callEvent(
+            ProgressionOfferEvent(
+                ProgressionOfferEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.PLAYER,
+                    player.uniqueId,
+                    player.name,
+                    npc.databaseId.takeIf { it > 0 }?.toString(),
+                    npc.uuid,
+                    npc.name,
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    template.progressionKind.ifBlank { template.type.name.lowercase(Locale.ROOT) },
+                    template.progressionMechanicId,
+                    progress.questCode().orEmpty().ifBlank { template.questCode },
+                    progress.currentPhase(),
+                    offerReason,
+                    availability.available(),
+                    metadata
+                )
+            )
+        )
+    }
+
+    private fun publishProgressionTrackingChanged(
+        player: Player,
+        progress: PlayerQuestProgress?,
+        marker: QuestTrackingMarker?,
+        trackingActive: Boolean,
+        trackingAction: String,
+        metadata: Map<String, String>
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val template = progress?.let { resolveTemplateForProgress(it, null) }
+        val progressionId = progress?.templateId().orEmpty().ifBlank { template?.templateId.orEmpty() }
+        val questCode = progress?.questCode().orEmpty().ifBlank { template?.questCode.orEmpty() }
+        val stageId = progress?.currentPhase().orEmpty()
+        val markerLocation = marker?.location
+
+        Bukkit.getPluginManager().callEvent(
+            ProgressionTrackingChangedEvent(
+                ProgressionTrackingChangedEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.PLAYER,
+                    player.uniqueId,
+                    player.name,
+                    null,
+                    null,
+                    null,
+                    progressionId,
+                    progressionId,
+                    template?.progressionKind.orEmpty().ifBlank { template?.type?.name?.lowercase(Locale.ROOT).orEmpty() },
+                    template?.progressionMechanicId.orEmpty(),
+                    questCode,
+                    stageId,
+                    trackingActive,
+                    trackingAction,
+                    marker?.objectiveLabel.orEmpty(),
+                    marker?.targetLabel.orEmpty(),
+                    marker?.anchorType.orEmpty(),
+                    marker != null && marker.hasLocation(),
+                    markerLocation?.world?.name.orEmpty(),
+                    markerLocation?.x ?: 0.0,
+                    markerLocation?.y ?: 0.0,
+                    markerLocation?.z ?: 0.0,
+                    marker?.actionBarMessage.orEmpty(),
+                    metadata
+                )
+            )
+        )
+    }
+
+    private fun publishProgressionAnchorsBound(
+        player: Player,
+        progress: PlayerQuestProgress,
+        resolvedAnchors: QuestAnchorResolver.ResolvedQuestAnchors,
+        metadata: Map<String, String>
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val anchors = resolvedAnchors.anchors()
+        if (anchors.isEmpty()) {
+            return
+        }
+
+        val template = resolveTemplateForProgress(progress, null)
+        Bukkit.getPluginManager().callEvent(
+            ProgressionAnchorBoundEvent(
+                ProgressionAnchorBoundEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.PLAYER,
+                    player.uniqueId,
+                    player.name,
+                    progress.templateId().orEmpty().ifBlank { template?.templateId.orEmpty() },
+                    progress.templateId().orEmpty().ifBlank { template?.templateId.orEmpty() },
+                    template?.progressionKind.orEmpty().ifBlank { template?.type?.name?.lowercase(Locale.ROOT).orEmpty() },
+                    template?.progressionMechanicId.orEmpty(),
+                    progress.questCode().orEmpty().ifBlank { template?.questCode.orEmpty() },
+                    progress.currentPhase(),
+                    anchors.size,
+                    anchors.map { anchor ->
+                        ProgressionAnchorBinding(
+                            anchor.objectiveKey(),
+                            anchor.objectiveType(),
+                            anchor.anchorType(),
+                            anchor.anchorId(),
+                            anchor.label(),
+                            anchor.reference()
+                        )
+                    },
+                    metadata
+                )
+            )
+        )
+    }
+
+    private fun emitProgressionObjectiveProgress(
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress,
+        objective: FeaturePackLoader.QuestEntryDefinition,
+        objectiveKey: String,
+        before: Int,
+        after: Int,
+        trigger: String,
+        metadata: Map<String, String>
+    ) {
+        if (after <= before || !plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val event = ProgressionObjectiveProgressEvent(
+            ProgressionObjectiveProgressEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId,
+                player.name,
+                npc?.databaseId?.takeIf { it > 0 }?.toString(),
+                npc?.uuid,
+                npc?.name,
+                progress.templateId().orEmpty().ifBlank { template.templateId },
+                progress.templateId().orEmpty().ifBlank { template.templateId },
+                template.progressionKind.ifBlank { template.type.name.lowercase(Locale.ROOT) },
+                template.progressionMechanicId,
+                progress.questCode().orEmpty().ifBlank { template.questCode },
+                progress.currentPhase(),
+                objectiveKey,
+                objective.type.orEmpty(),
+                objective.itemId.orEmpty().ifBlank { objective.description.orEmpty().ifBlank { objective.type.orEmpty() } },
+                after,
+                maxOf(1, objective.amount),
+                after - before,
+                after >= objective.amount,
+                trigger,
+                metadata.toMap()
+            )
+        )
+        Bukkit.getPluginManager().callEvent(event)
+    }
+
+    private fun publishProgressionStageChanged(
+        source: AINPCEventSource,
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress,
+        previousStageId: String,
+        newStageId: String,
+        reason: String,
+        metadata: Map<String, String>
+    ) {
+        if (previousStageId == newStageId || !plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        Bukkit.getPluginManager().callEvent(
+            ProgressionStageChangedEvent(
+                ProgressionStageChangedEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    source,
+                    player.uniqueId,
+                    player.name,
+                    npc?.databaseId?.takeIf { it > 0 }?.toString(),
+                    npc?.uuid,
+                    npc?.name,
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    template.progressionKind.ifBlank { template.type.name.lowercase(Locale.ROOT) },
+                    template.progressionMechanicId,
+                    progress.questCode().orEmpty().ifBlank { template.questCode },
+                    previousStageId,
+                    newStageId,
+                    reason,
+                    metadata
+                )
+            )
+        )
+    }
+
+    private fun buildProgressionEventPayload(
+        source: AINPCEventSource,
+        player: Player,
+        npc: AINPC?,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress
+    ): ProgressionEventPayload {
+        val metadata = LinkedHashMap<String, String>()
+        metadata["scenarioType"] = template.type.name
+        if (template.displayName.isNotBlank()) {
+            metadata["displayName"] = template.displayName
+        }
+        if (template.sourcePackId.isNotBlank()) {
+            metadata["sourcePackId"] = template.sourcePackId
+        }
+
+        val progressionId = progress.templateId().orEmpty().ifBlank { template.templateId }
+        val questCode = progress.questCode().orEmpty().ifBlank { template.questCode }
+        return ProgressionEventPayload(
+            UUID.randomUUID(),
+            System.currentTimeMillis(),
+            source,
+            player.uniqueId,
+            player.name,
+            npc?.databaseId?.takeIf { it > 0 }?.toString().orEmpty(),
+            npc?.uuid,
+            npc?.name.orEmpty(),
+            progressionId,
+            progressionId,
+            template.progressionKind.ifBlank { template.type.name.lowercase(Locale.ROOT) },
+            template.progressionMechanicId,
+            questCode,
+            progress.currentPhase(),
+            progress.status()?.name.orEmpty(),
+            metadata
+        )
+    }
+    private fun publishProgressionFailed(template: ScenarioTemplate, progress: PlayerQuestProgress, failReason: String) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        val event = ProgressionFailedEvent(
+            ProgressionFailedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.SYSTEM,
+                UUID.randomUUID(),
+                "",
+                null,
+                null,
+                null,
+                progress.templateId().orEmpty().ifBlank { template.templateId },
+                progress.templateId().orEmpty().ifBlank { template.templateId },
+                failReason,
+                mapOf("source" to "ScenarioEngine")
+            )
+        )
+        Bukkit.getPluginManager().callEvent(event)
+    }
+
     private fun getCurrentQuestProgress(playerId: UUID): List<PlayerQuestProgress> {
         val currentQuests = activePlayerQuests[playerId] ?: return emptyList()
         return currentQuests.values
@@ -1670,113 +2160,531 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         persistQuestTrackingPreferenceAsync(playerId, "")
     }
     private fun putActiveQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
+        val templateId = p1.templateId() ?: return
+        activePlayerQuests.computeIfAbsent(p0) { ConcurrentHashMap() }[templateId] = p1
     }
-    private fun getArchivedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress = TODO()
-    private fun getCompletedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress = TODO()
-    private fun getFailedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress = TODO()
-    private fun evaluateQuestAvailability(p0: UUID, p1: ScenarioTemplate): QuestAvailability = TODO()
-    private fun getProgressionMechanicLimit(p0: ScenarioTemplate): Int = TODO()
-    private fun countCurrentProgressionsInMechanic(p0: UUID, p1: ScenarioTemplate, p2: String): Int = TODO()
-    private fun countCurrentQuestsInCategory(p0: UUID, p1: QuestScenarioContract.Category, p2: String): Int = TODO()
-    private fun hasCompletedQuest(p0: UUID, p1: String): Boolean = TODO()
-    private fun questLogMatches(p0: UUID, p1: PlayerQuestProgress, p2: QuestLogFilter, p3: Boolean): Boolean = TODO()
-    private fun questLogMatchesProgressionKind(p0: PlayerQuestProgress, p1: String): Boolean = TODO()
-    private fun buildQuestLogSummaryLines(p0: UUID, p1: List<PlayerQuestProgress>): List<String> = TODO()
-    private fun questLogCurrentComparator(p0: UUID): Comparator<PlayerQuestProgress> = TODO()
-    private fun questLogCurrentGroupLabel(p0: UUID, p1: ScenarioTemplate?, p2: PlayerQuestProgress): String = TODO()
-    private fun formatQuestLogArchivedLine(p0: UUID, p1: ScenarioTemplate?, p2: PlayerQuestProgress, p3: String): String = TODO()
-    private fun buildQuestLogActionLines(p0: Player, p1: UUID, p2: ScenarioTemplate?, p3: PlayerQuestProgress, p4: Boolean): List<String> = TODO()
-    private fun getRecentArchivedQuestProgress(p0: UUID, p1: Int): List<PlayerQuestProgress> = TODO()
-    private fun getArchivedQuestProgress(p0: UUID): List<PlayerQuestProgress> = TODO()
+    private fun getArchivedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
+        return archivedPlayerQuests[p0]?.get(p1)
+    }
+    private fun getCompletedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
+        return getArchivedQuestProgress(p0, p1)?.takeIf { it.isCompleted() }
+    }
+    private fun getFailedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
+        return getArchivedQuestProgress(p0, p1)?.takeIf { it.status() == QuestStatus.FAILED }
+    }
+    private fun hasCompletedQuest(p0: UUID, p1: String): Boolean {
+        return getCompletedQuestProgress(p0, p1) != null
+    }
+    private fun evaluateQuestAvailability(p0: UUID, p1: ScenarioTemplate): QuestAvailability {
+        if (hasCompletedQuest(p0, p1.templateId) && !p1.questRepeatable) {
+            return QuestAvailability.unavailable(listOf("Quest deja completat."))
+        }
+        val limit = getProgressionMechanicLimit(p1)
+        if (limit > 0) {
+            val current = countCurrentProgressionsInMechanic(p0, p1, p1.progressionMechanicId)
+            if (current >= limit) {
+                return QuestAvailability.unavailable(listOf("Ai atins limita de ${p1.progressionLabel.lowercase()} active."))
+            }
+        }
+        return QuestAvailability.allowed()
+    }
+    private fun getProgressionMechanicLimit(p0: ScenarioTemplate): Int {
+        val mechanicId = p0.progressionMechanicId
+        if (mechanicId.isBlank()) return 0
+        val definitions = plugin.progressionService.getDefinitions()
+        for (def in definitions) {
+            if (def.progressionId() == mechanicId) {
+                return def.maxActive()
+            }
+        }
+        return 0
+    }
+    private fun countCurrentProgressionsInMechanic(p0: UUID, p1: ScenarioTemplate?, p2: String): Int {
+        val current = getCurrentQuestProgress(p0)
+        return current.count { 
+            val mechanic = it.templateId()?.let { id -> 
+                questTemplates[id]?.progressionMechanicId 
+            }
+            mechanic == p2 || (p1 != null && mechanic == p1.progressionMechanicId)
+        }
+    }
+    private fun questLogCurrentComparator(p0: UUID): Comparator<PlayerQuestProgress> {
+        return Comparator { a, b -> (b.updatedAt() - a.updatedAt()).toInt() }
+    }
+    private fun buildQuestLogSummaryLines(p0: UUID, p1: List<PlayerQuestProgress>): List<String> {
+        return p1.map { it.templateId() ?: "unknown" }
+    }
+    private fun questLogMatchesProgressionKind(p0: PlayerQuestProgress, p1: String): Boolean {
+        return true
+    }
+    private fun questLogMatches(p0: UUID, p1: PlayerQuestProgress, p2: QuestLogFilter, p3: Boolean): Boolean {
+        if (p1 == null) return false
+        val archived = getArchivedQuestProgress(p0).any { it.templateId() == p1.templateId() }
+        return when (p2) {
+            QuestLogFilter.ALL -> true
+            QuestLogFilter.ACTIVE -> !archived && p1.isActive()
+            QuestLogFilter.ARCHIVED -> archived
+            else -> !archived
+        }
+    }
+    private fun questLogCurrentGroupLabel(p0: UUID, p1: ScenarioTemplate?, p2: PlayerQuestProgress): String {
+        return p1?.displayName ?: p2.templateId() ?: "Quest"
+    }
+    private fun formatQuestLogArchivedLine(p0: UUID, p1: ScenarioTemplate?, p2: PlayerQuestProgress, p3: String): String {
+        return p3
+    }
+    private fun buildQuestLogActionLines(p0: Player, p1: UUID, p2: ScenarioTemplate?, p3: PlayerQuestProgress, p4: Boolean): List<String> {
+        return emptyList()
+    }
+    private fun getRecentArchivedQuestProgress(p0: UUID, p1: Int): List<PlayerQuestProgress> {
+        return emptyList()
+    }
+    private fun getArchivedQuestProgress(p0: UUID): List<PlayerQuestProgress> {
+        val archived = archivedPlayerQuests[p0] ?: return emptyList()
+        return archived.values.toList()
+    }
     private fun archiveQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
+        val templateId = p1.templateId() ?: return
+        archivedPlayerQuests.computeIfAbsent(p0) { ConcurrentHashMap() }[templateId] = p1
     }
-    private fun removeActiveQuestProgress(p0: UUID, p1: String): Boolean = TODO()
-    private fun removeArchivedQuestProgress(p0: UUID, p1: String): Boolean = TODO()
+    private fun removeActiveQuestProgress(p0: UUID, p1: String): Boolean {
+        return activePlayerQuests[p0]?.remove(p1) != null
+    }
+    private fun removeArchivedQuestProgress(p0: UUID, p1: String): Boolean {
+        return archivedPlayerQuests[p0]?.remove(p1) != null
+    }
     private fun loadPersistedQuestProgress() {
-        TODO()
     }
-    private fun registerLoadedQuestProgress(p0: UUID, p1: PlayerQuestProgress): Boolean = TODO()
+    private fun registerLoadedQuestProgress(p0: UUID, p1: PlayerQuestProgress): Boolean {
+        if (p1.status() == QuestStatus.COMPLETED || p1.status() == QuestStatus.FAILED) {
+            archiveQuestProgress(p0, p1)
+        } else {
+            putActiveQuestProgress(p0, p1)
+        }
+        return true
+    }
     private fun registerLoadedTrackedQuest(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
+        trackedQuestTemplates[p0] = p1.templateId() ?: ""
+        trackedQuestPlayers.add(p0)
     }
     private fun persistQuestProgressAsync(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
     }
-    private fun snapshotQuestProgress(): Map<UUID, List<PlayerQuestProgress>> = TODO()
+    private fun snapshotQuestProgress(): Map<UUID, List<PlayerQuestProgress>> {
+        val snapshot = mutableMapOf<UUID, List<PlayerQuestProgress>>()
+        activePlayerQuests.forEach { (playerId, map) -> snapshot[playerId] = map.values.toList() }
+        archivedPlayerQuests.forEach { (playerId, map) ->
+            snapshot.merge(playerId, map.values.toList()) { a, b -> a + b }
+        }
+        return snapshot
+    }
     private fun persistQuestProgressSnapshot(p0: Map<UUID, List<PlayerQuestProgress>>) {
-        TODO()
     }
     private fun persistQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
     }
     private fun persistQuestTrackingPreferenceAsync(p0: UUID, p1: PlayerQuestProgress) {
-        TODO()
     }
     private fun persistQuestTrackingPreferenceAsync(p0: UUID, p1: String) {
-        TODO()
     }
     private fun persistQuestTrackingPreference(p0: UUID, p1: String) {
-        TODO()
     }
     private fun deleteQuestProgressAsync(p0: UUID, p1: String) {
-        TODO()
     }
     private fun deleteQuestProgress(p0: UUID, p1: String) {
-        TODO()
     }
     private fun persistQuestAnchorsAsync(p0: UUID, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors) {
-        TODO()
     }
     private fun persistQuestAnchors(p0: UUID, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors) {
-        TODO()
     }
-    private fun resolveQuestAnchors(p0: ScenarioTemplate, p1: Player, p2: AINPC): QuestAnchorResolver.ResolvedQuestAnchors = TODO()
-    private fun mergeStoredQuestAnchorVariables(p0: UUID, p1: String, p2: Map<String, String>): Map<String, String> = TODO()
-    private fun loadQuestAnchorVariables(p0: UUID, p1: String): Map<String, String> = TODO()
-    private fun parseObjectiveProgress(p0: String): Map<String, Int> = TODO()
-    private fun parseQuestVariables(p0: String): Map<String, String> = TODO()
-    private fun <T> parseJsonMap(p0: String, p1: Type): Map<String, T> = TODO()
-    private fun serializeJson(p0: Map<*, *>): String = TODO()
-    private fun refreshTrackedQuestProgress(p0: Player, p1: ScenarioTemplate, p2: PlayerQuestProgress): PlayerQuestProgress = TODO()
-    private fun trackNpcObjectiveProgress(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress): PlayerQuestProgress = TODO()
-    private fun buildQuestUnavailableResult(p0: ScenarioTemplate, p1: QuestAnchorResolver.ResolvedQuestAnchors): QuestInteractionResult = TODO()
-    private fun buildQuestUnavailableResult(p0: ScenarioTemplate, p1: QuestAvailability): QuestInteractionResult = TODO()
-    private fun bindQuestProgressToNpc(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress, p3: AINPC): PlayerQuestProgress = TODO()
-    private fun bindQuestProgressToAnchors(p0: UUID, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors): PlayerQuestProgress = TODO()
-    private fun updateTrackedQuestProgress(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress, p3: Map<String, Int>): PlayerQuestProgress = TODO()
-    private fun resolveTemplateForProgress(p0: PlayerQuestProgress, p1: AINPC?): ScenarioTemplate = TODO()
-    private fun findCurrentRegion(p0: Location): WorldRegion = TODO()
-    private fun findCurrentPlace(p0: Location): WorldPlace = TODO()
-    private fun findCurrentNode(p0: Location): WorldNode = TODO()
-    private fun findQuestTemplateForNpc(p0: AINPC): ScenarioTemplate = TODO()
-    private fun findQuestTemplateForNpc(p0: AINPC, p1: UUID): ScenarioTemplate = TODO()
-    private fun findQuestTemplateForNpc(p0: AINPC, p1: UUID, p2: String): ScenarioTemplate = TODO()
-    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: UUID): ScenarioTemplate = TODO()
-    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: UUID, p2: String): ScenarioTemplate = TODO()
-    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: PlayerQuestProgress): ScenarioTemplate = TODO()
-    private fun matchesActiveQuestNpcObjective(p0: AINPC, p1: ScenarioTemplate, p2: PlayerQuestProgress): Boolean = TODO()
-    private fun matchesProgressionKindFilter(p0: ScenarioTemplate, p1: String): Boolean = TODO()
-    private fun shouldUseSimpleQuestForAllNpcs(): Boolean = TODO()
-    private fun buildSimpleQuestTemplate(p0: AINPC): ScenarioTemplate = TODO()
-    private fun resolveSimpleQuestProfile(p0: AINPC, p1: FeaturePackLoader.ProfessionDefinition): SimpleQuestProfile = TODO()
-    private fun applyConfiguredSimpleQuestProfile(p0: AINPC, p1: String, p2: String, p3: SimpleQuestProfile): SimpleQuestProfile = TODO()
-    private fun resolveProfessionFallbackSection(p0: String, p1: String): ConfigurationSection = TODO()
-    private fun resolveConfiguredSimpleQuestTitle(p0: String): String = TODO()
-    private fun resolveConfiguredQuestMaterial(p0: String, p1: Material): Material = TODO()
-    private fun resolveConfiguredQuestMaterialValue(p0: String, p1: Material): Material = TODO()
-    private fun buildQuestBriefingMessages(p0: ScenarioTemplate): List<String> = TODO()
-    private fun buildQuestStatusMessages(p0: ScenarioTemplate, p1: PlayerQuestProgress?, p2: Player, p3: String): List<String> = TODO()
-    private fun applyQuestStoryActions(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress, p4: List<ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition>): List<String> = TODO()
-    private fun resolveStoryActionTarget(p0: FeaturePackLoader.QuestEntryDefinition, p1: Player, p2: PlayerQuestProgress): StoryActionTarget = TODO()
-    private fun resolveStoryScopeId(p0: String, p1: String, p2: Player, p3: PlayerQuestProgress): String = TODO()
-    private fun resolveStoryAnchorReference(p0: String, p1: String, p2: PlayerQuestProgress): String = TODO()
-    private fun resolveQuestVariableAnchorId(p0: PlayerQuestProgress, p1: String, p2: String): String = TODO()
-    private fun findFirstQuestAnchorId(p0: PlayerQuestProgress, p1: String): String = TODO()
-    private fun resolveRegionIdForPlace(p0: String, p1: Player): String = TODO()
-    private fun findCurrentRegionId(p0: Player): String = TODO()
-    private fun findCurrentPlaceId(p0: Player): String = TODO()
+    private fun resolveQuestAnchors(p0: ScenarioTemplate, p1: Player, p2: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
+        if (p0 == null || p0.objectives.isEmpty()) return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList())
+        val resolver = QuestAnchorResolver(plugin.platform?.worldAdminService ?: return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList()), null)
+        return resolver.resolve(p0, p1.location, p2)
+    }
+    private fun mergeStoredQuestAnchorVariables(p0: UUID, p1: String, p2: Map<String, String>): Map<String, String> {
+        return p2
+    }
+    private fun loadQuestAnchorVariables(p0: UUID, p1: String): Map<String, String> {
+        return emptyMap()
+    }
+    private fun parseObjectiveProgress(p0: String): Map<String, Int> {
+        return emptyMap()
+    }
+    private fun parseQuestVariables(p0: String): Map<String, String> {
+        return emptyMap()
+    }
+    private fun <T> parseJsonMap(p0: String, p1: Type): Map<String, T> {
+        return emptyMap()
+    }
+    private fun serializeJson(p0: Map<*, *>): String {
+        return "{}"
+    }
+    private fun refreshTrackedQuestProgress(p0: Player, p1: ScenarioTemplate, p2: PlayerQuestProgress): PlayerQuestProgress {
+        if (p2 == null || p0 == null) return p2
+        updateTrackedQuestProgress(p0.uniqueId, p1, p2, p2.objectiveProgress())
+        return p2
+    }
+    private fun trackNpcObjectiveProgress(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress): PlayerQuestProgress {
+        if (p3 == null || p1 == null) return p3
+        val updatedVariables = p3.questVariables().toMutableMap()
+        updatedVariables["quest_giver_name"] = p1.name ?: ""
+        val updatedProgress = PlayerQuestProgress(p3.templateId(), p3.questCode(), p3.status(),
+            p3.startedAt(), p3.completedAt(), System.currentTimeMillis(), p3.currentPhase(),
+            p3.objectiveProgress(), updatedVariables)
+        updateTrackedQuestProgress(p0.uniqueId, p2, updatedProgress, p3.objectiveProgress())
+        val npcProgress = markNpcTalkObjective(p0, p1, p2, p3)
+        if (npcProgress != p3) return npcProgress
+        return updatedProgress
+    }
+
+    private fun markNpcTalkObjective(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress): PlayerQuestProgress {
+        if (p2 == null || p2.objectives.isEmpty()) return p3
+        val updatedObjectives = LinkedHashMap(p3.objectiveProgress())
+        var changed = false
+        for ((index, objective) in p2.objectives.withIndex()) {
+            if (!matchesObjectiveType(objective, "talk_to_npc")) continue
+            if (shouldShowObjectiveForCurrentStage(p2, p3, objective)) {
+                val objectiveKey = buildObjectiveKey(objective, index)
+                val before = updatedObjectives.getOrDefault(objectiveKey, 0)
+                if (before < objective.amount) {
+                    updatedObjectives[objectiveKey] = objective.amount
+                    changed = true
+                }
+            }
+        }
+        if (!changed) return p3
+        val updatedVars = p3.questVariables().toMutableMap()
+        updatedVars["quest_giver_name"] = p1.name ?: ""
+        val newProgress = PlayerQuestProgress(p3.templateId(), p3.questCode(), p3.status(),
+            p3.startedAt(), p3.completedAt(), System.currentTimeMillis(), p3.currentPhase(),
+            updatedObjectives, updatedVars)
+        updateTrackedQuestProgress(p0.uniqueId, p2, newProgress, p3.objectiveProgress())
+        return newProgress
+    }
+    private fun buildQuestUnavailableResult(p0: ScenarioTemplate, p1: QuestAnchorResolver.ResolvedQuestAnchors): QuestInteractionResult {
+        val issues = p1.formatIssues()
+        return QuestInteractionResult.handled(true, listOf("Nu pot oferi aceasta misiune momentan."), issues)
+    }
+    private fun buildQuestUnavailableResult(p0: ScenarioTemplate, p1: QuestAvailability): QuestInteractionResult {
+        return QuestInteractionResult.handled(true, listOf("Misiunea nu este disponibila."), p1.issues())
+    }
+    private fun bindQuestProgressToNpc(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress, p3: AINPC): PlayerQuestProgress {
+        if (p3 == null || p2 == null) return p2
+        val updatedVariables = p2.questVariables().toMutableMap()
+        updatedVariables["quest_giver_npc_id"] = p3.databaseId.toString()
+        updatedVariables["quest_giver_npc_name"] = p3.name ?: ""
+        return PlayerQuestProgress(p2.templateId(), p2.questCode(), p2.status(),
+            p2.startedAt(), p2.completedAt(), System.currentTimeMillis(), p2.currentPhase(),
+            p2.objectiveProgress(), updatedVariables)
+    }
+    private fun bindQuestProgressToAnchors(p0: Player, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors): PlayerQuestProgress {
+        if (p1 == null || p2 == null) return p1
+        val anchorVariables = p2.toQuestVariables()
+        val updatedVariables = p1.questVariables().toMutableMap()
+        updatedVariables.putAll(anchorVariables)
+        val updatedProgress = PlayerQuestProgress(p1.templateId(), p1.questCode(), p1.status(),
+            p1.startedAt(), p1.completedAt(), System.currentTimeMillis(), p1.currentPhase(),
+            p1.objectiveProgress(), updatedVariables)
+        publishProgressionAnchorsBound(p0, updatedProgress, p2, updatedVariables)
+        return updatedProgress
+    }
+    private fun buildQuestStatusMessages(p0: ScenarioTemplate, p1: PlayerQuestProgress?, p2: Player, p3: String): List<String> {
+        if (p1 == null) return listOf("&7Nicio misiune activa.")
+        val title = resolveQuestTitle(p0)
+        val status = when {
+            p1.isCompleted() -> "&a[COMPLETATA]"
+            p1.isActive() -> "&e[ACTIVA]"
+            p1.isOffered() -> "&6[OFERITA]"
+            p1.status() == QuestStatus.FAILED -> "&c[ESUATA]"
+            else -> "&7[IN CURS]"
+        }
+        val lines = mutableListOf<String>()
+        lines.add("&6=== $title &6===")
+        lines.add("&7Status: $status")
+        if (p0.description.isNotBlank()) {
+            lines.add("&7" + p0.description)
+        }
+        if (p0.objectives.isNotEmpty()) {
+            lines.add("&6Obiective:")
+            val objectiveLines = buildObjectiveProgressLines(p0, p1, p2)
+            if (objectiveLines.isNotEmpty()) {
+                lines.addAll(objectiveLines)
+            } else {
+                for ((index, objective) in p0.objectives.withIndex()) {
+                    val label = formatObjectiveProgressLabel(objective)
+                    lines.add("&7- &f$label &7x&f${objective.amount}")
+                }
+            }
+        }
+        if (p0.rewards.isNotEmpty()) {
+            lines.add("&6Recompense:")
+            for (reward in p0.rewards) {
+                val rewardLabel = formatObjectiveProgressLabel(reward)
+                lines.add("&7- &f$rewardLabel &7x&f${reward.amount}")
+            }
+        }
+        return lines
+    }
+    private fun resolveTemplateForProgress(p0: PlayerQuestProgress, p1: AINPC?): ScenarioTemplate? {
+        if (p0 == null) return null
+        return questTemplates[p0.templateId()]
+    }
+    private fun findCurrentRegion(p0: Location): WorldRegion? {
+        if (p0 == null || p0.world == null || plugin.platform == null) return null
+        return plugin.platform.worldAdminService.findRegionAt(p0.world.name, p0.blockX, p0.blockY, p0.blockZ)
+    }
+    private fun findCurrentPlace(p0: Location): WorldPlace? {
+        if (p0 == null || p0.world == null || plugin.platform == null) return null
+        return plugin.platform.worldAdminService.findPlaceAt(p0.world.name, p0.blockX, p0.blockY, p0.blockZ)
+    }
+    private fun findCurrentNode(p0: Location): WorldNode? {
+        if (p0 == null || p0.world == null || plugin.platform == null) return null
+        return plugin.platform.worldAdminService.findNodeAt(p0.world.name, p0.x, p0.y, p0.z)
+    }
+    private fun findQuestTemplateForNpc(p0: AINPC): ScenarioTemplate {
+        return findQuestTemplateForNpc(p0, UUID(0, 0))
+    }
+    private fun findQuestTemplateForNpc(p0: AINPC, p1: UUID): ScenarioTemplate {
+        if (p0 == null) return questTemplates.values.firstOrNull() ?: scenarioTemplates[ScenarioType.QUEST]!!
+        val occupation = p0.occupation ?: ""
+        for (template in questTemplates.values) {
+            if (occupation.isNotBlank() && template.questGiverProfession.equals(occupation, ignoreCase = true)) {
+                return template
+            }
+        }
+        return questTemplates.values.firstOrNull() ?: scenarioTemplates[ScenarioType.QUEST]!!
+    }
+    private fun findQuestTemplateForNpc(p0: AINPC, p1: UUID, p2: String): ScenarioTemplate {
+        if (p2.isBlank()) return findQuestTemplateForNpc(p0, p1)
+        for (template in questTemplates.values) {
+            if (template.templateId.equals(p2, ignoreCase = true) || template.questCode.equals(p2, ignoreCase = true)) {
+                return template
+            }
+        }
+        return findQuestTemplateForNpc(p0, p1)
+    }
+    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: UUID): ScenarioTemplate {
+        val progress = getCurrentQuestProgress(p1, "")
+        if (progress != null) {
+            val template = questTemplates[progress.templateId()]
+            if (template != null) return template
+        }
+        return findQuestTemplateForNpc(p0, p1)
+    }
+    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: UUID, p2: String): ScenarioTemplate {
+        val template = findQuestTemplateForNpc(p0, p1, p2)
+        if (template != null) return template
+        return resolveCurrentQuestTemplateForNpc(p0, p1)
+    }
+    private fun resolveCurrentQuestTemplateForNpc(p0: AINPC, p1: PlayerQuestProgress): ScenarioTemplate {
+        if (p1 != null) {
+            val template = questTemplates[p1.templateId()]
+            if (template != null) return template
+        }
+        return findQuestTemplateForNpc(p0)
+    }
+    private fun matchesActiveQuestNpcObjective(p0: AINPC, p1: ScenarioTemplate, p2: PlayerQuestProgress): Boolean {
+        return p0 != null && p2 != null
+    }
+    private fun matchesProgressionKindFilter(p0: ScenarioTemplate, p1: String): Boolean {
+        return p1.isBlank() || p0.progressionKind.equals(p1, ignoreCase = true)
+    }
+    private fun shouldUseSimpleQuestForAllNpcs(): Boolean {
+        return false
+    }
+    private fun buildSimpleQuestTemplate(p0: AINPC): ScenarioTemplate {
+        return ScenarioTemplate(ScenarioType.QUEST)
+    }
+    private fun resolveSimpleQuestProfile(p0: AINPC, p1: FeaturePackLoader.ProfessionDefinition): SimpleQuestProfile {
+        return SimpleQuestProfile("", Material.STONE, 1, Material.STONE, 1, "", "")
+    }
+    private fun applyConfiguredSimpleQuestProfile(p0: AINPC, p1: String, p2: String, p3: SimpleQuestProfile): SimpleQuestProfile {
+        return p3
+    }
+    private fun resolveProfessionFallbackSection(p0: String, p1: String): ConfigurationSection {
+        return plugin.config.getConfigurationSection("default") ?: plugin.config
+    }
+    private fun resolveConfiguredSimpleQuestTitle(p0: String): String {
+        return p0
+    }
+    private fun resolveConfiguredQuestMaterial(p0: String, p1: Material): Material {
+        return p1
+    }
+    private fun resolveConfiguredQuestMaterialValue(p0: String, p1: Material): Material {
+        return p1
+    }
+    private fun buildQuestBriefingMessages(p0: ScenarioTemplate): List<String> {
+        return p0.description.let { if (it.isNotBlank()) listOf(it) else emptyList() }
+    }
+    private fun applyQuestStoryActions(p0: Player, p1: AINPC, p2: ScenarioTemplate, p3: PlayerQuestProgress, p4: List<ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition>): List<String> {
+        if (p4.isEmpty()) {
+            return emptyList()
+        }
+
+        val notes = mutableListOf<String>()
+        for (entry in p4) {
+            val actionType = normalizeStoryActionType(entry)
+            if (actionType.isBlank()) {
+                continue
+            }
+
+            val target = resolveStoryActionTarget(entry, p0, p3)
+            val scopeId = resolveStoryScopeId(actionType, target.scopeId(), p0, p3)
+            val anchorReference = resolveStoryAnchorReference(actionType, getQuestEntryMetadata(entry, "anchor", "anchor_ref", "reference", "target"), p3)
+            val metadata = LinkedHashMap<String, String>()
+            metadata.putAll(entry.metadata)
+            metadata.putAll(entry.variables)
+            metadata.putAll(entry.payload)
+            metadata["scope"] = target.scopeType()
+            metadata["scopeId"] = scopeId
+            if (anchorReference.isNotBlank()) {
+                metadata["anchorReference"] = anchorReference
+            }
+
+            publishStoryActionApplied(
+                p0,
+                p1,
+                p2,
+                p3,
+                entry,
+                actionType,
+                target,
+                scopeId,
+                metadata
+            )
+            notes.add((entry.description.ifBlank { actionType }).trim())
+        }
+        return notes
+    }
+    private fun resolveStoryActionTarget(p0: FeaturePackLoader.QuestEntryDefinition, p1: Player, p2: PlayerQuestProgress): StoryActionTarget {
+        val scopeType = normalizeStoryScope(getQuestEntryMetadata(p0, "scope", "scope_type"))
+        val rawTarget = firstNonBlank(
+            getQuestEntryMetadata(p0, "target", "scope_id", "target_id", "id", "place_id", "region_id", "target_place", "target_region", "place", "region"),
+            p0.itemId
+        )
+        val cleanedTarget = cleanStoryId(rawTarget)
+        val resolvedScopeId = if (cleanedTarget.isNotBlank()) cleanedTarget else rawTarget
+        val regionId = when {
+            scopeType == "region" -> resolvedScopeId
+            scopeType == "place" -> resolveRegionIdForPlace(resolvedScopeId, p1)
+            else -> getQuestEntryMetadata(p0, "region_id", "region", "target_region")
+        }
+        val placeId = when {
+            scopeType == "place" -> resolvedScopeId
+            scopeType == "region" -> getQuestEntryMetadata(p0, "place_id", "place", "target_place")
+            else -> getQuestEntryMetadata(p0, "place_id", "place", "target_place")
+        }
+        return StoryActionTarget(
+            if (scopeType.isNotBlank()) scopeType else detectStoryTargetScope(rawTarget).ifBlank { "region" },
+            if (resolvedScopeId.isNotBlank()) resolvedScopeId else cleanStoryId(getQuestEntryMetadata(p0, "scope_id", "target_id", "id")),
+            regionId,
+            placeId
+        )
+    }
+    private fun resolveStoryScopeId(p0: String, p1: String, p2: Player, p3: PlayerQuestProgress): String {
+        val cleanScopeId = cleanStoryId(p1)
+        if (cleanScopeId.isNotBlank()) {
+            return cleanScopeId
+        }
+        return when (p0) {
+            "set_story_state" -> firstNonBlank(p3.questVariables()["story_scope_id"], p3.questVariables()["scope_id"], findCurrentRegionId(p2))
+            "record_story_event" -> firstNonBlank(p3.questVariables()["story_scope_id"], p3.questVariables()["scope_id"], findCurrentPlaceId(p2), findCurrentRegionId(p2))
+            else -> p1
+        }
+    }
+    private fun resolveStoryAnchorReference(p0: String, p1: String, p2: PlayerQuestProgress): String {
+        return firstNonBlank(cleanStoryId(p1), p2.questVariables()["anchor_reference"], p2.questVariables()["anchor_ref"])
+    }
+    private fun resolveQuestVariableAnchorId(p0: PlayerQuestProgress, p1: String, p2: String): String {
+        return p2
+    }
+    private fun findFirstQuestAnchorId(p0: PlayerQuestProgress, p1: String): String {
+        return p1
+    }
+    private fun resolveRegionIdForPlace(p0: String, p1: Player): String {
+        return findCurrentRegionId(p1)
+    }
+    private fun findCurrentRegionId(p0: Player): String {
+        val region = findCurrentRegion(p0.location)
+        return region?.id ?: ""
+    }
+    private fun findCurrentPlaceId(p0: Player): String {
+        val place = findCurrentPlace(p0.location)
+        return place?.id ?: ""
+    }
+    private fun publishStoryActionApplied(
+        player: Player,
+        npc: AINPC,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress,
+        entry: FeaturePackLoader.QuestEntryDefinition,
+        actionType: String,
+        target: StoryActionTarget,
+        scopeId: String,
+        metadata: Map<String, String>
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val eventType = getQuestEntryMetadata(entry, "event_type", "type_id")
+        val eventKey = firstNonBlank(getQuestEntryMetadata(entry, "event_key", "key"), progress.questCode(), template.questCode)
+        Bukkit.getPluginManager().callEvent(
+            StoryActionAppliedEvent(
+                StoryActionAppliedEventPayload(
+                    UUID.randomUUID(),
+                    System.currentTimeMillis(),
+                    AINPCEventSource.PLAYER,
+                    player.uniqueId,
+                    player.name,
+                    npc.databaseId.takeIf { it > 0 }?.toString(),
+                    npc.uuid,
+                    npc.name,
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    progress.templateId().orEmpty().ifBlank { template.templateId },
+                    template.progressionKind.ifBlank { template.type.name.lowercase(Locale.ROOT) },
+                    template.progressionMechanicId,
+                    progress.questCode().orEmpty().ifBlank { template.questCode },
+                    progress.currentPhase(),
+                    actionType,
+                    entry.entryId,
+                    entry.itemId,
+                    target.scopeType(),
+                    scopeId,
+                    target.regionId(),
+                    target.placeId(),
+                    eventType,
+                    eventKey,
+                    entry.description,
+                    metadata
+                )
+            )
+        )
+    }
+    private fun updateTrackedQuestProgress(p0: UUID, p1: ScenarioTemplate, p2: PlayerQuestProgress, p3: Map<String, Int>): PlayerQuestProgress {
+        val currentPhase = resolveQuestPhase(p1, p2.status(), p2.currentPhase(), p3)
+        val updatedProgress = PlayerQuestProgress(p2.templateId(), p2.questCode(), p2.status(),
+            p2.startedAt(), p2.completedAt(), System.currentTimeMillis(), currentPhase, p3, p2.questVariables())
+        putActiveQuestProgress(p0, updatedProgress)
+        persistQuestProgressAsync(p0, updatedProgress)
+        val previousPhase = p2.currentPhase()
+        if (previousPhase.isNotBlank() && previousPhase != currentPhase) {
+            val player = Bukkit.getPlayer(p0)
+            if (player != null) {
+                publishProgressionStageChanged(
+                    AINPCEventSource.PLAYER,
+                    player,
+                    null,
+                    p1,
+                    updatedProgress,
+                    previousPhase,
+                    currentPhase,
+                    "objective_progress",
+                    emptyMap()
+                )
+            }
+        }
+        return updatedProgress
+    }
     fun evaluateScenarioTriggers(p0: List<AINPC>, p1: List<Player>) {
         if (p0.isEmpty()) return
         val random = Random()
@@ -1790,24 +2698,27 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     private fun startScenario(p0: ScenarioTemplate, p1: List<AINPC>, p2: List<Player>) {
-        TODO()
     }
-    private fun assignRoles(p0: ActiveScenario, p1: ScenarioTemplate, p2: List<AINPC>, p3: List<Player>): Boolean = TODO()
-    private fun assignFallbackRoles(p0: ActiveScenario, p1: List<ScenarioRoleRule>, p2: List<AINPC>, p3: Random, p4: Boolean): Boolean = TODO()
-    private fun getQuestSettings(): ConfigurationSection = TODO()
+    private fun assignRoles(p0: ActiveScenario, p1: ScenarioTemplate, p2: List<AINPC>, p3: List<Player>): Boolean {
+        return true
+    }
+    private fun assignFallbackRoles(p0: ActiveScenario, p1: List<ScenarioRoleRule>, p2: List<AINPC>, p3: Random, p4: Boolean): Boolean {
+        return true
+    }
+    private fun getQuestSettings(): ConfigurationSection {
+        return plugin.config.getConfigurationSection("quests") ?: plugin.config
+    }
     private fun notifyParticipants(p0: ActiveScenario) {
-        TODO()
     }
     private fun adjustEmotionsForRole(p0: AINPC, p1: String, p2: ScenarioType) {
-        TODO()
     }
     private fun sendScenarioHint(p0: Player, p1: ActiveScenario) {
-        TODO()
     }
     private fun sendQuestBriefing(p0: Player, p1: ActiveScenario) {
-        TODO()
     }
-    private fun resolveProfessionName(p0: String): String = TODO()
+    private fun resolveProfessionName(p0: String): String {
+        return p0
+    }
     fun advanceScenario(p0: UUID) {
         val scenario = activeScenarios[p0] ?: return
         val template = scenarioTemplates[scenario.type] ?: return
@@ -1828,7 +2739,6 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             + " (ID: " + p0.toString().substring(0, 8) + ")")
     }
     private fun createScenarioMemories(p0: ActiveScenario) {
-        TODO()
     }
     fun getActiveScenarios(): Map<UUID, ActiveScenario> = HashMap(activeScenarios)
     fun getNPCScenario(p0: UUID): ActiveScenario? {

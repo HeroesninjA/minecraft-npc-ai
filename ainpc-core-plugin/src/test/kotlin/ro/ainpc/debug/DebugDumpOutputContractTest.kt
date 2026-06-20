@@ -26,6 +26,53 @@ class DebugDumpOutputContractTest {
     }
 
     @Test
+    fun worldAdminSnapshotContainsRuntimeCountersAndSourceFiles() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpWorldAdminJson.kt").readText()
+
+        listOf(
+            "buildWorldAdminSnapshotJson",
+            "auto_index_enabled",
+            "indexed_region_chunk_count",
+            "indexed_place_chunk_count",
+            "indexed_node_chunk_count",
+            "source_files",
+            "overlay_sources",
+            "world_mapping",
+        ).forEach { token -> assertTrue(source.contains(token), "Missing world-admin snapshot token $token") }
+    }
+
+    @Test
+    fun mappingSnapshotContainsNormalizedWorldMappingAndOverlaySources() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpMappingSnapshotJson.kt").readText()
+
+        listOf(
+            "buildMappingSnapshotJson",
+            "normalized_world_mapping",
+            "semantic_index_summary",
+            "overlay_sources",
+            "world-admin.json",
+            "world_admin.yaml",
+        ).forEach { token -> assertTrue(source.contains(token), "Missing mapping snapshot token $token") }
+    }
+
+    @Test
+    fun questSnapshotContainsRuntimeSectionsAndSummary() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpQuestConfigJson.kt").readText()
+
+        listOf(
+            "buildQuestConfigSnapshotJson",
+            "normalized_document",
+            "supported_formats",
+            "quest_file_name",
+            "summary",
+            "sections",
+            "has_type",
+            "has_version",
+            "has_spec",
+        ).forEach { token -> assertTrue(source.contains(token), "Missing quest snapshot token $token") }
+    }
+
+    @Test
     fun npcBindingExportContainsRowsAndReferenceHealthContract() {
         val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpNpcWorldBindingJson.kt").readText()
 
@@ -59,6 +106,7 @@ class DebugDumpOutputContractTest {
     fun storyExportsContainStateAndEventRowsContracts() {
         val stateSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryStateJson.kt").readText()
         val eventSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryEventJson.kt").readText()
+        val gapSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryProgressionGapJson.kt").readText()
 
         listOf("\"regions_by_mode\"", "\"regions_by_state\"", "\"places_by_region\"", "\"places_by_state\"").forEach { token ->
             assertTrue(stateSource.contains(token), "Missing story state token $token")
@@ -66,6 +114,7 @@ class DebugDumpOutputContractTest {
         listOf("\"rows\"", "\"by_event_type\"", "\"by_progression_link\"").forEach { token ->
             assertTrue(eventSource.contains(token), "Missing story event token $token")
         }
+        assertTrue(gapSource.contains("buildStoryProgressionGapJson"), "Missing story progression gap export contract")
     }
 
     @Test
@@ -84,21 +133,67 @@ class DebugDumpOutputContractTest {
             "server.txt",
             "config-sanitized.yml",
             "audit.txt",
+            "quest.txt",
+            "mapping.txt",
             "npcs.json",
             "world-mapping.json",
+            "mapping-snapshot.json",
+            "world-admin-snapshot.json",
             "npc-world-bindings.json",
             "households.json",
             "spawn-batches.json",
             "quests.yml",
+            "quests-snapshot.json",
             "quest-audit-report.txt",
             "loaded-quest-definitions.json",
+            "quest-mapping-contract.json",
             "player-progressions.json",
             "player-quest-progress.json",
             "quest-anchor-bindings.json",
             "story-states.json",
             "story-events.json",
+            "story-progression-gaps.json",
+            "authoring.txt",
             "openai.txt",
-            "recent-server-log.txt"
+            "recent-server-log.txt",
+            "recent-public-events.txt",
+            "narrative-plans.json",
+            "quest-director-decision.json"
         )
+    }
+
+    @Test
+    fun questMappingContractExportContainsNormalizedQuestAndMappingSections() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpQuestMappingContractJson.kt").readText()
+
+        listOf(
+            "ScriptDocumentNormalizer.normalizeDocument",
+            "quest_document",
+            "quest_summary",
+            "mapping_summary",
+            "supported_formats",
+            "world_mapping",
+        ).forEach { token -> assertTrue(source.contains(token), "Missing quest/mapping contract token $token") }
+    }
+
+    @Test
+    fun questDirectorDecisionExportContainsDefinitionsAndDecisionsContract() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpQuestDirectorJson.kt").readText()
+
+        listOf(
+            "source_type",
+            "definition_count",
+            "definitions",
+            "decisions",
+            "progression_id",
+            "decision_status",
+            "decision_reason",
+            "runtime_executable",
+            "selected_progression",
+            "matched_signals",
+            "candidate_templates",
+            "blocked_reasons",
+            "warnings"
+        ).forEach { token -> assertTrue(source.contains(token), "Missing quest director contract token $token") }
     }
 }

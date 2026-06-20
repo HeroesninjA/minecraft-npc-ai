@@ -3,7 +3,9 @@ package ro.ainpc.gui.screens
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.debug.DebugDumpMappingText
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -13,6 +15,7 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.gui.GuiService
 import ro.ainpc.progression.ProgressionAnchorBinding
+import ro.ainpc.progression.ProgressionFormatUtil
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
 import ro.ainpc.world.WorldNodeInfo
@@ -64,10 +67,57 @@ class WorldHubGui : GuiScreen {
                 )
             )
         )
+        context.button(
+            5,
+            if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.PAPER, "&dMapping snapshot", mappingSnapshotLore(worldAdmin, region, place, node, nearbyNodes.size)),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
+                )
+            } else {
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&7Mapping snapshot",
+                        mappingSnapshotLore(worldAdmin, region, place, node, nearbyNodes.size)
+                    )
+                )
+            }
+        )
 
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", regionLore(region)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)))
         context.item(12, GuiItemFactory.item(Material.TARGET, "&dNode curent", nodeLore(node)))
+        if (place != null) {
+            val placeProgressions = runCatching {
+                context.plugin().progressionService.getProgressionsByAnchor("place", place.id(), 3)
+            }.getOrDefault(emptyList())
+            if (placeProgressions.isNotEmpty()) {
+                context.item(
+                    16,
+                    GuiItemFactory.item(
+                        Material.LIME_DYE,
+                        "&aProgresii pe acest place",
+                        placeProgressions.map { "&7- &f${ProgressionFormatUtil.formatOptional(it.progressionId())} &7(${ProgressionFormatUtil.formatOptional(it.status())})" }
+                    )
+                )
+            }
+        }
+        if (node != null) {
+            val nodeProgressions = runCatching {
+                context.plugin().progressionService.getProgressionsByAnchor("node", node.id(), 3)
+            }.getOrDefault(emptyList())
+            if (nodeProgressions.isNotEmpty()) {
+                context.item(
+                    17,
+                    GuiItemFactory.item(
+                        Material.LIME_DYE,
+                        "&aProgresii pe acest node",
+                        nodeProgressions.map { "&7- &f${ProgressionFormatUtil.formatOptional(it.progressionId())} &7(${ProgressionFormatUtil.formatOptional(it.status())})" }
+                    )
+                )
+            }
+        }
         context.button(
             13,
             if (context.service().canOpen(player, GuiKey.QUEST)) {
@@ -103,6 +153,23 @@ class WorldHubGui : GuiScreen {
                         Material.GRAY_DYE,
                         "&7Ancore progresii",
                         anchorLore(localAnchorBindings, false)
+                    )
+                )
+            }
+        )
+        context.button(
+            15,
+            if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.PAPER, "&eMapping diagnostics", mappingLore(context.plugin())),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
+                )
+            } else {
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&7Mapping diagnostics",
+                        mappingLore(context.plugin())
                     )
                 )
             }
@@ -256,6 +323,34 @@ class WorldHubGui : GuiScreen {
         lore.add("&7Tip: &f${node.typeId()}")
         lore.add("&7Raza: &f${String.format(Locale.ROOT, "%.1f", node.radius())}")
         return lore
+    }
+
+    private fun mappingSnapshotLore(
+        worldAdmin: WorldAdminApi,
+        region: WorldRegionInfo?,
+        place: WorldPlaceInfo?,
+        node: WorldNodeInfo?,
+        nearbyNodeCount: Int
+    ): List<String> {
+        val lore = ArrayList<String>()
+        lore.add("&7Regiuni: &f${worldAdmin.regionCount}")
+        lore.add("&7Places: &f${worldAdmin.placeCount}")
+        lore.add("&7Noduri: &f${worldAdmin.nodeCount}")
+        lore.add("&7Nearby nodes: &f$nearbyNodeCount")
+        lore.add("&7Curent region: &f${region?.id() ?: "<nemapat>"}")
+        lore.add("&7Curent place: &f${place?.id() ?: "<nemapat>"}")
+        lore.add("&7Curent node: &f${node?.id() ?: "<nemapat>"}")
+        lore.add("&8Click: debugdump mapping")
+        return lore
+    }
+
+    private fun mappingLore(plugin: AINPCPlugin): List<String> {
+        return DebugDumpMappingText.buildMappingText(plugin)
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .take(6)
+            .map { "&7$it" }
+            .toList()
     }
 
     private fun progressionLore(snapshot: ProgressionGuiSnapshot?): List<String> {

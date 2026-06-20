@@ -3,6 +3,7 @@ package ro.ainpc.debug
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.world.WorldAdminService
 
 object DebugDumpWorldJson {
     @JvmStatic
@@ -22,8 +23,12 @@ object DebugDumpWorldJson {
 
     @JvmStatic
     fun buildWorldMappingJson(plugin: AINPCPlugin): JsonObject {
+        return buildWorldMappingJson(runCatching { plugin.platform.worldAdminService }.getOrNull())
+    }
+
+    @JvmStatic
+    fun buildWorldMappingJson(worldAdmin: WorldAdminService?): JsonObject {
         val root = JsonObject()
-        val worldAdmin = runCatching { plugin.platform.worldAdmin }.getOrNull()
         if (worldAdmin == null) {
             root.addProperty("enabled", false)
             root.addProperty("error", "WorldAdmin indisponibil")

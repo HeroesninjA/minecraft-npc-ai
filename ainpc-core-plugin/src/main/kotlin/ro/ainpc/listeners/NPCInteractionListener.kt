@@ -8,9 +8,15 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.NPCRelationship
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.npc.AINPCInteractedEvent
+import ro.ainpc.api.events.npc.AINPCInteractedEventPayload
+import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
+import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.engine.*
 import ro.ainpc.npc.AINPC
 import java.util.concurrent.CompletableFuture
+import java.util.UUID
 
 /**
  * Listener pentru interactiunile cu NPC-urile
@@ -53,6 +59,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         npc.lookAt(player)
         npc.updateContext()
         npc.context.setInteractingPlayer(player)
+        publishNpcInteracted(player, npc, npc.location?.distance(player.location) ?: 0.0)
         if (questFeatureEnabled()) {
             plugin.scenarioEngine.recordNpcConversation(player, npc)
 
@@ -73,6 +80,8 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
                 }
 
                 plugin.emotionManager.processEvent(npc, "player_approach", 1.0)
+
+                // GUI-ul de interactiuni nu se deschide automat la click pe NPC.
                 return
             }
         }
@@ -85,6 +94,17 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
      * Incepe o conversatie cu un NPC
      */
     private fun startConversation(player: Player, npc: AINPC) {
+        if (!publishDialogSessionStarted(
+            player,
+            npc,
+            true,
+            true,
+            "explicit_interaction",
+            1,
+            npc.location?.distance(player.location) ?: 0.0
+        )) {
+            return
+        }
         beginConversationSession(player, npc)
             .thenCompose { firstMeeting ->
                 if (firstMeeting) {
@@ -116,6 +136,18 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             return
         }
 
+        if (!publishDialogSessionStarted(
+                player,
+                npc,
+                true,
+                true,
+                "quest_open",
+                1,
+                npc.location?.distance(player.location) ?: 0.0
+            )
+        ) {
+            return
+        }
         beginConversationSession(player, npc).exceptionally { ex ->
             plugin.logger.warning("Nu am putut reactualiza sesiunea pentru " + npc.name + ": " + ex.message)
             false
@@ -154,4 +186,77 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
     }
 
     private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)
+
+    private fun publishNpcInteracted(
+        player: Player,
+        npc: AINPC,
+        distanceToNpc: Double
+    ) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return
+        }
+
+        val event = AINPCInteractedEvent(
+            AINPCInteractedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                true,
+                "right_click_valid",
+                1,
+                distanceToNpc,
+                mapOf(
+                    "source" to "NPCInteractionListener"
+                )
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+    }
+
+    private fun publishDialogSessionStarted(
+        player: Player,
+        npc: AINPC,
+        directAddress: Boolean,
+        explicitConversation: Boolean,
+        triggerReason: String,
+        nearbyNpcCount: Int,
+        distanceToNpc: Double
+    ): Boolean {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) {
+            return true
+        }
+
+        val event = DialogSessionStartedEvent(
+            DialogSessionStartedEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.PLAYER,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                directAddress,
+                explicitConversation,
+                triggerReason,
+                nearbyNpcCount,
+                distanceToNpc,
+                mapOf(
+                    "source" to "NPCInteractionListener"
+                )
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
+        if (event.isCancelled) {
+            return false
+        }
+        return true
+    }
 }

@@ -63,6 +63,15 @@ class ProgressionStatusSnapshot(
         return QuestInteractionResult.handled(false, emptyList(), systemMessagesValue)
     }
 
+    fun toChatLines(): List<String> {
+        if (!handledValue) {
+            return listOf("&cProgresia nu a putut fi citita.")
+        }
+        val lines = mutableListOf<String>()
+        lines.addAll(systemMessagesValue)
+        return lines
+    }
+
     companion object {
         @JvmStatic
         fun fromResult(

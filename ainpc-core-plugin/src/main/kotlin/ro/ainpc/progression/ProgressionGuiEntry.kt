@@ -91,6 +91,26 @@ class ProgressionGuiEntry(
     fun rewardLines(): List<String> = rewardLinesValue
     fun actionLines(): List<String> = actionLinesValue
 
+    fun detailDiagnosticLines(): List<String> {
+        return listOf(
+            "selector=$selectorValue",
+            "progression_id=$progressionIdValue",
+            "template_id=$templateIdValue",
+            "definition_id=$definitionIdValue",
+            "code=$codeValue",
+            "kind=$kindValue",
+            "mechanic=$mechanicIdValue",
+            "status=$statusDisplayValue",
+            "current_stage=$currentStageIdValue",
+            "tracked=$trackedValue",
+            "current=$currentValue",
+            "active=$activeValue",
+            "offered=$offeredValue",
+            "archived=$archivedValue",
+            "missing_template=$missingTemplateValue"
+        )
+    }
+
     fun commandRoot(): String {
         return when (kindValue.lowercase(Locale.ROOT)) {
             "quest" -> "quest"

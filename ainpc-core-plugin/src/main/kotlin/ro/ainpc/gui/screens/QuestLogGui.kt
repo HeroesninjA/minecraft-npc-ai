@@ -2,6 +2,8 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.AINPCPlugin
+import ro.ainpc.debug.DebugDumpQuestText
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiClickContext
@@ -41,6 +43,8 @@ class QuestLogGui : GuiScreen {
                 )
             )
         )
+        renderAuthoringSummary(context, snapshot)
+        renderQuestDiagnostics(context)
         renderFilters(context, activeFilter)
 
         val entries = snapshot.allEntries()
@@ -239,6 +243,74 @@ class QuestLogGui : GuiScreen {
         )
     }
 
+    private fun renderAuthoringSummary(context: GuiRenderContext, snapshot: ProgressionGuiSnapshot) {
+        val selectedEntry = snapshot.currentEntries().firstOrNull() ?: snapshot.allEntries().firstOrNull()
+        val storyContext = context.plugin().storyContextService.buildForPlayer(context.player())
+        val authoringSnapshot = context.plugin().authoringService.analyze(
+            storyContext,
+            context.plugin().progressionService.getDefinitions(),
+            selectedEntry?.selector(),
+            selectedEntry?.mechanicId(),
+            storyContext.worldContext().currentRegion()?.id(),
+            storyContext.worldContext().currentPlace()?.id(),
+            true,
+            emptyList()
+        )
+        context.button(
+            7,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ENCHANTED_BOOK,
+                    "&bAuthoring",
+                    listOf(
+                        "&7Decision: &f${authoringSnapshot.decisionStatus()}",
+                        "&7Reason: &f${valueOrUnknown(authoringSnapshot.decisionReason())}",
+                        "&7Selector: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
+                        "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
+                        "&7Warnings: &f${authoringSnapshot.warnings.size}",
+                        "&8Click: deschide authoring GUI."
+                    )
+                ),
+                GuiAction { click ->
+                    click.service().openAuthoring(click.player(), selectedEntry?.selector(), selectedEntry?.mechanicId())
+                }
+            )
+        )
+    }
+
+    private fun renderQuestDiagnostics(context: GuiRenderContext) {
+        context.button(
+            8,
+            if (context.player().hasPermission("ainpc.admin")) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        Material.PAPER,
+                        "&dQuest diagnostics",
+                        questDiagnosticsLore(context.plugin())
+                    ),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump quest") }
+                )
+            } else {
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&7Quest diagnostics",
+                        questDiagnosticsLore(context.plugin())
+                    )
+                )
+            }
+        )
+    }
+
+    private fun questDiagnosticsLore(plugin: AINPCPlugin): List<String> {
+        return DebugDumpQuestText.buildQuestText(plugin)
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .take(6)
+            .map { "&7$it" }
+            .toList()
+    }
+
     private fun handleEntryClick(click: GuiClickContext, entry: ProgressionGuiEntry, activeFilter: String) {
         val selector = entry.guiDetailSelector()
         if (click.clickType().isShiftClick) {
@@ -368,6 +440,8 @@ class QuestLogGui : GuiScreen {
         lore.add("&8Shift click: status in chat")
         return lore
     }
+
+    private fun valueOrUnknown(value: String): String = value.ifBlank { "unknown" }
 
     companion object {
         private val LOG_SLOTS = intArrayOf(

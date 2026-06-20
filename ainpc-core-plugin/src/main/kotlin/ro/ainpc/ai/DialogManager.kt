@@ -2,6 +2,9 @@ package ro.ainpc.ai
 
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.events.AINPCEventSource
+import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEvent
+import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEventPayload
 import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.npc.AINPC
 import java.sql.PreparedStatement
@@ -69,6 +72,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 PromptDbContext(totalMemoryCount, weightedMemoryImpact)
             )
         }.thenCompose { context ->
+            publishAiRequestBuilt(npc, player, message, request, context)
             val dialogueEngine: DialogueEngine? = plugin.dialogueEngine
             val responseFuture: CompletableFuture<String> = if (dialogueEngine != null) {
                 dialogueEngine.generateResponse(
@@ -390,6 +394,32 @@ class DialogManager(private val plugin: AINPCPlugin) {
             "threat" -> -0.8
             else -> 0.0
         }
+    }
+
+    private fun publishAiRequestBuilt(npc: AINPC, player: Player, message: String, request: DialogRequest, context: DialogContext) {
+        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
+        if (!plugin.config.getBoolean("events.dialog_prompt_events_enabled", false)) return
+        val summary = "memories=" + context.memories.size + ",history=" + context.history.size
+        val event = DialogAIRequestBuiltEvent(
+            DialogAIRequestBuiltEventPayload(
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                AINPCEventSource.NPC,
+                player.uniqueId.toString() + ":" + npc.uuid,
+                player.uniqueId,
+                player.name,
+                npc.databaseId.toString(),
+                npc.uuid,
+                npc.name,
+                message,
+                summary,
+                request.directAddress(),
+                request.explicitConversation(),
+                request.triggerReason(),
+                mapOf("source" to "DialogManager")
+            )
+        )
+        plugin.server.pluginManager.callEvent(event)
     }
 
     // Context holder class

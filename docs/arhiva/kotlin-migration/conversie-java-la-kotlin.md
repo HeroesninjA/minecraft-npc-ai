@@ -41,7 +41,7 @@ Status factual (2026-05-17):
 - `ainpc-core-plugin/src/main`: 169 fisiere Kotlin si 9 fisiere Java (~95.0% Kotlin)
 - `ainpc-api`: migrat majoritar la Kotlin; raman Java doar `AddonRegistryApi`, `AINPCPlatformApi`, `WorldAdminApi` pentru interop stabil
 - `ainpc-scenario-medieval/src/main`: fara fisiere Java ramase
-- conversiile de test Kotlin continua incremental; statusul pe slice-uri este in `kotlin-migration-tracker.md`
+- conversiile de test Kotlin continua incremental; statusul pe slice-uri este in `README.md`
 
 ## Faza 0: Baseline si reguli de siguranta
 
