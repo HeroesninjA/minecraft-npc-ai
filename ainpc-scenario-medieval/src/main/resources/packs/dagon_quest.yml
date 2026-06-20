@@ -1,0 +1,87 @@
+id: dagon_castel
+name: "Quest Dagon - Castelul Parasit"
+description: "Scenariu cu Dagon despre castelul parasit."
+addon:
+  type: "scenario"
+  version: "1.0.0"
+scenarios:
+  castel_dagon:
+    name: "Castelul lui Dagon"
+    description: "Dagon iti cere sa vizitezi castelul."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    trigger_probability: 0.15
+    min_npcs: 1
+    requires_player: true
+    hint: "Dagon are o legatura cu castelul parasit."
+    phases:
+      INTRODUCTION: "Dagon iti spune despre castel."
+      ACCEPTANCE: "Accepti sa vizitezi castelul."
+      EXPLORE: "Explorezi castelul."
+      RETURN: "Te intorci la Dagon."
+      COMPLETION: "Dagon iti multumeste."
+    quest:
+      code: "CST01"
+      giver_profession: "garda"
+      kind: "exploration"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags:
+        - exploration
+        - castle
+        - story
+      dialogues:
+        offer:
+          - "Am o legatura veche cu castelul parasit. Du-te si vezi cum mai arata, apoi intoarce-te la mine."
+        offered:
+          - "Vrei sa ma ajuti? Nu intra in beci, s-ar putea sa nu poti iesi la fel de usor."
+        accepted:
+          - "Bine. Intra in castel, traverseaza curtea si cauta in cufarul vechi. Apoi revino la mine."
+        active:
+          - "Ce-ai gasit in castel?"
+        ready:
+          - "Te-ai intors! Spune-mi ce-ai vazut."
+        completed:
+          - "Multumesc. Castelul meu are nevoie de un stapan, dar pana atunci... ia sabia asta."
+      objectives:
+        enter_castel:
+          type: "visit_region"
+          item: "castel"
+          amount: 1
+          description: "Intra in regiunea castelului."
+        pass_gate:
+          type: "visit_place"
+          item: "castel:poarta_castel"
+          amount: 1
+          description: "Treci pe la poarta castelului."
+        reach_courtyard:
+          type: "visit_place"
+          item: "castel:curte_castel"
+          amount: 1
+          description: "Ajungi in curtea castelului."
+        open_chest:
+          type: "inspect_node"
+          item: "castel:curte_castel:cufar"
+          amount: 1
+          description: "Deschide cufarul vechi."
+        return_dagon:
+          type: "talk_to_npc"
+          item: "profession:garda"
+          amount: 1
+          description: "Intoarce-te la Dagon."
+      rewards:
+        iron_sword:
+          type: "item"
+          item: "IRON_SWORD"
+          amount: 1
+          description: "Primesti o sabie de fier."
+    roles:
+      QUEST_GIVER:
+        description: "Dagon, fost stapan al castelului."
+        required_professions:
+          - "garda"
+      HERO:
+        description: "Jucatorul."
+        player_role: true

@@ -1,0 +1,28 @@
+{
+  "type": "quest",
+  "version": 1,
+  "meta": {
+    "id": "quest_intro_market",
+    "title": "Misiunea din piata"
+  },
+  "spec": {
+    "objectives": [
+      {
+        "id": "reach_market",
+        "trigger": "quest.started",
+        "hook": "resolve_place_target",
+        "target": {
+          "kind": "place",
+          "ref": "tag:market"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "item",
+        "item": "emerald",
+        "amount": 3
+      }
+    ]
+  }
+}
