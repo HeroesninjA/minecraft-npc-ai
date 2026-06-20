@@ -50,7 +50,8 @@ Ordinea recomandata pentru orientare:
 40. `kotlin-code-review-checklist.md`
 41. `kotlin-coroutines-paper-policy.md`
 42. `kotlin-testing-strategy.md`
-43. `arhiva/kotlin-migration/README.md`
+43. `harta-pachetelor-cod.md`
+44. `arhiva/kotlin-migration/README.md`
 
 ## Documente Kotlin
 
@@ -60,6 +61,10 @@ Ordinea recomandata pentru orientare:
 - `kotlin-code-review-checklist.md`
 - `kotlin-coroutines-paper-policy.md`
 - `kotlin-testing-strategy.md`
+
+## Harta cod
+
+- `harta-pachetelor-cod.md`
 
 ## Arhiva Kotlin
 

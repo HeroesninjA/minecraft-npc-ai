@@ -222,3 +222,56 @@ Detalierea completa este sintetizata in `Tabel compact`. Pentru trasee de citire
 
 `Depinde de` este un rezumat scurt, nu o lista exhaustiva a tuturor referintelor.
 
+## Documente suplimentare
+
+### Demo si onboarding
+
+- `50-taskuri-prim-demo.md` - operational
+- `criterii-gata-prim-demo.md` - operational
+- `env-prim-demo.md` - operational
+- `inventar-comenzi-prim-demo.md` - operational
+- `player-onboarding-initiere.md` - derivat
+- `procedura-backup-prim-demo.md` - operational
+- `sumar-implementare-demo.md` - derivat
+
+### Worldgen si fixture
+
+- `addon-config-template.md` - operational
+- `generare-ai-si-constructie-automata.md` - derivat
+- `generare-sate-fara-worldedit.md` - derivat
+- `generare-sate-worldedit-si-npc.md` - derivat
+- `mediu-test-controlat-sat-si-structuri-exterioare.md` - operational
+- `patch-planner.md` - derivat
+
+### Kotlin si arhiva
+
+- `conversie-java-la-kotlin.md` - istoric
+- `conversie-java-la-kotlin-partea-2.md` - istoric
+- `conversie-java-la-kotlin-partea-3.md` - istoric
+- `conversie-java-la-kotlin-partea-4.md` - istoric
+- `conversie-java-la-kotlin-partea-5.md` - istoric
+- `kotlin-gradle-activation-plan.md` - istoric
+
+### Quest si mapping
+
+- `obiective-quest-tipuri.md` - derivat
+- `ordine-spawn-npc-cladiri-region-node-v1.md` - istoric
+
+### Contracte si exemple
+
+- `json-yaml-contract-exemple.md` - derivat
+
+### Operare si suport
+
+- `constitusional.md` - istoric
+- `documentatie-lipsa.md` - operational
+- `server-credentials.md` - operational
+- `storage-provider-roadmap.md` - derivat
+- `verificari-server-d1.md` - operational
+- `verificari-server-d2.md` - operational
+- `verificari-server-d3.md` - operational
+- `verificari-server-d4.md` - operational
+- `verificari-server-d5.md` - operational
+- `verificari-server-d6.md` - operational
+- `verificari-server-d7-d9.md` - operational
+
