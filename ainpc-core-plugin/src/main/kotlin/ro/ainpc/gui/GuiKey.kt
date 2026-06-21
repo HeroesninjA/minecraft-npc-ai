@@ -32,6 +32,11 @@ enum class GuiKey(
     CREATOR_QUEST_DEFS("creator_quest_defs", "Definitii"),
     CREATOR_QUEST_TEST("creator_quest_test", "Test Quest"),
     QUEST_EDIT("quest_edit", "Editeaza Quest"),
+    QUEST_CREATE("quest_create", "Creeaza Quest"),
+    MAPPING_CREATOR("mapping_creator", "Creator Mapping"),
+    MAPPING_CREATE_REGION("mapping_create_region", "Creaza Regiune"),
+    MAPPING_CREATE_PLACE("mapping_create_place", "Creaza Place"),
+    MAPPING_CREATE_NODE("mapping_create_node", "Creaza Node"),
     CONFIRM("confirm", "Confirmare");
 
     fun id(): String = idValue
@@ -73,6 +78,11 @@ enum class GuiKey(
                 "creatorquestdefs", "creator_quest_defs", "defs", "definitions" -> "creator_quest_defs"
                 "creatorquesttest", "creator_quest_test", "quest_test", "test_quest" -> "creator_quest_test"
                 "questedit", "quest_edit", "edit_quest", "editor" -> "quest_edit"
+                "questcreate", "quest_create", "create_quest", "new_quest" -> "quest_create"
+                "mappingcreator", "mapping_creator", "creator_mapping", "build_mapping" -> "mapping_creator"
+                "mappingcreateregion", "mapping_create_region", "create_region", "new_region" -> "mapping_create_region"
+                "mappingcreateplace", "mapping_create_place", "create_place", "new_place" -> "mapping_create_place"
+                "mappingcreatenode", "mapping_create_node", "create_node", "new_node" -> "mapping_create_node"
                 "questmap", "quest_map", "mapping", "create_quest", "edit_quest_map" -> "quest_map"
                 else -> trimmed
             }

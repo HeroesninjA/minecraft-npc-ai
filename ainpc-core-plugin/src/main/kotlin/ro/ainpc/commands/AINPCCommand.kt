@@ -1890,7 +1890,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         return true
     }
 
-    private fun sendMigrationUsage(sender: CommandSender): Unit = sendMigrationUsage(sender)
+    private fun sendMigrationUsage(sender: CommandSender) {
+        plugin.messageUtils.send(sender, "&cUtilizare: /ainpc migration households <dryrun|apply> [limit]")
+    }
 
     // -- Audit ------------------------------------------------------
     private fun handleAudit(sender: CommandSender, args: Array<String>): Boolean {
@@ -1929,7 +1931,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         return true
     }
 
-    private fun sendAuditUsage(sender: CommandSender): Unit = sendAuditUsage(sender)
+    private fun sendAuditUsage(sender: CommandSender) {
+        plugin.messageUtils.send(sender, "&cUtilizare: /ainpc audit <all|npc|world|db|spawn|quest|wand> [strict|full|offline]")
+    }
 
     // -- Debug Dump -------------------------------------------------
     private fun handleDebugDump(sender: CommandSender, args: Array<String>): Boolean {

@@ -19,10 +19,10 @@ class CreatorHubGui : GuiScreen {
             "&7Creeaza si editezi mapping si questuri."
         )))
 
-        context.button(10, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Mapping admin", listOf("&7Regiuni, places, noduri.")),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }))
-        context.button(11, GuiButton.enabled(GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bAuthoring", listOf("&7Quest design read-only.")),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }))
+        context.button(10, GuiButton.enabled(GuiItemFactory.item(Material.GRASS_BLOCK, "&6Creator Mapping", listOf("&7Creaza regiuni, places si noduri.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }))
+        context.button(11, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&bQuest Creator", listOf("&7Submeniu quest: definitii, test, ancore, editor.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST) }))
         context.button(12, GuiButton.enabled(GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", listOf("&7Creeaza mapping demo la pozitia ta.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc world demo create") }))
         context.button(13, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza mapping", listOf("&7Persista modificarile.")),

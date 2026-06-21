@@ -41,12 +41,23 @@ import ro.ainpc.story.StoryContextService
 import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.world.WorldNode
 import ro.ainpc.world.WorldPlace
+import ro.ainpc.engine.runtime.ScenarioActionRegistry
+import ro.ainpc.engine.runtime.ScenarioConditionRegistry
+import ro.ainpc.engine.runtime.ScenarioExecutionContext
+import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
+import ro.ainpc.engine.runtime.ScenarioTriggerRegistry
+import ro.ainpc.engine.runtime.actions.GiveItemAction
+import ro.ainpc.engine.runtime.actions.SetStoryStateAction
+import ro.ainpc.engine.runtime.conditions.HasCompletedQuestCondition
 import ro.ainpc.world.WorldRegion
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class ScenarioEngine(private val plugin: AINPCPlugin) {
+    val actionRegistry: ScenarioActionRegistry = ScenarioActionRegistry()
+    val conditionRegistry: ScenarioConditionRegistry = ScenarioConditionRegistry()
+    val triggerRegistry: ScenarioTriggerRegistry = ScenarioTriggerRegistry()
     private val scenarioTemplates = LinkedHashMap<ScenarioType, ScenarioTemplate>()
     private val questTemplates = LinkedHashMap<String, ScenarioTemplate>()
     private val gson = Gson()
@@ -60,12 +71,37 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private val trackedQuestTemplates = ConcurrentHashMap<UUID, String>()
     private val activeScenarios = HashMap<UUID, ActiveScenario>()
 
-    init { loadScenarioTemplates() }
+    init {
+        registerRuntimeHandlers()
+        loadScenarioTemplates()
+    }
+
+    private fun registerRuntimeHandlers() {
+        actionRegistry.register(GiveItemAction())
+        actionRegistry.register(SetStoryStateAction())
+        conditionRegistry.register(HasCompletedQuestCondition())
+    }
 
     fun reloadTemplates() {
         loadScenarioTemplates()
     }
     fun flushQuestProgress() {
+        val snapshot = snapshotQuestProgress()
+        val total = snapshot.values.sumOf { it.size }
+        persistQuestProgressSnapshot(snapshot)
+        plugin.debug("[QuestEngine] Flush progresii: $total progresii in memorie.")
+    }
+
+    fun executeRuntimeAction(actionDef: ScenarioRuntimeDefinition?, context: ScenarioExecutionContext) {
+        if (actionDef == null) return
+        val report = actionRegistry.validateDefinition(actionDef, "actiune")
+        if (!report.isValid()) {
+            plugin.debug("[Runtime] Actiune invalida: ${actionDef.id()} - erori: ${report.errors().joinToString("; ")}")
+            return
+        }
+        actionRegistry.find(actionDef.type()).ifPresent { handler ->
+            handler.execute(context, actionDef)
+        }
     }
     private fun loadScenarioTemplates() {
         scenarioTemplates.clear()
@@ -382,6 +418,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             rewardNotes.addAll(applyQuestStoryActions(p0, p1, template, currentProgress, template.rewards))
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.PLAYER, p0, p1, template, completedProgress)
+            advanceToNextChainedQuest(p0, template)
             plugin.debug("[QuestEngine] Quest completat pentru player=" + p0.name
                 + " templateId=" + template.templateId)
             val systemMessages = mutableListOf<String>()
@@ -745,6 +782,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             p0.updateInventory()
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.COMMAND, p0, p1, template, completedProgress)
+            advanceToNextChainedQuest(p0, template)
             plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
                 + p0.name + " templateId=" + template.templateId)
             val systemMessages = mutableListOf<String>()
@@ -2179,6 +2217,14 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         if (hasCompletedQuest(p0, p1.templateId) && !p1.questRepeatable) {
             return QuestAvailability.unavailable(listOf("Quest deja completat."))
         }
+        if (p1.questPrerequisites.isNotEmpty()) {
+            val missing = p1.questPrerequisites.filter { prereq ->
+                !hasCompletedQuest(p0, prereq) && !hasCompletedQuestByCode(p0, prereq)
+            }
+            if (missing.isNotEmpty()) {
+                return QuestAvailability.unavailable(listOf("Completeaza mai intai: ${missing.joinToString(", ")}"))
+            }
+        }
         val limit = getProgressionMechanicLimit(p1)
         if (limit > 0) {
             val current = countCurrentProgressionsInMechanic(p0, p1, p1.progressionMechanicId)
@@ -2187,6 +2233,37 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             }
         }
         return QuestAvailability.allowed()
+    }
+    private fun hasCompletedQuestByCode(p0: UUID, p1: String): Boolean {
+        val archived = getArchivedQuestProgress(p0)
+        return archived.any { it.templateId().equals(p1, ignoreCase = true) || it.questCode().equals(p1, ignoreCase = true) }
+    }
+    private fun advanceToNextChainedQuest(p0: Player, p1: ScenarioTemplate) {
+        val nextTemplates = questTemplates.values.filter { t ->
+            t.questPrerequisites.any { prereq ->
+                prereq.equals(p1.templateId, ignoreCase = true) || prereq.equals(p1.questCode, ignoreCase = true)
+            }
+        }
+        for (nextTemplate in nextTemplates) {
+            val availability = evaluateQuestAvailability(p0.uniqueId, nextTemplate)
+            if (!availability.available()) continue
+            val npc = resolveQuestGiverNpc(getCurrentQuestProgress(p0.uniqueId, p1.templateId))
+            if (npc == null) {
+                plugin.debug("[Chain] NPC pentru questul urmator (${nextTemplate.templateId}) nu a fost gasit.")
+                continue
+            }
+            val resolvedAnchors = resolveQuestAnchors(nextTemplate, p0, npc)
+            if (!resolvedAnchors.valid()) {
+                plugin.debug("[Chain] Ancore nerezolvate pentru ${nextTemplate.templateId}, sar peste lant.")
+                continue
+            }
+            removeArchivedQuestProgress(p0.uniqueId, nextTemplate.templateId)
+            var offered = setInitialQuestProgress(p0.uniqueId, p0, nextTemplate)
+            offered = bindQuestProgressToNpc(p0.uniqueId, nextTemplate, offered, npc)
+            offered = bindQuestProgressToAnchors(p0, offered, resolvedAnchors)
+            publishProgressionOffered(p0, npc, nextTemplate, offered, availability, "chain_advance")
+            plugin.debug("[Chain] Avansat automat la ${nextTemplate.templateId} pentru ${p0.name}")
+        }
     }
     private fun getProgressionMechanicLimit(p0: ScenarioTemplate): Int {
         val mechanicId = p0.progressionMechanicId
@@ -2298,28 +2375,31 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun resolveQuestAnchors(p0: ScenarioTemplate, p1: Player, p2: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
         if (p0 == null || p0.objectives.isEmpty()) return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList())
 
-        val playerUuid = p1.uniqueId.toString()
-        val templateId = p0.templateId
-        val preBound = runCatching {
-            plugin.progressionService.getAnchorBindings(playerUuid, templateId, 50)
-        }.getOrDefault(emptyList())
-
-        if (preBound.isNotEmpty()) {
-            val anchors = preBound.map { binding ->
+        val bindings = mutableListOf<QuestAnchorResolver.ResolvedQuestAnchor>()
+        runCatching {
+            val uuid = p1.uniqueId.toString()
+            val personal = plugin.progressionService.getAnchorBindings(uuid, p0.templateId, 50)
+            bindings.addAll(personal.map { b ->
                 QuestAnchorResolver.ResolvedQuestAnchor(
-                    binding.objectiveKey(),
-                    binding.objectiveType(),
-                    binding.reference(),
-                    binding.anchorType(),
-                    binding.anchorId(),
-                    binding.displayLabel()
+                    b.objectiveKey(), b.objectiveType(),
+                    b.reference(), b.anchorType(),
+                    b.anchorId(), b.displayLabel()
                 )
+            })
+            val global = plugin.progressionService.getAnchorBindings("", p0.templateId, 50)
+            for (b in global) {
+                if (bindings.none { it.objectiveKey().equals(b.objectiveKey(), ignoreCase = true) }) {
+                    bindings.add(QuestAnchorResolver.ResolvedQuestAnchor(
+                        b.objectiveKey(), b.objectiveType(),
+                        b.reference(), b.anchorType(),
+                        b.anchorId(), b.displayLabel()
+                    ))
+                }
             }
-            return QuestAnchorResolver.ResolvedQuestAnchors.valid(anchors)
         }
 
         val resolver = QuestAnchorResolver(plugin.platform?.worldAdminService ?: return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList()), null)
-        return resolver.resolve(p0, p1.location, p2)
+        return resolver.resolve(p0, p1.location, p2, bindings.ifEmpty { null })
     }
     private fun mergeStoredQuestAnchorVariables(p0: UUID, p1: String, p2: Map<String, String>): Map<String, String> {
         return p2

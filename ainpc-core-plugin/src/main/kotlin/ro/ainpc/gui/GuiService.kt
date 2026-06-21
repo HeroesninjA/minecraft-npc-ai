@@ -29,8 +29,14 @@ import ro.ainpc.gui.screens.QuestCreatorGui
 import ro.ainpc.gui.screens.QuestCreatorDefinitionsGui
 import ro.ainpc.gui.screens.QuestCreatorTestGui
 import ro.ainpc.gui.screens.QuestEditGui
+import ro.ainpc.gui.screens.QuestCreateGui
+import ro.ainpc.gui.screens.MappingCreatorGui
+import ro.ainpc.gui.screens.MappingCreateRegionGui
+import ro.ainpc.gui.screens.MappingCreatePlaceGui
+import ro.ainpc.gui.screens.MappingCreateNodeGui
 import ro.ainpc.gui.screens.NpcInteractionGui
 import ro.ainpc.gui.screens.QuestMapGui
+import ro.ainpc.gui.screens.ShopGui
 import java.util.EnumMap
 import java.util.Optional
 import java.util.UUID
@@ -53,7 +59,21 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val questMapTemplateIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapObjectiveKeys: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapMechanicFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val questMapGlobalModes: ConcurrentMap<UUID, Boolean> = ConcurrentHashMap()
     private val questEditSelectedIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val creatorFormValues: ConcurrentMap<UUID, MutableMap<String, String>> = ConcurrentHashMap()
+
+    fun getCreatorFormValue(player: Player?, key: String): String {
+        if (player == null) return ""
+        return creatorFormValues[player.uniqueId]?.get(key).orEmpty()
+    }
+
+    fun setCreatorFormValue(player: Player?, key: String, value: String?) {
+        if (player == null) return
+        val map = creatorFormValues.getOrPut(player.uniqueId) { mutableMapOf() }
+        if (value.isNullOrBlank()) map.remove(key)
+        else map[key] = value
+    }
 
     fun getQuestEditSelectedId(player: Player?): String {
         if (player == null) return ""
@@ -120,7 +140,12 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(QuestCreatorDefinitionsGui())
         register(QuestCreatorTestGui())
         register(QuestEditGui())
-        register(PlaceholderGui(GuiKey.SHOP, "Shop NPC", "Nu exista inca un serviciu shop conectat."))
+        register(QuestCreateGui())
+        register(MappingCreatorGui())
+        register(MappingCreateRegionGui())
+        register(MappingCreatePlaceGui())
+        register(MappingCreateNodeGui())
+        register(ShopGui())
     }
 
     fun sessions(): GuiSessionManager = sessionManager
@@ -309,7 +334,23 @@ class GuiService(private val plugin: AINPCPlugin) {
         questMapTemplateIds.remove(playerId)
         questMapObjectiveKeys.remove(playerId)
         questMapMechanicFilters.remove(playerId)
+        questMapGlobalModes.remove(playerId)
         questEditSelectedIds.remove(playerId)
+        creatorFormValues.remove(playerId)
+    }
+
+    fun getQuestMapGlobalMode(player: Player?): Boolean {
+        if (player == null) return false
+        return questMapGlobalModes.getOrDefault(player.uniqueId, false)
+    }
+
+    fun toggleQuestMapGlobalMode(player: Player?): Boolean {
+        if (player == null) return false
+        val current = questMapGlobalModes.getOrDefault(player.uniqueId, false)
+        val next = !current
+        if (next) questMapGlobalModes[player.uniqueId] = true
+        else questMapGlobalModes.remove(player.uniqueId)
+        return next
     }
 
     fun getQuestMapMechanicFilter(player: Player?): String {
@@ -493,7 +534,8 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.ADMIN_HUB -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.audit", "ainpc.gui.debug")
             GuiKey.CREATOR_HUB -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world", "ainpc.gui.quest")
             GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
-            GuiKey.QUEST_EDIT -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
+            GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
+            GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world")
             GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
             GuiKey.CONFIRM -> true
         }

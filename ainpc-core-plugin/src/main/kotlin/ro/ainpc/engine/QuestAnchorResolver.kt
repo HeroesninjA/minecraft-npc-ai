@@ -19,19 +19,32 @@ class QuestAnchorResolver(
     fun resolve(
         template: ScenarioTemplate?,
         playerLocation: Location?,
-        questGiver: AINPC?
+        questGiver: AINPC?,
+        preBoundAnchors: List<ResolvedQuestAnchor>? = null
     ): ResolvedQuestAnchors {
         if (template == null || template.objectives.isEmpty()) {
-            return ResolvedQuestAnchors.valid(listOf())
+            return ResolvedQuestAnchors.valid(preBoundAnchors ?: listOf())
         }
 
+        val usedKeys = mutableSetOf<String>()
         val anchors = mutableListOf<ResolvedQuestAnchor>()
         val issues = mutableListOf<ResolutionIssue>()
+
+        if (!preBoundAnchors.isNullOrEmpty()) {
+            for (pre in preBoundAnchors) {
+                if (pre.objectiveKey().isNotBlank()) {
+                    anchors.add(pre)
+                    usedKeys.add(pre.objectiveKey())
+                }
+            }
+        }
+
         val objectives = template.objectives
         for (index in objectives.indices) {
             val objective = objectives[index]
             val objectiveType = normalizeObjectiveType(objective.type ?: "")
             val objectiveKey = buildObjectiveKey(objective, index)
+            if (objectiveKey in usedKeys) continue
             val reference = objective?.itemId ?: ""
 
             when (objectiveType) {

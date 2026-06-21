@@ -50,6 +50,10 @@ class QuestCreatorGui : GuiScreen {
             GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf("&7Editeaza quest: selecteaza definitie, NPC giver, testeaza.", "&7Click: deschide editorul.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }
         ))
+        context.button(17, GuiButton.enabled(
+            GuiItemFactory.item(Material.EMERALD, "&aCreeaza Quest Nou", listOf("&7Formular pentru quest nou: ID, nume, mecanica, obiective.", "&7Click: deschide formularul.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_CREATE) }
+        ))
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST) }))

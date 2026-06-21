@@ -171,6 +171,11 @@ private fun clampProgressionStoredLimit(sender: CommandSender, limit: Int): Int 
     return maxOf(1, minOf(limit, PROGRESSION_STORED_MAX_LIMIT))
 }
 
+private val PROGRESSION_FILTER_SUBCOMMANDS = setOf(
+    "active", "current", "completed", "failed", "archived", "tracked", "unresolved",
+    "offered", "abandoned", "resolved", "missing_definition"
+)
+
 fun handleProgression(
     sender: CommandSender,
     args: Array<String>,
@@ -185,6 +190,7 @@ fun handleProgression(
     return when (mode) {
         "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
         "stored", "store", "state", "states", "progressions" -> handleProgressionStored(sender, args, "", findOnlinePlayer)
+        in PROGRESSION_FILTER_SUBCOMMANDS -> handleProgressionStored(sender, args, mode, findOnlinePlayer)
         else -> handleQuest(sender, routeSubcommandToQuest(args))
     }
 }

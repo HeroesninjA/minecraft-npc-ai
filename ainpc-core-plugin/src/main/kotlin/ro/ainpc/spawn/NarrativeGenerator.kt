@@ -348,7 +348,6 @@ class NarrativeGenerator {
     private fun nodeMatchesAny(node: WorldNodeInfo, vararg tokens: String): Boolean =
         tokens.any { matchesToken(node.typeId(), it) || node.metadata().values.any { v -> matchesToken(v, it) } }
 
-    private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: Int): Int = 0
     private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int {
         for (key in keys) {
             val value = place.metadata()[key]?.trim()?.toIntOrNull()

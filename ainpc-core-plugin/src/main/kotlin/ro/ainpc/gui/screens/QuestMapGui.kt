@@ -190,6 +190,7 @@ class QuestMapGui : GuiScreen {
         val place = worldAdmin.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
         val region = worldAdmin.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
 
+        val globalMode = context.service().getQuestMapGlobalMode(player)
         context.item(4, GuiItemFactory.item(
             Material.KNOWLEDGE_BOOK,
             "&6${GuiItemFactory.compact(objectiveKey, 30)}",
@@ -197,7 +198,8 @@ class QuestMapGui : GuiScreen {
                 "&7Template: &f$templateId",
                 if (existing != null) "&7Ancora: &f${existing.anchorType()}:${existing.anchorId()}"
                 else "&7Ancora: &cniciuna",
-                "&7Locatie: &f${place?.displayName() ?: region?.name() ?: "<nemapat>"}"
+                "&7Locatie: &f${place?.displayName() ?: region?.name() ?: "<nemapat>"}",
+                if (globalMode) "&6Mod GLOBAL — ancorele functioneaza pentru toti jucatorii" else "&aMod PERSONAL — ancorele functioneaza doar pentru tine"
             )
         ))
 
@@ -274,21 +276,40 @@ class QuestMapGui : GuiScreen {
             ))
         }
 
+        context.button(17, GuiButton.enabled(
+            GuiItemFactory.item(
+                if (globalMode) Material.ENDER_EYE else Material.PLAYER_HEAD,
+                if (globalMode) "&6Mod: GLOBAL — click pentru PERSONAL" else "&aMod: PERSONAL — click pentru GLOBAL",
+                listOf(
+                    if (globalMode) "&7Ancorele create functioneaza pentru TOTI jucatorii."
+                    else "&7Ancorele create functioneaza doar pentru TINE.",
+                    "&8Click: schimba modul"
+                )
+            ),
+            GuiAction { click ->
+                context.service().toggleQuestMapGlobalMode(click.player())
+                click.service().open(click.player(), GuiKey.QUEST_MAP)
+            }
+        ))
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
 
     private fun saveBinding(context: GuiRenderContext, player: Player, templateId: String, objectiveKey: String, anchorType: String, anchorId: String, label: String) {
         val def = context.plugin().progressionService.getDefinitions(templateId).firstOrNull()
+        val globalMode = context.service().getQuestMapGlobalMode(player)
+        val playerUuid = if (globalMode) "" else player.uniqueId.toString()
+        val modeLabel = if (globalMode) "&6[GLOBAL]" else "&a[PERSONAL]"
         runCatching {
             context.plugin().progressionService.saveAnchorBinding(ProgressionAnchorBinding(
-                player.uniqueId.toString(), templateId, objectiveKey, def?.code() ?: "",
+                playerUuid, templateId, objectiveKey, def?.code() ?: "",
                 "location", "", anchorType, anchorId, label,
                 System.currentTimeMillis(), System.currentTimeMillis(), "active"
             ))
             context.service().open(player, GuiKey.QUEST_MAP)
         }.onSuccess {
-            context.plugin().messageUtils.send(player, "&aAncora salvata: &f$anchorType:$anchorId &a-> &f$objectiveKey")
+            context.plugin().messageUtils.send(player, "$modeLabel Ancora salvata: &f$anchorType:$anchorId &a-> &f$objectiveKey")
         }.onFailure { e ->
             context.plugin().logger.warning("Nu am putut salva anchor binding: ${e.message}")
             context.plugin().messageUtils.send(player, "&cEroare la salvarea ancorei: ${e.message}")

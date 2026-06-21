@@ -1,15 +1,18 @@
 package ro.ainpc.ai
 
+import ro.ainpc.story.StoryContextSnapshot
 import java.util.Locale
 
 object OpenAIPromptBuilder {
     @JvmStatic
+    @JvmOverloads
     fun buildPrompt(
         snapshot: PromptSnapshot,
         recentHistory: List<DialogHistory>?,
         relevantMemories: List<String>?,
         relationship: NPCRelationship?,
-        dbContext: DialogManager.PromptDbContext?
+        dbContext: DialogManager.PromptDbContext?,
+        storyContext: StoryContextSnapshot? = null
     ): String {
         val prompt = StringBuilder()
         val facts = NpcFactResolver.NpcFacts(
@@ -138,6 +141,11 @@ object OpenAIPromptBuilder {
                 prompt.append(snapshot.npcName()).append(": ").append(entry.npcResponse).append("\n")
             }
             prompt.append("\n")
+        }
+
+        if (storyContext != null && storyContext.toPromptBlock().isNotBlank()) {
+            prompt.append("=== CONTEXT STORY LOCAL ===\n")
+            prompt.append(storyContext.toPromptBlock()).append("\n\n")
         }
 
         prompt.append("=== MESAJUL JUCATORULUI ===\n")
