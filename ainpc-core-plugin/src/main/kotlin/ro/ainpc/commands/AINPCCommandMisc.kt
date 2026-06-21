@@ -331,6 +331,33 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
     return true
 }
 
+fun handleHealth(sender: CommandSender): Boolean {
+    val plugin = ainpcCommandMiscPlugin
+    val msg = plugin.messageUtils
+    msg.send(sender, "&6=== AINPC Health Status ===")
+
+    val platform = plugin.platform
+    val worldAdmin = platform.worldAdmin
+    val npcCount = plugin.npcManager.getAllNPCs().size
+    val spawnedNpcs = plugin.npcManager.getAllNPCs().count { it.isSpawned() }
+    val activeRoutines = if (plugin.routineService != null) {
+        if (plugin.config.getBoolean("routine.enabled", false)) "activa" else "dezactivata"
+    } else "indisponibila"
+    val questCount = plugin.progressionService?.getDefinitions()?.size ?: 0
+    val dbAvailable = plugin.databaseManager != null
+
+    msg.send(sender, "&ePlugin: &f${if (plugin.isEnabled) "&aactiv" else "&cinactiv"}")
+    msg.send(sender, "&eRuntime: &f${platform.runtimeMode.name} / World: &f${worldAdmin.worldMode.name}")
+    msg.send(sender, "&eNPC-uri: &f$npcCount &7($spawnedNpcs spawnate) &8Rutina: $activeRoutines")
+    msg.send(sender, "&eWorld mapping: &f${worldAdmin.regionCount} regiuni / ${worldAdmin.placeCount} places / ${worldAdmin.nodeCount} noduri &8Index: ${if (worldAdmin.isAutoIndexEnabled) "activ" else "dezactivat"}")
+    msg.send(sender, "&eDefinitii progresie: &f$questCount")
+    msg.send(sender, "&eBaza de date: &f${if (dbAvailable) "&aconectata" else "&cindisponibila"}")
+    msg.send(sender, "&eModificari nesalvate: &f${if (worldAdmin.hasUnsavedChanges()) "&cda" else "&anu"}")
+    msg.send(sender, "&7Pentru audit complet: &f/ainpc audit")
+    msg.send(sender, "&7Pentru debugdump: &f/ainpc debugdump all")
+    return true
+}
+
 fun handleTest(sender: CommandSender): Boolean {
     if (!sender.hasPermission("ainpc.admin")) {
         ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")

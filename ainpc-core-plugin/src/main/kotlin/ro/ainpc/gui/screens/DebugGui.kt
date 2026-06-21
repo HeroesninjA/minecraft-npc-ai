@@ -82,6 +82,13 @@ class DebugGui : GuiScreen {
             ) { click -> click.service().runCommand(click.player(), "ainpc test") }
         )
 
+        context.button(28, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+        ) { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) })
+        context.button(29, GuiButton.enabled(
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+        ) { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) })
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

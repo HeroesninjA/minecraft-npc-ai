@@ -906,12 +906,20 @@ fun handleWorldRegion(
     if (action == "create") {
         return handleWorldRegionCreate(sender, args, requirePlayerSender)
     }
+    if (action == "edit") {
+        return handleWorldRegionEdit(sender, args, requirePlayerSender)
+    }
+    if (action == "remove" || action == "delete") {
+        return handleWorldRegionRemove(sender, args)
+    }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region info <regionId>")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region edit <regionId>")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region remove <regionId>")
         return true
     }
 
@@ -958,6 +966,65 @@ fun handleWorldRegion(
     return true
 }
 
+fun handleWorldRegionEdit(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region edit <regionId>")
+        return true
+    }
+
+    val player = requirePlayerSender(sender) ?: return true
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    val region = worldAdmin.getRegion(args[3]) ?: run {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cRegiunea &e${args[3]} &cnu a fost gasita.")
+        return true
+    }
+
+    val location = player.location
+    try {
+        val updated = worldAdmin.updateRegionBounds(
+            region.id(),
+            location.blockX - 16,
+            maxOf(0, location.blockY - 8),
+            location.blockZ - 16,
+            location.blockX + 16,
+            minOf(319, location.blockY + 8),
+            location.blockZ + 16
+        )
+        if (updated == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNu am putut edita regiunea.")
+            return true
+        }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&aRegiune editata: &f${updated.id} &7-> bounds centrate pe jucator.")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
+    } catch (exception: IllegalArgumentException) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
+    }
+    return true
+}
+
+fun handleWorldRegionRemove(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region remove <regionId>")
+        return true
+    }
+
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    val regionId = args[3].trim()
+    val removed = worldAdmin.removeRegion(regionId)
+    if (!removed) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cRegiunea &e$regionId &cnu a fost gasita.")
+        return true
+    }
+
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&aRegiune stearsa: &f$regionId")
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
+    return true
+}
+
 fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     if (args.size < 3) {
         ainpcCommandWorldPlugin.messageUtils.send(
@@ -977,15 +1044,19 @@ fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     if (action == "create") {
         return handleWorldPlaceCreate(sender, args)
     }
+    if (action == "edit") {
+        return handleWorldPlaceEdit(sender, args)
+    }
     if (action == "remove" || action == "delete") {
         return handleWorldPlaceRemove(sender, args)
     }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place <info|create|remove> ...")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place <info|create|edit|remove> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place edit <placeId>")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world place remove <placeId>"
@@ -1035,12 +1106,79 @@ fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     return true
 }
 
+fun handleWorldPlaceEdit(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world place edit <placeId>")
+        return true
+    }
+
+    val player = sender as? Player ?: run {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cEditarea place-urilor cere un player.")
+        return true
+    }
+
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    val place = worldAdmin.getPlace(args[3]) ?: run {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cPlace-ul &e${args[3]} &cnu a fost gasit.")
+        return true
+    }
+
+    val loc = player.location
+    try {
+        val updated = worldAdmin.updatePlace(
+            place.id(),
+            place.displayName(),
+            place.placeType(),
+            loc.blockX - 8,
+            maxOf(0, loc.blockY - 6),
+            loc.blockZ - 8,
+            loc.blockX + 8,
+            minOf(319, loc.blockY + 6),
+            loc.blockZ + 8,
+            place.publicAccess()
+        )
+        if (updated == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNu am putut edita place-ul.")
+            return true
+        }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&aPlace editat: &f${updated.id} &7-> bounds centrate pe jucator.")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
+    } catch (exception: IllegalArgumentException) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
+    }
+    return true
+}
+
 fun handleWorldNode(sender: CommandSender, args: Array<String>): Boolean {
-    if (args.size < 3 || args[2].lowercase() != "create") {
+    if (args.size < 3) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc world node <create|edit|remove> ..."
+        )
+        return true
+    }
+
+    val action = args[2].lowercase()
+    if (action == "create") {
+        return handleWorldNodeCreate(sender, args)
+    }
+    if (action == "edit") {
+        return handleWorldNodeEdit(sender, args)
+    }
+    if (action == "remove" || action == "delete") {
+        return handleWorldNodeRemove(sender, args)
+    }
+    if (action != "info" || args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc world node <create|edit|remove> ..."
+        )
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node edit <nodeId>")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node remove <nodeId>")
         return true
     }
 
@@ -1144,6 +1282,57 @@ fun handleWorldNodeCreate(sender: CommandSender, args: Array<String>): Boolean {
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
+    return true
+}
+
+fun handleWorldNodeEdit(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node edit <nodeId>")
+        return true
+    }
+
+    val player = sender as? Player ?: run {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cEditarea node-urilor cere un player.")
+        return true
+    }
+
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    val node = worldAdmin.getNode(args[3]) ?: run {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNode-ul &e${args[3]} &cnu a fost gasit.")
+        return true
+    }
+
+    val loc = player.location
+    try {
+        val updated = worldAdmin.updateNode(node.id(), WorldNodeType.fromId(node.typeId()), loc.x, loc.y, loc.z, maxOf(2.0, node.radius()))
+        if (updated == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNu am putut edita node-ul.")
+            return true
+        }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&aNode editat: &f${updated.id} &7-> mutat la pozitia curenta.")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
+    } catch (exception: IllegalArgumentException) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
+    }
+    return true
+}
+
+fun handleWorldNodeRemove(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 4) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node remove <nodeId>")
+        return true
+    }
+
+    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
+    val nodeId = args[3].trim()
+    val removed = worldAdmin.removeNode(nodeId)
+    if (!removed) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNode-ul &e$nodeId &cnu a fost gasit.")
+        return true
+    }
+
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&aNode sters: &f$nodeId")
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
     return true
 }
 

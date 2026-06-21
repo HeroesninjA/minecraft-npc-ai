@@ -13,6 +13,8 @@ enum class GuiKey(
     STORY("story", "Story"),
     AUTHORING("authoring", "Authoring"),
     WORLD("world", "World"),
+    PLACE("place", "Place"),
+    REGION("region", "Regiune"),
     STATS("stats", "Statistici"),
     INTERACT("interact", "Interactiune NPC"),
     ROUTINE("routine", "Rutine NPC"),
@@ -20,6 +22,9 @@ enum class GuiKey(
     MANAGER("manager", "Manager NPC"),
     AUDIT("audit", "Audit"),
     DEBUG("debug", "Debug"),
+    ADMIN_MAPPING("admin_mapping", "Admin Mapping"),
+    ADMIN_QUEST("admin_quest", "Admin Quest"),
+    QUEST_MAP("quest_map", "Quest Mapping"),
     CONFIRM("confirm", "Confirmare");
 
     fun id(): String = idValue
@@ -44,11 +49,16 @@ enum class GuiKey(
                 "poveste", "story_state", "story_context", "narativ" -> "story"
                 "authoring", "quest_authoring", "progress_authoring", "authoring_view" -> "authoring"
                 "map", "lume" -> "world"
+                "place_detail", "world_place", "loc", "place_details" -> "place"
+                "region_detail", "world_region", "regiune" -> "region"
                 "stat", "statistics", "statistici" -> "stats"
                 "npc", "interaction", "interactiune", "nearest" -> "interact"
                 "routines", "rutine", "program", "schedule" -> "routine"
                 "admin", "npc_manager", "manager_npc" -> "manager"
                 "debugdump", "dump" -> "debug"
+                "adminmapping", "admin_mapping", "mapping_admin", "edit_mapping" -> "admin_mapping"
+                "adminquest", "admin_quest", "quest_admin", "edit_quest" -> "admin_quest"
+                "questmap", "quest_map", "mapping", "create_quest", "edit_quest_map" -> "quest_map"
                 else -> trimmed
             }
 

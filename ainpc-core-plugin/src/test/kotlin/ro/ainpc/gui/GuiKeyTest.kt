@@ -13,4 +13,20 @@ class GuiKeyTest {
         assertEquals(GuiKey.AUTHORING, GuiKey.fromId("authoring").orElseThrow())
         assertEquals(GuiKey.AUTHORING, GuiKey.fromId("quest_authoring").orElseThrow())
     }
+
+    @Test
+    fun resolvesAdminMappingAliases() {
+        assertEquals(GuiKey.ADMIN_MAPPING, GuiKey.fromId("admin_mapping").orElseThrow())
+        assertEquals(GuiKey.ADMIN_MAPPING, GuiKey.fromId("adminmapping").orElseThrow())
+        assertEquals(GuiKey.ADMIN_MAPPING, GuiKey.fromId("mapping_admin").orElseThrow())
+        assertEquals(GuiKey.ADMIN_MAPPING, GuiKey.fromId("edit_mapping").orElseThrow())
+    }
+
+    @Test
+    fun resolvesAdminQuestAliases() {
+        assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("admin_quest").orElseThrow())
+        assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("adminquest").orElseThrow())
+        assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("quest_admin").orElseThrow())
+        assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("edit_quest").orElseThrow())
+    }
 }

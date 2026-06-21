@@ -77,6 +77,26 @@ class MainHubGui : GuiScreen {
             "&bWorld",
             listOf("&7Regiune, place, noduri si context local.")
         )
+        val currentRegion = worldAdmin.findRegion(location.world.name, location.blockX, location.blockY, location.blockZ)
+        val currentPlace = worldAdmin.findPlace(location.world.name, location.blockX, location.blockY, location.blockZ)
+        if (currentRegion != null && context.service().canOpen(player, GuiKey.REGION)) {
+            context.button(
+                17,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", listOf("&7${currentRegion.name()}", "&7Click: detalii regiune")),
+                    GuiAction { click -> click.service().openRegionDetail(click.player(), currentRegion.id()) }
+                )
+            )
+        }
+        if (currentPlace != null && context.service().canOpen(player, GuiKey.PLACE)) {
+            context.button(
+                18,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", listOf("&7${currentPlace.displayName()}", "&7Click: detalii place")),
+                    GuiAction { click -> click.service().openPlaceDetail(click.player(), currentPlace.id()) }
+                )
+            )
+        }
         openButton(
             context,
             13,
@@ -150,9 +170,47 @@ class MainHubGui : GuiScreen {
             )
         )
 
+        val isAdmin = player.hasPermission("ainpc.admin")
+        if (isAdmin) {
+            context.button(
+                33,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Panou admin quest."),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+                )
+            )
+            context.button(
+                34,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Panou admin mapping."),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+                )
+            )
+            context.button(
+                35,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.SPYGLASS, "&6Quest debug", "&7Debug progresie curenta."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest debug tracked") }
+                )
+            )
+            context.button(
+                36,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.MAP, "&6Quest anchors", "&7Listeaza ancore persistate."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors") }
+                )
+            )
+            context.button(
+                37,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", "&7Creaza/editeaza/stergere ancore."),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+                )
+            )
+        }
         if (context.service().canOpen(player, GuiKey.DEBUG)) {
             context.button(
-                32,
+                35,
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.ENDER_EYE, "&bTest OpenAI", "&7Ruleaza /ainpc test."),
                     GuiAction { click -> click.service().runCommand(click.player(), "ainpc test") }

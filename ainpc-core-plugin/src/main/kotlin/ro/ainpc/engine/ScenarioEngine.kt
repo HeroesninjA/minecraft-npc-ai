@@ -2297,6 +2297,27 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     }
     private fun resolveQuestAnchors(p0: ScenarioTemplate, p1: Player, p2: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
         if (p0 == null || p0.objectives.isEmpty()) return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList())
+
+        val playerUuid = p1.uniqueId.toString()
+        val templateId = p0.templateId
+        val preBound = runCatching {
+            plugin.progressionService.getAnchorBindings(playerUuid, templateId, 50)
+        }.getOrDefault(emptyList())
+
+        if (preBound.isNotEmpty()) {
+            val anchors = preBound.map { binding ->
+                QuestAnchorResolver.ResolvedQuestAnchor(
+                    binding.objectiveKey(),
+                    binding.objectiveType(),
+                    binding.reference(),
+                    binding.anchorType(),
+                    binding.anchorId(),
+                    binding.displayLabel()
+                )
+            }
+            return QuestAnchorResolver.ResolvedQuestAnchors.valid(anchors)
+        }
+
         val resolver = QuestAnchorResolver(plugin.platform?.worldAdminService ?: return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList()), null)
         return resolver.resolve(p0, p1.location, p2)
     }

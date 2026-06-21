@@ -128,6 +128,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             dumpRoot.resolve("recent-public-events.txt"),
             bufferText + "\n" + dbText,
         )
+        writeIndexFile(dumpRoot, normalizedScope)
         return DebugDumpResult(dumpRoot, normalizedScope)
     }
 
@@ -151,6 +152,29 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
     @Throws(IOException::class)
     private fun writeText(path: Path, content: String) {
         DebugDumpIO.writeText(path, content)
+    }
+
+    private fun writeIndexFile(dumpRoot: Path, scope: String) {
+        val index = StringBuilder()
+        index.append("Debug Dump Index\n")
+        index.append("Scope: $scope\n")
+        index.append("Directory: ${dumpRoot.fileName}\n")
+        index.append("Generated: ${DUMP_TIMESTAMP.format(LocalDateTime.now())}\n")
+        index.append("\nFiles:\n")
+        try {
+            Files.list(dumpRoot).sorted().forEach { path ->
+                val fileSize = try { Files.size(path) } catch (_: Exception) { 0L }
+                val sizeLabel = when {
+                    fileSize < 1024 -> "${fileSize}B"
+                    fileSize < 1048576 -> "${fileSize / 1024}KB"
+                    else -> "${fileSize / 1048576}MB"
+                }
+                index.append("  ${path.fileName} ($sizeLabel)\n")
+            }
+        } catch (_: Exception) {
+            index.append("  <error listing files>\n")
+        }
+        writeText(dumpRoot.resolve("index.txt"), index.toString())
     }
 
     data class DebugDumpResult(

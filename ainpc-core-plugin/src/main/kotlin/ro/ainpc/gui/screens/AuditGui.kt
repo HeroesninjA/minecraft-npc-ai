@@ -37,6 +37,15 @@ class AuditGui : GuiScreen {
         auditButton(context, 14, "spawn", Material.GRASS_BLOCK, "&2Audit spawn")
         auditButton(context, 15, "quest", Material.WRITABLE_BOOK, "&dAudit quest")
 
+        context.button(16, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+        ))
+        context.button(17, GuiButton.enabled(
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+        ))
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

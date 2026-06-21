@@ -1,12 +1,33 @@
 ﻿# Taskuri prioritizate
 
-Actualizat: 2026-06-21 (revizia 2)
+Actualizat: 2026-06-21 (revizia 4 — audit de consistență + backlog extins)
 
-Taskuri marcate cu `✓` sunt finalizate.
+Taskurile finalizate au fost mutate in `docs/taskuri-finalizate.md`; restul sunt taskuri deschise sau propuneri.
 
 Aceasta este o lista comuna de implementare, derivata din documentatia canonica.
 
 Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/story/GUI, apoi debug/operare, apoi modularizare si igiena istorica.
+
+## Reguli de lucru
+
+- Nu marca un task ca finalizat fara verificare in cod sau documentatia canonică.
+- Pastreaza separat taskurile finalizate de backlog-ul deschis.
+- Orice categorie noua trebuie sa aiba taskuri concrete, verificabile si ordonate.
+- Taskurile suplimentare trebuie sa ramana in acelasi stil: scurte, actionabile, fara ambiguitate.
+- Daca apare o contradictie intre stare si continut, continutul si auditul au prioritate.
+
+## Reguli pentru consum AI
+
+- Citeste intai `Reguli de lucru`, apoi `Index rapid`, apoi categoria relevanta.
+- Trateaza `✓` ca finalizat verificat, nu ca intentie.
+- Trateaza sectiunile `Taskuri suplimentare` si `Taskuri extinse` ca backlog propus, nu ca implementare existenta.
+- Nu presupune ca un task nementionat in alt document este optional; verifica referinta canonică inainte de concluzie.
+- Daca un AI extern foloseste documentul, trebuie sa urmeze aceeasi ierarhie: reguli, stare, categorie, taskuri detaliate.
+- Nu interpreta termenii generali ca echivalenti cu implementarea; cere sau cauta dovezi in documentele legate.
+- Cand exista o discrepanta intre titlul unei sectiuni si continutul ei, foloseste continutul si marcajele de stare.
+- Foloseste numele documentelor si prioritatile ca puncte de intrare, nu ca sursa unica de adevar.
+- Dacă un task pare vag, trateaza-l ca obiectiv si nu ca specificatie completa.
+- Daca documentul este folosit de un alt AI de coding, conserva acelasi sens al termenilor: „finalizat”, „deschis”, „backlog”, „audit”, „canonic”.
 
 ## Index rapid
 
@@ -16,6 +37,8 @@ Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/sto
 - `P3` - debug, testare, release si hardening: 21 documente
 - `P4` - modularizare, Kotlin si addonuri: 16 documente
 - `P5` - istoric si igiena documentatiei: 27 documente
+
+Aceste numere indica documentele repere asociate fiecarei categorii; nu inseamna ca toate taskurile din categorie sunt inchise.
 
 ## Harta compacta
 
@@ -30,9 +53,7 @@ Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/sto
 
 ## P0 - Fundatie, API si runtime
 
-- ✓ Stabileste contractul public minim pentru `ainpc-api` (`WorldAdminApi` complet: 12 proprietati, 15 metode abstracte, 11 metode default, proprietati de indexare, metode de bind NPC-place).
 - Construieste un traseu clar de reload si shutdown pentru platforma, addonuri si feature flags.
-- ✓ Blocheaza dependintele directe ale addonurilor catre clase interne din core (`WorldContextSnapshotBuilder` decuplat de `WorldAdminService`; `StoryContextService` + `NPCContext` folosesc API in loc de implementare).
 - Stabileste o baza coerenta pentru persistenta, dialect SQL si schema initiala.
 - Fixeaza punctul principal de intrare in documentatie si navigare.
 
@@ -40,7 +61,6 @@ Documente: `documentatie-api.md`, `harta-clase-platform-db.md`, `harta-clase-ind
 
 ### Taskuri detaliate
 
-- ✓ Documenteaza suprafata publica minima pentru addonuri si core (`WorldAdminApi` expune 12 proprietati si 29 de metode, dintre care 11 default si 18 abstracte; metoda `platform.worldAdmin` returneaza API, nu implementare).
 - Deseneaza traseul de bootstrap si reload pentru platforma.
 - Specifica ce feature flags sunt citite la pornire si cum sunt rezolvate.
 - Stabileste schema initiala si regulile SQL pe dialect.
@@ -126,10 +146,47 @@ Documente: `documentatie-api.md`, `harta-clase-platform-db.md`, `harta-clase-ind
 - Pastreaza documentul scurt si citibil rapid.
 - Noteaza daca o regula trebuie mutata in documentul canonic.
 
+### Taskuri suplimentare P0
+
+- Defineste versiunea semantica a API-ului public.
+- Stabileste criteriile de compatibilitate binara pentru addonuri.
+- Documenteaza ordinea de bootstrap pentru serviciile critice.
+- Clarifica shutdown-ul idempotent pentru platforma si addonuri.
+- Specifica fallback-ul cand un feature flag lipseste la pornire.
+- Introdu validari explicite pentru schema SQL initiala.
+- Leaga reload-ul de invalidarea cache-urilor si rebind.
+- Defineste limitele de acces la clasele interne din core.
+- Precizeaza ce date sunt snapshot si ce date sunt live state.
+- Adauga checklist de validare pentru public API inainte de release.
+
+### Taskuri extinse P0
+
+- Specifica ordinea de initializare pentru handler-ele critice.
+- Stabileste contractul de erori pentru bootstrap esuat.
+- Clarifica ce se poate reconstrui dupa restart fara interventie.
+- Documenteaza ce inseamna safe reload pentru addonuri.
+- Defineste validarea pentru dependinte lipsa la pornire.
+- Precizeaza ce servicii trebuie oprire ordonata si in ce ordine.
+- Defineste cum se raporteaza un API incompatibil la incarcare.
+- Clarifica ce configurari pot fi preluate din cache si care nu.
+- Stabileste regula de versionare pentru contractele publice.
+- Noteaza ce verifici dupa aplicarea unui restart complet.
+
+### Taskuri extinse P0 - lot mare
+
+- Defineste contractul de compatibilitate intre versiuni de API.
+- Stabileste ce se intampla cand o resursa critica lipseste la start.
+- Clarifica ordinea de validare pentru configurare, DB si runtime.
+- Documenteaza cum se face fail fast pentru bootstrap corupt.
+- Precizeaza ce exception handling este permis in startup.
+- Stabileste ce loguri se emit in etapa de init si shutdown.
+- Noteaza ce state trebuie curatat inainte de reload.
+- Defineste cum se valideaza registration order pentru addonuri.
+- Clarifica ce depinde de feature flags si ce este permanent.
+- Stabileste criterii de acceptare pentru un startup fara regresii.
+
 ## P1 - World, NPC si spawn
 
-- ✓ Stabileste fluxul `WorldAdminService -> WorldContextSnapshotBuilder -> WorldContextSnapshot` (`WorldContextSnapshotBuilder` refactorizat sa primeasca `WorldAdminApi` in loc de `WorldAdminService`; fluxul e transparent si fara dependente directe de implementare).
-- ✓ Stabileste legaturile persistente NPC -> home/work/social si backfill-ul lor (`bindNpcToHomePlace`, `bindNpcToWorkPlace`, `bindNpcToSocialPlace` expuse ca metode abstracte in `WorldAdminApi`; `WorldAdminService` are `override`).
 - Stabileste ordinea corecta de spawn: alocare, validare, spawn, bind, persistenta, rollback.
 - Stabileste auditul semantic pentru mapping, gap analysis si patch planning.
 - Stabileste modelul principal `AINPC -> NPCManager -> NPCContext`.
@@ -141,8 +198,6 @@ Documente: `simulare-sat-si-lume.md`, `ordine-spawn-npc-cladiri-region-node.md`,
 
 ### Taskuri detaliate
 
-- ✓ Incheaga contractul semantic `Region -> Place -> Node` (`WorldAdminApi` expune interogari simetrice: `findRegionsByType/Tag/World`, `findPlacesByTag/Type/World/Owner/Metadata`, `findNodesByType/World/Metadata`; plus `hasTag` pe `WorldRegionInfo` si `WorldPlaceInfo`).
-- ✓ Defineste planul de household si backfill-ul persistent (metodele `bindNpcToHome/Work/SocialPlace` expuse in API; `WorldAdminService` implementeaza binding cu metadata `owner_npc_id`, `resident_npc_ids`, `worker_npc_ids`, `social_npc_ids`).
 - Defineste regulile de spawn sigur, cu rollback si audit.
 - Normalizeaza identitatea NPC-ului intre entity, DB si context.
 - Stabileste inspectia pentru duplicate, binding-uri si lock-uri.
@@ -315,26 +370,53 @@ Documente: `simulare-sat-si-lume.md`, `ordine-spawn-npc-cladiri-region-node.md`,
 - Pastreaza lista de optiuni scurta.
 - Noteaza ce trebuie evaluat inainte de schimbarea providerului.
 
+### Taskuri suplimentare P1
+
+- Defineste raportarea conflictelor de mapping inainte de spawn.
+- Specifica regulile de re-incercare pentru binding esuat.
+- Stabileste semnatura auditului pentru duplicate NPC.
+- Descrie recuperarea dupa rollback partial al spawn-ului.
+- Documenteaza cum se actualizeaza household-ul dupa mutare.
+- Clarifica ordinea de reaplicare a rutinei dupa backfill.
+- Adauga regulile de reconciliere intre entity si DB.
+- Precizeaza cum se trateaza locurile fara owner sau worker.
+- Defineste validarea pentru structuri exterioare in world.
+- Stabileste criterii de acceptare pentru sat semantic complet.
+
+### Taskuri extinse P1
+
+- Clarifica ce face patch planner cand mapping-ul este incomplet.
+- Stabileste cum se marcheaza locurile invalide in audit.
+- Documenteaza ordinea de reparatie pentru binding-uri multiple.
+- Defineste fallback-ul cand un NPC nu are niciun context asociat.
+- Precizeaza cum se trateaza structurile generate partial.
+- Adauga reguli pentru reconcilierea intre world state si snapshot.
+- Stabileste cum se rescrie metadata dupa mutarea unui NPC.
+- Clarifica ce se intampla cand un loc este ocupat de doua ori.
+- Documenteaza criteriile de respingere pentru spawn incomplet.
+- Noteaza cum se valideaza integritatea relatiilor home-work-social.
+
+### Taskuri extinse P1 - lot mare
+
+- Defineste cum se atribuie prioritate intre doua locatii candidate.
+- Clarifica ce se auditeaza cand un NPC este mutat manual.
+- Documenteaza regula de fallback pentru locuinta lipsa.
+- Stabileste ce inseamna o structura valida pentru spawn.
+- Precizeaza cum se evita dublarea relatiei de proprietate.
+- Adauga criterii de reparatie pentru entitati zombie in world.
+- Noteaza ce se face cand mapping-ul contine metadata conflictuala.
+- Defineste cum se trateaza regiuni fara noduri active.
+- Clarifica ce refresh se aplica dupa backfill complet.
+- Stabileste pasii de verificare dupa cleanup de duplicate.
+
 ## P2 - Quest, AI, story si GUI
 
-- ✓ Stabileste `QuestDirector -> QuestDirectorDecision` si criteriile de selectie (`QuestDirector` cu scoring engine, `QuestDirectorRequest`, `QuestDirectorDecision` — implementat).
-- ✓ Stabileste rezolvarea ancorelor de quest in raport cu world-ul si NPC-urile (`QuestAnchorResolver` cu `ResolvedQuestAnchor`, fallback-uri, matching pe ID/nume/tag/tip/metadata — optimizat sa foloseasca API-ul).
-- ✓ Stabileste runtime-ul generic de progres pentru questuri, contracte, datorii si evenimente (`ProgressionService`, `ProgressionDefinition`, `ProgressionSelector`, snapshot-uri GUI — implementat).
-- ✓ Stabileste contextul narativ pentru AI si story state-ul persistent (`StoryContextService`, `StoryStateService`, `StoryContextSnapshot`, semnale story, story events — implementat).
-- ✓ Stabileste fluxul AI `OpenAIPromptSnapshotFactory -> OpenAIService -> DialogManager` (implementat cu fallback determinist, politica `AIOrchestrationPolicy`, `AIUseCase`).
 - Stabileste regulile pentru generare de questuri cu AI doar ca draft.
-- ✓ Stabileste ecranele principale GUI si modul de navigare intre ele (`MainHubGui`, `QuestLogGui`, `QuestDetailGui`, `WorldHubGui`, `StoryGui`, `StatsGui`, `NpcInteractionGui`, `NpcManagerGui`, `RoutineGui`, `DebugGui`, `AuditGui`, `ConfirmActionGui`, `QuestAuthoringGui` — implementat).
-- ✓ Stabileste traseul de conversatie, emotii, relatii si reactii NPC (`ConversationSessionManager`, dialog cu OpenAI, memorii, emotii, relatii persistente, NPC reactii — implementat).
 
 Documente: `questuri-avansate-v2.md`, `progression-service.md`, `story-context-service.md`, `ai-orchestrare-si-mecanici.md`, `gui-interfete.md`, `dialog-si-conversatii.md`, `harta-clase-quest.md`, `harta-clase-ai.md`, `harta-clase-gui.md`
 
 ### Taskuri detaliate
 
-- ✓ Scrie clar criteriile de selectie ale directorului de quest (`QuestDirector` scoring engine: `storyDemandSignals` → `definitionTokens` → scor pe signal matching + preferred mechanic → `CandidateScore` sortat descrescator).
-- ✓ Specifica rezolvarea ancorelor si fallback-urile ei (`QuestAnchorResolver` matcheaza obiective `visit_region/place/node/talk_to_npc` prin ID, nume, tag, tip, metadata; fallback: locatia curenta, primul element din mapping).
-- ✓ Detaliaza snapshot-ul de progres si progresul generic (`ProgressionGuiSnapshot`, `ProgressionStatusSnapshot`, `ProgressionProgressSnapshot`, `ProgressionStageSnapshot` — modele read-only cu player, selector, obiective, stage-uri, recompense).
-- ✓ Defineste ce inseamna draft AI si ce ramane validare runtime (`QuestSeed`, `QuestDraft`, `QuestDraftValidator`, `QuestSeedFactory`, `QuestAuthoringService` — flux read-only; draft-ul nu se executa fara validare runtime).
-- ✓ Fixeaza traseele GUI pentru quest, story si debug (`GuiKey.QUEST` → `QuestLogGui` → `QuestDetailGui`; `GuiKey.STORY` → `StoryGui`; `GuiKey.DEBUG` → `DebugGui`; toate au navigare standard si butoane de actiune).
 
 #### `questuri-avansate-v2.md`
 
@@ -536,14 +618,47 @@ Documente: `questuri-avansate-v2.md`, `progression-service.md`, `story-context-s
 - Pastreaza lista de ecrane si manageri usor de parcurs.
 - Evita duplicarea detaliilor de business logic.
 
+### Taskuri suplimentare P2
+
+- Descrie fluxul de aprobare pentru quest drafts.
+- Clarifica modul in care scorul se combina cu preferintele mecanice.
+- Defineste fallback-ul cand story context este gol.
+- Specifica regulile de expunere a quest data in GUI.
+- Stabileste ce evenimente de dialog sunt persistate.
+- Detaliaza sincronizarea dintre progression si quest log.
+- Precizeaza cum se versioneaza scenariile narative.
+- Adauga reguli pentru conflict intre questuri active.
+- Defineste criteriile de degradare pentru AI orchestration.
+- Specifica ce se intampla cand un NPC reactioneaza in afara contextului.
+
+### Taskuri extinse P2
+
+- Stabileste ce se salveaza dintr-un dialog nereusit.
+- Clarifica cine decide anularea unui quest activ.
+- Documenteaza cum se refolosesc ancorele in questuri similare.
+- Defineste cand GUI-ul afiseaza date stale si cum le marcheaza.
+- Precizeaza ordinea de refresh pentru story si progression.
+- Stabileste regula pentru conflict intre doua questuri cu acelasi anchor.
+- Defineste ce semnale story sunt obligatorii pentru un quest avansat.
+- Clarifica ce date AI poate vedea si ce date raman ascunse.
+- Documenteaza comportamentul GUI cand lipsesc datele pentru un slot.
+- Noteaza cum se recupereaza progresul dupa o intrerupere in AI flow.
+
+### Taskuri extinse P2 - lot mare
+
+- Defineste o politica pentru retry la generarea draftului de quest.
+- Clarifica cand se marcheaza un quest ca suspendat, nu anulat.
+- Stabileste ce date narative trebuie sincronizate la fiecare tick.
+- Noteaza cum se selecteaza un fallback de dialog cand AI esueaza.
+- Documenteaza ce campuri din quest sunt vizibile in authoring.
+- Precizeaza ordinea de salvare pentru story, progression si GUI.
+- Adauga reguli pentru conflict intre mai multe surse de semnale.
+- Defineste ce se intampla cand un anchor se invalideaza in runtime.
+- Clarifica cum se marcheaza o reactie NPC invalida.
+- Stabileste criteriile pentru reactivarea unui quest dupa pauza.
+
 ## P3 - Debug, testare, release si hardening
 
-- ✓ Stabileste `DebugDumpService` si ce artefacte scrie in mod standard (`DebugDumpService` scrie: `world-mapping.json`, `npc-world-bindings.json`, `audit.txt`, `config-sanitized.yml`, `recent-server-log.txt`, `quest-audit-report.txt`, `loaded-quest-definitions.json`, `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, `story-states.json`, `story-events.json`, `npc-summary.json` — implementat).
-- ✓ Stabileste `RecentEventsBuffer` si ce evenimente sunt retinute pentru inspectie (buffer de evenimente recente in `EventRecorder` sau `RecentEventsBuffer` — log-uri de server, evenimente story).
-- Stabileste `WorldMappingSemanticIndex` ca instrument de debugging semantic.
-- Stabileste checklist-ul de testare, release si recuperare dupa restart.
-- ✓ Stabileste procedura anti-duplicare NPC si reparatia starii corupte (`/ainpc duplicates`, `/ainpc repair duplicates|households|npc-bindings|mapping-metadata|batch <args> [dryrun|apply]` — implementat).
-- ✓ Stabileste observabilitatea pentru AI backoff, audit si snapshot-uri de stare (`AIOrchestrationService` cu fallback determinist, `/ainpc audit`, `DebugDumpService`, snapshot-uri story/progression/GUI — implementat).
 
 Documente: `debugging-si-testare.md`, `release-checklist.md`, `server-admin-runbook.md`, `prevenire-duplicare-npc.md`, `harta-clase-debug.md`
 
@@ -723,13 +838,47 @@ Documente: `debugging-si-testare.md`, `release-checklist.md`, `server-admin-runb
 - Pastreaza sumarul mai degraba decat detaliul.
 - Noteaza ce se transfera in audit sau hotfix.
 
+### Taskuri suplimentare P3
+
+- Defineste matricea de prioritate pentru incidente runtime.
+- Specifica formatul minim al unui raport de bug reproducibil.
+- Stabileste pasii de verificare dupa restart de server.
+- Clarifica semnele de coruptie in snapshot-uri.
+- Adauga checklist pentru inspectia logurilor de productie.
+- Defineste cand un audit blocheaza release-ul.
+- Stabileste pragurile pentru alertare manuala.
+- Documenteaza procedura de rollback pentru fisiere de configurare.
+- Precizeaza cum se valideaza repararea dupa duplicate cleanup.
+- Adauga verificari pentru datele din debug dump.
+
+### Taskuri extinse P3
+
+- Stabileste ce loguri se pastreaza pentru investigatii lungi.
+- Clarifica cand un incident trece din warning in blocking.
+- Documenteaza cum se compara dump-urile intre rulari.
+- Defineste ce sanitarizare se aplica in artefactele de debug.
+- Precizeaza cum se inchide o anomalie dupa confirmarea repararii.
+- Specifica ce campuri trebuie mascate in rapoartele trimise extern.
+- Clarifica cum se marcheaza o regresie in raportul de incident.
+- Stabileste procedura de verificare dupa repararea unui dump corupt.
+- Documenteaza ce trebuie salvat cand auditul esueaza partial.
+- Precizeaza criteriile de acceptare pentru un hotfix minimal.
+
+### Taskuri extinse P3 - lot mare
+
+- Defineste ce inseamna un log suficient pentru reproducere.
+- Clarifica ce se considera dovada valida pentru inchiderea bugului.
+- Stabileste cum se structureaza un raport de incident intern.
+- Noteaza ce verifici dupa fiecare operatie de restore.
+- Documenteaza cum se triereaza erorile intermitente.
+- Precizeaza ce date sunt necesare pentru rollback rapid.
+- Adauga reguli pentru compararea a doua snapshot-uri consecutive.
+- Defineste cand un warning devine ticket obligatoriu.
+- Clarifica ce artefacte sunt obligatorii in fiecare debug dump.
+- Stabileste cum se documenteaza un hotfix aplicat manual.
+
 ## P4 - Modularizare, Kotlin si addonuri
 
-- Stabileste limitele clare ale modulului `ainpc-api` fata de core.
-- Stabileste contractele de addon si ordinea de incarcare a descriptorilor.
-- Stabileste regulile Kotlin pentru interop Java si packaging Paper.
-- Stabileste strategia de testare pentru conversii Kotlin si smoke tests.
-- Stabileste directia pentru scenarii programabile si modularizare.
 
 Documente: `kotlin-style-guide.md`, `kotlin-interop-api-addonuri.md`, `kotlin-paper-packaging-si-smoke.md`, `kotlin-testing-strategy.md`, `strategie-plugin-modular-si-scenarii-programabile.md`, `harta-clase-platform-db.md`
 
@@ -869,13 +1018,47 @@ Documente: `kotlin-style-guide.md`, `kotlin-interop-api-addonuri.md`, `kotlin-pa
 - Pastreaza instructiunile orientate pe reproducere.
 - Noteaza ce trebuie actualizat cand toolchain-ul se schimba.
 
+### Taskuri suplimentare P4
+
+- Defineste standardul de packaging pentru module noi.
+- Clarifica contractul dintre API si implementarile Kotlin.
+- Specifica regulile pentru coroutines in taskuri server.
+- Adauga checklist pentru evaluarea interop-ului la review.
+- Stabileste criterii pentru extragerea unui modul nou.
+- Precizeaza ce API-uri raman stabile pe termen lung.
+- Documenteaza conventiile de naming intre module.
+- Defineste testele obligatorii inainte de publicarea addonului.
+- Clarifica gestionarea resurselor comune intre addonuri.
+- Stabileste politica de compatibilitate pentru scenarii programabile.
+
+### Taskuri extinse P4
+
+- Stabileste ce ramane in Kotlin si ce trebuie expus ca Java-friendly.
+- Clarifica pragul la care un helper devine modul separat.
+- Documenteaza cum se testeaza API-urile publice cross-module.
+- Defineste o regula unica pentru dependente circulare.
+- Precizeaza cum se versionizeaza contractele dintre addonuri.
+- Specifica ce clase sunt permise in layer-ul public al addonurilor.
+- Clarifica cand se prefera interfata in locul clasei concrete.
+- Documenteaza cum se evita duplicarea helperelor intre module.
+- Stabileste ordinea de migrare cand un modul este spart in doua.
+- Noteaza ce compatibilitate trebuie verificata la publicarea unui addon.
+
+### Taskuri extinse P4 - lot mare
+
+- Defineste ce inseamna o dependinta acceptabila intre module.
+- Clarifica ce cod ramane comun si ce se extrage in helper.
+- Stabileste reguli pentru API stabil versus API experimental.
+- Noteaza cum se testeaza contractele publice dupa refactor.
+- Documenteaza ce se face cand un addon cere o clasa interna.
+- Precizeaza cand un wrapper Kotlin este obligatoriu.
+- Adauga criterii pentru reducerea suprafetei publice.
+- Defineste ce artefacte trebuie verificate in smoke test.
+- Clarifica cum se gestioneaza breaking changes in addon API.
+- Stabileste ce inseamna o migratie incrementala corecta.
+
 ## P5 - Istoric si igiena documentatiei
 
-- Pastreaza arhiva Kotlin ca istoric, nu ca sursa de decizie noua.
-- Clarifica documentele vechi de quest si spawn fata de documentele curente.
-- Mentine indexurile de navigare scurte si consecvente.
-- Pastreaza harta de clase ca index de lucru, nu ca sursa canonica.
-- Revizuieste periodic daca un document istoric trebuie mutat in arhiva sau actualizat in documentul canonic.
 
 Documente: `index-arhiva.md`, `arhiva/kotlin-migration/README.md`, `arhiva/questuri-avansate-v1.md`, `arhiva/ordine-spawn-npc-cladiri-region-node-v1.md`, `index-navigare.md`, `start-here.md`
 
@@ -1102,4 +1285,44 @@ Documente: `index-arhiva.md`, `arhiva/kotlin-migration/README.md`, `arhiva/quest
 - Clarifica ce este fixture si ce este output.
 - Pastreaza formatul compatibil cu testarea manuala.
 - Noteaza ce se valideaza dupa rulare.
+
+### Taskuri suplimentare P5
+
+- Defineste criteriile de mutare a unui document in arhiva.
+- Clarifica ce documente sunt sursa de adevar curenta.
+- Adauga reguli pentru pastrarea istoricului de decizie.
+- Specifica cum se evita duplicarea intre indexuri.
+- Stabileste procesul de curatare a documentelor obsolete.
+- Defineste o schema de referinta intre vechi si canonic.
+- Clarifica ce note merita pastrate ca istorie.
+- Adauga verificare periodica a linkurilor moarte.
+- Precizeaza cine actualizeaza indexurile de navigare.
+- Stabileste criterii pentru rezumatul istoric minim.
+
+### Taskuri extinse P5
+
+- Defineste ce informatie se muta din canonic in istoric.
+- Clarifica cand un index devine redundant si poate fi retras.
+- Documenteaza cum se noteaza o decizie abandonata.
+- Stabileste regula pentru re-etichetarea documentelor vechi.
+- Precizeaza cum se compara doua versiuni istorice similare.
+- Specifica ce documente istorice trebuie mentionate in fiecare arhiva.
+- Clarifica cum se marcheaza un document partial depasit.
+- Documenteaza politica pentru linkuri interne catre arhive.
+- Stabileste cand un rezumat istoric merita actualizat.
+- Noteaza cum se tine evidenta mutarilor intre categorii.
+
+### Taskuri extinse P5 - lot mare
+
+- Defineste ce se arhiveaza automat si ce necesita decizie manuala.
+- Clarifica cum se elimina un document fara a pierde contextul.
+- Stabileste regula pentru redenumirea fisierelor istorice.
+- Noteaza cum se pastreaza urmele unei mutari de document.
+- Documenteaza ce format are un rezumat istoric minim.
+- Precizeaza cum se evita contradictiile intre arhiva si canonic.
+- Adauga criterii pentru consolidarea documentelor aproape identice.
+- Defineste ce se face cu linkurile catre documente mutate.
+- Clarifica cum se marcheaza un document drept referinta, nu activ.
+- Stabileste procesul de audit pentru documentatia veche.
+
 

@@ -29,6 +29,7 @@ Foloseste aceasta pagina daca vrei sa sari direct la documentele canonice de fun
 - [Quest, story si AI](./questuri-avansate-v2.md)
 - [AI orchestrare si mecanici](./ai-orchestrare-si-mecanici.md)
 - [GUI interfete](./gui-interfete.md)
+- [GUI Admin Mapping si Quest](./gui-admin-mapping-quest.md)
 - [Debugging si testare](./debugging-si-testare.md)
 - [Documentatie API](./documentatie-api.md)
 - [Server admin runbook](./server-admin-runbook.md)

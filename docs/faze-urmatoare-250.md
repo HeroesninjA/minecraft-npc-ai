@@ -29,10 +29,10 @@ Legenda status:
 1. F001 - `ACUM` - Ruleaza smoke Paper complet pentru startup, audit, debugdump si shutdown curat.
 2. F002 - `ACUM` - Documenteaza rezultatul smoke Paper in `debugging-si-testare.md`.
 3. F003 - `ACUM` - Adauga checklist scurt pentru restart dupa update de jar.
-4. F004 - `ACUM` - Extinde `/ainpc audit db` cu sumar clar pentru tabelele noi.
-5. F005 - `ACUM` - Extinde `/ainpc debugdump all` cu index sumar al fisierelor generate.
-6. F006 - `ACUM` - Marcheaza in log fiecare repair aplicat cu motiv si numar de randuri afectate.
-7. F007 - `ACUM` - Adauga comanda read-only pentru status rapid de sanatate server AINPC.
+4. F004 - `IMPLEMENTAT` - Extinde `/ainpc audit db` cu sumar clar pentru 19 tabele (randuri per tabela + total).
+5. F005 - `IMPLEMENTAT` - Extinde `/ainpc debugdump all` cu index sumar al fisierelor generate (`index.txt` cu nume fisiere + marimi).
+6. F006 - `IMPLEMENTAT` - Marcheaza in log fiecare repair aplicat cu motiv si numar de randuri afectate (duplicates, households, npc-bindings, mapping-metadata).
+7. F007 - `IMPLEMENTAT` - Adauga comanda read-only pentru status rapid de sanatate server AINPC (`/ainpc health` + alias `status`, `healthcheck`).
 8. F008 - `URMATOR` - Creeaza smoke script pentru `world demo -> settlement spawn -> audit -> restart`.
 9. F009 - `URMATOR` - Creeaza smoke script pentru quest accept/progress/complete/reload.
 10. F010 - `URMATOR` - Adauga raport de versiune schema DB in debugdump.
@@ -116,8 +116,8 @@ Legenda status:
 79. F079 - `ACUM` - Audit pentru places fara `role`.
 80. F080 - `ACUM` - Audit pentru nodes fara `type`.
 81. F081 - `URMATOR` - Comanda read-only pentru summary pe regiune.
-82. F082 - `URMATOR` - GUI world cu lista places filtrabila.
-83. F083 - `URMATOR` - GUI world cu noduri pentru place selectat.
+82. F082 - `IMPLEMENTAT` - GUI world cu lista places filtrabila (`WorldHubGui` + `WorldPlaceGui` cu navigare din hub).
+83. F083 - `IMPLEMENTAT` - GUI world cu noduri pentru place selectat (`WorldPlaceGui` afiseaza nodurile unui place la sloturile 19-25).
 84. F084 - `URMATOR` - Validare Y variance pentru demo settlement.
 85. F085 - `URMATOR` - Validare apa/lava la spawn nodes.
 86. F086 - `URMATOR` - Validare obstacole in jurul `npc_spawn`.

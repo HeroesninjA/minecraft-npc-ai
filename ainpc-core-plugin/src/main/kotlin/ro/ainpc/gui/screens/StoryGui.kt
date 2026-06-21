@@ -101,6 +101,15 @@ class StoryGui : GuiScreen {
             listOf("&7Exporta story-states.json si story-events.json.")
         )
 
+        context.button(6, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+        ))
+        context.button(7, GuiButton.enabled(
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+        ))
+
         var slot = 19
         for (event in snapshot.events) {
             context.item(slot++, GuiItemFactory.item(eventMaterial(event), "&f${GuiItemFactory.compact(eventTitle(event), 28)}", eventLore(event)))

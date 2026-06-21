@@ -336,6 +336,8 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Teleporteaza-te la un NPC")
     msg.send(sender, "&e/ainpc test")
     msg.send(sender, "&7  Testeaza conexiunea OpenAI")
+    msg.send(sender, "&e/ainpc health")
+    msg.send(sender, "&7  Status rapid de sanatate server AINPC")
     msg.send(sender, "&e/ainpc reload")
     msg.send(sender, "&7  Reincarca configuratia")
 }

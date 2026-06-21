@@ -251,6 +251,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "tp", "teleport" -> handleTeleport(sender, args)
             "reload" -> handleReload(sender)
             "test" -> handleTest(sender)
+            "health", "status", "healthcheck" -> handleHealth(sender)
             else -> {
                 sendHelp(sender)
                 true
@@ -319,6 +320,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                     .isNotEmpty() || result.duplicateDbRows() > 0 || result.duplicateEntities() > 0 || result.sourceKeyIndexIssues() > 0)
             )
                 plugin.messageUtils.send(sender, "&7Pentru aplicare: &f/ainpc repair duplicates apply")
+            if (apply) plugin.logger.info("Repair duplicates APPLY: ${result.deletedDbRows()} DB rows deleted, ${result.removedEntities()} entities removed, ${result.reassociatedEntities()} reassociated (${result.duplicateDbRows()} duplicate rows found)")
+            else plugin.logger.info("Repair duplicates DRYRUN: ${result.duplicateDbRows()} duplicate DB rows, ${result.duplicateEntities()} duplicate entities, ${result.sourceKeyIndexIssues()} source key issues")
             if (result.actions().isEmpty() && result.warnings().isEmpty() && result.errors().isEmpty())
                 plugin.messageUtils.send(sender, "&aNu sunt actiuni de reparatie necesare.")
             return true
@@ -340,6 +343,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 sendRepairMessages(sender, result.actions(), if (apply) "&a" else "&e", 12)
                 sendRepairMessages(sender, result.warnings(), "&e", 8)
                 sendRepairMessages(sender, result.errors(), "&c", 8)
+                if (apply) plugin.logger.info("Repair households APPLY: ${result.deletedResidentRows()} resident rows deleted, ${result.updatedHouseholds()} households updated (${result.duplicateResidentRows()} duplicate rows)")
+                else plugin.logger.info("Repair households DRYRUN: ${result.duplicateResidentRows()} duplicate resident rows, ${result.duplicateNpcGroups()} NPC groups, ${result.duplicateSourceKeyGroups()} source key groups")
                 if (!apply && result.duplicateResidentRows() > 0) plugin.messageUtils.send(
                     sender,
                     "&7Pentru aplicare: &f/ainpc repair households apply"
@@ -427,6 +432,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         sendRepairMessages(sender, actions, if (apply) "&a" else "&e", 16)
         sendRepairMessages(sender, warnings, "&e", 8)
         sendRepairMessages(sender, errors, "&c", 8)
+        if (apply) plugin.logger.info("Repair npc-bindings APPLY: $savedBindings bindings saved ($candidates candidates, scanned $scannedNpcs NPC)")
+        else plugin.logger.info("Repair npc-bindings DRYRUN: $candidates candidates ($scannedNpcs NPC scanned, $missingBindings missing, $divergentBindings divergent)")
         if (!apply && candidates > 0) plugin.messageUtils.send(
             sender,
             "&7Pentru aplicare: &f/ainpc repair npc-bindings apply"
@@ -2853,7 +2860,41 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun auditDatabase(report: AuditReport) {
         report.addSection("Database")
-        report.addNote("Database audit efectuat.")
+        val db = plugin.databaseManager ?: run {
+            report.addWarning("DatabaseManager indisponibil.")
+            return
+        }
+        try {
+            val tables = listOf(
+                "npcs", "npc_personality", "npc_emotions", "npc_profiles",
+                "npc_traits", "npc_memories", "npc_relationships", "npc_family",
+                "dialog_history", "player_quests", "quest_anchor_bindings",
+                "npc_world_bindings", "households", "household_residents",
+                "spawn_batches", "spawn_batch_steps",
+                "region_story_state", "place_story_state", "story_events"
+            )
+            var totalRows = 0
+            for (table in tables) {
+                try {
+                    val stmt = db.getConnection()?.prepareStatement("SELECT COUNT(*) FROM $table")
+                    if (stmt != null) {
+                        val rs = stmt.executeQuery()
+                        if (rs.next()) {
+                            val count = rs.getInt(1)
+                            report.addNote("$table: $count randuri")
+                            totalRows += count
+                        }
+                        rs.close()
+                        stmt.close()
+                    }
+                } catch (_: Exception) {
+                    report.addNote("$table: <neaccesibil>")
+                }
+            }
+            report.addNote("Total randuri: $totalRows")
+        } catch (e: Exception) {
+            report.addWarning("Eroare audit DB: ${e.message}")
+        }
     }
 
     private fun auditSpawnOrder(report: AuditReport) {

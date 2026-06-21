@@ -670,6 +670,153 @@ class WorldAdminService(
         return node
     }
 
+    fun renameRegion(regionId: String?, name: String?): WorldRegion? {
+        val normalizedRegionId = normalizeScopeId(regionId, "regionId")
+        val region = regionsById[normalizedRegionId] ?: return null
+        val updated = WorldRegion(
+            region.id,
+            defaultDisplayName(name, region.name),
+            region.worldName,
+            region.type,
+            region.minX,
+            region.minY,
+            region.minZ,
+            region.maxX,
+            region.maxY,
+            region.maxZ
+        )
+        updated.setTags(region.getTags())
+        updated.storyState = region.storyState
+        replaceRegion(region, updated)
+        dirty = true
+        return updated
+    }
+
+    fun updateRegionBounds(
+        regionId: String?,
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int
+    ): WorldRegion? {
+        val normalizedRegionId = normalizeScopeId(regionId, "regionId")
+        val region = regionsById[normalizedRegionId] ?: return null
+        val updated = WorldRegion(
+            region.id,
+            region.name,
+            region.worldName,
+            region.type,
+            minX,
+            minY,
+            minZ,
+            maxX,
+            maxY,
+            maxZ
+        )
+        updated.setTags(region.getTags())
+        updated.storyState = region.storyState
+        validateRegion(updated)
+        replaceRegion(region, updated)
+        dirty = true
+        return updated
+    }
+
+    fun updatePlace(
+        placeId: String?,
+        displayName: String?,
+        placeType: PlaceType?,
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+        publicAccess: Boolean? = null
+    ): WorldPlace? {
+        val normalizedPlaceId = normalizeBindingValue(placeId)
+        val place = placesById[normalizedPlaceId] ?: return null
+        val region = regionsById[place.regionId] ?: return null
+        val updated = WorldPlace(
+            place.id,
+            place.regionId,
+            defaultDisplayName(displayName, place.displayName),
+            place.worldName,
+            placeType ?: place.placeType,
+            minX,
+            minY,
+            minZ,
+            maxX,
+            maxY,
+            maxZ
+        )
+        updated.setOwnerNpcId(place.getOwnerNpcId())
+        updated.setTags(place.getTags())
+        for ((key, value) in place.getMetadata()) {
+            updated.putMetadata(key, value)
+        }
+        if (publicAccess != null) {
+            updated.isPublicAccess = publicAccess
+        } else {
+            updated.isPublicAccess = place.isPublicAccess
+        }
+        validatePlace(region, updated)
+        replacePlace(place, updated)
+        dirty = true
+        return updated
+    }
+
+    fun updateNode(
+        nodeId: String?,
+        nodeType: WorldNodeType?,
+        x: Double,
+        y: Double,
+        z: Double,
+        radius: Double
+    ): WorldNode? {
+        val normalizedNodeId = normalizeBindingValue(nodeId)
+        val node = nodesById[normalizedNodeId] ?: return null
+        val region = regionsById[node.regionId] ?: return null
+        val place = node.placeId?.let { placesById[it] }
+        val updated = WorldNode(
+            node.id,
+            node.regionId,
+            node.placeId,
+            nodeType ?: node.type,
+            node.worldName,
+            x,
+            y,
+            z,
+            radius
+        )
+        for ((key, value) in node.getMetadata()) {
+            updated.putMetadata(key, value)
+        }
+        validateNode(region, place, updated)
+        replaceNode(node, updated)
+        dirty = true
+        return updated
+    }
+
+    fun removeRegion(regionId: String?): Boolean {
+        val normalizedId = normalizeScopeId(regionId, "regionId")
+        val region = regionsById.remove(normalizedId) ?: return false
+        placesByRegion.remove(normalizedId)?.forEach { place ->
+            placesById.remove(place.id)
+            nodesByPlace.remove(place.id)?.forEach { node -> nodesById.remove(node.id) }
+        }
+        nodesByRegion.remove(normalizedId)?.forEach { node ->
+            nodesById.remove(node.id)
+            if (!node.placeId.isNullOrBlank()) {
+                nodesByPlace[node.placeId]?.removeIf { it.id == node.id }
+            }
+        }
+        rebuildMappingIndex()
+        dirty = true
+        return true
+    }
+
     fun saveToConfig(config: FileConfiguration) {
         val worldAdminSection = config.getConfigurationSection("world_admin") ?: config.createSection("world_admin")
 
@@ -773,6 +920,19 @@ class WorldAdminService(
             }
         }
         nodesByPlace.remove(normalizedId)
+        rebuildMappingIndex()
+        dirty = true
+        return true
+    }
+
+    fun removeNode(nodeId: String?): Boolean {
+        val normalizedId = normalizeBindingValue(nodeId)
+        val node = nodesById.remove(normalizedId) ?: return false
+        nodesByRegion[node.regionId]?.removeIf { it.id == node.id }
+        if (!node.placeId.isNullOrBlank()) {
+            nodesByPlace[node.placeId]?.removeIf { it.id == node.id }
+        }
+        rebuildMappingIndex()
         dirty = true
         return true
     }
@@ -786,6 +946,40 @@ class WorldAdminService(
         if (autoIndexEnabled) {
             mappingIndex.indexNode(node)
         }
+    }
+
+    private fun replaceRegion(oldRegion: WorldRegion, newRegion: WorldRegion) {
+        regionsById[oldRegion.id] = newRegion
+        rebuildMappingIndex()
+    }
+
+    private fun replacePlace(oldPlace: WorldPlace, newPlace: WorldPlace) {
+        placesById[oldPlace.id] = newPlace
+        placesByRegion.getOrPut(newPlace.regionId) { ArrayList() }
+            .removeIf { it.id == oldPlace.id }
+        placesByRegion.getOrPut(newPlace.regionId) { ArrayList() }.add(newPlace)
+        rebuildMappingIndex()
+    }
+
+    private fun replaceNode(oldNode: WorldNode, newNode: WorldNode) {
+        nodesById[oldNode.id] = newNode
+        nodesByRegion.getOrPut(newNode.regionId) { ArrayList() }
+            .removeIf { it.id == oldNode.id }
+        nodesByRegion.getOrPut(newNode.regionId) { ArrayList() }.add(newNode)
+        if (!oldNode.placeId.isNullOrBlank()) {
+            nodesByPlace[oldNode.placeId]?.removeIf { it.id == oldNode.id }
+        }
+        if (!newNode.placeId.isNullOrBlank()) {
+            nodesByPlace.getOrPut(newNode.placeId) { ArrayList() }.add(newNode)
+        }
+        rebuildMappingIndex()
+    }
+
+    private fun rebuildMappingIndex() {
+        mappingIndex.clear()
+        regionsById.values.forEach { mappingIndex.indexRegion(it) }
+        placesById.values.forEach { mappingIndex.indexPlace(it) }
+        nodesById.values.forEach { mappingIndex.indexNode(it) }
     }
 
     fun getRegionModels(): Collection<WorldRegion> {

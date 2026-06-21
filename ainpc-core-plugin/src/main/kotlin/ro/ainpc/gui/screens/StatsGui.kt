@@ -71,6 +71,18 @@ class StatsGui : GuiScreen {
             )
         )
 
+        val isAdmin = player.hasPermission("ainpc.admin")
+        if (isAdmin) {
+            context.button(13, GuiButton.enabled(
+                GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+            ))
+            context.button(14, GuiButton.enabled(
+                GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+            ))
+        }
+
         var slot = 19
         for (npc in nearbyNpcs.stream().limit(14).toList()) {
             val npcLocation: Location? = npc.location

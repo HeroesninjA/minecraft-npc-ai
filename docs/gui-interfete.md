@@ -8,6 +8,8 @@ Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-p
 
 Acest document descrie implementarea unui strat GUI profesional pentru AINPC: quest GUI, world GUI, statistici, shop, manager admin, debug, audit, interactiune NPC si authoring read-only.
 
+Pentru creare/editare/stergere de mapping si quest din GUI, vezi [GUI Admin Mapping si Quest](./gui-admin-mapping-quest.md).
+
 Regula principala:
 
 ```text
@@ -862,6 +864,7 @@ GUI-ul trebuie sa respecte:
 | Audit GUI | audit logic din `AINPCCommand` sau viitor `AuditService` |
 | NPC Interaction GUI | `ConversationSessionManager`, `ScenarioEngine`, `DialogManager`, `MemoryManager`, `EmotionManager` |
 | Authoring GUI | `GuiService`, `QuestAuthoringService`, `QuestSeedFactory`, `StoryContextService`, `ProgressionService` |
+| Admin Mapping/Quest GUI | `WorldAdminApi`, `QuestAuthoringService`, `ProgressionService`, `StoryContextService`, `ConfirmActionGui` |
 
 Recomandare importanta: auditul din `AINPCCommand` trebuie extras treptat intr-un `AuditService`, ca GUI-ul si comanda text sa foloseasca acelasi contract.
 Authoring-ul GUI trebuie sa ramana strict read-only; orice export sau validare mai grea trebuie sa treaca prin helperii de command/debug, nu prin click-uri care schimba runtime-ul.

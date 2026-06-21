@@ -87,8 +87,22 @@ class WorldHubGui : GuiScreen {
             }
         )
 
-        context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", regionLore(region)))
-        context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)))
+        context.button(10, if (region != null) {
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", regionLore(region)),
+                GuiAction { click -> click.service().openRegionDetail(click.player(), region.id()) }
+            )
+        } else {
+            GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Regiune", regionLore(null)))
+        })
+        context.button(11, if (place != null) {
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)),
+                GuiAction { click -> click.service().openPlaceDetail(click.player(), place.id()) }
+            )
+        } else {
+            GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Place curent", placeLore(null)))
+        })
         context.item(12, GuiItemFactory.item(Material.TARGET, "&dNode curent", nodeLore(node)))
         if (place != null) {
             val placeProgressions = runCatching {
@@ -211,6 +225,32 @@ class WorldHubGui : GuiScreen {
             }
         )
 
+        context.button(
+            18,
+            if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping",
+                        listOf("&7Gestioneaza regiuni, places si noduri.", "&7Click: deschide panoul admin.")),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+                )
+            } else {
+                GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Admin Mapping",
+                    listOf("&7Necesita admin.")))
+            }
+        )
+        context.button(
+            33,
+            if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest",
+                        listOf("&7Gestioneaza definitii, ancore si progresii.", "&7Click: deschide panoul admin quest.")),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+                )
+            } else {
+                GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Admin Quest",
+                    listOf("&7Necesita admin.")))
+            }
+        )
         if (adminView) {
             context.button(
                 30,
