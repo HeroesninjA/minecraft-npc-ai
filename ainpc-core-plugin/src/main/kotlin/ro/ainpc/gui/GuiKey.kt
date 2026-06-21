@@ -8,6 +8,7 @@ enum class GuiKey(
     private val displayNameValue: String
 ) {
     MAIN("main", "Hub AINPC"),
+    PLAYER_HUB("player_hub", "Jucator"),
     QUEST("quest", "Progresii"),
     QUEST_DETAIL("quest_detail", "Detalii progresie"),
     STORY("story", "Story"),
@@ -24,7 +25,13 @@ enum class GuiKey(
     DEBUG("debug", "Debug"),
     ADMIN_MAPPING("admin_mapping", "Admin Mapping"),
     ADMIN_QUEST("admin_quest", "Admin Quest"),
-    QUEST_MAP("quest_map", "Quest Mapping"),
+    ADMIN_HUB("admin_hub", "Admin Hub"),
+    CREATOR_HUB("creator_hub", "Creator Hub"),
+    QUEST_MAP("quest_map", "Quest Map"),
+    CREATOR_QUEST("creator_quest", "Creator Quest"),
+    CREATOR_QUEST_DEFS("creator_quest_defs", "Definitii"),
+    CREATOR_QUEST_TEST("creator_quest_test", "Test Quest"),
+    QUEST_EDIT("quest_edit", "Editeaza Quest"),
     CONFIRM("confirm", "Confirmare");
 
     fun id(): String = idValue
@@ -58,6 +65,14 @@ enum class GuiKey(
                 "debugdump", "dump" -> "debug"
                 "adminmapping", "admin_mapping", "mapping_admin", "edit_mapping" -> "admin_mapping"
                 "adminquest", "admin_quest", "quest_admin", "edit_quest" -> "admin_quest"
+                "playerhub", "player_hub", "jucator", "player" -> "player_hub"
+                "adminhub", "admin_hub", "control_panel", "panel" -> "admin_hub"
+                "creatorhub", "creator_hub", "creator", "designer" -> "creator_hub"
+                "questmap", "quest_map", "map_quest", "quest_mapping" -> "quest_map"
+                "creatorquest", "creator_quest", "quest_creator" -> "creator_quest"
+                "creatorquestdefs", "creator_quest_defs", "defs", "definitions" -> "creator_quest_defs"
+                "creatorquesttest", "creator_quest_test", "quest_test", "test_quest" -> "creator_quest_test"
+                "questedit", "quest_edit", "edit_quest", "editor" -> "quest_edit"
                 "questmap", "quest_map", "mapping", "create_quest", "edit_quest_map" -> "quest_map"
                 else -> trimmed
             }

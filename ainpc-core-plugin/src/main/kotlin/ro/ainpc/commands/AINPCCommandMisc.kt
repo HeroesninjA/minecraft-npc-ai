@@ -12,6 +12,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.debug.DebugDumpAuthoringText
 import ro.ainpc.gui.GuiKey
+import ro.ainpc.gui.GuiRole
 import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
@@ -237,17 +238,34 @@ fun handleReload(sender: CommandSender): Boolean {
 fun handleGui(sender: CommandSender, args: Array<String>): Boolean {
     val player = requirePlayerSenderMisc(sender) ?: return true
 
+    val rawKey = if (args.size >= 2) args[1] else ""
+    val role = GuiRole.resolve(player)
+
+    when {
+        rawKey == "player" || (rawKey.isBlank() && role == GuiRole.PLAYER) -> {
+            ainpcCommandMiscPlugin.guiService.open(player, GuiKey.PLAYER_HUB)
+            return true
+        }
+        rawKey == "admin" || (rawKey.isBlank() && role == GuiRole.ADMIN) -> {
+            ainpcCommandMiscPlugin.guiService.open(player, GuiKey.ADMIN_HUB)
+            return true
+        }
+        rawKey == "creator" || (rawKey.isBlank() && role == GuiRole.CREATOR) -> {
+            ainpcCommandMiscPlugin.guiService.open(player, GuiKey.CREATOR_HUB)
+            return true
+        }
+    }
+
     if (args.size > 3) {
         ainpcCommandMiscPlugin.messageUtils.send(sender,
-            "&cUtilizare: /ainpc gui [main|quest|progresii|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
+            "&cUtilizare: /ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
         return true
     }
 
-    val rawKey = if (args.size >= 2) args[1] else "main"
     val resolvedKey = GuiKey.fromId(rawKey)
     if (resolvedKey.isEmpty()) {
         ainpcCommandMiscPlugin.messageUtils.send(sender,
-            "&cGUI necunoscut. Optiuni: &fmain, quest/progresii, story, world, stats, interact, routine, shop, manager, audit, debug")
+            "&cGUI necunoscut. Optiuni: &fplayer, admin, creator, quest, story, world, stats, interact, routine, shop, manager, audit, debug")
         return true
     }
 

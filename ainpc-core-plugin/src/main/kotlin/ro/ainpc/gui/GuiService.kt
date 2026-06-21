@@ -22,6 +22,13 @@ import ro.ainpc.gui.screens.WorldPlaceGui
 import ro.ainpc.gui.screens.WorldRegionGui
 import ro.ainpc.gui.screens.AdminMappingGui
 import ro.ainpc.gui.screens.AdminQuestGui
+import ro.ainpc.gui.screens.AdminHubGui
+import ro.ainpc.gui.screens.CreatorHubGui
+import ro.ainpc.gui.screens.PlayerHubGui
+import ro.ainpc.gui.screens.QuestCreatorGui
+import ro.ainpc.gui.screens.QuestCreatorDefinitionsGui
+import ro.ainpc.gui.screens.QuestCreatorTestGui
+import ro.ainpc.gui.screens.QuestEditGui
 import ro.ainpc.gui.screens.NpcInteractionGui
 import ro.ainpc.gui.screens.QuestMapGui
 import java.util.EnumMap
@@ -46,6 +53,18 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val questMapTemplateIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapObjectiveKeys: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapMechanicFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val questEditSelectedIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+
+    fun getQuestEditSelectedId(player: Player?): String {
+        if (player == null) return ""
+        return questEditSelectedIds.getOrDefault(player.uniqueId, "")
+    }
+
+    fun setQuestEditSelectedId(player: Player?, id: String?) {
+        if (player == null) return
+        if (id.isNullOrBlank()) questEditSelectedIds.remove(player.uniqueId)
+        else questEditSelectedIds[player.uniqueId] = id
+    }
 
     fun getPlaceDetailId(player: Player?): String {
         if (player == null) return ""
@@ -94,6 +113,13 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(QuestAuthoringGui())
         register(QuestMapGui())
         register(ConfirmActionGui())
+        register(AdminHubGui())
+        register(CreatorHubGui())
+        register(PlayerHubGui())
+        register(QuestCreatorGui())
+        register(QuestCreatorDefinitionsGui())
+        register(QuestCreatorTestGui())
+        register(QuestEditGui())
         register(PlaceholderGui(GuiKey.SHOP, "Shop NPC", "Nu exista inca un serviciu shop conectat."))
     }
 
@@ -283,6 +309,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         questMapTemplateIds.remove(playerId)
         questMapObjectiveKeys.remove(playerId)
         questMapMechanicFilters.remove(playerId)
+        questEditSelectedIds.remove(playerId)
     }
 
     fun getQuestMapMechanicFilter(player: Player?): String {
@@ -449,6 +476,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         }
         return when (key) {
             GuiKey.MAIN -> hasAny(player, "ainpc.admin", "ainpc.gui")
+            GuiKey.PLAYER_HUB -> hasAny(player, "ainpc.gui", "ainpc.gui.quest")
             GuiKey.QUEST, GuiKey.QUEST_DETAIL -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
             GuiKey.STORY -> hasAny(player, "ainpc.admin", "ainpc.gui.story")
             GuiKey.AUTHORING -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
@@ -462,6 +490,10 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.AUDIT -> hasAny(player, "ainpc.admin", "ainpc.gui.audit")
             GuiKey.DEBUG -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
             GuiKey.ADMIN_MAPPING, GuiKey.ADMIN_QUEST -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.quest")
+            GuiKey.ADMIN_HUB -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.audit", "ainpc.gui.debug")
+            GuiKey.CREATOR_HUB -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world", "ainpc.gui.quest")
+            GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
+            GuiKey.QUEST_EDIT -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
             GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
             GuiKey.CONFIRM -> true
         }

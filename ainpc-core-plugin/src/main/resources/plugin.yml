@@ -97,3 +97,9 @@ permissions:
   ainpc.gui.debug:
     description: Permite deschiderea GUI-ului debug
     default: op
+  ainpc.creator:
+    description: Permite accesul la modul creator (mapping si quest design)
+    default: op
+  ainpc.gui.quest_map:
+    description: Permite deschiderea GUI-ului quest map
+    default: op

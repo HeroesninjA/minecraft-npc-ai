@@ -231,11 +231,14 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Inspecteaza sau ruleaza rollback controlat pentru un spawn batch esuat")
     msg.send(sender, "&e/ainpc info [nume]")
     msg.send(sender, "&7  Afiseaza informatii despre un NPC")
-    msg.send(sender, "&e/ainpc gui [quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
+    msg.send(sender, "&e/ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
     msg.send(
         sender,
-        "&7  Deschide hub-ul GUI sau un ecran specific; questFilter poate fi quest/contract/duty/bounty/event/tutorial/ritual"
+        "&7  Deschide hub-ul GUI pe rol (player/admin/creator) sau un ecran specific;"
     )
+    msg.send(sender, "&7  /ainpc gui player &8- hub jucator (quest, NPC, stats, rutine, shop)")
+    msg.send(sender, "&7  /ainpc gui admin &8- hub admin (world, mapping, audit, debug, manager, authoring)")
+    msg.send(sender, "&7  /ainpc gui creator &8- hub creator (mapping, quest authoring, demo, save)")
     msg.send(sender, "&e/ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]")
     msg.send(sender, "&7  Deschide snapshot-ul read-only de authoring sau il afiseaza filtrat in chat")
     msg.send(sender, "&e/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]")
