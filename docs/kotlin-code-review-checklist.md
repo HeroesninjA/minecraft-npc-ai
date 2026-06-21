@@ -1,6 +1,8 @@
-# Kotlin Code Review Checklist
+﻿# Kotlin Code Review Checklist
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -186,3 +188,4 @@ O conversie Kotlin este acceptabila daca:
 - rupe addonul medieval
 - necesita multe modificari Java nelegate
 - face codul mai greu de citit decat versiunea Java
+

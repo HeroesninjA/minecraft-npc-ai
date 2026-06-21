@@ -119,6 +119,7 @@ class WorldAdminServiceTest {
                   name: "Castelul Vechi"
                   world: "world"
                   type: "castle"
+                  tags: [royal, castle]
                   min: { x: 0, y: 50, z: 0 }
                   max: { x: 100, y: 100, z: 100 }
                   places:
@@ -128,11 +129,57 @@ class WorldAdminServiceTest {
                       min: { x: 20, y: 60, z: 20 }
                       max: { x: 40, y: 75, z: 40 }
                       tags: [royal, meeting]
+                      owner_npc_id: "npc_rege"
+                      metadata:
+                        style: "royal"
+                        floor: "1"
             """), profile())
 
         val region = service.findRegion("world", 30, 70, 30)
         assertNotNull(region)
         assertEquals("castelul_vechi", region!!.id())
+
+        val regionsByType = service.findRegionsByType("castle")
+        assertEquals(1, regionsByType.size)
+        assertEquals("castelul_vechi", regionsByType.iterator().next().id())
+
+        val regionsByTag = service.findRegionsByTag("royal")
+        assertEquals(1, regionsByTag.size)
+        assertEquals("castelul_vechi", regionsByTag.iterator().next().id())
+
+        assertEquals(0, service.findRegionsByTag("nonexistent").size)
+        assertEquals(0, service.findRegionsByTag(null).size)
+        assertEquals(0, service.findRegionsByTag("").size)
+
+        assertEquals(0, service.findPlacesByTag(null, null).size)
+        assertEquals(0, service.findPlacesByTag("castelul_vechi", null).size)
+        assertEquals(0, service.findPlacesByTag("castelul_vechi", "").size)
+
+        assertEquals(1, service.findRegionsByWorld("world").size)
+        assertEquals("castelul_vechi", service.findRegionsByWorld("world").iterator().next().id())
+        assertEquals(0, service.findRegionsByWorld("nether").size)
+        assertEquals(0, service.findRegionsByWorld(null).size)
+        assertEquals(0, service.findRegionsByWorld("").size)
+
+        assertEquals(1, service.findPlacesByOwner("npc_rege").size)
+        assertEquals("castelul_vechi:sala_mare", service.findPlacesByOwner("npc_rege").iterator().next().id())
+        assertEquals(0, service.findPlacesByOwner("npc_fantoma").size)
+        assertEquals(0, service.findPlacesByOwner(null).size)
+
+        assertEquals(1, service.findPlacesByMetadata("castelul_vechi", "style", "royal").size)
+        assertEquals(1, service.findPlacesByMetadata(null, "style", "royal").size)
+        assertEquals(0, service.findPlacesByMetadata("castelul_vechi", "style", "gothic").size)
+        assertEquals(0, service.findPlacesByMetadata(null, null, "royal").size)
+        assertEquals(0, service.findPlacesByMetadata(null, "style", null).size)
+
+        assertEquals(1, service.findPlacesByWorld("world").size)
+        assertEquals("castelul_vechi:sala_mare", service.findPlacesByWorld("world").iterator().next().id())
+        assertEquals(0, service.findPlacesByWorld("nether").size)
+
+        assertEquals(0, service.findNodesByWorld("world").size)
+        assertEquals(0, service.findNodesByWorld(null).size)
+
+        assertEquals(0, service.findNodesByMetadata(null, "role", "work").size)
 
         val place = service.findPlace("world", 25, 65, 25)
         assertNotNull(place)
@@ -141,6 +188,10 @@ class WorldAdminServiceTest {
         val placesByTag = service.findPlacesByTag("castelul_vechi", "royal")
         assertEquals(1, placesByTag.size)
         assertEquals("castelul_vechi:sala_mare", placesByTag.iterator().next().id())
+
+        val placesByType = service.findPlacesByType("castelul_vechi", PlaceType.CASTLE_ROOM)
+        assertEquals(1, placesByType.size)
+        assertEquals("castelul_vechi:sala_mare", placesByType.iterator().next().id())
 
         assertNull(service.findPlace("world", 90, 65, 90))
         assertNull(service.findRegion("nether", 25, 65, 25))
@@ -172,6 +223,8 @@ class WorldAdminServiceTest {
                           y: 65
                           z: 30
                           radius: 2.0
+                          metadata:
+                            role: "work"
                         counter:
                           type: "interaction"
                           x: 35
@@ -187,6 +240,20 @@ class WorldAdminServiceTest {
         val nearbyNodeIds = service.findNodesNear("world", 32.0, 65.0, 32.0, 8.0, 10)
             .map { it.id() }
         assertEquals(listOf("satul_central:fierarie:anvil", "satul_central:fierarie:counter"), nearbyNodeIds)
+
+        val nodesByType = service.findNodesByType("satul_central", "interaction")
+        assertEquals(2, nodesByType.size)
+        assertEquals(
+            listOf("satul_central:fierarie:anvil", "satul_central:fierarie:counter"),
+            nodesByType.map { it.id() }
+        )
+
+        val nodesByMetadata = service.findNodesByMetadata("satul_central", "role", "work")
+        assertEquals(1, nodesByMetadata.size)
+        assertEquals("satul_central:fierarie:anvil", nodesByMetadata.iterator().next().id())
+        assertEquals(0, service.findNodesByMetadata("satul_central", "role", "social").size)
+        assertEquals(0, service.findNodesByMetadata(null, null, "work").size)
+        assertEquals(0, service.findNodesByMetadata(null, "role", null).size)
 
         assertTrue(service.findNodesNear("world", 32.0, 65.0, 32.0, 8.0, 1).size == 1)
         assertNull(service.findNode("world", 80, 65, 80))

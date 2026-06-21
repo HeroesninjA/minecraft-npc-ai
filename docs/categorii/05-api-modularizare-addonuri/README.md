@@ -1,6 +1,6 @@
 # API, Modularizare si Addonuri
 
-Actualizat: 2026-06-18
+Actualizat: 2026-06-21
 
 Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariile programabile.
 
@@ -21,7 +21,9 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 | `../../kotlin-code-review-checklist.md` | Checklist de review pentru schimbari Kotlin |
 | `../../kotlin-testing-strategy.md` | Strategie de testare pentru conversiile Kotlin |
 | `../../arhiva/kotlin-migration/README.md` | Index pentru istoricul arhivat al conversiei Kotlin |
+| `../../harta-pachetelor-cod-scurta.md` | Harta scurta pentru navigare rapida intre module si pachete |
 | `../../harta-pachetelor-cod.md` | Harta doar-documentatie pentru module si pachete de cod |
+| `../../harta-clase-cod.md` | Harta doar-documentatie pentru relatiile dintre clasele cheie |
 | `../../gui-interfete.md` | Contract pentru framework GUI intern, ecrane, snapshots, actiuni si extensibilitate |
 | `../../betonquest-directii-potrivite-pentru-ainpc.md` | Directii pentru runtime de questuri configurabile |
 | `../../reducere-marime-jar.md` | Impact asupra buildului si livrarii |
@@ -38,4 +40,6 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 
 ## Relatii
 
-Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.
+Vezi ../../relatii-documentatie.md pentru catalogul pe fisiere si lanturile de citire aferente acestei categorii.
+Pentru harta de cod, foloseste ../../harta-pachetelor-cod-scurta.md pentru orientare rapida si ../../harta-pachetelor-cod.md pentru detaliu complet.
+Pentru relatii intre clase, foloseste ../../harta-clase-cod.md.

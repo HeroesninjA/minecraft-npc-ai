@@ -1,37 +1,40 @@
-# Constituția Proiectului — Documentație Fundamentală
+﻿# ConstituÈ›ia Proiectului â€” DocumentaÈ›ie FundamentalÄƒ
 
-Acest document definește regulile structurale, arhitecturale și de convenție ale proiectului AINPC.
-Orice modificare a acestui document trebuie aprobată și înregistrată în changelog.
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Acest document defineÈ™te regulile structurale, arhitecturale È™i de convenÈ›ie ale proiectului AINPC.
+Orice modificare a acestui document trebuie aprobatÄƒ È™i Ã®nregistratÄƒ Ã®n changelog.
 
 ## Principii Arhitecturale
 
-1. **Separarea responsabilităților**: Codul Java sursă se extrage în fișiere Kotlin sidecar, păstrând fișierul Java original cât mai subțire (delegate one-line).
-2. **Plugin-ul nu se propagă** (prin constructori/parametri) — se folosește `lateinit var` + funcție `init*()` pentru metodele care necesită `plugin`.
-3. **Build-ul trebuie să rămână verde** după fiecare extracție — zero erori, zero avertismente noi.
-4. **Nicio rescriere completă** a fișierelor Java mari — doar extracție sigură (safe slice).
+1. **Separarea responsabilitÄƒÈ›ilor**: Codul Java sursÄƒ se extrage Ã®n fiÈ™iere Kotlin sidecar, pÄƒstrÃ¢nd fiÈ™ierul Java original cÃ¢t mai subÈ›ire (delegate one-line).
+2. **Plugin-ul nu se propagÄƒ** (prin constructori/parametri) â€” se foloseÈ™te `lateinit var` + funcÈ›ie `init*()` pentru metodele care necesitÄƒ `plugin`.
+3. **Build-ul trebuie sÄƒ rÄƒmÃ¢nÄƒ verde** dupÄƒ fiecare extracÈ›ie â€” zero erori, zero avertismente noi.
+4. **Nicio rescriere completÄƒ** a fiÈ™ierelor Java mari â€” doar extracÈ›ie sigurÄƒ (safe slice).
 
-## Convenții de Cod
+## ConvenÈ›ii de Cod
 
-- Fișierele Kotlin sidecar poartă adnotarea `@file:JvmName("...")` pentru compatibilitate Java.
-- Metodele Java originale devin delegate de o linie către sidecar.
-- Metodele pure (fără `plugin` sau câmpuri NPCManager) se extrag în `NPCManagerText.kt`.
-- Metodele care folosesc `plugin` (dar nu alte câmpuri private) se extrag în `NPCManagerVillagerLookup.kt` (cu `lateinit var`).
-- Pentru `AINPCCommand.java`, metodele pure se extrag în `AINPCCommandText.kt`.
+- FiÈ™ierele Kotlin sidecar poartÄƒ adnotarea `@file:JvmName("...")` pentru compatibilitate Java.
+- Metodele Java originale devin delegate de o linie cÄƒtre sidecar.
+- Metodele pure (fÄƒrÄƒ `plugin` sau cÃ¢mpuri NPCManager) se extrag Ã®n `NPCManagerText.kt`.
+- Metodele care folosesc `plugin` (dar nu alte cÃ¢mpuri private) se extrag Ã®n `NPCManagerVillagerLookup.kt` (cu `lateinit var`).
+- Pentru `AINPCCommand.java`, metodele pure se extrag Ã®n `AINPCCommandText.kt`.
 
-## Starea Extracției
+## Starea ExtracÈ›iei
 
-| Fișier | Linii inițiale | Linii curente | Extrageri |
+| FiÈ™ier | Linii iniÈ›iale | Linii curente | Extrageri |
 |--------|---------------|---------------|-----------|
 | NPCManager.java | 2985 | 2135 | 57 metode |
-| NPCManagerText.kt | 740 | 986 | 14 funcții |
-| NPCManagerVillagerLookup.kt | 0 | 199 | 16 funcții |
-| NPCManagerDB.kt | 0 | 283 | 16 funcții |
-| NPCManagerAnchors.kt | 0 | 181 | 11 funcții |
+| NPCManagerText.kt | 740 | 986 | 14 funcÈ›ii |
+| NPCManagerVillagerLookup.kt | 0 | 199 | 16 funcÈ›ii |
+| NPCManagerDB.kt | 0 | 283 | 16 funcÈ›ii |
+| NPCManagerAnchors.kt | 0 | 181 | 11 funcÈ›ii |
 | AINPCCommand.java | 6248 | 6942 | 2 metode |
 | AINPCCommandText.kt | 2817 | 3175 | 2 metode |
 
 ## Reguli de Stabilitate
 
-- Nu se extrag metode care accesează câmpuri private ale clasei gazdă (ex: `npcsByUuid`, `npcsById`).
-- Se prioritizează clusterele logice (toate metodele înrudite se extrag împreună).
-- Avertismentele pre-existante Kotlin nu se repara — doar cele nou introduse de extracție.
+- Nu se extrag metode care acceseazÄƒ cÃ¢mpuri private ale clasei gazdÄƒ (ex: `npcsByUuid`, `npcsById`).
+- Se prioritizeazÄƒ clusterele logice (toate metodele Ã®nrudite se extrag Ã®mpreunÄƒ).
+- Avertismentele pre-existante Kotlin nu se repara â€” doar cele nou introduse de extracÈ›ie.
+

@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-15
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Scop
 
 Inventarul complet al comenzilor `/ainpc` necesare pentru fiecare faza D0-D9.

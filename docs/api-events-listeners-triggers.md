@@ -1,6 +1,8 @@
-# API Events, Listeners si Triggers
+﻿# API Events, Listeners si Triggers
 
 Actualizat: 2026-06-18
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -373,3 +375,4 @@ Un event este considerat gata cand:
 5. payload-ul nu expune obiecte mutable interne
 6. documentatia listeaza cand se declanseaza si daca este cancellable
 7. debug/audit poate confirma emiterea fara date sensibile
+

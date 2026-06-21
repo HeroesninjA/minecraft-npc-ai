@@ -23,6 +23,10 @@ AI-ul propune, formuleaza si explica.
 Runtime-ul valideaza, executa si persista.
 ```
 
+Pentru a vedea unde se leaga aceste mecanici in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
+Pentru relatiile dintre clasele AI, foloseste [harta claselor pentru AI](./harta-clase-ai.md).
+
 AI-ul nu trebuie sa fie sursa de adevar pentru progres, reward-uri, story state, economie, relatii sau world changes.
 
 ## Raspuns la intrebarea despre main service

@@ -1,4 +1,6 @@
-# D6: Story Context — Verificari pe Server Paper
+﻿# D6: Story Context â€” Verificari pe Server Paper
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## T037: Story context
 
@@ -34,3 +36,4 @@ Dupa completarea unui quest:
 **Verificati:** Fisierul nu contine API keys, token-uri, parole.
 
 **Gate:** Export story fara secrete.
+

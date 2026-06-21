@@ -224,12 +224,23 @@ class AddonRegistryTest {
                 override val regionCount: Int = 0
                 override val placeCount: Int = 0
                 override val nodeCount: Int = 0
+                override val isAutoIndexEnabled: Boolean = false
+                override val indexedRegionChunkCount: Int = 0
+                override val indexedPlaceChunkCount: Int = 0
+                override val indexedNodeChunkCount: Int = 0
+                override fun hasUnsavedChanges(): Boolean = false
                 override fun getRegion(regionId: String?): WorldRegionInfo? = null
                 override fun findRegion(worldName: String?, x: Int, y: Int, z: Int): WorldRegionInfo? = null
                 override fun getPlaces(regionId: String?): Collection<WorldPlaceInfo> = emptyList()
                 override fun getPlace(placeId: String?): WorldPlaceInfo? = null
                 override fun findPlace(worldName: String?, x: Int, y: Int, z: Int): WorldPlaceInfo? = null
                 override fun findPlacesByTag(regionId: String?, tag: String?): Collection<WorldPlaceInfo> = emptyList()
+                override fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+                    throw UnsupportedOperationException("stub")
+                override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+                    throw UnsupportedOperationException("stub")
+                override fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+                    throw UnsupportedOperationException("stub")
                 override fun getNodes(regionId: String?): Collection<WorldNodeInfo> = emptyList()
                 override fun getNodesForPlace(placeId: String?): Collection<WorldNodeInfo> = emptyList()
                 override fun getNode(nodeId: String?): WorldNodeInfo? = null

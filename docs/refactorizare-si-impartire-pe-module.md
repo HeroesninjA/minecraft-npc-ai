@@ -1,6 +1,8 @@
-# Refactorizare si Impartire pe Module
+﻿# Refactorizare si Impartire pe Module
 
 Actualizat: 2026-04-28
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -599,3 +601,4 @@ Pentru acest repo, modularizarea corecta nu inseamna inca mai multe module Maven
 - intarirea granitelor dintre `ainpc-api`, `ainpc-core-plugin` si addonuri
 
 Abia dupa asta are sens sa decizi daca mai este nevoie de module suplimentare.
+

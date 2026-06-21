@@ -1,4 +1,6 @@
-# Contract config core si addonuri
+﻿# Contract config core si addonuri
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Scopul este ca `ainpc-core-plugin` sa ramana universal. Core-ul poate incarca, valida si coordona addonuri, dar nu trebuie sa contina balancing sau continut specific unui scenariu.
 
@@ -121,3 +123,4 @@ Implementarea curenta:
 - `content.install_pack: false` sau `content.playable_content: false` nu mai instaleaza `medieval_quest.yml`.
 - metadata `addon:` din feature pack-uri este validata la startup/reload cand optiunile core aferente sunt active;
 - dependintele declarate in `addon.dependencies` sunt verificate inclusiv tranzitiv.
+

@@ -1,6 +1,8 @@
-# Rutine NPC si Timeline
+﻿# Rutine NPC si Timeline
 
 Actualizat: 2026-04-29
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status curent:
 
@@ -532,3 +534,4 @@ TimeService mic
 ```
 
 Rutinele dau viata zilnica NPC-urilor. Timeline-ul adauga poveste si schimbari peste aceasta viata zilnica.
+

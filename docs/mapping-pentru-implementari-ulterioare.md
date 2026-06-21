@@ -1,6 +1,8 @@
-# Mapping pentru Implementari Ulterioare
+﻿# Mapping pentru Implementari Ulterioare
 
 Actualizat: 2026-05-01
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Acest document a fost combinat in `docs/mapping.md`.
 
@@ -12,3 +14,4 @@ Foloseste acum `docs/mapping.md` ca document canonic pentru:
 - imbunatatiri recomandate si ordine de evolutie
 
 Fisierul ramane doar ca redirect pentru linkurile vechi din documentatie.
+

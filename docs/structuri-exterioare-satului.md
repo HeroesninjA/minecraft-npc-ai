@@ -1,6 +1,8 @@
-# Structuri exterioare satului
+﻿# Structuri exterioare satului
 
 Actualizat: 2026-06-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -526,3 +528,4 @@ O structura exterioara este suficient definita cand:
 - poate fi folosita de quest/story prin ID semantic;
 - are reguli clare pentru NPC, loot, risc si generatie;
 - poate fi validata inainte de build/spawn.
+

@@ -6,6 +6,8 @@ Actualizat: 2026-05-09
 
 Acest document continua backlog-ul operational din `faze-urmatoare-250.md`.
 
+Pentru a lega fazele de codul actual, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Partea 2 se concentreaza pe:
 
 - generare de sate din config;

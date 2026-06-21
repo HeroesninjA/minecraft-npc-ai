@@ -23,6 +23,8 @@ Pentru a evita confuzia intre design si cod existent:
 - `TODO.md` este lista curenta de lucru, nu specificatie completa.
 - `docs/debugging-si-testare.md` este sursa pentru verificari, smoke tests si debug.
 
+Cand roadmap-ul trimite la zone de cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) pentru orientare rapida si [harta completa](./harta-pachetelor-cod.md) pentru detaliu.
+
 Regula interna:
 
 - daca o sarcina nu poate fi legata de o componenta, o mecanica si o faza de mai jos, nu intra in lucru pana nu este clarificata.

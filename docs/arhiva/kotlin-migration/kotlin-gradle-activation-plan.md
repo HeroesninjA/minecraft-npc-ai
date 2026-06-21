@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-16
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../../harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document descrie exact cum se activeaza Kotlin in build-ul Gradle curent, fara sa convertesti inca fisiere Java.

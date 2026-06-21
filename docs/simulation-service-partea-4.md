@@ -19,6 +19,8 @@ refactor fara schimbare functionala
 -> consumatori controlati
 ```
 
+Pentru a conecta planul de livrare la codul real, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Regula principala:
 
 ```text

@@ -1,6 +1,8 @@
-# Template Cladiri si Marker Nodes
+﻿# Template Cladiri si Marker Nodes
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru metadata de template-uri, ancore si marker nodes. Acest document este design de contract; catalogul complet de template-uri, loader-ul si integrarea builder nu sunt considerate implementate pana cand exista cod, validatoare si teste.
 
@@ -612,3 +614,4 @@ Contractul de template este suficient pentru MVP cand:
 - lipsa capabilitatilor este raportata clar
 
 Abia dupa acest nivel merita introdus paste real cu WorldEdit sau builder nativ mai complex.
+

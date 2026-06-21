@@ -1,6 +1,8 @@
-# Coding Automation Stack Linux VS Code DeepSeek MCP
+﻿# Coding Automation Stack Linux VS Code DeepSeek MCP
 
 Actualizat: 2026-06-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -687,3 +689,4 @@ Ordinea recomandata:
 9. Adauga embeddings si reranking.
 10. Adauga `fix` doar dupa ce test/build sunt stabile.
 11. Adauga deploy Paper si smoke doar dupa backup/rollback.
+

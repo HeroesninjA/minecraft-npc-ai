@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-07
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document explica cum se avanseaza sistemul de questuri din AINPC de la questuri simple de tip "adu iteme" la questuri mai variate: explorare, social, lupta, livrare, investigatie, crafting, story state si questuri pe etape.

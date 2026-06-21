@@ -1,11 +1,12 @@
 package ro.ainpc.world
 
 import org.bukkit.Location
+import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import java.util.LinkedHashMap
 
 class WorldContextSnapshotBuilder(
-    private val worldAdminService: WorldAdminService?
+    private val worldAdminService: WorldAdminApi?
 ) {
     fun build(location: Location?, npc: AINPC?, nearbyNpcs: Collection<AINPC>?): WorldContextSnapshot {
         if (worldAdminService == null || !worldAdminService.isEnabled || location == null || location.world == null) {

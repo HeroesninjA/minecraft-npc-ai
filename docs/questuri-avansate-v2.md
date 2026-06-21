@@ -1,6 +1,10 @@
-# Questuri Avansate V2 - Faze, diversitate si mecanici
+﻿# Questuri Avansate V2 - Faze, diversitate si mecanici
 
 Actualizat: 2026-05-08
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Pentru relatiile dintre clasele de quest, foloseste [harta claselor pentru quest](./harta-clase-quest.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -301,3 +305,4 @@ Pana cand V2.7 este validat pe Paper:
 - `mapping.md` pentru modelul de lume consumat de questuri;
 - `story-context-service.md` si `story-si-context-ai.md` pentru story state si context AI;
 - `ai-orchestrare-si-mecanici.md` pentru regula ca AI-ul propune, iar serviciile deterministe executa.
+

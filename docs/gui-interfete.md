@@ -1,6 +1,6 @@
 # GUI Interfete
 
-Actualizat: 2026-05-11
+Actualizat: 2026-06-21
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -17,6 +17,10 @@ Click-ul din GUI nu modifica stare fara validare runtime.
 ```
 
 GUI-ul trebuie sa faca sistemul mai usor de folosit pe server, dar nu trebuie sa mute logica din `ScenarioEngine`, `WorldAdminApi`, `DialogManager`, `StoryContextService`, `QuestAuthoringService`, audit sau debugdump in clasele de inventar.
+
+Pentru a localiza rapid clasele si serviciile care alimenteaza UI-ul, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
+Pentru relatiile dintre clasele GUI, foloseste [harta claselor pentru GUI](./harta-clase-gui.md).
 
 ## Status curent
 
@@ -284,6 +288,42 @@ Permisiuni recomandate:
 | `ainpc.gui.audit` | Audit GUI admin |
 
 Pentru compatibilitate, `ainpc.admin`, `ainpc.quest`, `ainpc.info`, `ainpc.talk` si permisiunile dedicate precum `ainpc.gui.story` pot activa implicit parti din GUI. `QuestAuthoringGui` foloseste acelasi gate `ainpc.gui.debug` ca debug-ul admin si ramane read-only chiar si cand este deschis de admin.
+
+## Separare meniuri pe roluri
+
+Regula de baza: rolul decide ce meniuri apar, dar permisiunea decide daca actiunea se executa. Nu hardcoda meniuri diferite dupa nume de jucator; foloseste un resolver de roluri sau un set de permisiuni agregate.
+
+Model recomandat:
+
+| Rol | Meniuri vizibile | Observatii |
+|---|---|---|
+| `player` | `main`, `quest`, `stats`, `shop`, `interact`, `routine` | baza pentru gameplay; fara actiuni destructive |
+| `moderator` | tot ce are `player` + `audit` + parti selectate de `debug` | only read-only sau actiuni de verificare |
+| `quest_creator` | tot ce are `player` + `quest authoring` + `quest debug` | focus pe authoring si inspectie de progresie |
+| `admin` | tot ce are `moderator` + `world`, `manager`, `debug`, `audit` | meniurile admin pot fi vizibile dezactivate cu motiv in lore |
+| `owner` / `ceo` | toate meniurile + configurare/diagnostic extins | tratat ca super-admin; poate vedea si meniuri experimentale |
+
+Reguli de implementare:
+
+- construieste hub-ul dintr-un `GuiAccessProfile`, nu din if-uri imprastiate prin fiecare inventar;
+- fiecare buton are `requiredRole` si/sau `requiredPermission`;
+- un rol superior mosteneste meniurile rolurilor inferioare;
+- un buton ascuns inseamna lipsa de drepturi clare, iar un buton dezactivat inseamna drept existent, dar conditie neindeplinita;
+- meniurile admin/owner trebuie sa fie separat grupate vizual de meniurile de gameplay;
+- meniurile de authoring si debug trebuie sa ramana read-only pana la confirmare explicita;
+- cand exista dubiu, afiseaza butonul dezactivat cu motiv in lore pentru rolurile privilegiate si ascunde-l pentru jucatori.
+
+Mapare recomandata pe `GuiKey`:
+
+| Rol | `GuiKey` permis | Permisiuni curente echivalente |
+|---|---|---|
+| `player` | `MAIN`, `QUEST`, `QUEST_DETAIL`, `STATS`, `SHOP`, `INTERACT`, `ROUTINE` | `ainpc.gui`, `ainpc.gui.quest`, `ainpc.gui.stats`, `ainpc.gui.shop`, `ainpc.gui.interact`, `ainpc.gui.routine` |
+| `moderator` | toate meniurile de `player` + `AUDIT` + `DEBUG` limitat | `ainpc.admin`, `ainpc.gui.audit`, `ainpc.gui.debug` |
+| `quest_creator` | toate meniurile de `player` + `AUTHORING` + `QUEST_DETAIL` avansat | `ainpc.gui.debug`, `ainpc.gui.quest`, `ainpc.quest` |
+| `admin` | `MAIN`, `QUEST`, `QUEST_DETAIL`, `STORY`, `AUTHORING`, `WORLD`, `STATS`, `INTERACT`, `ROUTINE`, `SHOP`, `MANAGER`, `AUDIT`, `DEBUG` | `ainpc.admin` plus permisiunile dedicate |
+| `owner` / `ceo` | toate `GuiKey`-urile, inclusiv meniuri experimentale sau de diagnostic | acces total prin `ainpc.admin` sau rol intern echivalent |
+
+Notă de implementare: in codul actual, `GuiService.canOpen(...)` deja trateaza `ainpc.admin` ca bypass pentru `MAIN`, `QUEST`, `STORY`, `AUTHORING`, `WORLD`, `STATS`, `INTERACT`, `ROUTINE`, `SHOP`, `MANAGER`, `AUDIT` si `DEBUG`, iar `CONFIRM` este permis mereu. Documentația de roluri trebuie să păstreze acest comportament și să-l rafineze, nu să-l contrazică.
 
 ## Hub principal
 

@@ -18,6 +18,8 @@ Acest document stabileste cum trebuie legate mapping-ul, indexarea, questurile s
 
 Ideea principala: AI-ul nu trebuie sa primeasca toata harta si nu trebuie sa inventeze coordonate. Mapping-ul trebuie sa fie sursa de adevar, indexarea trebuie sa gaseasca rapid contextul relevant, iar quest/story runtime-ul trebuie sa valideze ce poate fi folosit.
 
+Pentru a naviga repede intre `world`, `story`, `progression` si `dialog` in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Problema curenta
 
 Mapping-ul are deja concepte utile:

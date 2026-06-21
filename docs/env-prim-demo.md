@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-15
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document defineste variabilele de mediu si parametrii necesari pentru a rula primul demo jucabil AINPC pe un server Paper local. Toate celelalte taskuri din D0-D9 refera acest document.

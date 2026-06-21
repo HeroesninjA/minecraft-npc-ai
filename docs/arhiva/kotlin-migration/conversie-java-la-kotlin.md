@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-17
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../../harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document descrie o migrare pe faze de la Java la Kotlin pentru proiectul AINPC, dupa conversia build-ului la Gradle.

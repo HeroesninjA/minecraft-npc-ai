@@ -1,6 +1,8 @@
-# Mapping
+﻿# Mapping
 
 Actualizat: 2026-05-10
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -1143,3 +1145,4 @@ Pasii urmatori nu mai tin de "daca exista mapping", ci de completarea legaturii 
 - questuri
 - scenarii
 - generare automata
+

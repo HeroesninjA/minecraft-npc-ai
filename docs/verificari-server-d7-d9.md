@@ -1,4 +1,6 @@
-# D7-D9: Dialog, Restart, Final — Verificari pe Server Paper
+﻿# D7-D9: Dialog, Restart, Final â€” Verificari pe Server Paper
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## D7: Dialog & AI Fallback
 
@@ -70,3 +72,4 @@ Apoi: oprire, pornire, re-audit.
 
 ### T050: Documentare concluzie
 Documentati: ce a mers, ce n-a mers, ce taskuri au ramas, ce urmeaza dupa D9.
+

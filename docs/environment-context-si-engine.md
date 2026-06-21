@@ -1,6 +1,8 @@
-# Environment Context si EnvironmentEngine
+﻿# Environment Context si EnvironmentEngine
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -500,3 +502,4 @@ EnvironmentEngine complet mai tarziu.
 ```
 
 Aceasta separare pastreaza questurile implementabile acum si lasa loc pentru questuri sistemice, world events si simulare de sat in fazele viitoare.
+

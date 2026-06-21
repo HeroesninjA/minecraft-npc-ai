@@ -186,6 +186,11 @@ class HouseAllocationValidatorTest {
         override val regionCount: Int = 0
         override val placeCount: Int = placeList.size
         override val nodeCount: Int = nodeList.size
+        override val isAutoIndexEnabled: Boolean = true
+        override val indexedRegionChunkCount: Int = 0
+        override val indexedPlaceChunkCount: Int = placeList.size
+        override val indexedNodeChunkCount: Int = nodeList.size
+        override fun hasUnsavedChanges(): Boolean = false
 
         override fun getRegion(regionId: String?): WorldRegionInfo? = null
         override fun findRegion(worldName: String?, x: Int, y: Int, z: Int): WorldRegionInfo? = null
@@ -200,6 +205,13 @@ class HouseAllocationValidatorTest {
             placeList.filter { place ->
                 place.regionId().equals(regionId, ignoreCase = true) && place.hasTag(tag)
             }
+
+        override fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+            throw UnsupportedOperationException("stub")
+        override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+            throw UnsupportedOperationException("stub")
+        override fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo =
+            throw UnsupportedOperationException("stub")
 
         override fun getNodes(regionId: String?): Collection<WorldNodeInfo> =
             nodeList.filter { node -> node.regionId().equals(regionId, ignoreCase = true) }

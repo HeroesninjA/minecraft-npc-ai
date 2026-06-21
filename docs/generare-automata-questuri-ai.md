@@ -19,6 +19,8 @@ Runtime-ul valideaza, adminul aproba, apoi pack-ul versionat este incarcat.
 
 Generarea automata nu inseamna ca modelul poate porni questuri live, acorda reward-uri sau modifica story state. El produce un `QuestDraft` inspectabil, care trece prin validatoare si audit inainte sa ajunga in YAML sau intr-un pack de scenariu.
 
+Pentru a urmari traseul din cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Probleme rezolvate
 
 Sistemul are deja runtime pentru questuri si progresii, dar authoring-ul manual devine greu pe masura ce apar:

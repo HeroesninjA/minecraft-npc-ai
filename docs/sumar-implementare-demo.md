@@ -1,10 +1,12 @@
-# Sumar Implementare Demo AINPC
+﻿# Sumar Implementare Demo AINPC
 
 Actualizat: 2026-06-15
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Ce s-a implementat
 
-### 1. Conversie Java → Kotlin (complet)
+### 1. Conversie Java â†’ Kotlin (complet)
 
 | Fisier Java | Fisier Kotlin | Metode |
 |---|---|---|
@@ -14,46 +16,46 @@ Actualizat: 2026-06-15
 
 ### 2. Build si Config
 
-- Build: `./gradlew.bat clean build` → **SUCCESS**
+- Build: `./gradlew.bat clean build` â†’ **SUCCESS**
 - Teste: **458/458** (0 esuate)
 - JAR-uri: 3 artefacte generate (core 21MB, addon 30KB, API 33KB)
 - Config: `routine=true`, `simulation=true` activate pentru demo
 
 ### 3. 50 de Taskuri pentru Demo (D0-D9)
 
-**D0: Scope** — 4 taskuri
+**D0: Scope** â€” 4 taskuri
 - Env vars documentate (`docs/env-prim-demo.md`)
 - Criterii "gata" + non-obiective (`docs/criterii-gata-prim-demo.md`)
 - Inventar comenzi (`docs/inventar-comenzi-prim-demo.md`)
 - Backup initial (`docs/procedura-backup-prim-demo.md`)
 
-**D1: Build & Config** — 6 taskuri
+**D1: Build & Config** â€” 6 taskuri
 - Build verifcat, JAR-uri OK, config activat
 
-**D2: Mapping demo_sat** — 7 taskuri
+**D2: Mapping demo_sat** â€” 7 taskuri
 - Script de verificare mapping (`docs/verificari-server-d2.md`)
 
-**D3: NPC Population** — 7 taskuri
+**D3: NPC Population** â€” 7 taskuri
 - Settlement plan/spawn, bindings, audit
 
-**D4: Routine & UX** — 6 taskuri
+**D4: Routine & UX** â€” 6 taskuri
 - Rutina, tick, interactiune, GUI, nearest
 
-**D5: Quest + Progression** — 6 taskuri
+**D5: Quest + Progression** â€” 6 taskuri
 - 16 quest-uri definite in addonul medieval
 - Quest clasic, progression non-quest, tracking
 - Authoring read-only pentru questuri, cu GUI, dump si validare
 
-**D6: Story Context** — 4 taskuri
+**D6: Story Context** â€” 4 taskuri
 - Context narativ, story events, debugdump
 
-**D7: Dialog & AI** — 3 taskuri
+**D7: Dialog & AI** â€” 3 taskuri
 - Dialog, fallback AI, debug OpenAI
 
-**D8: Restart** — 4 taskuri
+**D8: Restart** â€” 4 taskuri
 - Smoke tests, comenzi demo, restart gate
 
-**D9: Final** — 3 taskuri
+**D9: Final** â€” 3 taskuri
 - Audit final, script demo complet, concluzie
 
 ### 4. Quest-uri Disponibile (16)
@@ -71,18 +73,18 @@ Actualizat: 2026-06-15
 ### 5. Comenzi Demo (implementate in `DemoReadinessCommand.kt`)
 
 Toate comenzile `/ainpc demo <comanda>`:
-- `status` / `check` / `readiness` — raport stare demo
-- `next` — urmatorii pasi si blocaje
-- `definition` — definiia demo-ului
-- `phases` — fazele D0-D9
-- `script` — flux manual
-- `evidence` — dovezi milestone
-- `runbook` — ghid operare
-- `smoke` — verificare rapida
-- `summary` — rezumat
-- `commands` — lista compacta comenzi
-- `restart` — gate restart
-- `experimental*` — pachete de analiza
+- `status` / `check` / `readiness` â€” raport stare demo
+- `next` â€” urmatorii pasi si blocaje
+- `definition` â€” definiia demo-ului
+- `phases` â€” fazele D0-D9
+- `script` â€” flux manual
+- `evidence` â€” dovezi milestone
+- `runbook` â€” ghid operare
+- `smoke` â€” verificare rapida
+- `summary` â€” rezumat
+- `commands` â€” lista compacta comenzi
+- `restart` â€” gate restart
+- `experimental*` â€” pachete de analiza
 
 ### 6. Instrumente de Testare
 
@@ -101,9 +103,9 @@ Toate comenzile `/ainpc demo <comanda>`:
 
 ### 7. Curatenie Generala
 
-- `.gitignore` actualizat: 1522 → 519 fisiere tracked
-- Warning-uri reduse: 281 → 34 (88%)
-- Fisiere Java: 3 → **0**
+- `.gitignore` actualizat: 1522 â†’ 519 fisiere tracked
+- Warning-uri reduse: 281 â†’ 34 (88%)
+- Fisiere Java: 3 â†’ **0**
 - Fisiere junk sterse: null, New Text Document.txt, docs.text
 - README.md rescris cu informaii reale despre proiect
 
@@ -139,7 +141,7 @@ ainpc-core-plugin/src/main/kotlin/ro/ainpc/
 #    /ainpc reload
 
 # 3. Urmeaza ghidurile:
-docs\verificari-server-d1.md → d2.md → ... → d7-d9.md
+docs\verificari-server-d1.md â†’ d2.md â†’ ... â†’ d7-d9.md
 
 # 4. Urmareste progresul:
 docs\checklist-demo.html
@@ -147,3 +149,4 @@ docs\checklist-demo.html
 # 5. Testare interactiva:
 .\scripts\test-demo.ps1 -Interactive
 ```
+

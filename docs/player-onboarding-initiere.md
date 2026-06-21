@@ -1,6 +1,8 @@
-# Player Onboarding si Initiere
+﻿# Player Onboarding si Initiere
 
 Actualizat: 2026-05-09
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -401,3 +403,4 @@ Sistemul este gata pentru demo cand:
 - Nu amesteca reset profil cu reset complet player.
 - Nu porni AI pentru alegeri de profil pana cand schema si validatoarele sunt stabile.
 - Nu bloca spawn-ul pe server daca onboarding-ul are eroare; degradeaza cu mesaj admin si fallback.
+

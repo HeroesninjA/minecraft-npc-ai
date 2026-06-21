@@ -1,4 +1,6 @@
-# D4: Routine & UX — Verificari pe Server Paper
+﻿# D4: Routine & UX â€” Verificari pe Server Paper
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## T025: Rutina NPC
 
@@ -66,3 +68,4 @@ Observati NPC-ul 1-2 minute.
 ```
 
 **Gate:** Selectorul nearest e explicit, nu nume de NPC.
+

@@ -1,6 +1,8 @@
-# WorldEdit Integration Contract
+﻿# WorldEdit Integration Contract
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: contract de proiectare. Integrarea WorldEdit nu este implementata in core.
 
@@ -330,4 +332,5 @@ Integrarea WorldEdit este MVP cand:
 - rezultatul include bounds si markere transformate;
 - core-ul poate crea legaturi semantice dupa build;
 - lipsa rollback-ului este raportata explicit daca nu exista suport.
+
 

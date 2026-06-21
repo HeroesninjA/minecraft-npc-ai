@@ -34,16 +34,16 @@ class WorldAdminService(
     override val isEnabled: Boolean
         get() = enabled
 
-    val isAutoIndexEnabled: Boolean
+    override val isAutoIndexEnabled: Boolean
         get() = autoIndexEnabled
 
-    val indexedRegionChunkCount: Int
+    override val indexedRegionChunkCount: Int
         get() = mappingIndex.indexedRegionChunks()
 
-    val indexedPlaceChunkCount: Int
+    override val indexedPlaceChunkCount: Int
         get() = mappingIndex.indexedPlaceChunks()
 
-    val indexedNodeChunkCount: Int
+    override val indexedNodeChunkCount: Int
         get() = mappingIndex.indexedNodeChunks()
 
     override val worldMode: WorldMode
@@ -215,9 +215,9 @@ class WorldAdminService(
         return if (section.isInt(path)) section.getInt(path) else fallback
     }
 
-    fun hasUnsavedChanges(): Boolean = dirty
+    override fun hasUnsavedChanges(): Boolean = dirty
 
-    fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+    override fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
         val place = requireExistingPlace(placeId)
         val normalizedNpcId = normalizeBindingValue(npcId)
         if (normalizedNpcId.isBlank()) {
@@ -234,7 +234,7 @@ class WorldAdminService(
         return toPlaceInfo(place)!!
     }
 
-    fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+    override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
         val place = requireExistingPlace(placeId)
         val normalizedNpcId = normalizeBindingValue(npcId)
         if (normalizedNpcId.isBlank()) {
@@ -248,7 +248,7 @@ class WorldAdminService(
         return toPlaceInfo(place)!!
     }
 
-    fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+    override fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
         val place = requireExistingPlace(placeId)
         val normalizedNpcId = normalizeBindingValue(npcId)
         if (normalizedNpcId.isBlank()) {

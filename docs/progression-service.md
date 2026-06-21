@@ -24,6 +24,8 @@ Un addon trebuie sa poata folosi acelasi runtime pentru:
 
 Regula centrala: "quest" trebuie sa devina o fatada peste `ProgressionService`, nu numele intern obligatoriu al sistemului.
 
+Pentru a vedea unde se conecteaza runtime-ul de progresie, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Problema curenta
 
 In codul actual, runtime-ul matur exista in mare parte in `ScenarioEngine` si este orientat semantic spre questuri:

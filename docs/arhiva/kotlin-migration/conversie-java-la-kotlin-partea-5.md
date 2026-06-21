@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-17
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../../harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document continua seria Java -> Kotlin cu partea de control al executiei: tracking, criterii de acceptare, matrice de teste, audit de JAR, smoke test Paper si rollback.

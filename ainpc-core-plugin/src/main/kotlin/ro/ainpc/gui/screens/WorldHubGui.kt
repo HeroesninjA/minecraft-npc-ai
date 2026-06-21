@@ -62,8 +62,10 @@ class WorldHubGui : GuiScreen {
                 listOf(
                     "&7Coordonate: &f$worldName $x, $y, $z",
                     "&7Mapping: &f${worldAdmin.regionCount} regiuni / ${worldAdmin.placeCount} places / ${worldAdmin.nodeCount} noduri",
+                    "&7Indexare: &f${if (worldAdmin.isAutoIndexEnabled) "activa" else "dezactivata"} &8(${worldAdmin.indexedRegionChunkCount}r/${worldAdmin.indexedPlaceChunkCount}p/${worldAdmin.indexedNodeChunkCount}n)",
                     "&7Progresii vizibile: &f${progressionSnapshot.allEntries().size}",
-                    "&7Ancore locale: &f${localAnchorBindings.size}"
+                    "&7Ancore locale: &f${localAnchorBindings.size}",
+                    if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate modificarile sunt salvate"
                 )
             )
         )
@@ -336,6 +338,7 @@ class WorldHubGui : GuiScreen {
         lore.add("&7Regiuni: &f${worldAdmin.regionCount}")
         lore.add("&7Places: &f${worldAdmin.placeCount}")
         lore.add("&7Noduri: &f${worldAdmin.nodeCount}")
+        lore.add("&7Index: &f${if (worldAdmin.isAutoIndexEnabled) "activa" else "dezactivata"} &8(${worldAdmin.indexedRegionChunkCount}r/${worldAdmin.indexedPlaceChunkCount}p/${worldAdmin.indexedNodeChunkCount}n)")
         lore.add("&7Nearby nodes: &f$nearbyNodeCount")
         lore.add("&7Curent region: &f${region?.id() ?: "<nemapat>"}")
         lore.add("&7Curent place: &f${place?.id() ?: "<nemapat>"}")

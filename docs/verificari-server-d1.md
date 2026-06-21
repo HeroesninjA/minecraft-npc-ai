@@ -1,16 +1,22 @@
-# D1: Verificari pe Server Paper
+﻿# D1: Verificari pe Server Paper
 
-Pentru T008, T009, T010 — rulati pe serverul Paper.
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Pentru T008, T009, T010 â€” rulati pe serverul Paper.
 
 ## T008: Verificare incarcare plugin
 
 ```powershell
 # 1. Copiati JAR-urile in plugins/
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 Copy-Item ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar $ServerDir/plugins/
 Copy-Item ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar $ServerDir/plugins/
 Copy-Item ainpc-api/build/libs/ainpc-api-1.0.0.jar $ServerDir/plugins/
 
 # 2. Porniti serverul, apoi in consola/joc:
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 /plugins              # AINPC si addonul medieval apar ca enabled
 /ainpc                # Raspunde cu lista de comenzi
 /ainpc audit db       # Fara erori critice
@@ -50,3 +56,4 @@ Apoi:
 ```
 
 **Gate:** Configurarea corecta, comanda raspunde fara stacktrace.
+

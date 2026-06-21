@@ -1,6 +1,8 @@
-# Kotlin Style Guide
+﻿# Kotlin Style Guide
 
 Actualizat: 2026-05-25
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -304,3 +306,4 @@ Un fisier Kotlin respecta stilul proiectului daca:
 - are teste sau este acoperit de teste existente
 - nu schimba comportamentul public
 - nu introduce dependinte sau runtime nou fara documentare
+

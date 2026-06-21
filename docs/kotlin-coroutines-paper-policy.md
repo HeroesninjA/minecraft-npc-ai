@@ -1,6 +1,8 @@
-# Kotlin Coroutines si Paper Policy
+﻿# Kotlin Coroutines si Paper Policy
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -182,3 +184,4 @@ Conversia Kotlin initiala este corecta daca:
 - nu introduce lifecycle async nou
 
 Coroutine pot avea faza lor doar dupa ce conversia Kotlin de baza este stabila.
+

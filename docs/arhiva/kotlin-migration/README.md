@@ -1,8 +1,10 @@
 # Arhiva Kotlin Migration
 
-Actualizat: 2026-06-20
+Actualizat: 2026-06-21
 
 Acest folder pastreaza documentele istorice ale conversiei Java -> Kotlin. Nu mai contine documente operationale active.
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../../harta-pachetelor-cod.md).
 
 ## Documente arhivate
 

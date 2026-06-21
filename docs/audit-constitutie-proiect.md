@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-29
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 Importanta: ridicata. Acest document compara codul curent cu `constitutie-proiect.md` si listeaza zonele care nu respecta complet regulile constitutionale sau care sunt doar partial conforme.
 
 ## Scop
@@ -384,3 +386,4 @@ Codul are directia corecta pentru addonuri si configurabilitate. Pack-urile tema
 Cele mai importante remedieri ramase sunt lifecycle complet pentru feature flags, introducerea unui `RuntimeFeatureState` central pentru config/addon/pack resolution si portarea completa a dialectului SQL pentru MySQL.
 
 Pana la legarea tuturor serviciilor interne de `features.*` si apoi de `RuntimeFeatureState`, `ainpc-core-plugin` trebuie tratat ca "core neutru la nivel de continut runtime, dar partial dezactivabil la nivel de lifecycle si partial centralizat la nivel de decizie feature".
+

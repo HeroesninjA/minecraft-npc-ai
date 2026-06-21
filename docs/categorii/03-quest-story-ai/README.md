@@ -19,6 +19,8 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 | `../../interactiuni.md` | Fluxul click/chat/sesiune, ascultare pasiva si intentii de quest inaintea dialogului liber |
 | `../../gui-interfete.md` | Directie pentru Quest GUI, NPC interaction GUI si suprafete vizuale peste quest/story |
 | `../../ai-orchestrare-si-mecanici.md` | AI transversal peste dialog, questuri, story, environment, reactii si tool calls validate |
+| `../../harta-clase-ai.md` | Harta doar-documentatie pentru relatiile dintre clasele cheie ale subsistemului AI |
+| `../../harta-clase-quest.md` | Harta doar-documentatie pentru relatiile dintre clasele cheie ale subsistemului quest |
 | `../../spring-ai-mcp-serviciu-intern.md` | Design pentru Spring AI MCP ca sidecar runtime intern, cu tool-uri read-only initiale si fallback |
 | `../../generare-automata-questuri-ai.md` | Contract pentru `QuestSeed`, `QuestDraft`, validare, review admin si export YAML dezactivat |
 | `../../lucru-alternat-quest-mapping-progression.md` | Include slice-ul `AI-QUEST-DOC-02` pentru authoring read-only, GUI, dump si selectie per-player |
@@ -76,4 +78,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 
 ## Relatii
 
-Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.
+Vezi ../../relatii-documentatie.md pentru catalogul pe fisiere si lanturile de citire aferente acestei categorii.
+Pentru harta de cod, foloseste ../../harta-pachetelor-cod-scurta.md pentru orientare rapida si ../../harta-pachetelor-cod.md pentru detaliu complet.
+Pentru harta de clase pe AI, foloseste ../../harta-clase-ai.md.
+Pentru harta de clase pe quest, foloseste ../../harta-clase-quest.md.

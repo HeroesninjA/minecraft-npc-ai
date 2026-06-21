@@ -6,6 +6,8 @@ Actualizat: 2026-05-09
 
 Acest document este backlog operational pe termen lung pentru AINPC. Nu inlocuieste documentele canonice, ci le transforma intr-o lista de faze executabile.
 
+Pentru a lega fazele de codul actual, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Reguli de folosire:
 
 - lucreaza in slice-uri mici, cu test sau smoke test dupa fiecare schimbare reala;

@@ -21,6 +21,8 @@ Rolul lui este sa:
 
 Nu este motor de economie, story sau generare de questuri. Pentru simularea de comunitate si lumea sistemica, vezi `simulare-sat-si-lume.md`.
 
+Pentru a vedea unde se leaga simularea curenta in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Componente reale
 
 Implementarea curenta este distribuita astfel:

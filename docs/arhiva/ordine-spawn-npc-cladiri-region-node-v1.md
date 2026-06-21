@@ -1,6 +1,8 @@
-# Ordine spawn NPC, cladiri, regiuni si node-uri
+﻿# Ordine spawn NPC, cladiri, regiuni si node-uri
 
 Actualizat: 2026-04-30
+
+Pentru orientare in codul curent, porneste cu [harta scurta a pachetelor](../harta-pachetelor-cod-scurta.md), [harta completa](../harta-pachetelor-cod.md) si [harta claselor pentru spawn](../harta-clase-spawn.md).
 
 ## Scop
 
@@ -1003,3 +1005,4 @@ Pentru productie mai lipsesc:
 - model persistent dedicat `households/household_residents/npc_world_bindings`
 - migration/backfill pentru NPC-uri si case deja existente
 - tranzactii DB si rollback complet peste constructii fizice
+

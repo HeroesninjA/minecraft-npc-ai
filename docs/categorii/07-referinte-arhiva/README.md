@@ -20,4 +20,6 @@ Referintele nu sunt specificatii de implementare. Daca o idee devine decizie teh
 
 ## Relatii
 
-Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.
+Vezi ../../relatii-documentatie.md pentru catalogul pe fisiere si lanturile de citire aferente acestei categorii.
+Pentru harta de cod, foloseste ../../harta-pachetelor-cod-scurta.md pentru orientare rapida si ../../harta-pachetelor-cod.md pentru detaliu complet.
+Pentru indexul arhivei, foloseste ../../index-arhiva.md.

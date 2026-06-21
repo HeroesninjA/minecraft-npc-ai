@@ -1,6 +1,8 @@
-# NPC-uri Temporare, Cu Impact Redus si Episodice
+﻿# NPC-uri Temporare, Cu Impact Redus si Episodice
 
 Actualizat: 2026-04-26
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -660,3 +662,4 @@ Drumul bun este:
 2. lifecycle + persistence + cleanup
 3. `NpcEntityAdapter`
 4. suport pentru non-villager si scene episodice
+

@@ -1,6 +1,8 @@
-# SettlementPlan
+﻿# SettlementPlan
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru planul complet de sat/regiune. Acest document defineste contractul de design pentru `SettlementPlan`; implementarea completa, serializarea, comenzile `spawnplan` si validatoarele raman faze viitoare pana cand exista cod si teste.
 
@@ -640,3 +642,4 @@ Livrabile:
 - poate refuza commit cand lipsesc case, node-uri sau work anchors
 
 Abia dupa acest punct merita introdus commit complet cu patch/build si rollback matur.
+

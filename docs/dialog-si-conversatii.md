@@ -17,6 +17,8 @@ Dialogul trebuie sa fie prezentarea inteligenta a starii reale din runtime.
 
 NPC-ul nu trebuie sa inventeze progres, reward-uri, questuri completate sau story state. El trebuie sa vorbeasca pe baza unui context validat si sa propuna intentii care sunt executate doar daca trec prin servicii deterministe.
 
+Pentru a vedea unde intra `dialog`, `ai`, `story` si `progression` in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Decizia de arhitectura
 
 Dialogul trebuie impartit in trei straturi:

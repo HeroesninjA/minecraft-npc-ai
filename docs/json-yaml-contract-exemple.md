@@ -1,4 +1,6 @@
-# Exemple JSON/YAML pentru quest, mapping si world_admin
+﻿# Exemple JSON/YAML pentru quest, mapping si world_admin
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Acest document completeaza `docs/json-yaml-contract.md` cu exemple concrete, gata de folosit ca referinta pentru autori, migrari si verificari rapide.
 
@@ -140,3 +142,4 @@ world_admin:
 - `docs/mapping.md`
 - `docs/questuri-avansate-v2.md`
 - Fixture-uri de test: `ainpc-core-plugin/src/test/resources/json-yaml-contract/quests.yml`, `ainpc-core-plugin/src/test/resources/json-yaml-contract/quests.json`, `ainpc-core-plugin/src/test/resources/json-yaml-contract/world-admin.yml`, `ainpc-core-plugin/src/test/resources/json-yaml-contract/world-admin.json`
+

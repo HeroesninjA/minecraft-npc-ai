@@ -1,8 +1,8 @@
-# Ordine spawn NPC, cladiri, regiuni si node-uri - v2
+﻿# Ordine spawn NPC, cladiri, regiuni si node-uri - v2
 
 Actualizat: 2026-05-11
 
-Versiune: v2
+Pentru orientare in codul de spawn, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md), [harta completa](./harta-pachetelor-cod.md) si [harta claselor pentru spawn](./harta-clase-spawn.md).
 
 Arhiva v1:
 
@@ -22,6 +22,8 @@ v2 stabileste ce trebuie facut in continuare dupa nucleul MVP de spawn order:
 - rollback mai sigur peste DB, entitati si viitoare constructii fizice
 - integrare cu scannerul vanilla, gap analyzer si patch planner
 - rutina/familie/timeline peste date persistente clare
+
+Pentru a urmari traseul in cod pentru spawn, mapping si household, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
 
 ## Status curent scurt
 
@@ -593,3 +595,4 @@ v2 este completa cand:
 ## Concluzie
 
 v1 documenteaza cum s-a ajuns la nucleul MVP. v2 trebuie folosit pentru urmatoarea etapa: transformarea spawn order-ului dintr-un set de modele initiale intr-un pipeline complet, validabil, persistent si recuperabil dupa esec.
+

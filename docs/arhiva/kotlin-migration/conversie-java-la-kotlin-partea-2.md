@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-17
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../../harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document continua `conversie-java-la-kotlin.md` cu un runbook operational. Partea 1 descrie strategia si fazele mari. Partea 2 descrie ordinea concreta de lucru, criteriile de oprire, riscurile de interop si lista de slice-uri recomandate pentru acest repo.

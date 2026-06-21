@@ -4,6 +4,7 @@ import ro.ainpc.platform.RuntimeMode
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldMode
 import java.nio.file.Path
+import java.util.Locale
 
 interface AINPCPlatformApi {
     val runtimeMode: RuntimeMode
@@ -21,9 +22,18 @@ interface AINPCPlatformApi {
     val packDirectory: Path
 
     fun getAddonConfigDirectory(addonId: String?): Path {
-        val safeAddonId = if (addonId.isNullOrBlank()) "unknown-addon" else addonId.trim()
+        val safeAddonId = sanitizePathSegment(addonId, "unknown-addon")
         return dataDirectory.resolve("addons").resolve(safeAddonId)
     }
 
     fun reloadContent()
+
+    private fun sanitizePathSegment(value: String?, fallback: String): String {
+        if (value.isNullOrBlank()) {
+            return fallback
+        }
+        val normalized = value.trim().lowercase(Locale.ROOT)
+        val sanitized = normalized.replace(Regex("[^a-z0-9._-]"), "-")
+        return if (sanitized.isBlank()) fallback else sanitized
+    }
 }

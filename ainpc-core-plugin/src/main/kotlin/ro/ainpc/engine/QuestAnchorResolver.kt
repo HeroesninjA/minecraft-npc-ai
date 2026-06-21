@@ -201,12 +201,20 @@ class QuestAnchorResolver(
     }
 
     private fun orderedPlaces(playerLocation: Location?): List<WorldPlaceInfo> {
-        val places = ArrayList(worldAdminApi!!.places)
+        val currentRegion = if (playerLocation != null && playerLocation.world != null) {
+            findCurrentRegion(playerLocation)
+        } else {
+            null
+        }
+        val places = if (currentRegion != null) {
+            ArrayList(worldAdminApi!!.getPlaces(currentRegion.id()))
+        } else {
+            ArrayList(worldAdminApi!!.places)
+        }
         if (playerLocation == null || playerLocation.world == null) {
             return places
         }
 
-        val currentRegion = findCurrentRegion(playerLocation)
         val currentRegionId = currentRegion?.id() ?: ""
         places.sortWith(
             compareBy<WorldPlaceInfo> { place -> !place.regionId().equals(currentRegionId, ignoreCase = true) }
@@ -216,12 +224,35 @@ class QuestAnchorResolver(
     }
 
     private fun orderedNodes(playerLocation: Location?): List<WorldNodeInfo> {
-        val nodes = ArrayList(worldAdminApi!!.nodes)
+        val currentPlace = if (playerLocation != null && playerLocation.world != null) {
+            findCurrentPlace(playerLocation)
+        } else {
+            null
+        }
+        val nodes = if (currentPlace != null) {
+            val placeNodes = worldAdminApi!!.getNodesForPlace(currentPlace.id())
+            val nearbyNodes = worldAdminApi!!.findNodesNear(
+                playerLocation!!.world.name,
+                playerLocation.x, playerLocation.y, playerLocation.z,
+                24.0, 12
+            )
+            val combined = LinkedHashSet<String>()
+            val result = ArrayList(placeNodes)
+            result.addAll(nearbyNodes.filter { combined.add(it.id()) })
+            result
+        } else if (playerLocation != null && playerLocation.world != null) {
+            ArrayList(worldAdminApi!!.findNodesNear(
+                playerLocation.world.name,
+                playerLocation.x, playerLocation.y, playerLocation.z,
+                24.0, 20
+            ))
+        } else {
+            ArrayList(worldAdminApi!!.nodes)
+        }
         if (playerLocation == null || playerLocation.world == null) {
             return nodes
         }
 
-        val currentPlace = findCurrentPlace(playerLocation)
         val currentPlaceId = currentPlace?.id() ?: ""
         nodes.sortWith(
             compareBy<WorldNodeInfo> { node -> !node.placeId().equals(currentPlaceId, ignoreCase = true) }

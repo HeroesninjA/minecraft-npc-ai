@@ -1,6 +1,8 @@
-# Reactia NPC La Jucator
+﻿# Reactia NPC La Jucator
 
 Actualizat: 2026-05-06
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -672,3 +674,4 @@ Trebuie sa fie un sistem unificat care:
 - pastreaza consecintele in memorie si relatie
 
 Pe arhitectura ta actuala, cel mai bun pas este introducerea unui `PlayerReactionService` central, nu extinderea haotica a listener-elor existente.
+

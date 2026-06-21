@@ -19,6 +19,8 @@ Observatie de gameplay: inainte de mecanici noi, satul trebuie sa fie lizibil. N
 
 Acest document stabileste mecanicile lipsa si ordinea in care trebuie legate. Documentele existente acopera bine parti separate: mapping, spawn, rutine, questuri si story. Lipsa principala era un contract de ansamblu pentru simularea satului.
 
+Pentru a vedea unde se leaga aceste mecanici in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Ce nu este
 
 Acest document nu inlocuieste:

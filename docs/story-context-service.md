@@ -8,6 +8,8 @@ Status: implementat initial ca strat read-only peste mapping, quest anchors si s
 
 `StoryContextService` construieste un context narativ compact pentru NPC, jucator si locatia curenta, fara sa lase AI-ul sa inventeze coordonate sau ID-uri executabile.
 
+Pentru a vedea unde se leaga acest serviciu de `world`, `quest` si `ai`, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Este legatura practica dintre:
 
 - `WorldContextSnapshot`

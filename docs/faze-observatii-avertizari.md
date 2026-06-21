@@ -4,6 +4,8 @@ Actualizat: 2026-05-25
 
 Status: audit documentatie dupa codul curent, mapping demo, bind NPC-place, household/settlement planner, patch planner read-only, demo readiness/script read-only si rollback global practic pentru spawn pe regiune.
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Verdict
 
 Documentatia este in mare parte coerenta, dar trebuie citita pe doua niveluri:

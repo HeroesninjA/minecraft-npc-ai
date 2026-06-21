@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-15
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document defineste cele 50 de taskuri necesare pentru a trece primul demo jucabil AINPC. Fiecare task are un **prompt AI** care explica contextul, dependintele, comenzi de verificat si criterii de trecere.

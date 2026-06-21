@@ -1,6 +1,8 @@
-# Analiza Erori si Plan de Rezolvare
+﻿# Analiza Erori si Plan de Rezolvare
 
 Actualizat: 2026-04-29
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -439,3 +441,4 @@ Problemele reale identificate sunt:
 - acoperire de teste insuficienta pentru zonele cele mai riscante
 
 Acestea sunt punctele care trebuie rezolvate primele.
+

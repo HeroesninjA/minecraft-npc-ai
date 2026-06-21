@@ -1,6 +1,8 @@
-# Reducere Marime JAR
+﻿# Reducere Marime JAR
 
 Actualizat: 2026-06-05
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -493,3 +495,4 @@ Pentru acest proiect, cea mai buna strategie este:
 - pasul 3: pastreaza core-ul mic si lasa addonurile/storage-ul sa aduca dependinte grele doar cand sunt necesare
 
 Refactorizarea claselor mari ramane importanta pentru mentenanta, dar nu va reduce semnificativ JAR-ul. Dimensiunea actuala este o problema de dependinte, nu de cod propriu.
+

@@ -1,6 +1,8 @@
-# Generare Populatie Narativa
+﻿# Generare Populatie Narativa
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru generatorul narativ de populatie pe regiune. Acest document descrie designul si contractele recomandate; nu inseamna ca generatorul este implementat complet in cod.
 
@@ -603,3 +605,4 @@ Generatorul narativ este suficient pentru MVP cand:
 - planul poate fi inspectat fara spawn
 
 Abia dupa acest punct merita legate resursele, reputatia si evenimentele peste populatia generata.
+

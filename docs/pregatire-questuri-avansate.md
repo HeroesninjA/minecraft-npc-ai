@@ -1,6 +1,8 @@
-# Pregatire pentru Questuri Avansate
+﻿# Pregatire pentru Questuri Avansate
 
 Actualizat: 2026-05-08
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -502,3 +504,4 @@ Pregatirea este gata cand:
 - `questuri-avansate-v2.md` ramane ghidul complet de evolutie.
 - `quest-anchor-bindings.md` ramane contractul pentru ancore persistente.
 - Acest document este puntea practica dintre stabilizarea Q1 si implementarea Q06-Q08.
+

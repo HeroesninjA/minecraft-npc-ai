@@ -9,6 +9,9 @@ Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-p
 Acest document centralizeaza metodele practice de debugging si testare pentru proiectul AINPC.
 
 Pentru fluxul operational cap-coada pe server Paper, pornind de la instalare si configuratie minima, vezi `server-admin-runbook.md`. Pentru acceptarea unui build ca release, vezi `release-checklist.md`.
+Pentru orientare rapida in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
+Pentru relatiile dintre clasele de debug, foloseste [harta claselor pentru debug](./harta-clase-debug.md).
 
 Acopera:
 

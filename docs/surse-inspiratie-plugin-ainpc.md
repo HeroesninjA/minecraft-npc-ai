@@ -1,6 +1,8 @@
-# Surse de inspiratie pentru AINPC
+﻿# Surse de inspiratie pentru AINPC
 
 Actualizat: 2026-04-29
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -605,3 +607,4 @@ Pentru AINPC, cea mai buna strategie este:
 3. foloseste `Region/Place/Node` ca avantaj fata de quest pluginurile generice
 4. trateaza familiile si gospodariile ca model social, nu doar text in backstory
 5. introdu extensibilitate prin registries si events, nu printr-un limbaj de scripting complet de la inceput
+

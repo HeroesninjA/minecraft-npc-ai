@@ -1,539 +1,155 @@
 # Documentatie API
 
-Actualizat: 2026-04-28
-
-## Scop
-
-Acest document descrie contractul public curent al modulului `ainpc-api` si modul in care ar trebui folosit de addonuri sau pluginuri externe.
-
-Scopul lui nu este sa descrie toate clasele din core, ci doar suprafata publica pe care alte module ar trebui sa se bazeze.
-
-## Context
-
-Proiectul are deja separarea:
-
-- `ainpc-api`
-- `ainpc-core-plugin`
-- `ainpc-scenario-medieval`
-
-In acest model:
-
-- `ainpc-api` trebuie tratat ca punct oficial de integrare
-- `ainpc-core-plugin` ramane implementarea
-- addonurile trebuie sa depinda de API, nu de clase interne din core
-
-## Statusul actual al API-ului
-
-API-ul exista si este deja utilizabil pentru:
-
-- descoperirea platformei prin Bukkit Services
-- citirea profilului de runtime
-- acces la registry-ul de addonuri
-- acces read-only la world admin pentru regiuni, places si nodes
-- cererea unui `reloadContent()`
-
-API-ul actual este util pentru integrare si inspectie, dar nu este inca un runtime complet de extensii.
-
-Ce inseamna asta:
-
-- este bun pentru faza initiala a addonurilor
-- nu este inca suficient pentru scenarii complet extensibile
-- va trebui extins cand apar registrii de actiuni, conditii si trigger-e
-
-## Modulul public
-
-Modulul public este `ainpc-api`.
-
-Rolul lui este:
-
-- sa defineasca interfetele stabile
-- sa defineasca enum-urile de runtime si lume
-- sa defineasca descriptorii si lifecycle-ul addonurilor
-
-Acest modul ar trebui sa poata fi adaugat ca dependinta de orice addon AINPC fara a trage dupa el tot core-ul.
-
-## Punctul principal de intrare
-
-Intrarea publica in platforma este:
-
-- `ro.ainpc.api.AINPCPlatformApi`
-
-Aceasta interfata expune:
-
-- `getRuntimeMode()`
-- `getWorldMode()`
-- `getDefaultStoryMode()`
-- `getAddonRegistry()`
-- `getWorldAdmin()`
-- `getDataDirectory()`
-- `getPackDirectory()`
-- `reloadContent()`
-
-## Ce inseamna fiecare metoda
-
-### `getRuntimeMode()`
-
-Returneaza profilul de runtime al platformei.
-
-Util pentru:
-
-- activare conditionala a unei capabilitati
-- validarea dependintelor unui addon
-- adaptarea comportamentului daca exista sau nu servicii externe
-
-### `getWorldMode()`
-
-Spune ce model de lume foloseste platforma:
-
-- fixa
-- semi-dinamica
-- dinamica deschisa
-
-Util pentru:
-
-- scenarii dependente de tipul lumii
-- limitarea unor addonuri la anumite moduri
-
-### `getDefaultStoryMode()`
-
-Spune modul narativ de baza al lumii.
-
-Util pentru:
-
-- selectie de scenarii
-- comportamente tematice
-- decizii de pacing narativ
-
-### `getAddonRegistry()`
-
-Ofera acces la registrul public de addonuri.
-
-Aici se fac:
-
-- inregistrarea addonului
-- listarea addonurilor
-- gasirea scenariului principal
-
-### `getWorldAdmin()`
-
-Ofera acces la contractul public pentru world admin.
-
-Atentie:
-- API-ul public este read-only
-- expune regiuni, places si nodes prin modele info stabile
-- nu ofera inca metode publice de creare, stergere sau modificare
-- scrierea se face momentan prin comenzi admin si implementarea interna din core
-
-### `getDataDirectory()`
-
-Returneaza directorul de date al pluginului core.
-
-Util pentru:
-
-- logica de instalare addon
-- fisiere auxiliare
-- artefacte generate
-
-### `getPackDirectory()`
-
-Returneaza directorul in care core-ul asteapta pack-uri.
-
-Acesta este punctul corect pentru addonuri care instaleaza:
-
-- pack-uri YAML
-- resurse gestionate
-
-### `reloadContent()`
-
-Cere core-ului sa reincarce continutul.
-
-Util pentru:
-
-- addonuri care adauga sau elimina pack-uri
-- dezvoltare
-- sincronizare dupa schimbari controlate
-
-Atentie:
-- nu ar trebui apelat abuziv
-- trebuie folosit doar dupa modificari reale de continut
-
-## Cum este expus API-ul
-
-Core-ul publica `AINPCPlatformApi` ca serviciu Bukkit.
-
-Asta inseamna ca un plugin extern il poate obtine fara sa cunoasca implementarea concreta.
-
-Modelul corect este:
-
-```java
-RegisteredServiceProvider<AINPCPlatformApi> provider = getServer()
-    .getServicesManager()
-    .getRegistration(AINPCPlatformApi.class);
-
-AINPCPlatformApi platform = provider != null ? provider.getProvider() : null;
+Actualizat: 2026-06-21
+
+Acest document descrie suprafata publica a API-ului AINPC pentru addonuri si consumatori externi.
+
+Regula principala: addonurile trebuie sa consume doar clasele din `ainpc-api`. Orice dependenta directa catre `ainpc-core-plugin` (clase interne) este un semn de design gresit si trebuie refactorizata.
+
+## Pachete publice
+
+```
+ro.ainpc.api
+  AINPCPlatformApi      - punctul principal de intrare pentru platforma
+  AddonRegistryApi      - registru de addonuri si descriptorilor
+  WorldAdminApi         - API complet pentru world mapping semantic
+  AINPCAddon            - interfata pentru addonuri
+  
+ro.ainpc.addons
+  AddonDescriptor       - descriptor de addon (id, nume, versiune, tip, capabilitati)
+  AddonType             - tipuri de addon (CORE, FEATURE, SCENARIO, STORY etc.)
+  
+ro.ainpc.world
+  WorldRegionInfo       - informatie read-only despre o regiune
+  WorldPlaceInfo        - informatie read-only despre un place (include hasTag, metadata)
+  WorldNodeInfo         - informatie read-only despre un node (include metadata)
+  WorldMode             - modul de world (FINITE_DYNAMIC etc.)
+  PlaceType             - tipuri de place (HOUSE, FORGE, MARKET, TAVERN etc.)
+  StoryMode             - modul de story (EVOLUTIVE etc.)
+
+ro.ainpc.platform
+  RuntimeMode           - modul de runtime (STANDALONE, ADVANCED etc.)
 ```
 
-Acesta este si modelul folosit deja de addonul medieval separat.
+## WorldAdminApi
 
-## Exemplu minim de consum
+`WorldAdminApi` este API-ul principal pentru accesarea si manipularea world mapping-ului semantic (regiuni, places, nodes).
 
-```java
-public final class MyAddonPlugin extends JavaPlugin {
+### Proprietati
 
-    private AINPCPlatformApi platform;
+| Proprietate | Tip | Descriere |
+|---|---|---|
+| `isEnabled` | `Boolean` | World admin este activ |
+| `worldMode` | `WorldMode` | Modul curent de world |
+| `regions` | `Collection<WorldRegionInfo>` | Toate regiunile |
+| `places` | `Collection<WorldPlaceInfo>` | Toate place-urile |
+| `nodes` | `Collection<WorldNodeInfo>` | Toate nodurile |
+| `regionCount` | `Int` | Numar de regiuni |
+| `placeCount` | `Int` | Numar de places |
+| `nodeCount` | `Int` | Numar de noduri |
+| `isAutoIndexEnabled` | `Boolean` | Indexarea automata este activa |
+| `indexedRegionChunkCount` | `Int` | Numar de chunk-uri indexate pentru regiuni |
+| `indexedPlaceChunkCount` | `Int` | Numar de chunk-uri indexate pentru places |
+| `indexedNodeChunkCount` | `Int` | Numar de chunk-uri indexate pentru noduri |
 
-    @Override
-    public void onEnable() {
-        RegisteredServiceProvider<AINPCPlatformApi> provider = getServer()
-            .getServicesManager()
-            .getRegistration(AINPCPlatformApi.class);
+### Metode de interogare
 
-        platform = provider != null ? provider.getProvider() : null;
-        if (platform == null) {
-            getLogger().severe("AINPC API nu este disponibil.");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
+Toate metodele default pot fi folosite fara a fi suprascrise. Metodele abstracte trebuie implementate de service.
 
-        getLogger().info("Runtime mode: " + platform.getRuntimeMode().getId());
-        getLogger().info("Pack directory: " + platform.getPackDirectory());
-    }
-}
+#### Regiuni
+
+| Metoda | Tip | Descriere |
+|---|---|---|
+| `getRegion(regionId)` | abstract | Gaseste o regiune dupa ID |
+| `findRegion(worldName, x, y, z)` | abstract | Gaseste regiunea la coordonate |
+| `findRegionsByType(typeId)` | default | Regiuni filtrate dupa tip |
+| `findRegionsByTag(tag)` | default | Regiuni filtrate dupa tag |
+| `findRegionsByWorld(worldName)` | default | Regiuni filtrate dupa lume |
+
+#### Places
+
+| Metoda | Tip | Descriere |
+|---|---|---|
+| `getPlaces(regionId)` | abstract | Places dintr-o regiune |
+| `getPlace(placeId)` | abstract | Place dupa ID |
+| `findPlace(worldName, x, y, z)` | abstract | Place la coordonate |
+| `findPlacesByTag(regionId, tag)` | default | Places filtrate dupa tag (si regiune) |
+| `findPlacesByType(regionId, placeType)` | default | Places filtrate dupa tip (si regiune) |
+| `findPlacesByWorld(worldName)` | default | Places filtrate dupa lume |
+| `findPlacesByOwner(npcId)` | default | Places detinute de un NPC |
+| `findPlacesByMetadata(regionId, key, value)` | default | Places filtrate dupa metadata |
+
+#### Noduri
+
+| Metoda | Tip | Descriere |
+|---|---|---|
+| `getNodes(regionId)` | abstract | Noduri dintr-o regiune |
+| `getNodesForPlace(placeId)` | abstract | Noduri dintr-un place |
+| `getNode(nodeId)` | abstract | Node dupa ID |
+| `findNode(worldName, x, y, z)` | abstract | Node la coordonate |
+| `findNodesNear(worldName, x, y, z, radius, limit)` | abstract | Noduri in apropiere |
+| `findNodesByType(regionId, typeId)` | default | Noduri filtrate dupa tip |
+| `findNodesByWorld(worldName)` | default | Noduri filtrate dupa lume |
+| `findNodesByMetadata(regionId, key, value)` | default | Noduri filtrate dupa metadata |
+
+#### NPC Bindings
+
+| Metoda | Tip | Descriere |
+|---|---|---|
+| `bindNpcToHomePlace(placeId, npcId, npcName)` | abstract | Leaga un NPC de casa sa |
+| `bindNpcToWorkPlace(placeId, npcId, npcName)` | abstract | Leaga un NPC de locul de munca |
+| `bindNpcToSocialPlace(placeId, npcId, npcName)` | abstract | Leaga un NPC de locul social |
+
+#### Utilitare
+
+| Metoda | Tip | Descriere |
+|---|---|---|
+| `hasUnsavedChanges()` | abstract | Exista modificari nepersistate |
+
+### AINPCPlatformApi
+
+`AINPCPlatformApi` este punctul de intrare pentru platforma.
+
+| Membru | Tip | Descriere |
+|---|---|---|
+| `runtimeMode` | `RuntimeMode` | Modul curent de runtime |
+| `worldMode` | `WorldMode` | Modul curent de world |
+| `defaultStoryMode` | `StoryMode` | Modul implicit de story |
+| `addonRegistry` | `AddonRegistryApi` | Registrul de addonuri |
+| `worldAdmin` | `WorldAdminApi` | API-ul de world admin |
+| `dataDirectory` | `Path` | Directorul cu date ale pluginului |
+| `packDirectory` | `Path` | Directorul cu pack-uri |
+| `getAddonConfigDirectory(addonId)` | default | Directorul deconfig al unui addon (sanitizat) |
+| `reloadContent()` | abstract | Reincarca continutul |
+
+Accesul la platforma se face prin:
+```kotlin
+val platform: AINPCPlatformApi = plugin.platform
+val worldAdmin: WorldAdminApi = platform.worldAdmin
 ```
 
-## Sistemul de addonuri
-
-Addonurile sunt descrise prin:
-
-- `AINPCAddon`
-- `AddonDescriptor`
-- `AddonRegistryApi`
-- `AddonType`
-
-## `AINPCAddon`
-
-Interfata addonului este simpla:
-
-- `getDescriptor()`
-- `onLoad(AINPCPlatformApi api)`
-- `onEnable(AINPCPlatformApi api)`
-- `onDisable(AINPCPlatformApi api)`
-
-### Rolul lifecycle-ului
-
-`onLoad(...)`
-- pregatire logica
-- citire context
-- initializare usoara
-
-`onEnable(...)`
-- activare efectiva
-- inregistrare de capabilitati
-- instalare de continut
-
-`onDisable(...)`
-- cleanup
-- stergere de artefacte gestionate
-- dezactivare controlata
-
-## `AddonDescriptor`
-
-Descriptorul este contractul public de identitate si capabilitati pentru un addon.
-
-Campuri importante:
-
-- `origin`
-- `id`
-- `name`
-- `version`
-- `description`
-- `type`
-- `primaryScenario`
-- `supportedRuntimeModes`
-- `capabilities`
-- `dependencies`
-
-### `origin`
-
-Valori curente:
-
-- `core`
-- `feature-pack`
-- `plugin-addon`
-
-### `type`
-
-Valorile principale sunt:
-
-- `CORE`
-- `SCENARIO`
-- `FEATURE`
-- `INTEGRATION`
-
-### `primaryScenario`
-
-Marcheaza scenariul principal al unei instalari.
-
-Este util pentru:
-
-- selectie implicita
-- admin UI
-- fallback de continut
-
-### `supportedRuntimeModes`
-
-Spune in ce moduri de runtime poate functiona addonul.
-
-### `capabilities`
-
-Lista libera de capabilitati declarate.
-
-Exemple de capabilitati bune:
-
-- `scenario-pack`
-- `pack-installer`
-- `traits`
-- `dialogues`
-- `topology`
-
-Pe viitor, aici pot intra si:
-
-- `scenario-actions`
-- `scenario-conditions`
-- `world-place-support`
-
-### `dependencies`
-
-Lista addonurilor sau capabilitatilor necesare.
-
-Acest camp trebuie folosit pentru:
-
-- detectie de configuratii incomplete
-- validare la incarcare
-- documentarea ecosistemului modular
-
-## `AddonRegistryApi`
-
-Acest registry este punctul public pentru managementul addonurilor.
-
-Metode:
-
-- `registerDescriptor(AddonDescriptor descriptor)`
-- `registerAddon(AINPCAddon addon)`
-- `unregisterAddon(String addonId)`
-- `removeByOrigin(String origin)`
-- `getDescriptors()`
-- `getDescriptors(AddonType type)`
-- `getDescriptor(String id)`
-- `getPrimaryScenario()`
-- `size()`
-
-### Recomandari de folosire
-
-`registerAddon(...)`
-- cand ai un addon real cu lifecycle
-
-`registerDescriptor(...)`
-- cand vrei sa publici doar metadate de continut
-
-`unregisterAddon(...)`
-- la shutdown sau cleanup controlat
-
-`removeByOrigin(...)`
-- util pentru curatarea descriptorilor generati dintr-o sursa specifica
-
-`getPrimaryScenario()`
-- util pentru interfete admin si bootstrapping de continut
-
-## World admin API
-
-Interfata publica actuala este:
-
-- `isEnabled()`
-- `getWorldMode()`
-- `getRegions()`
-- `getRegion(String regionId)`
-- `findRegion(String worldName, int x, int y, int z)`
-- `getPlaces()`
-- `getPlaces(String regionId)`
-- `getPlace(String placeId)`
-- `findPlace(String worldName, int x, int y, int z)`
-- `findPlacesByTag(String regionId, String tag)`
-- `getNodes()`
-- `getNodes(String regionId)`
-- `getNodesForPlace(String placeId)`
-- `getNode(String nodeId)`
-- `getRegionCount()`
-- `getPlaceCount()`
-- `getNodeCount()`
-
-Aceasta suprafata este intentionat read-only.
-
-Ce inseamna asta:
-
-- addonurile pot afla daca world admin este activ
-- pot citi regiuni, places si nodes
-- pot face lookup dupa coordonate pentru regiune si place
-- pot face validari simple si afisa statistici
-- pot cauta places dupa tag
-- pot conecta continut extern la semantica lumii fara sa importe clase interne din core
-
-Ce nu face inca:
-
-- nu creeaza regiuni, places sau nodes
-- nu sterge sau modifica mapping-ul
-- nu expune evenimente de modificare a mapping-ului
-- nu expune lookup public pentru nodes apropiate de o locatie
-- nu ofera inca legaturi directe de tip `NPC -> homePlaceId/workPlaceId`
-
-Pe viitor, pentru addonuri de scenariu serioase, `WorldAdminApi` trebuie extins cu write API controlat, event API si query-uri mai bogate.
-
-## Enum-uri publice
-
-## `RuntimeMode`
-
-Valori:
-
-- `STANDALONE`
-- `HYBRID`
-- `ADVANCED`
-
-Semnificatie:
-
-- `STANDALONE` = fara servicii externe obligatorii
-- `HYBRID` = servicii externe optionale
-- `ADVANCED` = servicii externe si sincronizare dedicate
-
-Metode utile:
-
-- `usesExternalAi()`
-- `usesExternalDatabase()`
-- `usesDistributedSync()`
-- `fromId(...)`
-- `fromIds(...)`
-
-## `WorldMode`
-
-Valori:
-
-- `STATIC`
-- `FINITE_DYNAMIC`
-- `OPEN_DYNAMIC`
-
-Folosire:
-
-- adaptarea scenariilor la tipul lumii
-- limitarea unor addonuri la anumite medii
-
-## `StoryMode`
-
-Valori:
-
-- `STATIC`
-- `EVOLUTIVE`
-- `ROTATIVE`
-
-Folosire:
-
-- alegerea stilului narativ
-- filtrare de scenarii
-- control asupra ritmului de evolutie
-
-## Ce este sigur sa foloseasca un addon
-
-Un addon ar trebui sa se bazeze doar pe:
-
-- clase din `ainpc-api`
-- serviciul `AINPCPlatformApi`
-- descriptorii si registry-ul public
-- directoarele returnate de API
-
-## Ce nu ar trebui folosit direct
-
-Un addon nu ar trebui sa depinda de:
-
-- `AINPCPlugin`
-- `ScenarioEngine`
-- `NPCManager`
-- `WorldAdminService`
-- orice clasa din core care nu este expusa in `ainpc-api`
-
-Motivul este simplu:
-
-- acele clase se pot schimba mult mai des
-- creeaza coupling puternic
-- rup modularitatea reala
-
-## Contracte lipsa in acest moment
-
-Pentru faza actuala, API-ul este suficient doar partial.
-
-Pentru faza 2 si 3 vor trebui adaugate contracte noi, de exemplu:
-
-- `ScenarioActionHandler`
-- `ScenarioConditionHandler`
-- `ScenarioTriggerProvider`
-- `ScenarioExecutionContext`
-- `ScenarioVariableProvider`
-- `ScenarioValidationReport`
-- write API controlat pentru `WorldAdmin`
-- event API pentru schimbari de mapping
-- query API pentru nodes apropiate si places disponibile
-
-Fara acestea:
-
-- addonurile pot instala continut
-- pot citi mapping-ul semantic
-- dar nu pot extinde curat runtime-ul de scenarii si nu pot modifica lumea semantic prin API public
-
-## Reguli de compatibilitate recomandate
-
-Cand API-ul incepe sa fie folosit extern, trebuie introduse reguli clare:
-
-- versiune de API
-- capabilitati declarate
-- dependinte minime
-- deprecari explicite
-
-Model recomandat:
-
-- schimbarile breaking intra doar intr-o versiune noua de API
-- contractele vechi raman o perioada marcate ca deprecated
-- addonurile verifica versiunea minima suportata
-
-## Recomandari pentru autorii de addonuri
-
-- foloseste `AINPCPlatformApi` ca singur punct de intrare
-- trateaza `reloadContent()` ca operatie scumpa
-- declara corect `capabilities` si `dependencies`
-- nu scrie direct in fisierele interne ale core-ului in afara directoarelor destinate pack-urilor
-- nu consuma internals din core doar pentru ca sunt la indemana
-
-## MVP bun pentru documentatia API
-
-Pentru stadiul actual al proiectului, aceasta documentatie este suficienta daca este completata cu:
-
-1. un exemplu de addon minimal
-2. o conventie pentru `capabilities`
-3. o conventie pentru `dependencies`
-4. reguli de versionare API
-5. ulterior, documentatie pentru registrii de scenarii
-
-## Concluzie
-
-API-ul actual este o baza buna pentru inceputul fazei de modularitate.
-
-El permite deja:
-
-- descoperirea platformei
-- instalarea si descrierea addonurilor
-- sincronizarea pack-urilor
-- consultarea profilului de runtime si lume
-- citirea mapping-ului semantic prin regiuni, places si nodes
-
-Dar pentru un ecosistem real de scenarii extensibile, API-ul trebuie extins mai ales in zona:
-
-- runtime de scenarii
-- validare
-- world semantics
-- contracte pentru extensii programabile
+### AddonRegistryApi
+
+`AddonRegistryApi` gestioneaza inregistrarea si interogarea addonurilor.
+
+| Membru | Tip | Descriere |
+|---|---|---|
+| `descriptors` | `Collection<AddonDescriptor>` | Toti descriptorii inregistrati |
+| `primaryScenario` | `AddonDescriptor?` | Scenariul principal |
+| `registerDescriptor(descriptor)` | abstract | Inregistreaza un descriptor |
+| `registerAddon(addon)` | abstract | Inregistreaza un addon |
+| `unregisterAddon(addonId)` | abstract | Dezinregistreaza un addon |
+| `removeByOrigin(origin)` | abstract | Sterge addonurile dupa origine |
+| `getDescriptors(type)` | abstract | Descriptorii filtrati dupa tip |
+| `getDescriptor(id)` | abstract | Descriptor dupa ID |
+| `isAddonEnabled(addonId)` | default | Verifica daca un addon e activ |
+| `size()` | abstract | Numarul de descriptorii |
+
+## Reguli de consum
+
+1. Foloseste `platform.worldAdmin` (returneaza `WorldAdminApi`), nu `platform.worldAdminService` (clasa interna).
+2. Foloseste metodele default pentru interogari simple; nu implementa propria logica de filtrare.
+3. Pentru binding NPC-place, foloseste metodele `bindNpcTo*`. Nu scrie direct in DB.
+4. Toate metodele default sunt sigure la null/blank (returneaza colectii goale).
+5. `WorldAdminApi` este interfata stabila; metodele abstracte pot fi extinse, metodele default nu trebuie suprascrise.
+6. Pentru metadata, foloseste `findPlacesByMetadata` si `findNodesByMetadata` in loc sa filtrezi manual colectiile.

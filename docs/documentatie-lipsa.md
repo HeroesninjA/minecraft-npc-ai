@@ -1,6 +1,8 @@
-# Documentatie Lipsa si Idei Recomandate
+﻿# Documentatie Lipsa si Idei Recomandate
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Acest document listeaza documentatiile care lipsesc sau merita separate din documentele mari existente.
 
@@ -75,3 +77,4 @@ Aceste cinci documente reduc cel mai mult riscul pentru urmatoarele faze, pentru
 | `kotlin-coroutines-paper-policy.md` | Creat ca politica pentru coroutine in context Paper |
 | `arhiva/kotlin-migration/kotlin-gradle-activation-plan.md` | Arhivat; plan exact pentru activarea Kotlin in Gradle |
 | `kotlin-testing-strategy.md` | Creat ca strategie de testare pentru conversiile Kotlin |
+

@@ -1,4 +1,6 @@
-# Feature Flags Lifecycle
+﻿# Feature Flags Lifecycle
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Importanta: ridicata.
 
@@ -148,3 +150,4 @@ Un feature este conform doar cand:
 - comenzile si GUI-urile raporteaza clar dezactivarea;
 - reload-ul aplica aceeasi regula ca startup-ul;
 - exista test pentru cel putin o cale publica dezactivata.
+

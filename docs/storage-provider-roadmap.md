@@ -1,4 +1,6 @@
-# Storage Provider Roadmap
+﻿# Storage Provider Roadmap
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Importanta: ridicata.
 
@@ -90,3 +92,4 @@ Auditul static valideaza si blocurile SQL DML inventariate: dupa `DatabaseDialec
 3. Adauga teste de unit pentru SQL generat per dialect.
 4. Adauga smoke test MySQL containerizat sau server local controlat.
 5. Marcheaza `database.type: mysql` ca production-ready doar dupa migration si backup validate.
+

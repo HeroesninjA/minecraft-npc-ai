@@ -15,6 +15,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 | `../../mapping-pentru-implementari-ulterioare.md` | Redirect istoric catre `../../mapping.md` |
 | `../../npc-world-bindings.md` | Tabela dedicata pentru legaturi NPC -> home/work/social places si nodes |
 | `../../ordine-spawn-npc-cladiri-region-node.md` | v2 pentru spawn order, household, generator si rollback |
+| `../../harta-clase-spawn.md` | Harta doar-documentatie pentru relatiile dintre clasele cheie ale subsistemului spawn |
 | `../../settlement-plan.md` | Contract pentru planul complet de regiune inainte de mapping/populatie/spawn |
 | `../../structuri-exterioare-satului.md` | Definitii semantice pentru structuri din afara satului: castel, padure, fantana, casa izolata, mini-sat, sat de barbari, dungeon si extensii |
 | `../../mediu-test-controlat-sat-si-structuri-exterioare.md` | Fixture demo/test temporar pentru sat predefinit, structuri exterioare si ancore stabile de validare; nu trebuie sa ramana hardcodat in core |
@@ -66,4 +67,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 
 ## Relatii
 
-Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.
+Vezi ../../relatii-documentatie.md pentru catalogul pe fisiere si lanturile de citire aferente acestei categorii.
+Pentru harta de cod, foloseste ../../harta-pachetelor-cod-scurta.md pentru orientare rapida si ../../harta-pachetelor-cod.md pentru detaliu complet.
+Pentru harta de clase pe world, foloseste ../../harta-clase-world.md.
+Pentru harta de clase pe spawn, foloseste ../../harta-clase-spawn.md.

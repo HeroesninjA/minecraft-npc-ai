@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-18
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Navigare rapida
 
 - `docs/mapping.md`
@@ -1452,6 +1454,7 @@ Un demo intern este matur doar cand:
 - `generare-automata-questuri-ai.md` pentru `QuestSeed`, `QuestDraft`, validare si export controlat;
 - `gui-interfete.md` pentru GUI system peste quest, progression, world, NPC, audit si debug;
 - `debugging-si-testare.md` pentru smoke tests, audit si debugdump.
+
 
 
 

@@ -1,6 +1,8 @@
-# Households Persistente
+﻿# Households Persistente
 
 Actualizat: 2026-05-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru modelul persistent de household-uri. Acest document este design si contract de lucru; tabelele `households` si `household_residents` nu sunt considerate implementate complet pana cand exista cod, migration, audit si comenzi de inspectie.
 
@@ -639,3 +641,4 @@ Modelul este suficient pentru MVP cand:
 - rutina poate citi household-ul pentru target home
 
 Abia dupa acest punct are sens sa legam economie, resurse si reputatie de gospodarii.
+

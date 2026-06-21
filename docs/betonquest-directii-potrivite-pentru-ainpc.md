@@ -1,6 +1,8 @@
-# Directii din BetonQuest care se potrivesc pentru AINPC
+﻿# Directii din BetonQuest care se potrivesc pentru AINPC
 
 Actualizat: 2026-04-27
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -453,3 +455,4 @@ AINPC trebuie sa aiba ca centru relatia dintre:
 - stare narativa
 
 De aceea, ideile BetonQuest trebuie absorbite prin filtrul `world mapping + NPC context`, nu copiate mecanic.
+

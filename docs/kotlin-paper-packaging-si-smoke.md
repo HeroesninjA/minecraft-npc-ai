@@ -1,6 +1,8 @@
-# Kotlin Paper Packaging si Smoke Test
+﻿# Kotlin Paper Packaging si Smoke Test
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -224,3 +226,4 @@ Packaging-ul Kotlin este acceptat cand:
 - addonul medieval se incarca
 - comenzile de baza merg
 - smoke testele relevante sunt trecute
+

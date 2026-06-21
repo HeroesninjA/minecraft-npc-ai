@@ -15,6 +15,8 @@ Rolul lui este operational:
 
 Nu inlocuieste documentele mari. `implementat-deja.md` ramane sursa pentru ce exista in cod, iar documentele de specialitate raman sursa pentru detalii tehnice.
 
+Cand o categorie trimite la schimbari in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) pentru orientare rapida si [harta completa](./harta-pachetelor-cod.md) pentru detaliu.
+
 ## Surse analizate
 
 Sinteza este bazata pe:

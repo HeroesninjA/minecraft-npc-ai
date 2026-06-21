@@ -1,11 +1,15 @@
-# D2: Mapping demo_sat — Verificari pe Server Paper
+﻿# D2: Mapping demo_sat â€” Verificari pe Server Paper
 
-Pentru T011-T017 — rulati pe serverul Paper.
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Pentru T011-T017 â€” rulati pe serverul Paper.
 
 ## T011: Creare harta demo
 
 ```powershell
 # Intrati in joc, mergeti intr-o zona relativ plata, rulati:
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 /ainpc world demo create demo_sat
 ```
 
@@ -97,3 +101,4 @@ Apoi restartati serverul si verificati:
    ```
 
 **Gate:** Toate datele de mapping supravietuiesc restartului.
+

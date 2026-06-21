@@ -5,6 +5,7 @@ Actualizat: 2026-05-28
 Importanta: ridicata. Acest document este reper constitutional pentru arhitectura, directie, reguli de dezvoltare si decizii intre alternative.
 
 Acest document stabileste regulile de baza ale proiectului AINPC. Este document de orientare si control: cand exista conflict intre idei, backlog, implementari rapide sau documente vechi, acest document fixeaza directia generala, iar documentele de specialitate fixeaza detaliile.
+Pentru orientare rapida in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Articolul 1. Identitate
 

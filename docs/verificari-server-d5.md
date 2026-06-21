@@ -1,4 +1,6 @@
-# D5: Quest + Progression — Verificari pe Server Paper
+﻿# D5: Quest + Progression â€” Verificari pe Server Paper
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## T031: Quest clasic
 
@@ -61,3 +63,4 @@ Testati cu OpenAI dezactivat (fara OPENAI_API_KEY):
 ```
 
 **Gate:** Quest-urile functioneaza complet si fara AI extern.
+

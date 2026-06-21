@@ -1,6 +1,8 @@
-# Kotlin Interop, API si Addonuri
+﻿# Kotlin Interop, API si Addonuri
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -263,3 +265,4 @@ Interop-ul este acceptabil daca:
 - nu apar adaptoare inutile doar pentru Kotlin
 - documentatia API este actualizata
 - serverul Paper incarca addonul dupa core
+

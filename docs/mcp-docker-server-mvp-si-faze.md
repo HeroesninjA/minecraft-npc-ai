@@ -1,6 +1,8 @@
-# MCP Docker Server MVP si Faze Ulterioare
+﻿# MCP Docker Server MVP si Faze Ulterioare
 
 Actualizat: 2026-05-22
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -1201,3 +1203,4 @@ Prioritati:
 - Nu pune MCP public pe internet fara autentificare.
 - Nu restaura Chroma peste date locale fara `-RestoreChroma` intentionat.
 - Nu modifica SQLite/Chroma manual cat timp containerul ruleaza.
+

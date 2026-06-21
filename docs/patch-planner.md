@@ -1,6 +1,8 @@
-# Patch Planner
+﻿# Patch Planner
 
 Actualizat: 2026-05-11
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -658,3 +660,4 @@ Patch planner-ul este suficient pentru MVP cand:
 - patch-urile semantic-only pot fi aplicate separat in faza controlata
 
 Primele trei puncte exista initial in cod. Urmatoarele raman faze de integrare inainte de builder nativ sau WorldEdit pentru patch-uri fizice.
+

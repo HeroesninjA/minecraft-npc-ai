@@ -87,7 +87,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             return WorldContextSnapshot.empty()
         }
         val snapshot = WorldContextSnapshotBuilder(
-            plugin.platform.worldAdminService
+            plugin.platform.worldAdmin
         ).build(location, npc, collectNearbyNpcs(location, npc))
 
         if (snapshot.isEmpty()) {

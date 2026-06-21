@@ -1,6 +1,8 @@
-# NPC World Bindings
+﻿# NPC World Bindings
 
 Actualizat: 2026-05-07
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -103,3 +105,4 @@ Exportul contine:
 - migration/backfill mai explicit pentru servere vechi
 - audit dedicat `worldbindings`
 - integrare completa in rutina si spawn-order, astfel incat coordonatele din `profile_data` sa ramana doar cache runtime
+

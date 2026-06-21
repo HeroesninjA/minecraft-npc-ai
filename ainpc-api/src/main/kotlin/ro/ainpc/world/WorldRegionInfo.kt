@@ -33,6 +33,10 @@ class WorldRegionInfo(
     fun maxY(): Int = maxY
     fun maxZ(): Int = maxZ
     fun tags(): List<String> = tags
+
+    fun hasTag(tag: String?): Boolean {
+        return tag != null && tags.any { existing -> existing.equals(tag, ignoreCase = true) }
+    }
     fun storyMode(): StoryMode = storyMode
     fun storyStateKey(): String = storyStateKey
     fun storyPool(): List<String> = storyPool

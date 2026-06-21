@@ -171,7 +171,7 @@ class NPCContext(
         }
 
         val snapshot = WorldContextSnapshotBuilder(
-            npc.plugin.platform.worldAdminService
+            npc.plugin.platform.worldAdmin
         ).build(npcLocation, npc, nearbyNPCs)
         worldContextSnapshot = snapshot
         if (!snapshot.isEmpty()) {

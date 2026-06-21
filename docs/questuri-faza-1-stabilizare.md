@@ -1,6 +1,8 @@
-# Questuri - Faza Q1 Stabilizare
+﻿# Questuri - Faza Q1 Stabilizare
 
 Actualizat: 2026-05-03
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -85,3 +87,4 @@ ainpc quest reset nearest <player>
 - 1-2 questuri legate direct de `visit_place` si `inspect_node`
 - `objectiveId` explicit in YAML
 - etape reale persistente
+

@@ -17,6 +17,8 @@ SimulationService
 -> SettlementSimulation / QuestDirector / StoryContext / AI prompt
 ```
 
+Pentru a vedea unde apar aceste dependinte in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Regula centrala:
 
 ```text

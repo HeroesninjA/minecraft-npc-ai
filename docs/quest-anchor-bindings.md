@@ -1,6 +1,8 @@
-# Quest Anchor Bindings
+﻿# Quest Anchor Bindings
 
 Actualizat: 2026-05-11
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -208,3 +210,4 @@ Prioritate recomandata:
 1. adauga repair/backfill pentru binding-uri dupa rename de mapping;
 2. extinde `StoryContextService` dupa ce exista story state persistent;
 3. adauga `quest_story_links` dupa ce story state-ul este persistent.
+

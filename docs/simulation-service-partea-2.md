@@ -14,6 +14,8 @@ Tinta este o componenta clara, testabila si observabila:
 ro.ainpc.simulation.SimulationService
 ```
 
+Pentru a urmari unde se leaga piesele reale in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Aceasta componenta trebuie sa orchestreze tick-ul de simulare, dar sa pastreze responsabilitatile separate:
 
 - `DecisionEngine` ramane locul unde se calculeaza actiunea potrivita

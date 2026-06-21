@@ -8,6 +8,8 @@ Status: checklist operational initial pentru build, test si livrare pe server Pa
 
 Acest document defineste ce trebuie verificat inainte ca un build AINPC sa fie pus pe un server Paper de test, demo sau productie.
 
+Pentru a lega checklist-ul de codul real, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Release inseamna aici:
 
 ```text

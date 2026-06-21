@@ -1,6 +1,8 @@
-# Spring AI MCP Ca Serviciu Intern
+﻿# Spring AI MCP Ca Serviciu Intern
 
 Actualizat: 2026-06-04
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -477,3 +479,4 @@ Ordinea recomandata:
 5. Adauga `ainpc.feature.state`.
 6. Ruleaza Paper smoke cu sidecar oprit si pornit.
 7. Abia dupa aceea leaga `AIOrchestrationService` de MCP.
+

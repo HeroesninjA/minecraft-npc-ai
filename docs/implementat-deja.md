@@ -6,6 +6,8 @@ Status verificat:
 - build-ul multi-module trece cu Gradle pe testele core si `assemble`
 - informatiile din acest fisier sunt bazate pe codul actual, nu pe viziunea de produs
 
+Pentru a naviga repede codul confirmat aici, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Module existente
 
 Proiectul este impartit in 3 module Maven:

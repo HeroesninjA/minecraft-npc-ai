@@ -1,6 +1,8 @@
-# Mapping pentru harti construite manual
+﻿# Mapping pentru harti construite manual
 
 Actualizat: 2026-05-10
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -500,3 +502,4 @@ harta construita manual
 
 Pluginul nu trebuie sa pretinda ca intelege singur lumea doar din blocuri.
 El trebuie sa pastreze peste lumea Minecraft un strat semantic validat.
+

@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-26
 
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
 ## Scop
 
 Acest document transforma documentatia existenta intr-un plan executabil pentru primul demo intern jucabil AINPC.

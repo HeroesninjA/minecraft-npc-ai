@@ -22,6 +22,7 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 | `../../interactiuni.md` | Fluxul concret player-NPC: click, chat privat, sesiuni, passive listen, intentii si efecte sociale |
 | `../../gui-interfete.md` | Directie pentru GUI de interactiune NPC, manager NPC, statistici si shop |
 | `../../npc-uri-temporare-si-episodice.md` | NPC-uri temporare, episodice si non-villager |
+| `../../harta-clase-npc.md` | Harta doar-documentatie pentru relatiile dintre clasele cheie ale subsistemului NPC |
 | `../../implementat-deja.md` | Status confirmat pentru NPC, familie, emotii si simulare |
 | `../../ordine-spawn-npc-cladiri-region-node.md` | Legatura dintre spawn, household si rutina |
 
@@ -36,4 +37,6 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 
 ## Relatii
 
-Vezi `../../relatii-documentatie.md` pentru catalogul pe fișiere si lanturile de citire aferente acestei categorii.
+Vezi ../../relatii-documentatie.md pentru catalogul pe fisiere si lanturile de citire aferente acestei categorii.
+Pentru harta de cod, foloseste ../../harta-pachetelor-cod-scurta.md pentru orientare rapida si ../../harta-pachetelor-cod.md pentru detaliu complet.
+Pentru harta de clase pe NPC, foloseste ../../harta-clase-npc.md.

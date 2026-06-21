@@ -1,6 +1,8 @@
-# Villager Generation cu WorldEdit si NPC-uri
+﻿# Villager Generation cu WorldEdit si NPC-uri
 
 Actualizat: 2026-04-28
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -407,3 +409,4 @@ Rezultatul corect trebuie sa produca simultan:
 
 WorldEdit este util pentru volum si template-uri.
 AINPC trebuie sa controleze semantica, NPC-urile si gameplay-ul.
+

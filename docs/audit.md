@@ -1,6 +1,8 @@
-# AINPC Audit
+﻿# AINPC Audit
 
 Actualizat: 2026-04-29
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 Status: revizuit fata de codul curent
 
 ## Verdict
@@ -189,3 +191,4 @@ P2:
 - backlog-ul de securitate ramas de verificat
 
 Nu trebuie interpretat ca dovada ca pluginul este sigur complet. Este un document de audit operational si backlog de hardening.
+

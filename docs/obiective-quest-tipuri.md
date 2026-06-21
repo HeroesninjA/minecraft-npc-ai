@@ -1,17 +1,19 @@
-# Obiective Quest - Tipuri Suportate
+﻿# Obiective Quest - Tipuri Suportate
 
-## Stare curentă (2026-06-19)
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
-| Tip obiectiv | ID configurație | Status | Detecție |
+## Stare curentÄƒ (2026-06-19)
+
+| Tip obiectiv | ID configuraÈ›ie | Status | DetecÈ›ie |
 |---|---|---|---|
-| Vizitează regiune | `visit_region` | ✅ Implementat | Automată la mișcare (`PlayerMoveEvent`) |
-| Vizitează loc | `visit_place` | ✅ Implementat | Automată la mișcare (`PlayerMoveEvent`) |
-| Inspectează nod | `inspect_node` | ✅ Implementat | Automată la mișcare (`PlayerMoveEvent`) |
-| Vorbește cu NPC | `talk_to_npc` | ✅ Implementat | La right-click pe NPC (`handleQuestInteraction`) |
-| Colectează obiect | `collect_item` | ✅ Implementat | La pickup (`EntityPickupItemEvent`) + inventory check |
-| Omoră mob | `kill_mob` | ✅ Implementat | La moarte mob (`EntityDeathEvent`) |
-| Livrează la NPC | `deliver_to_npc` | ✅ Implementat | La right-click pe NPC cu obiectul în inventar |
-| Plasează bloc | `place_block` | ❌ **Lipsește** | Neimplementat |
+| ViziteazÄƒ regiune | `visit_region` | âœ… Implementat | AutomatÄƒ la miÈ™care (`PlayerMoveEvent`) |
+| ViziteazÄƒ loc | `visit_place` | âœ… Implementat | AutomatÄƒ la miÈ™care (`PlayerMoveEvent`) |
+| InspecteazÄƒ nod | `inspect_node` | âœ… Implementat | AutomatÄƒ la miÈ™care (`PlayerMoveEvent`) |
+| VorbeÈ™te cu NPC | `talk_to_npc` | âœ… Implementat | La right-click pe NPC (`handleQuestInteraction`) |
+| ColecteazÄƒ obiect | `collect_item` | âœ… Implementat | La pickup (`EntityPickupItemEvent`) + inventory check |
+| OmorÄƒ mob | `kill_mob` | âœ… Implementat | La moarte mob (`EntityDeathEvent`) |
+| LivreazÄƒ la NPC | `deliver_to_npc` | âœ… Implementat | La right-click pe NPC cu obiectul Ã®n inventar |
+| PlaseazÄƒ bloc | `place_block` | âŒ **LipseÈ™te** | Neimplementat |
 
 ## Detalii implementare
 
@@ -34,7 +36,7 @@
 - **Config**: `item: "region:place:node_id"` (ex: `castel:curte_castel:cufar`)
 
 ### talk_to_npc
-- **Listener**: `NPCInteractionListener` → `ScenarioEngine.handleQuestInteraction()`
+- **Listener**: `NPCInteractionListener` â†’ `ScenarioEngine.handleQuestInteraction()`
 - **Engine**: `ScenarioEngine.trackNpcObjectiveProgress()` + `markNpcTalkObjective()`
 - **Matching**: Compare `objectives[].item` cu `profession:npc_profession`
 - **Config**: `item: "profession:garda"` (sau NPC name)
@@ -51,34 +53,35 @@
 - **Config**: `item: "ZOMBIE"` (entity type), `amount: 2`
 
 ### deliver_to_npc
-- **Listener**: `NPCInteractionListener` → `ScenarioEngine.handleQuestInteraction()`
+- **Listener**: `NPCInteractionListener` â†’ `ScenarioEngine.handleQuestInteraction()`
 - **Engine**: Verificare inventar + consumare obiect la predare
 - **Config**: `item: "WHEAT"`, `amount: 5`
 
 ## Obiective viitoare (neimplementate)
 
 ### place_block
-- Necesită:
+- NecesitÄƒ:
   - Listener pentru `BlockPlaceEvent`
   - Verificare tip bloc (`item: "OAK_PLANKS"`)
-  - Verificare opțională locație (region/place/node)
-  - Logica `incrementObjectiveProgress()` similară cu `collect_item`
+  - Verificare opÈ›ionalÄƒ locaÈ›ie (region/place/node)
+  - Logica `incrementObjectiveProgress()` similarÄƒ cu `collect_item`
 
 ### break_block
 - Similar cu `place_block` dar cu `BlockBreakEvent`
 
 ### ride_entity / tame_entity
-- Pentru questuri de călărie / îmblânzire
+- Pentru questuri de cÄƒlÄƒrie / Ã®mblÃ¢nzire
 
 ### craft_item
 - Pentru questuri de crafting
 
-## Cum se adaugă un tip nou de obiectiv
+## Cum se adaugÄƒ un tip nou de obiectiv
 
-1. Adaugă tipul în `normalizeQuestObjectiveType()` în `AINPCCommandText.kt`
-2. Adaugă în `isSupportedQuestObjectiveType()` în `AINPCCommandText.kt`
-3. Adaugă listener pentru evenimentul Bukkit corespunzător
-4. Adaugă logica de progres în `ScenarioEngine`
-5. Adaugă formatare afișare în `ScenarioEngineText.kt`
-6. Adaugă în `QuestDraftValidator.kt` pentru validare drafturi
-7. Adaugă în tab completion (`AINPCTabCompleter.kt`)
+1. AdaugÄƒ tipul Ã®n `normalizeQuestObjectiveType()` Ã®n `AINPCCommandText.kt`
+2. AdaugÄƒ Ã®n `isSupportedQuestObjectiveType()` Ã®n `AINPCCommandText.kt`
+3. AdaugÄƒ listener pentru evenimentul Bukkit corespunzÄƒtor
+4. AdaugÄƒ logica de progres Ã®n `ScenarioEngine`
+5. AdaugÄƒ formatare afiÈ™are Ã®n `ScenarioEngineText.kt`
+6. AdaugÄƒ Ã®n `QuestDraftValidator.kt` pentru validare drafturi
+7. AdaugÄƒ Ã®n tab completion (`AINPCTabCompleter.kt`)
+

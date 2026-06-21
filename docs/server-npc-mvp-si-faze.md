@@ -1,6 +1,8 @@
-# Server NPC MVP si Faze Ulterioare
+﻿# Server NPC MVP si Faze Ulterioare
 
 Actualizat: 2026-05-20
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -535,4 +537,5 @@ Audit in joc:
 - Nu considera un feature gata fara restart test.
 - Nu trece la mecanici mari daca mapping/NPC/routine nu sunt stabile.
 - Nu publica JAR fara smoke Paper si backup.
+
 

@@ -1,6 +1,8 @@
-# Interactiuni
+﻿# Interactiuni
 
 Actualizat: 2026-05-08
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -362,3 +364,4 @@ Interactiunile pot fi considerate stabile pentru faza avansata cand:
 - `debugdump` exporta sesiuni active si ultimele evenimente;
 - testele acopera click, chat activ, chat pasiv, goodbye, cooldown si quest intents;
 - AI-ul ramane limitat la formulare si nu poate modifica direct starea de gameplay.
+

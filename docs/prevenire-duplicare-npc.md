@@ -6,6 +6,8 @@ Actualizat: 2026-05-09
 
 Acest document descrie cum se previne duplicarea NPC-urilor si cum se rezolva bugurile unde acelasi NPC apare de doua ori.
 
+Pentru a vedea unde se leaga fluxul de spawn, persistenta si audit, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 Termenul corect folosit aici este `duplicare`; daca bug report-ul foloseste `dublicare`, trateaza-l ca aceeasi problema.
 
 Documentul acopera:

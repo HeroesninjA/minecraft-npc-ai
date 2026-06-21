@@ -1,4 +1,6 @@
-# D3: NPC Population & Bindings — Verificari pe Server Paper
+﻿# D3: NPC Population & Bindings â€” Verificari pe Server Paper
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## T018: Planificare asezare
 
@@ -78,7 +80,8 @@
 
 1. Oprire server
 2. Pornire server
-3. `/ainpc list` — acelasi numar de NPC-uri
-4. `/ainpc world bindings nearest` — aceleasi date
+3. `/ainpc list` â€” acelasi numar de NPC-uri
+4. `/ainpc world bindings nearest` â€” aceleasi date
 
 **Gate:** NPC-urile supravietuiesc restartului.
+

@@ -1,6 +1,8 @@
-# Mediu test controlat: sat si structuri exterioare
+﻿# Mediu test controlat: sat si structuri exterioare
 
 Actualizat: 2026-06-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -311,3 +313,4 @@ Primul slice trebuie sa livreze doar:
 - teste unitare pentru planul fixture.
 
 Abia dupa acest slice merita introdusa comanda `fixture create`, tot mapping-only si opt-in.
+

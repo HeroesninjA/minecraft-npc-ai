@@ -1,6 +1,8 @@
-# Strategie Plugin Modular si Scenarii Programabile
+﻿# Strategie Plugin Modular si Scenarii Programabile
 
 Actualizat: 2026-04-26
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -628,3 +630,4 @@ Ele vin din separarea clara dintre:
 - extensii
 
 Aceasta este directia care iti permite sa adaugi teme noi, lumi noi si logica noua fara sa rescrii proiectul de fiecare data.
+

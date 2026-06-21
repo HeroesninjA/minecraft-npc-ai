@@ -1,6 +1,8 @@
-# Kotlin Testing Strategy
+﻿# Kotlin Testing Strategy
 
 Actualizat: 2026-05-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -273,3 +275,4 @@ Un slice Kotlin este testat suficient cand:
 - JAR audit este facut pentru packaging
 - smoke Paper este facut pentru runtime Paper
 - API public are test Java de consum
+

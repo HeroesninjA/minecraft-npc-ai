@@ -16,6 +16,8 @@ sat lizibil
 -> questuri vizibile si variate
 ```
 
+Pentru a localiza rapid clasele si serviciile care influenteaza UX-ul satului, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Probleme observate
 
 ### Interactiune NPC greoaie

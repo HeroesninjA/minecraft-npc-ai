@@ -14,6 +14,8 @@ Ce face un admin ca sa instaleze, porneasca, verifice si depaneze AINPC pe un se
 
 Documentul este orientat spre operare. Nu descrie design intern, nu promite features viitoare si nu cere teste automate ca preconditie pentru citire.
 
+Pentru a localiza rapid clasele si serviciile din spatele operarii, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
+
 ## Cand il folosesti
 
 Foloseste acest document cand:

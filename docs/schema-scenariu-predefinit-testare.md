@@ -1,6 +1,8 @@
-# Schema scenariu predefinit de testare
+﻿# Schema scenariu predefinit de testare
 
 Actualizat: 2026-06-16
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -444,3 +446,4 @@ Nu se include in primul slice:
 - salvare permanenta in core ca scenariu oficial.
 
 Primul slice trebuie sa livreze documentatia si, eventual, un plan read-only. Implementarea de create/spawn/story live vine doar dupa validare si ramane opt-in.
+

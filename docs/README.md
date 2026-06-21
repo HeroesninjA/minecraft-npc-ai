@@ -1,8 +1,10 @@
 ﻿# Documentatie
 
-Actualizat: 2026-06-20
+Actualizat: 2026-06-21
 
 Acesta este indexul documentatiei tehnice locale.
+
+Pentru un punct de start scurt, deschide `start-here.md`.
 
 ## Citire rapida
 
@@ -50,8 +52,15 @@ Ordinea recomandata pentru orientare:
 40. `kotlin-code-review-checklist.md`
 41. `kotlin-coroutines-paper-policy.md`
 42. `kotlin-testing-strategy.md`
-43. `harta-pachetelor-cod.md`
-44. `arhiva/kotlin-migration/README.md`
+43. `start-here.md`
+44. `index-navigare.md`
+45. `index-functional.md`
+46. `index-arhiva.md`
+47. `taskuri-prioritizate.md`
+48. `harta-pachetelor-cod-scurta.md`
+49. `harta-pachetelor-cod.md`
+50. `harta-clase-index.md`
+51. `arhiva/kotlin-migration/README.md`
 
 ## Documente Kotlin
 
@@ -61,10 +70,15 @@ Ordinea recomandata pentru orientare:
 - `kotlin-code-review-checklist.md`
 - `kotlin-coroutines-paper-policy.md`
 - `kotlin-testing-strategy.md`
+- `index-functional.md`
+- `index-arhiva.md`
+- `taskuri-prioritizate.md`
 
 ## Harta cod
 
+- `harta-pachetelor-cod-scurta.md`
 - `harta-pachetelor-cod.md`
+- `harta-clase-index.md`
 
 ## Arhiva Kotlin
 

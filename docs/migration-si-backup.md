@@ -1,6 +1,8 @@
-# Migration si Backup
+﻿# Migration si Backup
 
 Actualizat: 2026-05-24
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: runbook operational pentru backup, restore-check si migration pe server Paper cu AINPC. Nu inlocuieste backup-ul complet al providerului de hosting.
 
@@ -154,3 +156,4 @@ Pentru prima versiune LTS, un release nu este gata daca:
 - `server-admin-runbook.md`
 - `prevenire-duplicare-npc.md`
 - `debugging-si-testare.md`
+

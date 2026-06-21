@@ -1,6 +1,8 @@
-# Generare AI si Constructie Automata
+﻿# Generare AI si Constructie Automata
 
 Actualizat: 2026-04-28
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
@@ -520,3 +522,4 @@ Nu recomand o implementare 100% custom pentru toate volumele mari.
 Ar consuma timp mult pe infrastructura si ar complica inutil proiectul.
 
 Recomandarea corecta pentru acest proiect este un sistem hibrid, modular si extensibil.
+

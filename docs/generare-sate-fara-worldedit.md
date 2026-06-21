@@ -1,6 +1,8 @@
-# Generare de Sate Fara WorldEdit
+﻿# Generare de Sate Fara WorldEdit
 
 Actualizat: 2026-05-11
+
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status curent:
 
@@ -865,3 +867,4 @@ Pentru etapa curenta, problema "prea putine case si cladiri de meserii" se rezol
 
 Nu este nevoie de WorldEdit API pentru acest MVP.
 Este mai important ca satul generat sa fie coerent pentru NPC-uri si questuri decat sa fie foarte complex vizual.
+
