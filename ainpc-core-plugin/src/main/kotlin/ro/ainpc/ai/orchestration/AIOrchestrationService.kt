@@ -77,8 +77,10 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         when (useCase ?: AIUseCase.DIALOGUE_REPLY) {
             AIUseCase.DIALOGUE_REPLY,
             AIUseCase.REACTION_TEXT -> "Nu am un raspuns AI disponibil acum."
+            AIUseCase.INTENT_CLASSIFICATION -> "AI intent classification indisponibil; ruleaza fallback determinist."
             AIUseCase.QUEST_DRAFT -> "AI quest draft indisponibil; foloseste definitiile validate din runtime."
             AIUseCase.STORY_DRAFT -> "AI story draft indisponibil; foloseste story state-ul existent."
+            AIUseCase.BUILD_PLAN_DRAFT -> "AI build plan draft indisponibil; foloseste planul existent."
             AIUseCase.ADMIN_DEBUG_SUMMARY -> "AI debug summary indisponibil; foloseste audit/debugdump brut."
         }
 }

@@ -66,6 +66,7 @@ enum class GuiKey(
                 "stat", "statistics", "statistici" -> "stats"
                 "npc", "interaction", "interactiune", "nearest" -> "interact"
                 "routines", "rutine", "program", "schedule" -> "routine"
+                "shop", "magazin", "comert", "comercial", "cumparaturi", "negustor", "market", "piata" -> "shop"
                 "admin", "npc_manager", "manager_npc" -> "manager"
                 "debugdump", "dump" -> "debug"
                 "adminmapping", "admin_mapping", "mapping_admin", "edit_mapping" -> "admin_mapping"

@@ -252,6 +252,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "reload" -> handleReload(sender)
             "test" -> handleTest(sender)
             "health", "status", "healthcheck" -> handleHealth(sender)
+            "economy" -> handleEconomy(sender, args)
             else -> {
                 sendHelp(sender)
                 true
@@ -663,6 +664,24 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 resolveQuestTargetPlayer(sender, args, 2, "&cUtilizare: /ainpc quest <numeNpc> [jucator]")
                     ?: return true
             )
+        }
+    }
+
+    // -- Economy ----------------------------------------------------
+    private fun handleEconomy(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size < 2) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set> [args]")
+            return true
+        }
+        return when (args[1].lowercase()) {
+            "balance", "bal", "bani", "sold" -> handleEconomyBalance(sender, args)
+            "pay", "plateste", "trimite" -> handleEconomyPay(sender, args)
+            "set", "seteaza" -> handleEconomySet(sender, args)
+            "top", "clasament", "ranking" -> handleEconomyTop(sender, args)
+            else -> {
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set> [args]")
+                true
+            }
         }
     }
 
@@ -1708,10 +1727,33 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun sendWorldHouseholdUsage(sender: CommandSender): Unit = sendWorldHouseholdUsage(sender)
 
     private fun handleWorldSettlement(sender: CommandSender, args: Array<String>): Boolean {
-        if (args.size < 4 || args.size > 5 || (args[2].lowercase() !in setOf("plan", "spawn"))) {
+        if (args.size < 3) {
             plugin.messageUtils.send(
                 sender,
-                "&cUtilizare: /ainpc world settlement <plan|spawn> <regionId> [maxHouses]"
+                "&cUtilizare: /ainpc world settlement <definitions|plan|spawn> [regionId] [maxHouses]"
+            ); return true
+        }
+        val mode = args[2].lowercase(Locale.ROOT)
+        if (mode == "definitions") {
+            val loader = ro.ainpc.settlement.SettlementConfigLoader(plugin)
+            val defs = loader.loadAll()
+            if (defs.isEmpty()) {
+                plugin.messageUtils.send(sender, "&7Nu exista definitii de settlement in config.")
+                if (loader.getWarnings().isNotEmpty()) {
+                    for (w in loader.getWarnings()) plugin.messageUtils.send(sender, "&e$w")
+                }
+                return true
+            }
+            plugin.messageUtils.send(sender, "&6=== Settlement Definitions ===")
+            for (def in defs) {
+                plugin.messageUtils.send(sender, "&e${def.id} &7- &f${def.displayName} &8(${def.worldName} @ ${def.centerX},${def.centerY},${def.centerZ} r=${def.radius})")
+            }
+            return true
+        }
+        if (args.size < 4 || args.size > 5 || (mode !in setOf("plan", "spawn"))) {
+            plugin.messageUtils.send(
+                sender,
+                "&cUtilizare: /ainpc world settlement <definitions|plan|spawn> [regionId] [maxHouses]"
             ); return true
         }
         val worldAdmin = plugin.platform.worldAdminService
@@ -1953,6 +1995,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "story" -> handleDebugDumpStory(sender, args)
             "authoring" -> handleDebugDumpAuthoring(sender, args)
             "ai", "openai" -> handleDebugDumpAi(sender, args)
+            "runtime" -> handleDebugDumpRuntime(sender)
+            "features", "feature" -> handleDebugDumpFeatures(sender)
+            "progression", "progressions", "prog" -> handleDebugDumpProgression(sender)
             else -> {
                 sendDebugDumpUsage(sender); true
             }
@@ -2099,6 +2144,69 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             if (interaction.hadError) plugin.messageUtils.send(sender, "&7  error: &f${interaction.errorMessage ?: "N/A"}")
             if (interaction.promptPreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  prompt: &7${interaction.promptPreview}")
             if (interaction.responsePreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  response: &7${interaction.responsePreview}")
+        }
+        return true
+    }
+
+    private fun handleDebugDumpProgression(sender: CommandSender): Boolean {
+        val service = plugin.progressionService
+        plugin.messageUtils.send(sender, "&6=== Progression Dump ===")
+        val definitions = service.getDefinitions()
+        plugin.messageUtils.send(sender, "&eDefinitii: &f${definitions.size}")
+        for (def in definitions.take(10)) {
+            plugin.messageUtils.send(sender, "&7- &f${def.progressionId()} &8[${def.mechanicId()}] &7obiective=&f${def.objectiveCount()}")
+        }
+        if (definitions.size > 10) plugin.messageUtils.send(sender, "&7... inca ${definitions.size - 10} definitii")
+        plugin.messageUtils.send(sender, "&eAncore (ultimele 10):")
+        runCatching {
+            val anchors = service.getAnchorBindings("", "", 10)
+            for (a in anchors) {
+                plugin.messageUtils.send(sender, "&7- &f${a.playerUuid()} &7| &f${a.templateId()} &7| &f${a.objectiveKey()} &7-> &f${a.anchorType()}:${a.anchorId()}")
+            }
+        }.onFailure {
+            plugin.messageUtils.send(sender, "&cNu am putut citi ancorele: ${it.message}")
+        }
+        return true
+    }
+
+    private fun handleDebugDumpFeatures(sender: CommandSender): Boolean {
+        plugin.messageUtils.send(sender, "&6=== Feature Status ===")
+        val flags = mapOf(
+            "features.ai" to plugin.config.getBoolean("features.ai", false),
+            "features.quest" to plugin.config.getBoolean("features.quest", true),
+            "features.story" to plugin.config.getBoolean("features.story", true),
+            "features.generation" to plugin.config.getBoolean("features.generation", false),
+            "features.routine" to plugin.config.getBoolean("features.routine", false),
+            "features.gui" to plugin.config.getBoolean("features.gui", true),
+            "ai.orchestration.enabled" to plugin.config.getBoolean("ai.orchestration.enabled", true),
+            "routine.enabled" to plugin.config.getBoolean("routine.enabled", false),
+            "demo.enabled" to plugin.config.getBoolean("demo.enabled", true),
+            "world_admin.enabled" to plugin.platform.worldAdmin.isEnabled,
+            "world_admin.auto_index.enabled" to plugin.platform.worldAdmin.isAutoIndexEnabled
+        )
+        for ((key, value) in flags) {
+            val color = if (value) "&a" else "&c"
+            plugin.messageUtils.send(sender, "&e$key: $color$value")
+        }
+        plugin.messageUtils.send(sender, "&eopenai.api_key: ${if ((plugin.config.getString("openai.api_key") ?: "").isNotBlank()) "&aprezent" else "&clipseste"}")
+        plugin.messageUtils.send(sender, "&eRuntime mode: &f${plugin.platform.runtimeMode.name}")
+        return true
+    }
+
+    private fun handleDebugDumpRuntime(sender: CommandSender): Boolean {
+        val engine = plugin.scenarioEngine
+        plugin.messageUtils.send(sender, "&6=== Runtime Handlers ===")
+        plugin.messageUtils.send(sender, "&eAction handlers:")
+        for ((type, _) in engine.actionRegistry.handlers()) {
+            plugin.messageUtils.send(sender, "&7- &f$type")
+        }
+        plugin.messageUtils.send(sender, "&eCondition handlers:")
+        for ((type, _) in engine.conditionRegistry.handlers()) {
+            plugin.messageUtils.send(sender, "&7- &f$type")
+        }
+        plugin.messageUtils.send(sender, "&eTrigger handlers:")
+        for ((type, _) in engine.triggerRegistry.handlers()) {
+            plugin.messageUtils.send(sender, "&7- &f$type")
         }
         return true
     }

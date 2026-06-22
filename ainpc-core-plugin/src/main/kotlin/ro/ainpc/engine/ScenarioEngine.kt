@@ -49,6 +49,7 @@ import ro.ainpc.engine.runtime.ScenarioTriggerRegistry
 import ro.ainpc.engine.runtime.actions.GiveItemAction
 import ro.ainpc.engine.runtime.actions.SetStoryStateAction
 import ro.ainpc.engine.runtime.conditions.HasCompletedQuestCondition
+import ro.ainpc.engine.runtime.triggers.PlayerEntersRegionTrigger
 import ro.ainpc.world.WorldRegion
 import java.lang.reflect.Type
 import java.util.*
@@ -80,6 +81,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         actionRegistry.register(GiveItemAction())
         actionRegistry.register(SetStoryStateAction())
         conditionRegistry.register(HasCompletedQuestCondition())
+        triggerRegistry.register(PlayerEntersRegionTrigger())
     }
 
     fun reloadTemplates() {
@@ -1654,6 +1656,66 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             }
         }
     }
+    fun recordItemCrafted(p0: Player, p1: Material?) {
+        if (p0 == null || p1 == null) return
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "craft_item")) continue
+            incrementCraftObjective(p0, template, progress, p1.name)
+        }
+    }
+    private fun incrementCraftObjective(p0: Player, template: ScenarioTemplate, progress: PlayerQuestProgress, itemName: String) {
+        val updatedProgress = LinkedHashMap(progress.objectiveProgress())
+        var changed = false
+        for ((index, objective) in template.objectives.withIndex()) {
+            if (!matchesObjectiveType(objective, "craft_item")) continue
+            if (!isObjectiveActiveForProgress(template, progress, objective)) continue
+            if (!matchesObjectiveReference(objective.itemId, itemName)) continue
+            val objectiveKey = buildObjectiveKey(objective, index)
+            val before = updatedProgress.getOrDefault(objectiveKey, 0)
+            changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
+            changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
+            val after = updatedProgress.getOrDefault(objectiveKey, 0)
+            if (after > before) {
+                emitProgressionObjectiveProgress(p0, null, template, progress, objective, objectiveKey, before, after, "craft_item", linkedMapOf("item" to itemName))
+            }
+        }
+        if (changed) updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
+    }
+
+    fun recordBlockPlaced(p0: Player, p1: Material) {
+        if (p0 == null) return
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "place_block")) continue
+            incrementBlockObjective(p0, template, progress, "place_block", p1.name)
+        }
+    }
+    fun recordBlockBroken(p0: Player, p1: Material) {
+        if (p0 == null) return
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "break_block")) continue
+            incrementBlockObjective(p0, template, progress, "break_block", p1.name)
+        }
+    }
+    private fun incrementBlockObjective(p0: Player, template: ScenarioTemplate, progress: PlayerQuestProgress, objectiveType: String, blockName: String) {
+        val updatedProgress = LinkedHashMap(progress.objectiveProgress())
+        var changed = false
+        for ((index, objective) in template.objectives.withIndex()) {
+            if (!matchesObjectiveType(objective, objectiveType)) continue
+            if (!isObjectiveActiveForProgress(template, progress, objective)) continue
+            if (!matchesObjectiveReference(objective.itemId, blockName)) continue
+            val objectiveKey = buildObjectiveKey(objective, index)
+            val before = updatedProgress.getOrDefault(objectiveKey, 0)
+            changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
+            changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
+        }
+        if (changed) updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
+    }
     fun recordInventoryChange(p0: Player) {
         if (p0 == null) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
@@ -2216,6 +2278,16 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun evaluateQuestAvailability(p0: UUID, p1: ScenarioTemplate): QuestAvailability {
         if (hasCompletedQuest(p0, p1.templateId) && !p1.questRepeatable) {
             return QuestAvailability.unavailable(listOf("Quest deja completat."))
+        }
+        if (p1.questRepeatable && p1.questCooldownSeconds > 0) {
+            val lastCompleted = getCompletedQuestProgress(p0, p1.templateId)
+            if (lastCompleted != null) {
+                val elapsed = (System.currentTimeMillis() - lastCompleted.completedAt()) / 1000L
+                val remaining = p1.questCooldownSeconds - elapsed
+                if (remaining > 0) {
+                    return QuestAvailability.unavailable(listOf("Mai asteapta ${remaining}s inainte sa reiei acest quest."))
+                }
+            }
         }
         if (p1.questPrerequisites.isNotEmpty()) {
             val missing = p1.questPrerequisites.filter { prereq ->

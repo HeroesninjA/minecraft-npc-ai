@@ -715,6 +715,10 @@ fun handleWorldSave(sender: CommandSender): Boolean {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Nu exista modificari runtime de salvat.")
         return true
     }
+    val previousVersion = ainpcCommandWorldPlugin.config.getInt("mapping.version", 0)
+    val newVersion = previousVersion + 1
+    ainpcCommandWorldPlugin.config.set("mapping.version", newVersion)
+    ainpcCommandWorldPlugin.config.set("mapping.saved_at", System.currentTimeMillis())
     worldAdmin.saveToConfig(ainpcCommandWorldPlugin.config)
     ainpcCommandWorldPlugin.saveConfig()
     ainpcCommandWorldPlugin.messageUtils.send(
@@ -724,6 +728,14 @@ fun handleWorldSave(sender: CommandSender): Boolean {
             + worldAdmin.placeCount + " places, "
             + worldAdmin.nodeCount + " noduri&a."
     )
+    if (newVersion > 1) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&7Versiune mapping: &f#$newVersion &8(anterior: #$previousVersion)"
+        )
+    } else {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Versiune mapping: &f#$newVersion")
+    }
     return true
 }
 
@@ -912,8 +924,22 @@ fun handleWorldRegion(
     if (action == "remove" || action == "delete") {
         return handleWorldRegionRemove(sender, args)
     }
+    if (action == "summary") {
+        val allRegions = worldAdmin.regions.sortedBy { it.id() }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&6=== Region Summary ===")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Total regiuni: &f${allRegions.size}")
+        for (region in allRegions) {
+            val places = worldAdmin.getPlaces(region.id())
+            val nodes = worldAdmin.getNodes(region.id())
+            ainpcCommandWorldPlugin.messageUtils.send(
+                sender,
+                "&e${region.id()} &7- &f${region.name()} &8[${region.typeId()}] &7- places: &f${places.size}&7, nodes: &f${nodes.size}&7, world: &f${region.worldName()}"
+            )
+        }
+        return true
+    }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove> ...")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove|summary> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
@@ -962,6 +988,12 @@ fun handleWorldRegion(
     ainpcCommandWorldPlugin.messageUtils.send(sender, "&eNodes: &f${nodes.size}")
     if (places.isNotEmpty()) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&ePlace IDs: &f${formatList(places.map { it.id() })}")
+        val byType = places.groupBy { it.placeType().id }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eTipuri places: &f${byType.entries.joinToString(", ") { "${it.key}=${it.value.size}" }}")
+    }
+    if (nodes.isNotEmpty()) {
+        val byNodeType = nodes.groupBy { it.typeId() }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eTipuri noduri: &f${byNodeType.entries.joinToString(", ") { "${it.key}=${it.value.size}" }}")
     }
     return true
 }

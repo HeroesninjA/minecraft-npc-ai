@@ -23,6 +23,18 @@ class GuiKeyTest {
     }
 
     @Test
+    fun resolvesShopAliases() {
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("shop").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("magazin").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("comert").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("comercial").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("cumparaturi").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("negustor").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("market").orElseThrow())
+        assertEquals(GuiKey.SHOP, GuiKey.fromId("piata").orElseThrow())
+    }
+
+    @Test
     fun resolvesAdminQuestAliases() {
         assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("admin_quest").orElseThrow())
         assertEquals(GuiKey.ADMIN_QUEST, GuiKey.fromId("adminquest").orElseThrow())

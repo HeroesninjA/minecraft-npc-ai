@@ -29,6 +29,11 @@ class CreatorHubGui : GuiScreen {
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc world save") }))
         context.button(14, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&bQuest Creator", listOf("&7Submeniu dedicat: definitii, test, ancore, authoring, quest map.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST) }))
+        context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", listOf("&7Leaga obiective de locatii in lume.",
+            "&7Creaza, editeaza si sterge ancore pentru questuri.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }))
+        context.button(16, GuiButton.enabled(GuiItemFactory.item(Material.ANVIL, "&7Ancore", listOf("&7Listeaza toate ancorele persistate.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }))
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_HUB) }))

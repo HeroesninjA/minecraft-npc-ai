@@ -57,25 +57,38 @@ class NpcInteractionGui : GuiScreen {
             val npc = nearbyNpcs[index]
             val distance = Math.sqrt(distanceSquared(location, npc.location))
             val progression = primaryProgressionForNpc(progressionSnapshot, npc).orElse(null)
+            val occupation = npc.occupation
+            val npcShops = if (occupation != null) context.plugin().shopService.findShopsForRole(occupation) else emptyList()
+            val hasShop = npcShops.isNotEmpty()
+            val npcName = npc.name
             context.button(
                 NPC_SLOTS[index],
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.PLAYER_HEAD, "&f${npc.name}", npcLore(npc, progression, distance)),
+                    GuiItemFactory.item(
+                        if (hasShop) Material.EMERALD else Material.PLAYER_HEAD,
+                        "&f$npcName",
+                        npcLore(npc, progression, distance, hasShop, npcShops.size)
+                    ),
                     GuiAction { click ->
-                        if (progression != null && click.clickType().isShiftClick) {
-                            click.service().openQuestDetail(
-                                click.player(),
-                                progression.guiDetailSelector(),
-                                progression.guiFilter()
-                            )
-                        } else if (click.clickType().isRightClick) {
-                            click.service().runCommand(
-                                click.player(),
-                                if (progression != null) progression.command("status")
-                                else "ainpc quest status ${npc.name}"
-                            )
-                        } else {
-                            click.service().runCommand(click.player(), "ainpc info ${npc.name}")
+                        when {
+                            hasShop && click.clickType().isLeftClick -> {
+                                click.service().setShopSelectedNpcId(click.player(), npcName)
+                                click.service().open(click.player(), GuiKey.SHOP)
+                            }
+                            progression != null && click.clickType().isShiftClick ->
+                                click.service().openQuestDetail(
+                                    click.player(),
+                                    progression.guiDetailSelector(),
+                                    progression.guiFilter()
+                                )
+                            click.clickType().isRightClick ->
+                                click.service().runCommand(
+                                    click.player(),
+                                    if (progression != null) progression.command("status")
+                                    else "ainpc quest status $npcName"
+                                )
+                            else ->
+                                click.service().runCommand(click.player(), "ainpc info $npcName")
                         }
                     }
                 )
@@ -155,18 +168,42 @@ class NpcInteractionGui : GuiScreen {
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
             )
         )
+        val nearestShopNpc = nearbyNpcs.firstOrNull { npc ->
+            val occ = npc.occupation
+            occ != null && context.plugin().shopService.findShopsForRole(occ).isNotEmpty()
+        }
+        if (nearestShopNpc != null) {
+            context.button(
+                52,
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        Material.EMERALD,
+                        "&aShop nearest",
+                        "&7Deschide shop-ul celui mai apropiat",
+                        "&7NPC cu magazin: &f${nearestShopNpc.name}"
+                    ),
+                    GuiAction { click ->
+                        click.service().setShopSelectedNpcId(click.player(), nearestShopNpc.name)
+                        click.service().open(click.player(), GuiKey.SHOP)
+                    }
+                )
+            )
+        }
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
 
-    private fun npcLore(npc: AINPC, progression: ProgressionGuiEntry?, distance: Double): List<String> {
+    private fun npcLore(npc: AINPC, progression: ProgressionGuiEntry?, distance: Double, hasShop: Boolean = false, shopCount: Int = 0): List<String> {
         val lore = ArrayList<String>()
         lore.add("&7Ocupatie: &f${valueOrUnknown(npc.occupation)}")
         lore.add("&7Stare: &f${npc.currentState.displayName}")
         lore.add("&7Rutina: &f${valueOrUnknown(npc.plannedRoutineActivity)}")
         lore.add("&7Emotie: &f${npc.emotions.dominantEmotion}")
         lore.add("&7Distanta: &f${String.format(Locale.ROOT, "%.1f", distance)}")
+        if (hasShop) {
+            lore.add("&a◆ Shop: $shopCount magazin(e) — Click pentru oferte")
+        }
         if (progression != null) {
             lore.add("&7Progresie: &f${GuiItemFactory.compact(progression.title(), 28)}")
             lore.add("&7Mecanica: &f${valueOrUnknown(progression.mechanicDisplay())}")
@@ -174,7 +211,10 @@ class NpcInteractionGui : GuiScreen {
         } else {
             lore.add("&8Nu exista progresie vizibila pentru acest NPC.")
         }
-        lore.add("&8Click: info")
+        lore.add(
+            if (hasShop) "&aClick: deschide shop"
+            else "&8Click: info NPC"
+        )
         lore.add(
             if (progression != null) "&8Right click: status ${progression.commandRoot()}"
             else "&8Right click: quest status fallback"

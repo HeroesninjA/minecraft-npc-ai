@@ -85,6 +85,7 @@ fun handleRoutine(sender: CommandSender, args: Array<String>): Boolean {
     return when (action) {
         "tick" -> handleRoutineTick(sender)
         "status" -> handleRoutineStatus(sender, args)
+        "profiles" -> handleRoutineProfiles(sender)
         else -> {
             sendRoutineUsage(sender)
             true
@@ -106,6 +107,22 @@ private fun handleRoutineTick(sender: CommandSender): Boolean {
     ainpcCommandMiscPlugin.messageUtils.send(sender, "&eSkip busy: &f${summary.skippedBusy()}")
     ainpcCommandMiscPlugin.messageUtils.send(sender, "&eSkip fara tinta: &f${summary.skippedMissingTarget()}")
     ainpcCommandMiscPlugin.messageUtils.send(sender, "&eSkip tinta invalida: &f${summary.skippedInvalidTarget()}")
+    return true
+}
+
+private fun handleRoutineProfiles(sender: CommandSender): Boolean {
+    val loader = ro.ainpc.routine.BehaviorProfileLoader(ainpcCommandMiscPlugin)
+    val profiles = loader.loadAll()
+    if (profiles.isEmpty()) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista profile de comportament incarcate.")
+        for (w in loader.getWarnings()) ainpcCommandMiscPlugin.messageUtils.send(sender, "&e$w")
+        return true
+    }
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Behavior Profiles ===")
+    for (p in profiles) {
+        val scheduleInfo = if (p.schedule.isNotEmpty()) "${p.schedule.size} entries" else "no schedule"
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&e${p.profileId} &7- &f${p.displayName} &8[${p.occupation}] &7- $scheduleInfo")
+    }
     return true
 }
 
@@ -371,6 +388,21 @@ fun handleHealth(sender: CommandSender): Boolean {
     msg.send(sender, "&eDefinitii progresie: &f$questCount")
     msg.send(sender, "&eBaza de date: &f${if (dbAvailable) "&aconectata" else "&cindisponibila"}")
     msg.send(sender, "&eModificari nesalvate: &f${if (worldAdmin.hasUnsavedChanges()) "&cda" else "&anu"}")
+    val issues = mutableListOf<String>()
+    if (!plugin.config.getBoolean("features.ai", false)) issues.add("&eAI: &cdezactivat (features.ai=false)")
+    if (!plugin.config.getBoolean("features.quest", true)) issues.add("&eQuest: &cdezactivat (features.quest=false)")
+    if ((plugin.config.getString("openai.api_key") ?: "").isBlank() && (System.getenv("OPENAI_API_KEY") ?: "").isBlank())
+        issues.add("&eOpenAI: &ccheia API lipseste (seteaza openai.api_key sau OPENAI_API_KEY)")
+    if (!plugin.config.getBoolean("routine.enabled", false)) issues.add("&eRutine: &cdezactivate (routine.enabled=false)")
+    if (!worldAdmin.isEnabled) issues.add("&eWorld admin: &cdezactivat (world_admin.enabled)")
+    if (plugin.databaseManager == null) issues.add("&eDatabase: &cindisponibil")
+    if (issues.isNotEmpty()) {
+        msg.send(sender, "&6=== Config Warnings ===")
+        for (issue in issues) msg.send(sender, issue)
+        msg.send(sender, "&7Rezolva avertismentele in config.yml sau .env")
+    } else {
+        msg.send(sender, "&aConfiguratia pare corecta.")
+    }
     msg.send(sender, "&7Pentru audit complet: &f/ainpc audit")
     msg.send(sender, "&7Pentru debugdump: &f/ainpc debugdump all")
     return true
@@ -564,6 +596,28 @@ fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
     if (npc.backstory != null) {
         msg.send(sender, "")
         msg.send(sender, "&ePoveste: &f" + npc.backstory)
+    }
+    msg.send(sender, "")
+    msg.send(sender, "&eRutina curenta: &f" + formatOptional(npc.plannedRoutineActivity))
+    msg.send(sender, "&eStare: &f" + npc.currentState.displayName)
+    msg.send(sender, "&eEmotie dominanta: &f" + npc.emotions.dominantEmotion)
+    val needs = npc.context
+    msg.send(sender, "&eNevoi: &fFoame=${npc.hungerLevel}/100 Energie=${npc.energyLevel}/100 Siguranta=${npc.safetyLevel}/100 Confort=${npc.comfortLevel}/100")
+    msg.send(sender, "&eAncore: &fhome=${formatOptional(npc.homeAnchor?.label())} work=${formatOptional(npc.workAnchor?.label())} social=${formatOptional(npc.socialAnchor?.label())}")
+    val worldBinding = runCatching {
+        if (npc.databaseId > 0) ainpcCommandMiscPlugin.npcWorldBindingService?.getBinding(npc.databaseId)?.orElse(null) else null
+    }.getOrNull()
+    if (worldBinding != null) {
+        msg.send(sender, "&eMapare: &fhome=${formatOptional(worldBinding.homePlaceId())} work=${formatOptional(worldBinding.workPlaceId())} social=${formatOptional(worldBinding.socialPlaceId())}")
+    }
+    val player = sender as? Player
+    if (player != null && npc.databaseId > 0) {
+        val anchorCount = runCatching {
+            ainpcCommandMiscPlugin.progressionService?.getAnchorBindingsForAnchor("", "npc", npc.databaseId.toString(), 5)
+        }.getOrNull()
+        if (anchorCount != null && anchorCount.isNotEmpty()) {
+            msg.send(sender, "&eAncore quest: &f${anchorCount.size}")
+        }
     }
     return true
 }

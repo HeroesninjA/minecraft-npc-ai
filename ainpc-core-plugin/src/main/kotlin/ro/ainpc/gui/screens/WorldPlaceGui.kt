@@ -20,10 +20,11 @@ class WorldPlaceGui : GuiScreen {
 
     override fun title(player: Player): String = "&0Place"
 
-    override fun size(player: Player): Int = 45
+    override fun size(player: Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
-        val worldAdmin: WorldAdminApi = context.plugin().platform.worldAdmin
+        val plugin = context.plugin()
+        val worldAdmin: WorldAdminApi = plugin.platform.worldAdmin
         val placeId = context.service().getPlaceDetailId(context.player())
         val place = if (placeId.isNotBlank()) worldAdmin.getPlace(placeId) else null
         val region = place?.let { worldAdmin.getRegion(it.regionId()) }
@@ -77,17 +78,61 @@ class WorldPlaceGui : GuiScreen {
                 ))
             }
 
-            context.button(28, if (adminView) {
+            val residentsCount = plugin.npcManager.getAllNPCs().count { npc ->
+                runCatching { plugin.npcWorldBindingService.getBinding(npc.databaseId) }
+                    .getOrNull()?.orElse(null)?.homePlaceId().equals(place.id(), ignoreCase = true)
+            }
+            context.button(28, GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.VILLAGER_SPAWN_EGG,
+                    "&bLocuitori: $residentsCount",
+                    listOf("&7Click: detalii in chat despre locuitorii acestui place.")
+                ),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc world place info ${place.id()}")
+                }
+            ))
+
+            context.button(29, GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.TRIPWIRE_HOOK,
+                    "&bNPC Bindings",
+                    listOf("&7Click: vezi NPC-urile legate de acest place (home/work/social).")
+                ),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc world place info ${place.id()}")
+                }
+            ))
+
+            context.button(30, GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ENDER_EYE,
+                    "&bAncore quest",
+                    listOf("&7Click: vezi ancorele de quest pentru acest place.")
+                ),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc quest anchors ${place.id()}")
+                }
+            ))
+
+            context.button(31, GuiButton.enabled(
+                GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory state", "&7Vezi starea povestii pentru acest place."),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc story place ${place.id()}")
+                }
+            ))
+
+            context.button(32, if (adminView) {
                 GuiButton.enabled(GuiItemFactory.item(Material.ENDER_PEARL, "&6Teleport", "&7Teleporteaza-te la acest place."),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc world place info ${place.id()}") })
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc tp ${place.id()}") })
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Teleport", listOf("&7Necesita admin."))))
 
-            context.button(29, if (adminView) {
+            context.button(33, if (adminView) {
                 GuiButton.enabled(GuiItemFactory.item(Material.PAPER, "&6Inspectie", "&7Inspecteaza place in chat."),
                     GuiAction { click -> click.service().runCommand(click.player(), "ainpc world place info ${place.id()}") })
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Inspectie", listOf("&7Necesita admin."))))
 
-            context.button(30, if (adminView) {
+            context.button(34, if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.ANVIL, "&eEdit place",
                         listOf("&7Recentreaza bounds-urile pe pozitia curenta.", "&7Pastrat prin GUI.")),
@@ -95,7 +140,17 @@ class WorldPlaceGui : GuiScreen {
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Edit place", listOf("&7Necesita admin."))))
 
-            context.button(31, if (adminView) {
+            context.button(35, if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.LEAD, "&eBind NPC",
+                        listOf("&7Leaga un NPC de acest place (home/work/social).")),
+                    GuiAction { click ->
+                        click.service().runCommand(click.player(), "ainpc world place bind ${place.id()}")
+                    }
+                )
+            } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Bind NPC", listOf("&7Necesita admin."))))
+
+            context.button(36, if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.BARRIER, "&cDelete place",
                         listOf("&7Sterge place-ul curent.", "&cSterge si node-urile asociate.")),
@@ -112,7 +167,7 @@ class WorldPlaceGui : GuiScreen {
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Delete place", listOf("&7Necesita admin."))))
 
-            context.button(32, if (adminView) {
+            context.button(37, if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.LODESTONE, "&aCreate node",
                         listOf("&7Creeaza un node la pozitia ta.", "&7Node-ul se leaga de place-ul curent.")),
@@ -128,7 +183,7 @@ class WorldPlaceGui : GuiScreen {
 
             if (nodes.isNotEmpty()) {
                 val nearest = nodes.first()
-                context.button(33, if (adminView) {
+                context.button(38, if (adminView) {
                     GuiButton.enabled(
                         GuiItemFactory.item(Material.COMPASS, "&eEdit node",
                             listOf("&7Mută node-ul cel mai apropiat la poziția curentă.")),
@@ -136,7 +191,7 @@ class WorldPlaceGui : GuiScreen {
                     )
                 } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Edit node", listOf("&7Necesita admin."))))
 
-                context.button(34, if (adminView) {
+                context.button(39, if (adminView) {
                     GuiButton.enabled(
                         GuiItemFactory.item(Material.BARRIER, "&cDelete node",
                             listOf("&7Sterge node-ul cel mai apropiat.")),
@@ -181,4 +236,6 @@ class WorldPlaceGui : GuiScreen {
             "&7Raza: &f${String.format(Locale.ROOT, "%.1f", node.radius())}"
         )
     }
+
+
 }

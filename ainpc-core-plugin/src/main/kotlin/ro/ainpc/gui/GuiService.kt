@@ -62,6 +62,14 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val questMapGlobalModes: ConcurrentMap<UUID, Boolean> = ConcurrentHashMap()
     private val questEditSelectedIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val creatorFormValues: ConcurrentMap<UUID, MutableMap<String, String>> = ConcurrentHashMap()
+    private val shopSelectedNpcIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+
+    fun getShopSelectedNpcId(player: Player): String? = shopSelectedNpcIds[player.uniqueId]
+
+    fun setShopSelectedNpcId(player: Player, npcId: String?) {
+        if (npcId != null) shopSelectedNpcIds[player.uniqueId] = npcId
+        else shopSelectedNpcIds.remove(player.uniqueId)
+    }
 
     fun getCreatorFormValue(player: Player?, key: String): String {
         if (player == null) return ""

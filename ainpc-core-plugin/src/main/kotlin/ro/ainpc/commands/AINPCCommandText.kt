@@ -556,9 +556,20 @@ fun auditNpcs(
 
         val workAnchor = npc.workAnchor
         if (workAnchor == null) {
-            report.warn("$label nu are loc de munca/workAnchor.")
+            if (npc.occupation.isNullOrBlank()) {
+                report.warn("$label nu are loc de munca/workAnchor.")
+            } else {
+                report.error("$label are ocupatia '${npc.occupation}' dar nu are workAnchor.")
+            }
         } else {
             validateOwnedLocation(report, "$label workAnchor", workAnchor, loadedWorldNames)
+        }
+
+        val socialAnchor = npc.socialAnchor
+        if (socialAnchor == null) {
+            report.warn("$label nu are socialAnchor.")
+        } else {
+            validateOwnedLocation(report, "$label socialAnchor", socialAnchor, loadedWorldNames)
         }
     }
 
@@ -1036,7 +1047,7 @@ fun isLegacyObjectiveProgressKey(key: String?): Boolean {
 
 fun isSupportedQuestObjectiveType(type: String?): Boolean =
     when (normalizeQuestObjectiveType(type)) {
-        "collect_item", "deliver_to_npc", "talk_to_npc", "visit_region", "visit_place", "inspect_node", "kill_mob" -> true
+        "collect_item", "deliver_to_npc", "talk_to_npc", "visit_region", "visit_place", "inspect_node", "kill_mob", "place_block", "break_block", "craft_item" -> true
         else -> false
     }
 
@@ -1049,6 +1060,9 @@ fun normalizeQuestObjectiveType(type: String?): String =
         "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place"
         "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node"
         "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
+        "place", "placeblock", "place_block", "build", "construct" -> "place_block"
+        "break", "breakblock", "break_block", "mine", "dig", "excavate" -> "break_block"
+        "craft", "craftitem", "craft_item", "make", "create_item", "fabricate" -> "craft_item"
         else -> normalized
     }
 
@@ -1943,11 +1957,38 @@ fun auditWorld(
         if (loadedWorldNames.none { it.equals(node.worldName(), ignoreCase = true) }) {
             report.warn("Node-ul ${node.id()} refera o lume neincarcata: ${node.worldName()}.")
         }
+        if (node.typeId().isBlank() || node.typeId().equals("custom", ignoreCase = true)) {
+            report.warn("Node-ul ${node.id()} nu are type setat sau este 'custom'.")
+        }
 
         if (place != null && !pointInsidePlace(node, place)) {
             report.error("Node-ul ${node.id()} nu este in interiorul place-ului ${place.id()}.")
         } else if (place == null && region != null && !pointInsideRegion(node, region)) {
             report.error("Node-ul ${node.id()} nu este in interiorul regiunii ${region.id()}.")
+        }
+    }
+
+    for (region in regions) {
+        val regionPlaces = worldAdmin.getPlaces(region.id())
+        if (regionPlaces.isEmpty()) {
+            report.warn("Regiunea ${region.id()} nu are places. Obiectivele visit_place nu pot fi rezolvate aici.")
+        }
+        val regionNodes = worldAdmin.getNodes(region.id())
+        if (regionNodes.isEmpty()) {
+            report.warn("Regiunea ${region.id()} nu are noduri. Obiectivele inspect_node nu pot fi rezolvate aici.")
+        }
+    }
+
+    for (place in places) {
+        if (isHousePlace(place)) {
+            val maxResidents = place.metadata()["max_residents"]?.toIntOrNull()
+            if (maxResidents == null || maxResidents <= 0) {
+                report.warn("Casa ${place.id()} nu are max_residents in metadata.")
+            }
+        }
+        val role = place.metadata()["role"]
+        if (role.isNullOrBlank()) {
+            report.warn("Place-ul ${place.id()} nu are metadata 'role' (home/work/social).")
         }
     }
 }

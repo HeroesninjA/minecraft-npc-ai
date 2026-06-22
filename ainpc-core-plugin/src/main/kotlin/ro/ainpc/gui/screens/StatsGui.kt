@@ -71,6 +71,13 @@ class StatsGui : GuiScreen {
             )
         )
 
+        val balance = context.plugin().economyService.getBalance(player)
+        context.button(15, GuiButton.enabled(
+            GuiItemFactory.item(Material.GOLD_INGOT, "&6Economie: &e$balance &7monede",
+                listOf("&7Click: /ainpc economy balance", "&8Sold disponibil pentru tranzactii.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc economy balance") }
+        ))
+
         val isAdmin = player.hasPermission("ainpc.admin")
         if (isAdmin) {
             context.button(13, GuiButton.enabled(

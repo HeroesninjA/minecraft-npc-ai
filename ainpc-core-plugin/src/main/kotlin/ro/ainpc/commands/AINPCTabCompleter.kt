@@ -204,6 +204,21 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     ) completions.addAll(filterStartsWith(AUDIT_QUEST_OPTIONS, args[2]))
                 }
 
+                "economy" -> {
+                    if (args.size == 2) {
+                        completions.addAll(filterStartsWith(listOf("balance", "pay", "set"), args[1]))
+                    } else if (args.size == 3) {
+                        val mode = args[1].lowercase()
+                        if (mode == "pay" || mode == "set" || mode == "balance") {
+                            completions.addAll(getOnlinePlayerNames(args[2]))
+                        }
+                    } else if (args.size == 4 && "pay".equals(args[1], true)) {
+                        completions.add("<suma>")
+                    } else if (args.size == 4 && "set".equals(args[1], true)) {
+                        completions.add("<suma>")
+                    }
+                }
+
                 "debugdump" -> if (args.size == 2) completions.addAll(filterStartsWith(DEBUG_DUMP_SCOPES, args[1]))
                 "routine" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(ROUTINE_ACTIONS, args[1]))
@@ -815,7 +830,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "version",
             "tp",
             "reload",
-            "test"
+            "test",
+            "economy"
         )
         private val GUI_MODES = listOf(
             "main",

@@ -351,6 +351,19 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         }
     }
 
+    fun reloadFromConfig() {
+        val oldKey = apiKey
+        val newKey = OpenAITextSupport.sanitizeSecret(
+            plugin.config.getString("openai.api_key", ""),
+            System.getenv("OPENAI_API_KEY")
+        )
+        if (newKey != oldKey) {
+            offlineRetryAfterMillis = 0L
+            offlineMode = false
+        }
+        plugin.debug("[OpenAI] Config reincarcata. Model: ${plugin.config.getString("openai.model", "gpt-5.4-nano")}")
+    }
+
     fun runDiagnosticsAsync(reason: String) {
         if (!aiFeatureEnabled()) {
             recordFallback("feature_disabled")

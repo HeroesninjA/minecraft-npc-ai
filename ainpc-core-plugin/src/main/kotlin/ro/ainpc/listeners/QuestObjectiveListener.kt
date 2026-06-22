@@ -1,10 +1,14 @@
 package ro.ainpc.listeners
 
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDeathEvent
+import org.bukkit.event.inventory.CraftItemEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
@@ -45,6 +49,25 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
 
         plugin.scenarioEngine.recordRegionVisit(event.player)
         publishPlayerContextChanged(event.player, to)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onCraftItem(event: CraftItemEvent) {
+        if (!questFeatureEnabled()) return
+        val player = event.whoClicked as? Player ?: return
+        plugin.scenarioEngine.recordItemCrafted(player, event.currentItem?.type)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onBlockPlace(event: BlockPlaceEvent) {
+        if (!questFeatureEnabled()) return
+        plugin.scenarioEngine.recordBlockPlaced(event.player, event.block.type)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onBlockBreak(event: BlockBreakEvent) {
+        if (!questFeatureEnabled()) return
+        plugin.scenarioEngine.recordBlockBroken(event.player, event.block.type)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

@@ -35,6 +35,8 @@ import ro.ainpc.story.StoryContextService
 import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
 import ro.ainpc.world.NpcWorldBindingService
+import ro.ainpc.economy.EconomyService
+import ro.ainpc.economy.ShopService
 import ro.ainpc.world.mapping.MappingWandService
 import java.io.File
 import java.util.logging.Level
@@ -99,6 +101,10 @@ class AINPCPlugin : JavaPlugin() {
         private set
     lateinit var mappingWandService: MappingWandService
         private set
+    lateinit var economyService: EconomyService
+        private set
+    lateinit var shopService: ShopService
+        private set
     lateinit var recentEventsBuffer: RecentEventsBuffer
 
     override fun onEnable() {
@@ -161,7 +167,9 @@ class AINPCPlugin : JavaPlugin() {
         authoringService = QuestAuthoringService()
         guiService = GuiService(this)
         mappingWandService = MappingWandService(this)
-
+        economyService = EconomyService(this)
+        shopService = ShopService(economyService)
+ 
         logger.info("Inregistrare comenzi...")
         val command = AINPCCommand(this)
         val ainpcCommand = getCommand("ainpc")
@@ -231,8 +239,16 @@ class AINPCPlugin : JavaPlugin() {
         if (::platform.isInitialized) {
             platform.reloadFromConfig()
         }
-        openAIService = OpenAIService(this)
-        aiOrchestrationService = AIOrchestrationService(this)
+        if (::openAIService.isInitialized) {
+            openAIService.reloadFromConfig()
+        } else {
+            openAIService = OpenAIService(this)
+        }
+        if (::aiOrchestrationService.isInitialized) {
+            aiOrchestrationService.reloadFromConfig()
+        } else {
+            aiOrchestrationService = AIOrchestrationService(this)
+        }
         openAIService.runDiagnosticsAsync("reload")
         if (::memoryManager.isInitialized) {
             dialogueEngine = DialogueEngine(this, openAIService)

@@ -58,8 +58,10 @@ class AIOrchestrationPolicy(
             val safeUseCase = useCase ?: AIUseCase.DIALOGUE_REPLY
             return when (safeUseCase) {
                 AIUseCase.DIALOGUE_REPLY -> AIOrchestrationPolicy(safeUseCase, AIOutputType.MESSAGE, false, true, true)
+                AIUseCase.INTENT_CLASSIFICATION -> AIOrchestrationPolicy(safeUseCase, AIOutputType.INTENT, false, true, true)
                 AIUseCase.QUEST_DRAFT,
-                AIUseCase.STORY_DRAFT -> AIOrchestrationPolicy(safeUseCase, AIOutputType.DRAFT, false, true, true)
+                AIUseCase.STORY_DRAFT,
+                AIUseCase.BUILD_PLAN_DRAFT -> AIOrchestrationPolicy(safeUseCase, AIOutputType.DRAFT, false, true, true)
                 AIUseCase.REACTION_TEXT -> AIOrchestrationPolicy(safeUseCase, AIOutputType.MESSAGE, false, true, true)
                 AIUseCase.ADMIN_DEBUG_SUMMARY -> AIOrchestrationPolicy(safeUseCase, AIOutputType.SUMMARY, false, true, true)
             }

@@ -5,6 +5,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
+import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.npc.AINPC
 import ro.ainpc.engine.ScenarioTemplate
@@ -126,6 +127,12 @@ fun hasObjectiveType(template: ScenarioTemplate?, type: String?): Boolean =
 
 fun hasInventoryObjective(template: ScenarioTemplate?): Boolean =
     template?.objectives?.any { usesInventoryProgress(it) } == true
+
+fun hasPlaceBlockObjective(template: ScenarioTemplate?): Boolean =
+    template?.objectives?.any { matchesObjectiveType(it, "place_block") } == true
+
+fun hasBreakBlockObjective(template: ScenarioTemplate?): Boolean =
+    template?.objectives?.any { matchesObjectiveType(it, "break_block") } == true
 
 // --- Reference matching ---
 
@@ -499,15 +506,32 @@ fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List
     val notes = mutableListOf<String>()
     for (reward in rewards) {
         if (isQuestStoryAction(reward)) continue
-        val material = resolveQuestMaterial(reward) ?: run {
-            notes.add("&cRecompensa invalida in configuratie: &f${reward.itemId}")
-            continue
-        }
-        val rewardStack = ItemStack(material, reward.amount)
-        val leftovers = player.inventory.addItem(rewardStack)
-        if (leftovers.isNotEmpty()) {
-            leftovers.values.forEach { leftover -> player.world.dropItemNaturally(player.location, leftover) }
-            notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.")
+        val normalizedType = normalizeReference(reward.type)
+        when (normalizedType) {
+            "experience" -> {
+                val xp = reward.amount.coerceAtLeast(1)
+                player.giveExp(xp)
+                notes.add("&a+ $xp XP")
+            }
+            "economy:money" -> {
+                val amount = reward.amount.coerceAtLeast(1)
+                val economy = AINPCPlugin.getInstance().economyService
+                economy.deposit(player, amount)
+                notes.add("&a+ $amount monede")
+            }
+            else -> {
+                val material = resolveQuestMaterial(reward)
+                if (material == null) {
+                    notes.add("&cRecompensa invalida in configuratie: &f${reward.itemId}")
+                    continue
+                }
+                val rewardStack = ItemStack(material, reward.amount)
+                val leftovers = player.inventory.addItem(rewardStack)
+                if (leftovers.isNotEmpty()) {
+                    leftovers.values.forEach { leftover -> player.world.dropItemNaturally(player.location, leftover) }
+                    notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.")
+                }
+            }
         }
     }
     return notes

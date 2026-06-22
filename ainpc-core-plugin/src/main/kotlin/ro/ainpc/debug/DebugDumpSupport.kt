@@ -86,6 +86,8 @@ object DebugDumpSupport {
     fun supportedQuestRewardTypes(): Set<String> {
         return setOf(
             "item",
+            "experience",
+            "economy:money",
             "set_story_state",
             "record_story_event",
         )

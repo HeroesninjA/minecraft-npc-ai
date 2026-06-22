@@ -218,7 +218,7 @@ class QuestDraftValidator(
             "collect_item",
             "kill_mob"
         )
-        val DEFAULT_REWARD_TYPES: Set<String> = setOf("item", "experience", "command", "story")
+        val DEFAULT_REWARD_TYPES: Set<String> = setOf("item", "experience", "command", "economy:money", "story")
         val DEFAULT_STORY_ACTION_TYPES: Set<String> = setOf("record_story_event", "set_story_state")
         private val SEMANTIC_PREFIXES = setOf("region:", "place:", "node:", "tag:", "role:", "npc:", "objective:")
         private val RAW_COORDINATE_REGEX = Regex("""(^|\W)-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?($|\W)""")
