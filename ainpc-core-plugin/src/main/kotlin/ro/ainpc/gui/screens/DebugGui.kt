@@ -50,6 +50,12 @@ class DebugGui : GuiScreen {
         dumpButton(context, 14, "story", Material.AMETHYST_SHARD, "&dDebugdump story")
         dumpButton(context, 15, "openai", Material.ENDER_EYE, "&aDebugdump OpenAI")
         context.button(
+            18,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.LIME_DYE, "&aQuick debugdump", "&7Ruleaza /ainpc debugdump all si raporteaza in chat."),
+            ) { click -> click.service().runCommand(click.player(), "ainpc debugdump all") }
+        )
+        context.button(
             17,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest authoring", "&7Snapshot read-only pentru story, mapping si progresie."),

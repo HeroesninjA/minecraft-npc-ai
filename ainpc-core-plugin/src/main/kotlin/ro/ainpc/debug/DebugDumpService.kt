@@ -34,6 +34,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
 
         if (normalizedScope == "all" || normalizedScope == "npc") {
             writeJson(dumpRoot.resolve("npcs.json"), DebugDumpNpcJson.buildNpcsJson(plugin))
+            writeJson(dumpRoot.resolve("behavior-profiles.json"), DebugDumpBehaviorProfileJson.buildBehaviorProfilesJson(plugin))
         }
         if (normalizedScope == "all" || normalizedScope == "world") {
             writeText(dumpRoot.resolve("mapping.txt"), DebugDumpMappingText.buildMappingText(plugin))
