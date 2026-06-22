@@ -85,6 +85,7 @@ class AINPCTabCompleterTest {
 
         assertTrue(tab(completer, "ainpc", "").contains("list"))
         assertTrue(tab(completer, "ainpc", "").contains("info"))
+        assertTrue(tab(completer, "ainpc", "").contains("scenario"))
         assertTrue(tab(completer, "ainpc", "").contains("duplicates"))
         assertTrue(tab(completer, "ainpc", "authoring", "").contains("next"))
         assertTrue(tab(completer, "ainpc", "authoring", "").contains("prev"))
@@ -98,6 +99,10 @@ class AINPCTabCompleterTest {
         assertTrue(tab(completer, "ainpc", "repair", "").contains("duplicates"))
         assertTrue(tab(completer, "ainpc", "repair", "duplicates", "").contains("dryrun"))
         assertTrue(tab(completer, "ainpc", "debugdump", "").contains("npc"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("list"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("spawn"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("advance"))
+        assertTrue(tab(completer, "ainpc", "scenario", "spawn", "").contains("<templateId|displayName>"))
     }
 
     @Test

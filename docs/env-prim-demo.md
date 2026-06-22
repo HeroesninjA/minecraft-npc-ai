@@ -36,7 +36,7 @@ $env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.2"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
 # Build
-./gradlew.bat clean build
+powershell -ExecutionPolicy Bypass -File .\scripts\build-local.ps1
 
 # Verifica JAR-uri
 Get-ChildItem ainpc-core-plugin/build/libs/*.jar

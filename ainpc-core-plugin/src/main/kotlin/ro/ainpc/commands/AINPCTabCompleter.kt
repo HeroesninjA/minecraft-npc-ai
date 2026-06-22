@@ -129,6 +129,31 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     4 -> if ("dump".equals(args[1], true)) completions.addAll(getAuthoringMechanicSuggestions(args[3]))
                 }
 
+                "scenario" -> {
+                    if (args.size == 2) {
+                        completions.addAll(filterStartsWith(SCENARIO_ACTIONS, args[1]))
+                    } else if (args.size == 3) {
+                        if ("list".equals(args[1], true)) {
+                            completions.addAll(filterStartsWith(SCENARIO_LIST_MODES, args[2]))
+                        } else if ("warnings".equals(args[1], true)) {
+                            completions.addAll(filterStartsWith(listOf("<templateId|displayName>"), args[2]))
+                            completions.addAll(getActiveScenarioSelectors(args[2]))
+                        } else {
+                            completions.addAll(filterStartsWith(SCENARIO_SELECTOR_HINTS, args[2]))
+                            completions.addAll(getActiveScenarioSelectors(args[2]))
+                        }
+                    } else if (args.size == 4 && "list".equals(args[1], true)) {
+                        completions.addAll(
+                            filterStartsWith(
+                                SCENARIO_LIST_MODES.filterNot { it.equals(args[2], true) },
+                                args[3]
+                            )
+                        )
+                    } else if (args.size == 4 && ("spawn".equals(args[1], true) || "despawn".equals(args[1], true))) {
+                        completions.addAll(getActiveScenarioActorIds(args[2], args[3]))
+                    }
+                }
+
                 "demo" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(DEMO_COMMAND_ACTIONS, args[1]))
                     else if (args.size == 3 && DEMO_COMMAND_REGION_ACTIONS.any {
@@ -718,6 +743,30 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         return if (mechanics.isEmpty()) filterStartsWith(listOf("<mechanicId>"), prefix) else filterStartsWith(mechanics, prefix)
     }
 
+    private fun getActiveScenarioSelectors(prefix: String): List<String> {
+        val scenarioEngine = plugin?.scenarioEngine ?: return listOf()
+        val selectors = scenarioEngine.getActiveScenarios().values
+            .flatMap { scenario ->
+                listOf(scenario.templateId, scenario.displayName)
+            }
+            .filter { value -> value.isNotBlank() }
+            .distinct()
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        return filterStartsWith(selectors, prefix)
+    }
+
+    private fun getActiveScenarioActorIds(scenarioSelector: String, prefix: String): List<String> {
+        val scenarioEngine = plugin?.scenarioEngine ?: return filterStartsWith(listOf("<actorId>"), prefix)
+        val activeScenario = scenarioEngine.getActiveScenarios().values.firstOrNull { scenario ->
+            scenario.templateId.equals(scenarioSelector, true) || scenario.displayName.equals(scenarioSelector, true)
+        } ?: return filterStartsWith(listOf("<actorId>"), prefix)
+
+        val actorIds = activeScenario.actors.keys
+            .distinct()
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        return if (actorIds.isEmpty()) filterStartsWith(listOf("<actorId>"), prefix) else filterStartsWith(actorIds, prefix)
+    }
+
     private fun getNPCNames(prefix: String): List<String> {
         return (plugin?.npcManager?.getAllNPCs() ?: return listOf()).stream()
             .map(AINPC::name)
@@ -806,6 +855,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "gui",
             "authoring",
             "quest",
+            "scenario",
             "progression",
             "contract",
             "duty",
@@ -1203,6 +1253,9 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val NODE_ACTIONS = listOf("create")
         private val SCAN_TARGETS = listOf("village")
         private val DEMO_ACTIONS = listOf("create")
+        private val SCENARIO_ACTIONS = listOf("list", "warnings", "info", "spawn", "despawn", "advance")
+        private val SCENARIO_LIST_MODES = listOf("warnings-only", "warnings-first")
+        private val SCENARIO_SELECTOR_HINTS = listOf("<templateId|displayName>")
         private val BIND_TARGETS = listOf("npc")
         private val BINDINGS_ACTIONS = listOf("list", "npc", "place")
         private val HOUSEHOLD_ACTIONS = listOf("plan", "spawn", "status", "place", "resident", "list")

@@ -31,7 +31,7 @@ ainpc-scenario-medieval/  # Scenariu medieval
 ## Build
 
 ```powershell
-./gradlew.bat clean build
+powershell -ExecutionPolicy Bypass -File .\scripts\build-local.ps1
 ```
 
 ## Tehnologii

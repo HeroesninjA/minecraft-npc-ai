@@ -245,6 +245,8 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Alias quest-side pentru authoring-ul read-only si dump-ul text")
     msg.send(sender, "&e/ainpc quest <numeNpc> [jucator]")
     msg.send(sender, "&7  Declanseaza manual quest-ul unui NPC")
+    msg.send(sender, "&e/ainpc scenario <list|info|spawn|despawn|advance> [templateId|displayName] [actorId]")
+    msg.send(sender, "&7  Inspecteaza sau ruleaza actorii si fazele scenariului definit in YAML")
     msg.send(sender, "&e/ainpc progression log [jucator] [quest|contract|duty|bounty|event|active|all]")
     msg.send(sender, "&7  Listeaza progresii generice peste questuri, contracte, sarcini, bounty-uri si evenimente")
     msg.send(sender, "&e/ainpc contract log [jucator]")
