@@ -35,6 +35,8 @@ object DebugDumpQuestDefinitionJson {
             root.addProperty("error", "FeaturePackLoader indisponibil")
             root.addProperty("scenario_count", 0)
             root.addProperty("quest_count", 0)
+            root.addProperty("actor_count", 0)
+            root.addProperty("validation_warning_count", 0)
             root.add("rows", JsonArray())
             return root
         }
@@ -52,6 +54,8 @@ object DebugDumpQuestDefinitionJson {
         val byCategory = LinkedHashMap<String, Int>()
         val byKind = LinkedHashMap<String, Int>()
         val byMechanic = LinkedHashMap<String, Int>()
+        var actorCount = 0
+        var validationWarningCount = 0
 
         for (scenario in sortedScenarios) {
             if (!isLoadedQuestDefinitionCandidate(scenario)) {
@@ -60,6 +64,8 @@ object DebugDumpQuestDefinitionJson {
 
             val contract = QuestScenarioContract.fromScenarioDefinition(scenario)
             rows.add(loadedQuestDefinitionRowJson(scenario, contract, gson))
+            actorCount += scenario.actors.size
+            validationWarningCount += scenario.validationWarnings.size
             DebugDumpSupport.incrementCount(byPack, scenario.packId)
             DebugDumpSupport.incrementCount(byCategory, DebugDumpSupport.enumJsonId(contract.category()))
             DebugDumpSupport.incrementCount(byKind, DebugDumpSupport.enumJsonId(contract.kind()))
@@ -71,6 +77,8 @@ object DebugDumpQuestDefinitionJson {
 
         root.addProperty("scenario_count", sortedScenarios.size)
         root.addProperty("quest_count", rows.size())
+        root.addProperty("actor_count", actorCount)
+        root.addProperty("validation_warning_count", validationWarningCount)
         root.addProperty("progression_mechanic_count", progressionMechanics?.size ?: 0)
         root.addProperty("progression_definition_count", progressionDefinitions?.size ?: 0)
         root.add("by_pack", DebugDumpSupport.countMapJson(byPack))
@@ -131,6 +139,12 @@ object DebugDumpQuestDefinitionJson {
         json.add("preferred_topologies", gson.toJsonTree(scenario.preferredTopologies))
         json.add("narrative_hints", gson.toJsonTree(scenario.narrativeHints))
         json.add("roles", scenarioRolesJson(scenario.roles, gson))
+        json.addProperty("actor_count", scenario.actors.size)
+        json.add("actors", scenarioActorsJson(scenario.actors, gson))
+        json.addProperty("quest_actor_trigger_count", scenario.questActorTriggers.size)
+        json.add("quest_actor_triggers", scenarioActorTriggersJson(scenario.questActorTriggers, gson))
+        json.addProperty("validation_warning_count", scenario.validationWarnings.size)
+        json.add("validation_warnings", gson.toJsonTree(scenario.validationWarnings))
         json.add("objectives", questEntriesJson(scenario.objectives, true, gson))
         json.add("rewards", questEntriesJson(scenario.rewards, false, gson))
         json.add("dialogues", gson.toJsonTree(scenario.questDialogues))
@@ -268,6 +282,48 @@ object DebugDumpQuestDefinitionJson {
         return json
     }
 
+    private fun scenarioActorsJson(
+        actors: Map<String, ro.ainpc.npc.NpcScenarioActorDefinition>?,
+        gson: Gson,
+    ): JsonObject {
+        val json = JsonObject()
+        if (actors.isNullOrEmpty()) {
+            return json
+        }
+
+        actors.entries
+            .sortedBy { entry -> DebugDumpSupport.valueOrEmpty(entry.key) }
+            .forEach { entry ->
+                json.add(DebugDumpSupport.valueOrEmpty(entry.key), scenarioActorJson(entry.value, gson))
+            }
+        return json
+    }
+
+    private fun scenarioActorJson(actor: ro.ainpc.npc.NpcScenarioActorDefinition?, gson: Gson): JsonObject {
+        val json = JsonObject()
+        if (actor == null) {
+            return json
+        }
+
+        json.addProperty("id", DebugDumpSupport.valueOrEmpty(actor.id))
+        json.addProperty("name", DebugDumpSupport.valueOrEmpty(actor.name))
+        json.addProperty("lifecycle_type", actor.lifecycleType.name)
+        json.addProperty("persistence_mode", actor.persistenceMode.name)
+        json.addProperty("simulation_mode", actor.simulationMode.name)
+        json.addProperty("interaction_profile", actor.interactionProfile.name)
+        json.addProperty("entity_kind", actor.entityKind.name)
+        json.addProperty("entity_archetype", DebugDumpSupport.valueOrEmpty(actor.entityArchetype))
+        json.addProperty("owner_scenario_id", DebugDumpSupport.valueOrEmpty(actor.ownerScenarioId))
+        json.addProperty("owner_quest_id", DebugDumpSupport.valueOrEmpty(actor.ownerQuestId))
+        json.addProperty("spawn_source", DebugDumpSupport.valueOrEmpty(actor.spawnSource))
+        json.addProperty("spawn_phase", DebugDumpSupport.valueOrEmpty(actor.spawnPhase))
+        json.addProperty("spawn_policy", actor.spawnPolicy.name)
+        json.addProperty("despawn_rule", DebugDumpSupport.valueOrEmpty(actor.despawnRule))
+        json.addProperty("duration_seconds", actor.durationSeconds ?: 0L)
+        json.add("temporary_tags", gson.toJsonTree(actor.temporaryTags.toList()))
+        return json
+    }
+
     private fun questEntriesJson(
         entries: List<FeaturePackLoader.QuestEntryDefinition>?,
         objectiveEntries: Boolean,
@@ -281,6 +337,23 @@ object DebugDumpQuestDefinitionJson {
         for (index in entries.indices) {
             json.add(questEntryJson(entries[index], index, objectiveEntries, gson))
         }
+        return json
+    }
+
+    private fun scenarioActorTriggersJson(
+        triggers: Map<String, MutableSet<String>>?,
+        gson: Gson,
+    ): JsonObject {
+        val json = JsonObject()
+        if (triggers.isNullOrEmpty()) {
+            return json
+        }
+
+        triggers.entries
+            .sortedBy { entry -> DebugDumpSupport.valueOrEmpty(entry.key) }
+            .forEach { entry ->
+                json.add(entry.key, gson.toJsonTree(entry.value.toList()))
+            }
         return json
     }
 

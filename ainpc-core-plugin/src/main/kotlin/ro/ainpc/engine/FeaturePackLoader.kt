@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.YamlConfiguration
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.addons.AddonType
+import ro.ainpc.npc.NpcScenarioActorDefinition
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.platform.RuntimeMode
 import ro.ainpc.topology.TopologyCategory
@@ -178,6 +179,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                     this::findProgressionMechanicDefinition,
                 )
             }
+            logScenarioValidationWarnings(allScenarios)
 
             registerPackDescriptor(pack, config.getConfigurationSection("addon"))
             loadedPacks[id] = pack
@@ -242,6 +244,14 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
     private fun logPackMetadataWarnings(file: File, validation: FeaturePackMetadataValidator.ValidationResult) {
         for (warning in validation.warnings()) {
             plugin.logger.warning("Metadata feature pack ${file.name}: $warning")
+        }
+    }
+
+    private fun logScenarioValidationWarnings(scenarios: Map<String, ScenarioDefinition>) {
+        for (scenario in scenarios.values) {
+            for (warning in scenario.validationWarnings) {
+                plugin.logger.warning("Scenario ${scenario.packId}:${scenario.id}: $warning")
+            }
         }
     }
 
@@ -670,6 +680,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val baseType: ScenarioType,
     ) {
         val roles: MutableMap<String, ScenarioRoleDefinition> = LinkedHashMap()
+        val actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap()
+        val questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap()
+        val validationWarnings: MutableList<String> = ArrayList()
         val objectives: MutableList<QuestEntryDefinition> = ArrayList()
         val rewards: MutableList<QuestEntryDefinition> = ArrayList()
         private val questStagesById: MutableMap<String, QuestStageDefinition> = LinkedHashMap()
@@ -711,6 +724,32 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
         fun addRole(role: ScenarioRoleDefinition) {
             roles[role.id] = role
+        }
+
+        fun addActor(actorId: String, actor: NpcScenarioActorDefinition?) {
+            if (actor != null && actorId.isNotBlank()) {
+                actors[actorId] = actor
+            }
+        }
+
+        fun addQuestActorTrigger(triggerId: String, actorIds: Collection<String>?) {
+            val normalizedTriggerId = triggerId.trim()
+            if (normalizedTriggerId.isBlank() || actorIds.isNullOrEmpty()) {
+                return
+            }
+            val targetIds = questActorTriggers.getOrPut(normalizedTriggerId) { LinkedHashSet() }
+            for (actorId in actorIds) {
+                val normalizedActorId = actorId.trim()
+                if (normalizedActorId.isNotBlank()) {
+                    targetIds.add(normalizedActorId)
+                }
+            }
+        }
+
+        fun addValidationWarning(message: String?) {
+            if (!message.isNullOrBlank()) {
+                validationWarnings.add(message.trim())
+            }
         }
 
         fun addPhase(phaseId: String?) {

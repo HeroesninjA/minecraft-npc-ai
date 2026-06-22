@@ -32,6 +32,10 @@ import ro.ainpc.api.events.quest.ProgressionLifecycleEvent
 import ro.ainpc.api.events.story.StoryActionAppliedEvent
 import ro.ainpc.api.events.story.StoryActionAppliedEventPayload
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NpcLifecycleType
+import ro.ainpc.npc.NpcPersistenceMode
+import ro.ainpc.npc.NpcScenarioActorDefinition
+import ro.ainpc.npc.NpcSpawnPolicy
 import ro.ainpc.engine.FeaturePackLoader.ProfessionDefinition
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.engine.FeaturePackLoader.ScenarioDefinition
@@ -52,6 +56,7 @@ import ro.ainpc.engine.runtime.conditions.HasCompletedQuestCondition
 import ro.ainpc.engine.runtime.triggers.PlayerEntersRegionTrigger
 import ro.ainpc.world.WorldRegion
 import java.lang.reflect.Type
+import java.util.UUID
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -244,7 +249,12 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 template.questRepeatable = definition.isQuestRepeatable
                 template.questCooldownSeconds = definition.questCooldownSeconds
                 template.questDialogues = LinkedHashMap(definition.questDialogues)
+                template.questActorTriggers = LinkedHashMap(
+                    definition.questActorTriggers.mapValues { entry -> LinkedHashSet(entry.value) }
+                )
+                template.validationWarnings = ArrayList(definition.validationWarnings)
                 template.questStages = definition.questStages
+                template.actors = LinkedHashMap(definition.actors)
                 template.objectives = definition.objectives
                 template.rewards = definition.rewards
                 template.questContract = QuestScenarioContract.fromScenarioDefinition(definition)
@@ -420,6 +430,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             rewardNotes.addAll(applyQuestStoryActions(p0, p1, template, currentProgress, template.rewards))
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.PLAYER, p0, p1, template, completedProgress)
+            triggerQuestActors(template, QuestActorTriggers.ON_COMPLETE, p0, p1)
+            triggerQuestActors(template, QuestActorTriggers.ON_RETURN_TO_GIVER, p0, p1)
             advanceToNextChainedQuest(p0, template)
             plugin.debug("[QuestEngine] Quest completat pentru player=" + p0.name
                 + " templateId=" + template.templateId)
@@ -503,6 +515,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         acceptedProgress = bindQuestProgressToNpc(playerId, template, acceptedProgress, p1)
         acceptedProgress = bindQuestProgressToAnchors(p0, acceptedProgress, resolvedAnchors)
         publishProgressionAccepted(p0, p1, template, acceptedProgress)
+        triggerQuestActors(template, QuestActorTriggers.ON_ACCEPT, p0, p1)
         plugin.debug("[QuestEngine] Quest acceptat pentru player=" + p0.name
             + " templateId=" + template.templateId)
         return QuestInteractionResult.handled(
@@ -596,6 +609,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         val failedProgress = markQuestFailed(playerId, template)
         publishProgressionAbandoned(AINPCEventSource.PLAYER, p0, p1, template, failedProgress)
+        cleanupQuestActors(template, QuestActorTriggers.ON_FAIL)
         return QuestInteractionResult.handled(
             true,
             buildQuestNpcMessages(
@@ -652,6 +666,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         val failedProgress = markQuestFailed(playerId, template)
         publishProgressionAbandoned(AINPCEventSource.COMMAND, p0, null, template, failedProgress)
+        cleanupQuestActors(template, QuestActorTriggers.ON_FAIL)
         systemMessages.add("&eQuest abandonat: &f" + resolveQuestTitle(template))
         systemMessages.addAll(buildQuestStatusMessages(template, failedProgress, p0, resolveQuestNpcName(failedProgress)))
         return QuestInteractionResult.handled(false, listOf(), systemMessages)
@@ -719,6 +734,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         clearQuestTrackingIfMatches(playerId, template.templateId)
         deleteQuestProgressAsync(playerId, template.templateId)
+        cleanupQuestActors(template, QuestActorTriggers.ON_RESET)
         plugin.debug("[QuestEngine] resetQuestProgress reusit pentru player=" + p0.name
             + " templateId=" + template.templateId)
         return true
@@ -784,6 +800,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             p0.updateInventory()
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.COMMAND, p0, p1, template, completedProgress)
+            triggerQuestActors(template, QuestActorTriggers.ON_COMPLETE, p0, p1)
+            triggerQuestActors(template, QuestActorTriggers.ON_RETURN_TO_GIVER, p0, p1)
             advanceToNextChainedQuest(p0, template)
             plugin.debug("[QuestEngine] forceCompleteQuest a marcat quest complet pentru player="
                 + p0.name + " templateId=" + template.templateId)
@@ -1602,6 +1620,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                         )
                     )
                 }
+                if (after >= objective.amount && before < objective.amount) {
+                    triggerQuestActors(template, QuestActorTriggers.ON_OBJECTIVE_COMPLETE, p0, null)
+                }
                 if (after >= objective.amount && sentCompletionMessages.add(p0.uniqueId.toString() + ":" + objectiveKey)) {
                     val msg = net.kyori.adventure.text.Component.text(
                         "✓ " + objective.description,
@@ -1650,6 +1671,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                         )
                     )
                 }
+                if (after >= objective.amount && before < objective.amount) {
+                    triggerQuestActors(template, QuestActorTriggers.ON_OBJECTIVE_COMPLETE, p0, null)
+                }
             }
             if (changed) {
                 updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
@@ -1679,6 +1703,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             val after = updatedProgress.getOrDefault(objectiveKey, 0)
             if (after > before) {
                 emitProgressionObjectiveProgress(p0, null, template, progress, objective, objectiveKey, before, after, "craft_item", linkedMapOf("item" to itemName))
+            }
+            if (after >= objective.amount && before < objective.amount) {
+                triggerQuestActors(template, QuestActorTriggers.ON_OBJECTIVE_COMPLETE, p0, null)
             }
         }
         if (changed) updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
@@ -1887,6 +1914,42 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             return
         }
         Bukkit.getPluginManager().callEvent(event)
+    }
+
+    private fun triggerQuestActors(
+        template: ScenarioTemplate,
+        triggerId: String,
+        player: Player,
+        npc: AINPC?,
+    ) {
+        val actorIds = template.questActorTriggers[triggerId.trim()] ?: return
+        if (actorIds.isEmpty()) {
+            return
+        }
+
+        val scenarioEntry = findActiveScenarioByTemplateId(template.templateId) ?: return
+        val anchorLocation = npc?.location ?: player.location
+        if (anchorLocation.world == null) {
+            return
+        }
+
+        spawnScenarioActors(scenarioEntry.key, anchorLocation, scenarioEntry.value.currentPhase, actorIds, true, true)
+    }
+
+    private fun cleanupQuestActors(
+        template: ScenarioTemplate,
+        triggerId: String,
+    ) {
+        val actorIds = template.questActorTriggers[triggerId.trim()] ?: return
+        if (actorIds.isEmpty()) {
+            return
+        }
+
+        val scenarioEntry = findActiveScenarioByTemplateId(template.templateId) ?: return
+        val scenarioId = scenarioEntry.key
+        for (actorId in actorIds) {
+            despawnScenarioActor(scenarioId, actorId)
+        }
     }
 
     private fun publishProgressionOffered(
@@ -2871,6 +2934,20 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     private fun startScenario(p0: ScenarioTemplate, p1: List<AINPC>, p2: List<Player>) {
+        val scenarioId = UUID.randomUUID()
+        val scenario = ActiveScenario(scenarioId, p0)
+        scenario.currentPhase = p0.phases.firstOrNull().orEmpty()
+        scenario.anchorLocation = p2.firstOrNull()?.location?.clone() ?: p1.firstOrNull()?.location?.clone()
+        scenario.questActorTriggers.putAll(p0.questActorTriggers.mapValues { entry -> LinkedHashSet(entry.value) })
+        activeScenarios[scenarioId] = scenario
+        val anchorLocation = scenario.anchorLocation
+        if (anchorLocation != null) {
+            applyScenarioPhaseActors(scenarioId, scenario.currentPhase, anchorLocation)
+        }
+        plugin.logger.info(
+            "Scenariu pornit: " + scenario.displayName +
+                " (ID: " + scenarioId.toString().substring(0, 8) + ", actori: " + scenario.actors.size + ")"
+        )
     }
     private fun assignRoles(p0: ActiveScenario, p1: ScenarioTemplate, p2: List<AINPC>, p3: List<Player>): Boolean {
         return true
@@ -2882,6 +2959,236 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return plugin.config.getConfigurationSection("quests") ?: plugin.config
     }
     private fun notifyParticipants(p0: ActiveScenario) {
+    }
+
+    fun spawnScenarioActor(scenarioId: UUID, actorId: String, location: Location): AINPC? {
+        val activeScenario = activeScenarios[scenarioId] ?: return null
+        val actorDefinition = activeScenario.actors[actorId] ?: return null
+        val npc = AINPC(plugin)
+        npc.applyScenarioDefinition(actorDefinition)
+        if (npc.name.isBlank()) {
+            npc.name = actorDefinition.name
+            npc.displayName = actorDefinition.name
+        }
+        npc.sourceKey = if (npc.sourceKey.isBlank()) {
+            "${activeScenario.templateId}:$actorId"
+        } else {
+            npc.sourceKey
+        }
+        npc.profileSource = "scenario_actor"
+        val worldName = location.world?.name ?: return null
+        npc.setLocation(worldName, location.x, location.y, location.z, location.yaw, location.pitch)
+
+        if (!publishScenarioActorSpawned(activeScenario, actorDefinition, npc, location)) {
+            return null
+        }
+        if (!npc.spawn()) {
+            return null
+        }
+
+        if (actorDefinition.persistenceMode != NpcPersistenceMode.RUNTIME_ONLY &&
+            !plugin.npcManager.saveNPC(npc, false)
+        ) {
+            npc.despawn()
+            return null
+        }
+
+        plugin.npcManager.registerTransientNPC(npc)
+        activeScenario.assignActor(actorId, npc.uuid)
+        scheduleScenarioActorExpiration(scenarioId, actorId, actorDefinition)
+        return npc
+    }
+
+    fun spawnScenarioActors(
+        scenarioId: UUID,
+        anchorLocation: Location,
+        phase: String? = null,
+        actorIds: Set<String>? = null,
+        allowManual: Boolean = false,
+        allowStage: Boolean = false,
+    ): List<AINPC> {
+        val activeScenario = activeScenarios[scenarioId] ?: return emptyList()
+        val spawned = mutableListOf<AINPC>()
+        var offset = 0.0
+        for (actorId in activeScenario.actors.keys) {
+            if (!actorIds.isNullOrEmpty() && !actorIds.contains(actorId)) {
+                continue
+            }
+            val actorDefinition = activeScenario.actors[actorId] ?: continue
+            if (!allowManual && actorDefinition.spawnPolicy == NpcSpawnPolicy.MANUAL) {
+                continue
+            }
+            if (!allowStage && actorDefinition.spawnPolicy == NpcSpawnPolicy.STAGE) {
+                continue
+            }
+            if (!shouldSpawnScenarioActorInPhase(actorDefinition, phase ?: activeScenario.currentPhase)) {
+                continue
+            }
+            if (activeScenario.spawnedActors.containsKey(actorId)) {
+                continue
+            }
+            val spawnLocation = anchorLocation.clone().add(offset, 0.0, offset)
+            val npc = spawnScenarioActor(scenarioId, actorId, spawnLocation)
+            if (npc != null) {
+                spawned.add(npc)
+            }
+            offset += 1.5
+        }
+        return spawned
+    }
+
+    fun despawnScenarioActor(scenarioId: UUID, actorId: String) {
+        val activeScenario = activeScenarios[scenarioId] ?: return
+        val npcUuid = activeScenario.removeActor(actorId) ?: return
+        val npc = plugin.npcManager.getNPCByUuid(npcUuid) ?: return
+        if (npc.persistenceMode == NpcPersistenceMode.RUNTIME_ONLY ||
+            npc.lifecycleType == NpcLifecycleType.EPISODIC ||
+            npc.lifecycleType == NpcLifecycleType.SCENE_ONLY
+        ) {
+            plugin.npcManager.unregisterTransientNPC(npc)
+        }
+        npc.despawn()
+    }
+
+    fun despawnScenarioActors(scenarioId: UUID) {
+        val activeScenario = activeScenarios[scenarioId] ?: return
+        for (actorId in activeScenario.spawnedActors.keys.toList()) {
+            despawnScenarioActor(scenarioId, actorId)
+        }
+    }
+
+    private fun refreshScenarioActorsForPhase(scenarioId: UUID, phase: String) {
+        val activeScenario = activeScenarios[scenarioId] ?: return
+        val anchorLocation = activeScenario.anchorLocation ?: activeScenario.spawnedActors.keys
+            .firstNotNullOfOrNull { actorId ->
+                val npcUuid = activeScenario.spawnedActors[actorId] ?: return@firstNotNullOfOrNull null
+                plugin.npcManager.getNPCByUuid(npcUuid)?.location
+            }
+            ?.clone()
+
+        if (anchorLocation == null) {
+            return
+        }
+
+        activeScenario.anchorLocation = anchorLocation.clone()
+        val phaseRule = getScenarioPhaseActorRule(activeScenario, phase)
+        phaseRule.despawnActorIds.forEach { actorId ->
+            despawnScenarioActor(scenarioId, actorId)
+        }
+        for (actorId in activeScenario.spawnedActors.keys.toList()) {
+            val actorDefinition = activeScenario.actors[actorId] ?: continue
+            if (shouldSpawnScenarioActorInPhase(actorDefinition, phase)) {
+                continue
+            }
+            despawnScenarioActor(scenarioId, actorId)
+        }
+
+        if (phaseRule.spawnActorIds.isNotEmpty()) {
+            spawnScenarioActors(scenarioId, anchorLocation, phase, phaseRule.spawnActorIds, false, true)
+        } else {
+            spawnScenarioActors(scenarioId, anchorLocation, phase)
+        }
+    }
+
+    private fun applyScenarioPhaseActors(scenarioId: UUID, phase: String, anchorLocation: Location) {
+        val activeScenario = activeScenarios[scenarioId] ?: return
+        activeScenario.anchorLocation = anchorLocation.clone()
+        refreshScenarioActorsForPhase(scenarioId, phase)
+    }
+
+    private fun publishScenarioActorSpawned(
+        activeScenario: ActiveScenario,
+        actorDefinition: NpcScenarioActorDefinition,
+        npc: AINPC,
+        location: Location,
+    ): Boolean {
+        plugin.debug(
+            "Spawn actor scenariu=" + activeScenario.templateId +
+                " actor=" + actorDefinition.id +
+                " npc=" + npc.name +
+                " la " + location
+        )
+        return true
+    }
+
+    private fun scheduleScenarioActorExpiration(
+        scenarioId: UUID,
+        actorId: String,
+        actorDefinition: NpcScenarioActorDefinition,
+    ) {
+        val durationSeconds = actorDefinition.durationSeconds ?: return
+        if (durationSeconds <= 0) return
+        val ticks = durationSeconds * 20L
+        Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            despawnScenarioActor(scenarioId, actorId)
+        }, ticks)
+    }
+
+    private fun shouldSpawnScenarioActorInPhase(
+        actorDefinition: NpcScenarioActorDefinition,
+        phase: String,
+    ): Boolean {
+        when (actorDefinition.spawnPolicy) {
+            NpcSpawnPolicy.MANUAL -> return false
+            NpcSpawnPolicy.STAGE -> return true
+            NpcSpawnPolicy.AUTO -> return true
+            NpcSpawnPolicy.PHASE -> Unit
+        }
+        val actorPhase = actorDefinition.spawnPhase.trim()
+        return actorPhase.isBlank() || actorPhase.equals(phase, ignoreCase = true)
+    }
+
+    private data class ScenarioPhaseActorRule(
+        val spawnActorIds: Set<String>,
+        val despawnActorIds: Set<String>,
+    )
+
+    private fun getScenarioPhaseActorRule(
+        scenario: ActiveScenario,
+        phase: String,
+    ): ScenarioPhaseActorRule {
+        val template = scenarioTemplates[scenario.type] ?: return ScenarioPhaseActorRule(emptySet(), emptySet())
+        val stage = template.questStages.firstOrNull { questStage ->
+            questStage.id.equals(phase, ignoreCase = true)
+        } ?: return ScenarioPhaseActorRule(emptySet(), emptySet())
+        return ScenarioPhaseActorRule(
+            spawnActorIds = readScenarioActorTriggerList(stage.metadata, "spawn_actors", QuestActorTriggers.ON_STAGE_ENTER, "stage_enter_actors"),
+            despawnActorIds = readScenarioActorTriggerList(stage.metadata, "despawn_actors", QuestActorTriggers.ON_STAGE_EXIT, "stage_exit_actors"),
+        )
+    }
+
+    private fun getScenarioStageCompleteActors(
+        scenario: ActiveScenario,
+        phase: String,
+    ): Set<String> {
+        val template = scenarioTemplates[scenario.type] ?: return emptySet()
+        val stage = template.questStages.firstOrNull { questStage ->
+            questStage.id.equals(phase, ignoreCase = true)
+        } ?: return emptySet()
+        return readScenarioActorTriggerList(stage.metadata, QuestActorTriggers.ON_STAGE_COMPLETE, "stage_complete_actors", "complete_actors")
+    }
+
+    private fun readScenarioActorTriggerList(
+        metadata: Map<String, String>,
+        vararg keys: String,
+    ): Set<String> {
+        for (key in keys) {
+            val actorIds = readScenarioActorIdList(metadata[key])
+            if (actorIds.isNotEmpty()) {
+                return actorIds
+            }
+        }
+        return emptySet()
+    }
+
+    private fun readScenarioActorIdList(rawValue: String?): Set<String> {
+        if (rawValue.isNullOrBlank()) {
+            return emptySet()
+        }
+        return rawValue.split(',', ';', '|')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toCollection(LinkedHashSet())
     }
     private fun adjustEmotionsForRole(p0: AINPC, p1: String, p2: ScenarioType) {
     }
@@ -2898,15 +3205,35 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val phases = template.phases
         val currentIndex = phases.indexOf(scenario.currentPhase)
         if (currentIndex < phases.size - 1) {
+            val previousPhase = scenario.currentPhase
             scenario.currentPhase = phases[currentIndex + 1]
+            cleanupScenarioStageActors(p0, previousPhase, getScenarioStageCompleteActors(scenario, previousPhase))
+            refreshScenarioActorsForPhase(p0, scenario.currentPhase)
             plugin.debug("Scenariu " + p0.toString().substring(0, 8)
                 + " avansat la faza: " + scenario.currentPhase)
         } else {
             endScenario(p0)
         }
     }
+
+    private fun cleanupScenarioStageActors(
+        scenarioId: UUID,
+        phase: String,
+        actorIds: Set<String>,
+    ) {
+        if (actorIds.isEmpty()) {
+            return
+        }
+        for (actorId in actorIds) {
+            despawnScenarioActor(scenarioId, actorId)
+        }
+        plugin.debug("Scenariu " + scenarioId.toString().substring(0, 8)
+            + " a curatat actorii de stage complete pentru faza: " + phase)
+    }
     fun endScenario(p0: UUID) {
-        val scenario = activeScenarios.remove(p0) ?: return
+        val scenario = activeScenarios[p0] ?: return
+        despawnScenarioActors(p0)
+        activeScenarios.remove(p0)
         createScenarioMemories(scenario)
         plugin.logger.info("Scenariu terminat: " + scenario.displayName
             + " (ID: " + p0.toString().substring(0, 8) + ")")
@@ -2914,6 +3241,18 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun createScenarioMemories(p0: ActiveScenario) {
     }
     fun getActiveScenarios(): Map<UUID, ActiveScenario> = HashMap(activeScenarios)
+
+    fun findActiveScenarioByTemplateId(templateId: String): Map.Entry<UUID, ActiveScenario>? {
+        val normalized = templateId.trim()
+        if (normalized.isBlank()) {
+            return null
+        }
+        return activeScenarios.entries.firstOrNull { entry ->
+            entry.value.templateId.equals(normalized, ignoreCase = true) ||
+                entry.value.displayName.equals(normalized, ignoreCase = true)
+        }
+    }
+
     fun getNPCScenario(p0: UUID): ActiveScenario? {
         for (scenario in activeScenarios.values) {
             if (scenario.hasNPCRole(p0)) {

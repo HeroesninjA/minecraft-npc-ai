@@ -24,6 +24,19 @@ class AINPC(val plugin: AINPCPlugin?) {
     var uuid: UUID = UUID.randomUUID()
     var name: String = ""
     var displayName: String? = null
+    var entityKind: NpcEntityKind = NpcEntityKind.VILLAGER
+    var entityAdapter: NpcEntityAdapter? = null
+    var lifecycleType: NpcLifecycleType = NpcLifecycleType.PERMANENT
+    var persistenceMode: NpcPersistenceMode = NpcPersistenceMode.FULL
+    var simulationMode: NpcSimulationMode = NpcSimulationMode.FULL
+    var interactionProfile: NpcInteractionProfile = NpcInteractionProfile.FULL_AI
+    var entityArchetype: String = "villager"
+    var ownerScenarioId: String? = null
+    var ownerQuestId: String? = null
+    var spawnSource: String? = null
+    var despawnRule: String? = null
+    var durationSeconds: Long? = null
+    var temporaryTags: MutableSet<String> = linkedSetOf()
 
     var worldName: String? = null
     var x = 0.0
@@ -74,30 +87,58 @@ class AINPC(val plugin: AINPCPlugin?) {
             return false
         }
         val location = Location(world, x, y, z, yaw, pitch)
-        val villager = world.spawn(location, Villager::class.java) { spawnedVillager ->
-            applyPersistentIdentity(spawnedVillager)
-            spawnedVillager.profession = villagerProfession
-            spawnedVillager.villagerType = Villager.Type.PLAINS
-            applyControlledVillagerDefaults(spawnedVillager)
+        val adapter = NpcEntityAdapters.resolve(this)
+        val entity = adapter.spawn(this, location)
+        if (entity == null) {
+            plugin?.debug("NPC '$name' nu poate fi spawnat prin adapterul ${adapter.javaClass.simpleName}.")
+            return false
         }
-        attachToVillager(villager)
+        adapter.attach(this, entity)
         plugin?.debug("NPC '$name' spawnat la $location")
         return true
     }
 
+    fun attachToEntity(entity: Entity?) {
+        if (entity == null) return
+        bukkitEntity = entity
+        spawned = entity.isValid
+        uuid = entity.uniqueId
+        syncLocation(entity.location)
+        entity.customName(coloredDisplayNameComponent)
+        entity.isCustomNameVisible = true
+        applyPersistentIdentity(entity)
+    }
+
     fun attachToVillager(villager: Villager?) {
         if (villager == null) return
-        bukkitEntity = villager
-        spawned = villager.isValid
-        uuid = villager.uniqueId
-        syncLocation(villager.location)
-        villager.customName(coloredDisplayNameComponent)
-        villager.isCustomNameVisible = true
+        attachToEntity(villager)
         applyControlledVillagerDefaults(villager)
         if (!occupation.isNullOrBlank() && shouldApplyProfessionToVillager(villager)) {
             villager.profession = villagerProfession
         }
-        applyPersistentIdentity(villager)
+    }
+
+    fun applyScenarioDefinition(definition: NpcScenarioActorDefinition) {
+        if (definition.id.isNotBlank() && sourceKey.isBlank()) {
+            sourceKey = definition.id
+        }
+        if (definition.name.isNotBlank() && name.isBlank()) {
+            name = definition.name
+        }
+        lifecycleType = definition.lifecycleType
+        persistenceMode = definition.persistenceMode
+        simulationMode = definition.simulationMode
+        interactionProfile = definition.interactionProfile
+        entityKind = definition.entityKind
+        entityArchetype = definition.entityArchetype.takeIf { it.isNotBlank() } ?: entityArchetype
+        ownerScenarioId = definition.ownerScenarioId.takeIf { it.isNotBlank() } ?: ownerScenarioId
+        ownerQuestId = definition.ownerQuestId.takeIf { it.isNotBlank() } ?: ownerQuestId
+        spawnSource = definition.spawnSource.takeIf { it.isNotBlank() } ?: spawnSource
+        despawnRule = definition.despawnRule.takeIf { it.isNotBlank() } ?: despawnRule
+        durationSeconds = definition.durationSeconds ?: durationSeconds
+        if (definition.temporaryTags.isNotEmpty()) {
+            temporaryTags.addAll(definition.temporaryTags)
+        }
     }
 
     fun applyPersistentIdentity() {

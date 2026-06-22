@@ -15,6 +15,7 @@ import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMode
 import org.bukkit.configuration.file.YamlConfiguration
 import java.io.File
+import java.io.InputStreamReader
 import java.nio.file.Path
 import java.util.EnumSet
 import java.util.Locale
@@ -108,13 +109,27 @@ class AINPCPlatform(
         val mergedConfig = YamlConfiguration()
         mergedConfig.loadFromString(baseConfig.saveToString())
 
-        val overlayFile = findWorldAdminOverlayFile() ?: return mergedConfig
-        val overlayConfig = ScriptConfigurationLoader.loadConfiguration(overlayFile)
-        val overlaySection = overlayConfig.getConfigurationSection("world_admin")
-            ?: overlayConfig.getConfigurationSection("world-admin")
-            ?: overlayConfig.getConfigurationSection("mapping")
-            ?: overlayConfig
-        ScriptConfigurationLoader.mergeSection(mergedConfig, "world_admin", overlaySection)
+        val overlayFile = findWorldAdminOverlayFile()
+        if (overlayFile != null) {
+            val overlayConfig = ScriptConfigurationLoader.loadConfiguration(overlayFile)
+            val overlaySection = overlayConfig.getConfigurationSection("world_admin")
+                ?: overlayConfig.getConfigurationSection("world-admin")
+                ?: overlayConfig.getConfigurationSection("mapping")
+                ?: overlayConfig
+            ScriptConfigurationLoader.mergeSection(mergedConfig, "world_admin", overlaySection)
+        } else {
+            val builtinOverlay = plugin.getResource("castel-world-admin.yml")
+            if (builtinOverlay != null) {
+                try {
+                    val builtinConfig = YamlConfiguration.loadConfiguration(java.io.InputStreamReader(builtinOverlay))
+                    val overlaySection = builtinConfig.getConfigurationSection("world_admin") ?: builtinConfig
+                    ScriptConfigurationLoader.mergeSection(mergedConfig, "world_admin", overlaySection)
+                    plugin.logger.info("Castel mapping incarcat din resursa incorporata.")
+                } catch (e: Exception) {
+                    plugin.logger.warning("Nu am putut incarca castel-world-admin.yml din resursa: ${e.message}")
+                }
+            }
+        }
         return mergedConfig
     }
 
@@ -126,6 +141,7 @@ class AINPCPlatform(
             "world_admin.json",
             "world_admin.yml",
             "world_admin.yaml",
+            "castel-world-admin.yml",
         )
         for (candidate in candidates) {
             val file = File(plugin.dataFolder, candidate)

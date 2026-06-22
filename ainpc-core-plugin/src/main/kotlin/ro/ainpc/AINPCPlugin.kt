@@ -113,6 +113,11 @@ class AINPCPlugin : JavaPlugin() {
         config.options().copyDefaults(true)
         saveConfig()
         loadQuestConfig()
+        try {
+            saveResource("castel-world-admin.yml", false)
+        } catch (ignored: Exception) {
+            logger.fine("castel-world-admin.yml deja exista sau nu este disponibil.")
+        }
 
         messageUtils = MessageUtils(this)
         platform = AINPCPlatform(this)

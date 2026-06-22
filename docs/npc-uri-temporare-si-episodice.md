@@ -439,6 +439,24 @@ Actiuni utile:
 - `change_npc_dialogue_profile`
 - `bind_npc_to_player`
 - `set_npc_hostile`
+- `spawn_actors`
+- `despawn_actors`
+- `on_stage_enter`
+- `on_stage_exit`
+- `on_stage_complete`
+- `quest_actor_triggers`
+
+Aliasuri acceptate:
+
+- `on_stage_start` -> `on_stage_enter`
+- `on_stage_finish` / `on_stage_end` -> `on_stage_complete`
+
+Cheile necunoscute din `quest_actor_triggers` sunt ignorate si emit warning la incarcare.
+`/ainpc scenario list` afiseaza si numarul de warning-uri pentru fiecare scenariu activ.
+`/ainpc scenario list warnings-only` filtreaza doar scenariile care au warning-uri.
+`/ainpc scenario list warnings-first` sorteaza scenariile cu warning-uri primele.
+`warnings-only` si `warnings-first` nu pot fi folosite impreuna; un mod necunoscut este respins cu mesaj clar.
+`/ainpc scenario warnings` listeaza direct doar scenariile cu warning-uri.
 
 ### Exemplu conceptual
 
@@ -503,6 +521,8 @@ Coloane recomandate:
 - `owner_scenario_id`
 - `expires_at`
 - `spawn_source`
+- `spawn_phase`
+- `spawn_policy`
 - `is_low_impact`
 
 Alternativ:
@@ -647,6 +667,141 @@ Abia dupa ce asta e stabil, merita introdus suportul pentru NPC non-villager.
 - sa implementezi non-villager direct in `AINPC.spawn()` cu `if`-uri multe
 - sa lasi questurile sa gestioneze manual entitatile fara un serviciu comun
 - sa amesteci profilele de reactie ale unui spirit, gardian si localnic obisnuit
+
+## Directia recomandata pentru implementare
+
+Ca sa reusezi acelasi mecanism in mai multe scenarii, sistemul trebuie sa plece de la o definitie de actor, nu de la o lista fixa de tipuri.
+
+### Principiul de baza
+
+- scenariul defineste actorul
+- core-ul executa ciclul de viata si atasarea in lume
+- adapterul decide cum apare actorul in lume
+- profilul de interactiune spune ce poate face actorul
+
+### Modelul de date recomandat
+
+Un actor scenariu-definit ar trebui sa aiba:
+
+- `lifecycleType`
+- `persistenceMode`
+- `simulationMode`
+- `interactionProfile`
+- `entityKind`
+- `entityArchetype`
+- `ownerScenarioId`
+- `ownerQuestId`
+- `spawnSource`
+- `spawnPhase`
+- `spawnPolicy`
+- `questActorTriggers`
+- `despawnRule`
+- `durationSeconds`
+- `temporaryTags`
+
+`spawnPolicy` controleaza daca actorul se spawneaza automat, la o faza, doar prin reguli de stage sau manual din admin.
+
+### Ce rezolva acest model
+
+- un paznic temporar pentru un quest
+- un martor care apare doar intr-o scena
+- un ghid de dungeon
+- un mesager sau curier
+- un actor de tip monstru, spirit sau om simplificat
+
+### Ce ramane in core
+
+- persistenta si cleanup
+- reguli de spawn/despawn
+- legarea la quest sau scenariu
+- adaptarea la tipul de entitate Bukkit
+
+### Ce ramane in scenariu
+
+- numele si rolul actorului
+- durata de viata
+- profilul minim de interactiune
+- ancorele de quest sau story
+- tag-urile de scena
+
+### Exemplu de configurare
+
+```yml
+scenarios:
+  Q08:
+    actors:
+      dungeon_spirit:
+        name: "Spiritul din Cripta"
+        lifecycle_type: "episodic"
+        persistence_mode: "runtime_only"
+        simulation_mode: "none"
+        interaction_profile: "scene_only"
+        entity_kind: "spirit"
+        entity_archetype: "wraith"
+        owner_scenario_id: "medieval_quest"
+        owner_quest_id: "Q08"
+        spawn_source: "border_patrol_scene"
+        spawn_phase: "investigation"
+        spawn_policy: "phase"
+        despawn_rule: "on_stage_complete"
+        duration_seconds: 180
+        temporary_tags: ["undead", "dungeon", "scene"]
+      border_messenger:
+        name: "Mesagerul Hotarului"
+        lifecycle_type: "temporary"
+        persistence_mode: "runtime_only"
+        simulation_mode: "light"
+        interaction_profile: "scene_only"
+        entity_kind: "villager"
+        spawn_source: "quest_accept_scene"
+        spawn_policy: "manual"
+        despawn_rule: "on_quest_complete"
+        duration_seconds: 240
+    quest_actor_triggers:
+      on_accept:
+        - "border_messenger"
+      on_fail:
+        - "border_messenger"
+      on_reset:
+        - "border_messenger"
+    stages:
+      PATROL:
+        description: "Jucatorul verifica regiunea si elimina amenintarile."
+        completion_mode: "all_objectives"
+        next_stage: "RETURN"
+        spawn_actors: "dungeon_spirit"
+        on_stage_enter: "dungeon_spirit"
+        on_stage_complete: "border_messenger"
+        objectives:
+          - "patrol_region"
+          - "clear_zombies"
+      RETURN:
+        description: "Jucatorul revine la garda cu raportul."
+        completion_mode: "manual_turn_in"
+        despawn_actors: "dungeon_spirit"
+        on_stage_exit: "dungeon_spirit"
+        objectives:
+          - "report_to_guard"
+```
+
+## Stadiul implementarii
+
+Am inceput printr-o baza minima care separa:
+
+- clasificarea actorului
+- definitia scenariu
+- adapterul de entitate
+
+In aceasta etapa, implementarea porneste in continuare cu suportul existent pe `Villager`, dar fara sa mai blocheze designul in jurul lui.
+
+### Ce este deja legat in runtime
+
+- scenariile incarcate pot contine `actors`
+- scenariile active pastreaza actorii definiti in template
+- actorii runtime-only pot fi inregistrati temporar in manager
+- exista helper pentru spawn/despawn pe scenariu activ
+- debug dump-ul include numarul de actori si detaliile lor
+- exista comanda admin `/ainpc scenario <list|info|spawn|despawn>`
 
 ## Concluzie
 

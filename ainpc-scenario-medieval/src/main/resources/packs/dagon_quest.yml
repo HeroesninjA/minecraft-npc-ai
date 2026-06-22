@@ -66,6 +66,11 @@ scenarios:
           item: "castel:curte_castel:cufar"
           amount: 1
           description: "Deschide cufarul vechi."
+        kill_zombie:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 1
+          description: "Ucide zombie-ul din curtea castelului."
         return_dagon:
           type: "talk_to_npc"
           item: "profession:garda"

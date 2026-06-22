@@ -3,6 +3,7 @@ package ro.ainpc.engine
 
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.engine.FeaturePackLoader.QuestStageDefinition
+import ro.ainpc.npc.NpcScenarioActorDefinition
 import java.util.Locale
 
 class ScenarioTemplate(val type: ScenarioType) {
@@ -28,8 +29,11 @@ class ScenarioTemplate(val type: ScenarioType) {
     var questRepeatable: Boolean = false
     var questCooldownSeconds: Long = 0L
     var questDialogues: MutableMap<String, List<String>> = LinkedHashMap()
+    var questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap()
+    var validationWarnings: MutableList<String> = ArrayList()
     var questStages: List<QuestStageDefinition> = ArrayList()
     var questContract: QuestScenarioContract = QuestScenarioContract.defaultContract()
+    var actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap()
     var objectives: List<QuestEntryDefinition> = ArrayList()
     var rewards: List<QuestEntryDefinition> = ArrayList()
     var triggerProbability: Double = 0.05
@@ -50,6 +54,26 @@ class ScenarioTemplate(val type: ScenarioType) {
 
     fun addRole(role: ScenarioRoleRule) {
         roles[role.id] = role
+    }
+
+    fun addActor(actorId: String, actor: NpcScenarioActorDefinition?) {
+        if (actor != null && actorId.isNotBlank()) {
+            actors[actorId] = actor
+        }
+    }
+
+    fun addQuestActorTrigger(triggerId: String, actorIds: Collection<String>?) {
+        val normalizedTriggerId = triggerId.trim()
+        if (normalizedTriggerId.isBlank() || actorIds.isNullOrEmpty()) {
+            return
+        }
+        val targetIds = questActorTriggers.getOrPut(normalizedTriggerId) { LinkedHashSet() }
+        for (actorId in actorIds) {
+            val normalizedActorId = actorId.trim()
+            if (normalizedActorId.isNotBlank()) {
+                targetIds.add(normalizedActorId)
+            }
+        }
     }
 
     fun addPhase(phaseId: String, description: String) {

@@ -179,6 +179,41 @@ class StoryActionValidatorTest {
     }
 
     @Test
+    fun validatesAliasTypes() {
+        assertTrue(StoryActionValidator.validateType("set-flag").valid)
+        assertTrue(StoryActionValidator.validateType("story_state").valid)
+        assertTrue(StoryActionValidator.validateType("set_flag").valid)
+        assertTrue(StoryActionValidator.validateType("setstate").valid)
+        assertTrue(StoryActionValidator.validateType("record event").valid)
+        assertTrue(StoryActionValidator.validateType("event").valid)
+        assertTrue(StoryActionValidator.validateType("recordstoryevent").valid)
+    }
+
+    @Test
+    fun acceptsScopeAliases() {
+        val villageResult = StoryActionValidator.validate(entry(
+            type = "set_story_state",
+            metadata = mapOf("scope" to "village", "target" to "region:spawn", "state" to "helped"),
+            variables = mapOf("quest" to "Q01")
+        ))
+        assertTrue(villageResult.valid, "Errors: ${villageResult.errors}")
+
+        val worldResult = StoryActionValidator.validate(entry(
+            type = "set_story_state",
+            metadata = mapOf("scope" to "world_region", "target" to "region:spawn", "state" to "helped"),
+            variables = mapOf("quest" to "Q01")
+        ))
+        assertTrue(worldResult.valid, "Errors: ${worldResult.errors}")
+
+        val settlementResult = StoryActionValidator.validate(entry(
+            type = "record_story_event",
+            metadata = mapOf("scope" to "settlement", "target" to "region:spawn", "event_type" to "test", "event_key" to "test"),
+            payload = mapOf("quest" to "Q01")
+        ))
+        assertTrue(settlementResult.valid, "Errors: ${settlementResult.errors}")
+    }
+
+    @Test
     fun acceptsStateInAnyMetadataKey() {
         val stateKeys = listOf("state_key", "flag", "value", "item")
         for (key in stateKeys) {

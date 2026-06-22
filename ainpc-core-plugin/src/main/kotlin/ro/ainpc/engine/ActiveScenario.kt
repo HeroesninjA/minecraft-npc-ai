@@ -1,5 +1,7 @@
 package ro.ainpc.engine
 
+import ro.ainpc.npc.NpcScenarioActorDefinition
+import org.bukkit.Location
 import java.util.UUID
 
 class ActiveScenario(val id: UUID, template: ScenarioTemplate) {
@@ -9,10 +11,15 @@ class ActiveScenario(val id: UUID, template: ScenarioTemplate) {
     val hint: String = template.hint
     val questCode: String = template.questCode
     val questGiverProfession: String = template.questGiverProfession
+    val actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap(template.actors)
+    val questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap(template.questActorTriggers)
+    val validationWarnings: MutableList<String> = ArrayList(template.validationWarnings)
     val objectives: List<FeaturePackLoader.QuestEntryDefinition> = ArrayList(template.objectives)
     val rewards: List<FeaturePackLoader.QuestEntryDefinition> = ArrayList(template.rewards)
     val npcRoles: MutableMap<UUID, String> = HashMap()
     val playerRoles: MutableMap<UUID, String> = HashMap()
+    val spawnedActors: MutableMap<String, UUID> = LinkedHashMap()
+    var anchorLocation: Location? = null
     var currentPhase: String = ""
     val startTime: Long = System.currentTimeMillis()
 
@@ -27,4 +34,12 @@ class ActiveScenario(val id: UUID, template: ScenarioTemplate) {
     fun hasNPCRole(npcId: UUID): Boolean = npcRoles.containsKey(npcId)
 
     fun hasQuestBriefing(): Boolean = questCode.isNotBlank() || objectives.isNotEmpty() || rewards.isNotEmpty()
+
+    fun assignActor(actorId: String, npcId: UUID) {
+        if (actorId.isNotBlank()) {
+            spawnedActors[actorId] = npcId
+        }
+    }
+
+    fun removeActor(actorId: String): UUID? = spawnedActors.remove(actorId)
 }

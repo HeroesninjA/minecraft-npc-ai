@@ -11,8 +11,11 @@ import org.bukkit.World
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.EntityType
+import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
+import ro.ainpc.debug.DebugDumpSupport
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpService
@@ -240,6 +243,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "population" -> handlePopulation(sender, args)
             "audit" -> handleAudit(sender, args)
             "debugdump" -> handleDebugDump(sender, args)
+            "scenario" -> handleScenario(sender, args)
             "list" -> handleList(sender, args)
             "family" -> handleFamily(sender, args)
             "routine" -> ensureFeatureEnabled(sender, "features.routine", true, "Rutinele") && handleRoutine(
@@ -253,6 +257,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "test" -> handleTest(sender)
             "health", "status", "healthcheck" -> handleHealth(sender)
             "economy" -> handleEconomy(sender, args)
+            "building" -> handleBuilding(sender, args)
             else -> {
                 sendHelp(sender)
                 true
@@ -658,6 +663,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "progress", "progres" -> handleQuestProgress(sender, args)
             "debug" -> handleQuestDebug(sender, args)
             "reset" -> handleResetQuest(sender, args)
+            "spawn" -> handleQuestSpawn(sender, args)
             "complete" -> handleCompleteQuest(sender, args)
             else -> handleTriggerQuest(
                 sender, args[1],
@@ -683,6 +689,29 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 true
             }
         }
+    }
+
+    private fun handleBuilding(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (args.size < 2 || args[1].lowercase() != "templates") {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates"); return true
+        }
+        ro.ainpc.settlement.BuildingTemplateRegistry.loadDefaults()
+        val templates = ro.ainpc.settlement.BuildingTemplateRegistry.getAll()
+        if (templates.isEmpty()) {
+            plugin.messageUtils.send(sender, "&7Nu exista template-uri de cladiri.")
+            return true
+        }
+        plugin.messageUtils.send(sender, "&6=== Building Templates ===")
+        for (t in templates) {
+            plugin.messageUtils.send(
+                sender,
+                "&e${t.templateId} &7- &f${t.displayName} &8[${t.placeType}] &7- ${t.footprintWidth}x${t.footprintDepth}x${t.footprintHeight}, ${t.anchorCount()} ancore"
+            )
+        }
+        return true
     }
 
     // Usage functions delegated to helper files
@@ -1326,6 +1355,32 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         } finally {
             stmt.close()
         }
+    }
+
+    // -- Quest spawn ------------------------------------------------
+    private fun handleQuestSpawn(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val player = sender as? Player
+        if (player == null) {
+            plugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+            return true
+        }
+        val x = if (args.size > 3) args[3].toDoubleOrNull() ?: 171.0 else 171.0
+        val y = if (args.size > 4) args[4].toDoubleOrNull() ?: -60.0 else -60.0
+        val z = if (args.size > 5) args[5].toDoubleOrNull() ?: 148.0 else 148.0
+        val world = player.world
+        val location = Location(world, x, y, z)
+        val entity = world.spawnEntity(location, EntityType.ZOMBIE)
+        entity.setCustomName("§c§lZombie din Castel")
+        entity.setCustomNameVisible(true)
+        if (entity is Mob) {
+            entity.isPersistent = true
+            entity.removeWhenFarAway = false
+        }
+        plugin.messageUtils.send(sender, "&aZombie spawnat la $x, $y, $z in curtea castelului.")
+        return true
     }
 
     // -- Story ------------------------------------------------------
@@ -2213,6 +2268,201 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun handleDebugDumpAuthoring(sender: CommandSender, args: Array<String>): Boolean {
         return handleAuthoring(sender, arrayOf("authoring", "dump"))
+    }
+
+    private fun handleScenario(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.send(sender, "&cNu ai permisiune pentru aceasta comanda.")
+            return true
+        }
+        if (args.size < 2) {
+            plugin.messageUtils.send(sender, "&6Utilizare: &f/ainpc scenario <list|spawn|despawn|info|advance>")
+            return true
+        }
+
+        val scenarioEngine = plugin.scenarioEngine
+        return when (args[1].lowercase(Locale.getDefault())) {
+            "list" -> {
+                val listModes = args.drop(2).map { it.lowercase(Locale.getDefault()) }
+                val unknownModes = listModes.filterNot { it == "warnings-only" || it == "warnings-first" }
+                if (unknownModes.isNotEmpty()) {
+                    plugin.messageUtils.send(sender, "&cMod list necunoscut pentru scenariu: ${unknownModes.joinToString(", ")}")
+                    plugin.messageUtils.send(sender, "&7Foloseste: /ainpc scenario list [warnings-only] [warnings-first]")
+                    return true
+                }
+                if (listModes.contains("warnings-only") && listModes.contains("warnings-first")) {
+                    plugin.messageUtils.send(sender, "&cModurile warnings-only si warnings-first sunt incompatibile.")
+                    plugin.messageUtils.send(sender, "&7Alege un singur mod: /ainpc scenario list [warnings-only] [warnings-first]")
+                    return true
+                }
+                val warningsOnly = listModes.contains("warnings-only")
+                val warningsFirst = listModes.contains("warnings-first")
+                plugin.messageUtils.send(sender, "&6=== Scenarii active ===")
+                val active = scenarioEngine.getActiveScenarios()
+                if (active.isEmpty()) {
+                    plugin.messageUtils.send(sender, "&7Nu exista scenarii active.")
+                    return true
+                }
+                if (warningsOnly) {
+                    plugin.messageUtils.send(sender, "&7Filtru: doar scenarii cu warning-uri.")
+                }
+                val scenarios = if (warningsFirst) {
+                    active.entries.sortedWith(
+                        compareByDescending<Map.Entry<UUID, ActiveScenario>> { it.value.validationWarnings.size }
+                            .thenBy { it.value.templateId.lowercase(Locale.getDefault()) }
+                            .thenBy { it.key.toString() }
+                    )
+                } else {
+                    active.entries.toList()
+                }
+                if (warningsFirst) {
+                    plugin.messageUtils.send(sender, "&7Sortare: warning-uri mai intai.")
+                }
+                for ((scenarioId, scenario) in scenarios) {
+                    if (warningsOnly && scenario.validationWarnings.isEmpty()) {
+                        continue
+                    }
+                    plugin.messageUtils.send(
+                        sender,
+                        "&7- &f${scenario.templateId} &8(${scenario.displayName}) " +
+                            "&7id=&f${scenarioId.toString().substring(0, 8)} &7actori=&f${scenario.actors.size} " +
+                            "&7warnings=&f${scenario.validationWarnings.size}"
+                    )
+                }
+                true
+            }
+            "warnings" -> {
+                plugin.messageUtils.send(sender, "&6=== Scenarii cu warning-uri ===")
+                val active = scenarioEngine.getActiveScenarios()
+                if (active.isEmpty()) {
+                    plugin.messageUtils.send(sender, "&7Nu exista scenarii active.")
+                    return true
+                }
+                val scenarios = active.entries
+                    .filter { it.value.validationWarnings.isNotEmpty() }
+                    .sortedWith(
+                        compareByDescending<Map.Entry<UUID, ActiveScenario>> { it.value.validationWarnings.size }
+                            .thenBy { it.value.templateId.lowercase(Locale.getDefault()) }
+                            .thenBy { it.key.toString() }
+                    )
+                if (scenarios.isEmpty()) {
+                    plugin.messageUtils.send(sender, "&7Nu exista scenarii active cu warning-uri.")
+                    return true
+                }
+                for ((scenarioId, scenario) in scenarios) {
+                    plugin.messageUtils.send(
+                        sender,
+                        "&7- &f${scenario.templateId} &8(${scenario.displayName}) " +
+                            "&7id=&f${scenarioId.toString().substring(0, 8)} &7actori=&f${scenario.actors.size} " +
+                            "&7warnings=&f${scenario.validationWarnings.size}"
+                    )
+                }
+                true
+            }
+            "info" -> {
+                if (args.size < 3) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario info <templateId|displayName>")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                if (entry == null) {
+                    plugin.messageUtils.send(sender, "&cNu am gasit un scenariu activ pentru &f${args[2]}&c.")
+                    return true
+                }
+                val (scenarioId, scenario) = entry
+                plugin.messageUtils.send(
+                    sender,
+                    "&6Scenariu: &f${scenario.templateId} &7| &6ID: &f${scenarioId.toString().substring(0, 8)}"
+                )
+                plugin.messageUtils.send(sender, "&7Actori definiti: &f${scenario.actors.size}")
+                plugin.messageUtils.send(sender, "&7Quest actor triggers: &f${scenario.questActorTriggers.size}")
+                plugin.messageUtils.send(sender, "&7Validation warnings: &f${scenario.validationWarnings.size}")
+                if (scenario.questActorTriggers.isNotEmpty()) {
+                    plugin.messageUtils.send(
+                        sender,
+                        "&7Trigger keys: &f" + scenario.questActorTriggers.keys.sorted().joinToString(", ")
+                    )
+                }
+                plugin.messageUtils.send(sender, "&7Actori spawnați: &f${scenario.spawnedActors.size}")
+                if (scenario.validationWarnings.isNotEmpty()) {
+                    for (warning in scenario.validationWarnings) {
+                        plugin.messageUtils.send(sender, "&e- $warning")
+                    }
+                }
+                for ((actorId, actor) in scenario.actors) {
+                    val spawned = scenario.spawnedActors[actorId] != null
+                    plugin.messageUtils.send(
+                        sender,
+                        "&7- &f$actorId &8${actor.entityKind.name} &7spawned=&f$spawned &7life=&f${actor.lifecycleType.name} &7policy=&f${actor.spawnPolicy.name}"
+                    )
+                }
+                true
+            }
+            "spawn" -> {
+                if (args.size < 4) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario spawn <templateId|displayName> <actorId>")
+                    return true
+                }
+                val player = sender as? Player
+                if (player == null) {
+                    plugin.messageUtils.send(sender, "&cSpawn-ul actorilor cere un jucator online ca locatie de referinta.")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                if (entry == null) {
+                    plugin.messageUtils.send(sender, "&cNu am gasit un scenariu activ pentru &f${args[2]}&c.")
+                    return true
+                }
+                val spawned = scenarioEngine.spawnScenarioActor(entry.key, args[3], player.location)
+                if (spawned == null) {
+                    plugin.messageUtils.send(sender, "&cActorul nu a putut fi spawnat.")
+                    return true
+                }
+                plugin.messageUtils.send(
+                    sender,
+                    "&aActorul &f${args[3]} &aa fost spawnat pentru scenariul &f${entry.value.templateId}&a."
+                )
+                true
+            }
+            "despawn" -> {
+                if (args.size < 4) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario despawn <templateId|displayName> <actorId>")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                if (entry == null) {
+                    plugin.messageUtils.send(sender, "&cNu am gasit un scenariu activ pentru &f${args[2]}&c.")
+                    return true
+                }
+                scenarioEngine.despawnScenarioActor(entry.key, args[3])
+                plugin.messageUtils.send(
+                    sender,
+                    "&eActorul &f${args[3]} &ea fost despawnat pentru scenariul &f${entry.value.templateId}&e."
+                )
+                true
+            }
+            "advance" -> {
+                if (args.size < 3) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario advance <templateId|displayName>")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                if (entry == null) {
+                    plugin.messageUtils.send(sender, "&cNu am gasit un scenariu activ pentru &f${args[2]}&c.")
+                    return true
+                }
+                scenarioEngine.advanceScenario(entry.key)
+                plugin.messageUtils.send(
+                    sender,
+                    "&aScenariul &f${entry.value.templateId}&a a fost avansat manual la urmatoarea faza."
+                )
+                true
+            }
+            else -> {
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario <list|warnings|spawn|despawn|info|advance>")
+                true
+            }
+        }
     }
 
     private fun sendNpcWorldBindingDetails(sender: CommandSender, binding: NpcWorldBinding) {

@@ -47,7 +47,7 @@ object StoryActionValidator {
         }
         val canonical = when (normalized) {
             "set_story_state", "set-flag", "story_state", "set_flag", "setstate" -> "set_story_state"
-            "record_story_event", "record event", "event", "recordstoryevent" -> "record_story_event"
+            "record_story_event", "record_event", "record event", "event", "recordstoryevent" -> "record_story_event"
             else -> ""
         }
         if (canonical.isBlank()) {

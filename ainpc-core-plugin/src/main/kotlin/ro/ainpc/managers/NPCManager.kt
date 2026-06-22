@@ -1486,6 +1486,28 @@ class NPCManager(
         rebuildSourceKeyIndex()
     }
 
+    fun registerTransientNPC(npc: AINPC) {
+        if (npc == null) {
+            return
+        }
+        npcsByUuid[npc.uuid] = npc
+        if (npc.databaseId > 0) {
+            npcsById[npc.databaseId] = npc
+        }
+        npc.applyPersistentIdentity()
+        rebuildSourceKeyIndex()
+        if (npc.bukkitEntity != null) {
+            registerEntity(npc, npc.bukkitEntity!!)
+        }
+    }
+
+    fun unregisterTransientNPC(npc: AINPC) {
+        if (npc == null) {
+            return
+        }
+        unregisterNPC(npc)
+    }
+
     private fun rebuildSourceKeyIndex() {
         npcsBySourceKey.clear()
         npcsBySourceKey.putAll(canonicalSourceKeyOwners())

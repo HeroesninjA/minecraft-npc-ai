@@ -987,18 +987,23 @@ scenarios:
         completed:
           - "Raport bun. Straja poate intari hotarul exact unde trebuie."
       stages:
-        PATROL:
-          description: "Jucatorul verifica regiunea si elimina amenintarile."
-          completion_mode: "all_objectives"
-          next_stage: "RETURN"
-          objectives:
-            - "patrol_region"
-            - "clear_zombies"
-        RETURN:
-          description: "Jucatorul revine la garda cu raportul."
-          completion_mode: "manual_turn_in"
-          objectives:
-            - "report_to_guard"
+      PATROL:
+        description: "Jucatorul verifica regiunea si elimina amenintarile."
+        completion_mode: "all_objectives"
+        next_stage: "RETURN"
+        spawn_actors: "dungeon_spirit"
+        on_stage_enter: "dungeon_spirit"
+        on_stage_complete: "border_messenger"
+        objectives:
+          - "patrol_region"
+          - "clear_zombies"
+      RETURN:
+        description: "Jucatorul revine la garda cu raportul."
+        completion_mode: "manual_turn_in"
+        despawn_actors: "dungeon_spirit"
+        on_stage_exit: "dungeon_spirit"
+        objectives:
+          - "report_to_guard"
       objectives:
         patrol_region:
           type: "visit_region"
@@ -1037,6 +1042,44 @@ scenarios:
           item: "ARROW"
           amount: 8
           description: "Primesti 8 sageti."
+    actors:
+      dungeon_spirit:
+        name: "Spiritul din Cripta"
+        lifecycle_type: "episodic"
+        persistence_mode: "runtime_only"
+        simulation_mode: "none"
+        interaction_profile: "scene_only"
+        entity_kind: "spirit"
+        entity_archetype: "wraith"
+        owner_scenario_id: "medieval_quest"
+        owner_quest_id: "Q08"
+        spawn_source: "border_patrol_scene"
+        spawn_phase: "investigation"
+        spawn_policy: "phase"
+        despawn_rule: "on_stage_complete"
+        duration_seconds: 180
+        temporary_tags:
+          - "undead"
+          - "dungeon"
+          - "scene"
+      border_messenger:
+        name: "Mesagerul Hotarului"
+        lifecycle_type: "temporary"
+        persistence_mode: "runtime_only"
+        simulation_mode: "light"
+        interaction_profile: "scene_only"
+        entity_kind: "villager"
+        spawn_source: "quest_accept_scene"
+        spawn_policy: "manual"
+        despawn_rule: "on_quest_complete"
+        duration_seconds: 240
+    quest_actor_triggers:
+      on_accept:
+        - "border_messenger"
+      on_fail:
+        - "border_messenger"
+      on_reset:
+        - "border_messenger"
     roles:
       QUEST_GIVER:
         description: "Garda care coordoneaza patrula hotarului."

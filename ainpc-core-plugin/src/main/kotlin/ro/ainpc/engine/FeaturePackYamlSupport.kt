@@ -1,6 +1,13 @@
 package ro.ainpc.engine
 
 import org.bukkit.configuration.ConfigurationSection
+import ro.ainpc.npc.NpcEntityKind
+import ro.ainpc.npc.NpcInteractionProfile
+import ro.ainpc.npc.NpcLifecycleType
+import ro.ainpc.npc.NpcPersistenceMode
+import ro.ainpc.npc.NpcSpawnPolicy
+import ro.ainpc.npc.NpcScenarioActorDefinition
+import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.topology.TopologyCategory
 import java.util.LinkedHashMap
 import java.util.function.BiConsumer
@@ -195,6 +202,8 @@ object FeaturePackYamlSupport {
             }
 
             loadScenarioPhases(scenario, scenarioSection)
+            loadScenarioActors(scenario, scenarioSection.getConfigurationSection("actors"))
+            loadQuestActorTriggers(scenario, scenarioSection.getConfigurationSection("quest_actor_triggers"))
 
             val questSection = scenarioSection.getConfigurationSection("quest")
             if (questSection != null) {
@@ -375,6 +384,94 @@ object FeaturePackYamlSupport {
                 ),
             )
         }
+    }
+
+    @JvmStatic
+    fun loadScenarioActors(
+        scenario: FeaturePackLoader.ScenarioDefinition,
+        actorsSection: ConfigurationSection?,
+    ) {
+        if (actorsSection == null) {
+            return
+        }
+
+        for (actorId in actorsSection.getKeys(false)) {
+            val actorSection = actorsSection.getConfigurationSection(actorId) ?: continue
+            val actor = NpcScenarioActorDefinition(
+                id = actorId,
+                name = actorSection.getString("name", actorId) ?: actorId,
+                lifecycleType = readLifecycleType(actorSection.getString("lifecycle_type"), NpcLifecycleType.TEMPORARY),
+                persistenceMode = readPersistenceMode(actorSection.getString("persistence_mode"), NpcPersistenceMode.LIGHT),
+                simulationMode = readSimulationMode(actorSection.getString("simulation_mode"), NpcSimulationMode.LIGHT),
+                interactionProfile = readInteractionProfile(actorSection.getString("interaction_profile"), NpcInteractionProfile.MINIMAL),
+                entityKind = readEntityKind(actorSection.getString("entity_kind"), NpcEntityKind.VILLAGER),
+                entityArchetype = actorSection.getString("entity_archetype", "") ?: "",
+                ownerScenarioId = actorSection.getString("owner_scenario_id", "") ?: "",
+                ownerQuestId = actorSection.getString("owner_quest_id", "") ?: "",
+                spawnSource = actorSection.getString("spawn_source", "") ?: "",
+                spawnPhase = actorSection.getString("spawn_phase", "") ?: "",
+                spawnPolicy = readSpawnPolicy(actorSection.getString("spawn_policy"), NpcSpawnPolicy.AUTO),
+                despawnRule = actorSection.getString("despawn_rule", "") ?: "",
+                durationSeconds = if (actorSection.contains("duration_seconds")) actorSection.getLong("duration_seconds") else null,
+                temporaryTags = actorSection.getStringList("temporary_tags").toSet(),
+            )
+            scenario.addActor(actorId, actor)
+        }
+    }
+
+    @JvmStatic
+    fun loadQuestActorTriggers(
+        scenario: FeaturePackLoader.ScenarioDefinition,
+        triggersSection: ConfigurationSection?,
+    ) {
+        if (triggersSection == null) {
+            return
+        }
+
+        for (triggerId in triggersSection.getKeys(false)) {
+            val rawTrigger = triggersSection.get(triggerId)
+            val normalizedTriggerId = QuestActorTriggers.normalize(triggerId)
+            if (normalizedTriggerId.isNullOrBlank()) {
+                continue
+            }
+            if (!QuestActorTriggers.isSupported(normalizedTriggerId)) {
+                scenario.addValidationWarning("quest_actor_triggers.$triggerId necunoscut; ignorat.")
+                continue
+            }
+            val actorIds = when (rawTrigger) {
+                is List<*> -> rawTrigger.mapNotNull { it?.toString() }
+                is String -> rawTrigger.split(',', ';', '|')
+                is ConfigurationSection -> rawTrigger.getStringList("actors")
+                else -> emptyList()
+            }
+            scenario.addQuestActorTrigger(normalizedTriggerId, actorIds)
+        }
+    }
+
+    private fun readLifecycleType(rawValue: String?, fallback: NpcLifecycleType): NpcLifecycleType =
+        enumValue(rawValue, fallback, NpcLifecycleType.values())
+
+    private fun readPersistenceMode(rawValue: String?, fallback: NpcPersistenceMode): NpcPersistenceMode =
+        enumValue(rawValue, fallback, NpcPersistenceMode.values())
+
+    private fun readSimulationMode(rawValue: String?, fallback: NpcSimulationMode): NpcSimulationMode =
+        enumValue(rawValue, fallback, NpcSimulationMode.values())
+
+    private fun readInteractionProfile(rawValue: String?, fallback: NpcInteractionProfile): NpcInteractionProfile =
+        enumValue(rawValue, fallback, NpcInteractionProfile.values())
+
+    private fun readEntityKind(rawValue: String?, fallback: NpcEntityKind): NpcEntityKind =
+        enumValue(rawValue, fallback, NpcEntityKind.values())
+
+    private fun readSpawnPolicy(rawValue: String?, fallback: NpcSpawnPolicy): NpcSpawnPolicy =
+        enumValue(rawValue, fallback, NpcSpawnPolicy.values())
+
+    private fun <T : Enum<T>> enumValue(rawValue: String?, fallback: T, values: Array<T>): T {
+        val normalized = rawValue?.trim().orEmpty()
+        if (normalized.isBlank()) {
+            return fallback
+        }
+        return values.firstOrNull { candidate -> candidate.name.equals(normalized, ignoreCase = true) } ?: fallback
     }
 
     @JvmStatic
