@@ -78,4 +78,22 @@ class QuestSeedFactoryTest {
         assertEquals("no_story", seed.storyMode())
         assertTrue(seed.limits().contains("decision_status=no_action"))
     }
+
+    @Test
+    fun seedFactoryAdvertisesRuntimeSupportedObjectives() {
+        val seed = QuestSeedFactory().create(
+            QuestDirectorDecision.noAction("no_story", emptyList()),
+            StoryContextSnapshot.empty(),
+            null,
+            "demo_sat",
+            ""
+        )
+
+        assertTrue(seed.allowedObjectiveTypes().contains("visit_region"))
+        assertTrue(seed.allowedObjectiveTypes().contains("collect_item"))
+        assertTrue(seed.allowedObjectiveTypes().contains("kill_mob"))
+        assertTrue(seed.allowedObjectiveTypes().contains("place_block"))
+        assertTrue(seed.allowedObjectiveTypes().contains("break_block"))
+        assertTrue(seed.allowedObjectiveTypes().contains("craft_item"))
+    }
 }

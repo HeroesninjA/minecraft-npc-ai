@@ -46,6 +46,7 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 - `households-persistente.md`, `rutine-npc-si-timeline.md`, `prevenire-duplicare-npc.md` si `generare-populatie-narativa.md` depind de mapping si de bind-urile NPC.
 - `simulare-sat-si-lume.md` descrie sistemul de simulare la nivel mare, peste mapping si NPC bindings.
 - `environment-context-si-engine.md` si `gui-interfete.md` folosesc mapping-ul ca baza pentru inspectie si prezentare.
+- `gui-interfete.md` si `gui-admin-mapping-quest.md` includ acum reguli explicite de simplificare UI/UX: progressive disclosure, separare player/admin si layout-uri mai curate pentru authoring si editare.
 
 ### 3. NPC, rutine si simulare
 
@@ -74,7 +75,8 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 - `documentatie-api.md` este contractul public curent.
 - `refactorizare-si-impartire-pe-module.md` si `strategie-plugin-modular-si-scenarii-programabile.md` descriu cum se extinde platforma.
 - `kotlin-style-guide.md`, `kotlin-interop-api-addonuri.md`, `kotlin-code-review-checklist.md`, `kotlin-testing-strategy.md` si `kotlin-coroutines-paper-policy.md` sunt reguli si ghiduri de implementare.
-- `gui-interfete.md` acopera si extensibilitatea GUI-ului intern pentru addonuri.
+- `gui-interfete.md` acopera si extensibilitatea GUI-ului intern pentru addonuri, strategia de simplificare a ecranelor principale si terminologia standard de UI.
+- `gui-admin-mapping-quest.md` acopera fluxul admin de mapping/quest, regulile de separare view/edit/preview/confirm si terminologia standard de admin UI.
 - `reducere-marime-jar.md` influenteaza livrarea si packaging-ul.
 - `arhiva/kotlin-migration/README.md` este istoric pentru migrarile Java -> Kotlin.
 

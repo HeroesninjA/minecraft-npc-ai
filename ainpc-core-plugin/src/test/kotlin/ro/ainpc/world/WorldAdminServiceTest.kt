@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import ro.ainpc.platform.PlatformProfile
 import ro.ainpc.platform.RuntimeMode
+import java.util.function.Consumer
 import java.util.logging.Logger
 
 class WorldAdminServiceTest {
@@ -358,6 +359,63 @@ class WorldAdminServiceTest {
         assertEquals(1, reloadedService.regionCount)
         assertEquals(1, reloadedService.placeCount)
         assertEquals(1, reloadedService.nodeCount)
+    }
+
+    @Test
+    fun removePlaceDoesNotLeakStaleNodesIntoRecreatedPlace() {
+        service.createRegion("satul_central", null, "world", RegionType.SETTLEMENT, 100, 60, 100, 220, 90, 220)
+        service.createPlace("satul_central", "fierarie", null, "world", PlaceType.FORGE, 140, 64, 145, 149, 73, 155)
+        service.createNode("satul_central", "satul_central:fierarie", "forge_spot", WorldNodeType.INTERACTION, "world", 144.0, 65.0, 149.0, 2.0)
+
+        assertTrue(service.removePlace("satul_central:fierarie"))
+        service.createPlace("satul_central", "fierarie", null, "world", PlaceType.FORGE, 140, 64, 145, 149, 73, 155)
+
+        val savedConfiguration = YamlConfiguration()
+        service.saveToConfig(savedConfiguration)
+
+        val reloadedService = WorldAdminService({ }, Logger.getLogger("WorldAdminReloadedTest"))
+        reloadedService.reloadFromConfig(savedConfiguration, profile())
+
+        assertNull(reloadedService.getNode("satul_central:fierarie:forge_spot"))
+        assertEquals(0, reloadedService.nodeCount)
+    }
+
+    @Test
+    fun removeRegionClearsNestedNodesBeforeSave() {
+        service.createRegion("satul_central", null, "world", RegionType.SETTLEMENT, 100, 60, 100, 220, 90, 220)
+        service.createPlace("satul_central", "fierarie", null, "world", PlaceType.FORGE, 140, 64, 145, 149, 73, 155)
+        service.createNode("satul_central", "satul_central:fierarie", "forge_spot", WorldNodeType.INTERACTION, "world", 144.0, 65.0, 149.0, 2.0)
+
+        assertTrue(service.removeRegion("satul_central"))
+        val savedConfiguration = YamlConfiguration()
+        service.saveToConfig(savedConfiguration)
+
+        val reloadedService = WorldAdminService({ }, Logger.getLogger("WorldAdminRegionRemovedTest"))
+        reloadedService.reloadFromConfig(savedConfiguration, profile())
+
+        assertNull(reloadedService.getRegion("satul_central"))
+        assertNull(reloadedService.getPlace("satul_central:fierarie"))
+        assertNull(reloadedService.getNode("satul_central:fierarie:forge_spot"))
+        assertEquals(0, reloadedService.regionCount)
+        assertEquals(0, reloadedService.placeCount)
+        assertEquals(0, reloadedService.nodeCount)
+    }
+
+    @Test
+    fun createCastelMappingMarksServiceDirty() {
+        val method = WorldAdminService::class.java.getDeclaredMethod(
+            "createCastelMapping",
+            Consumer::class.java
+        )
+        method.isAccessible = true
+
+        val created = method.invoke(service, Consumer<String> { }) as Boolean
+
+        assertTrue(created)
+        assertTrue(service.hasUnsavedChanges())
+        assertNotNull(service.getRegion("castel"))
+        assertNotNull(service.getPlace("castel:poarta_castel"))
+        assertNotNull(service.getNode("castel:curte_castel:cufar"))
     }
 
     @Test

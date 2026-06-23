@@ -39,13 +39,15 @@ class QuestLogGui : GuiScreen {
                     "&7Afiseaza snapshot-ul curent pentru jucator.",
                     "&7Filtru: &f${snapshot.filterLabel()}",
                     "&7Progresii curente: &f${snapshot.currentEntries().size}",
-                    "&7Progresii arhivate vizibile: &f${snapshot.archivedEntries().size}"
+                    "&7Progresii arhivate vizibile: &f${snapshot.archivedEntries().size}",
+                    "&8Actiuni principale: detalii / track / refresh"
                 )
             )
         )
         renderAuthoringSummary(context, snapshot)
         renderQuestDiagnostics(context)
-        renderFilters(context, activeFilter)
+        renderBaseFilters(context, activeFilter)
+        renderAdvancedFilter(context, activeFilter)
 
         val entries = snapshot.allEntries()
         val page = QuestLogGuiPage.fromEntries(
@@ -333,9 +335,15 @@ class QuestLogGui : GuiScreen {
         click.service().openQuestDetail(click.player(), selector, activeFilter)
     }
 
-    private fun renderFilters(context: GuiRenderContext, activeFilter: String) {
+    private fun renderBaseFilters(context: GuiRenderContext, activeFilter: String) {
         var slot = 9
-        for (filter in QuestLogGuiFilter.primaryFilters()) {
+        val baseFilters = listOf(
+            QuestLogGuiFilter.ALL,
+            QuestLogGuiFilter.ACTIVE,
+            QuestLogGuiFilter.QUEST,
+            QuestLogGuiFilter.CONTRACT
+        )
+        for (filter in baseFilters) {
             val selected = filter.matches(activeFilter)
             context.button(
                 slot++,
@@ -345,13 +353,52 @@ class QuestLogGui : GuiScreen {
                         if (selected) "&a${filter.buttonLabel()}" else "&f${filter.buttonLabel()}",
                         listOf(
                             if (selected) "&aFiltru curent." else "&7Click pentru filtrare.",
-                            "&7Ruleaza view-ul: &f${filter.displayLabel()}"
+                            "&7Filtru de baza: &f${filter.displayLabel()}"
                         )
                     ),
                     GuiAction { click -> click.service().openQuestLog(click.player(), filter.filter()) }
                 )
             )
         }
+    }
+
+    private fun renderAdvancedFilter(context: GuiRenderContext, activeFilter: String) {
+        val advancedFilters = listOf(
+            QuestLogGuiFilter.DUTY,
+            QuestLogGuiFilter.BOUNTY,
+            QuestLogGuiFilter.EVENT,
+            QuestLogGuiFilter.TUTORIAL,
+            QuestLogGuiFilter.RITUAL
+        )
+        val selected = advancedFilters.firstOrNull { it.matches(activeFilter) }
+        val nextFilter = nextAdvancedFilter(selected, advancedFilters)
+        context.button(
+            13,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    if (selected != null) Material.AMETHYST_SHARD else Material.BOOK,
+                    if (selected != null) "&dAvansat: ${selected.buttonLabel()}" else "&fFiltre avansate",
+                    listOf(
+                        "&7Acopera: sarcini, bounty, evenimente, tutoriale, ritualuri.",
+                        if (selected != null) "&7Filtru curent avansat." else "&7Click pentru primul filtru avansat.",
+                        "&7Urmator: &f${nextFilter.buttonLabel()}"
+                    )
+                ),
+                GuiAction { click -> click.service().openQuestLog(click.player(), nextFilter.filter()) }
+            )
+        )
+    }
+
+    private fun nextAdvancedFilter(
+        selected: QuestLogGuiFilter?,
+        filters: List<QuestLogGuiFilter>
+    ): QuestLogGuiFilter {
+        if (filters.isEmpty()) {
+            return QuestLogGuiFilter.ALL
+        }
+        val index = selected?.let { filters.indexOf(it) } ?: -1
+        val nextIndex = if (index < 0 || index + 1 >= filters.size) 0 else index + 1
+        return filters[nextIndex]
     }
 
     private fun entryMaterial(entry: ProgressionGuiEntry): Material {

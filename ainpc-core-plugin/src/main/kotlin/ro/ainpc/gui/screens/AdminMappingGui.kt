@@ -61,7 +61,8 @@ class AdminMappingGui : GuiScreen {
                 "&7World mode: &f${worldMode.id}",
                 "&7Indexare automata: &f${if (isAutoIndex) "activa" else "dezactivata"}",
                 "&7Current region: &f${currentRegion?.id() ?: "<niciuna>"}",
-                if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate salvate"
+                if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate salvate",
+                "&8Actiuni principale: whereami / scan / save"
             )
         ))
 
@@ -78,7 +79,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.OAK_DOOR, "&aWhere am I", "&7Ruleaza /ainpc world whereami."),
+            GuiItemFactory.item(Material.OAK_DOOR, "&aWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiune principala."),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
         ))
 
@@ -88,7 +89,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(13, GuiButton.enabled(
-            GuiItemFactory.item(Material.SPYGLASS, "&6Scan sat", "&7Scaneaza vanilla village in raza 48."),
+            GuiItemFactory.item(Material.SPYGLASS, "&6Scan sat", "&7Scaneaza vanilla village in raza 48.", "&8Admin separat."),
             GuiAction { click ->
                 click.service().openConfirmCommand(
                     click.player(),
@@ -102,7 +103,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", "&7Creeaza mapping demo la pozitia ta."),
+            GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", "&7Creeaza mapping demo la pozitia ta.", "&8Admin separat."),
             GuiAction { click ->
                 click.service().openConfirmCommand(
                     click.player(),
@@ -116,7 +117,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(15, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza mapping", "&7Persista modificarile in config."),
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza mapping", "&7Persista modificarile in config.", "&8Actiune persistenta separata."),
             GuiAction { click ->
                 click.service().openConfirmCommand(
                     click.player(),
@@ -139,7 +140,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(17, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
         ))
 

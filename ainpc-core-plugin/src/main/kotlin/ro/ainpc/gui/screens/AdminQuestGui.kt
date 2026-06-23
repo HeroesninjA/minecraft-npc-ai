@@ -48,31 +48,9 @@ class AdminQuestGui : GuiScreen {
                 "&7Progresii curente: &f${snapshot.allEntries().size}",
                 "&7Active: &f${snapshot.currentEntries().count { it.active() }}",
                 "&7Tracked: &f${snapshot.currentEntries().count { it.tracked() }}",
-                if (storedSummary != null) "&7Stored DB: &f${storedSummary.rowCount()}" else "&7Stored DB: &cN/A"
-            )
-        ))
-
-        context.item(5, GuiItemFactory.item(
-            Material.WRITABLE_BOOK,
-            "&bDefinitii",
-            listOf(
-                "&7Total: &f${definitions.size}",
-                "&7Enabled: &f${definitions.count { it.enabled() }}",
-                "&7Repeatable: &f${definitions.count { it.repeatable() }}",
-                "&7Cu stagii: &f${definitions.count { it.stageCount() > 0 }}",
-                "&7Cu obiective: &f${definitions.count { it.objectiveCount() > 0 }}",
-                "&7Cu recompense: &f${definitions.count { it.rewardCount() > 0 }}"
-            )
-        ))
-
-        context.item(6, GuiItemFactory.item(
-            Material.STRUCTURE_BLOCK,
-            "&dDiagnostic",
-            listOf(
-                "&7Def. duplicat (id): &f${duplicates.size}",
-                "&7Def. duplicat (cod): &f${duplicateCodes.size}",
-                if (unresolvedCount >= 0) "&7Nerezolvate in DB: &f$unresolvedCount" else "&7Nerezolvate: &cDB indisponibil",
-                if (storedSummary != null) "&7Stored: &f${storedSummary.rowCount()} (current: &f${storedSummary.currentCount()}&7, archived: &f${storedSummary.archivedCount()}&7)" else "&7Stored DB: &cN/A"
+                "&7Diagnostic: &fdup=${duplicates.size}, code=${duplicateCodes.size}, unresolved=${if (unresolvedCount >= 0) unresolvedCount else -1}",
+                if (storedSummary != null) "&7Stored DB: &f${storedSummary.rowCount()}" else "&7Stored DB: &cN/A",
+                "&8Actiuni principale: log / authoring / anchors"
             )
         ))
 

@@ -61,6 +61,7 @@ Ordinea recomandata pentru orientare:
 49. `harta-pachetelor-cod.md`
 50. `harta-clase-index.md`
 51. `arhiva/kotlin-migration/README.md`
+52. `deepseek-taskuri-late-25.md`
 
 ## Documente Kotlin
 

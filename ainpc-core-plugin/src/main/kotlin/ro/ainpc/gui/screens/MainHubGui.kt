@@ -36,7 +36,8 @@ class MainHubGui : GuiScreen {
                     "&7NPC-uri incarcate: &f${context.plugin().npcManager.getNPCCount()}",
                     "&7World mapping: &f${worldAdmin.regionCount} regiuni, " +
                         "${worldAdmin.placeCount} places, ${worldAdmin.nodeCount} noduri",
-                    "&7Locatie: &f${location.world.name} ${location.blockX}, ${location.blockY}, ${location.blockZ}"
+                    "&7Locatie: &f${location.world.name} ${location.blockX}, ${location.blockY}, ${location.blockZ}",
+                    "&8Actiuni principale: progresii / interactiune / world"
                 )
             )
         )
@@ -46,9 +47,9 @@ class MainHubGui : GuiScreen {
                 Material.PAPER,
                 "&aVersion snapshot",
                 listOf(
-                    "&7Ultima versiune: &f${versionSnapshot.version}",
-                    "&7Build hash: &f${versionSnapshot.buildHash}",
-                    "&7Build timestamp: &f${versionSnapshot.buildTimestamp}"
+                    "&7Versiune: &f${versionSnapshot.version}",
+                    "&7Build: &f${versionSnapshot.buildHash}",
+                    "&8Snapshot de runtime pentru suport si debug."
                 )
             )
         )
@@ -59,7 +60,7 @@ class MainHubGui : GuiScreen {
             GuiKey.QUEST,
             Material.WRITABLE_BOOK,
             "&eProgresii",
-            listOf("&7Questuri, contracte, duty-uri si tracking.")
+            listOf("&7Questuri si progresii active.", "&8Actiune principala.")
         )
         openButton(
             context,
@@ -67,7 +68,7 @@ class MainHubGui : GuiScreen {
             GuiKey.INTERACT,
             Material.VILLAGER_SPAWN_EGG,
             "&aInteractiune NPC",
-            listOf("&7NPC-uri apropiate si actiuni rapide.")
+            listOf("&7NPC-uri apropiate si actiuni rapide.", "&8Vorbit / quest / routine.")
         )
         openButton(
             context,
@@ -75,7 +76,7 @@ class MainHubGui : GuiScreen {
             GuiKey.WORLD,
             Material.COMPASS,
             "&bWorld",
-            listOf("&7Regiune, place, noduri si context local.")
+            listOf("&7Regiune, place, noduri si context local.", "&8Context si navigare.")
         )
         val currentRegion = worldAdmin.findRegion(location.world.name, location.blockX, location.blockY, location.blockZ)
         val currentPlace = worldAdmin.findPlace(location.world.name, location.blockX, location.blockY, location.blockZ)
@@ -103,7 +104,7 @@ class MainHubGui : GuiScreen {
             GuiKey.STATS,
             Material.CLOCK,
             "&dStatistici",
-            listOf("&7Snapshot personal si NPC-uri din apropiere.")
+            listOf("&7Snapshot personal si NPC-uri din apropiere.", "&8Informatii scurte.")
         )
         openButton(
             context,
@@ -111,7 +112,7 @@ class MainHubGui : GuiScreen {
             GuiKey.SHOP,
             Material.EMERALD,
             "&2Shop NPC",
-            listOf("&7Intrare pregatita pentru economie/shop.")
+            listOf("&7Intrare pregatita pentru economie/shop.", "&8Actiune secundara.")
         )
         openButton(
             context,
@@ -119,7 +120,7 @@ class MainHubGui : GuiScreen {
             GuiKey.ROUTINE,
             Material.CLOCK,
             "&eRutine NPC",
-            listOf("&7Preview program zilnic si status rutina.")
+            listOf("&7Preview program zilnic si status rutina.", "&8Inspectie separata.")
         )
         openButton(
             context,
@@ -127,7 +128,7 @@ class MainHubGui : GuiScreen {
             GuiKey.STORY,
             Material.AMETHYST_SHARD,
             "&dStory",
-            listOf("&7State narativ local si evenimente recente.")
+            listOf("&7State narativ local si evenimente recente.", "&8Context narativ.")
         )
 
         openButton(
@@ -136,7 +137,7 @@ class MainHubGui : GuiScreen {
             GuiKey.MANAGER,
             Material.NAME_TAG,
             "&6Manager NPC",
-            listOf("&7Lista NPC admin, info si teleport.")
+            listOf("&7Lista NPC admin, info si teleport.", "&8Admin separat.")
         )
         openButton(
             context,
@@ -144,7 +145,7 @@ class MainHubGui : GuiScreen {
             GuiKey.AUDIT,
             Material.REDSTONE_TORCH,
             "&cAudit",
-            listOf("&7Ruleaza audituri operationale.")
+            listOf("&7Ruleaza audituri operationale.", "&8Inspectie separata.")
         )
         openButton(
             context,
@@ -152,7 +153,7 @@ class MainHubGui : GuiScreen {
             GuiKey.DEBUG,
             Material.SPYGLASS,
             "&9Debug",
-            listOf("&7Debugdump si test OpenAI.")
+            listOf("&7Debugdump si test OpenAI.", "&8Tooling separat.")
         )
         openButton(
             context,
@@ -160,7 +161,7 @@ class MainHubGui : GuiScreen {
             GuiKey.AUTHORING,
             Material.ENCHANTED_BOOK,
             "&bAuthoring",
-            listOf("&7Snapshot story, mapping si progresie pentru quest design.")
+            listOf("&7Snapshot story, mapping si progresie pentru quest design.", "&8Authoring compact.")
         )
         context.button(
             32,

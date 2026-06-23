@@ -64,7 +64,8 @@ class QuestDetailGui : GuiScreen {
             GuiItemFactory.item(
                 Material.COMPARATOR,
                 "&bSelection detail",
-                entry.detailDiagnosticLines().map { line -> "&7${line}" }.take(8)
+                entry.detailDiagnosticLines().map { line -> "&7${line}" }.take(4) +
+                    listOf("&8Actiuni principale: status / track / abandon")
             )
         )
     }
@@ -120,7 +121,7 @@ class QuestDetailGui : GuiScreen {
             GuiItemFactory.item(
                 Material.BOOK,
                 "&bStatus runtime",
-                compactLore(entry.statusLines(), "&8Nu exista linii de status in snapshot.", 5)
+                    compactLore(entry.statusLines(), "&8Nu exista linii de status in snapshot.", 3)
             )
         )
         context.item(
@@ -128,7 +129,7 @@ class QuestDetailGui : GuiScreen {
             GuiItemFactory.item(
                 Material.OAK_SIGN,
                 "&aActiuni sugerate",
-                compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.", 5)
+                compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.", 3)
             )
         )
     }
@@ -156,13 +157,9 @@ class QuestDetailGui : GuiScreen {
             "&7Snapshot handled: &f${snapshot.handled()}",
             "&7Filter: &f${valueOrUnknown(detailFilter)}",
             "&7Matched selector: &f${valueOrUnknown(matchedSelector)}",
-            "&7Current entries: &f${snapshot.currentEntries().size}",
-            "&7Archived entries: &f${snapshot.archivedEntries().size}",
+            "&7Current / archived: &f${snapshot.currentEntries().size} / ${snapshot.archivedEntries().size}",
             "&7Selected current: &f$currentMatches",
             "&7Selected archived: &f$archivedMatches",
-            "&7UI tracked: &f${entry.tracked()}",
-            "&7UI active: &f${entry.active()}",
-            "&7UI completed: &f${entry.archived()}",
             "&8Click-through uses the same selector and filter chain."
         )
         context.item(
@@ -412,6 +409,7 @@ class QuestDetailGui : GuiScreen {
         if (entry.currentStageLabel().isNotBlank()) {
             lore.add("&7Stage curent: &f${entry.currentStageLabel()}")
         }
+        lore.add("&8Actiuni principale: detalii / track / status")
         if (entry.tracked()) {
             lore.add("&bProgresie urmarita")
         }

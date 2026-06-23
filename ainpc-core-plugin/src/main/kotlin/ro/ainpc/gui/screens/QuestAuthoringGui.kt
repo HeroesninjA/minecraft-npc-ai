@@ -49,33 +49,8 @@ class QuestAuthoringGui : GuiScreen {
                     "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
                     "&7Entries progresie: &f${progressionSnapshot.allEntries().size}",
                     "&7Story signals: &f${storyContext.storySignals().size}",
-                    "&7Warnings: &f${authoringSnapshot.warnings.size}"
-                )
-            )
-        )
-
-        context.item(
-            5,
-            GuiItemFactory.item(
-                Material.NAME_TAG,
-                "&bQuest selector",
-                listOf(
-                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
-                    "&7Ciclareaza selectorul authoring.",
-                    "&7Folosit la dump si analiza GUI."
-                )
-            )
-        )
-
-        context.item(
-            6,
-            GuiItemFactory.item(
-                Material.COMPARATOR,
-                "&dMechanic",
-                listOf(
-                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
-                    "&7Ciclareaza mecanica authoring.",
-                    "&7Raman mecanicile active din progresie."
+                    "&7Warnings: &f${authoringSnapshot.warnings.size}",
+                    "&8Actiuni principale: next / prev / reset / dump"
                 )
             )
         )
@@ -93,8 +68,15 @@ class QuestAuthoringGui : GuiScreen {
             11,
             GuiItemFactory.item(
                 Material.BOOK,
-                "&dDecision",
-                compactLore(authoringSnapshot.summaryLines, "&7", 7)
+                "&dDecision detail",
+                listOf(
+                    "&7Decision: &f${valueOrUnknown(authoringSnapshot.decisionStatus())}",
+                    "&7Reason: &f${valueOrUnknown(authoringSnapshot.decisionReason())}",
+                    "&7Runtime executable: &f${authoringSnapshot.decisionRuntimeExecutable()}",
+                    "&7Matched signals: &f${valueOrUnknown(authoringSnapshot.decisionMatchedSignals().joinToString(", "))}",
+                    "&7Candidate templates: &f${valueOrUnknown(authoringSnapshot.decisionCandidateTemplateIds().joinToString(", "))}",
+                    "&7Blocked reasons: &f${valueOrUnknown(authoringSnapshot.decisionBlockedReasons().joinToString(", "))}"
+                )
             )
         )
 
@@ -110,41 +92,10 @@ class QuestAuthoringGui : GuiScreen {
         context.item(
             12,
             GuiItemFactory.item(
-                Material.STRUCTURE_BLOCK,
-                "&6Decision detail",
-                listOf(
-                    "&7Runtime executable: &f${authoringSnapshot.decisionRuntimeExecutable()}",
-                    "&7Matched signals: &f${valueOrUnknown(authoringSnapshot.decisionMatchedSignals().joinToString(", "))}",
-                    "&7Candidate templates: &f${valueOrUnknown(authoringSnapshot.decisionCandidateTemplateIds().joinToString(", "))}",
-                    "&7Blocked reasons: &f${valueOrUnknown(authoringSnapshot.decisionBlockedReasons().joinToString(", "))}"
-                )
-            )
-        )
-
-        context.item(
-            13,
-            GuiItemFactory.item(
-                Material.ENCHANTED_BOOK,
-                "&aSeed",
-                seedLore(authoringSnapshot)
-            )
-        )
-
-        context.item(
-            14,
-            GuiItemFactory.item(
-                Material.FILLED_MAP,
-                "&bProgressie",
-                progressionLore(progressionSnapshot.summaryLines())
-            )
-        )
-
-        context.item(
-            15,
-            GuiItemFactory.item(
                 Material.REDSTONE_TORCH,
                 "&eWarnings",
-                warningLore(authoringSnapshot.warnings)
+                warningLore(authoringSnapshot.warnings) +
+                    listOf("&7Progressie: &f${progressionSnapshot.allEntries().size}", "&7Seed: &f${authoringSnapshot.seedKind()}")
             )
         )
 

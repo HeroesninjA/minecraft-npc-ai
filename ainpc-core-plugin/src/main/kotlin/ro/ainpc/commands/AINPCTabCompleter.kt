@@ -1239,7 +1239,18 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             listOf("region", "place", "node", "npc_bind", "quest_anchor", "preview", "confirm", "cancel")
         private val MAP_QUEST_ANCHOR_SELECTORS = listOf("tracked", "current")
         private val MAP_QUEST_ANCHOR_OBJECTIVE_TYPES =
-            listOf("visit_place", "inspect_node", "talk_to_npc", "deliver_to_npc", "visit_region", "kill_mob")
+            listOf(
+                "visit_place",
+                "inspect_node",
+                "talk_to_npc",
+                "deliver_to_npc",
+                "visit_region",
+                "kill_mob",
+                "collect_item",
+                "place_block",
+                "break_block",
+                "craft_item"
+            )
         private val STORY_MODES = listOf("context", "region", "place", "events")
         private val REGION_ACTIONS = listOf("info", "create")
         private val OUTSIDE_ACTIONS = listOf("types", "blueprint", "plan", "report", "validate")

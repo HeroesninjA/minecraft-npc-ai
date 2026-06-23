@@ -122,6 +122,34 @@ Directie:
 - pe termen mediu: miscari pe trasee simple intre ancore, nu teleport frecvent;
 - pe termen lung: pathing controlat sau integrare cu navigator dedicat, dupa ce satul are drumuri si ancore curate.
 
+## Simplificare UI/UX
+
+Cand experienta pare grea de citit, problema principala nu este lipsa de functii, ci densitatea lor in acelasi ecran.
+
+Regula de simplificare:
+
+- un ecran are o singura intentie dominanta;
+- afiseaza intai contextul, apoi actiunea recomandata;
+- separa clar gameplay-ul de admin tools;
+- ascunde actiunile rare sau riscante in submeniuri sau confirmari;
+- nu aglomera acelasi ecran cu stare, navigare, debug si administrare.
+
+Aplicare pe zonele deja existente:
+
+- `NpcInteractionGui` trebuie sa arate din start: rol NPC, rutina, quest relevant si un singur next step clar;
+- `QuestLogGui` trebuie sa favorizeze progresul curent, nu toate filtrele simultan;
+- `QuestDetailGui` trebuie sa arate implicit doar stage-ul curent, cu detalii avansate la cerere;
+- `WorldHubGui` trebuie sa afiseze unde esti si daca exista schimbari nesalvate, apoi actiunile admin;
+- `ConfirmActionGui` ramane singurul loc pentru actiuni cu efect persistent sau risc.
+
+Metoda practica:
+
+- progressive disclosure;
+- carduri scurte, cu text util, nu liste lungi;
+- actiune principala evidenta pe fiecare ecran;
+- `More` sau `Advanced` pentru detalii rare;
+- feedback imediat pentru fiecare click.
+
 ## Definition of Playable Village
 
 Un sat demo poate fi considerat jucabil doar daca:

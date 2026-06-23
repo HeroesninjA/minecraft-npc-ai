@@ -25,7 +25,8 @@ class AuditGui : GuiScreen {
                 "&cAudit operational",
                 listOf(
                     "&7Click-urile ruleaza comenzile audit existente.",
-                    "&7Rezultatele apar in chat."
+                    "&7Rezultatele apar in chat.",
+                    "&8Actiuni principale: all / npc / world / db"
                 )
             )
         )
@@ -38,11 +39,11 @@ class AuditGui : GuiScreen {
         auditButton(context, 15, "quest", Material.WRITABLE_BOOK, "&dAudit quest")
 
         context.button(16, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.", "&8Admin separat."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
         ))
         context.button(17, GuiButton.enabled(
-            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
         ))
 

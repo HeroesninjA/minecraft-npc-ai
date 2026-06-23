@@ -12,9 +12,12 @@ class ScenarioObjectiveProgressTest {
         assertEquals("collect_item", normalizeObjectiveType("fetch"))
         assertEquals("deliver_to_npc", normalizeObjectiveType("turn-in"))
         assertEquals("talk_to_npc", normalizeObjectiveType("speak_to_npc"))
+        assertEquals("talk_to_npc", normalizeObjectiveType("talk_npc"))
+        assertEquals("talk_to_npc", normalizeObjectiveType("talk_nlc"))
         assertEquals("visit_region", normalizeObjectiveType("go_to"))
         assertEquals("visit_place", normalizeObjectiveType("go-to-place"))
         assertEquals("inspect_node", normalizeObjectiveType("interact node"))
+        assertEquals("inspect_node", normalizeObjectiveType("interact_nkde"))
         assertEquals("kill_mob", normalizeObjectiveType("slay"))
         assertEquals("custom_type", normalizeObjectiveType("custom type"))
 

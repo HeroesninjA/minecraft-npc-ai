@@ -115,9 +115,10 @@ class WorldAdminService(
         }
 
         val isTest = System.getProperty("org.gradle.test.worker") != null
+        var generatedFallbackMapping = false
         if (!isTest && getRegion("castel") == null) {
             logger.info("Castel mapping lipseste din config; adaug programatic.")
-            createCastelMapping(debugSink)
+            generatedFallbackMapping = createCastelMapping(debugSink)
         }
 
         logger.info(
@@ -125,10 +126,10 @@ class WorldAdminService(
                 "$placeCount places, $nodeCount noduri." +
                 " Auto-index: ${if (autoIndexEnabled) "activ" else "dezactivat"}."
         )
-        dirty = false
+        dirty = generatedFallbackMapping
     }
 
-    private fun createCastelMapping(debugSink: java.util.function.Consumer<String>) {
+    private fun createCastelMapping(debugSink: java.util.function.Consumer<String>): Boolean {
         try {
             val region = WorldRegion(
                 "castel", "Castelul Parasit", "world",
@@ -159,11 +160,14 @@ class WorldAdminService(
                 171.0, -60.0, 148.0, 1.5
             )
             registerNode(cufar)
+            dirty = true
 
             debugSink.accept("Castel mapping creat: regiune, 2 places, 1 node.")
             logger.info("Castel mapping creat cu succes: castel -> poarta_castel + curte_castel -> cufar")
+            return true
         } catch (e: Exception) {
             logger.warning("Nu am putut crea castel mapping programatic: ${e.message}")
+            return false
         }
     }
 
@@ -960,7 +964,7 @@ class WorldAdminService(
             val nodesToRemove = regionNodes.filter { it.placeId == normalizedId }
             for (node in nodesToRemove) {
                 nodesById.remove(node.id)
-                nodesByPlace.remove(node.id)
+                nodesByPlace[node.placeId]?.removeIf { it.id == node.id }
                 regionNodes.remove(node)
             }
         }

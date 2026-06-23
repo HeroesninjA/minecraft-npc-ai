@@ -5,6 +5,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDeathEvent
@@ -12,6 +13,7 @@ import org.bukkit.event.inventory.CraftItemEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
+import org.bukkit.entity.Projectile
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import ro.ainpc.AINPCPlugin
@@ -27,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     private val playerRegions: MutableMap<UUID, String> = ConcurrentHashMap()
     private val playerPlaces: MutableMap<UUID, String> = ConcurrentHashMap()
+    private val recentMobAttackers: MutableMap<UUID, UUID> = ConcurrentHashMap()
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
@@ -71,11 +74,23 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
+        if (!questFeatureEnabled()) {
+            return
+        }
+        val attacker = resolvePlayerAttacker(event.damager) ?: return
+        recentMobAttackers[event.entity.uniqueId] = attacker.uniqueId
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEntityDeath(event: EntityDeathEvent) {
         if (!questFeatureEnabled()) {
             return
         }
-        val killer = event.entity.killer ?: return
+        val killer = event.entity.killer
+            ?: recentMobAttackers.remove(event.entity.uniqueId)?.let { attackerId -> plugin.server.getPlayer(attackerId) }
+            ?: return
+        recentMobAttackers.remove(event.entity.uniqueId)
         plugin.scenarioEngine.recordMobKill(killer, event.entity)
     }
 
@@ -119,6 +134,16 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             return
         }
         runLater({ plugin.scenarioEngine.recordInventoryChange(player) }, 1L)
+    }
+
+    private fun resolvePlayerAttacker(damager: org.bukkit.entity.Entity): Player? {
+        if (damager is Player) {
+            return damager
+        }
+        if (damager is Projectile) {
+            return damager.shooter as? Player
+        }
+        return null
     }
 
     private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)

@@ -62,10 +62,10 @@ class WorldHubGui : GuiScreen {
                 listOf(
                     "&7Coordonate: &f$worldName $x, $y, $z",
                     "&7Mapping: &f${worldAdmin.regionCount} regiuni / ${worldAdmin.placeCount} places / ${worldAdmin.nodeCount} noduri",
-                    "&7Indexare: &f${if (worldAdmin.isAutoIndexEnabled) "activa" else "dezactivata"} &8(${worldAdmin.indexedRegionChunkCount}r/${worldAdmin.indexedPlaceChunkCount}p/${worldAdmin.indexedNodeChunkCount}n)",
                     "&7Progresii vizibile: &f${progressionSnapshot.allEntries().size}",
                     "&7Ancore locale: &f${localAnchorBindings.size}",
-                    if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate modificarile sunt salvate"
+                    if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate modificarile sunt salvate",
+                    "&8Actiuni principale: whereami / quest / admin"
                 )
             )
         )
@@ -199,7 +199,7 @@ class WorldHubGui : GuiScreen {
         context.button(
             28,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami."),
+                GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiune principala."),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
             )
         )
@@ -230,7 +230,7 @@ class WorldHubGui : GuiScreen {
             if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping",
-                        listOf("&7Gestioneaza regiuni, places si noduri.", "&7Click: deschide panoul admin.")),
+                        listOf("&7Gestioneaza regiuni, places si noduri.", "&7Click: deschide panoul admin.", "&8Actiune admin separata.")),
                     GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
                 )
             } else {
@@ -243,7 +243,7 @@ class WorldHubGui : GuiScreen {
             if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest",
-                        listOf("&7Gestioneaza definitii, ancore si progresii.", "&7Click: deschide panoul admin quest.")),
+                        listOf("&7Gestioneaza definitii, ancore si progresii.", "&7Click: deschide panoul admin quest.", "&8Actiune admin separata.")),
                     GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
                 )
             } else {

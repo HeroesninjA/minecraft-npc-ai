@@ -45,11 +45,61 @@ class NpcInteractionGui : GuiScreen {
                 listOf(
                     "&7NPC-uri in raza 32: &f${nearbyNpcs.size}",
                     "&7Progresii vizibile: &f${progressionSnapshot.allEntries().size}",
+                    "&7Actiuni principale: talk / quest / routine.",
                     "&7Click pe card: info NPC.",
                     "&7Right click pe card: status progresie.",
                     "&7Shift click pe card: detalii progresie.",
                     "&7Pentru dialog direct: click dreapta pe NPC in lume."
                 )
+            )
+        )
+
+        context.button(
+            0,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.PLAYER_HEAD,
+                    "&bTalk nearest",
+                    "&7Deschide informatia NPC-ului cel mai apropiat.",
+                    "&7Comanda: &f/ainpc info nearest"
+                ),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc info nearest") }
+            )
+        )
+        context.button(
+            1,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.WRITABLE_BOOK,
+                    "&eQuest nearest",
+                    "&7Arata oferta sau statusul questului apropiat.",
+                    "&7Comanda: &f/ainpc quest nearest"
+                ),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest nearest") }
+            )
+        )
+        context.button(
+            2,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.CLOCK,
+                    "&eRoutine nearest",
+                    "&7Arata rutina NPC-ului cel mai apropiat.",
+                    "&7Comanda: &f/ainpc routine status nearest"
+                ),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
+            )
+        )
+        context.button(
+            3,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.MAP,
+                    "&dStory nearest",
+                    "&7Arata context story local.",
+                    "&7Comanda: &f/ainpc story context ${player.name} nearest"
+                ),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc story context ${click.player().name} nearest") }
             )
         )
 

@@ -39,7 +39,8 @@ class StatsGui : GuiScreen {
                     "&7Coordonate: &f${location.blockX}, ${location.blockY}, ${location.blockZ}",
                     "&7Level: &f${player.level}",
                     "&7Health: &f${String.format(Locale.ROOT, "%.1f", player.health)}",
-                    "&7Food: &f${player.foodLevel}"
+                    "&7Food: &f${player.foodLevel}",
+                    "&8Actiuni principale: progresii / world / economie"
                 )
             )
         )
@@ -52,7 +53,7 @@ class StatsGui : GuiScreen {
                 listOf(
                     "&7Total incarcat: &f${context.plugin().npcManager.getNPCCount()}",
                     "&7In apropiere: &f${nearbyNpcs.size}",
-                    "&7Raza snapshot: &f24 block-uri"
+                    "&8Lista compacta de NPC-uri apropiate."
                 )
             )
         )
@@ -74,18 +75,18 @@ class StatsGui : GuiScreen {
         val balance = context.plugin().economyService.getBalance(player)
         context.button(15, GuiButton.enabled(
             GuiItemFactory.item(Material.GOLD_INGOT, "&6Economie: &e$balance &7monede",
-                listOf("&7Click: /ainpc economy balance", "&8Sold disponibil pentru tranzactii.")),
+                listOf("&7Click: /ainpc economy balance", "&8Actiune secundara.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc economy balance") }
         ))
 
         val isAdmin = player.hasPermission("ainpc.admin")
         if (isAdmin) {
             context.button(13, GuiButton.enabled(
-                GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+                GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.", "&8Admin separat."),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
             ))
             context.button(14, GuiButton.enabled(
-                GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+                GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
             ))
         }
@@ -106,6 +107,7 @@ class StatsGui : GuiScreen {
                             "&7Spawned: &f${if (npc.isSpawned()) "da" else "nu"}",
                             "&7Emotie: &f${npc.emotions.dominantEmotion}",
                             "&7Distanta: &f${if (distance >= 0) String.format(Locale.ROOT, "%.1f", distance) else "necunoscuta"}",
+                            "&8Actiune principala: info NPC",
                             "&8Click: /ainpc info"
                         )
                     ),

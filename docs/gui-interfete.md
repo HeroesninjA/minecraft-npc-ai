@@ -126,6 +126,170 @@ Reguli pentru toate ecranele:
 - nu ascunde erorile: afiseaza warnings/errors in GUI si lasa detalii in audit/debugdump;
 - pastreaza comenzile text ca fallback si pentru administrare rapida.
 
+## Terminologie standard
+
+Pentru consistenta vizuala, ecranele folosesc aceleasi etichete scurte:
+
+- `Actiuni principale` pentru butoanele cele mai importante;
+- `Admin separat` pentru actiuni cu permisiuni sau risc mai mare;
+- `Actiune secundara` pentru comenzi utile, dar non-centrale;
+- `Inspectie separata` pentru debug, rutina si diagnostic;
+- `Snapshot de suport` pentru metadata tehnica;
+- `Panou admin separat` pentru navigare catre ecrane de administrare.
+
+## Simplificare UI/UX recomandata
+
+Observatia principala din testarea UX este ca ecranele devin prea dense cand amesteca stare, navigare si actiuni de admin in acelasi nivel.
+
+Regula de simplificare:
+
+- aplica progressive disclosure: afiseaza intai sumarul si actiunea principala, apoi detaliile avansate in submeniu;
+- separa clar player gameplay de admin tools;
+- fiecare ecran trebuie sa aiba o intentie dominanta;
+- contextul se afiseaza inaintea actiunilor;
+- actiunile destructive raman mereu confirmate.
+
+Simplificari recomandate imediat:
+
+- `QuestLogGui`:
+  - reduce filtrele vizibile la un set de baza;
+  - muta filtrele secundare in submeniu sau toggle avansat;
+  - pastreaza paginarea si highlight-ul pentru activ/tracked.
+- `QuestDetailGui`:
+  - arata implicit doar `current stage`;
+  - muta `next/locked stage` si `debug` in vizualizare avansata;
+  - pastreaza `track` si `status` ca actiuni principale.
+- `NpcInteractionGui`:
+  - afiseaza default doar `talk`, `quest` si `routine`;
+  - muta `shop`, `memory`, `relation` si `admin` in `More`;
+  - nu amesteca dialogul cu actiunile administrative.
+- `WorldHubGui`:
+  - lasa `whereami`, `unsaved` si `quest anchors` pe randul principal;
+  - muta `scan`, `demo create` si `save mapping` la actiuni admin confirmate.
+- `QuestAuthoringGui`:
+  - arata doar questul curent, mecanica si warnings;
+  - lasa `next`, `prev`, `reset` si `dump` vizibile;
+  - muta inspectia avansata si editarea profunda in flux separat.
+
+Principiu de design:
+
+- un singur ecran, o singura intentie dominanta;
+- mai putine actiuni la vedere inseamna mai putine erori si mai putina incarcare cognitiva;
+- daca o functie este rara sau riscanta, nu trebuie sa stea in randul principal.
+
+## Creator UX
+
+`QuestAuthoringGui` trebuie tratat ca un ecran de inspectie si authoring usor, nu ca un editor complet de productie.
+
+Reguli de simplificare pentru creator:
+
+- ecranul principal arata un singur quest si contextul lui;
+- actiunile principale sunt navigare si inspectie;
+- warnings si stare trebuie sa fie vizibile imediat;
+- orice schimbare profunda trebuie mutata intr-un flux separat de editare sau confirmare;
+- creatorul trebuie sa poata lucra fara sa parcurga liste lungi de optiuni nefolosite.
+
+Aplicare directa:
+
+- `QuestAuthoringGui`:
+  - afiseaza questul selectat si mecanica selectata;
+  - pastreaza actiunile `next`, `prev`, `reset`, `dump`;
+  - pune debug-ul si inspectia avansata in zona secundara;
+  - nu amesteca authoring-ul cu admin editare completa.
+
+## Layout-uri simplificate recomandate
+
+### QuestLogGui
+
+Scopul ecranului trebuie sa fie clar: gasire rapida, status rapid, apoi detalii.
+
+```text
+0-8     header + status scurt
+9-12    filtre de baza: all, active, tracked, archived
+13-43   quest cards paginate
+44      indicator pagina
+45      back
+46      prev page
+47      next page
+48      advanced filters
+49      refresh
+50      track/untrack
+51      status in chat
+53      close
+```
+
+Reguli:
+
+- filtrele speciale raman in `advanced filters`;
+- `track/untrack` si `status in chat` raman actiuni rapide, dar nu concureaza cu navigarea;
+- cardurile trebuie sa aiba un singur mesaj dominant: ce este, ce stare are, ce urmeaza.
+
+### NpcInteractionGui
+
+Scopul ecranului este sa explice imediat ce poate face NPC-ul si care este urmatorul pas.
+
+```text
+0-8     NPC summary + role
+9-17    talk, quest, routine
+18-26   story, relationship, memory
+27-35   shop, services, more
+36-44   admin actions gated
+45      back
+49      refresh
+53      close
+```
+
+Reguli:
+
+- dialogul si questul sunt in zona principala;
+- shop, memorie si relatie sunt secundare;
+- admin actions nu trebuie sa stea langa actiunile jucatorului fara gating vizual.
+
+### QuestAuthoringGui
+
+Scopul ecranului este inspectie rapida, nu editare completa.
+
+```text
+0-8     quest current + mechanic + warnings
+9-17    next, prev, reset
+18-26   dump, debug, inspect
+27-35   state summary
+45      back
+49      refresh
+53      close
+```
+
+Reguli:
+
+- warnings apar inaintea actiunilor avansate;
+- `dump` si `debug` raman secundare;
+- daca authoring-ul cere editare completa, trebuie alt ecran sau alt flux.
+
+### AdminQuestGui
+
+Scopul ecranului este sa arate lista de questuri, starea lor si impactul, fara sa amestece editarea cu confirmarea.
+
+```text
+0-8     header + search + warnings
+9-17    create, clone, edit, archive
+18-43   quest list paginate
+44      indicator pagina
+45      back
+46      prev page
+47      next page
+48      preview impact
+49      refresh
+50      validate
+51      delete
+53      close
+```
+
+Reguli:
+
+- `delete` nu sta in grupul principal de create/edit;
+- `preview impact` si `validate` trebuie sa fie vizibile separat;
+- daca un quest este activ, butonul de stergere trebuie dezactivat sau trebuie sa deschida `ConfirmActionGui`.
+
 Cod de culoare recomandat:
 
 | Culoare | Sens |

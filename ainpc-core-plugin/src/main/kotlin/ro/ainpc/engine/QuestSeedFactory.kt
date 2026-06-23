@@ -49,7 +49,18 @@ class QuestSeedFactory {
         safeContext.persistentRegionState()?.stateKey()?.takeIf { it.isNotBlank() }?.let { storySignals.add("region_state=$it") }
         safeContext.persistentPlaceState()?.stateKey()?.takeIf { it.isNotBlank() }?.let { storySignals.add("place_state=$it") }
 
-        val objectiveTypes = linkedSetOf("visit_place", "inspect_node", "talk_to_npc", "deliver_to_npc")
+        val objectiveTypes = linkedSetOf(
+            "visit_place",
+            "inspect_node",
+            "talk_to_npc",
+            "deliver_to_npc",
+            "visit_region",
+            "collect_item",
+            "kill_mob",
+            "place_block",
+            "break_block",
+            "craft_item"
+        )
         val rewardTypes = linkedSetOf("item", "experience", "story")
         val limits = LinkedHashSet<String>()
         limits.add("read_only")

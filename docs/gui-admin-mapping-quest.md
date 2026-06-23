@@ -23,6 +23,75 @@ Documentul descrie o cerinta de produs si de operare. GUI-ul este doar front-end
 - Orice actiune cu efect produce audit.
 - Datele citite in ecran sunt snapshot-uri sau view models, nu acces direct la stare interna.
 
+## Terminologie standard
+
+Adminul trebuie sa pastreze aceleasi etichete scurte ca restul GUI-ului:
+
+- `Actiuni principale` pentru lista sau navigarea initiala;
+- `Admin separat` pentru actiuni cu confirmare sau permisiune;
+- `Inspectie separata` pentru preview, diagnostic si comparatie;
+- `Snapshot de suport` pentru metadata care ajuta la debug;
+- `Panou admin separat` pentru link-uri intre zonele de editare.
+
+## Simplificare UI/UX pentru admin
+
+Problema principala in admin nu este lipsa de functii, ci faptul ca editarea, validarea si impactul sunt prea apropiate vizual.
+
+Regula de simplificare:
+
+- separa clar `view`, `edit`, `preview` si `confirm`;
+- nu pune campuri editabile si actiuni destructive in acelasi prim ecran;
+- afiseaza impactul inainte de confirmare;
+- pastreaza un singur pas principal per ecran;
+- actiunile riscante trebuie sa ceara confirmare explicita.
+
+Aplicare practica:
+
+- `AdminMappingGui`:
+  - primul ecran arata doar lista, statusul si dependintele;
+  - editarea de `Region`, `Place` si `Node` intra intr-un subecran separat;
+  - stergerea nu sta langa butonul de editare.
+- `AdminQuestGui`:
+  - primul ecran arata doar lista de questuri, stare si warnings;
+  - editarea definitionala intra in `AdminQuestEditGui`;
+  - preview-ul de impact ramane separat de save.
+- `ConfirmActionGui`:
+  - ramane singurul loc pentru actiuni destructive;
+  - trebuie sa arate actiunea exacta, tinta si efectul persistent.
+
+Principiu de operare:
+
+- adminul trebuie sa vada clar diferenta dintre inspectie si modificare;
+- daca un ecran cere prea multe decizii simultan, trebuie spart in subecrane.
+
+### Layout-uri simplificate recomandate
+
+Pentru a reduce densitatea, layout-ul admin trebuie sa urmeze acelasi model peste mapping si quest:
+
+- primul rand pentru context, cautare si warnings;
+- zona centrala pentru lista sau formular;
+- o zona separata pentru preview/impact;
+- actiunile destructive jos, separat de edit;
+- confirmarea intr-un ecran dedicat.
+
+Aplicare directa:
+
+- `AdminMappingGui`:
+  - lista de `Region`, `Place`, `Node` in centru;
+  - `preview impact` separat de `edit`;
+  - `delete` clar separat si conditionat de confirmare.
+- `AdminMappingEditGui`:
+  - campurile de edit sunt singurele actionabile;
+  - dependintele si impactul apar in lateral sau in footer.
+- `AdminQuestGui`:
+  - lista de questuri si warnings in centru;
+  - `create`, `clone`, `edit` sus;
+  - `validate`, `preview impact`, `delete` jos si separat.
+- `AdminQuestEditGui`:
+  - formularul principal ramane compact;
+  - `save` si `discard` nu se amesteca cu actiuni destructive;
+  - validation errors apar imediat, nu doar la final.
+
 ## Domenii
 
 ### Admin Mapping
@@ -164,6 +233,31 @@ Fiecare actiune trebuie sa poata fi urmarita cu:
 - Nu presupune ca stergerea este permisa doar pentru ca exista ecranul; verifica regula de confirmare si dependinte.
 - Nu interpreta `draft` ca `published`.
 - Nu confunda preview-ul cu persistenta.
+
+## Creator / Authoring
+
+`QuestAuthoringGui` trebuie tratat separat de adminul complet de editare. Scopul lui este inspectie si authoring usor, nu editare completa de productie.
+
+Reguli de simplificare pentru creator:
+
+- ecranul principal arata doar questul curent, mecanica si starea draft;
+- actiunile principale sunt `next`, `prev`, `reset` si `dump`;
+- nu amesteca in acelasi nivel inspectia curenta cu editarea directa a tuturor campurilor;
+- orice functionalitate de modificare profunda trebuie sa intre intr-un flux dedicat de editare, nu in authoring read-only;
+- creatorul trebuie sa poata citi rapid warnings, stage-uri si obiective fara sa navigheze prin prea multe submeniuri.
+
+Aplicare practica:
+
+- `QuestAuthoringGui`:
+  - arata în prim plan questul selectat si mecanica selectata;
+  - pastreaza butoanele de ciclu si reset vizibile;
+  - dump-ul si debug-ul raman actiuni secundare, nu actiunea principala;
+  - daca exista warnings, acestea trebuie sa apara imediat in rezumat.
+
+Principiu:
+
+- creatorul lucreaza mai des cu context si inspectie decat cu editare grea;
+- reducerea numarului de actiuni vizibile face authoring-ul mai sigur si mai rapid.
 
 ## Legaturi
 

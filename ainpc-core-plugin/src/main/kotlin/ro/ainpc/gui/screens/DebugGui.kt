@@ -26,7 +26,8 @@ class DebugGui : GuiScreen {
                 "&9Debug tools",
                 listOf(
                     "&7Debugdump ramane read-only.",
-                    "&7Fisierele si rezultatele sunt raportate in chat/consola."
+                    "&7Fisierele si rezultatele sunt raportate in chat/consola.",
+                    "&8Actiuni principale: debugdump / authoring / audit"
                 )
             )
         )
@@ -36,9 +37,9 @@ class DebugGui : GuiScreen {
                 Material.PAPER,
                 "&aVersion snapshot",
                 listOf(
-                    "&7Ultima versiune: &f${versionSnapshot.version}",
-                    "&7Build hash: &f${versionSnapshot.buildHash}",
-                    "&7Build timestamp: &f${versionSnapshot.buildTimestamp}"
+                    "&7Versiune: &f${versionSnapshot.version}",
+                    "&7Build: &f${versionSnapshot.buildHash}",
+                    "&8Snapshot de suport."
                 )
             )
         )
@@ -89,10 +90,10 @@ class DebugGui : GuiScreen {
         )
 
         context.button(28, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.", "&8Admin separat."),
         ) { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) })
         context.button(29, GuiButton.enabled(
-            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
         ) { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) })
 
         GuiNavigation.addStandardControls(context, key())

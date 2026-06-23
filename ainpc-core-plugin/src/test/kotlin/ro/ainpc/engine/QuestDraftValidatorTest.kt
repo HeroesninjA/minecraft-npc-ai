@@ -84,4 +84,11 @@ class QuestDraftValidatorTest {
         assertTrue(report.errors().any { it.contains("scope region sau place") })
         assertTrue(report.errors().any { it.contains("key") })
     }
+
+    @Test
+    fun defaultObjectiveTypesIncludeBuilderObjectives() {
+        assertTrue(QuestDraftValidator.DEFAULT_OBJECTIVE_TYPES.contains("place_block"))
+        assertTrue(QuestDraftValidator.DEFAULT_OBJECTIVE_TYPES.contains("break_block"))
+        assertTrue(QuestDraftValidator.DEFAULT_OBJECTIVE_TYPES.contains("craft_item"))
+    }
 }

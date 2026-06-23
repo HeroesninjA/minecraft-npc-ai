@@ -15,7 +15,18 @@ import java.nio.file.Files
 
 class QuestCreateGui : GuiScreen {
     private val mechanics = listOf("main_quests", "side_quests", "village_contracts", "npc_duties", "local_bounties", "village_events", "onboarding", "village_rituals")
-    private val objectiveTypes = listOf("visit_place", "inspect_node", "talk_to_npc", "collect_item", "deliver_to_npc", "kill_mob", "visit_region")
+    private val objectiveTypes = listOf(
+        "visit_place",
+        "inspect_node",
+        "talk_to_npc",
+        "collect_item",
+        "deliver_to_npc",
+        "kill_mob",
+        "visit_region",
+        "place_block",
+        "break_block",
+        "craft_item"
+    )
     private val rewardTypes = listOf("item", "experience", "story_event", "reputation")
     private val dialogTypes = listOf("npc_greeting", "npc_accept", "npc_progress", "npc_complete", "player_respond", "narrator")
     private val baseTypes = listOf("QUEST", "TRADE_DEAL", "BOUNTY", "DUTY", "WORLD_EVENT", "TUTORIAL", "RITUAL")
