@@ -38,6 +38,12 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         val player = event.player
         val message = PLAIN_TEXT.serialize(event.message())
 
+        if (plugin.guiService.hasTextInputRequest(player)) {
+            event.isCancelled = true
+            runSync { handleGuiTextInput(player, message) }
+            return
+        }
+
         val target: ResolvedDialogTarget = try {
             callSync { resolveTarget(player, message) }
         } catch (ex: IllegalStateException) {
@@ -205,6 +211,83 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             }
             null
         }
+    }
+
+    private fun handleGuiTextInput(player: Player, message: String) {
+        val request = plugin.guiService.consumeTextInputRequest(player) ?: return
+        val normalized = message.trim()
+        if (handleSpecialGuiTextInput(player, request, normalized)) {
+            return
+        }
+        if (normalized.equals("clear", ignoreCase = true) ||
+            normalized.equals("cancel", ignoreCase = true) ||
+            normalized.equals("anuleaza", ignoreCase = true)
+        ) {
+            plugin.guiService.setCreatorFormValue(player, request.formKey(), null)
+            messages().send(player, "&7Campul &f${request.title()} &7a fost curatat.")
+            reopenAfterTextInput(player, request)
+            return
+        }
+
+        plugin.guiService.setCreatorFormValue(player, request.formKey(), normalized)
+        messages().send(player, "&aSalvat: &f${request.title()}")
+        reopenAfterTextInput(player, request)
+    }
+
+    private fun handleSpecialGuiTextInput(
+        player: Player,
+        request: ro.ainpc.gui.GuiService.TextInputRequest,
+        normalized: String
+    ): Boolean {
+        return when (request.formKey()) {
+            "creator_quest_log_filter" -> {
+                val filter = if (normalized.equals("clear", ignoreCase = true)) "all" else normalized
+                plugin.guiService.openQuestLog(player, filter)
+                true
+            }
+            "creator_quest_map_target" -> {
+                if (normalized.equals("clear", ignoreCase = true)) {
+                    plugin.guiService.setQuestMapMechanicFilter(player, null)
+                    plugin.guiService.setQuestMapTemplateId(player, null)
+                    plugin.guiService.setQuestMapObjectiveKey(player, null)
+                    plugin.guiService.open(player, ro.ainpc.gui.GuiKey.QUEST_MAP)
+                    return true
+                }
+
+                val input = normalized.removePrefix("mechanic:").removePrefix("template:").removePrefix("objective:")
+                when {
+                    normalized.startsWith("mechanic:", ignoreCase = true) -> {
+                        plugin.guiService.setQuestMapMechanicFilter(player, input.ifBlank { null })
+                        plugin.guiService.setQuestMapTemplateId(player, null)
+                        plugin.guiService.setQuestMapObjectiveKey(player, null)
+                    }
+                    normalized.startsWith("template:", ignoreCase = true) -> {
+                        plugin.guiService.setQuestMapMechanicFilter(player, null)
+                        plugin.guiService.setQuestMapTemplateId(player, input.ifBlank { null })
+                        plugin.guiService.setQuestMapObjectiveKey(player, null)
+                    }
+                    normalized.startsWith("objective:", ignoreCase = true) -> {
+                        plugin.guiService.setQuestMapObjectiveKey(player, input.ifBlank { null })
+                    }
+                    else -> {
+                        plugin.guiService.setQuestMapTemplateId(player, normalized)
+                        plugin.guiService.setQuestMapMechanicFilter(player, null)
+                        plugin.guiService.setQuestMapObjectiveKey(player, null)
+                    }
+                }
+                plugin.guiService.open(player, ro.ainpc.gui.GuiKey.QUEST_MAP)
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun reopenAfterTextInput(player: Player, request: ro.ainpc.gui.GuiService.TextInputRequest) {
+        if (request.returnKey() == ro.ainpc.gui.GuiKey.QUEST_DETAIL && request.returnSelector().isNotBlank()) {
+            plugin.guiService.openQuestDetail(player, request.returnSelector(), plugin.guiService.getQuestDetailFilter(player))
+            return
+        }
+        plugin.guiService.open(player, request.returnKey())
     }
 
     private fun handleQuestInteractionFromMessage(player: Player, npc: AINPC, message: String, target: ResolvedDialogTarget): Boolean {

@@ -3,11 +3,10 @@ package ro.ainpc.engine
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import ro.ainpc.AINPCPlugin
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class QuestDraftExporter(private val plugin: AINPCPlugin) {
+class QuestDraftExporter {
 
     fun exportDraft(params: QuestDraftParams): String {
         val root = JsonObject()
@@ -72,11 +71,13 @@ class QuestDraftExporter(private val plugin: AINPCPlugin) {
         }
         root.add("systemMessages", systemArr)
 
-        if (params.npcGiverPlace.isNotBlank()) {
+        if (params.npcGiver.isNotBlank()) {
             val anchor = JsonObject()
             anchor.addProperty("type", "npc")
             anchor.addProperty("target", params.npcGiver)
-            anchor.addProperty("place", params.npcGiverPlace)
+            if (params.npcGiverPlace.isNotBlank()) {
+                anchor.addProperty("place", params.npcGiverPlace)
+            }
             root.add("questAnchor", anchor)
         }
 

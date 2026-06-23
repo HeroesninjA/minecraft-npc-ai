@@ -39,16 +39,53 @@ class QuestCreatorGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST_TEST) }
         ))
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMPASS, "&eQuest Map", listOf("&7Harta vizuala intre definitii si ancore.", "&7Click: deschide quest map.")),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            GuiItemFactory.item(Material.COMPASS, "&eQuest Map", listOf(
+                "&7Harta vizuala intre definitii si ancore.",
+                "&7Click: scrie mechanic:<id>, template:<id> sau objective:<key>."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "creator_quest_map_target",
+                    "creator_quest_map_target",
+                    GuiKey.CREATOR_QUEST,
+                    promptLines = listOf(
+                        "&7Ex: mechanic:side_quests",
+                        "&7Ex: template:Q08",
+                        "&7Ex: objective:kill_zombie"
+                    )
+                )
+            }
         ))
         context.button(15, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest Log", listOf("&7Log-ul complet al progresiilor.", "&7Click: deschide log.")),
-            GuiAction { click -> click.service().openQuestLog(click.player(), "all") }
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest Log", listOf(
+                "&7Log-ul complet al progresiilor.",
+                "&7Click: scrie un filtru sau all."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "creator_quest_log_filter",
+                    "creator_quest_log_filter",
+                    GuiKey.CREATOR_QUEST,
+                    promptLines = listOf("&7Ex: all, active, completed, questCode", "&7Scrie clear pentru all.")
+                )
+            }
         ))
         context.button(16, GuiButton.enabled(
-            GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf("&7Editeaza quest: selecteaza definitie, NPC giver, testeaza.", "&7Click: deschide editorul.")),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }
+            GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf(
+                "&7Editeaza quest: selecteaza definitie, NPC giver, testeaza.",
+                "&7Click: scrie ID sau nume pentru cautare directa."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_edit_query",
+                    "quest_edit_query",
+                    GuiKey.QUEST_EDIT,
+                    promptLines = listOf("&7Ex: Q08, Castelul lui Dagon", "&7Scrie clear pentru a reveni la selectie.")
+                )
+            }
         ))
         context.button(17, GuiButton.enabled(
             GuiItemFactory.item(Material.EMERALD, "&aCreeaza Quest Nou", listOf("&7Formular pentru quest nou: ID, nume, mecanica, obiective.", "&7Click: deschide formularul.")),

@@ -19,8 +19,15 @@ class QuestEditGui : GuiScreen {
 
     override fun render(context: GuiRenderContext) {
         val defs = context.plugin().progressionService.getDefinitions()
-        val selectedId = context.service().getQuestEditSelectedId(context.player())
-        val currentDef = defs.firstOrNull { it.progressionId() == selectedId }
+        val selectedQuery = context.service().getCreatorFormValue(context.player(), "quest_edit_query")
+        val selectedId = if (selectedQuery.isNotBlank()) selectedQuery else context.service().getQuestEditSelectedId(context.player())
+        val currentDef = defs.firstOrNull { def ->
+            def.progressionId().equals(selectedId, ignoreCase = true) ||
+                def.displayName().equals(selectedId, ignoreCase = true)
+        } ?: defs.firstOrNull { def ->
+            def.progressionId().contains(selectedId, ignoreCase = true) ||
+                def.displayName().contains(selectedId, ignoreCase = true)
+        }
         val adminView = context.player().hasPermission("ainpc.admin")
 
         context.item(4, GuiItemFactory.item(
@@ -48,6 +55,22 @@ class QuestEditGui : GuiScreen {
                 }
             ))
         }
+
+        context.button(26, GuiButton.enabled(
+            GuiItemFactory.item(Material.NAME_TAG, "&eCauta quest", listOf(
+                "&7Click: scrie ID sau nume in chat.",
+                "&7Cauta in toate definitiile, nu doar primele 16."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_edit_query",
+                    "quest_edit_query",
+                    GuiKey.QUEST_EDIT,
+                    promptLines = listOf("&7Ex: Q08, Castelul lui Dagon", "&7Scrie clear pentru reset.")
+                )
+            }
+        ))
 
         if (currentDef != null) {
             // Obiective (slot 28-34)
@@ -102,6 +125,13 @@ class QuestEditGui : GuiScreen {
                     }
                 ))
             }
+        }
+        if (currentDef == null && selectedId.isNotBlank()) {
+            context.item(28, GuiItemFactory.item(
+                Material.BARRIER,
+                "&cQuest negasit",
+                listOf("&7Nu am gasit nicio definitie pentru &f$selectedId", "&7Incearca un ID mai scurt sau numele complet.")
+            ))
         }
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),

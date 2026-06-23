@@ -62,6 +62,7 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val questMapGlobalModes: ConcurrentMap<UUID, Boolean> = ConcurrentHashMap()
     private val questEditSelectedIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val creatorFormValues: ConcurrentMap<UUID, MutableMap<String, String>> = ConcurrentHashMap()
+    private val textInputRequests: ConcurrentMap<UUID, TextInputRequest> = ConcurrentHashMap()
     private val shopSelectedNpcIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
 
     fun getShopSelectedNpcId(player: Player): String? = shopSelectedNpcIds[player.uniqueId]
@@ -81,6 +82,40 @@ class GuiService(private val plugin: AINPCPlugin) {
         val map = creatorFormValues.getOrPut(player.uniqueId) { mutableMapOf() }
         if (value.isNullOrBlank()) map.remove(key)
         else map[key] = value
+    }
+
+    fun openTextInput(
+        player: Player?,
+        title: String?,
+        formKey: String,
+        returnKey: GuiKey?,
+        returnSelector: String? = null,
+        promptLines: List<String> = listOf()
+    ) {
+        if (player == null || formKey.isBlank()) return
+        textInputRequests[player.uniqueId] = TextInputRequest(
+            title = title,
+            formKey = formKey,
+            returnKey = returnKey ?: GuiKey.MAIN,
+            returnSelector = returnSelector,
+            promptLines = promptLines
+        )
+        player.closeInventory()
+        plugin.messageUtils.send(player, "&eInput text: &f${title ?: formKey}")
+        for (line in promptLines) {
+            plugin.messageUtils.send(player, line)
+        }
+        plugin.messageUtils.send(player, "&7Scrie in chat. Scrie &fclear&7 ca sa cureti campul.")
+    }
+
+    fun hasTextInputRequest(player: Player?): Boolean {
+        if (player == null) return false
+        return textInputRequests.containsKey(player.uniqueId)
+    }
+
+    fun consumeTextInputRequest(player: Player?): TextInputRequest? {
+        if (player == null) return null
+        return textInputRequests.remove(player.uniqueId)
     }
 
     fun getQuestEditSelectedId(player: Player?): String {
@@ -345,6 +380,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         questMapGlobalModes.remove(playerId)
         questEditSelectedIds.remove(playerId)
         creatorFormValues.remove(playerId)
+        textInputRequests.remove(playerId)
     }
 
     fun getQuestMapGlobalMode(player: Player?): Boolean {
@@ -567,6 +603,25 @@ class GuiService(private val plugin: AINPCPlugin) {
         fun returnKey(): GuiKey = safeReturnKey
         fun returnSelector(): String = safeReturnSelector
         fun warningLines(): List<String> = safeWarningLines.toList()
+    }
+
+    data class TextInputRequest(
+        val title: String?,
+        val formKey: String,
+        val returnKey: GuiKey,
+        val returnSelector: String?,
+        val promptLines: List<String>
+    ) {
+        private val safeTitle = title ?: formKey
+        private val safeFormKey = formKey
+        private val safeReturnSelector = returnSelector ?: ""
+        private val safePromptLines = promptLines.toList()
+
+        fun title(): String = safeTitle
+        fun formKey(): String = safeFormKey
+        fun returnKey(): GuiKey = this.returnKey
+        fun returnSelector(): String = safeReturnSelector
+        fun promptLines(): List<String> = safePromptLines.toList()
     }
 
     private fun register(screen: GuiScreen) {

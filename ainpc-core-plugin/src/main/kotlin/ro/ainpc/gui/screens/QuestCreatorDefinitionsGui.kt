@@ -16,11 +16,44 @@ class QuestCreatorDefinitionsGui : GuiScreen {
     override fun size(player: Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
-        val defs = context.plugin().progressionService.getDefinitions().sortedBy { it.progressionId() }
+        val filter = context.service().getCreatorFormValue(context.player(), "creator_defs_filter").trim()
+        val defs = context.plugin().progressionService.getDefinitions()
+            .sortedBy { it.progressionId() }
+            .filter {
+                filter.isBlank() ||
+                    it.progressionId().contains(filter, ignoreCase = true) ||
+                    it.displayName().contains(filter, ignoreCase = true) ||
+                    it.mechanicId().contains(filter, ignoreCase = true) ||
+                    it.kind().contains(filter, ignoreCase = true)
+            }
 
         context.item(4, GuiItemFactory.item(Material.BOOKSHELF, "&6Definitii Progresie", listOf(
-            "&7Total: &f${defs.size}"
+            "&7Total: &f${defs.size}",
+            "&7Filtru: &f${if (filter.isBlank()) "-" else filter}"
         )))
+
+        context.button(26, GuiButton.enabled(
+            GuiItemFactory.item(Material.NAME_TAG, "&eFiltru definitii", listOf(
+                "&7Click: scrie un ID, nume sau mecanica.",
+                "&7Filtreaza toate definitiile afisate."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "creator_defs_filter",
+                    "creator_defs_filter",
+                    GuiKey.CREATOR_QUEST_DEFS,
+                    promptLines = listOf("&7Ex: Q08, side_quests, Dagon", "&7Scrie clear pentru reset.")
+                )
+            }
+        ))
+        context.button(34, GuiButton.enabled(
+            GuiItemFactory.item(Material.BARRIER, "&cCurata filtru", listOf("&7Sterge filtrul curent.", "&7Revine la lista completa.")),
+            GuiAction { click ->
+                context.service().setCreatorFormValue(click.player(), "creator_defs_filter", null)
+                click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS)
+            }
+        ))
 
         var slot = 9
         for (def in defs.take(36)) {
@@ -37,7 +70,10 @@ class QuestCreatorDefinitionsGui : GuiScreen {
         }
 
         if (defs.isEmpty()) {
-            context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNicio definitie", listOf("&7Nu exista definitii de progresie.")))
+            context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNicio definitie", listOf(
+                "&7Nu exista definitii de progresie.",
+                if (filter.isBlank()) "&7Adauga un filtru daca vrei cautare mai precisa." else "&7Incearca un filtru mai larg."
+            )))
         }
 
         GuiNavigation.addStandardControls(context, key())
