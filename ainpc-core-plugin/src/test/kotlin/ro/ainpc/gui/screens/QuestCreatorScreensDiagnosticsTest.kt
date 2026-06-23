@@ -19,6 +19,9 @@ class QuestCreatorScreensDiagnosticsTest {
         assertTrue(src.contains("creator_quest_map_target"))
         assertTrue(src.contains("creator_quest_log_filter"))
         assertTrue(src.contains("objective:<key>"))
+        assertTrue(src.contains("Target curent"))
+        assertTrue(src.contains("Filtru curent"))
+        assertTrue(src.contains("Query curent"))
     }
 
     @Test
@@ -48,6 +51,8 @@ class QuestCreatorScreensDiagnosticsTest {
         assertTrue(src.contains("Editeaza Quest") || src.contains("Quest Edit"))
         assertTrue(src.contains("Cauta quest"))
         assertTrue(src.contains("quest_edit_query"))
+        assertTrue(src.contains("Status: definitie gasita"))
+        assertTrue(src.contains("quest negasit"))
     }
 
     @Test
@@ -56,10 +61,28 @@ class QuestCreatorScreensDiagnosticsTest {
         assertTrue(src.contains("Creeaza Quest") || src.contains("Quest Create"))
         assertTrue(src.contains("Descriere"))
         assertTrue(src.contains("Locatie NPC"))
+        assertTrue(src.contains("Status: completabil"))
+        assertTrue(src.contains("Lipsesc"))
         assertTrue(src.contains("Stage preset"))
         assertTrue(src.contains("openTextInput"))
+        assertTrue(src.contains("quest_id"))
+        assertTrue(src.contains("quest_mechanic"))
+        assertTrue(src.contains("quest_base"))
+        assertTrue(src.contains("quest_obj_type"))
+        assertTrue(src.contains("quest_obj_count"))
+        assertTrue(src.contains("quest_stage_id"))
+        assertTrue(src.contains("quest_stage_name"))
+        assertTrue(src.contains("quest_stage_mode"))
+        assertTrue(src.contains("quest_reward_type"))
+        assertTrue(src.contains("quest_dialog_type"))
+        assertTrue(src.contains("quest_dialog_speaker"))
         assertTrue(src.contains("quest_dialog_text"))
+        assertTrue(src.contains("quest_obj_dialog"))
         assertTrue(src.contains("quest_system_msg"))
+        assertTrue(src.contains("quest_obj_target"))
+        assertTrue(src.contains("quest_reward_value"))
+        assertTrue(src.contains("quest_reward_count"))
         assertTrue(src.contains("Exporta Draft JSON"))
+        assertTrue(src.contains("Sugestii"))
     }
 }

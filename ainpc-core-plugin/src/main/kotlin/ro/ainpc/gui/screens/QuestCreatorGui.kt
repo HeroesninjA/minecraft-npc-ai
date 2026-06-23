@@ -16,6 +16,9 @@ class QuestCreatorGui : GuiScreen {
 
     override fun render(context: GuiRenderContext) {
         val defs = context.plugin().progressionService.getDefinitions()
+        val mapTarget = context.service().getCreatorFormValue(context.player(), "creator_quest_map_target").ifBlank { "-" }
+        val logFilter = context.service().getCreatorFormValue(context.player(), "creator_quest_log_filter").ifBlank { "all" }
+        val editQuery = context.service().getCreatorFormValue(context.player(), "quest_edit_query").ifBlank { "-" }
 
         context.item(4, GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Quest Creator", listOf(
             "&7Definitii: &f${defs.size}",
@@ -41,6 +44,7 @@ class QuestCreatorGui : GuiScreen {
         context.button(14, GuiButton.enabled(
             GuiItemFactory.item(Material.COMPASS, "&eQuest Map", listOf(
                 "&7Harta vizuala intre definitii si ancore.",
+                "&7Target curent: &f$mapTarget",
                 "&7Click: scrie mechanic:<id>, template:<id> sau objective:<key>."
             )),
             GuiAction { click ->
@@ -60,6 +64,7 @@ class QuestCreatorGui : GuiScreen {
         context.button(15, GuiButton.enabled(
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest Log", listOf(
                 "&7Log-ul complet al progresiilor.",
+                "&7Filtru curent: &f$logFilter",
                 "&7Click: scrie un filtru sau all."
             )),
             GuiAction { click ->
@@ -75,6 +80,7 @@ class QuestCreatorGui : GuiScreen {
         context.button(16, GuiButton.enabled(
             GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf(
                 "&7Editeaza quest: selecteaza definitie, NPC giver, testeaza.",
+                "&7Query curent: &f$editQuery",
                 "&7Click: scrie ID sau nume pentru cautare directa."
             )),
             GuiAction { click ->

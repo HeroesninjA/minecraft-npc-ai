@@ -229,7 +229,14 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             return
         }
 
-        plugin.guiService.setCreatorFormValue(player, request.formKey(), normalized)
+        val sanitized = sanitizeGuiTextInput(request.formKey(), normalized)
+        if (!isValidGuiTextInput(request.formKey(), sanitized)) {
+            messages().send(player, "&cValoare invalida pentru &f${request.title()}&c.")
+            requeueTextInput(player, request)
+            return
+        }
+
+        plugin.guiService.setCreatorFormValue(player, request.formKey(), sanitized)
         messages().send(player, "&aSalvat: &f${request.title()}")
         reopenAfterTextInput(player, request)
     }
@@ -280,6 +287,50 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             }
             else -> false
         }
+    }
+
+    private fun isValidGuiTextInput(formKey: String, normalized: String): Boolean {
+        return when (formKey) {
+            "quest_obj_count", "quest_reward_count" -> normalized.toIntOrNull() != null
+            "quest_id" -> normalized.matches(Regex("[A-Za-z0-9_:-]{1,64}"))
+            "quest_mechanic",
+            "quest_base",
+            "quest_obj_type",
+            "quest_obj_target",
+            "quest_reward_type",
+            "quest_stage_id",
+            "quest_stage_name",
+            "quest_stage_mode",
+            "quest_dialog_type",
+            "quest_dialog_speaker",
+            "quest_reward_value" -> normalized.isNotBlank()
+            else -> true
+        }
+    }
+
+    private fun sanitizeGuiTextInput(formKey: String, normalized: String): String {
+        return when (formKey) {
+            "quest_mechanic",
+            "quest_base",
+            "quest_obj_type",
+            "quest_obj_target",
+            "quest_reward_type",
+            "quest_stage_mode",
+            "quest_dialog_type",
+            "quest_dialog_speaker" -> normalized.lowercase()
+            else -> normalized
+        }
+    }
+
+    private fun requeueTextInput(player: Player, request: ro.ainpc.gui.GuiService.TextInputRequest) {
+        plugin.guiService.openTextInput(
+            player,
+            request.title(),
+            request.formKey(),
+            request.returnKey(),
+            request.returnSelector(),
+            request.promptLines()
+        )
     }
 
     private fun reopenAfterTextInput(player: Player, request: ro.ainpc.gui.GuiService.TextInputRequest) {

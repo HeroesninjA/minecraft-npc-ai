@@ -13,6 +13,7 @@ class AdminQuestGuiDiagnosticsTest {
         assertTrue(source.contains("Definitii"))
         assertTrue(source.contains("Mecanici"))
         assertTrue(source.contains("Diagnostic"))
+        assertTrue(source.contains("Status: curat") || source.contains("Status: necesita atentie"))
     }
 
     @Test

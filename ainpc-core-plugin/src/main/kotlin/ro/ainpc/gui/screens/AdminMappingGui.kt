@@ -54,15 +54,16 @@ class AdminMappingGui : GuiScreen {
         context.item(4, GuiItemFactory.item(
             Material.COMPASS,
             "&6Admin Mapping",
-            listOf(
-                "&7Regiuni: &f${worldAdmin.regionCount}",
-                "&7Places: &f${worldAdmin.placeCount}",
-                "&7Noduri: &f${worldAdmin.nodeCount}",
-                "&7World mode: &f${worldMode.id}",
-                "&7Indexare automata: &f${if (isAutoIndex) "activa" else "dezactivata"}",
-                "&7Current region: &f${currentRegion?.id() ?: "<niciuna>"}",
-                if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate salvate",
-                "&8Actiuni principale: whereami / scan / save"
+            buildMappingStatusLines(
+                worldAdmin.regionCount,
+                worldAdmin.placeCount,
+                worldAdmin.nodeCount,
+                worldMode.id,
+                isAutoIndex,
+                currentRegion?.id(),
+                currentPlace?.displayName(),
+                currentNodes.size,
+                worldAdmin.hasUnsavedChanges()
             )
         ))
 
@@ -308,5 +309,31 @@ class AdminMappingGui : GuiScreen {
         "mountain" -> Material.STONE
         "farm" -> Material.WHEAT
         else -> Material.FILLED_MAP
+    }
+
+    private fun buildMappingStatusLines(
+        regionCount: Int,
+        placeCount: Int,
+        nodeCount: Int,
+        worldMode: String,
+        autoIndexEnabled: Boolean,
+        currentRegionId: String?,
+        currentPlaceName: String?,
+        nearbyNodeCount: Int,
+        hasUnsavedChanges: Boolean
+    ): List<String> {
+        return buildList {
+            add("&7Regiuni: &f$regionCount")
+            add("&7Places: &f$placeCount")
+            add("&7Noduri: &f$nodeCount")
+            add("&7World mode: &f$worldMode")
+            add("&7Indexare automata: &f${if (autoIndexEnabled) "activa" else "dezactivata"}")
+            add("&7Current region: &f${currentRegionId ?: "<niciuna>"}")
+            add("&7Current place: &f${currentPlaceName ?: "<niciunul>"}")
+            add("&7Noduri in raza: &f$nearbyNodeCount")
+            add(if (hasUnsavedChanges) "&cModificari nesalvate!" else "&aToate salvate")
+            add(if (hasUnsavedChanges) "&eStatus: necesita save" else "&aStatus: curat")
+            add("&8Actiuni principale: whereami / scan / save")
+        }
     }
 }

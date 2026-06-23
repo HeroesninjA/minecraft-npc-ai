@@ -13,6 +13,7 @@ class AdminMappingGuiDiagnosticsTest {
         assertTrue(source.contains("Regiuni"))
         assertTrue(source.contains("Places"))
         assertTrue(source.contains("Noduri"))
+        assertTrue(source.contains("Status: curat") || source.contains("Status: necesita save"))
     }
 
     @Test

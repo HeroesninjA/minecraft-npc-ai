@@ -35,13 +35,7 @@ class QuestLogGui : GuiScreen {
             GuiItemFactory.item(
                 Material.WRITABLE_BOOK,
                 "&eLog progresii",
-                listOf(
-                    "&7Afiseaza snapshot-ul curent pentru jucator.",
-                    "&7Filtru: &f${snapshot.filterLabel()}",
-                    "&7Progresii curente: &f${snapshot.currentEntries().size}",
-                    "&7Progresii arhivate vizibile: &f${snapshot.archivedEntries().size}",
-                    "&8Actiuni principale: detalii / track / refresh"
-                )
+                buildQuestLogStatusLines(snapshot, activeFilter, adminView)
             )
         )
         renderAuthoringSummary(context, snapshot)
@@ -489,6 +483,36 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun valueOrUnknown(value: String): String = value.ifBlank { "unknown" }
+
+    private fun buildQuestLogStatusLines(
+        snapshot: ProgressionGuiSnapshot,
+        activeFilter: String,
+        adminView: Boolean
+    ): List<String> {
+        val currentCount = snapshot.currentEntries().size
+        val archivedVisible = snapshot.archivedEntries().size
+        val trackedCount = snapshot.currentEntries().count { it.tracked() }
+        val activeCount = snapshot.currentEntries().count { it.active() }
+        val summary = snapshot.summaryLines().take(2)
+
+        return buildList {
+            add("&7Afiseaza snapshot-ul curent pentru jucator.")
+            add("&7Filtru: &f${snapshot.filterLabel()}")
+            add("&7Progresii curente: &f$currentCount")
+            add("&7Active: &f$activeCount")
+            add("&7Tracked: &f$trackedCount")
+            add("&7Progresii arhivate vizibile: &f$archivedVisible")
+            if (snapshot.totalMatchingArchived() > archivedVisible) {
+                add("&7Arhivate ascunse: &f${snapshot.totalMatchingArchived() - archivedVisible}")
+            }
+            if (summary.isNotEmpty()) {
+                add("&8Rezumat:")
+                summary.forEach { add("&8- $it") }
+            }
+            add(if (adminView) "&8Actiuni principale: detalii / track / refresh / anchors" else "&8Actiuni principale: detalii / track / refresh")
+            add("&7Filtru curent: &f${if (activeFilter.isBlank()) "all" else activeFilter}")
+        }
+    }
 
     companion object {
         private val LOG_SLOTS = intArrayOf(

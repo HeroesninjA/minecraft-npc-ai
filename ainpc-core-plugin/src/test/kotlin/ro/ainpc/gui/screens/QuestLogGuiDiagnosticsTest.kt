@@ -12,5 +12,8 @@ class QuestLogGuiDiagnosticsTest {
         assertTrue(source.contains("DebugDumpQuestText.buildQuestText(plugin)"))
         assertTrue(source.contains("ainpc debugdump quest"))
         assertTrue(source.contains("Quest diagnostics"))
+        assertTrue(source.contains("buildQuestLogStatusLines"))
+        assertTrue(source.contains("Filtru curent"))
+        assertTrue(source.contains("Tracked"))
     }
 }

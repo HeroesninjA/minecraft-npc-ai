@@ -59,13 +59,19 @@ class WorldHubGui : GuiScreen {
             GuiItemFactory.item(
                 Material.COMPASS,
                 "&bWorld context",
-                listOf(
-                    "&7Coordonate: &f$worldName $x, $y, $z",
-                    "&7Mapping: &f${worldAdmin.regionCount} regiuni / ${worldAdmin.placeCount} places / ${worldAdmin.nodeCount} noduri",
-                    "&7Progresii vizibile: &f${progressionSnapshot.allEntries().size}",
-                    "&7Ancore locale: &f${localAnchorBindings.size}",
-                    if (worldAdmin.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aToate modificarile sunt salvate",
-                    "&8Actiuni principale: whereami / quest / admin"
+                buildWorldStatusLines(
+                    worldName,
+                    x,
+                    y,
+                    z,
+                    worldAdmin.regionCount,
+                    worldAdmin.placeCount,
+                    worldAdmin.nodeCount,
+                    progressionSnapshot.allEntries().size,
+                    localAnchorBindings.size,
+                    nearbyNodes.size,
+                    worldAdmin.hasUnsavedChanges(),
+                    adminView
                 )
             )
         )
@@ -487,4 +493,30 @@ class WorldHubGui : GuiScreen {
     }
 
     private fun valueOrUnknown(value: String?): String = if (value.isNullOrBlank()) "necunoscut" else value
+
+    private fun buildWorldStatusLines(
+        worldName: String,
+        x: Int,
+        y: Int,
+        z: Int,
+        regionCount: Int,
+        placeCount: Int,
+        nodeCount: Int,
+        visibleProgressions: Int,
+        localAnchorCount: Int,
+        nearbyNodeCount: Int,
+        hasUnsavedChanges: Boolean,
+        adminView: Boolean
+    ): List<String> {
+        return buildList {
+            add("&7Coordonate: &f$worldName $x, $y, $z")
+            add("&7Mapping: &f$regionCount regiuni / $placeCount places / $nodeCount noduri")
+            add("&7Progresii vizibile: &f$visibleProgressions")
+            add("&7Ancore locale: &f$localAnchorCount")
+            add("&7Noduri in raza: &f$nearbyNodeCount")
+            add(if (hasUnsavedChanges) "&cModificari nesalvate!" else "&aToate modificarile sunt salvate")
+            add(if (hasUnsavedChanges) "&eStatus: necesita save" else "&aStatus: curat")
+            add(if (adminView) "&8Actiuni principale: whereami / quest / admin" else "&8Actiuni principale: whereami / quest")
+        }
+    }
 }

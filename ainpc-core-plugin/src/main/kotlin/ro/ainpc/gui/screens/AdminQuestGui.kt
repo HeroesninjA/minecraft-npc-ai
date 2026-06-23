@@ -35,6 +35,9 @@ class AdminQuestGui : GuiScreen {
         val unresolvedCount = runCatching {
             context.plugin().progressionService.findUnresolvedProgressions("", 0).size
         }.getOrDefault(-1)
+        val anchorCount = runCatching {
+            context.plugin().progressionService.getAnchorBindings("", "", 0).size
+        }.getOrDefault(-1)
 
         val byMechanic = definitions.groupBy { it.mechanicId().ifBlank { "other" } }
         val mechanics = byMechanic.keys.sorted()
@@ -42,15 +45,17 @@ class AdminQuestGui : GuiScreen {
         context.item(4, GuiItemFactory.item(
             Material.KNOWLEDGE_BOOK,
             "&6Admin Quest",
-            listOf(
-                "&7Definitii: &f${definitions.size}",
-                "&7Mecanici: &f${mechanics.size}",
-                "&7Progresii curente: &f${snapshot.allEntries().size}",
-                "&7Active: &f${snapshot.currentEntries().count { it.active() }}",
-                "&7Tracked: &f${snapshot.currentEntries().count { it.tracked() }}",
-                "&7Diagnostic: &fdup=${duplicates.size}, code=${duplicateCodes.size}, unresolved=${if (unresolvedCount >= 0) unresolvedCount else -1}",
-                if (storedSummary != null) "&7Stored DB: &f${storedSummary.rowCount()}" else "&7Stored DB: &cN/A",
-                "&8Actiuni principale: log / authoring / anchors"
+            buildAdminStatusLines(
+                definitions.size,
+                mechanics.size,
+                snapshot.allEntries().size,
+                snapshot.currentEntries().count { it.active() },
+                snapshot.currentEntries().count { it.tracked() },
+                duplicates.size,
+                duplicateCodes.size,
+                unresolvedCount,
+                storedSummary?.rowCount(),
+                anchorCount
             )
         ))
 
@@ -247,10 +252,6 @@ class AdminQuestGui : GuiScreen {
             }
         }
 
-        val anchorCount = runCatching {
-            context.plugin().progressionService.getAnchorBindings("", "", 0).size
-        }.getOrDefault(-1)
-
         if (anchorCount >= 0) {
             context.item(43, GuiItemFactory.item(
                 Material.ANVIL,
@@ -332,5 +333,35 @@ class AdminQuestGui : GuiScreen {
         "tutorial", "onboarding" -> Material.COMPASS
         "ritual" -> Material.AMETHYST_SHARD
         else -> Material.NAME_TAG
+    }
+
+    private fun buildAdminStatusLines(
+        definitionCount: Int,
+        mechanicCount: Int,
+        currentCount: Int,
+        activeCount: Int,
+        trackedCount: Int,
+        duplicateCount: Int,
+        duplicateCodeCount: Int,
+        unresolvedCount: Int,
+        storedCount: Int?,
+        anchorCount: Int
+    ): List<String> {
+        val lines = mutableListOf<String>()
+        lines.add("&7Definitii: &f$definitionCount")
+        lines.add("&7Mecanici: &f$mechanicCount")
+        lines.add("&7Progresii curente: &f$currentCount")
+        lines.add("&7Active: &f$activeCount")
+        lines.add("&7Tracked: &f$trackedCount")
+        lines.add("&7Diagnostic: &fdup=$duplicateCount, code=$duplicateCodeCount, unresolved=${if (unresolvedCount >= 0) unresolvedCount else -1}")
+        lines.add(if (storedCount != null) "&7Stored DB: &f$storedCount" else "&7Stored DB: &cN/A")
+        lines.add("&7Ancore: &f$anchorCount")
+        lines.add("&8Actiuni principale: log / authoring / anchors")
+        if (duplicateCount > 0 || duplicateCodeCount > 0 || unresolvedCount > 0) {
+            lines.add("&eStatus: necesita atentie")
+        } else {
+            lines.add("&aStatus: curat")
+        }
+        return lines
     }
 }

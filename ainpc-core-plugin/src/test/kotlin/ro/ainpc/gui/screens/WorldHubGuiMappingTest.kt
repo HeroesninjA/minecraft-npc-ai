@@ -12,5 +12,6 @@ class WorldHubGuiMappingTest {
         assertTrue(source.contains("DebugDumpMappingText.buildMappingText(plugin)"))
         assertTrue(source.contains("ainpc debugdump mapping"))
         assertTrue(source.contains("Mapping diagnostics"))
+        assertTrue(source.contains("Noduri in raza"))
     }
 }

@@ -74,13 +74,31 @@ class QuestCreateGui : GuiScreen {
 
         val sysMsg = service.getCreatorFormValue(player, "quest_system_msg").ifBlank { "" }
 
-        context.item(4, GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Creeaza Quest", listOf(
-            "&7Completeaza campurile, apoi apasa Exporta.",
-            "&7Exportul include anchor-ul NPC chiar daca locatia lipseste."
+        context.item(4, GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Creeaza Quest", buildDraftStatusLines(
+            qId, qName, qMech, qBase, qNpc, qPlace, objType, objTarget, objCount, objDialog,
+            rwType, rwValue, rwCount, stageId, stageName, stageMode, diagType, diagSpeaker, diagText, sysMsg
         )))
 
         // Rand 1: info de baza
-        context.button(9, cycleBtn("&eID", qId, "quest_id", listOf("Q99", "Q10", "Q11", "Q12", "Q13", "Q14", "Q15", "Q16", "Q17", "Q18"), context))
+        context.button(9, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eID: &f$qId", listOf(
+                "&7Click: scrie ID-ul in chat.",
+                "&7Ex: Q99, CST01, DGN_CASTEL"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_id",
+                    "quest_id",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7ID-ul trebuie sa fie stabil si unic.",
+                        "&7Ex: Q99 | CST01 | DAGON_CASTLE",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
         context.button(10, GuiButton.enabled(
             GuiItemFactory.item(Material.NAME_TAG, "&eNume: &f$qName", listOf(
                 "&7Click: scrie un nume personalizat in chat.",
@@ -96,8 +114,44 @@ class QuestCreateGui : GuiScreen {
                 )
             }
         ))
-        context.button(11, cycleBtn("&eMecanica", qMech, "quest_mechanic", mechanics, context))
-        context.button(12, cycleBtn("&eTip", qBase, "quest_base", baseTypes, context))
+        context.button(11, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMPASS, "&eMecanica: &f$qMech", listOf(
+                "&7Click: scrie mecanica in chat.",
+                "&7Sugestii: ${mechanics.joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_mechanic",
+                    "quest_mechanic",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Mecanica poate fi din preset sau custom.",
+                        "&7Sugestii: ${mechanics.joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(12, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMPASS, "&eTip: &f$qBase", listOf(
+                "&7Click: scrie tipul questului in chat.",
+                "&7Sugestii: ${baseTypes.joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_base",
+                    "quest_base",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Tipul poate fi un preset sau unul custom.",
+                        "&7Sugestii: ${baseTypes.joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
         context.button(13, GuiButton.enabled(
             GuiItemFactory.item(Material.VILLAGER_SPAWN_EGG, "&6NPC Giver: &f$qNpc", listOf(
                 "&7Click: captureaza NPC-ul apropiat.",
@@ -138,18 +192,80 @@ class QuestCreateGui : GuiScreen {
 
         // Rand 2: obiectiv
         context.item(18, GuiItemFactory.item(Material.TARGET, "&cObiectiv", listOf("&7Configureaza obiectivul principal.")))
-        context.button(19, cycleBtn("&eTip obiectiv", objType, "quest_obj_type", objectiveTypes, context))
-        context.button(20, cycleBtn("&eTinta", objTarget, "quest_obj_target", targetOptionsFor(objType), context))
-        context.button(21, cycleBtn("&eCount", objCount, "quest_obj_count", listOf("1", "2", "3", "5", "10"), context))
+        context.button(19, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eTip obiectiv: &f$objType", listOf(
+                "&7Click: scrie tipul obiectivului in chat.",
+                "&7Sugestii: ${objectiveTypes.joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_obj_type",
+                    "quest_obj_type",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Tipul obiectivului poate fi preset sau custom.",
+                        "&7Sugestii: ${objectiveTypes.joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(20, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eTinta: &f$objTarget", listOf(
+                "&7Click: scrie tinta in chat.",
+                "&7Sugestii: ${targetOptionsFor(objType).joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_obj_target",
+                    "quest_obj_target",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Tinta obiectivului poate fi semantica sau explicita.",
+                        "&7Ex: ${targetOptionsFor(objType).joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(21, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eCount: &f$objCount", listOf(
+                "&7Click: scrie cantitatea in chat.",
+                "&7Ex: 1, 2, 3, 5, 10"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_obj_count",
+                    "quest_obj_count",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Cantitatea este un numar intreg.",
+                        "&7Ex: 1 | 2 | 3 | 5 | 10",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
         context.button(22, GuiButton.enabled(
             GuiItemFactory.item(Material.BOOK, "&eDialog obiectiv: &f${objDialog.ifBlank { "-" }}", listOf(
-                "&7Click: pune un text preset.",
+                "&7Click: scrie dialogul in chat.",
                 "&7Textul spus la activarea obiectivului."
             )),
             GuiAction { click ->
-                val nextDialog = if (objDialog.isBlank()) defaultObjectiveDialog(objType, qName) else ""
-                service.setCreatorFormValue(click.player(), "quest_obj_dialog", nextDialog)
-                click.service().open(click.player(), GuiKey.QUEST_CREATE)
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_obj_dialog",
+                    "quest_obj_dialog",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Dialogul obiectivului poate descrie momentul.",
+                        "&7Ex: ${defaultObjectiveDialog(objType, qName)}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
             }
         ))
 
@@ -159,9 +275,63 @@ class QuestCreateGui : GuiScreen {
             "&7Nume: &f$stageName",
             "&7Mode: &f$stageMode"
         )))
-        context.button(28, cycleBtn("&eStage ID", stageId, "quest_stage_id", listOf("S1", "S2", "RETURN", "INTRO", "EXPLORE"), context))
-        context.button(29, cycleBtn("&eStage nume", stageName, "quest_stage_name", listOf("Stage 1", "Introduction", "Explore", "Return", "Complete"), context))
-        context.button(30, cycleBtn("&eStage mode", stageMode, "quest_stage_mode", listOf("all", "any", "manual_turn_in", "all_objectives"), context))
+        context.button(28, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eStage ID: &f$stageId", listOf(
+                "&7Click: scrie ID-ul stage-ului in chat.",
+                "&7Ex: S1, S2, RETURN, INTRO, EXPLORE"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_stage_id",
+                    "quest_stage_id",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7ID-ul stage-ului trebuie sa fie stabil.",
+                        "&7Ex: S1 | S2 | RETURN | INTRO | EXPLORE",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(29, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eStage nume: &f$stageName", listOf(
+                "&7Click: scrie numele stage-ului in chat.",
+                "&7Ex: Stage 1, Introduction, Explore, Return, Complete"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_stage_name",
+                    "quest_stage_name",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Numele stage-ului poate fi clarificator.",
+                        "&7Ex: Stage 1 | Introduction | Explore | Return | Complete",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(30, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eStage mode: &f$stageMode", listOf(
+                "&7Click: scrie modul stage in chat.",
+                "&7Ex: all, any, manual_turn_in, all_objectives"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_stage_mode",
+                    "quest_stage_mode",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Modul stage poate fi custom daca runtime-ul il suporta.",
+                        "&7Ex: all | any | manual_turn_in | all_objectives",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
         context.button(31, GuiButton.enabled(
             GuiItemFactory.item(Material.MAP, "&eStage preset", listOf(
                 "&7Click: aplica un preset simplu.",
@@ -177,9 +347,63 @@ class QuestCreateGui : GuiScreen {
         ))
 
         context.item(36, GuiItemFactory.item(Material.EMERALD, "&aRecompensa", listOf("&7Configureaza recompensa.")))
-        context.button(37, cycleBtn("&eTip recompensa", rwType, "quest_reward_type", rewardTypes, context))
-        context.button(38, cycleBtn("&eObiect", rwValue, "quest_reward_value", rewardValuesFor(rwType), context))
-        context.button(39, cycleBtn("&eCantitate", rwCount, "quest_reward_count", listOf("1", "2", "3", "5", "10", "16", "32", "64"), context))
+        context.button(37, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eTip recompensa: &f$rwType", listOf(
+                "&7Click: scrie tipul recompensei in chat.",
+                "&7Sugestii: ${rewardTypes.joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_reward_type",
+                    "quest_reward_type",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Tipul recompensei poate fi preset sau custom.",
+                        "&7Sugestii: ${rewardTypes.joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(38, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eObiect: &f$rwValue", listOf(
+                "&7Click: scrie valoarea in chat.",
+                "&7Sugestii: ${rewardValuesFor(rwType).joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_reward_value",
+                    "quest_reward_value",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Valoarea recompensei poate fi item, numar sau cheie narrativa.",
+                        "&7Ex: ${rewardValuesFor(rwType).joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(39, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eCantitate: &f$rwCount", listOf(
+                "&7Click: scrie cantitatea in chat.",
+                "&7Ex: 1, 2, 3, 5, 10, 16, 32, 64"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_reward_count",
+                    "quest_reward_count",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Cantitatea recompensei este un numar intreg.",
+                        "&7Ex: 1 | 2 | 3 | 5 | 10 | 16 | 32 | 64",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
 
         // Rand 5: dialog
         context.item(42, GuiItemFactory.item(Material.BOOK, "&bDialog", listOf("&7Mesaje pentru quest.")))
@@ -213,8 +437,44 @@ class QuestCreateGui : GuiScreen {
                 )
             }
         ))
-        context.button(43, cycleBtn("&eTip dialog", diagType, "quest_dialog_type", dialogTypes, context))
-        context.button(44, cycleBtn("&eVorbitor", diagSpeaker, "quest_dialog_speaker", listOf("npc", "player", "narrator"), context))
+        context.button(43, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eTip dialog: &f$diagType", listOf(
+                "&7Click: scrie tipul dialogului in chat.",
+                "&7Sugestii: ${dialogTypes.joinToString(", ")}"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_dialog_type",
+                    "quest_dialog_type",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Tipul dialogului poate fi preset sau custom.",
+                        "&7Sugestii: ${dialogTypes.joinToString(" | ")}",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
+        context.button(44, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eVorbitor: &f$diagSpeaker", listOf(
+                "&7Click: scrie vorbitorul in chat.",
+                "&7Ex: npc, player, narrator"
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_dialog_speaker",
+                    "quest_dialog_speaker",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7Vorbitorul poate fi preset sau custom.",
+                        "&7Ex: npc | player | narrator",
+                        "&7Scrie clear pentru reset."
+                    )
+                )
+            }
+        ))
 
         context.button(47, GuiButton.enabled(
             GuiItemFactory.item(Material.LIME_DYE, "&aExporta Draft JSON", listOf(
@@ -286,23 +546,6 @@ class QuestCreateGui : GuiScreen {
         context.fillEmpty(GuiItemFactory.filler())
     }
 
-    private fun cycleBtn(label: String, current: String, formKey: String, options: List<String>, ctx: GuiRenderContext): GuiButton {
-        return GuiButton.enabled(
-            GuiItemFactory.item(Material.PAPER, "$label: &f$current", listOf("&7Click: schimba valoarea.", "&7Urmatoarea: ${nextOption(current, options)}")),
-            GuiAction { click ->
-                val next = nextOption(current, options)
-                ctx.service().setCreatorFormValue(click.player(), formKey, next)
-                click.service().open(click.player(), GuiKey.QUEST_CREATE)
-            }
-        )
-    }
-
-    private fun nextOption(current: String, options: List<String>): String {
-        if (options.isEmpty()) return current
-        val idx = options.indexOf(current)
-        return options[(idx + 1) % options.size]
-    }
-
     private fun captureNearestNpc(click: ro.ainpc.gui.GuiClickContext, service: ro.ainpc.gui.GuiService) {
         val player = click.player()
         val nearestNpc = click.plugin().npcManager.getNPCsNear(player.location, 16.0)
@@ -365,6 +608,67 @@ class QuestCreateGui : GuiScreen {
             "break_block" -> "Sparge blocul cerut in zona indicata."
             "craft_item" -> "Craft-uieste obiectul cerut si revino."
             else -> "Du-te si fa obiectivul cerut."
+        }
+    }
+
+    private fun buildDraftStatusLines(
+        qId: String,
+        qName: String,
+        qMech: String,
+        qBase: String,
+        qNpc: String,
+        qPlace: String,
+        objType: String,
+        objTarget: String,
+        objCount: String,
+        objDialog: String,
+        rwType: String,
+        rwValue: String,
+        rwCount: String,
+        stageId: String,
+        stageName: String,
+        stageMode: String,
+        diagType: String,
+        diagSpeaker: String,
+        diagText: String,
+        sysMsg: String
+    ): List<String> {
+        val missing = mutableListOf<String>()
+        if (qId.isBlank()) missing += "ID"
+        if (qName.isBlank()) missing += "Nume"
+        if (qMech.isBlank()) missing += "Mecanica"
+        if (qBase.isBlank()) missing += "Tip"
+        if (qNpc.isBlank() || qNpc == "<neselectat>") missing += "NPC Giver"
+        if (objType.isBlank()) missing += "Tip obiectiv"
+        if (objTarget.isBlank()) missing += "Tinta obiectiv"
+        if (objCount.toIntOrNull() == null) missing += "Count obiectiv"
+        if (rwType.isBlank()) missing += "Tip recompensa"
+        if (rwValue.isBlank()) missing += "Valoare recompensa"
+        if (rwCount.toIntOrNull() == null) missing += "Count recompensa"
+        if (stageId.isBlank()) missing += "Stage ID"
+        if (stageName.isBlank()) missing += "Stage nume"
+        if (stageMode.isBlank()) missing += "Stage mode"
+        if (diagType.isBlank()) missing += "Tip dialog"
+        if (diagSpeaker.isBlank()) missing += "Vorbitor"
+        if (diagText.isBlank()) missing += "Text dialog"
+
+        return buildList {
+            add("&7Completeaza campurile, apoi apasa Exporta.")
+            add("&7Exportul include anchor-ul NPC chiar daca locatia lipseste.")
+            add("&7Quest: &f$qId &7| &f$qName")
+            add("&7Mecanica: &f$qMech &7| Tip: &f$qBase")
+            add("&7NPC: &f$qNpc &7| Place: &f${qPlace.ifBlank { "-" }}")
+            add("&7Obiectiv: &f$objType &7-> &f$objTarget &7x$objCount")
+            add("&7Recompensa: &f$rwType &7-> &f$rwValue &7x$rwCount")
+            add("&7Stage: &f$stageId &7/ &f$stageName &7/ &f$stageMode")
+            add("&7Dialog: &f$diagType &7/ &f$diagSpeaker")
+            if (sysMsg.isNotBlank()) {
+                add("&7Mesaj sistem: &f${sysMsg.take(24)}${if (sysMsg.length > 24) ".." else ""}")
+            }
+            if (objDialog.isNotBlank()) {
+                add("&7Dialog obiectiv: &f${objDialog.take(24)}${if (objDialog.length > 24) ".." else ""}")
+            }
+            add(if (missing.isEmpty()) "&aStatus: completabil" else "&eLipsesc: &f${missing.joinToString(", ")}")
         }
     }
 }

@@ -33,10 +33,7 @@ class QuestEditGui : GuiScreen {
         context.item(4, GuiItemFactory.item(
             if (currentDef != null) Material.WRITABLE_BOOK else Material.BARRIER,
             if (currentDef != null) "&6${currentDef.displayName()}" else "&6Quest Editor",
-            listOf(
-                if (currentDef != null) "&7ID: &f${currentDef.progressionId()}" else "&7Selecteaza un quest din lista.",
-                if (currentDef != null) "&7Mecanica: &f${currentDef.mechanicId()}" else ""
-            )
+            buildEditorStatusLines(currentDef, selectedId, adminView)
         ))
 
         // Lista definitii (slot 9-25)
@@ -138,5 +135,28 @@ class QuestEditGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }))
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun buildEditorStatusLines(
+        currentDef: ProgressionDefinition?,
+        selectedId: String,
+        adminView: Boolean
+    ): List<String> {
+        return buildList {
+            if (currentDef != null) {
+                add("&7ID: &f${currentDef.progressionId()}")
+                add("&7Mecanica: &f${currentDef.mechanicId()}")
+                add("&7Obiective: &f${currentDef.objectiveCount()}")
+                add("&7Stage-uri: &f${currentDef.stageCount()}")
+                add("&7Query: &f${if (selectedId.isBlank()) "-" else selectedId}")
+                add(if (adminView) "&bMod admin: activ" else "&7Mod admin: inactiv")
+                add("&aStatus: definitie gasita")
+            } else {
+                add("&7Selecteaza un quest din lista.")
+                add("&7Query: &f${if (selectedId.isBlank()) "-" else selectedId}")
+                add("&eStatus: quest negasit")
+                add("&7Cauta dupa ID sau nume complet.")
+            }
+        }
     }
 }
