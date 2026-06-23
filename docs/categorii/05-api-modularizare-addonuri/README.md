@@ -8,6 +8,8 @@ Aceasta categorie acopera API-ul public, modulele Maven, addonurile si scenariil
 
 | Document | Rol |
 |---|---|
+| `../../gui-stack.md` | Punct de intrare scurt pentru documentele UI relevante pentru addonuri si framework |
+| `../../ai-orchestrare-mcp-stack.md` | Punct de intrare scurt pentru stack-ul de orchestration AI si MCP |
 | `../../documentatie-api.md` | Contract public curent |
 | `../../api-events-listeners-triggers.md` | Contract pentru event-uri publice, listener-e si trigger-e peste quest, story, dialog, NPC si context |
 | `../../ai-orchestrare-si-mecanici.md` | Contract conceptual pentru `AIOrchestrationService`, tool calls si validare |

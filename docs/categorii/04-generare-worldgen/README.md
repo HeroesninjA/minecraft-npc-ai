@@ -8,6 +8,8 @@ Aceasta categorie acopera generarea de sate, completarea lumii si constructia as
 
 | Document | Rol |
 |---|---|
+| `../../npc-population-world-stack.md` | Punct de intrare scurt pentru planul de regiune, binding-uri NPC, household-uri si spawn |
+| `../../ai-orchestrare-mcp-stack.md` | Punct de intrare scurt pentru stack-ul de orchestration AI si MCP |
 | `../../playable-village-ux.md` | Cerinte de playability pentru generator: teren plat, case mai mari, distante, drumuri si locuri de interactiune |
 | `../../settlement-plan.md` | Contract pentru plan complet de sat/regiune, validabil inainte de constructie sau spawn |
 | `../../structuri-exterioare-satului.md` | Taxonomie si reguli de generare/mapping pentru castel, padure, fantana, casa izolata, mini-sat, sat de barbari, dungeon si alte zone exterioare |

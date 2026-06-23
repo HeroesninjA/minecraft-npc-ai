@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Punctul de intrare recomandat pentru aceasta zona este `progression-events-onboarding-stack.md`.
+
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
 ## Scop

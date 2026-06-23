@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-04
 
+Punctul de intrare recomandat pentru aceasta zona este `npc-population-world-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru modelul persistent de household-uri. Acest document este design si contract de lucru; tabelele `households` si `household_residents` nu sunt considerate implementate complet pana cand exista cod, migration, audit si comenzi de inspectie.

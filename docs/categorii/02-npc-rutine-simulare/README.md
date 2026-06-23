@@ -8,7 +8,10 @@ Aceasta categorie acopera comportamentul NPC-urilor, rutina, reactiile sociale, 
 
 | Document | Rol |
 |---|---|
+| `../../npc-population-world-stack.md` | Punct de intrare scurt pentru planul de regiune, binding-uri NPC, household-uri si spawn |
+| `../../simulation-stack.md` | Punct de intrare scurt pentru seria de simulare NPC |
 | `../../playable-village-ux.md` | Criterii concrete pentru NPC-uri stabile, rutina lizibila si interactiuni clare in primul sat jucabil |
+| `../../gui-stack.md` | Punct de intrare scurt pentru ecranele GUI relevante pentru NPC interaction si status |
 | `../../simulare-sat-si-lume.md` | Contract de ansamblu pentru simulare de comunitate, resurse, reputatie, evenimente si consecinte |
 | `../../simulation-service.md` | Contract tehnic pentru serviciul logic de simulare NPC: tick periodic, nevoi, scoring, stare, rutina si persistenta |
 | `../../simulation-service-partea-2.md` | Plan de extractie pentru `SimulationService` real: API, comenzi, audit, debugdump, teste, performanta si integrare cu household-uri |

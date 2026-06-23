@@ -190,20 +190,7 @@ class HouseholdPersistenceServiceState(
             return report.toReport()
         }
 
-        val rowsByHousehold = LinkedHashMap<String, MutableList<BindingBackfillRow>>()
-        for (row in rows) {
-            val householdId = backfillHouseholdId(row.familyId, row.homePlaceId)
-            if (householdId.isBlank()) {
-                report.warning("Sar peste npc_id=${row.npcId}: nu pot deriva household_id din family_id/home_place_id.")
-                continue
-            }
-            rowsByHousehold.computeIfAbsent(householdId) { ArrayList() }.add(row)
-        }
-        report.candidateHouseholds = rowsByHousehold.size
-
-        for ((householdId, householdRows) in rowsByHousehold) {
-            backfillHouseholdCandidate(householdId, householdRows, apply, report)
-        }
+        processBackfillRows(rows, apply, report)
 
         return report.toReport()
     }
@@ -237,20 +224,7 @@ class HouseholdPersistenceServiceState(
             rowsByKey.putIfAbsent("${value.homePlaceId}:${value.npcId}", value)
         }
 
-        val rowsByHousehold = LinkedHashMap<String, MutableList<BindingBackfillRow>>()
-        for (row in rowsByKey.values) {
-            val householdId = backfillHouseholdId(row.familyId, row.homePlaceId)
-            if (householdId.isBlank()) {
-                report.warning("Sar peste metadata resident npc_id=${row.npcId}: nu pot deriva household_id din family_id/home_place_id.")
-                continue
-            }
-            rowsByHousehold.computeIfAbsent(householdId) { ArrayList() }.add(row)
-        }
-        report.candidateHouseholds = rowsByHousehold.size
-
-        for ((householdId, householdRows) in rowsByHousehold) {
-            backfillHouseholdCandidate(householdId, householdRows, apply, report)
-        }
+        processBackfillRows(rowsByKey.values.toList(), apply, report)
 
         return report.toReport()
     }
@@ -638,6 +612,27 @@ class HouseholdPersistenceServiceState(
 
         if (apply) {
             updateResidentCount(householdId, residentsAccepted)
+        }
+    }
+
+    private fun processBackfillRows(
+        rows: List<BindingBackfillRow>,
+        apply: Boolean,
+        report: HouseholdBackfillAccumulator
+    ) {
+        val rowsByHousehold = LinkedHashMap<String, MutableList<BindingBackfillRow>>()
+        for (row in rows) {
+            val householdId = backfillHouseholdId(row.familyId, row.homePlaceId)
+            if (householdId.isBlank()) {
+                report.warning("Sar peste npc_id=${row.npcId}: nu pot deriva household_id din family_id/home_place_id.")
+                continue
+            }
+            rowsByHousehold.computeIfAbsent(householdId) { ArrayList() }.add(row)
+        }
+        report.candidateHouseholds = rowsByHousehold.size
+
+        for ((householdId, householdRows) in rowsByHousehold) {
+            backfillHouseholdCandidate(householdId, householdRows, apply, report)
         }
     }
 

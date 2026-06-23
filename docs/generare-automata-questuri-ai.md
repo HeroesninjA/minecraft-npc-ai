@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Punctul de intrare recomandat pentru aceasta zona este `story-context-quest-ai-stack.md`.
+
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
 Status: document canonic initial pentru generarea asistata de questuri cu AI. In cod exista `AIOrchestrationService` ca fundatie initiala, dar generarea automata de questuri, `QuestDraft`, comenzile admin dedicate, persistenta drafturilor si validatorul complet nu sunt implementate inca.

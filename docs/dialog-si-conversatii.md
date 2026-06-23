@@ -7,6 +7,7 @@ Actualizat: 2026-05-11
 Acest document descrie cum trebuie imbunatatit dialogul NPC pe masura ce avanseaza celelalte mecanici: questuri, story state, environment context, memorie, reputatie, rutine, familie, economie si campanii.
 
 Pentru fluxul concret de click, chat privat, sesiuni, ascultare pasiva si intentii de quest, vezi `interactiuni.md`. Documentul de fata ramane despre continutul si contextul dialogului.
+Pentru vederea de ansamblu a stack-ului, vezi `interactiune-dialog-reactie-stack.md`.
 
 Ideea principala:
 

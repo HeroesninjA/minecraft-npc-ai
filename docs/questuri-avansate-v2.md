@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Punctul de intrare recomandat pentru aceasta serie este `quest-evolution-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Pentru relatiile dintre clasele de quest, foloseste [harta claselor pentru quest](./harta-clase-quest.md).

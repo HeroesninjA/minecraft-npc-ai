@@ -85,7 +85,7 @@ class NPCManager(
                 stmt.executeQuery().use { rs ->
                     var count = 0
                     while (rs.next()) {
-                        val npc = loadNPCFromResultSet(rs) ?: continue
+                        val npc = loadNPCFromResultSet(rs)
                         loadTraits(npc)
                         registerNPC(npc)
                         count++
@@ -1375,22 +1375,48 @@ class NPCManager(
         }
 
         val handledEntities = HashSet<UUID>()
-        for ((key, value) in byNpcId) {
-            val npc = getNPCById(key)
-            if (npc == null) {
-                warnings.add("Sar peste entitati live pentru npc_id inexistent: " + key + ".")
-                continue
-            }
-            repairDuplicateVillagerGroup("npc_id=" + key, npc, value, apply, actions, counters, handledEntities)
-        }
+        repairDuplicateVillagerGroups(
+            byNpcId,
+            apply,
+            actions,
+            warnings,
+            counters,
+            handledEntities,
+            { key -> getNPCById(key) },
+            { key -> "Sar peste entitati live pentru npc_id inexistent: $key." },
+            { key -> "npc_id=$key" }
+        )
+        repairDuplicateVillagerGroups(
+            bySourceKey,
+            apply,
+            actions,
+            warnings,
+            counters,
+            handledEntities,
+            { key -> findNPCBySourceKey(key) },
+            { key -> "Sar peste entitati live pentru source_key fara NPC canonic: $key." },
+            { key -> "source_key=$key" }
+        )
+    }
 
-        for ((key, value) in bySourceKey) {
-            val canonical = findNPCBySourceKey(key)
+    private fun <K> repairDuplicateVillagerGroups(
+        groups: Map<K, ArrayList<Villager>>,
+        apply: Boolean,
+        actions: ArrayList<String>,
+        warnings: ArrayList<String>,
+        counters: NpcRepairCounters,
+        handledEntities: HashSet<UUID>,
+        canonicalResolver: (K) -> AINPC?,
+        missingMessage: (K) -> String,
+        groupLabel: (K) -> String
+    ) {
+        for ((key, value) in groups) {
+            val canonical = canonicalResolver(key)
             if (canonical == null) {
-                warnings.add("Sar peste entitati live pentru source_key fara NPC canonic: " + key + ".")
+                warnings.add(missingMessage(key))
                 continue
             }
-            repairDuplicateVillagerGroup("source_key=" + key, canonical, value, apply, actions, counters, handledEntities)
+            repairDuplicateVillagerGroup(groupLabel(key), canonical, value, apply, actions, counters, handledEntities)
         }
     }
 
@@ -1433,7 +1459,7 @@ class NPCManager(
     }
 
     private fun chooseLiveVillagerToKeep(canonical: AINPC, villagers: List<Villager>): Villager {
-        val currentEntity = canonical?.bukkitEntity
+        val currentEntity = canonical.bukkitEntity
         if (currentEntity is Villager && currentEntity.isValid) {
             for (villager in villagers) {
                 if (villager.uniqueId == currentEntity.uniqueId) {
@@ -1442,7 +1468,7 @@ class NPCManager(
             }
         }
 
-        if (canonical != null && canonical.uuid != null) {
+        if (canonical.uuid != null) {
             for (villager in villagers) {
                 if (villager.uniqueId == canonical.uuid) {
                     return villager
@@ -1450,7 +1476,7 @@ class NPCManager(
             }
         }
 
-        val canonicalId = canonical?.databaseId ?: 0
+        val canonicalId = canonical.databaseId
         if (canonicalId > 0) {
             for (villager in villagers) {
                 if (readPersistentNpcId(villager) == canonicalId) {
@@ -1854,7 +1880,7 @@ class NPCManager(
     }
 
     fun ensureSimulationAnchors(npc: AINPC): Boolean {
-        return ensureSimulationAnchors(npc, npc?.location)
+        return ensureSimulationAnchors(npc, npc.location)
     }
 
     private fun publishNpcDiscovered(npc: AINPC, villager: Villager, reason: String) {

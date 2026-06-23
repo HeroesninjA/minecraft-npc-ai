@@ -8,8 +8,11 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 
 | Document | Rol |
 |---|---|
+| `../../mapping-stack.md` | Punct de intrare scurt pentru documentele de mapping |
+| `../../npc-population-world-stack.md` | Punct de intrare scurt pentru planul de regiune, binding-uri NPC, household-uri si spawn |
 | `../../mapping.md` | Starea actuala, regulile de consum si evolutia sistemului `WorldRegion -> WorldPlace -> WorldNode` |
 | `../../playable-village-ux.md` | Criterii de playability pentru sat: spatiere, teren, NPC stabili, rutina si interactiuni clare |
+| `../../gui-stack.md` | Punct de intrare scurt pentru documentele UI relevante pentru mapping si world hub |
 | `../../lucru-alternat-quest-mapping-progression.md` | Protocol pentru a verifica mapping-ul prin questuri/contracte mici si GUI peste snapshot-uri inainte de extractii mari de runtime |
 | `../../mapping-harti-manuale.md` | Ghid pentru harti construite manual, etichetare semantica, wand + prompturi naturale si limitele detectiei automate |
 | `../../mapping-pentru-implementari-ulterioare.md` | Redirect istoric catre `../../mapping.md` |
@@ -46,7 +49,7 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 - Inspectia read-only pentru `npc_world_bindings` exista prin `/ainpc world bindings ...`.
 - Debugdump-ul `world/all` exporta `npc-world-bindings.json`.
 - Protectiile anti-duplicare au index DB `npc_source_keys`, marker persistent pe entitate, `/ainpc duplicates`, `/ainpc delete-id` si `/ainpc repair duplicates`.
-- Lipseste inca batch-ul persistent complet pentru retry/rollback settlement la nivel de `spawn_batches`.
+- Ramane de acoperit batch-ul persistent complet pentru retry/rollback settlement la nivel de `spawn_batches`.
 
 ## Fazele urmatoare
 

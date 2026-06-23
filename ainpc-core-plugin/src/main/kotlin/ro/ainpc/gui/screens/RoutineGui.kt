@@ -94,7 +94,7 @@ class RoutineGui : GuiScreen {
                         Material.COMPASS,
                         "&eStatus nearest",
                         "&7Ruleaza /ainpc routine status nearest pentru cel mai apropiat NPC.",
-                        "&8Actiune principala."
+                    "&8Actiuni principale."
                     ),
                     GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
                 )

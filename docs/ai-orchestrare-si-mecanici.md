@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Punctul de intrare recomandat pentru aceasta zona este `ai-orchestrare-mcp-stack.md`.
+
 ## Scop
 
 Acest document descrie cum trebuie imbunatatita partea de AI astfel incat AI-ul sa nu fie folosit doar pentru dialog, ci si pentru:
@@ -26,6 +28,7 @@ Runtime-ul valideaza, executa si persista.
 Pentru a vedea unde se leaga aceste mecanici in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si [harta completa](./harta-pachetelor-cod.md).
 
 Pentru relatiile dintre clasele AI, foloseste [harta claselor pentru AI](./harta-clase-ai.md).
+Pentru vederea de ansamblu a stack-ului, vezi `ai-orchestrare-mcp-stack.md`.
 
 AI-ul nu trebuie sa fie sursa de adevar pentru progres, reward-uri, story state, economie, relatii sau world changes.
 

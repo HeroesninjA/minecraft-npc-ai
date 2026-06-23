@@ -12,6 +12,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.npc.AINPC
 import ro.ainpc.debug.WorldMappingSemanticIndex
 import ro.ainpc.managers.ManagedVillagerAuditIssue
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.progression.ProgressionService
 import ro.ainpc.progression.StoredProgression
@@ -308,25 +309,6 @@ fun isNoneSelector(value: String?): Boolean =
         value == "-" ||
         value.equals("none", ignoreCase = true) ||
         value.equals("null", ignoreCase = true)
-
-fun firstNonBlankFromMap(values: Map<String, String>, vararg keys: String): String {
-    for (key in keys) {
-        val value = values[key]
-        if (!value.isNullOrBlank()) {
-            return value
-        }
-    }
-    return ""
-}
-
-fun firstNonBlank(vararg values: String?): String {
-    for (value in values) {
-        if (!value.isNullOrBlank()) {
-            return value
-        }
-    }
-    return ""
-}
 
 fun formatBounds(minX: Int, minY: Int, minZ: Int, maxX: Int, maxY: Int, maxZ: Int): String =
     "$minX,$minY,$minZ -> $maxX,$maxY,$maxZ"
@@ -923,7 +905,7 @@ fun formatNpcIdentity(npc: AINPC): String =
     npc.name + "#" + npc.databaseId
 
 fun nodeLabel(node: WorldNodeInfo, fallbackLabel: String?): String {
-    val explicitLabel = firstNonBlank(
+    val explicitLabel = SpawnSemanticRules.firstNonBlank(
         node.metadata()["label"],
         node.metadata()["name"],
         node.metadata()["display_name"]
@@ -942,36 +924,18 @@ fun npcBindingId(npc: AINPC): String {
 }
 
 fun distanceSquaredToPlaceCenter(place: WorldPlaceInfo, node: WorldNodeInfo): Double =
-    distanceSquared(placeCenterX(place), placeAnchorY(place), placeCenterZ(place), node.x(), node.y(), node.z())
-
-fun distanceSquared(
-    leftX: Double,
-    leftY: Double,
-    leftZ: Double,
-    rightX: Double,
-    rightY: Double,
-    rightZ: Double
-): Double {
-    val dx = leftX - rightX
-    val dy = leftY - rightY
-    val dz = leftZ - rightZ
-    return dx * dx + dy * dy + dz * dz
-}
-
-fun placeCenterX(place: WorldPlaceInfo): Double =
-    (place.minX() + place.maxX()) / 2.0
-
-fun placeAnchorY(place: WorldPlaceInfo): Double =
-    kotlin.math.min(place.maxY().toDouble(), place.minY() + 1.0)
-
-fun placeCenterZ(place: WorldPlaceInfo): Double =
-    (place.minZ() + place.maxZ()) / 2.0
+    SpawnSemanticRules.distanceSquared(
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place),
+        node.x(), node.y(), node.z()
+    )
 
 fun questEntryStage(entry: FeaturePackLoader.QuestEntryDefinition?): String {
     if (entry == null) {
         return ""
     }
-    return firstNonBlank(
+    return SpawnSemanticRules.firstNonBlank(
         entry.metadata["stage_id"],
         entry.metadata["stage"],
         entry.metadata["phase"],
@@ -1154,7 +1118,7 @@ fun isHousePlace(place: WorldPlaceInfo): Boolean =
         "home".equals(place.metadata()["purpose"], ignoreCase = true)
 
 fun parseResidents(place: WorldPlaceInfo): List<String> {
-    val rawResidents = firstNonBlank(
+    val rawResidents = SpawnSemanticRules.firstNonBlank(
         place.metadata()["residents"],
         place.metadata()["resident_npc_ids"],
         place.metadata()["resident_ids"]
@@ -1168,7 +1132,7 @@ fun parseResidents(place: WorldPlaceInfo): List<String> {
 }
 
 fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int? {
-    val rawValue = firstNonBlankFromMap(place.metadata(), *keys)
+    val rawValue = SpawnSemanticRules.firstNonBlankFromMap(place.metadata(), *keys)
     if (rawValue.isBlank()) {
         return null
     }
@@ -1181,19 +1145,7 @@ fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int? {
 }
 
 fun hasAnySemanticNode(nodes: Collection<WorldNodeInfo>, vararg expectedTokens: String): Boolean =
-    nodes.any { nodeMatchesAny(it, *expectedTokens) }
-
-fun nodeMatchesAny(node: WorldNodeInfo, vararg expectedTokens: String): Boolean {
-    if (matchesAnyToken(node.typeId(), *expectedTokens)) {
-        return true
-    }
-    for ((key, value) in node.metadata()) {
-        if (matchesAnyToken(key, *expectedTokens) || matchesAnyToken(value, *expectedTokens)) {
-            return true
-        }
-    }
-    return false
-}
+    nodes.any { SpawnSemanticRules.nodeMatchesAny(it, *expectedTokens) }
 
 fun formatQuestAnchorBinding(row: QuestAnchorBindingRow): String =
     row.playerUuid() + " | " + row.templateId() +
@@ -1208,8 +1160,8 @@ fun generatedQuestObjectiveKey(objective: FeaturePackLoader.QuestEntryDefinition
     if (!entryId.isNullOrBlank()) {
         return entryId
     }
-    val type = normalizeQuestStageReference(firstNonBlank(objective.type, "objective"))
-    val itemId = normalizeQuestStageReference(firstNonBlank(objective.itemId, "entry"))
+    val type = normalizeQuestStageReference(SpawnSemanticRules.firstNonBlank(objective.type, "objective"))
+    val itemId = normalizeQuestStageReference(SpawnSemanticRules.firstNonBlank(objective.itemId, "entry"))
     return "$type:$itemId:$index"
 }
 
@@ -2007,10 +1959,10 @@ fun auditWorldReadiness(
     val workplaceCount = places.count { isWorkplace(it) }
     val socialPlaceCount = places.count { isSocialPlace(it) }
     val questNodeCount = nodes.count { node ->
-        nodeMatchesAny(node, "quest_trigger", "quest_board", "inspect_node", "interaction")
+        SpawnSemanticRules.nodeMatchesAny(node, "quest_trigger", "quest_board", "inspect_node", "interaction")
     }
-    val bedNodeCount = nodes.count { node -> nodeMatchesAny(node, "bed") }
-    val workNodeCount = nodes.count { node -> nodeMatchesAny(node, "work", "workstation", "work_anchor") }
+    val bedNodeCount = nodes.count { node -> SpawnSemanticRules.nodeMatchesAny(node, "bed") }
+    val workNodeCount = nodes.count { node -> SpawnSemanticRules.nodeMatchesAny(node, "work", "workstation", "work_anchor") }
 
     report.info(
         "Mapping readiness: $houseCount case, $workplaceCount locuri de munca, " +
@@ -2699,8 +2651,8 @@ fun preserveBindingMetadata(proposed: NpcWorldBinding, existing: NpcWorldBinding
     }
     return NpcWorldBinding(
         proposed.npcId(),
-        firstNonBlank(proposed.npcUuid(), existing.npcUuid()),
-        firstNonBlank(proposed.npcName(), existing.npcName()),
+        SpawnSemanticRules.firstNonBlank(proposed.npcUuid(), existing.npcUuid()),
+        SpawnSemanticRules.firstNonBlank(proposed.npcName(), existing.npcName()),
         proposed.homePlaceId(),
         proposed.workPlaceId(),
         proposed.socialPlaceId(),
@@ -2728,20 +2680,15 @@ fun inferNpcWorldBindingFromProfile(npc: AINPC?, worldAdmin: WorldAdminApi?, sou
     val homeNode = inferProfileAnchorNode(worldAdmin, npc.homeAnchor, homePlace)
     val workNode = inferProfileAnchorNode(worldAdmin, npc.workAnchor, workPlace)
     val socialNode = inferProfileAnchorNode(worldAdmin, npc.socialAnchor, socialPlace)
-    return NpcWorldBinding(
-        npc.databaseId,
-        npc.uuid.toString(),
-        npc.name,
-        homePlace?.id() ?: "",
-        workPlace?.id() ?: "",
-        socialPlace?.id() ?: "",
-        homeNode?.id() ?: "",
-        workNode?.id() ?: "",
-        socialNode?.id() ?: "",
-        "",
-        source,
-        0L,
-        0L
+    return NpcWorldBinding.fromResolvedAnchors(
+        npc,
+        homePlace,
+        workPlace,
+        socialPlace,
+        homeNode,
+        workNode,
+        socialNode,
+        source
     )
 }
 
@@ -2815,9 +2762,9 @@ fun createOwnedLocationFromPlace(
         anchorRole,
         place.displayName(),
         place.worldName(),
-        placeCenterX(place),
-        placeAnchorY(place),
-        placeCenterZ(place)
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place)
     )
 }
 
@@ -2946,26 +2893,26 @@ fun nodePriorityForAnchor(node: WorldNodeInfo, anchorRole: String?): Int =
     when (normalizeAuditKey(anchorRole)) {
         "home" -> {
             when {
-                nodeMatchesAny(node, "home", "house", "bed", "sleep", "pat") -> 0
-                nodeMatchesAny(node, "npc_spawn", "spawn") -> 1
-                nodeMatchesAny(node, "entrance", "door", "inside", "intrare", "usa") -> 2
-                nodeMatchesAny(node, "interaction") -> 3
+                SpawnSemanticRules.nodeMatchesAny(node, "home", "house", "bed", "sleep", "pat") -> 0
+                SpawnSemanticRules.nodeMatchesAny(node, "npc_spawn", "spawn") -> 1
+                SpawnSemanticRules.nodeMatchesAny(node, "entrance", "door", "inside", "intrare", "usa") -> 2
+                SpawnSemanticRules.nodeMatchesAny(node, "interaction") -> 3
                 else -> -1
             }
         }
         "work" -> {
             when {
-                nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru") -> 0
-                nodeMatchesAny(node, "npc_spawn", "spawn") -> 1
-                nodeMatchesAny(node, "interaction", "counter", "desk") -> 2
+                SpawnSemanticRules.nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru") -> 0
+                SpawnSemanticRules.nodeMatchesAny(node, "npc_spawn", "spawn") -> 1
+                SpawnSemanticRules.nodeMatchesAny(node, "interaction", "counter", "desk") -> 2
                 else -> -1
             }
         }
         "social" -> {
             when {
-                nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata", "fantana") -> 0
-                nodeMatchesAny(node, "interaction") -> 1
-                nodeMatchesAny(node, "npc_spawn", "spawn") -> 2
+                SpawnSemanticRules.nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata", "fantana") -> 0
+                SpawnSemanticRules.nodeMatchesAny(node, "interaction") -> 1
+                SpawnSemanticRules.nodeMatchesAny(node, "npc_spawn", "spawn") -> 2
                 else -> -1
             }
         }

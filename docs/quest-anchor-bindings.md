@@ -85,7 +85,7 @@ La oferire, acceptare sau pornire manuala:
 
 1. `ScenarioEngine` cere `QuestAnchorResolver` pentru template-ul de quest.
 2. Resolverul verifica obiectivele semantice.
-3. Daca lipsesc ancore obligatorii, questul este refuzat cu mesaj administrativ.
+3. Daca ancorele obligatorii sunt incomplete sau lipsesc, questul este refuzat cu mesaj administrativ.
 4. Daca ancorele sunt valide, progresul este salvat in `player_quests`.
 5. Binding-urile sunt salvate in `quest_anchor_bindings`.
 6. Pentru compatibilitate runtime, aceleasi ancore sunt reflectate si in `questVariables`.

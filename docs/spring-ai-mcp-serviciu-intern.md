@@ -2,7 +2,11 @@
 
 Actualizat: 2026-06-04
 
+Punctul de intrare recomandat pentru aceasta zona este `ai-orchestrare-mcp-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Pentru vederea de ansamblu a stack-ului, vezi `ai-orchestrare-mcp-stack.md`.
 
 ## Scop
 

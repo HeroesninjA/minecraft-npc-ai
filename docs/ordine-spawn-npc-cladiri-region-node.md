@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Punctul de intrare recomandat pentru aceasta zona este `npc-population-world-stack.md`.
+
 Pentru orientare in codul de spawn, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md), [harta completa](./harta-pachetelor-cod.md) si [harta claselor pentru spawn](./harta-clase-spawn.md).
 
 Arhiva v1:

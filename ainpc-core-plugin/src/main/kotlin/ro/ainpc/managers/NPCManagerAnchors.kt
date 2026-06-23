@@ -6,6 +6,7 @@ import org.bukkit.Location
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import java.util.function.Predicate
@@ -162,7 +163,7 @@ private fun findBestRegionNode(center: Location, anchorRole: String): WorldNodeI
         val priority = nodePriority(node, anchorRole)
         if (priority < 0) continue
 
-        val distanceSquared = distanceSquared(node.x(), node.y(), node.z(), center.x, center.y, center.z)
+        val distanceSquared = SpawnSemanticRules.distanceSquared(node.x(), node.y(), node.z(), center.x, center.y, center.z)
         if (regionId.isBlank() && distanceSquared > 32.0 * 32.0) continue
 
         val score = priority * 100_000.0 + distanceSquared

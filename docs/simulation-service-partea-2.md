@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-06
 
+Punctul de intrare recomandat pentru aceasta serie este `simulation-stack.md`.
+
 Status: design tehnic pentru pasul urmator. Partea 1 descrie implementarea curenta distribuita. Acest document descrie cum ar trebui extras si maturizat un `SimulationService` real, fara sa schimbe contractele de quest, story sau rutina.
 
 ## Scop

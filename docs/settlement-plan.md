@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-04
 
+Punctul de intrare recomandat pentru aceasta zona este `npc-population-world-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Status: document canonic initial pentru planul complet de sat/regiune. Acest document defineste contractul de design pentru `SettlementPlan`; implementarea completa, serializarea, comenzile `spawnplan` si validatoarele raman faze viitoare pana cand exista cod si teste.

@@ -15,6 +15,7 @@ Acest document descrie cum ar trebui construit sistemul de reactie dintre NPC si
 - reutilizabila pentru dialog, questuri, combat si simulare
 
 Pentru evolutia dialogului propriu-zis peste quest, story, environment, memorie si reputatie, vezi si `dialog-si-conversatii.md`. Pentru fluxul concret de click, chat privat, sesiuni si intentii, vezi `interactiuni.md`.
+Pentru vederea de ansamblu a stack-ului, vezi `interactiune-dialog-reactie-stack.md`.
 
 Ideea centrala:
 - reactia nu trebuie sa fie doar text

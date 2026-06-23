@@ -60,7 +60,7 @@ class MainHubGui : GuiScreen {
             GuiKey.QUEST,
             Material.WRITABLE_BOOK,
             "&eProgresii",
-            listOf("&7Questuri si progresii active.", "&8Actiune principala.")
+            listOf("&7Questuri si progresii active.", "&8Actiuni principale.")
         )
         openButton(
             context,
@@ -112,7 +112,7 @@ class MainHubGui : GuiScreen {
             GuiKey.SHOP,
             Material.EMERALD,
             "&2Shop NPC",
-            listOf("&7Intrare pregatita pentru economie/shop.", "&8Actiune secundara.")
+            listOf("&7Intrare pregatita pentru economie/shop.", "&8Actiuni secundare.")
         )
         openButton(
             context,

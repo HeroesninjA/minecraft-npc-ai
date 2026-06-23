@@ -36,6 +36,8 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 
 ### 2. World mapping si spawn
 
+- `mapping-stack.md` este punctul de intrare pentru citirea zonei de mapping.
+- `npc-population-world-stack.md` este punctul de intrare pentru citirea zonei NPC population/world bindings.
 - `mapping.md` este documentul canonic pentru `WorldRegion -> WorldPlace -> WorldNode`.
 - `mapping-pentru-implementari-ulterioare.md` este redirect istoric catre `mapping.md`.
 - `mapping-harti-manuale.md` detaliaza folosirea manuala a mapping-ului.
@@ -46,27 +48,36 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 - `households-persistente.md`, `rutine-npc-si-timeline.md`, `prevenire-duplicare-npc.md` si `generare-populatie-narativa.md` depind de mapping si de bind-urile NPC.
 - `simulare-sat-si-lume.md` descrie sistemul de simulare la nivel mare, peste mapping si NPC bindings.
 - `environment-context-si-engine.md` si `gui-interfete.md` folosesc mapping-ul ca baza pentru inspectie si prezentare.
+- `gui-stack.md` este punctul de intrare pentru citirea zonei UI.
 - `gui-interfete.md` si `gui-admin-mapping-quest.md` includ acum reguli explicite de simplificare UI/UX: progressive disclosure, separare player/admin si layout-uri mai curate pentru authoring si editare.
 
 ### 3. NPC, rutine si simulare
+
+- `simulation-stack.md` este punctul de intrare pentru citirea seriei de simulare NPC.
 
 - `simulation-service.md` este contractul tehnic de baza.
 - `simulation-service-partea-2.md`, `simulation-service-partea-3.md` si `simulation-service-partea-4.md` sunt etape successive de extractie si rollout.
 - `dialog-si-conversatii.md` depinde de rutina, relatie, memorie si context.
 - `interactiuni.md` defineste fluxul concret player-NPC si consuma starea NPC.
 - `reactie-npc-jucator.md` se bazeaza pe istoric si emotii.
+- `interactiune-dialog-reactie-stack.md` este punctul de intrare pentru citirea celor trei documente de mai sus.
 - `npc-uri-temporare-si-episodice.md` este o ramura speciala a modelului de NPC.
 
 ### 4. Quest, story si AI
+
+- `progression-events-onboarding-stack.md` este punctul de intrare pentru citirea zonei progresie/event-uri/onboarding.
+- `quest-evolution-stack.md` este punctul de intrare pentru citirea seriei de evolutie a questurilor.
 
 - `questuri-faza-1-stabilizare.md`, `pregatire-questuri-avansate.md` si `questuri-avansate-v2.md` formeaza lantul de evolutie pentru questuri.
 - `progression-service.md` este directia pentru progres generic peste questuri.
 - `api-events-listeners-triggers.md` defineste contractul de evenimente folosit de quest, story, dialog si NPC.
 - `lucru-alternat-quest-mapping-progression.md` leaga mapping-ul de questuri si progres.
+- `story-context-quest-ai-stack.md` este punctul de intrare pentru citirea zonei story/context/quest AI.
 - `quest-anchor-bindings.md` depinde de mapping si este folosit de quest/story.
 - `story-context-service.md` si `story-si-context-ai.md` leaga mapping -> quest -> story -> AI.
 - `story-context-service.md` si `generare-automata-questuri-ai.md` sunt dependente de contextul stabil al lumii.
 - `ai-orchestrare-si-mecanici.md` si `spring-ai-mcp-serviciu-intern.md` descriu stratul AI care consuma context determinist.
+- `ai-orchestrare-mcp-stack.md` este punctul de intrare pentru citirea celor doua documente AI de mai sus.
 - `schema-scenariu-predefinit-testare.md` este un fixture de test peste mapping, NPC si quest/story.
 - `betonquest-directii-potrivite-pentru-ainpc.md` este referinta externa, nu specificatie primara.
 

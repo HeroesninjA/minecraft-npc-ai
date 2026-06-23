@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-06
 
+Punctul de intrare recomandat pentru aceasta serie este `simulation-stack.md`.
+
 Status: runbook de implementare pentru introducerea treptata a `SimulationService`, a snapshot-urilor, a comenzilor admin si a semnalelor. Partile 1-3 descriu starea curenta, designul serviciului si semnalele avansate. Partea 4 descrie cum se livreaza efectiv fara regresii.
 
 ## Scop

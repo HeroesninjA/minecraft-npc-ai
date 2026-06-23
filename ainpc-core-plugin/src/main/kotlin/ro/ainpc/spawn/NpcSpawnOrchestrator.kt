@@ -12,7 +12,6 @@ import ro.ainpc.world.WorldPlaceInfo
 import java.util.LinkedHashMap
 import java.util.Locale
 import kotlin.math.max
-import kotlin.math.min
 
 class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
     private val houseAllocationValidator = HouseAllocationValidator()
@@ -443,9 +442,15 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         var workNode = resolveOptionalNode(worldAdmin, plan.workNodeId(), "workNodeId", errors)
         var socialNode = resolveOptionalNode(worldAdmin, plan.socialNodeId(), "socialNodeId", errors)
 
-        if (homeNode == null && homePlace != null) homeNode = findBestNodeForPlace(worldAdmin, homePlace, "home")
-        if (workNode == null && workPlace != null) workNode = findBestNodeForPlace(worldAdmin, workPlace, "work")
-        if (socialNode == null && socialPlace != null) socialNode = findBestNodeForPlace(worldAdmin, socialPlace, "social")
+        if (homeNode == null && homePlace != null) {
+            homeNode = SpawnSemanticRules.bestNodeForPlace(homePlace, worldAdmin.getNodesForPlace(homePlace.id()), "home")
+        }
+        if (workNode == null && workPlace != null) {
+            workNode = SpawnSemanticRules.bestNodeForPlace(workPlace, worldAdmin.getNodesForPlace(workPlace.id()), "work")
+        }
+        if (socialNode == null && socialPlace != null) {
+            socialNode = SpawnSemanticRules.bestNodeForPlace(socialPlace, worldAdmin.getNodesForPlace(socialPlace.id()), "social")
+        }
 
         validateNodeInsidePlace(homeNode, homePlace, "homeNodeId", errors)
         validateNodeInsidePlace(workNode, workPlace, "workNodeId", errors)
@@ -526,28 +531,6 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         return actual == expected || actual.endsWith(":$expected")
     }
 
-    private fun findBestNodeForPlace(worldAdmin: WorldAdminApi, place: WorldPlaceInfo, anchorRole: String): WorldNodeInfo? {
-        val nodes = worldAdmin.getNodesForPlace(place.id())
-        var bestNode: WorldNodeInfo? = null
-        var bestPriority = Int.MAX_VALUE
-        var bestDistance = Double.MAX_VALUE
-
-        for (node in nodes) {
-            val priority = nodePriority(node, anchorRole)
-            if (priority < 0) continue
-            val distance = distanceSquared(
-                placeCenterX(place), placeAnchorY(place), placeCenterZ(place),
-                node.x(), node.y(), node.z()
-            )
-            if (priority < bestPriority || (priority == bestPriority && distance < bestDistance)) {
-                bestPriority = priority
-                bestDistance = distance
-                bestNode = node
-            }
-        }
-        return bestNode
-    }
-
     private fun validateNodeInsidePlace(node: WorldNodeInfo?, place: WorldPlaceInfo?, label: String, errors: MutableList<String>) {
         if (node == null || place == null) return
         if (!place.id().equals(node.placeId(), ignoreCase = true)) {
@@ -587,48 +570,12 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
                 type,
                 place.displayName(),
                 place.worldName(),
-                placeCenterX(place),
-                placeAnchorY(place),
-                placeCenterZ(place)
+                SpawnSemanticRules.placeCenterX(place),
+                SpawnSemanticRules.placeAnchorY(place),
+                SpawnSemanticRules.placeCenterZ(place)
             )
         }
         return null
-    }
-
-    private fun nodePriority(node: WorldNodeInfo, anchorRole: String): Int = when (anchorRole) {
-        "home" -> when {
-            nodeMatchesAny(node, "bed", "home", "npc_spawn") -> 0
-            nodeMatchesAny(node, "entrance", "interaction") -> 1
-            else -> -1
-        }
-        "work" -> when {
-            nodeMatchesAny(node, "workstation", "work", "npc_spawn") -> 0
-            nodeMatchesAny(node, "interaction") -> 1
-            else -> -1
-        }
-        "social" -> when {
-            nodeMatchesAny(node, "social", "meeting_point", "interaction") -> 0
-            nodeMatchesAny(node, "npc_spawn") -> 1
-            else -> -1
-        }
-        else -> -1
-    }
-
-    private fun nodeMatchesAny(node: WorldNodeInfo, vararg expectedTokens: String): Boolean {
-        if (matchesAnyToken(node.typeId(), *expectedTokens)) return true
-        for ((key, value) in node.metadata()) {
-            if (matchesAnyToken(key, *expectedTokens) || matchesAnyToken(value, *expectedTokens)) return true
-        }
-        return false
-    }
-
-    private fun matchesAnyToken(rawValue: String?, vararg expectedTokens: String): Boolean {
-        val value = normalizeToken(rawValue)
-        if (value.isBlank()) return false
-        for (expectedToken in expectedTokens) {
-            if (value == normalizeToken(expectedToken)) return true
-        }
-        return false
     }
 
     private fun nodeLabel(node: WorldNodeInfo, fallbackLabel: String): String {
@@ -659,22 +606,4 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
     private fun normalizeToken(rawValue: String?): String =
         rawValue?.trim()?.lowercase(Locale.ROOT)?.replace(' ', '_')?.replace('-', '_') ?: ""
 
-    private fun placeCenterX(place: WorldPlaceInfo): Double = (place.minX() + place.maxX()) / 2.0
-    private fun placeAnchorY(place: WorldPlaceInfo): Double =
-        min(place.maxY().toDouble(), place.minY().toDouble() + 1.0)
-    private fun placeCenterZ(place: WorldPlaceInfo): Double = (place.minZ() + place.maxZ()) / 2.0
-
-    private fun distanceSquared(
-        leftX: Double,
-        leftY: Double,
-        leftZ: Double,
-        rightX: Double,
-        rightY: Double,
-        rightZ: Double
-    ): Double {
-        val dx = leftX - rightX
-        val dy = leftY - rightY
-        val dz = leftZ - rightZ
-        return dx * dx + dy * dy + dz * dz
-    }
 }

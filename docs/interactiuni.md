@@ -8,6 +8,8 @@ Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelo
 
 Acest document descrie fluxul de interactiune dintre jucator si NPC: click dreapta, chat privat, ascultare pasiva, intentii de quest, conversatie, relatie, memorie si emotii.
 
+Pentru o vedere de ansamblu peste interactiune, dialog si reactie, vezi `interactiune-dialog-reactie-stack.md`.
+
 Regula principala:
 
 ```text

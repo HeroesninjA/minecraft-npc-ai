@@ -31,7 +31,7 @@ class HouseAllocationPlanner {
             errors.add("Casa ${house.id()} nu are node bed/home pentru spawn plan.")
         }
 
-        val metadataCapacity = parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
+        val metadataCapacity = SpawnSemanticRules.parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
         val nodeCapacity = minOf(spawnNodes.size, homeNodes.size)
         val maxResidents = if (metadataCapacity > 0) metadataCapacity else maxOf(1, nodeCapacity)
         var residentCount = if (requestedResidents > 0) requestedResidents else minOf(maxResidents, nodeCapacity)
@@ -56,29 +56,29 @@ class HouseAllocationPlanner {
 
         val workplaces = worldAdmin.getPlaces(house.regionId()).asSequence()
             .filter { !it.id().equals(house.id(), ignoreCase = true) }
-            .filter { isWorkplace(it) }
-            .sortedWith(compareBy<WorldPlaceInfo> { workplacePriority(it) }.thenBy { it.id() })
+            .filter { SpawnSemanticRules.isWorkplace(it) }
+            .sortedWith(compareBy<WorldPlaceInfo> { SpawnSemanticRules.workplacePriority(it) }.thenBy { it.id() })
             .toList()
         val socialPlaces = worldAdmin.getPlaces(house.regionId()).asSequence()
             .filter { !it.id().equals(house.id(), ignoreCase = true) }
-            .filter { isSocialPlace(it) }
-            .sortedWith(compareBy<WorldPlaceInfo> { socialPriority(it) }.thenBy { it.id() })
+            .filter { SpawnSemanticRules.isSocialPlace(it) }
+            .sortedWith(compareBy<WorldPlaceInfo> { SpawnSemanticRules.socialPriority(it) }.thenBy { it.id() })
             .toList()
 
         val builder = HouseAllocation.builder(house.id()).maxResidents(maxResidents)
         if (residentCount > 1) {
-            builder.familyId("family_${normalizeId(localId(house.id()))}")
+            builder.familyId("family_${SpawnSemanticRules.normalizeId(SpawnSemanticRules.localId(house.id()))}")
         }
 
         var firstNpcKey = ""
         for (index in 0 until residentCount) {
-            val npcKey = "${normalizeId(house.id())}_resident_${index + 1}"
+            val npcKey = "${SpawnSemanticRules.normalizeId(house.id())}_resident_${index + 1}"
             val npcName = buildNpcName(house, index)
             val relationRole = relationRole(index, residentCount)
             val workPlace = workplaces.getOrNull(index)
-            val workNode = if (workPlace != null) findBestNodeForPlace(worldAdmin, workPlace, "work") else null
+            val workNode = if (workPlace != null) SpawnSemanticRules.bestNodeForPlace(workPlace, worldAdmin.getNodesForPlace(workPlace.id()), "work") else null
             val socialPlace = if (socialPlaces.isEmpty()) null else socialPlaces[index % socialPlaces.size]
-            val socialNode = if (socialPlace != null) findBestNodeForPlace(worldAdmin, socialPlace, "social") else null
+            val socialNode = if (socialPlace != null) SpawnSemanticRules.bestNodeForPlace(socialPlace, worldAdmin.getNodesForPlace(socialPlace.id()), "social") else null
 
             val residentBuilder = HouseAllocation.ResidentPlan.builder(npcKey, npcName)
                 .relationRole(relationRole)
@@ -139,7 +139,7 @@ class HouseAllocationPlanner {
             ?: return SettlementPlanningResult.failed("", allocations, errors, warnings)
 
         val houses = worldAdmin.getPlaces(region.id()).asSequence()
-            .filter { isHousePlace(it) }
+            .filter { SpawnSemanticRules.isHousePlace(it) }
             .sortedBy { it.id() }
             .toList()
         if (houses.isEmpty()) {
@@ -198,7 +198,7 @@ class HouseAllocationPlanner {
         }
 
         val house = matches.first()
-        if (!isHousePlace(house)) {
+        if (!SpawnSemanticRules.isHousePlace(house)) {
             errors.add("Place-ul ${house.id()} nu este marcat ca house/home.")
             return null
         }
@@ -230,40 +230,30 @@ class HouseAllocationPlanner {
 
     private fun nodesMatching(nodes: List<WorldNodeInfo>, vararg tokens: String): List<WorldNodeInfo> =
         nodes.asSequence()
-            .filter { node -> nodeMatchesAny(node, *tokens) }
+            .filter { node -> SpawnSemanticRules.nodeMatchesAny(node, *tokens) }
             .sortedWith(compareBy<WorldNodeInfo> { nodePriority(it, *tokens) }.thenBy { it.id() })
             .toList()
 
-    private fun findBestNodeForPlace(worldAdmin: WorldAdminApi, place: WorldPlaceInfo, anchorRole: String): WorldNodeInfo? =
-        worldAdmin.getNodesForPlace(place.id()).asSequence()
-            .filter { node -> nodePriorityForAnchor(node, anchorRole) >= 0 }
-            .sortedWith(
-                compareBy<WorldNodeInfo> { nodePriorityForAnchor(it, anchorRole) }
-                    .thenBy { distanceSquaredToPlaceCenter(place, it) }
-                    .thenBy { it.id() }
-            )
-            .firstOrNull()
-
     private fun nodePriorityForAnchor(node: WorldNodeInfo, anchorRole: String): Int = when (anchorRole) {
         "work" -> {
-            if (matchesAnyToken(node.typeId(), "work") || matchesAnyToken(node.metadata()["semantic"], "work_anchor")) {
+            if (SpawnSemanticRules.matchesAnyToken(node.typeId(), "work") || SpawnSemanticRules.matchesAnyToken(node.metadata()["semantic"], "work_anchor")) {
                 0
-            } else if (nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
+            } else if (SpawnSemanticRules.nodeMatchesAny(node, "work", "workplace", "workstation", "job", "munca", "lucru")) {
                 1
-            } else if (nodeMatchesAny(node, "interaction", "counter", "desk", "npc_spawn", "spawn")) {
+            } else if (SpawnSemanticRules.nodeMatchesAny(node, "interaction", "counter", "desk", "npc_spawn", "spawn")) {
                 2
             } else {
                 -1
             }
         }
         "social" -> {
-            if (matchesAnyToken(node.typeId(), "social", "meeting_point") ||
-                matchesAnyToken(node.metadata()["semantic"], "social_anchor", "meeting_point")
+            if (SpawnSemanticRules.matchesAnyToken(node.typeId(), "social", "meeting_point") ||
+                SpawnSemanticRules.matchesAnyToken(node.metadata()["semantic"], "social_anchor", "meeting_point")
             ) {
                 0
-            } else if (nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata")) {
+            } else if (SpawnSemanticRules.nodeMatchesAny(node, "social", "meeting_point", "meeting", "market", "well", "tavern", "piata")) {
                 1
-            } else if (nodeMatchesAny(node, "interaction", "npc_spawn", "spawn")) {
+            } else if (SpawnSemanticRules.nodeMatchesAny(node, "interaction", "npc_spawn", "spawn")) {
                 2
             } else {
                 -1
@@ -273,54 +263,10 @@ class HouseAllocationPlanner {
     }
 
     private fun nodePriority(node: WorldNodeInfo, vararg tokens: String): Int =
-        if (tokens.isNotEmpty() && matchesAnyToken(node.typeId(), *tokens)) 0 else 1
-
-    private fun isHousePlace(place: WorldPlaceInfo): Boolean =
-        place.placeType() == PlaceType.HOUSE ||
-            place.hasTag("home") ||
-            place.hasTag("house") ||
-            metadataEquals(place, "role", "home") ||
-            metadataEquals(place, "purpose", "home")
-
-    private fun isWorkplace(place: WorldPlaceInfo): Boolean =
-        place.hasTag("work") ||
-            place.hasTag("workplace") ||
-            place.hasTag("job") ||
-            metadataEquals(place, "role", "work") ||
-            metadataEquals(place, "purpose", "work") ||
-            when (place.placeType()) {
-                PlaceType.FORGE, PlaceType.SHOP, PlaceType.FARM, PlaceType.MARKET, PlaceType.TAVERN -> true
-                else -> false
-            }
-
-    private fun isSocialPlace(place: WorldPlaceInfo): Boolean =
-        place.placeType() == PlaceType.MARKET ||
-            place.placeType() == PlaceType.TAVERN ||
-            place.placeType() == PlaceType.CAMP ||
-            place.hasTag("social") ||
-            place.hasTag("public") ||
-            place.hasTag("meeting") ||
-            metadataEquals(place, "role", "social") ||
-            metadataEquals(place, "purpose", "social")
-
-    private fun workplacePriority(place: WorldPlaceInfo): Int = when (place.placeType()) {
-        PlaceType.FORGE -> 0
-        PlaceType.FARM -> 1
-        PlaceType.MARKET -> 2
-        PlaceType.TAVERN -> 3
-        PlaceType.SHOP -> 4
-        else -> 5
-    }
-
-    private fun socialPriority(place: WorldPlaceInfo): Int = when (place.placeType()) {
-        PlaceType.MARKET -> 0
-        PlaceType.TAVERN -> 1
-        PlaceType.CAMP -> 2
-        else -> 3
-    }
+        if (tokens.isNotEmpty() && SpawnSemanticRules.matchesAnyToken(node.typeId(), *tokens)) 0 else 1
 
     private fun occupationForWorkplace(place: WorldPlaceInfo): String {
-        val configuredProfession = firstNonBlank(place.metadata()["profession"], place.metadata()["occupation"])
+        val configuredProfession = SpawnSemanticRules.firstNonBlank(place.metadata()["profession"], place.metadata()["occupation"])
         if (configuredProfession.isNotBlank()) {
             return configuredProfession
         }
@@ -354,80 +300,6 @@ class HouseAllocationPlanner {
         val surname = SURNAME_STEMS[(offset + index + house.id().length) % SURNAME_STEMS.size]
         return "${firstName} ${surname}"
     }
-
-    private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int {
-        for (key in keys) {
-            val value = place.metadata()[key]
-            if (value.isNullOrBlank()) {
-                continue
-            }
-            try {
-                val parsed = value.trim().toInt()
-                if (parsed > 0) {
-                    return parsed
-                }
-            } catch (_: NumberFormatException) {
-                return 0
-            }
-        }
-        return 0
-    }
-
-    private fun nodeMatchesAny(node: WorldNodeInfo, vararg expectedTokens: String): Boolean {
-        if (matchesAnyToken(node.typeId(), *expectedTokens)) {
-            return true
-        }
-        node.metadata().forEach { (key, value) ->
-            if (matchesAnyToken(key, *expectedTokens) || matchesAnyToken(value, *expectedTokens)) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun matchesAnyToken(rawValue: String?, vararg expectedTokens: String): Boolean {
-        val value = normalizeToken(rawValue)
-        if (value.isBlank()) {
-            return false
-        }
-        for (expectedToken in expectedTokens) {
-            if (value == normalizeToken(expectedToken)) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun metadataEquals(place: WorldPlaceInfo, key: String, expectedValue: String): Boolean {
-        val value = place.metadata()[key]
-        return value != null && value.equals(expectedValue, ignoreCase = true)
-    }
-
-    private fun firstNonBlank(vararg values: String?): String {
-        for (value in values) {
-            if (!value.isNullOrBlank()) {
-                return value.trim()
-            }
-        }
-        return ""
-    }
-
-    private fun localId(qualifiedId: String?): String {
-        if (qualifiedId == null) {
-            return ""
-        }
-        val index = qualifiedId.lastIndexOf(':')
-        return if (index >= 0) qualifiedId.substring(index + 1) else qualifiedId
-    }
-
-    private fun normalizeId(rawValue: String?): String {
-        val value = rawValue?.trim()?.lowercase(Locale.ROOT) ?: ""
-        val normalized = value.replace(Regex("[^a-z0-9]+"), "_").replace(Regex("^_+|_+$"), "")
-        return if (normalized.isBlank()) "npc" else normalized
-    }
-
-    private fun normalizeToken(rawValue: String?): String =
-        rawValue?.trim()?.lowercase(Locale.ROOT)?.replace(' ', '_')?.replace('-', '_') ?: ""
 
     private fun distanceSquaredToPlaceCenter(place: WorldPlaceInfo, node: WorldNodeInfo): Double {
         val dx = ((place.minX() + place.maxX()) / 2.0) - node.x()

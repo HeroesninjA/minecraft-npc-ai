@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-06
 
+Punctul de intrare recomandat pentru aceasta serie este `simulation-stack.md`.
+
 Status: design avansat pentru semnale, evenimente si integrarea `SimulationService` cu household-uri, settlement simulation, quest/story si AI. Partea 1 descrie starea reala din cod. Partea 2 descrie extractia si hardening-ul serviciului. Partea 3 descrie cum poate deveni simularea sursa controlata de semnale de gameplay.
 
 ## Scop

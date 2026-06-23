@@ -6,7 +6,6 @@ import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -57,14 +56,14 @@ class NarrativeGenerator {
             val residentCount = minOf(remainingPopulation, capacity)
             if (residentCount <= 0) continue
 
-            val localId = localId(house.id())
-            val familyId = "family_${normalizeId(house.id())}"
+            val localId = SpawnSemanticRules.localId(house.id())
+            val familyId = "family_${SpawnSemanticRules.normalizeId(house.id())}"
             val familyType = selectFamilyType(residentCount)
             val residents = mutableListOf<ResidentNarrativePlan>()
 
             for (index in 0 until residentCount) {
                 popIndex++
-                val npcKey = "${normalizeId(region.id())}:${localId}:${familyType}_${index + 1}"
+                val npcKey = "${SpawnSemanticRules.normalizeId(region.id())}:${localId}:${familyType}_${index + 1}"
                 val gender = defaultGender(index, residentCount, popIndex + randomSeed)
                 val age = defaultAge(index, residentCount)
                 val firstName = NPCNameGenerator.randomName(gender, java.util.Random((randomSeed + popIndex * 7).toLong()))
@@ -72,9 +71,9 @@ class NarrativeGenerator {
                 val displayName = "$firstName $familyName"
                 val relationRole = relationRoleForFamily(index, residentCount, familyType)
                 val workPlace = findWorkplaceForIndex(workplaces, popIndex, assignedWorkplaces, randomSeed)
-                val workNode = workPlace?.let { findBestNodeForPlace(worldAdmin, it, "work") }
+                val workNode = workPlace?.let { SpawnSemanticRules.bestNodeForPlace(it, worldAdmin.getNodesForPlace(it.id()), "work") }
                 val socialPlace = selectSocialPlace(socialPlaces, popIndex, randomSeed)
-                val socialNode = socialPlace?.let { findBestNodeForPlace(worldAdmin, it, "social") }
+                val socialNode = socialPlace?.let { SpawnSemanticRules.bestNodeForPlace(it, worldAdmin.getNodesForPlace(it.id()), "social") }
                 val profession = if (workPlace != null) professionForWorkplace(workPlace) else ""
                 val socialRole = socialRoleForProfession(profession, relationRole)
                 val questRole = questRoleForNpc(profession, socialRole, relationRole, popIndex + randomSeed)
@@ -136,7 +135,7 @@ class NarrativeGenerator {
         }
 
         val plan = PopulationPlan(
-            planId = "${normalizeId(region.id())}_pop_${abs(effectiveSeed.hashCode()) % 1000}",
+            planId = "${SpawnSemanticRules.normalizeId(region.id())}_pop_${abs(effectiveSeed.hashCode()) % 1000}",
             regionId = region.id(),
             themeId = "medieval",
             seed = effectiveSeed,
@@ -188,43 +187,18 @@ class NarrativeGenerator {
     }
 
     private fun findHouses(worldAdmin: WorldAdminApi, region: WorldRegionInfo): List<WorldPlaceInfo> =
-        worldAdmin.getPlaces(region.id()).filter { isHousePlace(it) }.sortedBy { it.id() }
+        worldAdmin.getPlaces(region.id()).filter { SpawnSemanticRules.isHousePlace(it) }.sortedBy { it.id() }
 
     private fun findWorkplaces(worldAdmin: WorldAdminApi, region: WorldRegionInfo): List<WorldPlaceInfo> =
-        worldAdmin.getPlaces(region.id()).filter { isWorkplace(it) }
-            .sortedWith(compareBy<WorldPlaceInfo> { workplacePriority(it) }.thenBy { it.id() })
+        worldAdmin.getPlaces(region.id()).filter { SpawnSemanticRules.isWorkplace(it) }
+            .sortedWith(compareBy<WorldPlaceInfo> { SpawnSemanticRules.workplacePriority(it) }.thenBy { it.id() })
 
     private fun findSocialPlaces(worldAdmin: WorldAdminApi, region: WorldRegionInfo): List<WorldPlaceInfo> =
-        worldAdmin.getPlaces(region.id()).filter { isSocialPlace(it) }
-            .sortedWith(compareBy<WorldPlaceInfo> { socialPriority(it) }.thenBy { it.id() })
-
-    private fun isHousePlace(place: WorldPlaceInfo): Boolean =
-        place.placeType() == PlaceType.HOUSE || place.hasTag("home") || place.hasTag("house") ||
-            metadataEquals(place, "role", "home") || metadataEquals(place, "purpose", "home")
-
-    private fun isWorkplace(place: WorldPlaceInfo): Boolean =
-        place.hasTag("work") || place.hasTag("workplace") || metadataEquals(place, "role", "work") ||
-            metadataEquals(place, "purpose", "work") || when (place.placeType()) {
-                PlaceType.FORGE, PlaceType.SHOP, PlaceType.FARM, PlaceType.MARKET, PlaceType.TAVERN -> true
-                else -> false
-            }
-
-    private fun isSocialPlace(place: WorldPlaceInfo): Boolean =
-        place.placeType() == PlaceType.MARKET || place.placeType() == PlaceType.TAVERN ||
-            place.placeType() == PlaceType.CAMP || place.hasTag("social") || place.hasTag("public") ||
-            place.hasTag("meeting") || metadataEquals(place, "role", "social") || metadataEquals(place, "purpose", "social")
-
-    private fun workplacePriority(place: WorldPlaceInfo): Int = when (place.placeType()) {
-        PlaceType.FORGE -> 0; PlaceType.FARM -> 1; PlaceType.MARKET -> 2
-        PlaceType.TAVERN -> 3; PlaceType.SHOP -> 4; else -> 5
-    }
-
-    private fun socialPriority(place: WorldPlaceInfo): Int = when (place.placeType()) {
-        PlaceType.MARKET -> 0; PlaceType.TAVERN -> 1; PlaceType.CAMP -> 2; else -> 3
-    }
+        worldAdmin.getPlaces(region.id()).filter { SpawnSemanticRules.isSocialPlace(it) }
+            .sortedWith(compareBy<WorldPlaceInfo> { SpawnSemanticRules.socialPriority(it) }.thenBy { it.id() })
 
     private fun resolveCapacity(house: WorldPlaceInfo, spawnCount: Int, bedCount: Int): Int {
-        val metadataCapacity = parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
+        val metadataCapacity = SpawnSemanticRules.parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
         if (metadataCapacity > 0) return metadataCapacity
         val nodeCapacity = minOf(spawnCount, bedCount)
         return maxOf(1, nodeCapacity)
@@ -245,14 +219,14 @@ class NarrativeGenerator {
     }
 
     private fun selectFamilyName(house: WorldPlaceInfo, index: Int, seed: Int): String {
-        val configured = firstNonBlank(house.metadata()["family_name"], house.metadata()["surname"])
+        val configured = SpawnSemanticRules.firstNonBlank(house.metadata()["family_name"], house.metadata()["surname"])
         if (configured.isNotBlank()) return configured
         val defaultFamilies = listOf("Popescu", "Ionescu", "Dumitrescu", "Marinescu", "Constantinescu", "Radulescu")
         return defaultFamilies[abs(seed + index) % defaultFamilies.size]
     }
 
     private fun professionForWorkplace(place: WorldPlaceInfo): String {
-        val configured = firstNonBlank(place.metadata()["profession"], place.metadata()["occupation"])
+        val configured = SpawnSemanticRules.firstNonBlank(place.metadata()["profession"], place.metadata()["occupation"])
         if (configured.isNotBlank()) return configured
         return when (place.placeType()) {
             PlaceType.FORGE -> "fierar"
@@ -261,7 +235,10 @@ class NarrativeGenerator {
             PlaceType.TAVERN -> "hangiu"
             PlaceType.SHOP -> "mestesugar"
             PlaceType.CAMP -> "gardian"
-            else -> place.metadata()["trade"] ?: firstNonBlank(place.tags().firstOrNull { it in PROFESSION_TAGS }) ?: "locuitor"
+            else -> {
+                val tagProfession = SpawnSemanticRules.firstNonBlank(place.tags().firstOrNull { it in PROFESSION_TAGS })
+                place.metadata()["trade"] ?: if (tagProfession.isBlank()) "locuitor" else tagProfession
+            }
         }
     }
 
@@ -323,54 +300,15 @@ class NarrativeGenerator {
         }
     }
 
-    private fun findBestNodeForPlace(worldAdmin: WorldAdminApi, place: WorldPlaceInfo, anchorRole: String): WorldNodeInfo? =
-        worldAdmin.getNodesForPlace(place.id()).minByOrNull {
-            when (anchorRole) {
-                "work" -> if (nodeMatchesAny(it, "work", "workstation", "munca")) 0 else 1
-                "social" -> if (nodeMatchesAny(it, "social", "meeting", "piata")) 0 else 1
-                else -> 1
-            }
-        }
-
     private fun calculateTargetPopulation(houses: List<WorldPlaceInfo>, workplaces: List<WorldPlaceInfo>): Int {
-        val houseCapacity = houses.sumOf { parsePositiveIntMetadata(it, "max_residents", "maxResidents", "capacity").coerceAtLeast(2) }
+        val houseCapacity = houses.sumOf { SpawnSemanticRules.parsePositiveIntMetadata(it, "max_residents", "maxResidents", "capacity").coerceAtLeast(2) }
         val workCapacity = workplaces.size * 2
         return minOf(houseCapacity, maxOf(workCapacity, 6))
     }
 
     private fun nodesMatching(nodes: List<WorldNodeInfo>, vararg tokens: String): List<WorldNodeInfo> =
-        nodes.filter { node -> tokens.any { token -> matchesToken(node.typeId(), token) } }
+        nodes.filter { node -> tokens.any { token -> SpawnSemanticRules.matchesAnyToken(node.typeId(), token) } }
             .sortedBy { it.id() }
-
-    private fun matchesToken(raw: String?, expected: String): Boolean =
-        raw?.trim()?.lowercase(Locale.ROOT) == expected.lowercase(Locale.ROOT)
-
-    private fun nodeMatchesAny(node: WorldNodeInfo, vararg tokens: String): Boolean =
-        tokens.any { matchesToken(node.typeId(), it) || node.metadata().values.any { v -> matchesToken(v, it) } }
-
-    private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int {
-        for (key in keys) {
-            val value = place.metadata()[key]?.trim()?.toIntOrNull()
-            if (value != null && value > 0) return value
-        }
-        return 0
-    }
-
-    private fun metadataEquals(place: WorldPlaceInfo, key: String, expected: String): Boolean =
-        place.metadata()[key]?.equals(expected, ignoreCase = true) == true
-
-    private fun firstNonBlank(vararg values: String?): String = values.firstOrNull { !it.isNullOrBlank() } ?: ""
-
-    private fun localId(qualifiedId: String?): String {
-        if (qualifiedId == null) return ""
-        val idx = qualifiedId.lastIndexOf(':')
-        return if (idx >= 0) qualifiedId.substring(idx + 1) else qualifiedId
-    }
-
-    private fun normalizeId(raw: String?): String {
-        val v = raw?.trim()?.lowercase(Locale.ROOT) ?: ""
-        return v.replace(Regex("[^a-z0-9]+"), "_").replace(Regex("^_+|_+\$"), "").ifBlank { "npc" }
-    }
 
     class PopulationPlanResult private constructor(
         private val success: Boolean,

@@ -398,9 +398,9 @@ Lucreaza la mapping cand:
 Lucreaza la patch planner cand:
 
 - mapping-ul exista, dar nu sustine populatia sau profesiile dorite;
-- lipsesc social hub, `quest_trigger`, entrance sau work nodes;
+- lipsesc inca social hub, `quest_trigger`, entrance sau work nodes;
 - ai nevoie de o decizie read-only inainte de constructie manuala;
-- AI-ul sau story-ul propune continut pentru o ancora care lipseste.
+- AI-ul sau story-ul propune continut pentru o ancora care lipseste sau e incompleta.
 
 Lucreaza la quest cand:
 
@@ -451,7 +451,7 @@ Fiecare slice nou trebuie sa contina bucatile de control potrivite pentru scopul
 | Persistenta | Ce ramane dupa reload? |
 | Debug/audit | Cum aflam de ce nu merge? |
 
-Daca mapping-ul, progresul, persistenta sau auditul lipsesc, slice-ul nu este gata. Patch planner-ul, story-ul si AI authoring-ul sunt obligatorii doar cand slice-ul cere infrastructura noua, context narativ sau continut generat.
+Daca mapping-ul, progresul, persistenta sau auditul sunt incomplete sau lipsesc, slice-ul nu este gata. Patch planner-ul, story-ul si AI authoring-ul sunt obligatorii doar cand slice-ul cere infrastructura noua, context narativ sau continut generat.
 
 ## Sablon pentru un slice nou
 

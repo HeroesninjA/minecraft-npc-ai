@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCPersonality
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.utils.NPCNameGenerator
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
@@ -90,12 +91,12 @@ class NPCManagerTextTest {
             )
         }
 
-        assertEquals(5.0, placeCenterX(place))
-        assertEquals(61.0, placeAnchorY(place))
-        assertEquals(5.0, placeCenterZ(place))
+        assertEquals(5.0, SpawnSemanticRules.placeCenterX(place))
+        assertEquals(61.0, SpawnSemanticRules.placeAnchorY(place))
+        assertEquals(5.0, SpawnSemanticRules.placeCenterZ(place))
         assertEquals(29.0, distanceSquaredToPlaceCenter(place, node))
         assertEquals(29.0, distanceSquaredToPlaceCenter(place, Location(null, 8.0, 63.0, 9.0)))
-        assertEquals(50.0, distanceSquared(0.0, 0.0, 0.0, 3.0, 4.0, 5.0))
+        assertEquals(50.0, SpawnSemanticRules.distanceSquared(0.0, 0.0, 0.0, 3.0, 4.0, 5.0))
     }
 
     @Test

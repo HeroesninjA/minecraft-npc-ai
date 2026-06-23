@@ -8,6 +8,11 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 
 | Document | Rol |
 |---|---|
+| `../../gui-stack.md` | Punct de intrare scurt pentru GUI relevant in quest/story authoring si interactiune |
+| `../../progression-events-onboarding-stack.md` | Punct de intrare scurt pentru zona progresie/event-uri/onboarding |
+| `../../quest-evolution-stack.md` | Punct de intrare scurt pentru seria de evolutie a questurilor |
+| `../../ai-orchestrare-mcp-stack.md` | Punct de intrare scurt pentru stack-ul de orchestration AI si MCP |
+| `../../story-context-quest-ai-stack.md` | Punct de intrare scurt pentru zona story/context/generare quest AI |
 | `../../questuri-faza-1-stabilizare.md` | Faza Q1 pentru stabilizarea Q01-Q05, audit template si smoke test |
 | `../../pregatire-questuri-avansate.md` | Pregatiri si status pentru Q06-Q08, stages liniare, ID-uri stabile, audit si smoke test |
 | `../../questuri-avansate-v2.md` | Faze V2 pentru diversitate de questuri, mapping, progres generic si mecanici non-quest |
@@ -67,7 +72,7 @@ Aceasta categorie acopera questurile, story state-ul, contextul AI si authoring-
 - Generarea automata de questuri cu AI are document canonic initial: AI produce `QuestDraft`, nu quest live.
 - Story-ul poate conduce selectia sau generarea unui quest prin context si `QuestDirector`, dar `ProgressionService` ramane responsabil pentru progres si executie.
 - AI-ul trebuie orchestratat central printr-un serviciu dedicat, dar executia ramane in serviciile deterministe.
-- Lipsesc inca branching, hook-uri intermediare pe stage si validator complet pentru story actions complexe.
+- Raman de acoperit branching, hook-uri intermediare pe stage si validator complet pentru story actions complexe.
 
 ## Urmatoarele documente utile
 

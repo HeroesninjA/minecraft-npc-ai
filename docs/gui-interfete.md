@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-21
 
+Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
+
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
 ## Scop
@@ -132,10 +134,13 @@ Pentru consistenta vizuala, ecranele folosesc aceleasi etichete scurte:
 
 - `Actiuni principale` pentru butoanele cele mai importante;
 - `Admin separat` pentru actiuni cu permisiuni sau risc mai mare;
-- `Actiune secundara` pentru comenzi utile, dar non-centrale;
+- `Actiuni secundare` pentru comenzi utile, dar non-centrale;
 - `Inspectie separata` pentru debug, rutina si diagnostic;
 - `Snapshot de suport` pentru metadata tehnica;
 - `Panou admin separat` pentru navigare catre ecrane de administrare.
+- `Status: curat` / `Status: necesita save` pentru mapping/world;
+- `Status: completabil` / `Lipsesc` pentru creatorul de quest;
+- `Status: definitie gasita` / `quest negasit` pentru editorul de quest.
 
 ## Simplificare UI/UX recomandata
 

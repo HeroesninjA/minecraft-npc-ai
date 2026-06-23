@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-07
 
+Punctul de intrare recomandat pentru aceasta zona este `npc-population-world-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.

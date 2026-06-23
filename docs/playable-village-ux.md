@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-08
 
+Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
+
 ## Scop
 
 Acest document fixeaza problemele observate in testarea de gameplay pentru primul sat jucabil. Pana aici s-au adaugat multe sisteme tehnice pentru quest, mapping, progression, GUI si rutina, dar experienta in joc ramane greu de citit daca satul, NPC-urile si interactiunile nu au reguli simple si vizibile.
@@ -164,6 +166,15 @@ Un sat demo poate fi considerat jucabil doar daca:
 - questurile duc jucatorul intre locuri clare, nu doar la iteme;
 - GUI-ul NPC arata actiunea urmatoare, nu doar informatii brute;
 - dupa reload, mapping-ul, NPC bindings, rutina si quest progress raman coerente.
+
+## Terminologie UI
+
+Pentru ecranele demo si de admin, folosim aceleasi etichete scurte ca in GUI:
+
+- `Status: curat` / `Status: necesita save` pentru mapping-ul de lume;
+- `Status: completabil` / `Lipsesc` pentru creatorul de quest;
+- `Status: definitie gasita` / `quest negasit` pentru editorul de quest;
+- `Actiuni principale` pentru butoanele prioritare din hub-uri.
 
 ## Ordine de lucru recomandata
 

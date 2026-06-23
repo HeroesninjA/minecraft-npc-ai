@@ -4,31 +4,31 @@ Actualizat: 2026-05-16
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
-Acest document listeaza documentatiile care lipsesc sau merita separate din documentele mari existente.
+Acest document listeaza documentatiile inca neacoperite sau care merita separate din documentele mari existente.
 
 ## Prioritate mare
 
-| Document propus | De ce lipseste | Categorie |
+| Document propus | Motiv | Categorie |
 |---|---|---|
 | `prompt-safety-guide.md` | Prompturile AI trebuie sa aiba reguli clare de context, limite si fallback inainte de public | Quest, story si AI |
 
 ## Prioritate medie
 
-| Document propus | De ce lipseste | Categorie |
+| Document propus | Motiv | Categorie |
 |---|---|---|
-| `story-state-service.md` | Story-ul are design, dar nu contract pentru flags, events si integrare cu questuri | Quest, story si AI |
+| `story-state-service.md` | Story-ul are design, dar inca nu are contract pentru flags, events si integrare cu questuri | Quest, story si AI |
 | `settlement-plan.md` | Spawn order v2 descrie ideea, dar merita contract separat pentru generator | Generare |
-| `patch-planner.md` | Scannerul vanilla exista initial, dar lipseste specificatia pentru completarea lipsurilor | Generare |
-| `addon-developer-guide.md` | API-ul exista, dar lipseste ghidul pentru cine scrie addonuri | API si addonuri |
+| `patch-planner.md` | Scannerul vanilla exista initial, dar inca nu are specificatia pentru completarea lipsurilor | Generare |
+| `addon-developer-guide.md` | API-ul exista, dar inca nu are ghidul pentru cine scrie addonuri | API si addonuri |
 | `scenario-pack-schema.md` | Feature packs exista, dar schema YAML nu este documentata ca referinta compacta | API si questuri |
 
 ## Prioritate mica
 
-| Document propus | De ce lipseste | Categorie |
+| Document propus | Motiv | Categorie |
 |---|---|---|
 | `performance-notes.md` | Indexarea si task-urile periodice pot avea impact pe servere mari | Operare |
-| `observability-and-logs.md` | Lipsesc conventii pentru loguri, debugdump si date sensibile | Operare |
-| `test-fixtures-and-demo-world.md` | Lipseste descrierea unui demo world minimal pentru teste manuale repetabile | Operare |
+| `observability-and-logs.md` | Nu exista inca conventii pentru loguri, debugdump si date sensibile | Operare |
+| `test-fixtures-and-demo-world.md` | Nu exista inca descrierea unui demo world minimal pentru teste manuale repetabile | Operare |
 
 ## Ordine recomandata
 

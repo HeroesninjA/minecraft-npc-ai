@@ -61,12 +61,12 @@ class HouseAllocationValidator {
 
         val house = resolvePlace(worldAdmin, allocation.placeId(), "placeId", errors) ?: return null
 
-        if (!isHousePlace(house)) {
+        if (!SpawnSemanticRules.isHousePlace(house)) {
             errors.add("HouseAllocation placeId '${allocation.placeId()}' nu indica o casa/place home.")
         }
 
-        val metadataMaxResidents = parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
-        if (metadataMaxResidents == null) {
+        val metadataMaxResidents = SpawnSemanticRules.parsePositiveIntMetadata(house, "max_residents", "maxResidents", "capacity")
+        if (metadataMaxResidents <= 0) {
             warnings.add("Casa ${house.id()} nu are metadata.max_residents/capacity sincronizat.")
         } else {
             if (allocation.residentPlans().size > metadataMaxResidents) {
@@ -214,7 +214,7 @@ class HouseAllocationValidator {
         var workPlace: WorldPlaceInfo? = null
         if (resident.workPlaceId().isNotBlank()) {
             workPlace = resolvePlace(worldAdmin, resident.workPlaceId(), "$label workPlaceId", errors)
-            if (workPlace != null && !isWorkplace(workPlace)) {
+            if (workPlace != null && !SpawnSemanticRules.isWorkplace(workPlace)) {
                 errors.add("$label workPlaceId '${resident.workPlaceId()}' nu indica un workplace compatibil.")
             }
         }
@@ -225,7 +225,7 @@ class HouseAllocationValidator {
                 validateNodeInPlace(workNode, workPlace, "$label workNodeId", errors)
             } else if (workNode != null && workNode.placeId().isNotBlank()) {
                 val nodePlace = resolvePlace(worldAdmin, workNode.placeId(), "$label workNode place", errors)
-                if (nodePlace != null && !isWorkplace(nodePlace)) {
+                if (nodePlace != null && !SpawnSemanticRules.isWorkplace(nodePlace)) {
                     errors.add("$label workNodeId '${resident.workNodeId()}' apartine unui place care nu este workplace.")
                 }
             } else if (workNode != null) {
@@ -327,7 +327,7 @@ class HouseAllocationValidator {
     }
 
     private fun validateNodeSemantics(node: WorldNodeInfo?, label: String, errors: MutableList<String>, vararg expectedTokens: String) {
-        if (node != null && !nodeMatchesAny(node, *expectedTokens)) {
+        if (node != null && !SpawnSemanticRules.nodeMatchesAny(node, *expectedTokens)) {
             errors.add("$label '${node.id()}' nu are tip/metadata compatibil: ${expectedTokens.joinToString(", ")}.")
         }
     }
@@ -351,25 +351,8 @@ class HouseAllocationValidator {
         }
     }
 
-    private fun isHousePlace(place: WorldPlaceInfo): Boolean =
-        place.placeType() == PlaceType.HOUSE ||
-            place.hasTag("home") ||
-            place.hasTag("house") ||
-            "home".equals(place.metadata()["role"], ignoreCase = true) ||
-            "home".equals(place.metadata()["purpose"], ignoreCase = true)
-
-    private fun isWorkplace(place: WorldPlaceInfo): Boolean =
-        place.hasTag("work") ||
-            place.hasTag("workplace") ||
-            "work".equals(place.metadata()["role"], ignoreCase = true) ||
-            "work".equals(place.metadata()["purpose"], ignoreCase = true) ||
-            when (place.placeType()) {
-                PlaceType.FORGE, PlaceType.SHOP, PlaceType.FARM, PlaceType.MARKET, PlaceType.TAVERN -> true
-                else -> false
-            }
-
     private fun parseResidents(place: WorldPlaceInfo): Set<String> {
-        val rawResidents = firstNonBlank(
+        val rawResidents = SpawnSemanticRules.firstNonBlank(
             place.metadata()["residents"],
             place.metadata()["resident_npc_ids"],
             place.metadata()["resident_ids"]
@@ -399,38 +382,6 @@ class HouseAllocationValidator {
         return residentKeys
     }
 
-    private fun parsePositiveIntMetadata(place: WorldPlaceInfo, vararg keys: String): Int? {
-        val rawValue = firstNonBlankFromMap(place.metadata(), *keys)
-        if (rawValue.isBlank()) {
-            return null
-        }
-        return try {
-            val value = rawValue.trim().toInt()
-            if (value > 0) value else null
-        } catch (_: NumberFormatException) {
-            null
-        }
-    }
-
-    private fun firstNonBlankFromMap(values: Map<String, String>, vararg keys: String): String {
-        for (key in keys) {
-            val value = values[key]
-            if (!value.isNullOrBlank()) {
-                return value
-            }
-        }
-        return ""
-    }
-
-    private fun firstNonBlank(vararg values: String?): String {
-        for (value in values) {
-            if (!value.isNullOrBlank()) {
-                return value
-            }
-        }
-        return ""
-    }
-
     private fun idMatches(actualId: String?, selector: String?): Boolean {
         if (actualId == null || selector == null) {
             return false
@@ -446,31 +397,6 @@ class HouseAllocationValidator {
         return normalizedLeft == normalizedRight ||
             normalizedLeft == "npc_$normalizedRight" ||
             normalizedRight == "npc_$normalizedLeft"
-    }
-
-    private fun nodeMatchesAny(node: WorldNodeInfo, vararg expectedTokens: String): Boolean {
-        if (matchesAnyToken(node.typeId(), *expectedTokens)) {
-            return true
-        }
-        node.metadata().forEach { (key, value) ->
-            if (matchesAnyToken(key, *expectedTokens) || matchesAnyToken(value, *expectedTokens)) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun matchesAnyToken(rawValue: String?, vararg expectedTokens: String): Boolean {
-        val value = normalizeToken(rawValue)
-        if (value.isBlank()) {
-            return false
-        }
-        for (expectedToken in expectedTokens) {
-            if (value == normalizeToken(expectedToken)) {
-                return true
-            }
-        }
-        return false
     }
 
     private fun requiresWorkAnchor(occupation: String?): Boolean {

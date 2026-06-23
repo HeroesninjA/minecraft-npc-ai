@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-07
 
+Punctul de intrare recomandat pentru aceasta zona este `story-context-quest-ai-stack.md`.
+
 Status: implementat initial ca strat read-only peste mapping, quest anchors si story state persistent initial; scrierile controlate vin prin actiuni de quest, iar audit/debugdump-ul pentru story state exista initial.
 
 ## Scop

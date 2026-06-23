@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-18
 
+Punctul de intrare recomandat pentru aceasta zona este `progression-events-onboarding-stack.md`.
+
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop

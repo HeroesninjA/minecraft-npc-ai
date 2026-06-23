@@ -8,6 +8,7 @@ Aceasta categorie acopera verificarea, debugging-ul, auditul si pregatirea pentr
 
 | Document | Rol |
 |---|---|
+| `../../gui-stack.md` | Punct de intrare scurt pentru documentele UI relevante pentru hardening si admin |
 | `../../server-admin-runbook.md` | Runbook pentru instalare, config minim, verificari, audit, debugdump si smoke test pe Paper |
 | `../../migration-si-backup.md` | Backup cu restore-check, migration si rollback operational |
 | `../../mcp-docker-server-mvp-si-faze.md` | Checklist pentru serverul MCP din Docker, integrare Codex/JetBrains, vector DB, watchers, backup si faze ulterioare |

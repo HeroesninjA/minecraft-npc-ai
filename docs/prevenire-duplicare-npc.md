@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-09
 
+Punctul de intrare recomandat pentru aceasta zona este `npc-population-world-stack.md`.
+
 ## Scop
 
 Acest document descrie cum se previne duplicarea NPC-urilor si cum se rezolva bugurile unde acelasi NPC apare de doua ori.

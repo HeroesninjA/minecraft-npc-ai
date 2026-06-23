@@ -20,6 +20,7 @@ import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.utils.NPCNameGenerator
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
@@ -30,7 +31,6 @@ import java.util.Random
 import java.util.function.Predicate
 import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.min
 
 private val PLAIN_TEXT = PlainTextComponentSerializer.plainText()
 
@@ -105,20 +105,17 @@ fun normalizeAnchorToken(rawValue: String?): String =
     rawValue?.trim()?.lowercase(Locale.ROOT)?.replace(' ', '_')?.replace('-', '_').orEmpty()
 
 fun nodeLabel(node: WorldNodeInfo, fallbackLabel: String?): String {
-    val explicitLabel = firstNonBlank(
-        node.metadata()["label"],
-        node.metadata()["name"],
-        node.metadata()["display_name"],
-    )
+        val explicitLabel = SpawnSemanticRules.firstNonBlank(
+            node.metadata()["label"],
+            node.metadata()["name"],
+            node.metadata()["display_name"],
+        )
     if (explicitLabel.isNotBlank()) {
         return explicitLabel
     }
 
     return fallbackLabel?.takeIf { it.isNotBlank() } ?: node.id()
 }
-
-fun firstNonBlank(vararg values: String?): String =
-    values.firstOrNull { !it.isNullOrBlank() }.orEmpty()
 
 fun nodePriority(node: WorldNodeInfo?, anchorRole: String?): Int {
     if (node == null || anchorRole == null) {
@@ -216,47 +213,24 @@ fun metadataEquals(place: WorldPlaceInfo, key: String, expectedValue: String): B
     place.metadata()[key]?.equals(expectedValue, ignoreCase = true) == true
 
 fun distanceSquaredToPlaceCenter(place: WorldPlaceInfo, location: Location): Double =
-    distanceSquared(
-        placeCenterX(place),
-        placeAnchorY(place),
-        placeCenterZ(place),
+    SpawnSemanticRules.distanceSquared(
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place),
         location.x,
         location.y,
         location.z,
     )
 
 fun distanceSquaredToPlaceCenter(place: WorldPlaceInfo, node: WorldNodeInfo): Double =
-    distanceSquared(
-        placeCenterX(place),
-        placeAnchorY(place),
-        placeCenterZ(place),
+    SpawnSemanticRules.distanceSquared(
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place),
         node.x(),
         node.y(),
         node.z(),
     )
-
-fun distanceSquared(
-    leftX: Double,
-    leftY: Double,
-    leftZ: Double,
-    rightX: Double,
-    rightY: Double,
-    rightZ: Double,
-): Double {
-    val dx = leftX - rightX
-    val dy = leftY - rightY
-    val dz = leftZ - rightZ
-    return dx * dx + dy * dy + dz * dz
-}
-
-fun placeCenterX(place: WorldPlaceInfo): Double =
-    (place.minX() + place.maxX()) / 2.0
-
-fun placeAnchorY(place: WorldPlaceInfo): Double =
-    min(place.maxY().toDouble(), place.minY() + 1.0)
-
-fun placeCenterZ(place: WorldPlaceInfo): Double =
-    (place.minZ() + place.maxZ()) / 2.0
 
 fun toOwnedLocation(type: String, place: WorldPlaceInfo, node: WorldNodeInfo?): AINPC.OwnedLocation {
     if (node != null) {
@@ -267,9 +241,9 @@ fun toOwnedLocation(type: String, place: WorldPlaceInfo, node: WorldNodeInfo?): 
         type,
         place.displayName(),
         place.worldName(),
-        placeCenterX(place),
-        placeAnchorY(place),
-        placeCenterZ(place),
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place),
     )
 }
 
@@ -790,20 +764,15 @@ fun inferWorldBindingFromAnchors(npc: AINPC, worldAdmin: WorldAdminApi): NpcWorl
     val workNode = inferNodeFromAnchor(worldAdmin, npc.workAnchor, workPlace)
     val socialNode = inferNodeFromAnchor(worldAdmin, npc.socialAnchor, socialPlace)
 
-    return NpcWorldBinding(
-        npc.databaseId,
-        npc.uuid.toString(),
-        npc.name,
-        homePlace?.id() ?: "",
-        workPlace?.id() ?: "",
-        socialPlace?.id() ?: "",
-        homeNode?.id() ?: "",
-        workNode?.id() ?: "",
-        socialNode?.id() ?: "",
-        "",
-        "profile_backfill",
-        0L,
-        0L,
+    return NpcWorldBinding.fromResolvedAnchors(
+        npc,
+        homePlace,
+        workPlace,
+        socialPlace,
+        homeNode,
+        workNode,
+        socialNode,
+        "profile_backfill"
     )
 }
 
@@ -829,9 +798,9 @@ fun anchorFromBinding(worldAdmin: WorldAdminApi, placeId: String?, nodeId: Strin
         role,
         place.displayName(),
         place.worldName(),
-        placeCenterX(place),
-        placeAnchorY(place),
-        placeCenterZ(place),
+        SpawnSemanticRules.placeCenterX(place),
+        SpawnSemanticRules.placeAnchorY(place),
+        SpawnSemanticRules.placeCenterZ(place),
     )
 }
 

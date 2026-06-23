@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-06
 
+Punctul de intrare recomandat pentru aceasta serie este `simulation-stack.md`.
+
 Status: document tehnic pentru serviciul logic `simulation.service`. In codul curent nu exista inca o clasa separata cu acest nume; responsabilitatea este impartita intre `SchedulerCoordinator`, `NPCManager`, `DecisionEngine`, `AINPC`, `NPCContext` si `RoutineService`.
 
 Continuare: pentru planul de extractie, comenzi admin, audit, debugdump si teste, vezi `simulation-service-partea-2.md`.

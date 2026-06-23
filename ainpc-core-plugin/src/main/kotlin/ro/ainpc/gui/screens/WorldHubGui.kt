@@ -205,7 +205,7 @@ class WorldHubGui : GuiScreen {
         context.button(
             28,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiune principala."),
+                GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiuni principale."),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
             )
         )

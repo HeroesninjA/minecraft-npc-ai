@@ -2,6 +2,8 @@
 
 Actualizat: 2026-05-11
 
+Punctul de intrare recomandat pentru aceasta zona este `story-context-quest-ai-stack.md`.
+
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
 Status: design pentru faze urmatoare, cu Faza A implementata initial, Faza B implementata initial la nivel de quest anchors, `StoryContextService` implementat initial read-only si Faza C implementata initial la nivel de schema, serviciu si actiuni de quest pentru story state.
@@ -634,7 +636,7 @@ Observatii:
 
 - serviciul este read-only si nu creeaza story state nou
 - foloseste mapping-ul curent, NPC-ul tinta, jucatorul si quest anchors active
-- include warnings cand mapping-ul, DB-ul sau locatia lipsesc
+- include avertismente cand mapping-ul, DB-ul sau locatia sunt incomplete sau lipsesc
 
 ### Faza C: Story state regional
 
@@ -745,7 +747,7 @@ Pasi 1-9 si actiunile story de baza sunt implementate initial. Urmatorul pas rec
 
 - Nu da AI-ului toata harta; trimite un rezumat semantic limitat.
 - Nu lasa AI-ul sa inventeze coordonate sau ID-uri executabile.
-- Nu genera questuri daca ancorele cerute lipsesc.
+- Nu genera questuri daca ancorele cerute sunt incomplete sau lipsesc.
 - Nu lega questurile de nume fixe de NPC cand poti folosi roluri si tag-uri.
 - Nu trata story-ul ca text liber; persista stari si evenimente.
 - Nu combina generarea de cladiri, spawn NPC, questuri si story intr-un singur pas netestabil.

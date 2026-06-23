@@ -75,7 +75,7 @@ class StatsGui : GuiScreen {
         val balance = context.plugin().economyService.getBalance(player)
         context.button(15, GuiButton.enabled(
             GuiItemFactory.item(Material.GOLD_INGOT, "&6Economie: &e$balance &7monede",
-                listOf("&7Click: /ainpc economy balance", "&8Actiune secundara.")),
+                listOf("&7Click: /ainpc economy balance", "&8Actiuni secundare.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc economy balance") }
         ))
 
@@ -107,7 +107,7 @@ class StatsGui : GuiScreen {
                             "&7Spawned: &f${if (npc.isSpawned()) "da" else "nu"}",
                             "&7Emotie: &f${npc.emotions.dominantEmotion}",
                             "&7Distanta: &f${if (distance >= 0) String.format(Locale.ROOT, "%.1f", distance) else "necunoscuta"}",
-                            "&8Actiune principala: info NPC",
+                            "&8Actiuni principale: info NPC",
                             "&8Click: /ainpc info"
                         )
                     ),

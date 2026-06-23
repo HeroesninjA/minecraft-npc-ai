@@ -2,6 +2,8 @@
 
 Actualizat: 2026-06-21
 
+Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
+
 ## Scop
 
 Acest document defineste o suprafata GUI de administrare pentru:
@@ -32,6 +34,8 @@ Adminul trebuie sa pastreze aceleasi etichete scurte ca restul GUI-ului:
 - `Inspectie separata` pentru preview, diagnostic si comparatie;
 - `Snapshot de suport` pentru metadata care ajuta la debug;
 - `Panou admin separat` pentru link-uri intre zonele de editare.
+- `Status: curat` / `Status: necesita save` pentru mapping-ul de lume;
+- `Status: curat` / `Status: necesita atentie` pentru panoul admin quest.
 
 ## Simplificare UI/UX pentru admin
 

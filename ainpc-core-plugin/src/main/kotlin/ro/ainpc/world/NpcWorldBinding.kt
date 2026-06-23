@@ -73,6 +73,68 @@ class NpcWorldBinding(
 
     companion object {
         @JvmStatic
+        fun fromResolvedAnchors(
+            npcId: Int,
+            npcUuid: String?,
+            npcName: String?,
+            homePlace: WorldPlaceInfo?,
+            workPlace: WorldPlaceInfo?,
+            socialPlace: WorldPlaceInfo?,
+            homeNode: WorldNodeInfo?,
+            workNode: WorldNodeInfo?,
+            socialNode: WorldNodeInfo?,
+            source: String?
+        ): NpcWorldBinding? {
+            if (homePlace == null && workPlace == null && socialPlace == null) {
+                return null
+            }
+
+            return NpcWorldBinding(
+                npcId,
+                npcUuid,
+                npcName,
+                homePlace?.id(),
+                workPlace?.id(),
+                socialPlace?.id(),
+                homeNode?.id(),
+                workNode?.id(),
+                socialNode?.id(),
+                "",
+                source,
+                0L,
+                0L
+            )
+        }
+
+        @JvmStatic
+        fun fromResolvedAnchors(
+            npc: AINPC?,
+            homePlace: WorldPlaceInfo?,
+            workPlace: WorldPlaceInfo?,
+            socialPlace: WorldPlaceInfo?,
+            homeNode: WorldNodeInfo?,
+            workNode: WorldNodeInfo?,
+            socialNode: WorldNodeInfo?,
+            source: String?
+        ): NpcWorldBinding? {
+            if (npc == null) {
+                return null
+            }
+            return fromResolvedAnchors(
+                npc.databaseId,
+                npc.uuid.toString(),
+                npc.name,
+                homePlace,
+                workPlace,
+                socialPlace,
+                homeNode,
+                workNode,
+                socialNode,
+                source
+            )
+        }
+
+        @JvmStatic
         fun fromSpawnPlan(npc: AINPC?, plan: NpcSpawnPlan?, source: String?): NpcWorldBinding {
             if (npc == null || plan == null) {
                 throw IllegalArgumentException("NPC-ul si planul de spawn sunt obligatorii pentru binding.")
