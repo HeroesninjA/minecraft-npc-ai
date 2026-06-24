@@ -1,6 +1,6 @@
 package ro.ainpc.api.settlement
 
-data class RegionPlan(
+data class RegionPlan @JvmOverloads constructor(
     val regionId: String,
     val displayName: String,
     val worldName: String,

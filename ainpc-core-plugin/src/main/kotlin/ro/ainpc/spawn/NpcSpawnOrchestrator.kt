@@ -62,13 +62,13 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         val trackedBatch = beginTrackedHouseholdBatch(
             allocation,
             spawnPlans,
-            trackSingularBatch && shouldTrackDryRunBatches(),
-            true,
+            trackSingularBatch = trackSingularBatch && shouldTrackDryRunBatches(),
+            dryRun = true,
             warnings,
             errors
         )
         if (errors.isNotEmpty()) {
-            val result = HouseholdSpawnResult.failed(true, false, spawnPlans, emptyList(), null, errors, warnings)
+            val result = HouseholdSpawnResult.failed(dryRun = true, rolledBack = false, spawnPlans, emptyList(), null, errors, warnings)
             finishTrackedHouseholdBatch(trackedBatch, allocation, result)
             return result
         }
@@ -84,9 +84,9 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
         val spawnPlans = prepareHouseholdPlans(allocation, errors, warnings)
-        val trackedBatch = beginTrackedHouseholdBatch(allocation, spawnPlans, trackSingularBatch, false, warnings, errors)
+        val trackedBatch = beginTrackedHouseholdBatch(allocation, spawnPlans, trackSingularBatch = trackSingularBatch, dryRun = false, warnings, errors)
         if (errors.isNotEmpty()) {
-            val result = HouseholdSpawnResult.failed(false, false, spawnPlans, emptyList(), null, errors, warnings)
+            val result = HouseholdSpawnResult.failed(dryRun = false, rolledBack = false, spawnPlans, emptyList(), null, errors, warnings)
             finishTrackedHouseholdBatch(trackedBatch, allocation, result)
             return result
         }
@@ -154,7 +154,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
 
         if (safeAllocations.isEmpty()) {
             errors.add("Settlement spawn nu are HouseAllocation-uri.")
-            return SettlementSpawnResult.failed(dryRun, false, safeAllocations, householdResults, errors, warnings)
+            return SettlementSpawnResult.failed(dryRun = dryRun, rolledBack = false, safeAllocations, householdResults, errors, warnings)
         }
 
         if (trackBatch && batchTracker != null) {
@@ -172,7 +172,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             if (!dryRun && existingBatch.isPresent &&
                 shouldBlockRunningBatchRewrite(batchTracker, existingBatch.get(), batchKey, errors)
             ) {
-                return SettlementSpawnResult.failed(false, false, safeAllocations, householdResults, errors, warnings)
+                return SettlementSpawnResult.failed(dryRun = false, rolledBack = false, safeAllocations, householdResults, errors, warnings)
             }
 
             batchTracker.beginBatch(
@@ -336,7 +336,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
 
     private fun shouldTrackDryRunBatches(): Boolean = try {
         plugin.config.getBoolean("spawn.batches.track_dry_runs", false)
-    } catch (_: RuntimeException) {
+    } catch (_: java.lang.IllegalArgumentException) {
         false
     }
 
@@ -419,7 +419,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         try {
             val residents = persistence.saveHousehold(allocation, spawnPlans, spawnResults, "spawn_plan")
             warnings.add("Household persistent actualizat: ${allocation.householdId()} rezidenti=$residents.")
-        } catch (exception: Exception) {
+        } catch (exception: java.sql.SQLException) {
             warnings.add("Nu am putut salva household-ul persistent ${allocation.householdId()}: ${exception.message}")
         }
     }

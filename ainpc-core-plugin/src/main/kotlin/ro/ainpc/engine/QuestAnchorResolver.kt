@@ -52,6 +52,7 @@ class QuestAnchorResolver(
                 "visit_place" -> resolvePlaceObjective(objectiveKey, reference, playerLocation, anchors, issues)
                 "inspect_node" -> resolveNodeObjective(objectiveKey, reference, playerLocation, anchors, issues)
                 "talk_to_npc" -> resolveNpcObjective(objectiveKey, reference, questGiver, anchors)
+                "deliver_to_npc" -> resolveNpcObjective(objectiveKey, reference, questGiver, anchors)
                 else -> {
                     // Non-semantic objectives are validated by their own systems.
                 }
@@ -250,6 +251,7 @@ class QuestAnchorResolver(
                 24.0, 12
             )
             val combined = LinkedHashSet<String>()
+            combined.addAll(placeNodes.map { it.id() })
             val result = ArrayList(placeNodes)
             result.addAll(nearbyNodes.filter { combined.add(it.id()) })
             result
@@ -367,19 +369,8 @@ class QuestAnchorResolver(
         )
     }
 
-    private fun normalizeObjectiveType(type: String?): String {
-        val normalized = normalizeReference(type)
-        return when (normalized) {
-            "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item"
-            "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc"
-            "talk", "speak", "conversation", "talk_npc", "talk_nlc", "talk_to_npc", "speak_to_npc" -> "talk_to_npc"
-            "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region"
-            "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place"
-            "inspect", "inspectnode", "inspect_node", "interact_node", "interact_nkde", "node" -> "inspect_node"
-            "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
-            else -> normalized
-        }
-    }
+    private fun normalizeObjectiveType(type: String?): String =
+        ObjectiveTypeAliasRegistry.normalize(type)
 
     private fun buildObjectiveKey(objective: FeaturePackLoader.QuestEntryDefinition?, index: Int): String {
         val entryId = if (objective != null) normalizeEntryId(objective.entryId) else ""

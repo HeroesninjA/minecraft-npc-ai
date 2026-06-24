@@ -94,6 +94,7 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 ### 6. Operare, hardening si infrastructura
 
 - `server-admin-runbook.md`, `release-checklist.md`, `debugging-si-testare.md` si `migration-si-backup.md` formeaza lantul operational.
+- `sistem-permisiuni-compatibilitate-pluginuri.md` descrie contractul de permisiuni Bukkit si compatibilitatea cu manageri externi precum LuckPerms.
 - `audit.md` descrie auditul runtime.
 - `mcp-docker-server-mvp-si-faze.md` si `coding-automation-stack-linux-vscode-deepseek-mcp.md` tin de infrastructura de lucru.
 - `kotlin-paper-packaging-si-smoke.md` si `kotlin-testing-strategy.md` sunt ghiduri de verificare pentru build si runtime.
@@ -193,6 +194,7 @@ Detalierea completa este sintetizata in `Tabel compact`. Pentru trasee de citire
 | Quest, story si AI | `questuri-faza-1-stabilizare.md` -> `questuri-avansate-v2.md` -> `progression-service.md` -> `story-context-service.md` |
 | API si addonuri | `documentatie-api.md` -> `refactorizare-si-impartire-pe-module.md` -> `strategie-plugin-modular-si-scenarii-programabile.md` |
 | Operare | `server-admin-runbook.md` -> `release-checklist.md` -> `debugging-si-testare.md` -> `migration-si-backup.md` |
+| Permisiuni | `sistem-permisiuni-compatibilitate-pluginuri.md` -> `server-admin-runbook.md` |
 
 ## Tabel compact de referințe
 

@@ -15,6 +15,7 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.entity.Projectile
 import org.bukkit.event.player.PlayerDropItemEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.events.AINPCEventSource
@@ -74,6 +75,13 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onItemUse(event: PlayerInteractEvent) {
+        if (!questFeatureEnabled()) return
+        val item = event.item ?: return
+        plugin.scenarioEngine.recordItemUsed(event.player, item.type)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
         if (!questFeatureEnabled()) {
             return
@@ -117,6 +125,13 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             return
         }
         val player = event.whoClicked as? Player ?: return
+        val slot = event.slot
+        if (slot in 5..8 || slot in 36..39) {
+            val cursor = event.cursor
+            if (cursor != null) {
+                plugin.scenarioEngine.recordItemEquipped(player, cursor.type)
+            }
+        }
         refreshInventoryProgressNextTick(player)
     }
 

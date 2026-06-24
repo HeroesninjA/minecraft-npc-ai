@@ -34,7 +34,6 @@ import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldPlace
 import ro.ainpc.world.WorldRegion
 import ro.ainpc.world.NpcWorldBinding
-import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.*
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -1016,19 +1015,7 @@ fun isSupportedQuestObjectiveType(type: String?): Boolean =
     }
 
 fun normalizeQuestObjectiveType(type: String?): String =
-    when (val normalized = normalizeAuditKey(type)) {
-        "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item"
-        "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc"
-        "talk", "speak", "conversation", "talk_npc", "talk_nlc", "talk_to_npc", "speak_to_npc" -> "talk_to_npc"
-        "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region"
-        "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place"
-        "inspect", "inspectnode", "inspect_node", "interact_node", "interact_nkde", "node" -> "inspect_node"
-        "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
-        "place", "placeblock", "place_block", "build", "construct" -> "place_block"
-        "break", "breakblock", "break_block", "mine", "dig", "excavate" -> "break_block"
-        "craft", "craftitem", "craft_item", "make", "create_item", "fabricate" -> "craft_item"
-        else -> normalized
-    }
+    ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(type)
 
 fun normalizeQuestRewardType(type: String?): String =
     when (val normalized = normalizeAuditKey(type)) {

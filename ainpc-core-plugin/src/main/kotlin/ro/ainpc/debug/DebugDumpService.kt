@@ -112,6 +112,10 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
                 dumpRoot.resolve("quest-director-decision.json"),
                 DebugDumpQuestDirectorJson.buildQuestDirectorSnapshotJson(plugin),
             )
+            writeJson(
+                dumpRoot.resolve("objective-types-contract.json"),
+                DebugDumpObjectiveTypesJson.buildObjectiveTypesJson(),
+            )
         }
         if (normalizedScope == "all") {
             writeJson(
@@ -164,7 +168,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         index.append("\nFiles:\n")
         try {
             Files.list(dumpRoot).sorted().forEach { path ->
-                val fileSize = try { Files.size(path) } catch (_: Exception) { 0L }
+                val fileSize = try { Files.size(path) } catch (_: java.io.IOException) { 0L }
                 val sizeLabel = when {
                     fileSize < 1024 -> "${fileSize}B"
                     fileSize < 1048576 -> "${fileSize / 1024}KB"
@@ -172,7 +176,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
                 }
                 index.append("  ${path.fileName} ($sizeLabel)\n")
             }
-        } catch (_: Exception) {
+        } catch (_: IOException) {
             index.append("  <error listing files>\n")
         }
         writeText(dumpRoot.resolve("index.txt"), index.toString())

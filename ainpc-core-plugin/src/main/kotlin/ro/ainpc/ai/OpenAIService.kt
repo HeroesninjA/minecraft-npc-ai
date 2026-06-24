@@ -131,7 +131,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
                 val prompt = try {
                     OpenAIPromptBuilder.buildPrompt(snapshot, recentHistory, relevantMemories, relationship, dbContext)
-                } catch (e: Exception) {
+                } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("prompt_build_error: ${OpenAITextSupport.compactExceptionMessage(e)}")
                     val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
@@ -143,7 +143,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                     recordInteractionSuccess(pendingNpcName, pendingPlayerName, prompt, response)
                     clearOfflineState()
                     response
-                } catch (e: Exception) {
+                } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("exception: ${OpenAITextSupport.compactExceptionMessage(e)}")
                     val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
@@ -344,7 +344,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 val response = callOpenAI(prompt, null)
                 clearOfflineState()
                 response
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
                 handleGenerationFailure(e)
                 null
             }
@@ -419,7 +419,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         val captureTask = Runnable {
             try {
                 future.complete(OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request))
-            } catch (e: Exception) {
+            } catch (e: java.lang.RuntimeException) {
                 future.completeExceptionally(e)
             }
         }

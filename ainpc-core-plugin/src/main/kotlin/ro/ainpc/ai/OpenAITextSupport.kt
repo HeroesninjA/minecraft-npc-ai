@@ -260,7 +260,7 @@ object OpenAITextSupport {
         }
         return try {
             element.asString
-        } catch (_: Exception) {
+        } catch (_: java.lang.IllegalStateException) {
             element.toString()
         }
     }
@@ -296,7 +296,7 @@ object OpenAITextSupport {
                     if (parts.isEmpty()) abbreviate(responseBody, 200) else parts.joinToString(": ")
                 }
             }
-        } catch (_: Exception) {
+        } catch (_: com.google.gson.JsonSyntaxException) {
             abbreviate(responseBody, 200)
         }
     }
@@ -310,7 +310,7 @@ object OpenAITextSupport {
 
         val jsonResponse = try {
             gson.fromJson(responseBody, JsonObject::class.java)
-        } catch (e: Exception) {
+        } catch (e: com.google.gson.JsonSyntaxException) {
             throw IOException("OpenAI a returnat JSON invalid: " + compactExceptionMessage(e), e)
         } ?: throw IOException("OpenAI a returnat un JSON gol.")
 

@@ -97,24 +97,23 @@ class ShopService(private val economyService: EconomyService?) {
     }
 
     private fun hasInventorySpace(player: Player, items: Map<Material, Int>): Boolean {
-        var neededSlots = 0
+        var neededNewSlots = 0
         for ((material, amount) in items) {
             val maxStack = material.maxStackSize
             var remaining = amount
             for (item in player.inventory.contents) {
-                if (item == null || item.type == Material.AIR) {
-                    neededSlots++
-                    break
-                }
+                if (item == null || item.type == Material.AIR) continue
                 if (item.type == material && item.amount < maxStack) {
                     remaining -= (maxStack - item.amount)
                     if (remaining <= 0) break
                 }
             }
-            if (remaining > 0) neededSlots++
+            if (remaining > 0) {
+                neededNewSlots += (remaining + maxStack - 1) / maxStack
+            }
         }
         val emptySlots = player.inventory.contents.count { it == null || it.type == Material.AIR }
-        return emptySlots >= neededSlots
+        return emptySlots >= neededNewSlots
     }
 
     private fun removeItems(player: Player, items: Map<Material, Int>) {
@@ -136,8 +135,14 @@ class ShopService(private val economyService: EconomyService?) {
             var remaining = amount
             while (remaining > 0) {
                 val stackSize = minOf(remaining, maxStack)
-                player.inventory.addItem(ItemStack(material, stackSize))
-                remaining -= stackSize
+                val leftover = player.inventory.addItem(ItemStack(material, stackSize))
+                if (leftover.isNotEmpty()) {
+                    val dropped = leftover.values.first().amount
+                    player.world.dropItem(player.location, ItemStack(material, dropped))
+                    remaining -= (stackSize - dropped)
+                } else {
+                    remaining -= stackSize
+                }
             }
         }
     }

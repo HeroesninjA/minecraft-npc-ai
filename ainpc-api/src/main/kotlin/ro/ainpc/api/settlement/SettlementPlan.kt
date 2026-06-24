@@ -1,6 +1,6 @@
 package ro.ainpc.api.settlement
 
-data class SettlementPlan(
+data class SettlementPlan @JvmOverloads constructor(
     val planId: String,
     val version: Int = 1,
     val source: SettlementPlanSource = SettlementPlanSource.MANUAL,

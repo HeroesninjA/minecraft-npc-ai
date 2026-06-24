@@ -96,6 +96,10 @@ class DebugGui : GuiScreen {
             GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
         ) { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) })
 
+        context.button(19, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Audit NPC", "&7Ruleaza /ainpc audit npc."),
+        ) { click -> click.service().runCommand(click.player(), "ainpc audit npc") })
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

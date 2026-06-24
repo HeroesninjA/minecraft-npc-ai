@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
 class RoutineService(private val plugin: AINPCPlugin) {
-    val routineEngine = RoutineEngine()
+    val routineEngine = RoutineEngine(plugin)
     private val lastRoutineSlots: ConcurrentMap<UUID, RoutineSlot> = ConcurrentHashMap()
     private val lastRoutineMoveAt: ConcurrentMap<UUID, Long> = ConcurrentHashMap()
 

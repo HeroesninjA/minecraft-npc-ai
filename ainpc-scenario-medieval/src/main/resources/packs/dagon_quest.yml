@@ -22,7 +22,7 @@ scenarios:
       COMPLETION: "Dagon iti multumeste."
     quest:
       code: "CST01"
-      giver_profession: "garda"
+      giver_profession: "guard"
       kind: "exploration"
       category: "side"
       acceptance_mode: "explicit"

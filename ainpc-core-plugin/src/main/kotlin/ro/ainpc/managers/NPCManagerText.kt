@@ -167,11 +167,7 @@ fun nodePriority(node: WorldNodeInfo?, anchorRole: String?): Int {
 }
 
 fun isHomePlace(place: WorldPlaceInfo): Boolean =
-    place.placeType() == PlaceType.HOUSE ||
-            place.hasTag("home") ||
-            place.hasTag("house") ||
-            metadataEquals(place, "role", "home") ||
-            metadataEquals(place, "purpose", "home")
+    SpawnSemanticRules.isHousePlace(place)
 
 fun isWorkPlace(place: WorldPlaceInfo, occupation: String?): Boolean {
     if (place.placeType() == PlaceType.HOUSE) {
@@ -188,16 +184,7 @@ fun isWorkPlace(place: WorldPlaceInfo, occupation: String?): Boolean {
 }
 
 fun isSocialPlace(place: WorldPlaceInfo): Boolean =
-    place.placeType() == PlaceType.MARKET ||
-            place.placeType() == PlaceType.TAVERN ||
-            place.hasTag("social") ||
-            place.hasTag("meeting") ||
-            place.hasTag("meeting_point") ||
-            place.hasTag("market") ||
-            place.hasTag("well") ||
-            metadataEquals(place, "role", "social") ||
-            metadataEquals(place, "purpose", "social") ||
-            metadataEquals(place, "anchor", "social")
+    SpawnSemanticRules.isSocialPlace(place)
 
 @Suppress("UNUSED_PARAMETER")
 fun matchesOccupationPlaceType(occupation: String?, placeType: PlaceType): Boolean = false
@@ -723,6 +710,7 @@ fun markNpcPlannedForDeletion(npc: AINPC?, plannedDeletedNpcIds: MutableSet<Int>
 }
 
 fun averageLocation(locations: List<Location>): Location {
+    require(locations.isNotEmpty()) { "Locations list must not be empty" }
     var x = 0.0
     var y = 0.0
     var z = 0.0

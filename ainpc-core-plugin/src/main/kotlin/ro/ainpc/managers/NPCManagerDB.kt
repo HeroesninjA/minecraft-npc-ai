@@ -205,7 +205,8 @@ fun findPersistedSourceKeyOwnerId(sourceKey: String?): Int? {
                 if (rs.next()) return rs.getInt("npc_id")
             }
         }
-    } catch (_: SQLException) {
+    } catch (e: SQLException) {
+        npcManagerDbPlugin.debug("Nu am putut gasi owner pentru source_key: ${e.message}")
     }
     return null
 }

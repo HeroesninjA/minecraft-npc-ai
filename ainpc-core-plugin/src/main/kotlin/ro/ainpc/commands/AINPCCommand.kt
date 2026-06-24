@@ -22,7 +22,6 @@ import ro.ainpc.debug.DebugDumpService
 import ro.ainpc.debug.DebugDumpMappingText
 import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.debug.WorldMappingSemanticIndex
-import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.*
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.npc.AINPC
@@ -424,7 +423,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                     plugin.npcWorldBindingService.saveBinding(proposed); savedBindings++
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: java.sql.SQLException) {
             errors.add("Repair npc-bindings esuat: " + e.message)
         }
         plugin.messageUtils.send(
@@ -549,7 +548,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             if (batches.isEmpty()) {
                 plugin.messageUtils.send(sender, "&7Nu exista batch-uri."); return true
             }
-            @Suppress("UNCHECKED_CAST")
             val batchList = batches
             for (b in batchList) sendSpawnBatchSummary(sender, b)
         } catch (e: SQLException) {
@@ -650,6 +648,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         return when (mode) {
             "anchors" -> handleQuestAnchors(sender, args)
             "objectives" -> handleQuestObjectives(sender, args)
+            "types", "objective-types" -> handleQuestTypes(sender)
+            "audit-types", "audit_types", "check-types" -> handleQuestAuditTypes(sender, args)
+            "audit-deprecated", "deprecated" -> handleQuestDeprecated(sender)
             "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
             "gui" -> handleQuestGui(sender, args)
             "authoring" -> handleAuthoring(sender, arrayOf("authoring", *args.drop(2).toTypedArray()))
@@ -664,6 +665,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "debug" -> handleQuestDebug(sender, args)
             "reset" -> handleResetQuest(sender, args)
             "spawn" -> handleQuestSpawn(sender, args)
+            "snapshot" -> handleQuestSnapshot(sender, args)
+            "quick" -> handleQuickQuest(sender)
+            "quick-export" -> handleQuickQuestExport(sender, args)
+            "import" -> handleQuestImport(sender, args)
             "complete" -> handleCompleteQuest(sender, args)
             else -> handleTriggerQuest(
                 sender, args[1],
@@ -1381,6 +1386,244 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
         plugin.messageUtils.send(sender, "&aZombie spawnat la $x, $y, $z in curtea castelului.")
         return true
+    }
+
+    // -- Quest audit types ------------------------------------------
+    private fun handleQuestAuditTypes(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val loader = runCatching { plugin.featurePackLoader }.getOrNull()
+        if (loader == null) {
+            plugin.messageUtils.send(sender, "&cFeaturePackLoader indisponibil."); return true
+        }
+        val supported = ro.ainpc.engine.ObjectiveTypeAliasRegistry.supportedTypes()
+        val unknown = mutableListOf<Pair<String, String>>()
+        var totalObjectives = 0
+        for (scenario in loader.getAllScenarios()) {
+            for (obj in scenario.objectives) {
+                totalObjectives++
+                val normalized = ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(obj.type)
+                if (normalized !in supported) {
+                    unknown.add(Pair(scenario.questCode.ifBlank { scenario.id }, obj.type))
+                }
+            }
+        }
+        plugin.messageUtils.send(sender, "&6=== Quest Objective Type Audit ===")
+        plugin.messageUtils.send(sender, "&eTotal obiective: &f$totalObjectives")
+        plugin.messageUtils.send(sender, "&eTipuri suportate: &f${supported.size}")
+        if (unknown.isEmpty()) {
+            plugin.messageUtils.send(sender, "&aToate tipurile de obiective sunt valide.")
+        } else {
+            plugin.messageUtils.send(sender, "&cTipuri necunoscute: &f${unknown.size}")
+            for ((templateId, type) in unknown.distinct()) {
+                plugin.messageUtils.send(sender, "&7- &f$templateId&7: &c$type")
+            }
+        }
+        return true
+    }
+
+    private fun handleQuestDeprecated(sender: CommandSender): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val loader = runCatching { plugin.featurePackLoader }.getOrNull()
+        if (loader == null) {
+            plugin.messageUtils.send(sender, "&cFeaturePackLoader indisponibil."); return true
+        }
+        var totalDeprecated = 0
+        val deprecatedByScenario = mutableListOf<Pair<String, String>>()
+        for (scenario in loader.getAllScenarios()) {
+            for (obj in scenario.objectives) {
+                if (ro.ainpc.engine.ObjectiveTypeAliasRegistry.isDeprecated(obj.type)) {
+                    val rec = ro.ainpc.engine.ObjectiveTypeAliasRegistry.recommendedType(obj.type)
+                    deprecatedByScenario.add(Pair(scenario.questCode.ifBlank { scenario.id },
+                        "'${obj.type}' -> '$rec'"))
+                    totalDeprecated++
+                }
+            }
+        }
+        plugin.messageUtils.send(sender, "&6=== Quest Deprecated Fields Audit ===")
+        if (totalDeprecated == 0) {
+            plugin.messageUtils.send(sender, "&aNu exista campuri deprecated in questuri.")
+        } else {
+            plugin.messageUtils.send(sender, "&eTotal campuri deprecated: &f$totalDeprecated")
+            for ((templateId, detail) in deprecatedByScenario.distinct()) {
+                plugin.messageUtils.send(sender, "&7- &f$templateId&7: &e$detail")
+            }
+        }
+        return true
+    }
+
+    // -- Quest snapshot ---------------------------------------------
+    private fun handleQuestSnapshot(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest snapshot <templateId|questCode> [jucator]"); return true
+        }
+        val templateId = args[2]
+        val playerName = if (args.size > 3) args[3] else (sender as? Player)?.name ?: ""
+        val player = if (playerName.isNotBlank()) plugin.server.getPlayerExact(playerName) else null
+        val template = runCatching {
+            plugin.featurePackLoader.getAllScenarios().find {
+                it.questCode.equals(templateId, ignoreCase = true) || it.id.equals(templateId, ignoreCase = true)
+            }
+        }.getOrNull()
+        if (template == null) {
+            plugin.messageUtils.send(sender, "&cTemplate negasit: $templateId"); return true
+        }
+        plugin.messageUtils.send(sender, "&6=== Quest Snapshot: ${template.questCode.ifBlank { template.id }} ===")
+        plugin.messageUtils.send(sender, "&eNume: &f${template.name}")
+        plugin.messageUtils.send(sender, "&eObiective: &f${template.objectives.size}")
+        for ((i, obj) in template.objectives.withIndex()) {
+            val type = ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(obj.type)
+            val target = if (obj.itemId.isNullOrBlank()) "-" else obj.itemId
+            plugin.messageUtils.send(sender, "&7  $i. &f[$type] &7target: &f$target &7amount: &f${obj.amount}")
+        }
+        plugin.messageUtils.send(sender, "&eRecompense: &f${template.rewards.size}")
+        for (rw in template.rewards) {
+            plugin.messageUtils.send(sender, "&7  - &f${rw.type} &7(${rw.itemId.orEmpty()}) x${rw.amount}")
+        }
+        plugin.messageUtils.send(sender, "&eWarning-uri: &f${template.validationWarnings.size}")
+        for (w in template.validationWarnings) {
+            plugin.messageUtils.send(sender, "&7  - &e$w")
+        }
+        if (player != null) {
+            plugin.messageUtils.send(sender, "&7Pentru progresul jucatorului: &f/ainpc quest progress $templateId ${player.name}")
+        }
+        return true
+    }
+
+    // -- Quick quest ------------------------------------------------
+    private fun handleQuickQuest(sender: CommandSender): Boolean {
+        val player = sender as? Player ?: run {
+            plugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+            return true
+        }
+        plugin.guiService.setCreatorFormValue(player, "qq_step", "1")
+        plugin.guiService.open(player, GuiKey.QUICK_QUEST)
+        return true
+    }
+
+    private fun handleQuickQuestExport(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size < 6) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest quick-export <name> <type> <target> <reward>")
+            return true
+        }
+        val name = args[2]
+        val type = args[3]
+        val target = args[4]
+        val reward = args[5]
+        val yaml = buildString {
+            appendLine("quick_quest:")
+            appendLine("  name: \"$name\"")
+            appendLine("  base_type: \"QUEST\"")
+            appendLine("  mechanic: \"side_quests\"")
+            appendLine("  quest:")
+            appendLine("    code: \"QQ01\"")
+            appendLine("    kind: \"side\"")
+            appendLine("    objectives:")
+            appendLine("      obj_01:")
+            appendLine("        type: \"$type\"")
+            appendLine("        item: \"$target\"")
+            appendLine("        amount: 1")
+            appendLine("        description: \"$name\"")
+            appendLine("    rewards:")
+            appendLine("      reward_01:")
+            appendLine("        type: \"item\"")
+            appendLine("        item: \"${reward.split(" ")[0]}\"")
+            appendLine("        amount: ${reward.split(" ").getOrElse(1) { "1" }}")
+        }
+        plugin.messageUtils.send(sender, "&6=== Quick Quest YAML ===")
+        for (line in yaml.lines()) {
+            plugin.messageUtils.send(sender, "&f$line")
+        }
+        plugin.messageUtils.send(sender, "&7Copiază acest YAML intr-un fisier .yml in folderul packs/.")
+        return true
+    }
+
+    private fun handleQuestImport(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest import <fileName>")
+            return true
+        }
+        val fileName = args[2].trim()
+        if (!fileName.endsWith(".yml") && !fileName.endsWith(".yaml")) {
+            plugin.messageUtils.send(sender, "&cNumele fisierului trebuie sa se termine cu .yml sau .yaml.")
+            return true
+        }
+        val packsFolder = java.io.File(plugin.dataFolder, "packs")
+        val importFile = java.io.File(packsFolder, fileName)
+        if (!importFile.exists()) {
+            plugin.messageUtils.send(sender, "&cFisierul &e$fileName &cnu exista in folderul packs/.")
+            return true
+        }
+        try {
+            val config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(importFile)
+            val scenarioSection = config.getConfigurationSection("scenarios")
+            if (scenarioSection == null) {
+                plugin.messageUtils.send(sender, "&cFisierul nu contine o sectiune 'scenarios' valida.")
+                return true
+            }
+            val keys = scenarioSection.getKeys(false)
+            plugin.messageUtils.send(sender, "&6=== Import Quest ===")
+            plugin.messageUtils.send(sender, "&aScenarii gasite in &f$fileName&a: $keys")
+            for (key in keys) {
+                val s = scenarioSection.getConfigurationSection(key) ?: continue
+                plugin.messageUtils.send(sender, "&7- &f$key &7- &e${s.getString("name", key)}")
+            }
+            plugin.messageUtils.send(sender, "&7Pentru activare: pune fisierul in packs/ si ruleaza /ainpc reload")
+        } catch (e: Exception) {
+            plugin.messageUtils.send(sender, "&cEroare la parsare: &e${e.message}")
+        }
+        return true
+    }
+
+    // -- Quest types ------------------------------------------------
+    private fun handleQuestTypes(sender: CommandSender): Boolean {
+        val supported = ro.ainpc.engine.ObjectiveTypeAliasRegistry.supportedTypes().sorted()
+        val sb = StringBuilder()
+        sb.appendLine("{")
+        sb.appendLine("  \"version\": 1,")
+        sb.appendLine("  \"total\": ${supported.size},")
+        sb.appendLine("  \"types\": [")
+        for ((index, type) in supported.withIndex()) {
+            val aliases = ro.ainpc.engine.ObjectiveTypeAliasRegistry.aliasesFor(type)
+            val comma = if (index < supported.size - 1) "," else ""
+            sb.appendLine("    {")
+            sb.appendLine("      \"canonical\": \"$type\",")
+            if (aliases.isNotEmpty()) {
+                sb.appendLine("      \"aliases\": [${aliases.joinToString(", ") { "\"$it\"" }}],")
+            }
+            sb.appendLine("      \"hook\": \"${hookFor(type)}\"")
+            sb.appendLine("    }$comma")
+        }
+        sb.appendLine("  ]")
+        sb.appendLine("}")
+        plugin.messageUtils.send(sender, sb.toString())
+        return true
+    }
+
+    private fun hookFor(type: String): String = when (type) {
+        "collect_item" -> "EntityPickupItemEvent / Inventory check"
+        "deliver_to_npc" -> "NPC interaction"
+        "talk_to_npc" -> "NPC interaction"
+        "visit_region" -> "PlayerMoveEvent"
+        "visit_place" -> "PlayerMoveEvent"
+        "inspect_node" -> "PlayerMoveEvent / Node interaction"
+        "kill_mob" -> "EntityDeathEvent"
+        "place_block" -> "BlockPlaceEvent"
+        "break_block" -> "BlockBreakEvent"
+        "craft_item" -> "CraftItemEvent"
+        "use_item" -> "PlayerInteractEvent"
+        "equip_item" -> "InventoryClickEvent (armor slots)"
+        else -> "Custom"
     }
 
     // -- Story ------------------------------------------------------
@@ -2349,14 +2592,25 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                     plugin.messageUtils.send(sender, "&7Nu exista scenarii active cu warning-uri.")
                     return true
                 }
+                var totalUnknown = 0; var totalNoTarget = 0; var totalOrder = 0; var totalOther = 0
                 for ((scenarioId, scenario) in scenarios) {
+                    val unknown = scenario.validationWarnings.count { it.contains("necunoscut") }
+                    val noTarget = scenario.validationWarnings.count { it.contains("target") || it.contains("itemId") }
+                    val order = scenario.validationWarnings.count { it.contains("devreme") || it.contains("ordine") }
+                    val other = scenario.validationWarnings.size - unknown - noTarget - order
+                    totalUnknown += unknown; totalNoTarget += noTarget; totalOrder += order; totalOther += other
                     plugin.messageUtils.send(
                         sender,
                         "&7- &f${scenario.templateId} &8(${scenario.displayName}) " +
                             "&7id=&f${scenarioId.toString().substring(0, 8)} &7actori=&f${scenario.actors.size} " +
                             "&7warnings=&f${scenario.validationWarnings.size}"
                     )
+                    if (unknown > 0) plugin.messageUtils.send(sender, "&8    tip necunoscut: &e$unknown")
+                    if (noTarget > 0) plugin.messageUtils.send(sender, "&8    fara target: &e$noTarget")
+                    if (order > 0) plugin.messageUtils.send(sender, "&8    ordine suspecta: &e$order")
+                    if (other > 0) plugin.messageUtils.send(sender, "&8    altele: &e$other")
                 }
+                plugin.messageUtils.send(sender, "&eTotal: &f$totalUnknown tip necunoscut, &f$totalNoTarget fara target, &f$totalOrder ordine, &f$totalOther altele")
                 true
             }
             "info" -> {
@@ -3264,6 +3518,35 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val tracker = SpawnBatchTracker(plugin.databaseManager, plugin.logger)
         val recent = tracker.findRecentBatches("all", 10)
         report.addNote("Batch-uri recente: ${recent.size}")
+        val familyData = runCatching {
+            val sql = "SELECT npc_id_1, npc_id_2, relationship_type FROM npc_family"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                stmt.executeQuery().use { rs ->
+                    val pairs = mutableListOf<Triple<Int, Int, String>>()
+                    while (rs.next()) {
+                        val id1 = rs.getInt("npc_id_1")
+                        val id2 = rs.getInt("npc_id_2")
+                        val type = rs.getString("relationship_type") ?: ""
+                        pairs.add(Triple(id1, id2, type))
+                    }
+                    pairs
+                }
+            }
+        }.getOrNull()
+        if (familyData != null && familyData.isNotEmpty()) {
+            report.addNote("Relatii de familie: ${familyData.size}")
+            val seen = mutableSetOf<Pair<Int, Int>>()
+            for ((id1, id2, type) in familyData) {
+                val inverse = familyData.any { it.second == id1 && it.first == id2 && it.third == type }
+                if (!inverse) {
+                    report.addWarning("Relatia $id1 -> $id2 ($type) nu are pereche reciproca in npc_family.")
+                }
+                val pair = Pair(minOf(id1, id2), maxOf(id1, id2))
+                if (!seen.add(pair)) {
+                    report.addWarning("Perechea $id1-$id2 are intrari duplicate in npc_family.")
+                }
+            }
+        }
     }
 
     private fun auditQuestAnchors(report: AuditReport, strict: Boolean) {
@@ -3554,9 +3837,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun isHousePlace(place: WorldPlaceInfo): Boolean {
         val t = place.placeType().id.lowercase()
-        return t.contains("house") || t.contains("home") || t.contains("residence") || t.contains("locuinta") || t.contains(
-            "casa"
-        )
+        return t in setOf("house", "home", "residence", "locuinta", "casa")
     }
 
     private fun isWorkplace(place: WorldPlaceInfo): Boolean {

@@ -987,23 +987,23 @@ scenarios:
         completed:
           - "Raport bun. Straja poate intari hotarul exact unde trebuie."
       stages:
-      PATROL:
-        description: "Jucatorul verifica regiunea si elimina amenintarile."
-        completion_mode: "all_objectives"
-        next_stage: "RETURN"
-        spawn_actors: "dungeon_spirit"
-        on_stage_enter: "dungeon_spirit"
-        on_stage_complete: "border_messenger"
-        objectives:
-          - "patrol_region"
-          - "clear_zombies"
-      RETURN:
-        description: "Jucatorul revine la garda cu raportul."
-        completion_mode: "manual_turn_in"
-        despawn_actors: "dungeon_spirit"
-        on_stage_exit: "dungeon_spirit"
-        objectives:
-          - "report_to_guard"
+        PATROL:
+          description: "Jucatorul verifica regiunea si elimina amenintarile."
+          completion_mode: "all_objectives"
+          next_stage: "RETURN"
+          spawn_actors: "dungeon_spirit"
+          on_stage_enter: "dungeon_spirit"
+          on_stage_complete: "border_messenger"
+          objectives:
+            - "patrol_region"
+            - "clear_zombies"
+        RETURN:
+          description: "Jucatorul revine la garda cu raportul."
+          completion_mode: "manual_turn_in"
+          despawn_actors: "dungeon_spirit"
+          on_stage_exit: "dungeon_spirit"
+          objectives:
+            - "report_to_guard"
       objectives:
         patrol_region:
           type: "visit_region"

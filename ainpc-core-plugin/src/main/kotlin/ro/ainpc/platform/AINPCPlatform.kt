@@ -125,7 +125,7 @@ class AINPCPlatform(
                     val overlaySection = builtinConfig.getConfigurationSection("world_admin") ?: builtinConfig
                     ScriptConfigurationLoader.mergeSection(mergedConfig, "world_admin", overlaySection)
                     plugin.logger.info("Castel mapping incarcat din resursa incorporata.")
-                } catch (e: Exception) {
+                } catch (e: java.io.IOException) {
                     plugin.logger.warning("Nu am putut incarca castel-world-admin.yml din resursa: ${e.message}")
                 }
             }

@@ -130,7 +130,7 @@ class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
             }
         }
 
-        return BehaviorProfile(
+        val profile = BehaviorProfile(
             profileId = id,
             occupation = occupation,
             displayName = displayName,
@@ -144,5 +144,10 @@ class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
             dangerAvoidance = dangerAvoidance,
             metadata = metadata
         )
+
+        val validationIssues = validate(profile)
+        loadWarnings.addAll(validationIssues)
+
+        return profile
     }
 }

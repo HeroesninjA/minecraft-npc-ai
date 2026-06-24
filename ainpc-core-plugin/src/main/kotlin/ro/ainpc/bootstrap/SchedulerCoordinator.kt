@@ -55,7 +55,7 @@ class SchedulerCoordinator(
                 plugin,
                 Runnable {
                     val summary = plugin.routineService.runRoutineTick()
-                    if (plugin.config.getBoolean("debug")) {
+                    if (plugin.config.getBoolean("debug.enabled", false)) {
                         plugin.logger.info(
                             "[Debug] Routine tick: evaluated=" + summary.evaluatedNpcs() +
                                 ", moved=" + summary.movedNpcs() +
@@ -95,8 +95,8 @@ class SchedulerCoordinator(
             Runnable {
                 plugin.npcManager.syncAllNPCEntityState()
                 plugin.databaseManager.runAsync {
-                    plugin.npcManager.saveAllNPCs(false)
-                    if (plugin.config.getBoolean("debug")) {
+                    plugin.npcManager.saveAllNPCs(syncFromEntity = false)
+                    if (plugin.config.getBoolean("debug.enabled", false)) {
                         plugin.logger.info("[Debug] Salvare automata completata.")
                     }
                 }
@@ -124,7 +124,7 @@ class SchedulerCoordinator(
             plugin,
             Runnable {
                 val updated = plugin.scenarioEngine.tickQuestTrackingMarkers()
-                if (updated > 0 && plugin.config.getBoolean("debug")) {
+                if (updated > 0 && plugin.config.getBoolean("debug.enabled", false)) {
                     plugin.logger.info("[Debug] Quest tracking refresh: updated=$updated")
                 }
             },

@@ -25,11 +25,7 @@ class QuestDirectorDecision(
     private val candidateTemplateIdsValue: List<String> = sanitizeStrings(candidateTemplateIds)
     private val blockedReasonsValue: List<String> = sanitizeStrings(blockedReasons)
     private val warningsValue: List<String> = sanitizeStrings(warnings)
-    private val runtimeExecutableValue: Boolean = false
-
-    init {
-        runtimeExecutable
-    }
+    private val runtimeExecutableValue: Boolean = runtimeExecutable
 
     fun status(): Status = statusValue
     fun reason(): String = reasonValue

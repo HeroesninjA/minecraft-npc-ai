@@ -30,6 +30,7 @@ import ro.ainpc.gui.screens.QuestCreatorDefinitionsGui
 import ro.ainpc.gui.screens.QuestCreatorTestGui
 import ro.ainpc.gui.screens.QuestEditGui
 import ro.ainpc.gui.screens.QuestCreateGui
+import ro.ainpc.gui.screens.QuickQuestGui
 import ro.ainpc.gui.screens.MappingCreatorGui
 import ro.ainpc.gui.screens.MappingCreateRegionGui
 import ro.ainpc.gui.screens.MappingCreatePlaceGui
@@ -64,8 +65,22 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val creatorFormValues: ConcurrentMap<UUID, MutableMap<String, String>> = ConcurrentHashMap()
     private val textInputRequests: ConcurrentMap<UUID, TextInputRequest> = ConcurrentHashMap()
     private val shopSelectedNpcIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val lastGuiKeys: ConcurrentMap<UUID, GuiKey> = ConcurrentHashMap()
 
     fun getShopSelectedNpcId(player: Player): String? = shopSelectedNpcIds[player.uniqueId]
+
+    fun setLastGuiKey(player: Player, key: GuiKey) {
+        if (key != GuiKey.CONFIRM) {
+            lastGuiKeys[player.uniqueId] = key
+        }
+    }
+
+    fun getLastGuiKey(player: Player): GuiKey? = lastGuiKeys[player.uniqueId]
+
+    fun popLastGuiKey(player: Player): GuiKey? {
+        val key = lastGuiKeys.remove(player.uniqueId)
+        return key
+    }
 
     fun setShopSelectedNpcId(player: Player, npcId: String?) {
         if (npcId != null) shopSelectedNpcIds[player.uniqueId] = npcId
@@ -184,6 +199,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(QuestCreatorTestGui())
         register(QuestEditGui())
         register(QuestCreateGui())
+        register(QuickQuestGui())
         register(MappingCreatorGui())
         register(MappingCreateRegionGui())
         register(MappingCreatePlaceGui())
@@ -202,6 +218,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             return
         }
 
+        setLastGuiKey(player, key)
         val screen = screens.getOrDefault(key, screens[GuiKey.MAIN]) ?: return
         val session = sessionManager.create(player, key)
         val holder = AINPCGuiHolder(session.getSessionId(), key)
@@ -578,7 +595,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.ADMIN_HUB -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.audit", "ainpc.gui.debug")
             GuiKey.CREATOR_HUB -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world", "ainpc.gui.quest")
             GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
-            GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
+            GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE, GuiKey.QUICK_QUEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
             GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world")
             GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
             GuiKey.CONFIRM -> true

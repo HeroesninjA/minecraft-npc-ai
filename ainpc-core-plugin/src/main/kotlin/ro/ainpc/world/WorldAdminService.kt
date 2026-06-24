@@ -50,13 +50,13 @@ class WorldAdminService(
         get() = currentWorldMode
 
     override val regions: Collection<WorldRegionInfo>
-        get() = Collections.unmodifiableList(regionsById.values.map { region -> toRegionInfo(region)!! })
+        get() = Collections.unmodifiableList(regionsById.values.mapNotNull { region -> toRegionInfo(region) })
 
     override val places: Collection<WorldPlaceInfo>
-        get() = Collections.unmodifiableList(placesById.values.map { place -> toPlaceInfo(place)!! })
+        get() = Collections.unmodifiableList(placesById.values.mapNotNull { place -> toPlaceInfo(place) })
 
     override val nodes: Collection<WorldNodeInfo>
-        get() = Collections.unmodifiableList(nodesById.values.map { node -> toNodeInfo(node)!! })
+        get() = Collections.unmodifiableList(nodesById.values.mapNotNull { node -> toNodeInfo(node) })
 
     override val regionCount: Int
         get() = regionsById.size
@@ -165,7 +165,7 @@ class WorldAdminService(
             debugSink.accept("Castel mapping creat: regiune, 2 places, 1 node.")
             logger.info("Castel mapping creat cu succes: castel -> poarta_castel + curte_castel -> cufar")
             return true
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             logger.warning("Nu am putut crea castel mapping programatic: ${e.message}")
             return false
         }
@@ -280,7 +280,7 @@ class WorldAdminService(
         appendMetadataValue(place, "resident_names", npcName)
         place.putMetadata("residents_status", "assigned")
         dirty = true
-        return toPlaceInfo(place)!!
+        return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
     }
 
     override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
@@ -294,7 +294,7 @@ class WorldAdminService(
         appendMetadataValue(place, "worker_names", npcName)
         place.putMetadata("worker_status", "assigned")
         dirty = true
-        return toPlaceInfo(place)!!
+        return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
     }
 
     override fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
@@ -308,7 +308,7 @@ class WorldAdminService(
         appendMetadataValue(place, "social_names", npcName)
         place.putMetadata("social_status", "assigned")
         dirty = true
-        return toPlaceInfo(place)!!
+        return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
     }
 
     fun createDemoSettlement(
@@ -1094,7 +1094,7 @@ class WorldAdminService(
     override fun getPlaces(regionId: String?): Collection<WorldPlaceInfo> {
         return Collections.unmodifiableList(
             (regionId?.let { placesByRegion[it] } ?: emptyList())
-                .map { place -> toPlaceInfo(place)!! }
+                .mapNotNull { place -> toPlaceInfo(place) }
         )
     }
 
@@ -1115,7 +1115,7 @@ class WorldAdminService(
             placesById.values.asSequence()
                 .filter { place -> regionId.isNullOrBlank() || place.regionId.equals(regionId, ignoreCase = true) }
                 .filter { place -> place.hasTag(tag) }
-                .map { place -> toPlaceInfo(place)!! }
+                .mapNotNull { place -> toPlaceInfo(place) }
                 .toList()
         )
     }
@@ -1123,14 +1123,14 @@ class WorldAdminService(
     override fun getNodes(regionId: String?): Collection<WorldNodeInfo> {
         return Collections.unmodifiableList(
             (regionId?.let { nodesByRegion[it] } ?: emptyList())
-                .map { node -> toNodeInfo(node)!! }
+                .mapNotNull { node -> toNodeInfo(node) }
         )
     }
 
     override fun getNodesForPlace(placeId: String?): Collection<WorldNodeInfo> {
         return Collections.unmodifiableList(
             (placeId?.let { nodesByPlace[it] } ?: emptyList())
-                .map { node -> toNodeInfo(node)!! }
+                .mapNotNull { node -> toNodeInfo(node) }
         )
     }
 
@@ -1145,7 +1145,7 @@ class WorldAdminService(
     override fun findNodesNear(worldName: String?, x: Double, y: Double, z: Double, radius: Double, limit: Int): Collection<WorldNodeInfo> {
         return Collections.unmodifiableList(
             findNodeModelsNear(worldName, x, y, z, radius, limit)
-                .map { node -> toNodeInfo(node)!! }
+                .mapNotNull { node -> toNodeInfo(node) }
         )
     }
 

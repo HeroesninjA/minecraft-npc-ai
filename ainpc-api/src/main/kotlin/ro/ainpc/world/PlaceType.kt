@@ -18,12 +18,24 @@ enum class PlaceType(val id: String) {
             if (value.isNullOrBlank()) {
                 return CUSTOM
             }
+            val normalized = value.trim().lowercase(java.util.Locale.ROOT).replace('-', '_')
             for (type in entries) {
-                if (type.id.equals(value, ignoreCase = true) || type.name.equals(value, ignoreCase = true)) {
+                if (type.id.equals(normalized, ignoreCase = true) || type.name.equals(normalized, ignoreCase = true)) {
                     return type
                 }
             }
-            return CUSTOM
+            val alias = mapOf(
+                "casa" to HOUSE, "locuinta" to HOUSE, "home" to HOUSE,
+                "magazin" to SHOP, "comert" to SHOP, "dropshop" to SHOP,
+                "fierarie" to FORGE, "forge" to FORGE, "atelier" to FORGE,
+                "taverna" to TAVERN, "han" to TAVERN, "carciuma" to TAVERN,
+                "ferma" to FARM, "fermier" to FARM,
+                "piata" to MARKET, "marketplace" to MARKET,
+                "castel" to CASTLE_ROOM, "camera_castel" to CASTLE_ROOM,
+                "pestera" to CAVE_ROOM, "cave" to CAVE_ROOM,
+                "tabara" to CAMP, "campament" to CAMP,
+            )
+            return alias[normalized] ?: CUSTOM
         }
     }
 }

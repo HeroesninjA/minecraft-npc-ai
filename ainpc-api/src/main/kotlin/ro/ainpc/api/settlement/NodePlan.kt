@@ -1,6 +1,6 @@
 package ro.ainpc.api.settlement
 
-data class NodePlan(
+data class NodePlan @JvmOverloads constructor(
     val nodeId: String,
     val placeId: String,
     val nodeType: String,

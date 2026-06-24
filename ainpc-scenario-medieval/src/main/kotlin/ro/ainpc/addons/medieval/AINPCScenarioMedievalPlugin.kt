@@ -20,7 +20,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
     override fun onEnable() {
         platform = resolvePlatform()
         if (platform == null) {
-            logger.severe("AINPC core nu a expus serviciul API. Addonul se opreste.")
+            logger.severe("AINPC core nu a expus serviciul API. Pluginul se opreste.")
             server.pluginManager.disablePlugin(this)
             return
         }
@@ -55,7 +55,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
                 removeManagedPack()
                 platform!!.reloadContent()
             } catch (exception: IOException) {
-                logger.warning("Nu s-a putul curata pack-ul medieval dezactivat: ${exception.message}")
+                logger.warning("Nu s-a putut curata pack-ul medieval dezactivat: ${exception.message}")
             }
             return
         }
@@ -94,11 +94,12 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
 
         try {
             removeManagedPack()
-            if (server.pluginManager.isPluginEnabled(CORE_PLUGIN_NAME)) {
-                platform!!.reloadContent()
-            }
         } catch (exception: IOException) {
             logger.warning("Nu s-a putut curata pack-ul medieval: ${exception.message}")
+        }
+
+        if (platform != null && server.pluginManager.isPluginEnabled(CORE_PLUGIN_NAME)) {
+            platform!!.reloadContent()
         }
 
         unregisterAddon()

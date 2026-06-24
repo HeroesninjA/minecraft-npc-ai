@@ -87,6 +87,46 @@ class SettlementConfigLoaderTest {
     }
 
     @Test
+    fun missingWorldEmitsError() {
+        val loader = SettlementConfigLoader(null)
+        val yaml = """
+            settlements:
+              bad:
+                radius: 30
+        """.trimIndent()
+        val results = loader.parseYamlString(yaml)
+        assertTrue(results.isEmpty())
+        assertTrue(loader.getErrors().any { it.contains("world") })
+    }
+
+    @Test
+    fun zeroRadiusEmitsError() {
+        val loader = SettlementConfigLoader(null)
+        val yaml = """
+            settlements:
+              bad:
+                world: "world"
+                radius: 0
+        """.trimIndent()
+        val results = loader.parseYamlString(yaml)
+        assertTrue(results.isEmpty())
+        assertTrue(loader.getErrors().any { it.contains("radius") })
+    }
+
+    @Test
+    fun getDefinitionById() {
+        val loader = SettlementConfigLoader(null)
+        val yaml = """
+            settlements:
+              test: { world: "w", center: { x: 0, y: 64, z: 0 }, radius: 10 }
+        """.trimIndent()
+        loader.parseYamlString(yaml)
+        val def = loader.getDefinition("test")
+        assertTrue(def != null)
+        assertEquals("test", def!!.id)
+    }
+
+    @Test
     fun getAllDefinitions() {
         val loader = SettlementConfigLoader(null)
         val yaml = """

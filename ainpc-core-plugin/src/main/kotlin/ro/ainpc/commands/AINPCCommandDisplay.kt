@@ -35,6 +35,8 @@ fun sendQuestUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc quest reset <numeNpc> [jucator]")
     msg.send(sender, "&e/ainpc quest complete <numeNpc> [jucator]")
     msg.send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]")
+    msg.send(sender, "&e/ainpc quest audit-types")
+    msg.send(sender, "&7Tipuri obiective suportate: &fcollect_item &7(fetch,gather), &ftalk_to_npc &7(talk_nlc), &fvisit_place, &finspect_node &7(interact_nkde), &fkill_mob, &fplace_block, &fbreak_block, &fcraft_item")
 }
 
 fun sendProgressionUsage(sender: CommandSender) {

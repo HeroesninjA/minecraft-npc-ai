@@ -247,9 +247,13 @@ $outputDirFull = (Resolve-Path -LiteralPath $outputDirFull).Path
 $jsonPath = Join-Path $outputDirFull "$safeReleaseId-release-report.json"
 $markdownPath = Join-Path $outputDirFull "$safeReleaseId-release-report.md"
 
-$defaultCoreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar"
-$defaultMedievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-1.0.0.jar"
-$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-1.0.0.jar"
+$version = "1.0.0"
+$props = Get-Content -LiteralPath (Join-Path $repoRoot "gradle.properties") -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
+if ($props) { $version = $matches[1] }
+
+$defaultCoreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-$version.jar"
+$defaultMedievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-$version.jar"
+$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-$version.jar"
 
 $artifactSummaries = @(
     New-ArtifactSummary -Name "core" -Path ($(if ($CoreJar) { $CoreJar } else { $defaultCoreJar })) -Required $true

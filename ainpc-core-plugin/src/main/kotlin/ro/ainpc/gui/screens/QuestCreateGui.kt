@@ -23,18 +23,15 @@ class QuestCreateGui : GuiScreen {
         "onboarding",
         "village_rituals"
     )
-    private val objectiveTypes = listOf(
-        "visit_place",
-        "inspect_node",
-        "talk_to_npc",
-        "collect_item",
-        "deliver_to_npc",
-        "kill_mob",
-        "visit_region",
-        "place_block",
-        "break_block",
-        "craft_item"
+    private val objectiveCategories = linkedMapOf(
+        "Social" to listOf("talk_to_npc", "deliver_to_npc"),
+        "Explorare" to listOf("visit_region", "visit_place", "inspect_node"),
+        "Colectare" to listOf("collect_item"),
+        "Constructie" to listOf("place_block", "break_block"),
+        "Crafting" to listOf("craft_item", "use_item", "equip_item"),
+        "Combat" to listOf("kill_mob"),
     )
+    private val objectiveTypes = objectiveCategories.values.flatten()
     private val rewardTypes = listOf("item", "experience", "story_event", "reputation")
     private val dialogTypes = listOf("npc_greeting", "npc_accept", "npc_progress", "npc_complete", "player_respond", "narrator")
     private val baseTypes = listOf("QUEST", "TRADE_DEAL", "BOUNTY", "DUTY", "WORLD_EVENT", "TUTORIAL", "RITUAL")
@@ -63,6 +60,11 @@ class QuestCreateGui : GuiScreen {
         val rwType = service.getCreatorFormValue(player, "quest_reward_type").ifBlank { "item" }
         val rwValue = service.getCreatorFormValue(player, "quest_reward_value").ifBlank { "EMERALD" }
         val rwCount = service.getCreatorFormValue(player, "quest_reward_count").ifBlank { "1" }
+        val rwEventKey = service.getCreatorFormValue(player, "quest_reward_event_key").ifBlank { "" }
+        val rwEventScope = service.getCreatorFormValue(player, "quest_reward_event_scope").ifBlank { "region" }
+        val rwEventTarget = service.getCreatorFormValue(player, "quest_reward_event_target").ifBlank { "current_region" }
+        val rwEventTitle = service.getCreatorFormValue(player, "quest_reward_event_title").ifBlank { "" }
+        val rwEventPayload = service.getCreatorFormValue(player, "quest_reward_event_payload").ifBlank { "" }
 
         val stageId = service.getCreatorFormValue(player, "quest_stage_id").ifBlank { "S1" }
         val stageName = service.getCreatorFormValue(player, "quest_stage_name").ifBlank { "Stage 1" }
@@ -194,7 +196,8 @@ class QuestCreateGui : GuiScreen {
         context.item(18, GuiItemFactory.item(Material.TARGET, "&cObiectiv", listOf("&7Configureaza obiectivul principal.")))
         context.button(19, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&eTip obiectiv: &f$objType", listOf(
-                "&7Click: scrie tipul obiectivului in chat.",
+                "&7Click: scrie tipul in chat.",
+                "&7Categorii: ${objectiveCategories.keys.joinToString(" | ")}",
                 "&7Sugestii: ${objectiveTypes.joinToString(", ")}"
             )),
             GuiAction { click ->
@@ -204,7 +207,8 @@ class QuestCreateGui : GuiScreen {
                     "quest_obj_type",
                     GuiKey.QUEST_CREATE,
                     promptLines = listOf(
-                        "&7Tipul obiectivului poate fi preset sau custom.",
+                        "&7Tipul obiectivului determina actiunea.",
+                        "&7Categorii: ${objectiveCategories.keys.joinToString(" | ")}",
                         "&7Sugestii: ${objectiveTypes.joinToString(" | ")}",
                         "&7Scrie clear pentru reset."
                     )
@@ -405,7 +409,57 @@ class QuestCreateGui : GuiScreen {
             }
         ))
 
-        // Rand 5: dialog
+        // Story event fields (doar cand tipul e story_event)
+        if (rwType == "story_event" || rwType == "record_story_event") {
+            context.button(32, GuiButton.enabled(
+                GuiItemFactory.item(Material.PAPER, "&eEvent key: &f${rwEventKey.ifBlank { "<click>" }}", listOf(
+                    "&7Click: scrie event key in chat.",
+                    "&7Ex: castle_cleansed, quest_completed, boss_defeated"
+                )),
+                GuiAction { click ->
+                    click.service().openTextInput(
+                        click.player(), "quest_reward_event_key", "quest_reward_event_key",
+                        GuiKey.QUEST_CREATE, promptLines = listOf("&7Event key pentru story event.", "&7Ex: castle_cleansed")
+                    )
+                }
+            ))
+            context.button(33, GuiButton.enabled(
+                GuiItemFactory.item(Material.COMPASS, "&eScope: &f$rwEventScope", listOf(
+                    "&7Click: scrie scope-ul.",
+                    "&7Ex: region, place, global"
+                )),
+                GuiAction { click ->
+                    click.service().openTextInput(
+                        click.player(), "quest_reward_event_scope", "quest_reward_event_scope",
+                        GuiKey.QUEST_CREATE, promptLines = listOf("&7Scope: region | place | global")
+                    )
+                }
+            ))
+            context.button(34, GuiButton.enabled(
+                GuiItemFactory.item(Material.COMPASS, "&eTarget: &f${rwEventTarget.ifBlank { "<click>" }}", listOf(
+                    "&7Click: scrie target-ul.",
+                    "&7Ex: current_region, anchor:obj_key"
+                )),
+                GuiAction { click ->
+                    click.service().openTextInput(
+                        click.player(), "quest_reward_event_target", "quest_reward_event_target",
+                        GuiKey.QUEST_CREATE, promptLines = listOf("&7Target: current_region | anchor:obj_key")
+                    )
+                }
+            ))
+            context.button(35, GuiButton.enabled(
+                GuiItemFactory.item(Material.NAME_TAG, "&eTitlu: &f${rwEventTitle.ifBlank { "-" }}", listOf(
+                    "&7Click: scrie titlul.",
+                    "&7Ex: Castelul a fost curatat"
+                )),
+                GuiAction { click ->
+                    click.service().openTextInput(
+                        click.player(), "quest_reward_event_title", "quest_reward_event_title",
+                        GuiKey.QUEST_CREATE, promptLines = listOf("&7Titlu pentru story event.", "&7Ex: Castelul a fost curatat")
+                    )
+                }
+            ))
+        }
         context.item(42, GuiItemFactory.item(Material.BOOK, "&bDialog", listOf("&7Mesaje pentru quest.")))
         context.button(40, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&eText: &f${diagText.take(24)}${if (diagText.length > 24) ".." else ""}", listOf(
@@ -514,7 +568,15 @@ class QuestCreateGui : GuiScreen {
                         QuestDraftExporter.RewardDef(
                             type = rwType,
                             value = rwValue,
-                            count = rwCount.toIntOrNull() ?: 1
+                            count = rwCount.toIntOrNull() ?: 1,
+                            eventScope = rwEventScope,
+                            eventTarget = rwEventTarget,
+                            eventType = "quest_completed",
+                            eventKey = rwEventKey,
+                            eventTitle = rwEventTitle,
+                            eventPayload = if (rwEventKey.isNotBlank())
+                                mapOf("quest" to qId, "outcome" to rwEventKey)
+                            else emptyMap()
                         )
                     ),
                     dialogMessages = listOf(

@@ -1,15 +1,49 @@
 package ro.ainpc.routine
 
+import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 
-class RoutineEngine {
+class RoutineEngine(private val plugin: AINPCPlugin? = null) {
     fun assign(npc: AINPC?, worldTime: Long): RoutineAssignment {
         if (npc == null) {
             return idle("nu exista NPC valid")
         }
 
         val time = normalizeWorldTime(worldTime)
+
+        val occupation = npc.occupation
+        val profile = if (plugin != null && occupation != null) {
+            val loader = BehaviorProfileLoader(plugin)
+            loader.loadAll()
+            loader.findProfileForOccupation(occupation)
+        } else null
+
+        if (profile != null && profile.schedule.isNotEmpty()) {
+            for (entry in profile.schedule) {
+                if (time >= entry.startTick && time < entry.endTick) {
+                    val slot = when (entry.slot.uppercase()) {
+                        "HOME" -> RoutineSlot.HOME
+                        "WORK" -> RoutineSlot.WORK
+                        "SOCIAL" -> RoutineSlot.SOCIAL
+                        else -> RoutineSlot.IDLE
+                    }
+                    val anchor = when (slot) {
+                        RoutineSlot.HOME -> npc.homeAnchor
+                        RoutineSlot.WORK -> npc.workAnchor
+                        RoutineSlot.SOCIAL -> npc.socialAnchor
+                        RoutineSlot.IDLE -> null
+                    }
+                    return RoutineAssignment(slot, entry.activity, entry.target.ifBlank { entry.label }, when (slot) {
+                        RoutineSlot.HOME -> NPCState.RESTING
+                        RoutineSlot.WORK -> NPCState.WORKING
+                        RoutineSlot.SOCIAL -> NPCState.SOCIALIZING
+                        RoutineSlot.IDLE -> NPCState.IDLE
+                    }, anchor)
+                }
+            }
+        }
+
         if (time >= 18000 || time < 2000) {
             return home(
                 npc,

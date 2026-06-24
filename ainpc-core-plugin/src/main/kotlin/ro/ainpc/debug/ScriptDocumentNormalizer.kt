@@ -52,7 +52,13 @@ object ScriptDocumentNormalizer {
             normalized.addProperty("source_name", sourceName ?: "")
             normalized.addProperty("raw_length", text.length)
             normalized
-        } catch (exception: Exception) {
+        } catch (exception: com.google.gson.JsonSyntaxException) {
+            root.addProperty("available", false)
+            root.addProperty("error", exception.message ?: exception.javaClass.simpleName)
+            root.addProperty("source_name", sourceName ?: "")
+            root.addProperty("raw_length", text.length)
+            root
+        } catch (exception: java.io.IOException) {
             root.addProperty("available", false)
             root.addProperty("error", exception.message ?: exception.javaClass.simpleName)
             root.addProperty("source_name", sourceName ?: "")

@@ -5,6 +5,11 @@ param(
     [switch]$SkipBackup
 )
 
+# Read project version from gradle.properties
+$version = "1.0.0"
+$props = Get-Content -LiteralPath "gradle.properties" -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
+if ($props) { $version = $matches[1] }
+
 $ErrorActionPreference = "Stop"
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
@@ -38,9 +43,9 @@ if (-not $SkipBackup) {
 # 3. Copiere JAR-uri
 Write-Host "[3/4] Copiere JAR-uri..." -ForegroundColor Yellow
 $jars = @(
-    "ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar",
-    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar",
-    "ainpc-api/build/libs/ainpc-api-1.0.0.jar"
+    "ainpc-core-plugin/build/libs/ainpc-core-plugin-$version.jar",
+    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar",
+    "ainpc-api/build/libs/ainpc-api-$version.jar"
 )
 foreach ($jar in $jars) {
     if (Test-Path -LiteralPath $jar) {

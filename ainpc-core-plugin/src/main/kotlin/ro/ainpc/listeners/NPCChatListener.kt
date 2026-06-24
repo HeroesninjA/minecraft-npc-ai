@@ -137,20 +137,18 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
 
         if (!target.explicitConversation()) {
-            if (!publishDialogSessionStarted(
-                player,
-                npc,
-                target.directAddress(),
-                target.explicitConversation(),
-                target.triggerReason(),
-                target.nearbyNpcCount(),
-                target.distanceToNpc()
-            )) {
-                return
-            }
-            beginConversationSession(player, npc).exceptionally { ex ->
-                plugin.logger.warning("Nu am putut initializa sesiunea de conversatie pentru " + npc.name + ": " + ex.message)
-                false
+            beginConversationSession(player, npc).handle { success, ex ->
+                if (success != null && success) {
+                    runSync {
+                        publishDialogSessionStarted(
+                            player, npc,
+                            target.directAddress(), target.explicitConversation(),
+                            target.triggerReason(), target.nearbyNpcCount(), target.distanceToNpc()
+                        )
+                    }
+                } else {
+                    plugin.logger.warning("Nu am putut initializa sesiunea de conversatie pentru " + npc.name + ": " + (ex?.message ?: "eroare necunoscuta"))
+                }
             }
         } else {
             refreshConversationSession(player)

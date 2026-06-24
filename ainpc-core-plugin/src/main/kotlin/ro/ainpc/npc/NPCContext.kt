@@ -44,6 +44,7 @@ class NPCContext(
     var nearbyPlayers: MutableList<Player> = ArrayList()
         private set
     var nearbyNPCs: MutableList<AINPC> = ArrayList()
+        private set
     var nearbyHostileMobs: Int = 0
         private set
     var nearbyPassiveMobs: Int = 0

@@ -113,10 +113,12 @@ class AINPCPlugin : JavaPlugin() {
         config.options().copyDefaults(true)
         saveConfig()
         loadQuestConfig()
-        try {
-            saveResource("castel-world-admin.yml", false)
-        } catch (ignored: Exception) {
-            logger.fine("castel-world-admin.yml deja exista sau nu este disponibil.")
+        for (res in listOf("castel-world-admin.yml", "settlements.yml", "building_templates.yml", "behavior_profiles.yml")) {
+            try {
+                saveResource(res, false)
+            } catch (ignored: java.io.IOException) {
+                logger.fine("$res deja exista sau nu este disponibil.")
+            }
         }
 
         messageUtils = MessageUtils(this)
@@ -174,7 +176,7 @@ class AINPCPlugin : JavaPlugin() {
         mappingWandService = MappingWandService(this)
         economyService = EconomyService(this)
         shopService = ShopService(economyService)
- 
+
         logger.info("Inregistrare comenzi...")
         val command = AINPCCommand(this)
         val ainpcCommand = getCommand("ainpc")
@@ -289,7 +291,7 @@ class AINPCPlugin : JavaPlugin() {
     }
 
     fun debug(message: String) {
-        if (config.getBoolean("debug")) {
+        if (config.getBoolean("debug.enabled", false)) {
             logger.log(Level.INFO, "[Debug] $message")
         }
     }

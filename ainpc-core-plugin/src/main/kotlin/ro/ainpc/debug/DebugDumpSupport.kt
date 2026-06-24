@@ -46,18 +46,8 @@ object DebugDumpSupport {
     }
 
     @JvmStatic
-    fun normalizeQuestObjectiveType(type: String?): String {
-        return when (val normalized = normalizeKey(type).replace('-', '_')) {
-            "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item"
-            "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc"
-            "talk", "speak", "conversation", "talk_to_npc", "speak_to_npc" -> "talk_to_npc"
-            "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region"
-            "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place"
-            "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node"
-            "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
-            else -> normalized
-        }
-    }
+    fun normalizeQuestObjectiveType(type: String?): String =
+        ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(type)
 
     @JvmStatic
     fun normalizeQuestRewardType(type: String?): String {
@@ -70,17 +60,8 @@ object DebugDumpSupport {
     }
 
     @JvmStatic
-    fun supportedQuestObjectiveTypes(): Set<String> {
-        return setOf(
-            "collect_item",
-            "deliver_to_npc",
-            "talk_to_npc",
-            "visit_region",
-            "visit_place",
-            "inspect_node",
-            "kill_mob",
-        )
-    }
+    fun supportedQuestObjectiveTypes(): Set<String> =
+        ro.ainpc.engine.ObjectiveTypeAliasRegistry.supportedTypes()
 
     @JvmStatic
     fun supportedQuestRewardTypes(): Set<String> {

@@ -48,6 +48,18 @@ class QuestDraftExporter {
             r.addProperty("type", rw.type)
             r.addProperty("value", rw.value)
             r.addProperty("count", rw.count)
+            if ((rw.type == "story_event" || rw.type == "record_story_event") && rw.eventKey.isNotBlank()) {
+                r.addProperty("scope", rw.eventScope.ifBlank { "region" })
+                r.addProperty("target", rw.eventTarget.ifBlank { "current_region" })
+                r.addProperty("event_type", rw.eventType)
+                r.addProperty("event_key", rw.eventKey)
+                if (rw.eventTitle.isNotBlank()) r.addProperty("title", rw.eventTitle)
+                if (rw.eventPayload.isNotEmpty()) {
+                    val payload = JsonObject()
+                    for ((k, v) in rw.eventPayload) payload.addProperty(k, v)
+                    r.add("payload", payload)
+                }
+            }
             rewardsArr.add(r)
         }
         root.add("rewards", rewardsArr)
@@ -118,7 +130,13 @@ class QuestDraftExporter {
     data class RewardDef(
         val type: String,
         val value: String,
-        val count: Int = 1
+        val count: Int = 1,
+        val eventScope: String = "",
+        val eventTarget: String = "",
+        val eventType: String = "quest_completed",
+        val eventKey: String = "",
+        val eventTitle: String = "",
+        val eventPayload: Map<String, String> = emptyMap()
     )
 
     data class DialogDef(

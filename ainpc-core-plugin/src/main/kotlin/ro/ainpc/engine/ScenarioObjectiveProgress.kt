@@ -15,19 +15,9 @@ import java.util.Locale
 // --- Type matching ---
 
 fun matchesObjectiveType(objective: FeaturePackLoader.QuestEntryDefinition?, expectedType: String?): Boolean =
-    objective != null && normalizeObjectiveType(objective.type) == normalizeObjectiveType(expectedType)
+    objective != null && ObjectiveTypeAliasRegistry.normalize(objective.type) == ObjectiveTypeAliasRegistry.normalize(expectedType)
 
-fun normalizeObjectiveType(type: String?): String =
-    when (val normalized = normalizeReference(type)) {
-        "", "item", "collect", "collectitem", "collect_item", "fetch", "gather" -> "collect_item"
-        "deliver", "deliveritem", "deliver_item", "deliver_to_npc", "turnin", "turn_in" -> "deliver_to_npc"
-        "talk", "speak", "conversation", "talk_npc", "talk_nlc", "talk_to_npc", "speak_to_npc" -> "talk_to_npc"
-        "visit", "travel", "go_to", "visit_region", "enter_region" -> "visit_region"
-        "visitplace", "visit_place", "enterplace", "enter_place", "go_to_place", "place" -> "visit_place"
-        "inspect", "inspectnode", "inspect_node", "interact_node", "interact_nkde", "node" -> "inspect_node"
-        "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
-        else -> normalized
-    }
+fun normalizeObjectiveType(type: String?): String = ObjectiveTypeAliasRegistry.normalize(type)
 
 // --- Inventory progress ---
 

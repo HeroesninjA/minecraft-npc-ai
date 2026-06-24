@@ -220,7 +220,7 @@ class WorldPlaceGui : GuiScreen {
             "&7ID: &f${place.id()}",
             "&7Regiune: &f${place.regionId()}",
             "&7Nume: &f${place.displayName()}",
-            "&7Noduri: &f${place.takeIf { true }?.let { true }?.let { 0 }}"
+            "&7Noduri: &f0"
         )
     }
 

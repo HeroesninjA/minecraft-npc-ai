@@ -1,6 +1,6 @@
 package ro.ainpc.api.settlement
 
-data class SettlementDefinition(
+data class SettlementDefinition @JvmOverloads constructor(
     val id: String,
     val worldName: String,
     val centerX: Int,

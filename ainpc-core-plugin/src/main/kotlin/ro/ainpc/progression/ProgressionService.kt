@@ -3,7 +3,6 @@ package ro.ainpc.progression
 
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
-import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.*
 import java.sql.SQLException
 import java.util.Comparator

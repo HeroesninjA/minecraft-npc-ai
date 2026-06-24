@@ -10,6 +10,11 @@ param(
     [switch]$Rcon          # executa comenzile automat prin RCON
 )
 
+# Read project version from gradle.properties
+$version = "1.0.0"
+$props = Get-Content -LiteralPath "gradle.properties" -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
+if ($props) { $version = $matches[1] }
+
 $ErrorActionPreference = "Stop"
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logFile = "demo-smoke-$timestamp.log"
@@ -44,9 +49,9 @@ if (-not $Quick) {
 # 2. Deploy JAR-uri
 Info "[2/10] DEPLOY"
 $jars = @(
-    "ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar",
-    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar",
-    "ainpc-api/build/libs/ainpc-api-1.0.0.jar"
+    "ainpc-core-plugin/build/libs/ainpc-core-plugin-$version.jar",
+    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar",
+    "ainpc-api/build/libs/ainpc-api-$version.jar"
 )
 if (-not (Test-Path $ServerDir/plugins)) { New-Item -ItemType Directory -Path "$ServerDir/plugins" -Force | Out-Null }
 foreach ($jar in $jars) {

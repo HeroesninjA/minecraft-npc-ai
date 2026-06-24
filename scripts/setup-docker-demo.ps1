@@ -4,6 +4,11 @@ param(
     [string]$PlayerName = "Hero"
 )
 
+# Read project version from gradle.properties
+$version = "1.0.0"
+$props = Get-Content -LiteralPath "gradle.properties" -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
+if ($props) { $version = $matches[1] }
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "=== Setup Docker Demo AINPC ===" -ForegroundColor Cyan
@@ -21,9 +26,9 @@ Write-Host "  OK" -ForegroundColor Green
 # 2. JARs
 Write-Host "[2/5] Pregatesc JAR-uri..." -ForegroundColor Yellow
 $jars = @(
-    "ainpc-core-plugin/build/libs/ainpc-core-plugin-1.0.0.jar",
-    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-1.0.0.jar",
-    "ainpc-api/build/libs/ainpc-api-1.0.0.jar"
+    "ainpc-core-plugin/build/libs/ainpc-core-plugin-$version.jar",
+    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar",
+    "ainpc-api/build/libs/ainpc-api-$version.jar"
 )
 $missing = $false
 foreach ($jar in $jars) {

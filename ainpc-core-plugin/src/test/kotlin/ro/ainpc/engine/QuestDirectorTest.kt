@@ -152,8 +152,8 @@ class QuestDirectorTest {
     }
 
     @Test
-    fun decisionIsImmutableAndNeverRuntimeExecutable() {
-        val decision = QuestDirectorDecision(
+    fun decisionIsImmutableAndRespectsRuntimeExecutableParameter() {
+        val executableDecision = QuestDirectorDecision(
             QuestDirectorDecision.Status.CANDIDATE_FOUND,
             " test ",
             " progression ",
@@ -166,11 +166,25 @@ class QuestDirectorTest {
             listOf(" warning "),
             true
         )
+        val nonExecutableDecision = QuestDirectorDecision(
+            QuestDirectorDecision.Status.CANDIDATE_FOUND,
+            " test ",
+            " progression ",
+            " template ",
+            " mechanic ",
+            " definition ",
+            listOf(" signal "),
+            listOf(" candidate "),
+            listOf(" blocked "),
+            listOf(" warning "),
+            false
+        )
 
-        assertFalse(decision.runtimeExecutable())
-        assertEquals("test", decision.reason())
-        assertEquals(listOf("signal"), decision.matchedSignals())
-        assertThrows(UnsupportedOperationException::class.java) { (decision.matchedSignals() as MutableList<String>).add("new") }
+        assertTrue(executableDecision.runtimeExecutable())
+        assertFalse(nonExecutableDecision.runtimeExecutable())
+        assertEquals("test", executableDecision.reason())
+        assertEquals(listOf("signal"), executableDecision.matchedSignals())
+        assertThrows(UnsupportedOperationException::class.java) { (executableDecision.matchedSignals() as MutableList<String>).add("new") }
     }
 
     private fun storyContext(signals: List<String>, warnings: List<String>): StoryContextSnapshot {

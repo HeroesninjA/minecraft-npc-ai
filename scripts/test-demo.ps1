@@ -34,7 +34,7 @@ function Write-Result {
     $color = if ($Pass) { "Green" } else { "Red" }
     Write-Host "  [$icon] $Step" -ForegroundColor $color
     if ($Detail) { Write-Host "    $Detail" -ForegroundColor Gray }
-    $global:results += @{ Step = $Step; Pass = $Pass; Detail = $Detail }
+    $script:results += @{ Step = $Step; Pass = $Pass; Detail = $Detail }
     Start-Sleep -Milliseconds 300
 }
 

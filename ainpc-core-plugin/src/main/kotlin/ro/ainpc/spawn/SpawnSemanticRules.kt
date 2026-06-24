@@ -32,8 +32,11 @@ object SpawnSemanticRules {
             place.hasTag("social") ||
             place.hasTag("public") ||
             place.hasTag("meeting") ||
+            place.hasTag("meeting_point") ||
+            place.hasTag("well") ||
             metadataEquals(place, "role", "social") ||
-            metadataEquals(place, "purpose", "social")
+            metadataEquals(place, "purpose", "social") ||
+            metadataEquals(place, "anchor", "social")
 
     fun workplacePriority(place: WorldPlaceInfo): Int = when (place.placeType()) {
         PlaceType.FORGE -> 0
@@ -174,7 +177,7 @@ object SpawnSemanticRules {
         return false
     }
 
-    private fun metadataEquals(place: WorldPlaceInfo, key: String, expectedValue: String): Boolean =
+    fun metadataEquals(place: WorldPlaceInfo, key: String, expectedValue: String): Boolean =
         place.metadata()[key]?.equals(expectedValue, ignoreCase = true) == true
 
     private fun normalizeToken(rawValue: String?): String =

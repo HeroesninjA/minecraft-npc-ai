@@ -151,7 +151,8 @@ class HouseAllocationPlanner {
         for (house in houses.take(limit)) {
             val planning = plan(worldAdmin, house.id(), 0)
             if (planning.success()) {
-                allocations.add(planning.allocation()!!)
+                val allocation = planning.allocation() ?: continue
+                allocations.add(allocation)
             }
             planning.warnings().forEach { warning -> warnings.add("${house.id()}: $warning") }
             planning.errors().forEach { error -> errors.add("${house.id()}: $error") }

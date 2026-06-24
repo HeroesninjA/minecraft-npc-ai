@@ -334,4 +334,6 @@ messages:
   openai_unavailable: "&cServiciul OpenAI nu este disponibil sau nu este configurat corect."
 
 # Debug
-debug: false
+debug:
+  enabled: false
+  quest: false

@@ -23,6 +23,11 @@ param(
     [switch]$SkipWandFlow
 )
 
+# Read project version from gradle.properties
+$version = "1.0.0"
+$props = Get-Content -LiteralPath "gradle.properties" -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
+if ($props) { $version = $matches[1] }
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -30,8 +35,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $serverPath = Resolve-Path -LiteralPath $ServerDir -ErrorAction Stop
 $serverDirFull = $serverPath.Path
 $pluginsDir = Join-Path $serverDirFull "plugins"
-$coreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar"
-$medievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-1.0.0.jar"
+$coreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-$version.jar"
+$medievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-$version.jar"
 $commandsPath = Join-Path $serverDirFull "ainpc-mapping-smoke-commands.txt"
 $reportPath = Join-Path $serverDirFull "ainpc-mapping-smoke-report.txt"
 $gradleWrapper = Join-Path $repoRoot "gradlew.bat"

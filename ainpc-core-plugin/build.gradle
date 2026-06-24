@@ -13,7 +13,7 @@ dependencies {
 }
 
 tasks.named('jar', Jar) {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    duplicatesStrategy = DuplicatesStrategy.WARN
     dependsOn configurations.runtimeClasspath
 
     from({

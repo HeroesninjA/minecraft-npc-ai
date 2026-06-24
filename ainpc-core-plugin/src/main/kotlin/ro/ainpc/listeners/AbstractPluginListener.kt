@@ -46,8 +46,8 @@ abstract class AbstractPluginListener(
             Runnable {
                 try {
                     future.complete(supplier.get())
-                } catch (throwable: Throwable) {
-                    future.completeExceptionally(throwable)
+                } catch (e: Exception) {
+                    future.completeExceptionally(e)
                 }
             }
         )

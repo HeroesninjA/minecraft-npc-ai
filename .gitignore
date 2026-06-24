@@ -29,6 +29,12 @@ Thumbs.db
 *.swo
 *~
 
+# ===== Environment =====
+.env
+
+# ===== Build artifacts =====
+deploy/
+
 # ===== Misc =====
 *.log
 *.tmp

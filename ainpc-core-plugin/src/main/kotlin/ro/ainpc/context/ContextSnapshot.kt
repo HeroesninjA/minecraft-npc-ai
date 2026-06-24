@@ -105,7 +105,7 @@ data class ContextSnapshot(
 
             val activeQuests = if (player != null) {
                 runCatching {
-                    val snapshot = plugin.progressionService.getProgressionGuiSnapshot(player, "active", false)
+                    val snapshot = plugin.progressionService.getProgressionGuiSnapshot(player, "active", adminView = false)
                     snapshot.allEntries().count { it.active() }
                 }.getOrDefault(0)
             } else 0

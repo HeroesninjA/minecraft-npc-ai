@@ -1,0 +1,75 @@
+# AINPC Behavior Profiles
+# Each profile defines NPC behavior: schedule, movement, reactions.
+# Usage: /ainpc routine profiles
+
+profiles:
+  villager:
+    occupation: "villager"
+    display_name: "Sattean"
+    movement_speed: 0.6
+    wander_radius: 8.0
+    home_return: true
+    socialize_chance: 0.3
+    weather_reactions: true
+    night_return: true
+    schedule:
+      morning:
+        label: "Dimineata"
+        start_tick: 0
+        end_tick: 6000
+        slot: "HOME"
+        activity: "pregateste"
+        target: "home"
+      work:
+        label: "Munca"
+        start_tick: 6000
+        end_tick: 12000
+        slot: "WORK"
+        activity: "munca"
+      evening:
+        label: "Seara"
+        start_tick: 12000
+        end_tick: 13800
+        slot: "HOME"
+        activity: "odihneste"
+      night:
+        label: "Noapte"
+        start_tick: 13800
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"
+
+  worker:
+    occupation: "worker"
+    display_name: "Muncitor"
+    movement_speed: 0.5
+    wander_radius: 6.0
+    home_return: true
+    socialize_chance: 0.2
+    weather_reactions: true
+    night_return: true
+    schedule:
+      morning:
+        label: "Dimineata"
+        start_tick: 0
+        end_tick: 6000
+        slot: "WORK"
+        activity: "munca"
+      afternoon:
+        label: "Dupa-amiaza"
+        start_tick: 6000
+        end_tick: 12000
+        slot: "WORK"
+        activity: "munca"
+      evening:
+        label: "Seara"
+        start_tick: 12000
+        end_tick: 13800
+        slot: "HOME"
+        activity: "odihneste"
+      night:
+        label: "Noapte"
+        start_tick: 13800
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"

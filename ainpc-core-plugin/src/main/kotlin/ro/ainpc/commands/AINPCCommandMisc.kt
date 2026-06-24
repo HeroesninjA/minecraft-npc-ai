@@ -271,6 +271,15 @@ fun handleGui(sender: CommandSender, args: Array<String>): Boolean {
             ainpcCommandMiscPlugin.guiService.open(player, GuiKey.CREATOR_HUB)
             return true
         }
+        rawKey == "resume" -> {
+            val lastGui = ainpcCommandMiscPlugin.guiService.popLastGuiKey(player)
+            if (lastGui != null) {
+                ainpcCommandMiscPlugin.guiService.open(player, lastGui)
+            } else {
+                ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista un ultim ecran. Deschide intai un GUI.")
+            }
+            return true
+        }
     }
 
     if (args.size > 3) {

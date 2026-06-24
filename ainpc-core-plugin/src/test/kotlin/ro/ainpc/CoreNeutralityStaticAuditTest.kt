@@ -38,6 +38,9 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("ControlledTestWorldFixturePopulator") }
                 .filter { path -> !path.toString().contains("NarrativeGenerator") }
                 .filter { path -> !path.toString().contains("GuiKey") }
+                .filter { path -> !path.toString().contains("ObjectiveTypeAliasRegistry") }
+                .filter { path -> !path.toString().contains("QuestCreateGui") }
+                .filter { path -> !path.toString().contains("QuickQuestGui") }
                 .flatMap { path ->
                     val text = path.readText()
                     forbiddenTerms

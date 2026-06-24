@@ -17,8 +17,8 @@ class GiveItemAction : ScenarioActionHandler {
         val player = Bukkit.getPlayer(context.playerUuid()) ?: return
         val stack = ItemStack(material, amount)
         val leftovers = player.inventory.addItem(stack)
-        if (leftovers.isNotEmpty()) {
-            player.world.dropItemNaturally(player.location, leftovers.values.first())
+        for (overflow in leftovers.values) {
+            player.world.dropItemNaturally(player.location, overflow)
         }
     }
 }

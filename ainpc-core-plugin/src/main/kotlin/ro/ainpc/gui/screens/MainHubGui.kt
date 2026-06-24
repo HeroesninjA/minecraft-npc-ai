@@ -209,12 +209,12 @@ class MainHubGui : GuiScreen {
                 )
             )
         }
-        if (context.service().canOpen(player, GuiKey.DEBUG)) {
+        if (context.service().canOpen(player, GuiKey.QUICK_QUEST)) {
             context.button(
-                35,
+                38,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.ENDER_EYE, "&bTest OpenAI", "&7Ruleaza /ainpc test."),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc test") }
+                    GuiItemFactory.item(Material.CRAFTING_TABLE, "&bQuick Quest", listOf("&7Creeaza un quest rapid in 5 pasi.", "&8Wizard pas cu pas.")),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUICK_QUEST) }
                 )
             )
         }

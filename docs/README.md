@@ -56,22 +56,23 @@ Ordinea recomandata pentru orientare:
 44. `release-checklist.md`
 45. `debugging-si-testare.md`
 46. `prevenire-duplicare-npc.md`
-47. `kotlin-style-guide.md`
-48. `kotlin-interop-api-addonuri.md`
-49. `kotlin-paper-packaging-si-smoke.md`
-50. `kotlin-code-review-checklist.md`
-51. `kotlin-coroutines-paper-policy.md`
-52. `kotlin-testing-strategy.md`
-53. `start-here.md`
-54. `index-navigare.md`
-55. `index-functional.md`
-47. `index-arhiva.md`
-48. `taskuri-prioritizate.md`
-49. `harta-pachetelor-cod-scurta.md`
-50. `harta-pachetelor-cod.md`
-51. `harta-clase-index.md`
-52. `arhiva/kotlin-migration/README.md`
-53. `deepseek-taskuri-late-25.md`
+47. `sistem-permisiuni-compatibilitate-pluginuri.md`
+48. `kotlin-style-guide.md`
+49. `kotlin-interop-api-addonuri.md`
+50. `kotlin-paper-packaging-si-smoke.md`
+51. `kotlin-code-review-checklist.md`
+52. `kotlin-coroutines-paper-policy.md`
+53. `kotlin-testing-strategy.md`
+54. `start-here.md`
+55. `index-navigare.md`
+56. `index-functional.md`
+57. `index-arhiva.md`
+58. `taskuri-prioritizate.md`
+59. `harta-pachetelor-cod-scurta.md`
+60. `harta-pachetelor-cod.md`
+61. `harta-clase-index.md`
+62. `arhiva/kotlin-migration/README.md`
+63. `deepseek-taskuri-late-25.md`
 
 ## Documente Kotlin
 

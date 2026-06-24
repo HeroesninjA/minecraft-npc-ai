@@ -383,12 +383,7 @@ class StoryGui : GuiScreen {
         val placeState: PlaceStoryState?,
         val events: List<StoryEvent>,
         val error: String
-    ) {
-        init {
-            requireNotNull(events)
-            requireNotNull(error)
-        }
-    }
+    )
 
     private companion object {
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")

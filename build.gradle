@@ -11,10 +11,12 @@ ext {
     hikariVersion = property('hikariVersion').toString()
     mysqlConnectorVersion = property('mysqlConnectorVersion').toString()
     junitVersion = property('junitVersion').toString()
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            freeCompilerArgs += ['-Xsuppress-warning=UNNECESSARY_SAFE_CALL', '-Xsuppress-warning=UNUSED_ELVIS']
-        }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions {
+        freeCompilerArgs.add('-Xsuppress-warning=UNNECESSARY_SAFE_CALL')
+        freeCompilerArgs.add('-Xsuppress-warning=UNUSED_ELVIS')
     }
 }
 
@@ -155,8 +157,10 @@ def resolveIdeaLauncherPath(String ideaLauncherPath) {
     return launcher
 }
 
+def isWindows() { System.getProperty('os.name').toLowerCase(Locale.ENGLISH).contains('windows') }
+
 def ideaLauncherCommand(File ideaLauncher, List<String> args) {
-    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+    if (isWindows()) {
         if (ideaLauncher.name.toLowerCase().endsWith('.bat')) {
             def quotedLauncher = "\"${ideaLauncher.absolutePath.replace('"', '\\"')}\""
             def quotedArgs = args.collect { "\"${it.replace('"', '\\"')}\"" }
@@ -172,7 +176,7 @@ def ideaLauncherCommand(File ideaLauncher, List<String> args) {
 def findExecutableOnPath(String name) {
     def pathValue = System.getenv('PATH') ?: ''
     def candidateNames = [name]
-    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+    if (isWindows()) {
         candidateNames += ["${name}.bat", "${name}.exe"]
     }
     pathValue.split(File.pathSeparator).findResult { dir ->
@@ -435,8 +439,8 @@ task kotlinRatio {
         def ktFiles = sources.matching { include '**/*.kt' }
         def javaFiles = sources.matching { include '**/*.java' }
 
-        def ktLineCount = ktFiles.files.sum { file -> file.readLines().size() }
-        def javaLineCount = javaFiles.files.sum { file -> file.readLines().size() }
+        def ktLineCount = ktFiles.files.sum(0) { file -> file.readLines().size() }
+        def javaLineCount = javaFiles.files.sum(0) { file -> file.readLines().size() }
 
         def totalFiles = ktFiles.files.size() + javaFiles.files.size()
         def totalLines = ktLineCount + javaLineCount

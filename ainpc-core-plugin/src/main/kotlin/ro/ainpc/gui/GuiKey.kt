@@ -33,6 +33,7 @@ enum class GuiKey(
     CREATOR_QUEST_TEST("creator_quest_test", "Test Quest"),
     QUEST_EDIT("quest_edit", "Editeaza Quest"),
     QUEST_CREATE("quest_create", "Creeaza Quest"),
+    QUICK_QUEST("quick_quest", "Quick Quest"),
     MAPPING_CREATOR("mapping_creator", "Creator Mapping"),
     MAPPING_CREATE_REGION("mapping_create_region", "Creaza Regiune"),
     MAPPING_CREATE_PLACE("mapping_create_place", "Creaza Place"),

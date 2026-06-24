@@ -767,7 +767,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     ) : InvocationHandler {
         private var closed = false
 
-        @Throws(Throwable::class)
+        @Throws(Exception::class)
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
             if ("close" == method.name) {
                 if (closed) return null

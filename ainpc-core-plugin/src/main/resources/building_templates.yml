@@ -1,0 +1,100 @@
+# AINPC Building Template Definitions
+# Each template defines a building structure with anchors.
+# Usage: /ainpc building templates
+
+profiles:
+  house_small:
+    display_name: "Casa mica"
+    place_type: "house"
+    footprint:
+      width: 5
+      depth: 5
+      height: 4
+    anchors:
+      bed:
+        node_type: "bed"
+        offset:
+          x: 2
+          y: 1
+          z: 2
+        radius: 1.0
+      entrance:
+        node_type: "entrance"
+        offset:
+          x: 2
+          y: 0
+          z: 0
+        radius: 1.5
+        role: "main"
+      spawn:
+        node_type: "npc_spawn"
+        offset:
+          x: 2
+          y: 0
+          z: 2
+        radius: 1.0
+    rotations: [0, 90, 180, 270]
+
+  forge:
+    display_name: "Fierarie"
+    place_type: "forge"
+    footprint:
+      width: 7
+      depth: 6
+      height: 5
+    anchors:
+      workstation:
+        node_type: "workstation"
+        offset:
+          x: 3
+          y: 1
+          z: 3
+        radius: 2.0
+      entrance:
+        node_type: "entrance"
+        offset:
+          x: 3
+          y: 0
+          z: 0
+        radius: 2.0
+        role: "main"
+      spawn:
+        node_type: "npc_spawn"
+        offset:
+          x: 3
+          y: 0
+          z: 3
+        radius: 1.0
+    rotations: [0, 90, 180, 270]
+
+  farm:
+    display_name: "Ferma"
+    place_type: "farm"
+    footprint:
+      width: 10
+      depth: 8
+      height: 4
+    anchors:
+      workstation:
+        node_type: "workstation"
+        offset:
+          x: 5
+          y: 1
+          z: 4
+        radius: 2.0
+      entrance:
+        node_type: "entrance"
+        offset:
+          x: 5
+          y: 0
+          z: 0
+        radius: 2.0
+        role: "main"
+      spawn:
+        node_type: "npc_spawn"
+        offset:
+          x: 5
+          y: 0
+          z: 4
+        radius: 1.0
+    rotations: [0, 90]

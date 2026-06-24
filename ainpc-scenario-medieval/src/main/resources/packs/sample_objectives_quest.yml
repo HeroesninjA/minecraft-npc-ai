@@ -1,0 +1,102 @@
+id: sample_objectives
+name: "Quest Exemplu - Toate Tipurile de Obiective"
+description: "Quest demonstrativ care acopera toate tipurile de obiective suportate."
+addon:
+  type: "scenario"
+  version: "1.0.0"
+scenarios:
+  sample_quest:
+    name: "Exemplu Complet de Obiective"
+    description: "Acest quest arata toate tipurile de obiective disponibile."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    trigger_probability: 0.0
+    min_npcs: 0
+    requires_player: true
+    phases:
+      START: "Inceput"
+      COLLECT: "Colectare"
+      EXPLORE: "Explorare"
+      CRAFT: "Crafting"
+      BUILD: "Constructie"
+      COMBAT: "Combat"
+      DELIVERY: "Livrare"
+      COMPLETE: "Final"
+    quest:
+      code: "SAMPLE01"
+      giver_profession: "guard"
+      kind: "investigation"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tags:
+        - sample
+        - tutorial
+      objectives:
+        # Social
+        talk_to_villager:
+          type: "talk_to_npc"
+          item: "profession:garda"
+          amount: 1
+          description: "Vorbeste cu gardianul."
+        # Colectare
+        gather_wood:
+          type: "collect_item"
+          item: "OAK_LOG"
+          amount: 10
+          description: "Colecteaza 10 busteni de stejar."
+        # Explorare
+        visit_village:
+          type: "visit_region"
+          item: "demo_sat"
+          amount: 1
+          description: "Viziteaza satul."
+        enter_house:
+          type: "visit_place"
+          item: "demo_sat:house_1"
+          amount: 1
+          description: "Intra in casa."
+        inspect_chest:
+          type: "inspect_node"
+          item: "demo_sat:house_1:bed_1"
+          amount: 1
+          description: "Inspecteaza patul din casa."
+        # Crafting
+        craft_sword:
+          type: "craft_item"
+          item: "IRON_SWORD"
+          amount: 1
+          description: "Craft-uieste o sabie de fier."
+        # Constructie
+        place_fence:
+          type: "place_block"
+          item: "OAK_FENCE"
+          amount: 5
+          description: "Plaseaza 5 garduri de stejar."
+        break_stone:
+          type: "break_block"
+          item: "COBBLESTONE"
+          amount: 10
+          description: "Sparge 10 pietre de rau."
+        # Combat
+        kill_zombie:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 3
+          description: "Ucide 3 zombies."
+        # Livrare
+        deliver_report:
+          type: "deliver_to_npc"
+          item: "profession:garda"
+          amount: 1
+          description: "Preda raportul gardianului."
+      rewards:
+        reward_gold:
+          type: "item"
+          item: "EMERALD"
+          amount: 5
+          description: "Primesti 5 smaralde."
+        reward_xp:
+          type: "experience"
+          amount: 50
+          description: "Primesti 50 XP."

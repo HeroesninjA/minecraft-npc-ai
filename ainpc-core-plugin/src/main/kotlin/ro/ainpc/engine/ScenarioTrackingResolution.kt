@@ -10,6 +10,10 @@ import java.util.UUID
 
 lateinit var enginePlugin: AINPCPlugin
 
+fun initTrackingResolutionPlugin(plugin: AINPCPlugin) {
+    enginePlugin = plugin
+}
+
 fun buildQuestTrackingLines(
     template: ScenarioTemplate?,
     progress: PlayerQuestProgress?,
@@ -215,14 +219,14 @@ fun resolveQuestGiverNpc(progress: PlayerQuestProgress?): AINPC? {
 fun resolveNpcByAnchorId(anchorId: String?): AINPC? {
     if (anchorId.isNullOrBlank()) return null
     val npcManager = runCatching { enginePlugin.npcManager }.getOrNull() ?: return null
-    try {
+    runCatching {
         val npc = npcManager.getNPCByUuid(UUID.fromString(anchorId))
         if (npc != null) return npc
-    } catch (_: IllegalArgumentException) {}
-    try {
+    }
+    runCatching {
         val databaseId = anchorId.toInt()
         val npc = npcManager.getNPCById(databaseId)
         if (npc != null) return npc
-    } catch (_: NumberFormatException) {}
+    }
     return npcManager.getNPCByName(anchorId)
 }

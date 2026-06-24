@@ -25,7 +25,7 @@ class HouseAllocationPlannerTest {
         assertEquals("demo_sat:house_1:npc_spawn_1", resident.spawnNodeId())
         assertEquals("demo_sat:house_1:bed_1", resident.homeNodeId())
         assertEquals("demo_sat:fierarie", resident.workPlaceId())
-        assertEquals("demo_sat:fierarie:work_1", resident.workNodeId())
+        assertEquals("demo_sat:fierarie:workstation_1", resident.workNodeId())
         assertEquals("demo_sat:piata", resident.socialPlaceId())
         assertEquals("demo_sat:piata:meeting_point_1", resident.socialNodeId())
 
@@ -105,7 +105,7 @@ class HouseAllocationPlannerTest {
                 assertTrue(resident.spawnNodeId().startsWith("${allocation.placeId()}:npc_spawn_")) { resident.spawnNodeId() }
                 assertTrue(resident.homeNodeId().startsWith("${allocation.placeId()}:bed_")) { resident.homeNodeId() }
                 assertEquals("demo_sat:fierarie", resident.workPlaceId())
-                assertEquals("demo_sat:fierarie:work_1", resident.workNodeId())
+        assertEquals("demo_sat:fierarie:workstation_1", resident.workNodeId())
                 assertEquals("demo_sat:piata", resident.socialPlaceId())
                 assertEquals("demo_sat:piata:meeting_point_1", resident.socialNodeId())
                 assertTrue(resident.occupation().isNotBlank()) { resident.npcKey() }

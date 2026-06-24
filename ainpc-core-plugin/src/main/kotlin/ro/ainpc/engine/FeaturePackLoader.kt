@@ -186,7 +186,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             plugin.debug("Feature Pack incarcat: $name ($id)")
         } catch (exception: Exception) {
             plugin.logger.warning("Eroare la incarcarea feature pack: ${file.name}")
-            exception.printStackTrace()
+            plugin.logger.log(java.util.logging.Level.WARNING, "Detalii eroare feature pack", exception)
             if (plugin.config.getBoolean("feature_packs.fail_invalid_pack", false)) {
                 throw IllegalStateException("Feature pack invalid: ${file.name}", exception)
             }
@@ -766,6 +766,37 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
         fun addObjective(objective: QuestEntryDefinition?) {
             if (objective != null) {
+                val normalized = ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(objective.type)
+                if (normalized !in ro.ainpc.engine.ObjectiveTypeAliasRegistry.supportedTypes()) {
+                    val deprecated = ro.ainpc.engine.ObjectiveTypeAliasRegistry.recommendedType(objective.type)
+                    if (deprecated != null) {
+                        addValidationWarning("Objective type '${objective.type}' in '${questCode.ifBlank { id }}' este deprecated. Foloseste '$deprecated'.")
+                    } else {
+                        val suggestion = ro.ainpc.engine.ObjectiveTypeAliasRegistry.suggestCorrection(objective.type)
+                        val msg = if (suggestion != null) {
+                            "Objective type necunoscut: '${objective.type}' in '${questCode.ifBlank { id }}'. Ai vrut sa scrii '$suggestion'?"
+                        } else {
+                            "Objective type necunoscut: '${objective.type}' in '${questCode.ifBlank { id }}'"
+                        }
+                        addValidationWarning(msg)
+                    }
+                } else if (normalized != "kill_mob" && objective.itemId.isNullOrBlank()) {
+                    addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}' nu are target/itemId.")
+                }
+                val required = ro.ainpc.engine.ObjectiveTypeAliasRegistry.requiredFields(objective.type)
+                if (required.contains("item") && objective.itemId.isNullOrBlank() && normalized != "kill_mob") {
+                    addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}': campul 'item' este obligatoriu.")
+                }
+                if (objective.amount < 1) {
+                    addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}': 'amount' trebuie sa fie >= 1.")
+                }
+                val hasTalkBefore = objectives.any { o ->
+                    ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(o.type) == "talk_to_npc"
+                }
+                val isDeliveryType = normalized in setOf("deliver_to_npc", "return_to_giver", "talk_to_npc")
+                if (!hasTalkBefore && isDeliveryType && objectives.size >= 2) {
+                    addValidationWarning("Objective '${objective.type}' apare devreme in quest, posibil inainte de interactiunea initiala.")
+                }
                 objectives.add(objective)
             }
         }

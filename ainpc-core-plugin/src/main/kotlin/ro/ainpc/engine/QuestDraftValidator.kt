@@ -219,7 +219,9 @@ class QuestDraftValidator(
             "kill_mob",
             "place_block",
             "break_block",
-            "craft_item"
+            "craft_item",
+            "use_item",
+            "equip_item"
         )
         val DEFAULT_REWARD_TYPES: Set<String> = setOf("item", "experience", "command", "economy:money", "story")
         val DEFAULT_STORY_ACTION_TYPES: Set<String> = setOf("record_story_event", "set_story_state")

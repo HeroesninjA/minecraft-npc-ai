@@ -234,7 +234,7 @@ class NPCManager(
 
         val profileChanged = occupationChanged || anchorsChanged
         if (profileChanged) {
-            saveNPC(npc, false)
+            saveNPC(npc, syncFromEntity = false)
             if (occupationChanged) {
                 plugin.debug("Profilul villagerului '" + npc.name + "' a fost actualizat la ocupatia: " + npc.occupation)
             } else {
@@ -344,7 +344,7 @@ class NPCManager(
                 npc.workAnchor = readOwnedLocation(ownedLocations, "work")
                 npc.socialAnchor = readOwnedLocation(ownedLocations, "social")
             }
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             plugin.debug("Nu am putut hidrata profilul runtime pentru NPC-ul " + npc.name + ": " + e.message)
         }
     }
@@ -1156,7 +1156,7 @@ class NPCManager(
             return DuplicateRepairResult(false, 0, 0, 0, 0, 0, 0, 0, listOf(), listOf(), listOf())
         }
 
-        val result = repairDuplicateLiveNPCEntities(true)
+        val result = repairDuplicateLiveNPCEntities(apply = true)
         if (result.duplicateEntities() > 0 || result.removedEntities() > 0 || result.reassociatedEntities() > 0) {
             plugin.logger.warning("Reconciliere duplicate NPC live (" + valueOrFallback(reason, "manual")
                 + "): duplicate=" + result.duplicateEntities()
@@ -1586,7 +1586,7 @@ class NPCManager(
             return
         }
         plugin.databaseManager.runAsync {
-            if (!saveNPC(npc, false)) {
+            if (!saveNPC(npc, syncFromEntity = false)) {
                 plugin.logger.warning("Nu am putut persista starea runtime pentru NPC-ul "
                     + npc.name + " dupa " + valueOrFallback(reason, "update") + ".")
             }
@@ -1630,7 +1630,7 @@ class NPCManager(
         registerEntity(npc, villager)
         refreshNpcCache(npc, previousUuid)
         if (!wasSpawned || previousUuid != npc.uuid) {
-            saveNPC(npc, false)
+            saveNPC(npc, syncFromEntity = false)
         }
         return npc
     }

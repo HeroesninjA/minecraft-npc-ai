@@ -691,7 +691,10 @@ fun handleTriggerQuest(
         return true
     }
 
-    npc = refreshQuestNpc(npc)!!
+    npc = refreshQuestNpc(npc) ?: run {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cNPC-ul nu mai este disponibil.")
+        return true
+    }
     if (!ensureQuestNpcCommandRange(sender, targetPlayer, npc)) return true
 
     questDebug("Quest trigger foloseste npc=${npc.name} id=${npc.databaseId}" +
@@ -758,7 +761,7 @@ fun findNearestQuestNpc(targetPlayer: Player, progressionKind: String): AINPC? {
         .filter { normalizeProgressionKind(progressionKind).isBlank()
             || ainpcCommandQuestPlugin.scenarioEngine.hasQuestForNpc(targetPlayer, it, progressionKind) }
         .filter { it.location != null }
-        .minByOrNull { it.location!!.distanceSquared(targetPlayer.location) }
+        .minByOrNull { it.location?.distanceSquared(targetPlayer.location) ?: Double.MAX_VALUE }
 }
 
 fun handleAcceptQuest(

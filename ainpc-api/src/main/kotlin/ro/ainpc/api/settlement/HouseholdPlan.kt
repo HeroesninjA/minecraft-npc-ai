@@ -1,6 +1,6 @@
 package ro.ainpc.api.settlement
 
-data class HouseholdPlan(
+data class HouseholdPlan @JvmOverloads constructor(
     val householdKey: String,
     val homePlaceId: String,
     val familyId: String = "",

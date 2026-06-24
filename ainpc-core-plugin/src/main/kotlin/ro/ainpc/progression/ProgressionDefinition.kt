@@ -1,8 +1,6 @@
 @file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.progression
 
-import ro.ainpc.engine.FeaturePackLoader
-import ro.ainpc.engine.QuestScenarioContract
 import ro.ainpc.engine.*
 import java.util.Locale
 
