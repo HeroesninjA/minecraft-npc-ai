@@ -57,7 +57,11 @@ fun handleEconomyPay(sender: CommandSender, args: Array<String>): Boolean {
 }
 
 fun handleEconomyTop(sender: CommandSender, args: Array<String>): Boolean {
-    val limit = if (args.size > 2) args[2].toIntOrNull() ?: 10 else 10
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandEconomyPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val limit = if (args.size > 2) (args[2].toIntOrNull() ?: 10).coerceIn(1, 50) else 10
     return EconomyTopCommand.execute(sender, ainpcCommandEconomyPlugin, limit)
 }
 

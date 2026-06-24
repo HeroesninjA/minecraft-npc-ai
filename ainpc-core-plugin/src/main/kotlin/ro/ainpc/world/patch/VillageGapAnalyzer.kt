@@ -1,6 +1,7 @@
 package ro.ainpc.world.patch
 
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
@@ -265,36 +266,9 @@ class VillageGapAnalyzer {
         return nodes.count { node -> nodeMatchesAny(node, "home") }
     }
 
-    private fun isHousePlace(place: WorldPlaceInfo): Boolean {
-        return place.placeType() == PlaceType.HOUSE ||
-            place.hasTag("home") ||
-            place.hasTag("house") ||
-            metadataEquals(place, "role", "home") ||
-            metadataEquals(place, "purpose", "home")
-    }
-
-    private fun isWorkplace(place: WorldPlaceInfo): Boolean {
-        return place.hasTag("work") ||
-            place.hasTag("workplace") ||
-            place.hasTag("job") ||
-            metadataEquals(place, "role", "work") ||
-            metadataEquals(place, "purpose", "work") ||
-            when (place.placeType()) {
-                PlaceType.FORGE, PlaceType.SHOP, PlaceType.FARM, PlaceType.MARKET, PlaceType.TAVERN -> true
-                else -> false
-            }
-    }
-
-    private fun isSocialPlace(place: WorldPlaceInfo): Boolean {
-        return place.placeType() == PlaceType.MARKET ||
-            place.placeType() == PlaceType.TAVERN ||
-            place.placeType() == PlaceType.CAMP ||
-            place.hasTag("social") ||
-            place.hasTag("public") ||
-            place.hasTag("meeting") ||
-            metadataEquals(place, "role", "social") ||
-            metadataEquals(place, "purpose", "social")
-    }
+    private fun isHousePlace(place: WorldPlaceInfo): Boolean = SpawnSemanticRules.isHousePlace(place)
+    private fun isWorkplace(place: WorldPlaceInfo): Boolean = SpawnSemanticRules.isWorkplace(place)
+    private fun isSocialPlace(place: WorldPlaceInfo): Boolean = SpawnSemanticRules.isSocialPlace(place)
 
     private fun supportsProfession(place: WorldPlaceInfo, profession: String): Boolean {
         val normalizedProfession = normalizeToken(profession)
@@ -343,11 +317,6 @@ class VillageGapAnalyzer {
             }
         }
         return 0
-    }
-
-    private fun metadataEquals(place: WorldPlaceInfo, key: String, expectedValue: String): Boolean {
-        val value = place.metadata()[key]
-        return value != null && value.equals(expectedValue, ignoreCase = true)
     }
 
     private fun matchesAnyToken(rawValue: String?, vararg expectedTokens: String): Boolean {

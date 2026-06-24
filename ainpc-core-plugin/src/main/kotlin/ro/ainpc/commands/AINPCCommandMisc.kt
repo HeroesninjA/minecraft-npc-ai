@@ -247,8 +247,13 @@ fun handleReload(sender: CommandSender): Boolean {
         return true
     }
 
-    ainpcCommandMiscPlugin.reload()
-    ainpcCommandMiscPlugin.messageUtils.send(sender, "&aConfiguratia a fost reincarcata!")
+    try {
+        ainpcCommandMiscPlugin.reload()
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aConfiguratia a fost reincarcata!")
+    } catch (e: Exception) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cEroare la reincarcare: &e" + e.message)
+        ainpcCommandMiscPlugin.logger.warning("Eroare la reload: " + e.message)
+    }
     return true
 }
 
@@ -414,6 +419,82 @@ fun handleHealth(sender: CommandSender): Boolean {
     }
     msg.send(sender, "&7Pentru audit complet: &f/ainpc audit")
     msg.send(sender, "&7Pentru debugdump: &f/ainpc debugdump all")
+    return true
+}
+
+fun handleOverview(sender: CommandSender): Boolean {
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+
+    val plugin = ainpcCommandMiscPlugin
+    val msg = plugin.messageUtils
+    val worldAdmin = plugin.platform.worldAdmin
+
+    msg.send(sender, "&6══════ AINPC Overview ══════")
+
+    msg.send(sender, "&e=== NPC-uri ===")
+    val npcs = plugin.npcManager.getAllNPCs()
+    msg.send(sender, "&7Total: &f${npcs.size} &7| Activ: &f${npcs.count { it.isSpawned() }}")
+
+    msg.send(sender, "")
+    msg.send(sender, "&e=== Progresii (Questuri) ===")
+    val defs = plugin.progressionService?.getDefinitions() ?: emptyList()
+    if (defs.isEmpty()) {
+        msg.send(sender, "&7Nu exista definitii de progresie.")
+    } else {
+        msg.send(sender, "&7Total: &f${defs.size}")
+        for (d in defs.take(15)) {
+            msg.send(sender, "&7- &f${d.progressionId()} &8| &e${d.displayName()} &8| &b${d.mechanicId()} &8| kind: &f${d.kind()}")
+        }
+        if (defs.size > 15) msg.send(sender, "&7... si inca &f${defs.size - 15} &7. Vezi &f/ainpc quest definitions")
+    }
+
+    msg.send(sender, "")
+    msg.send(sender, "&e=== Regiuni ===")
+    val regions = worldAdmin.regions.toList()
+    if (regions.isEmpty()) {
+        msg.send(sender, "&7Nu exista regiuni mapate.")
+    } else {
+        msg.send(sender, "&7Total: &f${regions.size}")
+        for (r in regions) {
+            val placeCount = worldAdmin.getPlaces(r.id()).size
+            val nodeCount = worldAdmin.getNodes(r.id()).size
+            msg.send(sender, "&7- &a${r.id()} &8| &f${r.name()} &8| &e${r.typeId()} &8| places: &f$placeCount &8| nodes: &f$nodeCount")
+        }
+    }
+
+    msg.send(sender, "")
+    msg.send(sender, "&e=== Place-uri ===")
+    val places = worldAdmin.places.toList()
+    if (places.isEmpty()) {
+        msg.send(sender, "&7Nu exista place-uri mapate.")
+    } else {
+        msg.send(sender, "&7Total: &f${places.size}")
+        for (p in places.take(15)) {
+            val regionName = worldAdmin.getRegion(p.regionId())?.name() ?: p.regionId()
+            msg.send(sender, "&7- &a${p.id()} &8| &f${p.displayName()} &8| reg: &e$regionName &8| tip: &f${p.placeType().id}")
+        }
+        if (places.size > 15) msg.send(sender, "&7... si inca &f${places.size - 15}")
+    }
+
+    msg.send(sender, "")
+    msg.send(sender, "&e=== Noduri ===")
+    val nodes = worldAdmin.nodes.toList()
+    if (nodes.isEmpty()) {
+        msg.send(sender, "&7Nu exista noduri mapate.")
+    } else {
+        msg.send(sender, "&7Total: &f${nodes.size}")
+        for (n in nodes.take(15)) {
+            msg.send(sender, "&7- &a${n.id()} &8| tip: &f${n.typeId()} &8| lume: &e${n.worldName()} &8| &7(${n.x().toInt()},${n.y().toInt()},${n.z().toInt()})")
+        }
+        if (nodes.size > 15) msg.send(sender, "&7... si inca &f${nodes.size - 15}")
+    }
+
+    msg.send(sender, "")
+    msg.send(sender, "&7Comenzi rapide:")
+    msg.send(sender, "&f/ainpc quest definitions &8| &f/ainpc world &8| &f/ainpc gui creator")
     return true
 }
 

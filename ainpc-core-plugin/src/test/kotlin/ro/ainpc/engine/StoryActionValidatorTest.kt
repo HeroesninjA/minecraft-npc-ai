@@ -40,23 +40,23 @@ class StoryActionValidatorTest {
     }
 
     @Test
-    fun rejectsMissingScope() {
+    fun warnsOnMissingScope() {
         val result = StoryActionValidator.validate(entry(
             type = "set_story_state",
             metadata = mapOf("target" to "region:spawn", "state" to "helped")
         ))
-        assertFalse(result.valid)
-        assertTrue(result.errors.any { it.contains("scope") })
+        assertTrue(result.valid)
+        assertTrue(result.warnings.any { it.contains("scope") })
     }
 
     @Test
-    fun rejectsInvalidScope() {
+    fun warnsOnInvalidScope() {
         val result = StoryActionValidator.validate(entry(
             type = "set_story_state",
             metadata = mapOf("scope" to "invalid_scope", "target" to "region:spawn", "state" to "helped")
         ))
-        assertFalse(result.valid)
-        assertTrue(result.errors.any { it.contains("scope") })
+        assertTrue(result.valid)
+        assertTrue(result.warnings.any { it.contains("scope") })
     }
 
     @Test

@@ -66,9 +66,16 @@ class QuestCreateGui : GuiScreen {
         val rwEventTitle = service.getCreatorFormValue(player, "quest_reward_event_title").ifBlank { "" }
         val rwEventPayload = service.getCreatorFormValue(player, "quest_reward_event_payload").ifBlank { "" }
 
-        val stageId = service.getCreatorFormValue(player, "quest_stage_id").ifBlank { "S1" }
-        val stageName = service.getCreatorFormValue(player, "quest_stage_name").ifBlank { "Stage 1" }
-        val stageMode = service.getCreatorFormValue(player, "quest_stage_mode").ifBlank { "all" }
+        val stageIdx = (service.getCreatorFormValue(player, "quest_stage_idx").ifBlank { "1" }.toIntOrNull() ?: 1).coerceAtLeast(1)
+        val stageCount = (service.getCreatorFormValue(player, "quest_stage_count").ifBlank { "1" }.toIntOrNull() ?: 1).coerceAtLeast(1).coerceIn(1, 10)
+        val stageId = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_id").ifBlank {
+            when (stageIdx) { 1 -> "ACCEPTANCE"; 2 -> "EXECUTION"; else -> "S$stageIdx" }
+        }
+        val stageName = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_name").ifBlank {
+            when (stageIdx) { 1 -> "Acceptare"; 2 -> "Executie"; else -> "Stage $stageIdx" }
+        }
+        val stageMode = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_mode").ifBlank { "all" }
+        val stageNext = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_next").ifBlank { "" }
 
         val diagType = service.getCreatorFormValue(player, "quest_dialog_type").ifBlank { "npc_greeting" }
         val diagSpeaker = service.getCreatorFormValue(player, "quest_dialog_speaker").ifBlank { "npc" }
@@ -274,10 +281,12 @@ class QuestCreateGui : GuiScreen {
         ))
 
         // Rand 3: stage si recompensa
-        context.item(27, GuiItemFactory.item(Material.CLOCK, "&dStage", listOf(
+        context.item(27, GuiItemFactory.item(Material.CLOCK, "&dStage ${stageIdx}/${stageCount}", listOf(
             "&7Id: &f$stageId",
             "&7Nume: &f$stageName",
-            "&7Mode: &f$stageMode"
+            "&7Mode: &f$stageMode",
+            "&7Next: &f${stageNext.ifBlank { "(auto)" }}",
+            "&7Click pe butoanele de mai jos pentru a naviga."
         )))
         context.button(28, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&eStage ID: &f$stageId", listOf(
@@ -287,14 +296,10 @@ class QuestCreateGui : GuiScreen {
             GuiAction { click ->
                 click.service().openTextInput(
                     click.player(),
-                    "quest_stage_id",
-                    "quest_stage_id",
+                    "quest_stage_${stageIdx}_id",
+                    "quest_stage_${stageIdx}_id",
                     GuiKey.QUEST_CREATE,
-                    promptLines = listOf(
-                        "&7ID-ul stage-ului trebuie sa fie stabil.",
-                        "&7Ex: S1 | S2 | RETURN | INTRO | EXPLORE",
-                        "&7Scrie clear pentru reset."
-                    )
+                    promptLines = listOf("&7ID-ul stage-ului.", "&7Ex: S1 | RETURN | INTRO | EXPLORE")
                 )
             }
         ))
@@ -306,14 +311,10 @@ class QuestCreateGui : GuiScreen {
             GuiAction { click ->
                 click.service().openTextInput(
                     click.player(),
-                    "quest_stage_name",
-                    "quest_stage_name",
+                    "quest_stage_${stageIdx}_name",
+                    "quest_stage_${stageIdx}_name",
                     GuiKey.QUEST_CREATE,
-                    promptLines = listOf(
-                        "&7Numele stage-ului poate fi clarificator.",
-                        "&7Ex: Stage 1 | Introduction | Explore | Return | Complete",
-                        "&7Scrie clear pentru reset."
-                    )
+                    promptLines = listOf("&7Numele stage-ului.", "&7Ex: Introduction | Explore | Return")
                 )
             }
         ))
@@ -325,28 +326,93 @@ class QuestCreateGui : GuiScreen {
             GuiAction { click ->
                 click.service().openTextInput(
                     click.player(),
-                    "quest_stage_mode",
-                    "quest_stage_mode",
+                    "quest_stage_${stageIdx}_mode",
+                    "quest_stage_${stageIdx}_mode",
                     GuiKey.QUEST_CREATE,
-                    promptLines = listOf(
-                        "&7Modul stage poate fi custom daca runtime-ul il suporta.",
-                        "&7Ex: all | any | manual_turn_in | all_objectives",
-                        "&7Scrie clear pentru reset."
-                    )
+                    promptLines = listOf("&7Modul stage.", "&7Ex: all | any | manual_turn_in | all_objectives")
                 )
             }
         ))
         context.button(31, GuiButton.enabled(
-            GuiItemFactory.item(Material.MAP, "&eStage preset", listOf(
-                "&7Click: aplica un preset simplu.",
-                "&7Stage-ul este exportat clar in draft.",
-                "&7RETURN pentru final, EXPLORE pentru lucru."
+            GuiItemFactory.item(Material.LIME_DYE, "&a+ Adauga Stage", listOf(
+                "&7Adauga un nou stage dupa cel curent.",
+                "&7Maxim 10 stage-uri."
             )),
             GuiAction { click ->
-                service.setCreatorFormValue(click.player(), "quest_stage_id", "RETURN")
-                service.setCreatorFormValue(click.player(), "quest_stage_name", "Return")
-                service.setCreatorFormValue(click.player(), "quest_stage_mode", "manual_turn_in")
+                val newCount = (stageCount + 1).coerceAtMost(10)
+                service.setCreatorFormValue(player, "quest_stage_count", newCount.toString())
+                service.setCreatorFormValue(player, "quest_stage_idx", (stageIdx + 1).toString())
                 click.service().open(click.player(), GuiKey.QUEST_CREATE)
+            }
+        ))
+        context.button(32, if (stageIdx > 1) {
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&7← Prev Stage", listOf("&7Mergi la stage-ul anterior.")),
+                GuiAction { click ->
+                    service.setCreatorFormValue(player, "quest_stage_idx", (stageIdx - 1).toString())
+                    click.service().open(click.player(), GuiKey.QUEST_CREATE)
+                }
+            )
+        } else {
+            GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&8← Prev Stage", listOf("&8Esti la primul stage.")))
+        })
+        context.button(33, if (stageIdx < stageCount) {
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&eNext Stage →", listOf("&7Mergi la urmatorul stage.")),
+                GuiAction { click ->
+                    service.setCreatorFormValue(player, "quest_stage_idx", (stageIdx + 1).toString())
+                    click.service().open(click.player(), GuiKey.QUEST_CREATE)
+                }
+            )
+        } else {
+            GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&8Next Stage →", listOf("&8Esti la ultimul stage.", "&8Apasa + Adauga Stage pentru unul nou.")))
+        })
+        context.button(34, if (stageCount > 1) {
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.BARRIER, "&cSterge Stage $stageIdx", listOf("&7Sterge stage-ul curent.", "&7Fara confirmare!")),
+                GuiAction { click ->
+                    if (stageCount > 1) {
+                        for (i in stageIdx until stageCount) {
+                            val nextId = service.getCreatorFormValue(player, "quest_stage_${i + 1}_id").ifBlank { "S${i + 1}" }
+                            val nextName = service.getCreatorFormValue(player, "quest_stage_${i + 1}_name").ifBlank { "Stage ${i + 1}" }
+                            val nextMode = service.getCreatorFormValue(player, "quest_stage_${i + 1}_mode").ifBlank { "all" }
+                            val nextLink = service.getCreatorFormValue(player, "quest_stage_${i + 1}_next").ifBlank { "" }
+                            service.setCreatorFormValue(player, "quest_stage_${i}_id", nextId)
+                            service.setCreatorFormValue(player, "quest_stage_${i}_name", nextName)
+                            service.setCreatorFormValue(player, "quest_stage_${i}_mode", nextMode)
+                            service.setCreatorFormValue(player, "quest_stage_${i}_next", nextLink)
+                        }
+                        val lastIdx = stageCount
+                        service.setCreatorFormValue(player, "quest_stage_${lastIdx}_id", "")
+                        service.setCreatorFormValue(player, "quest_stage_${lastIdx}_name", "")
+                        service.setCreatorFormValue(player, "quest_stage_${lastIdx}_mode", "")
+                        service.setCreatorFormValue(player, "quest_stage_${lastIdx}_next", "")
+                        service.setCreatorFormValue(player, "quest_stage_count", (stageCount - 1).toString())
+                        if (stageIdx >= stageCount) service.setCreatorFormValue(player, "quest_stage_idx", (stageCount - 1).toString())
+                    }
+                    click.service().open(click.player(), GuiKey.QUEST_CREATE)
+                }
+            )
+        } else {
+            GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&8Sterge Stage", listOf("&8Nu poti sterge singurul stage.")))
+        })
+        context.button(35, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&eNext Stage: &f${stageNext.ifBlank { "(auto)" }}", listOf(
+                "&7Click: scrie ID-ul stage-ului urmator.",
+                "&7Gol = se foloseste ordinea naturala."
+            )),
+            GuiAction { click ->
+                click.service().openTextInput(
+                    click.player(),
+                    "quest_stage_${stageIdx}_next",
+                    "quest_stage_${stageIdx}_next",
+                    GuiKey.QUEST_CREATE,
+                    promptLines = listOf(
+                        "&7ID-ul stage-ului urmator.",
+                        "&7Ex: EXECUTION | RETURN | COMPLETE",
+                        "&7Scrie clear pentru a lasa gol."
+                    )
+                )
             }
         ))
 
@@ -409,9 +475,9 @@ class QuestCreateGui : GuiScreen {
             }
         ))
 
-        // Story event fields (doar cand tipul e story_event)
+        // Story event fields (doar cand tipul e story_event) — sloturile 23-26 sunt libere
         if (rwType == "story_event" || rwType == "record_story_event") {
-            context.button(32, GuiButton.enabled(
+            context.button(23, GuiButton.enabled(
                 GuiItemFactory.item(Material.PAPER, "&eEvent key: &f${rwEventKey.ifBlank { "<click>" }}", listOf(
                     "&7Click: scrie event key in chat.",
                     "&7Ex: castle_cleansed, quest_completed, boss_defeated"
@@ -423,7 +489,7 @@ class QuestCreateGui : GuiScreen {
                     )
                 }
             ))
-            context.button(33, GuiButton.enabled(
+            context.button(24, GuiButton.enabled(
                 GuiItemFactory.item(Material.COMPASS, "&eScope: &f$rwEventScope", listOf(
                     "&7Click: scrie scope-ul.",
                     "&7Ex: region, place, global"
@@ -435,7 +501,7 @@ class QuestCreateGui : GuiScreen {
                     )
                 }
             ))
-            context.button(34, GuiButton.enabled(
+            context.button(25, GuiButton.enabled(
                 GuiItemFactory.item(Material.COMPASS, "&eTarget: &f${rwEventTarget.ifBlank { "<click>" }}", listOf(
                     "&7Click: scrie target-ul.",
                     "&7Ex: current_region, anchor:obj_key"
@@ -447,7 +513,7 @@ class QuestCreateGui : GuiScreen {
                     )
                 }
             ))
-            context.button(35, GuiButton.enabled(
+            context.button(26, GuiButton.enabled(
                 GuiItemFactory.item(Material.NAME_TAG, "&eTitlu: &f${rwEventTitle.ifBlank { "-" }}", listOf(
                     "&7Click: scrie titlul.",
                     "&7Ex: Castelul a fost curatat"
@@ -557,13 +623,14 @@ class QuestCreateGui : GuiScreen {
                             dialog = objDialog
                         )
                     ),
-                    stages = listOf(
+                    stages = (1..stageCount).map { i ->
                         QuestDraftExporter.StageDef(
-                            id = stageId,
-                            name = stageName,
-                            completionMode = stageMode
+                            id = service.getCreatorFormValue(player, "quest_stage_${i}_id").ifBlank { "S$i" },
+                            name = service.getCreatorFormValue(player, "quest_stage_${i}_name").ifBlank { "Stage $i" },
+                            completionMode = service.getCreatorFormValue(player, "quest_stage_${i}_mode").ifBlank { "all" },
+                            nextStage = service.getCreatorFormValue(player, "quest_stage_${i}_next").ifBlank { "" }
                         )
-                    ),
+                    },
                     rewards = listOf(
                         QuestDraftExporter.RewardDef(
                             type = rwType,

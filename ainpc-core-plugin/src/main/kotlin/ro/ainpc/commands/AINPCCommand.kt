@@ -255,6 +255,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "reload" -> handleReload(sender)
             "test" -> handleTest(sender)
             "health", "status", "healthcheck" -> handleHealth(sender)
+            "overview", "preview", "summary" -> handleOverview(sender)
             "economy" -> handleEconomy(sender, args)
             "building" -> handleBuilding(sender, args)
             else -> {
@@ -669,6 +670,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "quick" -> handleQuickQuest(sender)
             "quick-export" -> handleQuickQuestExport(sender, args)
             "import" -> handleQuestImport(sender, args)
+            "reload" -> handleQuestReload(sender, args)
+            "backup" -> handleQuestBackup(sender, args)
+            "reindex" -> handleQuestReindex(sender)
             "complete" -> handleCompleteQuest(sender, args)
             else -> handleTriggerQuest(
                 sender, args[1],
@@ -1482,6 +1486,14 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             val target = if (obj.itemId.isNullOrBlank()) "-" else obj.itemId
             plugin.messageUtils.send(sender, "&7  $i. &f[$type] &7target: &f$target &7amount: &f${obj.amount}")
         }
+        if (template.actors.isNotEmpty()) {
+            plugin.messageUtils.send(sender, "&eActori: &f${template.actors.size}")
+            for ((actorId, actorDef) in template.actors) {
+                val lifecycle = actorDef.lifecycleType?.name?.lowercase() ?: "temp"
+                val entityKind = actorDef.entityKind?.name?.lowercase() ?: "villager"
+                plugin.messageUtils.send(sender, "&7  - &f$actorId &7($lifecycle, $entityKind)")
+            }
+        }
         plugin.messageUtils.send(sender, "&eRecompense: &f${template.rewards.size}")
         for (rw in template.rewards) {
             plugin.messageUtils.send(sender, "&7  - &f${rw.type} &7(${rw.itemId.orEmpty()}) x${rw.amount}")
@@ -1582,6 +1594,64 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         } catch (e: Exception) {
             plugin.messageUtils.send(sender, "&cEroare la parsare: &e${e.message}")
         }
+        return true
+    }
+
+    private fun handleQuestReload(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reload <templateId|questCode>"); return true
+        }
+        val questId = args[2]
+        val template = plugin.featurePackLoader.getAllScenarios().find {
+            it.questCode.equals(questId, ignoreCase = true) || it.id.equals(questId, ignoreCase = true)
+        }
+        if (template == null) {
+            plugin.messageUtils.send(sender, "&cTemplate negasit: $questId"); return true
+        }
+        plugin.reloadContent()
+        plugin.messageUtils.send(sender, "&aContinut reincarcat ($questId).")
+        return true
+    }
+
+    private fun handleQuestBackup(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val packsDir = java.io.File(plugin.dataFolder, "packs")
+        if (!packsDir.exists()) {
+            plugin.messageUtils.send(sender, "&cFolderul packs/ nu exista."); return true
+        }
+        val backupDir = java.io.File(plugin.dataFolder, "backups")
+        backupDir.mkdirs()
+        val timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val backupFile = java.io.File(backupDir, "quest-packs-backup-$timestamp.zip")
+        try {
+            val files = packsDir.listFiles()?.filter { it.name.endsWith(".yml") || it.name.endsWith(".yaml") } ?: emptyList()
+            if (files.isEmpty()) { plugin.messageUtils.send(sender, "&cNu exista fisiere YAML de backup."); return true }
+            java.util.zip.ZipOutputStream(java.io.FileOutputStream(backupFile)).use { zos ->
+                for (file in files) {
+                    zos.putNextEntry(java.util.zip.ZipEntry(file.name))
+                    file.inputStream().use { it.copyTo(zos) }
+                    zos.closeEntry()
+                }
+            }
+            plugin.messageUtils.send(sender, "&aBackup salvat: &f${backupFile.absolutePath}")
+        } catch (e: Exception) {
+            plugin.messageUtils.send(sender, "&cEroare la backup: &e${e.message}")
+        }
+        return true
+    }
+
+    private fun handleQuestReindex(sender: CommandSender): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        plugin.featurePackLoader.loadAllPacks()
+        plugin.scenarioEngine.reloadTemplates()
+        plugin.messageUtils.send(sender, "&aIndexul questurilor a fost regenerat (${plugin.featurePackLoader.getAllScenarios().size} scenarii).")
         return true
     }
 

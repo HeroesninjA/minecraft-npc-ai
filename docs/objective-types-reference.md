@@ -32,3 +32,34 @@
 - Tipul gol → `collect_item`
 - Tip nerecunoscut → trece prin nemodificat (poate fi alias custom)
 - Aliasurile tolerate produc același rezultat ca tipul canonic
+
+## Prioritatea aliasurilor
+
+Când același concept are mai multe aliasuri, ordinea de prioritate este:
+
+1. **Tip canonic** — întotdeauna recomandat (ex: `talk_to_npc`)
+2. **Alias tolerat** — acceptat, parsează la fel ca tipul canonic (ex: `talk_npc`, `speak_to_npc`)
+3. **Alias deprecated** — acceptat dar emite warning de migrare (ex: `talk_nlc`, `interact_nkde`, `turnin`, `gather`, `slay`, `construct`, `fabricate`)
+
+Regulă: aliasurile deprecated produc același rezultat ca tipul canonic, dar apar în `/ainpc quest deprecated` cu sugestie de înlocuire.
+
+## Migrare de la aliasuri vechi la contract nou
+
+Pentru a migra questurile existente:
+
+1. Rulează `/ainpc quest deprecated` — vezi ce aliasuri deprecated sunt folosite
+2. Înlocuiește fiecare alias cu tipul canonic conform tabelului de mai sus
+3. Rulează `/ainpc audit quest` — confirmă 0 erori
+4. Exemple de înlocuire:
+
+| Alias vechi (deprecated) | Înlocuire canonică |
+|---|---|
+| `talk_nlc` | `talk_to_npc` |
+| `interact_nkde` | `inspect_node` |
+| `turnin` | `deliver_to_npc` |
+| `gather` | `collect_item` |
+| `slay` | `kill_mob` |
+| `construct` | `place_block` |
+| `fabricate` | `craft_item` |
+
+Toate aliasurile tolerate (non-deprecated) rămân acceptabile, dar tipul canonic este întotdeauna recomandat pentru claritate.

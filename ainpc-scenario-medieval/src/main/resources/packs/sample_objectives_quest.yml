@@ -21,6 +21,8 @@ scenarios:
       BUILD: "Constructie"
       COMBAT: "Combat"
       DELIVERY: "Livrare"
+      USE: "Utilizare"
+      EQUIP: "Echipare"
       COMPLETE: "Final"
     quest:
       code: "SAMPLE01"
@@ -90,6 +92,18 @@ scenarios:
           item: "profession:garda"
           amount: 1
           description: "Preda raportul gardianului."
+        # Utilizare item
+        consume_potion:
+          type: "use_item"
+          item: "POTION"
+          amount: 1
+          description: "Bea o potiune."
+        # Echipare item
+        equip_helmet:
+          type: "equip_item"
+          item: "IRON_HELMET"
+          amount: 1
+          description: "Echipeaza o casca de fier."
       rewards:
         reward_gold:
           type: "item"

@@ -34,7 +34,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         importance: Int
     ) {
         val decayDays = plugin.config.getInt("npc.memory_decay_days", 30)
-        val expirationDays = decayDays * importance
+        val expirationDays = maxOf(0, decayDays * importance)
 
         val sql = """
             INSERT INTO npc_memories 
@@ -117,7 +117,8 @@ class MemoryManager(private val plugin: AINPCPlugin) {
                         memory.setContent(rs.getString("content"))
                         memory.setEmotionalImpact(rs.getDouble("emotional_impact"))
                         memory.setImportance(rs.getInt("importance"))
-                        memory.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime())
+                        val timestamp = rs.getTimestamp("created_at")
+                        memory.setCreatedAt(if (timestamp != null) timestamp.toLocalDateTime() else LocalDateTime.now())
                         memories.add(memory)
                     }
                 }

@@ -14,6 +14,7 @@ class ActiveScenario(val id: UUID, template: ScenarioTemplate) {
     val actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap(template.actors)
     val questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap(template.questActorTriggers)
     val validationWarnings: MutableList<String> = ArrayList(template.validationWarnings)
+    val validationWarningDetails: List<FeaturePackLoader.ValidationWarning> = ArrayList(template.validationWarningDetails)
     val objectives: List<FeaturePackLoader.QuestEntryDefinition> = ArrayList(template.objectives)
     val rewards: List<FeaturePackLoader.QuestEntryDefinition> = ArrayList(template.rewards)
     val npcRoles: MutableMap<UUID, String> = HashMap()

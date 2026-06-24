@@ -269,6 +269,10 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Marcheaza manual quest-ul ca finalizat si da recompensa")
     msg.send(sender, "&e/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]")
     msg.send(sender, "&7  Listeaza ancorele semantice persistate pentru questuri")
+    msg.send(sender, "&e/ainpc quest types")
+    msg.send(sender, "&7  Afiseaza JSON cu toate tipurile de obiective, aliasurile si hook-urile suportate")
+    msg.send(sender, "&e/ainpc quest deprecated")
+    msg.send(sender, "&7  Listeaza aliasurile si tipurile deprecated cu sugestia inlocuirii")
     msg.send(
         sender,
         "&e/ainpc demo <definition|status|next|script|phases|evidence|runbook|smoke|summary|commands|restart|experimental|experimental5|experimental25|experimental25deep|experimental25ops> [regionId] [player]"

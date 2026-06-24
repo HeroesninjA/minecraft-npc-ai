@@ -31,6 +31,7 @@ class ScenarioTemplate(val type: ScenarioType) {
     var questDialogues: MutableMap<String, List<String>> = LinkedHashMap()
     var questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap()
     var validationWarnings: MutableList<String> = ArrayList()
+    var validationWarningDetails: List<FeaturePackLoader.ValidationWarning> = ArrayList()
     var questStages: List<QuestStageDefinition> = ArrayList()
     var questContract: QuestScenarioContract = QuestScenarioContract.defaultContract()
     var actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap()

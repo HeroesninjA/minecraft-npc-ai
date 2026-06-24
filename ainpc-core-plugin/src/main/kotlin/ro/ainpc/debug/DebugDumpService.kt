@@ -116,6 +116,10 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
                 dumpRoot.resolve("objective-types-contract.json"),
                 DebugDumpObjectiveTypesJson.buildObjectiveTypesJson(),
             )
+            writeJson(
+                dumpRoot.resolve("quest-warnings-contract.json"),
+                DebugDumpWarningsJson.buildWarningsJson(plugin),
+            )
         }
         if (normalizedScope == "all") {
             writeJson(

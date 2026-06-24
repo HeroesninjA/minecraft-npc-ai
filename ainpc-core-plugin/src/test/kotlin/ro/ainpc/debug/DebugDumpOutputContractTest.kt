@@ -158,7 +158,9 @@ class DebugDumpOutputContractTest {
             "recent-server-log.txt",
             "recent-public-events.txt",
             "narrative-plans.json",
-            "quest-director-decision.json"
+            "quest-director-decision.json",
+            "objective-types-contract.json",
+            "quest-warnings-contract.json"
         )
     }
 
@@ -195,5 +197,19 @@ class DebugDumpOutputContractTest {
             "blocked_reasons",
             "warnings"
         ).forEach { token -> assertTrue(source.contains(token), "Missing quest director contract token $token") }
+    }
+
+    @Test
+    fun questWarningsContractContainsStructuredTypeMessageContext() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpWarningsJson.kt").readText()
+
+        listOf(
+            "buildWarningsJson",
+            "total_warnings",
+            "template_id",
+            "\"type\"",
+            "\"message\"",
+            "\"context\"",
+        ).forEach { token -> assertTrue(source.contains(token), "Missing structured warnings token $token") }
     }
 }

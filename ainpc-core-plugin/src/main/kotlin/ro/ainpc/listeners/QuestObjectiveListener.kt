@@ -65,13 +65,13 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onBlockPlace(event: BlockPlaceEvent) {
         if (!questFeatureEnabled()) return
-        plugin.scenarioEngine.recordBlockPlaced(event.player, event.block.type)
+        plugin.scenarioEngine.recordBlockPlaced(event.player, event.block.type, event.block.location)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
         if (!questFeatureEnabled()) return
-        plugin.scenarioEngine.recordBlockBroken(event.player, event.block.type)
+        plugin.scenarioEngine.recordBlockBroken(event.player, event.block.type, event.block.location)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -79,6 +79,7 @@ class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         if (!questFeatureEnabled()) return
         val item = event.item ?: return
         plugin.scenarioEngine.recordItemUsed(event.player, item.type)
+        plugin.scenarioEngine.recordNodeInteraction(event.player)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

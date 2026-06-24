@@ -75,6 +75,11 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private val trackedQuestPlayers = HashSet<UUID>()
     private val trackedQuestTemplates = ConcurrentHashMap<UUID, String>()
     private val activeScenarios = HashMap<UUID, ActiveScenario>()
+    private val npcConversationCooldowns = ConcurrentHashMap<UUID, Long>()
+    private val trackedBlockLocations = ConcurrentHashMap<UUID, MutableSet<String>>()
+    private val trackedVisitedPlaces = ConcurrentHashMap<UUID, MutableSet<String>>()
+    private val regionEntryCounts = ConcurrentHashMap<UUID, MutableMap<String, Int>>()
+    private val eventDebounceBuffer = ConcurrentHashMap<String, Long>()
 
     init {
         initSimpleQuestPlugin(plugin)
@@ -254,6 +259,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                     definition.questActorTriggers.mapValues { entry -> LinkedHashSet(entry.value) }
                 )
                 template.validationWarnings = ArrayList(definition.validationWarnings)
+                template.validationWarningDetails = ArrayList(definition.validationWarningDetails)
                 template.questStages = definition.questStages
                 template.actors = LinkedHashMap(definition.actors)
                 template.objectives = definition.objectives
@@ -1563,6 +1569,10 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     }
     fun recordNpcConversation(p0: Player, p1: AINPC) {
         if (p0 == null || p1 == null) return
+        val now = System.currentTimeMillis()
+        val lastTalk = npcConversationCooldowns.getOrDefault(p0.uniqueId, 0L)
+        if (now - lastTalk < 3000) return
+        npcConversationCooldowns[p0.uniqueId] = now
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, p1)
@@ -1571,8 +1581,39 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             trackNpcObjectiveProgress(p0, p1, template, refreshedProgress)
         }
     }
-    fun recordRegionVisit(p0: Player) {
+    fun recordNodeInteraction(p0: Player) {
         if (p0 == null) return
+        val node = findCurrentNode(p0.location) ?: return
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "inspect_node")) continue
+            val updatedProgress = LinkedHashMap(progress.objectiveProgress())
+            var changed = false
+            for ((index, objective) in template.objectives.withIndex()) {
+                if (!isObjectiveActiveForProgress(template, progress, objective)) continue
+                if (!matchesObjectiveType(objective, "inspect_node")) continue
+                if (!matchesNodeObjective(progress, objective, index, node)) continue
+                val objectiveKey = buildObjectiveKey(objective, index)
+                val before = updatedProgress.getOrDefault(objectiveKey, 0)
+                changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
+                changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
+                if (changed && updatedProgress.getOrDefault(objectiveKey, 0) > before) {
+                    emitProgressionObjectiveProgress(
+                        player = p0, npc = null, template = template, progress = progress,
+                        objective = objective, objectiveKey = objectiveKey,
+                        before = before, after = updatedProgress.getOrDefault(objectiveKey, 0),
+                        trigger = "inspect_node",
+                        metadata = linkedMapOf("nodeId" to (node.id ?: ""))
+                    )
+                }
+            }
+            if (changed) updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
+        }
+    }
+
+    fun recordRegionVisit(p0: Player) {
+        if (p0 == null || isDebounced(p0.uniqueId, "regionVisit")) return
         val location = p0.location
         val region = findCurrentRegion(location)
         val place = findCurrentPlace(location)
@@ -1601,6 +1642,25 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                         || (matchesObjectiveType(objective, "visit_place") && matchesPlaceObjective(progress, objective, index, place))
                         || (matchesObjectiveType(objective, "inspect_node") && matchesNodeObjective(progress, objective, index, node))
                 if (!matchesLocationObjective) continue
+                if (matchesObjectiveType(objective, "visit_place")) {
+                    val placeKey = "${p0.uniqueId}:${objectiveKey}:${place?.id.orEmpty()}"
+                    val visited = trackedVisitedPlaces.getOrPut(p0.uniqueId) { HashSet() }
+                    if (!visited.add(placeKey)) continue
+                }
+                if (matchesObjectiveType(objective, "inspect_node") && objective.metadata["interact_node"] == "true") {
+                    continue
+                }
+                if (matchesObjectiveType(objective, "visit_region")) {
+                    val minEntries = objective.metadata["min_entries"]?.toIntOrNull() ?: 1
+                    if (minEntries > 1) {
+                        val regionId = region?.id.orEmpty()
+                        val entryKey = "${objectiveKey}:${regionId}"
+                        val entries = regionEntryCounts.getOrPut(p0.uniqueId) { HashMap() }
+                        val current = entries.getOrDefault(entryKey, 0) + 1
+                        entries[entryKey] = current
+                        if (current < minEntries) continue
+                    }
+                }
                 changed = changed or incrementObjectiveProgress(updatedProgress, objectiveKey, objective.amount)
                 val after = updatedProgress.getOrDefault(objectiveKey, 0)
                 if (after > before) {
@@ -1638,7 +1698,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     fun recordMobKill(p0: Player, p1: Entity) {
-        if (p0 == null || p1 == null) return
+        if (p0 == null || p1 == null || isDebounced(p0.uniqueId, "mobKill")) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
@@ -1682,7 +1742,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     fun recordItemCrafted(p0: Player, p1: Material?) {
-        if (p0 == null || p1 == null) return
+        if (p0 == null || p1 == null || isDebounced(p0.uniqueId, "craft")) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
@@ -1697,6 +1757,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!matchesObjectiveType(objective, "craft_item")) continue
             if (!isObjectiveActiveForProgress(template, progress, objective)) continue
             if (!matchesObjectiveReference(objective.itemId, itemName)) continue
+            val allowedRecipes = objective.metadata["allowed_recipes"]
+            if (allowedRecipes != null && allowedRecipes.split(",").none { it.trim().equals(itemName, ignoreCase = true) }) continue
             val objectiveKey = buildObjectiveKey(objective, index)
             val before = updatedProgress.getOrDefault(objectiveKey, 0)
             changed = changed or carryLegacyObjectiveProgress(updatedProgress, objective, index)
@@ -1721,6 +1783,18 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             incrementBlockObjective(p0, template, progress, "place_block", p1.name)
         }
     }
+    fun recordBlockPlaced(p0: Player, p1: Material, p2: org.bukkit.Location) {
+        if (p0 == null) return
+        val locationKey = "${p2.world.name}:${p2.blockX}:${p2.blockY}:${p2.blockZ}"
+        val placed = trackedBlockLocations.getOrPut(p0.uniqueId) { HashSet() }
+        if (!placed.add(locationKey)) return
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "place_block")) continue
+            incrementBlockObjective(p0, template, progress, "place_block", p1.name)
+        }
+    }
     fun recordBlockBroken(p0: Player, p1: Material) {
         if (p0 == null) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
@@ -1729,6 +1803,25 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (template == null || !hasObjectiveType(template, "break_block")) continue
             incrementBlockObjective(p0, template, progress, "break_block", p1.name)
         }
+    }
+    fun recordBlockBroken(p0: Player, p1: Material, p2: org.bukkit.Location) {
+        if (p0 == null) return
+        val locationKey = "${p2.world.name}:${p2.blockX}:${p2.blockY}:${p2.blockZ}"
+        var isConfirmed = false
+        for (progress in getCurrentQuestProgress(p0.uniqueId)) {
+            if (!progress.isCurrent()) continue
+            val template = resolveTemplateForProgress(progress, null)
+            if (template == null || !hasObjectiveType(template, "break_block")) continue
+            for ((_, objective) in template.objectives.withIndex()) {
+                if (!isObjectiveActiveForProgress(template, progress, objective)) continue
+                if (!matchesObjectiveType(objective, "break_block")) continue
+                if (objective.metadata["confirm_target"] != "true") { isConfirmed = true; break }
+                val brokenKey = "broken:${locationKey}"
+                val confirmed = trackedBlockLocations.getOrPut(p0.uniqueId) { HashSet() }
+                if (confirmed.add(brokenKey)) { isConfirmed = true; break }
+            }
+        }
+        if (isConfirmed) recordBlockBroken(p0, p1)
     }
     private fun incrementBlockObjective(p0: Player, template: ScenarioTemplate, progress: PlayerQuestProgress, objectiveType: String, blockName: String) {
         val updatedProgress = LinkedHashMap(progress.objectiveProgress())
@@ -1745,7 +1838,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         if (changed) updateTrackedQuestProgress(p0.uniqueId, template, progress, updatedProgress)
     }
     fun recordItemUsed(p0: Player, p1: Material?) {
-        if (p0 == null || p1 == null) return
+        if (p0 == null || p1 == null || isDebounced(p0.uniqueId, "itemUse")) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
@@ -1777,7 +1870,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     fun recordItemEquipped(p0: Player, p1: Material?) {
-        if (p0 == null || p1 == null) return
+        if (p0 == null || p1 == null || isDebounced(p0.uniqueId, "equip")) return
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
@@ -1885,6 +1978,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val startedAt = activeProgress?.startedAt() ?: now
         clearQuestTrackingIfMatches(p0, p1.templateId)
         removeActiveQuestProgress(p0, p1.templateId)
+        clearQuestTrackingData(p0)
         val completedProgress = PlayerQuestProgress(
             p1.templateId,
             p1.questCode,
@@ -1900,6 +1994,51 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         persistQuestProgressAsync(p0, completedProgress)
         return completedProgress
     }
+    private fun clearQuestTrackingData(playerId: UUID) {
+        trackedBlockLocations.remove(playerId)
+        trackedVisitedPlaces.remove(playerId)
+        npcConversationCooldowns.remove(playerId)
+        regionEntryCounts.remove(playerId)
+        eventDebounceBuffer.keys.removeIf { it.startsWith("$playerId:") }
+    }
+
+    fun cleanupOrphanedObjectives() {
+        val onlinePlayerIds = plugin.server.onlinePlayers.map { it.uniqueId }.toSet()
+        activePlayerQuests.keys.removeIf { it !in onlinePlayerIds }
+        archivedPlayerQuests.keys.removeIf { it !in onlinePlayerIds }
+        sentCompletionMessages.removeIf { key -> key.split(":").firstOrNull()?.let { uid ->
+            runCatching { UUID.fromString(uid) }.getOrNull()?.let { it !in onlinePlayerIds } ?: false } == true }
+        trackedQuestPlayers.removeIf { it !in onlinePlayerIds }
+        trackedQuestTemplates.keys.removeIf { it !in onlinePlayerIds }
+        eventDebounceBuffer.keys.removeIf { key -> key.split(":").firstOrNull()?.let { uid ->
+            runCatching { UUID.fromString(uid) }.getOrNull()?.let { it !in onlinePlayerIds } ?: false } == true }
+    }
+
+    private fun clearLocationObjectiveProgress(
+        progressByObjective: MutableMap<String, Int>?,
+        template: ScenarioTemplate,
+    ): MutableMap<String, Int> {
+        val cleared = progressByObjective?.toMutableMap() ?: LinkedHashMap()
+        if (template.objectives.isEmpty()) return cleared
+        val locationTypes = setOf("visit_region", "visit_place", "inspect_node")
+        for ((index, objective) in template.objectives.withIndex()) {
+            if (locationTypes.any { matchesObjectiveType(objective, it) }) {
+                val key = buildObjectiveKey(objective, index)
+                cleared.remove(key)
+            }
+        }
+        return cleared
+    }
+
+    private fun isDebounced(playerId: UUID, eventKey: String): Boolean {
+        val fullKey = "$playerId:$eventKey"
+        val now = System.currentTimeMillis()
+        val last = eventDebounceBuffer.getOrDefault(fullKey, 0L)
+        if (now - last < 500) return true
+        eventDebounceBuffer[fullKey] = now
+        return false
+    }
+
     private fun markQuestFailed(playerId: UUID, template: ScenarioTemplate): PlayerQuestProgress {
         val now = System.currentTimeMillis()
         val activeProgress = getCurrentQuestProgress(playerId, template.templateId)
@@ -1907,6 +2046,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
 
         clearQuestTrackingIfMatches(playerId, template.templateId)
         removeActiveQuestProgress(playerId, template.templateId)
+        clearQuestTrackingData(playerId)
+        val clearedProgress = clearLocationObjectiveProgress(activeProgress?.objectiveProgress()?.toMutableMap(), template)
         val failedProgress = PlayerQuestProgress(
             template.templateId,
             template.questCode,
@@ -1915,7 +2056,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             now,
             now,
             resolveQuestPhase(template, QuestStatus.FAILED, activeProgress),
-            activeProgress?.objectiveProgress() ?: buildObjectiveProgressSnapshot(null, template, emptyMap()),
+            clearedProgress,
             activeProgress?.questVariables() ?: emptyMap()
         )
         archiveQuestProgress(playerId, failedProgress)

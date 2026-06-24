@@ -360,9 +360,14 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         var rollbackComplete = true
         for (i in spawnedNpcs.size - 1 downTo 0) {
             val npc = spawnedNpcs[i]
-            if (!plugin.npcManager.deleteNPC(npc)) {
+            try {
+                if (!plugin.npcManager.deleteNPC(npc)) {
+                    rollbackComplete = false
+                    warnings.add("Rollback incomplet: NPC-ul ${npc.name}#${npc.databaseId} nu a putut fi sters.")
+                }
+            } catch (e: Exception) {
                 rollbackComplete = false
-                warnings.add("Rollback incomplet: NPC-ul ${npc.name}#${npc.databaseId} nu a putut fi sters.")
+                warnings.add("Rollback exception pentru NPC-ul ${npc.name}#${npc.databaseId}: ${e.message}")
             }
         }
         return rollbackComplete

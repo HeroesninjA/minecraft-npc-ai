@@ -136,6 +136,7 @@ object DebugDumpQuestDefinitionJson {
         json.add("prerequisites", gson.toJsonTree(scenario.questPrerequisites))
         json.add("phases", gson.toJsonTree(scenario.phases))
         json.add("stages", DebugDumpSupport.questStagesJson(scenario.questStages, gson))
+        json.add("objective_tree", buildObjectiveTree(scenario, gson))
         json.add("preferred_topologies", gson.toJsonTree(scenario.preferredTopologies))
         json.add("narrative_hints", gson.toJsonTree(scenario.narrativeHints))
         json.add("roles", scenarioRolesJson(scenario.roles, gson))
@@ -149,6 +150,46 @@ object DebugDumpQuestDefinitionJson {
         json.add("rewards", questEntriesJson(scenario.rewards, false, gson))
         json.add("dialogues", gson.toJsonTree(scenario.questDialogues))
         return json
+    }
+
+    private fun buildObjectiveTree(
+        scenario: FeaturePackLoader.ScenarioDefinition,
+        gson: Gson,
+    ): JsonObject {
+        val tree = JsonObject()
+        val objectivesByStage = LinkedHashMap<String, JsonArray>()
+        objectivesByStage["(no stage)"] = JsonArray()
+
+        for ((index, objective) in scenario.objectives.withIndex()) {
+            val stage = DebugDumpSupport.questEntryStage(objective)
+            val stageKey = if (stage.isNotBlank() && scenario.questStages.any { DebugDumpSupport.normalizeKey(it.id) == DebugDumpSupport.normalizeKey(stage) }) {
+                stage
+            } else {
+                "(no stage)"
+            }
+            val arr = objectivesByStage.getOrPut(stageKey) { JsonArray() }
+            val entry = JsonObject()
+            entry.addProperty("index", index)
+            entry.addProperty("id", DebugDumpSupport.valueOrEmpty(objective.entryId))
+            entry.addProperty("type", DebugDumpSupport.normalizeQuestObjectiveType(objective.type))
+            entry.addProperty("target", DebugDumpSupport.valueOrEmpty(objective.itemId))
+            entry.addProperty("amount", objective.amount)
+            arr.add(entry)
+        }
+
+        for ((stageKey, objectives) in objectivesByStage) {
+            val stageNode = JsonObject()
+            stageNode.addProperty("stage_id", stageKey)
+            stageNode.add("objectives", objectives)
+            val stageDef = scenario.questStages.find { DebugDumpSupport.normalizeKey(it.id) == DebugDumpSupport.normalizeKey(stageKey) }
+            if (stageDef != null) {
+                stageNode.addProperty("completion_mode", stageDef.completionMode)
+                val nextStage = stageDef.getNextStageId()
+                if (nextStage.isNotBlank()) stageNode.addProperty("next_stage", nextStage)
+            }
+            tree.add(stageKey, stageNode)
+        }
+        return tree
     }
 
     private fun progressionMechanicsJson(

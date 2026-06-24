@@ -179,7 +179,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                     this::findProgressionMechanicDefinition,
                 )
             }
-            logScenarioValidationWarnings(allScenarios)
+            for (scenario in pack.scenarios) {
+                scenario.sourceFile = file.name
+            }
+            logScenarioValidationWarnings(allScenarios, file)
 
             registerPackDescriptor(pack, config.getConfigurationSection("addon"))
             loadedPacks[id] = pack
@@ -247,10 +250,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun logScenarioValidationWarnings(scenarios: Map<String, ScenarioDefinition>) {
+    private fun logScenarioValidationWarnings(scenarios: Map<String, ScenarioDefinition>, packFile: File) {
         for (scenario in scenarios.values) {
             for (warning in scenario.validationWarnings) {
-                plugin.logger.warning("Scenario ${scenario.packId}:${scenario.id}: $warning")
+                plugin.logger.warning("[${packFile.name}] Scenario ${scenario.packId}:${scenario.id}: $warning")
             }
         }
     }
@@ -537,6 +540,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val name: String,
         val description: String,
     ) {
+        var schemaVersion: Int = 1
         val traits: MutableList<TraitDefinition> = ArrayList()
         val professions: MutableList<ProfessionDefinition> = ArrayList()
         val topologies: MutableList<TopologyDefinition> = ArrayList()
@@ -672,6 +676,12 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         var suggestedTraits: List<String> = ArrayList()
     }
 
+    data class ValidationWarning(
+        val type: String,
+        val message: String,
+        val context: String = ""
+    )
+
     class ScenarioDefinition(
         val packId: String,
         val id: String,
@@ -679,10 +689,12 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val description: String,
         val baseType: ScenarioType,
     ) {
+        var sourceFile: String = ""
         val roles: MutableMap<String, ScenarioRoleDefinition> = LinkedHashMap()
         val actors: MutableMap<String, NpcScenarioActorDefinition> = LinkedHashMap()
         val questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap()
         val validationWarnings: MutableList<String> = ArrayList()
+        val validationWarningDetails: MutableList<ValidationWarning> = ArrayList()
         val objectives: MutableList<QuestEntryDefinition> = ArrayList()
         val rewards: MutableList<QuestEntryDefinition> = ArrayList()
         private val questStagesById: MutableMap<String, QuestStageDefinition> = LinkedHashMap()
@@ -748,7 +760,27 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
         fun addValidationWarning(message: String?) {
             if (!message.isNullOrBlank()) {
+                val trimmed = message.trim()
+                validationWarnings.add(trimmed)
+                val type = when {
+                    trimmed.contains("necunoscut") || trimmed.contains("unsupported") || trimmed.contains("invalid") -> "type"
+                    trimmed.contains("target") || trimmed.contains("itemId") || trimmed.contains("anchor") -> "missing_target"
+                    trimmed.contains("devreme") || trimmed.contains("ordine") || trimmed.contains("duplicat") -> "ordering"
+                    trimmed.contains("deprecated") || trimmed.contains("legacy") -> "deprecated"
+                    else -> "other"
+                }
+                val context = when {
+                    trimmed.contains(":") -> trimmed.substringBefore(":").substringBefore(" ").trim()
+                    else -> ""
+                }
+                validationWarningDetails.add(ValidationWarning(type, trimmed, context))
+            }
+        }
+
+        fun addValidationWarning(type: String, message: String, context: String = "") {
+            if (message.isNotBlank()) {
                 validationWarnings.add(message.trim())
+                validationWarningDetails.add(ValidationWarning(type, message.trim(), context.trim()))
             }
         }
 
@@ -767,6 +799,12 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         fun addObjective(objective: QuestEntryDefinition?) {
             if (objective != null) {
                 val normalized = ro.ainpc.engine.ObjectiveTypeAliasRegistry.normalize(objective.type)
+                if (ro.ainpc.engine.ObjectiveTypeAliasRegistry.isDeprecated(objective.type)) {
+                    val deprecated = ro.ainpc.engine.ObjectiveTypeAliasRegistry.recommendedType(objective.type)
+                    if (deprecated != null) {
+                        addValidationWarning("Objective type '${objective.type}' in '${questCode.ifBlank { id }}' este deprecated. Foloseste '$deprecated'.")
+                    }
+                }
                 if (normalized !in ro.ainpc.engine.ObjectiveTypeAliasRegistry.supportedTypes()) {
                     val deprecated = ro.ainpc.engine.ObjectiveTypeAliasRegistry.recommendedType(objective.type)
                     if (deprecated != null) {

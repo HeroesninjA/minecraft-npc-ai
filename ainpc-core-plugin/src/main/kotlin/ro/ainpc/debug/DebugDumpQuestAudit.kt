@@ -73,6 +73,7 @@ object DebugDumpQuestAudit {
                 warnings,
             )
             auditQuestObjectiveStages(templateId, scenario, errors, warnings)
+            auditQuestActorsWithoutTriggers(templateId, scenario, warnings)
         }
 
         if (questCount == 0) {
@@ -282,6 +283,36 @@ object DebugDumpQuestAudit {
             errors.add("$templateId stage ${stage.id} are next_stage necunoscut: $nextStage.")
         } else if (!DebugDumpSupport.isQuestRuntimeStage(scenario, normalizedNextStage)) {
             warnings.add("$templateId stage ${stage.id} are next_stage catre o faza fara obiective runtime: $nextStage.")
+        }
+    }
+
+    private fun auditQuestActorsWithoutTriggers(
+        templateId: String,
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        warnings: MutableList<String>,
+    ) {
+        if (scenario == null || scenario.actors.isEmpty()) {
+            return
+        }
+
+        val actorIdsInTriggers = HashSet<String>()
+        for (triggerEntry in scenario.questActorTriggers) {
+            actorIdsInTriggers.addAll(triggerEntry.value)
+        }
+        for (stage in scenario.questStages) {
+            val stageActorKeys = listOf("spawn_actors", "despawn_actors", "on_stage_enter", "on_stage_exit", "on_stage_complete")
+            for (key in stageActorKeys) {
+                val value = stage.metadata[key]
+                if (!value.isNullOrBlank()) {
+                    value.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { actorIdsInTriggers.add(it) }
+                }
+            }
+        }
+
+        for (actorId in scenario.actors.keys) {
+            if (actorId !in actorIdsInTriggers) {
+                warnings.add("$templateId defineste actorul '$actorId' dar nu apare in niciun trigger actor (quest_actor_triggers/stage) — nu va fi spawnat.")
+            }
         }
     }
 

@@ -221,4 +221,86 @@ class FeaturePackYamlSupportActorTest {
         assertFalse(scenario.questActorTriggers.containsKey("on_stage_spawn"))
         assertTrue(scenario.validationWarnings.any { it.contains("on_stage_spawn") })
     }
+
+    @Test
+    fun actorCleanupOnStageCompleteIsParsedFromDespawnRule() {
+        val yaml = """
+            actors:
+              border_spirit:
+                name: "Spirit"
+                lifecycle_type: "temporary"
+                persistence_mode: "runtime_only"
+                despawn_rule: "on_stage_complete"
+                spawn_policy: "manual"
+            quest_actor_triggers:
+              on_stage_complete:
+                - "border_spirit"
+        """.trimIndent()
+        val config = YamlConfiguration()
+        config.loadFromString(yaml)
+
+        val scenario = FeaturePackLoader.ScenarioDefinition(
+            "test_pack", "AC01", "Actor Cleanup", "Desc", ScenarioType.QUEST,
+        )
+
+        FeaturePackYamlSupport.loadScenarioActors(scenario, config.getConfigurationSection("actors"))
+        FeaturePackYamlSupport.loadQuestActorTriggers(scenario, config.getConfigurationSection("quest_actor_triggers"))
+
+        assertTrue(scenario.actors.containsKey("border_spirit"))
+        assertEquals("on_stage_complete", scenario.actors["border_spirit"]?.despawnRule ?: "")
+        assertTrue(scenario.questActorTriggers.containsKey("on_stage_complete"))
+        assertTrue(scenario.questActorTriggers["on_stage_complete"]?.contains("border_spirit") ?: false)
+    }
+
+    @Test
+    fun deprecatedObjectiveAliasLoadsWithWarningAndNormalizes() {
+        val yaml = """
+            scenarios:
+              test_deprecated:
+                base_type: "QUEST"
+                phases:
+                  START: "Start"
+                  COMPLETE: "Complete"
+                quest:
+                  code: "TD01"
+                  giver_profession: "guard"
+                  objectives:
+                    talk_old:
+                      type: "talk_nlc"
+                      item: "profession:guard"
+                      amount: 1
+                  rewards:
+                    r1:
+                      type: "item"
+                      item: "EMERALD"
+                      amount: 1
+                  dialogues:
+                    offer: ["Ofera"]
+                    offered: ["Of"]
+                    accepted: ["Ok"]
+                    active: ["Mergi"]
+                    ready: ["Gata"]
+                    completed: ["Bine"]
+                roles:
+                  QUEST_GIVER:
+                    required_professions: ["guard"]
+                  HERO:
+                    player_role: true
+        """.trimIndent()
+        val config = YamlConfiguration()
+        config.loadFromString(yaml)
+
+        val scenario = FeaturePackLoader.ScenarioDefinition(
+            "test_pack", "TD01", "Test Deprecated", "Desc", ScenarioType.QUEST,
+        )
+
+        FeaturePackYamlSupport.loadQuestEntries(
+            config.getConfigurationSection("scenarios.test_deprecated.quest.objectives"),
+            java.util.function.Consumer { scenario.addObjective(it) },
+        )
+
+        assertEquals(1, scenario.objectives.size)
+        assertEquals("talk_nlc", scenario.objectives[0].type)
+        assertTrue(scenario.validationWarnings.any { it.contains("deprecated") && it.contains("talk_nlc") })
+    }
 }

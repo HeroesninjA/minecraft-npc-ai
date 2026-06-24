@@ -38,6 +38,7 @@ class QuestDraftExporter {
             s.addProperty("id", st.id)
             s.addProperty("name", st.name)
             s.addProperty("completionMode", st.completionMode)
+            if (st.nextStage.isNotBlank()) s.addProperty("next_stage", st.nextStage)
             stagesArr.add(s)
         }
         root.add("stages", stagesArr)
@@ -124,7 +125,8 @@ class QuestDraftExporter {
     data class StageDef(
         val id: String,
         val name: String = "",
-        val completionMode: String = "all"
+        val completionMode: String = "all",
+        val nextStage: String = ""
     )
 
     data class RewardDef(

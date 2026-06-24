@@ -73,6 +73,11 @@ Ordinea recomandata pentru orientare:
 61. `harta-clase-index.md`
 62. `arhiva/kotlin-migration/README.md`
 63. `deepseek-taskuri-late-25.md`
+64. `deepseek-taskuri-late-50.md`
+65. `deepseek-taskuri-late-50-2.md`
+66. `deepseek-taskuri-late-50-3.md`
+67. `deepseek-taskuri-late-50-4.md`
+68. `deepseek-taskuri-late-50-5.md`
 
 ## Documente Kotlin
 

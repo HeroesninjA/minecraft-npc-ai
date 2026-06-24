@@ -1249,7 +1249,9 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 "collect_item",
                 "place_block",
                 "break_block",
-                "craft_item"
+                "craft_item",
+                "use_item",
+                "equip_item"
             )
         private val STORY_MODES = listOf("context", "region", "place", "events")
         private val REGION_ACTIONS = listOf("info", "create")

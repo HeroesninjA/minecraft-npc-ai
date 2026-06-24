@@ -17,7 +17,6 @@ data class StoryActionValidationResult(
 }
 
 object StoryActionValidator {
-    private val VALID_SCOPES = setOf("region", "place")
     private val VALID_TYPES = setOf("set_story_state", "record_story_event")
     private val TARGET_KEYS = setOf(
         "target", "scope_id", "target_id", "id",
@@ -70,17 +69,12 @@ object StoryActionValidator {
         val label = "Recompensa '${entry.type}'"
 
         val rawScope = metadata.getOrDefault("scope", "")
-        val normalizedScope = normalizeReference(rawScope).replace('-', '_')
-        val scope = when (normalizedScope) {
-            "region", "world_region", "village", "settlement" -> "region"
-            "place", "world_place", "location" -> "place"
-            else -> normalizedScope
-        }
+        val scope = ScopeRegistry.normalize(rawScope)
 
         if (scope.isBlank()) {
-            errors.add("$label nu are metadata.scope pentru story action.")
-        } else if (scope !in VALID_SCOPES) {
-            errors.add("$label are metadata.scope invalid: '${metadata.getOrDefault("scope", "")}'. Valori acceptate: region, place.")
+            warnings.add("$label nu are metadata.scope pentru story action.")
+        } else if (!ScopeRegistry.isValid(scope)) {
+            warnings.add("$label are metadata.scope invalid: '${metadata.getOrDefault("scope", "")}'. Valori acceptate: region, place.")
         }
 
         val hasTarget = TARGET_KEYS.any { key ->

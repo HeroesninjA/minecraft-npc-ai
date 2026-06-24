@@ -165,6 +165,86 @@ Admin brief sau sistem seed
 
 In niciun punct AI-ul nu scrie direct in `player_quests`, `quest_anchor_bindings`, story state sau config live.
 
+## Variatie de quest si story
+
+Pentru a obtine questuri cu diversitate reala, AI-ul nu trebuie sa schimbe doar textul. Trebuie sa varieze structura pe axe controlate:
+
+- tipul de obiectiv: colectare, livrare, investigatie, escorta, reparare, aparare, negociere, descoperire;
+- rolul NPC-ului: util, suspicios, grabit, ascunde ceva, testeaza playerul, are interes personal;
+- motivul cererii: lipsa de resurse, sabotaj, rutina, urgenta, datorie veche, competitie intre NPC-uri;
+- locatia: familiar, ascuns, subteran, periculos, legat de lore, schimbat de ora sau vreme;
+- tonul: practic, misterios, tensionat, comic, trist, eroic, conspirativ;
+- consecintele: reputatie, unlock de quest, schimbare vizuala, acces la zona, relatie NPC, bonus economic;
+- finalul: pozitiv, neutru, amar, cu alegere morala sau cu ramura noua de story.
+
+Regula utila:
+
+```text
+1 quest = 2-3 axe variate + 1 conflict sau surpriza + 1 consecinta clara
+```
+
+Exemplu aplicat pentru `fierar + mina de fir`:
+
+- varianta 1: ajutor practic, colectare simpla, recompensă utilă;
+- varianta 2: investigatie, indiciu de lore, deschidere spre quest secundar;
+- varianta 3: alegere morala intre doi NPC, consecinta in relatie sau economie.
+
+Aceeasi idee poate produce questuri diferite daca se schimba:
+
+- cine cere ajutorul;
+- de ce lipseste resursa;
+- ce se intampla daca playerul intarzie;
+- cine castiga sau pierde la final;
+- ce ramura narativa se deschide dupa rezolvare.
+
+## Template de story inspirat, fara solutie fixa
+
+Acest tip de quest se foloseste cand vrei o poveste care pare clara la inceput, dar isi dezvaluie sensul real treptat.
+
+Exemplu de intentie:
+
+- **arhetip:** fantoma din castel;
+- **locatie:** castel vechi, camera inchisa, coridor uitat;
+- **ton:** melancolic, misterios, usor solemn;
+- **masca initiala:** cere ajutor sa „scape”;
+- **adevar ascuns:** vrea sa-si indeplineasca ultima dorinta ca sa poata trece mai departe;
+- **metoda de descoperire:** indicii in dialog, obiecte din camera, reactii ale mediului, marturii de la alt NPC;
+- **revelatie:** jucatorul intelege treptat ca ajutorul cerut nu este fuga, ci incheiere;
+- **finaluri valide:** odihna, amanare, refuz, esec partial, ramura noua de story.
+
+Regula de authoring:
+
+- nu scrie adevarul complet in primul dialog;
+- lasa cel putin 2-3 indicii distribuite in timp;
+- permite o interpretare initiala gresita, dar plauzibila;
+- pastreaza o cale clara pentru revelatie;
+- fa finalul sa schimbe starea NPC-ului sau a locului.
+
+Template AI:
+
+```yaml
+story_archetype: "ghost_castle"
+surface_request: "help me leave"
+hidden_goal: "fulfill last wish"
+reveal_style: "gradual"
+clue_channels:
+  - "dialog"
+  - "environment"
+  - "npc_memory"
+  - "symbolic_object"
+endings:
+  - "release"
+  - "postpone"
+  - "refuse"
+  - "partial_resolution"
+constraints:
+  - "no direct full explanation at start"
+  - "no fixed single solution"
+  - "reveal must be earned by player actions"
+```
+
+Acest model functioneaza bine pentru povesti care au inspiratie, nu scenariu rigid: fantome, juraminte vechi, datorii uitate, protectori abandonati, NPC-uri cu intentii mascate sau locuri care par blestemate dar au o cauza umana.
+
 ## Input: QuestSeed
 
 `QuestSeed` este brief-ul controlat pe care il primeste sistemul.

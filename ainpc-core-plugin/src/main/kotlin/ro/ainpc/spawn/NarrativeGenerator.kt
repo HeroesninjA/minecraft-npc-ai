@@ -285,6 +285,7 @@ class NarrativeGenerator {
         "negustor", "comerciant" -> "work_market"
         "hangiu", "tavernier" -> "work_tavern"
         "preot" -> "work_temple"
+        "vraci", "vindecator", "medic", "healer" -> "work_healer"
         else -> "idle"
     }
 
