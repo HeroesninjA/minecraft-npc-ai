@@ -41,9 +41,18 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         if (!enabled()) {
             return fallback(request, "ai_orchestration_disabled")
         }
+        if (isFreezeActive()) {
+            return fallback(request, "ai_suggestion_freeze_active")
+        }
         val ai = openAI
         if (ai == null || !ai.isAvailable) {
             return fallback(request, "ai_provider_not_available")
+        }
+        val draftUseCases = listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)
+        if (request.useCase() in draftUseCases && !isConfidenceSufficient(request)) {
+            return AIResultStatus.VALIDATION_FAILED.result(
+                request.useCase(), "Sugestia AI nu atinge pragul minim de incredere.", "confidence_too_low"
+            )
         }
         val maxRetries = plugin?.config?.getInt("ai.orchestration.max_retries", DEFAULT_MAX_RETRIES) ?: DEFAULT_MAX_RETRIES
         val baseDelay = plugin?.config?.getLong("ai.orchestration.retry_base_delay_ms", DEFAULT_RETRY_BASE_DELAY_MS)
@@ -101,6 +110,31 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
             message.contains("unavailable") ||
             message.contains("too many requests") ||
             message.contains("connection")
+    }
+
+    fun isFreezeActive(): Boolean {
+        val config = plugin?.config ?: return false
+        val freezeStart = config.getString("ai.orchestration.freeze_start", "") ?: ""
+        val freezeEnd = config.getString("ai.orchestration.freeze_end", "") ?: ""
+        if (freezeStart.isBlank() || freezeEnd.isBlank()) return false
+        val now = System.currentTimeMillis()
+        val start = config.getLong("ai.orchestration.freeze_start_millis", 0L)
+        val end = config.getLong("ai.orchestration.freeze_end_millis", 0L)
+        return start > 0 && end > 0 && now in start..end
+    }
+
+    fun isDraftStale(draftTimestamp: Long, maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Boolean {
+        val age = System.currentTimeMillis() - draftTimestamp
+        return age > maxAgeMs
+    }
+
+    fun isConfidenceSufficient(request: AIOrchestrationRequest): Boolean {
+        val minConfidence = plugin?.config?.getDouble("ai.orchestration.min_confidence", 0.3) ?: 0.3
+        val context = request.context()
+        val confidenceStr = context["confidence"] ?: context["score"]
+        if (confidenceStr == null) return true
+        val confidence = confidenceStr.toDoubleOrNull() ?: return true
+        return confidence >= minConfidence
     }
 
     private fun backoffDelay(attempt: Int, baseDelayMs: Long, maxDelayMs: Long) {

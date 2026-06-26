@@ -5304,3 +5304,363 @@ Sisteme planificate: settlement creation, boundaries, taxes, treasury, residents
 **Scop:** Ofera un pachet complet pentru audit, backup si transfer de context.
 **Target:** export pipeline, docs archive, release operations.
 **Acceptare:** Exportul contine artefactele necesare pentru reconstructia istoricului continutului spatial.
+
+### ~~W981~~ ✅ Story map generation seed policy
+**Descriere tehnica:** Defineste seed-ul si regulile de initializare pentru generarea hartii narative astfel incat aceleasi input-uri sa produca aceeasi structura de baza.
+**Scop:** Face continutul de mapping reproductibil si auditat.
+**Target:** map generation pipeline, story world bootstrap, validation reports.
+**Acceptare:** Seed-ul si parametrii de generatie sunt salvati si pot recrea harta de baza.
+
+### ~~W982~~ ✅ Map generation deterministic diff
+**Descriere tehnica:** Compara doua rulari de generare a hartii si raporteaza diferentele in noduri, rute, marker-e, hazard-uri si ownership.
+**Scop:** Detecteaza drift in generarea procedurală.
+**Target:** map generation pipeline, diff tools, release checklist.
+**Acceptare:** Diff-ul listeaza toate schimbarile deterministe si cele non-deterministe separat.
+
+### ~~W983~~ ✅ Quest generation lore guard
+**Descriere tehnica:** Valideaza questurile generate automat impotriva glosarului lore, a hărții si a fazelor story active.
+**Scop:** Previne generarea de continut care contrazice lumea.
+**Target:** quest generation pipeline, lore validation, map registry.
+**Acceptare:** Questul generat incorect este respins inainte de publicare.
+
+### ~~W984~~ ✅ Story generation branch budget
+**Descriere tehnica:** Limiteaza numarul de ramuri narative noi create de generarea automata pentru a evita explozia de continut.
+**Scop:** Pastreaza controlul editorial si reducerea complexitatii.
+**Target:** story generation pipeline, validation pipeline, docs.
+**Acceptare:** Generarea peste buget este oprita sau coada de review este extinsa explicit.
+
+### ~~W985~~ ✅ Map generation hazard quota
+**Descriere tehnica:** Aplica cote pentru hazard-urile generate procedural pe regiune, capitol story si nivel de risc.
+**Scop:** Evita harti supra-aglomerate sau imposibil de parcurs.
+**Target:** map generation pipeline, hazard layer, region rules.
+**Acceptare:** Hazard-urile peste cota sunt redistribuite, reduse sau refuzate.
+
+### ~~W986~~ ✅ Quest generation objective balance
+**Descriere tehnica:** Evalueaza obiectivele generate automat dupa dificultate, timp estimat, travel, combat si reward budget.
+**Scop:** Previne questuri dezechilibrate sau repetitive.
+**Target:** quest generation pipeline, balancing reports, route graph.
+**Acceptare:** Obiectivele prea ieftine sau prea scumpe sunt marcate pentru ajustare.
+
+### ~~W987~~ ✅ Story generation spoiler filter
+**Descriere tehnica:** Filtreaza continutul generat automat pentru a respecta nivelul de spoiler al branch-ului, capitolului si fazei story.
+**Scop:** Protejeaza descoperirea narativa.
+**Target:** story generation pipeline, spoiler classifier, content validation.
+**Acceptare:** Continutul cu spoiler peste prag este respins sau retrogradat.
+
+### ~~W988~~ ✅ Map generation ownership assignment
+**Descriere tehnica:** Asigneaza owner logic pentru nodurile, rutele si marker-ele generate automat, incluzand system owner si review owner.
+**Scop:** Face generarea automata responsabila si urmaribila.
+**Target:** map generation pipeline, ownership metadata, admin dashboard.
+**Acceptare:** Fiecare element generat are owner sau este marcat neasignat.
+
+### ~~W989~~ ✅ Quest generation provenance trace
+**Descriere tehnica:** Pastreaza provenienta fiecarui quest generat: seed, template, prompt, faza story, evaluator si aprobator.
+**Scop:** Face continutul generat auditabil si reversibil.
+**Target:** quest generation pipeline, audit log, export pipeline.
+**Acceptare:** Provenienta poate fi recunoscuta pentru fiecare quest generat.
+
+### ~~W990~~ ✅ Story generation prompt audit
+**Descriere tehnica:** Inregistreaza prompt-urile sau regulile folosite pentru generarea story, cu redactare pentru date sensibile.
+**Scop:** Ofera trasabilitate fara expunerea completă a input-ului intern.
+**Target:** story generation pipeline, audit log, privacy rules.
+**Acceptare:** Promptul este auditabil si redactat in zonele sensibile.
+
+### ~~W991~~ ✅ Map generation prompt lint
+**Descriere tehnica:** Ruleaza lint asupra prompt-urilor sau configuratiilor de generare pentru a detecta instructiuni contradictorii sau incomplete.
+**Scop:** Reduce generarea de continut incoerent.
+**Target:** generation config validator, docs rules, release pipeline.
+**Acceptare:** Promptul invalid este marcat cu erori si sugereaza corectii.
+
+### ~~W992~~ ✅ Quest generation prompt lint
+**Descriere tehnica:** Valideaza prompt-urile pentru generarea de questuri astfel incat sa includa lore, acces, ruta, recompensa si cleanup.
+**Scop:** Evita generarea de questuri incomplete.
+**Target:** quest generation pipeline, prompt validator, docs.
+**Acceptare:** Promptul care lipseste componente critice este respins.
+
+### ~~W993~~ ✅ Story generation template registry
+**Descriere tehnica:** Creeaza registru pentru template-urile de generare story, cu tip, scope, nivel de spoiler, owner si versionare.
+**Scop:** Standardizeaza continutul generat si usureaza review-ul.
+**Target:** story generation pipeline, template registry, docs index.
+**Acceptare:** Template-ul are metadata completa si versiune validata.
+
+### ~~W994~~ ✅ Quest generation template registry
+**Descriere tehnica:** Creeaza registru pentru template-urile de generare quest, incluzand obiective, rute, recompense si gating.
+**Scop:** Reduce variantele improvizate si inconsistente.
+**Target:** quest generation pipeline, template registry, validation.
+**Acceptare:** Fiecare template are schema valida si owner.
+
+### ~~W995~~ ✅ Map generation template registry
+**Descriere tehnica:** Introduce template-uri pentru generarea de harta: zone, rute, landmark-uri, hazard-uri si spawn rules.
+**Scop:** Controleaza structura hartii generate.
+**Target:** map generation pipeline, template registry, validation reports.
+**Acceptare:** Template-ul de harta este validat si versionat.
+
+### ~~W996~~ ✅ Generated content approval queue
+**Descriere tehnica:** Pune continutul generat automat intr-o coada de aprobare cu status, severitate, reviewer si deadline.
+**Scop:** Separa generarea de publicare.
+**Target:** moderation queue, generation pipeline, admin dashboard.
+**Acceptare:** Continutul generat nu devine live fara aprobare.
+
+### ~~W997~~ ✅ Generated content rollback guard
+**Descriere tehnica:** Permite rollback pentru continut generat care a fost publicat si apoi dovedit problematic.
+**Scop:** Reduce impactul continutului generat defect.
+**Target:** generation runtime, rollback service, map/story registries.
+**Acceptare:** Rollback-ul restaureaza versiunea anterioara sau produce recovery plan.
+
+### ~~W998~~ ✅ Generated content quality threshold
+**Descriere tehnica:** Stabileste praguri de calitate pentru continutul generat pe baza de consistenta, completitudine, performanta si review score.
+**Scop:** Previne publicarea continutului slab sau incomplet.
+**Target:** generation pipeline, validation reports, release checklist.
+**Acceptare:** Continutul sub prag ramane blocat pana la corectie.
+
+### ~~W999~~ ✅ Generated content contradiction detector
+**Descriere tehnica:** Detecteaza contradictii intre continutul generat si regulile existente de harta, lore, quest si story.
+**Scop:** Protejeaza coerenta lumii.
+**Target:** generation validation, lore glossary, map/quest/story registries.
+**Acceptare:** Contradictiile sunt raportate cu referinta la regula incalcata.
+
+### ~~W1000~~ ✅ Generated content splice validator
+**Descriere tehnica:** Valideaza integrarea continutului generat in continutul existent pentru a evita rute, marker-e sau capitole izolate.
+**Scop:** Pastreaza continutul generat conectat la world state.
+**Target:** generation pipeline, route graph, story/quest registries.
+**Acceptare:** Splicing-ul invalid este refuzat inainte de publicare.
+
+### ~~W1001~~ ✅ AI map suggestion review
+**Descriere tehnica:** Creeaza un flux de review pentru sugestiile AI de map nodes, rute si marker-e, cu justificare si diff.
+**Scop:** Limiteaza publicarea automata a sugestiilor AI.
+**Target:** AI review queue, map editor workflow, validation pipeline.
+**Acceptare:** Sugestia AI nu se publica fara review si rezultat clar.
+
+### ~~W1002~~ ✅ AI quest suggestion review
+**Descriere tehnica:** Creeaza un flux de review pentru sugestiile AI de questuri, incluzand obiective, flow, reward si lore checks.
+**Scop:** Evita questuri AI nevalide sau incomplete.
+**Target:** AI quest pipeline, moderator queue, quest registry.
+**Acceptare:** Questul AI trece prin review cu verdict si motive.
+
+### ~~W1003~~ ✅ AI story suggestion review
+**Descriere tehnica:** Creeaza review pentru sugestii AI de story arcs, dialoguri si milestone-uri cu control de spoiler si canon.
+**Scop:** Pastreaza continutul narativ sub control editorial.
+**Target:** AI story pipeline, story editor workflow, lore validation.
+**Acceptare:** Sugestia AI ajunge in review si nu poate sari peste gate.
+
+### ~~W1004~~ ✅ AI suggestion batch quarantine
+**Descriere tehnica:** Pune loturile de sugestii AI in carantina cand au erori blocking sau incalca reguli de continut.
+**Scop:** Evita contaminarea registrului live cu drafturi defecte.
+**Target:** AI queue, quarantine service, validation reports.
+**Acceptare:** Lotul in carantina ramane izolat pana la repair sau respingere.
+
+### ~~W1005~~ ✅ AI suggestion provenance chain
+**Descriere tehnica:** Urmareste lantul de provenienta pentru o sugestie AI: model, seed, prompt, transformari, reviewer si publish decision.
+**Scop:** Face responsabila publicarea continutului generat.
+**Target:** AI audit log, generation pipeline, release operations.
+**Acceptare:** Provenienta completa poate fi reconstruita pentru orice sugestie publicata.
+
+### ~~W1006~~ ✅ AI suggestion diff explainability
+**Descriere tehnica:** Explica diff-ul dintre sugestia AI si continutul existent prin schimbari de geografii, questuri, dialoguri si risc.
+**Scop:** Face review-ul mai rapid si mai corect.
+**Target:** AI review tools, diff renderer, validation pipeline.
+**Acceptare:** Review-ul afiseaza clar ce s-a schimbat si de ce conteaza.
+
+### ~~W1007~~ ✅ AI suggestion cost budget
+**Descriere tehnica:** Limiteaza costul si volumul de sugestii AI pe sesiune, pe tip de continut si pe owner.
+**Scop:** Controleaza consumul operational si zgomotul de review.
+**Target:** AI generation service, quota manager, admin dashboard.
+**Acceptare:** Sugestiile peste buget sunt amanate sau refuzate cu motiv.
+
+### ~~W1008~~ ✅ AI suggestion latency monitor
+**Descriere tehnica:** Monitorizeaza latenta generarii si review-ului AI pentru map, quest si story sugestii.
+**Scop:** Detecteaza degradari operational timpuriu.
+**Target:** AI telemetry, admin dashboard, performance alerts.
+**Acceptare:** Latenta peste prag produce alerta si sumar contextual.
+
+### ~~W1009~~ ✅ AI suggestion retry policy
+**Descriere tehnica:** Defineste retry pentru sugestii AI esuate, cu backoff, max attempts si fallback manual.
+**Scop:** Evita retry-urile infinite si pierderile de context.
+**Target:** AI generation pipeline, recovery service, moderation queue.
+**Acceptare:** Sugestia esuata urmeaza politica de retry si intra in fallback dupa limita.
+
+### ~~W1010~~ ✅ AI suggestion branch lock
+**Descriere tehnica:** Blocheaza sugestiile AI pe branch-uri story sau map nodes care sunt deja in review sau freeze.
+**Scop:** Previne conflicte intre editari concurente.
+**Target:** AI suggestion pipeline, branch lock manager, editor workflow.
+**Acceptare:** Sugestia pe branch blocat este refuzata sau pusa in coada conform politicii.
+
+### ~~W1011~~ ✅ AI suggestion freeze window
+**Descriere tehnica:** Definește ferestre de freeze pentru sugestiile AI astfel incat schimbările mari sa fie stopate inainte de release.
+**Scop:** Reduce riscul de drift intre review, test si publicare.
+**Target:** AI suggestion pipeline, release checklist, branch lock manager.
+**Acceptare:** Sugestiile intra in freeze si nu pot fi aplicate fara bypass auditat.
+
+### ~~W1012~~ ✅ AI draft review SLA
+**Descriere tehnica:** Stabileste un SLA pentru review-ul drafturilor AI cu prioritate, deadline si escaladare.
+**Scop:** Evita cozi blocate si continut netrimis mai departe.
+**Target:** moderation queue, admin dashboard, AI review workflow.
+**Acceptare:** Draftul are timp limită si status vizibil pentru reviewer.
+
+### ~~W1013~~ ✅ AI draft stale detector
+**Descriere tehnica:** Detecteaza drafturile AI care au ramas prea mult timp in coada sau au fost invalidate de schimbari de context.
+**Scop:** Previne publicarea continutului vechi sau nepotrivit.
+**Target:** AI review queue, validation pipeline, audit reports.
+**Acceptare:** Draftul stale este marcat, retras sau revalidat inainte de folosire.
+
+### ~~W1014~~ ✅ AI content branch pinning
+**Descriere tehnica:** Leaga drafturile AI de branch-ul de harta, quest sau story pe care l-au generat pentru a evita aplicarea pe alt context.
+**Scop:** Previne cross-branch contamination.
+**Target:** AI generation pipeline, branch manager, map/quest/story registries.
+**Acceptare:** Draftul nu poate fi aplicat in alt branch fara reaprobare.
+
+### ~~W1015~~ ✅ AI suggestion confidence threshold
+**Descriere tehnica:** Stabileste pragul minim de incredere pentru sugestiile AI care pot merge in review sau in carantina.
+**Scop:** Filtreaza sugestiile slabe inainte sa ocupe coada.
+**Target:** AI scoring service, moderation queue, validation pipeline.
+**Acceptare:** Sugestiile sub prag sunt respinse sau carantinate automat.
+
+### ~~W1016~~ ✅ AI suggestion explanation bundle
+**Descriere tehnica:** Genereaza un pachet de explicatie pentru fiecare sugestie AI: ce a schimbat, de ce, ce risca si ce dependente are.
+**Scop:** Face review-ul mai rapid si mai corect.
+**Target:** AI review tools, diff renderer, audit log.
+**Acceptare:** Reviewerul vede sumarul explicativ fara sa consulte surse externe.
+
+### ~~W1017~~ ✅ AI suggestion safety label
+**Descriere tehnica:** Eticheteaza sugestiile AI cu nivel de siguranta: safe, caution, risky, blocked sau quarantine.
+**Scop:** Instructeaza clar pipeline-ul si reviewerii.
+**Target:** AI scoring service, moderation queue, release checklist.
+**Acceptare:** Label-ul determinat este vizibil si afecteaza traseul de review.
+
+### ~~W1018~~ ✅ AI content mismatch detector
+**Descriere tehnica:** Detecteaza cand sugestia AI se potriveste semantic dar nu se potriveste cu regiunea, capitolul, quest chain-ul sau branch-ul activ.
+**Scop:** Previne aplicarea continutului corect in locul gresit.
+**Target:** AI validation, map/quest/story registries, context matcher.
+**Acceptare:** Mismatch-ul este raportat cu contextul gresit si cel asteptat.
+
+### ~~W1019~~ ✅ AI content rollback preview
+**Descriere tehnica:** Arata exact cum ar arata rollback-ul unei sugestii AI inainte de a o publica sau respinge.
+**Scop:** Reduce costul erorilor de review.
+**Target:** AI review workflow, rollback service, preview renderer.
+**Acceptare:** Preview-ul arata obiectele afectate si rezultatul final.
+
+### ~~W1020~~ ✅ AI suggestion merge conflict detector
+**Descriere tehnica:** Detecteaza conflictele dintre doua sugestii AI care ating acelasi nod, marker, quest sau branch story.
+**Scop:** Evita suprascrierea si combinarea necontrolata a drafturilor.
+**Target:** AI suggestion pipeline, branch lock manager, diff tools.
+**Acceptare:** Conflictul este raportat cu sugestiile implicate si recomandare de rezolvare.
+
+### ~~W1021~~ ✅ AI content dependency graph
+**Descriere tehnica:** Construieste un graf al dependintelor pentru continutul AI generat: map nodes, quest chains, story arcs, lore terms si permissions.
+**Scop:** Face compatibilitatea continutului AI verificabila.
+**Target:** AI generation pipeline, dependency graph, validation reports.
+**Acceptare:** Graf-ul poate arata ce depinde de un draft si ce il blocheaza.
+
+### ~~W1022~~ ✅ AI content approval audit trail
+**Descriere tehnica:** Inregistreaza trail-ul de aprobare pentru sugestiile AI cu reviewer, motivatie, schimbari cerute si timpul petrecut.
+**Scop:** Ofera trasabilitate editoriala completa.
+**Target:** AI review queue, audit log, admin dashboard.
+**Acceptare:** Orice draft aprobat poate fi urmarit pana la decizia finala.
+
+### ~~W1023~~ ✅ AI content rejection taxonomy
+**Descriere tehnica:** Clasifica motivele de respingere pentru continutul AI: lore conflict, route invalid, spoiler, permission mismatch, missing cleanup sau quality.
+**Scop:** Face respingerile consistente si utile pentru iteratie.
+**Target:** AI review workflow, validation pipeline, docs export.
+**Acceptare:** Fiecare respingere are cod de motiv si recomandare de corectie.
+
+### ~~W1024~~ ✅ AI content rework loop
+**Descriere tehnica:** Creeaza un loop de rework pentru sugestiile AI respinse, pastrand istoricul modificarilor si al criteriilor de validare.
+**Scop:** Reduce rescrierile manuale si pierderea contextului.
+**Target:** AI generation pipeline, review queue, version history.
+**Acceptare:** Draftul revizuit poate fi comparat cu versiunea initiala si cu motivul respingerii.
+
+### ~~W1025~~ ✅ AI content publish gate
+**Descriere tehnica:** Adauga gate final de publish pentru continutul AI care verifica approval, provenance, consistency, accessibility si rollback.
+**Scop:** Blocheaza publicarea accidentala a continutului generat.
+**Target:** AI release pipeline, validation pipeline, admin dashboard.
+**Acceptare:** Contintul AI nu poate fi publicat fara toate conditiile bifate.
+
+### ~~W1026~~ ✅ AI content quarantine report
+**Descriere tehnica:** Genereaza raport pentru continutul AI pus in carantina cu motiv, owner, dependente si actiune recomandata.
+**Scop:** Face carantina actionabila, nu doar pasiva.
+**Target:** quarantine service, moderation queue, admin dashboard.
+**Acceptare:** Raportul arata clar de ce continutul a ramas in carantina.
+
+### ~~W1027~~ ✅ AI content provenance export
+**Descriere tehnica:** Exporta provenienta continutului AI intr-un format utilizabil la audit, backup sau transfer de context.
+**Scop:** Face istoricul continutului generat usor de urmarit.
+**Target:** AI audit log, export pipeline, docs archive.
+**Acceptare:** Exportul include seed, prompt, model, reviewer si versiunea continutului.
+
+### ~~W1028~~ ✅ AI content lifecycle state machine
+**Descriere tehnica:** Modeleaza continutul AI in stari explicite: generated, queued, reviewing, approved, published, quarantined, rejected si rolled back.
+**Scop:** Elimina tranzitiile implicite si starea ambigua.
+**Target:** AI content service, state machine, moderation workflow.
+**Acceptare:** Orice tranzitie invalida este refuzata si raportata.
+
+### ~~W1029~~ ✅ AI content lifecycle cleanup
+**Descriere tehnica:** Curata in mod sigur continutul AI ramas in stari intermediare dupa restart, failover sau cancel.
+**Scop:** Evita drafturi orfane si lock-uri ramase.
+**Target:** AI content service, recovery jobs, branch lock manager.
+**Acceptare:** Starea intermediara este reconciliata sau raportata pentru interventie.
+
+### ~~W1030~~ ✅ AI content release notes generator
+**Descriere tehnica:** Genereaza release notes pentru continutul AI publicat cu sumar de schimbari, riscuri, validare si rollback.
+**Scop:** Ofera context clar pentru review, suport si audit.
+**Target:** AI release pipeline, docs export, changelog workflow.
+**Acceptare:** Release notes includ efectele principale si artefactele afectate.
+
+### ~~W1031~~ ✅ AI map suggestion moderation
+**Descriere tehnica:** Adauga moderare dedicata pentru sugestiile AI de harti, incluzand risc de lore, route, accessibility si marker clutter.
+**Scop:** Separa mapping-ul AI de sugestiile generice.
+**Target:** AI map pipeline, moderation queue, map validation.
+**Acceptare:** Sugestiile de harta trec printr-un review specializat.
+
+### ~~W1032~~ ✅ AI quest suggestion moderation
+**Descriere tehnica:** Creeaza moderare dedicata pentru sugestiile AI de questuri, cu verificari de ruta, reward, cleanup si branch compatibility.
+**Scop:** Reduce erorile specifice questurilor generate.
+**Target:** AI quest pipeline, quest validation, moderation workflow.
+**Acceptare:** Questul AI nu ajunge in publicare fara validare de gameplay.
+
+### ~~W1033~~ ✅ AI story suggestion moderation
+**Descriere tehnica:** Creeaza moderare dedicata pentru sugestiile AI de story, cu accent pe canon, spoiler, pacing si branch coherence.
+**Scop:** Protejeaza calitatea narativa.
+**Target:** AI story pipeline, story validation, moderation queue.
+**Acceptare:** Sugestia AI de story trebuie aprobata narativ si tehnic.
+
+### ~~W1034~~ ✅ AI suggestion visibility policy
+**Descriere tehnica:** Defineste ce sugestii AI sunt vizibile pentru staff, owner, moderator sau ascunse complet.
+**Scop:** Controleaza expunerea drafturilor si a decisiei de review.
+**Target:** AI review UI, permission service, audit log.
+**Acceptare:** Fiecare rol vede doar nivelul de detaliu permis.
+
+### ~~W1035~~ ✅ AI suggestion branch visibility filter
+**Descriere tehnica:** Filtreaza sugestiile AI astfel incat un reviewer sa vada doar branch-urile si contextul pentru care are permisiuni.
+**Scop:** Previne leakage intre ramuri de story sau map.
+**Target:** AI review workflow, branch permissions, visibility service.
+**Acceptare:** Sugestia pentru branch ascuns nu este afisata reviewerului fara drept.
+
+### ~~W1036~~ ✅ AI suggestion review replay
+**Descriere tehnica:** Permite replay-ul complet al deciziei de review pentru o sugestie AI, inclusiv diffs, comentarii si schimbari aplicate.
+**Scop:** Face auditul si training-ul reviewerilor mai eficiente.
+**Target:** AI review audit, replay tools, admin dashboard.
+**Acceptare:** Replay-ul poate reproduce ordinea si continutul deciziei.
+
+### ~~W1037~~ ✅ AI suggestion training feedback loop
+**Descriere tehnica:** Colecteaza feedback-ul review-ului AI pentru a-l transforma in reguli, heuristici sau imbunatatiri de prompt.
+**Scop:** Inchide bucla dintre review si generatie.
+**Target:** AI validation pipeline, prompt tooling, audit reports.
+**Acceptare:** Feedback-ul poate fi exportat si aplicat in iteratia urmatoare.
+
+### ~~W1038~~ ✅ AI suggestion policy pack
+**Descriere tehnica:** Grupeaza politicile AI pentru map, quest si story intr-un pachet documentat cu reguli, exceptii si severitati.
+**Scop:** Elimina politicile dispersate si neuniforme.
+**Target:** AI policy docs, validation pipeline, admin dashboard.
+**Acceptare:** Pachetul de politici poate fi folosit ca referinta unica la review.
+
+### ~~W1039~~ ✅ AI suggestion policy drift audit
+**Descriere tehnica:** Detecteaza drift-ul dintre politica AI documentata si regulile efectiv aplicate de pipeline.
+**Scop:** Previne divergențele intre docs si implementare.
+**Target:** AI policy docs, pipeline rules, audit reports.
+**Acceptare:** Drift-ul este raportat cu regula, severitatea si sursa divergentei.
+
+### ~~W1040~~ ✅ AI suggestion rollout checklist
+**Descriere tehnica:** Creeaza checklist de rollout pentru schimbari in pipeline-ul AI, inclusiv validation, moderation, cache, rollback si docs.
+**Scop:** Face schimbarile AI publicabile in siguranta.
+**Target:** AI release pipeline, docs/taskuri-de-lucru.md, validation checklist.
+**Acceptare:** Rollout-ul nu continua fara checklist complet si aprobat.
