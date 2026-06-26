@@ -15,6 +15,7 @@ class SchedulerCoordinator(
         scheduleEmotionDecay()
         scheduleMemoryCleanup()
         scheduleNpcStatePersistence()
+        scheduleSocialCoordination()
         scheduleVillageRebalance()
         scheduleQuestTracking()
     }
@@ -117,6 +118,17 @@ class SchedulerCoordinator(
             20L * 60 * 5,
             20L * 60 * 5
         )
+    }
+
+    private fun scheduleSocialCoordination() {
+        if (featureEnabled("features.routine", false) && plugin.config.getBoolean("routine.enabled", false)) {
+            plugin.server.scheduler.runTaskTimer(
+                plugin,
+                Runnable { plugin.socialCoordinator.tick() },
+                20L * 30,
+                20L * 120
+            )
+        }
     }
 
     private fun scheduleVillageRebalance() {

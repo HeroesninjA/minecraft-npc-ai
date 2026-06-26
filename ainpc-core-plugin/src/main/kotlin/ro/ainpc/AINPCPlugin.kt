@@ -106,6 +106,7 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var shopService: ShopService
         private set
     lateinit var reputationService: ro.ainpc.reputation.ReputationService
+    lateinit var socialCoordinator: ro.ainpc.routine.SocialCoordinator
     lateinit var recentEventsBuffer: RecentEventsBuffer
 
     override fun onEnable() {
@@ -114,6 +115,7 @@ class AINPCPlugin : JavaPlugin() {
         config.options().copyDefaults(true)
         saveConfig()
         loadQuestConfig()
+        validateConfig()
         for (res in listOf("castel-world-admin.yml", "settlements.yml", "building_templates.yml", "behavior_profiles.yml")) {
             try {
                 saveResource(res, false)
@@ -178,6 +180,7 @@ class AINPCPlugin : JavaPlugin() {
         economyService = EconomyService(this)
         shopService = ShopService(economyService)
         reputationService = ro.ainpc.reputation.ReputationService(this)
+        socialCoordinator = ro.ainpc.routine.SocialCoordinator(this)
 
         logger.info("Inregistrare comenzi...")
         val command = AINPCCommand(this)
@@ -295,6 +298,34 @@ class AINPCPlugin : JavaPlugin() {
     fun debug(message: String) {
         if (config.getBoolean("debug.enabled", false)) {
             logger.log(Level.INFO, "[Debug] $message")
+        }
+    }
+
+    private fun validateConfig() {
+        val warnings = mutableListOf<String>()
+
+        if (!config.contains("features.ai")) {
+            warnings.add("config.yml: 'features.ai' nu este definit; se va folosi implicit false.")
+        }
+        if (!config.contains("openai.api_key") && config.getBoolean("features.ai", false)) {
+            warnings.add("config.yml: 'openai.api_key' nu este definit, dar features.ai=true. AI-ul nu va functiona.")
+            warnings.add("  >> Actiune: seteaza OPENAI_API_KEY in variabilele de mediu sau openai.api_key in config.yml.")
+        }
+        if (!config.contains("database.dialect")) {
+            warnings.add("config.yml: 'database.dialect' nu este definit; se va folosi 'sqlite'.")
+        }
+        val aiEnabled = config.getBoolean("features.ai", false)
+        val routineEnabled = config.getBoolean("routine.enabled", false)
+        if (routineEnabled && !aiEnabled) {
+            warnings.add("config.yml: routine.enabled=true dar features.ai=false. NPC-urile nu vor avea dialog AI.")
+            warnings.add("  >> Actiune: seteaza features.ai=true sau dezactiveaza routine.enabled.")
+        }
+
+        if (warnings.isNotEmpty()) {
+            logger.warning("=== Validare config.yml ===")
+            for (w in warnings) {
+                logger.warning("  ! $w")
+            }
         }
     }
 

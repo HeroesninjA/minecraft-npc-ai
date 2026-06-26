@@ -90,6 +90,39 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         plugin.logger.info("Profesii disponibile: ${allProfessions.size}")
         plugin.logger.info("Topologii disponibile: ${allTopologies.size}")
         plugin.logger.info("Mecanici de progres disponibile: ${allProgressionMechanics.size}")
+
+        val validationWarnings = mutableListOf<String>()
+
+        if (allProfessions.isEmpty()) {
+            validationWarnings.add("Nicio profesie definita in feature packs.")
+            validationWarnings.add("  >> Actiune: verifica fisierele YAML din packs/ pentru sectiunea 'professions'.")
+        }
+        if (allScenarios.isEmpty()) {
+            validationWarnings.add("Niciun scenariu definit in feature packs.")
+            validationWarnings.add("  >> Actiune: verifica fisierele YAML din packs/ pentru sectiunea 'scenarios'.")
+        }
+
+        val scenarioCount = allScenarios.size
+        val questScenarios = allScenarios.values.count { it.baseType == ScenarioType.QUEST }
+        if (questScenarios == 0 && scenarioCount > 0) {
+            validationWarnings.add("Nu exista scenarii de tip QUEST in feature packs.")
+        }
+
+        for ((packId, pack) in loadedPacks) {
+            val scenarioWarnings = pack.scenarios.filter { it.validationWarnings.isNotEmpty() }
+            for (sc in scenarioWarnings.take(5)) {
+                for (w in sc.validationWarnings.take(2)) {
+                    validationWarnings.add("$packId/${sc.id}: $w")
+                }
+            }
+        }
+
+        if (validationWarnings.isNotEmpty()) {
+            plugin.logger.warning("=== Validare Feature Packs ===")
+            for (warning in validationWarnings) {
+                plugin.logger.warning("  ! $warning")
+            }
+        }
     }
 
     private fun saveDefaultPacks() {
@@ -156,7 +189,8 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             val pack = FeaturePack(id, name, description)
             pack.schemaVersion = config.getInt("version", pack.schemaVersion)
             if (pack.schemaVersion < 1 || pack.schemaVersion > 1) {
-                plugin.logger.warning("Feature pack '$id' are schema_version=${pack.schemaVersion}, dar versiunea curenta este 1. Posibile incompatibilitati.")
+                plugin.logger.warning("Feature pack '$id' (${file.name}) are schema_version=${pack.schemaVersion}, dar versiunea curenta este 1. Posibile incompatibilitati.")
+            plugin.logger.warning("  >> Recomandare: actualizeaza schema_version la 1 sau verifica documentatia pack-ului.")
             }
 
             config.getConfigurationSection("traits")?.let { section ->
@@ -193,6 +227,8 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             plugin.debug("Feature Pack incarcat: $name ($id)")
         } catch (exception: Exception) {
             plugin.logger.warning("Eroare la incarcarea feature pack: ${file.name}")
+            plugin.logger.warning("  >> Cale: ${file.absolutePath}")
+            plugin.logger.warning("  >> Actiune: verifica sintaxa YAML si campurile obligatorii.")
             plugin.logger.log(java.util.logging.Level.WARNING, "Detalii eroare feature pack", exception)
             if (plugin.config.getBoolean("feature_packs.fail_invalid_pack", false)) {
                 throw IllegalStateException("Feature pack invalid: ${file.name}", exception)
@@ -233,11 +269,12 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             return true
         }
 
-        plugin.logger.warning("Feature pack respins prin dependinte lipsa: $packId (${file.name})")
-        plugin.logger.warning("- dependinte lipsa: ${missingDependencies.joinToString(", ")}")
-        if (plugin.config.getBoolean("feature_packs.fail_invalid_pack", false)) {
-            throw IllegalStateException("Dependinte feature pack lipsa: $packId")
-        }
+            plugin.logger.warning("Feature pack respins prin dependinte lipsa: $packId (${file.name})")
+            plugin.logger.warning("- dependinte lipsa: ${missingDependencies.joinToString(", ")}")
+            plugin.logger.warning("  >> Actiune: adauga pack-urile lipsa in directorul packs/ sau dezactiveaza dependintele.")
+            if (plugin.config.getBoolean("feature_packs.fail_invalid_pack", false)) {
+                throw IllegalStateException("Feature pack invalid: ${file.name}")
+            }
         return false
     }
 

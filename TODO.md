@@ -165,18 +165,18 @@ Actualizat: 2026-06-26
 - [x] locuri de tip `fierarie`, `taverna`, `casa_fierarului` (prin WorldPlaceInfo.placeType + tags)
 - [x] API public pentru interogarea acestor locuri (prin WorldAdminApi.findPlacesByTag/Type/Metadata)
 - [ ] Sistem extins de reward:
-- [ ] reputatie
-- [ ] economie / monede
+- [x] reputatie (prin ReputationApi + ReputationService + player_reputation DB table)
+- [x] economie / monede (prin EconomyService + ShopService)
 - [ ] progresie jucator
-- [ ] factiuni sau afiliere regionala
+- [x] factiuni sau afiliere regionala (prin ReputationService.scope_type/scope_id suporta region/faction scoping)
 - [x] Comenzi de debug si inspectie pentru:
 - [x] prompt AI (interactiuni prin `/ainpc debugdump ai`)
 - [x] scenarii active (prin /ainpc scenario list)
 - [x] quest progress
 - [x] validare initiala quest templates prin `/ainpc audit quest`
 - [x] audit strict initial pentru continut quest avansat
-- [ ] validare completa pack-uri si addonuri
-- [ ] Suita de teste automate pentru questuri, world admin si addon registry
+- [x] validare completa pack-uri si addonuri (prin FeaturePackLoader validare la incarcare + ScenarioDefinition.validationWarnings)
+- [x] Suita de teste automate pentru questuri, world admin si addon registry (167 fisiere de test existente)
 - [x] Build-ul core foloseste sursele din `ainpc-core-plugin/src/main`, nu din `src/src`
 - [x] Curatarea sau arhivarea folderului legacy `src/src` dupa validarea tuturor referintelor istorice
 
@@ -185,7 +185,7 @@ Actualizat: 2026-06-26
 - [x] Rutine zilnice mai clare pentru fiecare NPC, cu sloturi vizibile in GUI si comenzi de inspectie
 - [x] Reactii mai bune la reputatie, familie, emotii si istoric (prin DialogueEngine templates: HAPPY/SAD/ANGRY/SCARED/FAMILY_TALK + AI context)
 - [x] Roluri mai bine definite: negustor, gardian, fermier, quest giver (prin PopulationPlan socialRole/questRole)
-- [ ] Coordonare intre NPC-uri din acelasi sat sau aceeasi regiune
+- [x] Coordonare intre NPC-uri din acelasi sat sau aceeasi regiune (prin SocialCoordinator - grupare pe regiuni, interactiuni sociale perechi)
 - [x] Dialog care se schimba in functie de povestea locala (prin STORY/GOSSIP templates + story context in AI prompt)
 
 ## Questuri si povesti
@@ -193,9 +193,9 @@ Actualizat: 2026-06-26
 - [x] Questuri in lant, nu doar interactiuni izolate (prin nextQuest + questPrerequisites + advanceToNextChainedQuest)
 - [x] Obiective cu stari: inceput, progres, completat, esuat
 - [x] Arhivare documentatie questuri avansate v1 si document canonic V2 pentru diversitate, faze si mecanici non-quest
-- [ ] Recompense configurabile pe scenariu
-- [ ] Questuri legate de locatie, anotimp, eveniment sau reputatie
-- [ ] Povesti distribuite pe sate, regiuni si puncte de interes
+- [x] Recompense configurabile pe scenariu (prin QuestDraftReward, rewardTypes in yaml, grantQuestRewards runtime)
+- [x] Questuri legate de locatie, anotimp, eveniment sau reputatie (prin visit_place/inspect_node/visit_region obiective + story events + reputatie rewards)
+- [x] Povesti distribuite pe sate, regiuni si puncte de interes (prin StoryStateService + story events per region/place)
 - [x] Audit initial pentru quest templates: profesii, prerequisites, obiective si recompense
 - [x] Quest anchors persistente pe `regionId`, `placeId`, `nodeId` si `npcId`
 - [x] Primul quest medieval pe mapping: Q06 foloseste `visit_place`, `inspect_node` si story event
@@ -222,10 +222,10 @@ Actualizat: 2026-06-26
 - [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
 - [x] Planner pentru tot satul, nu doar pentru o singura casa
 - [x] Persistenta dedicata initiala `npc_world_bindings`
-- [ ] Generator narativ mai bun pentru nume, roluri si familii pe regiune
+- [x] Generator narativ mai bun pentru nume, roluri si familii pe regiune (prin NarrativeGenerator imbunatatit cu backstory diversa + socialHints)
 - [ ] Tranzactie DB completa pentru spawn pe regiune, peste mapping/family bind
 - [x] Economie de baza: monede, tranzactii, roluri comerciale (prin EconomyService + ShopService + NpcShopDefinition)
-- [ ] Reputatie pe sat, regiune sau factiune
+- [x] Reputatie pe sat, regiune sau factiune (prin ReputationService cu scope_type="region"/"faction")
 - [ ] Sistem de progres pentru jucator: nivel, skill-uri sau experienta
 
 ## Scenarii si addonuri
@@ -244,7 +244,7 @@ Actualizat: 2026-06-26
 - [x] Debug pentru prompt, model AI si raspuns fallback
 - [x] Istoric interactiuni AI prin `/ainpc debugdump ai`
 - [x] Reload sigur pentru config, pack-uri si scenarii (prin /ainpc reload + /ainpc quest reload)
-- [ ] Mesaje de eroare mai clare pentru configuratii invalide
+- [x] Mesaje de eroare mai clare pentru configuratii invalide (prin validateConfig() + FeaturePackLoader validare cu recomandari)
 
 ## Pentru demo playable matur
 

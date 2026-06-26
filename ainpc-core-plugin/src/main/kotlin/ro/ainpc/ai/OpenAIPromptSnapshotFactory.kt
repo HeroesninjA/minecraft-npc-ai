@@ -17,33 +17,30 @@ object OpenAIPromptSnapshotFactory {
         var environmentDescription = ""
         var topologyConsensusBlock = ""
 
-        if (npc.context != null) {
-            environmentDescription = npc.context.generateContextDescription()
-            val topologyCategory = npc.context.topologyCategory
-            if (plugin.featurePackLoader != null && topologyCategory != null) {
-                val topologyConsensus: TopologyConsensus? =
-                    plugin.featurePackLoader.buildTopologyConsensus(topologyCategory)
-                if (topologyConsensus != null) {
-                    topologyConsensusBlock = topologyConsensus.toPromptBlock()
-                }
+        environmentDescription = npc.context.generateContextDescription()
+        val topologyCategory = npc.context.topologyCategory
+        if (topologyCategory != null) {
+            val topologyConsensus = plugin.featurePackLoader.buildTopologyConsensus(topologyCategory)
+            if (topologyConsensus != null) {
+                topologyConsensusBlock = topologyConsensus.toPromptBlock()
             }
         }
 
         val familyMembers = mutableListOf<FamilyMemberSnapshot>()
-        if (plugin.familyManager != null) {
-            for (member: FamilyMemberRecord in plugin.familyManager.getFamily(npc)) {
-                familyMembers.add(
-                    FamilyMemberSnapshot(
-                        member.name() ?: "",
-                        member.relationType() ?: "",
-                        member.alive()
-                    )
+        for (member in plugin.familyManager.getFamily(npc)) {
+            familyMembers.add(
+                FamilyMemberSnapshot(
+                    member.name().orEmpty(),
+                    member.relationType().orEmpty(),
+                    member.alive()
                 )
-            }
+            )
         }
 
+        val traitsList = npc.traits.toList()
+        val stateDisplayName = npc.currentState.displayName
         return PromptSnapshot(
-            npc.uuid ?: UUID.randomUUID(),
+            npc.uuid,
             npc.name,
             npcDescription,
             environmentDescription,
@@ -54,13 +51,13 @@ object OpenAIPromptSnapshotFactory {
             npc.profileVersion,
             npc.profileSummary,
             npc.profileDataJson,
-            if (npc.traits == null) emptyList() else npc.traits.toList(),
-            if (player != null) player.name else "Jucator",
+            traitsList,
+            player.name,
             request.message(),
-            npc.occupation ?: "",
+            npc.occupation.orEmpty(),
             npc.emotions.getShortDescription(),
             npc.emotions.dominantEmotion,
-            npc.currentState?.displayName ?: "",
+            stateDisplayName,
             NpcFactResolver.describeCurrentActivity(npc.occupation, npc.currentState),
             NpcFactResolver.describeLocation(npc, npc.context),
             request.directAddress(),

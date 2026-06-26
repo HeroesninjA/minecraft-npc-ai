@@ -48,16 +48,16 @@ object OpenAIPromptBuilder {
         prompt.append("npc_location: ").append(OpenAITextSupport.valueOrUnknown(snapshot.locationDescription())).append("\n")
         prompt.append("fact_name_answer: ").append("Sunt ").append(snapshot.npcName()).append(".\n")
         prompt.append("fact_profession_answer: ").append(
-            if (facts.occupation() == null || facts.occupation().isBlank()) "Nu stiu sigur." else "Sunt " + facts.occupation() + "."
+            if (facts.occupation().isBlank()) "Nu stiu sigur." else "Sunt " + facts.occupation() + "."
         ).append("\n")
         prompt.append("fact_state_answer: ").append(
-            if (facts.emotionalState() == null || facts.emotionalState().isBlank()) "Nu stiu sigur." else "Ma simt " + facts.emotionalState() + "."
+            if (facts.emotionalState().isBlank()) "Nu stiu sigur." else "Ma simt " + facts.emotionalState() + "."
         ).append("\n")
         prompt.append("fact_activity_answer: ").append(
-            if (facts.currentActivity() == null || facts.currentActivity().isBlank()) "Nu stiu sigur." else OpenAITextSupport.capitalizeSentence(facts.currentActivity()) + "."
+            if (facts.currentActivity().isBlank()) "Nu stiu sigur." else OpenAITextSupport.capitalizeSentence(facts.currentActivity()) + "."
         ).append("\n")
         prompt.append("fact_location_answer: ").append(
-            if (facts.locationDescription() == null || facts.locationDescription().isBlank()) "Nu stiu sigur." else "Sunt in " + facts.locationDescription() + "."
+            if (facts.locationDescription().isBlank()) "Nu stiu sigur." else "Sunt in " + facts.locationDescription() + "."
         ).append("\n\n")
 
         prompt.append("=== PROFIL PERSISTENT DIN BAZA DE DATE ===\n")

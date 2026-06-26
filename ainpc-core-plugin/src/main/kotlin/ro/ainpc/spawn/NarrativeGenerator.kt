@@ -292,13 +292,25 @@ class NarrativeGenerator {
     private fun generateBackstory(name: String, profession: String, socialRole: String, relationRole: String, familyName: String, workplace: WorldPlaceInfo?): String {
         val prof = profession.ifBlank { "locuitor" }
         val workPart = if (workplace != null) " la ${workplace.displayName().ifBlank { workplace.id() }}" else ""
-        return when (relationRole) {
+        val socialHints = when (socialRole) {
+            "gossip_hub" -> "Stie tot ce se intampla prin sat si ii place sa vorbeasca."
+            "merchant" -> "E cunoscut pentru preturile corecte si marfa de calitate."
+            "healer" -> "Oamenii din sat vin la el/ea cand au nevoie de leacuri."
+            "guardian" -> "Pazește linistea in sat zi si noapte."
+            "teacher" -> "Le place sa invete pe altii meserii si povesti vechi."
+            "informant" -> "Asculta atent si stie ce se vorbeste pe la fiecare casa."
+            else -> ""
+        }
+        val backstory = when (relationRole) {
             "father" -> "$name este $prof al familiei $familyName si munceste$workPart."
             "mother" -> "$name este $prof al familiei $familyName si are grija de casa$workPart."
             "child" -> "$name este copilul familiei $familyName si invata meseria."
+            "grandparent" -> "$name este batranul intelept al familiei $familyName si povesteste despre vremurile de demult."
+            "uncle", "aunt" -> "$name este $prof si traieste impreuna cu familia $familyName, ajutand la treburi$workPart."
             "resident" -> "$name este $prof si face parte din comunitatea locala$workPart."
             else -> "$name are rolul de $prof$workPart."
         }
+        return if (socialHints.isNotBlank()) "$backstory $socialHints" else backstory
     }
 
     private fun calculateTargetPopulation(houses: List<WorldPlaceInfo>, workplaces: List<WorldPlaceInfo>): Int {
