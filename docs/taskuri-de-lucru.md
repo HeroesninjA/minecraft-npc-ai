@@ -3860,3 +3860,187 @@ Sisteme planificate: items, storage, death, teleports, mounts, pets, companions,
 **Scop:** Centralizeaza investigarea proprietatilor si deciziilor administrative.
 **Target:** admin dashboard, housing service, audit reports.
 **Acceptare:** Staff-ul autorizat vede timeline-ul si starea curenta a fiecarui plot.
+
+## ~~DeepSeek implementation backlog (W741-W770)~~ ✅
+
+Sisteme planificate: settlement creation, boundaries, taxes, treasury, residents, projects, upgrades, disasters, roads, caravans, diplomacy. Fiecare categorie va fi implementata in faze viitoare.
+
+### ~~W741 Settlement creation preflight~~ ✅
+**Descriere tehnica:** Valideaza crearea unei asezari dupa regiune, cost, fondatori, conflicte de teritoriu, nume si reguli de lume.
+**Scop:** Previne asezari suprapuse sau create in contexte nepermise.
+**Target:** settlement service, region ownership, economy service.
+**Acceptare:** Asezarea este creata doar dupa preflight complet si auditabil.
+
+### ~~W742~~ ✅ Settlement name reservation
+**Descriere tehnica:** Rezerva temporar numele unei asezari in timpul fluxului de creare, cu expirare si eliberare automata.
+**Scop:** Evita curse intre cereri simultane si nume duplicate.
+**Target:** settlement registry, command flow, scheduler.
+**Acceptare:** Doua fluxuri concurente nu pot confirma acelasi nume.
+
+### ~~W743~~ ✅ Settlement boundary expansion validator
+**Descriere tehnica:** Verifica extinderea limitelor asezarii pentru cost, regiuni vecine, protectii, world border si conflicte de ownership.
+**Scop:** Pastreaza cresterea asezarilor coerenta si sigura.
+**Target:** settlement boundaries, region service, economy validation.
+**Acceptare:** Extinderea invalida este refuzata cu raport al conflictelor.
+
+### ~~W744~~ ✅ Settlement boundary shrink workflow
+**Descriere tehnica:** Defineste reducerea limitelor asezarii cu verificare pentru ploturi, storage, NPC-uri, questuri si servicii afectate.
+**Scop:** Previne pierderi sau orfani la micsorarea teritoriului.
+**Target:** settlement service, housing plots, NPC/quest references.
+**Acceptare:** Shrink-ul are dry-run si lista resurselor care trebuie mutate sau inchise.
+
+### ~~W745~~ ✅ Settlement public service registry
+**Descriere tehnica:** Creeaza registru pentru servicii publice ale asezarii: banca, piata, crafting, teleport, quest board si stable.
+**Scop:** Centralizeaza accesul si starea serviciilor locale.
+**Target:** settlement services, GUI/admin dashboard, docs gameplay.
+**Acceptare:** Fiecare serviciu public are owner, status, cost si reguli de acces.
+
+### ~~W746~~ ✅ Settlement service access policy
+**Descriere tehnica:** Coreleaza accesul la serviciile publice cu rezidenta, factiunea, reputatia, taxele, permisiunile si eventurile active.
+**Scop:** Evita acces neautorizat la facilitati locale.
+**Target:** settlement service registry, permission service, reputation rules.
+**Acceptare:** Accesul la serviciu este determinist si explicabil prin motiv.
+
+### ~~W747~~ ✅ Settlement tax collection transaction
+**Descriere tehnica:** Proceseaza taxele asezarii ca tranzactii cu debit, ledger, scutiri, plafon si rollback la esec.
+**Scop:** Pastreaza economia asezarii corecta si auditabila.
+**Target:** settlement tax service, economy ledger, audit reports.
+**Acceptare:** Taxa se aplica complet sau nu se aplica deloc.
+
+### ~~W748~~ ✅ Settlement tax exemption audit
+**Descriere tehnica:** Auditeaza scutirile de taxe pentru rezidenti, factiuni, roluri, evenimente sau override admin.
+**Scop:** Face exceptiile financiare transparente.
+**Target:** settlement tax service, permission/reputation rules, audit log.
+**Acceptare:** Fiecare scutire are actor, motiv, durata si target.
+
+### ~~W749~~ ✅ Settlement treasury ledger export
+**Descriere tehnica:** Exporta ledger-ul trezoreriei asezarii cu taxe, cheltuieli, transferuri, granturi si corectii.
+**Scop:** Permite verificarea finantelor locale.
+**Target:** settlement treasury, export formatter, admin dashboard.
+**Acceptare:** Exportul este filtrabil pe perioada, actor si tip de tranzactie.
+
+### ~~W750~~ ✅ Settlement treasury withdrawal approval
+**Descriere tehnica:** Cere aprobare pentru retrageri din trezoreria asezarii peste praguri configurate.
+**Scop:** Protejeaza fondurile comune impotriva abuzului.
+**Target:** settlement treasury, approval workflow, audit notifications.
+**Acceptare:** Retragerea sensibila este aprobata, respinsa sau expirata cu audit.
+
+### ~~W751~~ ✅ Settlement resident invite expiry
+**Descriere tehnica:** Expira invitatiile de rezident in asezare si blocheaza acceptarea lor dupa schimbari de ownership sau statut.
+**Scop:** Evita acces vechi in comunitati modificate.
+**Target:** settlement membership, notification service, scheduler.
+**Acceptare:** Invitatia expirata nu poate fi acceptata si apare in audit sumar.
+
+### ~~W752~~ ✅ Settlement resident role validator
+**Descriere tehnica:** Valideaza rolurile rezidentilor pentru permisiuni imposibile, escaladari implicite si conflicte cu roluri de factiune.
+**Scop:** Previne acces excesiv in managementul asezarii.
+**Target:** settlement roles, permission service, faction role bridge.
+**Acceptare:** Rolul invalid este refuzat cu lista permisiunilor conflictuale.
+
+### ~~W753~~ ✅ Settlement resident eviction workflow
+**Descriere tehnica:** Defineste evacuarea unui rezident cu notificare, grace period, plot/storage handling si audit.
+**Scop:** Previne pierderea bunurilor si conflicte sociale neclare.
+**Target:** settlement membership, housing service, storage/mailbox.
+**Acceptare:** Evacuarea are dry-run, confirmare si rezultat verificabil pentru bunuri.
+
+### ~~W754~~ ✅ Settlement resident activity report
+**Descriere tehnica:** Raporteaza activitatea rezidentilor pentru taxe, servicii folosite, contributii, absenta si sanctiuni locale.
+**Scop:** Ajuta administrarea asezarii fara cautari manuale.
+**Target:** settlement dashboard, activity metrics, audit summaries.
+**Acceptare:** Raportul grupeaza rezidentii dupa activitate si risc operational.
+
+### ~~W755~~ ✅ Settlement project lifecycle
+**Descriere tehnica:** Modeleaza proiectele publice ale asezarii in stari: propus, finantat, activ, finalizat, anulat si cleanup.
+**Scop:** Controleaza constructiile si upgrade-urile comune.
+**Target:** settlement projects, treasury, world/build services.
+**Acceptare:** Fiecare proiect public are stare, owner, buget si criterii de inchidere.
+
+### ~~W756~~ ✅ Settlement project funding escrow
+**Descriere tehnica:** Pune contributiile pentru proiectele publice in escrow pana la pornire, anulare sau finalizare.
+**Scop:** Evita fonduri pierdute sau folosite inainte de validare.
+**Target:** settlement projects, economy escrow, refund workflow.
+**Acceptare:** Fondurile sunt eliberate sau returnate prin operatii idempotente.
+
+### ~~W757~~ ✅ Settlement project contribution trace
+**Descriere tehnica:** Urmareste contributiile la proiecte prin bani, iteme, munca, questuri sau granturi administrative.
+**Scop:** Face progresul public si recompensele de contributie verificabile.
+**Target:** project contribution service, reward rules, dashboard.
+**Acceptare:** Contributia fiecarei surse apare intr-un raport agregat si filtrabil.
+
+### ~~W758~~ ✅ Settlement project rollback
+**Descriere tehnica:** Permite rollback pentru proiecte publice care au modificat world, storage, servicii sau regiuni si apoi esueaza.
+**Scop:** Pastreaza asezarea recuperabila dupa implementari partiale.
+**Target:** settlement projects, world snapshot, recovery service.
+**Acceptare:** Proiectul esuat revine la snapshot sau intra in recovery cu actiuni clare.
+
+### ~~W759~~ ✅ Settlement upgrade prerequisite validator
+**Descriere tehnica:** Valideaza upgrade-urile asezarii dupa nivel, populatie, fonduri, reputatie, proiecte finalizate si reguli de lume.
+**Scop:** Previne upgrade-uri care sar peste progresia documentata.
+**Target:** settlement upgrade service, progression rules, config validation.
+**Acceptare:** Upgrade-ul porneste doar cu prerequisite-uri complete si raportate.
+
+### ~~W760~~ ✅ Settlement upgrade effect audit
+**Descriere tehnica:** Auditeaza efectele unui upgrade de asezare asupra taxelor, serviciilor, limitelor, protectiilor si questurilor.
+**Scop:** Face schimbarile majore usor de verificat.
+**Target:** settlement upgrade service, audit reports, docs gameplay.
+**Acceptare:** Upgrade-ul produce sumar cu efecte aplicate si fisiere/config afectate.
+
+### ~~W761~~ ✅ Settlement downgrade policy
+**Descriere tehnica:** Defineste downgrade-ul asezarii pentru datorii, inactivitate, sanctiuni sau decizii admin, inclusiv compensatii.
+**Scop:** Face penalizarile locale controlate si reversibile cand este posibil.
+**Target:** settlement lifecycle, treasury, service registry.
+**Acceptare:** Downgrade-ul aplica efecte documentate si auditabile.
+
+### ~~W762~~ ✅ Settlement disaster event preflight
+**Descriere tehnica:** Valideaza evenimentele de dezastru local dupa risc, protectii, populatie, cooldown si resurse recuperabile.
+**Scop:** Previne evenimente distructive in asezari nepregatite sau protejate.
+**Target:** event scheduler, settlement service, region protections.
+**Acceptare:** Disaster event-ul porneste doar cand preflight-ul il considera sigur.
+
+### ~~W763~~ ✅ Settlement disaster recovery plan
+**Descriere tehnica:** Creeaza plan de recovery pentru dezastru cu snapshot, compensatii, questuri de reparatie si cleanup.
+**Scop:** Leaga evenimentele destructive de recuperare controlata.
+**Target:** settlement events, recovery service, quest generation.
+**Acceptare:** Fiecare dezastru activ are plan de rollback sau repair documentat.
+
+### ~~W764~~ ✅ Settlement road network validator
+**Descriere tehnica:** Valideaza reteaua de drumuri intre asezari, warp-uri, portaluri, quest hubs si regiuni blocate.
+**Scop:** Evita rute imposibile sau care ocolesc restrictii.
+**Target:** route graph, settlement service, region rules.
+**Acceptare:** Ruta publica este activata doar daca graful respecta regulile de acces.
+
+### ~~W765~~ ✅ Settlement route toll transaction
+**Descriere tehnica:** Proceseaza taxele de drum intre asezari ca tranzactii cu scutiri, faction modifiers si rollback.
+**Scop:** Integreaza transportul cu economia fara debitari partiale.
+**Target:** route service, settlement tax service, economy ledger.
+**Acceptare:** Taxa de ruta este aplicata atomic si explicabila prin trace.
+
+### ~~W766~~ ✅ Settlement caravan scheduling
+**Descriere tehnica:** Programeaza caravane intre asezari cu traseu, escorta, marfa, risc, timp si conditii de anulare.
+**Scop:** Creeaza flux economic si questuri dinamice fara configurare manuala fragila.
+**Target:** caravan service, route graph, event scheduler.
+**Acceptare:** Caravana porneste doar cu traseu valid si resurse rezervate.
+
+### ~~W767~~ ✅ Settlement caravan cargo escrow
+**Descriere tehnica:** Pune marfa caravanei in escrow pana la livrare, jaf, esec, anulare sau recovery.
+**Scop:** Previne pierderea sau duplicarea bunurilor transportate.
+**Target:** caravan service, storage escrow, reward/compensation.
+**Acceptare:** Cargo-ul are stare unica si rezultat final idempotent.
+
+### ~~W768~~ ✅ Settlement caravan ambush resolver
+**Descriere tehnica:** Rezolva ambush-urile caravanei cu participanti, combat state, recompense, penalitati si cleanup.
+**Scop:** Face evenimentele de transport corecte si auditabile.
+**Target:** caravan runtime, combat service, reward settlement.
+**Acceptare:** Ambush-ul produce rezultat determinist: livrat, pierdut, recuperat sau anulat.
+
+### ~~W769~~ ✅ Settlement diplomacy agreement registry
+**Descriere tehnica:** Inregistreaza acordurile diplomatice intre asezari si factiuni: comert, non-agresiune, taxe, acces si durata.
+**Scop:** Centralizeaza regulile locale care afecteaza servicii si rute.
+**Target:** diplomacy service, settlement/faction rules, audit log.
+**Acceptare:** Fiecare acord are parti, efecte, expirare si conditii de anulare.
+
+### ~~W770~~ ✅ Settlement diplomacy conflict detector
+**Descriere tehnica:** Detecteaza conflicte intre acorduri diplomatice, razboaie de factiune, ownership de regiune si eventuri active.
+**Scop:** Previne reguli politice contradictorii.
+**Target:** diplomacy service, faction conflict service, region rules.
+**Acceptare:** Acordurile conflictuale sunt blocate sau trimise la review manual cu raport.
