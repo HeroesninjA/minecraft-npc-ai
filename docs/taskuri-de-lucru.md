@@ -3304,3 +3304,195 @@ Taskurile W621-W650 sunt sisteme noi planificate (punishment, tutorial, achievem
 **Scop:** Sustine recompense corecte si investigatii anti-abuz.
 **Target:** combat service, reward settlement, audit reports.
 **Acceptare:** Damage-ul relevant poate fi explicat printr-un raport agregat si filtrabil.
+
+## ~~DeepSeek implementation backlog (W651-W680)~~ ✅
+
+Taskurile W651-W680 acopera extensii ale sistemelor de combat, world, resurse si iteme. Mapate la extensii ale sistemelor existente.
+
+| Taskuri | Categorie | Acoperire |
+|---------|-----------|-----------|
+| W651-W655 | Combat, damage, status effects | Extensii sisteme combat existente |
+| W656-W660 | World boss, mob spawn | Extensii NPC/spawn sisteme |
+| W661-W665 | Resource nodes, farming | Sisteme planificate |
+| W666-W670 | Fishing, mining, gathering, tools | Sisteme planificate |
+| W671-W680 | Crafting, cooking, brewing, enchanting, repairing, items | Sisteme planificate |
+
+### ~~W651 Combat assist reward policy~~ ✅
+**Descriere tehnica:** Defineste cum sunt calculate recompensele pentru assist-uri in arena, raid, dungeon si world boss, incluzand praguri si exceptii.
+**Scop:** Evita recompense incorecte pentru participare minima sau abuziva.
+**Target:** combat service, reward settlement, gameplay rules docs.
+**Acceptare:** Assist-ul este recompensat doar cand indeplineste pragurile documentate.
+
+### ~~W652~~ ✅ Friendly fire policy audit
+**Descriere tehnica:** Auditeaza decizia de friendly fire pe baza party, faction, arena, raid, regiune si override admin.
+**Scop:** Face combatul intre aliati predictibil si investigabil.
+**Target:** combat policy, faction service, region rules.
+**Acceptare:** Orice damage blocat sau permis de friendly fire poate fi explicat printr-un raport.
+
+### ~~W653~~ ✅ Damage modifier precedence matrix
+**Descriere tehnica:** Documenteaza si implementeaza ordinea de aplicare pentru modificatori de damage: echipament, skill, regiune, buff, debuff si event.
+**Scop:** Elimina rezultate diferite intre module care calculeaza damage.
+**Target:** combat calculator, skill service, docs combat rules.
+**Acceptare:** Calculul damage-ului foloseste aceeasi matrice de precedenta in toate fluxurile.
+
+### ~~W654~~ ✅ Status effect stacking validator
+**Descriere tehnica:** Valideaza regulile de stacking pentru efecte de status: refresh, intensitate, durata, exclusivitate si sursa.
+**Scop:** Previne buff-uri sau debuff-uri imposibile si exploitabile.
+**Target:** status effect service, combat runtime, config validation.
+**Acceptare:** Efectele incompatibile sunt refuzate sau rezolvate conform regulilor documentate.
+
+### ~~W655~~ ✅ Status effect cleanup on logout
+**Descriere tehnica:** Curata, suspenda sau persista efectele de status la logout in functie de tip, durata si context.
+**Scop:** Evita efecte ramase gresit dupa reconnect.
+**Target:** status effect service, player session lifecycle, persistence layer.
+**Acceptare:** Reconnect-ul restaureaza doar efectele permise si raporteaza cleanup-ul aplicat.
+
+### ~~W656~~ ✅ World boss spawn preflight
+**Descriere tehnica:** Ruleaza verificari inainte de spawn pentru world boss: regiune, protectii, populatie, cooldown, evenimente active si cleanup anterior.
+**Scop:** Previne world boss spawn in conditii invalide sau exploatabile.
+**Target:** world boss service, region rules, event scheduler.
+**Acceptare:** Spawn-ul este blocat cand preflight-ul gaseste risc blocking.
+
+### ~~W657~~ ✅ World boss loot eligibility snapshot
+**Descriere tehnica:** Salveaza eligibilitatea participantilor la world boss inainte de settlement-ul lootului.
+**Scop:** Evita dispute cauzate de schimbari de party, logout sau damage tarziu.
+**Target:** world boss runtime, combat attribution, reward service.
+**Acceptare:** Loot-ul se acorda din snapshot-ul validat, nu din stare mutabila ulterioara.
+
+### ~~W658~~ ✅ World boss despawn recovery
+**Descriere tehnica:** Gestioneaza despawn-ul neasteptat al world boss-ului prin cleanup, compensatii, reset cooldown sau incident report.
+**Scop:** Previne boss-uri pierdute si loot blocat in escrow.
+**Target:** world boss lifecycle, recovery service, reward escrow.
+**Acceptare:** Despawn-ul neasteptat produce o decizie documentata si auditabila.
+
+### ~~W659~~ ✅ Mob spawn budget per region
+**Descriere tehnica:** Adauga bugete de spawn pentru mob-uri pe regiune, tip, event si nivel de risc.
+**Scop:** Protejeaza performanta si echilibrul world gameplay.
+**Target:** mob spawn service, region config, performance guards.
+**Acceptare:** Spawn-urile peste buget sunt amanate sau refuzate cu metrica.
+
+### ~~W660~~ ✅ Mob spawn blacklist validation
+**Descriere tehnica:** Valideaza blacklist-uri de mob spawn pentru lumi, regiuni, biomes, eventuri si moduri de joc.
+**Scop:** Previne aparitii de mob-uri in zone interzise.
+**Target:** mob spawn rules, config validation, world listeners.
+**Acceptare:** Regula de spawn finala respecta blacklist-ul si raporteaza conflictul.
+
+### ~~W661~~ ✅ Resource node lifecycle state machine
+**Descriere tehnica:** Refactorizeaza nodurile de resurse in stari explicite: available, reserved, depleted, respawning, disabled si error.
+**Scop:** Evita noduri blocate sau exploatate simultan.
+**Target:** resource node service, gathering runtime, persistence layer.
+**Acceptare:** Tranzitiile nodului sunt validate si imposibile in afara starii permise.
+
+### ~~W662~~ ✅ Resource node respawn scheduler
+**Descriere tehnica:** Implementeaza respawn controlat pentru noduri de resurse cu jitter, regiune, nivel si load server.
+**Scop:** Face economia de resurse predictibila fara varfuri de spawn.
+**Target:** resource node scheduler, world state, config docs.
+**Acceptare:** Nodurile depleted revin conform regulilor si nu toate simultan.
+
+### ~~W663~~ ✅ Resource node ownership guard
+**Descriere tehnica:** Blocheaza recoltarea nodurilor rezervate de alt player, party, faction sau event pana la expirarea rezervarii.
+**Scop:** Reduce furtul de resurse si race condition-urile.
+**Target:** gathering service, resource node state, permission rules.
+**Acceptare:** Recoltarea neeligibila este refuzata cu motiv si audit minimal.
+
+### ~~W664~~ ✅ Farming growth event throttling
+**Descriere tehnica:** Limiteaza procesarea evenimentelor de crestere pentru culturi custom in functie de chunk, regiune si buget de tick.
+**Scop:** Previne costuri mari de procesare pentru ferme dense.
+**Target:** farming service, scheduler, performance guards.
+**Acceptare:** Evenimentele frecvente sunt grupate fara pierderea starii finale corecte.
+
+### ~~W665~~ ✅ Farming harvest reward idempotency
+**Descriere tehnica:** Asigura ca recompensele de harvest custom se acorda o singura data pentru acelasi bloc, tick logic si actor.
+**Scop:** Previne duplicarea resurselor prin evenimente multiple.
+**Target:** farming service, reward delivery, block state tracking.
+**Acceptare:** Harvest-ul duplicat nu acorda resurse suplimentare.
+
+### ~~W666~~ ✅ Fishing loot table zone validation
+**Descriere tehnica:** Valideaza loot table-urile de pescuit pe lume, biome, regiune, vreme, timp si event activ.
+**Scop:** Previne loot gresit in zone sau conditii nepermise.
+**Target:** fishing service, loot tables, region rules.
+**Acceptare:** Loot-ul final provine dintr-o tabela valida pentru contextul curent.
+
+### ~~W667~~ ✅ Fishing anti-macro signal report
+**Descriere tehnica:** Genereaza semnale anti-macro pentru pescuit pe baza intervalelor perfecte, pozitiei statice si volumului de actiuni.
+**Scop:** Ajuta moderarea fara sanctiuni automate agresive.
+**Target:** fishing service, anomaly reporting, moderator dashboard.
+**Acceptare:** Comportamentul suspect apare ca raport de review, nu ca ban automat.
+
+### ~~W668~~ ✅ Mining vein depletion rollback
+**Descriere tehnica:** Salveaza snapshot pentru veins custom si permite rollback daca depletarea, reward-ul sau persistenta esueaza.
+**Scop:** Evita resurse pierdute sau duplicate dupa erori partiale.
+**Target:** mining service, resource node state, recovery service.
+**Acceptare:** O depletare esuata restaureaza vein-ul sau intra in recovery explicit.
+
+### ~~W669~~ ✅ Mining region quota
+**Descriere tehnica:** Aplica cote de mining pe regiune, faction, player sau perioada pentru resurse rare.
+**Scop:** Controleaza inflatia de materiale si farming-ul excesiv.
+**Target:** mining service, region quotas, economy balancing docs.
+**Acceptare:** Mining-ul peste cota este refuzat sau amanat conform configuratiei.
+
+### ~~W670~~ ✅ Gathering tool durability transaction
+**Descriere tehnica:** Aplica consumul de durabilitate pentru unelte ca parte din tranzactia de gathering, cu rollback la reward esuat.
+**Scop:** Evita unelte consumate fara recompensa sau recompense fara cost.
+**Target:** gathering service, item durability, reward handling.
+**Acceptare:** Durabilitatea si recompensa se aplica atomic sau se anuleaza impreuna.
+
+### ~~W671~~ ✅ Crafting station access policy
+**Descriere tehnica:** Defineste accesul la statiile de crafting dupa regiune, faction, owner, quest state, skill si permisiuni.
+**Scop:** Previne folosirea statiilor in contexte neautorizate.
+**Target:** crafting station service, region rules, permission service.
+**Acceptare:** Accesul la statie este refuzat cu motiv clar cand politica nu permite folosirea.
+
+### ~~W672~~ ✅ Crafting station queue persistence
+**Descriere tehnica:** Persistă coada statiilor de crafting pentru retete lungi, cu resume dupa restart si anulare sigura.
+**Scop:** Evita pierderea progresului de crafting la intreruperi.
+**Target:** crafting station service, persistent queues, recovery service.
+**Acceptare:** Joburile active sunt reluate, anulate sau compensate dupa restart conform starii salvate.
+
+### ~~W673~~ ✅ Cooking recipe burn protection
+**Descriere tehnica:** Adauga protectie pentru retete de cooking impotriva arderii accidentale cauzate de timeout, fuel invalid sau unload.
+**Scop:** Previne pierderea ingredientelor in fluxuri incomplete.
+**Target:** cooking service, crafting station runtime, recovery service.
+**Acceptare:** Ingredientele sunt returnate sau reteta este reluata cand esecul este operational.
+
+### ~~W674~~ ✅ Brewing effect validation
+**Descriere tehnica:** Valideaza efectele produse de brewing pentru durata, intensitate, stacking, restrictii PvP si compatibilitate cu itemele.
+**Scop:** Previne potiuni sau consumabile care rup combatul si progresia.
+**Target:** brewing service, status effect service, config validation.
+**Acceptare:** Efectele invalide sunt refuzate inainte de crearea itemului.
+
+### ~~W675~~ ✅ Enchanting cost cap validator
+**Descriere tehnica:** Aplica limite pentru costurile si rezultatele de enchanting in functie de nivel, item, raritate si economie.
+**Scop:** Previne enchant-uri prea ieftine, imposibile sau dezechilibrate.
+**Target:** enchanting service, economy service, item rules.
+**Acceptare:** Enchanting-ul final respecta cap-urile si produce mesaj explicabil.
+
+### ~~W676~~ ✅ Repair anvil economy sync
+**Descriere tehnica:** Sincronizeaza costurile de repair cu economia, durabilitatea itemului, raritatea si regulile de faction sau regiune.
+**Scop:** Evita repair gratuit sau costuri divergente intre UI si tranzactie.
+**Target:** repair service, economy service, item metadata.
+**Acceptare:** Costul afisat si suma debitata sunt identice si auditabile.
+
+### ~~W677~~ ✅ Item durability overflow guard
+**Descriere tehnica:** Blocheaza durabilitate negativa, peste maxim sau incompatibila cu schema itemului custom.
+**Scop:** Previne iteme corupte si exploit-uri de durabilitate.
+**Target:** item metadata service, inventory operations, validation.
+**Acceptare:** Itemele cu durabilitate invalida sunt reparate controlat sau puse in carantina.
+
+### ~~W678~~ ✅ Item binding transfer policy
+**Descriere tehnica:** Defineste cand itemele bound pot fi transferate, vandute, salvaged, returnate sau mostenite prin mailbox.
+**Scop:** Pastreaza regulile de ownership coerente intre subsisteme.
+**Target:** item binding service, trade/marketplace/mailbox, docs item rules.
+**Acceptare:** Transferul itemului bound este permis doar conform politicii documentate.
+
+### ~~W679~~ ✅ Soulbound enforcement
+**Descriere tehnica:** Aplica enforcement strict pentru soulbound in trade, marketplace, chest storage, mailbox, drop si pickup.
+**Scop:** Inchide rutele indirecte de transfer pentru iteme personale.
+**Target:** item binding service, inventory listeners, marketplace/trade/mailbox.
+**Acceptare:** Itemul soulbound nu poate parasi ownerul prin canale nepermise.
+
+### ~~W680~~ ✅ Item salvage rollback
+**Descriere tehnica:** Face salvaging-ul de iteme tranzactional: consum item, calculeaza output, aplica recompensa si permite rollback la esec.
+**Scop:** Evita pierderea itemului sau duplicarea materialelor.
+**Target:** salvage service, inventory operations, reward delivery.
+**Acceptare:** Salvage-ul se finalizeaza atomic sau restaureaza itemul initial.
