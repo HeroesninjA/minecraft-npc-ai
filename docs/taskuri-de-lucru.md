@@ -4044,3 +4044,1263 @@ Sisteme planificate: settlement creation, boundaries, taxes, treasury, residents
 **Scop:** Previne reguli politice contradictorii.
 **Target:** diplomacy service, faction conflict service, region rules.
 **Acceptare:** Acordurile conflictuale sunt blocate sau trimise la review manual cu raport.
+
+### ~~W771~~ ✅ Story map node registry
+**Descriere tehnica:** Creeaza un registru pentru nodurile de harta folosite de story arcs, quest hubs, regiuni narative si puncte de interes.
+**Scop:** Leaga explicit continutul story de locatii verificabile din world.
+**Target:** map node registry, story service, quest definitions.
+**Acceptare:** Fiecare nod story are id unic, locatie, tip, owner logic si status de validare.
+
+### ~~W772~~ ✅ Quest map marker lifecycle
+**Descriere tehnica:** Modeleaza marker-ele de harta pentru questuri in stari: ascuns, descoperit, activ, completat, expirat si curatat.
+**Scop:** Previne marker-e stale sau spoiler-e pe harta.
+**Target:** quest map service, marker renderer, quest lifecycle.
+**Acceptare:** Marker-ul isi schimba starea strict dupa progresia questului si se curata la final.
+
+### ~~W773~~ ✅ Story region unlock mapping
+**Descriere tehnica:** Leaga deblocarea regiunilor de story branches, reputatie, quest completion si decizii narrative.
+**Scop:** Face accesul pe harta coerent cu progresia story.
+**Target:** story service, region access rules, quest progression.
+**Acceptare:** Regiunea blocata explica prerequisite-ul principal fara a dezvalui spoiler critic.
+
+### ~~W774~~ ✅ Quest route graph validator
+**Descriere tehnica:** Valideaza graful rutelor necesare pentru questuri intre NPC, obiective, regiuni, dungeonuri si puncte de intoarcere.
+**Scop:** Previne questuri imposibil de parcurs fizic.
+**Target:** route graph, quest validation service, world mapping.
+**Acceptare:** Questul cu ruta imposibila este respins cu lista muchiilor blocate.
+
+### ~~W775~~ ✅ Quest objective spatial bounds
+**Descriere tehnica:** Adauga limite spatiale pentru obiectivele de quest: raza, volum, regiune, lume si toleranta de eroare.
+**Scop:** Evita trigger-e care se activeaza in locatii gresite.
+**Target:** quest objective tracker, world mapping, region service.
+**Acceptare:** Obiectivul se activeaza doar in bounds-urile documentate si validate.
+
+### ~~W776~~ ✅ Story pathfinding hint generator
+**Descriere tehnica:** Genereaza hint-uri de navigare pentru story quests pe baza grafului de rute si a regiunilor deblocate.
+**Scop:** Ajuta jucatorii fara waypoint-uri arbitrare sau spoiler-e.
+**Target:** route graph, quest hint service, story progression.
+**Acceptare:** Hint-ul indica urmatorul pas sigur fara sa dezvaluie obiective viitoare ascunse.
+
+### ~~W777~~ ✅ Map fog-of-war story sync
+**Descriere tehnica:** Sincronizeaza fog-of-war-ul hartii cu descoperirea story, quest completions, reputatie si explorare reala.
+**Scop:** Pastreaza harta aliniata cu progresia narativa.
+**Target:** map discovery service, story service, player profile.
+**Acceptare:** Zonele nedescoperite raman ascunse pana cand una dintre regulile documentate le deblocheaza.
+
+### ~~W778~~ ✅ Quest map marker permission filter
+**Descriere tehnica:** Filtreaza marker-ele de quest pe harta dupa player, party, faction, story branch, rol staff si mod spectator.
+**Scop:** Previne scurgeri de informatie intre jucatori sau roluri.
+**Target:** marker renderer, permission service, story state.
+**Acceptare:** Playerul vede doar marker-ele pentru care este eligibil.
+
+### ~~W779~~ ✅ Story instance map isolation
+**Descriere tehnica:** Izoleaza marker-ele si rutele de harta pentru instante diferite ale aceluiasi story arc sau dungeon narativ.
+**Scop:** Previne amestecarea progresului intre grupuri.
+**Target:** story instance service, map marker service, dungeon runtime.
+**Acceptare:** Doua instante paralele nu partajeaza marker-e sau rute mutabile.
+
+### ~~W780~~ ✅ Quest hub dependency map
+**Descriere tehnica:** Creeaza o harta a dependintelor intre quest hubs, NPC-uri, story arcs, regiuni si servicii locale.
+**Scop:** Ajuta planificarea continutului si detectarea hub-urilor critice.
+**Target:** quest hub registry, docs export, validation reports.
+**Acceptare:** Exportul arata ce questuri si story arcs depind de fiecare hub.
+
+### ~~W781~~ ✅ Story branch map overlay
+**Descriere tehnica:** Adauga overlay-uri de harta pentru ramuri story diferite, cu regiuni controlate, obiective active si consecinte vizibile.
+**Scop:** Face impactul deciziilor narative observabil.
+**Target:** map renderer, story branch service, player UI.
+**Acceptare:** Overlay-ul reflecta doar branch-ul activ al playerului sau party-ului.
+
+### ~~W782~~ ✅ Quest travel time estimator
+**Descriere tehnica:** Estimeaza timpul de deplasare pentru questuri pe baza rutelor, accesului la warp, mount, portal si regiuni blocate.
+**Scop:** Permite balansarea questurilor dupa efort real.
+**Target:** route graph, quest balancing, docs gameplay.
+**Acceptare:** Estimatorul produce timp aproximativ si motive pentru rute lungi sau imposibile.
+
+### ~~W783~~ ✅ Story critical path report
+**Descriere tehnica:** Genereaza raport cu traseul critic al story arcs: questuri obligatorii, noduri de harta, NPC-uri si dependinte de regiune.
+**Scop:** Identifica blocaje care pot opri progresia principala.
+**Target:** story graph, quest registry, map node registry.
+**Acceptare:** Raportul listeaza fiecare punct critic si fallback-ul disponibil sau lipsa lui.
+
+### ~~W784~~ ✅ Quest breadcrumb trail cleanup
+**Descriere tehnica:** Curata breadcrumb-urile de navigare dupa completare, abandon, branch switch, party leave sau instance cleanup.
+**Scop:** Previne ghidaje vechi care duc playerul gresit.
+**Target:** quest navigation service, story lifecycle, map markers.
+**Acceptare:** Breadcrumb-urile inactive dispar automat si nu reapar dupa restart.
+
+### ~~W785~~ ✅ Story event geofence validator
+**Descriere tehnica:** Valideaza geofence-urile pentru evenimente story dupa lume, regiune, dimensiune, prioritate si conflicte.
+**Scop:** Previne evenimente narative declansate in zone gresite.
+**Target:** story event service, region service, map validation.
+**Acceptare:** Geofence-ul invalid este refuzat cu raport al coordonatelor sau regiunilor conflictuale.
+
+### ~~W786~~ ✅ Quest location fallback policy
+**Descriere tehnica:** Defineste fallback pentru locatii de quest indisponibile din cauza protectiilor, grief, eventuri, unload sau schimbari de world.
+**Scop:** Mentine questurile jucabile cand locatia initiala nu mai este valida.
+**Target:** quest location service, world mapping, recovery service.
+**Acceptare:** Questul gaseste locatie alternativa sau se suspenda cu motiv auditabil.
+
+### ~~W787~~ ✅ Story NPC relocation map update
+**Descriere tehnica:** Actualizeaza marker-ele, rutele si dependintele story cand un NPC narativ este relocat manual sau automat.
+**Scop:** Evita questuri care trimit playerul la pozitia veche a NPC-ului.
+**Target:** NPC registry, story service, map marker service.
+**Acceptare:** Relocarea NPC-ului invalideaza rutele vechi si publica marker nou validat.
+
+### ~~W788~~ ✅ Quest discovery zone analytics
+**Descriere tehnica:** Colecteaza metrice agregate pentru zonele unde jucatorii descopera, abandoneaza sau finalizeaza questuri.
+**Scop:** Ajuta imbunatatirea hartii si a flow-ului narativ.
+**Target:** quest analytics, map zones, privacy-classified metrics.
+**Acceptare:** Raportul este agregat si nu expune trasee individuale sensibile.
+
+### ~~W789~~ ✅ Story map contradiction detector
+**Descriere tehnica:** Detecteaza contradictii intre lore-ul story si harta reala: regiuni inexistente, distante imposibile, ownership gresit sau rute blocate.
+**Scop:** Pastreaza naratiunea coerenta cu world state.
+**Target:** lore validation, map node registry, story docs.
+**Acceptare:** Contradictia este raportata cu referinta la textul story si nodul de harta afectat.
+
+### ~~W790~~ ✅ Quest region heatmap export
+**Descriere tehnica:** Exporta heatmap pentru utilizarea regiunilor de quest: start, obiective, combat, interactiuni si completari.
+**Scop:** Evidentiaza zone suprafolosite sau nefolosite.
+**Target:** quest analytics, map export, balancing reports.
+**Acceptare:** Exportul grupeaza datele pe regiune si tip de activitate.
+
+### ~~W791~~ ✅ Story phase world-state snapshot
+**Descriere tehnica:** Salveaza snapshot-uri de world-state pentru faze story majore: ownership, NPC positions, marker-e si servicii active.
+**Scop:** Permite audit si rollback narativ controlat.
+**Target:** story phase service, world snapshot, recovery service.
+**Acceptare:** Fiecare faza majora are snapshot valid sau motiv documentat pentru lipsa lui.
+
+### ~~W792~~ ✅ Quest map import validation
+**Descriere tehnica:** Valideaza importul de date mapping pentru questuri din fisiere externe sau exporturi editoriale.
+**Scop:** Previne coordonate invalide, regiuni lipsa si marker-e duplicate.
+**Target:** map import pipeline, quest validation, docs tooling.
+**Acceptare:** Importul invalid produce raport fara sa modifice registrul live.
+
+### ~~W793~~ ✅ Story route access simulation
+**Descriere tehnica:** Simuleaza accesul playerului prin rutele story pentru profile diferite: nou, avansat, faction-specific, party si staff test.
+**Scop:** Detecteaza blocaje ascunse in progresia spatiala.
+**Target:** route simulator, story graph, player profile fixtures.
+**Acceptare:** Simularea raporteaza prima muchie sau conditie care blocheaza accesul.
+
+### ~~W794~~ ✅ Quest chain map continuity check
+**Descriere tehnica:** Verifica continuitatea spatiala intre questurile consecutive dintr-un lant: predare, urmatorul start si rute de tranzitie.
+**Scop:** Evita lanturi care muta playerul arbitrar sau imposibil.
+**Target:** quest chain validator, route graph, map nodes.
+**Acceptare:** Lantul cu discontinuitate este raportat cu perechea de questuri afectata.
+
+### ~~W795~~ ✅ Story milestone map unlock audit
+**Descriere tehnica:** Auditeaza deblocarea marker-elor si regiunilor la milestone-uri story, cu actor, milestone, efecte si rollback.
+**Scop:** Face progresia hartii explicabila pentru suport.
+**Target:** story milestone service, map discovery, audit log.
+**Acceptare:** Fiecare unlock major are audit si poate fi corelat cu milestone-ul declansator.
+
+### ~~W796~~ ✅ Quest hidden area reveal policy
+**Descriere tehnica:** Defineste cand zonele ascunse apar pe harta prin quest, explorare, item, NPC hint sau actiune de party.
+**Scop:** Controleaza reveal-ul continutului secret fara hardcodari dispersate.
+**Target:** map reveal service, quest/story rules, item effects.
+**Acceptare:** Zona ascunsa se dezvaluie doar prin surse permise si auditate.
+
+### ~~W797~~ ✅ Story map rollback compensation
+**Descriere tehnica:** Defineste compensatii cand rollback-ul story ascunde regiuni, marker-e sau servicii deja folosite de player.
+**Scop:** Evita pierderi confuze dupa corectii narrative.
+**Target:** story rollback, map discovery, compensation service.
+**Acceptare:** Rollback-ul de harta produce lista efectelor si compensatiilor aplicate.
+
+### ~~W798~~ ✅ Quest map editor review queue
+**Descriere tehnica:** Creeaza coada de review pentru modificari de mapping propuse la questuri: noduri noi, rute, marker-e si geofence-uri.
+**Scop:** Separă draftul editorial de activarea live.
+**Target:** map editor workflow, moderator/admin dashboard, validation service.
+**Acceptare:** Modificarea de map nu devine activa fara validare si aprobare.
+
+### ~~W799~~ ✅ Story geography documentation export
+**Descriere tehnica:** Exporta documentatia geografiei story: regiuni, asezari, rute, bariere, hub-uri si dependinte narrative.
+**Scop:** Pastreaza documentatia de lore sincronizata cu harta implementata.
+**Target:** story docs export, map node registry, docs index.
+**Acceptare:** Exportul include doar noduri active sau marcheaza explicit drafturile.
+
+### ~~W800~~ ✅ Mapping quest story consistency gate
+**Descriere tehnica:** Adauga gate de validare care verifica alinierea dintre map nodes, quest chains, story branches, docs si reguli de acces.
+**Scop:** Blocheaza activarea continutului narativ spatial inconsistent.
+**Target:** validation pipeline, quest/story/map registries, release checklist.
+**Acceptare:** Continutul map-quest-story nu poate fi activat daca exista erori blocking de consistenta.
+
+### ~~W801~~ ✅ Cartography layer registry
+**Descriere tehnica:** Creeaza registru pentru layer-ele hartii: story, quest, faction, settlement, danger, resources si staff-only.
+**Scop:** Separă informatiile de mapping dupa scop si vizibilitate.
+**Target:** map layer service, marker renderer, permission service.
+**Acceptare:** Fiecare marker apartine unui layer valid si respecta regulile de vizibilitate.
+
+### ~~W802~~ ✅ Cartography layer conflict detector
+**Descriere tehnica:** Detecteaza conflicte intre layer-e cand aceeasi zona are marker-e incompatibile, prioritate gresita sau mesaje contradictorii.
+**Scop:** Previne harti aglomerate sau inselatoare.
+**Target:** map layer validation, marker registry, docs map rules.
+**Acceptare:** Conflictul de layer este raportat cu marker-ele si regulile implicate.
+
+### ~~W803~~ ✅ Quest map priority resolver
+**Descriere tehnica:** Defineste prioritatea marker-elor de quest cand mai multe obiective, hints sau story events ocupa aceeasi zona.
+**Scop:** Pastreaza UI-ul hartii lizibil si determinist.
+**Target:** quest marker service, map renderer, quest tracker.
+**Acceptare:** Marker-ul afisat este ales printr-o regula documentata si testabila.
+
+### ~~W804~~ ✅ Story map spoiler classifier
+**Descriere tehnica:** Clasifica marker-ele si descrierile de harta dupa risc de spoiler: public, hinted, hidden, post-milestone si staff-only.
+**Scop:** Previne dezvaluirea continutului narativ prea devreme.
+**Target:** story map service, marker metadata, content validation.
+**Acceptare:** Marker-ele cu spoiler nu sunt randate inainte de milestone-ul permis.
+
+### ~~W805~~ ✅ Quest path checkpoint registry
+**Descriere tehnica:** Inregistreaza checkpoint-uri de traseu pentru questuri lungi, incluzand locatie, conditii, fallback si status de validare.
+**Scop:** Imparte rutele lungi in segmente verificabile.
+**Target:** quest route service, map node registry, quest docs.
+**Acceptare:** Fiecare segment de ruta are checkpoint-uri ordonate si validate.
+
+### ~~W806~~ ✅ Quest path checkpoint recovery
+**Descriere tehnica:** Permite reluarea navigarii de la ultimul checkpoint valid dupa disconnect, teleport, abandon temporar sau restart.
+**Scop:** Reduce pierderea progresului spatial in questuri lungi.
+**Target:** quest navigation state, player session, recovery service.
+**Acceptare:** Playerul revine la checkpoint valid fara marker-e vechi sau duplicate.
+
+### ~~W807~~ ✅ Story biome requirement validator
+**Descriere tehnica:** Valideaza ca evenimentele story care cer biome specifice au locatii reale si rute valide catre acele biome.
+**Scop:** Evita story events imposibile dupa schimbari de world sau mapping.
+**Target:** story event validation, biome mapping, route graph.
+**Acceptare:** Evenimentul cu biome lipsa este blocat si raportat cu conditia afectata.
+
+### ~~W808~~ ✅ Quest verticality bounds validator
+**Descriere tehnica:** Verifica limitele pe axa Y pentru obiective subterane, aeriene, dungeon, turnuri sau structuri multi-level.
+**Scop:** Previne trigger-e activate la alt nivel decat obiectivul real.
+**Target:** quest objective bounds, map node registry, region service.
+**Acceptare:** Obiectivul spatial include toleranta verticala si respinge activari din afara ei.
+
+### ~~W809~~ ✅ Story route hazard annotation
+**Descriere tehnica:** Adauga adnotari de risc pe rutele story: combat, lava, fall, faction territory, PvP, tax zone sau locked region.
+**Scop:** Face rutele narative balansabile si explicabile.
+**Target:** route graph, story route docs, danger layer.
+**Acceptare:** Fiecare ruta cu risc are hazard metadata si severitate.
+
+### ~~W810~~ ✅ Quest safe-return route
+**Descriere tehnica:** Calculeaza ruta sigura de intoarcere dupa obiective riscante, incluzand fallback la teleport, checkpoint sau NPC escort.
+**Scop:** Evita blocarea playerului dupa finalizarea unui obiectiv.
+**Target:** quest route service, teleport rules, NPC escort service.
+**Acceptare:** Questul riscant are ruta de intoarcere valida sau compensatie documentata.
+
+### ~~W811~~ ✅ NPC escort route validator
+**Descriere tehnica:** Valideaza rutele NPC escort pentru pathfinding, chunk availability, zone protejate, combat si viteza playerului.
+**Scop:** Previne escort quests care se blocheaza sau abandoneaza gresit.
+**Target:** NPC escort service, route graph, quest objective tracker.
+**Acceptare:** Escort quest-ul nu porneste daca ruta NPC este imposibila sau prea instabila.
+
+### ~~W812~~ ✅ NPC escort story branch sync
+**Descriere tehnica:** Sincronizeaza starea escort NPC-ului cu story branch-ul activ, astfel incat dialogul, ruta si destinatia sa fie compatibile.
+**Scop:** Evita escort NPC-uri care urmeaza ramura narativa gresita.
+**Target:** NPC escort service, story branch service, dialogue engine.
+**Acceptare:** NPC-ul escort foloseste doar ruta si dialogul branch-ului curent.
+
+### ~~W813~~ ✅ Quest instance entrance mapping
+**Descriere tehnica:** Leaga intrarile in instante story sau dungeon de marker-e, rute, conditii de acces si status de disponibilitate.
+**Scop:** Face tranzitia din world in instanta clara si validabila.
+**Target:** instance entrance registry, quest map service, dungeon/story runtime.
+**Acceptare:** Intrarea in instanta are marker valid si refuza accesul cand conditiile nu sunt indeplinite.
+
+### ~~W814~~ ✅ Quest instance exit mapping
+**Descriere tehnica:** Defineste iesirile din instante pentru succes, esec, abandon, disconnect si recovery.
+**Scop:** Previne intoarceri in locatii gresite sau periculoase.
+**Target:** instance exit service, teleport safety, quest lifecycle.
+**Acceptare:** Fiecare rezultat de instanta are destinatie de iesire valida si auditata.
+
+### ~~W815~~ ✅ Story portal unlock sequence
+**Descriere tehnica:** Modeleaza deblocarea portalurilor story ca secventa de milestone-uri, iteme, dialoguri si regiuni.
+**Scop:** Evita portaluri activate inaintea progresiei narrative corecte.
+**Target:** portal service, story milestone service, item/quest rules.
+**Acceptare:** Portalul story se activeaza doar dupa secventa valida completa.
+
+### ~~W816~~ ✅ Story portal destination drift check
+**Descriere tehnica:** Verifica periodic ca destinatiile portalurilor story raman valide dupa modificari de world, regiune sau instanta.
+**Scop:** Previne teleporturi catre locatii sterse sau protejate.
+**Target:** portal registry, map validation jobs, region service.
+**Acceptare:** Portalul cu destinatie invalida se dezactiveaza si apare in raport.
+
+### ~~W817~~ ✅ Map-based quest recommendation
+**Descriere tehnica:** Recomanda questuri apropiate pe baza locatiei playerului, progresiei story, nivelului, reputatiei si riscului regiunii.
+**Scop:** Foloseste harta pentru descoperire de continut fara a rupe progresia.
+**Target:** quest recommendation service, map nodes, player profile.
+**Acceptare:** Recomandarile exclud questuri blocate sau cu spoiler nepermis.
+
+### ~~W818~~ ✅ Map-based quest recommendation audit
+**Descriere tehnica:** Auditeaza de ce un quest a fost recomandat sau exclus, incluzand distanta, prerequisite, story branch si risc.
+**Scop:** Face sistemul de recomandare explicabil pentru balancing.
+**Target:** recommendation service, audit reports, quest validation.
+**Acceptare:** Pentru un player test se poate genera lista motivelor de includere si excludere.
+
+### ~~W819~~ ✅ Story map personalization rules
+**Descriere tehnica:** Permite personalizarea hartii pe baza deciziilor story, reputatiei, aliantelor, profesiei si preferintelor playerului.
+**Scop:** Face harta relevanta fara a expune continut inutil.
+**Target:** map renderer, story/player profile, preference service.
+**Acceptare:** Harta personalizata respecta aceleasi gate-uri de spoiler si permisiuni.
+
+### ~~W820~~ ✅ Party story map consensus
+**Descriere tehnica:** Defineste cum se combina marker-ele story intr-un party cu membri aflati pe branch-uri, reputatii sau regiuni deblocate diferite.
+**Scop:** Previne scurgeri de spoiler intre membri si blocaje de grup.
+**Target:** party service, story map service, marker permissions.
+**Acceptare:** Party-ul vede doar marker-ele permise de politica de consens.
+
+### ~~W821~~ ✅ Quest route cost balancing report
+**Descriere tehnica:** Genereaza raport de cost pentru rute de quest: timp, taxe, risc, combat, consumabile si prerequisite-uri.
+**Scop:** Ajuta balansarea recompenselor dupa efortul spatial real.
+**Target:** route graph, quest balancing reports, economy rules.
+**Acceptare:** Raportul listeaza rutele prea scumpe, prea ieftine sau imposibile.
+
+### ~~W822~~ ✅ Story geography naming validator
+**Descriere tehnica:** Valideaza numele regiunilor, drumurilor, hub-urilor si locatiilor story impotriva glosarului lore si a duplicatelor.
+**Scop:** Pastreaza consistenta geografiei narative.
+**Target:** lore glossary, map node registry, docs export.
+**Acceptare:** Numele conflictuale sunt raportate cu sugestie de rezolvare sau owner de review.
+
+### ~~W823~~ ✅ Quest landmark interaction mapping
+**Descriere tehnica:** Mapeaza landmark-urile interactive la quest objectives, story milestones, cooldown-uri si reguli de acces.
+**Scop:** Previne interactiuni world nelegate corect de progresie.
+**Target:** landmark registry, quest objective handlers, story service.
+**Acceptare:** Landmark-ul interactiv are owner logic si conditii de activare validate.
+
+### ~~W824~~ ✅ Landmark state persistence
+**Descriere tehnica:** Persistă starea landmark-urilor story: descoperit, activat, consumat, corupt, reparat sau ascuns.
+**Scop:** Pastreaza efectele narative intre restarturi.
+**Target:** landmark service, persistence layer, map renderer.
+**Acceptare:** Landmark-ul isi restaureaza starea corecta dupa restart si chunk reload.
+
+### ~~W825~~ ✅ Landmark cleanup on story rollback
+**Descriere tehnica:** Curata sau revine landmark-urile cand story rollback schimba faza, branch-ul sau ownership-ul regiunii.
+**Scop:** Evita world state ramas dintr-o cronologie anulata.
+**Target:** landmark service, story rollback, recovery service.
+**Acceptare:** Rollback-ul story produce lista landmark-urilor modificate sau puse in recovery.
+
+### ~~W826~~ ✅ Quest map marker localization
+**Descriere tehnica:** Mută textele marker-elor de quest si story in catalogul de localizare, cu placeholder-e validate.
+**Scop:** Face harta traductibila si consistenta cu mesajele din joc.
+**Target:** map marker renderer, localization catalog, quest/story docs.
+**Acceptare:** Marker-ele nu contin text hardcodat si placeholder-ele lipsa sunt raportate.
+
+### ~~W827~~ ✅ Map marker accessibility modes
+**Descriere tehnica:** Adauga moduri alternative pentru marker-e: text explicit, icon fallback, contrast ridicat si descriere compacta.
+**Scop:** Imbunatateste lizibilitatea hartii pentru jucatori cu nevoi diferite.
+**Target:** map renderer, player preferences, marker metadata.
+**Acceptare:** Marker-ele critice au fallback textual si nu depind doar de culoare.
+
+### ~~W828~~ ✅ Quest route debug overlay
+**Descriere tehnica:** Creeaza overlay staff-only pentru debug de rute: noduri, muchii, costuri, blocaje si prerequisite-uri.
+**Scop:** Reduce timpul de investigare pentru questuri imposibile.
+**Target:** debug map overlay, route graph, admin permissions.
+**Acceptare:** Overlay-ul este vizibil doar staff-ului autorizat si nu apare jucatorilor.
+
+### ~~W829~~ ✅ Story spatial regression fixtures
+**Descriere tehnica:** Creeaza fixtures de regresie pentru cazuri story spatial sensibile: rute blocate, branch exclusiv, portal, geofence si hidden area.
+**Scop:** Previne reintroducerea bugurilor de mapping narativ.
+**Target:** validation tests, story graph, map node fixtures.
+**Acceptare:** Cazurile documentate ruleaza automat in validarea continutului.
+
+### ~~W830~~ ✅ Mapping quest story release checklist
+**Descriere tehnica:** Creeaza checklist de release pentru continut map-quest-story: rute, marker-e, localizare, spoiler, acces, docs si rollback.
+**Scop:** Standardizeaza activarea sigura a continutului narativ spatial.
+**Target:** release checklist, docs/taskuri-de-lucru.md, validation pipeline.
+**Acceptare:** Continutul nou de mapping quest story nu este publicat fara checklist complet.
+
+### ~~W831~~ ✅ Story chapter map timeline
+**Descriere tehnica:** Leaga capitolele story de o cronologie spatiala cu regiuni active, hub-uri, marker-e, rute si schimbari de world state.
+**Scop:** Face evolutia hartii pe capitole verificabila si documentabila.
+**Target:** story chapter service, map node registry, docs story geography.
+**Acceptare:** Fiecare capitol are snapshot cu zone active, blocate si tranzitii permise.
+
+### ~~W832~~ ✅ Quest region prerequisite diff
+**Descriere tehnica:** Genereaza diff intre prerequisite-urile declarate de quest si regulile reale de acces ale regiunilor folosite.
+**Scop:** Detecteaza questuri care cer acces pe care playerul nu il poate obtine.
+**Target:** quest validation service, region access rules, story prerequisites.
+**Acceptare:** Diff-ul raporteaza fiecare conditie lipsa, redundanta sau contradictorie.
+
+### ~~W833~~ ✅ Route obstruction detector
+**Descriere tehnica:** Detecteaza obstacole temporare sau permanente pe rutele de quest: protectii, blocuri, eventuri, claim-uri, mobs sau world border.
+**Scop:** Previne ghidarea jucatorului prin trasee blocate.
+**Target:** route graph, world mapping, region/event services.
+**Acceptare:** Ruta obstructionata este marcata indisponibila si are alternativa sau motiv de suspendare.
+
+### ~~W834~~ ✅ Dynamic quest reroute policy
+**Descriere tehnica:** Defineste cand questul poate recalcula ruta catre obiectiv dupa schimbari de world, party, unlock-uri sau hazard.
+**Scop:** Mentine navigarea corecta fara a schimba scopul questului.
+**Target:** quest navigation service, route graph, map marker service.
+**Acceptare:** Reroute-ul pastreaza obiectivul valid si auditeaza motivul recalcularii.
+
+### ~~W835~~ ✅ Map node versioning
+**Descriere tehnica:** Adauga versiuni pentru map nodes astfel incat questurile si story branches sa poata referi explicit o versiune compatibila.
+**Scop:** Previne ruperea continutului vechi cand locatiile sunt modificate.
+**Target:** map node registry, quest/story references, migration runner.
+**Acceptare:** Referintele la noduri incompatibile sunt raportate in validare.
+
+### ~~W836~~ ✅ Map node deprecation workflow
+**Descriere tehnica:** Introduce workflow pentru noduri de harta deprecated, cu inlocuitor, perioada de compatibilitate si raport de dependinte.
+**Scop:** Permite schimbari de mapping fara ruperea questurilor active.
+**Target:** map node registry, docs export, validation reports.
+**Acceptare:** Un nod deprecated nu poate fi sters cat timp exista dependinte active nemigrate.
+
+### ~~W837~~ ✅ Quest coordinate drift audit
+**Descriere tehnica:** Auditeaza diferenta dintre coordonatele documentate, marker-ele active si coordonatele reale folosite de trigger-e.
+**Scop:** Detecteaza drift intre documentatie, harta si cod.
+**Target:** quest objective definitions, map marker service, docs validation.
+**Acceptare:** Auditul raporteaza coordonatele divergente cu sursa fiecarei valori.
+
+### ~~W838~~ ✅ Landmark dialogue trigger sync
+**Descriere tehnica:** Sincronizeaza trigger-ele de dialog declansate la landmark cu starea marker-ului, story branch-ul si quest objective-ul.
+**Scop:** Evita dialoguri pornite la landmark-uri gresite sau inactive.
+**Target:** landmark service, dialogue engine, quest/story state.
+**Acceptare:** Dialogul de landmark se activeaza doar cand marker-ul si branch-ul sunt compatibile.
+
+### ~~W839~~ ✅ Story proximity trigger debouncer
+**Descriere tehnica:** Adauga debouncing pentru trigger-ele story bazate pe apropiere de locatie, cu fereastra pe player, party si regiune.
+**Scop:** Previne declansari multiple ale aceluiasi eveniment spatial.
+**Target:** story trigger service, movement listeners, quest event bus.
+**Acceptare:** Intrarea repetata in aceeasi zona nu dubleaza evenimentul story.
+
+### ~~W840~~ ✅ Quest clue spatial index
+**Descriere tehnica:** Indexeaza indiciile de quest dupa zona, landmark, NPC, item, story branch si nivel de spoiler.
+**Scop:** Face cautarea si validarea indiciilor spatiale eficienta.
+**Target:** clue service, map node registry, quest hint service.
+**Acceptare:** Fiecare clue spatial poate fi gasit dupa locatie si este filtrat dupa spoiler gate.
+
+### ~~W841~~ ✅ Map pin provenance tracking
+**Descriere tehnica:** Inregistreaza provenienta fiecarui pin de harta: quest, story, player, staff, import, AI draft sau recovery.
+**Scop:** Face marker-ele usor de investigat si curatat.
+**Target:** map marker service, audit log, map editor workflow.
+**Acceptare:** Fiecare pin activ are sursa, actor sau sistem owner si timestamp.
+
+### ~~W842~~ ✅ Alternative story route resolver
+**Descriere tehnica:** Calculeaza rute alternative pentru story objectives cand ruta principala este blocata de world state, faction conflict sau event.
+**Scop:** Mentine progresia story fara bypass necontrolat.
+**Target:** route graph, story objective service, region/faction rules.
+**Acceptare:** Ruta alternativa respecta aceleasi prerequisite-uri si este auditată ca fallback.
+
+### ~~W843~~ ✅ Narrative region state renderer
+**Descriere tehnica:** Randeaza starea narativa a regiunilor pe harta: pace, conflict, ocupat, corupt, reparat, ascuns sau post-event.
+**Scop:** Face consecintele story vizibile si coerente.
+**Target:** map renderer, story phase service, region metadata.
+**Acceptare:** Starea afisata corespunde ultimei faze story validate pentru player.
+
+### ~~W844~~ ✅ Quest marker cache invalidation
+**Descriere tehnica:** Invalideaza cache-ul marker-elor de quest cand se schimba story branch, party, reputatie, regiune, config sau locale.
+**Scop:** Previne marker-e stale dupa schimbari de context.
+**Target:** marker cache, quest tracker, player profile events.
+**Acceptare:** Schimbarile relevante se reflecta pe harta fara restart sau refresh manual fortat.
+
+### ~~W845~~ ✅ Story branch merge map policy
+**Descriere tehnica:** Defineste cum se imbina marker-ele si regiunile cand doua ramuri story se reunesc intr-un milestone comun.
+**Scop:** Evita marker-e duplicate sau contradictorii dupa branch merge.
+**Target:** story branch service, map discovery, marker cleanup.
+**Acceptare:** Merge-ul produce set unic de marker-e si curata branch-urile vechi.
+
+### ~~W846~~ ✅ Party waypoint leader policy
+**Descriere tehnica:** Stabileste cine poate seta waypoint-uri de party pentru questuri story si cum sunt validate fata de progresul membrilor.
+**Scop:** Previne ghidarea grupului catre continut blocat sau spoiler.
+**Target:** party service, map waypoint service, story permissions.
+**Acceptare:** Waypoint-ul de party este acceptat doar daca politica de lider si eligibilitate il permite.
+
+### ~~W847~~ ✅ Quest map privacy snapshot
+**Descriere tehnica:** Salveaza snapshot de vizibilitate pentru marker-ele partajate in party, staff review sau export de suport.
+**Scop:** Permite auditarea scurgerilor de informatie pe harta.
+**Target:** marker visibility service, party/staff workflows, audit reports.
+**Acceptare:** Se poate explica de ce un actor a vazut sau nu a vazut un marker la un moment dat.
+
+### ~~W848~~ ✅ Map editor change impact report
+**Descriere tehnica:** Calculeaza impactul unei modificari de mapping asupra questurilor, story branches, NPC-urilor, portalurilor si documentatiei.
+**Scop:** Previne activarea modificarilor de harta cu efecte ascunse.
+**Target:** map editor workflow, dependency graph, validation reports.
+**Acceptare:** Orice schimbare propusa produce lista dependintelor afectate inainte de aprobare.
+
+### ~~W849~~ ✅ Story content placement lint
+**Descriere tehnica:** Ruleaza lint pentru plasarea continutului story: distante, densitate, biomes, regiuni, rute, spoiler si compatibilitate lore.
+**Scop:** Mentine calitatea geografiei narative.
+**Target:** story content validator, map node registry, lore rules.
+**Acceptare:** Continutul plasat gresit primeste warning sau blocking error dupa severitate.
+
+### ~~W850~~ ✅ Quest world border guard
+**Descriere tehnica:** Verifica toate locatiile de quest si rutele asociate fata de world border curent si border-ul planificat.
+**Scop:** Previne obiective in afara zonei accesibile.
+**Target:** quest validation, world border service, route graph.
+**Acceptare:** Locatiile in afara border-ului sunt refuzate sau marcate pentru migrare.
+
+### ~~W851~~ ✅ Route graph chunk availability check
+**Descriere tehnica:** Verifica daca nodurile si muchiile importante ale rutei depind de chunk-uri unloadable, regenerate sau protejate.
+**Scop:** Reduce rutele instabile in productie.
+**Target:** route graph, chunk lifecycle, world validation.
+**Acceptare:** Ruta cu chunk instabil este raportata cu risc si fallback recomandat.
+
+### ~~W852~~ ✅ Map node health dashboard
+**Descriere tehnica:** Creeaza dashboard cu health status pentru noduri de harta: valid, stale, unreachable, deprecated, conflictual sau draft.
+**Scop:** Centralizeaza mentenanta mapping-ului.
+**Target:** admin dashboard, map node registry, validation jobs.
+**Acceptare:** Staff-ul vede starea fiecarui nod si actiunea recomandata.
+
+### ~~W853~~ ✅ Quest route config-change detector
+**Descriere tehnica:** Detecteaza cand o schimbare de config pentru regiuni, teleport, permisiuni sau economie face o ruta de quest invalida.
+**Scop:** Prinde buguri introduse prin configuratie, nu doar prin cod.
+**Target:** config reload validation, quest route graph, region rules.
+**Acceptare:** Reload-ul raporteaza rutele care devin imposibile dupa config change.
+
+### ~~W854~~ ✅ Story phase mapping migration
+**Descriere tehnica:** Migreaza map discovery, marker-e si regiuni narative cand se schimba definitia fazelor story intre versiuni.
+**Scop:** Pastreaza progresul playerilor dupa update-uri de story.
+**Target:** story migration, map discovery state, player profile.
+**Acceptare:** Migrarile au dry-run si raport cu playerii sau fazele afectate.
+
+### ~~W855~~ ✅ Quest objective map grouping
+**Descriere tehnica:** Grupeaza marker-ele obiectivelor multiple ale aceluiasi quest pentru a evita clutter si a indica progresul ramas.
+**Scop:** Imbunatateste lizibilitatea hartii pentru questuri complexe.
+**Target:** marker renderer, quest tracker, player UI preferences.
+**Acceptare:** Questurile cu multe obiective afiseaza grupuri expandabile sau sumarizate.
+
+### ~~W856~~ ✅ Story area ownership overlay
+**Descriere tehnica:** Afiseaza overlay de ownership narativ pentru zone controlate de factiuni, NPC-uri, evenimente sau decizii story.
+**Scop:** Leaga controlul politic de geografia story.
+**Target:** map renderer, faction/settlement/story services, region metadata.
+**Acceptare:** Overlay-ul arata ownerul efectiv si sursa regulii de control.
+
+### ~~W857~~ ✅ Quest route replay export
+**Descriere tehnica:** Exporta traseul parcurs de un quest in forma agregata pentru debugging: noduri atinse, marker-e vazute si blocaje.
+**Scop:** Ajuta investigarea bugurilor de navigare fara a expune date inutile.
+**Target:** quest navigation telemetry, export formatter, privacy rules.
+**Acceptare:** Replay-ul este disponibil staff-ului autorizat si redacteaza date sensibile.
+
+### ~~W858~~ ✅ Story map QA scenario pack
+**Descriere tehnica:** Creeaza pachet de scenarii QA pentru mapping story: player nou, player avansat, party mixt, branch exclusiv si rollback.
+**Scop:** Standardizeaza testarea manuala si automata a hartii narrative.
+**Target:** QA docs, validation fixtures, story/map test data.
+**Acceptare:** Fiecare scenariu are pasi, expected result si marker-e de verificat.
+
+### ~~W859~~ ✅ Map quest story docs drift audit
+**Descriere tehnica:** Compara documentatia de mapping quest story cu registrul live pentru noduri, marker-e, rute, unlock-uri si spoiler levels.
+**Scop:** Detecteaza documentatie invechita inainte de release.
+**Target:** docs validation, map/quest/story registries, release checklist.
+**Acceptare:** Drift-ul este raportat cu documentul, sectiunea si entitatea afectata.
+
+### ~~W860~~ ✅ Mapping quest story implementation batch
+**Descriere tehnica:** Defineste un batch implementabil pentru taskurile map-quest-story cu dependinte, ordine recomandata, teste si docs afectate.
+**Scop:** Permite executia sigura de catre agent extern fara a rupe progresia spatiala.
+**Target:** docs/taskuri-de-lucru.md, implementation planning, validation pipeline.
+**Acceptare:** Batch-ul contine ordine de implementare, riscuri, criterii de testare si rollback.
+
+### ~~W861~~ ✅ Story route lock ownership
+**Descriere tehnica:** Introduce ownership explicit pentru lock-urile de ruta story pe player, party, instanta sau event.
+**Scop:** Previne blocarea rutei de catre contextul gresit sau ramas dupa cleanup incomplet.
+**Target:** story route service, lock manager, recovery service.
+**Acceptare:** Fiecare lock de ruta are owner, expiry, motiv si cleanup auditabil.
+
+### ~~W862~~ ✅ Quest route lock conflict report
+**Descriere tehnica:** Raporteaza conflictele intre lock-uri de ruta create de questuri, eventuri, dungeonuri, settlement-uri si staff actions.
+**Scop:** Face blocajele spatiale usor de diagnosticat.
+**Target:** route lock manager, quest/event services, admin dashboard.
+**Acceptare:** Conflictul include actorii, ruta afectata, durata si actiunea recomandata.
+
+### ~~W863~~ ✅ Story bridge activation state
+**Descriere tehnica:** Modeleaza podurile, barierele si pasajele story ca entitati cu stari: inchis, deschis, deteriorat, reparat si ascuns.
+**Scop:** Leaga modificarile fizice ale hartii de progresia narativa.
+**Target:** world mapping, story phase service, landmark service.
+**Acceptare:** Starea pasajului este persistenta si sincronizata cu marker-ele de harta.
+
+### ~~W864~~ ✅ Quest bridge fallback routing
+**Descriere tehnica:** Calculeaza fallback pentru questuri cand un pod, pasaj sau poarta story devine indisponibil.
+**Scop:** Evita questuri blocate de modificari temporare ale hartii.
+**Target:** route graph, quest navigation, story bridge registry.
+**Acceptare:** Questul foloseste ruta alternativa valida sau se suspenda cu motiv clar.
+
+### ~~W865~~ ✅ Narrative map hazard decay
+**Descriere tehnica:** Adauga decay pentru hazard-urile narative de pe harta, precum coruptie, ceata, conflict sau infestare.
+**Scop:** Permite lumii sa revina gradual dupa evenimente story.
+**Target:** hazard layer, story phase service, scheduler.
+**Acceptare:** Hazard-ul scade conform politicii si actualizeaza marker-ele vizibile.
+
+### ~~W866~~ ✅ Narrative hazard cleanse quest link
+**Descriere tehnica:** Leaga curatarea hazard-urilor de questuri sau proiecte story care reduc, elimina sau muta pericolul pe harta.
+**Scop:** Face efectele questurilor vizibile in world mapping.
+**Target:** hazard layer, quest completion, story world-state.
+**Acceptare:** Finalizarea questului modifica hazard-ul doar daca toate conditiile sunt valide.
+
+### ~~W867~~ ✅ Map route toll story exception
+**Descriere tehnica:** Defineste exceptii de taxare pe rute pentru story quests, urgenta, faction treaty sau event escort.
+**Scop:** Evita blocarea progresiei narative de costuri de ruta.
+**Target:** route toll service, story quest rules, economy validation.
+**Acceptare:** Exceptia de taxa are motiv, durata si audit.
+
+### ~~W868~~ ✅ Quest route toll preview
+**Descriere tehnica:** Afiseaza costurile de ruta estimate inainte ca playerul sa porneasca un quest sau segment de calatorie.
+**Scop:** Face costurile spatiale explicite si reduce abandonul neinformat.
+**Target:** quest UI, route graph, toll/economy services.
+**Acceptare:** Preview-ul arata cost total, scutiri si rute alternative disponibile.
+
+### ~~W869~~ ✅ Story patrol route registry
+**Descriere tehnica:** Creeaza registru pentru rutele patrulelor NPC legate de story, factiuni si regiuni de conflict.
+**Scop:** Face patrulele parte verificabila a hartii narative.
+**Target:** NPC patrol service, route graph, faction/story services.
+**Acceptare:** Fiecare patrula are ruta valida, orar, owner si conditii de activare.
+
+### ~~W870~~ ✅ Story patrol encounter trigger
+**Descriere tehnica:** Leaga intalnirile cu patrule de geofence, reputatie, faction status, story branch si cooldown.
+**Scop:** Previne encountere de patrula declansate in contexte gresite.
+**Target:** patrol encounter service, story trigger service, reputation/faction rules.
+**Acceptare:** Encounter-ul se activeaza doar cand toate conditiile spatiale si narrative sunt indeplinite.
+
+### ~~W871~~ ✅ Quest escort route handoff
+**Descriere tehnica:** Permite handoff intre doua rute de escort cand NPC-ul trece intre regiuni, instante sau faze story.
+**Scop:** Evita escort quests care se rup la granite de zona.
+**Target:** NPC escort service, route graph, story phase service.
+**Acceptare:** Handoff-ul pastreaza progresul si verifica noua ruta inainte de tranzitie.
+
+### ~~W872~~ ✅ Map node ownership by story phase
+**Descriere tehnica:** Permite schimbarea ownerului unui map node in functie de faza story, faction conflict sau settlement event.
+**Scop:** Reflecta controlul narativ al zonelor direct in mapping.
+**Target:** map node registry, story phase service, faction/settlement services.
+**Acceptare:** Ownerul nodului este calculat determinist si auditat la schimbare.
+
+### ~~W873~~ ✅ Quest map node reservation
+**Descriere tehnica:** Rezerva temporar noduri de harta pentru questuri instanciate sau evenimente care necesita exclusivitate spatiala.
+**Scop:** Previne doua fluxuri care folosesc simultan acelasi loc incompatibil.
+**Target:** map node registry, quest instance service, event scheduler.
+**Acceptare:** Rezervarea are owner, expiry si regula de conflict.
+
+### ~~W874~~ ✅ Map node reservation cleanup
+**Descriere tehnica:** Curata rezervarile de map node ramase dupa quest cancel, disconnect, event fail, restart sau recovery.
+**Scop:** Evita zone blocate permanent de rezervari stale.
+**Target:** reservation service, cleanup jobs, recovery service.
+**Acceptare:** Rezervarile expirate sau orfane sunt eliberate si raportate.
+
+### ~~W875~~ ✅ Story route accessibility validator
+**Descriere tehnica:** Valideaza rutele story pentru accesibilitate: jump-uri imposibile, inaltime, apa, lava, intuneric, mob density si alternative.
+**Scop:** Evita rute care sunt teoretic valide dar practic nejucabile.
+**Target:** route graph, world analysis, gameplay validation.
+**Acceptare:** Rutele cu risc de accesibilitate primesc severitate si recomandare.
+
+### ~~W876~~ ✅ Quest route mount compatibility
+**Descriere tehnica:** Marcheaza segmentele de ruta unde mount-ul este permis, interzis, necesar sau periculos.
+**Scop:** Aliniaza navigarea questurilor cu regulile de mount si teren.
+**Target:** route graph, mount service, quest navigation.
+**Acceptare:** Navigarea nu recomanda mount pe segmente incompatibile.
+
+### ~~W877~~ ✅ Story route vehicle compatibility
+**Descriere tehnica:** Valideaza rutele pentru vehicule sau transport special: barci, minecart, caravan, portal, mount si teleport.
+**Scop:** Previne obiective care depind de transport indisponibil.
+**Target:** route graph, transport services, story/quest rules.
+**Acceptare:** Segmentul de ruta declara transporturile permise si prerequisite-urile lor.
+
+### ~~W878~~ ✅ Quest hub load distribution report
+**Descriere tehnica:** Raporteaza incarcarea spatiala a quest hub-urilor dupa numar de questuri, playeri, NPC-uri, marker-e si eventuri.
+**Scop:** Identifica hub-uri supra-aglomerate sau subfolosite.
+**Target:** quest hub registry, analytics, map reports.
+**Acceptare:** Raportul indica hub-uri cu risc de aglomerare si recomandari de redistribuire.
+
+### ~~W879~~ ✅ Story hub fallback assignment
+**Descriere tehnica:** Defineste hub-uri alternative pentru story arcs cand hub-ul principal este indisponibil sau supra-aglomerat.
+**Scop:** Mentine progresia story in conditii operationale variabile.
+**Target:** story hub service, quest routing, map node registry.
+**Acceptare:** Fallback-ul este folosit doar daca respecta prerequisite-urile si spoiler gate-ul.
+
+### ~~W880~~ ✅ Quest route weather dependency
+**Descriere tehnica:** Marcheaza segmentele de ruta si obiectivele dependente de vreme, furtuna, zi/noapte sau anotimp.
+**Scop:** Face conditiile de mediu explicite si testabile.
+**Target:** route graph, weather/time service, quest objective validation.
+**Acceptare:** Questul cu dependinta de vreme afiseaza conditia sau fallback-ul permis.
+
+### ~~W881~~ ✅ Story weather event map overlay
+**Descriere tehnica:** Afiseaza overlay pentru evenimente meteo story care afecteaza rute, regiuni, NPC-uri sau obiective.
+**Scop:** Leaga schimbarile atmosferice de navigarea pe harta.
+**Target:** weather event service, map renderer, story phase service.
+**Acceptare:** Overlay-ul meteo apare doar in zonele si fazele story relevante.
+
+### ~~W882~~ ✅ Quest route time-window validator
+**Descriere tehnica:** Valideaza rutele si obiectivele care sunt disponibile doar in ferestre de timp specifice.
+**Scop:** Previne obiective active in afara intervalului narativ permis.
+**Target:** quest validation, time service, route graph.
+**Acceptare:** Ferestrele de timp sunt documentate si evaluate inainte de activarea obiectivului.
+
+### ~~W883~~ ✅ Story nocturnal route policy
+**Descriere tehnica:** Defineste reguli speciale pentru rutele story nocturne: vizibilitate, mob density, NPC schedule, marker-e si risk hints.
+**Scop:** Face continutul de noapte coerent si balansat.
+**Target:** story route service, NPC routine service, danger layer.
+**Acceptare:** Rutele nocturne au metadata de risc si fallback pentru jucatori nepregatiti.
+
+### ~~W884~~ ✅ Quest route seasonal availability
+**Descriere tehnica:** Marcheaza rutele si obiectivele disponibile doar in anumite sezoane sau eventuri calendaristice.
+**Scop:** Previne referinte catre continut sezonier in afara ferestrei sale.
+**Target:** seasonal event service, route graph, quest validation.
+**Acceptare:** Questul sezonier este activ doar cand rutele sale sezoniere sunt disponibile.
+
+### ~~W885~~ ✅ Story map archival snapshot
+**Descriere tehnica:** Arhiveaza starea hartii narrative la final de capitol, sezon sau release major.
+**Scop:** Permite comparatii, rollback si documentare istorica.
+**Target:** map snapshot service, story chapter service, docs export.
+**Acceptare:** Snapshot-ul include noduri, rute, marker-e, owneri si hazard-uri active.
+
+### ~~W886~~ ✅ Quest route archival diff
+**Descriere tehnica:** Compara rutele de quest intre doua snapshot-uri pentru a detecta schimbari de acces, cost, risc si lungime.
+**Scop:** Evidentiaza impactul modificarilor de harta asupra continutului existent.
+**Target:** route snapshot diff, quest validation, release reports.
+**Acceptare:** Diff-ul listeaza questurile afectate si severitatea schimbarii.
+
+### ~~W887~~ ✅ Story geography changelog generator
+**Descriere tehnica:** Genereaza changelog pentru schimbarile de geografie story: regiuni, rute, noduri, landmark-uri si hub-uri.
+**Scop:** Face evolutia hartii narative usor de urmarit.
+**Target:** map registry, docs changelog, release workflow.
+**Acceptare:** Fiecare schimbare geografica publica apare intr-un sumar de release.
+
+### ~~W888~~ ✅ Quest map migration dry-run
+**Descriere tehnica:** Ruleaza migrarile de mapping pentru questuri in dry-run cu raport de marker-e mutate, rute schimbate si obiective afectate.
+**Scop:** Reduce riscul migrarilor de continut spatial.
+**Target:** map migration runner, quest registry, validation reports.
+**Acceptare:** Dry-run-ul nu modifica date live si produce lista exacta de schimbari planificate.
+
+### ~~W889~~ ✅ Story route rollback dry-run
+**Descriere tehnica:** Simuleaza rollback-ul rutelor story pentru a vedea marker-ele, unlock-urile, hazard-urile si questurile afectate.
+**Scop:** Permite decizii informate inainte de rollback narativ.
+**Target:** story rollback service, route graph, map discovery state.
+**Acceptare:** Dry-run-ul raporteaza efecte, riscuri si compensatii fara modificari live.
+
+### ~~W890~~ ✅ Mapping quest story validation summary export
+**Descriere tehnica:** Exporta sumarul validarii map-quest-story cu erori, warnings, noduri afectate, questuri blocate si actiuni recomandate.
+**Scop:** Ofera o predare clara pentru implementare, review si release.
+**Target:** validation pipeline, docs export, admin dashboard.
+**Acceptare:** Sumarul poate fi atasat unui batch si indica explicit ce blocheaza activarea.
+
+### ~~W891~~ ✅ Story route rehearsal simulator
+**Descriere tehnica:** Simuleaza parcurgerea rutelor story fara efecte live, folosind profile de player, party, branch si unlock-uri diferite.
+**Scop:** Detecteaza blocaje spatiale inainte ca story arc-ul sa fie activat.
+**Target:** route simulator, story graph, map node registry.
+**Acceptare:** Simulatorul raporteaza ruta parcursa, primul blocaj si conditiile lipsa.
+
+### ~~W892~~ ✅ Quest objective relocation approval
+**Descriere tehnica:** Creeaza flux de aprobare pentru mutarea obiectivelor de quest pe harta, cu impact asupra rutei, marker-elor si documentatiei.
+**Scop:** Previne mutari editoriale care rup chain-uri sau story gates.
+**Target:** quest editor workflow, map node registry, validation reports.
+**Acceptare:** Relocarea nu devine activa fara impact report si aprobare.
+
+### ~~W893~~ ✅ Map node permission inheritance
+**Descriere tehnica:** Defineste mostenirea permisiunilor intre map nodes, regiuni parinte, hub-uri, settlement-uri si instante.
+**Scop:** Evita reguli de acces duplicate sau contradictorii.
+**Target:** map node registry, permission service, region hierarchy.
+**Acceptare:** Permisiunea efectiva a nodului poate fi explicata prin lantul de mostenire.
+
+### ~~W894~~ ✅ Story route priority lanes
+**Descriere tehnica:** Marcheaza rute prioritare pentru story principal fata de side quests, daily quests, eventuri si continut optional.
+**Scop:** Protejeaza progresia principala de conflicte cu continut secundar.
+**Target:** route graph, story priority rules, quest scheduler.
+**Acceptare:** Rutele critice story au prioritate si conflictele sunt raportate.
+
+### ~~W895~~ ✅ Quest path difficulty tagging
+**Descriere tehnica:** Eticheteaza segmentele de ruta dupa dificultate: safe, normal, risky, combat-heavy, puzzle, platforming sau locked.
+**Scop:** Aliniaza recompensa si hint-urile cu dificultatea deplasarii.
+**Target:** route graph, quest balancing, map renderer.
+**Acceptare:** Fiecare segment folosit de quest are tag de dificultate si severitate.
+
+### ~~W896~~ ✅ Story region reputation gate sync
+**Descriere tehnica:** Sincronizeaza accesul la regiuni story cu tier-urile de reputatie si schimbarile produse de questuri.
+**Scop:** Evita regiuni accesibile inainte sau dupa pragul narativ corect.
+**Target:** reputation service, story region gates, map discovery.
+**Acceptare:** Schimbarea reputatiei actualizeaza accesul si marker-ele relevante.
+
+### ~~W897~~ ✅ Quest marker expiry by condition
+**Descriere tehnica:** Expira marker-ele de quest pe baza conditiilor: timp, branch schimbat, obiectiv completat, regiune inchisa sau quest suspendat.
+**Scop:** Previne indicatii vechi pe harta.
+**Target:** quest marker service, condition evaluator, cleanup jobs.
+**Acceptare:** Marker-ul expirat este eliminat si nu reapare fara conditie valida.
+
+### ~~W898~~ ✅ Rumor-based map hint system
+**Descriere tehnica:** Adauga hint-uri de harta provenite din zvonuri NPC, carti, semne sau interactiuni, cu nivel de incredere.
+**Scop:** Permite descoperire diegetica a locatiei fara marker direct permanent.
+**Target:** rumor service, map hint service, dialogue engine.
+**Acceptare:** Hint-ul de tip zvon afiseaza zona aproximativa si sursa, nu coordonata exacta.
+
+### ~~W899~~ ✅ Rumor hint validation
+**Descriere tehnica:** Valideaza zvonurile care indica locatii pentru a evita regiuni inexistente, spoiler-e nepermise sau contradictii lore.
+**Scop:** Pastreaza indiciile narative coerente cu harta.
+**Target:** rumor validation, lore glossary, map node registry.
+**Acceptare:** Zvonul invalid este respins sau trimis la review editorial.
+
+### ~~W900~~ ✅ Road sign quest sync
+**Descriere tehnica:** Sincronizeaza semnele de drum din world cu rutele si hub-urile relevante pentru questuri si story.
+**Scop:** Evita indicatoare care trimit catre locatii vechi sau blocate.
+**Target:** road sign service, route graph, map node registry.
+**Acceptare:** Semnele regenerate reflecta rutele active si respecta spoiler gate-ul.
+
+### ~~W901~~ ✅ In-world sign localization
+**Descriere tehnica:** Mută textele semnelor de quest si story in catalogul de localizare, cu fallback pe limba serverului.
+**Scop:** Pastreaza consistenta intre harta, chat si obiectele din lume.
+**Target:** sign renderer, localization catalog, story/quest text.
+**Acceptare:** Semnele nu contin text hardcodat si placeholder-ele sunt validate.
+
+### ~~W902~~ ✅ Compass target resolver
+**Descriere tehnica:** Centralizeaza rezolvarea target-ului de compass pentru questuri, story objectives, party waypoints si staff debug.
+**Scop:** Evita logici diferite pentru acelasi target spatial.
+**Target:** compass service, quest navigation, map waypoint service.
+**Acceptare:** Compass-ul foloseste un resolver unic cu verificari de acces si spoiler.
+
+### ~~W903~~ ✅ Quest compass spoiler guard
+**Descriere tehnica:** Blocheaza compass-ul sa indice obiective ascunse, branch-uri nealese sau locatii nedescoperite.
+**Scop:** Previne spoiler-e prin navigatie directa.
+**Target:** compass service, story spoiler classifier, quest tracker.
+**Acceptare:** Compass-ul indica doar target-uri permise de progresia curenta.
+
+### ~~W904~~ ✅ Map marker source diff
+**Descriere tehnica:** Compara marker-ele generate din quest, story, config, import si staff edits pentru a identifica sursa divergentei.
+**Scop:** Reduce timpul de debugging pentru marker-e gresite.
+**Target:** marker provenance, validation reports, map editor workflow.
+**Acceptare:** Diff-ul arata ce sursa produce fiecare marker conflictual.
+
+### ~~W905~~ ✅ Story world-state invariant tests
+**Descriere tehnica:** Creeaza teste de invarianti pentru world-state story: regiuni deschise, NPC positions, marker-e, hazard-uri si portaluri.
+**Scop:** Previne faze story imposibile dupa refactorizari.
+**Target:** story validation tests, map fixtures, world-state snapshots.
+**Acceptare:** Invariantii critici ruleaza in validarea continutului si esueaza pe contradictii.
+
+### ~~W906~~ ✅ Quest route branch split validator
+**Descriere tehnica:** Valideaza punctele unde o ruta de quest se desparte dupa branch story, alegere de dialog, reputatie sau faction status.
+**Scop:** Evita branch-uri fara ruta completa catre obiectiv.
+**Target:** quest route validator, story branch graph, dialogue choices.
+**Acceptare:** Fiecare split are cel putin o ruta valida pentru branch-ul permis.
+
+### ~~W907~~ ✅ Story route branch convergence validator
+**Descriere tehnica:** Verifica unde branch-urile story se reunesc spatial si daca marker-ele, unlock-urile si NPC-urile converg corect.
+**Scop:** Previne ramuri care lasa jucatorul in stari geografice incompatibile.
+**Target:** story graph, route graph, map marker cleanup.
+**Acceptare:** Convergenta de branch produce acelasi set valid de marker-e si acces.
+
+### ~~W908~~ ✅ Quest local map cache warmup
+**Descriere tehnica:** Pregateste cache-ul local pentru marker-ele si rutele questurilor active la login sau acceptarea questului.
+**Scop:** Reduce lag-ul la deschiderea hartii sau compass-ului.
+**Target:** map cache, quest tracker, player session lifecycle.
+**Acceptare:** Cache-ul se incalzeste doar pentru marker-e permise si se invalideaza corect.
+
+### ~~W909~~ ✅ Story map cache privacy boundary
+**Descriere tehnica:** Izoleaza cache-ul hartii pe player, party si branch pentru a evita reutilizarea marker-elor intre contexte.
+**Scop:** Previne scurgeri de informatie prin cache.
+**Target:** map cache, marker visibility, story branch service.
+**Acceptare:** Cache-ul unui player nu poate livra marker-e nepermise altui context.
+
+### ~~W910~~ ✅ Quest route analytics sampling
+**Descriere tehnica:** Colecteaza esantionat evenimente de navigare pentru rute de quest: abandon, blocaj, intoarcere, reroute si completare.
+**Scop:** Ofera date de balancing fara volum excesiv sau tracking sensibil.
+**Target:** quest navigation analytics, privacy rules, route reports.
+**Acceptare:** Sampling-ul este configurabil si exporta doar date agregate.
+
+### ~~W911~~ ✅ Story map onboarding route
+**Descriere tehnica:** Defineste o ruta initiala de onboarding pe harta care introduce hub-uri, marker-e, compass si regiuni story fara spoiler.
+**Scop:** Invata jucatorul sistemul de mapping prin gameplay.
+**Target:** tutorial service, map marker service, story intro quest.
+**Acceptare:** Ruta onboarding are pasi validati, fallback si cleanup la skip.
+
+### ~~W912~~ ✅ Quest route fail-safe teleport
+**Descriere tehnica:** Defineste cand un quest poate oferi teleport fail-safe daca playerul ramane blocat pe ruta validata.
+**Scop:** Reduce blocajele fara a transforma teleportul in bypass exploatabil.
+**Target:** quest navigation, teleport safety, abuse guards.
+**Acceptare:** Teleportul fail-safe cere conditii stricte si produce audit.
+
+### ~~W913~~ ✅ Story route abuse guard
+**Descriere tehnica:** Detecteaza folosirea rutelor story pentru a ocoli taxe, regiuni blocate, PvP, cooldown-uri sau content gates.
+**Scop:** Previne exploatarea navigatiei narrative.
+**Target:** route access service, economy/region/combat guards, audit reports.
+**Acceptare:** Abuzul suspect este blocat sau raportat cu ruta si gate-ul ocolit.
+
+### ~~W914~~ ✅ Map marker density budget
+**Descriere tehnica:** Limiteaza densitatea marker-elor pe zona, layer si player context, cu grupare sau prioritizare automata.
+**Scop:** Pastreaza harta lizibila in hub-uri aglomerate.
+**Target:** marker renderer, cartography layers, UI preferences.
+**Acceptare:** Zonele dense nu depasesc bugetul vizual configurat.
+
+### ~~W915~~ ✅ Quest marker cluster interaction
+**Descriere tehnica:** Defineste interactiunea cu clustere de marker-e: expandare, filtrare, prioritate, sumar si accesibilitate.
+**Scop:** Face marker-ele grupate utilizabile, nu doar ascunse.
+**Target:** map UI, marker cluster service, quest tracker.
+**Acceptare:** Clusterul afiseaza continutul relevant fara spoiler si cu fallback textual.
+
+### ~~W916~~ ✅ Story route staff override lock
+**Descriere tehnica:** Permite staff-ului autorizat sa blocheze temporar o ruta story cu motiv, durata si mesaj public sau privat.
+**Scop:** Ofera control operational cand o zona sau ruta devine instabila.
+**Target:** staff commands, route lock manager, notification service.
+**Acceptare:** Override-ul are expiry, audit si cleanup automat.
+
+### ~~W917~~ ✅ Quest route staff repair action
+**Descriere tehnica:** Adauga actiuni staff pentru repair de ruta: recalculare, mutare marker, dezactivare segment, fallback si export incident.
+**Scop:** Reduce timpul de interventie pentru questuri blocate.
+**Target:** admin dashboard, route graph, quest recovery.
+**Acceptare:** Fiecare actiune de repair este auditată si poate fi inclusa in incident timeline.
+
+### ~~W918~~ ✅ Story map incident correlation
+**Descriere tehnica:** Coreleaza incidentele de quest/story cu noduri de harta, rute, marker-e, regiuni si schimbari recente.
+**Scop:** Ajuta identificarea cauzei pentru buguri spatiale recurente.
+**Target:** incident timeline, map registry, audit reports.
+**Acceptare:** Incidentul afiseaza entitatile de mapping implicate si ultimele modificari relevante.
+
+### ~~W919~~ ✅ Quest story map ownership report
+**Descriere tehnica:** Genereaza raport cu ownerii logici ai nodurilor, marker-elor, rutelor, questurilor si branch-urilor story.
+**Scop:** Clarifica responsabilitatea pentru mentenanta si review.
+**Target:** ownership metadata, docs export, admin dashboard.
+**Acceptare:** Fiecare entitate map-quest-story critica are owner sau apare ca neasignata.
+
+### ~~W920~~ ✅ Mapping quest story hardening gate
+**Descriere tehnica:** Creeaza gate final pentru hardening: cache privacy, marker density, route abuse, staff repair, incident correlation si ownership.
+**Scop:** Blocheaza release-ul daca mapping-ul narativ are riscuri operationale majore.
+**Target:** validation pipeline, release checklist, admin reports.
+**Acceptare:** Gate-ul produce pass/fail cu erori blocking si actiuni recomandate.
+
+### ~~W921~~ ✅ Quest map editor transaction
+**Descriere tehnica:** Transforma modificarile din editorul de quest map in tranzactii cu preflight, commit, rollback si audit.
+**Scop:** Evita schimbari partiale care rup harta sau questurile asociate.
+**Target:** map editor workflow, quest registry, validation pipeline.
+**Acceptare:** O modificare esuata nu lasa registrul intr-o stare partial aplicata.
+
+### ~~W922~~ ✅ Quest map editor permission matrix
+**Descriere tehnica:** Defineste matricea de permisiuni pentru editarea marker-elor, rutei, geofence-urilor si metadata de story.
+**Scop:** Limiteaza cine poate modifica continutul spatial si narativ.
+**Target:** editor permissions, admin dashboard, map registry.
+**Acceptare:** Fiecare actiune de editare are permisiune distincta si auditabilitate.
+
+### ~~W923~~ ✅ Route editor conflict preview
+**Descriere tehnica:** Afiseaza in editor conflictele care vor aparea dupa modificarea unei rute: obiective blocate, marker-e stale si branch-uri incompatibile.
+**Scop:** Reduce surprizele la publicare.
+**Target:** route editor, validation reports, quest/story registries.
+**Acceptare:** Editorul arata conflictul inainte de commit.
+
+### ~~W924~~ ✅ Map node merge approval
+**Descriere tehnica:** Cere aprobare pentru unirea a doua map nodes cu dependinte diferite, istorice si ownership distinct.
+**Scop:** Previne coliziuni de identitate in registrul de harta.
+**Target:** map node registry, approval workflow, docs export.
+**Acceptare:** Merge-ul nu se aplica fara evaluarea dependintelor si aprobarea necesara.
+
+### ~~W925~~ ✅ Map node split migration
+**Descriere tehnica:** Migreaza referintele cand un map node este impartit in mai multe noduri mai mici pentru claritate sau balans.
+**Scop:** Pastreaza questurile si story branch-urile corecte dupa reconfigurarea hartii.
+**Target:** map node migration, quest/story references, validation reports.
+**Acceptare:** Referintele vechi sunt redirectionate sau raportate pentru repair.
+
+### ~~W926~~ ✅ Quest chain editor timeline
+**Descriere tehnica:** Afiseaza cronologia editarii unui quest chain: noduri adaugate, rute schimbate, gates mutate si marker-e regenerate.
+**Scop:** Face review-ul editorial mai rapid si mai sigur.
+**Target:** quest editor workflow, audit log, docs checklist.
+**Acceptare:** Editorul poate reda istoria completa a unei chain modificat.
+
+### ~~W927~~ ✅ Quest chain dependency break detector
+**Descriere tehnica:** Detecteaza cand o schimbare de quest rupe dependentele altor questuri, story arcs sau map nodes.
+**Scop:** Reduce regresiile intre continuturi conectate.
+**Target:** quest dependency graph, map registry, release validation.
+**Acceptare:** Dependentele rupte sunt raportate inainte de activare.
+
+### ~~W928~~ ✅ Story arc editor approval gate
+**Descriere tehnica:** Adauga gate de aprobare pentru modificari in story arc: dialog, branch, milestone, regiune si reward.
+**Scop:** Protejeaza progresia si continutul narativ public.
+**Target:** story editor workflow, approval service, validation pipeline.
+**Acceptare:** Modificarea story nu devine live fara gate-ul documentat.
+
+### ~~W929~~ ✅ Story arc rollback preview
+**Descriere tehnica:** Simuleaza rollback-ul unui story arc cu impact pe harta, questuri, reputation, factions si portaluri.
+**Scop:** Permite corectii narative in siguranta.
+**Target:** story rollback service, map state, quest registry.
+**Acceptare:** Preview-ul arata exact ce ramane activ si ce se reface.
+
+### ~~W930~~ ✅ Story arc milestone diff
+**Descriere tehnica:** Compara milestone-urile intre doua versiuni de story arc pentru a detecta schimbari de rute, obiective si spoiler gates.
+**Scop:** Evidentiaza impactul inainte de publicare.
+**Target:** story graph, docs export, validation reports.
+**Acceptare:** Diff-ul arata milestone-urile adaugate, eliminate sau mutate.
+
+### ~~W931~~ ✅ Story chapter prerequisite ledger
+**Descriere tehnica:** Inregistreaza prerequisite-urile pentru fiecare capitol story, incluzand questuri, reputatie, harta si iteme.
+**Scop:** Face cerintele de progresie explicite si verificabile.
+**Target:** story chapter service, prerequisite validation, docs index.
+**Acceptare:** Fiecare capitol are ledger valid si actualizat.
+
+### ~~W932~~ ✅ Story chapter completion sync
+**Descriere tehnica:** Sincronizeaza completarea capitolelor cu harta, marker-ele, unlock-urile si notificarile jucatorului.
+**Scop:** Pastreaza progresia narativa si spatiala in pas.
+**Target:** story chapter service, map discovery, notification service.
+**Acceptare:** Finalizarea capitolului actualizeaza toate efectele documentate.
+
+### ~~W933~~ ✅ Quest chapter transition guard
+**Descriere tehnica:** Blocheaza tranzitia intre capitolele de quest daca starile anterioare, marker-ele sau reward-urile nu sunt confirmate.
+**Scop:** Previnde sarirea neautorizata peste etape narative.
+**Target:** quest chapter service, validation pipeline, reward service.
+**Acceptare:** Tranzitia invalida este refuzata cu motiv clar.
+
+### ~~W934~~ ✅ Quest chapter skip compensation
+**Descriere tehnica:** Defineste compensatiile cand un capitol de quest este sarit intentional prin admin, event sau story catch-up.
+**Scop:** Evita progresie incompleta dupa skip.
+**Target:** quest chapter service, compensation workflow, audit log.
+**Acceptare:** Skip-ul produce compensatii si audit pentru toate efectele relevante.
+
+### ~~W935~~ ✅ Story branch eligibility report
+**Descriere tehnica:** Genereaza raport pentru eligibilitatea la branch-uri story pe baza de reputatie, faction, locatie, achievements si alegeri anterioare.
+**Scop:** Face clar de ce un branch este disponibil sau nu.
+**Target:** story branch service, eligibility evaluator, player UI.
+**Acceptare:** Raportul enumera motivele principale de includere si excludere.
+
+### ~~W936~~ ✅ Quest branch eligibility snapshot
+**Descriere tehnica:** Salveaza snapshot al eligibilitatii la branch pentru a evita schimbari dupa ce jucatorul deschide UI-ul sau confirma actiunea.
+**Scop:** Protejeaza alegerile de quest de race condition.
+**Target:** quest branch service, player session, UI state.
+**Acceptare:** Confirmarea foloseste snapshot-ul salvat, nu starea mutabila curenta.
+
+### ~~W937~~ ✅ Story branch choice replay
+**Descriere tehnica:** Permite replay-ul alegerilor story pentru debug, cu optiuni, consecinte si ordinea exacta a evenimentelor.
+**Scop:** Face investigarea bugurilor narative mai rapida.
+**Target:** story choice service, audit logs, replay tools.
+**Acceptare:** Replay-ul reproduce alegerile si efectele intr-o ordine determinista.
+
+### ~~W938~~ ✅ Quest dialogue branch sync
+**Descriere tehnica:** Sincronizeaza branch-urile de dialog cu obiectivele de quest, astfel incat alegerile sa reflecte progresia reala.
+**Scop:** Evita dialoguri care ofera optiuni invalide.
+**Target:** dialogue engine, quest tracker, story branch service.
+**Acceptare:** Optiunile de dialog invalide sunt ascunse sau explicate corect.
+
+### ~~W939~~ ✅ Dialogue choice consequence audit
+**Descriere tehnica:** Inregistreaza consecintele alegerilor de dialog: reputatie, faction, quest state, map unlock si reward changes.
+**Scop:** Face schimbarea narativa usor de verificat.
+**Target:** dialogue engine, audit log, story progression.
+**Acceptare:** Fiecare alegere importanta are consecinte auditate.
+
+### ~~W940~~ ✅ Dialogue choice rollback guard
+**Descriere tehnica:** Definește cand o alegere de dialog poate fi anulata sau refacuta fara a corupe progresia.
+**Scop:** Evita blocarea jucatorului dupa o alegere gresita sau un restart.
+**Target:** dialogue engine, story state, recovery service.
+**Acceptare:** Rollback-ul este permis doar conform regulilor documentate.
+
+### ~~W941~~ ✅ Map pin quest assignment validator
+**Descriere tehnica:** Valideaza asignarea unui pin de harta unui quest sau story arc pe baza locatiei, spoiler gate-ului si ownership-ului.
+**Scop:** Previne pins care trimit la continut gresit.
+**Target:** pin registry, quest/story services, validation pipeline.
+**Acceptare:** Pin-ul invalid este refuzat inainte de publicare.
+
+### ~~W942~~ ✅ Map pin group moderation
+**Descriere tehnica:** Permite moderarea grupurilor de pin-uri: aprobate, suspendate, hidden, duplicate sau in review.
+**Scop:** Mentine harta curata si usor de administrat.
+**Target:** map moderation queue, pin registry, admin dashboard.
+**Acceptare:** Fiecare pin group are status si actiune recomandata.
+
+### ~~W943~~ ✅ Story map import approval queue
+**Descriere tehnica:** Creeaza coada de aprobare pentru importurile de mapping story din editori sau fisiere externe.
+**Scop:** Evita publicarea accidentala a datelor nevalidate.
+**Target:** import pipeline, moderator workflow, validation reports.
+**Acceptare:** Importul ramane in coada pana la aprobare.
+
+### ~~W944~~ ✅ Quest map import provenance audit
+**Descriere tehnica:** Urmareste provenienta datelor importate pentru quest map: sursa, versiune, autor, data si transformari aplicate.
+**Scop:** Face importul verificabil si reversibil.
+**Target:** import pipeline, audit log, map registry.
+**Acceptare:** Fiecare element importat are provenance si poate fi localizat in sursa originala.
+
+### ~~W945~~ ✅ Story node capability matrix
+**Descriere tehnica:** Defineste capabilitatile fiecarui nod story: dialog, combat, trade, portal, quest start, cutscene sau replay.
+**Scop:** Face rolul fiecarui nod explicit pentru validation si UI.
+**Target:** story node registry, map docs, validation pipeline.
+**Acceptare:** Nodurile fara capabilitati declarate sunt marcate si auditate.
+
+### ~~W946~~ ✅ Quest node capability conflict
+**Descriere tehnica:** Detecteaza conflictele cand acelasi nod suporta capabilitati care se exclud, precum combat si safe tutorial sau hidden si public.
+**Scop:** Previne designul inconsistent al hartii.
+**Target:** node validation, quest/story registries, docs rules.
+**Acceptare:** Conflictul este raportat cu capabilitatile incompatibile.
+
+### ~~W947~~ ✅ Story location alias registry
+**Descriere tehnica:** Creeaza registru pentru aliasuri de locatii narative, astfel incat nume vechi si nume noi sa rezolve la acelasi nod.
+**Scop:** Pastreaza compatibilitatea intre docs, questuri si harta.
+**Target:** map node registry, docs export, migration layer.
+**Acceptare:** Aliasul rezolva la nodul curent sau la o eroare clara.
+
+### ~~W948~~ ✅ Quest location alias deprecation
+**Descriere tehnica:** Marcheaza aliasurile de locatie vechi ca deprecated cu perioada de compatibilitate si warning la folosire.
+**Scop:** Permite migrari graduale fara rupere bruta.
+**Target:** location alias registry, validation reports, docs.
+**Acceptare:** Aliasul deprecated produce warning si recomandare de inlocuire.
+
+### ~~W949~~ ✅ Story map accessibility audit
+**Descriere tehnica:** Auditeaza accesibilitatea narativa a hartii pentru rute, marker-e, color coding, text, navigation aid si fallback-uri.
+**Scop:** Face harta utilizabila pentru un spectru mai larg de jucatori.
+**Target:** map renderer, accessibility rules, QA reports.
+**Acceptare:** Auditul enumera zonele sau marker-ele care necesita ajustari.
+
+### ~~W950~~ ✅ Mapping quest story release readiness review
+**Descriere tehnica:** Adauga un review final pentru release care verifica map editor changes, quest/story sync, import approvals, provenance, accessibility si rollback.
+**Scop:** Inchide ciclul de validare pentru continutul spatial si narativ.
+**Target:** release checklist, validation pipeline, admin dashboard.
+**Acceptare:** Review-ul produce verdict clar si lista de actiuni obligatorii sau blocking.
+
+### ~~W951~~ ✅ Quest marker editorial freeze
+**Descriere tehnica:** Introduce un freeze editorial pentru marker-ele de quest inainte de release, cu perioada de stabilizare si blocare a modificarilor neaprobate.
+**Scop:** Evita schimbari tarzii care ar invalida testele sau documentatia.
+**Target:** map editor workflow, release checklist, quest registry.
+**Acceptare:** Marker-ele inghetate nu pot fi modificate fara bypass auditabil.
+
+### ~~W952~~ ✅ Story branch editorial freeze
+**Descriere tehnica:** Blocheaza modificarile la branch-urile story in fereastra de stabilizare de release.
+**Scop:** Previne contradictii intre continutul aprobat si ultimul commit.
+**Target:** story editor workflow, validation pipeline, docs export.
+**Acceptare:** Branch-urile aflate in freeze refuza editari neaprobate.
+
+### ~~W953~~ ✅ Map node stabilization window
+**Descriere tehnica:** Defineste o fereastra de stabilizare pentru map nodes, rute si geofence-uri inainte de publicare.
+**Scop:** Reduce riscul de a publica harti cu drift de ultim moment.
+**Target:** map node registry, route graph, release process.
+**Acceptare:** In stabilizare, modificarile intrerup revalidarea si cer recertificare.
+
+### ~~W954~~ ✅ Quest route recertification gate
+**Descriere tehnica:** Cere recertificare pentru rutele de quest atunci cand se modifica noduri, permisiuni, regiuni sau dependente.
+**Scop:** Pastreaza integritatea traseelor dupa schimbari structurale.
+**Target:** quest route validator, release checklist, validation pipeline.
+**Acceptare:** Ruta modificata nu poate fi publicata fara revalidare completa.
+
+### ~~W955~~ ✅ Story route recertification gate
+**Descriere tehnica:** Invalideaza automat certificarea rutelor story cand se schimba lumea, portalurile, hazard-urile sau barierelor.
+**Scop:** Previne activarea de rute narative neauditate.
+**Target:** story route service, validation reports, release checklist.
+**Acceptare:** Ruta story cu dependinte schimbate cere o noua aprobare.
+
+### ~~W956~~ ✅ Map marker regression alert
+**Descriere tehnica:** Detecteaza regresii in marker-ele de harta: disparitii, duplicari, schimbari de nivel spoiler sau vizibilitate.
+**Scop:** Ofera alerta timpurie pentru erori de mapping.
+**Target:** marker registry, regression tests, admin dashboard.
+**Acceptare:** Orice regresie este raportata cu marker-ele afectate si tipul schimbarii.
+
+### ~~W957~~ ✅ Quest marker duplication detector
+**Descriere tehnica:** Cauta duplicate de marker pentru acelasi obiectiv, aceeasi locatie sau acelasi branch de quest.
+**Scop:** Evita UI clutter si confuzie editoriala.
+**Target:** marker registry, quest validation, map editor workflow.
+**Acceptare:** Duplicatele sunt raportate si pot fi de-duplicated prin workflow.
+
+### ~~W958~~ ✅ Story marker visibility diff
+**Descriere tehnica:** Compara vizibilitatea marker-elor story intre doua profile sau doua versiuni de branch pentru a identifica leak-uri sau lipsuri.
+**Scop:** Previne scurgeri de spoiler si inconsistente de access.
+**Target:** marker visibility service, story branches, QA reports.
+**Acceptare:** Diff-ul evidentiaza marker-ele adaugate sau ascunse neasteptat.
+
+### ~~W959~~ ✅ Map pin unlock progression
+**Descriere tehnica:** Leaga deblocarea pin-urilor de harta de progresia questurilor, story chapters, reputation si explorare.
+**Scop:** Face progresia spatiala mai clara si controlata.
+**Target:** pin registry, progression service, map renderer.
+**Acceptare:** Pin-ul se deblocheaza doar cand progresia documentata este indeplinita.
+
+### ~~W960~~ ✅ Quest pin unlock audit
+**Descriere tehnica:** Auditeaza deblocarea pin-urilor de quest cu motiv, actor, eveniment declansator si efecte.
+**Scop:** Face schimbarea harta-progresie usor de investigat.
+**Target:** pin registry, audit log, quest progression.
+**Acceptare:** Fiecare unlock important are audit si poate fi replicat in QA.
+
+### ~~W961~~ ✅ Story pin spoiler level audit
+**Descriere tehnica:** Valideaza ca pin-urile story respecta nivelul de spoiler si nu dezvaluie locatii, NPC-uri sau finaluri prea devreme.
+**Scop:** Protejeaza descoperirea narativa.
+**Target:** pin registry, spoiler classifier, content validation.
+**Acceptare:** Pin-ul cu spoiler invalid este blocat sau retrogradat la nivelul permis.
+
+### ~~W962~~ ✅ Quest pin grouping policy
+**Descriere tehnica:** Defineste cum se grupeaza pin-urile pentru acelasi quest in functie de etapa, obiectiv, branch si locatie.
+**Scop:** Reduce supra-incarcarea hartii si ghidajul ambiguu.
+**Target:** pin renderer, quest tracker, map UI.
+**Acceptare:** Gruparea urmeaza o ordine documentata si stabila.
+
+### ~~W963~~ ✅ Map pin route anchor validator
+**Descriere tehnica:** Valideaza ca un pin poate servi drept ancoră de ruta fara a crea destinatii invalide sau imposibile.
+**Scop:** Previne rute generate din marker-e eronate.
+**Target:** pin registry, route graph, quest navigation.
+**Acceptare:** Pin-ul fara anchor valid este marcat ca non-navigabil.
+
+### ~~W964~~ ✅ Story quest anchor fallback
+**Descriere tehnica:** Ofera anchor-uri alternative pentru questuri story cand pin-ul principal este ascuns, mutat sau blocat.
+**Scop:** Pastreaza navigarea functionala dupa schimbari editoriale.
+**Target:** story quest service, map node registry, fallback routing.
+**Acceptare:** Fallback-ul este folosit doar cand respecta spoiler gate-ul si accesul.
+
+### ~~W965~~ ✅ Map waypoint path consistency
+**Descriere tehnica:** Verifica consistenta dintre waypoint-uri, pin-uri si rutele calculate pentru a evita instructiuni contradictorii.
+**Scop:** Face ghidajul pe harta predictibil.
+**Target:** waypoint service, route graph, map renderer.
+**Acceptare:** Waypoint-ul si ruta calculata indica aceeasi destinatie valida.
+
+### ~~W966~~ ✅ Story waypoint permission filter
+**Descriere tehnica:** Filtreaza waypoint-urile story dupa progresie, party, faction, staff role si nivel de spoiler.
+**Scop:** Previne expunerea de informatie prin waypoint-uri.
+**Target:** waypoint service, permission service, story state.
+**Acceptare:** Waypoint-ul afisat este conform permisiunilor si branch-ului curent.
+
+### ~~W967~~ ✅ Quest waypoint expiry
+**Descriere tehnica:** Expira waypoint-urile de quest cand obiectivul este completat, rerutat, abandonat sau invalidat.
+**Scop:** Previne ghidaje vechi care induc in eroare playerul.
+**Target:** waypoint service, quest lifecycle, cleanup jobs.
+**Acceptare:** Waypoint-ul expirat este curatat si nu reapare fara o conditie noua.
+
+### ~~W968~~ ✅ Story waypoint provenance
+**Descriere tehnica:** Salveaza provenienta fiecarui waypoint: quest, story, staff, import, AI draft sau recovery.
+**Scop:** Face debugging-ul si moderarea waypoint-urilor posibile.
+**Target:** waypoint registry, audit log, map editor workflow.
+**Acceptare:** Provenienta waypoint-ului este vizibila pentru staff-ul autorizat.
+
+### ~~W969~~ ✅ Map compass route split
+**Descriere tehnica:** Imparte traseele de compass in segmente pentru a diferentia obiectivele de quest, story si optional.
+**Scop:** Face navigatia mai precisa si mai usor de auditat.
+**Target:** compass service, route graph, map UI.
+**Acceptare:** Compass-ul poate afisa segmentul activ si destinatia urmatoare.
+
+### ~~W970~~ ✅ Quest compass route recompute
+**Descriere tehnica:** Recalculeaza traseul compass cand se schimba branch-ul, regiunea, rolul sau accesul la zona.
+**Scop:** Evita indicatii de navigatie stale.
+**Target:** compass service, route graph, player session.
+**Acceptare:** Recalculele apar doar la schimbari relevante si sunt auditate sumar.
+
+### ~~W971~~ ✅ Story compass spoiler budget
+**Descriere tehnica:** Limiteaza cate informatii narative poate expune compass-ul in functie de progresie si nivel de spoiler.
+**Scop:** Previne spoilere prin navigatie automata.
+**Target:** compass service, spoiler classifier, story progression.
+**Acceptare:** Compass-ul expune doar nivelul de detaliu permis.
+
+### ~~W972~~ ✅ Map route load test harness
+**Descriere tehnica:** Creeaza un harness de load test pentru rutele de quest si story cu multi jucatori, party si evente simultane.
+**Scop:** Verifica scalabilitatea sistemului de mapping.
+**Target:** route graph, validation pipeline, performance tests.
+**Acceptare:** Harness-ul raporteaza timpul de calcul, blocajele si rutele instabile.
+
+### ~~W973~~ ✅ Story map load spike detector
+**Descriere tehnica:** Detecteaza spike-uri de incarcare pe zonele story si marcheaza rutele, marker-ele sau pin-urile cu risc operational.
+**Scop:** Ajuta redistribuirea continutului popular.
+**Target:** analytics, map renderer, admin dashboard.
+**Acceptare:** Zonele supra-incarcate apar in raport cu recomandari de redistribuire.
+
+### ~~W974~~ ✅ Quest path cache invalidation storm guard
+**Descriere tehnica:** Limiteaza storm-urile de invalidare ale cache-ului de ruta cand multe evenimente de harta se produc simultan.
+**Scop:** Protejeaza serverul de invalide repetate si rerender excesiv.
+**Target:** route cache, map cache, scheduler.
+**Acceptare:** Invalidarile simultane se grupeaza si produc un singur refresh coerent.
+
+### ~~W975~~ ✅ Story region map shard alignment
+**Descriere tehnica:** Aliniaza regiunile story cu shard-urile sau partitions folosite de map cache, astfel incat aceeasi zona sa aiba starea corecta.
+**Scop:** Evita discrepante intre shards si world state.
+**Target:** region mapping, cache layer, story state.
+**Acceptare:** Shard-ul curent livreaza aceeasi versiune de regiune ca registrul live.
+
+### ~~W976~~ ✅ Map marker shard reconciliation
+**Descriere tehnica:** Reconciliaza marker-ele incarcate din shard-uri diferite pentru a elimina duplicari si stari divergente.
+**Scop:** Pastreaza harta coerenta in distributie.
+**Target:** marker cache, shard reconciliation, admin diagnostics.
+**Acceptare:** Un marker conflictual este redus la o singura stare canonica.
+
+### ~~W977~~ ✅ Quest region shard drift audit
+**Descriere tehnica:** Auditeaza drift-ul dintre shard-ul in care ruleaza questul si regiunea canonica a hărții.
+**Scop:** Identifica erori de sincronizare spatiala.
+**Target:** quest runtime, region registry, audit reports.
+**Acceptare:** Drift-ul este raportat cu shard-ul, regiunea si cauza probabila.
+
+### ~~W978~~ ✅ Story region shard failover
+**Descriere tehnica:** Defineste failover pentru regiunile story cand shard-ul principal este indisponibil sau lent.
+**Scop:** Pastreaza continutul narativ disponibil in conditii degradate.
+**Target:** region service, map cache, recovery service.
+**Acceptare:** Failover-ul muta traficul pe un shard compatibil sau suspenda accesul controlat.
+
+### ~~W979~~ ✅ Quest map data retention policy
+**Descriere tehnica:** Stabileste retentia pentru datele de quest map: snapshots, logs, diffs, replay-uri si telemetry.
+**Scop:** Controleaza stocarea si protejeaza datele sensibile.
+**Target:** map telemetry, storage policy, audit retention.
+**Acceptare:** Datele expirate sunt arhivate sau sterse conform politicii.
+
+### ~~W980~~ ✅ Mapping quest story archival export
+**Descriere tehnica:** Exporta arhiva proiectului de mapping quest story cu snapshot-uri, diffs, approvals, incidențe si documentatie aferenta.
+**Scop:** Ofera un pachet complet pentru audit, backup si transfer de context.
+**Target:** export pipeline, docs archive, release operations.
+**Acceptare:** Exportul contine artefactele necesare pentru reconstructia istoricului continutului spatial.
