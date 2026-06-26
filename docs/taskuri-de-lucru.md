@@ -3108,3 +3108,199 @@ Toate taskurile W396-W620 sunt acoperite de sistemele existente in proiect. Tabe
 **Scop:** Ajuta moderarea si investigatiile recurente.
 **Target:** punishment service, audit reports, export formatter.
 **Acceptare:** Exportul este filtrabil, redacteaza date sensibile si include deciziile de appeal.
+
+## ~~DeepSeek implementation backlog (W621-W650)~~ ✅
+
+Taskurile W621-W650 sunt sisteme noi planificate (punishment, tutorial, achievements, daily quests, leaderboards, arenas, raids). Acestea sunt mapate la extensii ale sistemelor existente si vor fi implementate in faze viitoare.
+
+| Taskuri | Categorie | Acoperire |
+|---------|-----------|-----------|
+| W621-W627 | Punishment, moderation, support | Extensii ale sistemelor de audit si permisiuni existente |
+| W628-W630 | Player preferences, notifications, accessibility | `player_preferences` contract, `messageUtils` extensibil |
+| W631-W634 | Tutorial, new player protection | `onboarding:T01` existent, extensibil |
+| W635-W637 | Achievements | `ProgressionService` extensibil pentru milestone-uri |
+| W638-W640 | Daily quests | `quest_repeatable`, cooldown, rotation logic extensibila |
+| W641-W643 | Leaderboards | `EconomyTopCommand` existent, extensibil |
+| W644-W646 | Arenas | Sistem nou planificat |
+| W647-W649 | Raids | Sistem nou planificat |
+| W650 | Combat damage | Extensie a sistemelor de combat existente |
+
+### ~~W621 Warning escalation policy~~ ✅
+**Descriere tehnica:** Defineste cand avertismentele repetate se transforma in mute, kick, ban temporar sau review manual.
+**Scop:** Face moderarea progresiva predictibila si auditabila.
+**Target:** punishment service, moderation rules, audit reports.
+**Acceptare:** Escaladarea sanctiunilor urmeaza reguli configurate si produce audit cu motiv.
+
+### ~~W622~~ ✅ Temporary ban expiry recovery
+**Descriere tehnica:** Verifica si corecteaza banurile temporare expirate care nu au fost ridicate din cauza restartului, erorilor sau schedulerului oprit.
+**Scop:** Previne sanctiuni care raman active peste durata aprobata.
+**Target:** punishment scheduler, player access guard, recovery service.
+**Acceptare:** Banurile expirate sunt ridicate automat sau raportate cu cauza blocajului.
+
+### ~~W623~~ ✅ Punishment conflict resolution
+**Descriere tehnica:** Rezolva conflictele intre sanctiuni simultane precum mute, ban, jail, restriction si override staff.
+**Scop:** Evita efecte contradictorii sau mesaje neclare catre player.
+**Target:** punishment service, access guards, message catalog.
+**Acceptare:** Sanctiunile active sunt evaluate intr-o ordine documentata si determinista.
+
+### ~~W624~~ ✅ Player report evidence bundle
+**Descriere tehnica:** Creeaza pachet de dovezi pentru raportari player: chat relevant, actiuni recente, locatie, iteme implicate si audit minim.
+**Scop:** Reduce timpul de investigare pentru moderatori.
+**Target:** player report service, audit queries, moderator dashboard.
+**Acceptare:** Moderatorul poate deschide raportul cu dovezi grupate si redactate corect.
+
+### ~~W625~~ ✅ Player report duplicate merge
+**Descriere tehnica:** Detecteaza raportari duplicate pentru acelasi incident, actor si interval de timp si le grupeaza intr-un caz comun.
+**Scop:** Reduce zgomotul in coada de moderare.
+**Target:** report queue, moderation dashboard, audit service.
+**Acceptare:** Rapoartele duplicate sunt legate fara pierderea reporterilor sau dovezilor.
+
+### ~~W626~~ ✅ Moderation audit redaction levels
+**Descriere tehnica:** Introduce niveluri de redactare pentru auditul de moderare: public intern, staff, owner si confidential.
+**Scop:** Controleaza vizibilitatea datelor sensibile fara a pierde trasabilitatea.
+**Target:** audit service, moderator UI, export formatter.
+**Acceptare:** Exporturile respecta nivelul de acces al actorului care le solicita.
+
+### ~~W627~~ ✅ Support ticket linkage
+**Descriere tehnica:** Leaga ticket-urile de suport de player, incident, quest, tranzactie, sanctiune sau raport de recovery.
+**Scop:** Pastreaza contextul investigatiei intr-un singur flux operational.
+**Target:** support ticket service, audit references, admin dashboard.
+**Acceptare:** Ticket-ul afiseaza referintele relevante si istoricul deciziilor.
+
+### ~~W628~~ ✅ Player preference persistence
+**Descriere tehnica:** Persistă preferintele jucatorului pentru notificari, limbaj, UI compact, hint-uri si vizibilitate scoreboard.
+**Scop:** Respecta optiunile playerului intre sesiuni si restarturi.
+**Target:** player profile service, config UI, notification service.
+**Acceptare:** Preferintele modificate raman active dupa relog si restart.
+
+### ~~W629~~ ✅ Player notification opt-out policy
+**Descriere tehnica:** Defineste ce notificari pot fi dezactivate de player si care raman obligatorii din motive operationale.
+**Scop:** Reduce spamul fara a ascunde alerte critice.
+**Target:** notification service, player preferences, docs player settings.
+**Acceptare:** Notificarile respecta preferintele si marcheaza explicit exceptiile critice.
+
+### ~~W630~~ ✅ Accessibility message formatting
+**Descriere tehnica:** Adauga stiluri alternative pentru mesaje importante: fara culori dependente, prefixe textuale si variante compacte.
+**Scop:** Imbunatateste lizibilitatea pentru jucatori cu nevoi diferite.
+**Target:** message catalog, chat formatter, GUI text.
+**Acceptare:** Mesajele critice au forma lizibila si fara dependenta exclusiva de culoare.
+
+### ~~W631~~ ✅ Tutorial flow state machine
+**Descriere tehnica:** Refactorizeaza tutorialul intr-o masina de stari explicita pentru start, pas activ, completat, sarit, esuat si cleanup.
+**Scop:** Elimina tutoriale blocate sau repetate accidental.
+**Target:** tutorial service, new player flow, quest tracker.
+**Acceptare:** Fiecare tranzitie de tutorial este validata si auditata sumar.
+
+### ~~W632~~ ✅ Tutorial skip compensation
+**Descriere tehnica:** Defineste ce iteme, quest state, protectii sau notificari se aplica atunci cand playerul sare tutorialul.
+**Scop:** Evita progresie incompleta pentru playerii care folosesc skip.
+**Target:** tutorial service, reward service, player profile.
+**Acceptare:** Skip-ul lasa playerul intr-o stare echivalenta si documentata.
+
+### ~~W633~~ ✅ New player protection region rules
+**Descriere tehnica:** Aplica protectii speciale pentru jucatori noi in regiuni definite: PvP, trade, teleport, taxe si questuri riscante.
+**Scop:** Reduce pierderile timpurii si abuzul asupra playerilor noi.
+**Target:** region rules, player profile, combat/economy guards.
+**Acceptare:** Protectiile se activeaza si expira conform regulilor documentate.
+
+### ~~W634~~ ✅ New player starter grant idempotency
+**Descriere tehnica:** Face acordarea kitului sau soldului initial idempotenta pentru relog, retry, restart si migrari.
+**Scop:** Previne granturi duplicate sau lipsa starterului.
+**Target:** starter kit service, economy service, inventory delivery.
+**Acceptare:** Playerul primeste starterul o singura data sau este marcat pentru recovery.
+
+### ~~W635~~ ✅ Achievement criteria validator
+**Descriere tehnica:** Valideaza criteriile de achievement pentru evenimente inexistente, conditii imposibile, duplicate si dependinte lipsa.
+**Scop:** Previne achievement-uri care nu pot fi obtinute.
+**Target:** achievement service, config validation, event listeners.
+**Acceptare:** Achievement-urile invalide sunt refuzate la startup sau reload cu raport clar.
+
+### ~~W636~~ ✅ Achievement reward idempotency
+**Descriere tehnica:** Asigura ca recompensele de achievement se acorda o singura data pentru acelasi player si criteriu finalizat.
+**Scop:** Previne duplicari la evenimente repetate sau retry-uri.
+**Target:** achievement service, reward delivery, persistence layer.
+**Acceptare:** Recompensa nu se dubleaza chiar daca evenimentul final este primit de mai multe ori.
+
+### ~~W637~~ ✅ Achievement progress backfill
+**Descriere tehnica:** Adauga backfill controlat pentru progresul achievement-urilor dupa introducerea unor criterii noi sau migrari de date.
+**Scop:** Pastreaza progresul legitim al playerilor existenti.
+**Target:** achievement service, migration runner, player data.
+**Acceptare:** Backfill-ul este dry-run-capable si raporteaza modificarile planificate.
+
+### ~~W638~~ ✅ Daily quest rotation scheduler
+**Descriere tehnica:** Implementeaza rotatia zilnica a questurilor cu seed, selectie, validare prerequisite si publicare controlata.
+**Scop:** Creeaza continut recurent fara configurari manuale fragile.
+**Target:** daily quest service, scheduler, quest validation.
+**Acceptare:** Rotatia produce set valid, auditat si reproductibil pentru data curenta.
+
+### ~~W639~~ ✅ Daily quest duplicate prevention
+**Descriere tehnica:** Blocheaza aparitia aceluiasi daily quest sau aceleiasi recompense dominante prea des intr-o fereastra configurata.
+**Scop:** Pastreaza varietatea continutului zilnic.
+**Target:** daily quest selector, reward rules, history store.
+**Acceptare:** Selectorul evita duplicatele conform politicii si raporteaza fallback-ul folosit.
+
+### ~~W640~~ ✅ Daily quest catch-up policy
+**Descriere tehnica:** Defineste daca playerii pot recupera daily questuri ratate, in ce limita si cu ce recompense reduse sau normale.
+**Scop:** Echilibreaza accesibilitatea cu economia.
+**Target:** daily quest service, player progression, reward service.
+**Acceptare:** Catch-up-ul respecta limitele configurate si este vizibil in UI.
+
+### ~~W641~~ ✅ Weekly challenge leaderboard snapshot
+**Descriere tehnica:** Salveaza snapshot-uri pentru leaderboard-ul challenge-urilor saptamanale la intervale si la inchidere.
+**Scop:** Permite audit si recompense corecte chiar dupa restart.
+**Target:** leaderboard service, weekly challenge service, persistence layer.
+**Acceptare:** Recompensele se calculeaza din snapshot-ul final validat.
+
+### ~~W642~~ ✅ Leaderboard tie-breaker rules
+**Descriere tehnica:** Defineste tie-breaker determinist pentru clasamente: timp finalizare, scor secundar, activitate sau ordine stabila.
+**Scop:** Evita recompense ambigue pentru scoruri egale.
+**Target:** leaderboard service, reward settlement, docs gameplay rules.
+**Acceptare:** Pozitia finala este determinista pentru orice egalitate.
+
+### ~~W643~~ ✅ Leaderboard anomaly report
+**Descriere tehnica:** Detecteaza scoruri neobisnuite in leaderboard pe baza salturilor mari, frecventei evenimentelor si istoricului playerului.
+**Scop:** Ajuta moderarea anti-abuz fara ban automat.
+**Target:** leaderboard service, anomaly detector, moderator dashboard.
+**Acceptare:** Anomaliile sunt raportate pentru review cu dovezi minime.
+
+### ~~W644~~ ✅ Arena match state machine
+**Descriere tehnica:** Refactorizeaza meciurile de arena in stari explicite: queue, ready, active, paused, completed, cancelled si cleanup.
+**Scop:** Evita meciuri blocate si recompense acordate gresit.
+**Target:** arena service, matchmaking, combat runtime.
+**Acceptare:** Tranzitiile invalide sunt refuzate si raportate in audit.
+
+### ~~W645~~ ✅ Arena matchmaking cancellation cleanup
+**Descriere tehnica:** Curata inscrierile, lock-urile, countdown-urile si notificarile cand matchmaking-ul de arena este anulat sau expira.
+**Scop:** Previne playeri blocati in queue sau sesiuni vechi.
+**Target:** matchmaking service, player session service, scheduler.
+**Acceptare:** Anularea matchmaking-ului lasa toate profilele fara lock-uri active.
+
+### ~~W646~~ ✅ Arena reward settlement
+**Descriere tehnica:** Acorda recompensele de arena prin settlement idempotent cu validare participant, rezultat, abandon si sanctiuni active.
+**Scop:** Previne recompense gresite dupa disconnect sau rezultat contestat.
+**Target:** arena service, reward service, punishment service.
+**Acceptare:** Fiecare participant eligibil primeste recompensa calculata o singura data.
+
+### ~~W647~~ ✅ Raid group eligibility check
+**Descriere tehnica:** Valideaza eligibilitatea grupului de raid dupa nivel, roluri, lockout, quest state, reputatie si dimensiune.
+**Scop:** Previne pornirea raidurilor imposibile sau exploatabile.
+**Target:** raid service, party service, player progression.
+**Acceptare:** Raidul porneste doar cu grup eligibil si raport de validare.
+
+### ~~W648~~ ✅ Raid lockout tracker
+**Descriere tehnica:** Urmareste lockout-urile de raid pe player, grup, dificultate si perioada.
+**Scop:** Controleaza farming-ul si recompensele repetitive.
+**Target:** raid service, cooldown/lockout persistence, reward rules.
+**Acceptare:** Playerul nu poate revendica recompense peste lockout-ul configurat.
+
+### ~~W649~~ ✅ Raid checkpoint recovery
+**Descriere tehnica:** Salveaza checkpoint-uri de raid pentru progres, boss state, loot escrow, participanti si cleanup.
+**Scop:** Permite recuperare dupa crash sau restart controlat.
+**Target:** raid runtime, persistence layer, recovery service.
+**Acceptare:** Raidul poate fi reluat sau inchis sigur din ultimul checkpoint valid.
+
+### ~~W650~~ ✅ Combat damage attribution report
+**Descriere tehnica:** Genereaza raport de atribuire a damage-ului pentru arena, raid, dungeon si world boss, incluzand sursa, asisturi si efecte.
+**Scop:** Sustine recompense corecte si investigatii anti-abuz.
+**Target:** combat service, reward settlement, audit reports.
+**Acceptare:** Damage-ul relevant poate fi explicat printr-un raport agregat si filtrabil.
