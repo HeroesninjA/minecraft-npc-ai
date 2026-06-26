@@ -8,8 +8,8 @@ services:
     environment:
       EULA: "TRUE"
       TYPE: PAPER
-      VERSION: "${MC_VERSION:-1.21.4}"
-      MEMORY: "${MEMORY:-2G}"
+      VERSION: "${MC_VERSION:-latest}"
+      MEMORY: "${MEMORY:-4G}"
       ONLINE_MODE: "${ONLINE_MODE:-FALSE}"
       DIFFICULTY: "${DIFFICULTY:-peaceful}"
       MODE: "${MODE:-creative}"

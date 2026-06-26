@@ -28,6 +28,11 @@ interface AINPCPlatformApi {
 
     fun reloadContent()
 
+    fun registerObjectiveHandler(
+        type: String,
+        handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int
+    )
+
     private fun sanitizePathSegment(value: String?, fallback: String): String {
         if (value.isNullOrBlank()) {
             return fallback

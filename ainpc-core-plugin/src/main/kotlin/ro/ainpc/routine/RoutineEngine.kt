@@ -36,7 +36,7 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
                     }
                     return RoutineAssignment(slot, entry.activity, entry.target.ifBlank { entry.label }, when (slot) {
                         RoutineSlot.HOME -> NPCState.RESTING
-                        RoutineSlot.WORK -> NPCState.WORKING
+                        RoutineSlot.WORK -> zoneWorkState(npc)
                         RoutineSlot.SOCIAL -> NPCState.SOCIALIZING
                         RoutineSlot.IDLE -> NPCState.IDLE
                     }, anchor)
@@ -61,7 +61,7 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
 
         if (time >= 2000 && time < 12000) {
             return if (hasAnchor(npc.workAnchor)) {
-                work(npc, "merge la lucru")
+                work(npc, zoneWorkActivity(npc, "merge la lucru"))
             } else {
                 fallbackDay(npc, "nu are loc de munca mapat")
             }
@@ -69,7 +69,7 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
 
         if (time >= 12000 && time < 16000) {
             return if (hasAnchor(npc.workAnchor)) {
-                work(npc, "inchide treburile principale ale zilei")
+                work(npc, zoneWorkActivity(npc, "inchide treburile principale ale zilei"))
             } else {
                 fallbackDay(npc, "nu are loc de munca mapat pentru dupa-amiaza")
             }
@@ -84,6 +84,40 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
         }
 
         return idle("isi urmeaza rutina obisnuita")
+    }
+
+    private fun zoneWorkState(npc: AINPC): NPCState {
+        val zone = npc.context.topologyCategory
+        if (zone == null) return NPCState.WORKING
+        return when (zone) {
+            ro.ainpc.topology.TopologyCategory.FOREST,
+            ro.ainpc.topology.TopologyCategory.DARK_FOREST,
+            ro.ainpc.topology.TopologyCategory.JUNGLE -> NPCState.FARMING
+            ro.ainpc.topology.TopologyCategory.MOUNTAIN,
+            ro.ainpc.topology.TopologyCategory.UNDERGROUND -> NPCState.MINING
+            ro.ainpc.topology.TopologyCategory.RIVER,
+            ro.ainpc.topology.TopologyCategory.COAST,
+            ro.ainpc.topology.TopologyCategory.OCEAN -> NPCState.FISHING
+            else -> NPCState.WORKING
+        }
+    }
+
+    private fun zoneWorkActivity(npc: AINPC, base: String): String {
+        val zone = npc.context.topologyCategory
+        if (zone == null) return base
+        return when (zone) {
+            ro.ainpc.topology.TopologyCategory.FOREST,
+            ro.ainpc.topology.TopologyCategory.DARK_FOREST -> "$base in padure"
+            ro.ainpc.topology.TopologyCategory.PLAINS -> "$base pe camp"
+            ro.ainpc.topology.TopologyCategory.MOUNTAIN -> "$base pe munte"
+            ro.ainpc.topology.TopologyCategory.DESERT -> "$base in desert"
+            ro.ainpc.topology.TopologyCategory.JUNGLE -> "$base in jungla"
+            ro.ainpc.topology.TopologyCategory.UNDERGROUND -> "$base in subteran"
+            ro.ainpc.topology.TopologyCategory.RIVER -> "$base la rau"
+            ro.ainpc.topology.TopologyCategory.COAST -> "$base pe coasta"
+            ro.ainpc.topology.TopologyCategory.INTERIOR -> "$base in interior"
+            else -> base
+        }
     }
 
     fun previewDay(npc: AINPC?): List<RoutineScheduleEntry> {
@@ -118,7 +152,7 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
             RoutineSlot.WORK,
             activity,
             "sa lucreze la " + describeAnchor(npc.workAnchor, "locul de munca"),
-            workStateFor(npc.occupation),
+            workStateForNpc(npc),
             npc.workAnchor
         )
     }
@@ -146,6 +180,8 @@ class RoutineEngine(private val plugin: AINPCPlugin? = null) {
     private fun workStateFor(occupation: String?): NPCState {
         return NPCState.WORKING
     }
+
+    private fun workStateForNpc(npc: AINPC): NPCState = zoneWorkState(npc)
 
     private fun hasAnchor(anchor: AINPC.OwnedLocation?): Boolean {
         return anchor != null && !anchor.worldName().isNullOrBlank()

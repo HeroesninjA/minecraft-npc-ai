@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -16,6 +17,15 @@ class CreatorHubGui : GuiScreen {
     override fun size(player: Player): Int = 45
 
     override fun render(context: GuiRenderContext) {
+        val player = context.player()
+        if (!GuiAccessHelper.adminOrCreator(player)) {
+            context.item(4, GuiItemFactory.item(Material.BARRIER, "&cAcces restrictionat", listOf(
+                "&7Doar creatorii si administratorii pot accesa acest panou."
+            )))
+            context.fillEmpty(GuiItemFactory.filler())
+            return
+        }
+
         context.item(4, GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Creator Tools", listOf(
             "&7Creeaza, editezi si testezi questuri si mapping."
         )))

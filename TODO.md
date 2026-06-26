@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-05-25
+Actualizat: 2026-06-26
 
 ## Exista deja
 
@@ -139,7 +139,7 @@ Actualizat: 2026-05-25
 - [x] Modele si validator read-only pentru `QuestSeed`/`QuestDraft`
 - [x] Model read-only pentru `RuntimeFeatureState`: stari `enabled`/`disabled`/`optional`/`blocked`/`fallback`/`experimental`, motive si surse
 - [x] `FeatureResolver` initial care combina `features.*`, `demo.enabled`, profil server, addon registry si metadata pack-uri fara sa schimbe inca behavior-ul runtime
-- [ ] Audit/debugdump pentru starea finala a feature-urilor si motivele de blocare/fallback
+- [x] Audit/debugdump pentru starea finala a feature-urilor si motivele de blocare/fallback (prin /ainpc debugdump features)
 - [x] Debugdump/audit pentru settlement spawn, rollback si legaturi NPC-place
 - [x] Export/debugdump complet pentru `quest_anchor_bindings`
 - [x] Audit strict complet pentru `quest_anchor_bindings`, inclusiv validarea `objective_key` fata de definitia progresiei
@@ -161,9 +161,9 @@ Actualizat: 2026-05-25
 - [x] verificare compatibilitate cu `RuntimeMode`
 - [x] mesaje clare la load pentru incompatibilitati
 - [x] Multi-quest runtime matur pe jucator, cu UX complet pentru prioritizare, grupare si actiuni rapide in `quest log`
-- [ ] Sistem semantic de `places` peste world admin:
-- [ ] locuri de tip `fierarie`, `taverna`, `casa_fierarului`
-- [ ] API public pentru interogarea acestor locuri
+- [x] Sistem semantic de `places` peste world admin:
+- [x] locuri de tip `fierarie`, `taverna`, `casa_fierarului` (prin WorldPlaceInfo.placeType + tags)
+- [x] API public pentru interogarea acestor locuri (prin WorldAdminApi.findPlacesByTag/Type/Metadata)
 - [ ] Sistem extins de reward:
 - [ ] reputatie
 - [ ] economie / monede
@@ -171,7 +171,7 @@ Actualizat: 2026-05-25
 - [ ] factiuni sau afiliere regionala
 - [x] Comenzi de debug si inspectie pentru:
 - [x] prompt AI (interactiuni prin `/ainpc debugdump ai`)
-- [ ] scenarii active
+- [x] scenarii active (prin /ainpc scenario list)
 - [x] quest progress
 - [x] validare initiala quest templates prin `/ainpc audit quest`
 - [x] audit strict initial pentru continut quest avansat
@@ -183,14 +183,14 @@ Actualizat: 2026-05-25
 ## NPC-uri
 
 - [x] Rutine zilnice mai clare pentru fiecare NPC, cu sloturi vizibile in GUI si comenzi de inspectie
-- [ ] Reactii mai bune la reputatie, familie, emotii si istoric
-- [ ] Roluri mai bine definite: negustor, gardian, fermier, quest giver
+- [x] Reactii mai bune la reputatie, familie, emotii si istoric (prin DialogueEngine templates: HAPPY/SAD/ANGRY/SCARED/FAMILY_TALK + AI context)
+- [x] Roluri mai bine definite: negustor, gardian, fermier, quest giver (prin PopulationPlan socialRole/questRole)
 - [ ] Coordonare intre NPC-uri din acelasi sat sau aceeasi regiune
-- [ ] Dialog care se schimba in functie de povestea locala
+- [x] Dialog care se schimba in functie de povestea locala (prin STORY/GOSSIP templates + story context in AI prompt)
 
 ## Questuri si povesti
 
-- [ ] Questuri in lant, nu doar interactiuni izolate
+- [x] Questuri in lant, nu doar interactiuni izolate (prin nextQuest + questPrerequisites + advanceToNextChainedQuest)
 - [x] Obiective cu stari: inceput, progres, completat, esuat
 - [x] Arhivare documentatie questuri avansate v1 si document canonic V2 pentru diversitate, faze si mecanici non-quest
 - [ ] Recompense configurabile pe scenariu
@@ -218,13 +218,13 @@ Actualizat: 2026-05-25
 - [x] Unealta wand initiala pentru mapping manual: selectie pos1/pos2, punct node, prompt natural determinist si confirmare inainte de salvare
 - [x] Bind manual initial NPC-place pentru demo mapping si harti manuale
 - [x] Draft `npc_bind` prin wand pentru home/work/social peste place-ul selectat
-- [ ] Spawn si comportament diferit pe tipuri de zona
+- [x] Spawn si comportament diferit pe tipuri de zona (prin RoutineEngine zoneWorkState/zoneWorkActivity)
 - [ ] Generator real care produce automat `HouseAllocation` din regiuni, cladiri si node-uri
 - [x] Planner pentru tot satul, nu doar pentru o singura casa
 - [x] Persistenta dedicata initiala `npc_world_bindings`
 - [ ] Generator narativ mai bun pentru nume, roluri si familii pe regiune
 - [ ] Tranzactie DB completa pentru spawn pe regiune, peste mapping/family bind
-- [ ] Economie de baza: monede, tranzactii, roluri comerciale
+- [x] Economie de baza: monede, tranzactii, roluri comerciale (prin EconomyService + ShopService + NpcShopDefinition)
 - [ ] Reputatie pe sat, regiune sau factiune
 - [ ] Sistem de progres pentru jucator: nivel, skill-uri sau experienta
 
@@ -239,11 +239,11 @@ Actualizat: 2026-05-25
 
 ## Admin si debug
 
-- [ ] Comenzi mai bune pentru inspectarea starii unui NPC
+- [x] Comenzi mai bune pentru inspectarea starii unui NPC (prin /ainpc info + NPC Interaction GUI)
 - [x] Audit/debugdump dedicat pentru story state si story events
 - [x] Debug pentru prompt, model AI si raspuns fallback
 - [x] Istoric interactiuni AI prin `/ainpc debugdump ai`
-- [ ] Reload sigur pentru config, pack-uri si scenarii
+- [x] Reload sigur pentru config, pack-uri si scenarii (prin /ainpc reload + /ainpc quest reload)
 - [ ] Mesaje de eroare mai clare pentru configuratii invalide
 
 ## Pentru demo playable matur

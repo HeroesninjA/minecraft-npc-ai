@@ -1,4 +1,4 @@
-# Debugging si Testare
+﻿# Debugging si Testare
 
 Actualizat: 2026-05-11
 
@@ -15,7 +15,7 @@ Pentru relatiile dintre clasele de debug, foloseste [harta claselor pentru debug
 
 Acopera:
 
-- comenzi Maven pentru build si teste
+- comenzi Gradle pentru build si teste
 - scripturi PowerShell existente
 - metode de diagnostic pentru OpenAI
 - metode de diagnostic pentru NPC-uri, World Admin si mapping
@@ -35,42 +35,42 @@ Flux recomandat:
 5. adauga sau actualizeaza un test daca bug-ul este reproductibil
 6. abia apoi modifica implementarea
 
-## Comenzi Maven utile
+## Comenzi Gradle utile
 
 Ruleaza toate testele din reactor:
 
 ```powershell
-mvn test
+gradlew test
 ```
 
 Ruleaza doar modulul core:
 
 ```powershell
-mvn -pl ainpc-core-plugin test
+gradlew :ainpc-core-plugin:test
 ```
 
 Ruleaza un singur test:
 
 ```powershell
-mvn -pl ainpc-core-plugin -Dtest=WorldAdminServiceTest test
+gradlew :ainpc-core-plugin:test --tests "WorldAdminServiceTest"
 ```
 
 Compileaza tot fara teste:
 
 ```powershell
-mvn package -DskipTests
+gradlew build -x test
 ```
 
 Construieste pluginul core si dependintele necesare:
 
 ```powershell
-mvn -pl ainpc-core-plugin -am package
+gradlew :ainpc-core-plugin:build
 ```
 
 Curata build-ul si ruleaza testele:
 
 ```powershell
-mvn clean test
+gradlew clean test
 ```
 
 Cand folosesti `clean`, asteapta-te ca directoarele `target/` sa fie regenerate.
@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
   -ServerDir "C:\Minecraft\paper-test"
 ```
 
-Cu teste Maven inainte de package:
+Cu teste Gradle inainte de package:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-paper-mapping.ps1 `
@@ -516,7 +516,7 @@ Atentie:
 Construieste pluginul:
 
 ```powershell
-mvn -pl ainpc-core-plugin -am package
+gradlew :ainpc-core-plugin:build
 ```
 
 JAR-ul rezultat este in:
@@ -806,7 +806,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
@@ -835,7 +835,7 @@ Comenzi:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
@@ -854,7 +854,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
@@ -874,7 +874,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin,ainpc-scenario-medieval -am clean "-Dtest=AINPCTabCompleterTest,AddonRegistryTest,FeaturePackMetadataValidatorTest,FeaturePackDependencyValidatorTest,MedievalQuestPackTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test :ainpc-scenario-medieval:test --tests "AINPCTabCompleterTest" --tests "AddonRegistryTest" --tests "FeaturePackMetadataValidatorTest" --tests "FeaturePackDependencyValidatorTest" --tests "MedievalQuestPackTest"
 ```
 
 Rezultat: `Tests run: 24, Failures: 0, Errors: 0, Skipped: 0`.
@@ -893,7 +893,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0`.
@@ -912,7 +912,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
@@ -931,7 +931,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin -am "-Dtest=AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test --tests "AINPCTabCompleterTest"
 ```
 
 Rezultat: `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`.
@@ -957,7 +957,7 @@ Rezultat validat:
 Test automat:
 
 ```text
-mvn -pl ainpc-core-plugin,ainpc-scenario-medieval -am clean "-Dtest=AINPCTabCompleterTest,AddonRegistryTest,FeaturePackMetadataValidatorTest,FeaturePackDependencyValidatorTest,MedievalQuestPackTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+gradlew :ainpc-core-plugin:test :ainpc-scenario-medieval:test --tests "AINPCTabCompleterTest" --tests "AddonRegistryTest" --tests "FeaturePackMetadataValidatorTest" --tests "FeaturePackDependencyValidatorTest" --tests "MedievalQuestPackTest"
 ```
 
 Rezultat: `Tests run: 23, Failures: 0, Errors: 0, Skipped: 0`.
@@ -1318,7 +1318,7 @@ Pentru orice bug serios, noteaza:
 
 Testarea buna in proiect trebuie sa combine:
 
-- teste automate Maven pentru logica determinista
+- teste automate Gradle pentru logica determinista
 - scripturi PowerShell pentru diagnostic local
 - smoke tests pe server Paper
 - comenzi admin pentru World Admin si NPC-uri

@@ -50,19 +50,28 @@ import ro.ainpc.engine.runtime.ScenarioConditionRegistry
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerRegistry
+import ro.ainpc.engine.runtime.ObjectiveContext
+import ro.ainpc.engine.runtime.ObjectiveHandlerRegistry
+import ro.ainpc.engine.runtime.ObjectiveResult
+import ro.ainpc.engine.runtime.objectivehandlers.EquipItemObjectiveHandler
+import ro.ainpc.engine.runtime.objectivehandlers.UseItemObjectiveHandler
 import ro.ainpc.engine.runtime.actions.GiveItemAction
 import ro.ainpc.engine.runtime.actions.SetStoryStateAction
 import ro.ainpc.engine.runtime.conditions.HasCompletedQuestCondition
 import ro.ainpc.engine.runtime.triggers.PlayerEntersRegionTrigger
 import ro.ainpc.world.WorldRegion
 import java.lang.reflect.Type
+import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Level
 
 class ScenarioEngine(private val plugin: AINPCPlugin) {
     val actionRegistry: ScenarioActionRegistry = ScenarioActionRegistry()
     val conditionRegistry: ScenarioConditionRegistry = ScenarioConditionRegistry()
     val triggerRegistry: ScenarioTriggerRegistry = ScenarioTriggerRegistry()
+    val objectiveHandlerRegistry: ObjectiveHandlerRegistry = ObjectiveHandlerRegistry()
     private val scenarioTemplates = LinkedHashMap<ScenarioType, ScenarioTemplate>()
     private val questTemplates = LinkedHashMap<String, ScenarioTemplate>()
     private val gson = Gson()
@@ -93,11 +102,73 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         actionRegistry.register(SetStoryStateAction())
         conditionRegistry.register(HasCompletedQuestCondition())
         triggerRegistry.register(PlayerEntersRegionTrigger())
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.UseItemObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.CollectItemObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.DeliverToNpcObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.KillMobObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.VisitRegionObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.VisitPlaceObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.TalkToNpcObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.BreakBlockObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.PlaceBlockObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.CraftItemObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.InspectNodeObjectiveHandler()
+        )
+        objectiveHandlerRegistry.register(
+            ro.ainpc.engine.runtime.objectivehandlers.EquipItemObjectiveHandler()
+        )
     }
 
     fun reloadTemplates() {
         loadScenarioTemplates()
     }
+
+    fun reloadSingleQuest(templateId: String): Boolean {
+        plugin.featurePackLoader.loadAllPacks()
+        val updated = plugin.featurePackLoader.getAllScenarios().find {
+            it.questCode.equals(templateId, ignoreCase = true) || it.id.equals(templateId, ignoreCase = true)
+        } ?: return false
+        val existing = questTemplates.values.find {
+            it.questCode.equals(templateId, ignoreCase = true) || it.templateId.equals(templateId, ignoreCase = true)
+        }
+        if (existing != null) {
+            existing.description = updated.description
+            existing.displayName = updated.name
+            existing.objectives = updated.objectives?.map { obj ->
+                FeaturePackLoader.QuestEntryDefinition(
+                    obj.type, obj.itemId, obj.amount, obj.description
+                )
+            } ?: existing.objectives
+            existing.rewards = updated.rewards?.map { reward ->
+                FeaturePackLoader.QuestEntryDefinition(
+                    reward.type, reward.itemId, reward.amount, reward.description
+                )
+            } ?: existing.rewards
+        }
+        return true
+    }
+
     fun flushQuestProgress() {
         val snapshot = snapshotQuestProgress()
         val total = snapshot.values.sumOf { it.size }
@@ -117,6 +188,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
     private fun loadScenarioTemplates() {
+        templatesLoadedAt = System.currentTimeMillis()
         scenarioTemplates.clear()
         questTemplates.clear()
 
@@ -254,6 +326,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 template.questPrerequisites = ArrayList(definition.questPrerequisites)
                 template.questRepeatable = definition.isQuestRepeatable
                 template.questCooldownSeconds = definition.questCooldownSeconds
+                template.nextQuest = definition.nextQuest
                 template.questDialogues = LinkedHashMap(definition.questDialogues)
                 template.questActorTriggers = LinkedHashMap(
                     definition.questActorTriggers.mapValues { entry -> LinkedHashSet(entry.value) }
@@ -1703,6 +1776,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
             if (template == null || !hasObjectiveType(template, "kill_mob")) continue
+            if (processObjectiveViaHandlers(p0.uniqueId, template, progress, "kill_mob")) continue
             val updatedProgress = LinkedHashMap(progress.objectiveProgress())
             var changed = false
             val objectives = template.objectives
@@ -1747,6 +1821,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
             if (template == null || !hasObjectiveType(template, "craft_item")) continue
+            if (processObjectiveViaHandlers(p0.uniqueId, template, progress, "craft_item")) continue
             incrementCraftObjective(p0, template, progress, p1.name)
         }
     }
@@ -1780,6 +1855,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
             if (template == null || !hasObjectiveType(template, "place_block")) continue
+            if (processObjectiveViaHandlers(p0.uniqueId, template, progress, "place_block")) continue
             incrementBlockObjective(p0, template, progress, "place_block", p1.name)
         }
     }
@@ -2012,6 +2088,25 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         trackedQuestTemplates.keys.removeIf { it !in onlinePlayerIds }
         eventDebounceBuffer.keys.removeIf { key -> key.split(":").firstOrNull()?.let { uid ->
             runCatching { UUID.fromString(uid) }.getOrNull()?.let { it !in onlinePlayerIds } ?: false } == true }
+        cleanupStaleTemplateProgress()
+    }
+
+    fun cleanupStaleTemplateProgress() {
+        val knownTemplateIds = questTemplates.keys.toSet()
+        for ((playerId, quests) in activePlayerQuests) {
+            val staleKeys = quests.keys.filter { it !in knownTemplateIds }
+            for (key in staleKeys) {
+                quests.remove(key)
+                deleteQuestProgress(playerId, key)
+            }
+        }
+        for ((playerId, quests) in archivedPlayerQuests) {
+            val staleKeys = quests.keys.filter { it !in knownTemplateIds }
+            for (key in staleKeys) {
+                quests.remove(key)
+                deleteQuestProgress(playerId, key)
+            }
+        }
     }
 
     private fun clearLocationObjectiveProgress(
@@ -2580,11 +2675,18 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return archived.any { it.templateId().equals(p1, ignoreCase = true) || it.questCode().equals(p1, ignoreCase = true) }
     }
     private fun advanceToNextChainedQuest(p0: Player, p1: ScenarioTemplate) {
-        val nextTemplates = questTemplates.values.filter { t ->
+        val nextTemplates = mutableListOf<ScenarioTemplate>()
+        if (p1.nextQuest.isNotBlank()) {
+            val explicitNext = questTemplates.values.find { t ->
+                t.templateId.equals(p1.nextQuest, ignoreCase = true) || t.questCode.equals(p1.nextQuest, ignoreCase = true)
+            }
+            if (explicitNext != null) nextTemplates.add(explicitNext)
+        }
+        nextTemplates.addAll(questTemplates.values.filter { t ->
             t.questPrerequisites.any { prereq ->
                 prereq.equals(p1.templateId, ignoreCase = true) || prereq.equals(p1.questCode, ignoreCase = true)
             }
-        }
+        })
         for (nextTemplate in nextTemplates) {
             val availability = evaluateQuestAvailability(p0.uniqueId, nextTemplate)
             if (!availability.available()) continue
@@ -2685,7 +2787,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         trackedQuestTemplates[p0] = p1.templateId() ?: ""
         trackedQuestPlayers.add(p0)
     }
-    private fun persistQuestProgressAsync(p0: UUID, p1: PlayerQuestProgress) {
+    private fun persistQuestProgressAsync(playerId: UUID, progress: PlayerQuestProgress) {
+        plugin.databaseManager.runAsync { persistQuestProgress(playerId, progress) }
     }
     private fun snapshotQuestProgress(): Map<UUID, List<PlayerQuestProgress>> {
         val snapshot = mutableMapOf<UUID, List<PlayerQuestProgress>>()
@@ -2695,23 +2798,337 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         return snapshot
     }
-    private fun persistQuestProgressSnapshot(p0: Map<UUID, List<PlayerQuestProgress>>) {
+    fun snapshotQuestProgressPublic(): Map<UUID, List<PlayerQuestProgress>> = snapshotQuestProgress()
+
+    fun findQuestTemplate(templateId: String): ScenarioTemplate? = questTemplates[templateId]
+
+    var templatesLoadedAt: Long = System.currentTimeMillis()
+
+    fun isCacheStale(): Boolean {
+        val questFile = java.io.File(plugin.dataFolder, "quests.yml")
+        if (!questFile.exists()) return false
+        val lastModified = questFile.lastModified()
+        return lastModified > templatesLoadedAt
     }
-    private fun persistQuestProgress(p0: UUID, p1: PlayerQuestProgress) {
+
+    fun cacheAgeSeconds(): Long = (System.currentTimeMillis() - templatesLoadedAt) / 1000
+
+    fun collectQuestWarnings(): List<Pair<String, String>> {
+        val warnings = mutableListOf<Pair<String, String>>()
+        for (template in questTemplates.values) {
+            val templateId = template.templateId
+            for ((index, objective) in template.objectives.withIndex()) {
+                val type = objective.type
+                val normalizedType = ObjectiveTypeAliasRegistry.normalize(type)
+                val deprecated = ObjectiveTypeAliasRegistry.isDeprecated(type)
+                if (deprecated) {
+                    warnings.add("quests.yml" to "Quest $templateId obj[$index]: tip '$type' este deprecated, foloseste '$normalizedType'")
+                }
+                if (!ObjectiveTypeAliasRegistry.isSupported(type) && !ObjectiveTypeAliasRegistry.isSupported(normalizedType)) {
+                    val suggestion = ObjectiveTypeAliasRegistry.suggestCorrection(type)
+                    val hint = if (suggestion != null) " - ai vrut '$suggestion'?" else ""
+                    warnings.add("quests.yml" to "Quest $templateId obj[$index]: tip necunoscut '$type'$hint")
+                }
+                if (objective.itemId.isBlank() && normalizedType != "kill_mob") {
+                    warnings.add("quests.yml" to "Quest $templateId obj[$index] ($normalizedType): lipseste 'item'")
+                }
+            }
+        }
+        if (isCacheStale()) {
+            warnings.add("system" to "Cache-ul de questuri este invechit (${cacheAgeSeconds()}s). Ruleaza /ainpc quest reload.")
+        }
+        for (pack in plugin.featurePackLoader.getLoadedPacks()) {
+            if (pack.schemaVersion != 1) {
+                warnings.add("pack:${pack.id}" to "Schema version ${pack.schemaVersion} difera de versiunea curenta 1.")
+            }
+        }
+        return warnings
     }
-    private fun persistQuestTrackingPreferenceAsync(p0: UUID, p1: PlayerQuestProgress) {
+
+    private fun processObjectiveViaHandlers(
+        playerId: UUID,
+        template: ScenarioTemplate,
+        progress: PlayerQuestProgress,
+        objectiveType: String,
+    ): Boolean {
+        for ((index, objective) in template.objectives.withIndex()) {
+            if (!matchesObjectiveType(objective, objectiveType)) continue
+            val handler = objectiveHandlerRegistry.find(objectiveType) ?: continue
+            val key = buildObjectiveKey(objective, index)
+            val current = progress.objectiveProgress()[key] ?: 0
+            val result = handler.handleProgress(ro.ainpc.engine.runtime.ObjectiveContext(
+                playerId = playerId,
+                objective = objective,
+                currentProgress = current,
+                requiredAmount = objective.amount,
+                metadata = emptyMap(),
+            ))
+            if (result.progressed > 0 || result.completed) {
+                return true
+            }
+        }
+        return false
     }
-    private fun persistQuestTrackingPreferenceAsync(p0: UUID, p1: String) {
+
+    fun processObjectiveViaRegistry(
+        playerId: UUID,
+        template: ScenarioTemplate,
+        objectiveIndex: Int,
+        currentProgress: Int,
+    ): ObjectiveResult? {
+        if (objectiveIndex < 0 || objectiveIndex >= template.objectives.size) return null
+        val objective = template.objectives[objectiveIndex]
+        val handler = objectiveHandlerRegistry.find(objective.type)
+        if (handler == null) return null
+        val context = ro.ainpc.engine.runtime.ObjectiveContext(
+            playerId = playerId,
+            objective = objective,
+            currentProgress = currentProgress,
+            requiredAmount = objective.amount,
+            metadata = emptyMap(),
+        )
+        return handler.handleProgress(context)
     }
-    private fun persistQuestTrackingPreference(p0: UUID, p1: String) {
+
+    fun collectFailureReasons(playerId: UUID, templateId: String): List<String> {
+        val reasons = mutableListOf<String>()
+        val template = questTemplates[templateId] ?: return reasons
+        val quests = activePlayerQuests[playerId]
+        val progress = quests?.get(templateId) ?: return reasons
+        if (template.objectives.isNotEmpty()) {
+            val incompleteObjectives = template.objectives.filterIndexed { index, obj ->
+                val key = buildObjectiveKey(obj, index)
+                (progress.objectiveProgress()[key] ?: 0) < obj.amount
+            }
+            if (incompleteObjectives.isNotEmpty()) {
+                reasons.add("objective_incomplete: ${incompleteObjectives.size}/${template.objectives.size}")
+            }
+        }
+        val elapsed = (System.currentTimeMillis() - progress.startedAt()) / 1000
+        if (elapsed > 0) reasons.add("elapsed_seconds=$elapsed")
+        return reasons
     }
-    private fun deleteQuestProgressAsync(p0: UUID, p1: String) {
+
+    private fun persistQuestProgressSnapshot(snapshot: Map<UUID, List<PlayerQuestProgress>>) {
+        plugin.databaseManager.runAsync {
+            try {
+                plugin.databaseManager.executeTransaction { conn ->
+                    val sql = "INSERT OR REPLACE INTO player_quests " +
+                        "(player_uuid, template_id, quest_code, status, started_at, completed_at, " +
+                        "current_phase, objective_progress, quest_variables, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    conn.prepareStatement(sql).use { stmt ->
+                        for ((playerId, progresses) in snapshot) {
+                            for (p in progresses) {
+                                bindUpsert(stmt, playerId, p)
+                                stmt.addBatch()
+                            }
+                        }
+                        stmt.executeBatch()
+                    }
+                }
+            } catch (e: Exception) {
+                plugin.logger.log(Level.WARNING, "Eroare la salvarea snapshot-ului de progres questuri", e)
+            }
+        }
     }
-    private fun deleteQuestProgress(p0: UUID, p1: String) {
+    private fun bindUpsert(
+        stmt: java.sql.PreparedStatement,
+        playerId: UUID,
+        p: PlayerQuestProgress
+    ) {
+        stmt.setString(1, playerId.toString())
+        stmt.setString(2, p.templateId() ?: "")
+        stmt.setString(3, p.questCode() ?: "")
+        stmt.setString(4, (p.status() ?: QuestStatus.NOT_STARTED).storageValue())
+        stmt.setLong(5, p.startedAt())
+        stmt.setLong(6, p.completedAt())
+        stmt.setString(7, p.currentPhase())
+        stmt.setString(8, gson.toJson(p.objectiveProgress()))
+        stmt.setString(9, gson.toJson(p.questVariables()))
+        stmt.setLong(10, maxOf(System.currentTimeMillis(), p.updatedAt()))
     }
-    private fun persistQuestAnchorsAsync(p0: UUID, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors) {
+    private fun persistQuestProgress(playerId: UUID, progress: PlayerQuestProgress) {
+        try {
+            val sql = "INSERT OR REPLACE INTO player_quests " +
+                "(player_uuid, template_id, quest_code, status, started_at, completed_at, " +
+                "current_phase, objective_progress, quest_variables, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                bindUpsert(stmt, playerId, progress)
+                stmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            plugin.logger.log(Level.WARNING, "Eroare la salvarea progresului quest ${progress.templateId()} " +
+                "pentru jucatorul $playerId", e)
+        }
     }
-    private fun persistQuestAnchors(p0: UUID, p1: PlayerQuestProgress, p2: QuestAnchorResolver.ResolvedQuestAnchors) {
+    private fun persistQuestTrackingPreferenceAsync(playerId: UUID, progress: PlayerQuestProgress) {
+        persistQuestProgressAsync(playerId, progress)
+    }
+    private fun persistQuestTrackingPreferenceAsync(playerId: UUID, trackedTemplateId: String) {
+        plugin.databaseManager.runAsync {
+            try {
+                val sql = "UPDATE player_quests SET tracked = 0 WHERE player_uuid = ?"
+                plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, playerId.toString())
+                    stmt.executeUpdate()
+                }
+                if (trackedTemplateId.isNotBlank()) {
+                    val updateSql = "UPDATE player_quests SET tracked = 1 " +
+                        "WHERE player_uuid = ? AND template_id = ?"
+                    plugin.databaseManager.prepareStatement(updateSql).use { stmt ->
+                        stmt.setString(1, playerId.toString())
+                        stmt.setString(2, trackedTemplateId)
+                        stmt.executeUpdate()
+                    }
+                }
+            } catch (e: SQLException) {
+                plugin.logger.log(Level.WARNING,
+                    "Eroare la salvarea preferintei de tracking pentru $playerId", e)
+            }
+        }
+    }
+    private fun persistQuestTrackingPreference(playerId: UUID, trackedTemplateId: String) {
+        try {
+            val sql = "UPDATE player_quests SET tracked = 0 WHERE player_uuid = ?"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, playerId.toString())
+                stmt.executeUpdate()
+            }
+            if (trackedTemplateId.isNotBlank()) {
+                val updateSql = "UPDATE player_quests SET tracked = 1 " +
+                    "WHERE player_uuid = ? AND template_id = ?"
+                plugin.databaseManager.prepareStatement(updateSql).use { stmt ->
+                    stmt.setString(1, playerId.toString())
+                    stmt.setString(2, trackedTemplateId)
+                    stmt.executeUpdate()
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.log(Level.WARNING,
+                "Eroare la salvarea preferintei de tracking pentru $playerId", e)
+        }
+    }
+    private fun deleteQuestProgressAsync(playerId: UUID, templateId: String) {
+        plugin.databaseManager.runAsync { deleteQuestProgress(playerId, templateId) }
+    }
+    private fun deleteQuestProgress(playerId: UUID, templateId: String) {
+        try {
+            val sql = "DELETE FROM player_quests WHERE player_uuid = ? AND template_id = ?"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, playerId.toString())
+                stmt.setString(2, templateId)
+                stmt.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            plugin.logger.log(Level.WARNING,
+                "Eroare la stergerea progresului quest $templateId pentru $playerId", e)
+        }
+    }
+    private fun persistQuestAnchorsAsync(
+        playerId: UUID,
+        progress: PlayerQuestProgress,
+        anchors: QuestAnchorResolver.ResolvedQuestAnchors
+    ) {
+        plugin.databaseManager.runAsync { persistQuestAnchors(playerId, progress, anchors) }
+    }
+    private fun persistQuestAnchors(
+        playerId: UUID,
+        progress: PlayerQuestProgress,
+        anchors: QuestAnchorResolver.ResolvedQuestAnchors
+    ) {
+        try {
+            plugin.databaseManager.executeTransaction { conn ->
+                val deleteSql = "DELETE FROM quest_anchor_bindings " +
+                    "WHERE player_uuid = ? AND template_id = ?"
+                conn.prepareStatement(deleteSql).use { stmt ->
+                    stmt.setString(1, playerId.toString())
+                    stmt.setString(2, progress.templateId() ?: "")
+                    stmt.executeUpdate()
+                }
+                val anchorList = anchors.anchors()
+                if (anchorList.isNotEmpty()) {
+                    val insertSql = "INSERT OR REPLACE INTO quest_anchor_bindings " +
+                        "(player_uuid, template_id, objective_key, quest_code, objective_type, " +
+                        "reference, anchor_type, anchor_id, anchor_label, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    conn.prepareStatement(insertSql).use { stmt ->
+                        for (anchor in anchorList) {
+                            stmt.setString(1, playerId.toString())
+                            stmt.setString(2, progress.templateId() ?: "")
+                            stmt.setString(3, anchor.objectiveKey())
+                            stmt.setString(4, progress.questCode() ?: "")
+                            stmt.setString(5, anchor.objectiveType())
+                            stmt.setString(6, anchor.reference())
+                            stmt.setString(7, anchor.anchorType())
+                            stmt.setString(8, anchor.anchorId())
+                            stmt.setString(9, anchor.label())
+                            stmt.setLong(10, System.currentTimeMillis())
+                            stmt.setLong(11, System.currentTimeMillis())
+                            stmt.executeUpdate()
+                        }
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.log(Level.WARNING,
+                "Eroare la salvarea ancorelor pentru quest ${progress.templateId()}", e)
+        }
+    }
+
+    fun loadPlayerQuests() {
+        try {
+            val sql = "SELECT player_uuid, template_id, quest_code, status, started_at, " +
+                "completed_at, current_phase, objective_progress, quest_variables, updated_at " +
+                "FROM player_quests"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val playerId = UUID.fromString(rs.getString("player_uuid"))
+                        val progress = deserializeProgress(rs)
+                        val templateId = progress.templateId() ?: continue
+                        when (progress.status()) {
+                            QuestStatus.COMPLETED, QuestStatus.FAILED -> {
+                                archivedPlayerQuests
+                                    .getOrPut(playerId) { ConcurrentHashMap() }[templateId] = progress
+                            }
+                            else -> {
+                                activePlayerQuests
+                                    .getOrPut(playerId) { ConcurrentHashMap() }[templateId] = progress
+                            }
+                        }
+                    }
+                }
+            }
+            val totalActive = activePlayerQuests.values.sumOf { it.size }
+            val totalArchived = archivedPlayerQuests.values.sumOf { it.size }
+            plugin.debug("[QuestEngine] Incarcate $totalActive progresii active, $totalArchived arhivate din DB.")
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la incarcarea progresului questurilor din DB", e)
+        }
+    }
+
+    private fun deserializeProgress(rs: ResultSet): PlayerQuestProgress {
+        val objectiveProgressType: Type = object : com.google.gson.reflect.TypeToken<Map<String, Int>>() {}.type
+        val questVariablesType: Type = object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type
+        val objectiveProgress: Map<String, Int> = try {
+            gson.fromJson(rs.getString("objective_progress"), objectiveProgressType) ?: emptyMap()
+        } catch (_: Exception) { emptyMap() }
+        val questVariables: Map<String, String> = try {
+            gson.fromJson(rs.getString("quest_variables"), questVariablesType) ?: emptyMap()
+        } catch (_: Exception) { emptyMap() }
+        return PlayerQuestProgress(
+            templateId = rs.getString("template_id"),
+            questCode = rs.getString("quest_code"),
+            status = QuestStatus.fromStorage(rs.getString("status")),
+            startedAt = rs.getLong("started_at"),
+            completedAt = rs.getLong("completed_at"),
+            updatedAt = rs.getLong("updated_at"),
+            currentPhase = rs.getString("current_phase"),
+            objectiveProgress = objectiveProgress,
+            questVariables = questVariables,
+        )
     }
     private fun resolveQuestAnchors(p0: ScenarioTemplate, p1: Player, p2: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
         if (p0 == null || p0.objectives.isEmpty()) return QuestAnchorResolver.ResolvedQuestAnchors.valid(emptyList())
@@ -2842,6 +3259,12 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val lines = mutableListOf<String>()
         lines.add("&6=== $title &6===")
         lines.add("&7Status: $status")
+        if (p1.status() == QuestStatus.FAILED) {
+            val reasons = collectFailureReasons(p2.uniqueId, p0.templateId)
+            if (reasons.isNotEmpty()) {
+                lines.add("&cMotive esec: ${reasons.joinToString(", ")}")
+            }
+        }
         if (p0.description.isNotBlank()) {
             lines.add("&7" + p0.description)
         }

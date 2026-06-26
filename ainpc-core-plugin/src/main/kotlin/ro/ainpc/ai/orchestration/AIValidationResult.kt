@@ -5,7 +5,8 @@ data class AIValidationResult(
     val errors: List<String> = emptyList(),
     val warnings: List<String> = emptyList(),
     val sanitizedText: String = "",
-    val parsedPayload: Map<String, String> = emptyMap()
+    val parsedPayload: Map<String, String> = emptyMap(),
+    val rejectionReason: String = ""
 ) {
     companion object {
         @JvmStatic
@@ -14,6 +15,10 @@ data class AIValidationResult(
         @JvmStatic
         fun rejected(errors: List<String>): AIValidationResult =
             AIValidationResult(false, errors = errors)
+
+        @JvmStatic
+        fun rejectedWithReason(errors: List<String>, reason: String): AIValidationResult =
+            AIValidationResult(false, errors = errors, rejectionReason = reason)
 
         @JvmStatic
         fun withWarnings(text: String, warnings: List<String>): AIValidationResult =

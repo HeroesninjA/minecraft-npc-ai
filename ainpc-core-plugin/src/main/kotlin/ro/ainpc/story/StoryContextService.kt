@@ -130,7 +130,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
               ON p.player_uuid = b.player_uuid
              AND p.template_id = b.template_id
             WHERE b.player_uuid = ?
-              AND UPPER(p.status) IN ('OFFERED', 'ACTIVE')
+              AND UPPER(p.status) IN ('OFFERED', 'ACTIVE', 'SUSPENDED')
             ORDER BY b.updated_at DESC, b.template_id, b.objective_key
             LIMIT ?
         """.trimIndent()

@@ -928,6 +928,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "summary",
             "overview",
             "recap",
+            "warnings",
             "commands",
             "cmds",
             "copy",
@@ -1024,6 +1025,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "summary",
             "overview",
             "recap",
+            "warnings",
             "commands",
             "cmds",
             "copy",
@@ -1048,7 +1050,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         )
         private val AUDIT_MODES = listOf("all", "npc", "world", "db", "spawn", "quest", "wand")
         private val AUDIT_QUEST_OPTIONS = listOf("strict", "full", "offline")
-        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai")
+        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai", "scenario")
         private val MIGRATION_TARGETS = listOf("households")
         private val MIGRATION_MODES = listOf("dryrun", "apply")
         private val POPULATION_ACTIONS = listOf("plan", "inspect")
@@ -1086,7 +1088,12 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "defs",
             "stored",
             "state",
-            "progressions"
+            "progressions",
+            "summary",
+            "warnings",
+            "diff",
+            "metrics",
+            "cache-clean"
         )
         private val QUEST_DECISION_MODES =
             listOf("accept", "decline", "yes", "y", "da", "ok", "confirm", "deny", "reject", "no", "n", "nu", "refuz")

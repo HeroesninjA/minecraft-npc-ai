@@ -11,6 +11,12 @@ import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 
 object OpenAIConnectionProbe {
+    @Volatile
+    private var lastProbeResult: ConnectionStatus? = null
+
+    @JvmStatic
+    fun getLastProbeResult(): ConnectionStatus? = lastProbeResult
+
     @JvmStatic
     fun probeConnection(
         model: String,
@@ -20,13 +26,15 @@ object OpenAIConnectionProbe {
         gson: Gson
     ): ConnectionStatus {
         if (apiKey.isBlank()) {
-            return ConnectionStatus.unreachable(
+            val result = ConnectionStatus.unreachable(
                 model,
                 listOf(baseUrl),
                 null,
                 emptyList(),
                 listOf("Cheia OpenAI lipseste; seteaza OPENAI_API_KEY sau openai.api_key pentru proba HTTP.")
             )
+            lastProbeResult = result
+            return result
         }
 
         val modelUrl = "$baseUrl/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8)
@@ -39,7 +47,7 @@ object OpenAIConnectionProbe {
         }
         val request = requestBuilder.build()
 
-        return try {
+        val result: ConnectionStatus = try {
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             val elapsedMs = OpenAITextSupport.nanosToMillis(startedAt)
             val responseBody = response.body().orEmpty()
@@ -86,5 +94,7 @@ object OpenAIConnectionProbe {
                 listOf(OpenAITextSupport.compactExceptionMessage(e))
             )
         }
+        lastProbeResult = result
+        return result
     }
 }

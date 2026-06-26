@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -16,6 +17,15 @@ class AdminHubGui : GuiScreen {
     override fun size(player: Player): Int = 45
 
     override fun render(context: GuiRenderContext) {
+        val player = context.player()
+        if (!GuiAccessHelper.isAdmin(player)) {
+            context.item(4, GuiItemFactory.item(Material.BARRIER, "&cAcces restrictionat", listOf(
+                "&7Doar administratorii pot accesa acest panou."
+            )))
+            context.fillEmpty(GuiItemFactory.filler())
+            return
+        }
+
         val wa: WorldAdminApi = context.plugin().platform.worldAdmin
 
         context.item(4, GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Panel", listOf(
@@ -24,7 +34,7 @@ class AdminHubGui : GuiScreen {
             if (wa.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aSalvat"
         )))
 
-        if (context.service().canOpen(context.player(), GuiKey.WORLD)) {
+        if (context.service().canOpen(player, GuiKey.WORLD)) {
             context.button(10, GuiButton.enabled(GuiItemFactory.item(Material.COMPASS, "&bWorld", listOf("&7Context world, regiuni, places.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.WORLD) }))
         }

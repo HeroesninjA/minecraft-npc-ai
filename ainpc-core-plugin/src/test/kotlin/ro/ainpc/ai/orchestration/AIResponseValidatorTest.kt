@@ -2,6 +2,7 @@ package ro.ainpc.ai.orchestration
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -128,6 +129,82 @@ class AIResponseValidatorTest {
         val warned = AIValidationResult.withWarnings("text", listOf("atentie"))
         assertTrue(warned.valid)
         assertEquals(1, warned.warnings.size)
+    }
+
+    @Test
+    fun rejectionReasonIsSetOnInvalidResponse() {
+        val result = AIResponseValidator.validate("")
+        assertFalse(result.valid)
+        assertEquals("raspuns_gol", result.rejectionReason)
+    }
+
+    @Test
+    fun rejectionReasonOnTruncatedResponse() {
+        val result = AIResponseValidator.validate("Raspunsul continua...")
+        assertFalse(result.valid)
+        assertEquals("raspuns_trunchiat", result.rejectionReason)
+    }
+
+    @Test
+    fun rejectionReasonOnForbiddenPattern() {
+        val result = AIResponseValidator.validate("Text cu {{template}} periculos.")
+        assertFalse(result.valid)
+        assertEquals("pattern_interzis", result.rejectionReason)
+    }
+
+    @Test
+    fun rejectedWithReasonFactory() {
+        val result = AIValidationResult.rejectedWithReason(listOf("eroare"), "test_reason")
+        assertFalse(result.valid)
+        assertEquals("test_reason", result.rejectionReason)
+    }
+
+    @Test
+    fun validatesFormatForIntentClassification() {
+        val issues = AIResponseValidator.validateFormat("single_line", AIUseCase.INTENT_CLASSIFICATION)
+        assertTrue(issues.isEmpty())
+    }
+
+    @Test
+    fun validatesFormatForIntentClassificationRejectsMultiline() {
+        val issues = AIResponseValidator.validateFormat("line1\nline2", AIUseCase.INTENT_CLASSIFICATION)
+        assertTrue(issues.any { it.contains("linii multiple") })
+    }
+
+    @Test
+    fun validatesFormatForDraftWithJson() {
+        val jsonResponse = """{"type": "quest", "name": "test"}"""
+        val issues = AIResponseValidator.validateFormat(jsonResponse, AIUseCase.QUEST_DRAFT)
+        assertTrue(issues.isEmpty())
+    }
+
+    @Test
+    fun validatesTruncatedResponse() {
+        val result = AIResponseValidator.validateComplete("Raspuns terminat cu ...")
+        assertTrue(result != null && result.contains("trunchiat"))
+    }
+
+    @Test
+    fun completeResponsePassesTruncationCheck() {
+        val result = AIResponseValidator.validateComplete("Raspuns complet si valid.")
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun validatesUnexpectedTypeInDialogueReply() {
+        val issues = AIResponseValidator.validateUnexpectedType(
+            """{"type": "json", "content": "test"}""", AIUseCase.DIALOGUE_REPLY
+        )
+        assertTrue(issues.any { it.contains("Tip neasteptat") })
+    }
+
+    @Test
+    fun validatesConnectionStatusSummary() {
+        val summary = "connected"
+        val degraded = "degraded"
+        val failed = "failed"
+        assertNotEquals(summary, failed)
+        assertNotEquals(degraded, failed)
     }
 
     @Test

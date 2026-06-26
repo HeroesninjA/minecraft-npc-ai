@@ -43,6 +43,7 @@ data class OpenAIDebugSnapshot(
     val lastFailureMessage: String,
     val lastFallbackAtMillis: Long,
     val lastFallbackReason: String,
+    val connectionStatus: ConnectionStatus?,
     val recentInteractions: List<OpenAIDebugInteraction>
 ) {
     val backoffActive: Boolean
@@ -50,4 +51,20 @@ data class OpenAIDebugSnapshot(
 
     val backoffRemainingSeconds: Long
         get() = maxOf(0L, (offlineRetryAfterMillis - nowMillis + 999L) / 1000L)
+
+    val connectionSummary: String
+        get() {
+            val cs = connectionStatus ?: return "Necunoscut (nu s-a efectuat nicio proba de conexiune)."
+            return cs.summary()
+        }
+
+    val connectionLabel: String
+        get() {
+            val cs = connectionStatus ?: return "unknown"
+            return when {
+                cs.isReachable() && cs.isModelAvailable() -> "connected"
+                cs.isReachable() -> "degraded"
+                else -> "failed"
+            }
+        }
 }

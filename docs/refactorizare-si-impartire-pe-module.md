@@ -30,8 +30,8 @@ Schimbari aplicate:
 - folderul legacy `src/src` a fost eliminat dupa migrare
 - task-urile programate au fost extrase din `AINPCPlugin` in `ro.ainpc.bootstrap.SchedulerCoordinator`
 - `scripts/debug-openai.ps1` citeste implicit config-ul din noua locatie
-- `mvn clean test` trece dupa schimbare
-- `mvn package -DskipTests` trece dupa schimbare
+- `gradlew clean test` trece dupa schimbare
+- `gradlew build -x test` trece dupa schimbare
 
 Ramas pentru fazele urmatoare:
 

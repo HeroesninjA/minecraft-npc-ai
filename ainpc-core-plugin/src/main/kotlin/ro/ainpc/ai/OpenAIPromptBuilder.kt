@@ -14,6 +14,9 @@ object OpenAIPromptBuilder {
         dbContext: DialogManager.PromptDbContext?,
         storyContext: StoryContextSnapshot? = null
     ): String {
+        if (snapshot.npcName().isBlank() && snapshot.playerMessage().isBlank()) {
+            return buildFallbackPrompt(snapshot)
+        }
         val prompt = StringBuilder()
         val facts = NpcFactResolver.NpcFacts(
             snapshot.npcName(),
@@ -155,5 +158,17 @@ object OpenAIPromptBuilder {
         prompt.append(snapshot.npcName()).append(": ")
 
         return prompt.toString()
+    }
+
+    @JvmStatic
+    fun buildFallbackPrompt(snapshot: PromptSnapshot?): String {
+        val name = snapshot?.npcName().orEmpty().ifBlank { "NPC" }
+        val message = snapshot?.playerMessage().orEmpty().ifBlank { "Salut!" }
+        return buildString {
+            append("Esti $name intr-un joc Minecraft. Vorbesti romana, natural si scurt.\n\n")
+            append("=== MESAJ JUCATOR ===\n")
+            append("Jucator: $message\n\n")
+            append("$name: ")
+        }
     }
 }

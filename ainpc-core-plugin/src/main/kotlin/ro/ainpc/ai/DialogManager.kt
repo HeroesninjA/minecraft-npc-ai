@@ -100,8 +100,14 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
             val sentiment = plugin.openAIService.analyzeSentimentFast(message)
 
+            val branchDecision = BranchDecision.runtimeSelected(
+                "branch_${System.currentTimeMillis()}",
+                "raspuns_generat"
+            )
+
             plugin.databaseManager.supplyAsync {
                 saveDialog(npc, playerUuid, message, generated.response())
+                recordBranchDecision(npc, playerUuid, branchDecision)
                 updateRelationship(npc, playerUuid, playerName, sentiment)
                 createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment)
                 PostProcessResult(generated.response(), sentiment, generated.relationship())
@@ -185,6 +191,11 @@ class DialogManager(private val plugin: AINPCPlugin) {
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la salvarea dialogului: " + e.message)
         }
+    }
+
+    fun recordBranchDecision(npc: AINPC, playerUuid: UUID, decision: BranchDecision) {
+        plugin.debug("[DialogManager] Branch ${decision.branchId}: propus de ${decision.proposedBy}, " +
+            "selectat de ${decision.selectedBy}, motiv: ${decision.reason}")
     }
 
     /**
@@ -458,13 +469,18 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
     class DialogResult private constructor(
         val status: DialogStatus,
-        val response: String?
+        val response: String?,
+        val branchDecision: BranchDecision? = null
     ) {
         fun isSuccess(): Boolean = status == DialogStatus.SUCCESS
 
         companion object {
             @JvmStatic
             fun success(response: String): DialogResult = DialogResult(DialogStatus.SUCCESS, response)
+
+            @JvmStatic
+            fun successWithBranch(response: String, decision: BranchDecision): DialogResult =
+                DialogResult(DialogStatus.SUCCESS, response, decision)
 
             @JvmStatic
             fun cooldown(): DialogResult = DialogResult(DialogStatus.COOLDOWN, null)
@@ -478,6 +494,24 @@ class DialogManager(private val plugin: AINPCPlugin) {
         SUCCESS,
         COOLDOWN,
         ERROR
+    }
+
+    data class BranchDecision(
+        val branchId: String,
+        val proposedBy: String,
+        val selectedBy: String,
+        val reason: String,
+        val timestamp: Long = System.currentTimeMillis()
+    ) {
+        companion object {
+            @JvmStatic
+            fun aiProposed(branchId: String, reason: String): BranchDecision =
+                BranchDecision(branchId, "ai", "runtime", reason)
+
+            @JvmStatic
+            fun runtimeSelected(branchId: String, reason: String): BranchDecision =
+                BranchDecision(branchId, "runtime", "runtime", reason)
+        }
     }
 
     data class DialogRequest(

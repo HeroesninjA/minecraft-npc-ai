@@ -13,4 +13,5 @@ Rulează înainte de a marca batch-ul ca finalizat:
 - [x] Backup: `/ainpc quest backup` salvează pack-urile în ZIP
 - [x] Reindex: `/ainpc quest reindex` regenerează indexul
 - [x] Schema version: `FeaturePack.schemaVersion` = 1
-- [x] Batch guide: `docs/deepseek-batch-guide.md` creat
+- [x] Batch guide: `./deepseek-batch-guide.md` creat
+

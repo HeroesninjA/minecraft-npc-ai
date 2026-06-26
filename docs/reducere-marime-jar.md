@@ -17,7 +17,7 @@ Concluzia importanta este ca marimea JAR-ului nu vine din codul AINPC, ci din de
 Comanda de referinta:
 
 ```powershell
-mvn package -DskipTests
+gradlew build -x test
 ```
 
 Dimensiune observata pentru core:
@@ -90,16 +90,16 @@ Inainte de orice schimbare, trebuie sa existe o masuratoare repetabila.
 Comenzi:
 
 ```powershell
-mvn clean package -DskipTests
+gradlew clean build -x test
 Get-ChildItem ainpc-core-plugin\target\*.jar | Select-Object Name,Length
-mvn -pl ainpc-core-plugin dependency:tree
+gradlew :ainpc-core-plugin:dependencies
 ```
 
 Recomandare:
 
 - documenteaza dimensiunea JAR-ului dupa fiecare schimbare
 - nu evalua optimizarea doar dupa build incremental
-- foloseste mereu `mvn clean package -DskipTests` pentru comparatii
+- foloseste mereu `gradlew clean build -x test` pentru comparatii
 
 ## Faza 1: Scoate dependintele inutile din shade
 
@@ -478,8 +478,8 @@ Cel mai mare castig vine din:
 
 Refactorizarea pentru reducerea JAR-ului este considerata terminata cand:
 
-- `mvn clean test` trece
-- `mvn package -DskipTests` trece
+- `gradlew clean test` trece
+- `gradlew build -x test` trece
 - pluginul porneste pe server Paper real
 - `ainpc-core-plugin` nu mai shaduieste `sqlite-jdbc`, daca tinta este un core mic
 - `ainpc-core-plugin` nu mai depinde de OkHttp/Kotlin, daca se accepta `HttpClient`

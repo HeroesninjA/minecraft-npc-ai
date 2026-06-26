@@ -1,4 +1,4 @@
-﻿# Relatii Documentatie
+# Relatii Documentatie
 
 Actualizat: 2026-06-20
 
@@ -96,7 +96,7 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 - `server-admin-runbook.md`, `release-checklist.md`, `debugging-si-testare.md` si `migration-si-backup.md` formeaza lantul operational.
 - `sistem-permisiuni-compatibilitate-pluginuri.md` descrie contractul de permisiuni Bukkit si compatibilitatea cu manageri externi precum LuckPerms.
 - `audit.md` descrie auditul runtime.
-- `mcp-docker-server-mvp-si-faze.md` si `coding-automation-stack-linux-vscode-deepseek-mcp.md` tin de infrastructura de lucru.
+- `mcp-docker-server-mvp-si-faze.md` si `deepseek/coding-automation-stack-linux-vscode-deepseek-mcp.md` tin de infrastructura de lucru.
 - `kotlin-paper-packaging-si-smoke.md` si `kotlin-testing-strategy.md` sunt ghiduri de verificare pentru build si runtime.
 - `analiza-erori-si-plan-rezolvare.md` colecteaza probleme istorice si planuri de remediere.
 - `faze-observatii-avertizari.md` ramane referinta pentru riscuri si avertizari globale.
@@ -196,7 +196,7 @@ Detalierea completa este sintetizata in `Tabel compact`. Pentru trasee de citire
 | Operare | `server-admin-runbook.md` -> `release-checklist.md` -> `debugging-si-testare.md` -> `migration-si-backup.md` |
 | Permisiuni | `sistem-permisiuni-compatibilitate-pluginuri.md` -> `server-admin-runbook.md` |
 
-## Tabel compact de referințe
+## Tabel compact de referin?e
 
 | Fisier | Rol | Depinde de |
 |---|---|---|

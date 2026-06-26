@@ -259,5 +259,6 @@ class AddonRegistryTest {
         override val packDirectory: Path
             get() = Path.of("packs")
         override fun reloadContent() {}
+        override fun registerObjectiveHandler(type: String, handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int) {}
     }
 }

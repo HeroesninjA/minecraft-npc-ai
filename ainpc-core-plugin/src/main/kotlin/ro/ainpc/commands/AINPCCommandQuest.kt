@@ -487,8 +487,163 @@ fun handleAbandonQuest(
     return true
 }
 
+fun handleQuestDiff(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val msg = ainpcCommandQuestPlugin.messageUtils
+    val templateId = if (args.size > 2) args[2] else null
+    if (templateId == null) {
+        msg.send(sender, "&cUtilizare: /ainpc quest diff <templateId>")
+        return true
+    }
+    val scenarioEngine = ainpcCommandQuestPlugin.scenarioEngine
+    val runtimeTemplate = scenarioEngine.findQuestTemplate(templateId)
+    val yamlDef = ainpcCommandQuestPlugin.questConfig.getConfigurationSection(templateId)
+    msg.send(sender, "&6═══ Diff: $templateId ═══")
+    val diffs = mutableListOf<String>()
+    if (runtimeTemplate == null && yamlDef == null) {
+        msg.send(sender, "&cQuest-ul '$templateId' nu exista in YAML sau runtime.")
+        return true
+    }
+    if (runtimeTemplate == null) {
+        diffs.add("&c- Exista in YAML dar NU in runtime (probabil neincarcat)")
+    } else if (yamlDef == null) {
+        diffs.add("&e- Exista in runtime dar NU in YAML (probabil generat/fallback)")
+    } else {
+        val yamlObjectives = yamlDef.getConfigurationSection("objectives")?.getKeys(false)?.size ?: 0
+        val runtimeObjectives = runtimeTemplate.objectives.size
+        if (yamlObjectives != runtimeObjectives) {
+            diffs.add("&e- Obiective: YAML=$yamlObjectives, Runtime=$runtimeObjectives")
+        } else {
+            diffs.add("&a- Obiective: $yamlObjectives (identic)")
+        }
+        val yamlPhases = yamlDef.getStringList("phases").size
+        val runtimePhases = runtimeTemplate.phases.size
+        if (yamlPhases != runtimePhases) {
+            diffs.add("&e- Faze: YAML=$yamlPhases, Runtime=$runtimePhases")
+        } else if (yamlPhases > 0) {
+            diffs.add("&a- Faze: $yamlPhases (identic)")
+        }
+        val yamlRoles = yamlDef.getConfigurationSection("roles")?.getKeys(false)?.size ?: 0
+        val runtimeRoles = runtimeTemplate.roles.size
+        if (yamlRoles != runtimeRoles) {
+            diffs.add("&e- Roluri: YAML=$yamlRoles, Runtime=$runtimeRoles")
+        } else if (yamlRoles > 0) {
+            diffs.add("&a- Roluri: $yamlRoles (identic)")
+        }
+    }
+    if (diffs.isEmpty()) {
+        msg.send(sender, "&aNicio diferenta intre YAML si runtime.")
+    } else {
+        diffs.forEach { msg.send(sender, it) }
+    }
+    return true
+}
+
+fun handleQuestCacheClean(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val engine = ainpcCommandQuestPlugin.scenarioEngine
+    engine.cleanupOrphanedObjectives()
+    engine.cleanupStaleTemplateProgress()
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aCache curatat: obiective orfane si progres pentru template-uri sterse.")
+    return true
+}
+
 private fun questDebug(message: String) {
     ainpcCommandQuestPlugin.debug("[QuestCmd] $message")
+}
+
+fun handleQuestSummary(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val scenarioEngine = ainpcCommandQuestPlugin.scenarioEngine
+    val allProgress = scenarioEngine.snapshotQuestProgressPublic()
+    val msg = ainpcCommandQuestPlugin.messageUtils
+
+    val targetPlayerName = if (args.size > 2) args[2] else null
+    val filtered = if (targetPlayerName != null) {
+        val player = ainpcCommandQuestPlugin.server.getPlayer(targetPlayerName)
+        if (player == null) {
+            msg.send(sender, "&cJucatorul &e$targetPlayerName &cnu este online.")
+            return true
+        }
+        val playerProgress = allProgress[player.uniqueId] ?: emptyList()
+        msg.send(sender, "&6═══ Quest Summary: &f${player.name} &6═══")
+        playerProgress
+    } else {
+        msg.send(sender, "&6═══ Quest Summary (toti jucatorii) ═══")
+        allProgress.values.flatten()
+    }
+
+    val active = filtered.filter { it.status()?.let { s -> !s.isArchived() } == true }
+    val completed = filtered.filter { it.status() == ro.ainpc.engine.QuestStatus.COMPLETED }
+    val failed = filtered.filter { it.status() == ro.ainpc.engine.QuestStatus.FAILED }
+
+    msg.send(sender, "&aActive: &f${active.size} &6| &aCompletate: &f${completed.size} &6| &cEsuate: &f${failed.size}")
+    msg.send(sender, "&7Total progresii in memorie: &f${filtered.size}")
+
+    if (active.isNotEmpty()) {
+        msg.send(sender, "&e--- Active ---")
+        for (p in active.take(10)) {
+            val phase = p.currentPhase().ifBlank { "-" }
+            val objectives = p.objectiveProgress().entries.joinToString(", ") { "${it.key}=${it.value}" }
+            msg.send(sender, "&7  &f${p.templateId()} &8| &e$phase &8| &7[$objectives]")
+        }
+        if (active.size > 10) msg.send(sender, "&7  ... si inca &f${active.size - 10}")
+    }
+    return true
+}
+
+fun handleQuestMetrics(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val engine = ainpcCommandQuestPlugin.scenarioEngine
+    val allProgress = engine.snapshotQuestProgressPublic()
+    val total = allProgress.values.flatten()
+    val active = total.count { it.status()?.let { s -> !s.isArchived() } == true }
+    val completed = total.count { it.status() == ro.ainpc.engine.QuestStatus.COMPLETED }
+    val failed = total.count { it.status() == ro.ainpc.engine.QuestStatus.FAILED }
+    val msg = ainpcCommandQuestPlugin.messageUtils
+    msg.send(sender, "&6=== Quest Metrics ===")
+    msg.send(sender, "&aActive: &f$active &7| &6Completate: &f$completed &7| &cEsuate: &f$failed")
+    msg.send(sender, "&7Total progresii: &f$total")
+    return true
+}
+
+fun handleQuestWarnings(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val msg = ainpcCommandQuestPlugin.messageUtils
+    val scenarioEngine = ainpcCommandQuestPlugin.scenarioEngine
+    val defs = scenarioEngine.questDefinitions
+
+    msg.send(sender, "&6═══ Quest Warnings ═══")
+    val warnings = scenarioEngine.collectQuestWarnings()
+    if (warnings.isEmpty()) {
+        msg.send(sender, "&aNu exista warning-uri in definitii.")
+        return true
+    }
+    val grouped = warnings.groupBy { it.first }
+    for ((file, fileWarnings) in grouped) {
+        msg.send(sender, "&eFile: &f$file &7(${fileWarnings.size} warnings)")
+        for ((_, message) in fileWarnings.take(5)) {
+            msg.send(sender, "&c  - $message")
+        }
+        if (fileWarnings.size > 5) msg.send(sender, "&7  ... si inca &f${fileWarnings.size - 5}")
+    }
+    msg.send(sender, "&7Total warnings: &f${warnings.size}")
+    return true
 }
 
 fun resolveQuestTargetPlayer(

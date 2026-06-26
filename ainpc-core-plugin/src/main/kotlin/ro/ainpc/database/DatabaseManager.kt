@@ -587,6 +587,21 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_scope ON story_events(scope_type, scope_id, created_at DESC)")
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_region ON story_events(region_id, created_at DESC)")
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_place ON story_events(place_id, created_at DESC)")
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS player_reputation (
+                    player_uuid ${shortText()} NOT NULL,
+                    scope_type ${shortText(64)} NOT NULL,
+                    scope_id ${shortText(128)} NOT NULL,
+                    reputation INTEGER NOT NULL DEFAULT 0,
+                    last_interaction INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (player_uuid, scope_type, scope_id)
+                )
+                """
+            )
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_player_reputation_scope ON player_reputation(scope_type, scope_id)")
             stmt.executeUpdate(
                 """
                 INSERT OR IGNORE INTO npc_personality (npc_id)
@@ -686,6 +701,26 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             plugin?.logger?.log(Level.SEVERE, "Eroare la verificarea conexiunii!", e)
         }
         return connection
+    }
+
+    fun executeTransaction(block: (Connection) -> Unit) {
+        statementLock.lock()
+        try {
+            val conn = getConnection()!!
+            val autoCommit = conn.autoCommit
+            conn.autoCommit = false
+            try {
+                block(conn)
+                conn.commit()
+            } catch (e: Exception) {
+                try { conn.rollback() } catch (_: Exception) {}
+                throw e
+            } finally {
+                try { conn.autoCommit = autoCommit } catch (_: Exception) {}
+            }
+        } finally {
+            statementLock.unlock()
+        }
     }
 
     fun close() {

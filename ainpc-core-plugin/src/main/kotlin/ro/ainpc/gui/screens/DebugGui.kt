@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.ai.OpenAIConnectionProbe
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.version.BuildVersionInfo
 import ro.ainpc.gui.GuiItemFactory
@@ -19,6 +20,44 @@ class DebugGui : GuiScreen {
 
     override fun render(context: GuiRenderContext) {
         val versionSnapshot = BuildVersionInfo.capture(context.plugin())
+        val probeResult = OpenAIConnectionProbe.getLastProbeResult()
+        val connectionMaterial: Material
+        val connectionColor: String
+        val connectionStatusText: String
+        if (probeResult == null) {
+            connectionMaterial = Material.GRAY_DYE
+            connectionColor = "&7"
+            connectionStatusText = "Nefacuta"
+        } else if (probeResult.isReachable() && probeResult.isModelAvailable()) {
+            connectionMaterial = Material.LIME_DYE
+            connectionColor = "&a"
+            connectionStatusText = "Connected"
+        } else if (probeResult.isReachable()) {
+            connectionMaterial = Material.ORANGE_DYE
+            connectionColor = "&6"
+            connectionStatusText = "Degraded"
+        } else {
+            connectionMaterial = Material.RED_DYE
+            connectionColor = "&c"
+            connectionStatusText = "Failed"
+        }
+        context.item(
+            0,
+            GuiItemFactory.item(
+                connectionMaterial,
+                "${connectionColor}OpenAI: $connectionStatusText",
+                listOf(
+                    "&7Model: &f${probeResult?.let { it -> "(see debugdump)" } ?: "necunoscut"}",
+                    "&7Status: &f$connectionStatusText",
+                    if (probeResult != null && probeResult.errors.isNotEmpty()) {
+                        "&7Erori: &f${probeResult.errors.joinToString("; ")}"
+                    } else {
+                        "&8Fara erori."
+                    },
+                    "&8Foloseste debugdump openai pentru detalii."
+                )
+            )
+        )
         context.item(
             4,
             GuiItemFactory.item(

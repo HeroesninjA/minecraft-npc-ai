@@ -1,4 +1,4 @@
-# Simulation Service - Partea 4
+﻿# Simulation Service - Partea 4
 
 Actualizat: 2026-05-06
 
@@ -67,7 +67,7 @@ Scop:
 
 Livrabile:
 
-- `mvn test` verde
+- `gradlew test` verde
 - documentatie actualizata
 - lista de fisiere afectate pentru refactor
 
@@ -103,7 +103,7 @@ Exit criteria:
 - comportamentul NPC-urilor ramane acelasi
 - rutina ramane neschimbata
 - autosave ramane neschimbat
-- `mvn test` trece
+- `gradlew test` trece
 
 ### M2 - Observabilitate admin
 
@@ -593,7 +593,7 @@ Inainte de merge:
 - `DecisionEngine` nu este duplicat
 - rutina trece in continuare prin `RoutineService`
 - autosave ramane separat
-- `mvn test` trece
+- `gradlew test` trece
 
 ## Checklist pentru M2
 
@@ -605,7 +605,7 @@ Inainte de merge:
 - `preview` nu modifica NPC-ul
 - output-ul este scurt si diagnosticabil
 - tab completion este actualizat daca exista
-- `mvn test` trece
+- `gradlew test` trece
 
 ## Checklist pentru M3
 
@@ -616,7 +616,7 @@ Inainte de merge:
 - datele sensibile sunt excluse
 - warning-urile sunt utile, nu zgomot
 - fisierele debugdump sunt documentate
-- `mvn test` trece
+- `gradlew test` trece
 
 ## Checklist pentru M4
 
@@ -628,7 +628,7 @@ Inainte de merge:
 - TTL-ul expira semnale
 - niciun consumator gameplay nu este activ implicit
 - debugdump exporta semnalele
-- `mvn test` trece
+- `gradlew test` trece
 
 ## Riscuri de implementare
 

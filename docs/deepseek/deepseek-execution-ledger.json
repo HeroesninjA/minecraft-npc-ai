@@ -1,0 +1,493 @@
+﻿{
+    "version":  1,
+    "updated_utc":  "2026-06-25T19:16:19.3696901Z",
+    "policy":  "strict_ascending",
+    "statuses":  {
+                     "L401":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:47:51.6088657Z",
+                                  "reason":  "Archive folder already exists and contains historical DeepSeek batches",
+                                  "evidence":  "./arhiva/README.md plus archived batch files",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  15,
+                                  "title":  "Arhiva dedicata pentru batch-urile DeepSeek"
+                              },
+                     "L402":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:40.6449981Z",
+                                  "reason":  "Archive README exists and explains archived versus active DeepSeek series",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  22,
+                                  "title":  "README pentru arhiva DeepSeek"
+                              },
+                     "L403":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:42.2020951Z",
+                                  "reason":  "Active indexes link to DeepSeek archive",
+                                  "evidence":  "../README.md and ../index-arhiva.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  29,
+                                  "title":  "Link din documentatia activa catre arhiva"
+                              },
+                     "L404":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:44.1128092Z",
+                                  "reason":  "Archive README links back to active DeepSeek series",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  36,
+                                  "title":  "Link invers din arhiva spre seria activa"
+                              },
+                     "L405":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:46.1307186Z",
+                                  "reason":  "Archive policy exists in DeepSeek batch guide",
+                                  "evidence":  "./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  43,
+                                  "title":  "Regula de mutare pentru batch-uri finalizate"
+                              },
+                     "L406":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:48.1361729Z",
+                                  "reason":  "Archived batch naming convention documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  50,
+                                  "title":  "Nume stabil pentru batch-urile arhivate"
+                              },
+                     "L407":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:50.1574043Z",
+                                  "reason":  "Archived batch inventory includes files and numeric intervals",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  57,
+                                  "title":  "Inventar al batch-urilor mutate"
+                              },
+                     "L408":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:52.1741157Z",
+                                  "reason":  "Checker audits active/archive duplicate batch file names",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  64,
+                                  "title":  "Audit read-only pentru fisiere duplicate"
+                              },
+                     "L409":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:54.1828384Z",
+                                  "reason":  "Checker warns about stale references to archived batch files",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  71,
+                                  "title":  "Warning pentru referinte ramase in urma mutarii"
+                              },
+                     "L410":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:56.2726226Z",
+                                  "reason":  "Archive index update workflow documented and checked",
+                                  "evidence":  "./deepseek-batch-guide.md and ../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  78,
+                                  "title":  "Actualizare automata a indexului de documente"
+                              },
+                     "L411":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:50:58.2950565Z",
+                                  "reason":  "Checker reports numbering gaps and overlaps",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  85,
+                                  "title":  "Regula pentru continuitatea numerotarii"
+                              },
+                     "L412":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:17.4565300Z",
+                                  "reason":  "Active DeepSeek series summary added",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  92,
+                                  "title":  "Sumar al seriei active"
+                              },
+                     "L413":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:19.1075210Z",
+                                  "reason":  "Active/historic boundary documented",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  99,
+                                  "title":  "Nota despre boundary-ul dintre activ si istoric"
+                              },
+                     "L414":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:21.1346728Z",
+                                  "reason":  "Checker audits references to archived batches",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  106,
+                                  "title":  "Check pentru linkuri catre batch-uri istorice"
+                              },
+                     "L415":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:23.1673782Z",
+                                  "reason":  "Progressive archiving policy documented",
+                                  "evidence":  "./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  113,
+                                  "title":  "Politica pentru mutarea progresiva a batch-urilor"
+                              },
+                     "L416":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:25.2038397Z",
+                                  "reason":  "Archive move message template documented",
+                                  "evidence":  "./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  120,
+                                  "title":  "Template pentru mesajul de arhivare"
+                              },
+                     "L417":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:27.3067834Z",
+                                  "reason":  "Archive inventory table template exists with document, interval and reason",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  127,
+                                  "title":  "Template pentru inventarul arhivei"
+                              },
+                     "L418":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:29.3774216Z",
+                                  "reason":  "Archive inventory requires explicit reason per archived document",
+                                  "evidence":  "./arhiva/README.md and ./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  134,
+                                  "title":  "Regula pentru descrieri de motiv la arhivare"
+                              },
+                     "L419":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:31.4206702Z",
+                                  "reason":  "Move report documents source, destination and interval",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  141,
+                                  "title":  "Scurt raport de mutare"
+                              },
+                     "L420":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:33.4526457Z",
+                                  "reason":  "Checker verifies active index traceability",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  148,
+                                  "title":  "Audit de trasabilitate"
+                              },
+                     "L421":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:35.5100038Z",
+                                  "reason":  "Checker validates chronological order in README",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  155,
+                                  "title":  "Guard pentru ordinea cronologica"
+                              },
+                     "L422":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:37.5641824Z",
+                                  "reason":  "Checker reports numbering overlaps",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  162,
+                                  "title":  "Guard pentru suprapuneri de intervale"
+                              },
+                     "L423":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:53:39.6422973Z",
+                                  "reason":  "Checker reports numbering gaps",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  169,
+                                  "title":  "Guard pentru gap-uri numerice"
+                              },
+                     "L424":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:37.9417890Z",
+                                  "reason":  "Partial archive transition policy documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  176,
+                                  "title":  "Nota pentru batch-uri partial arhivate"
+                              },
+                     "L425":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:39.5483824Z",
+                                  "reason":  "Temporary restore rule documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  183,
+                                  "title":  "Nota pentru batch-uri reluate"
+                              },
+                     "L426":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:41.0711104Z",
+                                  "reason":  "Archive read-only by default policy documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  190,
+                                  "title":  "Politica pentru read-only pe arhiva"
+                              },
+                     "L427":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:42.5894359Z",
+                                  "reason":  "Minimal justified archive updates policy documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  197,
+                                  "title":  "Politica pentru actualizari minime in arhiva"
+                              },
+                     "L428":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:44.2542237Z",
+                                  "reason":  "Canonical stable batch naming documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  204,
+                                  "title":  "Regula pentru denumiri canonice ale batch-urilor"
+                              },
+                     "L429":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:45.8157462Z",
+                                  "reason":  "Archive governance changelog entry added",
+                                  "evidence":  "../../CHANGELOG.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  211,
+                                  "title":  "Scurt changelog de arhivare"
+                              },
+                     "L430":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:47.3843876Z",
+                                  "reason":  "Archive closing note added",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  218,
+                                  "title":  "Nota de inchidere pentru arhiva"
+                              },
+                     "L431":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:48.9452191Z",
+                                  "reason":  "Current active series state report exists",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  225,
+                                  "title":  "Raport de stare pentru seria curenta"
+                              },
+                     "L432":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:50.6814753Z",
+                                  "reason":  "External references to verify after archive moves are listed",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  232,
+                                  "title":  "Notita pentru referinte externe"
+                              },
+                     "L433":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:55:52.2602248Z",
+                                  "reason":  "Citation policy for historical batches documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  239,
+                                  "title":  "Regula pentru citarea batch-urilor istorice"
+                              },
+                     "L434":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:21.0339851Z",
+                                  "reason":  "Historical dependencies and external references are listed",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  246,
+                                  "title":  "Regula pentru documente care depind de batch-uri vechi"
+                              },
+                     "L435":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:22.8832954Z",
+                                  "reason":  "Checker audits DeepSeek title consistency",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  253,
+                                  "title":  "Scurt audit de consistenta a titlurilor"
+                              },
+                     "L436":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:24.5507326Z",
+                                  "reason":  "Checker audits Actualizat metadata dates",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  260,
+                                  "title":  "Scurt audit de consistenta a datelor"
+                              },
+                     "L437":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:26.1477462Z",
+                                  "reason":  "Archive maintenance policy preserves revision context",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  267,
+                                  "title":  "Regula pentru istoricul de revizii"
+                              },
+                     "L438":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:27.8011256Z",
+                                  "reason":  "Restore note policy documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  274,
+                                  "title":  "Regula pentru note de restaurare"
+                              },
+                     "L439":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:29.6094589Z",
+                                  "reason":  "Restore report template documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  281,
+                                  "title":  "Template pentru raportul de restaurare"
+                              },
+                     "L440":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:31.2556767Z",
+                                  "reason":  "Reference cleanup note documented in active summary",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  288,
+                                  "title":  "Notita pentru curatarea referintelor vechi"
+                              },
+                     "L441":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:32.9020828Z",
+                                  "reason":  "Checker smoke-tests markdown links in primary indexes",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  295,
+                                  "title":  "Smoke check pentru linkuri in index"
+                              },
+                     "L442":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:34.5514864Z",
+                                  "reason":  "Checker smoke-tests DeepSeek archive README links",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  302,
+                                  "title":  "Smoke check pentru arhiva DeepSeek"
+                              },
+                     "L443":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:36.2620097Z",
+                                  "reason":  "Checker verifies active batch presence in README",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  309,
+                                  "title":  "Smoke check pentru batch-ul activ"
+                              },
+                     "L444":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:38.0508694Z",
+                                  "reason":  "Checker compares DeepSeek guide references with files on disk",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  316,
+                                  "title":  "Audit pentru consistenta dintre ghid si fisiere"
+                              },
+                     "L445":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:39.7894503Z",
+                                  "reason":  "Checker compares archive inventory with files on disk",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  323,
+                                  "title":  "Audit pentru consistenta dintre arhiva si index"
+                              },
+                     "L446":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:41.6470997Z",
+                                  "reason":  "Publish checklist for archiving documented",
+                                  "evidence":  "./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  330,
+                                  "title":  "Notita pentru publicare controlata"
+                              },
+                     "L447":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:43.4071478Z",
+                                  "reason":  "Index sync note documented in archive workflow",
+                                  "evidence":  "./deepseek-batch-guide.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  337,
+                                  "title":  "Notita pentru sincronizarea automata a indexului"
+                              },
+                     "L448":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:45.1472389Z",
+                                  "reason":  "Historical context preservation policy documented",
+                                  "evidence":  "./arhiva/README.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  344,
+                                  "title":  "Regula pentru conservarea contextului istoric"
+                              },
+                     "L449":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:46.8323766Z",
+                                  "reason":  "Next cycle summary added",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  351,
+                                  "title":  "Sumar executiv pentru urmatorul ciclu"
+                              },
+                     "L450":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T11:59:48.4485578Z",
+                                  "reason":  "Final L401-L450 note added",
+                                  "evidence":  "./deepseek-active-series-summary.md",
+                                  "file":  "./arhiva/deepseek-taskuri-late-50-6.md",
+                                  "line":  358,
+                                  "title":  "Nota finala pentru batch-ul 8"
+                              },
+                     "L451":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T16:51:17.8063288Z",
+                                  "reason":  "Active/archive boundary verification added",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1; ../README.md; ./deepseek-batch-guide.md",
+                                  "file":  "deepseek-taskuri-late-50-7.md",
+                                  "line":  15,
+                                  "title":  "Verificare pentru seria activa"
+                              },
+                     "L452":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T17:06:49.5594643Z",
+                                  "reason":  "Archive list audit added",
+                                  "evidence":  "./arhiva/README.md; ../../scripts/deepseek-next-task.ps1",
+                                  "file":  "deepseek-taskuri-late-50-7.md",
+                                  "line":  22,
+                                  "title":  "Audit pentru lista de arhiva"
+                              },
+                     "L453":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T17:16:27.3251243Z",
+                                  "reason":  "Legacy archive link guard added",
+                                  "evidence":  "../../scripts/deepseek-next-task.ps1; ./deepseek-batch-guide.md",
+                                  "file":  "deepseek-taskuri-late-50-7.md",
+                                  "line":  29,
+                                  "title":  "Guard pentru linkuri ramase vechi"
+                              },
+                     "L454":  {
+                                  "status":  "DONE",
+                                  "updated_utc":  "2026-06-25T19:16:19.3596417Z",
+                                  "reason":  "",
+                                  "evidence":  "docs/deepseek/deepseek-batch-guide.md",
+                                  "file":  "deepseek-taskuri-late-50-7.md",
+                                  "line":  36,
+                                  "title":  "Template pentru start de batch nou"
+                              }
+                 }
+}

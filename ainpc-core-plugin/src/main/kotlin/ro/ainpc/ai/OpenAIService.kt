@@ -64,6 +64,9 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     @Volatile
     private var lastFallbackReason = ""
 
+    @Volatile
+    private var lastConnectionStatus: ConnectionStatus? = null
+
     private val interactionHistory = java.util.concurrent.ConcurrentLinkedDeque<OpenAIDebugInteraction>()
     private val maxInteractionHistory = 50
     private var pendingNpcName: String = ""
@@ -434,7 +437,9 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     private fun probeConnection(): ConnectionStatus {
-        return OpenAIConnectionProbe.probeConnection(model, baseUrl, apiKey, httpClient, gson)
+        val status = OpenAIConnectionProbe.probeConnection(model, baseUrl, apiKey, httpClient, gson)
+        lastConnectionStatus = status
+        return status
     }
 
     private fun aiFeatureEnabled(): Boolean = plugin.config.getBoolean("features.ai", false)
@@ -469,6 +474,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             lastFailureMessage = lastFailureMessage,
             lastFallbackAtMillis = lastFallbackAtMillis,
             lastFallbackReason = lastFallbackReason,
+            connectionStatus = lastConnectionStatus ?: OpenAIConnectionProbe.getLastProbeResult(),
             recentInteractions = getRecentInteractions()
         )
     }

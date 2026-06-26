@@ -91,6 +91,14 @@ Formatul este orientat pe intrari scurte, verificabile:
 
 ### Docs
 
+- Added DeepSeek batch 24 (`docs/deepseek/deepseek-taskuri-late-50-24.md`) with L1201-L1250 consolidation, guard, checklist, and handoff tasks, plus updated DeepSeek index and summary docs so the new batch is visible.
+- Added DeepSeek legacy archive-link guarding for `L453`, so archived batch references must use the archive path and the checker can flag stale direct links.
+- Added DeepSeek archive list audit coverage for `L452`, keeping the archive README as the source of truth and advancing the cursor to `L453`.
+- Added DeepSeek active/archive boundary verification so the checker validates that active tasks start immediately after the archived local boundary and the docs identify `L451` in `docs/deepseek/deepseek-taskuri-late-50-7.md` as the active start.
+- Converted DeepSeek draft reservation headings from executable-looking `### Lx-Ly` headings to non-task `## Rezervare Lx-Ly` headings so the strict checker no longer reports them as `range_heading` issues.
+- Added a DeepSeek archive audit report and corrected archive metadata so only locally present tasks `L031-L450` are treated as archived task definitions; `L001-L030` is now explicitly marked as an unverified historical reference.
+- Documented DeepSeek archive governance, execution cursor, ledger-based task progression, active-series summary, and archive traceability checks.
+- Archived completed DeepSeek batch `docs/deepseek/arhiva/deepseek-taskuri-late-50-6.md` after L401-L450 were verified as `DONE` in the execution ledger.
 - Actualizat smoke script-ul Paper si documentele de progres pentru slice-ul D01 `npc_duties`.
 - Actualizat smoke script-ul Paper si documentele de progres pentru slice-ul B01 `local_bounties`.
 - Actualizat smoke script-ul Paper si documentele de progres pentru slice-ul B02 `local_bounties`.

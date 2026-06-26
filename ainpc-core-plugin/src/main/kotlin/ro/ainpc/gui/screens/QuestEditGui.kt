@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -28,7 +29,7 @@ class QuestEditGui : GuiScreen {
             def.progressionId().contains(selectedId, ignoreCase = true) ||
                 def.displayName().contains(selectedId, ignoreCase = true)
         }
-        val adminView = context.player().hasPermission("ainpc.admin")
+        val adminView = GuiAccessHelper.isAdmin(context.player())
 
         context.item(4, GuiItemFactory.item(
             if (currentDef != null) Material.WRITABLE_BOOK else Material.BARRIER,
@@ -122,6 +123,22 @@ class QuestEditGui : GuiScreen {
                     }
                 ))
             }
+            // Salvare si validare
+            val validationErrors = validateQuestDef(currentDef)
+            if (validationErrors.isEmpty()) {
+                context.button(35, GuiButton.enabled(
+                    GuiItemFactory.item(Material.LIME_DYE, "&aSalveaza si persista",
+                        listOf("&7Valideaza si salveaza definitia curenta.", "&7Click: /ainpc progression save ${currentDef.progressionId()}")),
+                    GuiAction { click ->
+                        click.service().runCommand(click.player(), "ainpc progression save ${currentDef.progressionId()}")
+                    }
+                ))
+            } else {
+                context.item(35, GuiItemFactory.item(
+                    Material.REDSTONE_TORCH, "&cErori de validare",
+                    listOf("&7Nu se poate salva. Corectati urmatoarele:") + validationErrors.map { "&7- &f$it" }
+                ))
+            }
         }
         if (currentDef == null && selectedId.isNotBlank()) {
             context.item(28, GuiItemFactory.item(
@@ -135,6 +152,15 @@ class QuestEditGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }))
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun validateQuestDef(def: ProgressionDefinition): List<String> {
+        val errors = mutableListOf<String>()
+        if (def.progressionId().isBlank()) errors.add("ID-ul progresiei este gol.")
+        if (def.displayName().isBlank()) errors.add("Numele afisat este gol.")
+        if (def.mechanicId().isBlank()) errors.add("Mecanica lipseste.")
+        if (def.objectiveCount() == 0) errors.add("Nu exista obiective definite.")
+        return errors
     }
 
     private fun buildEditorStatusLines(

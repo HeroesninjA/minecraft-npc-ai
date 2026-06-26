@@ -18,8 +18,8 @@ Important:
 
 Au fost rulate urmatoarele verificari:
 
-- `mvn test`
-- `mvn clean test`
+- `gradlew test`
+- `gradlew clean test`
 - inspectarea logurilor din `debug-logs/`
 - inspectarea scriptului `scripts/debug-openai.ps1`
 - inspectarea codului din `OpenAIService` si `FeaturePackLoader`
@@ -49,7 +49,7 @@ Erorile confirmate in repo sunt in acest moment de doua tipuri:
 
 ### Status actual
 
-`mvn clean test` a trecut complet pentru:
+`gradlew clean test` a trecut complet pentru:
 
 - `ainpc-api`
 - `ainpc-core-plugin`
@@ -178,7 +178,7 @@ Status:
 - rezolvat pentru build-ul Maven
 - sursele si resursele core sunt acum in `ainpc-core-plugin/src/main`
 - folderul legacy `src/src` a fost eliminat dupa migrare
-- `mvn clean test` trece dupa schimbare
+- `gradlew clean test` trece dupa schimbare
 
 Impact:
 
@@ -191,7 +191,7 @@ Plan de rezolvare:
 1. finalizat: mutarea fizica a surselor in `ainpc-core-plugin/src/main/java`
 2. finalizat: mutarea resurselor in `ainpc-core-plugin/src/main/resources`
 3. finalizat: revenirea la layout Maven standard in `pom.xml`
-4. finalizat: rularea `mvn clean test` dupa migrare
+4. finalizat: rularea `gradlew clean test` dupa migrare
 5. finalizat: stergerea folderului legacy dupa validarea build-ului
 6. ramas: curatarea mentiunilor istorice din documentatie doar unde incurca navigarea curenta
 

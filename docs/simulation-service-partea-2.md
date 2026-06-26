@@ -1,4 +1,4 @@
-# Simulation Service - Partea 2
+﻿# Simulation Service - Partea 2
 
 Actualizat: 2026-05-06
 
@@ -508,7 +508,7 @@ Partea 2 este implementata complet cand:
 - exista audit read-only pentru stari suspecte
 - debugdump include starea de simulare
 - comportamentul existent al rutinei si dialogului ramane neschimbat
-- `mvn test` trece
+- `gradlew test` trece
 
 Pana atunci, documentul ramane ghid de implementare, iar partea 1 ramane descrierea starii reale din cod.
 

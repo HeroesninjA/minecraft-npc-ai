@@ -10,6 +10,7 @@ Acesta este punctul principal de intrare pentru `docs/`.
 - [Index harta claselor](./harta-clase-index.md) - relatii intre clase si subsisteme
 - [Index arhiva](./index-arhiva.md) - documente istorice si variante vechi
 - [Taskuri prioritizate](./taskuri-prioritizate.md) - lista comuna de implementare
+- [Taskuri de lucru concrete](./taskuri-de-lucru.md) - backlog de lucru direct pe cod
 
 ## Hub scurt
 

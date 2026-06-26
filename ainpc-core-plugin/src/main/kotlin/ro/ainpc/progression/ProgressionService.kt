@@ -237,6 +237,22 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     @Throws(SQLException::class)
     fun saveAnchorBinding(binding: ProgressionAnchorBinding?) {
+        if (binding != null) {
+            val existing = repository.findAnchorBindingsForAnchor(
+                binding.playerUuid(), binding.anchorType(), binding.anchorId(), 10
+            )
+            val duplicate = existing.firstOrNull { other ->
+                other.templateId() != binding.templateId() &&
+                    other.anchorType().equals(binding.anchorType(), ignoreCase = true) &&
+                    other.anchorId().equals(binding.anchorId(), ignoreCase = true)
+            }
+            if (duplicate != null) {
+                plugin.logger.warning(
+                    "Ancora duplicata detectata: ${binding.anchorType()}:${binding.anchorId()} " +
+                        "este deja folosita de template-ul ${duplicate.templateId()}."
+                )
+            }
+        }
         repository.saveAnchorBinding(binding)
     }
 

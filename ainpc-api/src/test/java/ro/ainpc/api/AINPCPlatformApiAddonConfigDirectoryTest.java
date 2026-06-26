@@ -77,5 +77,9 @@ class AINPCPlatformApiAddonConfigDirectoryTest {
         @Override
         public void reloadContent() {
         }
+
+        @Override
+        public void registerObjectiveHandler(String type, kotlin.jvm.functions.Function3<? super String, ? super Integer, ? super Integer, Integer> handler) {
+        }
     }
 }

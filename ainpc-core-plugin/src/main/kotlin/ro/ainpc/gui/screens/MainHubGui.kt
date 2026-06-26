@@ -5,6 +5,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.version.BuildVersionInfo
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -171,8 +172,7 @@ class MainHubGui : GuiScreen {
             )
         )
 
-        val isAdmin = player.hasPermission("ainpc.admin")
-        if (isAdmin) {
+        if (GuiAccessHelper.isAdmin(player)) {
             context.button(
                 33,
                 GuiButton.enabled(
@@ -209,7 +209,8 @@ class MainHubGui : GuiScreen {
                 )
             )
         }
-        if (context.service().canOpen(player, GuiKey.QUICK_QUEST)) {
+
+        if (GuiAccessHelper.adminOrCreator(player)) {
             context.button(
                 38,
                 GuiButton.enabled(

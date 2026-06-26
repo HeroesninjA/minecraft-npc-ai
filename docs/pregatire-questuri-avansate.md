@@ -448,7 +448,7 @@ Motivul este simplu: toate acestea schimba contractul de progres. Daca le adauga
 - test pentru cheie legacy citita ca fallback;
 - test pentru anchor resolver cu ID stabil;
 - test pentru audit duplicate objective IDs;
-- `mvn test`.
+- `gradlew test`.
 
 ### Pasul C - Q06 in pack medieval
 
@@ -491,7 +491,7 @@ Motivul este simplu: toate acestea schimba contractul de progres. Daca le adauga
 
 Pregatirea este gata cand:
 
-- `mvn test` trece;
+- `gradlew test` trece;
 - Q01-Q05 continua sa functioneze;
 - cheile de obiectiv sunt stabile si lizibile;
 - `/ainpc audit quest` prinde obiective/reward-uri invalide;

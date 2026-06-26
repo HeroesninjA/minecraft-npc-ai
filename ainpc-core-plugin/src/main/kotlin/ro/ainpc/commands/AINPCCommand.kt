@@ -674,6 +674,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "backup" -> handleQuestBackup(sender, args)
             "reindex" -> handleQuestReindex(sender)
             "complete" -> handleCompleteQuest(sender, args)
+            "summary" -> handleQuestSummary(sender, args)
+            "metrics" -> handleQuestMetrics(sender, args)
+            "cache-clean" -> handleQuestCacheClean(sender, args)
             else -> handleTriggerQuest(
                 sender, args[1],
                 resolveQuestTargetPlayer(sender, args, 2, "&cUtilizare: /ainpc quest <numeNpc> [jucator]")
@@ -2365,6 +2368,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "ai", "openai" -> handleDebugDumpAi(sender, args)
             "runtime" -> handleDebugDumpRuntime(sender)
             "features", "feature" -> handleDebugDumpFeatures(sender)
+            "scenario" -> handleDebugDumpScenario(sender)
             "progression", "progressions", "prog" -> handleDebugDumpProgression(sender)
             else -> {
                 sendDebugDumpUsage(sender); true
@@ -2383,6 +2387,30 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&e/ainpc debugdump story &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump scenario &7- Show active scenario state")
+    }
+
+    private fun handleDebugDumpScenario(sender: CommandSender): Boolean {
+        val engine = plugin.scenarioEngine
+        val active = engine.getActiveScenarios()
+        if (active.isEmpty()) {
+            plugin.messageUtils.send(sender, "&7Nu exista scenarii active.")
+            return true
+        }
+        plugin.messageUtils.send(sender, "&6=== Scenarii Active (${active.size}) ===")
+        for ((playerId, scenario) in active) {
+            plugin.messageUtils.send(sender, "&ePlayer: &f$playerId")
+            plugin.messageUtils.send(sender, "&7  Template: &f${scenario.templateId}")
+            plugin.messageUtils.send(sender, "&7  Faza: &f${scenario.currentPhase}")
+            plugin.messageUtils.send(sender, "&7  Actori: &f${scenario.spawnedActors.size}")
+            if (scenario.validationWarnings.isNotEmpty()) {
+                for (w in scenario.validationWarnings.take(3)) {
+                    plugin.messageUtils.send(sender, "&c  Warning: $w")
+                }
+            }
+        }
+        plugin.messageUtils.send(sender, "&7Total: ${active.size} scenarii active.")
+        return true
     }
 
     private fun handleDebugDumpWorld(sender: CommandSender, args: Array<String>): Boolean {

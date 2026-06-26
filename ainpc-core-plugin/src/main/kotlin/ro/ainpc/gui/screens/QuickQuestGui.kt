@@ -104,10 +104,12 @@ class QuickQuestGui : GuiScreen {
         ctx.button(15, GuiButton.enabled(GuiItemFactory.item(Material.ARROW, "&7Inapoi", listOf("&7Revino la pasul anterior.")),
             GuiAction { click -> svc.setCreatorFormValue(player, "qq_step", "0"); click.service().open(click.player(), GuiKey.QUICK_QUEST) }
         ))
-        if (name.isNotBlank()) {
+        if (name.isNotBlank() && name.length >= 3) {
             ctx.button(16, GuiButton.enabled(GuiItemFactory.item(Material.LIME_DYE, "&aPasul urmator", listOf("&7Click: continua la pasul 2")),
                 GuiAction { click -> nextStep(player, svc, "2"); click.service().open(click.player(), GuiKey.QUICK_QUEST) }
             ))
+        } else if (name.isNotBlank()) {
+            ctx.button(16, GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Pasul urmator", listOf("&cNumele este prea scurt (minim 3 caractere)."))))
         }
     }
 
@@ -305,6 +307,24 @@ $objectives      rewards:
         player_role: true"""
     }
 
+    private fun validateQuickQuest(giver: String, name: String, type: String, count: String, targets: Map<Int, Pair<String, String>>, reward: String): List<String> {
+        val errors = mutableListOf<String>()
+        if (giver.isBlank()) errors.add("Giver-ul nu a fost selectat (Pas 0).")
+        if (name.isBlank()) errors.add("Numele questului este gol (Pas 1).")
+        if (name.length < 3) errors.add("Numele questului este prea scurt (minim 3 caractere).")
+        if (type.isBlank()) errors.add("Tipul obiectivului nu a fost selectat (Pas 2).")
+        val objCount = count.toIntOrNull() ?: 0
+        if (objCount <= 0) errors.add("Numarul de obiective nu este valid (Pas 2).")
+        for (i in 1..objCount) {
+            val (tgt, _) = targets[i] ?: Pair("", "")
+            if (tgt.isBlank() || tgt.startsWith("target_")) {
+                errors.add("Tinta pentru obiectivul $i este goala (Pas 3).")
+            }
+        }
+        if (reward.isBlank()) errors.add("Recompensa nu a fost selectata (Pas 4).")
+        return errors
+    }
+
     private fun renderStep5(ctx: GuiRenderContext, player: Player, svc: ro.ainpc.gui.GuiService, giver: String, name: String, type: String, count: String, target: String, reward: String) {
         val objCount = count.toIntOrNull() ?: 1
         val targets = (1..objCount).associateWith { i ->
@@ -312,6 +332,8 @@ $objectives      rewards:
             val a = readAmount(svc, player, i)
             Pair(if (t.isBlank()) "target_$i" else t, a)
         }
+
+        val validationErrors = validateQuickQuest(giver, name, type, count, targets, reward)
 
         val summary = mutableListOf<String>()
         summary.add("&7Giver: &f${giver.removePrefix("profession:")}")
@@ -321,33 +343,55 @@ $objectives      rewards:
             summary.add("&7Obiectiv $i: &f${pair.first} x${pair.second}")
         }
         summary.add("&7Recompensa: &f$reward")
+        if (validationErrors.isNotEmpty()) {
+            summary.add("")
+            summary.add("&cErori de validare:")
+            for (err in validationErrors) {
+                summary.add("&7- &c$err")
+            }
+        }
 
-        ctx.item(10, GuiItemFactory.item(Material.GREEN_SHULKER_BOX, "&aFinalizare", summary))
-        ctx.button(11, GuiButton.enabled(GuiItemFactory.item(Material.BOOK, "&ePrevizualizare YAML", listOf("&7Vezi YAML-ul in chat inainte de export.")),
-            GuiAction { click ->
-                val yaml = buildQuickYaml(giver, name, type, count, targets, reward)
-                click.player().sendMessage("&6=== Previzualizare YAML ===")
-                for (line in yaml.lines()) {
-                    click.player().sendMessage("&f$line")
-                }
-            }
+        ctx.item(10, GuiItemFactory.item(
+            if (validationErrors.isEmpty()) Material.GREEN_SHULKER_BOX else Material.RED_SHULKER_BOX,
+            if (validationErrors.isEmpty()) "&aFinalizare" else "&cErori de validare",
+            summary
         ))
-        ctx.button(12, GuiButton.enabled(GuiItemFactory.item(Material.LIME_DYE, "&aExporta YAML", listOf("&7Salveaza questul ca fisier YAML.")),
-            GuiAction { click ->
-                svc.setCreatorFormValue(player, "qq_step", "0")
-                svc.setCreatorFormValue(player, "qq_giver", "")
-                svc.setCreatorFormValue(player, "qq_name", "")
-                svc.setCreatorFormValue(player, "qq_type", "")
-                svc.setCreatorFormValue(player, "qq_count", "1")
-                svc.setCreatorFormValue(player, "qq_target", "")
-                svc.setCreatorFormValue(player, "qq_reward", "")
-                for (i in 1..5) {
-                    svc.setCreatorFormValue(player, "qq_target_$i", "")
-                    svc.setCreatorFormValue(player, "qq_amount_$i", "")
+        if (validationErrors.isEmpty()) {
+            ctx.button(11, GuiButton.enabled(
+                GuiItemFactory.item(Material.BOOK, "&ePrevizualizare YAML", listOf("&7Vezi YAML-ul in chat inainte de export.")),
+                GuiAction { click ->
+                    val yaml = buildQuickYaml(giver, name, type, count, targets, reward)
+                    click.player().sendMessage("&6=== Previzualizare YAML ===")
+                    for (line in yaml.lines()) {
+                        click.player().sendMessage("&f$line")
+                    }
                 }
-                click.service().runCommand(click.player(), "ainpc quest quick-export $name $type $target $reward")
-            }
-        ))
+            ))
+            ctx.button(12, GuiButton.enabled(
+                GuiItemFactory.item(Material.LIME_DYE, "&aExporta YAML", listOf("&7Toate campurile sunt valide. Se exporta.")),
+                GuiAction { click ->
+                    svc.setCreatorFormValue(player, "qq_step", "0")
+                    svc.setCreatorFormValue(player, "qq_giver", "")
+                    svc.setCreatorFormValue(player, "qq_name", "")
+                    svc.setCreatorFormValue(player, "qq_type", "")
+                    svc.setCreatorFormValue(player, "qq_count", "1")
+                    svc.setCreatorFormValue(player, "qq_target", "")
+                    svc.setCreatorFormValue(player, "qq_reward", "")
+                    for (i in 1..5) {
+                        svc.setCreatorFormValue(player, "qq_target_$i", "")
+                        svc.setCreatorFormValue(player, "qq_amount_$i", "")
+                    }
+                    click.service().runCommand(click.player(), "ainpc quest quick-export $name $type $target $reward")
+                }
+            ))
+        } else {
+            ctx.button(11, GuiButton.disabled(
+                GuiItemFactory.disabled(Material.BOOK, "&7Previzualizare YAML", listOf("&cCorectati erorile mai intai."))
+            ))
+            ctx.button(12, GuiButton.disabled(
+                GuiItemFactory.disabled(Material.GRAY_DYE, "&7Exporta YAML", listOf("&cCompletati toate campurile obligatorii."))
+            ))
+        }
         ctx.button(14, GuiButton.enabled(GuiItemFactory.item(Material.ARROW, "&7Inapoi", listOf("&7Revino la pasul anterior.")),
             GuiAction { click -> svc.setCreatorFormValue(player, "qq_step", "4"); click.service().open(click.player(), GuiKey.QUICK_QUEST) }
         ))

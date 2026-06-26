@@ -1,6 +1,6 @@
-﻿# Taskuri prioritizate
+# Taskuri prioritizate
 
-Actualizat: 2026-06-21 (revizia 4 — audit de consistență + backlog extins)
+Actualizat: 2026-06-21 (revizia 4 � audit de consisten?a + backlog extins)
 
 Taskurile finalizate au fost mutate in `docs/taskuri-finalizate.md`; restul sunt taskuri deschise sau propuneri.
 
@@ -10,7 +10,7 @@ Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/sto
 
 ## Reguli de lucru
 
-- Nu marca un task ca finalizat fara verificare in cod sau documentatia canonică.
+- Nu marca un task ca finalizat fara verificare in cod sau documentatia canonica.
 - Pastreaza separat taskurile finalizate de backlog-ul deschis.
 - Orice categorie noua trebuie sa aiba taskuri concrete, verificabile si ordonate.
 - Taskurile suplimentare trebuie sa ramana in acelasi stil: scurte, actionabile, fara ambiguitate.
@@ -19,15 +19,15 @@ Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/sto
 ## Reguli pentru consum AI
 
 - Citeste intai `Reguli de lucru`, apoi `Index rapid`, apoi categoria relevanta.
-- Trateaza `✓` ca finalizat verificat, nu ca intentie.
+- Trateaza `?` ca finalizat verificat, nu ca intentie.
 - Trateaza sectiunile `Taskuri suplimentare` si `Taskuri extinse` ca backlog propus, nu ca implementare existenta.
-- Nu presupune ca un task nementionat in alt document este optional; verifica referinta canonică inainte de concluzie.
+- Nu presupune ca un task nementionat in alt document este optional; verifica referinta canonica inainte de concluzie.
 - Daca un AI extern foloseste documentul, trebuie sa urmeze aceeasi ierarhie: reguli, stare, categorie, taskuri detaliate.
 - Nu interpreta termenii generali ca echivalenti cu implementarea; cere sau cauta dovezi in documentele legate.
 - Cand exista o discrepanta intre titlul unei sectiuni si continutul ei, foloseste continutul si marcajele de stare.
 - Foloseste numele documentelor si prioritatile ca puncte de intrare, nu ca sursa unica de adevar.
-- Dacă un task pare vag, trateaza-l ca obiectiv si nu ca specificatie completa.
-- Daca documentul este folosit de un alt AI de coding, conserva acelasi sens al termenilor: „finalizat”, „deschis”, „backlog”, „audit”, „canonic”.
+- Daca un task pare vag, trateaza-l ca obiectiv si nu ca specificatie completa.
+- Daca documentul este folosit de un alt AI de coding, conserva acelasi sens al termenilor: �finalizat�, �deschis�, �backlog�, �audit�, �canonic�.
 
 ## Index rapid
 
@@ -682,13 +682,13 @@ Documente: `debugging-si-testare.md`, `release-checklist.md`, `server-admin-runb
 
 - Stabileste ce trebuie sa treaca inainte de release.
 - Leaga release-ul de backup si rollback.
-- Definește semnele de stop pentru build si deploy.
+- Define?te semnele de stop pentru build si deploy.
 - Noteaza cum se valideaza jar-ul si versiunea.
 - Pastreaza checklist-ul scurt si repetabil.
 
 #### `server-admin-runbook.md`
 
-- Scrie pașii de pornire si oprire a serverului Paper.
+- Scrie pa?ii de pornire si oprire a serverului Paper.
 - Noteaza cum se aplica backup si restore.
 - Stabileste cum verifici starea pluginului si a addonurilor.
 - Leaga runbook-ul de debug si release.
@@ -810,7 +810,7 @@ Documente: `debugging-si-testare.md`, `release-checklist.md`, `server-admin-runb
 
 - Stabileste al patrulea set de verificari pentru server.
 - Leaga verificarea de GUI, debug si operare.
-- Clarifica ce trebuie vazut in interfețe.
+- Clarifica ce trebuie vazut in interfe?e.
 - Pastreaza ordinea de verificare stabila.
 - Noteaza ce se intoarce in backlog.
 
@@ -892,7 +892,7 @@ Documente: `kotlin-style-guide.md`, `kotlin-interop-api-addonuri.md`, `kotlin-pa
 
 #### `kotlin-style-guide.md`
 
-- Scrie convențiile de nume si format pentru acest repo.
+- Scrie conven?iile de nume si format pentru acest repo.
 - Leaga ghidul de clasele si modulele existente.
 - Clarifica ce stil este acceptat in core si in addonuri.
 - Stabileste cum se trateaza null-safety si extension functions.
@@ -1010,7 +1010,7 @@ Documente: `kotlin-style-guide.md`, `kotlin-interop-api-addonuri.md`, `kotlin-pa
 - Pastreaza exemplele scurte si reproductibile.
 - Noteaza unde se folosesc in documentatia principala.
 
-#### `coding-automation-stack-linux-vscode-deepseek-mcp.md`
+#### `deepseek/coding-automation-stack-linux-vscode-deepseek-mcp.md`
 
 - Stabileste stack-ul de automatizare pentru coding asistat.
 - Leaga toolchain-ul de MCP, VS Code si fluxul local.

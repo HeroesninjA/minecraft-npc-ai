@@ -23,6 +23,7 @@ Foloseste aceasta pagina daca vrei sa sari direct la documentele canonice de fun
 - [Implementat deja](./implementat-deja.md)
 - [Roadmap orientativ](./roadmap-orientativ.md)
 - [Taskuri prioritizate](./taskuri-prioritizate.md)
+- [Taskuri de lucru concrete](./taskuri-de-lucru.md)
 - [World mapping si spawn](./simulare-sat-si-lume.md)
 - [Ordine spawn NPC](./ordine-spawn-npc-cladiri-region-node.md)
 - [NPC, rutine si simulare](./simulare-sat-si-lume.md)

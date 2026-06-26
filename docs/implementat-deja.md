@@ -10,13 +10,13 @@ Pentru a naviga repede codul confirmat aici, foloseste [harta scurta a pachetelo
 
 ## Module existente
 
-Proiectul este impartit in 3 module Maven:
+Proiectul este impartit in 3 module Gradle:
 
 - `ainpc-api`
   - API public pentru runtime mode, world mode, addon registry si world admin
 - `ainpc-core-plugin`
   - modulul de build pentru pluginul principal
-  - detine sursele reale in `ainpc-core-plugin/src/main/java`
+  - detine sursele reale in `ainpc-core-plugin/src/main/kotlin`
   - detine resursele reale in `ainpc-core-plugin/src/main/resources`
 - `ainpc-scenario-medieval`
   - addon plugin separat pentru scenariul medieval

@@ -232,6 +232,7 @@ fun formatQuestStatus(status: QuestStatus?): String =
         QuestStatus.NOT_STARTED -> "Disponibil"
         QuestStatus.OFFERED -> "Oferit, asteapta acceptarea"
         QuestStatus.ACTIVE -> "Activ"
+        QuestStatus.SUSPENDED -> "Suspendat"
         QuestStatus.COMPLETED -> "Completat"
         QuestStatus.FAILED -> "Esuat"
     }

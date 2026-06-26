@@ -28,6 +28,7 @@ class ScenarioTemplate(val type: ScenarioType) {
     var questPrerequisites: MutableList<String> = ArrayList()
     var questRepeatable: Boolean = false
     var questCooldownSeconds: Long = 0L
+    var nextQuest: String = ""
     var questDialogues: MutableMap<String, List<String>> = LinkedHashMap()
     var questActorTriggers: MutableMap<String, MutableSet<String>> = LinkedHashMap()
     var validationWarnings: MutableList<String> = ArrayList()

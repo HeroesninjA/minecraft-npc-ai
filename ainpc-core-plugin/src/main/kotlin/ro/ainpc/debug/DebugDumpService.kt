@@ -15,10 +15,12 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         .setPrettyPrinting()
         .disableHtmlEscaping()
         .create()
+    private var playerFilter: String? = null
 
     @Throws(IOException::class)
-    fun createDump(scope: String?): DebugDumpResult {
+    fun createDump(scope: String?, playerName: String? = null): DebugDumpResult {
         val normalizedScope = normalizeScope(scope)
+        playerFilter = playerName
         val dumpRoot = plugin.dataFolder.toPath()
             .resolve("debug-dumps")
             .resolve("debug-dump-" + DUMP_TIMESTAMP.format(LocalDateTime.now()))
@@ -78,11 +80,11 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             )
             writeJson(
                 dumpRoot.resolve("player-progressions.json"),
-                DebugDumpProgressionJson.buildPlayerProgressionsJson(plugin),
+                DebugDumpProgressionJson.buildPlayerProgressionsJson(plugin, playerFilter),
             )
             writeJson(
                 dumpRoot.resolve("player-quest-progress.json"),
-                DebugDumpProgressionJson.buildPlayerQuestProgressJson(plugin),
+                DebugDumpProgressionJson.buildPlayerQuestProgressJson(plugin, playerFilter),
             )
             writeJson(
                 dumpRoot.resolve("quest-anchor-bindings.json"),
@@ -167,6 +169,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         val index = StringBuilder()
         index.append("Debug Dump Index\n")
         index.append("Scope: $scope\n")
+        if (playerFilter != null) index.append("Player filter: $playerFilter\n")
         index.append("Directory: ${dumpRoot.fileName}\n")
         index.append("Generated: ${DUMP_TIMESTAMP.format(LocalDateTime.now())}\n")
         index.append("\nFiles:\n")

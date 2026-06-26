@@ -37,6 +37,7 @@ fun resolveQuestPhase(
         QuestStatus.NOT_STARTED -> ""
         QuestStatus.OFFERED -> if (safeExistingPhase.isNotBlank()) safeExistingPhase else getFirstQuestPhase(template)
         QuestStatus.ACTIVE -> resolveActiveQuestPhase(template, safeExistingPhase, objectiveProgress)
+        QuestStatus.SUSPENDED -> safeExistingPhase
         QuestStatus.COMPLETED -> {
             val lastPhase = getLastQuestPhase(template)
             if (lastPhase.isNotBlank()) lastPhase else safeExistingPhase

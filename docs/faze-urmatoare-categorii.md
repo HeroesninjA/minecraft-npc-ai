@@ -1,4 +1,4 @@
-# Faze Urmatoare pe Categorii
+﻿# Faze Urmatoare pe Categorii
 
 Actualizat: 2026-05-11
 
@@ -68,7 +68,7 @@ Gate-uri minime inainte de orice `production-public`:
 
 | Faza | Nume | Obiectiv | Status | Nu incepe urmatoarea pana cand |
 |---|---|---|---|---|
-| F0 | Baseline verificabil | Codul, TODO-ul si documentatia reflecta aceeasi realitate | continuu | `mvn test`, audit/debugdump si docs sunt sincronizate |
+| F0 | Baseline verificabil | Codul, TODO-ul si documentatia reflecta aceeasi realitate | continuu | `gradlew test`, audit/debugdump si docs sunt sincronizate |
 | F1 | Paper smoke mapping/spawn | Mapping demo si spawn pe regiune merg pe server real | ACUM | save/reload nu pierde mapping, NPC bindings sau ancore |
 | F2 | Paper smoke quest/progression | Q01-Q08, C01/C02, D01, B01/B02, E01, T01 si R01 pot fi inspectate si testate cap-coada | ACUM | progresul, stages, anchors si story events supravietuiesc reload-ului |
 | F3 | First playable medieval demo | Un demo mic este instalabil si jucabil de admin/tester | URMATOR | exista 3-5 questuri completabile si NPC-uri cu roluri clare |
@@ -142,7 +142,7 @@ Livrabile:
 Nu face:
 
 - migration/backfill fara backup;
-- release doar pe baza de `mvn package`;
+- release doar pe baza de `gradlew build`;
 - activare debug extins pe server public fara politica de loguri.
 
 ## Categoria B - World mapping, spawn si populatie

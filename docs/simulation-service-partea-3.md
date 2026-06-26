@@ -1,4 +1,4 @@
-# Simulation Service - Partea 3
+﻿# Simulation Service - Partea 3
 
 Actualizat: 2026-05-06
 
@@ -748,7 +748,7 @@ Partea 3 este implementata cand:
 - semnalele sunt filtrate in context AI fara date brute
 - agregarea pe regiune este optionala si dezactivabila
 - niciun semnal nu modifica direct quest/story/world state
-- `mvn test` trece
+- `gradlew test` trece
 
 Pana atunci, partea 3 ramane ghid pentru transformarea simularii din stare interna in semnale controlate de gameplay.
 

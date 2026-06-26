@@ -154,6 +154,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             }
 
             val pack = FeaturePack(id, name, description)
+            pack.schemaVersion = config.getInt("version", pack.schemaVersion)
+            if (pack.schemaVersion < 1 || pack.schemaVersion > 1) {
+                plugin.logger.warning("Feature pack '$id' are schema_version=${pack.schemaVersion}, dar versiunea curenta este 1. Posibile incompatibilitati.")
+            }
 
             config.getConfigurationSection("traits")?.let { section ->
                 FeaturePackYamlSupport.loadTraits(pack, section, allTraits)
@@ -722,6 +726,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             set(value) {
                 field = value.coerceAtLeast(0L)
             }
+        var nextQuest = ""
         var questDialogues: Map<String, List<String>> = LinkedHashMap()
         var isProgressionEnabled = false
         var progressionMechanicId = ""

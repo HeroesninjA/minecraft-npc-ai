@@ -11,7 +11,7 @@ import kotlin.math.max
 
 object DebugDumpProgressionJson {
     @JvmStatic
-    fun buildPlayerProgressionsJson(plugin: AINPCPlugin): JsonObject {
+    fun buildPlayerProgressionsJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_quests")
         root.addProperty("compatibility_view", true)
@@ -62,7 +62,7 @@ object DebugDumpProgressionJson {
     }
 
     @JvmStatic
-    fun buildPlayerQuestProgressJson(plugin: AINPCPlugin): JsonObject {
+    fun buildPlayerQuestProgressJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_quests")
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()

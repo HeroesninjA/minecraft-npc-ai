@@ -1,4 +1,4 @@
-# Urmatoarele 250 Faze
+﻿# Urmatoarele 250 Faze
 
 Actualizat: 2026-05-09
 
@@ -278,8 +278,8 @@ Legenda status:
 
 ## J. Testing, Migration, Performance si Security
 
-226. F226 - `ACUM` - Ruleaza `mvn -pl ainpc-core-plugin -am test` dupa fiecare slice.
-227. F227 - `ACUM` - Ruleaza `mvn -pl ainpc-core-plugin -am package -DskipTests` dupa schimbari reale.
+226. F226 - `ACUM` - Ruleaza `gradlew :ainpc-core-plugin:test` dupa fiecare slice.
+227. F227 - `ACUM` - Ruleaza `gradlew :ainpc-core-plugin:build -x test` dupa schimbari reale.
 228. F228 - `ACUM` - Adauga teste pentru fiecare helper determinist nou.
 229. F229 - `ACUM` - Adauga test pentru fiecare schema service nou.
 230. F230 - `URMATOR` - Test de migrare DB in-memory pentru tabele noi.

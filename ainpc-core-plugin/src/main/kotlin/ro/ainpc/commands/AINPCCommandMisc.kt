@@ -452,6 +452,24 @@ fun handleOverview(sender: CommandSender): Boolean {
     }
 
     msg.send(sender, "")
+    msg.send(sender, "&e=== Questuri Active ===")
+    val scenarioEngine = plugin.scenarioEngine
+    val allProgress = scenarioEngine.snapshotQuestProgressPublic()
+    val totalActive = allProgress.values.sumOf { list ->
+        list.count { it.status()?.let { s -> !s.isArchived() } == true }
+    }
+    val totalCompleted = allProgress.values.sumOf { list ->
+        list.count { it.status() == ro.ainpc.engine.QuestStatus.COMPLETED }
+    }
+    val totalFailed = allProgress.values.sumOf { list ->
+        list.count { it.status() == ro.ainpc.engine.QuestStatus.FAILED }
+    }
+    msg.send(sender, "&7Active: &a$totalActive &7| Completate: &6$totalCompleted &7| Esuate: &c$totalFailed")
+    if (totalActive == 0 && totalCompleted == 0 && totalFailed == 0) {
+        msg.send(sender, "&7Niciun progres de quest in memorie.")
+    }
+
+    msg.send(sender, "")
     msg.send(sender, "&e=== Regiuni ===")
     val regions = worldAdmin.regions.toList()
     if (regions.isEmpty()) {

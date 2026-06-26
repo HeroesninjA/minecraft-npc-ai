@@ -92,6 +92,28 @@ class AINPCPlatform(
         plugin.reloadContent()
     }
 
+    override fun registerObjectiveHandler(
+        type: String,
+        handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int,
+    ) {
+        val wrapper = object : ro.ainpc.engine.runtime.ObjectiveHandler {
+            override fun type(): String = type
+            override fun handleProgress(context: ro.ainpc.engine.runtime.ObjectiveContext): ro.ainpc.engine.runtime.ObjectiveResult {
+                val progressed = handler(
+                    context.playerId.toString(),
+                    context.currentProgress,
+                    context.requiredAmount,
+                )
+                val newProgress = context.currentProgress + progressed
+                return ro.ainpc.engine.runtime.ObjectiveResult(
+                    progressed = progressed,
+                    completed = newProgress >= context.requiredAmount,
+                )
+            }
+        }
+        plugin.scenarioEngine.objectiveHandlerRegistry.register(wrapper)
+    }
+
     fun getProfile(): PlatformProfile = profile
 
     fun runtimeFeatures(): RuntimeFeatureSnapshot = featureSnapshot

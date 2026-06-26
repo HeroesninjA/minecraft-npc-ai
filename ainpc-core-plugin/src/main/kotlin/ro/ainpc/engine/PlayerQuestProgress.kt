@@ -52,10 +52,12 @@ enum class QuestStatus {
     NOT_STARTED,
     OFFERED,
     ACTIVE,
+    SUSPENDED,
     COMPLETED,
     FAILED;
 
     fun isArchived(): Boolean = this == COMPLETED || this == FAILED
+    fun isSuspendedOrArchived(): Boolean = this == SUSPENDED || isArchived()
 
     fun storageValue(): String = name.lowercase(Locale.ROOT)
 

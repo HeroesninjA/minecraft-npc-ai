@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -18,6 +19,15 @@ class AuditGui : GuiScreen {
     override fun size(player: Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
+        val player = context.player()
+        if (!GuiAccessHelper.isAdmin(player)) {
+            context.item(4, GuiItemFactory.item(Material.BARRIER, "&cAcces restrictionat", listOf(
+                "&7Doar administratorii pot rula audituri."
+            )))
+            context.fillEmpty(GuiItemFactory.filler())
+            return
+        }
+
         context.item(
             4,
             GuiItemFactory.item(

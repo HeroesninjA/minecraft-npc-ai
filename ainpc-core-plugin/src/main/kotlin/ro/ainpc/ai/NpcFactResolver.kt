@@ -33,10 +33,27 @@ object NpcFactResolver {
         }
 
         if (answers.isEmpty()) {
-            return Optional.of("Nu stiu sigur.")
+            return Optional.of(buildFallbackResponse(facts))
         }
 
         return Optional.of(joinNaturally(answers))
+    }
+
+    @JvmStatic
+    fun buildFallbackResponse(facts: NpcFacts?): String {
+        if (facts == null) {
+            return "Nu pot sa raspund acum."
+        }
+        val name = facts.npcName().ifBlank { null }
+        val occ = facts.occupation().ifBlank { null }
+        val loc = facts.locationDescription().ifBlank { null }
+        return when {
+            name != null && occ != null -> "Scuze, $name nu poate raspunde acum. Ca $occ, sunt concentrat pe alte lucruri."
+            name != null -> "$name nu poate raspunde acum."
+            occ != null -> "Ca $occ, nu am un raspuns pentru asta."
+            loc != null -> "Nu pot raspunde chiar acum, fiind in $loc."
+            else -> "Nu am un raspuns clar pentru tine."
+        }
     }
 
     @JvmStatic

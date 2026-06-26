@@ -206,6 +206,20 @@ object FeaturePackYamlSupport {
             loadQuestActorTriggers(scenario, scenarioSection.getConfigurationSection("quest_actor_triggers"))
 
             val questSection = scenarioSection.getConfigurationSection("quest")
+
+            val importFrom = questSection?.getString("import_objectives_from", "") ?: ""
+            if (importFrom.isNotBlank()) {
+                val sourceScenario = allScenarios["${pack.id}:$importFrom"]
+                if (sourceScenario != null) {
+                    for (obj in sourceScenario.objectives) {
+                        scenario.addObjective(obj)
+                    }
+                    for (reward in sourceScenario.rewards) {
+                        scenario.addReward(reward)
+                    }
+                }
+            }
+
             if (questSection != null) {
                 scenario.questCode = questSection.getString("code", scenarioId) ?: scenarioId
                 scenario.questGiverProfession = questSection.getString("giver_profession", "") ?: ""
@@ -213,17 +227,22 @@ object FeaturePackYamlSupport {
                     "scenario_kind",
                     questSection.getString("kind", questSection.getString("scenario_type", "")),
                 ) ?: ""
-                scenario.questCategory = questSection.getString("category", "") ?: ""
+                scenario.questCategory = questSection.getString("category", "")?.let {
+                    it.ifBlank { 
+                        questSection.getString("scenario_kind", questSection.getString("kind", "")) ?: ""
+                    }
+                } ?: ""
                 scenario.questAcceptanceMode = questSection.getString(
                     "acceptance_mode",
                     questSection.getString("offer_policy", ""),
-                ) ?: ""
-                scenario.questCompletionMode = questSection.getString("completion_mode", "") ?: ""
-                scenario.questTrackingMode = questSection.getString("tracking_mode", "") ?: ""
+                )?.ifBlank { "auto" } ?: "auto"
+                scenario.questCompletionMode = questSection.getString("completion_mode", "")?.ifBlank { "all_objectives" } ?: "all_objectives"
+                scenario.questTrackingMode = questSection.getString("tracking_mode", "")?.ifBlank { "auto" } ?: "auto"
                 scenario.questTags = questSection.getStringList("tags")
                 scenario.questPrerequisites = questSection.getStringList("prerequisites")
                 scenario.isQuestRepeatable = questSection.getBoolean("repeatable", false)
                 scenario.questCooldownSeconds = questSection.getLong("cooldown_seconds", 0L).coerceAtLeast(0L)
+                scenario.nextQuest = questSection.getString("next_quest", "") ?: ""
                 scenario.questDialogues = loadQuestDialogues(questSection.getConfigurationSection("dialogues"))
                 loadQuestStages(scenario, questSection.getConfigurationSection("stages"))
 

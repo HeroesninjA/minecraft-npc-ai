@@ -105,6 +105,7 @@ class AINPCPlugin : JavaPlugin() {
         private set
     lateinit var shopService: ShopService
         private set
+    lateinit var reputationService: ro.ainpc.reputation.ReputationService
     lateinit var recentEventsBuffer: RecentEventsBuffer
 
     override fun onEnable() {
@@ -176,6 +177,7 @@ class AINPCPlugin : JavaPlugin() {
         mappingWandService = MappingWandService(this)
         economyService = EconomyService(this)
         shopService = ShopService(economyService)
+        reputationService = ro.ainpc.reputation.ReputationService(this)
 
         logger.info("Inregistrare comenzi...")
         val command = AINPCCommand(this)

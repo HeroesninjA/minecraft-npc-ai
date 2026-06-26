@@ -1,4 +1,4 @@
-# Release Checklist
+﻿# Release Checklist
 
 Actualizat: 2026-05-07
 
@@ -21,7 +21,7 @@ artefact JAR identificabil
 -> rollback/backup clar
 ```
 
-Nu considera release un simplu `mvn package`.
+Nu considera release un simplu `gradlew build`.
 
 ## Tipuri de release
 
@@ -44,7 +44,7 @@ Inainte de release, noteaza:
 Release ID:
 Data:
 Commit / branch:
-Versiune Maven:
+Versiune Gradle:
 Server tinta:
 Paper / server jar:
 JAR core:
@@ -63,7 +63,7 @@ Fara aceste date, nu poti compara corect doua build-uri cand apare un bug.
 
 Opreste release-ul daca apare oricare dintre situatiile de mai jos:
 
-- `mvn test` esueaza fara explicatie acceptata;
+- `gradlew test` esueaza fara explicatie acceptata;
 - JAR-ul core lipseste sau nu contine `plugin.yml`;
 - serverul nu incarca pluginul;
 - logul de startup are exceptii repetate;

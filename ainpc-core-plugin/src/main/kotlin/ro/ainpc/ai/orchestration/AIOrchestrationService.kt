@@ -5,6 +5,29 @@ import ro.ainpc.ai.OpenAIService
 import java.util.concurrent.CompletableFuture
 
 class AIOrchestrationService(private val plugin: AINPCPlugin?) {
+    companion object {
+        const val DEFAULT_MAX_RETRIES = 3
+        const val DEFAULT_RETRY_BASE_DELAY_MS = 1000L
+        const val DEFAULT_RETRY_MAX_DELAY_MS = 10000L
+        const val DRAFT_MARKER = "[DRAFT]"
+        const val EXECUTED_MARKER = "[EXECUTED]"
+    }
+
+    fun isDraft(result: AIOrchestrationResult): Boolean = result.message().startsWith(DRAFT_MARKER)
+    fun isExecuted(result: AIOrchestrationResult): Boolean = result.message().startsWith(EXECUTED_MARKER)
+
+    fun markDraft(result: AIOrchestrationResult): AIOrchestrationResult = AIOrchestrationResult(
+        result.useCase(), result.status(), result.outputType(),
+        "$DRAFT_MARKER ${result.message()}", result.fallbackUsed(), false,
+        result.errorCode(), result.validationMessages()
+    )
+
+    fun markExecuted(result: AIOrchestrationResult): AIOrchestrationResult = AIOrchestrationResult(
+        result.useCase(), result.status(), result.outputType(),
+        "$EXECUTED_MARKER ${result.message()}", result.fallbackUsed(), true,
+        result.errorCode(), result.validationMessages()
+    )
+
     private val openAI: OpenAIService? get() = plugin?.openAIService
 
     fun policyFor(useCase: AIUseCase?): AIOrchestrationPolicy = AIOrchestrationPolicy.forUseCase(useCase)
@@ -22,22 +45,70 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         if (ai == null || !ai.isAvailable) {
             return fallback(request, "ai_provider_not_available")
         }
-        return try {
-            val prompt = buildPrompt(request)
-            val response = CompletableFuture.supplyAsync { ai.generateAsync(prompt).get() }.get()
-            if (response.isNullOrBlank()) {
-                fallback(request, "ai_response_empty")
-            } else {
-                AIOrchestrationResult(
+        val maxRetries = plugin?.config?.getInt("ai.orchestration.max_retries", DEFAULT_MAX_RETRIES) ?: DEFAULT_MAX_RETRIES
+        val baseDelay = plugin?.config?.getLong("ai.orchestration.retry_base_delay_ms", DEFAULT_RETRY_BASE_DELAY_MS)
+            ?: DEFAULT_RETRY_BASE_DELAY_MS
+        val maxDelay = plugin?.config?.getLong("ai.orchestration.retry_max_delay_ms", DEFAULT_RETRY_MAX_DELAY_MS)
+            ?: DEFAULT_RETRY_MAX_DELAY_MS
+
+        var lastError: String? = null
+        for (attempt in 1..maxRetries) {
+            try {
+                val prompt = buildPrompt(request)
+                val response = CompletableFuture.supplyAsync { ai.generateAsync(prompt).get() }.get()
+                if (response.isNullOrBlank()) {
+                    if (attempt < maxRetries) {
+                        lastError = "ai_response_empty"
+                        plugin?.debug("[AIOrchestrator] Incercarea $attempt/$maxRetries: raspuns gol. Reincerc...")
+                        backoffDelay(attempt, baseDelay, maxDelay)
+                        continue
+                    }
+                    return fallback(request, "ai_response_empty")
+                }
+                val draftResult = AIOrchestrationResult(
                     request.useCase(),
                     AIResultStatus.SUCCESS,
                     policyFor(request.useCase()).outputType(),
                     response, false, true, "ai_provider_openai", emptyList()
                 )
+                return if (request.useCase() in listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)) {
+                    markDraft(draftResult)
+                } else {
+                    markExecuted(draftResult)
+                }
+            } catch (e: Exception) {
+                lastError = "ai_error: ${e.message}"
+                if (attempt < maxRetries && isRetryable(e)) {
+                    plugin?.debug("[AIOrchestrator] Incercarea $attempt/$maxRetries: ${e.message}. Reincerc...")
+                    backoffDelay(attempt, baseDelay, maxDelay)
+                } else {
+                    plugin?.debug("[AIOrchestrator] Eroare OpenAI (final, $attempt/$maxRetries): ${e.message}")
+                    return fallback(request, lastError)
+                }
             }
-        } catch (e: Exception) {
-            plugin?.debug("[AIOrchestrator] Eroare OpenAI: ${e.message}")
-            fallback(request, "ai_error: ${e.message}")
+        }
+        return fallback(request, lastError ?: "ai_orchestration_retry_exhausted")
+    }
+
+    private fun isRetryable(e: Exception): Boolean {
+        val message = e.message?.lowercase() ?: return false
+        return message.contains("timeout") ||
+            message.contains("rate limit") ||
+            message.contains("429") ||
+            message.contains("500") ||
+            message.contains("503") ||
+            message.contains("temporarily") ||
+            message.contains("unavailable") ||
+            message.contains("too many requests") ||
+            message.contains("connection")
+    }
+
+    private fun backoffDelay(attempt: Int, baseDelayMs: Long, maxDelayMs: Long) {
+        val delay = minOf(baseDelayMs * (1L shl (attempt - 1)), maxDelayMs)
+        try {
+            Thread.sleep(delay)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
         }
     }
 

@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -77,6 +78,12 @@ class StatsGui : GuiScreen {
             GuiItemFactory.item(Material.GOLD_INGOT, "&6Economie: &e$balance &7monede",
                 listOf("&7Click: /ainpc economy balance", "&8Actiuni secundare.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc economy balance") }
+        ))
+
+        context.button(16, GuiButton.enabled(
+            GuiItemFactory.item(Material.AMETHYST_SHARD, "&dContext narativ",
+                listOf("&7Deschide story context pentru locatia curenta.", "&8Aceeasi sursa ca StoryGui.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.STORY) }
         ))
 
         val isAdmin = player.hasPermission("ainpc.admin")

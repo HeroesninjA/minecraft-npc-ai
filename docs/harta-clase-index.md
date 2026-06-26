@@ -18,6 +18,13 @@ Foloseste aceasta pagina daca vrei sa sari direct la subharta potrivita pentru u
 - [Harta claselor pentru debug](./harta-clase-debug.md)
 - [Harta claselor pentru platform si database](./harta-clase-platform-db.md)
 
+- [Harta claselor pentru rutine](./harta-clase-routine.md)
+- [Harta claselor pentru economy](./harta-clase-economy.md)
+- [Harta claselor pentru settlement](./harta-clase-settlement.md)
+- [Harta claselor pentru listeners](./harta-clase-listeners.md)
+- [Harta claselor pentru context](./harta-clase-context.md)
+- [Harta claselor pentru addons](./harta-clase-addons.md)
+
 ## Cum o folosesti
 
 1. Alege subsistemul relevant.

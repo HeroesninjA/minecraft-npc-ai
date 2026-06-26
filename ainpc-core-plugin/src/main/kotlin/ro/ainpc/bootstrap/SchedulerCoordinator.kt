@@ -7,6 +7,9 @@ class SchedulerCoordinator(
 ) {
     fun start() {
         scheduleInitialNpcRestore()
+        scheduleQuestProgressResume()
+        scheduleQuestProgressPersistence()
+        scheduleObjectiveCleanup()
         scheduleLifeSimulation()
         scheduleRoutine()
         scheduleEmotionDecay()
@@ -14,6 +17,16 @@ class SchedulerCoordinator(
         scheduleNpcStatePersistence()
         scheduleVillageRebalance()
         scheduleQuestTracking()
+    }
+
+    private fun scheduleObjectiveCleanup() {
+        val cleanupSeconds = maxOf(60, plugin.config.getInt("quest.cleanup_interval_seconds", 300))
+        plugin.server.scheduler.runTaskTimer(
+            plugin,
+            Runnable { plugin.scenarioEngine.cleanupOrphanedObjectives() },
+            20L * cleanupSeconds,
+            20L * cleanupSeconds
+        )
     }
 
     private fun scheduleInitialNpcRestore() {
@@ -112,6 +125,26 @@ class SchedulerCoordinator(
             Runnable { plugin.npcManager.rebalanceLoadedVillages() },
             20L * 45,
             20L * 120
+        )
+    }
+
+    private fun scheduleQuestProgressResume() {
+        plugin.server.scheduler.runTaskLater(
+            plugin,
+            Runnable {
+                plugin.scenarioEngine.loadPlayerQuests()
+            },
+            40L
+        )
+    }
+
+    private fun scheduleQuestProgressPersistence() {
+        val saveSeconds = maxOf(30, plugin.config.getInt("quest.progress_save_seconds", 120))
+        plugin.server.scheduler.runTaskTimer(
+            plugin,
+            Runnable { plugin.scenarioEngine.flushQuestProgress() },
+            20L * 30,
+            20L * saveSeconds
         )
     }
 

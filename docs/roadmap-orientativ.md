@@ -1,4 +1,4 @@
-# Organizare Interna: Componente, Mecanici si Ordine de Dezvoltare
+﻿# Organizare Interna: Componente, Mecanici si Ordine de Dezvoltare
 
 Actualizat: 2026-05-07
 
@@ -337,7 +337,7 @@ Obiectiv:
 
 Livrabile:
 
-- `mvn test` trece
+- `gradlew test` trece
 - `implementat-deja.md`, `TODO.md` si documentul afectat sunt actualizate dupa schimbari majore
 - comenzile de audit/debug functioneaza pentru fluxurile atinse
 

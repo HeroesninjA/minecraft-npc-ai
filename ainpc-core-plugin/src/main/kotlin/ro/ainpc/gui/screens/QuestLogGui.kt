@@ -5,6 +5,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.debug.DebugDumpQuestText
 import ro.ainpc.gui.GuiAction
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiClickContext
 import ro.ainpc.gui.GuiItemFactory
@@ -16,6 +17,8 @@ import ro.ainpc.gui.QuestLogGuiPage
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
 import ro.ainpc.progression.ProgressionObjectiveSnapshot
+import java.text.SimpleDateFormat
+import java.util.Date
 
 class QuestLogGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST
@@ -30,12 +33,13 @@ class QuestLogGui : GuiScreen {
         val snapshot: ProgressionGuiSnapshot =
             context.plugin().progressionService.getProgressionGuiSnapshot(context.player(), activeFilter, adminView)
 
+        val snapshotTime = SimpleDateFormat("HH:mm:ss").format(Date(System.currentTimeMillis()))
         context.item(
             4,
             GuiItemFactory.item(
                 Material.WRITABLE_BOOK,
                 "&eLog progresii",
-                buildQuestLogStatusLines(snapshot, activeFilter, adminView)
+                buildQuestLogStatusLines(snapshot, activeFilter, adminView) + listOf("&8Actualizat: $snapshotTime")
             )
         )
         renderAuthoringSummary(context, snapshot)
