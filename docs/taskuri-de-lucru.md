@@ -3496,3 +3496,367 @@ Taskurile W651-W680 acopera extensii ale sistemelor de combat, world, resurse si
 **Scop:** Evita pierderea itemului sau duplicarea materialelor.
 **Target:** salvage service, inventory operations, reward delivery.
 **Acceptare:** Salvage-ul se finalizeaza atomic sau restaureaza itemul initial.
+
+## ~~DeepSeek implementation backlog (W681-W740)~~ ✅
+
+Sisteme planificate: items, storage, death, teleports, mounts, pets, companions, housing, plots, furniture. Fiecare categorie va fi implementata in faze viitoare.
+
+### ~~W681 Salvage output validation~~ ✅
+**Descriere tehnica:** Valideaza output-ul de salvage pentru materiale inexistente, cantitati invalide, iteme bound si reguli de raritate.
+**Scop:** Previne generarea de materiale gresite sau exploatabile.
+**Target:** salvage service, item registry, reward validation.
+**Acceptare:** Salvage-ul refuza output-uri invalide inainte de consumul itemului.
+
+### ~~W682~~ ✅ Salvage rate limit
+**Descriere tehnica:** Aplica limita configurabila pentru operatii de salvage pe player, statie, item rarity si fereastra de timp.
+**Scop:** Controleaza farming-ul automatizat si presiunea pe economie.
+**Target:** salvage service, cooldown service, economy balancing config.
+**Acceptare:** Salvage-ul peste limita este refuzat cu mesaj si audit minimal.
+
+### ~~W683~~ ✅ Item upgrade transaction
+**Descriere tehnica:** Implementeaza upgrade-ul itemelor ca tranzactie atomica: cost, consum materiale, modificare metadata si rollback la esec.
+**Scop:** Evita iteme partial upgradate sau materiale pierdute.
+**Target:** item upgrade service, inventory operations, economy service.
+**Acceptare:** Upgrade-ul se aplica complet sau restaureaza starea initiala.
+
+### ~~W684~~ ✅ Item upgrade cap validator
+**Descriere tehnica:** Valideaza nivelul maxim de upgrade pe baza raritatii, tipului de item, progresiei playerului si regulilor de event.
+**Scop:** Previne iteme peste limitele documentate.
+**Target:** item upgrade service, progression service, config validation.
+**Acceptare:** Upgrade-ul peste cap este refuzat cu motiv clar.
+
+### ~~W685~~ ✅ Gem socket compatibility validator
+**Descriere tehnica:** Verifica compatibilitatea intre gem, socket, item type, raritate si restrictii de clasa sau skill.
+**Scop:** Previne combinatii de iteme care rup balansul.
+**Target:** gem socket service, item metadata, skill rules.
+**Acceptare:** Gem-ul incompatibil nu poate fi montat si nu consuma resurse.
+
+### ~~W686~~ ✅ Gem extraction rollback
+**Descriere tehnica:** Face extractia gemurilor tranzactionala, cu cost, risc de distrugere, returnare item si rollback la erori operationale.
+**Scop:** Evita pierderea gemului sau duplicarea socket-ului.
+**Target:** gem socket service, inventory operations, economy service.
+**Acceptare:** Extractia se finalizeaza atomic sau revine la itemul initial.
+
+### ~~W687~~ ✅ Item rarity migration
+**Descriere tehnica:** Migreaza itemele vechi cand se schimba schema de raritate, pastrand compatibilitatea cu upgrade-uri, trade si reward rules.
+**Scop:** Evita iteme legacy incompatibile dupa update.
+**Target:** item metadata migration, inventory scan, marketplace validation.
+**Acceptare:** Itemele legacy sunt migrate sau raportate pentru carantina.
+
+### ~~W688~~ ✅ Item lore renderer sync
+**Descriere tehnica:** Centralizeaza randarea lore-ului pentru iteme astfel incat tooltip-ul, GUI-ul, docs export si auditul sa foloseasca aceeasi sursa.
+**Scop:** Elimina diferentele intre descriere si efectele reale.
+**Target:** item lore renderer, GUI item views, docs export.
+**Acceptare:** Lore-ul afisat corespunde metadata si regulilor active ale itemului.
+
+### ~~W689~~ ✅ Item tooltip privacy guard
+**Descriere tehnica:** Redacteaza din tooltip date sensibile precum owner intern, seed, audit id, provenance sau flag-uri de moderare.
+**Scop:** Previne expunerea informatiei interne catre jucatori.
+**Target:** item tooltip renderer, item metadata, privacy rules.
+**Acceptare:** Tooltip-ul public nu afiseaza campuri interne sau sensibile.
+
+### ~~W690~~ ✅ Chest storage ownership audit
+**Descriere tehnica:** Auditeaza ownership-ul pentru chest storage custom: owner, co-owner, faction, regiune, lock si ultimele modificari.
+**Scop:** Face disputele de storage investigabile.
+**Target:** storage service, region rules, audit reports.
+**Acceptare:** Orice modificare sensibila de storage are actor si context in audit.
+
+### ~~W691~~ ✅ Shared storage locking
+**Descriere tehnica:** Adauga lock optimist sau pesimist pentru storage partajat ca sa previna update-uri concurente si pierderi de iteme.
+**Scop:** Stabilizeaza accesul simultan la containere comune.
+**Target:** storage service, inventory operations, persistence layer.
+**Acceptare:** Doua actiuni concurente nu pot suprascrie acelasi slot fara detectie.
+
+### ~~W692~~ ✅ Storage quota enforcement
+**Descriere tehnica:** Aplica limite de storage pe player, faction, regiune si tip de container, inclusiv exceptii administrative auditate.
+**Scop:** Controleaza cresterea datelor si abuzul de stocare.
+**Target:** storage service, permission service, config docs.
+**Acceptare:** Depasirea cotei este refuzata sau marcata pentru upgrade conform regulilor.
+
+### ~~W693~~ ✅ Storage move transaction
+**Descriere tehnica:** Trateaza mutarea itemelor intre inventar, storage, mailbox si marketplace ca tranzactie cu rollback.
+**Scop:** Previne iteme pierdute intre subsisteme.
+**Target:** storage service, inventory operations, mailbox/marketplace integrations.
+**Acceptare:** Mutarea itemului se finalizeaza intr-un singur loc sau revine la sursa.
+
+### ~~W694~~ ✅ Lost item recovery queue
+**Descriere tehnica:** Creeaza coada de recovery pentru iteme detectate ca pierdute in tranzactii esuate, cleanup-uri sau migrari.
+**Scop:** Permite reparatie controlata fara duplicare manuala.
+**Target:** recovery service, inventory audit, admin dashboard.
+**Acceptare:** Itemele suspecte apar in coada cu sursa, owner si recomandare de actiune.
+
+### ~~W695~~ ✅ Drop protection window
+**Descriere tehnica:** Adauga fereastra de protectie pentru itemele dropate de player, quest, dungeon sau event, cu reguli de pickup.
+**Scop:** Previne furtul accidental imediat dupa drop.
+**Target:** drop service, pickup listeners, item binding rules.
+**Acceptare:** Doar actorii eligibili pot ridica itemul in fereastra configurata.
+
+### ~~W696~~ ✅ Pickup priority policy
+**Descriere tehnica:** Defineste prioritatea de pickup pentru owner, party, faction, participant event si public.
+**Scop:** Face distribuirea itemelor din world predictibila.
+**Target:** pickup listeners, loot service, party/faction rules.
+**Acceptare:** Pickup-ul alege eligibilitatea dupa o ordine documentata.
+
+### ~~W697~~ ✅ Death drop rule matrix
+**Descriere tehnica:** Creeaza matrice pentru ce iteme se pierd, se pastreaza, se protejeaza sau se convertesc la moarte.
+**Scop:** Aliniaza death mechanics cu item binding, questuri si regiuni.
+**Target:** death handling, item rules, region combat policy.
+**Acceptare:** Rezultatul mortii este calculat din matricea documentata si auditabil.
+
+### ~~W698~~ ✅ Grave marker lifecycle
+**Descriere tehnica:** Adauga lifecycle pentru grave marker: creare, ownership, expiry, claim, cleanup si recovery dupa restart.
+**Scop:** Evita morminte blocate sau loot pierdut.
+**Target:** grave service, world markers, recovery service.
+**Acceptare:** Grave marker-ul expira, se revendica sau se curata conform politicii.
+
+### ~~W699~~ ✅ Death recovery compensation
+**Descriere tehnica:** Defineste compensatii pentru pierderi cauzate de erori operationale in fluxul de death drop sau grave marker.
+**Scop:** Permite suport corect fara interventii arbitrare.
+**Target:** death handling, recovery service, admin compensation commands.
+**Acceptare:** Compensatia se acorda doar cu dovada auditabila si idempotenta.
+
+### ~~W700~~ ✅ Home teleport cooldown policy
+**Descriere tehnica:** Standardizeaza cooldown-ul pentru teleport acasa dupa combat, trade, dungeon, raid, event sau schimbare de lume.
+**Scop:** Previne folosirea teleportului pentru a evita riscuri active.
+**Target:** teleport service, cooldown service, combat/event guards.
+**Acceptare:** Home teleport-ul este blocat sau permis dupa o politica unica.
+
+### ~~W701~~ ✅ Home location validation
+**Descriere tehnica:** Valideaza locatiile de home pentru lume, regiune, protectii, bloc solid, siguranta spawn si permisiuni.
+**Scop:** Previne teleporturi in zone invalide sau periculoase.
+**Target:** home service, region rules, teleport safety checks.
+**Acceptare:** Home-ul invalid este refuzat sau marcat pentru relocalizare sigura.
+
+### ~~W702~~ ✅ Home ownership transfer guard
+**Descriere tehnica:** Gestioneaza ce se intampla cu home-urile cand regiunea, plotul sau faction ownership-ul se schimba.
+**Scop:** Evita acces permanent in zone pierdute sau transferate.
+**Target:** home service, region ownership, faction territory.
+**Acceptare:** Home-urile afectate sunt pastrate, suspendate sau mutate conform politicii.
+
+### ~~W703~~ ✅ Warp access rule reconciliation
+**Descriere tehnica:** Coreleaza accesul la warp-uri cu regiuni, permisiuni, factiuni, quest state, economie si evenimente active.
+**Scop:** Previne warp-uri care ocolesc progresia sau restrictiile world.
+**Target:** warp service, permission service, region/quest rules.
+**Acceptare:** Accesul la warp este determinist si explicabil prin raport.
+
+### ~~W704~~ ✅ Warp usage audit
+**Descriere tehnica:** Auditeaza folosirea warp-urilor sensibile cu actor, sursa, destinatie, motiv si cost aplicat.
+**Scop:** Face deplasarile administrative sau riscante verificabile.
+**Target:** warp service, audit log, admin reports.
+**Acceptare:** Warp-urile marcate sensibile produc audit filtrabil.
+
+### ~~W705~~ ✅ Portal activation preflight
+**Descriere tehnica:** Verifica portalurile inainte de activare: destinatie valida, regiune, cost, cooldown, quest state si safe landing.
+**Scop:** Previne portaluri care trimit jucatori in stari invalide.
+**Target:** portal service, teleport safety, quest/region rules.
+**Acceptare:** Portalul nu se activeaza daca destinatia sau regulile sunt invalide.
+
+### ~~W706~~ ✅ Portal loop detector
+**Descriere tehnica:** Detecteaza bucle de portaluri care pot teleporta playerul repetat intre doua sau mai multe destinatii.
+**Scop:** Previne blocaje si abuzuri de teleport.
+**Target:** portal graph, teleport service, validation jobs.
+**Acceptare:** Buclele sunt raportate si portalurile afectate pot fi dezactivate sigur.
+
+### ~~W707~~ ✅ Mount ownership persistence
+**Descriere tehnica:** Persistă ownership-ul mount-urilor cu owner, item sursa, stare, locatie si reguli de transfer.
+**Scop:** Previne pierderea mount-urilor dupa restart sau unload.
+**Target:** mount service, entity persistence, item binding rules.
+**Acceptare:** Mount-ul revine ownerului sau intra in recovery dupa restart.
+
+### ~~W708~~ ✅ Mount summon cooldown
+**Descriere tehnica:** Adauga cooldown si conditii pentru summon mount: combat, regiune, dungeon, event, world si permission.
+**Scop:** Previne folosirea mount-ului in contexte interzise.
+**Target:** mount service, cooldown service, region/combat guards.
+**Acceptare:** Summon-ul este permis doar cand toate conditiile sunt indeplinite.
+
+### ~~W709~~ ✅ Mount despawn recovery
+**Descriere tehnica:** Gestioneaza despawn-ul neasteptat al mount-ului prin reatasare la owner, refund item, recovery queue sau audit.
+**Scop:** Evita mount-uri pierdute definitiv din cauze operationale.
+**Target:** mount lifecycle, recovery service, entity listeners.
+**Acceptare:** Mount-ul disparut are rezultat clar: recuperat, compensat sau investigat.
+
+### ~~W710~~ ✅ Pet combat participation policy
+**Descriere tehnica:** Defineste cand pet-urile pot participa la combat, primi damage, oferi buff-uri sau influenta loot eligibility.
+**Scop:** Previne avantaje necontrolate si conflicte cu regulile de combat.
+**Target:** pet service, combat policy, reward eligibility.
+**Acceptare:** Pet-ul influenteaza combatul doar conform politicii documentate.
+
+### ~~W711~~ ✅ Pet ownership transfer guard
+**Descriere tehnica:** Defineste cand ownership-ul unui pet poate fi transferat intre playeri, conturi, factiuni sau recovery queue.
+**Scop:** Previne transferuri neautorizate sau pierderea pet-urilor rare.
+**Target:** pet service, ownership rules, audit log.
+**Acceptare:** Transferul de pet este permis doar cu validare, audit si rollback la esec.
+
+### ~~W712~~ ✅ Pet ability cooldown validation
+**Descriere tehnica:** Valideaza cooldown-urile abilitatilor de pet dupa tip, nivel, regiune, combat state si restrictii de event.
+**Scop:** Evita spam-ul de abilitati si avantaje necontrolate.
+**Target:** pet ability service, cooldown service, combat policy.
+**Acceptare:** Abilitatea de pet se activeaza doar cand cooldown-ul si contextul permit.
+
+### ~~W713~~ ✅ Pet despawn recovery
+**Descriere tehnica:** Gestioneaza despawn-ul neasteptat al pet-urilor prin reatasare la owner, snapshot, recovery queue sau compensatie.
+**Scop:** Evita pierderea definitiva a pet-urilor din cauze operationale.
+**Target:** pet lifecycle, entity listeners, recovery service.
+**Acceptare:** Pet-ul disparut are rezultat auditat: recuperat, compensat sau investigat.
+
+### ~~W714~~ ✅ Companion quest assignment guard
+**Descriere tehnica:** Valideaza asignarea companionilor la questuri dupa ownership, loialitate, nivel, story state si regiune.
+**Scop:** Previne folosirea companionilor in questuri incompatibile.
+**Target:** companion service, quest assignment, story rules.
+**Acceptare:** Companionul poate fi asignat doar la questuri eligibile conform regulilor documentate.
+
+### ~~W715~~ ✅ Companion inventory transaction
+**Descriere tehnica:** Trateaza mutarea itemelor in si din inventarul companionului ca tranzactie cu lock, verificare si rollback.
+**Scop:** Previne pierderi sau duplicari de iteme in inventare secundare.
+**Target:** companion inventory, inventory operations, persistence layer.
+**Acceptare:** Itemul mutat ajunge intr-un singur inventar sau revine la sursa.
+
+### ~~W716~~ ✅ Companion loyalty decay scheduler
+**Descriere tehnica:** Adauga decay configurabil pentru loialitatea companionilor, cu exceptii pentru questuri active sau status special.
+**Scop:** Face managementul companionilor predictibil si balansat.
+**Target:** companion service, scheduler, config docs.
+**Acceptare:** Decay-ul ruleaza conform configuratiei si produce audit sumar.
+
+### ~~W717~~ ✅ Companion rename validation
+**Descriere tehnica:** Valideaza redenumirea companionilor pentru lungime, caractere, termeni rezervati, cooldown si cost.
+**Scop:** Previne nume abuzive, conflicte UI si spam de redenumiri.
+**Target:** companion service, command validation, message catalog.
+**Acceptare:** Numele invalid este refuzat fara modificari partiale.
+
+### ~~W718~~ ✅ Pet breeding compatibility validator
+**Descriere tehnica:** Verifica compatibilitatea pentru breeding dupa specie, raritate, owner, cooldown, regiune si restrictii de event.
+**Scop:** Previne combinatii nepermise si generare de pet-uri dezechilibrate.
+**Target:** pet breeding service, pet registry, config validation.
+**Acceptare:** Breeding-ul porneste doar cand ambii peti si contextul sunt eligibili.
+
+### ~~W719~~ ✅ Pet breeding offspring idempotency
+**Descriere tehnica:** Face generarea offspring-ului idempotenta pentru retry, restart sau evenimente duplicate.
+**Scop:** Previne pet-uri duplicate sau lipsa rezultatului dupa breeding valid.
+**Target:** pet breeding service, persistence layer, recovery service.
+**Acceptare:** O sesiune de breeding produce cel mult un offspring revendicabil.
+
+### ~~W720~~ ✅ Stable capacity enforcement
+**Descriere tehnica:** Aplica limite pentru numarul de pet-uri, mount-uri sau companioni stocati in stable pe player, rang sau upgrade.
+**Scop:** Controleaza stocarea si costurile persistente.
+**Target:** stable service, player profile, config docs.
+**Acceptare:** Stable-ul peste capacitate refuza intrari noi sau cere upgrade conform regulilor.
+
+### ~~W721~~ ✅ Stable claim transaction
+**Descriere tehnica:** Face claim-ul din stable tranzactional, cu verificare owner, spatiu, entity spawn si rollback la esec.
+**Scop:** Evita entitati pierdute sau duplicate la revendicare.
+**Target:** stable service, entity spawn, recovery service.
+**Acceptare:** Claim-ul finalizeaza exact o entitate activa sau pastreaza intrarea in stable.
+
+### ~~W722~~ ✅ Stable ownership change cleanup
+**Descriere tehnica:** Gestioneaza intrarile de stable cand ownership-ul playerului, factiunii sau regiunii se schimba.
+**Scop:** Previne accesul la stable-uri care nu mai apartin actorului.
+**Target:** stable service, ownership rules, faction/region services.
+**Acceptare:** Intrarile afectate sunt transferate, suspendate sau trimise in recovery conform politicii.
+
+### ~~W723~~ ✅ Housing plot claim preflight
+**Descriere tehnica:** Verifica preconditiile pentru claim de plot: regiune libera, cost, permisiuni, limite, conflicte si protectii.
+**Scop:** Previne claim-uri imposibile sau suprapuse.
+**Target:** housing service, region ownership, economy service.
+**Acceptare:** Plot-ul este revendicat doar dupa preflight complet si auditabil.
+
+### ~~W724~~ ✅ Housing plot boundary validator
+**Descriere tehnica:** Valideaza limitele ploturilor pentru suprapuneri, chunk-uri invalide, zone protejate si margini de lume.
+**Scop:** Evita coruperea ownership-ului de regiune.
+**Target:** housing plots, region service, world validation.
+**Acceptare:** Plot-urile cu limite invalide sunt refuzate sau marcate pentru repair.
+
+### ~~W725~~ ✅ Housing rent payment transaction
+**Descriere tehnica:** Proceseaza chiria locuintelor ca tranzactie cu debit, receipt, owner payout, taxe si rollback la esec.
+**Scop:** Evita chirii platite partial sau payout-uri duplicate.
+**Target:** housing rent service, economy ledger, audit log.
+**Acceptare:** Plata chiriei este aplicata complet sau ramane neachitata cu motiv clar.
+
+### ~~W726~~ ✅ Housing rent grace period
+**Descriere tehnica:** Adauga perioada de gratie pentru chirie neplatita, cu notificari, restrictii progresive si data de evacuare.
+**Scop:** Evita pierderea brusca a locuintei dupa o singura eroare sau absenta.
+**Target:** housing rent service, notification service, scheduler.
+**Acceptare:** Plot-ul intra in grace state inainte de orice evacuare automata.
+
+### ~~W727~~ ✅ Housing eviction workflow
+**Descriere tehnica:** Defineste evacuarea locuintei cu export, mutare iteme, notificare, audit si recovery pentru esecuri.
+**Scop:** Previne pierderea itemelor si disputele la evacuare.
+**Target:** housing service, storage service, mailbox/recovery.
+**Acceptare:** Evacuarea are dry-run, confirmare si rezultat auditat pentru bunuri.
+
+### ~~W728~~ ✅ Housing visitor permission guard
+**Descriere tehnica:** Controleaza accesul vizitatorilor la plot dupa rol, trust list, faction, party, perioada si reguli de regiune.
+**Scop:** Previne interactiuni neautorizate in locuinte.
+**Target:** housing access service, region rules, interaction listeners.
+**Acceptare:** Vizitatorul poate interactiona doar cu actiunile permise explicit.
+
+### ~~W729~~ ✅ Housing build mode lock
+**Descriere tehnica:** Introduce build mode cu lock pe plot, owner, sesiune si timeout pentru modificari structurale.
+**Scop:** Evita editari concurente sau actiuni dupa expirarea contextului.
+**Target:** housing build service, region edit guards, player session.
+**Acceptare:** Modificarile de build sunt permise doar in sesiune valida si activa.
+
+### ~~W730~~ ✅ Housing blueprint placement validation
+**Descriere tehnica:** Valideaza blueprint-urile de locuinte pentru dimensiune, materiale, orientare, coliziuni si cost.
+**Scop:** Previne plasari care depasesc plotul sau regulile economice.
+**Target:** blueprint service, housing plots, economy validation.
+**Acceptare:** Blueprint-ul invalid este refuzat inainte de consumul resurselor.
+
+### ~~W731~~ ✅ Housing blueprint rollback
+**Descriere tehnica:** Salveaza snapshot pentru plasarea blueprint-ului si permite rollback la esec, cancel sau conflict descoperit tarziu.
+**Scop:** Pastreaza plotul recuperabil dupa operatii complexe.
+**Target:** blueprint service, world snapshot store, recovery service.
+**Acceptare:** Blueprint-ul poate fi anulat fara a afecta blocuri externe snapshot-ului.
+
+### ~~W732~~ ✅ Furniture interaction permission
+**Descriere tehnica:** Verifica permisiunile pentru folosirea mobilierului functional: storage, crafting, teleport, buffs sau decor interactiv.
+**Scop:** Previne folosirea resurselor locuintei de catre actori neautorizati.
+**Target:** furniture service, housing access rules, interaction listeners.
+**Acceptare:** Interactiunea cu mobilierul este permisa doar conform rolului pe plot.
+
+### ~~W733~~ ✅ Furniture state persistence
+**Descriere tehnica:** Persistă starea mobilierului functional, incluzand inventar, cooldown, owner, configuratie si efecte active.
+**Scop:** Evita pierderea starii dupa restart sau unload.
+**Target:** furniture service, persistence layer, chunk lifecycle.
+**Acceptare:** Mobilierul isi restaureaza starea valida dupa restart.
+
+### ~~W734~~ ✅ Furniture cleanup on plot reset
+**Descriere tehnica:** Curata mobilierul si efectele asociate cand plotul este resetat, evacuat, transferat sau sters.
+**Scop:** Previne artefacte si stari orfane pe ploturi.
+**Target:** furniture service, housing cleanup, recovery service.
+**Acceptare:** Resetul de plot elimina sau transfera toate resursele mobilierului conform politicii.
+
+### ~~W735~~ ✅ Plot transfer approval workflow
+**Descriere tehnica:** Defineste transferul de plot intre playeri sau factiuni cu preflight, taxe, confirmare si audit.
+**Scop:** Previne vanzari sau transferuri accidentale de proprietate.
+**Target:** housing transfer service, economy service, region ownership.
+**Acceptare:** Transferul se finalizeaza doar dupa confirmarile si platile cerute.
+
+### ~~W736~~ ✅ Plot sale listing validation
+**Descriere tehnica:** Valideaza listarea unui plot la vanzare pentru ownership, datorii, lock-uri, iteme ramase si restrictii de regiune.
+**Scop:** Previne vanzarea proprietatilor in stare inconsistenta.
+**Target:** housing marketplace, region service, storage service.
+**Acceptare:** Plot-ul nu poate fi listat daca are blocaje active sau datorii nerezolvate.
+
+### ~~W737~~ ✅ Plot sale settlement escrow
+**Descriere tehnica:** Proceseaza vanzarea plotului prin escrow pentru bani, ownership, taxe, mobilier si storage.
+**Scop:** Evita pierderi la tranzactii imobiliare complexe.
+**Target:** housing marketplace, economy escrow, region ownership.
+**Acceptare:** Vanzarea transfera atomic ownership-ul si fondurile sau revine la starea initiala.
+
+### ~~W738~~ ✅ Plot inactivity policy
+**Descriere tehnica:** Defineste ce se intampla cu ploturile inactive: notificari, grace period, taxe, arhivare sau eliberare.
+**Scop:** Recupereaza resurse world fara pierderi arbitrare.
+**Target:** housing scheduler, player activity, plot lifecycle.
+**Acceptare:** Plotul inactiv urmeaza un lifecycle documentat cu notificari si audit.
+
+### ~~W739~~ ✅ Plot restore from archive
+**Descriere tehnica:** Permite restaurarea unui plot arhivat intr-o zona compatibila sau in acelasi loc daca este liber.
+**Scop:** Ofera recuperare pentru playeri reveniti sau erori operationale.
+**Target:** housing archive, blueprint/world snapshot, recovery service.
+**Acceptare:** Restaurarea verifica spatiu, ownership si conflicte inainte de aplicare.
+
+### ~~W740~~ ✅ Housing operations audit dashboard
+**Descriere tehnica:** Creeaza dashboard pentru operatii housing: claim, transfer, rent, eviction, archive, restore si conflicte.
+**Scop:** Centralizeaza investigarea proprietatilor si deciziilor administrative.
+**Target:** admin dashboard, housing service, audit reports.
+**Acceptare:** Staff-ul autorizat vede timeline-ul si starea curenta a fiecarui plot.
