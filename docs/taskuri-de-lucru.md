@@ -5664,3 +5664,723 @@ Sisteme planificate: settlement creation, boundaries, taxes, treasury, residents
 **Scop:** Face schimbarile AI publicabile in siguranta.
 **Target:** AI release pipeline, docs/taskuri-de-lucru.md, validation checklist.
 **Acceptare:** Rollout-ul nu continua fara checklist complet si aprobat.
+
+### ~~W1041~~ ✅ AI suggestion policy simulator
+**Descriere tehnica:** Simuleaza aplicarea politicilor AI pe sugestii reale sau sintetice pentru a vedea ce ar fi aprobat, carantinat sau respins.
+**Scop:** Testeaza politicile inainte de activare.
+**Target:** AI policy engine, validation pipeline, admin tools.
+**Acceptare:** Simulatorul produce acelasi verdict ca engine-ul de productie pentru aceleasi inputuri.
+
+### ~~W1042~~ ✅ AI suggestion scenario test harness
+**Descriere tehnica:** Creeaza un harness de scenarii pentru sugestii AI care acopera cazuri de lore conflict, branch mismatch, quality drop si rollback.
+**Scop:** Asigura regresii controlate inainte de rollout.
+**Target:** AI test suite, moderation workflow, validation reports.
+**Acceptare:** Scenariile esentiale pot fi rulate repetabil si dau verdict stabil.
+
+### ~~W1043~~ ✅ AI suggestion approval override audit
+**Descriere tehnica:** Inregistreaza orice override manual peste verdictul normal de review pentru sugestiile AI.
+**Scop:** Pastreaza trasabilitate pentru exceptii.
+**Target:** AI review queue, audit log, admin dashboard.
+**Acceptare:** Orice override are autor, motiv si timestamp vizibil.
+
+### ~~W1044~~ ✅ AI suggestion owner routing
+**Descriere tehnica:** Trimite fiecare sugestie AI catre ownerul corect in functie de map, quest, story sau branch-ul afectat.
+**Scop:** Reduce timpul pierdut cu redistribuiri manuale.
+**Target:** moderation queue, ownership registry, notification service.
+**Acceptare:** Sugestia ajunge la ownerul potrivit fara interventie manuala.
+
+### ~~W1045~~ ✅ AI suggestion context pack builder
+**Descriere tehnica:** Construieste automat un context pack minim pentru fiecare sugestie AI, cu reguli, branch, istoric si dependente relevante.
+**Scop:** Ofera reviewerului contextul necesar fara zgomot.
+**Target:** AI review tools, context service, audit export.
+**Acceptare:** Pachetul de context contine doar informatia necesara pentru decizie.
+
+### ~~W1046~~ ✅ AI suggestion prompt template registry
+**Descriere tehnica:** Centralizeaza template-urile de prompt folosite pentru sugestii AI si le leaga de tipul de continut si politica activa.
+**Scop:** Evita prompturi divergente intre echipe.
+**Target:** prompt tooling, AI generation pipeline, policy docs.
+**Acceptare:** Orice sugestie poate indica template-ul folosit pentru generare.
+
+### ~~W1047~~ ✅ AI suggestion drift notifier
+**Descriere tehnica:** Notifica atunci cand o sugestie AI sau un set de sugestii incepe sa se abata de la reguli, stil sau intentia branch-ului.
+**Scop:** Identifica devierea din timp.
+**Target:** AI telemetry, alerting system, moderation queue.
+**Acceptare:** Drift-ul declanseaza alerta cu contextul afectat.
+
+### ~~W1048~~ ✅ AI suggestion rollback queue
+**Descriere tehnica:** Introduce o coada separata pentru rollback-urile sugerate de AI, astfel incat reversarile sa fie validate si ordonate.
+**Scop:** Evita rollback-uri haotice sau simultane.
+**Target:** rollback service, AI review workflow, queue manager.
+**Acceptare:** Rollback-urile propuse sunt executate in ordine si cu status clar.
+
+### ~~W1049~~ ✅ AI suggestion publish window scheduler
+**Descriere tehnica:** Programeaza ferestre de publicare pentru sugestiile AI aprobate, cu control pe ore, zile si tip de continut.
+**Scop:** Sincronizeaza publicarea cu operatiunile si review-ul.
+**Target:** release scheduler, AI publish pipeline, admin dashboard.
+**Acceptare:** Sugestia aprobata asteapta fereastra corecta inainte de publish.
+
+### ~~W1050~~ ✅ AI suggestion duplicate detector
+**Descriere tehnica:** Detecteaza sugestiile AI duplicate sau aproape duplicate pentru acelasi branch, obiectiv sau marker set.
+**Scop:** Reduce zgomotul si munca redundanta.
+**Target:** AI queue, similarity service, moderation workflow.
+**Acceptare:** Duplicate-urile sunt grupate si tratate ca o singura propunere.
+
+### ~~W1051~~ ✅ AI suggestion canonical source linker
+**Descriere tehnica:** Leaga fiecare sugestie AI de sursa canonica relevanta: document, quest chain, lore registry sau map definition.
+**Scop:** Face verificarea rapida si sigura.
+**Target:** AI validation, lore registry, docs archive.
+**Acceptare:** Reviewerul poate deschide sursa canonica din sugestie.
+
+### ~~W1052~~ ✅ AI suggestion validation report exporter
+**Descriere tehnica:** Exporta rezultatele de validare ale unei sugestii AI intr-un raport usor de distribuit si arhivat.
+**Scop:** Simplifica auditul si handoff-ul.
+**Target:** validation pipeline, reporting service, docs archive.
+**Acceptare:** Raportul include verdictul, regulile incalcate si actiunile recomandate.
+
+### ~~W1053~~ ✅ AI suggestion moderation escalation
+**Descriere tehnica:** Ridica automat la nivel superior sugestiile AI care au risc mare, incertitudine mare sau impact critic.
+**Scop:** Asigura review uman pentru cazurile sensibile.
+**Target:** moderation queue, escalation rules, admin dashboard.
+**Acceptare:** Sugestiile critice sunt escaladate cu motiv si prioritate.
+
+### ~~W1054~~ ✅ AI suggestion incident triage mode
+**Descriere tehnica:** Activeaza un mod de triere cand apar incidente pe pipeline-ul AI, reducand publicarea si marind vizibilitatea asupra esecurilor.
+**Scop:** Stabilizeaza operatiunile in timpul incidentelor.
+**Target:** AI operations, incident dashboard, moderation queue.
+**Acceptare:** Triage mode modifica explicit fluxul si este vizibil in UI.
+
+### ~~W1055~~ ✅ AI suggestion quota reset policy
+**Descriere tehnica:** Defineste cand si cum se reseteaza cotele pentru sugestiile AI pe user, branch sau interval de timp.
+**Scop:** Evita abuzul si distribuie corect resursele.
+**Target:** quota manager, AI generation service, admin settings.
+**Acceptare:** Resetarea cotelor respecta regula configurata si este auditata.
+
+### ~~W1056~~ ✅ AI suggestion retention policy
+**Descriere tehnica:** Stabileste cat timp se pastreaza sugestiile AI, diffs, comentariile si artefactele asociate.
+**Scop:** Controleaza costul de stocare si conformitatea.
+**Target:** retention service, audit storage, archive jobs.
+**Acceptare:** Sugestiile expirate sunt arhivate sau sterse conform politicii.
+
+### ~~W1057~~ ✅ AI suggestion archive search index
+**Descriere tehnica:** Indexeaza sugestiile AI arhivate pentru cautare dupa branch, autor, verdict, risc sau context.
+**Scop:** Face istoricul reutilizabil operational.
+**Target:** archive search, AI audit store, admin tools.
+**Acceptare:** O sugestie arhivata poate fi gasita rapid dupa criteriile principale.
+
+### ~~W1058~~ ✅ AI suggestion replay sandbox
+**Descriere tehnica:** Ofera un sandbox in care sugestiile AI pot fi redate si testate fara a afecta registrul live.
+**Scop:** Permite verificari sigure pentru cazurile complexe.
+**Target:** sandbox runtime, AI review tools, validation pipeline.
+**Acceptare:** Replay-ul in sandbox nu modifica datele live si produce rezultate observabile.
+
+### ~~W1059~~ ✅ AI suggestion branch merge advisor
+**Descriere tehnica:** Recomanda cum sa fie unite doua ramasite de sugestii AI care ating acelasi branch, cu prioritate si ordine de aplicare.
+**Scop:** Reduce conflictele la integrare.
+**Target:** branch manager, AI diff tools, moderation workflow.
+**Acceptare:** Advisorul sugereaza o ordine si marcheaza riscurile de merge.
+
+### ~~W1060~~ ✅ AI suggestion approval reason assistant
+**Descriere tehnica:** Sugereaza motivul de aprobare sau respingere pe baza diff-ului, regulilor si istoricului branch-ului.
+**Scop:** Standardizeaza deciziile de review.
+**Target:** AI review UI, audit log, validation pipeline.
+**Acceptare:** Reviewerul vede o propunere de motiv pe care o poate accepta sau edita.
+
+### ~~W1061~~ ✅ AI suggestion safe default fallback
+**Descriere tehnica:** Definește fallback-uri sigure atunci cand sugestia AI nu poate fi evaluata complet sau lipsesc datele necesare.
+**Scop:** Evita decizii arbitrare sau publicari riscante.
+**Target:** AI generation pipeline, validation service, moderation queue.
+**Acceptare:** Lipsa de date duce la fallback sigur, nu la aprobare implicita.
+
+### ~~W1062~~ ✅ AI suggestion accessibility audit
+**Descriere tehnica:** Verifica daca sugestiile AI respecta cerintele de accesibilitate pentru UI, texte, contrast descris sau navigare.
+**Scop:** Pastreaza continutul generat utilizabil pentru toti utilizatorii.
+**Target:** AI validation, accessibility checker, review workflow.
+**Acceptare:** Problemele de accesibilitate sunt raportate inainte de publish.
+
+### ~~W1063~~ ✅ AI suggestion localization guard
+**Descriere tehnica:** Blocheaza sugestiile AI care introduc texte sau termeni incompatibili cu limba si terminologia proiectului.
+**Scop:** Evita amestecul accidental de locale.
+**Target:** AI validation, localization service, content review.
+**Acceptare:** Sugestia cu localizare gresita este marcata si retrimisa la corectie.
+
+### ~~W1064~~ ✅ AI suggestion permissions snapshot
+**Descriere tehnica:** Salveaza snapshot-ul permisiunilor in momentul generarii si review-ului unei sugestii AI.
+**Scop:** Face auditurile reproducibile.
+**Target:** AI audit log, permission service, review workflow.
+**Acceptare:** Se poate vedea ce drepturi existau cand a fost evaluata sugestia.
+
+### ~~W1065~~ ✅ AI suggestion provenance redaction
+**Descriere tehnica:** Redacteaza parti sensibile din provenienta sugestiei AI in functie de rolul celui care vizualizeaza raportul.
+**Scop:** Protejeaza informatiile interne sensibile.
+**Target:** AI audit export, permission service, admin dashboard.
+**Acceptare:** Vizualizarea redactionata ascunde campurile nepermise fara sa strice auditul.
+
+### ~~W1066~~ ✅ AI suggestion analytics dashboard
+**Descriere tehnica:** Construieste un dashboard pentru volum, aprobari, respingeri, latenta si costuri ale sugestiilor AI.
+**Scop:** Ofera vizibilitate operationala si de produs.
+**Target:** analytics service, admin dashboard, telemetry pipeline.
+**Acceptare:** Dashboard-ul afiseaza metricile cheie pe interval si tip de continut.
+
+### ~~W1067~~ ✅ AI suggestion quality regression alert
+**Descriere tehnica:** Detecteaza scaderi de calitate fata de baseline-ul istoric pentru sugestiile AI pe acelasi tip de continut.
+**Scop:** Prinde degradarile dupa schimbari de prompt sau model.
+**Target:** telemetry service, validation reports, alerting system.
+**Acceptare:** O scadere semnificativa declanseaza alerta cu comparatie fata de baseline.
+
+### ~~W1068~~ ✅ AI suggestion taxonomy sync
+**Descriere tehnica:** Sincronizeaza taxonomia de tipuri de sugestii, motive si severitati intre docs, pipeline si UI.
+**Scop:** Evita nomenclatura divergenta intre componente.
+**Target:** AI policy docs, validation pipeline, admin dashboard.
+**Acceptare:** Taxonomia folosita in UI coincide cu cea din documentatie si back-end.
+
+### ~~W1069~~ ✅ AI suggestion import-export bundle
+**Descriere tehnica:** Ambaleaza o sugestie AI impreuna cu contextul, verdictul si raportul de audit pentru import sau export.
+**Scop:** Simplifica transferul intre medii si echipe.
+**Target:** AI export pipeline, archive jobs, review tools.
+**Acceptare:** Bundle-ul poate fi importat fara pierderea datelor esentiale.
+
+### ~~W1070~~ ✅ AI suggestion rollout freeze rehearsal
+**Descriere tehnica:** Ruleaza o repetitie de rollout pentru schimbari AI inainte de activare, verificand freeze, review, rollback si notificarile.
+**Scop:** Reduce riscul la lansare.
+**Target:** release pipeline, validation checklist, admin dashboard.
+**Acceptare:** Repetitia confirma ca toate gate-urile de rollout reactioneaza corect.
+
+### ~~W1071~~ ✅ AI suggestion freeze bypass audit
+**Descriere tehnica:** Urmareste orice bypass folosit pentru a ignora ferestrele de freeze in pipeline-ul AI.
+**Scop:** Pastreaza controlul asupra exceptiilor de release.
+**Target:** release pipeline, audit log, admin dashboard.
+**Acceptare:** Orice bypass este inregistrat cu motiv, autor si durata.
+
+### ~~W1072~~ ✅ AI suggestion review SLA dashboard
+**Descriere tehnica:** Afiseaza SLA-ul de review pentru sugestiile AI cu timer, status si blocaje active.
+**Scop:** Face intarzierile vizibile si actionabile.
+**Target:** moderation dashboard, review queue, telemetry service.
+**Acceptare:** Dashboard-ul arata clar sugestiile care depasesc SLA-ul.
+
+### ~~W1073~~ ✅ AI suggestion stale quarantine auto move
+**Descriere tehnica:** Muta automat in carantina sugestiile AI care au ramas stale prea mult timp in coada.
+**Scop:** Elimina drafturile expirate din fluxul activ.
+**Target:** moderation queue, quarantine service, validation pipeline.
+**Acceptare:** Sugestia stale este mutata fara interventie manuala.
+
+### ~~W1074~~ ✅ AI suggestion branch lock conflict report
+**Descriere tehnica:** Genereaza un raport clar cand doua sugestii AI intra in conflict pe acelasi branch blocat.
+**Scop:** Ajuta la rezolvarea rapida a coliziunilor.
+**Target:** branch lock manager, AI review workflow, audit log.
+**Acceptare:** Raportul identifica ambele sugestii si motivul conflictului.
+
+### ~~W1075~~ ✅ AI suggestion semantic diff summary
+**Descriere tehnica:** Produce un sumar semantic al diferentelor dintre sugestia AI si continutul existent.
+**Scop:** Reduce timpul necesar pentru review.
+**Target:** diff renderer, AI review tools, validation pipeline.
+**Acceptare:** Sumarul evidentiaza schimbarile importante fara sa ascunda detalii.
+
+### ~~W1076~~ ✅ AI suggestion target scope validator
+**Descriere tehnica:** Verifica daca sugestia AI modifica doar aria de target declarata: map, quest, story sau config.
+**Scop:** Previne editari care scapa din scope.
+**Target:** AI validation, scope matcher, moderation queue.
+**Acceptare:** Orice extindere nepermisa de scope este blocata.
+
+### ~~W1077~~ ✅ AI suggestion branch impact estimator
+**Descriere tehnica:** Estimeaza impactul unei sugestii AI asupra branch-ului, inclusiv numar de obiecte, dependente si risc.
+**Scop:** Ajuta reviewerul sa prioritizeze corect.
+**Target:** AI review UI, dependency graph, telemetry service.
+**Acceptare:** Estimarea arata clar impactul si severitatea potentiala.
+
+### ~~W1078~~ ✅ AI suggestion review queue sorter
+**Descriere tehnica:** Sorteaza sugestiile AI in coada dupa risc, vechime, owner si blocaje active.
+**Scop:** Optimizeaza ordinea de lucru pentru moderatori.
+**Target:** moderation queue, scoring service, admin dashboard.
+**Acceptare:** Ordinea din coada reflecta regulile de prioritate configurate.
+
+### ~~W1079~~ ✅ AI suggestion moderation note templates
+**Descriere tehnica:** Defineste sabloane pentru notitele moderatorilor asupra sugestiilor AI.
+**Scop:** Uniformizeaza feedback-ul si auditul.
+**Target:** moderation UI, audit log, review workflow.
+**Acceptare:** Moderatorul poate selecta rapid un sablon si il poate personaliza.
+
+### ~~W1080~~ ✅ AI suggestion approval latency tracker
+**Descriere tehnica:** Urmareste timpul dintre generarea, review-ul si aprobarea unei sugestii AI.
+**Scop:** Identifica blocajele din pipeline.
+**Target:** telemetry service, admin dashboard, audit reports.
+**Acceptare:** Trackerul afiseaza timpii pe etape si media agregata.
+
+### ~~W1081~~ ✅ AI suggestion generation trace viewer
+**Descriere tehnica:** Afiseaza traseul complet al unei sugestii AI de la prompt la rezultat, inclusiv transformari si filtre.
+**Scop:** Face debug-ul reproductibil.
+**Target:** AI audit log, trace viewer, generation pipeline.
+**Acceptare:** Traseul poate fi urmarit fara a deschide surse externe.
+
+### ~~W1082~~ ✅ AI suggestion blocked reason composer
+**Descriere tehnica:** Compune un motiv clar si structurat cand o sugestie AI este blocata de politica sau validare.
+**Scop:** Ofera feedback actionabil pentru corectie.
+**Target:** moderation workflow, validation service, review UI.
+**Acceptare:** Motivul include regula, context si actiunea recomandata.
+
+### ~~W1083~~ ✅ AI suggestion checklist validator
+**Descriere tehnica:** Verifica daca o sugestie AI are toate elementele cerute in checklist inainte de publish.
+**Scop:** Reduce scapari in etapa finala.
+**Target:** release checklist, AI publish pipeline, admin dashboard.
+**Acceptare:** Sugestia fara checklist complet nu poate fi publicata.
+
+### ~~W1084~~ ✅ AI suggestion owner override policy
+**Descriere tehnica:** Defineste cand ownerul poate suprascrie verdictul normal al unei sugestii AI.
+**Scop:** Controleaza exceptiile fara a pierde guvernanta.
+**Target:** permission service, review workflow, audit log.
+**Acceptare:** Override-ul este permis doar in conditiile explicite ale politicii.
+
+### ~~W1085~~ ✅ AI suggestion rollback approval gate
+**Descriere tehnica:** Adauga un gate separat pentru aprobarea rollback-urilor generate de AI.
+**Scop:** Evita revert-uri automate riscante.
+**Target:** rollback service, moderation queue, release pipeline.
+**Acceptare:** Rollback-ul AI nu executa fara aprobare explicita.
+
+### ~~W1086~~ ✅ AI suggestion branch ownership snapshot
+**Descriere tehnica:** Captureaza ownerii si responsabilii branch-ului in momentul generarii sugestiei AI.
+**Scop:** Face handoff-ul si auditul mai clare.
+**Target:** ownership registry, AI audit log, moderation workflow.
+**Acceptare:** Snapshot-ul arata cine era responsabil la momentul generarii.
+
+### ~~W1087~~ ✅ AI suggestion policy exception registry
+**Descriere tehnica:** Pastreaza un registru al exceptiilor aprobate fata de politicile AI standard.
+**Scop:** Evita exceptiile uitate sau repetate.
+**Target:** policy engine, audit store, admin dashboard.
+**Acceptare:** Orice exceptie este listata, cautabila si expirabila.
+
+### ~~W1088~~ ✅ AI suggestion model version pin
+**Descriere tehnica:** Permite fixarea versiunii de model folosita la generarea unei sugestii AI.
+**Scop:** Asigura reproductibilitatea rezultatelor.
+**Target:** generation pipeline, model registry, audit log.
+**Acceptare:** Sugestia afiseaza modelul exact si nu se reevalueaza cu alt model.
+
+### ~~W1089~~ ✅ AI suggestion prompt version pin
+**Descriere tehnica:** Leaga fiecare sugestie AI de versiunea exacta a promptului care a produs-o.
+**Scop:** Face debugging-ul si comparatia intre iteratii mai simple.
+**Target:** prompt registry, AI audit log, review tools.
+**Acceptare:** Promptul folosit poate fi identificat si comparat pe versiuni.
+
+### ~~W1090~~ ✅ AI suggestion validation cache
+**Descriere tehnica:** Cache-uieste rezultatele de validare pentru sugestii AI identice sau aproape identice.
+**Scop:** Reduce costul recalcularilor repetate.
+**Target:** validation pipeline, cache layer, moderation queue.
+**Acceptare:** Validarile repetate refolosesc rezultatul cand inputul nu s-a schimbat.
+
+### ~~W1091~~ ✅ AI suggestion replay permission gate
+**Descriere tehnica:** Restrictioneaza cine poate relua o sugestie AI in sandbox sau in audit view.
+**Scop:** Protejeaza continutul sensibil.
+**Target:** sandbox runtime, permission service, audit viewer.
+**Acceptare:** Replay-ul este permis doar rolurilor configurate.
+
+### ~~W1092~~ ✅ AI suggestion structured feedback form
+**Descriere tehnica:** Creeaza un formular structurat pentru feedback-ul reviewerilor asupra sugestiilor AI.
+**Scop:** Standardizeaza invatarea si analiza ulterioara.
+**Target:** review UI, feedback pipeline, analytics service.
+**Acceptare:** Feedback-ul poate fi colectat pe categorii si severitati.
+
+### ~~W1093~~ ✅ AI suggestion conflict resolution guide
+**Descriere tehnica:** Documenteaza pasii de rezolvare pentru conflictele dintre sugestii AI, inclusiv prioritate, merge si respingere.
+**Scop:** Reduce deciziile ad-hoc.
+**Target:** docs/taskuri-de-lucru.md, moderation workflow, branch manager.
+**Acceptare:** Ghidul explica ce trebuie facut pentru fiecare tip de conflict.
+
+### ~~W1094~~ ✅ AI suggestion release candidate pin
+**Descriere tehnica:** Marcheaza o sugestie AI ca release candidate si blocheaza modificari suplimentare pana la decizia finala.
+**Scop:** Stabilizeaza pachetul care urmeaza sa fie publicat.
+**Target:** release pipeline, branch lock manager, review workflow.
+**Acceptare:** RC-ul nu poate fi schimbat fara a reseta statusul.
+
+### ~~W1095~~ ✅ AI suggestion cleanup scheduler
+**Descriere tehnica:** Programeaza curatarea sugestiilor AI abandonate, respinse sau expirate.
+**Scop:** Pastreaza coada si arhiva curate.
+**Target:** cleanup jobs, moderation queue, archive service.
+**Acceptare:** Jobul sterge sau arhiveaza doar elementele eligibile.
+
+### ~~W1096~~ ✅ AI suggestion health check summary
+**Descriere tehnica:** Rezuma starea de sanatate a pipeline-ului AI pentru sugestii, inclusiv coada, erori, cost si latenta.
+**Scop:** Ofera un status scurt si actionabil.
+**Target:** ops dashboard, telemetry service, validation pipeline.
+**Acceptare:** Summary-ul arata clar daca sistemul este healthy, degraded sau blocked.
+
+### ~~W1097~~ ✅ AI suggestion anomaly detector
+**Descriere tehnica:** Detecteaza anomalii in distributia sugestiilor AI, cum ar fi spike-uri de respingere, duplicate sau drift.
+**Scop:** Semnaleaza probleme de model sau proces.
+**Target:** telemetry service, analytics dashboard, alerting system.
+**Acceptare:** Anomalia produce alerta cu metricile care au deviat.
+
+### ~~W1098~~ ✅ AI suggestion publish audit report
+**Descriere tehnica:** Genereaza un raport final pentru sugestiile AI publicate, incluzand aprobari, versiuni, diffs si rollback readiness.
+**Scop:** Consolideaza auditul post-publicare.
+**Target:** audit log, release pipeline, docs archive.
+**Acceptare:** Raportul permite reconstruirea deciziei de publish.
+
+### ~~W1099~~ ✅ AI suggestion registry diff view
+**Descriere tehnica:** Afiseaza diferenta dintre registrul curent de sugestii AI si o versiune anterioara.
+**Scop:** Ajuta la urmarirea schimbarilor de volum si politica.
+**Target:** admin dashboard, registry service, audit tools.
+**Acceptare:** Diferența arata adaugari, stergeri si modificari relevante.
+
+### ~~W1100~~ ✅ AI suggestion rollout signoff
+**Descriere tehnica:** Adauga semnatura finala de release pentru schimbari in pipeline-ul AI dupa validare, review si checklist.
+**Scop:** Marcheaza in mod clar gata de productie.
+**Target:** release pipeline, approval workflow, admin dashboard.
+**Acceptare:** Schimbarea nu poate merge live fara semnatura finala inregistrata.
+
+### ~~W1101~~ ✅ AI suggestion policy exception review
+**Descriere tehnica:** Revizuieste periodic exceptiile din politica AI si le expira daca nu mai sunt justificate.
+**Scop:** Evita exceptiile permanente si necontrolate.
+**Target:** policy registry, audit workflow, admin dashboard.
+**Acceptare:** Exceptiile vechi pot fi expirate sau reconfirmate explicit.
+
+### ~~W1102~~ ✅ AI suggestion moderation escalation timer
+**Descriere tehnica:** Porneste un timer de escaladare pentru sugestiile AI care stau prea mult fara raspuns.
+**Scop:** Previne blocarea tacuta a review-ului.
+**Target:** moderation queue, escalation rules, telemetry service.
+**Acceptare:** Sugestia depasita este escaladata automat.
+
+### ~~W1103~~ ✅ AI suggestion review ownership handoff
+**Descriere tehnica:** Permite predarea explicita a unei sugestii AI de la un reviewer la altul fara pierderea contextului.
+**Scop:** Reduce confuzia in echipele distribuite.
+**Target:** review workflow, ownership registry, audit log.
+**Acceptare:** Handoff-ul pastreaza istoricul si noul owner este vizibil.
+
+### ~~W1104~~ ✅ AI suggestion branch freeze notice
+**Descriere tehnica:** Trimite notificari cand un branch intra in freeze si blocheaza sugestiile AI noi.
+**Scop:** Face starea de freeze vizibila imediat.
+**Target:** notification service, branch lock manager, UI.
+**Acceptare:** Utilizatorii vad clar ca branch-ul este in freeze.
+
+### ~~W1105~~ ✅ AI suggestion scope shrink detector
+**Descriere tehnica:** Detecteaza cand o sugestie AI reduce accidental aria de impact fata de ce era asteptat.
+**Scop:** Evita pierderea unor elemente importante.
+**Target:** AI validation, scope matcher, review tools.
+**Acceptare:** Reducerea neasteptata a scope-ului este raportata ca risc.
+
+### ~~W1106~~ ✅ AI suggestion branch replay checksum
+**Descriere tehnica:** Calculeaza un checksum pentru replay-ul unei sugestii AI pe acelasi branch si acelasi context.
+**Scop:** Verifica reproducibilitatea.
+**Target:** replay sandbox, AI audit log, validation service.
+**Acceptare:** Replay-ul identic produce acelasi checksum sau explica diferenta.
+
+### ~~W1107~~ ✅ AI suggestion policy rule linter
+**Descriere tehnica:** Analizeaza regulile din politica AI pentru ambiguitate, conflicte si lipsa de severitate.
+**Scop:** Imbunatateste calitatea regulilor inainte de aplicare.
+**Target:** policy docs, validation pipeline, admin tools.
+**Acceptare:** Linterul raporteaza problemele si sugereaza corectii.
+
+### ~~W1108~~ ✅ AI suggestion action recommendation engine
+**Descriere tehnica:** Recomanda actiunea potrivita pentru fiecare sugestie AI: approve, reject, quarantine, rework sau defer.
+**Scop:** Ajuta moderatorii sa ia decizii consistente.
+**Target:** moderation queue, scoring service, review UI.
+**Acceptare:** Recomandarea este explicata si poate fi suprascrisa.
+
+### ~~W1109~~ ✅ AI suggestion content boundary checker
+**Descriere tehnica:** Verifica daca sugestia AI trece de granita permisă dintre map, quest, story si configuratie.
+**Scop:** Previne amestecul nedorit intre domenii.
+**Target:** validation pipeline, branch manager, content registries.
+**Acceptare:** Crossing-ul de boundary este detectat si blocat.
+
+### ~~W1110~~ ✅ AI suggestion reviewer notes archive
+**Descriere tehnica:** Arhiveaza notitele reviewerilor atasate sugestiilor AI si le face cautabile ulterior.
+**Scop:** Pastreaza rationale-ul deciziilor.
+**Target:** audit store, review workflow, search index.
+**Acceptare:** Notitele pot fi regasite dupa sugestie, autor sau motiv.
+
+### ~~W1111~~ ✅ AI suggestion incident rollback marker
+**Descriere tehnica:** Marcheaza sugestiile AI implicate intr-un incident astfel incat rollback-ul sa fie usor de executat.
+**Scop:** Reduce timpul de recuperare.
+**Target:** incident response, rollback service, audit log.
+**Acceptare:** Sugestiile marcate pot fi incluse rapid intr-un rollback plan.
+
+### ~~W1112~~ ✅ AI suggestion quality gate dashboard
+**Descriere tehnica:** Afișeaza toate gate-urile de calitate care blocheaza o sugestie AI si starea lor curenta.
+**Scop:** Face blocajele explicite.
+**Target:** validation pipeline, admin dashboard, moderation UI.
+**Acceptare:** Fiecare gate are status si motivatie vizibile.
+
+### ~~W1113~~ ✅ AI suggestion branch dependency notifier
+**Descriere tehnica:** Notifica atunci cand o sugestie AI afecteaza dependente ascunse sau branch-uri conexe.
+**Scop:** Reduce surprizele la merge.
+**Target:** dependency graph, notification service, review workflow.
+**Acceptare:** Notificarea include dependentele relevante si impactul estimat.
+
+### ~~W1114~~ ✅ AI suggestion approval policy matrix
+**Descriere tehnica:** Defineste o matrice de aprobare pe tip de continut, risc si rol.
+**Scop:** Standardizeaza decizia finala.
+**Target:** policy engine, review workflow, admin dashboard.
+**Acceptare:** Matricea poate fi consultata si aplicata automat.
+
+### ~~W1115~~ ✅ AI suggestion quarantine replay restriction
+**Descriere tehnica:** Limiteaza replay-ul sugestiilor AI aflate in carantina doar la rolurile permise.
+**Scop:** Protejeaza continutul sensibil sau defect.
+**Target:** quarantine service, replay sandbox, permission service.
+**Acceptare:** Utilizatorii fara drept nu pot reda sugestia.
+
+### ~~W1116~~ ✅ AI suggestion feedback dedupe
+**Descriere tehnica:** Grupeaza feedback-ul identic sau aproape identic primit pe aceeasi sugestie AI.
+**Scop:** Evita zgomotul in analiza feedback-ului.
+**Target:** feedback pipeline, review tools, analytics service.
+**Acceptare:** Feedback-ul duplicat este consolidat si raportat o singura data.
+
+### ~~W1117~~ ✅ AI suggestion version compare view
+**Descriere tehnica:** Compara doua versiuni ale aceleiasi sugestii AI si evidentiaza diferenta de rezultat, context si verdict.
+**Scop:** Simplifica iteratia.
+**Target:** diff renderer, audit tools, review UI.
+**Acceptare:** Comparatia arata clar ce s-a schimbat intre versiuni.
+
+### ~~W1118~~ ✅ AI suggestion publish readiness meter
+**Descriere tehnica:** Calculeaza cat de pregatita este o sugestie AI pentru publicare pe baza checklist-ului si validarii.
+**Scop:** Ofera un indicator rapid de stare.
+**Target:** release pipeline, admin dashboard, validation reports.
+**Acceptare:** Meter-ul reflecta corect daca sugestia poate merge live.
+
+### ~~W1119~~ ✅ AI suggestion branch reactivation guard
+**Descriere tehnica:** Blocheaza reactivarea unei sugestii AI arhivate pe un branch care nu mai este valid sau activ.
+**Scop:** Evita readucerea continutului depasit.
+**Target:** archive service, branch manager, moderation workflow.
+**Acceptare:** Reactivarea pe branch invalid este refuzata cu motiv.
+
+### ~~W1120~~ ✅ AI suggestion input sanitation policy
+**Descriere tehnica:** Definește regulile de igienizare pentru inputul folosit la generarea unei sugestii AI.
+**Scop:** Reduce prompt injection si datele murdare.
+**Target:** generation pipeline, input validator, security rules.
+**Acceptare:** Inputul nesanitat este blocat sau curatat conform politicii.
+
+### ~~W1121~~ ✅ AI suggestion moderation checklist export
+**Descriere tehnica:** Exporta checklist-ul complet folosit de moderatori pentru o sugestie AI in format arhivabil.
+**Scop:** Face auditul si training-ul mai simple.
+**Target:** moderation tools, audit export, docs archive.
+**Acceptare:** Exportul include toate punctele bifate si semnaturile relevante.
+
+### ~~W1122~~ ✅ AI suggestion ownership conflict detector
+**Descriere tehnica:** Detecteaza cand mai multi owneri sau echipe revendica aceeasi sugestie AI.
+**Scop:** Previne asignarea dubla si blocajele de responsabilitate.
+**Target:** ownership registry, moderation queue, notification service.
+**Acceptare:** Conflictul de ownership este raportat si trimis la rezolvare.
+
+### ~~W1123~~ ✅ AI suggestion branch policy binder
+**Descriere tehnica:** Leaga politicile AI de un branch specific astfel incat regulile sa nu fie aplicate gresit pe alt context.
+**Scop:** Protejeaza coerenta intre branch-uri.
+**Target:** branch manager, policy engine, validation pipeline.
+**Acceptare:** Politica aplicata poate fi identificata pe branch si versiune.
+
+### ~~W1124~~ ✅ AI suggestion publish comment generator
+**Descriere tehnica:** Genereaza un comentariu scurt pentru publicarea unei sugestii AI, cu motivul principal si impactul.
+**Scop:** Standardizeaza comunicarea la release.
+**Target:** release pipeline, admin dashboard, changelog workflow.
+**Acceptare:** Comentariul generat poate fi atasat direct la publicare.
+
+### ~~W1125~~ ✅ AI suggestion rollback diff exporter
+**Descriere tehnica:** Exporta diff-ul necesar pentru rollback-ul unei sugestii AI in format usor de executat.
+**Scop:** Reduce erorile la revert.
+**Target:** rollback service, audit tools, release pipeline.
+**Acceptare:** Exportul contine doar modificarile necesare pentru revert.
+
+### ~~W1126~~ ✅ AI suggestion quality trend report
+**Descriere tehnica:** Produce un raport de trend pentru calitatea sugestiilor AI pe intervale de timp.
+**Scop:** Ajuta la evaluarea modelelor si a politicilor.
+**Target:** analytics dashboard, telemetry service, audit reports.
+**Acceptare:** Raportul arata evolutia calitatii si punctele de schimbare.
+
+### ~~W1127~~ ✅ AI suggestion moderation SLA exception log
+**Descriere tehnica:** Inregistreaza exceptiile fata de SLA-urile de moderare pentru sugestiile AI.
+**Scop:** Face vizibile devierile operationale.
+**Target:** moderation queue, audit log, telemetry service.
+**Acceptare:** Orice exceptie SLA are motiv si durata.
+
+### ~~W1128~~ ✅ AI suggestion release gate dependency map
+**Descriere tehnica:** Construieste o harta a gate-urilor de release care pot bloca o sugestie AI.
+**Scop:** Arata de ce nu poate fi publicata.
+**Target:** release pipeline, dependency graph, admin dashboard.
+**Acceptare:** Harta arata toate gate-urile si relatiile dintre ele.
+
+### ~~W1129~~ ✅ AI suggestion audit replay timeline
+**Descriere tehnica:** Afiseaza o cronologie completa a auditului unei sugestii AI cu generare, review, override si publish.
+**Scop:** Simplifica investigatiile si training-ul.
+**Target:** audit viewer, timeline renderer, review workflow.
+**Acceptare:** Cronologia poate fi parcursa si filtrata pe evenimente.
+
+### ~~W1130~~ ✅ AI suggestion signoff escalation
+**Descriere tehnica:** Escaladeaza automat sugestiile AI care asteapta prea mult semnatura finala de release.
+**Scop:** Evita blocajele in etapa finala.
+**Target:** approval workflow, notification service, admin dashboard.
+**Acceptare:** Sugestia fara semnatura este escaladata cu prioritate vizibila.
+
+### ~~W1131~~ ✅ AI suggestion approval quorum policy
+**Descriere tehnica:** Defineste cate aprobari sunt necesare pentru tipuri diferite de sugestii AI in functie de risc si impact.
+**Scop:** Ajusteaza guvernanta la severitatea schimbarii.
+**Target:** approval workflow, policy engine, admin dashboard.
+**Acceptare:** Policy-ul specifica clar quorum-ul cerut pentru fiecare categorie.
+
+### ~~W1132~~ ✅ AI suggestion auto reject heuristics
+**Descriere tehnica:** Aplica euristici automate pentru respingerea sugestiilor AI care incalca reguli evidente sau repetitive.
+**Scop:** Reduce incarcarea moderatorilor.
+**Target:** moderation queue, validation pipeline, scoring service.
+**Acceptare:** Sugestiile cu pattern-uri clare de respingere sunt eliminate automat.
+
+### ~~W1133~~ ✅ AI suggestion branch freeze report
+**Descriere tehnica:** Genereaza un raport al tuturor sugestiilor AI blocate de freeze pe fiecare branch.
+**Scop:** Ofera vizibilitate asupra impactului freeze-ului.
+**Target:** branch lock manager, admin dashboard, audit logs.
+**Acceptare:** Raportul arata sugestiile afectate si durata blocajului.
+
+### ~~W1134~~ ✅ AI suggestion context loss detector
+**Descriere tehnica:** Detecteaza cand o sugestie AI pierde context esential intre generare, review si publish.
+**Scop:** Previne decizii bazate pe informatie incompleta.
+**Target:** AI audit pipeline, review workflow, telemetry service.
+**Acceptare:** Pierderea de context este semnalata cu diferenta fata de starea initiala.
+
+### ~~W1135~~ ✅ AI suggestion rollback safety proof
+**Descriere tehnica:** Produce o dovada de siguranta pentru rollback inainte ca o sugestie AI sa fie aprobata pentru revert.
+**Scop:** Reduce riscul de rollback gresit.
+**Target:** rollback service, validation pipeline, audit tools.
+**Acceptare:** Dovada include elementele afectate si starea rezultata.
+
+### ~~W1136~~ ✅ AI suggestion review queue snapshot
+**Descriere tehnica:** Salveaza snapshot-uri periodice ale cozii de review pentru sugestiile AI.
+**Scop:** Permite analiza istorica a blocajelor si prioritatii.
+**Target:** moderation queue, telemetry service, archive store.
+**Acceptare:** Snapshot-ul poate fi comparat cu alte momente in timp.
+
+### ~~W1137~~ ✅ AI suggestion policy severity mapper
+**Descriere tehnica:** Mapeaza regulile de politica AI la niveluri de severitate standardizate.
+**Scop:** Face interpretarea politicilor consistenta.
+**Target:** policy engine, validation pipeline, admin dashboard.
+**Acceptare:** Fiecare regula are severitate clara si stabila.
+
+### ~~W1138~~ ✅ AI suggestion reviewer workload balancer
+**Descriere tehnica:** Distribuie sugestiile AI intre moderatori in functie de incarcare, specializare si SLA.
+**Scop:** Evita supraincarcarea unui singur reviewer.
+**Target:** moderation queue, assignment service, admin dashboard.
+**Acceptare:** Alocarea respecta incarcare si competentele configurate.
+
+### ~~W1139~~ ✅ AI suggestion publish dependency blocker
+**Descriere tehnica:** Blocheaza publicarea unei sugestii AI daca dependentele ei nu sunt aprobate sau sincronizate.
+**Scop:** Previne publicari incomplete.
+**Target:** release pipeline, dependency graph, validation service.
+**Acceptare:** Blocker-ul arata dependentele lipsa si stop-eaza publish-ul.
+
+### ~~W1140~~ ✅ AI suggestion rollback dependency blocker
+**Descriere tehnica:** Blocheaza rollback-ul unei sugestii AI daca exista dependente critice care nu pot fi restaurate sigur.
+**Scop:** Evita revenirile partiale periculoase.
+**Target:** rollback service, dependency graph, admin dashboard.
+**Acceptare:** Rollback-ul riscant este refuzat cu motiv explicit.
+
+### ~~W1141~~ ✅ AI suggestion canonical diff archive
+**Descriere tehnica:** Arhiveaza diff-ul canonic al unei sugestii AI ca referinta pentru audit si comparatie viitoare.
+**Scop:** Pastreaza istoricul de schimbare usor de consultat.
+**Target:** archive service, audit log, diff renderer.
+**Acceptare:** Diff-ul arhivat poate fi redeschis si comparat ulterior.
+
+### ~~W1142~~ ✅ AI suggestion branch health indicator
+**Descriere tehnica:** Afiseaza un indicator de sanatate pentru branch-urile care primesc sugestii AI.
+**Scop:** Arata rapid daca branch-ul este stabil sau tensionat.
+**Target:** admin dashboard, branch manager, telemetry service.
+**Acceptare:** Indicatorul reflecta blocaje, drift si activitate recenta.
+
+### ~~W1143~~ ✅ AI suggestion moderation SLA recalibration
+**Descriere tehnica:** Recalibreaza SLA-urile de moderare in functie de volum, risc si performanta istorica.
+**Scop:** Mentine SLA-urile realiste si utile.
+**Target:** moderation policy, telemetry service, admin dashboard.
+**Acceptare:** Recalibrarea produce valori noi justificate de date.
+
+### ~~W1144~~ ✅ AI suggestion exception timeline viewer
+**Descriere tehnica:** Afiseaza o cronologie a tuturor exceptiilor aplicate asupra unei sugestii AI.
+**Scop:** Face istoria exceptiilor usor de urmarit.
+**Target:** audit viewer, policy registry, review workflow.
+**Acceptare:** Cronologia arata ordinea si autorii exceptiilor.
+
+### ~~W1145~~ ✅ AI suggestion quarantine severity badge
+**Descriere tehnica:** Adauga un badge de severitate pentru sugestiile AI aflate in carantina.
+**Scop:** Prioritizeaza clar cazurile critice.
+**Target:** quarantine UI, moderation queue, admin dashboard.
+**Acceptare:** Badge-ul reflecta severitatea si este vizibil in listare.
+
+### ~~W1146~~ ✅ AI suggestion review routing rule test
+**Descriere tehnica:** Testeaza regulile care trimit sugestiile AI catre reviewerul potrivit.
+**Scop:** Previne rutarea gresita in productie.
+**Target:** routing rules, moderation workflow, test suite.
+**Acceptare:** Testele acopera toate traseele importante de rutare.
+
+### ~~W1147~~ ✅ AI suggestion prompt injection guard
+**Descriere tehnica:** Detecteaza incercarile de prompt injection in inputul folosit la generarea sugestiilor AI.
+**Scop:** Protejeaza pipeline-ul de instructiuni malitioase.
+**Target:** input validator, generation pipeline, security rules.
+**Acceptare:** Inputul suspect este blocat si raportat.
+
+### ~~W1148~~ ✅ AI suggestion content lineage viewer
+**Descriere tehnica:** Arata linia completa de provenienta a unei sugestii AI pana la sursa initiala si la transformari intermediare.
+**Scop:** Face auditul si debugging-ul mai rapide.
+**Target:** audit viewer, trace pipeline, archive store.
+**Acceptare:** Utilizatorul poate vedea toate etapele lineage-ului.
+
+### ~~W1149~~ ✅ AI suggestion moderation label sync
+**Descriere tehnica:** Sincronizeaza etichetele de moderare ale sugestiilor AI intre UI, audit si export.
+**Scop:** Evita discrepantele intre suprafete.
+**Target:** moderation UI, audit log, export pipeline.
+**Acceptare:** Aceeasi sugestie are acelasi label peste toate suprafetele.
+
+### ~~W1150~~ ✅ AI suggestion release comment audit
+**Descriere tehnica:** Verifica daca comentariile de release generate pentru sugestiile AI sunt complete si coezive.
+**Scop:** Evita note de release vagi sau incomplete.
+**Target:** release notes generator, audit pipeline, admin dashboard.
+**Acceptare:** Comentariile care lipsesc detalii sunt marcate pentru corectie.
+
+### ~~W1151~~ ✅ AI suggestion rollback rehearsal log
+**Descriere tehnica:** Pastreaza un jurnal al exercitiilor de rollback pentru sugestiile AI.
+**Scop:** Ofera istoric pentru pregatirea operationala.
+**Target:** rollback service, ops dashboard, audit logs.
+**Acceptare:** Fiecare exercitiu are data, rezultat si observatii.
+
+### ~~W1152~~ ✅ AI suggestion review explanation checker
+**Descriere tehnica:** Verifica daca explicatia unei decizii de review pentru sugestia AI este suficient de clara si completa.
+**Scop:** Pastreaza calitatea feedback-ului.
+**Target:** review UI, feedback pipeline, moderation workflow.
+**Acceptare:** Explicatiile vagi sunt semnalate pentru imbunatatire.
+
+### ~~W1153~~ ✅ AI suggestion duplicate merge audit
+**Descriere tehnica:** Inregistreaza cum au fost consolidate sugestiile AI duplicate si ce rezultat a ramas activ.
+**Scop:** Pastreaza trasabilitatea consolidarii.
+**Target:** moderation queue, audit log, similarity service.
+**Acceptare:** Auditul arata care duplicate au fost unite si de ce.
+
+### ~~W1154~~ ✅ AI suggestion policy doc sync job
+**Descriere tehnica:** Sincronizeaza automat documentatia politicilor AI cu setul de reguli active.
+**Scop:** Evita diferenta dintre documente si implementare.
+**Target:** docs pipeline, policy engine, audit reports.
+**Acceptare:** Sincronizarea detecteaza si raporteaza diferentele.
+
+### ~~W1155~~ ✅ AI suggestion approval delay notifier
+**Descriere tehnica:** Notifica atunci cand aprobarea unei sugestii AI intarzie peste o limita configurata.
+**Scop:** Reduce blocajele in release.
+**Target:** notification service, approval workflow, admin dashboard.
+**Acceptare:** Notificarea include cat timp a depasit limita si cine e blocat.
+
+### ~~W1156~~ ✅ AI suggestion branch quarantine split
+**Descriere tehnica:** Permite separarea unei sugestii AI in carantina pe sub-branch-uri pentru analiza mai simpla.
+**Scop:** Izoleaza problemele si reduce complexitatea de review.
+**Target:** quarantine service, branch manager, validation pipeline.
+**Acceptare:** Sub-branch-urile rezultate pot fi analizate independent.
+
+### ~~W1157~~ ✅ AI suggestion risk heatmap
+**Descriere tehnica:** Construiește o harta de risc pentru sugestiile AI pe branch, tip de continut si severitate.
+**Scop:** Arata zonele cu risc mare din pipeline.
+**Target:** analytics dashboard, telemetry service, admin tools.
+**Acceptare:** Heatmap-ul diferentiaza clar zonele de risc ridicat.
+
+### ~~W1158~~ ✅ AI suggestion sandbox export bundle
+**Descriere tehnica:** Exporta o sugestie AI impreuna cu contextul necesar pentru a fi testata in sandbox extern.
+**Scop:** Simplifica verificarea izolata.
+**Target:** sandbox runtime, export pipeline, audit tools.
+**Acceptare:** Bundle-ul poate fi reimportat si rulat in sandbox fara pierderi.
+
+### ~~W1159~~ ✅ AI suggestion branch policy drift lock
+**Descriere tehnica:** Blocheaza branch-urile care au drift intre politica activa si comportamentul real al sugestiilor AI.
+**Scop:** Previne publicarea in conditii nevalidate.
+**Target:** policy engine, branch lock manager, audit reports.
+**Acceptare:** Drift-ul mare impune lock pana la remediere.
+
+### ~~W1160~~ ✅ AI suggestion final approval receipt
+**Descriere tehnica:** Genereaza o dovada finala de aprobare pentru sugestiile AI publicate.
+**Scop:** Ofera o referinta oficiala pentru audit si suport.
+**Target:** approval workflow, audit log, release pipeline.
+**Acceptare:** Chitanta include aprobatorul, data, versiunea si scope-ul publicarii.
