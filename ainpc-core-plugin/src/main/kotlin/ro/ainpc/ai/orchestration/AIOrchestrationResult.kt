@@ -10,7 +10,10 @@ class AIOrchestrationResult(
     fallbackUsed: Boolean,
     runtimeExecutable: Boolean,
     errorCode: String?,
-    validationMessages: List<String>?
+    validationMessages: List<String>?,
+    lifecycle: AISuggestionLifecycle? = null,
+    safetyLabel: AISafetyLabel? = null,
+    provenance: AISuggestionProvenance? = null
 ) {
     private val useCaseValue = useCase ?: AIUseCase.DIALOGUE_REPLY
     private val statusValue = status ?: AIResultStatus.FALLBACK_USED
@@ -20,6 +23,9 @@ class AIOrchestrationResult(
     private val runtimeExecutableValue = runtimeExecutable
     private val errorCodeValue = errorCode?.trim().orEmpty()
     private val validationMessagesValue = Collections.unmodifiableList(ArrayList(validationMessages ?: emptyList()))
+    private val lifecycleValue = lifecycle ?: AISuggestionLifecycle.GENERATED
+    private val safetyLabelValue = safetyLabel ?: AISafetyLabel.SAFE
+    private val provenanceValue = provenance
 
     fun useCase(): AIUseCase = useCaseValue
 
@@ -37,6 +43,12 @@ class AIOrchestrationResult(
 
     fun validationMessages(): List<String> = validationMessagesValue
 
+    fun lifecycle(): AISuggestionLifecycle = lifecycleValue
+
+    fun safetyLabel(): AISafetyLabel = safetyLabelValue
+
+    fun provenance(): AISuggestionProvenance? = provenanceValue
+
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -52,7 +64,10 @@ class AIOrchestrationResult(
             fallbackUsedValue == other.fallbackUsedValue &&
             runtimeExecutableValue == other.runtimeExecutableValue &&
             errorCodeValue == other.errorCodeValue &&
-            validationMessagesValue == other.validationMessagesValue
+            validationMessagesValue == other.validationMessagesValue &&
+            lifecycleValue == other.lifecycleValue &&
+            safetyLabelValue == other.safetyLabelValue &&
+            provenanceValue == other.provenanceValue
     }
 
     override fun hashCode(): Int {
@@ -64,11 +79,15 @@ class AIOrchestrationResult(
         result = 31 * result + runtimeExecutableValue.hashCode()
         result = 31 * result + errorCodeValue.hashCode()
         result = 31 * result + validationMessagesValue.hashCode()
+        result = 31 * result + lifecycleValue.hashCode()
+        result = 31 * result + safetyLabelValue.hashCode()
+        result = 31 * result + (provenanceValue?.hashCode() ?: 0)
         return result
     }
 
     override fun toString(): String =
         "AIOrchestrationResult[useCase=$useCaseValue, status=$statusValue, outputType=$outputTypeValue, " +
             "message=$messageValue, fallbackUsed=$fallbackUsedValue, runtimeExecutable=$runtimeExecutableValue, " +
-            "errorCode=$errorCodeValue, validationMessages=$validationMessagesValue]"
+            "errorCode=$errorCodeValue, validationMessages=$validationMessagesValue, " +
+            "lifecycle=$lifecycleValue, safetyLabel=$safetyLabelValue]"
 }

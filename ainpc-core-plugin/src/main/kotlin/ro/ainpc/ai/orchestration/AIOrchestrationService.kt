@@ -5,6 +5,7 @@ import ro.ainpc.ai.OpenAIService
 import java.util.concurrent.CompletableFuture
 
 class AIOrchestrationService(private val plugin: AINPCPlugin?) {
+    val suggestionService: AISuggestionService = AISuggestionService(plugin)
     companion object {
         const val DEFAULT_MAX_RETRIES = 3
         const val DEFAULT_RETRY_BASE_DELAY_MS = 1000L
@@ -74,11 +75,22 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
                     }
                     return fallback(request, "ai_response_empty")
                 }
+                val lifecycleState = if (request.useCase() in listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)) {
+                    AISuggestionLifecycle.QUEUED
+                } else {
+                    AISuggestionLifecycle.APPROVED
+                }
+                val safetyLabel = suggestionService.determineSafetyLabel(request, AIOrchestrationResult(
+                    request.useCase(), AIResultStatus.SUCCESS, policyFor(request.useCase()).outputType(),
+                    response, false, true, "ai_provider_openai", emptyList()
+                ))
                 val draftResult = AIOrchestrationResult(
                     request.useCase(),
                     AIResultStatus.SUCCESS,
                     policyFor(request.useCase()).outputType(),
-                    response, false, true, "ai_provider_openai", emptyList()
+                    response, false, true, "ai_provider_openai", emptyList(),
+                    lifecycle = lifecycleState,
+                    safetyLabel = safetyLabel
                 )
                 return if (request.useCase() in listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)) {
                     markDraft(draftResult)
@@ -176,6 +188,23 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         if (request.actorId().isNotBlank()) parts.add("Actor: ${request.actorId()}")
         if (request.playerName().isNotBlank()) parts.add("Player: ${request.playerName()}")
         return parts.joinToString("\n")
+    }
+
+    fun checkSuggestionPublishGate(
+        result: AIOrchestrationResult,
+        audits: List<AISuggestionAuditEntry>,
+        rollbackInfo: AISuggestionRollbackInfo
+    ): List<String> {
+        return suggestionService.checkPublishGate(result, result.safetyLabel(), audits, rollbackInfo)
+    }
+
+    fun detectSuggestionMismatch(
+        request: AIOrchestrationRequest,
+        activeBranch: String?,
+        activeRegion: String?,
+        activeQuestChain: String?
+    ): List<String> {
+        return suggestionService.detectMismatch(request, activeBranch, activeRegion, activeQuestChain)
     }
 
     private fun fallbackMessage(useCase: AIUseCase?): String =

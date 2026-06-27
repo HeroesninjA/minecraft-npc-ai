@@ -173,6 +173,46 @@ object AIResponseValidator {
         return emptyList()
     }
 
+    fun classifyRejection(errorCode: String, message: String): String {
+        val lowerMsg = message.lowercase()
+        val lowerCode = errorCode.lowercase()
+        return when {
+            lowerCode.contains("lore") || lowerMsg.contains("lore") -> "lore_conflict"
+            lowerCode.contains("route") || lowerMsg.contains("route") -> "route_invalid"
+            lowerCode.contains("spoiler") || lowerMsg.contains("spoiler") -> "spoiler"
+            lowerCode.contains("permission") || lowerMsg.contains("permisiune") -> "permission_mismatch"
+            lowerCode.contains("quality") || lowerMsg.contains("calitate") -> "quality_below_threshold"
+            lowerCode.contains("duplicate") || lowerMsg.contains("duplicat") -> "duplicate_content"
+            lowerCode.contains("scope") || lowerMsg.contains("scope") -> "scope_violation"
+            lowerCode.contains("empty") || lowerCode.contains("gol") -> "raspuns_gol"
+            lowerCode.contains("trunchiat") || lowerMsg.contains("trunchiat") -> "raspuns_trunchiat"
+            lowerCode.contains("confidence") || lowerCode.contains("incredere") -> "confidence_too_low"
+            lowerCode.contains("freeze") -> "freeze_active"
+            lowerCode.contains("timeout") -> "timeout"
+            lowerCode.contains("rate") -> "rate_limited"
+            else -> "generic_rejection"
+        }
+    }
+
+    fun buildRejectionRecommendation(taxonomyCode: String): String {
+        return when (taxonomyCode) {
+            "lore_conflict" -> "Revizuieste sugestia pentru a se alinia la lore-ul existent."
+            "route_invalid" -> "Verifica ruta sugerata si corecteaza traseul."
+            "spoiler" -> "Ascunde sau elimina continutul care dezvaluie evenimente viitoare."
+            "permission_mismatch" -> "Solicita accesul necesar sau redirecționeaza catre owner."
+            "quality_below_threshold" -> "Imbunatateste calitatea generarii sau ajusteaza parametrii."
+            "duplicate_content" -> "Trimite ca duplicat sau fuzioneaza cu sugestia existenta."
+            "scope_violation" -> "Restrange sugestia la aria de target declarata."
+            "raspuns_gol" -> "Regenereaza cu context mai bogat."
+            "raspuns_trunchiat" -> "Regenereaza cu limita de tokeni marita."
+            "confidence_too_low" -> "Asteapta acumularea mai multor dovezi sau mareste pragul."
+            "freeze_active" -> "Incearca dupa fereastra de freeze."
+            "timeout" -> "Reincearca cu un timeout mai mare."
+            "rate_limited" -> "Asteapta inainte de a genera urmatoarea sugestie."
+            else -> "Revizuieste sugestia conform regulilor generale."
+        }
+    }
+
     fun sanitize(response: String): String {
         var result = response.trim()
         for (pattern in FORBIDDEN_PATTERNS) {
