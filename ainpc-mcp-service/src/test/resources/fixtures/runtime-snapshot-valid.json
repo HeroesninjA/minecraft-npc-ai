@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-06-28T12:00:00Z",
+  "plugin": {
+    "version": "1.0.0",
+    "serverType": "Paper",
+    "onlinePlayers": 3,
+    "uptimeMinutes": 120
+  },
+  "features": {
+    "ai": true,
+    "mcp": true,
+    "aiOrchestration": false
+  },
+  "npc": {
+    "totalCount": 8,
+    "byRegion": {
+      "demo_sat": 6,
+      "padurea_vrajita": 2
+    },
+    "samples": [
+      {
+        "npcId": 1,
+        "name": "Gheorghe",
+        "profession": "Fierar",
+        "regionId": "demo_sat",
+        "worldName": "world"
+      },
+      {
+        "npcId": 2,
+        "name": "Maria",
+        "profession": "Taverniera",
+        "regionId": "demo_sat",
+        "worldName": "world"
+      }
+    ]
+  },
+  "world": {
+    "regionCount": 2,
+    "placeCount": 5,
+    "nodeCount": 12,
+    "regionNames": ["demo_sat", "padurea_vrajita"],
+    "placeNames": ["Fieraria", "Taverna", "Piata", "Primaria", "Biserica"]
+  },
+  "quests": {
+    "activePlayerQuests": 2,
+    "activeGlobalQuests": 1,
+    "samples": [
+      {
+        "templateId": "medieval:C01",
+        "mechanic": "village_contracts",
+        "playerUuid": "player-1",
+        "status": "active"
+      }
+    ]
+  }
+}

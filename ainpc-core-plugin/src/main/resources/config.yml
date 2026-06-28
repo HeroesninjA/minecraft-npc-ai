@@ -72,6 +72,9 @@ mcp:
   connect_timeout_seconds: 5
   read_timeout_seconds: 20
   fail_open: true
+  snapshot:
+    auto: true
+    interval_ticks: 100
 
 # Setari spawn si jurnalizare batch
 spawn:

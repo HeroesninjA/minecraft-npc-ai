@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.mcp.bridge.McpDialogContextProvider
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
@@ -133,7 +134,19 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 }
 
                 val prompt = try {
-                    OpenAIPromptBuilder.buildPrompt(snapshot, recentHistory, relevantMemories, relationship, dbContext)
+                    val basePrompt = OpenAIPromptBuilder.buildPrompt(snapshot, recentHistory, relevantMemories, relationship, dbContext)
+                    val mcpEnabled = plugin.config.getBoolean("features.mcp", true)
+                    val orchestrationEnabled = plugin.config.getBoolean("ai.orchestration.enabled", true)
+                    val mcpContext = McpDialogContextProvider.enrich(
+                        client = if (mcpEnabled) plugin.mcpRuntimeClient else null,
+                        mcpEnabled = mcpEnabled,
+                        orchestrationEnabled = orchestrationEnabled
+                    )
+                    if (mcpContext.isNotBlank()) {
+                        "$basePrompt\n$mcpContext"
+                    } else {
+                        basePrompt
+                    }
                 } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("prompt_build_error: ${OpenAITextSupport.compactExceptionMessage(e)}")

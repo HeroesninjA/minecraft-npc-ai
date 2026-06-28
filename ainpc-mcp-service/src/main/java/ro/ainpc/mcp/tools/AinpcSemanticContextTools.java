@@ -471,4 +471,47 @@ public class AinpcSemanticContextTools {
             "timestamp", Instant.now().toString()
         );
     }
+
+    @McpTool(
+        name = "ainpc.semantic.context",
+        description = "Read-only semantic context for any domain: world, story, mapping, quest, quest_authoring, or routing. Use 'summary=true' for compact output.",
+        annotations = @McpTool.McpAnnotations(
+            readOnlyHint = true, destructiveHint = false,
+            idempotentHint = true, openWorldHint = false
+        )
+    )
+    public Map<String, Object> unifiedSemanticContext(String domain, Boolean summary) {
+        String d = domain != null ? domain.trim().toLowerCase() : "all";
+        boolean sum = summary != null && summary;
+
+        return switch (d) {
+            case "world" -> sum ? semanticContextSummary() : semanticContext();
+            case "quest" -> sum ? questSemanticContextSummary() : questSemanticContext();
+            case "quest_authoring" -> sum ? questAuthoringContextSummary() : questAuthoringContextSummary();
+            case "mapping" -> sum ? mappingSemanticContextSummary() : mappingSemanticContext();
+            case "story" -> sum ? storySemanticContextSummary() : storySemanticContext();
+            case "routing" -> sum ? routingSemanticContextSummary() : routingSemanticContext();
+            default -> {
+                Map<String, Object> world = sum ? semanticContextSummary() : semanticContext();
+                Map<String, Object> story = sum ? storySemanticContextSummary() : storySemanticContext();
+                Map<String, Object> mapping = sum ? mappingSemanticContextSummary() : mappingSemanticContext();
+                Map<String, Object> quest = sum ? questSemanticContextSummary() : questSemanticContext();
+                Map<String, Object> questAuth = sum ? questAuthoringContextSummary() : questAuthoringContextSummary();
+                Map<String, Object> routing = sum ? routingSemanticContextSummary() : routingSemanticContext();
+                yield Map.ofEntries(
+                    Map.entry("schemaVersion", 1),
+                    Map.entry("service", "ainpc-mcp-service"),
+                    Map.entry("domain", "all"),
+                    Map.entry("summary", sum),
+                    Map.entry("world", world),
+                    Map.entry("story", story),
+                    Map.entry("mapping", mapping),
+                    Map.entry("quest", quest),
+                    Map.entry("quest_authoring", questAuth),
+                    Map.entry("routing", routing),
+                    Map.entry("timestamp", Instant.now().toString())
+                );
+            }
+        };
+    }
 }

@@ -1,0 +1,9 @@
+mcp:
+  snapshot:
+    path: data/mcp-runtime-snapshot.json
+    cache-ttl-seconds: 2
+    stale-threshold-seconds: 60
+    blocklist-fields: ""
+  audit:
+    path: data/mcp-write-audit.json
+    max-entries: 1000

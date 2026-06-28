@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-06-28T12:00:00Z",
+  "plugin": {
+    "version": "1.0.0",
+    "serverType": "Paper",
+    "onlinePlayers": 3,
+    "uptimeMinutes": 120
+  },
+  "features": { "ai": true, "mcp": true, "aiOrchestration": false },
+  "npc": {
+    "totalCount": 1,
+    "byRegion": { "demo_sat": 1 },
+    "samples": [
+      {
+        "npcId": 1,
+        "name": "AdminBot",
+        "profession": "Administrator",
+        "regionId": "demo_sat",
+        "worldName": "world"
+      }
+    ]
+  },
+  "world": { "regionCount": 1, "placeCount": 1, "nodeCount": 1, "regionNames": ["demo_sat"], "placeNames": ["Sala"] },
+  "quests": { "activePlayerQuests": 0, "activeGlobalQuests": 0, "samples": [] }
+}

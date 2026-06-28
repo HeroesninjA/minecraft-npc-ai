@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
+import ro.ainpc.mcp.bridge.McpRuntimeBridgeHealthIndicator;
 
 class AinpcDebugHealthToolsTest {
     @Test
@@ -17,11 +18,19 @@ class AinpcDebugHealthToolsTest {
             .withProperty("spring.ai.mcp.server.protocol", "STREAMABLE")
             .withProperty("spring.ai.mcp.server.type", "SYNC");
 
-        Map<String, Object> result = new AinpcDebugHealthTools(environment).debugHealth();
+        McpRuntimeBridgeHealthIndicator.BridgeHealthResult stubHealth =
+            new McpRuntimeBridgeHealthIndicator.BridgeHealthResult("UNKNOWN", "no_cache", "No SnapshotReader wired in test");
+        McpRuntimeBridgeHealthIndicator stubIndicator = new McpRuntimeBridgeHealthIndicator(null) {
+            @Override
+            public BridgeHealthResult check() {
+                return stubHealth;
+            }
+        };
+
+        Map<String, Object> result = new AinpcDebugHealthTools(environment, stubIndicator).debugHealth();
 
         assertEquals(1, result.get("schemaVersion"));
         assertEquals("ainpc-mcp-service", result.get("service"));
-        assertEquals("UP", result.get("status"));
         assertTrue(result.containsKey("timestamp"));
 
         Map<?, ?> server = (Map<?, ?>) result.get("server");

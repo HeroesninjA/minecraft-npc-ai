@@ -1,7 +1,3 @@
-server:
-  address: 127.0.0.1
-  port: 39841
-
 spring:
   application:
     name: ainpc-mcp-service
@@ -12,6 +8,15 @@ spring:
         type: SYNC
         annotation-scanner:
           enabled: true
+  profiles:
+    active: static
+
+mcp:
+  mode: static
+
+server:
+  address: 127.0.0.1
+  port: 39841
 
 management:
   endpoints:
@@ -22,3 +27,4 @@ management:
     health:
       probes:
         enabled: true
+      show-details: always

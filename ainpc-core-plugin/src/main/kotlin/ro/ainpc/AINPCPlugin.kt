@@ -27,6 +27,7 @@ import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.mcp.McpRuntimeClient
 import ro.ainpc.mcp.McpRuntimeClientFactory
+import ro.ainpc.mcp.bridge.RuntimeSnapshotProducer
 import ro.ainpc.platform.AINPCPlatform
 import ro.ainpc.progression.ProgressionService
 import ro.ainpc.routine.RoutineService
@@ -63,6 +64,8 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var aiOrchestrationService: AIOrchestrationService
         private set
     lateinit var mcpRuntimeClient: McpRuntimeClient
+        private set
+    var snapshotProducer: RuntimeSnapshotProducer? = null
         private set
     lateinit var routineService: RoutineService
         private set
@@ -145,6 +148,7 @@ class AINPCPlugin : JavaPlugin() {
         logger.info("Initializare serviciu OpenAI...")
         openAIService = OpenAIService(this)
         mcpRuntimeClient = McpRuntimeClientFactory.create(this)
+        snapshotProducer = RuntimeSnapshotProducer(this).also { it.start() }
         aiOrchestrationService = AIOrchestrationService(this)
         openAIService.runDiagnosticsAsync("startup")
 
@@ -237,6 +241,7 @@ class AINPCPlugin : JavaPlugin() {
             logger.info("Salvare date NPC-uri...")
             npcManager.saveAllNPCs()
         }
+        snapshotProducer?.stop()
         if (::databaseManager.isInitialized) {
             logger.info("Inchidere conexiune baza de date...")
             databaseManager.close()

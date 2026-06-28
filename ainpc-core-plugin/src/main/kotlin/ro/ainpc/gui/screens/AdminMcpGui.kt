@@ -3,7 +3,6 @@ package ro.ainpc.gui.screens
 import com.google.gson.JsonParser
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -16,17 +15,11 @@ class AdminMcpGui : GuiScreen {
 
     override fun title(player: Player): String = "&0MCP Admin"
 
-    override fun size(player: Player): Int = 27
+    override fun size(player: Player): Int = 36
 
     override fun render(context: GuiRenderContext) {
         val plugin = context.plugin()
         val health = plugin.mcpRuntimeClient.health()
-        val featureFlags = if (health.available) {
-            val featureState = plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
-            parseFeatureFlags(featureState.contentJson)
-        } else {
-            emptyFeatureFlags()
-        }
 
         val statusMaterial = when {
             !health.enabled -> Material.GRAY_DYE
@@ -41,125 +34,111 @@ class AdminMcpGui : GuiScreen {
             else -> "&c"
         }
 
-        context.item(
-            4,
-            GuiItemFactory.item(
-                statusMaterial,
-                "${statusColor}MCP: ${health.status}",
-                listOf(
-                    "&7Enabled: &f${health.enabled}",
-                    "&7Available: &f${health.available}",
-                    "&7Endpoint: &f${health.endpoint}",
-                    "&7Detail: &f${health.detail}",
-                    "&7Health: &f${health.durationMillis}ms"
-                )
+        context.item(4, GuiItemFactory.item(statusMaterial,
+            "${statusColor}MCP: ${health.status}",
+            listOf(
+                "&7Enabled: &f${health.enabled}",
+                "&7Available: &f${health.available}",
+                "&7Endpoint: &f${health.endpoint}",
+                "&7Status: &f${health.status}",
+                "&7Detail: &f${health.detail}",
+                "&7Response: &f${health.durationMillis}ms"
             )
-        )
+        ))
 
-        context.item(
-            13,
-            GuiItemFactory.item(
-                Material.PAPER,
-                "&bFeature state",
-                listOf(
-                    "&7semanticContextExport: &f${featureFlags["semanticContextExport"] ?: "n/a"}",
-                    "&7semanticContextSummaryExport: &f${featureFlags["semanticContextSummaryExport"] ?: "n/a"}",
-                    "&7semanticRoutingSummaryExport: &f${featureFlags["semanticRoutingSummaryExport"] ?: "n/a"}",
-                    "&7routingSemanticContextSummaryExport: &f${featureFlags["routingSemanticContextSummaryExport"] ?: "n/a"}"
-                )
+        val featureResult = if (health.available) {
+            plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
+        } else null
+        val featureFlags = parseFeatureFlags(featureResult?.contentJson)
+
+        context.item(13, GuiItemFactory.item(Material.PAPER,
+            "&bFeature flags",
+            listOf(
+                "&7MCP: &f${featureFlags["mcp_enabled"] ?: "?"}",
+                "&7Bridge: &f${featureFlags["runtime_bridge"] ?: "?"}",
+                "&7Read-only: &f${featureFlags["read_only"] ?: "?"}",
+                "&7Tools: &f${featureFlags["tool_count"] ?: "?"}"
             )
-        )
+        ))
 
-        context.button(
-            10,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    Material.COMPASS,
-                    "&6Routing summary",
-                    listOf(
-                        "&7Deschide debugdump routing summary.",
-                        "&8Rezumat semantic agregat."
-                    )
-                ),
-            ) { click -> click.service().runCommand(click.player(), "ainpc debugdump routing summary") }
-        )
+        val snapshot = if (health.available) {
+            plugin.mcpRuntimeClient.callTool("ainpc.server.snapshot")
+        } else null
+        val runtimeInfo = parseSnapshot(snapshot?.contentJson)
 
-        context.button(
-            11,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    Material.BOOK,
-                    "&aWorld summary",
-                    listOf(
-                        "&7Deschide debugdump world summary.",
-                        "&8World lore + history."
-                    )
-                ),
-            ) { click -> click.service().runCommand(click.player(), "ainpc debugdump world summary") }
-        )
+        context.item(22, GuiItemFactory.item(Material.CLOCK,
+            "&eRuntime snapshot",
+            listOf(
+                "&7NPCs: &f${runtimeInfo["npcs"] ?: "?"}",
+                "&7Regiuni: &f${runtimeInfo["regions"] ?: "?"}",
+                "&7Places: &f${runtimeInfo["places"] ?: "?"}",
+                "&7Questuri: &f${runtimeInfo["quests"] ?: "?"}",
+                "&7Players: &f${runtimeInfo["players"] ?: "?"}"
+            )
+        ))
 
-        context.button(
-            12,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    Material.WRITABLE_BOOK,
-                    "&dStory summary",
-                    listOf(
-                        "&7Deschide debugdump story summary.",
-                        "&8Story context + history."
-                    )
-                ),
-            ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story summary") }
-        )
+        context.button(10, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMPASS, "&6World context",
+                listOf("&7Deschide debugdump world semantic context.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc debugdump world summary") })
 
-        context.button(
-            14,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    Material.KNOWLEDGE_BOOK,
-                    "&bQuest summary",
-                    listOf(
-                        "&7Deschide debugdump quest authoring summary.",
-                        "&8Quest lore + history."
-                    )
-                ),
-            ) { click -> click.service().runCommand(click.player(), "ainpc authoring summary") }
-        )
+        context.button(11, GuiButton.enabled(
+            GuiItemFactory.item(Material.BOOK, "&aStory context",
+                listOf("&7Deschide debugdump story semantic context.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story summary") })
 
-        context.button(
-            16,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    Material.SUNFLOWER,
-                    "&aRefresh",
-                    listOf("&7Reincarca starea MCP.")
-                ),
-            ) { click -> click.service().open(click.player(), GuiKey.MCP) }
-        )
+        context.button(14, GuiButton.enabled(
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&bQuest context",
+                listOf("&7Deschide debugdump quest semantic context.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc debugdump quest summary") })
+
+        context.button(15, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAP, "&dMapping context",
+                listOf("&7Deschide debugdump mapping semantic context.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping summary") })
+
+        context.button(16, GuiButton.enabled(
+            GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh",
+                listOf("&7Reincarca starea MCP.")),
+        ) { click -> click.service().open(click.player(), GuiKey.MCP) })
+
+        context.item(31, GuiItemFactory.item(
+            if (health.available && featureResult != null) Material.LIME_DYE else Material.RED_DYE,
+            "&bSnapshot path",
+            listOf("&7Fisier: &fdata/mcp-runtime-snapshot.json")
+        ))
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
 
-    private fun parseFeatureFlags(contentJson: String): Map<String, String> {
-        val keys = listOf(
-            "semanticContextExport",
-            "semanticContextSummaryExport",
-            "semanticRoutingSummaryExport",
-            "routingSemanticContextSummaryExport"
+    private fun parseFeatureFlags(contentJson: String?): Map<String, String> {
+        val root = runCatching { JsonParser.parseString(contentJson ?: "{}").asJsonObject }.getOrNull() ?: return emptyMap()
+        val mcp = root.getAsJsonObject("mcp")
+        val tools = root.getAsJsonObject("tools")
+        val bridge = root.getAsJsonObject("runtimeBridge")
+        return mapOf(
+            "mcp_enabled" to (mcp?.get("enabled")?.asBoolean?.toString() ?: "n/a"),
+            "runtime_bridge" to (bridge?.get("status")?.asString ?: "n/a"),
+            "read_only" to (tools?.get("readOnly")?.asBoolean?.toString() ?: "n/a"),
+            "tool_count" to (tools?.entrySet()?.size?.toString() ?: "n/a")
         )
-        val root = runCatching { JsonParser.parseString(contentJson).asJsonObject }.getOrNull()
-            ?: return keys.associateWith { "n/a" }
-        val tools = root.getAsJsonObject("tools") ?: return keys.associateWith { "n/a" }
-        return keys.associateWith { key ->
-            tools.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isBoolean }?.asBoolean?.toString() ?: "n/a"
-        }
     }
 
-    private fun emptyFeatureFlags(): Map<String, String> = listOf(
-        "semanticContextExport",
-        "semanticContextSummaryExport",
-        "semanticRoutingSummaryExport",
-        "routingSemanticContextSummaryExport"
-    ).associateWith { "n/a" }
+    private fun parseSnapshot(contentJson: String?): Map<String, String> {
+        val root = runCatching { JsonParser.parseString(contentJson ?: "{}").asJsonObject }.getOrNull() ?: return emptyMap()
+        val available = root.get("available")?.asBoolean ?: false
+        if (!available) return mapOf("error" to "bridge_indisponibil")
+        val npc = root.getAsJsonObject("npc")
+        val world = root.getAsJsonObject("world")
+        val quests = root.getAsJsonObject("quests")
+        val pluginData = root.getAsJsonObject("plugin")
+        return mapOf(
+            "npcs" to (npc?.get("totalCount")?.asString ?: "?"),
+            "regions" to (world?.get("regionCount")?.asString ?: "?"),
+            "places" to (world?.get("placeCount")?.asString ?: "?"),
+            "quests" to (quests?.get("activePlayerQuests")?.asString ?: "?"),
+            "players" to (pluginData?.get("onlinePlayers")?.asString ?: "?")
+        )
+    }
 }

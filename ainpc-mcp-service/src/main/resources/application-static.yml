@@ -1,0 +1,6 @@
+mcp:
+  mode: static
+  snapshot:
+    path: ""
+  audit:
+    enabled: false

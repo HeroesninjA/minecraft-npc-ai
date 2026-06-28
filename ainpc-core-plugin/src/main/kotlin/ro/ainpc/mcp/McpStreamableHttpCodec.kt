@@ -1,9 +1,11 @@
 package ro.ainpc.mcp
 
+import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 
 object McpStreamableHttpCodec {
+    private val gson = Gson()
     fun jsonRpcRequest(id: String, method: String, paramsJson: String = "{}"): String =
         """{"jsonrpc":"2.0","id":"$id","method":"$method","params":$paramsJson}"""
 
@@ -69,5 +71,5 @@ object McpStreamableHttpCodec {
 
     private fun isJsonPayload(candidate: String): Boolean = parseObject(candidate) != null
 
-    private fun quote(value: String): String = com.google.gson.Gson().toJson(value)
+    private fun quote(value: String): String = gson.toJson(value)
 }

@@ -8,8 +8,9 @@ dependencies {
     implementation platform("org.springframework.boot:spring-boot-dependencies:${rootProject.property('springBootVersion')}")
     implementation platform("org.springframework.ai:spring-ai-bom:${rootProject.property('springAiVersion')}")
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
+    implementation "com.google.code.gson:gson:${rootProject.property('gsonVersion')}"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

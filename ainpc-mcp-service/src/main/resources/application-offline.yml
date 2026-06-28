@@ -1,0 +1,6 @@
+mcp:
+  mode: offline
+  snapshot:
+    path: ""
+  audit:
+    enabled: false
