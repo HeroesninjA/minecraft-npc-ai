@@ -18,6 +18,17 @@ object DebugDumpStoryText {
     }
 
     @JvmStatic
+    fun buildSummaryText(plugin: AINPCPlugin): String {
+        val gson = GsonBuilder().disableHtmlEscaping().create()
+        val scenarios = plugin.scenarioEngine.getActiveScenarios()
+        val states = DebugDumpStoryStateJson.buildStoryStatesJson(plugin)
+        val events = DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson)
+        val progressionGaps = DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJson(plugin)
+
+        return buildSummaryText(scenarios.values.toList(), states, events, progressionGaps)
+    }
+
+    @JvmStatic
     fun buildStoryText(
         scenarios: List<ActiveScenario>,
         states: JsonObject,
@@ -31,6 +42,25 @@ object DebugDumpStoryText {
         appendEventSummary(sb, events)
         appendGapSummary(sb, progressionGaps)
         appendScenarios(sb, scenarios)
+        return DebugDumpSecrets.redactText(sb.toString())
+    }
+
+    @JvmStatic
+    fun buildSummaryText(
+        scenarios: List<ActiveScenario>,
+        states: JsonObject,
+        events: JsonObject,
+        progressionGaps: JsonObject,
+    ): String {
+        val sb = StringBuilder()
+        sb.append("AINPC Story Summary\n")
+        sb.append("Active scenarios: ").append(scenarios.size).append("\n")
+        sb.append("Region story states: ").append(states.getInt("region_state_count")).append("\n")
+        sb.append("Place story states: ").append(states.getInt("place_state_count")).append("\n")
+        sb.append("Story events rows: ").append(events.getInt("row_count")).append("\n")
+        sb.append("Story progression gaps: ").append(progressionGaps.getInt("gap_count")).append("\n")
+        sb.append("Progression cross-link available: ").append(events.getBoolean("progression_cross_link_available")).append("\n")
+        sb.append("Progression cross-link source rows: ").append(events.getInt("progression_cross_link_source_rows")).append("\n")
         return DebugDumpSecrets.redactText(sb.toString())
     }
 

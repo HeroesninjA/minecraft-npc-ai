@@ -15,6 +15,10 @@ class AuthoringCommandSupportTest {
             AuthoringCommandSupport.parse(arrayOf("authoring", "dump", "quest_b", "mechanic_y"))
         )
         assertEquals(
+            AuthoringCommandRequest(AuthoringCommandRequest.Mode.SUMMARY, "quest_c", "mechanic_z"),
+            AuthoringCommandSupport.parse(arrayOf("authoring", "summary", "quest_c", "mechanic_z"))
+        )
+        assertEquals(
             AuthoringCommandRequest(AuthoringCommandRequest.Mode.CLEAR, null, null),
             AuthoringCommandSupport.parse(arrayOf("authoring", "clear"))
         )
@@ -43,7 +47,7 @@ class AuthoringCommandSupportTest {
     @Test
     fun suggestsAuthoringModesWithAliases() {
         assertEquals(
-            listOf("clear", "dump", "forward", "next", "prev", "previous", "reset"),
+            listOf("clear", "dump", "forward", "next", "prev", "previous", "reset", "summary", "summarize"),
             AuthoringCommandSupport.modeSuggestions("")
         )
         assertEquals(
@@ -66,6 +70,12 @@ class AuthoringCommandSupportTest {
             AuthoringCommandPlan(false, AuthoringCommandRequest.Mode.DUMP),
             AuthoringCommandSupport.plan(
                 AuthoringCommandRequest(AuthoringCommandRequest.Mode.DUMP, "quest", "mechanic")
+            )
+        )
+        assertEquals(
+            AuthoringCommandPlan(false, AuthoringCommandRequest.Mode.SUMMARY),
+            AuthoringCommandSupport.plan(
+                AuthoringCommandRequest(AuthoringCommandRequest.Mode.SUMMARY, "quest", "mechanic")
             )
         )
         assertEquals(

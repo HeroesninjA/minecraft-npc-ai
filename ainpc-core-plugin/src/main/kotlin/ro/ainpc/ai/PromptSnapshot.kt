@@ -8,6 +8,7 @@ data class PromptSnapshot(
     val npcDescription: String,
     val environmentDescription: String,
     val topologyConsensusBlock: String,
+    val semanticWorldContext: String,
     val familyMembers: List<FamilyMemberSnapshot>,
     val profileCreated: Boolean,
     val profileSource: String,
@@ -34,6 +35,7 @@ data class PromptSnapshot(
     fun npcDescription(): String = npcDescription
     fun environmentDescription(): String = environmentDescription
     fun topologyConsensusBlock(): String = topologyConsensusBlock
+    fun semanticWorldContext(): String = semanticWorldContext
     fun familyMembers(): List<FamilyMemberSnapshot> = familyMembers
     fun profileCreated(): Boolean = profileCreated
     fun profileSource(): String = profileSource

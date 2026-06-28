@@ -25,6 +25,8 @@ import ro.ainpc.managers.EmotionManager
 import ro.ainpc.managers.FamilyManager
 import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
+import ro.ainpc.mcp.McpRuntimeClient
+import ro.ainpc.mcp.McpRuntimeClientFactory
 import ro.ainpc.platform.AINPCPlatform
 import ro.ainpc.progression.ProgressionService
 import ro.ainpc.routine.RoutineService
@@ -59,6 +61,8 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var openAIService: OpenAIService
         private set
     lateinit var aiOrchestrationService: AIOrchestrationService
+        private set
+    lateinit var mcpRuntimeClient: McpRuntimeClient
         private set
     lateinit var routineService: RoutineService
         private set
@@ -140,6 +144,7 @@ class AINPCPlugin : JavaPlugin() {
 
         logger.info("Initializare serviciu OpenAI...")
         openAIService = OpenAIService(this)
+        mcpRuntimeClient = McpRuntimeClientFactory.create(this)
         aiOrchestrationService = AIOrchestrationService(this)
         openAIService.runDiagnosticsAsync("startup")
 
@@ -261,6 +266,7 @@ class AINPCPlugin : JavaPlugin() {
         } else {
             aiOrchestrationService = AIOrchestrationService(this)
         }
+        mcpRuntimeClient = McpRuntimeClientFactory.create(this)
         openAIService.runDiagnosticsAsync("reload")
         if (::memoryManager.isInitialized) {
             dialogueEngine = DialogueEngine(this, openAIService)

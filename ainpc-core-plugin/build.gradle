@@ -25,5 +25,7 @@ tasks.named('jar', Jar) {
         exclude 'META-INF/*.SF'
         exclude 'META-INF/*.DSA'
         exclude 'META-INF/*.RSA'
+        exclude 'META-INF/versions/**/module-info.class'
+        exclude 'META-INF/services/java.sql.Driver'
     }
 }

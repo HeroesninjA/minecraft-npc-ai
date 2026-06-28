@@ -11,7 +11,9 @@ class DebugDumpStoryTextTest {
 
         assertTrue(source.contains("DebugDumpStoryStateJson.buildStoryStatesJson(plugin)"))
         assertTrue(source.contains("DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson)"))
+        assertTrue(source.contains("buildSummaryText(plugin: AINPCPlugin): String"))
         assertTrue(source.contains("Active scenarios"))
+        assertTrue(source.contains("AINPC Story Summary"))
         assertTrue(source.contains("scenarios.values.toList()"))
         assertTrue(source.contains("Progression cross-link available:"))
         assertTrue(source.contains("Story event progression links:"))

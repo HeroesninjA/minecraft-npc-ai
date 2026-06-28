@@ -111,14 +111,42 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 updateRelationship(npc, playerUuid, playerName, sentiment)
                 createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment)
                 PostProcessResult(generated.response(), sentiment, generated.relationship())
+            }.exceptionally { ex ->
+                val root = unwrapCompletionException(ex)
+                plugin.logger.warning(
+                    "Eroare la post-procesarea dialogului; trimit raspunsul generat: " +
+                        "${root.javaClass.simpleName}: ${root.message}"
+                )
+                if (plugin.config.getBoolean("debug.enabled", false)) {
+                    root.printStackTrace()
+                }
+                PostProcessResult(generated.response(), sentiment, generated.relationship())
             }.thenApply { postProcess ->
                 updateEmotions(npc, postProcess.relationship(), postProcess.sentiment())
                 DialogResult.success(postProcess.response())
             }
         }.exceptionally { ex ->
-            plugin.logger.warning("Eroare in procesarea dialogului: " + ex.message)
+            val root = unwrapCompletionException(ex)
+            plugin.logger.warning(
+                "Eroare in procesarea dialogului: ${root.javaClass.simpleName}: ${root.message}"
+            )
+            if (plugin.config.getBoolean("debug.enabled", false)) {
+                root.printStackTrace()
+            }
             DialogResult.error()
         }
+    }
+
+    private fun unwrapCompletionException(error: Throwable): Throwable {
+        var current = error
+        while (current.cause != null && (
+                current is java.util.concurrent.CompletionException ||
+                    current is java.util.concurrent.ExecutionException
+                )
+        ) {
+            current = current.cause!!
+        }
+        return current
     }
 
     /**

@@ -8,6 +8,7 @@ import ro.ainpc.ai.DialogHistory
 import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.NpcFactResolver
 import ro.ainpc.ai.OpenAIService
+import ro.ainpc.ai.OpenAISemanticWorldContextBuilder
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCEmotions
@@ -246,6 +247,9 @@ class DialogueEngine(
 
         val factResponse = resolveFactResponse(npc, context, request.message())
         if (factResponse != null) return CompletableFuture.completedFuture(factResponse)
+
+        val semanticFactResponse = OpenAISemanticWorldContextBuilder.resolveProfessionFact(plugin, npc, request.message())
+        if (semanticFactResponse != null) return CompletableFuture.completedFuture(semanticFactResponse)
 
         val intent = selectIntent(npc, context, request.message())
         val template = selectTemplate(npc, intent)

@@ -15,11 +15,14 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
+import ro.ainpc.ai.DialogManager
 import ro.ainpc.debug.DebugDumpSupport
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpService
 import ro.ainpc.debug.DebugDumpMappingText
+import ro.ainpc.debug.DebugDumpRoutingText
+import ro.ainpc.debug.DebugDumpWorldAdminJson
 import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.debug.WorldMappingSemanticIndex
 import ro.ainpc.engine.*
@@ -242,6 +245,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "population" -> handlePopulation(sender, args)
             "audit" -> handleAudit(sender, args)
             "debugdump" -> handleDebugDump(sender, args)
+            "debugdialog" -> handleDebugDialog(sender, args)
             "scenario" -> handleScenario(sender, args)
             "list" -> handleList(sender, args)
             "family" -> handleFamily(sender, args)
@@ -2363,10 +2367,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "nodes", "node" -> handleDebugDumpNodes(sender, args)
             "npc_bound", "npc_bounds", "npcbound", "npcbnd" -> handleDebugDumpNpcBound(sender, args)
             "mapping" -> handleDebugDumpMapping(sender, args)
+            "routing" -> handleDebugDumpRouting(sender, args)
             "story" -> handleDebugDumpStory(sender, args)
             "authoring" -> handleDebugDumpAuthoring(sender, args)
             "ai", "openai" -> handleDebugDumpAi(sender, args)
             "runtime" -> handleDebugDumpRuntime(sender)
+            "mcp" -> handleDebugDumpMcp(sender)
             "features", "feature" -> handleDebugDumpFeatures(sender)
             "scenario" -> handleDebugDumpScenario(sender)
             "progression", "progressions", "prog" -> handleDebugDumpProgression(sender)
@@ -2378,16 +2384,105 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun sendDebugDumpUsage(sender: CommandSender) {
         plugin.messageUtils.send(sender, "&6=== /ainpc debugdump ===")
-        plugin.messageUtils.send(sender, "&e/ainpc debugdump world &7- Dump world admin state")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump world [summary] &7- Dump world admin state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump regions &7- List all regions")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump places &7- List all places")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump nodes &7- List all nodes")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump npcbound &7- List NPC-world bindings")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump mapping &7- Dump full mapping")
-        plugin.messageUtils.send(sender, "&e/ainpc debugdump story &7- Dump story state")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump routing [summary] &7- Dump semantic routing summary")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump story [summary] &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump mcp &7- Probe Spring AI MCP sidecar")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump scenario &7- Show active scenario state")
+    }
+
+    private fun handleDebugDialog(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUsage: /ainpc debugdialog <player> <message...>")
+            return true
+        }
+        val player = Bukkit.getPlayerExact(args[1])
+        if (player == null) {
+            plugin.messageUtils.send(sender, "&cJucatorul nu este online: ${args[1]}")
+            return true
+        }
+        val message = args.drop(2).joinToString(" ").trim()
+        if (message.isBlank()) {
+            plugin.messageUtils.send(sender, "&cMesajul este gol.")
+            return true
+        }
+        val npc = plugin.npcManager.getActiveNPCsNear(player.location, 24.0)
+            .minByOrNull { candidate -> (candidate.location ?: player.location).distanceSquared(player.location) }
+            ?: plugin.npcManager.getAllNPCs().firstOrNull { it.isSpawned() }
+        if (npc == null) {
+            plugin.messageUtils.send(sender, "&cNu exista NPC spawnat pentru smoke test.")
+            return true
+        }
+        val distance = (npc.location ?: player.location).distance(player.location)
+        plugin.messageUtils.send(sender, "&eDebug dialog: &f${player.name} -> ${npc.name}: &7$message")
+        val request = DialogManager.DialogRequest(
+            npc,
+            player,
+            message,
+            true,
+            true,
+            "debugdialog_command",
+            1,
+            distance
+        )
+        plugin.dialogManager.processMessage(request).thenAccept { result ->
+            val response = when (result?.status) {
+                DialogManager.DialogStatus.SUCCESS -> result.response ?: ""
+                DialogManager.DialogStatus.COOLDOWN -> "COOLDOWN"
+                DialogManager.DialogStatus.ERROR -> "ERROR"
+                null -> "NULL"
+            }
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                plugin.messageUtils.send(sender, "&eDebug dialog status: &f${result?.status ?: "null"}")
+                plugin.messageUtils.send(sender, "&7${response.take(500)}")
+                plugin.logger.info("[DebugDialog] ${player.name} -> ${npc.name}: $message")
+                plugin.logger.info("[DebugDialog] status=${result?.status ?: "null"} response=${response.take(500)}")
+            })
+        }.exceptionally { ex ->
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                plugin.logger.warning("[DebugDialog] Eroare: ${ex.message}")
+                plugin.messageUtils.send(sender, "&cDebug dialog error: ${ex.message}")
+            })
+            null
+        }
+        return true
+    }
+
+    private fun handleDebugDumpMcp(sender: CommandSender): Boolean {
+        plugin.messageUtils.send(sender, "&6=== MCP Runtime Dump ===")
+        val health = plugin.mcpRuntimeClient.health()
+        plugin.messageUtils.send(sender, "&eStatus: &f${health.status}")
+        plugin.messageUtils.send(sender, "&eEndpoint: &f${health.endpoint}")
+        plugin.messageUtils.send(sender, "&eDisponibil: &f${if (health.available) "&ada" else "&cnu"} &8(${health.durationMillis}ms)")
+        plugin.messageUtils.send(sender, "&7${health.detail}")
+        if (!health.enabled || !health.available) {
+            plugin.messageUtils.send(sender, "&7Tool-call omis: MCP nu este activ sau disponibil.")
+            return true
+        }
+
+        val featureState = plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
+        plugin.messageUtils.send(sender, "&eTool ainpc.feature.state: &f${featureState.status} &8(${featureState.durationMillis}ms)")
+        if (featureState.available) {
+            plugin.messageUtils.send(sender, "&7${featureState.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${featureState.detail}")
+        }
+
+        val debugHealth = plugin.mcpRuntimeClient.callTool("ainpc.debug.health")
+        plugin.messageUtils.send(sender, "&eTool ainpc.debug.health: &f${debugHealth.status} &8(${debugHealth.durationMillis}ms)")
+        if (debugHealth.available) {
+            plugin.messageUtils.send(sender, "&7${debugHealth.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${debugHealth.detail}")
+        }
+        return true
     }
 
     private fun handleDebugDumpScenario(sender: CommandSender): Boolean {
@@ -2417,6 +2512,20 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val worldAdmin = plugin.platform?.worldAdminService
         if (worldAdmin == null || !worldAdmin.isEnabled) {
             plugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
+            return true
+        }
+        val summaryOnly = args.getOrNull(2)?.lowercase() in setOf("summary", "summarize")
+        if (summaryOnly) {
+            val snapshot = DebugDumpWorldAdminJson.buildWorldAdminSnapshotJson(worldAdmin, null)
+            plugin.messageUtils.send(sender, "&6=== World Admin Summary ===")
+            plugin.messageUtils.send(sender, "&eDisponibil: &f${snapshot.get("available").asBoolean}")
+            plugin.messageUtils.send(sender, "&eActiv: &f${snapshot.get("enabled").asBoolean}")
+            plugin.messageUtils.send(sender, "&eAuto index: &f${snapshot.get("auto_index_enabled").asBoolean}")
+            plugin.messageUtils.send(sender, "&eWorldMode: &f${snapshot.get("world_mode").asString}")
+            plugin.messageUtils.send(sender, "&eRegiuni: &f${snapshot.get("region_count").asInt}")
+            plugin.messageUtils.send(sender, "&ePlaces: &f${snapshot.get("place_count").asInt}")
+            plugin.messageUtils.send(sender, "&eNoduri: &f${snapshot.get("node_count").asInt}")
+            plugin.messageUtils.send(sender, "&eChunk-uri indexate: &f${snapshot.get("indexed_region_chunk_count").asInt}/${snapshot.get("indexed_place_chunk_count").asInt}/${snapshot.get("indexed_node_chunk_count").asInt}")
             return true
         }
         plugin.messageUtils.send(sender, "&6=== World Admin Dump ===")
@@ -2481,8 +2590,29 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
             return true
         }
-        plugin.messageUtils.send(sender, "&6=== Full Mapping Dump ===")
-        val text = DebugDumpMappingText.buildMappingText(plugin)
+        val summaryOnly = args.getOrNull(2)?.lowercase() in setOf("summary", "summarize")
+        val text = if (summaryOnly) {
+            DebugDumpMappingText.buildSummaryText(plugin)
+        } else {
+            DebugDumpMappingText.buildMappingText(plugin)
+        }
+        plugin.messageUtils.send(sender, if (summaryOnly) "&6=== Mapping Summary ===" else "&6=== Full Mapping Dump ===")
+        for (line in text.split("\n")) {
+            if (line.isNotBlank()) {
+                plugin.messageUtils.send(sender, "&7$line")
+            }
+        }
+        return true
+    }
+
+    private fun handleDebugDumpRouting(sender: CommandSender, args: Array<String>): Boolean {
+        val summaryOnly = args.getOrNull(2)?.lowercase() in setOf("summary", "summarize")
+        val text = if (summaryOnly) {
+            DebugDumpRoutingText.buildSummaryText(plugin)
+        } else {
+            DebugDumpRoutingText.buildRoutingText(plugin)
+        }
+        plugin.messageUtils.send(sender, if (summaryOnly) "&6=== Routing Summary ===" else "&6=== Routing Dump ===")
         for (line in text.split("\n")) {
             if (line.isNotBlank()) {
                 plugin.messageUtils.send(sender, "&7$line")
@@ -2492,8 +2622,13 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     private fun handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean {
-        val text = DebugDumpStoryText.buildStoryText(plugin)
-        plugin.messageUtils.send(sender, "&6=== Story Dump ===")
+        val summaryOnly = args.getOrNull(2)?.lowercase() in setOf("summary", "summarize")
+        val text = if (summaryOnly) {
+            DebugDumpStoryText.buildSummaryText(plugin)
+        } else {
+            DebugDumpStoryText.buildStoryText(plugin)
+        }
+        plugin.messageUtils.send(sender, if (summaryOnly) "&6=== Story Summary ===" else "&6=== Story Dump ===")
         for (line in text.split("\n")) {
             if (line.isNotBlank()) {
                 plugin.messageUtils.send(sender, "&7$line")

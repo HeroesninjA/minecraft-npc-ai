@@ -23,6 +23,7 @@ enum class GuiKey(
     MANAGER("manager", "Manager NPC"),
     AUDIT("audit", "Audit"),
     DEBUG("debug", "Debug"),
+    MCP("mcp", "MCP"),
     ADMIN_MAPPING("admin_mapping", "Admin Mapping"),
     ADMIN_QUEST("admin_quest", "Admin Quest"),
     ADMIN_HUB("admin_hub", "Admin Hub"),
@@ -70,6 +71,7 @@ enum class GuiKey(
                 "shop", "magazin", "comert", "comercial", "cumparaturi", "negustor", "market", "piata" -> "shop"
                 "admin", "npc_manager", "manager_npc" -> "manager"
                 "debugdump", "dump" -> "debug"
+                "mcpadmin", "mcp_admin", "mcp", "admin_mcp", "adminmcp" -> "mcp"
                 "adminmapping", "admin_mapping", "mapping_admin", "edit_mapping" -> "admin_mapping"
                 "adminquest", "admin_quest", "quest_admin", "edit_quest" -> "admin_quest"
                 "playerhub", "player_hub", "jucator", "player" -> "player_hub"

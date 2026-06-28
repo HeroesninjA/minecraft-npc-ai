@@ -12,5 +12,7 @@ class QuestAuthoringGuiDiagnosticsTest {
         assertTrue(source.contains("DebugDumpAuthoringText.buildAuthoringText(plugin, player, preferredQuestSelector, preferredMechanicId)"))
         assertTrue(source.contains("ainpc authoring dump"))
         assertTrue(source.contains("Authoring diagnostics"))
+        assertTrue(source.contains("QUEST_AUTHORING_SUMMARY"))
+        assertTrue(source.contains("Quest authoring summary"))
     }
 }

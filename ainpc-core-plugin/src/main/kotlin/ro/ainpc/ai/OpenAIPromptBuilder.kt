@@ -80,6 +80,16 @@ object OpenAIPromptBuilder {
             }
         }
 
+        if (snapshot.semanticWorldContext().isNotBlank()) {
+            prompt.append("=== CONTEXT SEMANTIC AL LUMII ===\n")
+            prompt.append("WORLD_LORE este pentru locuri, orientare si ce exista in zona.\n")
+            prompt.append("WORLD_HISTORY este pentru trecut, evenimente si evolutia regiunii.\n")
+            prompt.append("NPC_LORE este pentru povestea, rolul si ocupatia NPC-urilor.\n")
+            prompt.append("STORY_SIGNALS este pentru indicii narative si semnale de progresie.\n")
+            prompt.append("Daca jucatorul intreaba cine are o meserie, raspunde doar cu NPC-uri listate aici.\n")
+            prompt.append(snapshot.semanticWorldContext()).append("\n\n")
+        }
+
         if (snapshot.familyMembers().isNotEmpty()) {
             prompt.append("=== FAMILIA TA ===\n")
             for (member in snapshot.familyMembers()) {

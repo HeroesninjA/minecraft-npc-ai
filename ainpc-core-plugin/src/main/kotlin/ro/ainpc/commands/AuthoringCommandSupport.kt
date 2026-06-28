@@ -8,6 +8,7 @@ data class AuthoringCommandRequest(
     enum class Mode {
         OPEN,
         DUMP,
+        SUMMARY,
         CLEAR,
         PREV,
         NEXT
@@ -25,9 +26,9 @@ data class AuthoringResolvedSelection(
 )
 
 object AuthoringCommandSupport {
-    private val primaryAliases = listOf("next", "prev", "clear", "dump")
-    private val secondaryAliases = listOf("next" to "forward", "prev" to "previous", "clear" to "reset")
-    private val modeAliases = listOf("next", "forward", "prev", "previous", "clear", "reset", "dump")
+    private val primaryAliases = listOf("next", "prev", "clear", "dump", "summary")
+    private val secondaryAliases = listOf("next" to "forward", "prev" to "previous", "clear" to "reset", "dump" to "summarize")
+    private val modeAliases = listOf("next", "forward", "prev", "previous", "clear", "reset", "dump", "summary", "summarize")
 
     @JvmStatic
     fun parse(args: Array<String>): AuthoringCommandRequest {
@@ -35,6 +36,11 @@ object AuthoringCommandSupport {
         return when (action) {
             "dump" -> AuthoringCommandRequest(
                 AuthoringCommandRequest.Mode.DUMP,
+                args.getOrNull(2)?.takeIf { it.isNotBlank() },
+                args.getOrNull(3)?.takeIf { it.isNotBlank() }
+            )
+            "summary", "summarize" -> AuthoringCommandRequest(
+                AuthoringCommandRequest.Mode.SUMMARY,
                 args.getOrNull(2)?.takeIf { it.isNotBlank() },
                 args.getOrNull(3)?.takeIf { it.isNotBlank() }
             )
@@ -77,6 +83,7 @@ object AuthoringCommandSupport {
                     "prev", "previous" -> AuthoringCommandRequest.Mode.PREV
                     "clear", "reset" -> AuthoringCommandRequest.Mode.CLEAR
                     "dump" -> AuthoringCommandRequest.Mode.DUMP
+                    "summary", "summarize" -> AuthoringCommandRequest.Mode.SUMMARY
                     else -> null
                 }
                 mode == null || seen.add(mode)
@@ -86,7 +93,8 @@ object AuthoringCommandSupport {
     @JvmStatic
     fun plan(request: AuthoringCommandRequest): AuthoringCommandPlan {
         return when (request.mode) {
-            AuthoringCommandRequest.Mode.DUMP -> AuthoringCommandPlan(false, request.mode)
+            AuthoringCommandRequest.Mode.DUMP,
+            AuthoringCommandRequest.Mode.SUMMARY -> AuthoringCommandPlan(false, request.mode)
             AuthoringCommandRequest.Mode.OPEN,
             AuthoringCommandRequest.Mode.CLEAR,
             AuthoringCommandRequest.Mode.PREV,

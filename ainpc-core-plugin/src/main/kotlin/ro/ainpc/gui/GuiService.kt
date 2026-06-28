@@ -23,6 +23,7 @@ import ro.ainpc.gui.screens.WorldRegionGui
 import ro.ainpc.gui.screens.AdminMappingGui
 import ro.ainpc.gui.screens.AdminQuestGui
 import ro.ainpc.gui.screens.AdminHubGui
+import ro.ainpc.gui.screens.AdminMcpGui
 import ro.ainpc.gui.screens.CreatorHubGui
 import ro.ainpc.gui.screens.PlayerHubGui
 import ro.ainpc.gui.screens.QuestCreatorGui
@@ -182,6 +183,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(WorldRegionGui())
         register(AdminMappingGui())
         register(AdminQuestGui())
+        register(AdminMcpGui())
         register(StatsGui())
         register(NpcInteractionGui())
         register(RoutineGui())
@@ -592,6 +594,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.AUDIT -> hasAny(player, "ainpc.admin", "ainpc.gui.audit")
             GuiKey.DEBUG -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
             GuiKey.ADMIN_MAPPING, GuiKey.ADMIN_QUEST -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.quest")
+            GuiKey.MCP -> hasAny(player, "ainpc.admin", "ainpc.gui.debug", "ainpc.gui.mcp")
             GuiKey.ADMIN_HUB -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.audit", "ainpc.gui.debug")
             GuiKey.CREATOR_HUB -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world", "ainpc.gui.quest")
             GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")

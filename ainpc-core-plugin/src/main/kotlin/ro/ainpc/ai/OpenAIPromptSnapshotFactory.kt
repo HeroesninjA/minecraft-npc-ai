@@ -45,6 +45,7 @@ object OpenAIPromptSnapshotFactory {
             npcDescription,
             environmentDescription,
             topologyConsensusBlock,
+            OpenAISemanticWorldContextBuilder.build(plugin, npc),
             familyMembers,
             npc.isProfileCreated(),
             npc.profileSource,

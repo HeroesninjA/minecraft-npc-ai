@@ -1,0 +1,24 @@
+server:
+  address: 127.0.0.1
+  port: 39841
+
+spring:
+  application:
+    name: ainpc-mcp-service
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        type: SYNC
+        annotation-scanner:
+          enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

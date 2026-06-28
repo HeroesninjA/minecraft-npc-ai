@@ -1,6 +1,7 @@
 package ro.ainpc.managers
 
 import org.bukkit.entity.Player
+import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.events.AINPCEventSource
 import ro.ainpc.api.events.npc.AINPCMemoryRecordedEvent
@@ -377,6 +378,12 @@ class MemoryManager(private val plugin: AINPCPlugin) {
                 mapOf("source" to "MemoryManager")
             )
         )
-        plugin.server.pluginManager.callEvent(event)
+        if (Bukkit.isPrimaryThread()) {
+            plugin.server.pluginManager.callEvent(event)
+        } else {
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                plugin.server.pluginManager.callEvent(event)
+            })
+        }
     }
 }

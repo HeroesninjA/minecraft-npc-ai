@@ -337,6 +337,30 @@ class JsonYamlContractFixturesTest {
         assertTrue(text.contains("Story events rows: 1"))
     }
 
+    @Test
+    fun storySummaryTextHelperUsesProvidedSnapshots() {
+        val scenario = ActiveScenario(java.util.UUID.randomUUID(), ScenarioTemplate(ScenarioType.QUEST))
+        val states = JsonObject().apply {
+            addProperty("region_state_count", 1)
+            addProperty("place_state_count", 1)
+        }
+        val events = JsonObject().apply {
+            addProperty("row_count", 1)
+            addProperty("progression_cross_link_available", true)
+            addProperty("progression_cross_link_source_rows", 1)
+        }
+        val gaps = JsonObject().apply {
+            addProperty("gap_count", 0)
+        }
+
+        val text = DebugDumpStoryText.buildSummaryText(listOf(scenario), states, events, gaps)
+
+        assertTrue(text.contains("AINPC Story Summary"))
+        assertTrue(text.contains("Active scenarios: 1"))
+        assertTrue(text.contains("Region story states: 1"))
+        assertTrue(text.contains("Story progression gaps: 0"))
+    }
+
     private fun loadFixture(resourcePath: String, fileName: String) = run {
         val resourceUrl = requireNotNull(javaClass.classLoader.getResource(resourcePath)) {
             "Missing test fixture $resourcePath"

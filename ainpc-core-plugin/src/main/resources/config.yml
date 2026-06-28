@@ -59,7 +59,19 @@ features:
   routine: true
   simulation: true
   ai: true
+  mcp: true
   generation: true
+
+# Integrare optionala cu sidecar-ul runtime Spring AI MCP.
+# Implicit pornit cu fail-open: pluginul functioneaza in continuare daca sidecar-ul lipseste.
+mcp:
+  enabled: true
+  base_url: "http://127.0.0.1:39841/mcp"
+  token: ""
+  auto_start: false
+  connect_timeout_seconds: 5
+  read_timeout_seconds: 20
+  fail_open: true
 
 # Setari spawn si jurnalizare batch
 spawn:

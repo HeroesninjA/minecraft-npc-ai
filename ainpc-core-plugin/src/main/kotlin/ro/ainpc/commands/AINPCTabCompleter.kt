@@ -1050,7 +1050,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         )
         private val AUDIT_MODES = listOf("all", "npc", "world", "db", "spawn", "quest", "wand")
         private val AUDIT_QUEST_OPTIONS = listOf("strict", "full", "offline")
-        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai", "scenario")
+        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai", "mcp", "scenario")
         private val MIGRATION_TARGETS = listOf("households")
         private val MIGRATION_MODES = listOf("dryrun", "apply")
         private val POPULATION_ACTIONS = listOf("plan", "inspect")

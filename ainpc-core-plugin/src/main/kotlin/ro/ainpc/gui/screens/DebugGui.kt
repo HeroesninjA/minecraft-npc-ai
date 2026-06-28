@@ -127,6 +127,12 @@ class DebugGui : GuiScreen {
                 GuiItemFactory.item(Material.LIME_DYE, "&aTest OpenAI", "&7Ruleaza /ainpc test."),
             ) { click -> click.service().runCommand(click.player(), "ainpc test") }
         )
+        context.button(
+            20,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.ENDER_EYE, "&bMCP", listOf("&7Deschide MCP admin.", "&7Health, flags, routing.")),
+            ) { click -> click.service().open(click.player(), GuiKey.MCP) }
+        )
 
         context.button(28, GuiButton.enabled(
             GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.", "&8Admin separat."),

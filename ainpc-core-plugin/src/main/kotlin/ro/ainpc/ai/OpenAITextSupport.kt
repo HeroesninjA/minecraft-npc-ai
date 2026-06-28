@@ -382,6 +382,11 @@ object OpenAITextSupport {
     fun generateFallbackResponse(snapshot: PromptSnapshot): String {
         val normalized = snapshot.playerMessage().lowercase(Locale.ROOT).trim()
         val occupation = if (snapshot.occupation().isNotBlank()) snapshot.occupation() else "locuitor"
+        val semanticFact = resolveSemanticFactFallback(snapshot, normalized)
+        if (semanticFact != null) {
+            return semanticFact
+        }
+
         val factResponse = NpcFactResolver.resolve(snapshot.playerMessage(), NpcFactResolver.NpcFacts(
             snapshot.npcName(),
             snapshot.occupation(),
@@ -472,5 +477,228 @@ object OpenAITextSupport {
         }
 
         return pickResponse(snapshot.npcUuid(), normalized, responses)
+    }
+
+    private fun resolveSemanticFactFallback(snapshot: PromptSnapshot, normalizedMessage: String): String? {
+        if (!containsAny(normalizedMessage, "cine ", "care ", "unde ", "istor", "povest", "lore", "history", "semnal", "indici")) {
+            return null
+        }
+        val context = snapshot.semanticWorldContext()
+        if (context.isBlank()) {
+            return null
+        }
+
+        val worldLoreLines = extractSemanticSection(context, "WORLD_LORE:")
+        val worldHistoryLines = extractSemanticSection(context, "WORLD_HISTORY:")
+        val npcLoreLines = extractSemanticSection(context, "NPC_LORE:")
+        val storySignalsLine = extractSemanticLine(context, "STORY_SIGNALS:")
+        val professionAnswer = extractSemanticLine(context, "Raspuns factual pentru intrebari despre meserii:")
+
+        val wantsHistory = containsAny(normalizedMessage, "istor", "history", "povest", "trecut", "eveniment", "intampl")
+        val wantsLore = containsAny(normalizedMessage, "lore", "povest", "poveste", "despre")
+        val wantsPlace = containsAny(normalizedMessage, "unde ", "locuri", "zona", "sat", "aici")
+        val wantsPerson = containsAny(normalizedMessage, "cine ", "care ", "meserie", "lucreaza", "lucrează")
+        val wantsSignals = containsAny(normalizedMessage, "semnal", "indici")
+
+        return when {
+            wantsSignals -> buildStorySignalsAnswer(storySignalsLine)
+                ?: buildWorldHistoryAnswer(worldHistoryLines)
+                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+                ?: buildWorldLoreAnswer(worldLoreLines)
+            wantsHistory -> buildWorldHistoryAnswer(worldHistoryLines)
+                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+                ?: buildWorldLoreAnswer(worldLoreLines)
+            wantsLore -> buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+                ?: buildWorldLoreAnswer(worldLoreLines)
+                ?: buildProfessionAnswer(professionAnswer)
+            wantsPlace -> buildWorldLoreAnswer(worldLoreLines)
+                ?: buildProfessionAnswer(professionAnswer)
+            wantsPerson -> buildProfessionAnswer(professionAnswer)
+                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+            else -> buildProfessionAnswer(professionAnswer)
+                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+                ?: buildWorldLoreAnswer(worldLoreLines)
+                ?: buildWorldHistoryAnswer(worldHistoryLines)
+        }
+    }
+
+    private fun extractSemanticSection(context: String, header: String): List<String> {
+        val lines = context.lineSequence().map { it.trimEnd() }.toList()
+        val startIndex = lines.indexOfFirst { it.trim() == header }
+        if (startIndex < 0) {
+            return emptyList()
+        }
+
+        val endIndex = (startIndex + 1 until lines.size).firstOrNull { index ->
+            val trimmed = lines[index].trim()
+            trimmed == "WORLD_LORE:" ||
+                trimmed == "WORLD_HISTORY:" ||
+                trimmed == "NPC_LORE:" ||
+                trimmed.startsWith("STORY_SIGNALS:") ||
+                trimmed.startsWith("Raspuns factual pentru intrebari despre meserii:")
+        } ?: lines.size
+
+        return lines.subList(startIndex + 1, endIndex)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+    }
+
+    private fun extractSemanticLine(context: String, prefix: String): String? {
+        return context.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith(prefix) }
+            ?.removePrefix(prefix)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun buildProfessionAnswer(professionAnswer: String?): String? {
+        return professionAnswer?.takeIf { it.isNotBlank() }
+    }
+
+    private fun buildWorldHistoryAnswer(historyLines: List<String>): String? {
+        if (historyLines.isEmpty()) {
+            return null
+        }
+        val regionLine = historyLines.firstOrNull { it.startsWith("- region_story_mode=") }
+        val state = extractField(regionLine, "state")
+        val pool = extractTailField(regionLine, "pool")
+        val eventLines = historyLines.filter { line ->
+            line.startsWith("- ") &&
+                !line.startsWith("- region_story_mode=") &&
+                line != "- recent_events:"
+        }
+        val eventTitles = eventLines.mapNotNull { line ->
+            line.substringAfter(" - ", line.removePrefix("- ").trim()).trim()
+                .takeIf { it.isNotBlank() }
+        }.take(2)
+
+        return buildString {
+            if (state.isNotBlank()) {
+                append("Starea istorica a regiunii este ").append(state).append(".")
+            }
+            if (pool.isNotBlank()) {
+                if (isNotEmpty()) append(' ')
+                append("Teme de istorie: ").append(pool).append('.')
+            }
+            if (eventTitles.isNotEmpty()) {
+                if (isNotEmpty()) append(' ')
+                append("Eveniment recent: ").append(eventTitles.joinToString("; ")).append('.')
+            }
+        }.takeIf { it.isNotBlank() }
+    }
+
+    private fun buildWorldLoreAnswer(loreLines: List<String>): String? {
+        if (loreLines.isEmpty()) {
+            return null
+        }
+        val regionLine = loreLines.firstOrNull { it.startsWith("- region=") }
+        val placeLine = loreLines.firstOrNull { it.startsWith("- current_place=") }
+        val nearbyPlaces = loreLines.filter { line ->
+            line.startsWith("- ") &&
+                !line.startsWith("- region=") &&
+                !line.startsWith("- current_place=") &&
+                !line.startsWith("- nearby_places:")
+        }.take(3)
+
+        val regionName = extractField(regionLine, "name")
+        val placeName = extractField(placeLine, "name")
+        val placeType = extractField(placeLine, "type")
+
+        return buildString {
+            if (placeName.isNotBlank() && regionName.isNotBlank()) {
+                append("Sunt in ").append(placeName).append(" din ").append(regionName)
+                if (placeType.isNotBlank()) {
+                    append(" (").append(placeType).append(")")
+                }
+                append('.')
+            } else if (placeName.isNotBlank()) {
+                append("Sunt in ").append(placeName)
+                if (placeType.isNotBlank()) {
+                    append(" (").append(placeType).append(")")
+                }
+                append('.')
+            } else if (regionName.isNotBlank()) {
+                append("Sunt in ").append(regionName).append('.')
+            }
+            if (nearbyPlaces.isNotEmpty()) {
+                val summary = nearbyPlaces.mapNotNull { line ->
+                    val name = line.substringAfter("- ").substringBefore(", type=").trim()
+                    val type = extractField(line, "type")
+                    if (name.isBlank()) null else if (type.isBlank()) name else "$name ($type)"
+                }
+                if (summary.isNotEmpty()) {
+                    if (isNotEmpty()) append(' ')
+                    append("Locuri din zona: ").append(summary.joinToString("; ")).append('.')
+                }
+            }
+        }.takeIf { it.isNotBlank() }
+    }
+
+    private fun buildNpcLoreAnswer(npcLines: List<String>, normalizedMessage: String): String? {
+        if (npcLines.isEmpty()) {
+            return null
+        }
+        val selectedLine = npcLines.firstOrNull { line ->
+            val name = line.substringAfter("- ").substringBefore(",").trim().lowercase(Locale.ROOT)
+            val occupation = extractField(line, "occupation").lowercase(Locale.ROOT)
+            normalizedMessage.contains(name) || normalizedMessage.contains(occupation)
+        } ?: npcLines.first()
+
+        val name = selectedLine.substringAfter("- ").substringBefore(",").trim()
+        val occupation = extractField(selectedLine, "occupation")
+        val work = extractField(selectedLine, "work")
+        val lore = extractTailField(selectedLine, "lore")
+
+        return buildString {
+            if (name.isNotBlank()) {
+                append(name)
+            }
+            if (occupation.isNotBlank()) {
+                if (isNotEmpty()) append(" este ") else append("Este ")
+                append(occupation)
+            }
+            if (work.isNotBlank()) {
+                append(" si lucreaza la ").append(work)
+            }
+            if (lore.isNotBlank()) {
+                append(". Lore: ").append(lore)
+            } else if (isNotEmpty()) {
+                append('.')
+            }
+        }.takeIf { it.isNotBlank() }
+    }
+
+    private fun buildStorySignalsAnswer(signalsLine: String?): String? {
+        val signals = signalsLine.orEmpty()
+        if (signals.isBlank()) {
+            return null
+        }
+        return "Semnalele povestii sunt: $signals."
+    }
+
+    private fun extractField(line: String?, key: String): String {
+        if (line.isNullOrBlank()) {
+            return ""
+        }
+        val token = "$key="
+        val index = line.indexOf(token)
+        if (index < 0) {
+            return ""
+        }
+        val valueStart = index + token.length
+        return line.substring(valueStart).substringBefore(",").trim()
+    }
+
+    private fun extractTailField(line: String?, key: String): String {
+        if (line.isNullOrBlank()) {
+            return ""
+        }
+        val token = "$key="
+        val index = line.indexOf(token)
+        if (index < 0) {
+            return ""
+        }
+        return line.substring(index + token.length).trim()
     }
 }

@@ -1,0 +1,23 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+description = 'AINPC MCP Service'
+
+dependencies {
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${rootProject.property('springBootVersion')}")
+    implementation platform("org.springframework.ai:spring-ai-bom:${rootProject.property('springAiVersion')}")
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('jar', Jar) {
+    enabled = false
+}
+
+tasks.named('bootJar') {
+    archiveFileName = 'ainpc-mcp-service.jar'
+}

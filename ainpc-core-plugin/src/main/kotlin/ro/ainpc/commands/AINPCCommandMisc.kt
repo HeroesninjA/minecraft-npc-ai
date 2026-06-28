@@ -16,6 +16,7 @@ import ro.ainpc.gui.GuiRole
 import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
+import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.world.mapping.MappingDraft
 import ro.ainpc.world.mapping.MappingDraftKind
 import ro.ainpc.world.mapping.MappingWandMode
@@ -319,7 +320,7 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
     if (args.size > 4) {
         ainpcCommandMiscPlugin.messageUtils.send(
             sender,
-            "&cUtilizare: /ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]"
+            "&cUtilizare: /ainpc authoring [next|prev|clear|summary|questSelector [mechanicId] | dump [questSelector] [mechanicId]]"
         )
         return true
     }
@@ -327,6 +328,7 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
     val request = AuthoringCommandSupport.parse(args)
     val plan = AuthoringCommandSupport.plan(request)
     val player = sender as? Player
+    val storyContext = player?.let { ainpcCommandMiscPlugin.storyContextService.buildForPlayer(it) } ?: StoryContextSnapshot.empty()
     if (sender is Player) {
         if (!ainpcCommandMiscPlugin.guiService.canOpen(sender, GuiKey.AUTHORING)) {
             ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
@@ -363,14 +365,30 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
         player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringQuestSelector(it) },
         player?.let { ainpcCommandMiscPlugin.guiService.getAuthoringMechanicId(it) }
     )
-
-    val text = DebugDumpAuthoringText.buildAuthoringText(
-        ainpcCommandMiscPlugin,
-        player,
+    val authoringSnapshot = ainpcCommandMiscPlugin.authoringService.analyze(
+        storyContext,
+        ainpcCommandMiscPlugin.progressionService.getDefinitions(),
         resolvedDumpSelection.questSelector,
-        resolvedDumpSelection.mechanicId
+        resolvedDumpSelection.mechanicId,
+        storyContext.worldContext().currentRegion()?.id(),
+        storyContext.worldContext().currentPlace()?.id(),
+        true,
+        emptyList()
     )
-    ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Quest Authoring Dump ===")
+
+    val text = when (request.mode) {
+        AuthoringCommandRequest.Mode.SUMMARY -> DebugDumpAuthoringText.buildSummaryText(authoringSnapshot, storyContext)
+        else -> DebugDumpAuthoringText.buildAuthoringText(
+            ainpcCommandMiscPlugin,
+            player,
+            resolvedDumpSelection.questSelector,
+            resolvedDumpSelection.mechanicId
+        )
+    }
+    ainpcCommandMiscPlugin.messageUtils.send(
+        sender,
+        if (request.mode == AuthoringCommandRequest.Mode.SUMMARY) "&6=== Quest Authoring Summary ===" else "&6=== Quest Authoring Dump ==="
+    )
     for (line in text.split('\n')) {
         if (line.isBlank()) {
             continue
@@ -402,8 +420,19 @@ fun handleHealth(sender: CommandSender): Boolean {
     msg.send(sender, "&eDefinitii progresie: &f$questCount")
     msg.send(sender, "&eBaza de date: &f${if (dbAvailable) "&aconectata" else "&cindisponibila"}")
     msg.send(sender, "&eModificari nesalvate: &f${if (worldAdmin.hasUnsavedChanges()) "&cda" else "&anu"}")
+    val mcpHealth = plugin.mcpRuntimeClient.health()
+    val mcpColor = when {
+        !mcpHealth.enabled -> "&7"
+        mcpHealth.available -> "&a"
+        else -> "&c"
+    }
+    msg.send(
+        sender,
+        "&eMCP runtime: &f$mcpColor${mcpHealth.status} &8(${mcpHealth.durationMillis}ms, ${mcpHealth.endpoint})"
+    )
     val issues = mutableListOf<String>()
     if (!plugin.config.getBoolean("features.ai", false)) issues.add("&eAI: &cdezactivat (features.ai=false)")
+    if (mcpHealth.enabled && !mcpHealth.available) issues.add("&eMCP: &c${mcpHealth.detail}")
     if (!plugin.config.getBoolean("features.quest", true)) issues.add("&eQuest: &cdezactivat (features.quest=false)")
     if ((plugin.config.getString("openai.api_key") ?: "").isBlank() && (System.getenv("OPENAI_API_KEY") ?: "").isBlank())
         issues.add("&eOpenAI: &ccheia API lipseste (seteaza openai.api_key sau OPENAI_API_KEY)")

@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.debug.DebugDumpAuthoringText
+import ro.ainpc.engine.QuestAuthoringSnapshot
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -61,6 +62,24 @@ class QuestAuthoringGui : GuiScreen {
                 Material.MAP,
                 "&bStory context",
                 storyLore(storyContext.toPromptBlock())
+            )
+        )
+
+        context.item(
+            13,
+            GuiItemFactory.item(
+                Material.WRITTEN_BOOK,
+                "&bQuest semantic",
+                questSemanticLore(authoringSnapshot, storyContext)
+            )
+        )
+
+        context.item(
+            14,
+            GuiItemFactory.item(
+                Material.PAPER,
+                "&aQuest authoring summary",
+                questAuthoringSummaryLore(authoringSnapshot)
             )
         )
 
@@ -228,6 +247,41 @@ class QuestAuthoringGui : GuiScreen {
             .take(6)
             .map { "&7$it" }
             .toList()
+    }
+
+    private fun questSemanticLore(
+        snapshot: QuestAuthoringSnapshot,
+        storyContext: ro.ainpc.story.StoryContextSnapshot
+    ): List<String> {
+        val lore = ArrayList<String>()
+        lore.add("&7QUEST_LORE:")
+        lore.add("&8- selector: &f${valueOrUnknown(snapshot.requestedQuestSelector)}")
+        lore.add("&8- mechanic: &f${valueOrUnknown(snapshot.requestedMechanicId)}")
+        lore.add("&8- seed: &f${valueOrUnknown(snapshot.seedStoryMode())}/${valueOrUnknown(snapshot.seedKind())}")
+        lore.add("&7QUEST_HISTORY:")
+        lore.add("&8- decision: &f${valueOrUnknown(snapshot.decisionStatus())}")
+        lore.add("&8- reason: &f${valueOrUnknown(snapshot.decisionReason())}")
+        lore.add("&8- matched signals: &f${valueOrUnknown(snapshot.decisionMatchedSignals().joinToString(", "))}")
+        lore.add("&7QUEST_SIGNALS:")
+        lore.add("&8- allowed objectives: &f${valueOrUnknown(snapshot.seed?.allowedObjectiveTypes().orEmpty().joinToString(", "))}")
+        lore.add("&8- allowed rewards: &f${valueOrUnknown(snapshot.seed?.allowedRewardTypes().orEmpty().joinToString(", "))}")
+        lore.add("&8- limits: &f${valueOrUnknown(snapshot.seed?.limits().orEmpty().joinToString(", "))}")
+        lore.add("&8- story signals: &f${valueOrUnknown(snapshot.seed?.storySignals().orEmpty().joinToString(", "))}")
+        lore.add("&8- story warnings: &f${storyContext.warnings().size}")
+        return lore
+    }
+
+    private fun questAuthoringSummaryLore(snapshot: QuestAuthoringSnapshot): List<String> {
+        val lore = ArrayList<String>()
+        lore.add("&7QUEST_AUTHORING_SUMMARY:")
+        lore.add("&8- decision: &f${valueOrUnknown(snapshot.decisionStatus())}")
+        lore.add("&8- reason: &f${valueOrUnknown(snapshot.decisionReason())}")
+        lore.add("&8- selector: &f${valueOrUnknown(snapshot.requestedQuestSelector)}")
+        lore.add("&8- mechanic: &f${valueOrUnknown(snapshot.requestedMechanicId)}")
+        lore.add("&8- seed: &f${valueOrUnknown(snapshot.seedRegionId())}/${valueOrUnknown(snapshot.seedPlaceId())}/${valueOrUnknown(snapshot.seedStoryMode())}")
+        lore.add("&8- template: &f${valueOrUnknown(snapshot.selectedTemplateId())}")
+        lore.add("&8- definition: &f${valueOrUnknown(snapshot.selectedDefinitionId())}")
+        return lore
     }
 
     private fun progressionLore(lines: List<String>): List<String> =

@@ -27,10 +27,12 @@ class AdminHubGui : GuiScreen {
         }
 
         val wa: WorldAdminApi = context.plugin().platform.worldAdmin
+        val mcpHealth = context.plugin().mcpRuntimeClient.health()
 
         context.item(4, GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Panel", listOf(
             "&7Mapping: &f${wa.regionCount}r / ${wa.placeCount}p / ${wa.nodeCount}n",
             "&7NPC: &f${context.plugin().npcManager.getNPCCount()}",
+            "&7MCP: &f${mcpHealth.status} &8(${mcpHealth.durationMillis}ms)",
             if (wa.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aSalvat"
         )))
 
@@ -53,6 +55,10 @@ class AdminHubGui : GuiScreen {
         if (context.service().canOpen(context.player(), GuiKey.DEBUG)) {
             context.button(14, GuiButton.enabled(GuiItemFactory.item(Material.SPYGLASS, "&9Debug", listOf("&7Debugdump si teste.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.DEBUG) }))
+        }
+        if (context.service().canOpen(context.player(), GuiKey.MCP)) {
+            context.button(17, GuiButton.enabled(GuiItemFactory.item(Material.ENDER_EYE, "&bMCP", listOf("&7Status MCP si summary-uri.", "&7Routing semantic si feature flags.")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.MCP) }))
         }
         if (context.service().canOpen(context.player(), GuiKey.AUTHORING)) {
             context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bAuthoring", listOf("&7Snapshot quest design.")),

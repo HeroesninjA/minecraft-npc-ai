@@ -10,6 +10,8 @@ class AINPCCommandStoryDumpTest {
         val source = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt").readText()
 
         assertTrue(source.contains("DebugDumpStoryText.buildStoryText(plugin)"))
+        assertTrue(source.contains("DebugDumpStoryText.buildSummaryText(plugin)"))
         assertTrue(source.contains("handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean"))
+        assertTrue(source.contains("\"summary\", \"summarize\""))
     }
 }

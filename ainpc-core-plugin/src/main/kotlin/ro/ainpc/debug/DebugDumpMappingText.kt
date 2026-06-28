@@ -6,25 +6,35 @@ import ro.ainpc.AINPCPlugin
 object DebugDumpMappingText {
     @JvmStatic
     fun buildMappingText(plugin: AINPCPlugin): String {
-        val mapping = DebugDumpWorldJson.buildWorldMappingJson(plugin)
+        val snapshot = DebugDumpMappingSnapshotJson.buildMappingSnapshotJson(plugin)
         val npcBindings = DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJson(plugin)
 
         val sb = StringBuilder()
         sb.append("AINPC Mapping Dump\n")
-        appendWorldSummary(sb, mapping)
-        appendSemanticSummary(sb, mapping.getAsJsonObject("semantic_index"))
+        appendWorldSummary(sb, snapshot)
+        appendSemanticSummary(sb, snapshot.getAsJsonObject("semantic_index_summary"))
+        appendStorySummary(sb, snapshot.getAsJsonObject("story_summary"))
         appendNpcBindingsSummary(sb, npcBindings)
         return DebugDumpSecrets.redactText(sb.toString())
     }
 
+    @JvmStatic
+    fun buildSummaryText(plugin: AINPCPlugin): String {
+        val snapshot = DebugDumpMappingSnapshotJson.buildMappingSnapshotJson(plugin)
+        val sb = StringBuilder()
+        sb.append("AINPC Mapping Summary\n")
+        appendWorldSummary(sb, snapshot)
+        appendSemanticSummary(sb, snapshot.getAsJsonObject("semantic_index_summary"))
+        appendStorySummary(sb, snapshot.getAsJsonObject("story_summary"))
+        return DebugDumpSecrets.redactText(sb.toString())
+    }
+
     private fun appendWorldSummary(sb: StringBuilder, root: JsonObject) {
-        sb.append("World mapping available: ").append(root.getBoolean("enabled")).append("\n")
-        if (root.has("world_mode")) {
-            sb.append("World mode: ").append(root.getString("world_mode")).append("\n")
-        }
-        sb.append("Regions: ").append(root.getArraySize("regions")).append("\n")
-        sb.append("Places: ").append(root.getArraySize("places")).append("\n")
-        sb.append("Nodes: ").append(root.getArraySize("nodes")).append("\n")
+        sb.append("World mapping available: ").append(root.getBoolean("world_admin_enabled")).append("\n")
+        sb.append("Mapping source: ").append(root.getString("source")).append("\n")
+        sb.append("Regions: ").append(root.getInt("region_count")).append("\n")
+        sb.append("Places: ").append(root.getInt("place_count")).append("\n")
+        sb.append("Nodes: ").append(root.getInt("node_count")).append("\n")
     }
 
     private fun appendSemanticSummary(sb: StringBuilder, root: JsonObject?) {
@@ -33,13 +43,26 @@ object DebugDumpMappingText {
             return
         }
         sb.append("Semantic index buckets:\n")
-        appendSemanticBucket(sb, "region candidates", root.getAsJsonObject("resolver_candidate_tokens")?.getAsJsonObject("regions"))
-        appendSemanticBucket(sb, "place candidates", root.getAsJsonObject("resolver_candidate_tokens")?.getAsJsonObject("places"))
-        appendSemanticBucket(sb, "node candidates", root.getAsJsonObject("resolver_candidate_tokens")?.getAsJsonObject("nodes"))
-        appendSemanticBucket(sb, "place tags", root.getAsJsonObject("place_tags"))
-        appendSemanticBucket(sb, "place types", root.getAsJsonObject("place_types"))
-        appendSemanticBucket(sb, "node types", root.getAsJsonObject("node_types"))
-        appendSemanticBucket(sb, "node metadata values", root.getAsJsonObject("node_metadata_values"))
+        val bucketKeys = root.getAsJsonArray("bucket_keys")
+        appendSemanticBucket(sb, "semantic buckets", bucketKeys)
+        sb.append("Semantic index bucket count: ").append(root.getInt("bucket_count")).append("\n")
+    }
+
+    private fun appendStorySummary(sb: StringBuilder, root: JsonObject?) {
+        if (root == null || root.entrySet().isEmpty()) {
+            sb.append("Story summary unavailable\n")
+            return
+        }
+        sb.append("Story summary:\n")
+        sb.append("Story state available: ").append(root.getBoolean("story_state_available")).append("\n")
+        sb.append("Story event available: ").append(root.getBoolean("story_event_available")).append("\n")
+        sb.append("Story progression gap available: ").append(root.getBoolean("progression_gap_available")).append("\n")
+        sb.append("Region story states: ").append(root.getInt("region_state_count")).append("\n")
+        sb.append("Place story states: ").append(root.getInt("place_state_count")).append("\n")
+        sb.append("Story events rows: ").append(root.getInt("event_row_count")).append("\n")
+        sb.append("Story progression gaps: ").append(root.getInt("progression_gap_count")).append("\n")
+        sb.append("Progression cross-link available: ").append(root.getBoolean("progression_cross_link_available")).append("\n")
+        sb.append("Progression cross-link source rows: ").append(root.getInt("progression_cross_link_source_rows")).append("\n")
     }
 
     private fun appendNpcBindingsSummary(sb: StringBuilder, root: JsonObject) {
@@ -54,11 +77,11 @@ object DebugDumpMappingText {
         appendCountMap(sb, "Bindings by social place", root.getAsJsonObject("by_social_place"))
     }
 
-    private fun appendSemanticBucket(sb: StringBuilder, label: String, json: JsonObject?) {
-        if (json == null || json.entrySet().isEmpty()) {
+    private fun appendSemanticBucket(sb: StringBuilder, label: String, json: com.google.gson.JsonArray?) {
+        if (json == null || json.isEmpty) {
             return
         }
-        sb.append("- ").append(label).append(": ").append(json.entrySet().size).append("\n")
+        sb.append("- ").append(label).append(": ").append(json.size()).append("\n")
     }
 
     private fun JsonObject.getBoolean(name: String): Boolean = runCatching { get(name).asBoolean }.getOrDefault(false)

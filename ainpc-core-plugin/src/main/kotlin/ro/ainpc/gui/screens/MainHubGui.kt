@@ -164,6 +164,14 @@ class MainHubGui : GuiScreen {
             "&bAuthoring",
             listOf("&7Snapshot story, mapping si progresie pentru quest design.", "&8Authoring compact.")
         )
+        openButton(
+            context,
+            39,
+            GuiKey.MCP,
+            Material.ENDER_EYE,
+            "&bMCP",
+            listOf("&7Status MCP, summary-uri si routing semantic.", "&8Acces admin.")
+        )
         context.button(
             32,
             GuiButton.enabled(
