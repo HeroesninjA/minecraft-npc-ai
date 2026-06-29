@@ -6,6 +6,7 @@ import org.bukkit.command.CommandSender
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.mapping.MappingDraft
 import ro.ainpc.world.mapping.MappingWandService
+import ro.ainpc.world.patch.VillagePatchApplyResult
 import java.util.Locale
 
 lateinit var ainpcCommandDisplayPlugin: AINPCPlugin
@@ -127,10 +128,49 @@ fun sendPatchUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc patch analyze <regionId> [targetPopulation] [profesiiCSV]")
     msg.send(sender, "&e/ainpc patch plan <regionId> [targetPopulation] [profesiiCSV]")
     msg.send(sender, "&e/ainpc patch validate <regionId> [targetPopulation] [profesiiCSV]")
+    msg.send(sender, "&e/ainpc patch apply <regionId> <patchId> [targetPopulation]")
     msg.send(
         sender,
-        "&7Read-only: produce GapReport si PatchPlan, fara constructie si fara scrieri in mapping."
+        "&7analyze/plan/validate: read-only (GapReport si PatchPlan, fara scrieri)."
     )
+    msg.send(
+        sender,
+        "&7apply: scrie mapping-ul din plan (place-uri si node-uri lipsa)."
+    )
+}
+
+fun sendPatchApplyResult(sender: CommandSender, result: VillagePatchApplyResult) {
+    val msg = ainpcCommandDisplayPlugin.messageUtils
+    msg.send(sender, "&6=== Patch Apply Result ===")
+    msg.send(sender, "&ePatch: &f${result.patchId()}")
+    msg.send(sender, "&ePlace-uri create: &f${result.placeCount()} &7| Node-uri create: &f${result.nodeCount()}")
+    if (result.createdPlaceIds().isNotEmpty()) {
+        for (placeId in result.createdPlaceIds()) {
+            msg.send(sender, "  &a+ place &f${placeId}")
+        }
+    }
+    if (result.createdNodeIds().isNotEmpty()) {
+        for (nodeId in result.createdNodeIds()) {
+            msg.send(sender, "  &a+ node &f${nodeId}")
+        }
+    }
+    if (result.errors().isNotEmpty()) {
+        msg.send(sender, "&cErori apply:")
+        for (err in result.errors()) {
+            msg.send(sender, "  &c$err")
+        }
+    }
+    if (result.warnings().isNotEmpty()) {
+        msg.send(sender, "&eWarning-uri apply:")
+        for (warn in result.warnings()) {
+            msg.send(sender, "  &e$warn")
+        }
+    }
+    if (result.success()) {
+        msg.send(sender, "&aPatch aplicat cu succes. Ruleaza &f/ainpc world save &apentru a persista.")
+    } else {
+        msg.send(sender, "&cPatch-ul nu a putut fi aplicat complet. Verifica erorile de mai sus.")
+    }
 }
 
 fun sendWorldUsage(sender: CommandSender) {
@@ -361,7 +401,7 @@ fun sendWandStatus(sender: CommandSender, session: MappingWandService.MappingWan
     msg.send(sender, "&ePos1: &f${formatMappingPoint(selection.pos1())}")
     msg.send(sender, "&ePos2: &f${formatMappingPoint(selection.pos2())}")
     msg.send(sender, "&ePoint: &f${formatMappingPoint(selection.point())}")
-    selection.bounds().ifPresent { bounds ->
+    selection.bounds()?.let { bounds ->
         msg.send(sender, "&eBounds: &f${bounds.format()}")
     }
     msg.send(sender, "&eDraft: &f${session.draft()?.qualifiedId() ?: "<nesetat>"}")

@@ -19,6 +19,19 @@ fun matchesObjectiveType(objective: FeaturePackLoader.QuestEntryDefinition?, exp
 
 fun normalizeObjectiveType(type: String?): String = ObjectiveTypeAliasRegistry.normalize(type)
 
+fun resolveRewardAmount(reward: QuestEntryDefinition): Int {
+    val base = reward.amount.coerceAtLeast(1)
+    val penaltyFlag = reward.metadata["penalty"]?.lowercase()?.trim()
+    val signFlag = reward.metadata["sign"]?.trim()
+    val sign = when {
+        penaltyFlag == "true" || penaltyFlag == "1" || penaltyFlag == "yes" -> -1
+        signFlag == "-" || signFlag == "negative" || signFlag == "-1" -> -1
+        signFlag == "+" || signFlag == "positive" || signFlag == "1" -> 1
+        else -> 1
+    }
+    return base * sign
+}
+
 // --- Inventory progress ---
 
 fun usesInventoryProgress(objective: FeaturePackLoader.QuestEntryDefinition?): Boolean {
@@ -503,23 +516,74 @@ fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List
                 player.giveExp(xp)
                 notes.add("&a+ $xp XP")
             }
-            "economy:money" -> {
+            "economy_money" -> {
                 val amount = reward.amount.coerceAtLeast(1)
                 val economy = AINPCPlugin.getInstance().economyService
                 economy.deposit(player, amount)
                 notes.add("&a+ $amount monede")
             }
-            else -> {
-                val material = resolveQuestMaterial(reward)
-                if (material == null) {
-                    notes.add("&cRecompensa invalida in configuratie: &f${reward.itemId}")
+            "progression_xp" -> {
+                val amount = reward.amount.toLong().coerceAtLeast(0L)
+                if (amount == 0L) continue
+                val grant = AINPCPlugin.getInstance().playerProgressionService.grantXp(player, amount)
+                notes.add("&a+ $amount XP progresie (nivel ${grant.snapshot.level})")
+                if (grant.levelsGained > 0) {
+                    notes.add("&6Ai urcat ${grant.levelsGained} nivel${if (grant.levelsGained == 1) "" else "uri"}!")
+                }
+            }
+            "progression_level" -> {
+                val target = reward.amount.coerceAtLeast(1)
+                val before = AINPCPlugin.getInstance().playerProgressionService.getSnapshot(player)
+                AINPCPlugin.getInstance().playerProgressionService.setLevel(player, target)
+                notes.add("&aNivel setat la $target (anterior ${before.level})")
+            }
+            "progression_skill" -> {
+                val skillId = reward.itemId?.trim().orEmpty()
+                if (skillId.isEmpty()) {
+                    notes.add("&cRecompensa skill invalida: lipseste itemId (skill-ul).")
                     continue
                 }
-                val rewardStack = ItemStack(material, reward.amount)
-                val leftovers = player.inventory.addItem(rewardStack)
-                if (leftovers.isNotEmpty()) {
-                    leftovers.values.forEach { leftover -> player.world.dropItemNaturally(player.location, leftover) }
-                    notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.")
+                val amount = reward.amount.coerceAtLeast(1)
+                val grant = AINPCPlugin.getInstance().playerProgressionService.addSkillXp(player, skillId, amount)
+                notes.add("&a+ $amount XP la skill-ul $skillId (total ${grant.snapshot.skills[skillId] ?: amount})")
+            }
+            "progression_skill_level" -> {
+                val skillId = reward.itemId?.trim().orEmpty()
+                if (skillId.isEmpty()) {
+                    notes.add("&cRecompensa skill level invalida: lipseste itemId (skill-ul).")
+                    continue
+                }
+                val target = reward.amount.coerceAtLeast(1)
+                AINPCPlugin.getInstance().playerProgressionService.setSkillLevel(player, skillId, target)
+                notes.add("&aNivel skill $skillId setat la $target")
+            }
+            else -> when {
+                normalizedType.startsWith("reputation_") -> {
+                    val scopeType = normalizedType.removePrefix("reputation_")
+                    val scopeId = reward.itemId?.trim().orEmpty()
+                    if (scopeType.isBlank() || scopeId.isBlank()) {
+                        notes.add("&cRecompensa reputatie invalida: tip=&f${reward.type}&c, itemId=&f${reward.itemId}")
+                        continue
+                    }
+                    val amount = resolveRewardAmount(reward)
+                    AINPCPlugin.getInstance().reputationService.addReputation(
+                        player.uniqueId.toString(), scopeType, scopeId, amount
+                    )
+                    val sign = if (amount >= 0) "+" else ""
+                    notes.add("&a$sign$amount reputatie [$scopeType:$scopeId]")
+                }
+                else -> {
+                    val material = resolveQuestMaterial(reward)
+                    if (material == null) {
+                        notes.add("&cRecompensa invalida in configuratie: &f${reward.itemId}")
+                        continue
+                    }
+                    val rewardStack = ItemStack(material, reward.amount)
+                    val leftovers = player.inventory.addItem(rewardStack)
+                    if (leftovers.isNotEmpty()) {
+                        leftovers.values.forEach { leftover -> player.world.dropItemNaturally(player.location, leftover) }
+                        notes.add("&eInventarul s-a umplut in timpul acordarii. Restul recompensei a fost lasat pe jos langa tine.")
+                    }
                 }
             }
         }

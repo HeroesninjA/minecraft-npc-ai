@@ -250,6 +250,9 @@ object FeaturePackYamlSupport {
                 loadQuestEntries(questSection.getConfigurationSection("rewards"), scenario::addReward)
             }
 
+            loadRuntimeConditions(scenario, scenarioSection.getConfigurationSection("conditions"))
+            loadRuntimeTriggers(scenario, scenarioSection.getConfigurationSection("runtime_triggers"))
+            loadRuntimeActions(scenario, scenarioSection.getConfigurationSection("runtime_actions"))
             loadScenarioProgression(scenario, scenarioSection, questSection != null, findProgressionMechanic)
             if (scenario.progressionMechanicId.equals("quest", ignoreCase = true)) {
                 ensureDefaultQuestMechanic.accept(pack)
@@ -638,6 +641,101 @@ object FeaturePackYamlSupport {
         }
         if (scenario.progressionMaxActive == 0) {
             scenario.progressionMaxActive = mechanic.maxActive
+        }
+    }
+
+    @JvmStatic
+    fun loadRuntimeConditions(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        conditionsSection: ConfigurationSection?,
+    ) {
+        if (scenario == null || conditionsSection == null) return
+        for (condId in conditionsSection.getKeys(false)) {
+            val condSection = conditionsSection.getConfigurationSection(condId) ?: continue
+            val type = condSection.getString("type", "") ?: ""
+            if (type.isBlank()) {
+                scenario.addValidationWarning("condition.$condId nu are 'type'; ignorat.")
+                continue
+            }
+            val params = LinkedHashMap<String, String>()
+            for (key in condSection.getKeys(false)) {
+                if (key == "type") continue
+                val value = condSection.get(key)
+                if (value != null && value !is ConfigurationSection) {
+                    params[key] = questEntryValueToString(value)
+                }
+            }
+            scenario.addCondition(condId, type, params)
+        }
+    }
+
+    @JvmStatic
+    fun loadRuntimeTriggers(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        triggersSection: ConfigurationSection?,
+    ) {
+        if (scenario == null || triggersSection == null) return
+        for (triggerId in triggersSection.getKeys(false)) {
+            val triggerSection = triggersSection.getConfigurationSection(triggerId) ?: continue
+            val type = triggerSection.getString("type", "") ?: ""
+            if (type.isBlank()) {
+                scenario.addValidationWarning("runtime_trigger.$triggerId nu are 'type'; ignorat.")
+                continue
+            }
+            val params = LinkedHashMap<String, String>()
+            val actionRefs = mutableListOf<String>()
+            for (key in triggerSection.getKeys(false)) {
+                if (key == "type") continue
+                val value = triggerSection.get(key)
+                if (key == "actions" && value is List<*>) {
+                    @Suppress("UNCHECKED_CAST")
+                    for (entry in value as List<Map<String, Any>>) {
+                        val ref = entry["id"]?.toString()
+                        if (!ref.isNullOrBlank()) actionRefs.add(ref)
+                        val entryType = entry["type"]?.toString() ?: continue
+                        if (entryType.isBlank()) continue
+                        val entryParams = LinkedHashMap<String, String>()
+                        for ((ek, ev) in entry) {
+                            if (ek == "id" || ek == "type") continue
+                            entryParams[ek] = ev.toString()
+                        }
+                        scenario.addRuntimeAction(triggerId + "_" + ref.orEmpty(), entryType, entryParams)
+                    }
+                    continue
+                }
+                if (value != null && value !is ConfigurationSection) {
+                    params[key] = questEntryValueToString(value)
+                }
+            }
+            if (actionRefs.isNotEmpty()) {
+                params["action_refs"] = actionRefs.joinToString(",")
+            }
+            scenario.addRuntimeTrigger(triggerId, type, params)
+        }
+    }
+
+    @JvmStatic
+    fun loadRuntimeActions(
+        scenario: FeaturePackLoader.ScenarioDefinition?,
+        actionsSection: ConfigurationSection?,
+    ) {
+        if (scenario == null || actionsSection == null) return
+        for (actionId in actionsSection.getKeys(false)) {
+            val actionSection = actionsSection.getConfigurationSection(actionId) ?: continue
+            val type = actionSection.getString("type", "") ?: ""
+            if (type.isBlank()) {
+                scenario.addValidationWarning("runtime_action.$actionId nu are 'type'; ignorat.")
+                continue
+            }
+            val params = LinkedHashMap<String, String>()
+            for (key in actionSection.getKeys(false)) {
+                if (key == "type") continue
+                val value = actionSection.get(key)
+                if (value != null && value !is ConfigurationSection) {
+                    params[key] = questEntryValueToString(value)
+                }
+            }
+            scenario.addRuntimeAction(actionId, type, params)
         }
     }
 

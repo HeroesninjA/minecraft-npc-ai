@@ -120,9 +120,7 @@ class MappingDraftFactory {
         worldAdmin: WorldAdminService,
         suggestion: MappingDraftSuggestion
     ): MappingDraft {
-        val bounds = selection.bounds().orElseThrow {
-            IllegalArgumentException("Selecteaza pos1 si pos2 cu /ainpc wand inainte de draft region.")
-        }
+        val bounds = selection.bounds() ?: throw IllegalArgumentException("Selecteaza pos1 si pos2 cu /ainpc wand inainte de draft region.")
         val localId = uniqueRegionId(worldAdmin, suggestion.localId())
         val command = "/ainpc world region create " + localId + " " + suggestion.typeId() + " " +
             bounds.minX() + " " + bounds.minY() + " " + bounds.minZ() + " " +
@@ -162,15 +160,13 @@ class MappingDraftFactory {
         worldAdmin: WorldAdminService,
         suggestion: MappingDraftSuggestion
     ): MappingDraft {
-        val bounds = selection.bounds().orElseThrow {
-            IllegalArgumentException("Selecteaza pos1 si pos2 cu /ainpc wand inainte de draft place.")
-        }
+        val bounds = selection.bounds() ?: throw IllegalArgumentException("Selecteaza pos1 si pos2 cu /ainpc wand inainte de draft place.")
         val region = worldAdmin.findRegion(bounds.worldName(), bounds.centerX(), bounds.centerY(), bounds.centerZ())
             ?: throw IllegalArgumentException(
                 "Selectia place nu are o regiune parinte la centru. Creeaza intai regiunea."
             )
 
-        val warnings = ArrayList(suggestion.warnings())
+        val warnings = suggestion.warnings().toMutableList()
         if (!region.contains(bounds.worldName(), bounds.minX(), bounds.minY(), bounds.minZ()) ||
             !region.contains(bounds.worldName(), bounds.maxX(), bounds.maxY(), bounds.maxZ())
         ) {
@@ -183,8 +179,8 @@ class MappingDraftFactory {
             bounds.minX() + " " + bounds.minY() + " " + bounds.minZ() + " " +
             bounds.maxX() + " " + bounds.maxY() + " " + bounds.maxZ()
 
-        val tags = ArrayList(suggestion.tags())
-        val metadata = LinkedHashMap(suggestion.metadata())
+        val tags = suggestion.tags().toMutableList()
+        val metadata = suggestion.metadata().toMutableMap()
         val residentialOccupation = inferResidentialOccupation(description, suggestion.typeId())
         if (residentialOccupation.isNotBlank()) {
             if (tags.none { it.equals(residentialOccupation, ignoreCase = true) }) {
@@ -292,13 +288,13 @@ class MappingDraftFactory {
         }
 
         val intent = parseNpcBindIntent(description)
-        val warnings = ArrayList(suggestion.warnings())
+        val warnings = suggestion.warnings().toMutableList()
         warnings.add("Confirmarea actualizeaza profilul NPC, metadata mapping si npc_world_bindings.")
         if (!roleMatchesPlace(intent.role, place)) {
             warnings.add("Place-ul " + place.id() + " nu pare potrivit pentru rolul " + intent.role + ".")
         }
 
-        val metadata = LinkedHashMap(suggestion.metadata())
+        val metadata = suggestion.metadata().toMutableMap()
         metadata["npc_selector"] = intent.npcSelector
         metadata["bind_role"] = intent.role
         metadata["place_id"] = place.id()
@@ -375,13 +371,13 @@ class MappingDraftFactory {
             defaultObjectiveTypeForAnchor(anchorType),
             anchorId
         )
-        val warnings = ArrayList(suggestion.warnings())
+        val warnings = suggestion.warnings().toMutableList()
         warnings.add("Confirmarea scrie/actualizeaza quest_anchor_bindings pentru obiectivul ales.")
         if (!questAnchorTypeCompatible(intent.objectiveType, anchorType)) {
             warnings.add("Tipul obiectivului " + intent.objectiveType + " nu pare compatibil cu ancora " + anchorType + ".")
         }
 
-        val metadata = LinkedHashMap(suggestion.metadata())
+        val metadata = suggestion.metadata().toMutableMap()
         metadata["player_selector"] = intent.playerSelector
         metadata["progression_selector"] = intent.progressionSelector
         metadata["objective_key"] = intent.objectiveKey

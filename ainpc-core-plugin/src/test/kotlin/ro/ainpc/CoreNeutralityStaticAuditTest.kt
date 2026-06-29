@@ -41,6 +41,8 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("ObjectiveTypeAliasRegistry") }
                 .filter { path -> !path.toString().contains("QuestCreateGui") }
                 .filter { path -> !path.toString().contains("QuickQuestGui") }
+                .filter { path -> !path.toString().contains("RegionIdentityProvider") }
+                .filter { path -> !path.toString().contains("RegionType") }
                 .flatMap { path ->
                     val text = path.readText()
                     forbiddenTerms

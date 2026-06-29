@@ -1,7 +1,6 @@
 package ro.ainpc.world.mapping
 
 import java.util.Locale
-import java.util.Optional
 
 enum class MappingDraftKind(private val idValue: String) {
     REGION("region"),
@@ -14,9 +13,9 @@ enum class MappingDraftKind(private val idValue: String) {
 
     companion object {
         @JvmStatic
-        fun fromId(value: String?): Optional<MappingDraftKind> {
+        fun fromId(value: String?): MappingDraftKind? {
             if (value.isNullOrBlank()) {
-                return Optional.empty()
+                return null
             }
             val normalized = value.trim()
                 .lowercase(Locale.ROOT)
@@ -25,10 +24,10 @@ enum class MappingDraftKind(private val idValue: String) {
                 if (kind.idValue.equals(normalized, ignoreCase = true) ||
                     kind.name.equals(normalized, ignoreCase = true)
                 ) {
-                    return Optional.of(kind)
+                    return kind
                 }
             }
-            return Optional.empty()
+            return null
         }
     }
 }

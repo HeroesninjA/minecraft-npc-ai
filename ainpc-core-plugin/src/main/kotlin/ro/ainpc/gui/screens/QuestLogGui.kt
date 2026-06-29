@@ -42,10 +42,11 @@ class QuestLogGui : GuiScreen {
                 buildQuestLogStatusLines(snapshot, activeFilter, adminView) + listOf("&8Actualizat: $snapshotTime")
             )
         )
+        renderProgressSummary(context, snapshot)
         renderAuthoringSummary(context, snapshot)
         renderQuestDiagnostics(context)
         renderBaseFilters(context, activeFilter)
-        renderAdvancedFilter(context, activeFilter)
+        renderAdvancedFilters(context, activeFilter)
 
         val entries = snapshot.allEntries()
         val page = QuestLogGuiPage.fromEntries(
@@ -100,8 +101,8 @@ class QuestLogGui : GuiScreen {
             )
         }
 
-        val trackableEntry = entries.stream().filter { e -> e.active() }.findFirst().orElse(null)
-        val trackedEntry = entries.stream().filter { e -> e.tracked() }.findFirst().orElse(null)
+        val trackableEntry = entries.firstOrNull { it.active() }
+        val trackedEntry = entries.firstOrNull { it.tracked() }
         renderControls(context, page, adminView, trackableEntry, trackedEntry)
         context.fillEmpty(GuiItemFactory.filler())
     }
@@ -278,6 +279,57 @@ class QuestLogGui : GuiScreen {
         )
     }
 
+    private fun renderProgressSummary(context: GuiRenderContext, snapshot: ProgressionGuiSnapshot) {
+        val allEntries = snapshot.allEntries()
+        val currentEntries = snapshot.currentEntries()
+        val totalObjectives = allEntries.sumOf { it.objectives().size }
+        val completedObjectives = allEntries.sumOf { it.objectives().count { obj -> obj.complete() } }
+        val activeCount = currentEntries.count { it.active() }
+        val trackedCount = currentEntries.count { it.tracked() }
+        val completionPct = if (totalObjectives > 0) (completedObjectives * 100 / totalObjectives) else 0
+
+        context.item(
+            2,
+            GuiItemFactory.item(
+                Material.EXPERIENCE_BOTTLE,
+                "&bSumar progres",
+                listOf(
+                    "&7Active: &f$activeCount &7| Tracked: &f$trackedCount",
+                    "&7Obiective: &f$completedObjectives&7/&f$totalObjectives &7($completionPct%)",
+                    "&7Curente: &f${currentEntries.size} &7| Arhivate: &f${snapshot.archivedEntries().size}",
+                    "&8Include toate intrarile din snapshot-ul curent."
+                )
+            )
+        )
+        renderStoryContextCard(context, snapshot)
+    }
+
+    private fun renderStoryContextCard(context: GuiRenderContext, snapshot: ProgressionGuiSnapshot) {
+        val storyContext = context.plugin().storyContextService.buildForPlayer(context.player())
+        val currentRegion = storyContext.worldContext().currentRegion()
+        val currentPlace = storyContext.worldContext().currentPlace()
+        val regionState = try {
+            val service = context.plugin().storyStateService
+            if (currentRegion != null) {
+                service.getRegionState(currentRegion.id()).orElse(null)
+            } else null
+        } catch (_: Exception) { null }
+        context.item(
+            6,
+            GuiItemFactory.item(
+                if (regionState != null) Material.AMETHYST_SHARD else Material.GRAY_DYE,
+                "&dContext poveste",
+                listOf(
+                    "&7Regiune: &f${currentRegion?.id() ?: "<nemapata>"}",
+                    "&7Story state: &f${regionState?.stateKey() ?: "<nepersistat>"}",
+                    "&7Place: &f${currentPlace?.id() ?: "<nemapat>"}",
+                    "&7Ancore active: &f${storyContext.activeQuestAnchors().size}",
+                    "&7Warnings: &f${storyContext.warnings().size}"
+                )
+            )
+        )
+    }
+
     private fun renderQuestDiagnostics(context: GuiRenderContext) {
         context.button(
             8,
@@ -360,7 +412,7 @@ class QuestLogGui : GuiScreen {
         }
     }
 
-    private fun renderAdvancedFilter(context: GuiRenderContext, activeFilter: String) {
+    private fun renderAdvancedFilters(context: GuiRenderContext, activeFilter: String) {
         val advancedFilters = listOf(
             QuestLogGuiFilter.DUTY,
             QuestLogGuiFilter.BOUNTY,
@@ -368,35 +420,24 @@ class QuestLogGui : GuiScreen {
             QuestLogGuiFilter.TUTORIAL,
             QuestLogGuiFilter.RITUAL
         )
-        val selected = advancedFilters.firstOrNull { it.matches(activeFilter) }
-        val nextFilter = nextAdvancedFilter(selected, advancedFilters)
-        context.button(
-            13,
-            GuiButton.enabled(
-                GuiItemFactory.item(
-                    if (selected != null) Material.AMETHYST_SHARD else Material.BOOK,
-                    if (selected != null) "&dAvansat: ${selected.buttonLabel()}" else "&fFiltre avansate",
-                    listOf(
-                        "&7Acopera: sarcini, bounty, evenimente, tutoriale, ritualuri.",
-                        if (selected != null) "&7Filtru curent avansat." else "&7Click pentru primul filtru avansat.",
-                        "&7Urmator: &f${nextFilter.buttonLabel()}"
-                    )
-                ),
-                GuiAction { click -> click.service().openQuestLog(click.player(), nextFilter.filter()) }
+        var slot = 14
+        for (filter in advancedFilters) {
+            val selected = filter.matches(activeFilter)
+            context.button(
+                slot++,
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        filterMaterial(filter, selected),
+                        if (selected) "&d${filter.buttonLabel()}" else "&f${filter.buttonLabel()}",
+                        listOf(
+                            if (selected) "&dFiltru curent." else "&7Click pentru filtrare.",
+                            "&7Filtru avansat: &f${filter.displayLabel()}"
+                        )
+                    ),
+                    GuiAction { click -> click.service().openQuestLog(click.player(), filter.filter()) }
+                )
             )
-        )
-    }
-
-    private fun nextAdvancedFilter(
-        selected: QuestLogGuiFilter?,
-        filters: List<QuestLogGuiFilter>
-    ): QuestLogGuiFilter {
-        if (filters.isEmpty()) {
-            return QuestLogGuiFilter.ALL
         }
-        val index = selected?.let { filters.indexOf(it) } ?: -1
-        val nextIndex = if (index < 0 || index + 1 >= filters.size) 0 else index + 1
-        return filters[nextIndex]
     }
 
     private fun entryMaterial(entry: ProgressionGuiEntry): Material {
@@ -455,10 +496,8 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun entryLore(entry: ProgressionGuiEntry): List<String> {
-        val completeObjectives = entry.objectives().stream()
-            .filter { objective: ProgressionObjectiveSnapshot -> objective.complete() }
-            .count()
-        val lore = java.util.ArrayList<String>()
+        val completeObjectives = entry.objectives().count { it.complete() }
+        val lore = mutableListOf<String>()
         lore.add("&7Status: &f${entry.statusDisplay()}")
         if (entry.mechanicDisplay().isNotBlank()) {
             lore.add("&7Mecanica: &f${entry.mechanicDisplay()}")

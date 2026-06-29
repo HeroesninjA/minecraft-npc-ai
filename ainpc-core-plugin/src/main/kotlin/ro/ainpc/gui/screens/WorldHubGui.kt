@@ -18,12 +18,11 @@ import ro.ainpc.progression.ProgressionAnchorBinding
 import ro.ainpc.progression.ProgressionFormatUtil
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
+import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.sql.SQLException
-import java.util.ArrayList
-import java.util.Comparator
 import java.util.Locale
 
 class WorldHubGui : GuiScreen {
@@ -50,9 +49,7 @@ class WorldHubGui : GuiScreen {
         val node = worldAdmin.findNode(worldName, x, y, z)
         val localAnchorBindings = localAnchorBindings(context, player, adminView, region, place, node)
         val nearbyNodes = worldAdmin.findNodesNear(worldName, location.x, location.y, location.z, 24.0, 7)
-            .stream()
-            .sorted(Comparator.comparing(WorldNodeInfo::id))
-            .toList()
+            .sortedBy { it.id() }
 
         context.item(
             4,
@@ -101,6 +98,13 @@ class WorldHubGui : GuiScreen {
         } else {
             GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Regiune", regionLore(null)))
         })
+        context.item(6, GuiItemFactory.item(
+            Material.AMETHYST_SHARD,
+            "&dIdentitatea regiunii",
+            if (region != null) RegionIdentityProvider.summaryLore(
+                ro.ainpc.world.RegionType.fromId(region.typeId())
+            ) else listOf("&7Nu exista regiune aici.")
+        ))
         context.button(11, if (place != null) {
             GuiButton.enabled(
                 GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)),
@@ -336,11 +340,16 @@ class WorldHubGui : GuiScreen {
         if (region == null) {
             return listOf("&7Nicio regiune mapata aici.")
         }
+        val type = ro.ainpc.world.RegionType.fromId(region.typeId())
+        val identity = RegionIdentityProvider.identity(type)
         return listOf(
             "&7ID: &f${region.id()}",
             "&7Nume: &f${region.name()}",
-            "&7Tip: &f${region.typeId()}",
-            "&7Story state: &f${region.storyStateKey()}",
+            "&7Tip: &f${identity.displayName} &8(${type.id})",
+            "&7Identitate: &f${identity.description}",
+            "&7Poveste: &f${identity.defaultStoryKey} &8(${identity.mood})",
+            "&7Threat: &f${identity.threatLevel}",
+            "&7Atmosfera: &f${identity.ambiance}",
             "&7Tags: &f${region.tags().joinToString(", ")}"
         )
     }
@@ -362,7 +371,7 @@ class WorldHubGui : GuiScreen {
         if (node == null) {
             return listOf("&7Niciun node activ aici.")
         }
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7ID: &f${node.id()}")
         lore.add("&7Regiune: &f${node.regionId()}")
         if (node.placeId().isNotBlank()) {
@@ -380,7 +389,7 @@ class WorldHubGui : GuiScreen {
         node: WorldNodeInfo?,
         nearbyNodeCount: Int
     ): List<String> {
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7Regiuni: &f${worldAdmin.regionCount}")
         lore.add("&7Places: &f${worldAdmin.placeCount}")
         lore.add("&7Noduri: &f${worldAdmin.nodeCount}")
@@ -412,11 +421,11 @@ class WorldHubGui : GuiScreen {
         }
 
         val currentEntries = snapshot.currentEntries()
-        val activeCount = currentEntries.stream().filter { e -> e.active() }.count()
-        val offeredCount = currentEntries.stream().filter { e -> e.offered() }.count()
-        val trackedEntry = currentEntries.stream().filter { e -> e.tracked() }.findFirst().orElse(null)
+        val activeCount = currentEntries.count { it.active() }
+        val offeredCount = currentEntries.count { it.offered() }
+        val trackedEntry = currentEntries.firstOrNull { it.tracked() }
 
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7Filtru snapshot: &f${valueOrUnknown(snapshot.filterLabel())}")
         lore.add("&7Curente: &f${currentEntries.size} &8(active $activeCount, offered $offeredCount)")
         lore.add("&7Arhivate vizibile: &f${snapshot.archivedEntries().size}")
@@ -439,11 +448,11 @@ class WorldHubGui : GuiScreen {
     ): List<ProgressionAnchorBinding> {
         return try {
             val playerUuid = if (adminView) "" else player.uniqueId.toString()
-            val rows = ArrayList<ProgressionAnchorBinding>()
+            val rows = mutableListOf<ProgressionAnchorBinding>()
             addAnchorBindings(context, rows, playerUuid, "node", node?.id().orEmpty())
             addAnchorBindings(context, rows, playerUuid, "place", place?.id().orEmpty())
             addAnchorBindings(context, rows, playerUuid, "region", region?.id().orEmpty())
-            rows.stream().distinct().limit(12).toList()
+            rows.distinct().take(12)
         } catch (exception: SQLException) {
             context.plugin().logger.warning("Nu pot incarca ancorele locale pentru World GUI: ${exception.message}")
             emptyList()
@@ -466,12 +475,12 @@ class WorldHubGui : GuiScreen {
 
     private fun anchorLore(rows: List<ProgressionAnchorBinding>?, adminView: Boolean): List<String> {
         val safeRows = rows ?: emptyList()
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7Potriviri pentru regiune/place/node: &f${safeRows.size}")
         if (safeRows.isEmpty()) {
             lore.add("&8Nu exista ancore persistate pentru contextul curent.")
         } else {
-            safeRows.stream().limit(5).forEach { row ->
+            safeRows.take(5).forEach { row ->
                 lore.add(
                     "&7- &f${GuiItemFactory.compact(row.templateId(), 18)} &8${row.anchorSelector()} " +
                         "&7${valueOrUnknown(row.status())}"

@@ -13,8 +13,6 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineSlot
-import java.util.ArrayList
-import java.util.Comparator
 import java.util.Locale
 
 class NpcManagerGui : GuiScreen {
@@ -25,10 +23,9 @@ class NpcManagerGui : GuiScreen {
     override fun size(player: org.bukkit.entity.Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
-        val npcs = context.plugin().npcManager.getAllNPCs().stream()
-            .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
-            .limit(NPC_SLOTS.size.toLong())
-            .toList()
+        val npcs = context.plugin().npcManager.getAllNPCs()
+            .sortedBy { it.name.lowercase(Locale.ROOT) }
+            .take(NPC_SLOTS.size)
 
         context.item(
             4,
@@ -137,7 +134,7 @@ class NpcManagerGui : GuiScreen {
     }
 
     private fun npcLore(npc: AINPC, routine: RoutineAssignment): List<String> {
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7ID DB: &f${npc.databaseId}")
         lore.add("&7Ocupatie: &f${valueOrUnknown(npc.occupation)} &8/ &7varsta &f${npc.age}")
         lore.add(

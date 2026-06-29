@@ -27,6 +27,7 @@ import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.mcp.McpRuntimeClient
 import ro.ainpc.mcp.McpRuntimeClientFactory
+import ro.ainpc.mcp.McpRuntimeConfig
 import ro.ainpc.mcp.bridge.RuntimeSnapshotProducer
 import ro.ainpc.platform.AINPCPlatform
 import ro.ainpc.progression.ProgressionService
@@ -113,6 +114,7 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var shopService: ShopService
         private set
     lateinit var reputationService: ro.ainpc.reputation.ReputationService
+    lateinit var playerProgressionService: ro.ainpc.progression.PlayerProgressionService
     lateinit var socialCoordinator: ro.ainpc.routine.SocialCoordinator
     lateinit var recentEventsBuffer: RecentEventsBuffer
 
@@ -148,7 +150,10 @@ class AINPCPlugin : JavaPlugin() {
         logger.info("Initializare serviciu OpenAI...")
         openAIService = OpenAIService(this)
         mcpRuntimeClient = McpRuntimeClientFactory.create(this)
-        snapshotProducer = RuntimeSnapshotProducer(this).also { it.start() }
+        val snapshotPath = java.nio.file.Path.of(
+            McpRuntimeConfig.from(config).snapshotPath
+        )
+        snapshotProducer = RuntimeSnapshotProducer(this, snapshotPath).also { it.start() }
         aiOrchestrationService = AIOrchestrationService(this)
         openAIService.runDiagnosticsAsync("startup")
 
@@ -189,6 +194,7 @@ class AINPCPlugin : JavaPlugin() {
         economyService = EconomyService(this)
         shopService = ShopService(economyService)
         reputationService = ro.ainpc.reputation.ReputationService(this)
+        playerProgressionService = ro.ainpc.progression.PlayerProgressionService(this)
         socialCoordinator = ro.ainpc.routine.SocialCoordinator(this)
 
         logger.info("Inregistrare comenzi...")

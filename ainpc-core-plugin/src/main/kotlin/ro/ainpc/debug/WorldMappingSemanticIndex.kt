@@ -3,11 +3,8 @@ package ro.ainpc.debug
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
-import java.util.ArrayList
 import java.util.Collections
-import java.util.Comparator
 import java.util.LinkedHashMap
-import java.util.LinkedHashSet
 import java.util.Locale
 
 class WorldMappingSemanticIndex(
@@ -206,7 +203,7 @@ class WorldMappingSemanticIndex(
             if (token.isBlank() || id.isNullOrBlank()) {
                 return
             }
-            index.computeIfAbsent(token) { ArrayList() }.add(id)
+            index.computeIfAbsent(token) { mutableListOf() }.add(id)
         }
 
         private fun immutableIndex(index: Map<String, List<String>>?): Map<String, List<String>> {
@@ -216,8 +213,7 @@ class WorldMappingSemanticIndex(
 
             val sorted = LinkedHashMap<String, List<String>>()
             index.entries.sortedBy { it.key }.forEach { entry ->
-                val ids = ArrayList(LinkedHashSet(entry.value))
-                ids.sortWith(Comparator.naturalOrder())
+                val ids = entry.value.distinct().sorted()
                 sorted[entry.key] = java.util.List.copyOf(ids)
             }
             return Collections.unmodifiableMap(sorted)

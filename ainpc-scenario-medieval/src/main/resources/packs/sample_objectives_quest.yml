@@ -12,6 +12,32 @@ scenarios:
     mechanic: "side_quests"
     trigger_probability: 0.0
     min_npcs: 0
+    conditions:
+      cooldown_check:
+        type: "quest_cooldown"
+        template_id: "SAMPLE01"
+        seconds: 600
+      prereq_check:
+        type: "quest_prerequisite"
+        template_id: "MAIN_Q01"
+    runtime_triggers:
+      enter_village:
+        type: "player_enters_region"
+        region_id: "demo_sat"
+        actions:
+          - send_welcome_message
+      talk_to_guard:
+        type: "player_talks_to_npc"
+        profession: "guard"
+        actions:
+          - greet_player
+    runtime_actions:
+      send_welcome_message:
+        type: "send_message"
+        message: "&6Bun venit in satul demonstrativ!"
+      greet_player:
+        type: "send_message"
+        message: "&eSalut, calatorule. Ai nevoie de ajutor?"
     requires_player: true
     phases:
       START: "Inceput"
@@ -114,3 +140,38 @@ scenarios:
           type: "experience"
           amount: 50
           description: "Primesti 50 XP."
+        reward_progression_xp:
+          type: "progression:xp"
+          amount: 100
+          description: "Primesti 100 XP in sistemul de progresie al jucatorului."
+        reward_progression_skill:
+          type: "progression:skill"
+          item: "combat"
+          amount: 25
+          description: "Primesti 25 XP in skill-ul combat."
+        reward_reputation_region:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 10
+          description: "Primesti 10 reputatie in regiunea demo_sat."
+        reward_reputation_faction:
+          type: "reputation:faction"
+          item: "knights"
+          amount: 5
+          description: "Primesti 5 reputatie in factiunea knights."
+        reward_reputation_penalty:
+          type: "reputation:faction"
+          item: "bandits"
+          amount: 15
+          metadata:
+            penalty: "true"
+          description: "Pierzi 15 reputatie la factiunea bandits (penalty)."
+        reward_progression_skill_level:
+          type: "progression:skill_level"
+          item: "combat"
+          amount: 3
+          description: "Seteaza skill-ul combat la nivel 3."
+
+# Comentariu: penalty:true (sau sign:-) inverseaza amount-ul; util pentru recompense negative
+# precum reputatie, unde QuestEntryDefinition impune amount >= 1.
+# Alte metadata acceptate: penalty:true|1|yes, sign:+|positive, sign:-|negative

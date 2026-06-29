@@ -50,6 +50,8 @@ import ro.ainpc.engine.runtime.ScenarioConditionRegistry
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerRegistry
+import ro.ainpc.engine.runtime.ScenarioVariableProviderRegistry
+import ro.ainpc.engine.runtime.QuestVariableProvider
 import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandlerRegistry
 import ro.ainpc.engine.runtime.ObjectiveResult
@@ -71,6 +73,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     val actionRegistry: ScenarioActionRegistry = ScenarioActionRegistry()
     val conditionRegistry: ScenarioConditionRegistry = ScenarioConditionRegistry()
     val triggerRegistry: ScenarioTriggerRegistry = ScenarioTriggerRegistry()
+    val variableProviderRegistry: ScenarioVariableProviderRegistry = ScenarioVariableProviderRegistry()
     val objectiveHandlerRegistry: ObjectiveHandlerRegistry = ObjectiveHandlerRegistry()
     private val scenarioTemplates = LinkedHashMap<ScenarioType, ScenarioTemplate>()
     private val questTemplates = LinkedHashMap<String, ScenarioTemplate>()
@@ -100,8 +103,21 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun registerRuntimeHandlers() {
         actionRegistry.register(GiveItemAction())
         actionRegistry.register(SetStoryStateAction())
+        actionRegistry.register(ro.ainpc.engine.runtime.actions.RecordStoryEventAction())
+        actionRegistry.register(ro.ainpc.engine.runtime.actions.SendMessageAction())
+        actionRegistry.register(ro.ainpc.engine.runtime.actions.ExecuteCommandAction())
+        actionRegistry.register(ro.ainpc.engine.runtime.actions.PlaySoundAction())
+        actionRegistry.register(ro.ainpc.engine.runtime.actions.TeleportPlayerAction())
         conditionRegistry.register(HasCompletedQuestCondition())
+        conditionRegistry.register(ro.ainpc.engine.runtime.conditions.QuestCooldownCondition())
+        conditionRegistry.register(ro.ainpc.engine.runtime.conditions.QuestPrerequisiteCondition())
+        conditionRegistry.register(ro.ainpc.engine.runtime.conditions.MechanicLimitCondition())
         triggerRegistry.register(PlayerEntersRegionTrigger())
+        triggerRegistry.register(ro.ainpc.engine.runtime.triggers.PlayerEntersPlaceTrigger())
+        triggerRegistry.register(ro.ainpc.engine.runtime.triggers.PlayerEntersNodeTrigger())
+        triggerRegistry.register(ro.ainpc.engine.runtime.triggers.PlayerUsesItemTrigger())
+        triggerRegistry.register(ro.ainpc.engine.runtime.triggers.PlayerTalksToNpcTrigger())
+        variableProviderRegistry.register(QuestVariableProvider(this))
         objectiveHandlerRegistry.register(
             ro.ainpc.engine.runtime.objectivehandlers.UseItemObjectiveHandler()
         )
@@ -187,6 +203,76 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             handler.execute(context, actionDef)
         }
     }
+
+    fun executeRuntimeTrigger(triggerDef: ScenarioRuntimeDefinition?, context: ScenarioExecutionContext) {
+        if (triggerDef == null) return
+        val report = triggerRegistry.validateDefinition(triggerDef, "trigger")
+        if (!report.isValid()) {
+            plugin.debug("[Runtime] Trigger invalid: ${triggerDef.id()} - erori: ${report.errors().joinToString("; ")}")
+            return
+        }
+        triggerRegistry.find(triggerDef.type()).ifPresent { handler ->
+            handler.bind(context, triggerDef)
+        }
+        val actionRefs = triggerDef.parameter("action_refs")
+        if (actionRefs != null && actionRefs.isNotBlank()) {
+            val refIds = actionRefs.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            if (refIds.isNotEmpty()) {
+                val template = questTemplates[context.templateId()]
+                    ?: scenarioTemplates.values.firstOrNull { it.templateId == context.templateId() }
+                if (template != null) {
+                    for (refId in refIds) {
+                        val actionDef = template.runtimeActionDefs.firstOrNull { it.id() == refId }
+                        if (actionDef != null) {
+                            executeRuntimeAction(actionDef, context)
+                        } else {
+                            plugin.debug("[Runtime] Actiunea '${refId}' nu a fost gasita in template-ul '${context.templateId()}'")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun evaluateRuntimeCondition(conditionDef: ScenarioRuntimeDefinition?, context: ScenarioExecutionContext): Boolean {
+        if (conditionDef == null) return true
+        val report = conditionRegistry.validateDefinition(conditionDef, "conditie")
+        if (!report.isValid()) {
+            plugin.debug("[Runtime] Conditie invalida: ${conditionDef.id()} - erori: ${report.errors().joinToString("; ")}")
+            return true
+        }
+        return conditionRegistry.find(conditionDef.type())
+            .map { handler -> handler.evaluate(context, conditionDef) }
+            .orElse(true)
+    }
+    fun enrichWithProviderVariables(ctx: ScenarioExecutionContext): ScenarioExecutionContext {
+        val providerVars = variableProviderRegistry.allVariables(ctx)
+        return ScenarioExecutionContext(
+            ctx.playerUuid(), ctx.playerName(), ctx.npcId(), ctx.npcName(),
+            ctx.regionId(), ctx.placeId(), ctx.nodeId(),
+            ctx.templateId(), ctx.progressionId(), ctx.runtimeMode(),
+            providerVars + ctx.variables()
+        )
+    }
+
+    fun fireLifecycleTriggers(
+        template: ScenarioTemplate,
+        lifecycleType: String,
+        player: Player,
+        contextVars: Map<String, String>,
+    ) {
+        if (template.runtimeTriggerDefs.isEmpty()) return
+        val triggerCtx = enrichWithProviderVariables(ScenarioExecutionContext(
+            player.uniqueId.toString(), player.name, "", "", "", "", "",
+            template.templateId, template.templateId, "lifecycle", contextVars
+        ))
+        for (triggerDef in template.runtimeTriggerDefs) {
+            if (triggerDef.type().equals(lifecycleType, ignoreCase = true)) {
+                executeRuntimeTrigger(triggerDef, triggerCtx)
+            }
+        }
+    }
+
     private fun loadScenarioTemplates() {
         templatesLoadedAt = System.currentTimeMillis()
         scenarioTemplates.clear()
@@ -338,6 +424,25 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                 template.objectives = definition.objectives
                 template.rewards = definition.rewards
                 template.questContract = QuestScenarioContract.fromScenarioDefinition(definition)
+
+                template.runtimeConditionDefs = definition.conditions.map { cdef ->
+                    val params = LinkedHashMap(cdef)
+                    params.remove("id")
+                    params.remove("type")
+                    ScenarioRuntimeDefinition(cdef["id"], cdef["type"], params.toMap())
+                }
+                template.runtimeTriggerDefs = definition.runtimeTriggers.map { tdef ->
+                    val params = LinkedHashMap(tdef)
+                    params.remove("id")
+                    params.remove("type")
+                    ScenarioRuntimeDefinition(tdef["id"], tdef["type"], params.toMap())
+                }
+                template.runtimeActionDefs = definition.runtimeActions.map { adef ->
+                    val params = LinkedHashMap(adef)
+                    params.remove("id")
+                    params.remove("type")
+                    ScenarioRuntimeDefinition(adef["id"], adef["type"], params.toMap())
+                }
 
                 for (roleDefinition in definition.roles.values) {
                     val role = ScenarioRoleRule(
@@ -510,6 +615,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             rewardNotes.addAll(applyQuestStoryActions(p0, p1, template, currentProgress, template.rewards))
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.PLAYER, p0, p1, template, completedProgress)
+            fireLifecycleTriggers(template, "quest_completed", p0, mapOf("npc_id" to p1.uuid.toString()))
             triggerQuestActors(template, QuestActorTriggers.ON_COMPLETE, p0, p1)
             triggerQuestActors(template, QuestActorTriggers.ON_RETURN_TO_GIVER, p0, p1)
             advanceToNextChainedQuest(p0, template)
@@ -595,6 +701,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         acceptedProgress = bindQuestProgressToNpc(playerId, template, acceptedProgress, p1)
         acceptedProgress = bindQuestProgressToAnchors(p0, acceptedProgress, resolvedAnchors)
         publishProgressionAccepted(p0, p1, template, acceptedProgress)
+        fireLifecycleTriggers(template, "quest_accepted", p0, mapOf("npc_id" to p1.uuid.toString()))
         triggerQuestActors(template, QuestActorTriggers.ON_ACCEPT, p0, p1)
         plugin.debug("[QuestEngine] Quest acceptat pentru player=" + p0.name
             + " templateId=" + template.templateId)
@@ -647,6 +754,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         removeActiveQuestProgress(playerId, template.templateId)
         deleteQuestProgressAsync(playerId, template.templateId)
         publishProgressionDeclined(p0, p1, template, currentProgress)
+        fireLifecycleTriggers(template, "quest_declined", p0, mapOf("npc_id" to p1.uuid.toString()))
         return QuestInteractionResult.handled(
             true,
             listOf("In regula. Poate alta data."),
@@ -689,6 +797,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         val failedProgress = markQuestFailed(playerId, template)
         publishProgressionAbandoned(AINPCEventSource.PLAYER, p0, p1, template, failedProgress)
+        fireLifecycleTriggers(template, "quest_abandoned", p0, mapOf("npc_id" to p1.uuid.toString()))
         cleanupQuestActors(template, QuestActorTriggers.ON_FAIL)
         return QuestInteractionResult.handled(
             true,
@@ -746,6 +855,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         val failedProgress = markQuestFailed(playerId, template)
         publishProgressionAbandoned(AINPCEventSource.COMMAND, p0, null, template, failedProgress)
+        fireLifecycleTriggers(template, "quest_abandoned", p0, emptyMap())
         cleanupQuestActors(template, QuestActorTriggers.ON_FAIL)
         systemMessages.add("&eQuest abandonat: &f" + resolveQuestTitle(template))
         systemMessages.addAll(buildQuestStatusMessages(template, failedProgress, p0, resolveQuestNpcName(failedProgress)))
@@ -814,6 +924,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         clearQuestTrackingIfMatches(playerId, template.templateId)
         deleteQuestProgressAsync(playerId, template.templateId)
+        fireLifecycleTriggers(template, "quest_reset", p0, mapOf("npc_id" to p1.uuid.toString()))
         cleanupQuestActors(template, QuestActorTriggers.ON_RESET)
         plugin.debug("[QuestEngine] resetQuestProgress reusit pentru player=" + p0.name
             + " templateId=" + template.templateId)
@@ -880,6 +991,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             p0.updateInventory()
             val completedProgress = markQuestCompleted(playerId, template)
             publishProgressionCompleted(AINPCEventSource.COMMAND, p0, p1, template, completedProgress)
+            fireLifecycleTriggers(template, "quest_completed", p0, mapOf("npc_id" to p1.uuid.toString()))
             triggerQuestActors(template, QuestActorTriggers.ON_COMPLETE, p0, p1)
             triggerQuestActors(template, QuestActorTriggers.ON_RETURN_TO_GIVER, p0, p1)
             advanceToNextChainedQuest(p0, template)
@@ -1692,6 +1804,42 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val place = findCurrentPlace(location)
         val node = findCurrentNode(location)
         if (region == null && place == null && node == null) return
+
+        if (region != null) {
+            val triggerVars = mapOf("region_id" to region.id)
+            val triggerCtx = enrichWithProviderVariables(ScenarioExecutionContext(
+                p0.uniqueId.toString(), p0.name, "", "", region.id,
+                place?.id.orEmpty(), node?.id.orEmpty(),
+                "", "", "trigger", triggerVars
+            ))
+            executeRuntimeTrigger(
+                ScenarioRuntimeDefinition("region_enter_${region.id}", "player_enters_region", triggerVars),
+                triggerCtx
+            )
+        }
+        if (place != null) {
+            val triggerVars = mapOf("place_id" to place.id)
+            val triggerCtx = enrichWithProviderVariables(ScenarioExecutionContext(
+                p0.uniqueId.toString(), p0.name, "", "", region?.id.orEmpty(), place.id,
+                node?.id.orEmpty(), "", "", "trigger", triggerVars
+            ))
+            executeRuntimeTrigger(
+                ScenarioRuntimeDefinition("place_enter_${place.id}", "player_enters_place", triggerVars),
+                triggerCtx
+            )
+        }
+        if (node != null) {
+            val triggerVars = mapOf("node_id" to node.id)
+            val triggerCtx = enrichWithProviderVariables(ScenarioExecutionContext(
+                p0.uniqueId.toString(), p0.name, "", "", region?.id.orEmpty(),
+                place?.id.orEmpty(), node.id, "", "", "trigger", triggerVars
+            ))
+            executeRuntimeTrigger(
+                ScenarioRuntimeDefinition("node_enter_${node.id}", "player_enters_node", triggerVars),
+                triggerCtx
+            )
+        }
+
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue
             val template = resolveTemplateForProgress(progress, null)
@@ -2536,14 +2684,14 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         Bukkit.getPluginManager().callEvent(event)
     }
 
-    private fun getCurrentQuestProgress(playerId: UUID): List<PlayerQuestProgress> {
+    fun getCurrentQuestProgress(playerId: UUID): List<PlayerQuestProgress> {
         val currentQuests = activePlayerQuests[playerId] ?: return emptyList()
         return currentQuests.values
             .filter { it != null && it.isCurrent() }
             .sortedWith(compareByDescending<PlayerQuestProgress> { it.updatedAt() }.thenBy { it.templateId() ?: "" })
     }
 
-    private fun getCurrentQuestProgress(playerId: UUID?, templateId: String?): PlayerQuestProgress? {
+    fun getCurrentQuestProgress(playerId: UUID?, templateId: String?): PlayerQuestProgress? {
         if (playerId == null || templateId == null || templateId.isBlank()) return null
         val currentQuests = activePlayerQuests[playerId] ?: return null
         return currentQuests[templateId]
@@ -2630,45 +2778,105 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun getArchivedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
         return archivedPlayerQuests[p0]?.get(p1)
     }
-    private fun getCompletedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
+    fun getCompletedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
         return getArchivedQuestProgress(p0, p1)?.takeIf { it.isCompleted() }
     }
     private fun getFailedQuestProgress(p0: UUID, p1: String): PlayerQuestProgress? {
         return getArchivedQuestProgress(p0, p1)?.takeIf { it.status() == QuestStatus.FAILED }
     }
-    private fun hasCompletedQuest(p0: UUID, p1: String): Boolean {
+    fun hasCompletedQuest(p0: UUID, p1: String): Boolean {
         return getCompletedQuestProgress(p0, p1) != null
     }
     private fun evaluateQuestAvailability(p0: UUID, p1: ScenarioTemplate): QuestAvailability {
-        if (hasCompletedQuest(p0, p1.templateId) && !p1.questRepeatable) {
-            return QuestAvailability.unavailable(listOf("Quest deja completat."))
+        val issues = mutableListOf<String>()
+
+        val contextVars = mutableMapOf<String, String>()
+        contextVars["player_uuid"] = p0.toString()
+        contextVars["mechanic_id"] = p1.progressionMechanicId
+
+        if (hasCompletedQuest(p0, p1.templateId)) {
+            contextVars["quest_completed_${p1.templateId}"] = "true"
+            val completedProgress = getCompletedQuestProgress(p0, p1.templateId)
+            if (completedProgress != null) {
+                contextVars["quest_completed_${p1.templateId}_at"] = completedProgress.completedAt().toString()
+            }
         }
-        if (p1.questRepeatable && p1.questCooldownSeconds > 0) {
-            val lastCompleted = getCompletedQuestProgress(p0, p1.templateId)
-            if (lastCompleted != null) {
-                val elapsed = (System.currentTimeMillis() - lastCompleted.completedAt()) / 1000L
-                val remaining = p1.questCooldownSeconds - elapsed
-                if (remaining > 0) {
-                    return QuestAvailability.unavailable(listOf("Mai asteapta ${remaining}s inainte sa reiei acest quest."))
+
+        val mechanicCount = countCurrentProgressionsInMechanic(p0, p1, p1.progressionMechanicId)
+        contextVars["mechanic_active_count_${p1.progressionMechanicId}"] = mechanicCount.toString()
+
+        val execContext = enrichWithProviderVariables(ScenarioExecutionContext(
+            p0.toString(), "", "", "", "", "", "",
+            p1.templateId, p1.templateId, "quest_availability", contextVars
+        ))
+
+        if (!p1.questRepeatable) {
+            val completedDef = ScenarioRuntimeDefinition(
+                "completed_check", "has_completed_quest",
+                mapOf("template_id" to p1.templateId)
+            )
+            val completedReport = conditionRegistry.validateDefinition(completedDef, "has_completed_quest")
+            if (completedReport.isValid()) {
+                val completedHandler = conditionRegistry.find("has_completed_quest")
+                if (completedHandler.isPresent && completedHandler.get().evaluate(execContext, completedDef)) {
+                    issues.add("Quest deja completat.")
                 }
             }
         }
-        if (p1.questPrerequisites.isNotEmpty()) {
-            val missing = p1.questPrerequisites.filter { prereq ->
-                !hasCompletedQuest(p0, prereq) && !hasCompletedQuestByCode(p0, prereq)
-            }
-            if (missing.isNotEmpty()) {
-                return QuestAvailability.unavailable(listOf("Completeaza mai intai: ${missing.joinToString(", ")}"))
+
+        if (p1.questRepeatable && p1.questCooldownSeconds > 0) {
+            val cooldownDef = ScenarioRuntimeDefinition(
+                "cooldown_check", "quest_cooldown",
+                mapOf("template_id" to p1.templateId, "seconds" to p1.questCooldownSeconds.toString())
+            )
+            val cooldownReport = conditionRegistry.validateDefinition(cooldownDef, "quest_cooldown")
+            if (cooldownReport.isValid()) {
+                val cooldownHandler = conditionRegistry.find("quest_cooldown")
+                if (cooldownHandler.isPresent && !cooldownHandler.get().evaluate(execContext, cooldownDef)) {
+                    issues.add("Mai asteapta inainte sa reiei acest quest.")
+                }
             }
         }
+
+        if (p1.questPrerequisites.isNotEmpty()) {
+            for (prereq in p1.questPrerequisites) {
+                val prereqDef = ScenarioRuntimeDefinition(
+                    "prerequisite_check", "quest_prerequisite",
+                    mapOf("template_id" to prereq)
+                )
+                val prereqReport = conditionRegistry.validateDefinition(prereqDef, "quest_prerequisite")
+                if (prereqReport.isValid()) {
+                    val prereqHandler = conditionRegistry.find("quest_prerequisite")
+                    if (prereqHandler.isPresent && !prereqHandler.get().evaluate(execContext, prereqDef)) {
+                        issues.add("Completeaza mai intai: $prereq")
+                    }
+                }
+            }
+        }
+
         val limit = getProgressionMechanicLimit(p1)
         if (limit > 0) {
-            val current = countCurrentProgressionsInMechanic(p0, p1, p1.progressionMechanicId)
-            if (current >= limit) {
-                return QuestAvailability.unavailable(listOf("Ai atins limita de ${p1.progressionLabel.lowercase()} active."))
+            val limitDef = ScenarioRuntimeDefinition(
+                "mechanic_limit_check", "mechanic_limit",
+                mapOf("mechanic_id" to p1.progressionMechanicId, "max_active" to limit.toString())
+            )
+            val limitReport = conditionRegistry.validateDefinition(limitDef, "mechanic_limit")
+            if (limitReport.isValid()) {
+                val limitHandler = conditionRegistry.find("mechanic_limit")
+                if (limitHandler.isPresent && !limitHandler.get().evaluate(execContext, limitDef)) {
+                    issues.add("Ai atins limita de ${p1.progressionLabel.lowercase()} active.")
+                }
             }
         }
-        return QuestAvailability.allowed()
+
+        for (condDef in p1.runtimeConditionDefs) {
+            if (!evaluateRuntimeCondition(condDef, execContext)) {
+                issues.add("Conditie runtime neindeplinita: ${condDef.id()}")
+            }
+        }
+
+        return if (issues.isEmpty()) QuestAvailability.allowed()
+        else QuestAvailability.unavailable(issues)
     }
     private fun hasCompletedQuestByCode(p0: UUID, p1: String): Boolean {
         val archived = getArchivedQuestProgress(p0)
@@ -2719,7 +2927,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
         return 0
     }
-    private fun countCurrentProgressionsInMechanic(p0: UUID, p1: ScenarioTemplate?, p2: String): Int {
+    fun countCurrentProgressionsInMechanic(p0: UUID, p1: ScenarioTemplate?, p2: String): Int {
         val current = getCurrentQuestProgress(p0)
         return current.count { 
             val mechanic = it.templateId()?.let { id -> 
@@ -3283,8 +3491,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         if (p0.rewards.isNotEmpty()) {
             lines.add("&6Recompense:")
             for (reward in p0.rewards) {
-                val rewardLabel = formatObjectiveProgressLabel(reward)
-                lines.add("&7- &f$rewardLabel &7x&f${reward.amount}")
+                val rewardLabel = formatRewardLabel(reward)
+                lines.add("&7- &f$rewardLabel")
             }
         }
         return lines

@@ -55,7 +55,11 @@ object DebugDumpSupport {
             "", "item", "reward_item" -> "item"
             "story_state", "set_story_flag", "story_flag", "set_flag", "setstorystate" -> "set_story_state"
             "story_event", "record_event", "event", "recordstoryevent" -> "record_story_event"
-            else -> normalized
+            "progression_xp", "progression_xp_award" -> "progression:xp"
+            "progression_level", "progression_set_level" -> "progression:level"
+            "progression_skill", "progression_skill_xp" -> "progression:skill"
+            "progression_skill_level", "skill_level" -> "progression:skill_level"
+            else -> if (normalized.startsWith("reputation_")) "reputation:${normalized.removePrefix("reputation_")}" else normalized
         }
     }
 
@@ -71,6 +75,12 @@ object DebugDumpSupport {
             "economy:money",
             "set_story_state",
             "record_story_event",
+            "progression:xp",
+            "progression:level",
+            "progression:skill",
+            "progression:skill_level",
+            "reputation:region",
+            "reputation:faction",
         )
     }
 

@@ -10,6 +10,8 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.world.RegionIdentityProvider
+import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
@@ -35,6 +37,18 @@ class WorldRegionGui : GuiScreen {
         ))
 
         if (region != null) {
+            val regionType = RegionType.fromId(region.typeId())
+            val identity = RegionIdentityProvider.identity(regionType)
+            context.item(9, GuiItemFactory.item(
+                Material.AMETHYST_SHARD, "&dIdentitate: ${identity.displayName}",
+                listOf(
+                    "&7Tip: &f${identity.displayName}",
+                    "&7Descriere: &f${identity.description}",
+                    "&7Poveste: &f${identity.defaultStoryKey} &8(${identity.mood})",
+                    "&7Threat: &f${identity.threatLevel}",
+                    "&7Atmosfera: &f${identity.ambiance}"
+                )
+            ))
             context.item(10, GuiItemFactory.item(
                 Material.NAME_TAG, "&bDetalii",
                 listOf(

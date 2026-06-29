@@ -49,8 +49,15 @@ object McpStreamableHttpCodec {
         val content = result.getAsJsonArray("content") ?: return "{}"
         if (content.size() == 0) return "{}"
         val first = content[0].asJsonObject
-        first.get("text")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString?.let { return it }
-        first.get("data")?.takeIf { it.isJsonPrimitive }?.let { return it.toString().trim('"') }
+        val text = first.get("text")
+        if (text != null && text.isJsonPrimitive && text.asJsonPrimitive.isString) {
+            return text.asString
+        }
+        val data = first.get("data")
+        if (data != null && data.isJsonPrimitive) {
+            if (data.asJsonPrimitive.isString) return data.asString
+            return data.asJsonPrimitive.toString()
+        }
         return first.toString()
     }
 

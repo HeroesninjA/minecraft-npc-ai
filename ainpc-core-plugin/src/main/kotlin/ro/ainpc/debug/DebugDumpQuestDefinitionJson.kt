@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.QuestScenarioContract
+import ro.ainpc.engine.formatRewardLabel
 import ro.ainpc.progression.ProgressionDefinition
 
 object DebugDumpQuestDefinitionJson {
@@ -439,6 +440,9 @@ object DebugDumpQuestDefinitionJson {
         )
         json.addProperty("amount", entry.amount)
         json.addProperty("description", DebugDumpSupport.valueOrEmpty(entry.description))
+        if (!objectiveEntry) {
+            json.addProperty("formatted_label", formatRewardLabel(entry))
+        }
         json.add("metadata", gson.toJsonTree(entry.metadata))
         json.add("variables", gson.toJsonTree(entry.variables))
         json.add("payload", gson.toJsonTree(entry.payload))

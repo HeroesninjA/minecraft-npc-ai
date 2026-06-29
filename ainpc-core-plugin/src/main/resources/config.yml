@@ -62,6 +62,12 @@ features:
   mcp: true
   generation: true
 
+# Daca este true, toate confirmarile din GUI (world save, scan, spawn, etc.)
+# sunt SKIPATE automat, iar comanda este executata direct. Util pentru admini
+# care prefera un flux rapid fara dialoguri de confirmare.
+gui:
+  skip_confirmations: false
+
 # Integrare optionala cu sidecar-ul runtime Spring AI MCP.
 # Implicit pornit cu fail-open: pluginul functioneaza in continuare daca sidecar-ul lipseste.
 mcp:

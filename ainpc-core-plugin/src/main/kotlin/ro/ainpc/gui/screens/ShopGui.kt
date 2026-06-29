@@ -12,7 +12,6 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
-import java.util.Comparator
 import java.util.Locale
 
 class ShopGui : GuiScreen {

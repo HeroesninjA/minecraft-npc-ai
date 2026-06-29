@@ -1,7 +1,6 @@
 package ro.ainpc.world.mapping
 
 import java.util.Locale
-import java.util.Optional
 
 enum class MappingWandMode(private val idValue: String) {
     REGION("region"),
@@ -25,9 +24,9 @@ enum class MappingWandMode(private val idValue: String) {
 
     companion object {
         @JvmStatic
-        fun fromId(value: String?): Optional<MappingWandMode> {
+        fun fromId(value: String?): MappingWandMode? {
             if (value.isNullOrBlank()) {
-                return Optional.empty()
+                return null
             }
             val normalized = value.trim()
                 .lowercase(Locale.ROOT)
@@ -36,10 +35,10 @@ enum class MappingWandMode(private val idValue: String) {
                 if (mode.idValue.equals(normalized, ignoreCase = true) ||
                     mode.name.equals(normalized, ignoreCase = true)
                 ) {
-                    return Optional.of(mode)
+                    return mode
                 }
             }
-            return Optional.empty()
+            return null
         }
     }
 }

@@ -295,24 +295,24 @@ fun handleGui(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val resolvedKey = GuiKey.fromId(rawKey)
-    if (resolvedKey.isEmpty()) {
+    if (resolvedKey == null) {
         ainpcCommandMiscPlugin.messageUtils.send(sender,
             "&cGUI necunoscut. Optiuni: &fplayer, admin, creator, quest, story, world, stats, interact, routine, shop, manager, audit, debug")
         return true
     }
 
-    if (args.size == 3 && resolvedKey.get() != GuiKey.QUEST) {
+    if (args.size == 3 && resolvedKey != GuiKey.QUEST) {
         ainpcCommandMiscPlugin.messageUtils.send(sender,
             "&cFiltrul este disponibil doar pentru /ainpc gui quest|progresii <filter>.")
         return true
     }
 
-    if (resolvedKey.get() == GuiKey.QUEST && args.size == 3) {
+    if (resolvedKey == GuiKey.QUEST && args.size == 3) {
         ainpcCommandMiscPlugin.guiService.openQuestLog(player, args[2])
         return true
     }
 
-    ainpcCommandMiscPlugin.guiService.open(player, resolvedKey.get())
+    ainpcCommandMiscPlugin.guiService.open(player, resolvedKey)
     return true
 }
 
@@ -430,6 +430,7 @@ fun handleHealth(sender: CommandSender): Boolean {
         sender,
         "&eMCP runtime: &f$mcpColor${mcpHealth.status} &8(${mcpHealth.durationMillis}ms, ${mcpHealth.endpoint})"
     )
+    msg.send(sender, "&eMCP snapshot: &fdata/mcp-runtime-snapshot.json &8(auto: ${plugin.config.getBoolean("mcp.snapshot.auto", true)})")
     val issues = mutableListOf<String>()
     if (!plugin.config.getBoolean("features.ai", false)) issues.add("&eAI: &cdezactivat (features.ai=false)")
     if (mcpHealth.enabled && !mcpHealth.available) issues.add("&eMCP: &c${mcpHealth.detail}")
@@ -742,7 +743,7 @@ fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
     msg.send(sender, "&eNevoi: &fFoame=${npc.hungerLevel}/100 Energie=${npc.energyLevel}/100 Siguranta=${npc.safetyLevel}/100 Confort=${npc.comfortLevel}/100")
     msg.send(sender, "&eAncore: &fhome=${formatOptional(npc.homeAnchor?.label())} work=${formatOptional(npc.workAnchor?.label())} social=${formatOptional(npc.socialAnchor?.label())}")
     val worldBinding = runCatching {
-        if (npc.databaseId > 0) ainpcCommandMiscPlugin.npcWorldBindingService?.getBinding(npc.databaseId)?.orElse(null) else null
+        if (npc.databaseId > 0) ainpcCommandMiscPlugin.npcWorldBindingService?.getBinding(npc.databaseId) else null
     }.getOrNull()
     if (worldBinding != null) {
         msg.send(sender, "&eMapare: &fhome=${formatOptional(worldBinding.homePlaceId())} work=${formatOptional(worldBinding.workPlaceId())} social=${formatOptional(worldBinding.socialPlaceId())}")
@@ -765,7 +766,7 @@ fun handleDuplicates(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
-    val npcs = ArrayList(ainpcCommandMiscPlugin.npcManager.getAllNPCs())
+    val npcs = ainpcCommandMiscPlugin.npcManager.getAllNPCs().toMutableList()
     val msg = ainpcCommandMiscPlugin.messageUtils
     msg.send(sender, "&6=== Duplicate NPC - raport ===")
     msg.send(sender, "&eNPC-uri incarcate: &f" + npcs.size)
@@ -823,7 +824,7 @@ fun handleWand(sender: CommandSender, args: Array<String>): Boolean {
                 sendWandUsage(sender)
                 return true
             }
-            val mode = MappingWandMode.fromId(args[2]).orElse(null)
+            val mode = MappingWandMode.fromId(args[2])
             if (mode == null) {
                 ainpcCommandMiscPlugin.messageUtils.send(sender,
                     "&cMod wand invalid. Optiuni: &fregion, place, node, npc_bind, quest_anchor")
@@ -912,9 +913,7 @@ fun handleMap(
 
     val action = args[1].lowercase()
     if (action == "preview") {
-        val draft = service.session(player.uniqueId)
-            .map { it.draft() }
-            .orElse(null)
+        val draft = service.session(player.uniqueId)?.draft()
         if (draft == null) {
             ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista draft mapping. Ruleaza &f/ainpc map <descriere>&7.")
             return true
@@ -929,9 +928,7 @@ fun handleMap(
         return true
     }
     if (action == "confirm" || action == "confirma") {
-        val draft = service.session(player.uniqueId)
-            .map { it.draft() }
-            .orElse(null)
+        val draft = service.session(player.uniqueId)?.draft()
         if (draft != null && draft.isNpcBind()) {
             if (applyNpcBindDraft(sender, draft)) {
                 service.cancelDraft(player.uniqueId)
@@ -955,7 +952,7 @@ fun handleMap(
         return true
     }
 
-    val explicitKind = MappingDraftKind.fromId(action).orElse(null)
+    val explicitKind = MappingDraftKind.fromId(action)
     val descriptionStart = if (explicitKind != null) 2 else 1
     if (descriptionStart >= args.size) {
         sendMapUsage(sender)

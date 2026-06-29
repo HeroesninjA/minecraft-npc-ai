@@ -120,7 +120,10 @@ internal class MappingIndex {
     private fun toChunk(blockCoordinate: Int): Int = Math.floorDiv(blockCoordinate, 16)
 
     private fun normalizeWorld(worldName: String?): String {
-        return worldName?.lowercase(Locale.ROOT).orEmpty()
+        if (worldName.isNullOrBlank()) {
+            return "__unknown_world__"
+        }
+        return worldName.lowercase(Locale.ROOT)
     }
 
     private data class ChunkKey(

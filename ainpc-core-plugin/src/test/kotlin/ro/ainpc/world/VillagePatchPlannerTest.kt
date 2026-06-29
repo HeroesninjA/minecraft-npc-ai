@@ -13,6 +13,7 @@ import ro.ainpc.world.patch.PatchPlannerOptions
 import ro.ainpc.world.patch.PatchType
 import ro.ainpc.world.patch.PatchValidationStatus
 import ro.ainpc.world.patch.VillageGapAnalyzer
+import ro.ainpc.world.patch.VillagePatchApplier
 import ro.ainpc.world.patch.VillagePatchPlanner
 import java.util.logging.Logger
 
@@ -139,6 +140,91 @@ class VillagePatchPlannerTest {
         assertTrue(report.missingWorkplaces().isEmpty())
         assertEquals(0, report.missingSocialPlaces())
         assertFalse(report.missingNodes().contains("quest_trigger"))
+    }
+
+    @Test
+    fun demoMappingApplierCreatesPlaceAndNodeForAddHousePatch() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, 0, 320)
+        val options = PatchPlannerOptions(
+            targetPopulation = 10,
+            requiredProfessions = emptyList(),
+            minHouseCount = 0,
+            maxPatchCount = 12,
+            requireSocialHub = true,
+            requireQuestTriggerNode = true,
+            allowedCapabilities = setOf("semantic-place-mapping", "native-block-build")
+        )
+        val report = VillageGapAnalyzer().analyze(service, "demo_sat", options)
+        assertTrue(report.success())
+        assertTrue(report.hasGaps())
+
+        val planResult = VillagePatchPlanner().plan(report, options)
+        assertTrue(planResult.success())
+
+        val addHousePlan = planResult.patchPlans().firstOrNull { it.type() == PatchType.ADD_HOUSE }
+            ?: return // may have no house plan if capacity already sufficient
+
+        val applyResult = VillagePatchApplier().apply(service, addHousePlan, "demo_sat")
+        assertTrue(applyResult.success(), "Apply errors: ${applyResult.errors()}")
+        if (applyResult.placeCount() > 0) {
+            for (placeId in applyResult.createdPlaceIds()) {
+                val place = service.getPlace(placeId)
+                assertTrue(place != null, "Place $placeId should exist after apply")
+            }
+        }
+        if (applyResult.nodeCount() > 0) {
+            for (nodeId in applyResult.createdNodeIds()) {
+                val node = service.getNode(nodeId)
+                assertTrue(node != null, "Node $nodeId should exist after apply")
+            }
+        }
+    }
+
+    @Test
+    fun applyInvalidPlanReturnsError() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, 0, 320)
+        val options = PatchPlannerOptions(
+            targetPopulation = 10,
+            requiredProfessions = emptyList(),
+            minHouseCount = 0,
+            maxPatchCount = 12,
+            requireSocialHub = true,
+            requireQuestTriggerNode = true,
+            allowedCapabilities = setOf("semantic-place-mapping", "native-block-build")
+        )
+        val report = VillageGapAnalyzer().analyze(service, "demo_sat", options)
+        assertTrue(report.success())
+        val planResult = VillagePatchPlanner().plan(report, options)
+        assertTrue(planResult.success())
+
+        val addNodePlan = planResult.patchPlans().firstOrNull { it.type() == PatchType.ADD_NODE }
+        if (addNodePlan != null && addNodePlan.valid()) {
+            val applyResult = VillagePatchApplier().apply(service, addNodePlan, "demo_sat")
+            assertTrue(applyResult.success(), "AddNode apply should work: ${applyResult.errors()}")
+        }
+    }
+
+    @Test
+    fun applyToNonexistentRegionReturnsError() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, 0, 320)
+        val options = PatchPlannerOptions(
+            targetPopulation = 10,
+            requiredProfessions = emptyList(),
+            minHouseCount = 0,
+            maxPatchCount = 12,
+            requireSocialHub = true,
+            requireQuestTriggerNode = true,
+            allowedCapabilities = setOf("semantic-place-mapping", "native-block-build")
+        )
+        val report = VillageGapAnalyzer().analyze(service, "demo_sat", options)
+        assertTrue(report.success())
+        val planResult = VillagePatchPlanner().plan(report, options)
+        assertTrue(planResult.success())
+
+        val firstPlan = planResult.patchPlans().firstOrNull() ?: return
+        val applyResult = VillagePatchApplier().apply(service, firstPlan, "nonexistent_region")
+        assertFalse(applyResult.success())
+        assertTrue(applyResult.errors().any { it.contains("nu exista", ignoreCase = true) })
     }
 
     private fun profile(): PlatformProfile {

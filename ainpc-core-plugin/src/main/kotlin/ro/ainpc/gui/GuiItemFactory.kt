@@ -5,7 +5,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Material
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
-import java.util.ArrayList
+
 
 object GuiItemFactory {
     private val LEGACY: LegacyComponentSerializer = LegacyComponentSerializer.legacyAmpersand()
@@ -30,7 +30,7 @@ object GuiItemFactory {
 
     @JvmStatic
     fun disabled(material: Material?, name: String?, lore: List<String?>?): ItemStack {
-        val disabledLore = ArrayList(lore ?: emptyList())
+        val disabledLore = (lore ?: emptyList()).toMutableList()
         disabledLore.add("&cIndisponibil sau fara permisiune.")
         return item(material ?: Material.BARRIER, "&8${stripLegacy(name)}", disabledLore)
     }
@@ -51,7 +51,7 @@ object GuiItemFactory {
             return listOf(color)
         }
 
-        val lines = ArrayList<String>()
+        val lines = mutableListOf<String>()
         var current = StringBuilder()
         for (token in clean.split(Regex("\\s+"))) {
             if (current.isNotEmpty() && current.length + token.length + 1 > maxLineLength) {

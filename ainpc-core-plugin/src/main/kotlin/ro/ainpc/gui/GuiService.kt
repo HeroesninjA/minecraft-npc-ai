@@ -40,12 +40,13 @@ import ro.ainpc.gui.screens.NpcInteractionGui
 import ro.ainpc.gui.screens.QuestMapGui
 import ro.ainpc.gui.screens.ShopGui
 import java.util.EnumMap
-import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
 class GuiService(private val plugin: AINPCPlugin) {
+    private val skipConfirmations: Boolean
+        get() = plugin.config.getBoolean("gui.skip_confirmations", false)
     private val sessionManager = GuiSessionManager()
     private val screens: MutableMap<GuiKey, GuiScreen> = EnumMap(GuiKey::class.java)
     private val questDetailSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
@@ -242,11 +243,11 @@ class GuiService(private val plugin: AINPCPlugin) {
             return false
         }
         val key = GuiKey.fromId(rawKey)
-        if (key.isEmpty) {
+        if (key == null) {
             plugin.messageUtils.send(player, "&cGUI necunoscut: &f$rawKey")
             return false
         }
-        open(player, key.get())
+        open(player, key)
         return true
     }
 
@@ -480,6 +481,17 @@ class GuiService(private val plugin: AINPCPlugin) {
             return
         }
 
+        if (skipConfirmations) {
+            if (warningLines.isNullOrEmpty()) {
+                plugin.messageUtils.send(player, "&7[Auto-confirm] &f$title")
+            } else {
+                val firstWarning = warningLines.firstOrNull() ?: title ?: "Actiune"
+                plugin.messageUtils.send(player, "&7[Auto-confirm] &f$firstWarning")
+            }
+            runCommand(player, command)
+            return
+        }
+
         confirmRequests[player.uniqueId] = ConfirmRequest(
             title,
             command,
@@ -490,11 +502,11 @@ class GuiService(private val plugin: AINPCPlugin) {
         open(player, GuiKey.CONFIRM)
     }
 
-    fun getConfirmRequest(player: Player?): Optional<ConfirmRequest> {
+    fun getConfirmRequest(player: Player?): ConfirmRequest? {
         if (player == null) {
-            return Optional.empty()
+            return null
         }
-        return Optional.ofNullable(confirmRequests[player.uniqueId])
+        return confirmRequests[player.uniqueId]
     }
 
     fun returnFromConfirm(player: Player?, request: ConfirmRequest?) {
@@ -528,12 +540,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             return
         }
 
-        val optionalSession = sessionManager.find(sessionId)
-        if (optionalSession.isEmpty) {
-            return
-        }
-
-        val session = optionalSession.get()
+        val session = sessionManager.find(sessionId) ?: return
         if (session.getPlayerId() != player.uniqueId) {
             return
         }

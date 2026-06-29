@@ -120,7 +120,9 @@ Actualizat: 2026-06-26
 
 ## Prioritate curenta
 
-- [ ] Pass Paper pe playable village: teren plat, case distantate, NPC-uri cu home/work/social clare, rutina inspectabila si fara fuga haotica
+- [x] Script consolidat playable village: `scripts/playable-village-setup.ps1` (build → deploy → demo → plan → spawn → audit)
+- [x] Runbook playable village: `docs/playable-village-runbook.md` (pas-cu-pas + comenzi RCON + smoke tests)
+- [ ] Executa playable village pe server Paper live: `.\scripts\playable-village-setup.ps1 -ServerDir .\paper-data`
 - [ ] Smoke test Paper pentru flux wand complet: `region`/`place`/`node`/`npc_bind`/`quest_anchor`, audit, save si reload
 - [ ] Smoke test Paper pentru `/ainpc world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`
 - [x] Generator narativ pentru populatie pe regiune: PopulationPlan, ResidentNarrativePlan, narrative name generation cu NPCNameGenerator, profession mapping (fierar/fermier/negustor/hangiu/gardian), socialRole/questRole assignment, backstory generation, family structures, capacitate case, seed determinist, comenzi `/ainpc population plan <regionId> [pop] [seed]` si `inspect` cu conversie in HouseAllocation
@@ -147,7 +149,7 @@ Actualizat: 2026-06-26
 
 ## Componente lipsa sau incomplete confirmate in cod
 
-- [ ] Runtime extensibil complet pentru scenarii: registrii exista initial, dar `ScenarioEngine` nu consuma inca aceste contracte ca runtime principal
+- [x] Runtime extensibil complet pentru scenarii: registrii sunt consumati de `ScenarioEngine` ca runtime principal; YAML deserialization pentru `conditions`/`runtime_triggers`; 8 handler-e noi; wiring complet in `evaluateQuestAvailability()` si `recordRegionVisit()`
 - [x] `ScenarioActionRegistry`
 - [x] `ScenarioConditionRegistry`
 - [x] `ScenarioTriggerRegistry`
@@ -167,7 +169,7 @@ Actualizat: 2026-06-26
 - [ ] Sistem extins de reward:
 - [x] reputatie (prin ReputationApi + ReputationService + player_reputation DB table)
 - [x] economie / monede (prin EconomyService + ShopService)
-- [ ] progresie jucator
+- [x] progresie jucator (prin reward `progression:xp/level/skill` + `PlayerProgressionService`)
 - [x] factiuni sau afiliere regionala (prin ReputationService.scope_type/scope_id suporta region/faction scoping)
 - [x] Comenzi de debug si inspectie pentru:
 - [x] prompt AI (interactiuni prin `/ainpc debugdump ai`)
@@ -179,6 +181,10 @@ Actualizat: 2026-06-26
 - [x] Suita de teste automate pentru questuri, world admin si addon registry (167 fisiere de test existente)
 - [x] Build-ul core foloseste sursele din `ainpc-core-plugin/src/main`, nu din `src/src`
 - [x] Curatarea sau arhivarea folderului legacy `src/src` dupa validarea tuturor referintelor istorice
+
+## Feature packs
+
+- [x] Pack tutorial `tutorial_demo.yml` cu questuri TD01-TD03 (lant), TE01 (world event), TB01 (bounty), trasaturi, dialoguri si story defaults
 
 ## NPC-uri
 
@@ -226,7 +232,7 @@ Actualizat: 2026-06-26
 - [ ] Tranzactie DB completa pentru spawn pe regiune, peste mapping/family bind
 - [x] Economie de baza: monede, tranzactii, roluri comerciale (prin EconomyService + ShopService + NpcShopDefinition)
 - [x] Reputatie pe sat, regiune sau factiune (prin ReputationService cu scope_type="region"/"faction")
-- [ ] Sistem de progres pentru jucator: nivel, skill-uri sau experienta
+- [x] Sistem de progres pentru jucator: nivel, skill-uri sau experienta (prin PlayerProgressionService + DB table `player_progression` + reward types `progression:xp/level/skill` + comanda `/ainpc progression player`)
 
 ## Scenarii si addonuri
 

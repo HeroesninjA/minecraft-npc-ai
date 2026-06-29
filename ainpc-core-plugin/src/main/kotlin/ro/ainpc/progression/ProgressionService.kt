@@ -5,8 +5,6 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.*
 import java.sql.SQLException
-import java.util.Comparator
-import java.util.LinkedHashSet
 import java.util.Locale
 
 class ProgressionService(private val plugin: AINPCPlugin) {
@@ -21,30 +19,35 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     private var cachedDefinitions: List<ProgressionDefinition>? = null
     private var cachedDefinitionsTime: Long = 0L
     private val cacheTtlMs: Long = 30_000L
+    private val cacheLock = Any()
 
     fun invalidateDefinitionCache() {
-        cachedDefinitions = null
-        cachedDefinitionsTime = 0L
+        synchronized(cacheLock) {
+            cachedDefinitions = null
+            cachedDefinitionsTime = 0L
+        }
     }
 
     private fun loadDefinitions(): List<ProgressionDefinition> {
         val now = System.currentTimeMillis()
-        if (cachedDefinitions != null && now - cachedDefinitionsTime < cacheTtlMs) {
-            return cachedDefinitions!!
+        synchronized(cacheLock) {
+            if (cachedDefinitions != null && now - cachedDefinitionsTime < cacheTtlMs) {
+                return cachedDefinitions!!
+            }
         }
         val featurePackLoader = plugin.featurePackLoader ?: return listOf()
-        val definitions = featurePackLoader.getAllScenarios().stream()
+        val definitions = featurePackLoader.getAllScenarios()
             .filter(ProgressionDefinition::isProgressionCandidate)
             .map(ProgressionDefinition::fromScenarioDefinition)
-            .sorted(
-                Comparator
-                    .comparing(ProgressionDefinition::packId, String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(ProgressionDefinition::mechanicId, String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(ProgressionDefinition::definitionId, String.CASE_INSENSITIVE_ORDER)
+            .sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER, ProgressionDefinition::packId)
+                    .thenBy(String.CASE_INSENSITIVE_ORDER, ProgressionDefinition::mechanicId)
+                    .thenBy(String.CASE_INSENSITIVE_ORDER, ProgressionDefinition::definitionId)
             )
-            .toList()
-        cachedDefinitions = definitions
-        cachedDefinitionsTime = now
+        synchronized(cacheLock) {
+            cachedDefinitions = definitions
+            cachedDefinitionsTime = now
+        }
         return definitions
     }
 
@@ -76,9 +79,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return getDefinitions()
         }
 
-        return getDefinitions().stream()
-            .filter { definition -> ProgressionFilter.matchesDefinition(definition, filter) }
-            .toList()
+        return getDefinitions().filter { ProgressionFilter.matchesDefinition(it, filter) }
     }
 
     fun getObjectiveIdSuggestions(player: Player, selector: String): List<String> {
@@ -96,7 +97,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return listOf()
         }
 
-        val suggestions = LinkedHashSet<String>()
+        val suggestions = linkedSetOf<String>()
         for (objective in scenario.objectives) {
             addCandidate(suggestions, displayObjectiveKey(objective))
         }
@@ -149,25 +150,16 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     }
 
     fun findDuplicateDefinitions(): Map<String, List<ProgressionDefinition>> {
-        val definitions = getDefinitions()
-        val grouped = LinkedHashMap<String, MutableList<ProgressionDefinition>>()
-        for (definition in definitions) {
-            val key = "${definition.mechanicId()}:${definition.definitionId()}".lowercase(Locale.ROOT)
-            grouped.getOrPut(key) { mutableListOf() }.add(definition)
-        }
-        return grouped.filter { it.value.size > 1 }
+        return getDefinitions().groupBy {
+            "${it.mechanicId()}:${it.definitionId()}".lowercase(Locale.ROOT)
+        }.filter { it.value.size > 1 }
     }
 
     fun findDuplicateCodes(): Map<String, List<ProgressionDefinition>> {
-        val definitions = getDefinitions()
-        val grouped = LinkedHashMap<String, MutableList<ProgressionDefinition>>()
-        for (definition in definitions) {
-            val code = definition.code().lowercase(Locale.ROOT)
-            if (code.isNotBlank()) {
-                grouped.getOrPut(code) { mutableListOf() }.add(definition)
-            }
-        }
-        return grouped.filter { it.value.size > 1 }
+        return getDefinitions()
+            .filter { it.code().isNotBlank() }
+            .groupBy { it.code().lowercase(Locale.ROOT) }
+            .filter { it.value.size > 1 }
     }
 
     @Throws(SQLException::class)
@@ -370,7 +362,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     }
 
     private fun storedSelectorCandidates(progression: StoredProgression): Set<String> {
-        val candidates = LinkedHashSet<String>()
+        val candidates = linkedSetOf<String>()
         addCandidate(candidates, progression.progressionId())
         addCandidate(candidates, progression.templateId())
         addCandidate(candidates, progression.code())
@@ -407,48 +399,30 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     private fun resolveEntry(entries: List<QuestGuiEntry>, selector: ProgressionSelector?): QuestGuiEntry? {
         if (selector == null || selector.isEmpty()) {
-            return entries.stream()
-                .filter(QuestGuiEntry::tracked)
-                .findFirst()
-                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
-                .or { entries.stream().filter(QuestGuiEntry::active).findFirst() }
-                .orElse(null)
+            return entries.firstOrNull(QuestGuiEntry::tracked)
+                ?: entries.firstOrNull(QuestGuiEntry::current)
+                ?: entries.firstOrNull(QuestGuiEntry::active)
         }
 
         if (selector.isActiveAlias()) {
-            return entries.stream()
-                .filter(QuestGuiEntry::active)
-                .findFirst()
-                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
-                .orElse(null)
+            return entries.firstOrNull(QuestGuiEntry::active)
+                ?: entries.firstOrNull(QuestGuiEntry::current)
         }
 
         if (selector.isCompletedAlias()) {
-            return entries.stream()
-                .filter(QuestGuiEntry::archived)
-                .findFirst()
-                .orElse(null)
+            return entries.firstOrNull(QuestGuiEntry::archived)
         }
 
         if (selector.isTrackedAlias()) {
             val raw = selector.raw().lowercase(Locale.ROOT)
             if (raw == "current" || raw == "curent") {
-                return entries.stream()
-                    .filter(QuestGuiEntry::current)
-                    .findFirst()
-                    .orElse(null)
+                return entries.firstOrNull(QuestGuiEntry::current)
             }
-            return entries.stream()
-                .filter(QuestGuiEntry::tracked)
-                .findFirst()
-                .or { entries.stream().filter(QuestGuiEntry::current).findFirst() }
-                .orElse(null)
+            return entries.firstOrNull(QuestGuiEntry::tracked)
+                ?: entries.firstOrNull(QuestGuiEntry::current)
         }
 
-        return entries.stream()
-            .filter { entry -> entryMatchesSelector(entry, selector) }
-            .findFirst()
-            .orElse(null)
+        return entries.firstOrNull { entryMatchesSelector(it, selector) }
     }
 
     private fun entryMatchesSelector(entry: QuestGuiEntry?, selector: ProgressionSelector?): Boolean {
@@ -457,13 +431,11 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         }
 
         val normalized = selector.commandSelector().lowercase(Locale.ROOT)
-        return entrySelectorCandidates(entry).stream()
-            .map { candidate -> candidate.lowercase(Locale.ROOT) }
-            .anyMatch { candidate -> normalized == candidate }
+        return entrySelectorCandidates(entry).any { it.lowercase(Locale.ROOT) == normalized }
     }
 
     private fun entrySelectorCandidates(entry: QuestGuiEntry): Set<String> {
-        val candidates = LinkedHashSet<String>()
+        val candidates = linkedSetOf<String>()
         addCandidate(candidates, entry.selector)
         addCandidate(candidates, entry.templateId)
         addCandidate(candidates, entry.questCode)
@@ -490,18 +462,9 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return null
         }
 
-        val byTemplate = getDefinitions().stream()
-            .filter { definition -> equalsIgnoreCase(definition.templateId(), entry.templateId) }
-            .findFirst()
-        if (byTemplate.isPresent) {
-            return byTemplate.get()
-        }
+        getDefinitions().firstOrNull { equalsIgnoreCase(it.templateId(), entry.templateId) }?.let { return it }
 
-        return getDefinitions().stream()
-            .filter { definition -> definition.code().isNotBlank() }
-            .filter { definition -> equalsIgnoreCase(definition.code(), entry.questCode) }
-            .findFirst()
-            .orElse(null)
+        return getDefinitions().firstOrNull { it.code().isNotBlank() && equalsIgnoreCase(it.code(), entry.questCode) }
     }
 
     private fun findScenarioForDefinition(definition: ProgressionDefinition?): FeaturePackLoader.ScenarioDefinition? {
@@ -509,11 +472,9 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return null
         }
 
-        return plugin.featurePackLoader.getAllScenarios().stream()
+        return plugin.featurePackLoader.getAllScenarios()
             .filter(ProgressionDefinition::isProgressionCandidate)
-            .filter { scenario -> definitionMatchesScenario(definition, scenario) }
-            .findFirst()
-            .orElse(null)
+            .firstOrNull { scenario -> definitionMatchesScenario(definition, scenario) }
     }
 
     private fun findScenarioForSelector(selector: String?): FeaturePackLoader.ScenarioDefinition? {
@@ -522,16 +483,12 @@ class ProgressionService(private val plugin: AINPCPlugin) {
             return null
         }
 
-        return plugin.featurePackLoader.getAllScenarios().stream()
+        return plugin.featurePackLoader.getAllScenarios()
             .filter(ProgressionDefinition::isProgressionCandidate)
-            .filter { scenario ->
+            .firstOrNull { scenario ->
                 definitionSelectorCandidates(ProgressionDefinition.fromScenarioDefinition(scenario))
-                    .stream()
-                    .map { candidate -> candidate.lowercase(Locale.ROOT) }
-                    .anyMatch { candidate -> normalized == candidate }
+                    .any { it.lowercase(Locale.ROOT) == normalized }
             }
-            .findFirst()
-            .orElse(null)
     }
 
     private fun definitionMatchesScenario(
@@ -550,7 +507,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     }
 
     private fun definitionSelectorCandidates(definition: ProgressionDefinition?): Set<String> {
-        val candidates = LinkedHashSet<String>()
+        val candidates = linkedSetOf<String>()
         if (definition == null) {
             return candidates
         }

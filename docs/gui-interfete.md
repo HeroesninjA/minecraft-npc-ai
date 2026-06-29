@@ -557,14 +557,19 @@ QuestListSnapshot
 Layout `QuestLogGui`, 54 sloturi:
 
 ```text
-0-8     header si context
-9-17    filtre: all, active, quest, contract, duty, bounty, event, tutorial, ritual
+2       sumar progres: active/tracked, obiective %, curente/arhivate
+4       header principal: filtru curent, rezumat snapshot
+6       context poveste: regiune, story state, ancore active, warnings
+7       authoring: decizie, selector, mecanica, warnings
+8       diagnostics quest: primele 6 linii din debugdump quest
+9-13    filtre de baza: all, active, quest, contract
+14-18   filtre avansate: duty, bounty, event, tutorial, ritual
 19-43   headers de mecanica si quest/progression cards paginate
 44      indicator pagina/lista, cand exista mai multe pagini
 45      hub
 46      pagina anterioara
 47      pagina urmatoare
-48      quest anchors admin
+48      quest anchors admin (doar cu permisiune)
 49      refresh
 50      track quest activ fallback
 51      stop tracking
@@ -589,15 +594,23 @@ Shift click: status in chat
 `QuestDetailGui`, 54 sloturi:
 
 ```text
-10      quest summary
-12-16   objectives current stage
-21-25   objectives next/locked stage
-30      track/untrack
-31      status in chat
-32      abandon confirm
-34      admin debug
-45      inapoi la quest log
+2       diagnostic runtime: status lines
+3       snapshot alignment: handled, filter, matched selector, current/archived
+4       header: titlu, status, mecanica, categorie, stage, NPC
+5       selection detail: selector diagnostic
+6       action hints: actiuni sugerate
+7       authoring: decizie, selector, mecanica, seed mode, warnings
+10-16   objectives (7 sloturi)
+19-25   extra objectives (7 sloturi)
+28-34   stages (7 sloturi)
+37-43   rewards (7 sloturi)
+45      inapoi la quest log cu filtrul sursa
+46      track/untrack (doar daca activa)
+47      status in chat
+48      abandon cu confirmare (doar daca activa)
 49      refresh
+50      admin debug (doar cu permisiune)
+51      progress in chat
 53      close
 ```
 

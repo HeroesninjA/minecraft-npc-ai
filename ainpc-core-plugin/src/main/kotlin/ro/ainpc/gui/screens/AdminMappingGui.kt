@@ -10,6 +10,8 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.world.RegionIdentityProvider
+import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldRegionInfo
 
 class AdminMappingGui : GuiScreen {
@@ -131,6 +133,22 @@ class AdminMappingGui : GuiScreen {
             }
         ))
 
+        if (currentRegion != null) {
+            val regionType = RegionType.fromId(currentRegion.typeId())
+            val identity = RegionIdentityProvider.identity(regionType)
+            context.item(6, GuiItemFactory.item(
+                Material.AMETHYST_SHARD,
+                "&dIdentitate: ${identity.displayName}",
+                listOf(
+                    "&7Tip: &f${identity.displayName} &8(${regionType.id})",
+                    "&7Descriere: &f${identity.description}",
+                    "&7Poveste: &f${identity.defaultStoryKey} &8(${identity.mood})",
+                    "&7Threat: &f${identity.threatLevel}",
+                    "&7Atmosfera: &f${identity.ambiance}"
+                )
+            ))
+        }
+
         context.button(16, GuiButton.enabled(
             GuiItemFactory.item(
                 if (isAutoIndex) Material.REDSTONE_TORCH else Material.TORCH,
@@ -147,7 +165,22 @@ class AdminMappingGui : GuiScreen {
 
         context.button(18, GuiButton.enabled(
             GuiItemFactory.item(Material.MAP, "&eTipuri regiuni", regionTypeLore(worldAdmin)),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world places") }
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world region summary") }
+        ))
+
+        context.button(22, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMPARATOR, "&6Patch analyze", "&7Analizeaza decalajele regiunii curente."),
+            GuiAction { click ->
+                val regionId = currentRegion?.id() ?: "demo_sat"
+                click.service().runCommand(click.player(), "ainpc patch analyze $regionId")
+            }
+        ))
+        context.button(23, GuiButton.enabled(
+            GuiItemFactory.item(Material.COMPARATOR, "&6Patch plan", "&7Planifica patch-uri pentru regiunea curenta."),
+            GuiAction { click ->
+                val regionId = currentRegion?.id() ?: "demo_sat"
+                click.service().runCommand(click.player(), "ainpc patch plan $regionId")
+            }
         ))
 
         if (currentRegion != null) {
@@ -194,13 +227,15 @@ class AdminMappingGui : GuiScreen {
             val slot = regionSlots[index]
             val places = worldAdmin.getPlaces(region.id())
             val nodes = worldAdmin.getNodes(region.id())
+            val regionType = RegionType.fromId(region.typeId())
+            val identity = RegionIdentityProvider.identity(regionType)
             context.button(slot, GuiButton.enabled(
                 GuiItemFactory.item(regionIcon(region.typeId()), "&e${region.name()} &7(${region.id()})", listOf(
-                    "&7Tip: &f${region.typeId()}",
-                    "&7Places: &f${places.size}",
-                    "&7Noduri: &f${nodes.size}",
+                    "&7Tip: &f${identity.displayName} &8(${region.typeId()})",
+                    "&7Places: &f${places.size} &7| Noduri: &f${nodes.size}",
                     "&7Lume: &f${region.worldName()}",
                     "&7Story: &f${region.storyMode().id} &8(${region.storyStateKey()})",
+                    "&7Mood: &f${identity.mood} &7| Threat: &f${identity.threatLevel}",
                     "&7Click: detalii regiune"
                 )),
                 GuiAction { click -> click.service().openRegionDetail(click.player(), region.id()) }
@@ -225,25 +260,45 @@ class AdminMappingGui : GuiScreen {
             ))
         }
 
+        context.button(45, GuiButton.enabled(
+            GuiItemFactory.item(Material.AMETHYST_SHARD, "&dIdentitate regiune", listOf(
+                "&7Arata identitatea tipului de regiune curent.",
+                "&7Click: /ainpc world region identity ${currentRegion?.typeId() ?: "settlement"}"
+            )),
+            GuiAction { click ->
+                click.service().runCommand(click.player(), "ainpc world region identity ${currentRegion?.typeId() ?: "settlement"}")
+            }
+        ))
+
         context.button(47, GuiButton.enabled(
             GuiItemFactory.item(Material.OAK_DOOR, "&aCreaza place", listOf(
                 "&7Creaza un place in regiunea curenta.",
-                "&7Click: /ainpc world place create <regiune> <id> <nume> [tip]"
+                "&7Foloseste: /ainpc world place create <regiune> <id> <tip> <x1> <y1> <z1> <x2> <y2> <z2>"
             )),
             GuiAction { click ->
-                val regionId = currentRegion?.id() ?: "regiune_id"
-                click.service().runCommand(click.player(), "ainpc world place create $regionId ${location.blockX}_${location.blockZ} \"Place Nou\" house")
+                val regionId = currentRegion?.id() ?: ""
+                val placeId = "p_${location.blockX}_${location.blockZ}"
+                val minX = location.blockX - 8
+                val maxX = location.blockX + 8
+                val minZ = location.blockZ - 8
+                val maxZ = location.blockZ + 8
+                val minY = maxOf(0, location.blockY - 4)
+                val maxY = minOf(319, location.blockY + 4)
+                click.service().runCommand(click.player(),
+                    "ainpc world place create $regionId $placeId house $minX $minY $minZ $maxX $maxY $maxZ")
             }
         ))
 
         context.button(48, GuiButton.enabled(
             GuiItemFactory.item(Material.LODESTONE, "&bCreaza node", listOf(
                 "&7Creaza un nod la pozitia curenta.",
-                "&7Click: /ainpc world node create <regiune> <id> <tip>"
+                "&7Foloseste: /ainpc world node create <regiune> <placeId|-> <id> <tip> <x> <y> <z> [radius]"
             )),
             GuiAction { click ->
-                val regionId = currentRegion?.id() ?: "regiune_id"
-                click.service().runCommand(click.player(), "ainpc world node create $regionId ${location.blockX}_${location.blockZ} meeting_point")
+                val regionId = currentRegion?.id() ?: ""
+                val nodeId = "n_${location.blockX}_${location.blockZ}"
+                click.service().runCommand(click.player(),
+                    "ainpc world node create $regionId - $nodeId meeting_point ${location.x} ${location.y} ${location.z} 2.5")
             }
         ))
 

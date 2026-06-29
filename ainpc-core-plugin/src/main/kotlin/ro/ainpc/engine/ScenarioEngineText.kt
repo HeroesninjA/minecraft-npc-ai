@@ -140,6 +140,35 @@ fun formatObjectiveProgressLabel(objective: FeaturePackLoader.QuestEntryDefiniti
     }
 }
 
+fun formatRewardLabel(reward: FeaturePackLoader.QuestEntryDefinition?): String {
+    if (reward == null) return "recompensa"
+    val rawType = reward.type.orEmpty()
+    val normalized = normalizeReference(rawType)
+    val explicitDescription = reward.description.takeIf { it.isNotBlank() }
+    val itemId = reward.itemId.orEmpty()
+    val isPenalty = reward.metadata["penalty"]?.lowercase()?.trim() in setOf("true", "1", "yes") ||
+        reward.metadata["sign"]?.trim() in setOf("-", "negative", "-1")
+    return when (normalized) {
+        "experience" -> "${reward.amount} XP vanilla"
+        "economy_money" -> "${reward.amount} monede"
+        "progression_xp" -> "${reward.amount} XP progresie"
+        "progression_level" -> "nivel progresie = ${reward.amount}"
+        "progression_skill" -> "${reward.amount} XP skill ${if (itemId.isBlank()) "?" else itemId}"
+        "progression_skill_level" -> "nivel skill ${if (itemId.isBlank()) "?" else itemId} = ${reward.amount}"
+        "set_story_state" -> "story state ${if (itemId.isBlank()) "?" else itemId} = ${reward.amount}"
+        "record_story_event" -> "story event ${if (itemId.isBlank()) "?" else itemId}"
+        else -> {
+            if (normalized.startsWith("reputation_")) {
+                val scopeType = normalized.removePrefix("reputation_")
+                val sign = if (isPenalty) "-" else "+"
+                "$sign${reward.amount} reputatie ${if (scopeType.isBlank()) "?" else scopeType}:${if (itemId.isBlank()) "?" else itemId}"
+            } else {
+                explicitDescription ?: humanizeItemId(rawType)
+            }
+        }
+    }
+}
+
 internal fun formatMissingObjective(
     objective: FeaturePackLoader.QuestEntryDefinition?,
     currentAmount: Int,

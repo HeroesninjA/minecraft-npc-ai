@@ -5,8 +5,11 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandlers
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import ro.ainpc.mcp.bridge.McpCircuitBreaker
 
 class HttpMcpRuntimeClient(
     private val config: McpRuntimeConfig,
@@ -15,6 +18,14 @@ class HttpMcpRuntimeClient(
     private val requestIds = AtomicLong(1L)
     private val sessionId = AtomicReference<String?>(null)
     private val sessionLock = Any()
+    private val circuitBreaker = McpCircuitBreaker()
+
+    // Pentru health check, timeout mai scurt (1s fail-fast)
+    private val healthClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(1))
+        .build()
+    private val healthExecutor: (HttpRequest) -> HttpResponse<String> =
+        { req -> healthClient.send(req, BodyHandlers.ofString()) }
 
     constructor(config: McpRuntimeConfig) : this(
         config,
@@ -25,38 +36,45 @@ class HttpMcpRuntimeClient(
     )
 
     override fun health(): McpHealthResult {
+        if (circuitBreaker.isOpen()) {
+            return McpHealthResult(
+                enabled = true, available = false,
+                status = "unavailable_circuit_open",
+                detail = "MCP indisponibil (circuit breaker activ). Reincerc in 5s.",
+                endpoint = config.baseUrl, durationMillis = 0L
+            )
+        }
         val startedAt = System.nanoTime()
         return try {
             val requestBuilder = HttpRequest.newBuilder(config.healthUrl)
-                .timeout(config.readTimeout)
+                .timeout(Duration.ofSeconds(2))
                 .GET()
             if (config.token.isNotBlank()) {
                 requestBuilder.header("Authorization", "Bearer ${config.token}")
             }
-            val response = requestExecutor(requestBuilder.build())
+            val response = healthExecutor(requestBuilder.build())
             val durationMillis = elapsedMillis(startedAt)
+            circuitBreaker.markUp()
             if (response.statusCode() in 200..299) {
                 McpHealthResult(
-                    enabled = true,
-                    available = true,
+                    enabled = true, available = true,
                     status = "healthy",
                     detail = "Sidecar MCP disponibil (${response.statusCode()}).",
-                    endpoint = config.baseUrl,
-                    durationMillis = durationMillis
+                    endpoint = config.baseUrl, durationMillis = durationMillis
                 )
             } else {
                 McpHealthResult(
-                    enabled = true,
-                    available = false,
+                    enabled = true, available = false,
                     status = "degraded",
                     detail = "Health endpoint a raspuns cu HTTP ${response.statusCode()}.",
-                    endpoint = config.baseUrl,
-                    durationMillis = durationMillis
+                    endpoint = config.baseUrl, durationMillis = durationMillis
                 )
             }
         } catch (_: ConnectException) {
+            circuitBreaker.markDown()
             unavailable(startedAt, "Sidecar MCP indisponibil: conexiune refuzata.")
         } catch (e: Exception) {
+            circuitBreaker.markDown()
             unavailable(startedAt, "Sidecar MCP indisponibil: ${e.javaClass.simpleName}.")
         }
     }
@@ -71,15 +89,30 @@ class HttpMcpRuntimeClient(
     )
 
     override fun callTool(toolName: String, argumentsJson: String): McpToolCallResult {
+        if (circuitBreaker.isOpen()) {
+            return McpToolCallResult(
+                available = false, toolName = toolName,
+                status = "unavailable_circuit_open", contentJson = "{}",
+                detail = "MCP indisponibil (circuit breaker activ). Reincerc in 5s.", durationMillis = 0L
+            )
+        }
         val startedAt = System.nanoTime()
         return try {
             executeToolCall(toolName, argumentsJson, startedAt, allowRetry = true)
         } catch (_: ConnectException) {
+            circuitBreaker.markDown()
             toolUnavailable(startedAt, toolName, "Sidecar MCP indisponibil: conexiune refuzata.")
         } catch (e: Exception) {
+            circuitBreaker.markDown()
             toolUnavailable(startedAt, toolName, "MCP tool call indisponibil: ${e.javaClass.simpleName}.")
         }
     }
+
+    override fun healthAsync(): CompletableFuture<McpHealthResult> =
+        CompletableFuture.supplyAsync { health() }
+
+    override fun callToolAsync(toolName: String, argumentsJson: String): CompletableFuture<McpToolCallResult> =
+        CompletableFuture.supplyAsync { callTool(toolName, argumentsJson) }
 
     private fun executeToolCall(
         toolName: String,

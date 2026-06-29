@@ -357,7 +357,7 @@ class NPCManager(
 
         try {
             bindings.getBinding(npc.databaseId)
-                .ifPresent { binding -> applyWorldBindingAnchors(npc, binding) }
+                ?.let { binding -> applyWorldBindingAnchors(npc, binding) }
         } catch (exception: SQLException) {
             plugin.debug("Nu am putut hidrata npc_world_bindings pentru NPC-ul " + npc.name + ": " + exception.message)
         }
@@ -705,7 +705,7 @@ class NPCManager(
             }
 
             try {
-                if (bindings.getBinding(npc.databaseId).isPresent) {
+                if (bindings.getBinding(npc.databaseId) != null) {
                     continue
                 }
 

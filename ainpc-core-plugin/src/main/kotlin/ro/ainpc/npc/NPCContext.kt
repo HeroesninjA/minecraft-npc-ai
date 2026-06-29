@@ -13,7 +13,6 @@ import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.topology.TopologyCategory
 import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
-import java.util.ArrayList
 import java.util.Locale
 import java.util.UUID
 import kotlin.math.min
@@ -41,9 +40,9 @@ class NPCContext(
         private set
 
     // Entitati din apropiere
-    var nearbyPlayers: MutableList<Player> = ArrayList()
+    var nearbyPlayers: MutableList<Player> = mutableListOf()
         private set
-    var nearbyNPCs: MutableList<AINPC> = ArrayList()
+    var nearbyNPCs: MutableList<AINPC> = mutableListOf()
         private set
     var nearbyHostileMobs: Int = 0
         private set
@@ -76,7 +75,7 @@ class NPCContext(
     var isFriendsNearby: Boolean = false
 
     // Evenimente recente
-    var recentEvents: MutableList<String> = ArrayList()
+    var recentEvents: MutableList<String> = mutableListOf()
         private set
     var lastSignificantEvent: String? = null
         private set
@@ -94,7 +93,7 @@ class NPCContext(
             }
         }
     var relationshipStatus: String = "STRANGER" // STRANGER, ACQUAINTANCE, FRIEND, CLOSE_FRIEND, ENEMY
-    var sharedMemories: MutableList<String> = ArrayList()
+    var sharedMemories: MutableList<String> = mutableListOf()
     var plannedRoutineActivity: String = ""
     var currentGoal: String = ""
     var worldContextSnapshot: WorldContextSnapshot = WorldContextSnapshot.empty()

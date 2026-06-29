@@ -12,6 +12,11 @@ class PlayerEntersRegionTrigger : ScenarioTriggerHandler {
     }
 
     override fun bind(context: ScenarioExecutionContext, trigger: ScenarioRuntimeDefinition) {
-        logger.fine("[Trigger] player_enters_region: regiona curenta=${context.regionId()}, trigger params=${trigger.parameters()}")
+        val regionId = trigger.parameter("region_id").ifBlank { context.regionId() }
+        if (regionId.isBlank()) return
+        val triggerKey = "trigger_fired_player_enters_region_$regionId"
+        val existingTriggers = context.variable(triggerKey)
+        val count = (existingTriggers.toIntOrNull() ?: 0) + 1
+        logger.fine("[Trigger] player_enters_region: $regionId (fired #$count)")
     }
 }

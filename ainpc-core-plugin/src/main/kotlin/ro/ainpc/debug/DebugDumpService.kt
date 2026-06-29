@@ -87,6 +87,10 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
                 DebugDumpProgressionJson.buildPlayerQuestProgressJson(plugin, playerFilter),
             )
             writeJson(
+                dumpRoot.resolve("player-progression.json"),
+                DebugDumpPlayerProgressionJson.buildPlayerProgressionJson(plugin, playerFilter),
+            )
+            writeJson(
                 dumpRoot.resolve("quest-anchor-bindings.json"),
                 DebugDumpProgressionJson.buildQuestAnchorBindingsJson(plugin),
             )

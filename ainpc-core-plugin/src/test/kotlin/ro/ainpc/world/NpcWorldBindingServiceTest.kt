@@ -2,7 +2,7 @@ package ro.ainpc.world
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.sql.Connection
@@ -70,11 +70,11 @@ class NpcWorldBindingServiceTest {
 
         val loaded = service.getBinding(42)
 
-        assertTrue(loaded.isPresent)
-        assertEquals("demo_sat:house_1", loaded.get().homePlaceId())
-        assertEquals("demo_sat:fierarie", loaded.get().workPlaceId())
-        assertEquals("demo_sat:piata", loaded.get().socialPlaceId())
-        assertEquals("family_1", loaded.get().familyId())
+        assertNotNull(loaded)
+        assertEquals("demo_sat:house_1", loaded!!.homePlaceId())
+        assertEquals("demo_sat:fierarie", loaded.workPlaceId())
+        assertEquals("demo_sat:piata", loaded.socialPlaceId())
+        assertEquals("family_1", loaded.familyId())
         assertEquals(1, service.countBindings())
     }
 
@@ -116,7 +116,7 @@ class NpcWorldBindingServiceTest {
         ).mergeMissingFrom(existing)
         service.saveBinding(manualHomeOnly)
 
-        val loaded = service.getBinding(7).orElseThrow()
+        val loaded = service.getBinding(7)!!
 
         assertEquals("demo_sat:house_2", loaded.homePlaceId())
         assertEquals("demo_sat:fierarie", loaded.workPlaceId())

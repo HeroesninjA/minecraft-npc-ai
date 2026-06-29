@@ -305,6 +305,23 @@ scenarios:
     requires_player: true
     replace_base_type: true
     hint: "Fierarul te priveste atent, ca si cum ar avea de oferit o prima misiune."
+    conditions:
+      mechanic_limit:
+        type: "mechanic_limit"
+        mechanic_id: "main_quests"
+        max_active: 1
+    runtime_triggers:
+      enter_forge:
+        type: "player_enters_place"
+        place_id: "blacksmith_forge"
+        actions:
+          - forge_ambient_sound
+    runtime_actions:
+      forge_ambient_sound:
+        type: "play_sound"
+        sound: "BLOCK_ANVIL_USE"
+        volume: "0.5"
+        pitch: "1.0"
     preferred_topologies:
       - "village_center"
       - "interior"
@@ -2032,4 +2049,101 @@ scenarios:
           - "honorable"
       HERO:
         description: "Jucatorul care pregateste si confirma ritualul."
+        player_role: true
+
+  # Quest demonstrativ pentru recompensele noi (progression, reputation, economy).
+  # Acopera toate tipurile noi de recompense intr-un singur quest pentru a valida
+  # runtime-ul extensibil. Nu este in lant cu Q01-Q08; e oferit ca side quest.
+  Q100:
+    name: "Recompense Demonstrative"
+    description: "Quest demonstrativ care acopera recompensele progression, reputation si economy: money."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    trigger_probability: 0.0
+    min_npcs: 0
+    requires_player: true
+    replace_base_type: true
+    hint: "Fierarul iti arata un set complet de recompense pentru o misiune de test."
+    phases:
+      INTRODUCTION: "Fierarul prezinta recompensele"
+      ACCEPTANCE: "Jucatorul accepta demo-ul"
+      RETURN: "Jucatorul revine cu scandura"
+      COMPLETION: "Demo complet, recompensele acordate"
+      DEMO_INTRO: "Prezentare recompense"
+      DEMO_DONE: "Demo complet"
+    quest:
+      code: "Q100"
+      giver_profession: "blacksmith"
+      kind: "fetch"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      tags: ["demo", "rewards", "showcase"]
+      dialogues:
+        offer:
+          - "Vreau sa iti arat ce fel de recompense poti obtine. Adu-mi o scandura si vei vedea."
+        offered:
+          - "Te hotarasti? E doar un demo."
+        accepted:
+          - "Bine. Adu scandura inapoi si iti arat ce poti castiga."
+        active:
+          - "Astept scandura. Odata ce o ai, intoarce-te aici."
+        ready:
+          - "Ai scandura. Acum primeste ce ti se cuvine."
+        completed:
+          - "Acum stii ce fel de recompense te asteapta in lumea asta."
+        phase:
+          DEMO_INTRO:
+            - "Adu scandura inapoi si iti arat toate tipurile de recompense."
+      objectives:
+        demo_plank:
+          type: "collect_item"
+          item: "OAK_PLANKS"
+          amount: 1
+          description: "Adu 1 scandura de stejar."
+      rewards:
+        demo_xp:
+          type: "experience"
+          amount: 25
+          description: "Primesti 25 XP vanilla pentru completarea demo-ului."
+        demo_money:
+          type: "economy:money"
+          amount: 50
+          description: "Primesti 50 de monede ca recompensa economica."
+        demo_progression_xp:
+          type: "progression:xp"
+          amount: 100
+          description: "Primesti 100 XP in sistemul de progresie al jucatorului."
+        demo_progression_skill:
+          type: "progression:skill"
+          item: "combat"
+          amount: 15
+          description: "Primesti 15 XP in skill-ul combat."
+        demo_progression_skill_level:
+          type: "progression:skill_level"
+          item: "combat"
+          amount: 2
+          description: "Seteaza skill-ul combat la nivel 2."
+        demo_reputation_region:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 10
+          description: "Primesti 10 reputatie in regiunea demo_sat."
+        demo_reputation_faction:
+          type: "reputation:faction"
+          item: "knights"
+          amount: 5
+          description: "Primesti 5 reputatie in factiunea knights."
+    roles:
+      QUEST_GIVER:
+        description: "Fierarul care ofera demo-ul de recompense."
+        required_professions:
+          - "blacksmith"
+        preferred_professions:
+          - "blacksmith"
+        preferred_traits:
+          - "honorable"
+      HERO:
+        description: "Jucatorul care demonstreaza recompensele."
         player_role: true

@@ -17,8 +17,6 @@ import ro.ainpc.routine.RoutineScheduleEntry
 import ro.ainpc.routine.RoutineSlot
 import ro.ainpc.world.NpcWorldBinding
 import java.sql.SQLException
-import java.util.ArrayList
-import java.util.Comparator
 import java.util.Locale
 
 class RoutineGui : GuiScreen {
@@ -177,7 +175,7 @@ class RoutineGui : GuiScreen {
         binding: NpcWorldBinding?,
         adminView: Boolean
     ): List<String> {
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7Slot curent: &f${slotLabel(current.slot())}")
         lore.add("&7Activitate: &f${GuiItemFactory.compact(current.activity(), 32)}")
         lore.add("&7Goal: &f${GuiItemFactory.compact(current.goal(), 32)}")
@@ -210,7 +208,7 @@ class RoutineGui : GuiScreen {
             return null
         }
         return try {
-            context.plugin().npcWorldBindingService.getBinding(npc.databaseId).orElse(null)
+            context.plugin().npcWorldBindingService.getBinding(npc.databaseId)
         } catch (_: SQLException) {
             null
         }

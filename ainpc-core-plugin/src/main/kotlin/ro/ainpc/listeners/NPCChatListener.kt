@@ -24,7 +24,6 @@ import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.npc.AINPC
-import java.util.Comparator
 import java.util.UUID
 
 /**
@@ -80,17 +79,14 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
 
         val listenRadius = plugin.config.getDouble("dialog.passive_listen_radius", 8.0)
-        val nearby = plugin.npcManager.getActiveNPCsNear(player.location, listenRadius).stream()
-            .sorted(Comparator.comparingDouble { npc -> (npc.location ?: player.location).distanceSquared(player.location) })
-            .toList()
+        val nearby = plugin.npcManager.getActiveNPCsNear(player.location, listenRadius)
+            .sortedBy { (it.location ?: player.location).distanceSquared(player.location) }
 
         if (nearby.isEmpty()) {
             return null
         }
 
-        val directMatches = nearby.stream()
-            .filter { npc -> mentionsNpc(message, npc) }
-            .toList()
+        val directMatches = nearby.filter { mentionsNpc(message, it) }
 
         if (!directMatches.isEmpty()) {
             return buildTarget(player, directMatches[0], true, false, "name_match", nearby.size)

@@ -1,12 +1,12 @@
 ﻿# Patch Planner
 
-Actualizat: 2026-05-11
+Actualizat: 2026-06-29
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
-Status: document canonic si implementare initiala read-only pentru `VillageGapAnalyzer`, `VillagePatchPlanner` si comanda `/ainpc patch analyze|plan|validate`. Patch planner-ul produce `GapReport`, `PatchCandidate` si `PatchPlan`; builder-ul fizic si commit-ul de mapping nu sunt implementate.
+Status: implementare completa pentru `VillageGapAnalyzer`, `VillagePatchPlanner`, `VillagePatchApplier` si comanda `/ainpc patch analyze|plan|validate|apply`. Patch planner-ul produce `GapReport`, `PatchCandidate`, `PatchPlan` si `VillagePatchApplyResult`. Aplicarea (`apply`) scrie mapping semantic (place-uri si node-uri) prin `WorldAdminService`.
 
 ## Scop
 
@@ -29,7 +29,8 @@ VanillaVillageScanner
 -> VillagePatchPlanner
 -> SettlementPlan.patchPlans
 -> validate
--> builder optional
+-> VillagePatchApplier.apply
+-> WorldAdminService.createPlace / createNode
 ```
 
 ## Ce problema rezolva
@@ -114,7 +115,7 @@ semantic-place-mapping
 terrain-validation
 ```
 
-Un plan care cere capabilitati lipsa ramane valid doar ca propunere, nu poate fi commit-uit.
+Un plan care cere capabilitati lipsa ramane BLOCKED. `VillagePatchApplier` aplica totusi planurile BLOCKED cu un warning, pentru ca partea de mapping semantic (place-uri si node-uri) functioneaza independent de builder-ul de blocuri.
 
 ### 5. Teren si stil respectate
 
@@ -239,9 +240,26 @@ PatchCandidate
   reason
 ```
 
+### VillagePatchApplyResult
+
+`VillagePatchApplyResult` este rezultatul aplicarii unui `PatchPlan`.
+
+```text
+VillagePatchApplyResult
+  patchId
+  appliedPlanIds
+  createdPlaceIds
+  createdNodeIds
+  errors
+  warnings
+  success (errors.isEmpty)
+```
+
+`success() = true` daca nu exista erori (warning-urile nu afecteaza succesul).
+
 ### PatchPlan
 
-`PatchPlan` este candidatul validat si pregatit pentru `SettlementPlan`.
+`PatchPlan` este candidatul validat si pregatit pentru `SettlementPlan` sau `VillagePatchApplier`.
 
 ```text
 PatchPlan
@@ -496,9 +514,9 @@ Regula:
 - patch-ul creeaza ancore candidate
 - `QuestAnchorResolver` creeaza binding-uri runtime doar cand questul este oferit/acceptat
 
-## Comenzi recomandate
+## Comenzi implementate
 
-Implementate read-only:
+### Read-only
 
 ```text
 /ainpc patch analyze <regionId> [targetPopulation] [profesiiCSV]
@@ -508,20 +526,31 @@ Implementate read-only:
 
 Aceste comenzi nu scriu mapping, nu construiesc blocuri si nu persista planuri. Ele analizeaza regiunea curenta din `WorldAdminApi`, afiseaza gap-urile si, pentru `plan`/`validate`, propun patch-uri inspectabile in mesajul admin.
 
+### Write (apply)
+
+```text
+/ainpc patch apply <regionId> <patchId> [targetPopulation]
+```
+
+Executa un `PatchPlan` specificat, creand place-uri si node-uri lipsa prin `WorldAdminService`. Comportament:
+
+1. Ruleaza `VillageGapAnalyzer` si `VillagePatchPlanner` cu acelasi `targetPopulation` pentru a gasi planurile disponibile
+2. Cauta `patchId` printre planuri (match exact sau sufix)
+3. Apeleaza `VillagePatchApplier.apply()` care scrie mapping-ul semantic
+4. Afiseaza place-urile si node-urile create, erorile si warning-urile
+
+Planurile BLOCKED (capabilitati lipsa) sunt aplicate cu warning — partea de mapping semantic functioneaza independent.
+
+```text
+/ainpc patch apply demo_sat demo_sat:patch:missing_house_capacity:population 10
+```
+
 Planificat ulterior:
 
 ```text
 /ainpc patch inspect <planId>
 /ainpc patch discard <planId>
 ```
-
-Executie ulterioara, doar dupa persistenta planurilor si validare explicita:
-
-```text
-/ainpc patch commit <planId>
-```
-
-Pentru MVP, `commit` ramane neimplementat. `analyze`, `plan` si `validate` sunt partea utila pentru audit si pregatirea urmatorilor pasi.
 
 Capabilitatea implicita permisa este doar:
 
@@ -619,15 +648,17 @@ Livrabile:
 - valideaza capabilitati
 - export inspectabil
 
-### PP4: Semantic-only commit
+### PP4: Semantic-only commit (VillagePatchApplier)
 
-Status: neimplementat.
+Status: implementat.
 
 Livrabile:
 
-- aplica doar node-uri si tags semantice
-- fara blocuri fizice
-- audit post-commit
+- aplica place-uri si node-uri semantice prin `WorldAdminService`
+- suporta `SEMANTIC_ONLY` (doar node-uri) si `NATIVE_PATCH` (place + node-uri)
+- planurile BLOCKED sunt aplicate cu warning (mapping semantic e independent)
+- comanda `/ainpc patch apply <regionId> <patchId> [targetPopulation]`
+- 11+ teste unitare in `VillagePatchApplierTest`
 
 ### PP5: Builder integration
 
@@ -635,8 +666,7 @@ Status: neimplementat.
 
 Livrabile:
 
-- `native_patch` pentru structuri mici
-- WorldEdit adapter optional
+- WorldEdit adapter optional pentru `WORLDEDIT_TEMPLATE`
 - rollback/undo documentat
 
 ## Ce trebuie evitat
@@ -657,7 +687,8 @@ Patch planner-ul este suficient pentru MVP cand:
 - fiecare patch are motiv, prioritate, cost si risc
 - patch-urile pot fi incluse in `SettlementPlan`
 - patch-urile pot fi validate fara a modifica lumea
-- patch-urile semantic-only pot fi aplicate separat in faza controlata
+- patch-urile pot fi aplicate prin comanda `/ainpc patch apply`
+- aplicarea creeaza place-uri si node-uri prin `WorldAdminService`
 
-Primele trei puncte exista initial in cod. Urmatoarele raman faze de integrare inainte de builder nativ sau WorldEdit pentru patch-uri fizice.
+Primele sase puncte sunt implementate. Ramane integrarea cu WorldEdit pentru patch-uri `WORLDEDIT_TEMPLATE` si builder nativ pentru blocuri fizice.
 

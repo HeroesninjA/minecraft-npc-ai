@@ -1,7 +1,6 @@
 package ro.ainpc.gui
 
 import org.bukkit.entity.Player
-import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -24,7 +23,7 @@ class GuiSessionManager {
         return session
     }
 
-    fun find(sessionId: UUID): Optional<GuiSession> = Optional.ofNullable(sessionsById[sessionId])
+    fun find(sessionId: UUID): GuiSession? = sessionsById[sessionId]
 
     fun close(sessionId: UUID) {
         val removed = sessionsById.remove(sessionId)

@@ -13,10 +13,7 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
-import java.util.ArrayList
-import java.util.Comparator
 import java.util.Locale
-import java.util.Optional
 
 class NpcInteractionGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.INTERACT
@@ -31,10 +28,9 @@ class NpcInteractionGui : GuiScreen {
         val adminView = player.hasPermission("ainpc.admin")
         val progressionSnapshot = context.plugin().progressionService
             .getProgressionGuiSnapshot(player, "all", adminView)
-        val nearbyNpcs = context.plugin().npcManager.getNPCsNear(location, 32.0).stream()
-            .sorted(Comparator.comparingDouble { npc: AINPC -> distanceSquared(location, npc.location) })
-            .limit(NPC_SLOTS.size.toLong())
-            .toList()
+        val nearbyNpcs = context.plugin().npcManager.getNPCsNear(location, 32.0)
+            .sortedBy { distanceSquared(location, it.location) }
+            .take(NPC_SLOTS.size)
         val nearestProgression = nearestProgression(nearbyNpcs, progressionSnapshot)
 
         context.item(
@@ -106,7 +102,7 @@ class NpcInteractionGui : GuiScreen {
         for (index in nearbyNpcs.indices) {
             val npc = nearbyNpcs[index]
             val distance = Math.sqrt(distanceSquared(location, npc.location))
-            val progression = primaryProgressionForNpc(progressionSnapshot, npc).orElse(null)
+            val progression = primaryProgressionForNpc(progressionSnapshot, npc)
             val occupation = npc.occupation
             val npcShops = if (occupation != null) context.plugin().shopService.findShopsForRole(occupation) else emptyList()
             val hasShop = npcShops.isNotEmpty()
@@ -245,7 +241,7 @@ class NpcInteractionGui : GuiScreen {
     }
 
     private fun npcLore(npc: AINPC, progression: ProgressionGuiEntry?, distance: Double, hasShop: Boolean = false, shopCount: Int = 0): List<String> {
-        val lore = ArrayList<String>()
+        val lore = mutableListOf<String>()
         lore.add("&7Ocupatie: &f${valueOrUnknown(npc.occupation)}")
         lore.add("&7Stare: &f${npc.currentState.displayName}")
         lore.add("&7Rutina: &f${valueOrUnknown(npc.plannedRoutineActivity)}")
@@ -282,25 +278,24 @@ class NpcInteractionGui : GuiScreen {
 
         for (npc in nearbyNpcs) {
             val progression = primaryProgressionForNpc(snapshot, npc)
-            if (progression.isPresent) {
-                return NearbyProgression(npc, progression.get())
+            if (progression != null) {
+                return NearbyProgression(npc, progression)
             }
         }
         return NearbyProgression(nearbyNpcs[0], null)
     }
 
-    private fun primaryProgressionForNpc(snapshot: ProgressionGuiSnapshot?, npc: AINPC?): Optional<ProgressionGuiEntry> {
+    private fun primaryProgressionForNpc(snapshot: ProgressionGuiSnapshot?, npc: AINPC?): ProgressionGuiEntry? {
         if (snapshot == null || npc == null) {
-            return Optional.empty()
+            return null
         }
 
-        return snapshot.allEntries().stream()
+        return snapshot.allEntries()
             .filter { entry -> actorMatchesNpc(entry, npc) }
-            .min(
-                Comparator
-                    .comparingInt<ProgressionGuiEntry> { entry -> progressionPriority(entry) }
-                    .thenComparing(ProgressionGuiEntry::updatedAt, Comparator.reverseOrder())
-                    .thenComparing(ProgressionGuiEntry::title, String.CASE_INSENSITIVE_ORDER)
+            .minWithOrNull(
+                compareBy<ProgressionGuiEntry> { progressionPriority(it) }
+                    .thenByDescending { it.updatedAt() }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title() }
             )
     }
 

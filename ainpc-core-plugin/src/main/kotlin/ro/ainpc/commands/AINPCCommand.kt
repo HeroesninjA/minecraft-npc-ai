@@ -67,6 +67,7 @@ import ro.ainpc.world.patch.PatchPlannerOptions
 import ro.ainpc.world.patch.PatchPlannerResult
 import ro.ainpc.world.patch.VillageGap
 import ro.ainpc.world.patch.VillageGapAnalyzer
+import ro.ainpc.world.patch.VillagePatchApplier
 import ro.ainpc.world.patch.VillagePatchPlanner
 import ro.ainpc.world.scan.SemanticVillageImportResult
 import ro.ainpc.world.scan.SemanticVillageMapper
@@ -111,6 +112,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         initAinpcCommandStoryPlugin(plugin)
         initAinpcCommandMiscPlugin(plugin)
         initAinpcCommandProgressionPlugin(plugin)
+        initAinpcCommandReputationPlugin(plugin)
         initAinpcCommandWorldPlugin(plugin)
         initAinpcCommandQuestPlugin(plugin)
     }
@@ -188,6 +190,13 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 true,
                 "Progresia"
             ) && handleProgression(sender, args)
+
+            "reputation", "reputatie" -> ensureFeatureEnabled(
+                sender,
+                "features.progression",
+                true,
+                "Reputatia"
+            ) && handleReputation(sender, args, this::findOnlinePlayer)
 
             "contract", "contracts" -> ensureFeatureEnabled(
                 sender,
@@ -680,6 +689,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "complete" -> handleCompleteQuest(sender, args)
             "summary" -> handleQuestSummary(sender, args)
             "metrics" -> handleQuestMetrics(sender, args)
+            "rewards" -> handleQuestRewards(sender, args)
+            "chain" -> handleQuestChain(sender, args)
             "cache-clean" -> handleQuestCacheClean(sender, args)
             else -> handleTriggerQuest(
                 sender, args[1],
@@ -1789,9 +1800,39 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendPatchUsage(sender); return true
         }
         val mode = args[1].lowercase(Locale.ROOT)
-        if (mode !in setOf("analyze", "analyse", "plan", "validate")) {
+        if (mode !in setOf("analyze", "analyse", "plan", "validate", "apply")) {
             sendPatchUsage(sender); return true
         }
+        val worldAdmin = plugin.platform.worldAdmin
+        if (mode == "apply") {
+            if (args.size < 4) {
+                sendPatchUsage(sender); return true
+            }
+            val planId = args[3]
+            val targetPopulation = if (args.size >= 5) parseIntegerStrict(args[4]) ?: 0 else 0
+            val worldAdminService = plugin.platform.worldAdminService
+            if (worldAdminService == null) {
+                plugin.messageUtils.send(sender, "&cWorldAdminService nu este disponibil.")
+                return true
+            }
+            val report = VillageGapAnalyzer().analyze(worldAdmin, args[2], PatchPlannerOptions.forTargetPopulation(targetPopulation))
+            if (!report.success()) {
+                sendPatchGapReport(sender, report)
+                plugin.messageUtils.send(sender, "&cNu pot aplica patch-uri peste un raport cu erori.")
+                return true
+            }
+            val plannerResult = VillagePatchPlanner().plan(report, PatchPlannerOptions.forTargetPopulation(targetPopulation))
+            val targetPlan = plannerResult.patchPlans().firstOrNull { it.patchId().equals(planId, ignoreCase = true) || it.patchId().endsWith(planId) }
+            if (targetPlan == null) {
+                plugin.messageUtils.send(sender, "&cNu am gasit patch-ul &f$planId &cprintre cele planificate.")
+                plugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc patch plan <regiune> &7pentru a vedea planurile disponibile.")
+                return true
+            }
+            val applyResult = VillagePatchApplier().apply(worldAdminService, targetPlan, args[2])
+            sendPatchApplyResult(sender, applyResult)
+            return true
+        }
+
         var targetPopulation = 0
         if (args.size >= 4) {
             val parsed = parseIntegerStrict(args[3])
@@ -1807,7 +1848,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             targetPopulation,
             if (args.size >= 5) parsePatchProfessionList(args[4]) else emptyList()
         )
-        val worldAdmin = plugin.platform.worldAdmin
         val report = VillageGapAnalyzer().analyze(worldAdmin, args[2], options)
         sendPatchGapReport(sender, report)
         if (!report.success() || mode == "analyze" || mode == "analyse") return true
@@ -2482,6 +2522,22 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         } else {
             plugin.messageUtils.send(sender, "&c${debugHealth.detail}")
         }
+
+        val serverSnapshot = plugin.mcpRuntimeClient.callTool("ainpc.server.snapshot")
+        plugin.messageUtils.send(sender, "&eTool ainpc.server.snapshot: &f${serverSnapshot.status} &8(${serverSnapshot.durationMillis}ms)")
+        if (serverSnapshot.available) {
+            plugin.messageUtils.send(sender, "&7${serverSnapshot.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${serverSnapshot.detail}")
+        }
+
+        val npcList = plugin.mcpRuntimeClient.callTool("ainpc.npc.list")
+        plugin.messageUtils.send(sender, "&eTool ainpc.npc.list: &f${npcList.status} &8(${npcList.durationMillis}ms)")
+        if (npcList.available) {
+            plugin.messageUtils.send(sender, "&7${npcList.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${npcList.detail}")
+        }
         return true
     }
 
@@ -3026,9 +3082,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             loadedNpc = resolveWorldBindNpc(sender, selector); if (loadedNpc == null) return null
         } else loadedNpc = findLoadedNpcBySelector(plugin.npcManager.getAllNPCs().toList(), selector)
         if (loadedNpc != null && loadedNpc.databaseId > 0) return plugin.npcWorldBindingService.getBinding(loadedNpc.databaseId)
-            .orElse(null)
         val npcId = parseNpcIdSelector(selector)
-        if (npcId != null && npcId > 0) return plugin.npcWorldBindingService.getBinding(npcId).orElse(null)
+        if (npcId != null && npcId > 0) return plugin.npcWorldBindingService.getBinding(npcId)
         val normalized = normalizeAuditKey(selector)
         if (normalized.isBlank()) return null
         return plugin.npcWorldBindingService.listBindings(NPC_WORLD_BINDING_LOOKUP_LIMIT)
@@ -3374,7 +3429,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
         try {
             val toSave = if (mergeExisting) plugin.npcWorldBindingService.getBinding(binding.npcId())
-                .map { binding.mergeMissingFrom(it) }.orElse(binding) else binding
+                ?.let { binding.mergeMissingFrom(it) } ?: binding else binding
             plugin.npcWorldBindingService.saveBinding(toSave)
             return true
         } catch (e: Exception) {

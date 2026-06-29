@@ -789,6 +789,39 @@ fun resolveQuestNpcSelector(
     return npc
 }
 
+fun handleQuestRewards(
+    sender: CommandSender,
+    args: Array<String>,
+): Boolean {
+    val usage = "&cUtilizare: /ainpc quest rewards <questCode|templateId>"
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 3) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, usage)
+        return true
+    }
+    val selector = args[2].trim()
+    val template = ainpcCommandQuestPlugin.scenarioEngine.findQuestTemplate(selector)
+    if (template == null) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cQuest-ul &f$selector&c nu exista.")
+        return true
+    }
+    val title = resolveQuestTitle(template)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&6=== Recompense quest: ${if (title.isBlank()) selector else title} ===")
+    if (template.rewards.isEmpty()) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Quest-ul nu are recompense definite.")
+        return true
+    }
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Total recompense: &f${template.rewards.size}")
+    for ((index, reward) in template.rewards.withIndex()) {
+        val label = formatRewardLabel(reward)
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&7${index + 1}. &f$label")
+    }
+    return true
+}
+
 fun handleStatusQuest(
     sender: CommandSender,
     args: Array<String>,
@@ -1253,4 +1286,40 @@ fun queryQuestAnchorBindings(
     } finally {
         stmt.close()
     }
+}
+
+fun handleQuestChain(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.info")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    val msg = ainpcCommandQuestPlugin.messageUtils
+    val defs = ainpcCommandQuestPlugin.progressionService.getDefinitions()
+    if (defs.isEmpty()) {
+        msg.send(sender, "&7Nu exista template-uri de quest incarcate.")
+        return true
+    }
+    val engine = ainpcCommandQuestPlugin.scenarioEngine
+    val allTemplates = defs.sortedBy { it.templateId() }
+    msg.send(sender, "&6=== Quest Chain Map ===")
+    msg.send(sender, "&eTemplate-uri: &f${allTemplates.size}")
+    val chains = mutableListOf<String>()
+    for (d in allTemplates) {
+        val template = engine.findQuestTemplate(d.templateId())
+        val nextQuest = template?.nextQuest ?: ""
+        if (nextQuest.isNotBlank()) {
+            val nextTemplate = engine.findQuestTemplate(nextQuest)
+            val nextLabel = nextTemplate?.displayName ?: nextQuest
+            val exists = if (nextTemplate != null) "&a(exista)" else "&c(lipseste)"
+            chains.add("${d.displayName()} -> $nextLabel $exists")
+        }
+    }
+    if (chains.isNotEmpty()) {
+        msg.send(sender, "&eLanturi (questuri cu nextQuest):")
+        chains.forEach { msg.send(sender, "&7- &f$it") }
+    } else {
+        msg.send(sender, "&7Nu exista questuri inlantuite definite.")
+    }
+    msg.send(sender, "&8Foloseste /ainpc quest snapshot <templateId> pentru detalii.")
+    return true
 }

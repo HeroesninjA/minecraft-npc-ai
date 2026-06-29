@@ -80,7 +80,7 @@ class WorldPlaceGui : GuiScreen {
 
             val residentsCount = plugin.npcManager.getAllNPCs().count { npc ->
                 runCatching { plugin.npcWorldBindingService.getBinding(npc.databaseId) }
-                    .getOrNull()?.orElse(null)?.homePlaceId().equals(place.id(), ignoreCase = true)
+                    .getOrNull()?.homePlaceId().equals(place.id(), ignoreCase = true)
             }
             context.button(28, GuiButton.enabled(
                 GuiItemFactory.item(

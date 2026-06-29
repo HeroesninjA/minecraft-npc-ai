@@ -1,0 +1,466 @@
+# ========================================
+# Feature Pack: Tutorial Demo
+# Demonstrates AINPC quest, story, and NPC systems
+# ========================================
+
+id: tutorial_demo
+name: "Tutorial Demo"
+description: "Pachet demonstrativ pentru incepatori: questuri simple, NPC-uri tutorial si story events."
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["quest", "traits", "dialogues", "story"]
+
+# ==================== SCENARIOS ====================
+scenarios:
+
+  # ----------------------------------------
+  # TD01 - Bun venit in sat
+  # Quest simplu de explorare: vorbeste cu primarul
+  # ----------------------------------------
+  TD01_welcome:
+    name: "Bun venit in sat"
+    description: "Vorbeste cu primarul pentru a afla despre sat si a primi prima sarcina."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "TD01"
+      giver: "mayor"
+      kind: "side"
+      category: "tutorial"
+      repeatable: false
+      dialogues:
+        available:
+          - "Bine ai venit in satul nostru! Sunt primarul."
+          - "Avem nevoie de ajutor cu cateva treburi."
+        active:
+          - "Du-te si vorbeste cu fierarul din piata."
+          - "El te asteapta langa forja."
+        completed:
+          - "Buna treaba! Satul are nevoie de oameni ca tine."
+      objectives:
+        welcome_talk:
+          type: "talk_to_npc"
+          item: "npc:mayor"
+          amount: 1
+          description: "Vorbeste cu primarul"
+
+  # ----------------------------------------
+  # TD02 - Unelte pentru fierar
+  # Quest de colectare: aduce carbune fierarului
+  # ----------------------------------------
+  TD02_blacksmith_tools:
+    name: "Unelte pentru fierar"
+    description: "Fierarul are nevoie de carbune pentru a termina uneltele."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "TD02"
+      giver: "blacksmith"
+      kind: "side"
+      category: "tutorial"
+      repeatable: false
+      prerequisites: ["TD01"]
+      next_quest: "TD03"
+      dialogues:
+        available:
+          - "Primarul mi-a spus ca esti de nadejde."
+          - "Am nevoie de 3 bucati de carbune pentru forja."
+        active:
+          - "Mai am nevoie de %amount% carbuni."
+          - "Poti gasi carbune in mina de la marginea satului."
+        completed:
+          - "Excelent! Acum pot termina uneltele."
+      objectives:
+        collect_coal:
+          type: "collect_item"
+          item: "COAL"
+          amount: 3
+          description: "Aduna 3 carbuni pentru fierar"
+      rewards:
+        reward_xp:
+          type: "experience"
+          amount: 50
+          description: "50 XP vanilla"
+        reward_money:
+          type: "economy:money"
+          item: "emerald"
+          amount: 5
+          description: "5 monede de aur"
+
+  # ----------------------------------------
+  # TD03 - Livrare la primarie
+  # Quest de delivery: duce uneltele la primar
+  # ----------------------------------------
+  TD03_delivery:
+    name: "Livrare la primarie"
+    description: "Du uneltele finite la primar."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "TD03"
+      giver: "blacksmith"
+      return_to_giver: false
+      kind: "side"
+      category: "tutorial"
+      repeatable: false
+      prerequisites: ["TD02"]
+      dialogues:
+        available:
+          - "Uneltele sunt gata. Du-le primarului."
+          - "El se afla in sala de consiliu."
+        active:
+          - "Primarul te asteapta cu uneltele."
+        completed:
+          - "Minunat! Acum satul are uneltele de care avea nevoie."
+          - "Am sa-ti povestesc despre istoria acestui loc."
+      objectives:
+        talk_to_mayor:
+          type: "talk_to_npc"
+          item: "npc:mayor"
+          amount: 1
+          description: "Livreaza uneltele primarului"
+      rewards:
+        reward_story:
+          type: "set_story_state"
+          item: "satul_eliberat"
+          amount: 1
+          description: "Deblocheaza povestea satului"
+
+  # ----------------------------------------
+  # TE01 - Misterul din padure
+  # Story event simplu fara quest
+  # ----------------------------------------
+  TE01_forest_mystery:
+    name: "Misterul din padure"
+    description: "O lumina misterioasa a fost vazuta in padurea de la rasarit."
+    base_type: "WORLD_EVENT"
+    mechanic: "village_events"
+    quest:
+      code: "TE01"
+      giver: "villager"
+      kind: "event"
+      category: "side"
+      repeatable: false
+      dialogues:
+        available:
+          - "Am vazut o lumina ciudata in padure azi-noapte."
+          - "Poate ar trebui sa investighezi."
+        completed:
+          - "In padure nu mai e nimic neobisnuit. Pentru moment."
+      objectives:
+        inspect_light:
+          type: "inspect_node"
+          item: "tag:strange_light"
+          amount: 1
+          description: "Investiga lumina misterioasa din padure"
+      rewards:
+        reward_story_event:
+          type: "record_story_event"
+          item: "forest_light_investigated"
+          amount: 1
+          description: "Inregistreaza descoperirea"
+
+  # ----------------------------------------
+  # TB01 - Recompensa hotilor
+  # Bounty simplu
+  # ----------------------------------------
+  TB01_thief_bounty:
+    name: "Prinde hotii din pestera"
+    description: "Niste hoti s-au ascuns in pestera de langa sat. Primarul pune recompensa."
+    base_type: "BOUNTY"
+    mechanic: "local_bounties"
+    quest:
+      code: "TB01"
+      giver: "mayor"
+      kind: "bounty"
+      category: "side"
+      repeatable: true
+      cooldown_seconds: 3600
+      dialogues:
+        available:
+          - "Hotii au fost vazuti langa pestera de la marginea satului."
+          - "Adu capul hotului principal si vei fi rasplatit."
+        active:
+          - "Hotii inca sunt in pestera."
+        completed:
+          - "Recompensa ta. Meriti fiecare banut."
+      objectives:
+        kill_thief:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 3
+          description: "Elimina hotii din pestera (3 zombi)"
+      rewards:
+        reward_gold:
+          type: "economy:money"
+          item: "gold_ingot"
+          amount: 10
+          description: "10 lingouri de aur"
+        reward_reputation:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 15
+          description: "+15 reputatie in sat"
+
+  # ----------------------------------------
+  # TD04 - Aprovizionare la ferma
+  # Quest de place_block: construieste un gard
+  # ----------------------------------------
+  TD04_farm_supply:
+    name: "Gardul fermierului"
+    description: "Fermierul are nevoie de ajutor sa repare gardul din jurul fermei."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "TD04"
+      giver: "farmer"
+      kind: "side"
+      category: "tutorial"
+      repeatable: true
+      cooldown_seconds: 7200
+      prerequisites: ["TD01"]
+      dialogues:
+        available:
+          - "Gardul meu s-a daramat din nou. Vantul a fost prea puternic."
+          - "Ajuta-ma sa pun 5 scanduri noi."
+        active:
+          - "Mai am nevoie de %amount% scanduri."
+        completed:
+          - "Mersi! Acum animalele nu mai scapa."
+      objectives:
+        place_fence:
+          type: "place_block"
+          item: "OAK_FENCE"
+          amount: 5
+          description: "Plaseaza 5 scanduri de gard"
+      rewards:
+        reward_food:
+          type: "item"
+          item: "BREAD"
+          amount: 3
+          description: "3 paini proaspete"
+        reward_xp:
+          type: "experience"
+          amount: 30
+          description: "30 XP"
+
+  # ----------------------------------------
+  # TD05 - Curatarea temnitei
+  # Quest cu stages: exploreaza si raporteaza
+  # ----------------------------------------
+  TD05_dungeon_cleanup:
+    name: "Curatarea temnitei"
+    description: "Temnita de sub castel s-a umplut de creaturi. Curata-o pe etaje."
+    base_type: "QUEST"
+    mechanic: "main_quests"
+    quest:
+      code: "TD05"
+      giver: "guard"
+      kind: "main"
+      category: "tutorial"
+      repeatable: false
+      prerequisites: ["TD01"]
+      stages:
+        stage_1:
+          label: "Etajul 1 - Pestera"
+          completion_mode: "all_objectives"
+          objectives:
+            - kill_skeleton
+        stage_2:
+          label: "Etajul 2 - Temnita"
+          completion_mode: "all_objectives"
+          objectives:
+            - kill_zombie
+            - inspect_cell
+        stage_3:
+          label: "Raporteaza"
+          completion_mode: "manual_turn_in"
+          objectives: []
+      dialogues:
+        available:
+          - "Temnita de sub castel e plina de dihonii. Vrei sa ne ajuți?"
+          - "E periculos, dar rasplata e pe masura."
+        stage_1_active:
+          - "Am auzit zgomote de scheleti in pestera de la intrare."
+        stage_2_active:
+          - "Temnita de la etajul doi e cea mai periculoasa."
+          - "Fii atent la creaturile intunecate si cauta celulele."
+        stage_3_active:
+          - "Te-ai intors! Ce ai gasit acolo jos?"
+        completed:
+          - "Excelent! Temnita e din nou sigura."
+          - "Am sa vorbesc cu primarul despre curajul tau."
+      objectives:
+        kill_skeleton:
+          type: "kill_mob"
+          item: "SKELETON"
+          amount: 3
+          description: "Elimina 3 scheleti"
+        kill_zombie:
+          type: "kill_mob"
+          item: "ZOMBIE"
+          amount: 5
+          description: "Elimina 5 zombi"
+        inspect_cell:
+          type: "inspect_node"
+          item: "tag:dungeon_cell"
+          amount: 1
+          description: "Investiga celula din temnita"
+      rewards:
+        reward_weapon:
+          type: "item"
+          item: "IRON_SWORD"
+          amount: 1
+          description: "Sabie de fier"
+        reward_gold:
+          type: "economy:money"
+          item: "gold_ingot"
+          amount: 15
+          description: "15 lingouri de aur"
+        reward_story:
+          type: "set_story_state"
+          item: "dungeon_cleared"
+          amount: 1
+          description: "Temnita curatata"
+
+  # ----------------------------------------
+  # TR01 - Ritualul luminii
+  # Ritual cu inspect_node si deliver
+  # ----------------------------------------
+  TR01_light_ritual:
+    name: "Ritualul luminii"
+    description: "Preotul are nevoie de ajutor pentru a pregati ritualul saptamanal al luminii."
+    base_type: "RITUAL"
+    mechanic: "village_rituals"
+    quest:
+      code: "TR01"
+      giver: "priest"
+      kind: "ritual"
+      category: "side"
+      repeatable: true
+      cooldown_seconds: 604800
+      dialogues:
+        available:
+          - "Ritualul luminii se apropie. Ajuta-ma sa pregatesc altarul."
+          - "Ai nevoie de 3 torțe si sa inspectezi vechiul altar."
+        active:
+          - "Pregatim ritualul. Mai am nevoie de %amount% obiecte."
+        completed:
+          - "Lumina binecuvanteaza satul nostru inca o saptamana."
+      objectives:
+        inspect_altar:
+          type: "inspect_node"
+          item: "tag:ritual_altar"
+          amount: 1
+          description: "Inspecteaza altarul vechi"
+        place_torches:
+          type: "place_block"
+          item: "TORCH"
+          amount: 3
+          description: "Plaseaza 3 torțe in jurul altarului"
+      rewards:
+        reward_blessing:
+          type: "experience"
+          amount: 100
+          description: "100 XP binecuvantare"
+        reward_reputation:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 10
+          description: "+10 reputatie in sat"
+
+  # ----------------------------------------
+  # Story state default-uri per tip regiune
+  # ----------------------------------------
+story_defaults:
+  settlement:
+    default_state: "peaceful"
+    pool:
+      - "peaceful"
+      - "trade"
+      - "festival"
+      - "problem"
+      - "shortage"
+  castle:
+    default_state: "secure"
+    pool:
+      - "secure"
+      - "ceremony"
+      - "intrigue"
+      - "celebration"
+  dungeon:
+    default_state: "dangerous"
+    pool:
+      - "dangerous"
+      - "dark"
+      - "treasure"
+      - "secret"
+  cave:
+    default_state: "uncharted"
+    pool:
+      - "uncharted"
+      - "dark"
+      - "mineral"
+      - "creature"
+      - "treasure"
+  wilderness:
+    default_state: "untamed"
+    pool:
+      - "untamed"
+      - "wild"
+      - "hunting"
+      - "exploration"
+      - "seasonal"
+
+# ==================== TRASATURI NOI ====================
+traits:
+  curious:
+    name: "Curios"
+    description: "Intotdeauna doreste sa afle mai mult"
+    modifiers:
+      action_scores:
+        EXPLORE: 30
+        INVESTIGATE: 25
+        ASK: 20
+        READ: 15
+        GOSSIP: 10
+      emotions:
+        happiness: 0.1
+        surprise: 0.2
+
+  helpful:
+    name: "Ajutator"
+    description: "Fericit cand poate da o mana de ajutor"
+    modifiers:
+      action_scores:
+        HELP: 30
+        DELIVER: 25
+        ESCORT: 20
+        PROTECT: 15
+        DEFEND: 10
+        GOSSIP: -15
+      emotions:
+        happiness: 0.25
+        trust: 0.15
+
+# ==================== DIALOGUE TEMPLATES ====================
+dialogues:
+  greeting:
+    - "Buna ziua, calatorule!"
+    - "Ce te aduce pe aici?"
+    - "Bine ai venit in satul nostru!"
+  farewell:
+    - "La revedere! Sa ne auzim cu bine."
+    - "Pa! Ai grija de tine."
+    - "Slujba ta e apreciata aici."
+  weather_clear:
+    - "Ce vreme frumoasa astazi!"
+    - "Soarele straluceste deasupra satului."
+  weather_rain:
+    - "Ploua din nou... speram ca recoltele sa nu aiba de suferit."
+    - "Vreme rea. Mai bine stai la adapost."
+  weather_thunder:
+    - "Ce furtuna! Fereasca sfantul!"
+    - "Stai in casa pana trece furtuna."

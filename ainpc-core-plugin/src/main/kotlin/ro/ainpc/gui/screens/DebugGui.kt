@@ -47,7 +47,7 @@ class DebugGui : GuiScreen {
                 connectionMaterial,
                 "${connectionColor}OpenAI: $connectionStatusText",
                 listOf(
-                    "&7Model: &f${probeResult?.let { it -> "(see debugdump)" } ?: "necunoscut"}",
+                    "&7Model: &f${if (probeResult != null) "(see debugdump)" else "necunoscut"}",
                     "&7Status: &f$connectionStatusText",
                     if (probeResult != null && probeResult.errors.isNotEmpty()) {
                         "&7Erori: &f${probeResult.errors.joinToString("; ")}"

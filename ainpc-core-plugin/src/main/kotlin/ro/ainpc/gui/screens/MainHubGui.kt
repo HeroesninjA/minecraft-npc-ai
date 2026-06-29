@@ -12,7 +12,7 @@ import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
-import java.util.ArrayList
+
 
 class MainHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MAIN
@@ -264,7 +264,7 @@ class MainHubGui : GuiScreen {
             return
         }
 
-        val lockedLore = ArrayList(lore)
+        val lockedLore = lore.toMutableList()
         lockedLore.add("&8Necesita permisiune pentru ${target.displayName()}.")
         context.button(slot, GuiButton.disabled(GuiItemFactory.disabled(Material.BARRIER, title, lockedLore)))
     }

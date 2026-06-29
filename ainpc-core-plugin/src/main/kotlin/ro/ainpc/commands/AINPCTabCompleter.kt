@@ -14,6 +14,7 @@ import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import ro.ainpc.world.exterior.ExteriorStructureBlueprintCatalog
 import java.util.Arrays
+import java.util.Locale
 import java.util.stream.Collectors
 
 class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
@@ -482,24 +483,23 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
 
     private fun completePatchArgs(args: Array<String>): List<String> {
         val completions = ArrayList<String>()
+        val mode = args.getOrNull(1)?.lowercase(Locale.ROOT)
         if (args.size == 2) completions.addAll(filterStartsWith(PATCH_ACTIONS, args[1]))
-        else if (args.size == 3 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(
-            getRegionIdsSafe(
-                args[2]
-            )
+        else if (args.size == 3 && PATCH_ACTIONS.any { it.equals(mode, true) }) completions.addAll(
+            getRegionIdsSafe(args[2])
         )
-        else if (args.size == 4 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(
-            filterStartsWith(
-                PATCH_POPULATION_SUGGESTIONS,
-                args[3]
-            )
-        )
-        else if (args.size == 5 && PATCH_ACTIONS.any { it.equals(args[1], true) }) completions.addAll(
-            filterStartsWith(
-                getPatchProfessionSuggestions(),
-                args[4]
-            )
-        )
+        else if (args.size == 4 && mode == "apply") {
+            completions.addAll(filterStartsWith(listOf("<patchId>"), args[3]))
+        }
+        else if (args.size == 4 && mode != "apply") {
+            completions.addAll(filterStartsWith(PATCH_POPULATION_SUGGESTIONS, args[3]))
+        }
+        else if (args.size == 5 && mode == "apply") {
+            completions.addAll(filterStartsWith(PATCH_POPULATION_SUGGESTIONS, args[4]))
+        }
+        else if (args.size == 5 && mode != "apply") {
+            completions.addAll(filterStartsWith(getPatchProfessionSuggestions(), args[4]))
+        }
         return completions
     }
 
@@ -629,7 +629,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     }
 
     private fun isProgressionGuiMode(rawValue: String): Boolean {
-        return GuiKey.fromId(rawValue).map { key -> key == GuiKey.QUEST }.orElse(false)
+        return GuiKey.fromId(rawValue) == GuiKey.QUEST
     }
 
     private fun isProgressionAliasCommand(rawValue: String?): Boolean {
@@ -1090,6 +1090,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "state",
             "progressions",
             "summary",
+            "chain",
             "warnings",
             "diff",
             "metrics",
@@ -1235,7 +1236,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "settlement",
             "save"
         )
-        private val PATCH_ACTIONS = listOf("analyze", "plan", "validate")
+        private val PATCH_ACTIONS = listOf("analyze", "plan", "validate", "apply")
         private val PATCH_POPULATION_SUGGESTIONS = listOf("4", "6", "8", "10", "12")
         private val NEUTRAL_PROFESSION_IDS = listOf("worker", "caretaker", "guide")
         private val NEUTRAL_PATCH_PROFESSION_SUGGESTIONS = NEUTRAL_PROFESSION_IDS + "worker,caretaker"
@@ -1261,7 +1262,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 "equip_item"
             )
         private val STORY_MODES = listOf("context", "region", "place", "events")
-        private val REGION_ACTIONS = listOf("info", "create")
+        private val REGION_ACTIONS = listOf("info", "create", "edit", "remove", "delete", "summary", "identity", "nodes", "places")
         private val OUTSIDE_ACTIONS = listOf("types", "blueprint", "plan", "report", "validate")
         private val OUTSIDE_TYPE_ACTIONS = listOf("blueprint", "plan")
         private val OUTSIDE_REGION_ACTIONS = listOf("report", "validate")

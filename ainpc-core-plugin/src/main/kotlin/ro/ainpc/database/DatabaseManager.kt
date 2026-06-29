@@ -602,6 +602,19 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 """
             )
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_player_reputation_scope ON player_reputation(scope_type, scope_id)")
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS player_progression (
+                    player_uuid ${shortText()} NOT NULL PRIMARY KEY,
+                    level INTEGER NOT NULL DEFAULT 1,
+                    xp INTEGER NOT NULL DEFAULT 0,
+                    total_xp INTEGER NOT NULL DEFAULT 0,
+                    skills_json ${longText()} NOT NULL DEFAULT '{}',
+                    last_updated INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_player_progression_level ON player_progression(level, total_xp DESC)")
             stmt.executeUpdate(
                 """
                 INSERT OR IGNORE INTO npc_personality (npc_id)

@@ -33,6 +33,7 @@ class StorageDialectStaticAuditTest {
                 "ON_CONFLICT" to mapOf(
                     "kotlin/ro/ainpc/ai/DialogManager.kt" to 1,
                     "kotlin/ro/ainpc/managers/NPCManager.kt" to 1,
+                    "kotlin/ro/ainpc/progression/PlayerProgressionService.kt" to 3,
                     "kotlin/ro/ainpc/progression/ProgressionRepository.kt" to 1,
                     "kotlin/ro/ainpc/spawn/HouseholdPersistenceServiceState.kt" to 4,
                     "kotlin/ro/ainpc/spawn/SpawnBatchTracker.kt" to 2,

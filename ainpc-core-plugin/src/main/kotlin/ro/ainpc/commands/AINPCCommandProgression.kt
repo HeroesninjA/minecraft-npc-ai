@@ -160,6 +160,164 @@ private fun sendStoredProgressionLine(sender: CommandSender, progression: Stored
     }
 }
 
+fun handleProgressionTop(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandProgressionPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 3) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc progression top [limit]")
+        return true
+    }
+    val limit = if (args.size == 3) {
+        val parsed = args[2].toIntOrNull()
+        if (parsed == null || parsed <= 0) {
+            ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cLimit invalid; folosesc default 10.")
+            10
+        } else {
+            minOf(parsed, 100)
+        }
+    } else {
+        10
+    }
+    val top = try {
+        ainpcCommandProgressionPlugin.playerProgressionService.getTopPlayers(limit)
+    } catch (e: Exception) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cEroare la citirea top progresie: ${e.message}")
+        return true
+    }
+    ainpcCommandProgressionPlugin.messageUtils.send(sender, "&6=== Top progresie jucatori (level, xp total) ===")
+    ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Afisati: &f${top.size} &7(jucatori activi in sistem)")
+    if (top.isEmpty()) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Niciun jucator cu progresie persistata inca.")
+        return true
+    }
+    for ((index, snapshot) in top.withIndex()) {
+        val position = index + 1
+        val playerName = tryResolvePlayerName(snapshot.playerUuid)
+        val displayName = playerName ?: snapshot.playerUuid.take(8) + "..."
+        ainpcCommandProgressionPlugin.messageUtils.send(sender,
+            "&7#$position &f$displayName &7= nivel &e${snapshot.level}&7, xp &e${snapshot.totalXp}")
+    }
+    return true
+}
+
+fun handleProgressionSkills(
+    sender: CommandSender,
+    args: Array<String>,
+    findOnlinePlayer: (String) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandProgressionPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 3 || args.size > 4) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc progression skills <jucator> [skillId]")
+        return true
+    }
+    val targetInput = args[2]
+    val skillFilter = if (args.size == 4) args[3].trim().lowercase(Locale.ROOT) else null
+    val target = findOnlinePlayer(targetInput)
+    val resolvedUuid = if (target != null) {
+        target.uniqueId.toString()
+    } else {
+        tryParseUuidOrNull(targetInput) ?: run {
+            ainpcCommandProgressionPlugin.messageUtils.send(sender,
+                "&cJucatorul &f$targetInput&c nu este online si nu pare a fi un UUID valid.")
+            return true
+        }
+    }
+    val displayName = target?.name ?: targetInput
+    val snapshot = ainpcCommandProgressionPlugin.playerProgressionService.getSnapshot(resolvedUuid)
+    if (skillFilter != null) {
+        val skillXp = snapshot.skills[skillFilter] ?: 0
+        val skillLevel = ainpcCommandProgressionPlugin.playerProgressionService.getSkillLevel(resolvedUuid, skillFilter)
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&6=== Skill $skillFilter: $displayName ===")
+        if (skillXp == 0) {
+            ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Skill-ul &f$skillFilter&7 nu are XP acumulat.")
+            return true
+        }
+        val xpToNext = ainpcCommandProgressionPlugin.playerProgressionService.xpRequiredForLevel(skillLevel)
+        ainpcCommandProgressionPlugin.messageUtils.send(sender,
+            "&7Nivel skill: &e$skillLevel" +
+                " &7XP: &f$skillXp" +
+                "&7/&f$xpToNext")
+        return true
+    }
+    ainpcCommandProgressionPlugin.messageUtils.send(sender, "&6=== Skill-uri $displayName ===")
+    if (snapshot.skills.isEmpty()) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Niciun skill cu XP acumulat.")
+        return true
+    }
+    val sortedSkills = snapshot.skills.entries.sortedByDescending { it.value }
+    for ((skillId, xp) in sortedSkills) {
+        val level = ainpcCommandProgressionPlugin.playerProgressionService.getSkillLevel(resolvedUuid, skillId)
+        ainpcCommandProgressionPlugin.messageUtils.send(sender,
+            "&7- &f$skillId &7= nivel &e$level&7 (xp &f$xp&7)")
+    }
+    return true
+}
+
+private fun tryResolvePlayerName(playerUuid: String): String? {
+    return try {
+        val offlinePlayer = org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(playerUuid))
+        offlinePlayer.name
+    } catch (_: Exception) {
+        null
+    }
+}
+
+fun handleProgressionPlayer(
+    sender: CommandSender,
+    args: Array<String>,
+    findOnlinePlayer: (String) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandProgressionPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size < 3 || args.size > 4) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc progression player <jucator>")
+        return true
+    }
+    val targetInput = args[2]
+    val target = findOnlinePlayer(targetInput)
+    val snapshot = if (target != null) {
+        ainpcCommandProgressionPlugin.playerProgressionService.getSnapshot(target)
+    } else {
+        val offlineUuid = tryParseUuidOrNull(targetInput)
+        if (offlineUuid != null) {
+            ainpcCommandProgressionPlugin.playerProgressionService.getSnapshot(offlineUuid)
+        } else {
+            ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cJucatorul &f$targetInput&c nu este online si nu pare a fi un UUID valid.")
+            return true
+        }
+    }
+    val label = target?.name ?: targetInput
+    ainpcCommandProgressionPlugin.messageUtils.send(sender, "&6=== Progresie jucator: $label ===")
+    ainpcCommandProgressionPlugin.messageUtils.send(sender,
+        "&7Nivel: &f${snapshot.level}" +
+            " &7XP curent: &f${snapshot.xp}" +
+            "&7/&f${snapshot.xpToNextLevel}" +
+            " &7XP total: &f${snapshot.totalXp}")
+    if (snapshot.skills.isEmpty()) {
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Skill-uri: &fniciunul")
+    } else {
+        val sortedSkills = snapshot.skills.entries.sortedByDescending { it.value }
+        val skillsLine = sortedSkills.joinToString(", ") { "${it.key}=${it.value}" }
+        ainpcCommandProgressionPlugin.messageUtils.send(sender, "&7Skill-uri: &f$skillsLine")
+    }
+    return true
+}
+
+private fun tryParseUuidOrNull(value: String): String? {
+    return try {
+        java.util.UUID.fromString(value).toString()
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+}
+
 private fun clampProgressionStoredLimit(sender: CommandSender, limit: Int): Int {
     if (limit <= 0) {
         ainpcCommandProgressionPlugin.messageUtils.send(sender, "&cLimit trebuie sa fie un numar pozitiv.")
@@ -190,6 +348,9 @@ fun handleProgression(
     return when (mode) {
         "definitions", "definition", "defs" -> handleProgressionDefinitions(sender, args)
         "stored", "store", "state", "states", "progressions" -> handleProgressionStored(sender, args, "", findOnlinePlayer)
+        "player", "players", "progression" -> handleProgressionPlayer(sender, args, findOnlinePlayer)
+        "skills" -> handleProgressionSkills(sender, args, findOnlinePlayer)
+        "top", "leaderboard", "ranking" -> handleProgressionTop(sender, args)
         in PROGRESSION_FILTER_SUBCOMMANDS -> handleProgressionStored(sender, args, mode, findOnlinePlayer)
         else -> handleQuest(sender, routeSubcommandToQuest(args))
     }

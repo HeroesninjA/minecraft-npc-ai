@@ -534,26 +534,33 @@ class StoryStateService {
             return
         }
 
-        Bukkit.getPluginManager().callEvent(
-            StoryStateChangedEvent(
-                StoryStateChangedEventPayload(
-                    UUID.randomUUID(),
-                    now(),
-                    AINPCEventSource.SYSTEM,
-                    scopeType,
-                    scopeId,
-                    regionId,
-                    placeId,
-                    if (previousState is RegionStoryState) previousState.stateKey() else if (previousState is PlaceStoryState) previousState.stateKey() else "",
-                    if (currentState is RegionStoryState) currentState.stateKey() else if (currentState is PlaceStoryState) currentState.stateKey() else "",
-                    if (currentState is RegionStoryState) currentState.storyMode().id else StoryMode.EVOLUTIVE.id,
-                    updatedBy,
-                    origin,
-                    if (currentState is RegionStoryState) currentState.storyPool() else null,
-                    metadata
-                )
+        val previousKey = if (previousState is RegionStoryState) previousState.stateKey() else if (previousState is PlaceStoryState) previousState.stateKey() else ""
+        val currentKey = if (currentState is RegionStoryState) currentState.stateKey() else if (currentState is PlaceStoryState) currentState.stateKey() else ""
+        val currentMode = if (currentState is RegionStoryState) currentState.storyMode().id else StoryMode.EVOLUTIVE.id
+        val currentPool = if (currentState is RegionStoryState) currentState.storyPool() else null
+        val event = StoryStateChangedEvent(
+            StoryStateChangedEventPayload(
+                UUID.randomUUID(),
+                now(),
+                AINPCEventSource.SYSTEM,
+                scopeType,
+                scopeId,
+                regionId,
+                placeId,
+                previousKey,
+                currentKey,
+                currentMode,
+                updatedBy,
+                origin,
+                currentPool,
+                metadata
             )
         )
+        if (Bukkit.isPrimaryThread()) {
+            Bukkit.getPluginManager().callEvent(event)
+        } else {
+            Bukkit.getScheduler().runTask(plugin, Runnable { Bukkit.getPluginManager().callEvent(event) })
+        }
     }
 
     private fun publishStoryEventRecorded(storyEvent: StoryEvent, metadata: Map<String, String>) {
@@ -561,29 +568,32 @@ class StoryStateService {
             return
         }
 
-        Bukkit.getPluginManager().callEvent(
-            StoryEventRecordedEvent(
-                StoryEventRecordedEventPayload(
-                    UUID.randomUUID(),
-                    now(),
-                    AINPCEventSource.SYSTEM,
-                    storyEvent.id(),
-                    storyEvent.scopeType(),
-                    storyEvent.scopeId(),
-                    storyEvent.regionId(),
-                    storyEvent.placeId(),
-                    storyEvent.eventType(),
-                    storyEvent.eventKey(),
-                    storyEvent.title(),
-                    storyEvent.description(),
-                    storyEvent.actorType(),
-                    storyEvent.actorId(),
-                    storyEvent.playerUuid(),
-                    storyEvent.npcId(),
-                    metadata
-                )
+        val event = StoryEventRecordedEvent(
+            StoryEventRecordedEventPayload(
+                UUID.randomUUID(),
+                now(),
+                AINPCEventSource.SYSTEM,
+                storyEvent.id(),
+                storyEvent.scopeType(),
+                storyEvent.scopeId(),
+                storyEvent.regionId(),
+                storyEvent.placeId(),
+                storyEvent.eventType(),
+                storyEvent.eventKey(),
+                storyEvent.title(),
+                storyEvent.description(),
+                storyEvent.actorType(),
+                storyEvent.actorId(),
+                storyEvent.playerUuid(),
+                storyEvent.npcId(),
+                metadata
             )
         )
+        if (Bukkit.isPrimaryThread()) {
+            Bukkit.getPluginManager().callEvent(event)
+        } else {
+            Bukkit.getScheduler().runTask(plugin, Runnable { Bukkit.getPluginManager().callEvent(event) })
+        }
     }
 
     companion object {

@@ -775,6 +775,33 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             set(value) {
                 field = value.coerceAtLeast(0)
             }
+        val conditions: MutableList<Map<String, String>> = ArrayList()
+        val runtimeTriggers: MutableList<Map<String, String>> = ArrayList()
+        val runtimeActions: MutableList<Map<String, String>> = ArrayList()
+
+        fun addCondition(id: String, type: String, params: Map<String, String>) {
+            val def = LinkedHashMap<String, String>()
+            def["id"] = id
+            def["type"] = type
+            def.putAll(params)
+            conditions.add(def.toMap())
+        }
+
+        fun addRuntimeTrigger(id: String, type: String, params: Map<String, String>) {
+            val def = LinkedHashMap<String, String>()
+            def["id"] = id
+            def["type"] = type
+            def.putAll(params)
+            runtimeTriggers.add(def.toMap())
+        }
+
+        fun addRuntimeAction(id: String, type: String, params: Map<String, String>) {
+            val def = LinkedHashMap<String, String>()
+            def["id"] = id
+            def["type"] = type
+            def.putAll(params)
+            runtimeActions.add(def.toMap())
+        }
 
         fun addRole(role: ScenarioRoleDefinition) {
             roles[role.id] = role

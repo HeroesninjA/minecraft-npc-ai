@@ -12,7 +12,8 @@ data class McpRuntimeConfig(
     val readTimeout: Duration,
     val failOpen: Boolean,
     val snapshotAuto: Boolean = true,
-    val snapshotIntervalTicks: Long = 100L
+    val snapshotIntervalTicks: Long = 100L,
+    val snapshotPath: String = "data/mcp-runtime-snapshot.json"
 ) {
     val healthUrl: URI = URI.create(baseUrl).resolve("/actuator/health")
 
@@ -33,7 +34,9 @@ data class McpRuntimeConfig(
                 readTimeout = Duration.ofSeconds(config.getLong("mcp.read_timeout_seconds", 20L).coerceAtLeast(1L)),
                 failOpen = config.getBoolean("mcp.fail_open", true),
                 snapshotAuto = config.getBoolean("mcp.snapshot.auto", true),
-                snapshotIntervalTicks = config.getLong("mcp.snapshot.interval_ticks", 100L).coerceIn(20L, 6000L)
+                snapshotIntervalTicks = config.getLong("mcp.snapshot.interval_ticks", 100L).coerceIn(20L, 6000L),
+                snapshotPath = config.getString("mcp.snapshot.path", "data/mcp-runtime-snapshot.json")
+                    ?.trim()?.takeIf { it.isNotBlank() } ?: "data/mcp-runtime-snapshot.json"
             )
         }
     }

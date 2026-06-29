@@ -11,7 +11,7 @@ class ScenarioEngineQuestCooldownTest {
 
         assertTrue(source.contains("questCooldownSeconds"))
         assertTrue(source.contains("questRepeatable"))
-        assertTrue(source.contains("remaining"))
+        assertTrue(source.contains("quest_cooldown"))
         assertTrue(source.contains("Mai asteapta"))
     }
 }

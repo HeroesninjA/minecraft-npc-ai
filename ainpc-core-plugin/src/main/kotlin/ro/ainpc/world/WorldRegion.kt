@@ -20,7 +20,14 @@ class WorldRegion(
     val maxZ: Int = maxOf(minZ, maxZ)
 
     private val tags: MutableList<String> = ArrayList()
-    var storyState: StoryState = StoryState(StoryMode.EVOLUTIVE, "default")
+    var storyState: StoryState = StoryState(type.defaultStoryKey.let { key ->
+        when (key) {
+            "peaceful", "secure" -> StoryMode.STATIC
+            "dangerous", "dark", "uncharted" -> StoryMode.EVOLUTIVE
+            "untamed" -> StoryMode.ROTATIVE
+            else -> StoryMode.EVOLUTIVE
+        }
+    }, type.defaultStoryKey)
 
     fun getTags(): List<String> = tags.toList()
 

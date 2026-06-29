@@ -18,8 +18,8 @@ class ConfirmActionGui : GuiScreen {
     override fun size(player: Player): Int = 27
 
     override fun render(context: GuiRenderContext) {
-        val optionalRequest = context.service().getConfirmRequest(context.player())
-        if (optionalRequest.isEmpty) {
+        val request = context.service().getConfirmRequest(context.player())
+        if (request == null) {
             context.item(
                 13,
                 GuiItemFactory.item(
@@ -39,8 +39,7 @@ class ConfirmActionGui : GuiScreen {
             return
         }
 
-        val request: GuiService.ConfirmRequest = optionalRequest.get()
-        val lore = ArrayList(request.warningLines())
+        val lore = request.warningLines().toMutableList()
         lore.add("&8Comanda: /${request.command()}")
         context.item(13, GuiItemFactory.item(Material.REDSTONE_BLOCK, "&c${request.title()}", lore))
 

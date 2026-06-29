@@ -12,7 +12,6 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
-import java.util.Comparator
 import java.util.Locale
 
 class StatsGui : GuiScreen {
@@ -25,9 +24,8 @@ class StatsGui : GuiScreen {
     override fun render(context: GuiRenderContext) {
         val player = context.player()
         val location = player.location
-        val nearbyNpcs = context.plugin().npcManager.getNPCsNear(location, 24.0).stream()
-            .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
-            .toList()
+        val nearbyNpcs = context.plugin().npcManager.getNPCsNear(location, 24.0)
+            .sortedBy { it.name.lowercase(Locale.ROOT) }
 
         context.item(
             4,

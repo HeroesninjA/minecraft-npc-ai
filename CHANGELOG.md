@@ -14,6 +14,10 @@ Formatul este orientat pe intrari scurte, verificabile:
 
 ### Added
 
+- `QuestLogGui` now shows a **progress summary card** (slot 2) with active/tracked count, objective completion ratio (%), and current/archived totals.
+- `QuestLogGui` now shows a **story context card** (slot 6) with current region/place, story state key, active quest anchors, and warnings count.
+- `scripts/run-tests.ps1` — helper script for running unit tests by category (`-Module gui|quest|progression|story|mapping|npc|command|debug|spawn|listener|economy|ai`), single test class (`-Test`), failed reruns (`-Failed`), listing categories (`-List`), or minimal output (`-Quiet`).
+
 - `quest.txt` in debug dumps now summarizes `player-progressions.json`, `player-quest-progress.json`, `quest-anchor-bindings.json`, and the quest audit report contract.
 - `mapping.txt` in debug dumps now summarizes world mapping and NPC/world binding coverage alongside the JSON exports.
 - `WorldHubGui` now exposes a compact mapping snapshot and a shortcut to `debugdump mapping`.
@@ -155,7 +159,25 @@ Formatul este orientat pe intrari scurte, verificabile:
 - Rulat `mvn -pl ainpc-core-plugin -am "-Dtest=QuestDirectorTest,VillagePatchPlannerTest,AINPCTabCompleterTest" "-Dsurefire.failIfNoSpecifiedTests=false" test`.
 - Rezultat focalizat: `21` teste trecute, `0` esecuri.
 
+### Changed
+
+- `QuestLogGui` advanced filters (Duty/Bounty/Event/Tutorial/Ritual) are now all shown inline as individual buttons (slots 14-18) instead of cycling one-at-a-time.
+- `GuiKey.fromId()`, `GuiSessionManager.find()`, `GuiService.getConfirmRequest()`, `QuestLogGuiFilter.fromId()` — migrated from `Optional<X>` to Kotlin nullable `X?`.
+- `MappingWandService.session()`, `MappingWandMode.fromId()`, `MappingDraftKind.fromId()`, `MappingWandSelection.bounds()` — migrated from `Optional<X>` to Kotlin nullable `X?`.
+- `NpcWorldBindingService.getBinding()` — return type changed from `Optional<NpcWorldBinding>` to `NpcWorldBinding?`.
+- All Java collection types (`ArrayList`, `LinkedHashMap`, `LinkedHashSet`, `Comparator`, Java streams) replaced with Kotlin idioms across 30+ files.
+- `ProgressionService` definition cache now synchronized via `synchronized(cacheLock)`.
+- `StoryStateService` Bukkit event publishing now checks `Bukkit.isPrimaryThread()` and schedules on main thread when called async.
+
+### Fixed
+
+- `StoryStateService` — `Bukkit.getPluginManager().callEvent()` on async thread could cause illegal thread access crashes; now safely scheduled to main thread.
+- `ProgressionService.loadDefinitions()` — cache race condition when accessed from multiple threads; now protected by `synchronized` lock.
+- `MappingIndex.normalizeWorld()` — null/blank world names returned empty string causing invisible chunk key collisions; now returns `"__unknown_world__"`.
+- `MappingWandMode.kt` — duplicate `package` declaration caused compilation error.
+
 ### Remaining
 
 - Audit/debugdump dedicat pentru story state si story events.
 - Validator dedicat pentru actiunile story din feature packs.
+- Smoke tests on Paper server for quests, mapping, story, progression, and patch planner workflows.

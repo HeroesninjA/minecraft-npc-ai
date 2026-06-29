@@ -27,7 +27,35 @@ object DebugDumpQuestAudit {
         for (warning in warnings) {
             sb.append("[WARN] ").append(warning).append("\n")
         }
+        val summary = summarizeQuestRewardTypes(plugin)
+        if (summary.isNotEmpty()) {
+            sb.append("\nReward Type Summary (across all quest templates):\n")
+            for ((type, count) in summary) {
+                sb.append("  - ").append(type).append(": ").append(count).append("\n")
+            }
+        }
         return sb.toString()
+    }
+
+    @JvmStatic
+    fun summarizeQuestRewardTypes(plugin: AINPCPlugin): Map<String, Int> {
+        val featurePackLoader = runCatching { plugin.featurePackLoader }.getOrNull()
+            ?: return emptyMap()
+        return aggregateQuestRewardTypes(featurePackLoader.getAllScenarios())
+    }
+
+    @JvmStatic
+    fun aggregateQuestRewardTypes(scenarios: Collection<FeaturePackLoader.ScenarioDefinition>): Map<String, Int> {
+        val counts = LinkedHashMap<String, Int>()
+        for (scenario in scenarios) {
+            if (scenario.rewards.isNullOrEmpty()) continue
+            for (reward in scenario.rewards) {
+                val normalized = DebugDumpSupport.normalizeQuestRewardType(reward.type)
+                if (normalized.isBlank()) continue
+                counts[normalized] = (counts[normalized] ?: 0) + 1
+            }
+        }
+        return counts
     }
 
     private fun auditLoadedQuestTemplates(
@@ -72,6 +100,7 @@ object DebugDumpQuestAudit {
                 errors,
                 warnings,
             )
+            auditQuestRewardPayload(templateId, scenario.rewards, errors, warnings)
             auditQuestObjectiveStages(templateId, scenario, errors, warnings)
             auditQuestActorsWithoutTriggers(templateId, scenario, warnings)
         }
@@ -120,6 +149,65 @@ object DebugDumpQuestAudit {
                 errors.add("$templateId are $entryKind duplicat: $entryId.")
             }
         }
+    }
+
+    @JvmStatic
+    fun auditQuestRewardPayload(
+        templateId: String,
+        rewards: List<FeaturePackLoader.QuestEntryDefinition>?,
+    ): Pair<List<String>, List<String>> {
+        val errors = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+        if (rewards.isNullOrEmpty()) return errors to warnings
+        for ((index, reward) in rewards.withIndex()) {
+            val rawType = DebugDumpSupport.valueOrEmpty(reward.type)
+            val normalizedType = DebugDumpSupport.normalizeQuestRewardType(rawType)
+            val label = DebugDumpSupport.valueOrFallback(reward.entryId, rawType)
+            when {
+                normalizedType == "progression:skill" -> {
+                    if (DebugDumpSupport.valueOrEmpty(reward.itemId).isBlank()) {
+                        errors.add("$templateId reward $label (index $index) de tip progression:skill cere itemId cu numele skill-ului.")
+                    } else if (reward.amount <= 0) {
+                        warnings.add("$templateId reward $label (index $index) progression:skill are amount=${reward.amount} (recomandat pozitiv).")
+                    }
+                }
+                normalizedType == "progression:skill_level" -> {
+                    if (DebugDumpSupport.valueOrEmpty(reward.itemId).isBlank()) {
+                        errors.add("$templateId reward $label (index $index) de tip progression:skill_level cere itemId cu numele skill-ului.")
+                    } else if (reward.amount <= 0) {
+                        warnings.add("$templateId reward $label (index $index) progression:skill_level are amount=${reward.amount} (recomandat pozitiv).")
+                    }
+                }
+                normalizedType.startsWith("reputation:") -> {
+                    val scopeType = normalizedType.removePrefix("reputation:").trim()
+                    val scopeId = DebugDumpSupport.valueOrEmpty(reward.itemId)
+                    if (scopeType.isBlank() || scopeType == "_") {
+                        errors.add("$templateId reward $label (index $index) are reputation fara scopeType clar: $rawType.")
+                    }
+                    if (scopeId.isBlank()) {
+                        errors.add("$templateId reward $label (index $index) de tip $normalizedType cere itemId cu scope ID (ex: nume regiune/factiune).")
+                    }
+                }
+                normalizedType == "progression:level" && reward.amount <= 0 -> {
+                    warnings.add("$templateId reward $label (index $index) progression:level are amount=${reward.amount} (recomandat pozitiv).")
+                }
+                normalizedType == "economy:money" && reward.amount <= 0 -> {
+                    warnings.add("$templateId reward $label (index $index) economy:money are amount=${reward.amount} (recomandat pozitiv).")
+                }
+            }
+        }
+        return errors to warnings
+    }
+
+    private fun auditQuestRewardPayload(
+        templateId: String,
+        rewards: List<FeaturePackLoader.QuestEntryDefinition>?,
+        errors: MutableList<String>,
+        warnings: MutableList<String>,
+    ) {
+        val (newErrors, newWarnings) = auditQuestRewardPayload(templateId, rewards)
+        errors.addAll(newErrors)
+        warnings.addAll(newWarnings)
     }
 
     private fun auditQuestSemanticReference(

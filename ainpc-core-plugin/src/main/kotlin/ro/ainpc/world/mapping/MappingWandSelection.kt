@@ -1,6 +1,6 @@
 package ro.ainpc.world.mapping
 
-import java.util.Optional
+
 import kotlin.math.max
 import kotlin.math.min
 
@@ -27,25 +27,23 @@ class MappingWandSelection(
 
     fun withoutPoint(): MappingWandSelection = withPoint(null)
 
-    fun bounds(): Optional<MappingBounds> {
+    fun bounds(): MappingBounds? {
         val first = pos1Value
         val second = pos2Value
         if (first == null || second == null || !first.hasWorld() || !second.hasWorld()) {
-            return Optional.empty()
+            return null
         }
         if (!first.worldName().equals(second.worldName(), ignoreCase = true)) {
-            return Optional.empty()
+            return null
         }
-        return Optional.of(
-            MappingBounds(
-                first.worldName(),
-                min(first.x(), second.x()),
-                min(first.y(), second.y()),
-                min(first.z(), second.z()),
-                max(first.x(), second.x()),
-                max(first.y(), second.y()),
-                max(first.z(), second.z())
-            )
+        return MappingBounds(
+            first.worldName(),
+            min(first.x(), second.x()),
+            min(first.y(), second.y()),
+            min(first.z(), second.z()),
+            max(first.x(), second.x()),
+            max(first.y(), second.y()),
+            max(first.z(), second.z())
         )
     }
 

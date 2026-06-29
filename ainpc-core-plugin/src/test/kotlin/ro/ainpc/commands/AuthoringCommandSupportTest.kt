@@ -47,7 +47,7 @@ class AuthoringCommandSupportTest {
     @Test
     fun suggestsAuthoringModesWithAliases() {
         assertEquals(
-            listOf("clear", "dump", "forward", "next", "prev", "previous", "reset", "summary", "summarize"),
+            listOf("clear", "dump", "forward", "next", "prev", "previous", "reset", "summarize", "summary"),
             AuthoringCommandSupport.modeSuggestions("")
         )
         assertEquals(

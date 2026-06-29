@@ -5,7 +5,6 @@ import ro.ainpc.database.DatabaseManager
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
-import java.util.Optional
 import java.util.logging.Logger
 
 class NpcWorldBindingService {
@@ -93,9 +92,9 @@ class NpcWorldBindingService {
     }
 
     @Throws(SQLException::class)
-    fun getBinding(npcId: Int): Optional<NpcWorldBinding> {
+    fun getBinding(npcId: Int): NpcWorldBinding? {
         if (npcId <= 0) {
-            return Optional.empty()
+            return null
         }
 
         val sql = """
@@ -110,7 +109,7 @@ class NpcWorldBindingService {
         requireStatements().prepareStatement(sql).use { statement ->
             statement.setInt(1, npcId)
             statement.executeQuery().use { resultSet ->
-                return if (resultSet.next()) Optional.of(readBinding(resultSet)) else Optional.empty()
+                return if (resultSet.next()) readBinding(resultSet) else null
             }
         }
     }

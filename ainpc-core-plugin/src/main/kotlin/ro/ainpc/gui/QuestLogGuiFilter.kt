@@ -1,7 +1,6 @@
 package ro.ainpc.gui
 
 import java.util.Locale
-import java.util.Optional
 
 enum class QuestLogGuiFilter(
     private val filterValue: String,
@@ -33,17 +32,17 @@ enum class QuestLogGuiFilter(
         @JvmStatic
         fun normalizeFilter(rawFilter: String?): String {
             val resolved = fromId(rawFilter)
-            if (resolved.isPresent) {
-                return resolved.get().filter()
+            if (resolved != null) {
+                return resolved.filter()
             }
             return if (rawFilter.isNullOrBlank()) ALL.filterValue else rawFilter.trim()
         }
 
         @JvmStatic
-        fun fromId(rawValue: String?): Optional<QuestLogGuiFilter> {
+        fun fromId(rawValue: String?): QuestLogGuiFilter? {
             val normalized = normalize(rawValue)
             if (normalized.isBlank()) {
-                return Optional.of(ALL)
+                return ALL
             }
 
             val canonical = when (normalized) {
@@ -61,10 +60,10 @@ enum class QuestLogGuiFilter(
 
             for (filter in values()) {
                 if (filter.filterValue == canonical || normalize(filter.buttonLabelValue) == canonical) {
-                    return Optional.of(filter)
+                    return filter
                 }
             }
-            return Optional.empty()
+            return null
         }
 
         private fun normalize(value: String?): String {

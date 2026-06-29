@@ -1,7 +1,6 @@
 package ro.ainpc.gui
 
 import ro.ainpc.progression.ProgressionGuiEntry
-import java.util.ArrayList
 import java.util.LinkedHashMap
 import java.util.Locale
 
@@ -66,7 +65,7 @@ class QuestLogGuiPage(
         val id: String,
         val label: String
     ) {
-        val entries: MutableList<ProgressionGuiEntry> = ArrayList()
+        val entries: MutableList<ProgressionGuiEntry> = mutableListOf()
     }
 
     class Row(
@@ -161,7 +160,7 @@ class QuestLogGuiPage(
         }
 
         private fun rowsFromGroups(groups: List<Group>): List<Row> {
-            val rows = ArrayList<Row>()
+            val rows = mutableListOf<Row>()
             for (group in groups) {
                 rows.add(Row.header(group.id, group.label, group.entries.size))
                 for (entry in group.entries) {
@@ -179,8 +178,8 @@ class QuestLogGuiPage(
                 return paginateFlat(groupedRows, pageSize)
             }
 
-            val pages = ArrayList<List<Row>>()
-            val currentPage = ArrayList<Row>()
+            val pages = mutableListOf<List<Row>>()
+            val currentPage = mutableListOf<Row>()
             for (group in groups) {
                 if (group.entries.isEmpty()) {
                     continue
@@ -210,7 +209,7 @@ class QuestLogGuiPage(
 
         private fun paginateFlat(groupedRows: List<Row>, pageSize: Int): List<List<Row>> {
             val safePageSize = maxOf(1, pageSize)
-            val pages = ArrayList<List<Row>>()
+            val pages = mutableListOf<List<Row>>()
             var fromIndex = 0
             while (fromIndex < groupedRows.size) {
                 val toIndex = minOf(groupedRows.size, fromIndex + safePageSize)

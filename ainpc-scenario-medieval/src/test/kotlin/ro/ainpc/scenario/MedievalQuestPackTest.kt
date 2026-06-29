@@ -20,7 +20,7 @@ class MedievalQuestPackTest {
         val scenarios = config.getConfigurationSection("scenarios")
         assertNotNull(scenarios, "scenarios section should exist")
         assertEquals(
-            setOf("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "C01", "C02", "D01", "B01", "B02", "E01", "T01", "R01"),
+            setOf("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "C01", "C02", "D01", "B01", "B02", "E01", "T01", "R01", "Q100"),
             scenarios!!.getKeys(false)
         )
 
@@ -46,28 +46,33 @@ class MedievalQuestPackTest {
             "Q01" to "blacksmith", "Q02" to "farmer", "Q03" to "guard", "Q04" to "innkeeper",
             "Q05" to "healer", "Q06" to "blacksmith", "Q07" to "innkeeper", "Q08" to "guard",
             "C01" to "merchant", "C02" to "merchant", "D01" to "guard", "B01" to "guard",
-            "B02" to "farmer", "E01" to "guard", "T01" to "priest", "R01" to "priest"
+            "B02" to "farmer", "E01" to "guard", "T01" to "priest", "R01" to "priest",
+            "Q100" to "blacksmith"
         )
         val expectedBaseTypes = mapOf(
             "Q01" to "QUEST", "Q02" to "QUEST", "Q03" to "QUEST", "Q04" to "QUEST", "Q05" to "QUEST", "Q06" to "QUEST",
             "Q07" to "QUEST", "Q08" to "QUEST", "C01" to "TRADE_DEAL", "C02" to "TRADE_DEAL", "D01" to "DUTY",
-            "B01" to "BOUNTY", "B02" to "BOUNTY", "E01" to "WORLD_EVENT", "T01" to "TUTORIAL", "R01" to "RITUAL"
+            "B01" to "BOUNTY", "B02" to "BOUNTY", "E01" to "WORLD_EVENT", "T01" to "TUTORIAL", "R01" to "RITUAL",
+            "Q100" to "QUEST"
         )
         val expectedMechanics = mapOf(
             "Q01" to "main_quests", "Q02" to "side_quests", "Q03" to "side_quests", "Q04" to "side_quests",
             "Q05" to "side_quests", "Q06" to "side_quests", "Q07" to "side_quests", "Q08" to "side_quests",
             "C01" to "village_contracts", "C02" to "village_contracts", "D01" to "npc_duties", "B01" to "local_bounties",
-            "B02" to "local_bounties", "E01" to "village_events", "T01" to "onboarding", "R01" to "village_rituals"
+            "B02" to "local_bounties", "E01" to "village_events", "T01" to "onboarding", "R01" to "village_rituals",
+            "Q100" to "side_quests"
         )
         val expectedKinds = mapOf(
             "Q01" to "fetch", "Q02" to "fetch", "Q03" to "hunt", "Q04" to "fetch", "Q05" to "fetch", "Q06" to "exploration",
             "Q07" to "delivery", "Q08" to "hunt", "C01" to "delivery", "C02" to "investigation", "D01" to "duty",
-            "B01" to "hunt", "B02" to "hunt", "E01" to "event", "T01" to "tutorial", "R01" to "ritual"
+            "B01" to "hunt", "B02" to "hunt", "E01" to "event", "T01" to "tutorial", "R01" to "ritual",
+            "Q100" to "fetch"
         )
         val expectedCategories = mapOf(
             "Q01" to "main", "Q02" to "side", "Q03" to "side", "Q04" to "repeatable", "Q05" to "side", "Q06" to "side",
             "Q07" to "side", "Q08" to "side", "C01" to "side", "C02" to "side", "D01" to "repeatable", "B01" to "repeatable",
-            "B02" to "repeatable", "E01" to "repeatable", "T01" to "side", "R01" to "repeatable"
+            "B02" to "repeatable", "E01" to "repeatable", "T01" to "side", "R01" to "repeatable",
+            "Q100" to "side"
         )
 
         for ((key, giver) in expectedGivers) {
@@ -305,13 +310,24 @@ class MedievalQuestPackTest {
 
     private fun validateRuntimeSupportedRewards(scenarioId: String, rewards: ConfigurationSection?) {
         assertNotNull(rewards, "$scenarioId should define rewards")
-        val supportedRewardTypes = setOf("item", "set_story_state", "record_story_event")
+        val supportedRewardTypes = setOf(
+            "item",
+            "set_story_state",
+            "record_story_event",
+            "experience",
+            "economy_money",
+            "progression_xp",
+            "progression_level",
+            "progression_skill",
+            "progression_skill_level",
+        )
 
         for (key in rewards!!.getKeys(false)) {
             val reward = rewards.getConfigurationSection(key)
             assertNotNull(reward, "$scenarioId reward $key should be a section")
             val type = normalizeRuntimeType(reward!!.getString("type", "item") ?: "item")
-            assertTrue(supportedRewardTypes.contains(type), "$scenarioId reward $key should use a supported runtime type: $type")
+            val accepted = supportedRewardTypes.contains(type) || type.startsWith("reputation_")
+            assertTrue(accepted, "$scenarioId reward $key should use a supported runtime type: $type")
         }
     }
 
@@ -363,7 +379,15 @@ class MedievalQuestPackTest {
             "inspect", "inspectnode", "inspect_node", "interact_node", "node" -> "inspect_node"
             "kill", "slay", "defeat", "kill_mob" -> "kill_mob"
             "set_story_state", "record_story_event" -> normalized
-            else -> normalized
+            "experience", "xp" -> "experience"
+            "economy", "money", "economy_money" -> "economy_money"
+            "progression", "progression_xp" -> "progression_xp"
+            "progression_level", "progression_set_level", "set_level" -> "progression_level"
+            "progression_skill", "progression_skill_xp", "skill_xp" -> "progression_skill"
+            "progression_skill_level", "skill_level", "set_skill_level" -> "progression_skill_level"
+            else -> if (normalized.startsWith("reputation_") || normalized.startsWith("reputation:")) {
+                "reputation_${normalized.removePrefix("reputation:").removePrefix("reputation_")}"
+            } else normalized
         }
     }
 

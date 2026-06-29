@@ -26,13 +26,39 @@ docker compose down
 ## Comenzi
 
 | Script | Comanda | Ce face |
-|---|---|---|
+|---|---|---|---|
+| Build | `build-local.ps1` | Build local cu Gradle |
+| Test | `run-tests.ps1 -Module gui` | Ruleaza teste unitare pe categorii (`-Module`, `-Test`, `-Count`, `-List`, `-Failed`, `-Quiet`) |
 | Docker | `setup-docker-demo.ps1` | Build + deploy JAR-uri + porneste container Paper |
 | Smoke | `smoke-demo-complet.ps1 -Rcon` | Ruleaza TOATE comenzile demo automate prin RCON |
 | Deploy | `deploy-demo.ps1` | Copiaza JAR-urile pe un server Paper existent |
 | Test | `test-demo.ps1 -Interactive` | Ghid interactiv pas-cu-pas |
 | RCON | `rcon-client.ps1` | Conectare RCON la server Paper |
 | Evidence | `validate-demo-paper-evidence.ps1` | Demo Paper Evidence Validator - valideaza si genereaza dovezi milestone |
+
+## Teste unitare
+
+```powershell
+# Toate testele
+.\scripts\run-tests.ps1
+
+# Doar GUI
+.\scripts\run-tests.ps1 -Module gui
+
+# Doar quest engine
+.\scripts\run-tests.ps1 -Module quest
+
+# Test singular
+.\scripts\run-tests.ps1 -Test "ro.ainpc.gui.GuiKeyTest"
+
+# Statistici teste per categorie
+.\scripts\run-tests.ps1 -Count
+
+# Listeaza categoriile disponibile
+.\scripts\run-tests.ps1 -List
+```
+
+Module disponibile: `gui`, `quest`, `progression`, `story`, `mapping`, `npc`, `command`, `debug`, `spawn`, `listener`, `economy`, `ai`
 
 ## Smoke test automat
 

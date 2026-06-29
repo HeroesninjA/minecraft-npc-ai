@@ -13,7 +13,7 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.world.WorldAdminService
 import java.time.Instant
-import java.util.Optional
+
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -44,9 +44,9 @@ class MappingWandService(private val plugin: AINPCPlugin) {
         }
     }
 
-    fun session(playerId: UUID): Optional<MappingWandSession> = Optional.ofNullable(sessions[playerId])
+    fun session(playerId: UUID): MappingWandSession? = sessions[playerId]
 
-    fun mode(playerId: UUID): MappingWandMode = session(playerId).map { it.mode() }.orElse(MappingWandMode.PLACE)
+    fun mode(playerId: UUID): MappingWandMode = session(playerId)?.mode() ?: MappingWandMode.PLACE
 
     fun setMode(player: Player, mode: MappingWandMode?): MappingWandSession = start(player, mode)
 
@@ -141,7 +141,7 @@ class MappingWandService(private val plugin: AINPCPlugin) {
             )
             return
         }
-        selection.bounds().ifPresent { bounds -> showBoundsPreview(player, bounds) }
+        selection.bounds()?.let { bounds -> showBoundsPreview(player, bounds) }
     }
 
     fun showDraftPreview(player: Player?, draft: MappingDraft?) {

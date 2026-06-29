@@ -7,10 +7,12 @@ import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import java.util.Locale
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.world.PlaceType
+import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldNodeInfo
@@ -744,15 +746,16 @@ fun handleWorldRegionCreate(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (args.size != 11) {
+    val player = requirePlayerSender(sender) ?: return true
+
+    if (args.size < 5) {
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
-            "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
+            "&cUtilizare: /ainpc world region create <id> <type> [x1] [y1] [z1] [x2] [y2] [z2]"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Mod simplu (fara coordonate): foloseste pozitia jucatorului cu raza 32.")
         return true
     }
-
-    val player = requirePlayerSender(sender) ?: return true
 
     val regionType = parseRegionTypeStrict(args[4])
     if (regionType == null) {
@@ -760,15 +763,31 @@ fun handleWorldRegionCreate(
         return true
     }
 
-    val minX = parseIntegerStrict(args[5]) ?: run {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele regiunii trebuie sa fie numere intregi.")
-        return true
+    val minX: Int
+    val minY: Int
+    val minZ: Int
+    val maxX: Int
+    val maxY: Int
+    val maxZ: Int
+    if (args.size >= 11) {
+        minX = parseIntegerStrict(args[5]) ?: run {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele trebuie sa fie numere intregi.")
+            return true
+        }
+        minY = parseIntegerStrict(args[6]) ?: return true
+        minZ = parseIntegerStrict(args[7]) ?: return true
+        maxX = parseIntegerStrict(args[8]) ?: return true
+        maxY = parseIntegerStrict(args[9]) ?: return true
+        maxZ = parseIntegerStrict(args[10]) ?: return true
+    } else {
+        val loc = player.location
+        minX = loc.blockX - 32
+        minY = maxOf(0, loc.blockY - 16)
+        minZ = loc.blockZ - 32
+        maxX = loc.blockX + 32
+        maxY = minOf(319, loc.blockY + 16)
+        maxZ = loc.blockZ + 32
     }
-    val minY = parseIntegerStrict(args[6]) ?: return true
-    val minZ = parseIntegerStrict(args[7]) ?: return true
-    val maxX = parseIntegerStrict(args[8]) ?: return true
-    val maxY = parseIntegerStrict(args[9]) ?: return true
-    val maxZ = parseIntegerStrict(args[10]) ?: return true
 
     try {
         val regionInfo = toRegionInfo(
@@ -801,11 +820,12 @@ fun handleWorldRegionCreate(
 }
 
 fun handleWorldPlaceCreate(sender: CommandSender, args: Array<String>): Boolean {
-    if (args.size != 12) {
+    if (args.size < 6) {
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
-            "&cUtilizare: /ainpc world place create <regionId> <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
+            "&cUtilizare: /ainpc world place create <regionId> <id> <type> [x1] [y1] [z1] [x2] [y2] [z2]"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Mod simplu (fara coordonate): foloseste pozitia jucatorului cu raza 8.")
         return true
     }
 
@@ -830,17 +850,38 @@ fun handleWorldPlaceCreate(sender: CommandSender, args: Array<String>): Boolean 
         return true
     }
 
-    val minX = parseIntegerStrict(args[6]) ?: run {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele place-ului trebuie sa fie numere intregi.")
-        return true
-    }
-    val minY = parseIntegerStrict(args[7]) ?: return true
-    val minZ = parseIntegerStrict(args[8]) ?: return true
-    val maxX = parseIntegerStrict(args[9]) ?: return true
-    val maxY = parseIntegerStrict(args[10]) ?: return true
-    val maxZ = parseIntegerStrict(args[11]) ?: return true
-
     val region = regionMatches[0]
+    val minX: Int
+    val minY: Int
+    val minZ: Int
+    val maxX: Int
+    val maxY: Int
+    val maxZ: Int
+    if (args.size >= 12) {
+        minX = parseIntegerStrict(args[6]) ?: run {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele trebuie sa fie numere intregi.")
+            return true
+        }
+        minY = parseIntegerStrict(args[7]) ?: return true
+        minZ = parseIntegerStrict(args[8]) ?: return true
+        maxX = parseIntegerStrict(args[9]) ?: return true
+        maxY = parseIntegerStrict(args[10]) ?: return true
+        maxZ = parseIntegerStrict(args[11]) ?: return true
+    } else {
+        val player = sender as? Player
+        if (player == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cModul simplu necesita un jucator. Specifica coordonatele manual.")
+            return true
+        }
+        val loc = player.location
+        minX = loc.blockX - 8
+        minY = maxOf(0, loc.blockY - 4)
+        minZ = loc.blockZ - 8
+        maxX = loc.blockX + 8
+        maxY = minOf(319, loc.blockY + 4)
+        maxZ = loc.blockZ + 8
+    }
+
     try {
         val placeInfo = toPlaceInfo(
             ainpcCommandWorldPlugin.platform.worldAdminService.createPlace(
@@ -938,8 +979,76 @@ fun handleWorldRegion(
         }
         return true
     }
+    if (action == "identity") {
+        val regionType = if (args.size >= 4) RegionType.fromId(args[3]) else RegionType.CUSTOM
+        val identity = RegionIdentityProvider.identity(regionType)
+        val msg = ainpcCommandWorldPlugin.messageUtils
+        msg.send(sender, "&6=== Identitate Regiune: ${identity.displayName} ===")
+        msg.send(sender, "&eTip: &f${identity.displayName} &8(${regionType.id})")
+        msg.send(sender, "&eDescriere: &f${identity.description}")
+        msg.send(sender, "&ePoveste: &f${identity.defaultStoryKey} &8(${identity.mood})")
+        msg.send(sender, "&eThreat: &f${identity.threatLevel}")
+        msg.send(sender, "&eAtmosfera: &f${identity.ambiance}")
+        msg.send(sender, "&6Roluri NPC recomandate:")
+        val roles: List<String> = identity.suggestedNpcRoles
+        for (role in roles) {
+            msg.send(sender, "  &f$role")
+        }
+        msg.send(sender, "&6Tipuri place recomandate:")
+        val placeTypes: List<String> = identity.suggestedPlaceTypes
+        for (pt in placeTypes) {
+            msg.send(sender, "  &f$pt")
+        }
+        return true
+    }
+    if (action == "nodes" && args.size >= 4) {
+        val matches = findRegionMatches(worldAdmin, args[3])
+        if (matches.isEmpty()) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cRegiunea &e${args[3]} &cnu a fost gasita.")
+            return true
+        }
+        val region = matches[0]
+        val nodes = worldAdmin.getNodes(region.id()).sortedBy { it.id() }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&6=== Noduri: ${region.name()} &7(${region.id()}) ===")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eTotal noduri: &f${nodes.size}")
+        if (nodes.isEmpty()) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Regiunea nu are noduri.")
+        } else {
+            val byType = nodes.groupBy { it.typeId() }
+            for ((type, typeNodes) in byType.entries.sortedByDescending { it.value.size }) {
+                ainpcCommandWorldPlugin.messageUtils.send(sender, "&e$type &7(${typeNodes.size}):")
+                for (node in typeNodes.take(5)) {
+                    ainpcCommandWorldPlugin.messageUtils.send(sender, "  &f${node.id()} &7la &f${node.x().toInt()},${node.y().toInt()},${node.z().toInt()} &8raza=${node.radius()}")
+                }
+                if (typeNodes.size > 5) {
+                    ainpcCommandWorldPlugin.messageUtils.send(sender, "  &8... si inca ${typeNodes.size - 5} noduri")
+                }
+            }
+        }
+        return true
+    }
+    if (action == "places" && args.size >= 4) {
+        val matches = findRegionMatches(worldAdmin, args[3])
+        if (matches.isEmpty()) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cRegiunea &e${args[3]} &cnu a fost gasita.")
+            return true
+        }
+        val region = matches[0]
+        val places = worldAdmin.getPlaces(region.id()).sortedBy { it.id() }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&6=== Places: ${region.name()} &7(${region.id()}) ===")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eTotal places: &f${places.size}")
+        if (places.isEmpty()) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Regiunea nu are places.")
+        } else {
+            for (place in places) {
+                val nodes = worldAdmin.getNodesForPlace(place.id())
+                ainpcCommandWorldPlugin.messageUtils.send(sender, "&e${place.id()} &7- &f${place.displayName()} &8[${place.placeType().id}] &7noduri: &f${nodes.size}")
+            }
+        }
+        return true
+    }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove|summary> ...")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove|summary|identity|nodes|places> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"
@@ -1200,35 +1309,48 @@ fun handleWorldNode(sender: CommandSender, args: Array<String>): Boolean {
     if (action == "remove" || action == "delete") {
         return handleWorldNodeRemove(sender, args)
     }
-    if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(
-            sender,
-            "&cUtilizare: /ainpc world node <create|edit|remove> ..."
-        )
-        ainpcCommandWorldPlugin.messageUtils.send(
-            sender,
-            "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]"
-        )
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node edit <nodeId>")
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node remove <nodeId>")
+    if (action == "info" && args.size >= 4) {
+        val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdmin
+        if (!worldAdmin.isEnabled) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
+            return true
+        }
+        val node = worldAdmin.getNode(args[3])
+        if (node == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cNode-ul &e${args[3]} &cnu a fost gasit.")
+            return true
+        }
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&6=== Node Info ===")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eID: &f${node.id()}")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eTip: &f${node.typeId()}")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eRegiune: &f${node.regionId()}")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&ePlace: &f${formatOptional(node.placeId())}")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&ePozitie: &f${node.x().toInt()}, ${node.y().toInt()}, ${node.z().toInt()}")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&eRaza: &f${String.format(Locale.ROOT, "%.1f", node.radius())}")
         return true
     }
-
-    val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdmin
-    if (!worldAdmin.isEnabled) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
-        return true
-    }
-
-    return handleWorldNodeCreate(sender, args)
+    ainpcCommandWorldPlugin.messageUtils.send(
+        sender,
+        "&cUtilizare: /ainpc world node <create|edit|remove|info> ..."
+    )
+    ainpcCommandWorldPlugin.messageUtils.send(
+        sender,
+        "&cUtilizare: /ainpc world node create <regionId> [placeId|-] <id> <type> [x] [y] [z] [radius]"
+    )
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node edit <nodeId>")
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node remove <nodeId>")
+    ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world node info <nodeId>")
+    return true
 }
 
 fun handleWorldNodeCreate(sender: CommandSender, args: Array<String>): Boolean {
-    if (args.size !in 10..11) {
+    if (args.size < 7) {
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
-            "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> <x> <y> <z> [radius]"
+            "&cUtilizare: /ainpc world node create <regionId> <placeId|-> <id> <type> [x] [y] [z] [radius]"
         )
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Simplu: &f/ainpc world node create <regionId> - <id> <type> &7(foloseste pozitia ta)")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Complet: &f/ainpc world node create <regionId> - <id> <type> <x> <y> <z> [radius]")
         return true
     }
 
@@ -1247,23 +1369,40 @@ fun handleWorldNodeCreate(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
-    val nodeType = parseNodeTypeStrict(args[6])
-    if (nodeType == null) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cTip de node invalid: &e${args[6]}&c.")
-        return true
-    }
-
-    val x = parseDoubleStrict(args[7])
-    val y = parseDoubleStrict(args[8])
-    val z = parseDoubleStrict(args[9])
-    val radius = if (args.size == 11) parseDoubleStrict(args[10]) else 2.5
-    if (x == null || y == null || z == null || radius == null) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele node-ului si raza trebuie sa fie numere.")
-        return true
-    }
-
     val region = regionMatches[0]
     val placeSelector = args[4]
+
+    val explicitNodeType = if (args.size >= 7) args.getOrNull(6) else null
+    val nodeType = if (explicitNodeType != null) parseNodeTypeStrict(explicitNodeType) else WorldNodeType.CUSTOM
+    if (explicitNodeType != null && nodeType == null) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cTip de node invalid: &e$explicitNodeType&c.")
+        return true
+    }
+
+    val x: Double
+    val y: Double
+    val z: Double
+    val radius: Double
+    if (args.size >= 10) {
+        val rx = parseDoubleStrict(args[7])
+        val ry = parseDoubleStrict(args[8])
+        val rz = parseDoubleStrict(args[9])
+        val rr = if (args.size >= 11) parseDoubleStrict(args[10]) else 2.5
+        if (rx == null || ry == null || rz == null || rr == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cCoordonatele si raza trebuie sa fie numere.")
+            return true
+        }
+        x = rx; y = ry; z = rz; radius = rr
+    } else {
+        val player = sender as? Player
+        if (player == null) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&cModul simplu necesita un jucator. Specifica coordonatele manual.")
+            return true
+        }
+        val loc = player.location
+        x = loc.x; y = loc.y; z = loc.z; radius = 2.5
+    }
+
     var resolvedPlaceId: String? = null
     var place: WorldPlaceInfo? = null
     if (!isNoneSelector(placeSelector)) {
@@ -1293,7 +1432,7 @@ fun handleWorldNodeCreate(sender: CommandSender, args: Array<String>): Boolean {
     try {
         val nodeInfo = toNodeInfo(
             ainpcCommandWorldPlugin.platform.worldAdminService.createNode(
-                region.id(), resolvedPlaceId, args[5], nodeType,
+                region.id(), resolvedPlaceId, args[5], nodeType!!,
                 place?.worldName() ?: region.worldName(),
                 x, y, z, radius
             )

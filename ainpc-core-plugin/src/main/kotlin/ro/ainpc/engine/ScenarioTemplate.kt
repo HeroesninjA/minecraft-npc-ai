@@ -3,6 +3,7 @@ package ro.ainpc.engine
 
 import ro.ainpc.engine.FeaturePackLoader.QuestEntryDefinition
 import ro.ainpc.engine.FeaturePackLoader.QuestStageDefinition
+import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.npc.NpcScenarioActorDefinition
 import java.util.Locale
 
@@ -41,6 +42,9 @@ class ScenarioTemplate(val type: ScenarioType) {
     var triggerProbability: Double = 0.05
     var minimumNpcCount: Int = 2
     var requiresPlayer: Boolean = false
+    var runtimeConditionDefs: List<ScenarioRuntimeDefinition> = emptyList()
+    var runtimeTriggerDefs: List<ScenarioRuntimeDefinition> = emptyList()
+    var runtimeActionDefs: List<ScenarioRuntimeDefinition> = emptyList()
 
     fun addRole(roleId: String, description: String) {
         addRole(ScenarioRoleRule(roleId, description, false, false))

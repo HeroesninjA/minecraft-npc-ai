@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder
 import org.bukkit.Bukkit
 import org.bukkit.scheduler.BukkitRunnable
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.mcp.McpRuntimeConfig
 import java.nio.file.Path
 import java.time.Instant
 
@@ -116,13 +117,11 @@ class RuntimeSnapshotProducer(
     }
 
     fun start() {
-        val mcpConfig = plugin.config.getBoolean("features.mcp", true)
-        val snapshotEnabled = plugin.config.getBoolean("mcp.snapshot.auto", true)
-        val intervalTicks = plugin.config.getLong("mcp.snapshot.interval_ticks", 100L)
-            .coerceIn(20L, 6000L)
-        if (!mcpConfig || !snapshotEnabled) return
-        runTaskTimerAsynchronously(plugin, 40L, intervalTicks)
-        plugin.logger.info("RuntimeSnapshotProducer pornit (la fiecare ${intervalTicks}tick, fisier: $snapshotPath).")
+        val config = McpRuntimeConfig.from(plugin.config)
+        if (!config.enabled || !config.snapshotAuto) return
+        val ticks = config.snapshotIntervalTicks
+        runTaskTimerAsynchronously(plugin, 40L, ticks)
+        plugin.logger.info("RuntimeSnapshotProducer pornit (la fiecare ${ticks}tick, fisier: $snapshotPath).")
     }
 
     fun stop() {

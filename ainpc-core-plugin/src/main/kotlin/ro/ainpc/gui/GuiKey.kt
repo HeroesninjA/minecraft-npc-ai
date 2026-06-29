@@ -1,7 +1,6 @@
 package ro.ainpc.gui
 
 import java.util.Locale
-import java.util.Optional
 
 enum class GuiKey(
     private val idValue: String,
@@ -47,9 +46,9 @@ enum class GuiKey(
 
     companion object {
         @JvmStatic
-        fun fromId(rawValue: String?): Optional<GuiKey> {
+        fun fromId(rawValue: String?): GuiKey? {
             if (rawValue.isNullOrBlank()) {
-                return Optional.of(MAIN)
+                return MAIN
             }
 
             val trimmed = rawValue.trim()
@@ -93,10 +92,10 @@ enum class GuiKey(
 
             for (key in values()) {
                 if (key.idValue == normalized || key.name.equals(normalized, ignoreCase = true)) {
-                    return Optional.of(key)
+                    return key
                 }
             }
-            return Optional.empty()
+            return null
         }
     }
 }
