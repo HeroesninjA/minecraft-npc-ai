@@ -1,6 +1,6 @@
 # StoryContextService
 
-Actualizat: 2026-05-07
+Actualizat: 2026-06-29
 
 Punctul de intrare recomandat pentru aceasta zona este `story-context-quest-ai-stack.md`.
 
@@ -71,6 +71,7 @@ Snapshot-ul poate include:
 - evenimente story recente pentru regiune/place, daca exista
 - node-uri apropiate relevante pentru quest/story
 - quest anchors active pentru jucator
+- semnale de mediu (`environment_time`, `environment_weather`, `environment_season`, `environment_temperature`, `environment_events`) din `EnvironmentEngine`
 - warnings daca mapping-ul, DB-ul sau locatia nu sunt disponibile
 
 ## Reguli

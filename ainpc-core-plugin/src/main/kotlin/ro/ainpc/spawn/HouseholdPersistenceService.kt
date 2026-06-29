@@ -51,6 +51,9 @@ class HouseholdPersistenceService {
     fun findResidentByNpcId(npcId: Int): Optional<HouseholdResidentRecord> = state.findResidentByNpcId(npcId)
 
     @Throws(SQLException::class)
+    fun removeHousehold(householdId: String?) = state.removeHousehold(householdId)
+
+    @Throws(SQLException::class)
     fun backfillFromNpcWorldBindings(apply: Boolean, limit: Int): HouseholdBackfillReport =
         state.backfillFromNpcWorldBindings(apply, limit)
 

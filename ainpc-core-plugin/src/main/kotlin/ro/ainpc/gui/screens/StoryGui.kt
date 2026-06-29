@@ -5,14 +5,15 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.gui.GuiScreen
-import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryEvent
@@ -38,6 +39,18 @@ class StoryGui : GuiScreen {
         val player = context.player()
 
         context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory snapshot", summaryLore(snapshot)))
+
+        val env = context.plugin().environmentEngine.getContext(player.location.world.name)
+        context.item(5, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
+            "&7Timp: &f${env.timeOfDay.displayName}",
+            "&7Vreme: &f${env.weather.displayName}",
+            "&7Anotimp: &f${env.season.displayName}",
+            "&7Temperatura: &f${env.temperature.displayName}",
+            "&7Ziua: &f${env.dayNumber}",
+            if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
+            "&8Click: /ainpc environment"
+        )))
+
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
         context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
@@ -319,6 +332,19 @@ class StoryGui : GuiScreen {
             return "ainpc story events ${snapshot.region.id()} 10"
         }
         return ""
+    }
+
+    private fun environmentIcon(env: EnvironmentContext): Material = when {
+        env.isExtreme() -> Material.REDSTONE_BLOCK
+        env.isStorming() -> Material.REDSTONE_TORCH
+        env.isRaining() -> Material.WATER_BUCKET
+        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
+        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
+        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
+        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
+        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
+        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
+        else -> Material.COMPASS
     }
 
     private fun eventMaterial(event: StoryEvent): Material {

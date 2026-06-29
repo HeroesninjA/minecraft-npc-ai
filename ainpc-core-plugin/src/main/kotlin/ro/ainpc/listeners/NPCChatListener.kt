@@ -369,6 +369,10 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             messages().send(player, systemMessage)
         }
 
+        if (questInteraction.progressionSelector != null) {
+            plugin.guiService.openQuestOffer(player, questInteraction.progressionSelector)
+        }
+
         return true
     }
 

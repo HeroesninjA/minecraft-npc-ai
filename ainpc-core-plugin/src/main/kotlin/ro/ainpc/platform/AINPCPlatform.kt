@@ -1,12 +1,16 @@
 package ro.ainpc.platform
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.addons.AddonDependencyGraph
+import ro.ainpc.addons.AddonDependencyResolver
 import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.addons.AddonRegistry
 import ro.ainpc.addons.AddonType
+import ro.ainpc.addons.DependencyResolver
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.engine.ScriptConfigurationLoader
 import ro.ainpc.platform.features.RuntimeFeatureResolver
 import ro.ainpc.platform.features.RuntimeFeatureSnapshot
@@ -24,7 +28,9 @@ class AINPCPlatform(
     private val plugin: AINPCPlugin
 ) : AINPCPlatformApi {
     override val addonRegistry: AddonRegistry = AddonRegistry(this)
+    override val integrationRegistry: IntegrationRegistryApi = ro.ainpc.integration.IntegrationRegistry()
     val worldAdminService: WorldAdminService = WorldAdminService(plugin)
+    private val dependencyResolver: DependencyResolver = AddonDependencyResolver()
     private val featureResolver: RuntimeFeatureResolver = RuntimeFeatureResolver()
     private var profile: PlatformProfile = PlatformProfile.fromConfig(plugin.config)
     private var featureSnapshot: RuntimeFeatureSnapshot = featureResolver.resolve(plugin.config)
@@ -118,8 +124,17 @@ class AINPCPlatform(
 
     fun runtimeFeatures(): RuntimeFeatureSnapshot = featureSnapshot
 
+    fun getDependencyResolver(): DependencyResolver = dependencyResolver
+
+    fun getDependencyGraph(): AddonDependencyGraph {
+        val descriptors = addonRegistry.descriptors
+        val enabledIds = descriptors.map { it.id }.toSet()
+        return dependencyResolver.resolve(descriptors, enabledIds)
+    }
+
     fun shutdown() {
         addonRegistry.shutdown()
+        (integrationRegistry as? ro.ainpc.integration.IntegrationRegistry)?.clear()
         refreshFeatureSnapshot()
     }
 

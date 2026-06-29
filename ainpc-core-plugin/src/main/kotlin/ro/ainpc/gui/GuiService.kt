@@ -14,6 +14,7 @@ import ro.ainpc.gui.screens.PlaceholderGui
 import ro.ainpc.gui.screens.QuestAuthoringGui
 import ro.ainpc.gui.screens.QuestDetailGui
 import ro.ainpc.gui.screens.QuestLogGui
+import ro.ainpc.gui.screens.QuestOfferGui
 import ro.ainpc.gui.screens.RoutineGui
 import ro.ainpc.gui.screens.StatsGui
 import ro.ainpc.gui.screens.StoryGui
@@ -51,6 +52,7 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val screens: MutableMap<GuiKey, GuiScreen> = EnumMap(GuiKey::class.java)
     private val questDetailSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questDetailFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val questOfferSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val authoringQuestSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val authoringMechanicIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questLogFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
@@ -178,6 +180,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(MainHubGui())
         register(QuestLogGui())
         register(QuestDetailGui())
+        register(QuestOfferGui())
         register(StoryGui())
         register(WorldHubGui())
         register(WorldPlaceGui())
@@ -263,6 +266,17 @@ class GuiService(private val plugin: AINPCPlugin) {
         questDetailSelectors[player.uniqueId] = questSelector
         questDetailFilters[player.uniqueId] = QuestLogGuiFilter.normalizeFilter(sourceFilter)
         open(player, GuiKey.QUEST_DETAIL)
+    }
+
+    fun openQuestOffer(player: Player?, questSelector: String?) {
+        if (player == null || questSelector.isNullOrBlank()) return
+        questOfferSelectors[player.uniqueId] = questSelector
+        open(player, GuiKey.QUEST_OFFER)
+    }
+
+    fun getQuestOfferSelector(player: Player?): String {
+        if (player == null) return ""
+        return questOfferSelectors.getOrDefault(player.uniqueId, "")
     }
 
     fun openAuthoring(player: Player?, questSelector: String?, mechanicId: String?) {
@@ -608,6 +622,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE, GuiKey.QUICK_QUEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
             GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world")
             GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
+            GuiKey.QUEST_OFFER -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
             GuiKey.CONFIRM -> true
         }
     }

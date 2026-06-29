@@ -28,7 +28,8 @@ docker compose down
 | Script | Comanda | Ce face |
 |---|---|---|---|
 | Build | `build-local.ps1` | Build local cu Gradle |
-| Test | `run-tests.ps1 -Module gui` | Ruleaza teste unitare pe categorii (`-Module`, `-Test`, `-Count`, `-List`, `-Failed`, `-Quiet`) |
+| Test | `run-tests.ps1 -Module gui` | Ruleaza teste unitare pe categorii (`-Module`, `-Test`, `-Count`, `-List`, `-Failed`, `-Quiet`, `-OnlyCore`) |
+| Git hooks | `install-git-hooks.ps1` | Instaleaza pre-commit hooks pentru verificari automate |
 | Docker | `setup-docker-demo.ps1` | Build + deploy JAR-uri + porneste container Paper |
 | Smoke | `smoke-demo-complet.ps1 -Rcon` | Ruleaza TOATE comenzile demo automate prin RCON |
 | Deploy | `deploy-demo.ps1` | Copiaza JAR-urile pe un server Paper existent |

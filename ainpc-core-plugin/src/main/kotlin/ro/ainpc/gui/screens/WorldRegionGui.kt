@@ -10,6 +10,7 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldPlaceInfo
@@ -76,6 +77,17 @@ class WorldRegionGui : GuiScreen {
                     "&7State: &f${region.storyStateKey()}"
                 )
             ))
+
+            val env = context.plugin().environmentEngine.getContext(region.worldName())
+            context.item(7, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
+                "&7Timp: &f${env.timeOfDay.displayName}",
+                "&7Vreme: &f${env.weather.displayName}",
+                "&7Anotimp: &f${env.season.displayName}",
+                "&7Temperatura: &f${env.temperature.displayName}",
+                "&7Ziua: &f${env.dayNumber}",
+                if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
+                "&8Click: /ainpc environment"
+            )))
 
             context.item(14, GuiItemFactory.item(
                 Material.OAK_DOOR, "&aPlaces (${
@@ -146,6 +158,19 @@ class WorldRegionGui : GuiScreen {
             "&7Tags: &f${region.tags().joinToString(", ").ifBlank { "<fara>" }}",
             "&7Lume: &f${region.worldName()}"
         )
+    }
+
+    private fun environmentIcon(env: EnvironmentContext): Material = when {
+        env.isExtreme() -> Material.REDSTONE_BLOCK
+        env.isStorming() -> Material.REDSTONE_TORCH
+        env.isRaining() -> Material.WATER_BUCKET
+        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
+        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
+        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
+        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
+        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
+        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
+        else -> Material.COMPASS
     }
 
     private fun placeLore(place: WorldPlaceInfo): List<String> {

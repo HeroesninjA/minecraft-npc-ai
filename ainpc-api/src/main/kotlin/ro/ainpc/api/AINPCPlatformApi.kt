@@ -1,5 +1,6 @@
 package ro.ainpc.api
 
+import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.platform.RuntimeMode
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldMode
@@ -14,6 +15,8 @@ interface AINPCPlatformApi {
     val defaultStoryMode: StoryMode
 
     val addonRegistry: AddonRegistryApi
+
+    val integrationRegistry: IntegrationRegistryApi
 
     val worldAdmin: WorldAdminApi
 

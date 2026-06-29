@@ -9,6 +9,7 @@ import ro.ainpc.api.events.context.NPCContextUpdatedEvent
 import ro.ainpc.api.events.context.NPCContextUpdatedEventPayload
 import ro.ainpc.api.events.context.WorldContextBuiltEvent
 import ro.ainpc.api.events.context.WorldContextBuiltEventPayload
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.topology.TopologyCategory
 import ro.ainpc.world.WorldContextSnapshot
@@ -98,6 +99,8 @@ class NPCContext(
     var currentGoal: String = ""
     var worldContextSnapshot: WorldContextSnapshot = WorldContextSnapshot.empty()
         private set
+    var environmentContext: EnvironmentContext = EnvironmentContext.empty()
+        private set
 
     /**
      * Actualizeaza contextul bazat pe lumea curenta
@@ -120,6 +123,7 @@ class NPCContext(
         syncSimulationState(npcLocation)
         updateNearbyEntities(npcLocation)
         updateWorldContextSnapshot(npcLocation)
+        updateEnvironmentContext(npcLocation)
         publishNpcContextUpdated("update_from_world")
     }
 
@@ -235,6 +239,17 @@ class NPCContext(
     /**
      * Adauga un eveniment recent
      */
+    private fun updateEnvironmentContext(npcLocation: Location?) {
+        if (npcLocation == null || npc.plugin == null) {
+            environmentContext = EnvironmentContext.empty()
+            return
+        }
+        environmentContext = npc.plugin.environmentEngine.getContextForLocation(
+            npcLocation.world.name,
+            npcLocation.block.biome.name()
+        )
+    }
+
     fun addRecentEvent(event: String) {
         recentEvents.add(0, event)
         if (recentEvents.size > 10) {
@@ -256,6 +271,15 @@ class NPCContext(
         } else {
             sb.append("Sunt afara, intr-o zona de tip ").append(getTopologyDescription())
                 .append(" (").append(getBiomeDescription()).append(").\n")
+        }
+
+        val env = environmentContext
+        if (env.season != EnvironmentContext.Season.SPRING || env.temperature != EnvironmentContext.Temperature.MILD) {
+            sb.append("Anotimp: ").append(env.season.displayName).append(". ")
+            sb.append("Temperatura: ").append(env.temperature.displayName).append(".\n")
+        }
+        if (env.specialEvents.isNotEmpty()) {
+            sb.append("Evenimente active: ").append(env.specialEvents.joinToString(", ")).append(".\n")
         }
 
         if (!worldContextSnapshot.isEmpty()) {

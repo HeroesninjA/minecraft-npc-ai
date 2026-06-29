@@ -9,22 +9,21 @@
         "name": "Satul Central",
         "world": "world",
         "type": "settlement",
-        "min": { "x": 100, "y": 60, "z": 100 },
-        "max": { "x": 220, "y": 90, "z": 220 },
+        "min_x": 100, "min_y": 60, "min_z": 100,
+        "max_x": 220, "max_y": 90, "max_z": 220,
         "tags": ["village", "public"],
+        "story_state_key": "default",
+        "story_mode": "evolutive",
         "places": {
           "piata": {
-            "name": "Piata",
             "type": "market",
-            "min": { "x": 140, "y": 64, "z": 140 },
-            "max": { "x": 155, "y": 74, "z": 155 },
+            "min_x": 140, "min_y": 64, "min_z": 140,
+            "max_x": 155, "max_y": 74, "max_z": 155,
             "tags": ["market", "public"],
             "nodes": {
               "quest_board": {
                 "type": "quest_trigger",
-                "x": 148,
-                "y": 65,
-                "z": 148,
+                "x": 148, "y": 65, "z": 148,
                 "radius": 2.0
               }
             }

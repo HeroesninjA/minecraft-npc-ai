@@ -146,7 +146,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             }
 
             val fileName = entry.name.lowercase(Locale.ROOT)
-            if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
+            if (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".json")) {
                 files.add(entry)
             }
         }
@@ -171,7 +171,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                 }
             }
 
-            val id = config.getString("id", file.name.replace(".yml", "")) ?: file.name.replace(".yml", "")
+            val id = config.getString("id", file.nameWithoutExtension) ?: file.nameWithoutExtension
             val name = config.getString("name", id) ?: id
             val description = config.getString("description", "") ?: ""
             if (isDisabledCoreDemoPack(id, file)) {
@@ -221,6 +221,17 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                 scenario.sourceFile = file.name
             }
             logScenarioValidationWarnings(allScenarios, file)
+
+            config.getConfigurationSection("story_defaults")?.let { section ->
+                for (regionTypeKey in section.getKeys(false)) {
+                    val entry = section.getConfigurationSection(regionTypeKey) ?: continue
+                    val defaultState = entry.getString("default_state") ?: continue
+                    val pool = entry.getStringList("pool").filter { it.isNotBlank() }
+                    if (pool.isNotEmpty()) {
+                        pack.storyDefaults[regionTypeKey] = PackStoryDefaults(defaultState, pool)
+                    }
+                }
+            }
 
             registerPackDescriptor(pack, config.getConfigurationSection("addon"))
             loadedPacks[id] = pack
@@ -572,6 +583,14 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         plugin.platform.addonRegistry.registerDescriptor(descriptor)
     }
 
+    fun getMergedStoryDefaults(regionTypeId: String): PackStoryDefaults? {
+        var result: PackStoryDefaults? = null
+        for (pack in loadedPacks.values) {
+            pack.storyDefaults[regionTypeId]?.let { result = it }
+        }
+        return result
+    }
+
     companion object {
         private val CORE_DEMO_PACK_IDS = setOf("medieval", "modern", "social")
     }
@@ -590,6 +609,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val dialogues: MutableMap<String, List<String>> = HashMap()
         private var scenarioDefinitions = false
         var addonDescriptor: AddonDescriptor? = null
+        val storyDefaults: MutableMap<String, PackStoryDefaults> = HashMap()
 
         fun addTrait(trait: TraitDefinition) {
             traits.add(trait)
@@ -630,6 +650,11 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             return progressionMechanics.any { mechanic -> mechanic.id.equals(mechanicId, ignoreCase = true) }
         }
     }
+
+    class PackStoryDefaults(
+        val defaultState: String,
+        val pool: List<String>
+    )
 
     class ProgressionMechanicDefinition(
         packId: String?,

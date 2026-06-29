@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.platform.RuntimeMode
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
@@ -201,6 +202,16 @@ class AddonRegistryTest {
             get() = WorldMode.FINITE_DYNAMIC
         override val defaultStoryMode: StoryMode
             get() = StoryMode.EVOLUTIVE
+        override val integrationRegistry: IntegrationRegistryApi
+            get() = object : IntegrationRegistryApi {
+                override val integrations: Collection<ro.ainpc.api.integration.ExternalPluginIntegration> = emptyList()
+                override fun register(integration: ro.ainpc.api.integration.ExternalPluginIntegration) {}
+                override fun unregister(pluginName: String) {}
+                override fun findByType(type: ro.ainpc.api.integration.IntegrationType): List<ro.ainpc.api.integration.ExternalPluginIntegration> = emptyList()
+                override fun findByCapability(capability: String): List<ro.ainpc.api.integration.ExternalPluginIntegration> = emptyList()
+                override fun isRegistered(pluginName: String): Boolean = false
+                override fun size(): Int = 0
+            }
         override val addonRegistry: AddonRegistryApi
             get() = object : AddonRegistryApi {
                 override val descriptors: Collection<AddonDescriptor> = emptyList()

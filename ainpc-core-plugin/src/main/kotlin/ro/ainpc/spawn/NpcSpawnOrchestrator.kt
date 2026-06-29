@@ -195,6 +195,20 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
                 }
                 val globallyRolledBack = !dryRun &&
                     rollbackSettlementBatchCreatedNpcs(batchTracker, batchKey, spawnedNpcs, warnings)
+                if (!dryRun && globallyRolledBack) {
+                    val persistedCount = householdResults.size
+                    var cleanedUp = 0
+                    for (prevIndex in 0 until persistedCount) {
+                        val prevAllocation = safeAllocations[prevIndex]
+                        try {
+                            plugin.householdPersistenceService.removeHousehold(prevAllocation.householdId())
+                            cleanedUp++
+                        } catch (e: Exception) {
+                            warnings.add("Nu am putut curata datele DB pentru ${prevAllocation.placeId()}: ${e.message}")
+                        }
+                    }
+                    if (cleanedUp > 0) warnings.add("Curatare DB pentru $cleanedUp household-uri persistate anterior.")
+                }
                 if (trackBatch && batchTracker != null) {
                     if (dryRun) {
                         warnings.add("Spawn batch dry-run settlement finalizat cu erori; nu s-au creat NPC-uri.")

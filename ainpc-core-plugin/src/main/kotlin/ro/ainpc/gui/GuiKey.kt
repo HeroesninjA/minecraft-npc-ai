@@ -10,6 +10,7 @@ enum class GuiKey(
     PLAYER_HUB("player_hub", "Jucator"),
     QUEST("quest", "Progresii"),
     QUEST_DETAIL("quest_detail", "Detalii progresie"),
+    QUEST_OFFER("quest_offer", "Oferta quest"),
     STORY("story", "Story"),
     AUTHORING("authoring", "Authoring"),
     WORLD("world", "World"),
@@ -77,6 +78,7 @@ enum class GuiKey(
                 "adminhub", "admin_hub", "control_panel", "panel" -> "admin_hub"
                 "creatorhub", "creator_hub", "creator", "designer" -> "creator_hub"
                 "questmap", "quest_map", "map_quest", "quest_mapping" -> "quest_map"
+                "questoffer", "quest_offer", "offer", "offerta", "progression_offer" -> "quest_offer"
                 "creatorquest", "creator_quest", "quest_creator" -> "creator_quest"
                 "creatorquestdefs", "creator_quest_defs", "defs", "definitions" -> "creator_quest_defs"
                 "creatorquesttest", "creator_quest_test", "quest_test", "test_quest" -> "creator_quest_test"

@@ -15,9 +15,14 @@ import kotlin.math.min
 
 class WorldAdminService(
     private val debugSink: Consumer<String>,
-    private val logger: Logger
+    private val logger: Logger,
+    private val plugin: AINPCPlugin? = null
 ) : WorldAdminApi {
-    constructor(plugin: AINPCPlugin) : this(Consumer { message -> plugin.debug(message) }, plugin.logger)
+    constructor(plugin: AINPCPlugin) : this(
+        Consumer { message -> plugin.debug(message) },
+        plugin.logger,
+        plugin
+    )
 
     private val regionsById: MutableMap<String, WorldRegion> = LinkedHashMap()
     private val placesById: MutableMap<String, WorldPlace> = LinkedHashMap()
@@ -603,10 +608,28 @@ class WorldAdminService(
             maxY,
             maxZ
         )
+        applyPackStoryDefaults(region)
         validateRegion(region)
         registerRegion(region)
         dirty = true
         return region
+    }
+
+    private fun applyPackStoryDefaults(region: WorldRegion) {
+        val loader = plugin?.featurePackLoader ?: return
+        val packDefaults = loader.getMergedStoryDefaults(region.type.id) ?: return
+        region.storyState = StoryState(
+            packDefaults.defaultState.let { key ->
+                when (key) {
+                    "peaceful", "secure" -> StoryMode.STATIC
+                    "dangerous", "dark", "uncharted" -> StoryMode.EVOLUTIVE
+                    "untamed" -> StoryMode.ROTATIVE
+                    else -> StoryMode.EVOLUTIVE
+                }
+            },
+            packDefaults.defaultState
+        )
+        region.storyState.setStoryPool(packDefaults.pool)
     }
 
     fun createPlace(

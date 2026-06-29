@@ -1,6 +1,6 @@
 ﻿# Environment Context si EnvironmentEngine
 
-Actualizat: 2026-05-04
+Actualizat: 2026-06-29 (marcat ca IMPLEMENTAT)
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
@@ -18,24 +18,26 @@ Pentru questuri avansate de baza nu este nevoie de un motor de environment separ
 
 ## Decizie principala
 
-Implementarea recomandata este in doua trepte:
+Implementarea este in doua trepte:
 
-| Treapta | Cand | Rol |
+| Treapta | Status | Rol |
 |---|---|---|
-| `EnvironmentContextService` | acum | snapshot read-only despre lume, mapping si stare curenta |
-| `EnvironmentEngine` | viitor | observa lumea, produce semnale, alimenteaza `QuestDirector` |
+| `EnvironmentContext` | **IMPLEMENTAT** | snapshot read-only despre lume, timp, vreme, anotimp, temperatura |
+| `EnvironmentEngine` | **IMPLEMENTAT** | observa lumea, produce semnale, alimenteaza `StoryContextService` si NPC context |
 
-Regula: daca doar verifici unde este jucatorul sau ce stare are locul curent, folosesti context. Daca generezi sau activezi questuri pe baza starii dinamice a lumii, ai nevoie de engine.
+Ambele componente sunt implementate in `ro.ainpc.environment`. Vezi [implementat-deja.md](./implementat-deja.md) pentru detalii.
 
 ## Ce exista in jur
 
 Componentele relevante:
 
 | Componenta | Rol |
-|---|---|
+|---|---|---|
+| `EnvironmentContext` | data class cu timeOfDay, weather, season, temperature, specialEvents |
+| `EnvironmentEngine` | tick per world, getContext/getContextForLocation, evenimente speciale |
 | `QuestEngine` | ruleaza questuri, obiective, progres si finalizare |
 | `StoryStateService` | scrie si citeste stari narative persistente |
-| `StoryContextService` | ofera context narativ read-only pentru AI/debug |
+| `StoryContextService` | ofera context narativ read-only pentru AI/debug, include semnale environment |
 | `WorldAdminService` / mapping | regiuni, places, nodes si ancore semantice |
 | `QuestAnchorResolver` | rezolva referinte de quest catre ancore reale |
 | `QuestDirector` | viitor: recomanda questuri pe baza contextului |

@@ -1,6 +1,6 @@
 # TODO Caracteristici
 
-Actualizat: 2026-06-26
+Actualizat: 2026-06-29
 
 ## Exista deja
 
@@ -166,7 +166,7 @@ Actualizat: 2026-06-26
 - [x] Sistem semantic de `places` peste world admin:
 - [x] locuri de tip `fierarie`, `taverna`, `casa_fierarului` (prin WorldPlaceInfo.placeType + tags)
 - [x] API public pentru interogarea acestor locuri (prin WorldAdminApi.findPlacesByTag/Type/Metadata)
-- [ ] Sistem extins de reward:
+- [x] Sistem extins de reward:
 - [x] reputatie (prin ReputationApi + ReputationService + player_reputation DB table)
 - [x] economie / monede (prin EconomyService + ShopService)
 - [x] progresie jucator (prin reward `progression:xp/level/skill` + `PlayerProgressionService`)
@@ -185,6 +185,8 @@ Actualizat: 2026-06-26
 ## Feature packs
 
 - [x] Pack tutorial `tutorial_demo.yml` cu questuri TD01-TD03 (lant), TE01 (world event), TB01 (bounty), trasaturi, dialoguri si story defaults
+- [x] Pack festival `festival.yml` cu 5 questuri FS01-FS03 + FE01 + FB01, profesii (bannerman, cook, musician), trasaturi si dialoguri sezoniere
+- [x] Pack wilderness `wilderness.yml` cu 4 questuri WE01-WE03 + WB01 + WR01, profesii (hunter, herbalist, scout), trasaturi si story defaults
 
 ## NPC-uri
 
@@ -219,7 +221,7 @@ Actualizat: 2026-06-26
 
 ## Lume si gameplay
 
-- [ ] Regiuni cu identitate proprie: sat, castel, pestera, dungeon
+- [x] Regiuni cu identitate proprie: sat, castel, pestera, dungeon (prin RegionType + RegionIdentityProvider cu displayName, description, mood, threat, NPC roles, place types)
 - [ ] Demo mapping salvat si verificat pe server Paper real cu `settlement plan/spawn`, audit, save si reload
 - [x] Unealta wand initiala pentru mapping manual: selectie pos1/pos2, punct node, prompt natural determinist si confirmare inainte de salvare
 - [x] Bind manual initial NPC-place pentru demo mapping si harti manuale
@@ -251,6 +253,29 @@ Actualizat: 2026-06-26
 - [x] Istoric interactiuni AI prin `/ainpc debugdump ai`
 - [x] Reload sigur pentru config, pack-uri si scenarii (prin /ainpc reload + /ainpc quest reload)
 - [x] Mesaje de eroare mai clare pentru configuratii invalide (prin validateConfig() + FeaturePackLoader validare cu recomandari)
+
+## Sistem de mediu (Environment)
+
+- [x] `EnvironmentContext` — data class cu timeOfDay (6 stari), weather (5 tipuri), season (4 anotimpuri), temperature (6 niveluri), lightLevel, specialEvents
+- [x] `EnvironmentEngine` — tick per world, context per world, getContextForLocation cu temperatura pe baza de biome + season, registerSpecialEvent/clearSpecialEvent
+- [x] Integrare in `AINPCPlugin` (environmentEngine field), `NPCContext` (environmentContext + updateEnvironmentContext), `StoryContextService` (semnale environment_time/weather/season/temperature/events)
+- [x] `/ainpc environment [worldName]` (alias: env, time, weather) — inspectare mediu
+- [x] StoryGui slot 5 — card mediu cu iconita dinamica
+
+## Functionalitati administrative
+
+- [x] `gui.skip_confirmations` — config option care skip toate confirmarile GUI
+- [x] Comenzi simplificate create: `region create <id> <type>`, `place create <regId> <id> <type>`, `node create <regId> - <id> <type>` (fara coordonate)
+- [x] `/ainpc world region nodes <regionId>` — lista noduri pe tip
+- [x] `/ainpc world region places <regionId>` — lista places
+- [x] `/ainpc world region identity <regionType>` — identitate regiune in chat
+- [x] `/ainpc quest chain` — vizualizeaza lantul de questuri
+- [x] `scripts/run-tests.ps1` — helper pentru rulat teste unitare (`-Module`, `-Test`, `-Count`, `-Failed`, `-List`, `-Quiet`)
+- [x] PlaceType si WorldNodeType imbunatatite cu displayName + description
+
+## Feature packs
+
+- [x] Pack tutorial extins: TD04 (place_block), TD05 (multi-stage quest), TR01 (ritual), story defaults cave/wilderness
 
 ## Pentru demo playable matur
 

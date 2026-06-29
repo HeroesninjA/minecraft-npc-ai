@@ -534,7 +534,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             return QuestInteractionResult.handled(
                 true,
                 npcMessages,
-                buildQuestStatusMessages(template, offeredProgress, p0, p1.name)
+                buildQuestStatusMessages(template, offeredProgress, p0, p1.name),
+                template.templateId
             )
         }
         if (currentProgress.isOffered()) {
@@ -901,7 +902,8 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return QuestInteractionResult.handled(
             true,
             npcMessages,
-            buildQuestStatusMessages(template, offeredProgress, p0, p1.name)
+            buildQuestStatusMessages(template, offeredProgress, p0, p1.name),
+            template.templateId
         )
     }
     fun resetQuestProgress(p0: Player, p1: AINPC): Boolean {
@@ -1747,10 +1749,30 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return false
     }
     private fun spawnQuestTrackingParticles(p0: Player, p1: QuestTrackingMarker) {
+        val loc = p1.location ?: return
+        if (loc.world != p0.world) return
+        spawnQuestWaypointParticles(p0, loc)
+        val distance = loc.distance(p0.location)
+        if (distance > 3.0 && distance < 64.0) {
+            spawnQuestDirectionParticles(p0, loc, distance)
+        }
     }
     private fun spawnQuestDirectionParticles(p0: Player, p1: Location, p2: Double) {
+        val from = p0.location.clone().add(0.0, 1.0, 0.0)
+        val to = p1.clone().add(0.0, 1.0, 0.0)
+        val direction = to.toVector().subtract(from.toVector()).normalize()
+        p0.spawnParticle(
+            org.bukkit.Particle.END_ROD,
+            from.add(direction.multiply(2.0)),
+            0, direction.x, direction.y, direction.z, 0.5
+        )
     }
     private fun spawnQuestWaypointParticles(p0: Player, p1: Location) {
+        val distance = if (p1.world == p0.world) p1.distance(p0.location) else Double.MAX_VALUE
+        if (distance < 48.0) {
+            val beamLoc = p1.clone().add(0.0, 1.0, 0.0)
+            p0.spawnParticle(org.bukkit.Particle.COMPOSTER, beamLoc, 3, 0.5, 1.0, 0.5, 0.0)
+        }
     }
     fun recordNpcConversation(p0: Player, p1: AINPC) {
         if (p0 == null || p1 == null) return

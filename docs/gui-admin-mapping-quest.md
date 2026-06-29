@@ -1,6 +1,6 @@
 # GUI Admin Mapping si Quest
 
-Actualizat: 2026-06-21
+Actualizat: 2026-06-29
 
 Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
 
@@ -262,6 +262,47 @@ Principiu:
 
 - creatorul lucreaza mai des cu context si inspectie decat cu editare grea;
 - reducerea numarului de actiuni vizibile face authoring-ul mai sigur si mai rapid.
+
+## AdminMappingGui (stare curenta)
+
+`AdminMappingGui` este ecranul principal de administrare a mapping-ului, 54 sloturi:
+
+```text
+0       wand toggle
+1       bindings list
+2       exterior analyze
+4       header: status mapping (regiuni, places, noduri, auto-index, modificari)
+6       identitate regiune curenta (tip, descriere, story, mood, threat, atmosfera)
+8       reload config
+9       noduri apropiate
+10      locatie curenta
+11      whereami
+12      mapping debugdump
+13      scan sat
+14      demo mapping create
+15      save mapping
+16      toggle auto-index
+17      admin quest
+18      tipuri regiuni
+22      patch analyze
+23      patch plan
+26      lumi
+27      tipuri noduri
+44-46   paginare regiuni
+45      identitate regiune (comanda text)
+47      create place (cu parametri corecti: 12 argumente)
+48      create node (cu parametri corecti: 8+ argumente)
+50      remove place
+51      listeaza places
+52      listeaza noduri
+```
+
+Imbunatatiri fata de versiunea initiala:
+- card identitate regiune la slot 6 cu displayName, descriere, story, mood, threat, atmosfera
+- regiunile din lista arata identity.displayName si mood si threatLevel
+- butoane `Patch analyze` si `Patch plan` pentru analiza rapida a decalajelor
+- comenzi corecte pentru create place (12 parametri: regionId, id, type, 6 bounds) si create node (regionId, placeId, id, type, x, y, z, radius)
+- buton `Identitate regiune` pentru comanda text `/ainpc world region identity`
 
 ## Legaturi
 

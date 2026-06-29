@@ -10,6 +10,7 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldRegionInfo
@@ -132,6 +133,17 @@ class AdminMappingGui : GuiScreen {
                 )
             }
         ))
+
+        val env = context.plugin().environmentEngine.getContext(location.world.name)
+        context.item(5, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
+            "&7Timp: &f${env.timeOfDay.displayName}",
+            "&7Vreme: &f${env.weather.displayName}",
+            "&7Anotimp: &f${env.season.displayName}",
+            "&7Temperatura: &f${env.temperature.displayName}",
+            "&7Ziua: &f${env.dayNumber}",
+            if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
+            "&8Click: /ainpc environment"
+        )))
 
         if (currentRegion != null) {
             val regionType = RegionType.fromId(currentRegion.typeId())
@@ -353,6 +365,19 @@ class AdminMappingGui : GuiScreen {
         }
         lore.add("&8Click: listeaza places in chat")
         return lore
+    }
+
+    private fun environmentIcon(env: EnvironmentContext): Material = when {
+        env.isExtreme() -> Material.REDSTONE_BLOCK
+        env.isStorming() -> Material.REDSTONE_TORCH
+        env.isRaining() -> Material.WATER_BUCKET
+        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
+        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
+        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
+        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
+        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
+        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
+        else -> Material.COMPASS
     }
 
     private fun regionIcon(typeId: String): Material = when (typeId.lowercase()) {

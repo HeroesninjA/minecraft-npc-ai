@@ -1,6 +1,6 @@
 # ProgressionService
 
-Actualizat: 2026-05-08
+Actualizat: 2026-06-29
 
 Punctul de intrare recomandat pentru aceasta zona este `progression-events-onboarding-stack.md`.
 
@@ -366,7 +366,10 @@ Comenzi de verificare:
 /ainpc gui quest event
 /ainpc gui quest tutorial
 /ainpc gui quest ritual
+/ainpc quest chain
 ```
+
+Comanda `/ainpc quest chain` listeaza lanturile de questuri definite prin `nextQuest` in YAML, aratand care questuri au mostenitori si daca questul tinta exista in runtime.
 
 Exemplu practic intr-un addon medieval:
 

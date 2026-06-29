@@ -4,7 +4,8 @@ class QuestInteractionResult private constructor(
     val isHandled: Boolean,
     val openConversation: Boolean,
     val npcMessages: List<String>,
-    val systemMessages: List<String>
+    val systemMessages: List<String>,
+    val progressionSelector: String? = null
 ) {
     companion object {
         @JvmStatic
@@ -14,8 +15,9 @@ class QuestInteractionResult private constructor(
         fun handled(
             openConversation: Boolean,
             npcMessages: List<String>?,
-            systemMessages: List<String>?
-        ) = QuestInteractionResult(true, openConversation, npcMessages ?: emptyList(), systemMessages ?: emptyList())
+            systemMessages: List<String>?,
+            progressionSelector: String? = null
+        ) = QuestInteractionResult(true, openConversation, npcMessages ?: emptyList(), systemMessages ?: emptyList(), progressionSelector)
     }
 
     fun shouldOpenConversation() = openConversation

@@ -1,6 +1,6 @@
 # Harta Scurta a Pachetelor de Cod
 
-Actualizat: 2026-06-21
+Actualizat: 2026-06-29
 
 Aceasta este versiunea scurta a hartii de cod, folosita pentru orientare rapida.
 Nu schimba runtime-ul si nu inlocuieste [harta completa](./harta-pachetelor-cod.md).
@@ -28,6 +28,7 @@ Nu schimba runtime-ul si nu inlocuieste [harta completa](./harta-pachetelor-cod.
 - `ro.ainpc.world` - world admin, context si mapping.
 - `ro.ainpc.world.scan` - scan si import semantic pentru sate vanilla.
 - `ro.ainpc.world.patch` - gap analysis si planificare de patch.
+- `ro.ainpc.environment` - context si engine pentru timp, vreme, anotimp, temperatura.
 - `ro.ainpc.world.exterior` - planificare pentru structuri exterioare.
 - `ro.ainpc.world.fixture` - fixtures controlate pentru testare.
 - `ro.ainpc.spawn` - spawn, household si populator.
@@ -48,6 +49,7 @@ Nu schimba runtime-ul si nu inlocuieste [harta completa](./harta-pachetelor-cod.
 - `DecisionEngine` - simulare si actiuni.
 - `WorldAdminService` - regiuni, locuri, noduri.
 - `StoryContextService` - context pentru poveste si quest.
+- `EnvironmentEngine` - context de mediu (timp, vreme, sezon, temperatura).
 - `ProgressionService` - progresie si ancore.
 - `DialogManager` - relatie, istoric si AI request.
 - `NpcSpawnOrchestrator` - spawn si household.

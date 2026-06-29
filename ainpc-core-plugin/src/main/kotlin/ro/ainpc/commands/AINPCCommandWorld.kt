@@ -979,6 +979,21 @@ fun handleWorldRegion(
         }
         return true
     }
+    if (action == "storydefaults" || action == "story-defaults") {
+        val regionTypeId = if (args.size >= 4) args[3] else "settlement"
+        val msg = ainpcCommandWorldPlugin.messageUtils
+        val packDefaults = ainpcCommandWorldPlugin.featurePackLoader.getMergedStoryDefaults(regionTypeId)
+        msg.send(sender, "&6=== Story Defaults: &f$regionTypeId &6(Feature Packs) ===")
+        if (packDefaults != null) {
+            msg.send(sender, "&eDefault state: &f${packDefaults.defaultState}")
+            msg.send(sender, "&eStory pool (&f${packDefaults.pool.size}&e): &f${packDefaults.pool.joinToString(", ")}")
+            msg.send(sender, "&8Nota: Se aplica doar regiunilor create dupa incarcare.")
+        } else {
+            msg.send(sender, "&7Nicio suprascriere in feature packs pentru &f$regionTypeId&7.")
+            msg.send(sender, "&7Foloseste &f/ainpc world region identity $regionTypeId &7pentru valorile implicite hardcodate.")
+        }
+        return true
+    }
     if (action == "identity") {
         val regionType = if (args.size >= 4) RegionType.fromId(args[3]) else RegionType.CUSTOM
         val identity = RegionIdentityProvider.identity(regionType)
@@ -1048,7 +1063,7 @@ fun handleWorldRegion(
         return true
     }
     if (action != "info" || args.size < 4) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove|summary|identity|nodes|places> ...")
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc world region <info|create|edit|remove|summary|identity|storydefaults|nodes|places> ...")
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
             "&cUtilizare: /ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>"

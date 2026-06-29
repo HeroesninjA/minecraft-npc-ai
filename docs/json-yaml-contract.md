@@ -2,158 +2,167 @@
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
-AceastÄƒ documentaÈ›ie defineÈ™te cum integrÄƒm scripturi scrise Ã®n `JSON` È™i `YAML` astfel Ã®ncÃ¢t sÄƒ rÄƒmÃ¢nÄƒ uÈ™or de citit, uÈ™or de interpretat È™i compatibile Ã®n timp.
+Aceasta documentatie defineste cum integram scripturi scrise in JSON si YAML astfel incat sa ramana usor de citit, usor de interpretat si compatibile in timp.
 
-Obiectivul nu este sÄƒ Ã®ngheÈ›e formatul, ci sÄƒ stabileascÄƒ un contract comun: aceleaÈ™i intenÈ›ii, aceeaÈ™i structurÄƒ logicÄƒ È™i aceleaÈ™i reguli de validare, indiferent dacÄƒ sursa este JSON sau YAML.
+Obiectivul nu este sa inghete formatul, ci sa stabileasca un contract comun: aceleasi intentii, aceeasi structura logica si aceleasi reguli de validare, indiferent daca sursa este JSON sau YAML.
 
 ## Scop
 
-- OferÄƒ o cale unicÄƒ de interpretare pentru ambele formate.
-- Reduce diferenÈ›ele dintre fiÈ™ierele scrise manual È™i cele generate automat.
-- PÄƒstreazÄƒ compatibilitatea fÄƒrÄƒ sÄƒ blocheze extensiile viitoare.
-- EvitÄƒ apariÈ›ia unor variante locale de format care nu mai pot fi validate.
+- Ofera o cale unica de interpretare pentru ambele formate.
+- Reduce diferentele dintre fisierele scrise manual si cele generate automat.
+- Pastreaza compatibilitatea fara sa blocheze extensiile viitoare.
+- Evita aparitia unor variante locale de format care nu mai pot fi validate.
 
 ## Principii
 
 1. **Un singur model logic**
-   - JSON È™i YAML sunt doar forme de exprimare.
-   - ÃŽn interior, totul se normalizeazÄƒ la acelaÈ™i model de date.
+   - JSON si YAML sunt doar forme de exprimare.
+   - In interior, totul se normalizeaza la acelasi model de date.
 
-2. **Citire umanÄƒ Ã®nainte de optimizare**
-   - Structura trebuie sÄƒ fie clarÄƒ pentru oameni.
-   - Generatorul sau parserul nu trebuie sÄƒ impunÄƒ artificii inutile.
+2. **Citire umana inainte de optimizare**
+   - Structura trebuie sa fie clara pentru oameni.
+   - Generatorul sau parserul nu trebuie sa impuna artificii inutile.
 
 3. **Compatibilitate prin extensie**
-   - Se adaugÄƒ cÃ¢mpuri noi, nu se rup cÃ¢mpurile vechi.
-   - SchimbÄƒrile de nume se fac gradual, cu aliasuri.
+   - Se adauga campuri noi, nu se rup campurile vechi.
+   - Schimbarile de nume se fac gradual, cu aliasuri.
 
 4. **Validare pe straturi**
-   - SintaxÄƒ.
-   - StructurÄƒ.
-   - SemnificaÈ›ie.
-   - Compatibilitate Ã®ntre versiuni.
+   - Sintaxa.
+   - Structura.
+   - Semnificatie.
+   - Compatibilitate intre versiuni.
 
-## Model recomandat
+## Modelul real: Feature Pack YAML
 
-Formatul recomandat este:
+Formatul folosit in proiect este **Feature Pack YAML**, incarcat prin `FeaturePackLoader` din `packs/*.yml`.
+
+### Structura standard
 
 ```yaml
-type: quest-pack
-version: 1
-meta:
-  id: quest_pack_001
-  title: "Intro dungeon"
-  tags: [demo, readable]
-spec:
-  inputs:
-    - name: hero_level
-      required: true
-  steps:
-    - id: start
-      kind: spawn
-      target: village_gate
+id: pack_id
+name: "Nume pack"
+description: "Descriere."
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["quest", "traits", "dialogues"]
+  dependencies: ["medieval"]
+
+scenarios:
+  quest_id:
+    name: "Nume quest"
+    description: "Descriere."
+    base_type: "QUEST"        # QUEST | BOUNTY | WORLD_EVENT | TUTORIAL | RITUAL | TRADE_DEAL | DUTY
+    mechanic: "side_quests"
+    quest:
+      code: "Q01"
+      giver: "npc_profession"
+      kind: "side"            # side | main | repeatable
+      category: "tutorial"
+      repeatable: false
+      cooldown_seconds: 0
+      prerequisites: ["Q00"]
+      next_quest: "Q02"
+      dialogues:
+        available: ["Text pentru oferta."]
+        active: ["Text pentru progres."]
+        completed: ["Text pentru finalizare."]
+      objectives:
+        obj_id:
+          type: "visit_place"    # vezi tabelul cu tipuri
+          item: "tag:market"
+          amount: 1
+          description: "Descriere"
+      rewards:
+        rew_id:
+          type: "item"
+          item: "EMERALD"
+          amount: 3
+          description: "Recompensa"
 ```
 
-Varianta echivalentÄƒ Ã®n JSON pÄƒstreazÄƒ aceleaÈ™i chei:
+Varianta JSON pastreaza aceleasi chei (vezi exemple in `docs/json-yaml-contract-exemple.md`).
 
-```json
-{
-  "type": "quest-pack",
-  "version": 1,
-  "meta": {
-    "id": "quest_pack_001",
-    "title": "Intro dungeon",
-    "tags": ["demo", "readable"]
-  },
-  "spec": {
-    "inputs": [
-      { "name": "hero_level", "required": true }
-    ],
-    "steps": [
-      { "id": "start", "kind": "spawn", "target": "village_gate" }
-    ]
-  }
-}
-```
+### Pattern-uri
 
-## Pattern-uri recomandate
+### 1. Nucleu stabil, extensii optionale
 
-### 1. Nucleu stabil, extensii opÈ›ionale
+- `id` si `name` identifica pack-ul.
+- `addon` declara capabilitati si dependinte.
+- `scenarios` contine questurile si mecanica.
+- `quest` pastreaza dialogurile, obiectivele si recompensele.
 
-- `type` identificÄƒ familia de script.
-- `version` indicÄƒ schema logicÄƒ.
-- `meta` conÈ›ine identificatori È™i etichete.
-- `spec` conÈ›ine comportamentul real.
+Acest pattern permite adaugarea de campuri suplimentare (ex: `stages`, `actors`, `conditions`) fara a rupe pack-urile existente.
 
-Acest pattern lasÄƒ loc pentru cÃ¢mpuri suplimentare fÄƒrÄƒ sÄƒ amestece metadatele cu execuÈ›ia.
+### 2. Structuri scurte si previzibile
 
-### 2. Structuri scurte È™i previzibile
+- Prefera liste atunci cand ordinea conteaza.
+- Prefera obiecte atunci cand cheia este stabila.
+- Evita adancimi inutile de 6-8 niveluri.
+- Nu dubla aceeasi informatie in mai multe locuri.
 
-- PreferÄƒ liste atunci cÃ¢nd ordinea conteazÄƒ.
-- PreferÄƒ obiecte atunci cÃ¢nd cheia este stabilÄƒ.
-- EvitÄƒ adÃ¢ncimi inutile de 6-8 niveluri.
-- Nu dubla aceeaÈ™i informaÈ›ie Ã®n mai multe locuri.
+### 3. Chei constante intre formate
 
-### 3. Chei constante Ã®ntre formate
-
-- AceleaÈ™i nume de cÃ¢mp Ã®n JSON È™i YAML.
-- FÄƒrÄƒ sinonime locale de tipul `questSteps` Ã®ntr-un fiÈ™ier È™i `steps` Ã®n altul.
-- DacÄƒ apare un alias, el trebuie tratat ca backward-compatible, nu ca nou contract.
+- Aceleasi nume de camp in JSON si YAML.
+- Fara sinonime locale de tipul `questSteps` intr-un fisier si `steps` in altul.
+- Daca apare un alias, el trebuie tratat ca backward-compatible, nu ca nou contract.
 
 ### 4. Separarea datelor de comentarii
 
-- YAML poate conÈ›ine comentarii utile pentru autor.
+- YAML poate contine comentarii utile pentru autor.
 - Comentariile nu fac parte din contract.
-- JSON rÄƒmÃ¢ne sursa de referinÈ›Äƒ pentru consum automat doar dacÄƒ provine din aceeaÈ™i normalizare.
+- JSON ramane sursa de referinta pentru consum automat doar daca provine din aceeasi normalizare.
 
 ## Reguli de compatibilitate
 
-### Compatibilitate acceptatÄƒ
+### Compatibilitate acceptata
 
-- AdÄƒugarea de cÃ¢mpuri noi opÈ›ionale.
-- AdÄƒugarea de valori noi Ã®ntr-o listÄƒ de tipuri permise.
-- Extinderea unei secÈ›iuni fÄƒrÄƒ a schimba semnificaÈ›ia cÃ¢mpurilor existente.
+- Adaugarea de campuri noi optionale.
+- Adaugarea de valori noi intr-o lista de tipuri permise.
+- Extinderea unei sectiuni fara a schimba semnificatia campurilor existente.
 - Acceptarea unor aliasuri de nume pentru migrare.
 
-### SchimbÄƒri care cer migrare controlatÄƒ
+### Schimbari care cer migrare controlata
 
-- Redenumirea unui cÃ¢mp obligatoriu.
-- Schimbarea tipului unui cÃ¢mp.
-- Mutarea unui cÃ¢mp dintr-o secÈ›iune Ã®n alta.
-- Schimbarea semnificaÈ›iei unui status existent.
+- Redenumirea unui camp obligatoriu.
+- Schimbarea tipului unui camp.
+- Mutarea unui camp dintr-o sectiune in alta.
+- Schimbarea semnificatiei unui status existent.
 
 ### Ce trebuie evitat
 
-- SÄƒ tratÄƒm fiÈ™ierele diferit doar pentru cÄƒ sunt JSON sau YAML.
-- SÄƒ blocÄƒm inputul cu reguli estetice care nu influenÈ›eazÄƒ semantica.
-- SÄƒ introducem cÃ¢mpuri obligatorii noi fÄƒrÄƒ perioadÄƒ de tranziÈ›ie.
+- Sa tratam fisierele diferit doar pentru ca sunt JSON sau YAML.
+- Sa blocam inputul cu reguli estetice care nu influenteaza semantica.
+- Sa introducem campuri obligatorii noi fara perioada de tranzitie.
 
 ## Validare
 
-Validarea trebuie sÄƒ fie predictibilÄƒ:
+Validarea trebuie sa fie predictibila:
 
 1. **Parse**
-   - FiÈ™ierul se citeÈ™te Ã®n formatul lui nativ.
+   - Fisierul se citeste in formatul lui nativ.
 
 2. **Normalize**
-   - JSON È™i YAML se transformÄƒ Ã®n aceeaÈ™i structurÄƒ internÄƒ.
+   - JSON si YAML se transforma in aceeasi structura interna.
 
 3. **Validate structural**
-   - Se verificÄƒ existenÈ›a cÃ¢mpurilor cerute È™i tipurile de bazÄƒ.
+   - Se verifica existenta campurilor cerute si tipurile de baza.
 
 4. **Validate semantic**
-   - Se verificÄƒ relaÈ›iile dintre cÃ¢mpuri, referinÈ›ele È™i valorile permise.
+   - Se verifica relatiile dintre campuri, referintele si valorile permise.
 
 5. **Validate compatibility**
-   - Se verificÄƒ dacÄƒ scriptul respectÄƒ versiunea curentÄƒ sau una acceptatÄƒ prin alias.
+   - Se verifica daca scriptul respecta versiunea curenta sau una acceptata prin alias.
 
-## Reguli pentru pattern-uri uÈ™or de citit
+## Reguli pentru pattern-uri usor de citit
 
 - Un concept = un nod.
-- O intenÈ›ie = o secÈ›iune.
-- O regulÄƒ = o cheie clar numitÄƒ.
-- O colecÈ›ie = o listÄƒ scurtÄƒ È™i ordonatÄƒ.
-- O excepÈ›ie = un cÃ¢mp opÈ›ional explicit, nu o convenÈ›ie ascunsÄƒ.
+- O intentie = o sectiune.
+- O regula = o cheie clar numita.
+- O colectie = o lista scurta si ordonata.
+- O exceptie = un camp optional explicit, nu o conventie ascunsa.
 
 Exemplu bun:
 
@@ -173,39 +182,38 @@ a:
       d: 3
 ```
 
-## Integrare Ã®n runtime
+## Integrare in runtime
 
-- Parserul acceptÄƒ ambele formate.
-- Normalizarea produce acelaÈ™i model intern.
-- Restul sistemului consumÄƒ doar modelul intern.
-- Exportul poate genera fie JSON, fie YAML, dar nu trebuie sÄƒ schimbe semantica.
-- Loaderul runtime poate citi `quests.json` sau `quests.yml` fÄƒrÄƒ sÄƒ schimbe contractul logic.
-- Mapping-ul world admin poate fi Ã®ncÄƒrcat È™i din `world-admin.json` sau `world-admin.yml` ca overlay opÈ›ional peste config-ul de bazÄƒ.
-- Debug dump-ul expune È™i `quests-snapshot.json` ca imagine read-only a config-ului Ã®ncÄƒrcat.
-- Debug dump-ul expune È™i `mapping-snapshot.json` ca imagine normalizatÄƒ a world mapping-ului È™i a surselor overlay.
+- Parserul accepta ambele formate.
+- Normalizarea produce acelasi model intern.
+- Restul sistemului consuma doar modelul intern.
+- Exportul poate genera fie JSON, fie YAML, dar nu trebuie sa schimbe semantica.
+- Loaderul runtime poate citi quest definitions din `packs/*.yml` fara sa schimbe contractul logic.
+- Mapping-ul world admin poate fi incarcat si din `world-admin.yml` ca overlay optional peste config-ul de baza.
+- Debug dump-ul expune `world-mapping.json`, `loaded-quest-definitions.json`, `player-progressions.json`, `story-states.json` si `story-events.json` ca imagini read-only ale starii curente.
 
-Exemple concrete sunt Ã®n `docs/json-yaml-contract-exemple.md`.
+Exemple concrete sunt in `docs/json-yaml-contract-exemple.md`.
 
-Astfel, compatibilitatea este pÄƒstratÄƒ, iar oamenii pot lucra Ã®n formatul care li se potriveÈ™te mai bine.
+Astfel, compatibilitatea este pastrata, iar oamenii pot lucra in formatul care li se potriveste mai bine.
 
-## RecomandÄƒri practice
+## Recomandari practice
 
-- FoloseÈ™te YAML cÃ¢nd scriptul este editat frecvent de oameni.
-- FoloseÈ™te JSON cÃ¢nd payload-ul este generat, transmis sau validat mecanic.
-- PÄƒstreazÄƒ aceleaÈ™i chei Ã®n ambele formate.
-- MarcheazÄƒ explicit versiunea Ã®n fiÈ™ier.
-- AdaugÄƒ aliasuri Ã®nainte de a renunÈ›a la cÃ¢mpurile vechi.
+- Foloseste YAML cand scriptul este editat frecvent de oameni.
+- Foloseste JSON cand payload-ul este generat, transmis sau validat mecanic.
+- Pastreaza aceleasi chei in ambele formate.
+- Marcheaza explicit versiunea in fisier.
+- Adauga aliasuri inainte de a renunta la campurile vechi.
 
 ## Ce nu trebuie limitat
 
-- Nu bloca ordinea cÃ¢mpurilor dacÄƒ nu afecteazÄƒ semantica.
+- Nu bloca ordinea campurilor daca nu afecteaza semantica.
 - Nu interzice comentariile YAML la nivel de autor.
-- Nu cere structurÄƒ identicÄƒ la nivel fizic, doar la nivel logic.
-- Nu transforma convenÈ›iile de stil Ã®n erori de compatibilitate.
+- Nu cere structura identica la nivel fizic, doar la nivel logic.
+- Nu transforma conventiile de stil in erori de compatibilitate.
 
 ## Template standard
 
-Fiecare script nou ar trebui sÄƒ porneascÄƒ de la aceeaÈ™i formÄƒ de bazÄƒ:
+Fiecare script nou ar trebui sa porneasca de la aceeasi forma de baza:
 
 ```yaml
 type: example-script
@@ -222,43 +230,39 @@ spec:
 
 Reguli pentru acest template:
 
-- `type` rÄƒmÃ¢ne stabil È™i descriptiv.
-- `version` creÈ™te doar cÃ¢nd contractul logic se schimbÄƒ.
-- `meta.id` este unic Ã®n cadrul familiei de scripturi.
-- `spec` conÈ›ine doar date funcÈ›ionale.
-- Listele goale sunt valide dacÄƒ intenÈ›ia este explicitÄƒ.
+- `type` ramane stabil si descriptiv.
+- `version` creste doar cand contractul logic se schimba.
+- `meta.id` este unic in cadrul familiei de scripturi.
+- `spec` contine doar date functionale.
+- Listele goale sunt valide daca intentia este explicita.
 
-## Migrare controlatÄƒ
+## Migrare controlata
 
-Migrarea trebuie sÄƒ fie lizibilÄƒ È™i reversibilÄƒ pe cÃ¢t posibil:
+Migrarea trebuie sa fie lizibila si reversibila pe cat posibil:
 
-1. AdaugÄƒ cÃ¢mpul nou ca opÈ›ional.
-2. AcceptÄƒ vechiul È™i noul nume Ã®n paralel.
-3. MarcheazÄƒ vechiul nume ca deprecated Ã®n documentaÈ›ie.
-4. ActualizeazÄƒ generatorul sau editorul.
-5. EliminÄƒ aliasul doar dupÄƒ o perioadÄƒ clarÄƒ de compatibilitate.
+1. Adauga campul nou ca optional.
+2. Accepta vechiul si noul nume in paralel.
+3. Marcheaza vechiul nume ca deprecated in documentatie.
+4. Actualizeaza generatorul sau editorul.
+5. Elimina aliasul doar dupa o perioada clara de compatibilitate.
 
-Exemplu de tranziÈ›ie:
+Exemplu de tranzitie:
 
 ```yaml
 # vechi
-
-Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 spec:
   questName: "Intro"
 
 # nou
-
-Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 spec:
   title: "Intro"
 ```
 
-ÃŽn perioada de tranziÈ›ie, parserul trebuie sÄƒ accepte ambele forme È™i sÄƒ le normalizeze la aceeaÈ™i cheie internÄƒ.
+In perioada de tranzitie, parserul trebuie sa accepte ambele forme si sa le normalizeze la aceeasi cheie interna.
 
-## Event lists, trigger È™i hook
+## Evenimente, trigger si hook
 
-FiÈ™ierele JSON È™i YAML pot descrie evenimente ca liste ordonate de acÈ›iuni sau ca mapÄƒri de declanÈ™atoare cÄƒtre hook-uri. Contractul trebuie sÄƒ suporte ambele forme fÄƒrÄƒ a impune o singurÄƒ reprezentare fizicÄƒ.
+Fisierele JSON si YAML pot descrie evenimente ca liste ordonate de actiuni sau ca mapari de declansatoare catre hook-uri. Contractul trebuie sa suporte ambele forme fara a impune o singura reprezentare fizica.
 
 ### Model recomandat pentru evenimente
 
@@ -274,15 +278,15 @@ events:
 
 Reguli:
 
-- `events` este o listÄƒ ordonatÄƒ cÃ¢nd ordinea de procesare conteazÄƒ.
-- `trigger` identificÄƒ momentul sau condiÈ›ia de activare.
-- `hook` indicÄƒ handlerul logic asociat.
-- `name` este opÈ›ional, dar util pentru debugging È™i audit.
-- DacÄƒ un eveniment are mai multe hook-uri, ele rÄƒmÃ¢n Ã®ntr-o listÄƒ explicitÄƒ.
+- `events` este o lista ordonata cand ordinea de procesare conteaza.
+- `trigger` identifica momentul sau conditia de activare.
+- `hook` indica handlerul logic asociat.
+- `name` este optional, dar util pentru debugging si audit.
+- Daca un eveniment are mai multe hook-uri, ele raman intr-o lista explicita.
 
-### Reprezentare alternativÄƒ
+### Reprezentare alternativa
 
-ÃŽn unele cazuri, un map de trigger-uri este mai compact:
+In unele cazuri, un map de trigger-uri este mai compact:
 
 ```json
 {
@@ -293,35 +297,35 @@ Reguli:
 }
 ```
 
-AceastÄƒ formÄƒ este acceptabilÄƒ doar dacÄƒ normalizarea internÄƒ produce aceeaÈ™i semnificaÈ›ie ca lista de evenimente. Parserul trebuie sÄƒ converteascÄƒ ambele reprezentÄƒri Ã®n aceeaÈ™i structurÄƒ internÄƒ.
+Aceasta forma este acceptabila doar daca normalizarea interna produce aceeasi semnificatie ca lista de evenimente. Parserul trebuie sa converteasca ambele reprezentari in aceeasi structura interna.
 
 ### Reguli de interpretare
 
-- Un `trigger` activeazÄƒ unul sau mai multe `hook-uri`.
-- Un `hook` nu trebuie sÄƒ depindÄƒ de ordinea specificÄƒ a cÃ¢mpurilor din fiÈ™ier.
-- O listÄƒ de evenimente pÄƒstreazÄƒ ordinea declarativÄƒ.
-- O hartÄƒ de trigger-uri favorizeazÄƒ cÄƒutarea rapidÄƒ È™i poate fi folositÄƒ ca formÄƒ derivatÄƒ.
-- DacÄƒ existÄƒ ambiguitate, modelul canonic este lista normalizatÄƒ de evenimente.
+- Un `trigger` activeaza unul sau mai multe `hook-uri`.
+- Un `hook` nu trebuie sa depinda de ordinea specifica a campurilor din fisier.
+- O lista de evenimente pastreaza ordinea declarativa.
+- O harta de trigger-uri favorizeaza cautarea rapida si poate fi folosita ca forma derivata.
+- Daca exista ambiguitate, modelul canonic este lista normalizata de evenimente.
 
 ### Compatibilitate pentru hook-uri
 
-- AdÄƒugarea unui hook nou este compatibilÄƒ.
-- AdÄƒugarea unui trigger nou este compatibilÄƒ.
+- Adaugarea unui hook nou este compatibila.
+- Adaugarea unui trigger nou este compatibila.
 - Redenumirea unui hook cere alias sau adaptor.
-- Schimbarea semnificaÈ›iei unui trigger cere versiune nouÄƒ.
-- Eliminarea unui hook existent cere perioadÄƒ de tranziÈ›ie.
+- Schimbarea semnificatiei unui trigger cere versiune noua.
+- Eliminarea unui hook existent cere perioada de tranzitie.
 
-## Quest È™i mapping
+## Quest si mapping
 
-Pentru fiÈ™ierele care descriu questuri È™i mapping semantic, contractul trebuie sÄƒ pÄƒstreze separarea dintre intenÈ›ie È™i rezolvare.
+Pentru fisierele care descriu questuri si mapping semantic, contractul trebuie sa pastreze separarea dintre intentie si rezolvare.
 
 ### Quest
 
-- `quest` descrie intenÈ›ia de gameplay.
-- `objectives` sau `steps` descriu ordinea logicÄƒ.
-- `trigger` marcheazÄƒ momentul de activare.
-- `hook` trimite execuÈ›ia cÄƒtre logica runtime.
-- Tinta nu trebuie sÄƒ depindÄƒ doar de coordonate brute.
+- `quest` descrie intentia de gameplay.
+- `objectives` sau `steps` descriu ordinea logica.
+- `trigger` marcheaza momentul de activare.
+- `hook` trimite executia catre logica runtime.
+- Tinta nu trebuie sa depinda doar de coordonate brute.
 
 Exemplu:
 
@@ -342,11 +346,11 @@ spec:
 
 ### Mapping
 
-- `mapping` descrie rezolvarea semanticÄƒ a È›intelor.
-- `region`, `place` È™i `node` trebuie sÄƒ rÄƒmÃ¢nÄƒ tipuri distincte.
-- `tags` È™i `metadata` sunt baza pentru potrivire flexibilÄƒ.
-- Rezultatul resolverului trebuie sÄƒ fie stabil È™i auditat.
-- Mapping-ul poate fi exportat Ã®n JSON sau YAML fÄƒrÄƒ schimbare de semnificaÈ›ie.
+- `mapping` descrie rezolvarea semantica a tintelor.
+- `region`, `place` si `node` trebuie sa ramana tipuri distincte.
+- `tags` si `metadata` sunt baza pentru potrivire flexibila.
+- Rezultatul resolverului trebuie sa fie stabil si auditat.
+- Mapping-ul poate fi exportat in JSON sau YAML fara schimbare de semnificatie.
 
 Exemplu:
 
@@ -368,26 +372,24 @@ Exemplu:
 }
 ```
 
-### RegulÄƒ comunÄƒ
+### Regula comuna
 
-- Quest-ul consumÄƒ mapping-ul prin identificatori semantici, nu prin coordonate.
-- Mapping-ul rÄƒmÃ¢ne sursa de adevÄƒr pentru localizare È™i ancore.
-- JSON È™i YAML trebuie sÄƒ producÄƒ aceeaÈ™i structurÄƒ internÄƒ dupÄƒ normalizare.
+- Quest-ul consuma mapping-ul prin identificatori semantici, nu prin coordonate.
+- Mapping-ul ramane sursa de adevar pentru localizare si ancore.
+- JSON si YAML trebuie sa produca aceeasi structura interna dupa normalizare.
 
 ### Flux end-to-end
 
-1. Quest-ul declarÄƒ obiectivul È™i intenÈ›ia.
-2. Trigger-ul porneÈ™te obiectivul la un eveniment runtime.
-3. Hook-ul cere rezolvarea semanticÄƒ a È›intei.
-4. Mapping-ul Ã®ntoarce un `region`, `place` sau `node` valid.
-5. Runtime-ul executÄƒ logica fÄƒrÄƒ sÄƒ depindÄƒ de formatul fizic al fiÈ™ierului.
+1. Quest-ul declara obiectivul si intentia.
+2. Trigger-ul porneste obiectivul la un eveniment runtime.
+3. Hook-ul cere rezolvarea semantica a tintei.
+4. Mapping-ul intoarce un `region`, `place` sau `node` valid.
+5. Runtime-ul executa logica fara sa depinda de formatul fizic al fisierului.
 
 Exemplu complet:
 
 ```yaml
 # quest.yaml
-
-Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 type: quest
 version: 1
 meta:
@@ -404,8 +406,6 @@ spec:
 
 ```yaml
 # mapping.yaml
-
-Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 type: mapping
 version: 1
 meta:
@@ -418,123 +418,123 @@ spec:
         npc_service: merchant
 ```
 
-Normalizare aÈ™teptatÄƒ:
+Normalizare asteptata:
 
-- obiectivul `reach_market` devine o cerere semanticÄƒ de tip `place`;
-- `tag:market` se rezolvÄƒ la `village_market`;
-- `resolve_place_target` primeÈ™te un `place` stabil, nu o coordonatÄƒ hardcodatÄƒ;
-- aceeaÈ™i intenÈ›ie poate fi serializatÄƒ identic Ã®n JSON fÄƒrÄƒ sÄƒ se schimbe rezultatul.
+- obiectivul `reach_market` devine o cerere semantica de tip `place`;
+- `tag:market` se rezolva la `village_market`;
+- `resolve_place_target` primeste un `place` stabil, nu o coordonata hardcodata;
+- aceeasi intentie poate fi serializata identic in JSON fara sa se schimbe rezultatul.
 
 ## Matrice de compatibilitate
 
-| Schimbare | Compatibilitate | ObservaÈ›ie |
+| Schimbare | Compatibilitate | Observatie |
 | --- | --- | --- |
-| CÃ¢mp opÈ›ional nou | Da | Nu rupe scripturile existente |
-| Valoare nouÄƒ Ã®ntr-un enum | Da, cu fallback | Consumatorii vechi trebuie sÄƒ trateze valoarea necunoscutÄƒ |
-| Redenumire de cÃ¢mp | ParÈ›ial | NecesitÄƒ alias È™i migrare |
-| Mutare de secÈ›iune | ParÈ›ial | NecesitÄƒ normalizare È™i documentare clarÄƒ |
-| Schimbare de tip | Nu | NecesitÄƒ versiune nouÄƒ sau adaptor |
-| Eliminare de cÃ¢mp obligatoriu | Nu | NecesitÄƒ roadmap de migrare |
+| Camp optional nou | Da | Nu rupe scripturile existente |
+| Valoare noua intr-un enum | Da, cu fallback | Consumatorii vechi trebuie sa trateze valoarea necunoscuta |
+| Redenumire de camp | Partial | Necesita alias si migrare |
+| Mutare de sectiune | Partial | Necesita normalizare si documentare clara |
+| Schimbare de tip | Nu | Necesita versiune noua sau adaptor |
+| Eliminare de camp obligatoriu | Nu | Necesita roadmap de migrare |
 
 ## Faze de implementare
 
 ### Faza I - Contract minim
 
-Scop: stabilim un model comun pentru JSON È™i YAML.
+Scop: stabilim un model comun pentru JSON si YAML.
 
 Livrabile:
 
-- `type`, `version`, `meta`, `spec` ca structurÄƒ standard;
-- normalizare internÄƒ unicÄƒ;
-- validare structuralÄƒ de bazÄƒ;
-- exemple simple pentru `quest` È™i `mapping`.
+- `type`, `version`, `meta`, `spec` ca structura standard;
+- normalizare interna unica;
+- validare structurala de baza;
+- exemple simple pentru `quest` si `mapping`.
 
 Gate:
 
-- un fiÈ™ier JSON È™i unul YAML produc aceeaÈ™i structurÄƒ internÄƒ;
-- cÃ¢mpurile obligatorii sunt validate identic Ã®n ambele formate.
+- un fisier JSON si unul YAML produc aceeasi structura interna;
+- campurile obligatorii sunt validate identic in ambele formate.
 
-### Faza II - Eventuri, trigger È™i hook
+### Faza II - Eventuri, trigger si hook
 
-Scop: introducem fluxul de execuÈ›ie declarativÄƒ.
+Scop: introducem fluxul de executie declarativa.
 
 Livrabile:
 
 - liste de evenimente ordonate;
-- mapÄƒri de trigger-uri cÄƒtre hook-uri;
-- suport pentru aliasuri È™i formate alternative;
-- normalizare la aceeaÈ™i reprezentare logicÄƒ.
+- mapari de trigger-uri catre hook-uri;
+- suport pentru aliasuri si formate alternative;
+- normalizare la aceeasi reprezentare logica.
 
 Gate:
 
-- aceeaÈ™i semnificaÈ›ie poate fi exprimatÄƒ ca listÄƒ sau map;
-- runtime-ul primeÈ™te aceeaÈ™i structurÄƒ internÄƒ.
+- aceeasi semnificatie poate fi exprimata ca lista sau map;
+- runtime-ul primeste aceeasi structura interna.
 
-### Faza III - Quest È™i mapping semantic
+### Faza III - Quest si mapping semantic
 
-Scop: legÄƒm intenÈ›ia quest-ului de rezolvarea semanticÄƒ a mapping-ului.
+Scop: legam intentia quest-ului de rezolvarea semantica a mapping-ului.
 
 Livrabile:
 
-- exemple `quest.yaml` È™i `mapping.yaml`;
+- exemple `quest.yaml` si `mapping.yaml`;
 - rezolvare prin `region`, `place`, `node`;
-- fallback controlat pentru È›inte ambigue;
-- contract clar pentru `trigger`, `hook` È™i `target`.
+- fallback controlat pentru tinte ambigue;
+- contract clar pentru `trigger`, `hook` si `target`.
 
 Gate:
 
 - quest-ul nu mai depinde de coordonate brute;
-- mapping-ul rÄƒmÃ¢ne sursa de adevÄƒr pentru ancore.
+- mapping-ul ramane sursa de adevar pentru ancore.
 
-### Faza IV - Migrare È™i compatibilitate
+### Faza IV - Migrare si compatibilitate
 
-Scop: pÄƒstrÄƒm continuitatea Ã®ntre versiuni.
+Scop: pastram continuitatea intre versiuni.
 
 Livrabile:
 
-- aliasuri pentru cÃ¢mpuri redenumite;
+- aliasuri pentru campuri redenumite;
 - reguli de deprecated;
-- matrice de compatibilitate pentru schimbÄƒri frecvente;
-- adaptor pentru formatul vechi cÃ¢nd este necesar.
+- matrice de compatibilitate pentru schimbari frecvente;
+- adaptor pentru formatul vechi cand este necesar.
 
 Gate:
 
 - niciun consumator existent nu este rupt de o schimbare de nume;
-- eliminarea unui cÃ¢mp are perioada de tranziÈ›ie documentatÄƒ.
+- eliminarea unui camp are perioada de tranzitie documentata.
 
-### Faza V - Integrare runtime È™i tooling
+### Faza V - Integrare runtime si tooling
 
-Scop: conectÄƒm contractul la fluxul real de utilizare.
+Scop: conectam contractul la fluxul real de utilizare.
 
 Livrabile:
 
-- parser comun pentru JSON È™i YAML;
+- parser comun pentru JSON si YAML;
 - integrare cu quest runtime;
 - export/read-only debug pentru validare;
-- documente exemple pentru authors È™i admins.
+- documente exemple pentru authors si admins.
 
 Gate:
 
-- runtime-ul consumÄƒ doar modelul normalizat;
-- utilizatorii pot edita Ã®n formatul preferat fÄƒrÄƒ diferenÈ›e semantice.
+- runtime-ul consuma doar modelul normalizat;
+- utilizatorii pot edita in formatul preferat fara diferente semantice.
 
-### Faza VI - Hardening È™i extindere
+### Faza VI - Hardening si extindere
 
-Scop: pregÄƒtim contractul pentru extensii viitoare fÄƒrÄƒ blocaje.
+Scop: pregatim contractul pentru extensii viitoare fara blocaje.
 
 Livrabile:
 
-- extensii opÈ›ionale pe `spec`;
-- reguli pentru enum-uri È™i fallback;
+- extensii optionale pe `spec`;
+- reguli pentru enum-uri si fallback;
 - suport pentru hook-uri suplimentare;
-- testare pe cazuri limitÄƒ È™i regresii.
+- testare pe cazuri limita si regresii.
 
 Gate:
 
-- adÄƒugarea de date noi nu rupe compatibilitatea;
-- extensiile rÄƒmÃ¢n lizibile È™i validate.
+- adaugarea de date noi nu rupe compatibilitatea;
+- extensiile raman lizibile si validate.
 
-## LegÄƒturi cu documentaÈ›ia existentÄƒ
+## Legaturi cu documentatia existenta
 
 - `docs/progression-service.md`
 - `docs/story-context-service.md`

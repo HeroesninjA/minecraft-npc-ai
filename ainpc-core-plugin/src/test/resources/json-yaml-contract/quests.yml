@@ -1,17 +1,79 @@
-type: quest
-version: 1
-meta:
-  id: quest_intro_market
-  title: "Misiunea din piata"
-spec:
-  objectives:
-    - id: reach_market
-      trigger: quest.started
-      hook: resolve_place_target
-      target:
-        kind: place
-        ref: tag:market
-  rewards:
-    - type: item
-      item: emerald
-      amount: 3
+# Feature Pack — exemplu de quest in format real AINPC
+id: contract_example
+name: "Contract Example"
+description: "Exemplu de feature pack cu quest, mapping si story defaults."
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["quest", "traits", "dialogues"]
+
+traits:
+  helpful:
+    name: "Ajutator"
+    description: "Fericit cand poate da o mana de ajutor"
+    modifiers:
+      action_scores:
+        HELP: 30
+        DELIVER: 25
+      emotions:
+        happiness: 0.25
+        trust: 0.15
+
+scenarios:
+  quest_intro_market:
+    name: "Misiunea din piata"
+    description: "Viziteaza piata satului si vorbeste cu negustorul."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "QM01"
+      giver: "merchant"
+      kind: "side"
+      category: "tutorial"
+      repeatable: false
+      dialogues:
+        available:
+          - "Bine ai venit in piata! Am nevoie de ajutorul tau."
+          - "Du-te si vorbeste cu primarul despre marfa noua."
+        active:
+          - "Primarul te asteapta in piata."
+        completed:
+          - "Multumesc! Afacerea e incheiata."
+      objectives:
+        visit_market:
+          type: "visit_place"
+          item: "tag:market"
+          amount: 1
+          description: "Viziteaza piata satului"
+        talk_to_merchant:
+          type: "talk_to_npc"
+          item: "npc:merchant"
+          amount: 1
+          description: "Vorbeste cu negustorul"
+      rewards:
+        reward_coin:
+          type: "economy:money"
+          item: "gold_nugget"
+          amount: 5
+          description: "5 bucati de aur"
+        reward_xp:
+          type: "experience"
+          amount: 30
+          description: "30 XP vanilla"
+
+story_defaults:
+  settlement:
+    default_state: "peaceful"
+    pool:
+      - "peaceful"
+      - "trade"
+      - "festival"
+
+dialogues:
+  greeting:
+    - "Bine ai venit!"
+    - "Ce mai faci?"
+  farewell:
+    - "La revedere!"
+    - "Pe curand!"

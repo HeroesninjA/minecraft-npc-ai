@@ -1,6 +1,6 @@
 # Harta claselor pentru GUI
 
-Actualizat: 2026-06-21
+Actualizat: 2026-06-29
 
 Acest document este doar documentatie. Nu schimba runtime-ul si nu modifica ordinea de executie.
 
@@ -14,15 +14,32 @@ Nu este un inventar complet al tuturor ecranelor. Este o harta de lucru pentru n
 
 ## Noduri principale
 
-- `GuiService` -> coordoneaza deschiderea ecranelor, selectie, filtre si actiuni
+- `GuiService` -> coordoneaza deschiderea ecranelor, selectie, filtre, confirmari si `gui.skip_confirmations`
 - `GuiSessionManager` -> gestioneaza sesiunile active pe player si id
 - `GuiScreen` -> interfata comuna pentru toate ecranele
 - `MainHubGui` -> hub de intrare
-- `WorldHubGui` -> UI pentru world, regiuni, places, nodes si ancore
+- `QuestLogGui` -> UI pentru log progresii, cu sumar progres (slot 2), context poveste (slot 6), filtre inline (slots 9-18)
 - `QuestDetailGui` -> UI pentru detalii de quest, diagnostics si ancore
-- `StoryGui` -> UI pentru contextul narativ si starea story
+- `StoryGui` -> UI pentru context narativ, story state si card de mediu (slot 5)
+- `WorldHubGui` -> UI pentru world, regiuni, places, nodes si ancore, cu card identitate (slot 6)
+- `WorldRegionGui` -> UI pentru detalii regiune cu card identitate (slot 9)
+- `WorldPlaceGui` -> UI pentru detalii place
+- `AdminMappingGui` -> UI admin pentru mapping, cu identitate (slot 6), patch analyze/plan (slots 22/23), create place/node
+- `AdminQuestGui` -> UI admin pentru questuri
 - `StatsGui` -> UI pentru inspectie rapida de status
+- `NpcInteractionGui` -> UI pentru interactiune NPC: quest, shop, rutina, story
+- `NpcManagerGui` -> UI admin pentru manager NPC
+- `RoutineGui` -> UI pentru inspectie rutine NPC
+- `ShopGui` -> UI pentru shop NPC
+- `AuditGui` -> UI pentru audit
 - `DebugGui` -> UI pentru dump si inspectie tehnica
+- `QuestAuthoringGui` -> UI pentru authoring quest read-only
+- `ConfirmActionGui` -> UI pentru confirmari actiuni (optional cu skip_confirmations)
+- `AdminHubGui`, `CreatorHubGui`, `PlayerHubGui` -> hub-uri specializate
+- `QuestMapGui` -> UI pentru mapping ancore quest
+- `QuestCreatorGui`, `QuestCreatorDefinitionsGui`, `QuestCreatorTestGui` -> UI pentru creator quest
+- `QuestEditGui`, `QuestCreateGui`, `QuickQuestGui` -> UI pentru editare/creare rapida
+- `MappingCreatorGui`, `MappingCreateRegionGui`, `MappingCreatePlaceGui`, `MappingCreateNodeGui` -> UI pentru creator mapping
 
 ## Flux principal
 

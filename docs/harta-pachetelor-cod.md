@@ -1,6 +1,6 @@
 # Harta Pachetelor de Cod
 
-Actualizat: 2026-06-21
+Actualizat: 2026-06-29
 
 Aceasta este o harta doar-documentatie pentru vibe coding.
 Nu schimba codul runtime.
@@ -161,6 +161,12 @@ Pentru orientare rapida, incepe cu [harta scurta](./harta-pachetelor-cod-scurta.
 - `DebugDumpService` - creeaza dump-uri text si JSON fara mutatii.
 - `WorldMappingSemanticIndex` - index pentru inspectie si raportare.
 
+### `environment`
+
+- `EnvironmentContext` - data class cu timeOfDay (6 stari), weather (5 tipuri), season (4 anotimpuri), temperature (6 niveluri), lightLevel si specialEvents
+- `EnvironmentEngine` - tick per world, getContext/getContextForLocation, registerSpecialEvent/clearSpecialEvent
+- Integrat in `AINPCPlugin`, `NPCContext`, `StoryContextService`, `StoryGui`
+
 ## Relatii intre clase cheie
 
 Relatiile de mai jos sunt observabile din constructori, campuri si apeluri directe. Nu sunt reguli de arhitectura obligatorii; sunt o harta de orientare pentru vibe coding.
@@ -173,6 +179,7 @@ Relatiile de mai jos sunt observabile din constructori, campuri si apeluri direc
 - `RoutineService` foloseste `RoutineEngine` si publica evenimente prin `AINPCEventSource`.
 - `NpcSpawnOrchestrator` foloseste `NpcSpawnPlan`, `HouseAllocationValidator` si managerii din `AINPCPlugin`.
 - `StoryStateService` foloseste `DatabaseManager`, `Gson` si `AINPCEventSource`.
+- `EnvironmentEngine` observa lumile prin `World.getFullTime()` si `World.hasStorm()`.
 - `WorldAdminService` foloseste `MappingIndex` si expune date prin `WorldAdminApi`.
 - `NpcWorldBindingService` foloseste `DatabaseManager` prin `StatementProvider`.
 
@@ -354,6 +361,7 @@ Relatiile de mai jos sunt observabile din constructori, campuri si apeluri direc
 ### Stratul runtime/support
 
 - `ro.ainpc.platform`, `ro.ainpc.topology` si `ro.ainpc.bootstrap` tin de pornire si feature gating.
+- `ro.ainpc.environment` tine contextul de mediu (timp, vreme, anotimp, temperatura) si engine-ul asociat.
 - `ro.ainpc.ai.orchestration` trebuie tratat ca strat de decizie, nu ca loc pentru mutatii de date.
 
 ## Reguli de lectura

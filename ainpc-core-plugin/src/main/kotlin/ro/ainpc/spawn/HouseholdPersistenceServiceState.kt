@@ -68,6 +68,20 @@ class HouseholdPersistenceServiceState(
     }
 
     @Throws(SQLException::class)
+    fun removeHousehold(householdId: String?) {
+        val safeId = clean(householdId)
+        if (safeId.isBlank()) return
+        val stmt = requireStatements().prepareStatement("DELETE FROM household_residents WHERE household_id = ?")
+        stmt.setString(1, safeId)
+        stmt.executeUpdate()
+        stmt.close()
+        val hStmt = requireStatements().prepareStatement("DELETE FROM households WHERE household_id = ?")
+        hStmt.setString(1, safeId)
+        hStmt.executeUpdate()
+        hStmt.close()
+    }
+
+    @Throws(SQLException::class)
     fun listResidents(householdId: String?): List<HouseholdResidentRecord> {
         if (householdId.isNullOrBlank()) {
             return emptyList()

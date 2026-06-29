@@ -157,6 +157,7 @@ fun formatRewardLabel(reward: FeaturePackLoader.QuestEntryDefinition?): String {
         "progression_skill_level" -> "nivel skill ${if (itemId.isBlank()) "?" else itemId} = ${reward.amount}"
         "set_story_state" -> "story state ${if (itemId.isBlank()) "?" else itemId} = ${reward.amount}"
         "record_story_event" -> "story event ${if (itemId.isBlank()) "?" else itemId}"
+        "command" -> "comanda: ${if (itemId.isBlank()) "?" else itemId.take(40)}"
         else -> {
             if (normalized.startsWith("reputation_")) {
                 val scopeType = normalized.removePrefix("reputation_")

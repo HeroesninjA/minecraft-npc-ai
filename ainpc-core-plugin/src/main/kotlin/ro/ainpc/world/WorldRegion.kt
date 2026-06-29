@@ -27,7 +27,7 @@ class WorldRegion(
             "untamed" -> StoryMode.ROTATIVE
             else -> StoryMode.EVOLUTIVE
         }
-    }, type.defaultStoryKey)
+    }, type.defaultStoryKey).also { it.setStoryPool(type.defaultStoryPool) }
 
     fun getTags(): List<String> = tags.toList()
 

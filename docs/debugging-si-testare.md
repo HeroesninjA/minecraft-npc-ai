@@ -1,6 +1,6 @@
 ﻿# Debugging si Testare
 
-Actualizat: 2026-05-11
+Actualizat: 2026-06-29
 
 Coordonare: acest document este consumat de `docs/lucru-alternat-quest-mapping-progression.md`.
 
@@ -74,6 +74,38 @@ gradlew clean test
 ```
 
 Cand folosesti `clean`, asteapta-te ca directoarele `target/` sa fie regenerate.
+
+## Rulare rapida a testelor unitare
+
+Scriptul `scripts/run-tests.ps1` ofera un mod simplu de a rula teste unitare pe categorii:
+
+```powershell
+# Toate testele din modulul core
+.\scripts\run-tests.ps1
+
+# Doar GUI
+.\scripts\run-tests.ps1 -Module gui
+
+# Doar quest engine
+.\scripts\run-tests.ps1 -Module quest
+
+# Test singular
+.\scripts\run-tests.ps1 -Test "ro.ainpc.gui.GuiKeyTest"
+
+# Statistici teste per categorie
+.\scripts\run-tests.ps1 -Count
+
+# Re-ruleaza ultimele teste esuate
+.\scripts\run-tests.ps1 -Failed
+
+# Fara build prealabil
+.\scripts\run-tests.ps1 -NoBuild
+
+# Fara modulul API (evita eroarea pre-existentei de compilare in testul API)
+.\scripts\run-tests.ps1 -OnlyCore
+```
+
+Module disponibile: `gui`, `quest`, `progression`, `story`, `mapping`, `npc`, `command`, `debug`, `spawn`, `listener`, `economy`, `ai`
 
 ## Scripturi existente
 

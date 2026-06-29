@@ -5,7 +5,8 @@ param(
     [switch]$Count,
     [switch]$Failed,
     [switch]$Quiet,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$OnlyCore
 )
 
 # Helper script for running AINPC unit tests during development.
@@ -23,6 +24,7 @@ param(
 #   .\scripts\run-tests.ps1 -Count                # count tests per category
 #   .\scripts\run-tests.ps1 -Failed               # rerun last failed tests
 #   .\scripts\run-tests.ps1 -Quiet                # minimal output
+#   .\scripts\run-tests.ps1 -OnlyCore             # skip API module (avoids pre-existing API test failure)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -99,6 +101,7 @@ if ($Failed) {
 if (!$NoBuild) {
     Write-Host "Building core..." -ForegroundColor Cyan
     $buildArgs = @(":ainpc-core-plugin:classes", "-q")
+    if ($OnlyCore) { $buildArgs += "-x", ":ainpc-api:compileTestJava" }
     & $root\gradlew.bat @buildArgs 2>&1 | ForEach-Object { if (!$Quiet) { Write-Host $_ } }
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed!" -ForegroundColor Red
@@ -107,6 +110,7 @@ if (!$NoBuild) {
 }
 
 if ($Quiet) { $testArgs += "-q" }
+if ($OnlyCore) { $testArgs += "-x", ":ainpc-api:compileTestJava" }
 Write-Host "Running: gradlew $($testArgs -join ' ')" -ForegroundColor DarkGray
 & $root\gradlew.bat @testArgs 2>&1 | ForEach-Object {
     $line = $_

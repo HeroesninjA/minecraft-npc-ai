@@ -906,6 +906,11 @@ fun handleTriggerQuest(
 
     deliverQuestInteraction(sender, targetPlayer, npc, questInteraction,
         "&aQuest-ul lui &e${npc.name} &aa fost declansat pentru &f${targetPlayer.name}&a.")
+
+    val selector = "${formatOptional(progressionKind).ifBlank { "quest" }}:${npc.name}"
+    if (questInteraction.progressionSelector != null) {
+        ainpcCommandQuestPlugin.guiService.openQuestOffer(targetPlayer, questInteraction.progressionSelector)
+    }
     return true
 }
 

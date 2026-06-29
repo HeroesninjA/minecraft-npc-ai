@@ -441,18 +441,21 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun entryMaterial(entry: ProgressionGuiEntry): Material {
-        if (entry.tracked()) {
-            return Material.COMPASS
-        }
+        if (entry.tracked()) return Material.COMPASS
         if (entry.active()) {
-            return Material.LIME_DYE
+            return when (entry.commandRoot()) {
+                "quest" -> Material.WRITABLE_BOOK
+                "contract" -> Material.PAPER
+                "duty" -> Material.SHIELD
+                "bounty" -> Material.IRON_SWORD
+                "event" -> Material.BELL
+                "tutorial" -> Material.COMPASS
+                "ritual" -> Material.AMETHYST_SHARD
+                else -> Material.LIME_DYE
+            }
         }
-        if (entry.offered()) {
-            return Material.WRITABLE_BOOK
-        }
-        if (entry.archived()) {
-            return Material.MAP
-        }
+        if (entry.offered()) return Material.BOOK
+        if (entry.archived()) return Material.MAP
         return if (entry.missingTemplate()) Material.BARRIER else Material.PAPER
     }
 
@@ -496,6 +499,7 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun entryLore(entry: ProgressionGuiEntry): List<String> {
+        val totalObjectives = entry.objectives().size
         val completeObjectives = entry.objectives().count { it.complete() }
         val lore = mutableListOf<String>()
         lore.add("&7Status: &f${entry.statusDisplay()}")
@@ -512,8 +516,21 @@ class QuestLogGui : GuiScreen {
         if (entry.actorName().isNotBlank()) {
             lore.add("&7NPC: &f${entry.actorName()}")
         }
-        if (entry.objectives().isNotEmpty()) {
-            lore.add("&7Obiective: &f$completeObjectives&7/&f${entry.objectives().size}")
+        if (totalObjectives > 0) {
+            val pct = (completeObjectives * 100) / totalObjectives
+            val bar = progressBar(pct, 16)
+            lore.add("&7Obiective: &f$completeObjectives&7/&f$totalObjectives &8$pct%")
+            lore.add(" &8$bar")
+        }
+        val rewards = entry.rewardLines()
+        if (rewards.isNotEmpty()) {
+            lore.add("&6Recompense:")
+            for (reward in rewards.take(3)) {
+                lore.add("&7- &f${GuiItemFactory.compact(reward, 32)}")
+            }
+            if (rewards.size > 3) {
+                lore.add("  &8... si ${rewards.size - 3} altele")
+            }
         }
         lore.add("&8Click: detalii progresie")
         if (entry.active()) {
@@ -523,6 +540,16 @@ class QuestLogGui : GuiScreen {
         }
         lore.add("&8Shift click: status in chat")
         return lore
+    }
+
+    private fun progressBar(pct: Int, segments: Int): String {
+        val filled = (pct * segments) / 100
+        val empty = segments - filled
+        val sb = StringBuilder("&a")
+        for (i in 0 until filled) sb.append('\u2588')
+        sb.append("&7")
+        for (i in 0 until empty) sb.append('\u2588')
+        return sb.toString()
     }
 
     private fun valueOrUnknown(value: String): String = value.ifBlank { "unknown" }
@@ -539,11 +566,11 @@ class QuestLogGui : GuiScreen {
         val summary = snapshot.summaryLines().take(2)
 
         return buildList {
+            val offeredCount = snapshot.currentEntries().count { it.offered() }
             add("&7Afiseaza snapshot-ul curent pentru jucator.")
             add("&7Filtru: &f${snapshot.filterLabel()}")
-            add("&7Progresii curente: &f$currentCount")
-            add("&7Active: &f$activeCount")
-            add("&7Tracked: &f$trackedCount")
+            add("&7Curente: &f$currentCount &8($activeCount active, $offeredCount oferite)")
+            add("&7Urmarite: &f$trackedCount")
             add("&7Progresii arhivate vizibile: &f$archivedVisible")
             if (snapshot.totalMatchingArchived() > archivedVisible) {
                 add("&7Arhivate ascunse: &f${snapshot.totalMatchingArchived() - archivedVisible}")

@@ -73,6 +73,7 @@ object DebugDumpSupport {
             "item",
             "experience",
             "economy:money",
+            "command",
             "set_story_state",
             "record_story_event",
             "progression:xp",

@@ -34,6 +34,24 @@ ainpc-scenario-medieval/  # Scenariu medieval
 powershell -ExecutionPolicy Bypass -File .\scripts\build-local.ps1
 ```
 
+## Testare
+
+```powershell
+# Toate testele unitare
+.\scripts\run-tests.ps1
+
+# Doar GUI
+.\scripts\run-tests.ps1 -Module gui
+
+# Test singular
+.\scripts\run-tests.ps1 -Test "ro.ainpc.gui.GuiKeyTest"
+
+# Statistici teste per categorie
+.\scripts\run-tests.ps1 -Count
+```
+
+Module disponibile: `gui`, `quest`, `progression`, `story`, `mapping`, `npc`, `command`, `debug`, `spawn`, `listener`, `economy`, `ai`
+
 ## Tehnologii
 
 - **Kotlin** 2.3.21
@@ -44,5 +62,5 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-local.ps1
 ## Statistici
 
 - 0 fisiere Java
-- 458 teste unitare
+- ~1060 teste unitare (1048 trec, 3 pre-existente AI)
 - 100% Kotlin

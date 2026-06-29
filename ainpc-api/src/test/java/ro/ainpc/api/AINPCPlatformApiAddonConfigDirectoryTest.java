@@ -1,6 +1,7 @@
 package ro.ainpc.api;
 
 import org.junit.jupiter.api.Test;
+import ro.ainpc.api.integration.IntegrationRegistryApi;
 import ro.ainpc.platform.RuntimeMode;
 import ro.ainpc.world.StoryMode;
 import ro.ainpc.world.WorldMode;
@@ -56,6 +57,11 @@ class AINPCPlatformApiAddonConfigDirectoryTest {
 
         @Override
         public AddonRegistryApi getAddonRegistry() {
+            return null;
+        }
+
+        @Override
+        public IntegrationRegistryApi getIntegrationRegistry() {
             return null;
         }
 

@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-06-21
+Actualizat: 2026-06-29
 
 Status verificat:
 - build-ul multi-module trece cu Gradle pe testele core si `assemble`
@@ -41,6 +41,7 @@ Pluginul principal `AINPCPlugin` face deja urmatoarele la startup:
 - initializeaza `ProgressionService` ca strat initial peste runtime-ul curent din `ScenarioEngine`
 - initializeaza `StoryContextService` read-only
 - initializeaza `StoryStateService` pentru persistenta story
+- initializeaza `EnvironmentEngine` pentru context de mediu (timp, vreme, anotimp, temperatura)
 - inregistreaza comenzile si listener-ele
 - porneste task-urile periodice de simulare, decay si autosave
 - porneste task-ul periodic de rutina NPC, daca `routine.enabled` este activ
@@ -611,6 +612,46 @@ Acest lucru inseamna ca persistenta de baza este deja implementata pentru:
 - dialog
 - progres de quest
 - ancore semantice pentru obiective de quest
+
+## Sistem de mediu (Environment)
+
+- `EnvironmentContext` — data class ce urmareste timeOfDay (6 stari), weather (5 tipuri), season (4 anotimpuri), temperature (6 niveluri), lightLevel si evenimente speciale
+- `EnvironmentEngine` — tick per world, getContext/getContextForLocation, registerSpecialEvent/clearSpecialEvent
+- Integrat in `AINPCPlugin` (environmentEngine), `NPCContext` (environmentContext + updateEnvironmentContext), `StoryContextService` (semnale environment)
+- `/ainpc environment [worldName]` (alias: env, time, weather)
+- StoryGui slot 5 — card mediu cu iconita dinamica
+- NPC-urile primesc anotimp si temperatura in contextul AI
+
+## Identitate regiuni/places/noduri
+
+- `RegionType` extins cu displayName, description, defaultStoryKey, defaultStoryPool, ambiance, mood
+- `RegionIdentityProvider` — date de identitate per tip (descriere, NPC roles, place types, threat level)
+- `PlaceType` extins cu displayName, description si tags (ainpc-api)
+- `WorldNodeType` extins cu displayName si description
+- Card identitate in `WorldHubGui` (slot 6) si `WorldRegionGui` (slot 9)
+- `/ainpc world region identity <regionType>`
+- `/ainpc world region nodes <regionId>` si `/ainpc world region places <regionId>`
+- `/ainpc world node info <nodeId>`
+
+## Comenzi simplificate mapping
+
+- `/ainpc world region create <id> <type>` — fara coordonate, foloseste pozitia jucatorului (raza 32)
+- `/ainpc world place create <regionId> <id> <type>` — fara coordonate (raza 8)
+- `/ainpc world node create <regionId> - <id> <type>` — fara coordonate (pozitia curenta)
+- Comenzile complete cu coordonate explicite raman suportate
+
+## GUI imbunatatiri
+
+- `gui.skip_confirmations` in config.yml — skip toate confirmarile GUI
+- `AdminMappingGui` — card identitate (slot 6), butoane patch analyze/plan (slots 22/23), comenzi corecte create place/node
+- `QuestLogGui` — sumar progres (slot 2), context poveste (slot 6), filtre avansate inline (slots 14-18)
+- `StoryGui` — card mediu (slot 5)
+- `scripts/run-tests.ps1` — helper teste unitare (`-Module`, `-Test`, `-Count`, `-Failed`, `-List`, `-Quiet`)
+- `/ainpc quest chain` — vizualizeaza lanturile de questuri
+
+## Feature packs
+
+- `tutorial_demo.yml` — 7 questuri demonstrative (TD01-TD05, TE01, TB01, TR01), trasaturi, dialoguri, story defaults
 
 ## Ce nu este inca implementat complet
 

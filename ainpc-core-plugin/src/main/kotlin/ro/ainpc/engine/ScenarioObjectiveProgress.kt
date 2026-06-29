@@ -557,6 +557,14 @@ fun grantQuestRewards(player: Player, rewards: List<QuestEntryDefinition>): List
                 AINPCPlugin.getInstance().playerProgressionService.setSkillLevel(player, skillId, target)
                 notes.add("&aNivel skill $skillId setat la $target")
             }
+            "command" -> {
+                val cmd = reward.itemId?.trim().orEmpty()
+                if (cmd.isNotBlank()) {
+                    val parsed = cmd.replace("\${player}", player.name)
+                    AINPCPlugin.getInstance().server.dispatchCommand(AINPCPlugin.getInstance().server.consoleSender, parsed)
+                    notes.add("&aComanda executata: &f${cmd.take(40)}${if (cmd.length > 40) "..." else ""}")
+                }
+            }
             else -> when {
                 normalizedType.startsWith("reputation_") -> {
                     val scopeType = normalizedType.removePrefix("reputation_")

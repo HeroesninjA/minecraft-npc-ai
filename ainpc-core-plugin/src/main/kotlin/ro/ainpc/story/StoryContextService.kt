@@ -14,6 +14,7 @@ import ro.ainpc.api.events.story.StorySignalCollectedEvent
 import ro.ainpc.api.events.story.StorySignalCollectedEventPayload
 import ro.ainpc.database.DatabaseManager
 import ro.ainpc.npc.AINPC
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
 import ro.ainpc.world.WorldNodeInfo
@@ -278,6 +279,20 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             .toList()
         if (relevantNodeIds.isNotEmpty()) {
             addSignal(signals, "relevant_nodes", relevantNodeIds.joinToString(","))
+        }
+
+        if (worldContext != null && !worldContext.isEmpty()) {
+            val env = plugin.environmentEngine.getContext(
+                worldContext.currentRegion()?.worldName()
+                    ?: worldContext.currentPlace()?.worldName()
+            )
+            addSignal(signals, "environment_time", env.timeOfDay.id)
+            addSignal(signals, "environment_weather", env.weather.id)
+            addSignal(signals, "environment_season", env.season.id)
+            addSignal(signals, "environment_temperature", env.temperature.id)
+            if (env.specialEvents.isNotEmpty()) {
+                addSignal(signals, "environment_events", env.specialEvents.joinToString(","))
+            }
         }
 
         addActiveQuestAnchorSignals(signals, activeQuestAnchors)

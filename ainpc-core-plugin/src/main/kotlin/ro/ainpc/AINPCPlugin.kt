@@ -35,6 +35,7 @@ import ro.ainpc.routine.RoutineService
 import ro.ainpc.debug.RecentEventsBuffer
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
+import ro.ainpc.environment.EnvironmentEngine
 import ro.ainpc.story.StoryContextService
 import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
@@ -102,6 +103,8 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var storyContextService: StoryContextService
         private set
     lateinit var storyStateService: StoryStateService
+        private set
+    lateinit var environmentEngine: EnvironmentEngine
         private set
     lateinit var authoringService: QuestAuthoringService
         private set
@@ -188,6 +191,7 @@ class AINPCPlugin : JavaPlugin() {
         progressionService = ProgressionService(this)
         storyStateService = StoryStateService(this)
         storyContextService = StoryContextService(this)
+        environmentEngine = EnvironmentEngine(this)
         authoringService = QuestAuthoringService()
         guiService = GuiService(this)
         mappingWandService = MappingWandService(this)

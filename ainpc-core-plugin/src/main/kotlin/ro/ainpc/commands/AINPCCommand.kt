@@ -271,6 +271,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "overview", "preview", "summary" -> handleOverview(sender)
             "economy" -> handleEconomy(sender, args)
             "building" -> handleBuilding(sender, args)
+            "environment", "env", "time", "weather" -> handleEnvironment(sender, args)
             else -> {
                 sendHelp(sender)
                 true
@@ -716,6 +717,36 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 true
             }
         }
+    }
+
+    private fun handleEnvironment(sender: CommandSender, args: Array<String>): Boolean {
+        val player = sender as? Player
+        if (player == null && args.size < 2) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc environment [worldName]")
+            return true
+        }
+        val worldName = if (args.size > 1) args[1] else player?.world?.name ?: ""
+        if (worldName.isBlank()) {
+            plugin.messageUtils.send(sender, "&cNu s-a putut determina lumea.")
+            return true
+        }
+        val env = plugin.environmentEngine.getContext(worldName)
+        plugin.messageUtils.send(sender, "&6=== Mediu: $worldName ===")
+        plugin.messageUtils.send(sender, "&eZiua: &f${env.dayNumber} &7| Tick: &f${env.tickOfDay}")
+        plugin.messageUtils.send(sender, "&eTimp: &f${env.timeOfDay.displayName} &7(${env.timeOfDay.id})")
+        plugin.messageUtils.send(sender, "&eVreme: &f${env.weather.displayName} &7(${env.weather.id})")
+        plugin.messageUtils.send(sender, "&eAnotimp: &f${env.season.displayName} &7(${env.season.id})")
+        plugin.messageUtils.send(sender, "&eTemperatura: &f${env.temperature.displayName}")
+        plugin.messageUtils.send(sender, "&eLumina: &f${env.lightLevel}/15")
+        if (env.specialEvents.isNotEmpty()) {
+            plugin.messageUtils.send(sender, "&eEvenimente: &f${env.specialEvents.joinToString(", ")}")
+        }
+        if (player != null) {
+            val localEnv = plugin.environmentEngine.getContextForLocation(worldName, player.location.block.biome.name())
+            plugin.messageUtils.send(sender, "&7Temperatura locala: &f${localEnv.temperature.displayName} &8(biome: ${player.location.block.biome.name()})")
+        }
+        plugin.messageUtils.send(sender, "&8${env.toDescription()}")
+        return true
     }
 
     private fun handleBuilding(sender: CommandSender, args: Array<String>): Boolean {
@@ -2228,6 +2259,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         return when (args[1].lowercase()) {
             "plan" -> handlePopulationPlan(sender, args)
             "inspect" -> handlePopulationInspect(sender, args)
+            "stats" -> handlePopulationStats(sender, args)
             else -> { sendPopulationUsage(sender); true }
         }
     }
@@ -2236,6 +2268,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&6=== /ainpc population ===")
         plugin.messageUtils.send(sender, "&e/ainpc population plan <regionId> [targetPopulation] [seed] &7- Generate narrative population plan")
         plugin.messageUtils.send(sender, "&e/ainpc population inspect <regionId> &7- Inspect last generated plan")
+        plugin.messageUtils.send(sender, "&e/ainpc population stats [worldName] &7- Show NPC population statistics")
     }
 
     private var lastPopulationPlan: PopulationPlan? = null
@@ -2308,6 +2341,30 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendHouseholdAllocationSummary(sender, allocation)
         }
         plugin.messageUtils.send(sender, "\n&7Pentru spawn: &f/ainpc world settlement spawn ${plan.regionId}")
+        return true
+    }
+
+    private fun handlePopulationStats(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val worldName = if (args.size >= 3) args[2] else null
+        val stats = if (worldName != null) plugin.npcManager.getPopulationStats(worldName) else plugin.npcManager.getPopulationStats()
+        plugin.messageUtils.send(sender, "&6=== Population Statistics${if (worldName != null) ": &f$worldName" else ""} &6===")
+        plugin.messageUtils.send(sender, "&eTotal NPCs: &f${stats.total}")
+        plugin.messageUtils.send(sender, "&aSpawned: &f${stats.spawned} &8| &cDespawned: &f${stats.despawned}")
+        if (worldName == null && stats.byWorld.isNotEmpty()) {
+            plugin.messageUtils.send(sender, "\n&7By World:")
+            for ((world, count) in stats.byWorld.entries.sortedByDescending { it.value }) {
+                plugin.messageUtils.send(sender, "  &f$world&7: &e$count")
+            }
+        }
+        if (stats.byProfession.isNotEmpty()) {
+            plugin.messageUtils.send(sender, "\n&7By Profession:")
+            for ((prof, count) in stats.byProfession.entries.sortedByDescending { it.value }) {
+                plugin.messageUtils.send(sender, "  &f${prof.ifBlank { "none" }}&7: &e$count")
+            }
+        }
         return true
     }
 

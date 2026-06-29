@@ -10,7 +10,8 @@ addon:
   type: "feature"
   version: "1.0.0"
   runtime_modes: ["standalone", "hybrid", "advanced"]
-  capabilities: ["quest", "traits", "dialogues", "story"]
+  capabilities: ["quest", "traits", "dialogues", "story", "social"]
+  dependencies: ["social"]
 
 # ==================== SCENARIOS ====================
 scenarios:
