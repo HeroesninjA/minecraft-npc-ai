@@ -27,6 +27,10 @@ class QuestAuthoringGui : GuiScreen {
         val selectedEntry = progressionSnapshot.currentEntries().firstOrNull()
         val requestedQuestSelector = context.service().getAuthoringQuestSelector(player)
         val requestedMechanicId = context.service().getAuthoringMechanicId(player)
+        val aiMode = context.service().getCreatorFormValue(player, "qa_ai_mode").ifBlank { "" }
+        val aiSelector = context.service().getCreatorFormValue(player, "qa_ai_selector").ifBlank { "" }
+        val aiMechanic = context.service().getCreatorFormValue(player, "qa_ai_mechanic").ifBlank { "" }
+        val aiSummary = context.service().getCreatorFormValue(player, "qa_ai_summary").ifBlank { "" }
         val authoringSnapshot = context.plugin().authoringService.analyze(
             storyContext,
             context.plugin().progressionService.getDefinitions(),
@@ -51,6 +55,10 @@ class QuestAuthoringGui : GuiScreen {
                     "&7Entries progresie: &f${progressionSnapshot.allEntries().size}",
                     "&7Story signals: &f${storyContext.storySignals().size}",
                     "&7Warnings: &f${authoringSnapshot.warnings.size}",
+                    if (aiMode.isBlank()) "&7AI preset: &f(nu)" else "&7AI preset: &f$aiMode",
+                    if (aiSelector.isBlank()) "&7AI selector: &f(nu)" else "&7AI selector: &f$aiSelector",
+                    if (aiMechanic.isBlank()) "&7AI mechanic: &f(nu)" else "&7AI mechanic: &f$aiMechanic",
+                    if (aiSummary.isBlank()) "&7AI summary: &f(nu)" else "&7AI summary: &f$aiSummary",
                     "&8Actiuni principale: next / prev / reset / dump"
                 )
             )

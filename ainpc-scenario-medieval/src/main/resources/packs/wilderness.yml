@@ -1,0 +1,370 @@
+# ========================================
+# Feature Pack: Wilderness & Explorare
+# Vanatoare, explorare, resurse si pericole in salbaticie
+# ========================================
+
+id: wilderness
+name: "Wilderness & Explorare"
+description: "Aventuri in salbaticie: vanatoare, culegere de resurse, explorari si intalniri periculoase."
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["quest", "traits", "dialogues", "events", "story"]
+  dependencies: ["medieval"]
+
+# ==================== PROFESII NOI ====================
+professions:
+  hunter:
+    name: "Vanator"
+    description: "Paseaza padurile si aprovizioneaza satul cu carne si blana."
+    social_role: "provider"
+    work_tags: ["hunting_ground", "forest", "wilderness"]
+    dialogue_hints:
+      - "Vanatorul satului"
+      - "Pazește padurea"
+
+  herbalist:
+    name: "Ierbar"
+    description: "Cunoaste plantele medicinale din padure si prepa leacuri."
+    social_role: "healer"
+    work_tags: ["forest", "clearing", "meadow"]
+    dialogue_hints:
+      - "Ierbarul satului"
+      - "Plante lecuitoare"
+
+  scout:
+    name: "Cercetas"
+    description: "Exploreaza tinuturile necunoscute si aduce vesti."
+    social_role: "explorer"
+    work_tags: ["wilderness", "road", "lookout"]
+    dialogue_hints:
+      - "Cercetasul indraznet"
+      - "Explorator"
+
+# ==================== SCENARII ====================
+scenarios:
+
+  # ----------------------------------------
+  # WE01 - Vanatoarea cea mare
+  # Vanatoarea unui animal periculos care bantuieste padurea
+  # ----------------------------------------
+  WE01_great_hunt:
+    name: "Vanatoarea cea mare"
+    description: "Un urs vagabondeaza prin padurea de langa sat. Vanatorul are nevoie de ajutor."
+    base_type: "QUEST"
+    mechanic: "main_quests"
+    quest:
+      code: "WE01"
+      giver: "hunter"
+      kind: "main"
+      category: "wilderness"
+      repeatable: false
+      prerequisites: ["TD01"]
+      dialogues:
+        available:
+          - "Un urs mare si periculos a fost zarit in padure."
+          - "Ajuta-ma sa-l doboram inainte sa ajunga la sat."
+        active:
+          - "Ursul e in padurea de la nord. Pregateste-te bine."
+        completed:
+          - "Am reusit! Satul e in siguranta, iar blana ursului va fi vestita."
+      objectives:
+        hunt_bear:
+          type: "kill_mob"
+          item: "POLAR_BEAR"
+          amount: 1
+          description: "Doboara ursul din padure"
+      rewards:
+        reward_trophy:
+          type: "item"
+          item: "LEATHER"
+          amount: 5
+          description: "Blana de urs"
+        reward_xp:
+          type: "experience"
+          amount: 150
+          description: "150 XP"
+        reward_story:
+          type: "set_story_state"
+          item: "bear_hunted"
+          amount: 1
+          description: "Ursul a fost doborat"
+
+  # ----------------------------------------
+  # WE02 - Culegatorul de plante
+  # Colecteaza plante rare pentru ierbar
+  # ----------------------------------------
+  WE02_herb_gathering:
+    name: "Culegatorul de plante"
+    description: "Ierbarul are nevoie de flori rare care cresc doar in zonele insorite din padure."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "WE02"
+      giver: "herbalist"
+      kind: "side"
+      category: "wilderness"
+      repeatable: true
+      cooldown_seconds: 86400
+      dialogues:
+        available:
+          - "Am nevoie de 3 floarea-soarelui pentru leacurile mele."
+          - "Cresc doar in poienile insorite din padure."
+        active:
+          - "Mai am nevoie de %amount% floarea-soarelui."
+        completed:
+          - "Perfect! Acest leac va salva multi bolnavi."
+      objectives:
+        collect_flowers:
+          type: "collect_item"
+          item: "SUNFLOWER"
+          amount: 3
+          description: "Culege 3 floarea-soarelui"
+      rewards:
+        reward_potion:
+          type: "item"
+          item: "GOLDEN_APPLE"
+          amount: 1
+          description: "Un mar de aur lecuitor"
+        reward_xp:
+          type: "experience"
+          amount: 40
+          description: "40 XP"
+
+  # ----------------------------------------
+  # WE03 - Explorarea pesterii
+  # Exploreaza pestera adanca pentru resurse
+  # ----------------------------------------
+  WE03_cave_exploration:
+    name: "Explorarea pesterii"
+    description: "O pestera adanca a fost descoperita. Cercetase vrea sa stie ce se ascunde inauntru."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "WE03"
+      giver: "scout"
+      kind: "side"
+      category: "wilderness"
+      repeatable: false
+      prerequisites: ["TD01"]
+      stages:
+        stage_1:
+          label: "Intrarea in pestera"
+          completion_mode: "all_objectives"
+          objectives:
+            - enter_cave
+            - light_path
+        stage_2:
+          label: "Sala ascunsa"
+          completion_mode: "all_objectives"
+          objectives:
+            - find_treasure_room
+            - clear_monsters
+        stage_3:
+          label: "Intoarcerea"
+          completion_mode: "manual_turn_in"
+          objectives: []
+      dialogues:
+        available:
+          - "Pestera de la marginea padurii ascunde secrete."
+          - " Intra cu grija si lumineaza-ti calea."
+        stage_1_active:
+          - "Intrarea e sigura, dar ai nevoie de torte pentru interior."
+        stage_2_active:
+          - "Am auzit zgomote de creaturi. Pregateste-te de lupta!"
+        stage_3_active:
+          - "Bun, te-ai intors! Ce ai gasit in pestera?"
+        completed:
+          - "Minunat! Vom cartografia toata pestera."
+      objectives:
+        enter_cave:
+          type: "visit_place"
+          item: "tag:cave_entrance"
+          amount: 1
+          description: "Intra in pestera"
+        light_path:
+          type: "place_block"
+          item: "TORCH"
+          amount: 5
+          description: "Plaseaza 5 torte pentru lumina"
+        find_treasure_room:
+          type: "inspect_node"
+          item: "tag:treasure_room"
+          amount: 1
+          description: "Gaseste sala cu comoara"
+        clear_monsters:
+          type: "kill_mob"
+          item: "SPIDER"
+          amount: 4
+          description: "Elimina 4 paianjeni din sala"
+      rewards:
+        reward_gold:
+          type: "economy:money"
+          item: "gold_ingot"
+          amount: 8
+          description: "8 lingouri de aur"
+        reward_xp:
+          type: "experience"
+          amount: 100
+          description: "100 XP"
+
+  # ----------------------------------------
+  # WB01 - Recompensa pentru pradatori
+  # Bounty pentru eliminarea pradatorilor din zona
+  # ----------------------------------------
+  WB01_predator_bounty:
+    name: "Pradatorii din padure"
+    description: "Niste lupi flamanzi bantuie zona de nord. Vanatorul pune recompensa."
+    base_type: "BOUNTY"
+    mechanic: "local_bounties"
+    quest:
+      code: "WB01"
+      giver: "hunter"
+      kind: "bounty"
+      category: "wilderness"
+      repeatable: true
+      cooldown_seconds: 7200
+      dialogues:
+        available:
+          - "Lupii s-au apropiat prea mult de sat. Trebuie opriti."
+          - "Adu 4 capete de lup si vei fi rasplatit."
+        active:
+          - "Lupii sunt in padurea de la nord."
+          - "Fii atent, sunt periculosi in haita."
+        completed:
+          - "Bine lucrat! Satul va dormi linistit in noaptea asta."
+      objectives:
+        kill_wolves:
+          type: "kill_mob"
+          item: "WOLF"
+          amount: 4
+          description: "Elimina 4 lupi"
+      rewards:
+        reward_meat:
+          type: "item"
+          item: "BEEF"
+          amount: 8
+          description: "8 bucati de carne"
+        reward_gold:
+          type: "economy:money"
+          item: "gold_nugget"
+          amount: 16
+          description: "16 bucati de aur"
+        reward_reputation:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 8
+          description: "+8 reputatie - pazitor al satului"
+
+  # ----------------------------------------
+  # WR01 - Ritualul padurii
+  # Un ritual antic pentru protectia padurii
+  # ----------------------------------------
+  WR01_forest_ritual:
+    name: "Ritualul padurii"
+    description: "Un druid batran cere ajutorul pentru a intari protectia magica a padurii."
+    base_type: "RITUAL"
+    mechanic: "village_rituals"
+    quest:
+      code: "WR01"
+      giver: "herbalist"
+      kind: "ritual"
+      category: "wilderness"
+      repeatable: true
+      cooldown_seconds: 604800
+      dialogues:
+        available:
+          - "Puterea magica a padurii scade. Ajuta-ma sa reimprospatez ritualul."
+          - "Ai nevoie de 8 muschi si o piatra luminoasa."
+        active:
+          - "Mai am nevoie de materiale pentru ritual."
+        completed:
+          - "Padurea e din nou in echilibru. Multumesc."
+      objectives:
+        gather_moss:
+          type: "collect_item"
+          item: "VINE"
+          amount: 8
+          description: "Aduna 8 muschi"
+        place_ritual:
+          type: "inspect_node"
+          item: "tag:ritual_circle"
+          amount: 1
+          description: "Activeaza cercul ritual"
+      rewards:
+        reward_xp:
+          type: "experience"
+          amount: 200
+          description: "200 XP"
+        reward_story_event:
+          type: "record_story_event"
+          item: "forest_ritual_completed"
+          amount: 1
+          description: "Ritualul padurii a fost reinnoit"
+
+# ==================== TRASATURI NOI ====================
+traits:
+  survivalist:
+    name: "Supravietuitor"
+    description: "Cunaste tainele salbaticiei si se descurca in orice mediu."
+    modifiers:
+      action_scores:
+        EXPLORE: 25
+        HUNT: 25
+        FISH: 20
+        GATHER: 20
+        FIGHT: 15
+        DEFEND: 10
+      emotions:
+        fear: -0.2
+        anger: 0.1
+
+  nature_lover:
+    name: "Iubitor al naturii"
+    description: "Paseaza padurile si animalele si nu face rau niciunea fiinte."
+    modifiers:
+      action_scores:
+        GATHER: 25
+        EXPLORE: 20
+        HELP: 20
+        TEACH: 15
+        HUNT: -30
+        FIGHT: -20
+      emotions:
+        sadness: 0.1
+        happiness: 0.15
+
+# ==================== DIALOGURI ====================
+dialogues:
+  wilderness_greeting:
+    - "Salbaticia te cheama, calatorule."
+    - "Ai grija pe unde calci, padurea ascunde pericole."
+    - "Bine ai venit in salbaticie!"
+  wilderness_danger:
+    - "Am auzit urlete sinistre in noaptea trecuta."
+    - "Fii atent la creaturile noptii."
+    - "Nu merge singur in padurea intunecata."
+  wilderness_discovery:
+    - "Am gasit urme de animale rare langa paraul din vale."
+    - "Poiana cu flori albastre e in plina inflorire."
+    - "O pestera noua a fost descoperita la rasarit."
+
+# ==================== STORY DEFAULTS ====================
+story_defaults:
+  wilderness:
+    default_state: "wild"
+    pool:
+      - "wild"
+      - "hunting"
+      - "danger"
+      - "discovery"
+      - "seasonal"
+  cave:
+    default_state: "undiscovered"
+    pool:
+      - "undiscovered"
+      - "explored"
+      - "cleared"
+      - "treasure"
+      - "dangerous"

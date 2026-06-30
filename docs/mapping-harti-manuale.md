@@ -122,6 +122,7 @@ Moduri utile pentru wand:
 - `NODE` pentru puncte exacte de interactiune
 - `NPC_BIND` pentru legarea unui NPC de home/work/social places
 - `QUEST_ANCHOR` pentru marcarea unui punct folosit de questuri, contracte, bounties, tutoriale sau ritualuri
+- `BUILD` pentru fluxul extins de selectie vizuala, semnare si confirmare; detalii in `build-mode-region-place-node.md`
 
 Prompturi naturale acceptabile ca intentie:
 
@@ -174,6 +175,16 @@ Limitari ale implementarii initiale:
 - draft-ul `npc_bind` cere un punct aflat intr-un place existent si un NPC rezolvabil prin selector explicit sau `nearest`; `/ainpc world bind npc ...` ramane fallback-ul text direct;
 - draft-ul `quest_anchor` cere progresie existenta in `player_quests`; pentru player se foloseste implicit adminul care ruleaza comanda sau `player:<jucator|uuid>`;
 - nu exista inca preview vizual cu particule pentru bounds/radius.
+
+Directie extinsa dorita:
+
+- flux asistat AI pentru creare de `Region` si `Quest`, de forma `/ainpc world create ai` sau `/ainpc quest create ai`
+- flux asistat AI pentru creare de `Progression`, de forma `/ainpc progression create ai`
+- wizard care intreaba pe rand numele, ID-ul, selectia `pos1` / `pos2`, tipul, descrierea si centrul/suprafata valida
+- corectie interactiva pentru valori gresite prin sugestii, `Auto rename`, `Auto fit` si `Auto move`
+- auto-suggest pentru ID-uri si tipuri compatibile cu `Region`, `Quest` si `Progression`
+- validare automata a conflictelor reale, highlight vizual pentru varianta corecta si fallback pentru comenzi gresite
+- vizualizarea persistenta si selectia neregulata sunt definite ca directie de build mode, nu ca rezultat final al fluxului initial.
 
 Regula de siguranta:
 

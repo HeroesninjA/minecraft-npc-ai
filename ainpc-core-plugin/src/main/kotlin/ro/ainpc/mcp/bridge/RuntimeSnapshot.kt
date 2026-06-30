@@ -1,13 +1,14 @@
 package ro.ainpc.mcp.bridge
 
 data class RuntimeSnapshot(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = 2,
     val timestamp: String,
     val plugin: PluginSnapshot,
     val features: FeatureSnapshot,
     val npc: NpcSnapshot,
     val world: WorldSnapshot,
-    val quests: QuestSnapshot
+    val quests: QuestSnapshot,
+    val buildMode: BuildModeSnapshot
 )
 
 data class PluginSnapshot(
@@ -49,6 +50,28 @@ data class QuestSnapshot(
     val activePlayerQuests: Int,
     val activeGlobalQuests: Int,
     val samples: List<QuestSample>
+)
+
+data class BuildModeSnapshot(
+    val activePlayers: Int,
+    val byStyle: Map<String, Int>,
+    val byTarget: Map<String, Int>,
+    val players: List<BuildModePlayerSnapshot>,
+    val history: List<BuildModeHistorySnapshot>
+)
+
+data class BuildModePlayerSnapshot(
+    val name: String,
+    val style: String,
+    val target: String
+)
+
+data class BuildModeHistorySnapshot(
+    val playerName: String,
+    val timestampMillis: Long,
+    val action: String,
+    val style: String?,
+    val target: String?
 )
 
 data class QuestSample(

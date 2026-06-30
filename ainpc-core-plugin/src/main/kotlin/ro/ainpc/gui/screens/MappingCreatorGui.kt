@@ -18,10 +18,20 @@ class MappingCreatorGui : GuiScreen {
     override fun render(context: GuiRenderContext) {
         val wa: WorldAdminApi = context.plugin().platform.worldAdmin
         val loc = context.player().location
+        val aiMode = context.service().getCreatorFormValue(context.player(), "mc_ai_mode").ifBlank { "" }
+        val aiKind = context.service().getCreatorFormValue(context.player(), "mc_ai_kind").ifBlank { "" }
+        val aiName = context.service().getCreatorFormValue(context.player(), "mc_ai_name").ifBlank { "" }
+        val aiSummary = context.service().getCreatorFormValue(context.player(), "mc_ai_summary").ifBlank { "" }
+        val aiWarnings = context.service().getCreatorFormValue(context.player(), "mc_ai_warnings").ifBlank { "" }
 
         context.item(4, GuiItemFactory.item(Material.GRASS_BLOCK, "&6Creator Mapping", listOf(
             "&7Regiuni: &f${wa.regionCount}",
-            "&7Locatia ta: &f${loc.world.name} ${loc.blockX}, ${loc.blockY}, ${loc.blockZ}"
+            "&7Locatia ta: &f${loc.world.name} ${loc.blockX}, ${loc.blockY}, ${loc.blockZ}",
+            if (aiMode.isBlank()) "&7AI mode: &f(nu)" else "&7AI mode: &f$aiMode",
+            if (aiKind.isBlank()) "&7AI kind: &f(nu)" else "&7AI kind: &f$aiKind",
+            if (aiName.isBlank()) "&7AI name: &f(nu)" else "&7AI name: &f$aiName",
+            if (aiSummary.isBlank()) "&7AI summary: &f(nu)" else "&7AI summary: &f$aiSummary",
+            if (aiWarnings.isBlank()) "&7AI warnings: &f(nu)" else "&7AI warnings: &f$aiWarnings"
         )))
 
         context.button(10, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Creaza Regiune", listOf(

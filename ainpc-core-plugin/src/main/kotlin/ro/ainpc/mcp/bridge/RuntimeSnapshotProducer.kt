@@ -27,6 +27,31 @@ class RuntimeSnapshotProducer(
     private fun buildSnapshot(): RuntimeSnapshot {
         val worldAdmin = plugin.platform.worldAdmin
         val allNpcs = plugin.npcManager.getAllNPCs()
+        val buildModePlayers = Bukkit.getOnlinePlayers()
+            .mapNotNull { player ->
+                if (!plugin.guiService.isBuildModeEnabled(player)) return@mapNotNull null
+                val state = plugin.guiService.getBuildModeTarget(player)
+                val parts = state.split(":", limit = 2)
+                val style = parts.getOrNull(0)?.ifBlank { "wand" } ?: "wand"
+                val target = parts.getOrNull(1)?.ifBlank { "region" } ?: "region"
+                ro.ainpc.mcp.bridge.BuildModePlayerSnapshot(player.name, style, target)
+            }
+        val buildModeByStyle = buildModePlayers.groupingBy { it.style }.eachCount().toSortedMap()
+        val buildModeByTarget = buildModePlayers.groupingBy { it.target }.eachCount().toSortedMap()
+        val buildModeHistory = Bukkit.getOnlinePlayers()
+            .flatMap { player ->
+                plugin.guiService.getBuildModeHistory(player).map { history ->
+                    BuildModeHistorySnapshot(
+                        playerName = player.name,
+                        timestampMillis = history.timestampMillis,
+                        action = history.action,
+                        style = history.style,
+                        target = history.target
+                    )
+                }
+            }
+            .sortedByDescending { it.timestampMillis }
+            .take(24)
 
         val npcByRegion = allNpcs
             .mapNotNull { npc ->
@@ -101,6 +126,13 @@ class RuntimeSnapshotProducer(
                 activePlayerQuests = storedProgressions.count { it.playerUuid().isNotEmpty() },
                 activeGlobalQuests = storedProgressions.count { it.playerUuid().isEmpty() },
                 samples = questSamples
+            ),
+            buildMode = BuildModeSnapshot(
+                activePlayers = buildModePlayers.size,
+                byStyle = buildModeByStyle,
+                byTarget = buildModeByTarget,
+                players = buildModePlayers,
+                history = buildModeHistory
             )
         )
     }

@@ -270,6 +270,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "health", "status", "healthcheck" -> handleHealth(sender)
             "overview", "preview", "summary" -> handleOverview(sender)
             "economy" -> handleEconomy(sender, args)
+            "build" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleBuild(sender, args)
             "building" -> handleBuilding(sender, args)
             "environment", "env", "time", "weather" -> handleEnvironment(sender, args)
             else -> {
@@ -661,6 +662,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val mode = args[1].lowercase()
         questDebug("Parsare quest mode='' sender=" + sender.name)
         return when (mode) {
+            "create" -> handleQuestCreateAi(sender, args)
             "anchors" -> handleQuestAnchors(sender, args)
             "objectives" -> handleQuestObjectives(sender, args)
             "types", "objective-types" -> handleQuestTypes(sender)
@@ -770,6 +772,164 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             )
         }
         return true
+    }
+
+    private fun handleBuild(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
+
+        val player = sender as? Player ?: run {
+            plugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+            return true
+        }
+
+        if (args.size < 2 || args[1].equals("help", ignoreCase = true)) {
+            sendBuildModeUsage(sender)
+            return true
+        }
+
+        if (!args[1].equals("mode", ignoreCase = true)) {
+            sendBuildModeUsage(sender)
+            return true
+        }
+
+        val action = args.getOrNull(2)?.lowercase() ?: run {
+            sendBuildModeUsage(sender)
+            return true
+        }
+        if (action == "help") {
+            sendBuildModeUsage(sender)
+            return true
+        }
+        if (action == "clear-history") {
+            plugin.guiService.clearBuildModeHistory(player)
+            plugin.messageUtils.send(sender, "&aIstoricul build mode a fost curatat.")
+            return true
+        }
+        if (action == "history") {
+            val history = plugin.guiService.getBuildModeHistory(player)
+            plugin.messageUtils.send(sender, "&6=== Build Mode History ===")
+            if (history.isEmpty()) {
+                plugin.messageUtils.send(sender, "&7Nu exista istoric inregistrat.")
+                return true
+            }
+            history.take(10).forEachIndexed { index, entry ->
+                val time = java.time.Instant.ofEpochMilli(entry.timestampMillis)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime()
+                val details = listOfNotNull(
+                    entry.style?.let { "style=$it" },
+                    entry.target?.let { "target=$it" }
+                ).joinToString(" ")
+                plugin.messageUtils.send(
+                    sender,
+                    "&e#${index + 1} &7[$time] &f${entry.action}" + if (details.isBlank()) "" else " &8($details)"
+                )
+            }
+            if (history.size > 10) {
+                plugin.messageUtils.send(sender, "&7... si inca ${history.size - 10} intrari.")
+            }
+            return true
+        }
+        if (action == "export") {
+            val history = plugin.guiService.getBuildModeHistory(player)
+            val enabled = plugin.guiService.isBuildModeEnabled(player)
+            val state = parseBuildModeState(plugin.guiService.getBuildModeTarget(player))
+            plugin.messageUtils.send(sender, "&6=== Build Mode Export ===")
+            plugin.messageUtils.send(sender, "&eActiv: &f" + if (enabled) "da" else "nu")
+            plugin.messageUtils.send(sender, "&eStyle: &f" + (state.style ?: "wand"))
+            plugin.messageUtils.send(sender, "&eTarget: &f" + (state.target ?: "region"))
+            plugin.messageUtils.send(sender, "&eHistory: &f${history.size}")
+            if (history.isNotEmpty()) {
+                history.take(5).forEachIndexed { index, entry ->
+                    val details = listOfNotNull(
+                        entry.style?.let { "style=$it" },
+                        entry.target?.let { "target=$it" }
+                    ).joinToString(" ")
+                    plugin.messageUtils.send(
+                        sender,
+                        "&7#${index + 1} &f${entry.action}" + if (details.isBlank()) "" else " &8($details)"
+                    )
+                }
+            }
+            return true
+        }
+        val target = args.getOrNull(3)?.lowercase()
+        val normalizedTarget = when (target) {
+            "region", "place", "node" -> target
+            null, "" -> null
+            else -> {
+                plugin.messageUtils.send(sender, "&cTarget build invalid. Optiuni: &fregion, place, node")
+                return true
+            }
+        }
+        val currentState = parseBuildModeState(plugin.guiService.getBuildModeTarget(player))
+
+        when (action) {
+            "status", "inspect" -> {
+                val enabled = plugin.guiService.isBuildModeEnabled(player)
+                val state = if (enabled) parseBuildModeState(plugin.guiService.getBuildModeTarget(player)) else currentState
+                plugin.messageUtils.send(sender, "&6=== Build Mode ===")
+                plugin.messageUtils.send(sender, "&eActiv: &f" + if (enabled) "da" else "nu")
+                plugin.messageUtils.send(sender, "&eMod: &f" + (state.style ?: "wand"))
+                plugin.messageUtils.send(sender, "&eTarget: &f" + (state.target ?: "region"))
+                plugin.messageUtils.send(sender, "&7/ainpc build mode on|off|sign|wand|point [region|place|node]")
+                return true
+            }
+            "off", "disable" -> {
+                plugin.guiService.setBuildModeEnabled(player, false)
+                plugin.guiService.setBuildModeTarget(player, null)
+                plugin.messageUtils.send(sender, "&aBuild mode dezactivat.")
+                return true
+            }
+            "on", "enable", "sign", "wand", "point" -> {
+                val style = if (action == "on" || action == "enable") currentState.style ?: "wand" else action
+                val resolvedTarget = normalizedTarget ?: currentState.target ?: "region"
+                plugin.guiService.setBuildModeEnabled(player, true)
+                plugin.guiService.setBuildModeTarget(player, "$style:$resolvedTarget")
+                if (style == "wand") {
+                    val wandMode = when (resolvedTarget) {
+                        "place" -> ro.ainpc.world.mapping.MappingWandMode.PLACE
+                        "node" -> ro.ainpc.world.mapping.MappingWandMode.NODE
+                        else -> ro.ainpc.world.mapping.MappingWandMode.REGION
+                    }
+                    val session = plugin.mappingWandService.setMode(player, wandMode)
+                    plugin.mappingWandService.showSelectionPreview(player, session)
+                }
+                plugin.messageUtils.send(sender, "&aBuild mode activat: &f$style &7-> &f$resolvedTarget")
+                plugin.messageUtils.send(sender, "&7Semn: eticheteaza zona si foloseste confirmarea asistata.")
+                plugin.messageUtils.send(sender, "&7Wand: selecteaza cu /ainpc wand pos1|pos2|point.")
+                return true
+            }
+            else -> {
+                sendBuildModeUsage(sender)
+                return true
+            }
+        }
+    }
+
+    private data class BuildModeState(val style: String?, val target: String?)
+
+    private fun parseBuildModeState(rawValue: String?): BuildModeState {
+        val normalized = rawValue?.trim().orEmpty()
+        if (normalized.isBlank()) return BuildModeState(null, null)
+        val parts = normalized.split(":", limit = 2)
+        return if (parts.size == 2) {
+            BuildModeState(parts[0].ifBlank { null }, parts[1].ifBlank { null })
+        } else {
+            BuildModeState(null, normalized)
+        }
+    }
+
+    private fun sendBuildModeUsage(sender: CommandSender) {
+        plugin.messageUtils.send(sender, "&6Utilizare: /ainpc build mode on|off|sign|wand|point|history|export|clear-history [region|place|node]")
+        plugin.messageUtils.send(sender, "&7Exemple: /ainpc build mode sign region | /ainpc build mode wand place | /ainpc build mode point node")
+        plugin.messageUtils.send(sender, "&7Istoric: /ainpc build mode history")
+        plugin.messageUtils.send(sender, "&7Export: /ainpc build mode export")
+        plugin.messageUtils.send(sender, "&7Curatare: /ainpc build mode clear-history")
+        plugin.messageUtils.send(sender, "&7Status: /ainpc build mode status")
     }
 
     // Usage functions delegated to helper files
@@ -1262,6 +1422,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     // -- Progression alias delegates ------------------------------
     private fun handleProgression(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size >= 3 && args[1].equals("create", ignoreCase = true) && args[2].equals("ai", ignoreCase = true)) {
+            return handleProgressionCreateAi(sender, args)
+        }
         return handleProgression(sender, args, this::handleQuest, this::findOnlinePlayer)
     }
 
@@ -1802,6 +1965,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
         val worldMode = args[1].lowercase(Locale.ROOT)
         return when (worldMode) {
+            "create" -> handleWorldCreateAi(sender, args)
             "whereami" -> handleWorldWhereAmI(sender, args, ::resolveQuestTargetPlayer)
             "places" -> handleWorldPlaces(sender, args)
             "outside" -> handleWorldOutside(sender, args)
@@ -2586,6 +2750,30 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.send(sender, "&7${serverSnapshot.contentJson.take(500)}")
         } else {
             plugin.messageUtils.send(sender, "&c${serverSnapshot.detail}")
+        }
+
+        val buildModeStatus = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.status")
+        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.status: &f${buildModeStatus.status} &8(${buildModeStatus.durationMillis}ms)")
+        if (buildModeStatus.available) {
+            plugin.messageUtils.send(sender, "&7${buildModeStatus.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${buildModeStatus.detail}")
+        }
+
+        val buildModeHistory = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.history")
+        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.history: &f${buildModeHistory.status} &8(${buildModeHistory.durationMillis}ms)")
+        if (buildModeHistory.available) {
+            plugin.messageUtils.send(sender, "&7${buildModeHistory.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${buildModeHistory.detail}")
+        }
+
+        val buildModeExport = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.export")
+        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.export: &f${buildModeExport.status} &8(${buildModeExport.durationMillis}ms)")
+        if (buildModeExport.available) {
+            plugin.messageUtils.send(sender, "&7${buildModeExport.contentJson.take(500)}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${buildModeExport.detail}")
         }
 
         val npcList = plugin.mcpRuntimeClient.callTool("ainpc.npc.list")

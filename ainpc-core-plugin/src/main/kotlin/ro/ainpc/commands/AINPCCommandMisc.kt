@@ -17,6 +17,7 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
 import ro.ainpc.story.StoryContextSnapshot
+import ro.ainpc.world.mapping.MappingIntentParser
 import ro.ainpc.world.mapping.MappingDraft
 import ro.ainpc.world.mapping.MappingDraftKind
 import ro.ainpc.world.mapping.MappingWandMode
@@ -396,6 +397,307 @@ fun handleAuthoring(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandMiscPlugin.messageUtils.send(sender, line)
     }
     return true
+}
+
+fun handleWorldCreateAi(
+    sender: CommandSender,
+    args: Array<String>,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size >= 3 && args[2].equals("help", ignoreCase = true)) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6Utilizare: /ainpc world create ai [region|place|node] [descriere]")
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Exemple: /ainpc world create ai region curte castel | /ainpc world create ai node poarta intrare"
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Dupa tip, descrierea poate fi naturala: nume, scop, pozitie, forma."
+        )
+        return true
+    }
+    if (args.size < 3 || !args[2].equals("ai", ignoreCase = true)) {
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc world create ai [region|place|node] [descriere]"
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Exemple: /ainpc world create ai region curte castel | /ainpc world create ai place zona intrare"
+        )
+        return true
+    }
+    val player = sender as? Player ?: run {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
+        return true
+    }
+    val explicitKind = args.getOrNull(3)?.let { MappingDraftKind.fromId(it) }
+    val descriptionStart = if (explicitKind != null) 4 else 3
+    val description = if (args.size > descriptionStart) args.drop(descriptionStart).joinToString(" ").trim() else null
+    try {
+        val draft = ainpcCommandMiscPlugin.mappingWandService.createDraft(
+            player,
+            explicitKind,
+            description,
+            ainpcCommandMiscPlugin.platform.worldAdminService
+        )
+        val kindLabel = draft.kind().id()
+        val summaryLabel = listOfNotNull(
+            "kind=$kindLabel",
+            draft.localId().takeIf { it.isNotBlank() }?.let { "id=$it" },
+            draft.displayName().takeIf { it.isNotBlank() }?.let { "name=$it" },
+            draft.typeId().takeIf { it.isNotBlank() }?.let { "type=${it}" },
+            draft.regionId().takeIf { it.isNotBlank() }?.let { "region=$it" },
+            draft.placeId().takeIf { it.isNotBlank() }?.let { "place=$it" },
+            draft.worldName().takeIf { it.isNotBlank() }?.let { "world=$it" }
+        ).joinToString("; ")
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_mode", "world")
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_kind", kindLabel)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_name", draft.displayName())
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_summary", summaryLabel)
+        if (draft.warnings().isNotEmpty()) {
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_warnings", draft.warnings().joinToString(" | "))
+        } else {
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_warnings", "")
+        }
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Build AI Preview ===")
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Sugestie: &f" + (description?.takeIf { it.isNotBlank() } ?: draft.displayName())
+        )
+        sendMappingDraft(sender, draft)
+        ainpcCommandMiscPlugin.mappingWandService.showDraftPreview(player, draft)
+        when (draft.kind()) {
+            MappingDraftKind.REGION -> {
+                val regionName = draft.localId().ifBlank { draft.displayName() }
+                val regionType = draft.typeId().ifBlank { "settlement" }
+                val regionSize = (draft.maxX() - draft.minX()).coerceAtLeast(32).toString()
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_region_name", regionName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_region_type", regionType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_region_size", regionSize)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "region_name", regionName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "region_type", regionType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "region_size", regionSize)
+                ainpcCommandMiscPlugin.guiService.open(player, GuiKey.MAPPING_CREATE_REGION)
+            }
+            MappingDraftKind.PLACE -> {
+                val placeName = draft.localId().ifBlank { draft.displayName() }
+                val placeType = draft.typeId().ifBlank { "house" }
+                val placeSize = (draft.maxX() - draft.minX()).coerceAtLeast(10).toString()
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_place_region", draft.regionId())
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_place_name", placeName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_place_type", placeType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_place_size", placeSize)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "place_region", draft.regionId())
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "place_name", placeName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "place_type", placeType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "place_size", placeSize)
+                ainpcCommandMiscPlugin.guiService.open(player, GuiKey.MAPPING_CREATE_PLACE)
+            }
+            MappingDraftKind.NODE -> {
+                val nodeName = draft.localId().ifBlank { draft.displayName() }
+                val nodeType = draft.typeId().ifBlank { "interaction" }
+                val nodeRadius = draft.radius().takeIf { it > 0.0 }?.toString() ?: "2.0"
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_node_name", nodeName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_node_type", nodeType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "mc_ai_node_radius", nodeRadius)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "node_name", nodeName)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "node_type", nodeType)
+                ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "node_radius", nodeRadius)
+                ainpcCommandMiscPlugin.guiService.open(player, GuiKey.MAPPING_CREATE_NODE)
+            }
+            else -> ainpcCommandMiscPlugin.guiService.open(player, GuiKey.MAPPING_CREATOR)
+        }
+    } catch (exception: IllegalArgumentException) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&c" + exception.message)
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Corectie rapida: pune selecția cu wand-ul si incearca din nou."
+        )
+    }
+    return true
+}
+
+fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size >= 3 && args[2].equals("help", ignoreCase = true)) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6Utilizare: /ainpc quest create ai [selector sau text liber]")
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai tutorial salvare_sat"
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Daca nu dai text, se deschide Quick Quest AI ca wizard."
+        )
+        return true
+    }
+    val player = sender as? Player ?: run {
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&cQuest create ai poate fi folosit doar de jucatori. Foloseste /ainpc authoring dump pentru preview text."
+        )
+        return true
+    }
+    val payload = if (args.size > 3) args.drop(3).joinToString(" ").trim() else ""
+    if (payload.isBlank()) {
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_step", "1")
+        ainpcCommandMiscPlugin.guiService.open(player, GuiKey.QUICK_QUEST)
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&aQuick Quest AI a fost deschis. Completeaza pasii si foloseste preview-ul din GUI."
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai tutorial salvare_sat"
+        )
+        return true
+    }
+    val questName = payload.take(48)
+    val giver = inferQuickQuestGiver(payload)
+    val objectiveType = inferQuickQuestObjectiveType(payload)
+    val reward = inferQuickQuestReward(payload)
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_step", if (giver.isBlank()) "1" else "2")
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_name", questName)
+    if (giver.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_giver", giver)
+    if (objectiveType.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_type", objectiveType)
+    if (reward.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_reward", reward)
+    ainpcCommandMiscPlugin.guiService.open(player, GuiKey.QUICK_QUEST)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&aQuick Quest AI a fost precompletat.")
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nume: &f$questName")
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7NPC giver: &f" + (giver.ifBlank { "(alege din GUI)" }))
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Tip obiectiv: &f" + (objectiveType.ifBlank { "(alege din GUI)" }))
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Reward: &f" + (reward.ifBlank { "(alege din GUI)" }))
+    ainpcCommandMiscPlugin.messageUtils.send(
+        sender,
+        "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai contract lemne"
+    )
+    return true
+}
+
+private fun inferQuickQuestGiver(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "guard" in text || "garda" in text || "paza" in text -> "profession:guard"
+        "blacksmith" in text || "forj" in text || "fierar" in text -> "profession:blacksmith"
+        "innkeeper" in text || "han" in text || "gazda" in text -> "profession:innkeeper"
+        "farmer" in text || "fermier" in text || "camp" in text -> "profession:farmer"
+        "merchant" in text || "comer" in text || "negustor" in text -> "profession:merchant"
+        "healer" in text || "vindec" in text || "doctor" in text -> "profession:healer"
+        else -> ""
+    }
+}
+
+private fun inferQuickQuestObjectiveType(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "talk" in text || "vorb" in text || "speak" in text -> "talk_to_npc"
+        "deliver" in text || "duce" in text || "adu" in text || "carry" in text -> "deliver_to_npc"
+        "collect" in text || "colect" in text || "gather" in text -> "collect_item"
+        "visit" in text || "merg" in text || "lasa" in text || "explore" in text -> "visit_place"
+        "inspect" in text || "check" in text || "investig" in text -> "inspect_node"
+        "kill" in text || "omor" in text || "slay" in text -> "kill_mob"
+        "craft" in text || "crafta" in text || "forge" in text -> "craft_item"
+        "place" in text || "pune" in text || "build" in text -> "place_block"
+        "break" in text || "sparg" in text || "mine" in text -> "break_block"
+        else -> ""
+    }
+}
+
+private fun inferQuickQuestReward(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "emerald" in text || "smarald" in text -> "EMERALD x5"
+        "diamond" in text || "diamant" in text -> "DIAMOND x1"
+        "iron sword" in text || "sabie" in text -> "IRON_SWORD x1"
+        "book" in text || "carte" in text -> "BOOK x1"
+        "xp" in text || "experience" in text -> "XP 50"
+        else -> ""
+    }
+}
+
+fun handleProgressionCreateAi(sender: CommandSender, args: Array<String>): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size >= 3 && args[2].equals("help", ignoreCase = true)) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6Utilizare: /ainpc progression create ai [questSelector] [mechanicId]")
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Exemple: /ainpc progression create ai quest_intro xp | /ainpc progression create ai tutorial onboarding"
+        )
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Daca nu dai parametri, se folosesc valorile din wizard-ul curent."
+        )
+        return true
+    }
+    val player = sender as? Player ?: run {
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&cProgression create ai poate fi folosit doar de jucatori. Foloseste /ainpc authoring dump pentru preview text."
+        )
+        return true
+    }
+    val payload = if (args.size > 3) args.drop(3).joinToString(" ").trim() else ""
+    val questSelector = when {
+        payload.isBlank() -> ainpcCommandMiscPlugin.guiService.getAuthoringQuestSelector(player)
+        payload.contains(" ", ignoreCase = false) -> MappingIntentParser.slugOrFallback(
+            payload.substringBefore(" ").trim(),
+            "progression_draft"
+        )
+        else -> MappingIntentParser.slugOrFallback(payload, "progression_draft")
+    }
+    val mechanicId = when {
+        payload.isBlank() -> ainpcCommandMiscPlugin.guiService.getAuthoringMechanicId(player)
+        payload.contains(" ", ignoreCase = false) -> inferProgressionMechanicId(
+            payload.substringAfter(" ").trim().ifBlank { payload }
+        )
+        else -> inferProgressionMechanicId(payload)
+    }
+    val questSelectorLabel = if (questSelector.isBlank()) "(gol)" else questSelector
+    val mechanicLabel = if (mechanicId.isBlank()) "(gol)" else mechanicId
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qa_ai_mode", "progression")
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qa_ai_selector", questSelectorLabel)
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qa_ai_mechanic", mechanicLabel)
+    ainpcCommandMiscPlugin.guiService.setCreatorFormValue(
+        player,
+        "qa_ai_summary",
+        "selector=$questSelectorLabel; mechanic=$mechanicLabel"
+    )
+    ainpcCommandMiscPlugin.guiService.openAuthoring(player, questSelector, mechanicId)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&aProgression authoring AI deschis.")
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Quest selector: &f$questSelectorLabel")
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Mechanic: &f$mechanicLabel")
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Corectie rapida: foloseste /ainpc authoring next|prev sau reconstruieste comanda cu un selector mai clar.")
+    ainpcCommandMiscPlugin.messageUtils.send(
+        sender,
+        "&7Exemple: /ainpc progression create ai quest_intro xp | /ainpc progression create ai tutorial onboarding"
+    )
+    return true
+}
+
+private fun inferProgressionMechanicId(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        text.contains("xp") || text.contains("experience") || text.contains("level") -> "xp"
+        text.contains("tutorial") || text.contains("onboarding") || text.contains("guide") -> "tutorial"
+        text.contains("contract") || text.contains("job") || text.contains("duty") -> "contract"
+        text.contains("ritual") || text.contains("ceremony") -> "ritual"
+        text.contains("event") || text.contains("festival") -> "event"
+        text.contains("bounty") || text.contains("reward") -> "bounty"
+        text.contains("collect") || text.contains("item") -> "collection"
+        text.contains("talk") || text.contains("npc") -> "conversation"
+        text.contains("visit") || text.contains("place") || text.contains("region") -> "exploration"
+        else -> MappingIntentParser.slugOrFallback(payload, "quest")
+    }
 }
 
 fun handleHealth(sender: CommandSender): Boolean {

@@ -43,6 +43,7 @@ import ro.ainpc.gui.screens.ShopGui
 import java.util.EnumMap
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentMap
 
 class GuiService(private val plugin: AINPCPlugin) {
@@ -65,6 +66,9 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val questMapObjectiveKeys: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapMechanicFilters: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val questMapGlobalModes: ConcurrentMap<UUID, Boolean> = ConcurrentHashMap()
+    private val buildModeEnabled: ConcurrentMap<UUID, Boolean> = ConcurrentHashMap()
+    private val buildModeTarget: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val buildModeHistory: ConcurrentMap<UUID, ConcurrentLinkedDeque<BuildModeHistoryEntry>> = ConcurrentHashMap()
     private val questEditSelectedIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val creatorFormValues: ConcurrentMap<UUID, MutableMap<String, String>> = ConcurrentHashMap()
     private val textInputRequests: ConcurrentMap<UUID, TextInputRequest> = ConcurrentHashMap()
@@ -412,6 +416,9 @@ class GuiService(private val plugin: AINPCPlugin) {
         questMapObjectiveKeys.remove(playerId)
         questMapMechanicFilters.remove(playerId)
         questMapGlobalModes.remove(playerId)
+        buildModeEnabled.remove(playerId)
+        buildModeTarget.remove(playerId)
+        buildModeHistory.remove(playerId)
         questEditSelectedIds.remove(playerId)
         creatorFormValues.remove(playerId)
         textInputRequests.remove(playerId)
@@ -429,6 +436,73 @@ class GuiService(private val plugin: AINPCPlugin) {
         if (next) questMapGlobalModes[player.uniqueId] = true
         else questMapGlobalModes.remove(player.uniqueId)
         return next
+    }
+
+    fun isBuildModeEnabled(player: Player?): Boolean {
+        if (player == null) return false
+        return buildModeEnabled.getOrDefault(player.uniqueId, false)
+    }
+
+    fun setBuildModeEnabled(player: Player?, enabled: Boolean) {
+        if (player == null) return
+        if (enabled) buildModeEnabled[player.uniqueId] = true
+        else buildModeEnabled.remove(player.uniqueId)
+        recordBuildModeHistory(player.uniqueId, if (enabled) "enabled" else "disabled", null, null)
+    }
+
+    fun toggleBuildMode(player: Player?): Boolean {
+        if (player == null) return false
+        val next = !isBuildModeEnabled(player)
+        setBuildModeEnabled(player, next)
+        return next
+    }
+
+    fun getBuildModeTarget(player: Player?): String {
+        if (player == null) return ""
+        return buildModeTarget.getOrDefault(player.uniqueId, "")
+    }
+
+    fun setBuildModeTarget(player: Player?, target: String?) {
+        if (player == null) return
+        if (target.isNullOrBlank()) {
+            buildModeTarget.remove(player.uniqueId)
+            recordBuildModeHistory(player.uniqueId, "target_cleared", null, null)
+        } else {
+            val normalized = target.trim()
+            buildModeTarget[player.uniqueId] = normalized
+            val parts = normalized.split(":", limit = 2)
+            recordBuildModeHistory(
+                player.uniqueId,
+                "target_set",
+                parts.getOrNull(0),
+                parts.getOrNull(1)
+            )
+        }
+    }
+
+    fun getBuildModeHistory(player: Player?): List<BuildModeHistoryEntry> {
+        if (player == null) return emptyList()
+        return buildModeHistory[player.uniqueId]?.toList()?.reversed() ?: emptyList()
+    }
+
+    fun clearBuildModeHistory(player: Player?) {
+        if (player == null) return
+        buildModeHistory.remove(player.uniqueId)
+    }
+
+    private fun recordBuildModeHistory(playerId: UUID, action: String, style: String?, target: String?) {
+        val deque = buildModeHistory.computeIfAbsent(playerId) { ConcurrentLinkedDeque() }
+        deque.addLast(
+            BuildModeHistoryEntry(
+                timestampMillis = System.currentTimeMillis(),
+                action = action,
+                style = style?.ifBlank { null },
+                target = target?.ifBlank { null }
+            )
+        )
+        while (deque.size > 12) {
+            deque.pollFirst()
+        }
     }
 
     fun getQuestMapMechanicFilter(player: Player?): String {
@@ -665,6 +739,13 @@ class GuiService(private val plugin: AINPCPlugin) {
         fun returnSelector(): String = safeReturnSelector
         fun promptLines(): List<String> = safePromptLines.toList()
     }
+
+    data class BuildModeHistoryEntry(
+        val timestampMillis: Long,
+        val action: String,
+        val style: String?,
+        val target: String?
+    )
 
     private fun register(screen: GuiScreen) {
         screens[screen.key()] = screen

@@ -1,0 +1,14 @@
+#!/bin/sh
+# AINPC pre-commit hook - verificari rapide
+echo "=== AINPC Pre-commit ==="
+cd "$(dirname "$0")/.." || exit 1
+
+echo "[1/2] Compilare core..."
+./gradlew :ainpc-core-plugin:compileKotlin -q 2>/dev/null || { echo "FAIL: Erori compilare"; exit 1; }
+echo "  OK"
+
+echo "[2/2] Teste rapide..."
+./gradlew :ainpc-core-plugin:test --tests "ro.ainpc.gui.*" --tests "ro.ainpc.world.RegionIdentityProviderTest" -q 2>/dev/null || { echo "FAIL: Teste esuate"; exit 1; }
+echo "  OK"
+
+echo "=== Pre-commit pass ==="

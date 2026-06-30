@@ -171,6 +171,23 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                         }) completions.addAll(getOnlinePlayerNamesSafe(args[3]))
                 }
 
+                "build" -> {
+                    if (args.size == 2) {
+                        completions.addAll(filterStartsWith(listOf("mode", "help"), args[1]))
+                    } else if (args.size == 3 && "mode".equals(args[1], true)) {
+                        completions.addAll(
+                            filterStartsWith(
+                                listOf("on", "off", "sign", "wand", "point", "status", "inspect", "history", "export", "clear-history", "help"),
+                                args[2]
+                            )
+                        )
+                    } else if (args.size == 4 && "mode".equals(args[1], true)) {
+                        if (listOf("on", "enable", "sign", "wand", "point").any { it.equals(args[2], true) }) {
+                            completions.addAll(filterStartsWith(listOf("region", "place", "node"), args[3]))
+                        }
+                    }
+                }
+
                 "world" -> completions.addAll(completeWorldArgs(sender, args))
                 "patch" -> completions.addAll(completePatchArgs(args))
                 "wand" -> {
@@ -306,6 +323,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         when (worldMode) {
             "whereami" -> if (args.size == 3) completions.addAll(getOnlinePlayerNames(args[2]))
             "places" -> if (args.size == 3) completions.addAll(getRegionIds(args[2]))
+            "create" -> {
+                if (args.size == 3) completions.addAll(filterStartsWith(listOf("ai", "help"), args[2]))
+                else if (args.size == 4) completions.addAll(filterStartsWith(listOf("region", "place", "node"), args[3]))
+                else if (args.size == 5) completions.add("<descriere>")
+            }
             "outside" -> {
                 if (args.size == 3) completions.addAll(filterStartsWith(OUTSIDE_ACTIONS, args[2]))
                 else if (args.size == 4 && OUTSIDE_TYPE_ACTIONS.any { it.equals(args[2], true) }) {
@@ -561,6 +583,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     completions.addAll(getOnlinePlayerNames(questArgs[1]))
                 } else if (questMode == "gui") {
                     completions.addAll(filterStartsWith(GUI_QUEST_FILTERS, questArgs[1]))
+                } else if (questMode == "create") {
+                    completions.addAll(filterStartsWith(listOf("ai", "help"), questArgs[1]))
                 } else if (questMode == "authoring") {
                     if (questArgs.size == 2) {
                         completions.addAll(AuthoringCommandSupport.modeSuggestions(questArgs[1]))
@@ -599,6 +623,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 } else if (questMode == "log") {
                     completions.addAll(filterStartsWith(QUEST_LOG_FILTERS, questArgs[2]))
                     completions.addAll(getOnlinePlayerNames(questArgs[2]))
+                } else if (questMode == "create") {
+                    if ("ai".equals(questArgs[1], true)) completions.add("<questId|selector>")
                 } else if (questMode == "stored" || questMode == "state" || questMode == "progressions") {
                     completions.addAll(filterStartsWith(PROGRESSION_STORED_FILTERS, questArgs[2]))
                     completions.addAll(filterStartsWith(listOf("10", "20", "50"), questArgs[2]))
@@ -864,6 +890,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "tutorial",
             "ritual",
             "demo",
+            "build",
             "world",
             "patch",
             "wand",
@@ -1066,6 +1093,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val QUEST_MODES = listOf(
             "gui",
             "authoring",
+            "create",
             "log",
             "track",
             "current",
@@ -1225,6 +1253,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "places",
             "outside",
             "fixture",
+            "create",
             "region",
             "place",
             "node",

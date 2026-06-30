@@ -1,0 +1,329 @@
+# ========================================
+# Feature Pack: Festival & Sarbatori
+# Evenimente sezoniere, sarbatori, targuri si competitii
+# ========================================
+
+id: festival
+name: "Festival & Sarbatori"
+description: "Evenimente sezoniere, sarbatori ale satului, targuri si competitii intre localnici."
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["quest", "traits", "dialogues", "events", "story"]
+  dependencies: ["medieval"]
+
+# ==================== PROFESII NOI ====================
+professions:
+  bannerman:
+    name: "Strigator"
+    description: "Anunta sarbatorile si evenimentele importante in sat."
+    social_role: "entertainer"
+    dialogue_hints:
+      - "Strigatorul satului"
+      - "Vesti bune"
+
+  cook:
+    name: "Bucatar"
+    description: "Pregateste mancarea pentru sarbatori si petreceri."
+    social_role: "provider"
+    dialogue_hints:
+      - "Bucatarul satului"
+      - "Mancare buna"
+
+  musician:
+    name: "Muzicant"
+    description: "Canta la instrumente si anima petrecerile."
+    social_role: "entertainer"
+    dialogue_hints:
+      - "Muzicantul satului"
+      - "Artist"
+
+# ==================== SCENARII ====================
+scenarios:
+
+  # ----------------------------------------
+  # FS01 - Pregatirea sarbatorii
+  # Ajuta la pregatirea sarbatorii anuale a satului
+  # ----------------------------------------
+  FS01_festival_prep:
+    name: "Pregatirea sarbatorii"
+    description: "Sarbatoarea anuala a satului se apropie. Primarul are nevoie de ajutor pentru pregatiri."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "FS01"
+      giver: "mayor"
+      kind: "side"
+      category: "seasonal"
+      repeatable: true
+      cooldown_seconds: 604800
+      prerequisites: ["TD01"]
+      dialogues:
+        available:
+          - "Sarbatoarea anuala a satului bate la usa!"
+          - "Ajuta-ma sa strang 5 porumb pentru masa comuna."
+        active:
+          - "Mai am nevoie de %amount% porumb."
+        completed:
+          - "Minunat! Satul va avea o masa bogata anul acesta."
+      objectives:
+        collect_corn:
+          type: "collect_item"
+          item: "WHEAT"
+          amount: 5
+          description: "Strangeti 5 grau pentru painea de sarbatoare"
+      rewards:
+        reward_food:
+          type: "item"
+          item: "BREAD"
+          amount: 5
+          description: "5 paini proaspete"
+        reward_reputation:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 5
+          description: "+5 reputatie in sat"
+
+  # ----------------------------------------
+  # FS02 - Muzica pentru petrecere
+  # Adu un muzicant pentru petrecere
+  # ----------------------------------------
+  FS02_festival_music:
+    name: "Muzica pentru petrecere"
+    description: "Petrecerea are nevoie de un muzicant care sa cante la luta."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "FS02"
+      giver: "mayor"
+      kind: "side"
+      category: "seasonal"
+      repeatable: false
+      prerequisites: ["TD01"]
+      dialogues:
+        available:
+          - "Nicio petrecere fara muzica! Vrei sa aduci un muzicant?"
+          - "Du-te si vorbeste cu batranul Marcu din padure."
+        active:
+          - "Marcu locuieste in padurea de la rasarit."
+          - "Poarta-i luta cand vii inapoi."
+        completed:
+          - "Acum da, asta e petrecere! Muzica lui Marcu e vestita."
+      objectives:
+        find_musician:
+          type: "talk_to_npc"
+          item: "npc:old_man"
+          amount: 1
+          description: "Vorbeste cu batranul Marcu"
+        bring_lute:
+          type: "deliver_to_npc"
+          item: "NOTE_BLOCK"
+          amount: 1
+          description: "Adu un note block la primarie"
+      rewards:
+        reward_story:
+          type: "record_story_event"
+          item: "festival_music_arranged"
+          amount: 1
+          description: "Muzica pregatita pentru sarbatoare"
+        reward_xp:
+          type: "experience"
+          amount: 75
+          description: "75 XP"
+
+  # ----------------------------------------
+  # FS03 - Concursul de aruncat
+  # Concurs de aruncat cu sulita
+  # ----------------------------------------
+  FS03_festival_contest:
+    name: "Concursul de aruncat"
+    description: "La targul satului are loc concursul de aruncat cu sulita."
+    base_type: "QUEST"
+    mechanic: "side_quests"
+    quest:
+      code: "FS03"
+      giver: "guard"
+      kind: "side"
+      category: "seasonal"
+      repeatable: true
+      cooldown_seconds: 86400
+      prerequisites: ["TD01"]
+      dialogues:
+        available:
+          - "Concursul de aruncat incepe! Esti gata sa participi?"
+          - "Arata-ne ce poti! Fa rost de niste sulite si loveste tintele."
+        active:
+          - "Tintele sunt langa crasma. Loveste-le cu sulita!"
+        completed:
+          - "Felicitari! Ai dovedit ca esti cel mai bun aruncator."
+      objectives:
+        hit_targets:
+          type: "kill_mob"
+          item: "SKELETON"
+          amount: 5
+          description: "Loveste tintele (scheleti)"
+      rewards:
+        reward_gold:
+          type: "economy:money"
+          item: "gold_ingot"
+          amount: 5
+          description: "5 lingouri de aur - premiul concursului"
+        reward_reputation:
+          type: "reputation:region"
+          item: "demo_sat"
+          amount: 10
+          description: "+10 reputatie - esti campionul satului"
+
+  # ----------------------------------------
+  # FE01 - Focul de tabara
+  # Eveniment social sezonier: seara de povesti
+  # ----------------------------------------
+  FE01_campfire:
+    name: "Focul de tabara"
+    description: "O seara de povesti si cantece in jurul focului de tabara."
+    base_type: "WORLD_EVENT"
+    mechanic: "village_events"
+    quest:
+      code: "FE01"
+      giver: "innkeeper"
+      kind: "event"
+      category: "seasonal"
+      repeatable: true
+      cooldown_seconds: 432000
+      dialogues:
+        available:
+          - "Deseara facem foc de tabara in piata. Vii si tu?"
+          - "Adu lemne pentru foc si o poveste de spus."
+        active:
+          - "Focul arde, dar mai avem nevoie de povesti si voie buna."
+        completed:
+          - "Noaptea a fost magica. Povestile ne-au unit si mai mult."
+      objectives:
+        gather_wood:
+          type: "collect_item"
+          item: "OAK_LOG"
+          amount: 8
+          description: "Aduna 8 busteni pentru foc"
+      rewards:
+        reward_story_event:
+          type: "record_story_event"
+          item: "campfire_stories"
+          amount: 1
+          description: "Povestile serii"
+        reward_xp:
+          type: "experience"
+          amount: 50
+          description: "50 XP amintiri frumoase"
+
+  # ----------------------------------------
+  # FB01 - Vanatoarea de comori
+  # Bounty de festival: gaseste comoara ascunsa
+  # ----------------------------------------
+  FB01_treasure_hunt:
+    name: "Vanatoarea de comori"
+    description: "O comoara veche ar fi ascunsa undeva in zona satului. Primarul pune recompensa."
+    base_type: "BOUNTY"
+    mechanic: "local_bounties"
+    quest:
+      code: "FB01"
+      giver: "mayor"
+      kind: "bounty"
+      category: "seasonal"
+      repeatable: false
+      dialogues:
+        available:
+          - "Se spune ca o comoara veche e ascunsa in peștera de langa sat."
+          - "Adu-mi 3 diamante si vei primi o rasplata pe masura."
+        active:
+          - "Comoara e acolo. Trebuie doar s-o gasesti."
+        completed:
+          - "Ai găsit comoara! Acest inel ti se cuvine."
+      objectives:
+        find_treasure:
+          type: "collect_item"
+          item: "DIAMOND"
+          amount: 3
+          description: "Gaseste 3 diamante"
+      rewards:
+        reward_ring:
+          type: "item"
+          item: "EMERALD"
+          amount: 10
+          description: "10 smaralde - comoara gasita"
+        reward_story:
+          type: "set_story_state"
+          item: "treasure_found"
+          amount: 1
+          description: "Comoara a fost descoperita"
+
+# ==================== TRASATURI NOI ====================
+traits:
+  festive:
+    name: "Petrecaret"
+    description: "Iubeste sarbatorile si petrecerile."
+    modifiers:
+      action_scores:
+        CELEBRATE: 35
+        DANCE: 25
+        EAT: 20
+        SOCIALIZE: 20
+        GOSSIP: 15
+        WORK: -20
+      emotions:
+        happiness: 0.3
+
+  storyteller:
+    name: "Povestitor"
+    description: "Stie o multime de legende si povesti vechi."
+    modifiers:
+      action_scores:
+        TALK: 25
+        TEACH: 20
+        CALM_DOWN: 15
+        GOSSIP: 15
+        EXPLORE: -5
+      emotions:
+        happiness: 0.15
+        trust: 0.1
+
+# ==================== DIALOGURI SEZONIERE ====================
+dialogues:
+  festival_greeting:
+    - "Bine ai venit la sarbatoarea satului!"
+    - "O zi minunata pentru petrecere!"
+    - "Haide, alatura-te distractiei!"
+  festival_evening:
+    - "Seara asta promite sa fie de neuitat."
+    - "Muzica si dans pana dimineata!"
+    - "Focul de tabara e gata. Vii langa foc?"
+  seasonal_spring:
+    - "Primavara aduce viata noua in sat."
+    - "Florile infloresc si pasarile canta."
+    - "E timpul pentru semanat si sarbatorile primaverii."
+  seasonal_summer:
+    - "Soarele arzator de vara aduce recolte bogate."
+    - "Zilele sunt lungi si noptile sunt calduroase."
+    - "E sezonul targurilor si al petrecerilor in aer liber."
+  seasonal_autumn:
+    - "Frunzele aurii cad si aerul e racoros."
+    - "E timpul recoltei si al pregatirilor pentru iarna."
+    - "Vin serile lungi langa foc."
+  seasonal_winter:
+    - "Zapada a acoperit totul. E vremea colindelor."
+    - "Stam in casa cu cei dragi si povestim."
+    - "Iarna aduce liniste si sarbatori de iarna."
+  weather_snow:
+    - "Ninsoarea asta e cea mai frumoasa de ani de zile!"
+    - "Hai sa facem un om de zapada!"
+
+# ==================== STORY DEFAULTS ====================
+story_defaults:
+  settlement:
+    default_state: "festive"
+    pool:
+      - "festive"
+      - "celebration"
+      - "preparation"
+      - "contest"
+      - "feast"
