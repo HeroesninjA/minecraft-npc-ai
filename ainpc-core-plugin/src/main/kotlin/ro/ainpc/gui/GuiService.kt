@@ -107,6 +107,56 @@ class GuiService(private val plugin: AINPCPlugin) {
         else map[key] = value
     }
 
+    fun clearCreatorFormValues(player: Player?) {
+        if (player == null) return
+        creatorFormValues.remove(player.uniqueId)
+    }
+
+    fun clearQuestCreatorObjectiveDraft(player: Player?) {
+        clearCreatorFields(
+            player,
+            "quest_obj_type",
+            "quest_obj_target",
+            "quest_obj_count",
+            "quest_obj_dialog"
+        )
+    }
+
+    fun clearQuestCreatorRewardDraft(player: Player?) {
+        clearCreatorFields(
+            player,
+            "quest_reward_type",
+            "quest_reward_value",
+            "quest_reward_count",
+            "quest_reward_event_key",
+            "quest_reward_event_scope",
+            "quest_reward_event_target",
+            "quest_reward_event_title",
+            "quest_reward_event_payload"
+        )
+    }
+
+    fun clearQuestCreatorDialogDraft(player: Player?) {
+        clearCreatorFields(
+            player,
+            "quest_dialog_type",
+            "quest_dialog_speaker",
+            "quest_dialog_text",
+            "quest_system_msg"
+        )
+    }
+
+    private fun clearCreatorFields(player: Player?, vararg keys: String) {
+        if (player == null) return
+        val map = creatorFormValues[player.uniqueId] ?: return
+        for (key in keys) {
+            map.remove(key)
+        }
+        if (map.isEmpty()) {
+            creatorFormValues.remove(player.uniqueId)
+        }
+    }
+
     fun openTextInput(
         player: Player?,
         title: String?,

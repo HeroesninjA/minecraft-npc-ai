@@ -2814,22 +2814,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         return updatedProgress
     }
     
-    private fun startScenario(p0: ScenarioTemplate, p1: List<AINPC>, p2: List<Player>) {
-        val scenarioId = UUID.randomUUID()
-        val scenario = ActiveScenario(scenarioId, p0)
-        scenario.currentPhase = p0.phases.firstOrNull().orEmpty()
-        scenario.anchorLocation = p2.firstOrNull()?.location?.clone() ?: p1.firstOrNull()?.location?.clone()
-        scenario.questActorTriggers.putAll(p0.questActorTriggers.mapValues { entry -> LinkedHashSet(entry.value) })
-        activeScenarios[scenarioId] = scenario
-        val anchorLocation = scenario.anchorLocation
-        if (anchorLocation != null) {
-            applyScenarioPhaseActors(scenarioId, scenario.currentPhase, anchorLocation)
-        }
-        plugin.logger.info(
-            "Scenariu pornit: " + scenario.displayName +
-                " (ID: " + scenarioId.toString().substring(0, 8) + ", actori: " + scenario.actors.size + ")"
-        )
-    }
+    
     
 
     fun spawnScenarioActor(scenarioId: UUID, actorId: String, location: Location): AINPC? {
@@ -2964,11 +2949,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun applyScenarioPhaseActors(scenarioId: UUID, phase: String, anchorLocation: Location) {
-        val activeScenario = activeScenarios[scenarioId] ?: return
-        activeScenario.anchorLocation = anchorLocation.clone()
-        refreshScenarioActorsForPhase(scenarioId, phase)
-    }
+    
 
     private fun scheduleScenarioActorExpiration(
         scenarioId: UUID,

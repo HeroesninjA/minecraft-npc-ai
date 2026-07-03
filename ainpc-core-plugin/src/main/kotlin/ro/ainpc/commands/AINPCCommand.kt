@@ -184,6 +184,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "authoring" -> handleAuthoring(sender, args)
             "version" -> handleVersion(sender)
             "quest" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleQuest(sender, args)
+            "reset-objective", "resetobjective" -> handleQuestResetObjective(sender, args, this::requirePlayerSender)
+            "reset-reward", "resetreward" -> handleQuestResetReward(sender, args, this::requirePlayerSender)
+            "reset-dialog", "resetdialog" -> handleQuestResetDialog(sender, args, this::requirePlayerSender)
+            "reset-draft", "resetdraft" -> handleQuestResetDraft(sender, args, this::requirePlayerSender)
             "progression", "progress" -> ensureFeatureEnabled(
                 sender,
                 "features.progression",
@@ -703,6 +707,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "log" -> handleQuestLog(sender, args)
             "track", "current" -> handleQuestTrack(sender, args)
             "nearest" -> handleNearestQuest(sender, args)
+            "reset-objective", "resetobjective" -> handleQuestResetObjective(sender, args, this::requirePlayerSender)
+            "reset-reward", "resetreward" -> handleQuestResetReward(sender, args, this::requirePlayerSender)
+            "reset-dialog", "resetdialog" -> handleQuestResetDialog(sender, args, this::requirePlayerSender)
+            "reset-draft", "resetdraft" -> handleQuestResetDraft(sender, args, this::requirePlayerSender)
             "accept", "yes", "y", "da", "ok", "confirm" -> handleAcceptQuest(sender, args)
             "decline", "deny", "reject", "no", "n", "nu", "refuz" -> handleDeclineQuest(sender, args)
             "abandon" -> handleAbandonQuest(sender, args)
@@ -710,6 +718,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "progress", "progres" -> handleQuestProgress(sender, args)
             "debug" -> handleQuestDebug(sender, args)
             "reset" -> handleResetQuest(sender, args)
+            "reset-draft", "resetdraft" -> handleQuestResetDraft(sender, args, this::requirePlayerSender)
             "spawn" -> handleQuestSpawn(sender, args)
             "snapshot" -> handleQuestSnapshot(sender, args)
             "quick" -> handleQuickQuest(sender)
@@ -719,6 +728,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "backup" -> handleQuestBackup(sender, args)
             "reindex" -> handleQuestReindex(sender)
             "complete" -> handleCompleteQuest(sender, args)
+            "validate" -> handleQuestValidate(sender, args, this::requirePlayerSender)
+            "preview" -> handleQuestPreview(sender, args, this::requirePlayerSender)
             "summary" -> handleQuestSummary(sender, args)
             "metrics" -> handleQuestMetrics(sender, args)
             "rewards" -> handleQuestRewards(sender, args)

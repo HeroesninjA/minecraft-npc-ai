@@ -39,6 +39,8 @@ class AINPCCommandRoutingTest {
         val source = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt").readText()
 
         assertTrue(source.contains("warnings=&f\${scenario.validationWarnings.size}"))
+        assertTrue(source.contains("\"validate\" -> handleQuestValidate"))
+        assertTrue(source.contains("\"preview\" -> handleQuestPreview"))
     }
 
     @Test

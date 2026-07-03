@@ -26,10 +26,18 @@ class QuestCreatorDefinitionsGui : GuiScreen {
                     it.mechanicId().contains(filter, ignoreCase = true) ||
                     it.kind().contains(filter, ignoreCase = true)
             }
+        val pageSize = 16
+        val pageCount = maxOf(1, (defs.size + pageSize - 1) / pageSize)
+        val requestedPage = context.service().getCreatorFormValue(context.player(), "creator_defs_page").toIntOrNull() ?: 0
+        val currentPage = minOf(maxOf(0, requestedPage), pageCount - 1)
+        val pageStart = currentPage * pageSize
+        val visibleDefs = defs.drop(pageStart).take(pageSize)
 
         context.item(4, GuiItemFactory.item(Material.BOOKSHELF, "&6Definitii Progresie", listOf(
             "&7Total: &f${defs.size}",
-            "&7Filtru: &f${if (filter.isBlank()) "-" else filter}"
+            "&7Filtru: &f${if (filter.isBlank()) "-" else filter}",
+            "&7Pagina: &f${currentPage + 1}&7/&f$pageCount",
+            "&7Afisate: &f${visibleDefs.size}"
         )))
 
         context.button(26, GuiButton.enabled(
@@ -51,12 +59,13 @@ class QuestCreatorDefinitionsGui : GuiScreen {
             GuiItemFactory.item(Material.BARRIER, "&cCurata filtru", listOf("&7Sterge filtrul curent.", "&7Revine la lista completa.")),
             GuiAction { click ->
                 context.service().setCreatorFormValue(click.player(), "creator_defs_filter", null)
+                context.service().setCreatorFormValue(click.player(), "creator_defs_page", null)
                 click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS)
             }
         ))
 
         var slot = 9
-        for (def in defs.take(36)) {
+        for (def in visibleDefs) {
             val cmd = "/ainpc progression definitions ${def.progressionId()}"
             context.button(slot++, GuiButton.enabled(
                 GuiItemFactory.item(Material.PAPER, "&f${def.progressionId()}", listOf(
@@ -66,6 +75,23 @@ class QuestCreatorDefinitionsGui : GuiScreen {
                     "&7Click: detalii in chat"
                 )),
                 GuiAction { click -> click.service().runCommand(click.player(), cmd) }
+            ))
+        }
+
+        if (pageCount > 1) {
+            context.button(46, GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&eAnterioara", listOf("&7Pagina &f${currentPage + 1}&7/&f$pageCount")),
+                GuiAction { click ->
+                    context.service().setCreatorFormValue(click.player(), "creator_defs_page", (currentPage - 1).toString())
+                    click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS)
+                }
+            ))
+            context.button(52, GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&eUrmatoarea", listOf("&7Pagina &f${currentPage + 1}&7/&f$pageCount")),
+                GuiAction { click ->
+                    context.service().setCreatorFormValue(click.player(), "creator_defs_page", (currentPage + 1).toString())
+                    click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS)
+                }
             ))
         }
 

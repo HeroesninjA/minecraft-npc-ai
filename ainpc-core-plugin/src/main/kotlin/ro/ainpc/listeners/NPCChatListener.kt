@@ -1,6 +1,7 @@
 @file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.listeners
 
+import com.google.gson.JsonParser
 import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.entity.Player
@@ -241,6 +242,55 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         normalized: String
     ): Boolean {
         return when (request.formKey()) {
+            "creator_defs_filter" -> {
+                val filter = if (normalized.equals("clear", ignoreCase = true)) null else normalized
+                plugin.guiService.setCreatorFormValue(player, request.formKey(), filter)
+                plugin.guiService.setCreatorFormValue(player, "creator_defs_page", null)
+                plugin.guiService.open(player, ro.ainpc.gui.GuiKey.CREATOR_QUEST_DEFS)
+                true
+            }
+            "quest_edit_query" -> {
+                val query = if (normalized.equals("clear", ignoreCase = true)) null else normalized
+                plugin.guiService.setCreatorFormValue(player, request.formKey(), query)
+                plugin.guiService.setCreatorFormValue(player, "quest_edit_page", null)
+                plugin.guiService.open(player, ro.ainpc.gui.GuiKey.QUEST_EDIT)
+                true
+            }
+            "quest_obj_type" -> {
+                val previousType = plugin.guiService.getCreatorFormValue(player, "quest_obj_type")
+                val previousTarget = plugin.guiService.getCreatorFormValue(player, "quest_obj_target")
+                plugin.guiService.setCreatorFormValue(player, request.formKey(), normalized)
+                if (shouldResetObjectiveTarget(previousType, previousTarget)) {
+                    plugin.guiService.setCreatorFormValue(player, "quest_obj_target", defaultObjectiveTarget(normalized))
+                }
+                plugin.guiService.open(player, ro.ainpc.gui.GuiKey.QUEST_CREATE)
+                true
+            }
+            "quest_reward_type" -> {
+                plugin.guiService.setCreatorFormValue(player, request.formKey(), normalized)
+                val usesStoryEvent = normalized.equals("story_event", ignoreCase = true) ||
+                    normalized.equals("record_story_event", ignoreCase = true)
+                if (usesStoryEvent) {
+                    if (plugin.guiService.getCreatorFormValue(player, "quest_reward_event_scope").isBlank()) {
+                        plugin.guiService.setCreatorFormValue(player, "quest_reward_event_scope", "region")
+                    }
+                    if (plugin.guiService.getCreatorFormValue(player, "quest_reward_event_target").isBlank()) {
+                        plugin.guiService.setCreatorFormValue(player, "quest_reward_event_target", "current_region")
+                    }
+                    if (plugin.guiService.getCreatorFormValue(player, "quest_reward_event_title").isBlank()) {
+                        val questName = plugin.guiService.getCreatorFormValue(player, "quest_name").ifBlank { "Quest" }
+                        plugin.guiService.setCreatorFormValue(player, "quest_reward_event_title", "$questName event")
+                    }
+                } else {
+                    plugin.guiService.setCreatorFormValue(player, "quest_reward_event_scope", null)
+                    plugin.guiService.setCreatorFormValue(player, "quest_reward_event_target", null)
+                    plugin.guiService.setCreatorFormValue(player, "quest_reward_event_key", null)
+                    plugin.guiService.setCreatorFormValue(player, "quest_reward_event_title", null)
+                    plugin.guiService.setCreatorFormValue(player, "quest_reward_event_payload", null)
+                }
+                plugin.guiService.open(player, ro.ainpc.gui.GuiKey.QUEST_CREATE)
+                true
+            }
             "creator_quest_log_filter" -> {
                 val filter = if (normalized.equals("clear", ignoreCase = true)) "all" else normalized
                 plugin.guiService.openQuestLog(player, filter)
@@ -283,6 +333,31 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
     }
 
+    private fun shouldResetObjectiveTarget(previousType: String, previousTarget: String): Boolean {
+        if (previousTarget.isBlank()) return true
+        val previousDefaults = objectiveTargetOptions(previousType)
+        return previousTarget == defaultObjectiveTarget(previousType) || previousTarget in previousDefaults
+    }
+
+    private fun defaultObjectiveTarget(objectiveType: String): String {
+        return objectiveTargetOptions(objectiveType).firstOrNull()?.ifBlank { "tag:locatie" } ?: "tag:locatie"
+    }
+
+    private fun objectiveTargetOptions(objectiveType: String): List<String> {
+        return when (objectiveType.lowercase()) {
+            "talk_to_npc", "deliver_to_npc" -> listOf("npc:nearest", "npc:giver", "profession:garda", "profession:preot", "uuid:<npc_uuid>")
+            "visit_place" -> listOf("place:nearest", "place:castel", "place:curte_castel", "tag:locatie", "tag:poi")
+            "visit_region" -> listOf("region:nearest", "region:castel", "tag:regiune", "tag:zone")
+            "inspect_node" -> listOf("node:nearest", "node:cufar", "node:altar", "place:castel:curte_castel", "tag:interior")
+            "collect_item" -> listOf("item:IRON_INGOT", "item:EMERALD", "item:BOOK", "tag:resource")
+            "kill_mob" -> listOf("mob:ZOMBIE", "mob:SKELETON", "mob:SPIDER", "tag:undead")
+            "place_block" -> listOf("block:OAK_PLANKS", "block:STONE", "tag:build")
+            "break_block" -> listOf("block:COBBLESTONE", "block:DEEPSLATE", "tag:mine")
+            "craft_item" -> listOf("item:TORCH", "item:IRON_SWORD", "item:BOOK", "tag:craft")
+            else -> listOf("tag:locatie", "place:sample", "node:sample", "npc:nearest")
+        }
+    }
+
     private fun isValidGuiTextInput(formKey: String, normalized: String): Boolean {
         return when (formKey) {
             "quest_obj_count", "quest_reward_count" -> normalized.toIntOrNull() != null
@@ -298,6 +373,9 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             "quest_dialog_type",
             "quest_dialog_speaker",
             "quest_reward_value" -> normalized.isNotBlank()
+            "quest_reward_event_payload" -> normalized.isBlank() || runCatching {
+                JsonParser.parseString(normalized).asJsonObject
+            }.isSuccess
             else -> true
         }
     }

@@ -3,6 +3,7 @@
 
 package ro.ainpc.commands
 
+import com.google.gson.JsonParser
 import org.bukkit.Location
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -40,6 +41,183 @@ fun handleQuestGui(
     return true
 }
 
+fun handleQuestResetDraft(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 2) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reset-draft")
+        return true
+    }
+
+    val player = requirePlayerSender(sender) ?: return true
+    ainpcCommandQuestPlugin.guiService.clearCreatorFormValues(player)
+    ainpcCommandQuestPlugin.guiService.open(player, GuiKey.QUEST_CREATE)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aDraftul questului a fost resetat.")
+    return true
+}
+
+fun handleQuestResetObjective(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 2) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reset-objective")
+        return true
+    }
+
+    val player = requirePlayerSender(sender) ?: return true
+    ainpcCommandQuestPlugin.guiService.clearQuestCreatorObjectiveDraft(player)
+    ainpcCommandQuestPlugin.guiService.open(player, GuiKey.QUEST_CREATE)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aObiectivul questului a fost resetat.")
+    return true
+}
+
+fun handleQuestResetReward(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 2) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reset-reward")
+        return true
+    }
+
+    val player = requirePlayerSender(sender) ?: return true
+    ainpcCommandQuestPlugin.guiService.clearQuestCreatorRewardDraft(player)
+    ainpcCommandQuestPlugin.guiService.open(player, GuiKey.QUEST_CREATE)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aRecompensa questului a fost resetata.")
+    return true
+}
+
+fun handleQuestResetDialog(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 2) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reset-dialog")
+        return true
+    }
+
+    val player = requirePlayerSender(sender) ?: return true
+    ainpcCommandQuestPlugin.guiService.clearQuestCreatorDialogDraft(player)
+    ainpcCommandQuestPlugin.guiService.open(player, GuiKey.QUEST_CREATE)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aDialogul questului a fost resetat.")
+    return true
+}
+
+fun handleQuestPreview(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 3) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest preview [jucator]")
+        return true
+    }
+
+    val player = resolveQuestPreviewTarget(sender, args, requirePlayerSender) ?: return true
+    val preview = buildQuestDraftPreviewContext(player)
+    sendQuestDraftPreviewSummary(sender, preview, "&6=== Quest Draft Preview ===", includeJson = true)
+    return true
+}
+
+fun handleQuestValidate(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 3) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest validate [jucator]")
+        return true
+    }
+
+    val player = resolveQuestPreviewTarget(sender, args, requirePlayerSender) ?: return true
+    val preview = buildQuestDraftPreviewContext(player)
+    sendQuestDraftPreviewSummary(sender, preview, "&6=== Quest Draft Validation ===", includeJson = false)
+    return true
+}
+
+private fun resolveQuestPreviewTarget(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Player? {
+    return if (args.size == 3) {
+        val targetPlayer = findOnlinePlayer(args[2])
+        if (targetPlayer == null) {
+            ainpcCommandQuestPlugin.messageUtils.send(sender, "&cJucatorul &e${args[2]} &cnu este online.")
+            null
+        } else if (sender !is Player || sender.uniqueId != targetPlayer.uniqueId) {
+            if (!sender.hasPermission("ainpc.admin")) {
+                ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+                null
+            } else {
+                targetPlayer
+            }
+        } else {
+            targetPlayer
+        }
+    } else {
+        requirePlayerSender(sender)
+    }
+}
+
+private fun sendQuestDraftPreviewSummary(
+    sender: CommandSender,
+    preview: QuestDraftPreviewContext,
+    header: String,
+    includeJson: Boolean,
+) {
+    val stageNext = preview.stageNext.ifBlank { "(auto)" }
+    val missingText = preview.missing.joinToString(", ")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, header)
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Player: &f${preview.playerName}")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Quest: &f${preview.questId} &7- &f${preview.questName}")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Mecanica: &f${preview.mechanicId} &7| Base: &f${preview.baseType}")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Obiectiv: &f${preview.objectiveType} &7-> &f${preview.objectiveTarget} &7x${preview.objectiveCount}")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Recompensa: &f${preview.rewardType} &7-> &f${preview.rewardValue} &7x${preview.rewardCount}")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Stage: &f${preview.stageId} &7/ &f${preview.stageName} &7| &f${preview.stageMode} &7-> &f$stageNext")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&7Dialog: &f${preview.dialogType} &7/ &f${preview.dialogSpeaker}")
+    if (preview.missing.isEmpty()) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&aStatus: completabil")
+    } else {
+        ainpcCommandQuestPlugin.messageUtils.send(sender, "&eLipsesc: &f$missingText")
+    }
+    if (includeJson) {
+        for (line in preview.json.lineSequence()) {
+            ainpcCommandQuestPlugin.messageUtils.send(sender, line)
+        }
+    }
+}
+
 fun handleQuestLog(
     sender: CommandSender,
     args: Array<String>,
@@ -71,6 +249,190 @@ fun handleQuestLog(
     }
     return true
 }
+
+private fun buildQuestDraftPreviewContext(player: Player): QuestDraftPreviewContext {
+    val service = ainpcCommandQuestPlugin.guiService
+
+    val qId = service.getCreatorFormValue(player, "quest_id").ifBlank { "Q99" }
+    val qName = service.getCreatorFormValue(player, "quest_name").ifBlank { "Quest Nou" }
+    val qDesc = service.getCreatorFormValue(player, "quest_desc").ifBlank { "Descrie questul aici." }
+    val qMech = service.getCreatorFormValue(player, "quest_mechanic").ifBlank { "side_quests" }
+    val qBase = service.getCreatorFormValue(player, "quest_base").ifBlank { "QUEST" }
+    val qNpc = service.getCreatorFormValue(player, "quest_npc").ifBlank { "<neselectat>" }
+    val qPlace = service.getCreatorFormValue(player, "quest_npc_place").ifBlank { "" }
+
+    val objType = service.getCreatorFormValue(player, "quest_obj_type").ifBlank { "visit_place" }
+    val objTarget = service.getCreatorFormValue(player, "quest_obj_target").ifBlank { defaultObjectiveTarget(objType) }
+    val objCount = service.getCreatorFormValue(player, "quest_obj_count").ifBlank { "1" }
+    val objDialog = service.getCreatorFormValue(player, "quest_obj_dialog").ifBlank { "" }
+
+    val rwType = service.getCreatorFormValue(player, "quest_reward_type").ifBlank { "item" }
+    val rwValue = service.getCreatorFormValue(player, "quest_reward_value").ifBlank { "EMERALD" }
+    val rwCount = service.getCreatorFormValue(player, "quest_reward_count").ifBlank { "1" }
+    val rwEventKey = service.getCreatorFormValue(player, "quest_reward_event_key").ifBlank { "" }
+    val rwEventScope = service.getCreatorFormValue(player, "quest_reward_event_scope").ifBlank { "region" }
+    val rwEventTarget = service.getCreatorFormValue(player, "quest_reward_event_target").ifBlank { "current_region" }
+    val rwEventTitle = service.getCreatorFormValue(player, "quest_reward_event_title").ifBlank { "" }
+    val rwEventPayload = service.getCreatorFormValue(player, "quest_reward_event_payload").ifBlank { "" }
+
+    val stageIdx = (service.getCreatorFormValue(player, "quest_stage_idx").ifBlank { "1" }.toIntOrNull() ?: 1).coerceAtLeast(1)
+    val stageCount = (service.getCreatorFormValue(player, "quest_stage_count").ifBlank { "1" }.toIntOrNull() ?: 1).coerceAtLeast(1).coerceIn(1, 10)
+    val stageId = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_id").ifBlank {
+        when (stageIdx) { 1 -> "ACCEPTANCE"; 2 -> "EXECUTION"; else -> "S$stageIdx" }
+    }
+    val stageName = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_name").ifBlank {
+        when (stageIdx) { 1 -> "Acceptare"; 2 -> "Executie"; else -> "Stage $stageIdx" }
+    }
+    val stageMode = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_mode").ifBlank { "all" }
+    val stageNext = service.getCreatorFormValue(player, "quest_stage_${stageIdx}_next").ifBlank { "" }
+
+    val diagType = service.getCreatorFormValue(player, "quest_dialog_type").ifBlank { "npc_greeting" }
+    val diagSpeaker = service.getCreatorFormValue(player, "quest_dialog_speaker").ifBlank { "npc" }
+    val diagText = service.getCreatorFormValue(player, "quest_dialog_text").ifBlank { "Salut!" }
+    val sysMsg = service.getCreatorFormValue(player, "quest_system_msg").ifBlank { "" }
+
+    val missing = buildList {
+        if (qId.isBlank()) add("Quest ID")
+        if (qName.isBlank()) add("Quest name")
+        if (qDesc.isBlank()) add("Description")
+        if (qMech.isBlank()) add("Mechanic")
+        if (qBase.isBlank()) add("Base type")
+        if (objType.isBlank()) add("Objective type")
+        if (objTarget.isBlank()) add("Objective target")
+        if (objCount.isBlank()) add("Objective count")
+        if (rwType.isBlank()) add("Reward type")
+        if (rwValue.isBlank()) add("Reward value")
+        if (rwCount.isBlank()) add("Reward count")
+        if ((rwType == "story_event" || rwType == "record_story_event") && rwEventKey.isBlank()) add("Event key")
+        if ((rwType == "story_event" || rwType == "record_story_event") && rwEventScope.isBlank()) add("Event scope")
+        if ((rwType == "story_event" || rwType == "record_story_event") && rwEventTarget.isBlank()) add("Event target")
+        if ((rwType == "story_event" || rwType == "record_story_event") && rwEventTitle.isBlank()) add("Event title")
+        if (stageId.isBlank()) add("Stage ID")
+        if (stageName.isBlank()) add("Stage nume")
+        if (stageMode.isBlank()) add("Stage mode")
+        if (diagType.isBlank()) add("Tip dialog")
+        if (diagSpeaker.isBlank()) add("Vorbitor")
+        if (diagText.isBlank()) add("Text dialog")
+    }
+
+    val exporter = QuestDraftExporter()
+    val params = QuestDraftExporter.QuestDraftParams(
+            draftId = qId,
+            title = qName,
+            description = qDesc,
+            mechanicId = qMech,
+            baseType = qBase,
+            npcGiver = qNpc,
+            npcGiverPlace = qPlace,
+            objectives = listOf(
+                QuestDraftExporter.ObjectiveDef(
+                    type = objType,
+                    target = objTarget,
+                    count = objCount.toIntOrNull() ?: 1,
+                    dialog = objDialog
+                )
+            ),
+            stages = (1..stageCount).map { i ->
+                QuestDraftExporter.StageDef(
+                    id = service.getCreatorFormValue(player, "quest_stage_${i}_id").ifBlank { "S$i" },
+                    name = service.getCreatorFormValue(player, "quest_stage_${i}_name").ifBlank { "Stage $i" },
+                    completionMode = service.getCreatorFormValue(player, "quest_stage_${i}_mode").ifBlank { "all" },
+                    nextStage = service.getCreatorFormValue(player, "quest_stage_${i}_next").ifBlank { "" }
+                )
+            },
+            rewards = listOf(
+                QuestDraftExporter.RewardDef(
+                    type = rwType,
+                    value = rwValue,
+                    count = rwCount.toIntOrNull() ?: 1,
+                    eventScope = rwEventScope,
+                    eventTarget = rwEventTarget,
+                    eventType = "quest_completed",
+                    eventKey = rwEventKey,
+                    eventTitle = rwEventTitle,
+                    eventPayload = parseStoryEventPayload(rwEventPayload, qId, rwEventKey)
+                )
+            ),
+            dialogMessages = listOf(
+                QuestDraftExporter.DialogDef(
+                    type = diagType,
+                    speaker = diagSpeaker,
+                    message = diagText
+                )
+            ),
+            systemMessages = if (sysMsg.isNotBlank()) listOf(sysMsg) else emptyList()
+        )
+    return QuestDraftPreviewContext(
+        playerName = player.name,
+        questId = qId,
+        questName = qName,
+        mechanicId = qMech,
+        baseType = qBase,
+        objectiveType = objType,
+        objectiveTarget = objTarget,
+        objectiveCount = objCount,
+        rewardType = rwType,
+        rewardValue = rwValue,
+        rewardCount = rwCount,
+        stageId = stageId,
+        stageName = stageName,
+        stageMode = stageMode,
+        stageNext = stageNext,
+        dialogType = diagType,
+        dialogSpeaker = diagSpeaker,
+        missing = missing,
+        json = exporter.exportDraft(params)
+    )
+}
+
+private fun defaultObjectiveTarget(objectiveType: String): String {
+    return when (objectiveType) {
+        "talk_to_npc", "deliver_to_npc" -> "npc:nearest"
+        "visit_place" -> "place:nearest"
+        "visit_region" -> "region:nearest"
+        "inspect_node" -> "node:nearest"
+        "collect_item" -> "item:IRON_INGOT"
+        "kill_mob" -> "mob:ZOMBIE"
+        "place_block" -> "block:OAK_PLANKS"
+        "break_block" -> "block:COBBLESTONE"
+        "craft_item" -> "item:TORCH"
+        else -> "tag:locatie"
+    }
+}
+
+private fun parseStoryEventPayload(rawPayload: String, questId: String, eventKey: String): Map<String, String> {
+    val trimmed = rawPayload.trim()
+    if (trimmed.isBlank()) {
+        return if (eventKey.isBlank()) emptyMap() else mapOf("quest" to questId, "outcome" to eventKey)
+    }
+
+    val parsed = runCatching { JsonParser.parseString(trimmed).asJsonObject }.getOrNull() ?: return mapOf(
+        "_raw" to trimmed
+    )
+    return parsed.entrySet().associate { (key, value) -> key to value.toString().trim('"') }
+}
+
+private data class QuestDraftPreviewContext(
+    val playerName: String,
+    val questId: String,
+    val questName: String,
+    val mechanicId: String,
+    val baseType: String,
+    val objectiveType: String,
+    val objectiveTarget: String,
+    val objectiveCount: String,
+    val rewardType: String,
+    val rewardValue: String,
+    val rewardCount: String,
+    val stageId: String,
+    val stageName: String,
+    val stageMode: String,
+    val stageNext: String,
+    val dialogType: String,
+    val dialogSpeaker: String,
+    val missing: List<String>,
+    val json: String
+)
 
 private fun resolveQuestLogRequest(
     sender: CommandSender,

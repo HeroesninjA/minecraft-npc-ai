@@ -11,7 +11,6 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.progression.ProgressionDefinition
-import java.util.Locale
 
 class QuestEditGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_EDIT
@@ -29,17 +28,42 @@ class QuestEditGui : GuiScreen {
             def.progressionId().contains(selectedId, ignoreCase = true) ||
                 def.displayName().contains(selectedId, ignoreCase = true)
         }
+        val pageSize = 16
+        val pageCount = maxOf(1, (defs.size + pageSize - 1) / pageSize)
+        val currentDefIndex = currentDef?.let { def ->
+            defs.indexOfFirst {
+                it.progressionId().equals(def.progressionId(), ignoreCase = true) ||
+                    it.displayName().equals(def.displayName(), ignoreCase = true)
+            }
+        } ?: -1
+        val requestedPage = context.service().getCreatorFormValue(context.player(), "quest_edit_page").toIntOrNull()
+            ?: if (currentDefIndex >= 0) currentDefIndex / pageSize else 0
+        val currentPage = minOf(maxOf(0, requestedPage), pageCount - 1)
+        val pageStart = currentPage * pageSize
+        val visibleDefs = defs.drop(pageStart).take(pageSize)
         val adminView = GuiAccessHelper.isAdmin(context.player())
 
         context.item(4, GuiItemFactory.item(
             if (currentDef != null) Material.WRITABLE_BOOK else Material.BARRIER,
             if (currentDef != null) "&6${currentDef.displayName()}" else "&6Quest Editor",
-            buildEditorStatusLines(currentDef, selectedId, adminView)
+            buildEditorStatusLines(currentDef, selectedId, adminView, currentPage + 1, pageCount, visibleDefs.size)
         ))
+
+        if (pageCount > 1) {
+            context.item(44, GuiItemFactory.item(
+                Material.BOOKSHELF,
+                "&6Lista questuri",
+                listOf(
+                    "&7Pagina: &f${currentPage + 1}&7/&f$pageCount",
+                    "&7Afisate: &f${visibleDefs.size}",
+                    "&7Total: &f${defs.size}"
+                )
+            ))
+        }
 
         // Lista definitii (slot 9-25)
         var slot = 9
-        for (def in defs.take(16)) {
+        for (def in visibleDefs) {
             val isSelected = def.progressionId() == selectedId
             context.button(slot++, GuiButton.enabled(
                 GuiItemFactory.item(
@@ -49,6 +73,7 @@ class QuestEditGui : GuiScreen {
                 ),
                 GuiAction { click ->
                     click.service().setQuestEditSelectedId(click.player(), def.progressionId())
+                    click.service().setCreatorFormValue(click.player(), "quest_edit_page", currentPage.toString())
                     click.service().open(click.player(), GuiKey.QUEST_EDIT)
                 }
             ))
@@ -69,6 +94,23 @@ class QuestEditGui : GuiScreen {
                 )
             }
         ))
+
+        if (pageCount > 1) {
+            context.button(46, GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&eAnterioara", listOf("&7Pagina &f${currentPage + 1}&7/&f$pageCount")),
+                GuiAction { click ->
+                    click.service().setCreatorFormValue(click.player(), "quest_edit_page", (currentPage - 1).toString())
+                    click.service().open(click.player(), GuiKey.QUEST_EDIT)
+                }
+            ))
+            context.button(52, GuiButton.enabled(
+                GuiItemFactory.item(Material.ARROW, "&eUrmatoarea", listOf("&7Pagina &f${currentPage + 1}&7/&f$pageCount")),
+                GuiAction { click ->
+                    click.service().setCreatorFormValue(click.player(), "quest_edit_page", (currentPage + 1).toString())
+                    click.service().open(click.player(), GuiKey.QUEST_EDIT)
+                }
+            ))
+        }
 
         if (currentDef != null) {
             // Obiective (slot 28-34)
@@ -166,7 +208,10 @@ class QuestEditGui : GuiScreen {
     private fun buildEditorStatusLines(
         currentDef: ProgressionDefinition?,
         selectedId: String,
-        adminView: Boolean
+        adminView: Boolean,
+        pageIndex: Int,
+        pageCount: Int,
+        visibleCount: Int
     ): List<String> {
         return buildList {
             if (currentDef != null) {
@@ -175,11 +220,13 @@ class QuestEditGui : GuiScreen {
                 add("&7Obiective: &f${currentDef.objectiveCount()}")
                 add("&7Stage-uri: &f${currentDef.stageCount()}")
                 add("&7Query: &f${if (selectedId.isBlank()) "-" else selectedId}")
+                add("&7Lista: &f$pageIndex&7/&f$pageCount &7(${visibleCount} afisate)")
                 add(if (adminView) "&bMod admin: activ" else "&7Mod admin: inactiv")
                 add("&aStatus: definitie gasita")
             } else {
                 add("&7Selecteaza un quest din lista.")
                 add("&7Query: &f${if (selectedId.isBlank()) "-" else selectedId}")
+                add("&7Lista: &f$pageIndex&7/&f$pageCount &7(${visibleCount} afisate)")
                 add("&eStatus: quest negasit")
                 add("&7Cauta dupa ID sau nume complet.")
             }
