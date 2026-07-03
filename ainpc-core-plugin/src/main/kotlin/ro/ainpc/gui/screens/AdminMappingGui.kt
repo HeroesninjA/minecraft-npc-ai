@@ -3,17 +3,15 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
-import ro.ainpc.gui.GuiAction
+import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
-import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
-import ro.ainpc.world.WorldRegionInfo
 
 class AdminMappingGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.ADMIN_MAPPING
@@ -36,20 +34,20 @@ class AdminMappingGui : GuiScreen {
 
         context.button(0, GuiButton.enabled(
             GuiItemFactory.item(Material.STICK, "&6Wand", "&7Togleaza modul wand pentru mapping."),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc wand") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc wand") }
         ))
         context.button(1, GuiButton.enabled(
             GuiItemFactory.item(Material.CHAINMAIL_BOOTS, "&eBindings", "&7Listeaza NPC-world bindings."),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world bindings") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world bindings") }
         ))
         context.button(2, GuiButton.enabled(
             GuiItemFactory.item(Material.SPYGLASS, "&bExterior", "&7Analizeaza structurile exterioare."),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world outside") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world outside") }
         ))
 
         context.button(8, GuiButton.enabled(
             GuiItemFactory.item(Material.REDSTONE, "&cReload config", "&7Reincarca world admin din config."),
-            GuiAction { click ->
+            action = { click ->
                 click.service().runCommand(click.player(), "ainpc world reload")
             }
         ))
@@ -84,17 +82,17 @@ class AdminMappingGui : GuiScreen {
 
         context.button(11, GuiButton.enabled(
             GuiItemFactory.item(Material.OAK_DOOR, "&aWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiuni principale."),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
         ))
 
         context.button(12, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&dMapping dump", "&7Debug dump mapping text in chat."),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
         ))
 
         context.button(13, GuiButton.enabled(
             GuiItemFactory.item(Material.SPYGLASS, "&6Scan sat", "&7Scaneaza vanilla village in raza 48.", "&8Admin separat."),
-            GuiAction { click ->
+            action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
                     "Scan sat",
@@ -108,7 +106,7 @@ class AdminMappingGui : GuiScreen {
 
         context.button(14, GuiButton.enabled(
             GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", "&7Creeaza mapping demo la pozitia ta.", "&8Admin separat."),
-            GuiAction { click ->
+            action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
                     "Creeaza mapping demo",
@@ -122,7 +120,7 @@ class AdminMappingGui : GuiScreen {
 
         context.button(15, GuiButton.enabled(
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza mapping", "&7Persista modificarile in config.", "&8Actiune persistenta separata."),
-            GuiAction { click ->
+            action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
                     "Salveaza world mapping",
@@ -135,15 +133,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         val env = context.plugin().environmentEngine.getContext(location.world.name)
-        context.item(5, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
-            "&7Timp: &f${env.timeOfDay.displayName}",
-            "&7Vreme: &f${env.weather.displayName}",
-            "&7Anotimp: &f${env.season.displayName}",
-            "&7Temperatura: &f${env.temperature.displayName}",
-            "&7Ziua: &f${env.dayNumber}",
-            if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
-            "&8Click: /ainpc environment"
-        )))
+        context.item(5, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
         if (currentRegion != null) {
             val regionType = RegionType.fromId(currentRegion.typeId())
@@ -167,29 +157,29 @@ class AdminMappingGui : GuiScreen {
                 if (isAutoIndex) "&cDezactiveaza auto-index" else "&aActiveaza auto-index",
                 "&7Auto-index: &f${if (isAutoIndex) "ACTIV" else "INACTIV"}"
             ),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world autoindex ${if (isAutoIndex) "off" else "on"}") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world autoindex ${if (isAutoIndex) "off" else "on"}") }
         ))
 
         context.button(17, GuiButton.enabled(
             GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+            action = { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
         ))
 
         context.button(18, GuiButton.enabled(
             GuiItemFactory.item(Material.MAP, "&eTipuri regiuni", regionTypeLore(worldAdmin)),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world region summary") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world region summary") }
         ))
 
         context.button(22, GuiButton.enabled(
             GuiItemFactory.item(Material.COMPARATOR, "&6Patch analyze", "&7Analizeaza decalajele regiunii curente."),
-            GuiAction { click ->
+            action = { click ->
                 val regionId = currentRegion?.id() ?: "demo_sat"
                 click.service().runCommand(click.player(), "ainpc patch analyze $regionId")
             }
         ))
         context.button(23, GuiButton.enabled(
             GuiItemFactory.item(Material.COMPARATOR, "&6Patch plan", "&7Planifica patch-uri pentru regiunea curenta."),
-            GuiAction { click ->
+            action = { click ->
                 val regionId = currentRegion?.id() ?: "demo_sat"
                 click.service().runCommand(click.player(), "ainpc patch plan $regionId")
             }
@@ -250,7 +240,7 @@ class AdminMappingGui : GuiScreen {
                     "&7Mood: &f${identity.mood} &7| Threat: &f${identity.threatLevel}",
                     "&7Click: detalii regiune"
                 )),
-                GuiAction { click -> click.service().openRegionDetail(click.player(), region.id()) }
+                action = { click -> click.service().openRegionDetail(click.player(), region.id()) }
             ))
         }
 
@@ -264,11 +254,11 @@ class AdminMappingGui : GuiScreen {
         if (pageCount > 1) {
             context.button(44, GuiButton.enabled(
                 GuiItemFactory.item(Material.ARROW, "&eAnterioara", "&7Pag ${currentPage + 1}/$pageCount"),
-                GuiAction { click -> click.service().openAdminMappingPage(click.player(), currentPage - 1) }
+                action = { click -> click.service().openAdminMappingPage(click.player(), currentPage - 1) }
             ))
             context.button(46, GuiButton.enabled(
                 GuiItemFactory.item(Material.ARROW, "&eUrmatoarea", "&7Pag ${currentPage + 1}/$pageCount"),
-                GuiAction { click -> click.service().openAdminMappingPage(click.player(), currentPage + 1) }
+                action = { click -> click.service().openAdminMappingPage(click.player(), currentPage + 1) }
             ))
         }
 
@@ -277,7 +267,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Arata identitatea tipului de regiune curent.",
                 "&7Click: /ainpc world region identity ${currentRegion?.typeId() ?: "settlement"}"
             )),
-            GuiAction { click ->
+            action = { click ->
                 click.service().runCommand(click.player(), "ainpc world region identity ${currentRegion?.typeId() ?: "settlement"}")
             }
         ))
@@ -287,7 +277,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Creaza un place in regiunea curenta.",
                 "&7Foloseste: /ainpc world place create <regiune> <id> <tip> <x1> <y1> <z1> <x2> <y2> <z2>"
             )),
-            GuiAction { click ->
+            action = { click ->
                 val regionId = currentRegion?.id() ?: ""
                 val placeId = "p_${location.blockX}_${location.blockZ}"
                 val minX = location.blockX - 8
@@ -306,7 +296,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Creaza un nod la pozitia curenta.",
                 "&7Foloseste: /ainpc world node create <regiune> <placeId|-> <id> <tip> <x> <y> <z> [radius]"
             )),
-            GuiAction { click ->
+            action = { click ->
                 val regionId = currentRegion?.id() ?: ""
                 val nodeId = "n_${location.blockX}_${location.blockZ}"
                 click.service().runCommand(click.player(),
@@ -319,7 +309,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Elimina place-ul curent (daca exista).",
                 "&7Click: /ainpc world place remove <placeId>"
             )),
-            GuiAction { click ->
+            action = { click ->
                 val placeId = currentPlace?.id() ?: ""
                 if (placeId.isNotBlank()) {
                     click.service().openConfirmCommand(
@@ -341,7 +331,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Afiseaza toate place-urile in chat.",
                 "&7Click: /ainpc world places"
             )),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world places") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world places") }
         ))
 
         context.button(52, GuiButton.enabled(
@@ -349,7 +339,7 @@ class AdminMappingGui : GuiScreen {
                 "&7Afiseaza nodurile regiunii curente in chat.",
                 "&7Click: /ainpc world nodes ${currentRegion?.id() ?: ""}"
             )),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc world nodes ${currentRegion?.id() ?: ""}") }
+            action = { click -> click.service().runCommand(click.player(), "ainpc world nodes ${currentRegion?.id() ?: ""}") }
         ))
 
         GuiNavigation.addStandardControls(context, key())
@@ -365,19 +355,6 @@ class AdminMappingGui : GuiScreen {
         }
         lore.add("&8Click: listeaza places in chat")
         return lore
-    }
-
-    private fun environmentIcon(env: EnvironmentContext): Material = when {
-        env.isExtreme() -> Material.REDSTONE_BLOCK
-        env.isStorming() -> Material.REDSTONE_TORCH
-        env.isRaining() -> Material.WATER_BUCKET
-        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
-        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
-        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
-        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
-        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
-        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
-        else -> Material.COMPASS
     }
 
     private fun regionIcon(typeId: String): Material = when (typeId.lowercase()) {

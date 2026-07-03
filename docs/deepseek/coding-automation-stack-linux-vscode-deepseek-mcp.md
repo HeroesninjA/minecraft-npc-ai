@@ -2,7 +2,7 @@
 
 Actualizat: 2026-06-04
 
-Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+Pentru orientare in cod, foloseste [harta scurta a pachetelor](../harta-pachetelor-cod-scurta.md) si apoi [harta completa](../harta-pachetelor-cod.md).
 
 ## Scop
 

@@ -1,6 +1,6 @@
 # GUI Interfete
 
-Actualizat: 2026-06-21
+Actualizat: 2026-07-01
 
 Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
 
@@ -64,7 +64,7 @@ Implementat initial:
 - `WorldHubGui` afiseaza sumarul `ProgressionGuiSnapshot`, deschide log-ul filtrat de progresii si expune ancorele locale citite prin `ProgressionService` pentru diagnostic mapping/quest;
 - `StoryGui` afiseaza read-only region state, place state si ultimele story events pentru locatia curenta, folosind `StoryStateService`;
 - `QuestAuthoringGui` afiseaza selectorul de quest si mecanica, permite ciclare/reset pe player si expune snapshot-ul read-only de authoring pentru inspectie si dump;
-- `WorldHubGui` cere confirmare pentru scan sat, demo mapping si save mapping;
+- `WorldHubGui` cere confirmare pentru scan sat, demo mapping si save mapping, si poate redeschide draftul activ prin `map edit` din fluxurile de build mode;
 - `DebugGui` expune toate scope-urile principale de debugdump: all, npc, world, quest, story si openai;
 - `QuestDetailGui` cu obiective, stage-uri, recompense, tracking, status, debug admin si abandon cu confirmare;
 - `ConfirmActionGui` pentru actiuni destructive;
@@ -170,7 +170,7 @@ Simplificari recomandate imediat:
   - nu amesteca dialogul cu actiunile administrative.
 - `WorldHubGui`:
   - lasa `whereami`, `unsaved` si `quest anchors` pe randul principal;
-  - muta `scan`, `demo create` si `save mapping` la actiuni admin confirmate.
+  - muta `scan`, `demo create`, `save mapping` si `map edit` la actiuni admin confirmate sau la submeniuri de draft;
 - `QuestAuthoringGui`:
   - arata doar questul curent, mecanica si warnings;
   - lasa `next`, `prev`, `reset` si `dump` vizibile;

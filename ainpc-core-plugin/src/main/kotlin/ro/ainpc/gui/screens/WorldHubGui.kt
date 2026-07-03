@@ -1,13 +1,11 @@
 package ro.ainpc.gui.screens
 
-import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpMappingText
-import ro.ainpc.environment.EnvironmentContext
-import ro.ainpc.gui.GuiAction
+import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -17,7 +15,6 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.gui.GuiService
 import ro.ainpc.progression.ProgressionAnchorBinding
 import ro.ainpc.progression.ProgressionFormatUtil
-import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.WorldNodeInfo
@@ -78,7 +75,7 @@ class WorldHubGui : GuiScreen {
             if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.PAPER, "&dMapping snapshot", mappingSnapshotLore(worldAdmin, region, place, node, nearbyNodes.size)),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
                 )
             } else {
                 GuiButton.disabled(
@@ -92,20 +89,12 @@ class WorldHubGui : GuiScreen {
         )
 
         val env = context.plugin().environmentEngine.getContext(worldName)
-        context.item(7, GuiItemFactory.item(environmentIcon(env), "&bMediu", listOf(
-            "&7Timp: &f${env.timeOfDay.displayName}",
-            "&7Vreme: &f${env.weather.displayName}",
-            "&7Anotimp: &f${env.season.displayName}",
-            "&7Temperatura: &f${env.temperature.displayName}",
-            "&7Ziua: &f${env.dayNumber}",
-            if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
-            "&8Click: /ainpc environment"
-        )))
+        context.item(7, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
         context.button(10, if (region != null) {
             GuiButton.enabled(
                 GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune curenta", regionLore(region)),
-                GuiAction { click -> click.service().openRegionDetail(click.player(), region.id()) }
+                action = { click -> click.service().openRegionDetail(click.player(), region.id()) }
             )
         } else {
             GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Regiune", regionLore(null)))
@@ -120,7 +109,7 @@ class WorldHubGui : GuiScreen {
         context.button(11, if (place != null) {
             GuiButton.enabled(
                 GuiItemFactory.item(Material.OAK_DOOR, "&aPlace curent", placeLore(place)),
-                GuiAction { click -> click.service().openPlaceDetail(click.player(), place.id()) }
+                action = { click -> click.service().openPlaceDetail(click.player(), place.id()) }
             )
         } else {
             GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Place curent", placeLore(null)))
@@ -161,7 +150,7 @@ class WorldHubGui : GuiScreen {
             if (context.service().canOpen(player, GuiKey.QUEST)) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.WRITABLE_BOOK, "&eProgresii active", progressionLore(progressionSnapshot)),
-                    GuiAction { click ->
+                    action = { click ->
                         click.service().openQuestLog(
                             click.player(),
                             if (click.clickType().isRightClick) "all" else "active"
@@ -183,7 +172,7 @@ class WorldHubGui : GuiScreen {
             if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.MAP, "&6Ancore progresii", anchorLore(localAnchorBindings, true)),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }
                 )
             } else {
                 GuiButton.disabled(
@@ -200,7 +189,7 @@ class WorldHubGui : GuiScreen {
             if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.PAPER, "&eMapping diagnostics", mappingLore(context.plugin())),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
                 )
             } else {
                 GuiButton.disabled(
@@ -222,7 +211,7 @@ class WorldHubGui : GuiScreen {
             28,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.ENDER_EYE, "&bWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiuni principale."),
-                GuiAction { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
+                action = { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
             )
         )
         context.button(
@@ -234,7 +223,7 @@ class WorldHubGui : GuiScreen {
                         "&dStory",
                         "&7Deschide snapshot-ul story pentru regiunea si place-ul curent."
                     ),
-                    GuiAction { click -> click.service().open(click.player(), GuiKey.STORY) }
+                    action = { click -> click.service().open(click.player(), GuiKey.STORY) }
                 )
             } else {
                 GuiButton.disabled(
@@ -253,7 +242,7 @@ class WorldHubGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping",
                         listOf("&7Gestioneaza regiuni, places si noduri.", "&7Click: deschide panoul admin.", "&8Actiune admin separata.")),
-                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
+                    action = { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
                 )
             } else {
                 GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Admin Mapping",
@@ -266,7 +255,7 @@ class WorldHubGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest",
                         listOf("&7Gestioneaza definitii, ancore si progresii.", "&7Click: deschide panoul admin quest.", "&8Actiune admin separata.")),
-                    GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+                    action = { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
                 )
             } else {
                 GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Admin Quest",
@@ -282,7 +271,7 @@ class WorldHubGui : GuiScreen {
                         "&6Scan sat",
                         "&7Cere confirmare pentru scan vanilla pe raza 48."
                     ),
-                    GuiAction { click ->
+                    action = { click ->
                         confirmWorldCommand(
                             click.player(),
                             click.service(),
@@ -305,7 +294,7 @@ class WorldHubGui : GuiScreen {
                         "&6Demo mapping",
                         "&7Cere confirmare inainte de creare mapping demo."
                     ),
-                    GuiAction { click ->
+                    action = { click ->
                         confirmWorldCommand(
                             click.player(),
                             click.service(),
@@ -328,7 +317,7 @@ class WorldHubGui : GuiScreen {
                         "&aSalveaza mapping",
                         "&7Cere confirmare inainte de persistenta mapping."
                     ),
-                    GuiAction { click ->
+                    action = { click ->
                         confirmWorldCommand(
                             click.player(),
                             click.service(),
@@ -392,19 +381,6 @@ class WorldHubGui : GuiScreen {
         lore.add("&7Tip: &f${node.typeId()}")
         lore.add("&7Raza: &f${String.format(Locale.ROOT, "%.1f", node.radius())}")
         return lore
-    }
-
-    private fun environmentIcon(env: EnvironmentContext): Material = when {
-        env.isExtreme() -> Material.REDSTONE_BLOCK
-        env.isStorming() -> Material.REDSTONE_TORCH
-        env.isRaining() -> Material.WATER_BUCKET
-        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
-        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
-        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
-        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
-        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
-        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
-        else -> Material.COMPASS
     }
 
     private fun mappingSnapshotLore(

@@ -708,6 +708,10 @@ fun sendNpcWorldBindingSummary(sender: CommandSender, binding: NpcWorldBinding) 
 }
 
 fun handleWorldSave(sender: CommandSender): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin)) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world save este blocat.")
+        return true
+    }
     val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
     if (!worldAdmin.isEnabled) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
@@ -956,6 +960,10 @@ fun handleWorldRegion(
     }
 
     val action = args[2].lowercase()
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world region $action este blocat.")
+        return true
+    }
     if (action == "create") {
         return handleWorldRegionCreate(sender, args, requirePlayerSender)
     }
@@ -1197,6 +1205,10 @@ fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val action = args[2].lowercase()
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world place $action este blocat.")
+        return true
+    }
     if (action == "create") {
         return handleWorldPlaceCreate(sender, args)
     }
@@ -1315,6 +1327,10 @@ fun handleWorldNode(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val action = args[2].lowercase()
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world node $action este blocat.")
+        return true
+    }
     if (action == "create") {
         return handleWorldNodeCreate(sender, args)
     }
@@ -1561,6 +1577,10 @@ fun handleWorldDemo(
     args: Array<String>,
     ensureGenerationEnabled: (CommandSender, String) -> Boolean,
 ): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin)) {
+        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world demo create este blocat.")
+        return true
+    }
     if (args.size < 3 || args.size > 4 || args[2].lowercase() != "create") {
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,

@@ -50,6 +50,13 @@ class AdminMcpGui : GuiScreen {
             plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
         } else null
         val featureFlags = parseFeatureFlags(featureResult?.contentJson)
+        if (featureFlags["read_only"] == "true") {
+            context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
+                "&7MCP raporteaza modul read-only.",
+                "&7Scrierea in mapping este blocata.",
+                "&8Inspectia si exportul raman disponibile."
+            )))
+        }
 
         context.item(13, GuiItemFactory.item(Material.PAPER,
             "&bFeature flags",
@@ -107,6 +114,21 @@ class AdminMcpGui : GuiScreen {
             GuiItemFactory.item(Material.BARRIER, "&cClear build history",
                 listOf("&7Curata istoricul build mode pentru playerul curent.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc build mode clear-history") })
+
+        context.button(28, GuiButton.enabled(
+            GuiItemFactory.item(Material.CLOCK, "&eBuild status",
+                listOf("&7Afiseaza starea curenta a build mode.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode status") })
+
+        context.button(38, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history",
+                listOf("&7Afiseaza ultimele schimbari ale build mode.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode history") })
+
+        context.button(39, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&dBuild export",
+                listOf("&7Afiseaza exportul compact al build mode.")),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode export") })
 
         context.button(10, GuiButton.enabled(
             GuiItemFactory.item(Material.COMPASS, "&6World context",

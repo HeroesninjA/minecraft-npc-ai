@@ -48,7 +48,7 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         val context = npc.context
         context.updateFromWorld(location.world, location.location)
         val scheduledActivity = resolveScheduledActivity(npc, context)
-        npc.plannedRoutineActivity = scheduledActivity ?: ""
+        npc.plannedRoutineActivity = scheduledActivity
         updateNeeds(npc, context)
         context.syncSimulationState(location.location)
 
@@ -127,10 +127,13 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         if (context.interactingPlayer == null) return modifier
 
         val relationshipLevel = context.relationshipLevel
+        val routineFocus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })
         if (action.isFriendly()) modifier += relationshipLevel / 5
         if (action.isAggressive()) {
             modifier += if (relationshipLevel < -25) abs(relationshipLevel) / 3 else -relationshipLevel / 3
         }
+        if (routineFocus == RoutineFocus.SOCIAL && action.isFriendly()) modifier += 5
+        if (routineFocus == RoutineFocus.WORK && action.getCategory() == NPCAction.ActionCategory.WORK) modifier += 5
 
         when (context.relationshipStatus) {
             "ENEMY" -> {
@@ -216,7 +219,7 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     }
 
     private fun getRoutineModifier(npc: AINPC, context: NPCContext, action: NPCAction): Int {
-        val focus = inferRoutineFocus(context.plannedRoutineActivity)
+        val focus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })
         return when (focus) {
             RoutineFocus.WORK -> if (action.getCategory() == NPCAction.ActionCategory.WORK) 26 else 0
             RoutineFocus.REST -> if (action == NPCAction.SLEEP || action == NPCAction.REST || action == NPCAction.EAT) 28 else 0

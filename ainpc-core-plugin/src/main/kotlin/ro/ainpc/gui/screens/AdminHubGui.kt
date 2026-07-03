@@ -35,6 +35,13 @@ class AdminHubGui : GuiScreen {
             "&7MCP: &f${mcpHealth.status} &8(${mcpHealth.durationMillis}ms)",
             if (wa.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aSalvat"
         )))
+        if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
+            context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
+                "&7MCP raporteaza modul read-only.",
+                "&7Scrierea in mapping este blocata.",
+                "&8Poti inspecta status/history/export."
+            )))
+        }
 
         if (context.service().canOpen(player, GuiKey.WORLD)) {
             context.button(10, GuiButton.enabled(GuiItemFactory.item(Material.COMPASS, "&bWorld", listOf("&7Context world, regiuni, places.")),
@@ -60,6 +67,14 @@ class AdminHubGui : GuiScreen {
             context.button(17, GuiButton.enabled(GuiItemFactory.item(Material.ENDER_EYE, "&bMCP", listOf("&7Status MCP si summary-uri.", "&7Routing semantic si feature flags.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.MCP) }))
         }
+        context.button(18, GuiButton.enabled(GuiItemFactory.item(Material.CLOCK, "&dBuild mode", listOf("&7Status rapid pentru build mode.", "&7History, export si clear-history in MCP.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode status") }))
+        context.button(19, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history", listOf("&7Ultimele schimbari build mode.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode history") }))
+        context.button(20, GuiButton.enabled(GuiItemFactory.item(Material.PAPER, "&dBuild export", listOf("&7Export compact al build mode.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode export") }))
+        context.button(21, GuiButton.enabled(GuiItemFactory.item(Material.BARRIER, "&cClear build history", listOf("&7Curata istoricul local build mode.")),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode clear-history") }))
         if (context.service().canOpen(context.player(), GuiKey.AUTHORING)) {
             context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bAuthoring", listOf("&7Snapshot quest design.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }))

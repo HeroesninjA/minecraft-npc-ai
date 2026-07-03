@@ -28,6 +28,12 @@ fun handleEconomyBalance(sender: CommandSender, args: Array<String>): Boolean {
 }
 
 fun handleEconomyPay(sender: CommandSender, args: Array<String>): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandEconomyPlugin)) {
+        ainpcCommandEconomyPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; economy pay este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val player = sender as? Player ?: run {
         ainpcCommandEconomyPlugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
         return true
@@ -68,6 +74,11 @@ fun handleEconomyTop(sender: CommandSender, args: Array<String>): Boolean {
 fun handleEconomySet(sender: CommandSender, args: Array<String>): Boolean {
     if (!sender.hasPermission("ainpc.admin")) {
         ainpcCommandEconomyPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (isRuntimeReadOnly(ainpcCommandEconomyPlugin)) {
+        ainpcCommandEconomyPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; economy set este blocat pana la iesirea din modul read-only.")
         return true
     }
     if (args.size < 4) {

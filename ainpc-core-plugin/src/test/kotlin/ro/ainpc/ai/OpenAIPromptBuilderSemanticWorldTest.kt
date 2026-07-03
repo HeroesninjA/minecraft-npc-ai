@@ -83,6 +83,7 @@ class OpenAIPromptBuilderSemanticWorldTest {
                 WORLD_LORE:
                 - region=sat_central, name=Sat Central, type=village, tags=trade,craft
                 - current_place=sat_central:fierarie, name=Fierarie, type=forge, tags=work,craft_worker, access=public
+                - nearby_place=sat_central:piata, name=Piata, type=market, tags=trade,public
                 WORLD_HISTORY:
                 - region_story_mode=evolutive, state=market_day, pool=market_day,forge_trouble
                 - recent_events:

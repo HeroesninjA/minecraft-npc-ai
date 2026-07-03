@@ -1,6 +1,6 @@
 ﻿# Mapping pentru harti construite manual
 
-Actualizat: 2026-05-10
+Actualizat: 2026-07-01
 
 Punctul de intrare recomandat pentru aceasta zona este `mapping-stack.md`.
 
@@ -142,18 +142,26 @@ Parserul trebuie sa fie conservator:
 - daca intentia este ambigua, sistemul cere clarificare sau propune 2-3 optiuni
 - niciun prompt nu trebuie sa modifice direct lumea fara preview si confirmare
 
-Comenzi initiale pentru aceasta directie:
+Comenzi curente pentru aceasta directie:
 
 ```text
 /ainpc wand
 /ainpc wand mode <region|place|node|npc_bind|quest_anchor>
+/ainpc wand <pos1|pos2|point|status|inspect>
+/ainpc wand <clear|reset> [pos1|pos2|point|all]
 /ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>
+/ainpc map <descriere libera>   # poate include id=, name=, label=, type=, region=, place=, size=, radius=
 /ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]
 /ainpc map <descriere libera>
 /ainpc map node <descriere libera>
 /ainpc map preview
+/ainpc map edit
+/ainpc map open
+/ainpc map gui
 /ainpc map confirm
 /ainpc map cancel
+/ainpc world create ai help
+/ainpc world create ai [preview|dryrun|inspect] [region|place|node] [descriere libera]
 ```
 
 Status implementat initial:
@@ -163,7 +171,10 @@ Status implementat initial:
 - click stanga cu wand-ul seteaza `pos1`, click dreapta seteaza `pos2`, iar modul `node`/`npc_bind`/`quest_anchor` sau sneak-click seteaza punctul semantic;
 - `/ainpc wand pos1|pos2|point` poate seta selectia la pozitia curenta fara click;
 - `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` creeaza un `MappingDraft` determinist;
+- descrierea poate include hinturi `id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=` si `radius=`; daca `id=` lipseste, `name=` devine fallback pentru ID local, iar `label=` ramane nume afisat separat;
 - `/ainpc map preview`, `/ainpc map confirm` si `/ainpc map cancel` controleaza draft-ul inainte sa scrie in runtime;
+- `/ainpc map edit`, `/ainpc map open` si `/ainpc map gui` redeschid draft-ul curent in editorul potrivit dupa preview sau dupa generare AI;
+- `/ainpc world create ai [preview|dryrun|inspect] [region|place|node] ...` creeaza un draft AI/intent asistat fara sa scrie direct; in modul preview-only nu deschide formularul pana cand adminul ruleaza `/ainpc map edit`;
 - confirmarea creeaza `Region`, `Place` sau `Node` prin aceleasi reguli validate din `WorldAdminService`;
 - confirmarea unui draft `npc_bind` actualizeaza ancora NPC-ului, metadata home/work/social de pe place si randul din `npc_world_bindings`;
 - confirmarea unui draft `quest_anchor` scrie sau actualizeaza randul obiectivului in `quest_anchor_bindings`;
@@ -174,17 +185,22 @@ Limitari ale implementarii initiale:
 - parserul este determinist, cu aliasuri simple in romana/engleza; nu foloseste inca AI/NLU;
 - draft-ul `npc_bind` cere un punct aflat intr-un place existent si un NPC rezolvabil prin selector explicit sau `nearest`; `/ainpc world bind npc ...` ramane fallback-ul text direct;
 - draft-ul `quest_anchor` cere progresie existenta in `player_quests`; pentru player se foloseste implicit adminul care ruleaza comanda sau `player:<jucator|uuid>`;
-- nu exista inca preview vizual cu particule pentru bounds/radius.
+- preview-ul vizual exista pentru bounds si radius, dar este punctual: particulele se redeseneaza la `map preview`, `map edit` sau la crearea draftului; nu este inca un overlay permanent multi-tick cu persistenta intre sesiuni.
 
 Directie extinsa dorita:
 
-- flux asistat AI pentru creare de `Region` si `Quest`, de forma `/ainpc world create ai` sau `/ainpc quest create ai`
+- extinderea fluxului asistat AI pentru `Quest`, de forma `/ainpc quest create ai`
 - flux asistat AI pentru creare de `Progression`, de forma `/ainpc progression create ai`
 - wizard care intreaba pe rand numele, ID-ul, selectia `pos1` / `pos2`, tipul, descrierea si centrul/suprafata valida
 - corectie interactiva pentru valori gresite prin sugestii, `Auto rename`, `Auto fit` si `Auto move`
 - auto-suggest pentru ID-uri si tipuri compatibile cu `Region`, `Quest` si `Progression`
 - validare automata a conflictelor reale, highlight vizual pentru varianta corecta si fallback pentru comenzi gresite
 - vizualizarea persistenta si selectia neregulata sunt definite ca directie de build mode, nu ca rezultat final al fluxului initial.
+- comenzile ` /ainpc build mode history`, ` /ainpc build mode export` si ` /ainpc build mode clear-history` descriu inspectia si controlul starii build mode dupa selectie.
+- tutorialul pentru `Quest / Progression` este in `docs/quest-progression-tutorial.md`.
+- tutorialul pentru `Admin / MCP` este in `docs/admin-mcp-tutorial.md`.
+- tutorialul pentru `Admin Hub / World Hub` este in `docs/admin-world-hub-tutorial.md`.
+- tutorialul pentru `Quest Authoring / Quick Quest` este in `docs/quest-authoring-tutorial.md`.
 
 Regula de siguranta:
 
@@ -192,6 +208,7 @@ Regula de siguranta:
 - promptul da semantica
 - sistemul produce `MappingDraft`
 - preview-ul arata tipul, ID-ul propus, bounds, tags, metadata si conflicte
+- preview-ul vizual marcheaza bounds pentru `Region`/`Place` si radius pentru `Node`/`npc_bind`/`quest_anchor`
 - confirmarea creeaza `Region`, `Place`, `Node`, aplica bind-ul NPC-place validat sau scrie quest anchor-ul persistent
 - `/ainpc world save` persista mapping-ul
 

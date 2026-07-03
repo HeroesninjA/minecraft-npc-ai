@@ -11,12 +11,15 @@ class BehaviorProfileLoaderTest {
     fun parseMinimalProfile() {
         val loader = BehaviorProfileLoader(null)
         val yaml = """
+            default_profile: "default_villager"
             profiles:
               default_villager:
                 occupation: "villager"
         """.trimIndent()
         val results = loader.parseYamlString(yaml)
         assertEquals(1, results.size)
+        assertEquals("default_villager", loader.defaultProfileId())
+        assertEquals("default_villager", loader.defaultProfile()?.profileId)
         val p = results[0]
         assertEquals("default_villager", p.profileId)
         assertEquals("villager", p.occupation)
@@ -39,6 +42,54 @@ class BehaviorProfileLoaderTest {
                 weather_reactions: true
                 night_return: true
                 danger_avoidance: false
+                routine_bias_ticks: -900
+                routine_goals:
+                  home: "sa se intoarca la casa si gospodarie"
+                  work: "sa lucreze pe camp"
+                  social: "sa vorbeasca cu ceilalti fermieri"
+                  idle: "sa astepte sa se deschida campul"
+                phase_ticks:
+                  wake_start: 2000
+                  work_start: 3000
+                  midday_start: 12000
+                  evening_start: 16000
+                  social_start: 8000
+                  social_end: 18000
+                  night_start: 18000
+                routine_texts:
+                  work_day: "lucreaza pe camp"
+                  fallback_idle: "asteapta o ancora"
+                fallback_rules:
+                  - condition: "night"
+                    slot: "HOME"
+                    activity_key: "night_sleep"
+                    state: "SLEEPING"
+                  - condition: "default"
+                    slot: "IDLE"
+                    activity_key: "fallback_idle"
+                    state: "IDLE"
+                thresholds:
+                  energy_low: 20
+                  hunger_low: 22
+                  safety_low: 30
+                  social_need_low: 33
+                slot_states:
+                  home: "RESTING"
+                  work: "WORKING"
+                  social: "SOCIALIZING"
+                  idle: "IDLE"
+                zone_states:
+                  forest: "FARMING"
+                  plains: "WORKING"
+                  default: "WORKING"
+                zone_activity_suffixes:
+                  forest: "in padure"
+                  plains: "pe camp"
+                preview_points:
+                  - label: "Noapte"
+                    world_time: 19000
+                  - label: "Dimineata"
+                    world_time: 6000
                 schedule:
                   morning:
                     label: "Dimineata"
@@ -63,6 +114,25 @@ class BehaviorProfileLoaderTest {
         assertEquals("fermier", p.occupation)
         assertEquals("Fermier", p.displayName)
         assertEquals(0.5, p.movementSpeed)
+        assertEquals(-900L, p.routineBiasTicks)
+        assertEquals("sa lucreze pe camp", p.routineGoals["work"])
+        assertEquals("sa se intoarca la casa si gospodarie", p.routineGoals["home"])
+        assertEquals(3000L, p.phaseTicks["work_start"])
+        assertEquals(18000L, p.phaseTicks["night_start"])
+        assertEquals("lucreaza pe camp", p.routineTexts["work_day"])
+        assertEquals("asteapta o ancora", p.routineTexts["fallback_idle"])
+        assertEquals(2, p.fallbackRules.size)
+        assertEquals("night", p.fallbackRules[0].condition)
+        assertEquals("default", p.fallbackRules[1].condition)
+        assertEquals(20, p.thresholds["energy_low"])
+        assertEquals(33, p.thresholds["social_need_low"])
+        assertEquals("RESTING", p.slotStates["home"])
+        assertEquals("FARMING", p.zoneStates["forest"])
+        assertEquals("pe camp", p.zoneActivitySuffixes["plains"])
+        assertEquals(2, p.previewPoints.size)
+        assertEquals("Noapte", p.previewPoints[0].label)
+        assertEquals(19000L, p.previewPoints[0].worldTime)
+        assertEquals("SLEEPING", p.fallbackRules[0].state)
         assertEquals(2, p.schedule.size)
         assertEquals("Dimineata", p.schedule[0].label)
         assertEquals("WORK", p.schedule[0].slot)
@@ -82,14 +152,18 @@ class BehaviorProfileLoaderTest {
                 occupation: "paznic"
                 movement_speed: 0.7
                 danger_avoidance: true
+                routine_bias_ticks: 1200
               trader:
                 occupation: "negustor"
                 socialize_chance: 0.6
+                routine_bias_ticks: 500
         """.trimIndent()
         val results = loader.parseYamlString(yaml)
         assertEquals(2, results.size)
         assertTrue(results.any { it.profileId == "guard" })
         assertTrue(results.any { it.profileId == "trader" })
+        assertEquals(1200L, results.first { it.profileId == "guard" }.routineBiasTicks)
+        assertEquals(500L, results.first { it.profileId == "trader" }.routineBiasTicks)
     }
 
     @Test

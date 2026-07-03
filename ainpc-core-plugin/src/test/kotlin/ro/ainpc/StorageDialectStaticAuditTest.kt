@@ -42,8 +42,8 @@ class StorageDialectStaticAuditTest {
                 ),
                 "INSERT_OR" to mapOf(
                     "kotlin/ro/ainpc/database/DatabaseManager.kt" to 2,
-                    "kotlin/ro/ainpc/engine/ScenarioEngine.kt" to 3,
                     "kotlin/ro/ainpc/managers/NPCManagerDB.kt" to 3,
+                    "kotlin/ro/ainpc/engine/QuestProgressPersistenceService.kt" to 3,
                     "kotlin/ro/ainpc/reputation/ReputationService.kt" to 1
                 ),
                 "SQLITE_DATETIME" to mapOf(

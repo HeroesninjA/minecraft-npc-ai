@@ -1,6 +1,6 @@
 # Ce Este Implementat Deja
 
-Actualizat: 2026-06-29
+Actualizat: 2026-07-01
 
 Status verificat:
 - build-ul multi-module trece cu Gradle pe testele core si `assemble`
@@ -136,7 +136,7 @@ Exista o prima fundatie GUI inventory pentru operare in joc:
 - pachet `ro.ainpc.gui` cu `GuiService`, `GuiScreen`, `GuiSessionManager`, `AINPCGuiHolder`, `GuiButton`, contexte de render/click si factory pentru iteme
 - `GuiInventoryListener` anuleaza click/drag in inventarele AINPC si curata sesiunile la close/quit
 - `AINPCPlugin` initializeaza `GuiService`, iar `ListenerRegistry` inregistreaza listenerul GUI
-- comanda `/ainpc gui [main|quest|world|stats|interact|shop|manager|audit|debug]`, inclusiv `/ainpc gui quest <filter>` pentru quest log filtrat
+- comanda `/ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]`, inclusiv `/ainpc gui quest <filter>` pentru quest log filtrat
 - comanda rapida `/quest gui [filter]`
 - tab-completion pentru `/ainpc gui`, `/ainpc gui quest <filter>` si `/quest gui [filter]`
 - permisiuni `ainpc.gui`, `ainpc.gui.quest`, `ainpc.gui.stats`, `ainpc.gui.interact`, `ainpc.gui.shop`, `ainpc.gui.world`, `ainpc.gui.manager`, `ainpc.gui.audit`, `ainpc.gui.debug`
@@ -482,7 +482,8 @@ Capabilitati implementate:
 - comanda `/ainpc world fixture <plan|validate> [prefix]` pentru plan si validare read-only ale mediului controlat de test: sat predefinit, cladiri/places, nodes, structuri exterioare si offset-uri relative, fara WorldEdit, build fizic, spawn sau progress automat
 - comanda `/ainpc world bind npc <numeNpc|nearest> <homePlaceId> [workPlaceId|-] [socialPlaceId|-]`
 - comanda `/ainpc wand` pentru selectie manuala pos1/pos2/punct in harta construita
-- comanda `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` cu parser determinist, `preview`, `confirm` si `cancel`
+- comanda `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>` cu parser determinist, hinturi inline (`id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=`, `radius=`), `preview`, `edit/open/gui`, `confirm` si `cancel`
+- comanda `/ainpc world create ai [preview|dryrun|inspect] [region|place|node] ...` pentru draft AI/intent fara scriere directa; `preview` arata sumar si particule fara sa deschida obligatoriu formularul
 - `MappingDraft` initial pentru creare validata de `Region`, `Place` si `Node` prin `WorldAdminService`
 - `MappingDraft` pentru `npc_bind`, confirmat prin acelasi flux, care actualizeaza ancora home/work/social din profilul NPC, metadata mapping si `npc_world_bindings`
 - `MappingDraft` pentru `quest_anchor`, confirmat prin acelasi flux, care rezolva playerul/progresia si scrie sau actualizeaza `quest_anchor_bindings`

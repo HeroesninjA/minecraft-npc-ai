@@ -1,6 +1,6 @@
 # World Mapping si Spawn
 
-Actualizat: 2026-06-16
+Actualizat: 2026-07-01
 
 Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, spawn order, case si bindings.
 
@@ -11,6 +11,8 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 | `../../mapping-stack.md` | Punct de intrare scurt pentru documentele de mapping |
 | `../../npc-population-world-stack.md` | Punct de intrare scurt pentru planul de regiune, binding-uri NPC, household-uri si spawn |
 | `../../mapping.md` | Starea actuala, regulile de consum si evolutia sistemului `WorldRegion -> WorldPlace -> WorldNode` |
+| `../../build-mode-tutorial.md` | Tutorial scurt pentru mapping asistat AI/intent: `world create ai preview`, `map edit`, confirmare si save |
+| `../../build-mode-region-place-node.md` | Contract extins pentru build mode, preview, editor si integrare `Quest`/`Progression` |
 | `../../playable-village-ux.md` | Criterii de playability pentru sat: spatiere, teren, NPC stabili, rutina si interactiuni clare |
 | `../../gui-stack.md` | Punct de intrare scurt pentru documentele UI relevante pentru mapping si world hub |
 | `../../lucru-alternat-quest-mapping-progression.md` | Protocol pentru a verifica mapping-ul prin questuri/contracte mici si GUI peste snapshot-uri inainte de extractii mari de runtime |
@@ -34,7 +36,8 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 
 - Mapping-ul exista si are lookup pentru region/place/node.
 - Primul pass de playable village este documentat: demo semantic mai spatios, teren plat recomandat si criterii pentru sat lizibil.
-- Directia pentru mapping wand + prompt natural este documentata ca faza propusa, nu implementata.
+- Mapping wand + prompt natural exista initial pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`, cu draft, preview vizual, editare GUI si confirmare explicita.
+- `/ainpc world create ai [preview|dryrun|inspect] [region|place|node] ...` creeaza draft AI/intent fara scriere directa; `/ainpc map edit/open/gui` redeschide editorul pentru draftul curent.
 - `WorldContextSnapshot` este legat initial in `NPCContext`.
 - `visit_place`, `inspect_node` si `QuestAnchorResolver` exista initial.
 - Persistenta dedicata `quest_anchor_bindings` exista initial.
@@ -55,12 +58,11 @@ Aceasta categorie acopera fundatia semantica a lumii: regiuni, places, nodes, sp
 
 1. Pass Paper pe playable village: teren plat, case distantate, NPC-uri stabile si rutine inspectabile.
 2. Anti-duplicare NPC dupa restart: `/ainpc duplicates`, `/ainpc repair duplicates dryrun`, restart, chunk reload si verificare `npc_source_keys`.
-3. Mapping wand + prompt natural pentru regiuni, places, nodes, NPC bind si quest anchors, cu draft, preview si confirmare.
-4. Smoke test Paper pentru `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`.
-5. Backfill matur pentru `npc_world_bindings` si household-uri persistente.
-6. Generator narativ de populatie pe regiune: nume, roluri, familii si distributie pe case/work/social.
-7. Hardening pentru spawn pe regiune: `spawn_batches`, retry idempotent, compensare documentata, debugdump si test de rollback.
-8. Quest slice peste mapping: 3-5 questuri medievale cu `visit_place`, `inspect_node`, quest anchors si story events.
+3. Smoke test Paper pentru `world demo create -> settlement plan -> settlement spawn -> audit -> save -> reload`, plus flux wand/AI draft.
+4. Backfill matur pentru `npc_world_bindings` si household-uri persistente.
+5. Generator narativ de populatie pe regiune: nume, roluri, familii si distributie pe case/work/social.
+6. Hardening pentru spawn pe regiune: `spawn_batches`, retry idempotent, compensare documentata, debugdump si test de rollback.
+7. Quest slice peste mapping: 3-5 questuri medievale cu `visit_place`, `inspect_node`, quest anchors si story events.
 
 ## Urmatoarele documente utile
 

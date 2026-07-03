@@ -2,6 +2,7 @@
 # Each profile defines NPC behavior: schedule, movement, reactions.
 # Usage: /ainpc routine profiles
 
+default_profile: "villager"
 profiles:
   villager:
     occupation: "villager"
@@ -12,6 +13,103 @@ profiles:
     socialize_chance: 0.3
     weather_reactions: true
     night_return: true
+    routine_bias_ticks: 0
+    routine_goals:
+      home: "sa fie acasa"
+      work: "sa mearga la treaba"
+      social: "sa socializeze in sat"
+      idle: "sa astepte o activitate"
+    routine_texts:
+      night_sleep: "doarme acasa"
+      wake_start: "se trezeste si isi pregateste ziua"
+      low_needs_home: "revine acasa pentru siguranta si refacere"
+      work_day: "merge la lucru"
+      work_afternoon: "inchide treburile principale ale zilei"
+      social_day: "merge la punctul social pentru a vorbi cu localnicii"
+      social_evening: "se intalneste cu localnicii seara"
+      fallback_social: "foloseste punctul social"
+      fallback_home: "ramane aproape de casa"
+      fallback_idle: "sa astepte pana exista o ancora utila"
+      idle: "isi urmeaza rutina obisnuita"
+    fallback_rules:
+      - condition: "night"
+        slot: "HOME"
+        activity_key: "night_sleep"
+        state: "SLEEPING"
+      - condition: "low_needs"
+        slot: "HOME"
+        activity_key: "low_needs_home"
+        state: "RESTING"
+      - condition: "social_need"
+        slot: "SOCIAL"
+        activity_key: "social_day"
+        state: "SOCIALIZING"
+      - condition: "work_morning"
+        slot: "WORK"
+        activity_key: "work_day"
+        state: "WORKING"
+      - condition: "work_afternoon"
+        slot: "WORK"
+        activity_key: "work_afternoon"
+        state: "WORKING"
+      - condition: "social_evening"
+        slot: "SOCIAL"
+        activity_key: "social_evening"
+        state: "SOCIALIZING"
+      - condition: "default"
+        slot: "IDLE"
+        activity_key: "fallback_idle"
+        state: "IDLE"
+    thresholds:
+      energy_low: 25
+      hunger_low: 25
+      safety_low: 35
+      social_need_low: 35
+    slot_states:
+      home: "RESTING"
+      work: "WORKING"
+      social: "SOCIALIZING"
+      idle: "IDLE"
+    zone_states:
+      forest: "FARMING"
+      dark_forest: "FARMING"
+      jungle: "FARMING"
+      plains: "WORKING"
+      mountain: "MINING"
+      underground: "MINING"
+      river: "FISHING"
+      coast: "FISHING"
+      ocean: "FISHING"
+      interior: "WORKING"
+      default: "WORKING"
+    zone_activity_suffixes:
+      forest: "in padure"
+      dark_forest: "in padure"
+      jungle: "in jungla"
+      plains: "pe camp"
+      mountain: "pe munte"
+      underground: "in subteran"
+      river: "la rau"
+      coast: "pe coasta"
+      ocean: "pe ocean"
+      interior: "in interior"
+    preview_points:
+      - label: "Noapte"
+        world_time: 19000
+      - label: "Dimineata"
+        world_time: 6000
+      - label: "Pranz"
+        world_time: 13000
+      - label: "Seara"
+        world_time: 17000
+    phase_ticks:
+      wake_start: 2000
+      work_start: 2000
+      midday_start: 12000
+      evening_start: 16000
+      social_start: 8000
+      social_end: 18000
+      night_start: 18000
     schedule:
       morning:
         label: "Dimineata"
@@ -20,24 +118,28 @@ profiles:
         slot: "HOME"
         activity: "pregateste"
         target: "home"
+        state: "RESTING"
       work:
         label: "Munca"
         start_tick: 6000
         end_tick: 12000
         slot: "WORK"
         activity: "munca"
+        state: "WORKING"
       evening:
         label: "Seara"
         start_tick: 12000
         end_tick: 13800
         slot: "HOME"
         activity: "odihneste"
+        state: "RESTING"
       night:
         label: "Noapte"
         start_tick: 13800
         end_tick: 24000
         slot: "HOME"
         activity: "doarme"
+        state: "SLEEPING"
 
   worker:
     occupation: "worker"
@@ -48,6 +150,12 @@ profiles:
     socialize_chance: 0.2
     weather_reactions: true
     night_return: true
+    routine_bias_ticks: 300
+    routine_goals:
+      home: "sa se odihneasca acasa"
+      work: "sa munceasca la locul de munca"
+      social: "sa ia o pauza cu vecinii"
+      idle: "sa astepte urmatorul schimb"
     schedule:
       morning:
         label: "Dimineata"
@@ -55,21 +163,205 @@ profiles:
         end_tick: 6000
         slot: "WORK"
         activity: "munca"
+        state: "WORKING"
       afternoon:
         label: "Dupa-amiaza"
         start_tick: 6000
         end_tick: 12000
         slot: "WORK"
         activity: "munca"
+        state: "WORKING"
       evening:
         label: "Seara"
         start_tick: 12000
         end_tick: 13800
         slot: "HOME"
         activity: "odihneste"
+        state: "RESTING"
       night:
         label: "Noapte"
         start_tick: 13800
         end_tick: 24000
         slot: "HOME"
         activity: "doarme"
+        state: "SLEEPING"
+
+  farmer:
+    occupation: "farmer"
+    display_name: "Fermier"
+    movement_speed: 0.5
+    wander_radius: 10.0
+    home_return: true
+    socialize_chance: 0.25
+    weather_reactions: true
+    night_return: true
+    routine_bias_ticks: -900
+    routine_goals:
+      home: "sa se intoarca la casa si gospodarie"
+      work: "sa lucreze pe camp"
+      social: "sa vorbeasca cu ceilalti fermieri"
+      idle: "sa astepte sa se deschida campul"
+    schedule:
+      morning:
+        label: "Dimineata"
+        start_tick: 0
+        end_tick: 5000
+        slot: "WORK"
+        activity: "lucreaza pe camp"
+        state: "FARMING"
+      midday:
+        label: "Mijlocul zilei"
+        start_tick: 5000
+        end_tick: 12000
+        slot: "WORK"
+        activity: "ingrijeste recolta"
+        state: "FARMING"
+      evening:
+        label: "Seara"
+        start_tick: 12000
+        end_tick: 13800
+        slot: "HOME"
+        activity: "se intoarce acasa"
+        state: "RESTING"
+      night:
+        label: "Noapte"
+        start_tick: 13800
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"
+        state: "SLEEPING"
+
+  merchant:
+    occupation: "merchant"
+    display_name: "Negustor"
+    movement_speed: 0.55
+    wander_radius: 8.0
+    home_return: true
+    socialize_chance: 0.55
+    weather_reactions: true
+    night_return: true
+    routine_bias_ticks: 500
+    routine_goals:
+      home: "sa pregateasca marfa acasa"
+      work: "sa vanda si sa cumpere in piata"
+      social: "sa negocieze si sa discute"
+      idle: "sa astepte clienti"
+    schedule:
+      morning:
+        label: "Dimineata"
+        start_tick: 0
+        end_tick: 7000
+        slot: "HOME"
+        activity: "pregateste marfa"
+        state: "RESTING"
+      market:
+        label: "Piata"
+        start_tick: 7000
+        end_tick: 15000
+        slot: "WORK"
+        activity: "vinde si cumpara"
+        state: "WORKING"
+      evening:
+        label: "Seara"
+        start_tick: 15000
+        end_tick: 18000
+        slot: "SOCIAL"
+        activity: "discuta cu localnicii"
+        state: "SOCIALIZING"
+      night:
+        label: "Noapte"
+        start_tick: 18000
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"
+        state: "SLEEPING"
+
+  smith:
+    occupation: "smith"
+    display_name: "Fierar"
+    movement_speed: 0.45
+    wander_radius: 5.0
+    home_return: true
+    socialize_chance: 0.15
+    weather_reactions: true
+    night_return: true
+    routine_bias_ticks: 250
+    routine_goals:
+      home: "sa se odihneasca la casa"
+      work: "sa forjeze si sa repare la fierarie"
+      social: "sa schimbe vorbe cu clientii"
+      idle: "sa astepte comenzi"
+    schedule:
+      morning:
+        label: "Dimineata"
+        start_tick: 0
+        end_tick: 6000
+        slot: "WORK"
+        activity: "forjeaza"
+        state: "WORKING"
+      afternoon:
+        label: "Dupa-amiaza"
+        start_tick: 6000
+        end_tick: 13000
+        slot: "WORK"
+        activity: "repara unelte"
+        state: "WORKING"
+      evening:
+        label: "Seara"
+        start_tick: 13000
+        end_tick: 18000
+        slot: "HOME"
+        activity: "se odihneste"
+        state: "RESTING"
+      night:
+        label: "Noapte"
+        start_tick: 18000
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"
+        state: "SLEEPING"
+
+  guard:
+    occupation: "guard"
+    display_name: "Garda"
+    movement_speed: 0.65
+    wander_radius: 12.0
+    home_return: true
+    socialize_chance: 0.1
+    weather_reactions: true
+    night_return: true
+    routine_bias_ticks: 1200
+    routine_goals:
+      home: "sa se odihneasca la cazarma"
+      work: "sa patruleze si sa protejeze satul"
+      social: "sa schimbe tura cu ceilalti garzi"
+      idle: "sa astepte urmatoarea patrula"
+    schedule:
+      early_shift:
+        label: "Schimb dimineata"
+        start_tick: 0
+        end_tick: 5000
+        slot: "WORK"
+        activity: "patruleaza"
+        state: "WORKING"
+      day_shift:
+        label: "Schimb zi"
+        start_tick: 5000
+        end_tick: 15000
+        slot: "WORK"
+        activity: "supravegheaza satul"
+        state: "WORKING"
+      evening_shift:
+        label: "Schimb seara"
+        start_tick: 15000
+        end_tick: 19000
+        slot: "WORK"
+        activity: "schimba garda"
+        state: "WORKING"
+      night:
+        label: "Noapte"
+        start_tick: 19000
+        end_tick: 24000
+        slot: "HOME"
+        activity: "doarme"
+        state: "SLEEPING"

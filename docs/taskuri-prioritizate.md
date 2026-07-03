@@ -1,6 +1,6 @@
 # Taskuri prioritizate
 
-Actualizat: 2026-06-21 (revizia 4 — audit de consisten?a + backlog extins)
+Actualizat: 2026-07-01 (revizia 5 - aliniere mapping/build-mode)
 
 Taskurile finalizate au fost mutate in `docs/taskuri-finalizate.md`; restul sunt taskuri deschise sau propuneri.
 
@@ -32,7 +32,7 @@ Ordinea este pragmatica: intai fundatia, apoi world/NPC/spawn, apoi quest/AI/sto
 ## Index rapid
 
 - `P0` - fundatie, API si runtime: 10 documente
-- `P1` - world, NPC si spawn: 21 documente
+- `P1` - world, NPC si spawn: 22 documente
 - `P2` - quest, AI, story si GUI: 25 documente
 - `P3` - debug, testare, release si hardening: 21 documente
 - `P4` - modularizare, Kotlin si addonuri: 16 documente
@@ -305,6 +305,13 @@ Documente: `simulare-sat-si-lume.md`, `ordine-spawn-npc-cladiri-region-node.md`,
 - Clarifica ce este exemplu si ce este sursa de adevar.
 - Pastreaza instructiunile scurte si verificabile.
 - Noteaza unde se reflecta manualul in runtime.
+
+#### `build-mode-tutorial.md`
+
+- Pastreaza fluxul scurt pentru `world create ai preview`, `map edit`, `map confirm` si `world save`.
+- Leaga tutorialul de `mapping-stack.md` si `build-mode-region-place-node.md`.
+- Clarifica diferentele dintre `preview`, `dryrun`, `inspect` si deschiderea editorului.
+- Noteaza hinturile acceptate: `id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=`, `radius=`.
 
 #### `mapping-pentru-implementari-ulterioare.md`
 

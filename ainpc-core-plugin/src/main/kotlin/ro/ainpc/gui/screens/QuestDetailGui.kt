@@ -2,7 +2,6 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -47,7 +46,7 @@ class QuestDetailGui : GuiScreen {
         context.item(4, GuiItemFactory.item(headerMaterial(entry), "&e${GuiItemFactory.compact(entry.title(), 40)}", headerLore(entry)))
 
         renderSelectionDiagnostics(context, entry)
-        renderSnapshotAlignmentCard(context, entry, snapshot, selector, detailFilter)
+        renderSnapshotAlignmentCard(context, snapshot, selector, detailFilter)
         renderDiagnosticCards(context, entry)
         renderAuthoringCard(context, entry)
         renderAnchorDiagnostics(context, entry, anchors, adminView)
@@ -121,7 +120,7 @@ class QuestDetailGui : GuiScreen {
             GuiItemFactory.item(
                 Material.BOOK,
                 "&bStatus runtime",
-                    compactLore(entry.statusLines(), "&8Nu exista linii de status in snapshot.", 3)
+                    compactLore(entry.statusLines(), "&8Nu exista linii de status in snapshot.")
             )
         )
         context.item(
@@ -129,14 +128,13 @@ class QuestDetailGui : GuiScreen {
             GuiItemFactory.item(
                 Material.OAK_SIGN,
                 "&aActiuni sugerate",
-                compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.", 3)
+                compactLore(entry.actionLines(), "&8Nu exista actiuni sugerate in snapshot.")
             )
         )
     }
 
     private fun renderSnapshotAlignmentCard(
         context: GuiRenderContext,
-        entry: ProgressionGuiEntry,
         snapshot: ProgressionGuiSnapshot,
         selector: String,
         detailFilter: String
@@ -193,6 +191,7 @@ class QuestDetailGui : GuiScreen {
                     listOf(
                         "&7Decision: &f${authoringSnapshot.decisionStatus()}",
                         "&7Reason: &f${valueOrUnknown(authoringSnapshot.decisionReason())}",
+                        questGenerationLine(authoringSnapshot, storyContext.storySignals()),
                         "&7Selector: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
                         "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
                         "&7Seed mode: &f${valueOrUnknown(authoringSnapshot.seedStoryMode())}",
@@ -200,11 +199,40 @@ class QuestDetailGui : GuiScreen {
                         "&8Click: deschide authoring GUI."
                     )
                 ),
-                GuiAction { click ->
+                action = { click ->
                     click.service().openAuthoring(click.player(), entry.selector(), entry.mechanicId())
                 }
             )
         )
+    }
+
+    private fun questGenerationLine(authoringSnapshot: ro.ainpc.engine.QuestAuthoringSnapshot, storySignals: List<String>): String {
+        return if (authoringSnapshot.decisionReason() == "structure_quest_generation_cooldown") {
+            val category = signalValue(storySignals, "quest_generation_cooldown_category")
+            val remaining = signalValue(storySignals, "quest_generation_cooldown_remaining_ms").toLongOrNull()
+            val detail = buildList {
+                if (category.isNotBlank()) add(category)
+                if (remaining != null) add(formatDuration(remaining))
+            }.joinToString(", ")
+            if (detail.isBlank()) {
+                "&7Quest generation: &ein cooldown dupa o structura recenta"
+            } else {
+                "&7Quest generation: &ein cooldown ($detail)"
+            }
+        } else {
+            "&7Quest generation: &aactiv"
+        }
+    }
+
+    private fun signalValue(signals: List<String>, prefix: String): String {
+        return signals.firstOrNull { it.startsWith("$prefix=") }
+            ?.substringAfter("=")
+            .orEmpty()
+    }
+
+    private fun formatDuration(milliseconds: Long): String {
+        val seconds = (milliseconds / 1000).coerceAtLeast(0)
+        return "${seconds}s"
     }
 
     private fun loadAnchorBindings(context: GuiRenderContext, entry: ProgressionGuiEntry): List<ProgressionAnchorBinding>? {
@@ -517,13 +545,13 @@ class QuestDetailGui : GuiScreen {
         return lore
     }
 
-    private fun compactLore(lines: List<String>?, emptyLine: String, maxLines: Int): List<String> {
+    private fun compactLore(lines: List<String>?, emptyLine: String): List<String> {
         if (lines.isNullOrEmpty()) {
             return listOf(emptyLine)
         }
 
         val lore = ArrayList<String>()
-        val limit = minOf(maxOf(1, maxLines), lines.size)
+        val limit = minOf(3, lines.size)
         for (index in 0 until limit) {
             lore.add("&7${GuiItemFactory.compact(lines[index], 44)}")
         }

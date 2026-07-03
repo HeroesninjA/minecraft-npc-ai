@@ -2,6 +2,29 @@
   "id": "contract_example",
   "name": "Contract Example",
   "description": "Exemplu de feature pack cu quest, mapping si story defaults.",
+  "type": "quest_pack",
+  "version": 1,
+  "meta": {
+    "id": "contract_example",
+    "title": "Contract Example"
+  },
+  "spec": {
+    "objectives": [
+      {
+        "target": {
+          "ref": "tag:market"
+        },
+        "amount": 1,
+        "description": "Viziteaza piata satului"
+      }
+    ],
+    "rewards": [
+      {
+        "amount": 5,
+        "description": "5 bucati de aur"
+      }
+    ]
+  },
   "addon": {
     "type": "feature",
     "version": "1.0.0",

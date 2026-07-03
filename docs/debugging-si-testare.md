@@ -808,7 +808,7 @@ Status: amanat pentru test manual in joc.
 
 Motiv:
 
-- `/ainpc wand` si `/ainpc map preview|confirm|cancel` trec prin validare `Player`;
+- `/ainpc wand` si `/ainpc map preview|edit|confirm|cancel` trec prin validare `Player`;
 - RCON/console nu poate simula selectii wand reale, click stanga/dreapta sau context de inventar;
 - aceste faze nu sunt marcate finalizate pana cand exista un jucator conectat in Paper.
 
@@ -819,6 +819,7 @@ Comenzi manuale ramase:
 /ainpc wand mode place
 /ainpc wand mode node
 /ainpc map preview
+/ainpc map edit
 /ainpc map confirm
 /ainpc map cancel
 ```

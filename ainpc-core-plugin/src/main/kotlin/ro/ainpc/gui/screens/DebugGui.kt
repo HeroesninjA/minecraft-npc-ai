@@ -82,6 +82,13 @@ class DebugGui : GuiScreen {
                 )
             )
         )
+        if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
+            context.item(6, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
+                "&7MCP raporteaza modul read-only.",
+                "&7Debug-ul ramane disponibil.",
+                "&8Scrierea in mapping este blocata."
+            )))
+        }
 
         dumpButton(context, 10, "all", Material.NETHER_STAR, "&6Debugdump all")
         dumpButton(context, 11, "npc", Material.VILLAGER_SPAWN_EGG, "&eDebugdump NPC")
@@ -133,6 +140,18 @@ class DebugGui : GuiScreen {
                 GuiItemFactory.item(Material.ENDER_EYE, "&bMCP", listOf("&7Deschide MCP admin.", "&7Health, flags, routing.")),
             ) { click -> click.service().open(click.player(), GuiKey.MCP) }
         )
+        context.button(21, GuiButton.enabled(
+            GuiItemFactory.item(Material.CLOCK, "&dBuild status", "&7Inspecteaza rapid build mode."),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode status") })
+        context.button(22, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history", "&7Ultimele schimbari build mode."),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode history") })
+        context.button(23, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&dBuild export", "&7Export compact al build mode."),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode export") })
+        context.button(24, GuiButton.enabled(
+            GuiItemFactory.item(Material.BARRIER, "&cClear build history", "&7Curata istoricul local build mode."),
+        ) { click -> click.service().runCommand(click.player(), "ainpc build mode clear-history") })
 
         context.button(28, GuiButton.enabled(
             GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.", "&8Admin separat."),

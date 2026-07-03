@@ -1,6 +1,6 @@
 # GUI Admin Mapping si Quest
 
-Actualizat: 2026-06-29
+Actualizat: 2026-07-01
 
 Punctul de intrare recomandat pentru aceasta zona este `gui-stack.md`.
 
@@ -167,13 +167,14 @@ Reguli de stergere:
 ### Mapping
 
 1. Adminul deschide `WorldHubGui` sau un hub dedicat de mapping.
-2. Alege tipul de obiect: region, place sau node.
-3. Deschide editorul de create sau edit.
-4. Modifica campurile permise.
-5. Ruleaza validarea.
-6. Vede preview-ul impactului.
-7. Salveaza cu confirmare.
-8. Stergerea cere `ConfirmActionGui`.
+2. Alege tipul de obiect: `Region`, `Place` sau `Node`.
+3. Porneste un draft prin `build mode` sau prin `world create ai preview|dryrun|inspect`.
+4. Deschide editorul cu `map edit`, `map open` sau `map gui` daca vrea sa ajusteze draftul curent.
+5. Modifica campurile permise.
+6. Ruleaza validarea.
+7. Vede preview-ul impactului si preview-ul vizual.
+8. Salveaza cu confirmare.
+9. Stergerea cere `ConfirmActionGui`.
 
 ### Quest
 
@@ -189,6 +190,7 @@ Reguli de stergere:
 
 - `AdminMappingGui` pentru lista si editor de world mapping.
 - `AdminMappingEditGui` pentru detalii de region/place/node.
+- `BuildModePreviewGui` sau echivalentul de draft editor pentru preview-first create flow.
 - `AdminQuestGui` pentru lista si editor de questuri.
 - `AdminQuestEditGui` pentru draft si publicare.
 - `ConfirmActionGui` pentru stergeri si actiuni cu impact mare.

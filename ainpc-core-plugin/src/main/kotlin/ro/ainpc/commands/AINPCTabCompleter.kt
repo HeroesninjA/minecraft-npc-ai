@@ -325,8 +325,10 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "places" -> if (args.size == 3) completions.addAll(getRegionIds(args[2]))
             "create" -> {
                 if (args.size == 3) completions.addAll(filterStartsWith(listOf("ai", "help"), args[2]))
-                else if (args.size == 4) completions.addAll(filterStartsWith(listOf("region", "place", "node"), args[3]))
-                else if (args.size == 5) completions.add("<descriere>")
+                else if (args.size == 4) completions.addAll(filterStartsWith(listOf("preview", "dryrun", "region", "place", "node"), args[3]))
+                else if (args.size == 5 && listOf("preview", "dryrun", "inspect").any { it.equals(args[3], true) }) {
+                    completions.addAll(filterStartsWith(listOf("region", "place", "node"), args[4]))
+                } else if (args.size == 5 || args.size == 6) completions.add("<descriere>")
             }
             "outside" -> {
                 if (args.size == 3) completions.addAll(filterStartsWith(OUTSIDE_ACTIONS, args[2]))
@@ -1273,7 +1275,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val WAND_RESET_TARGETS = listOf("pos1", "pos2", "point", "all")
         private val WAND_MODES = listOf("region", "place", "node", "npc_bind", "quest_anchor")
         private val MAP_ACTIONS =
-            listOf("region", "place", "node", "npc_bind", "quest_anchor", "preview", "confirm", "cancel")
+            listOf("region", "place", "node", "npc_bind", "quest_anchor", "preview", "edit", "open", "gui", "confirm", "cancel")
         private val MAP_QUEST_ANCHOR_SELECTORS = listOf("tracked", "current")
         private val MAP_QUEST_ANCHOR_OBJECTIVE_TYPES =
             listOf(

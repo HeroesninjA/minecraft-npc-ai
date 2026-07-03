@@ -35,7 +35,7 @@ class QuestSeedFactoryTest {
 
         val decision = QuestDirectorDecision.candidateFound(
             definition,
-            listOf("recent_story_event_key=market_unrest", "quest_hook=investigation"),
+            listOf("recent_story_event_key=market_unrest", "quest_hook=investigation", "structure_type=market_square"),
             listOf("medieval:C02"),
             listOf("note")
         )
@@ -56,6 +56,7 @@ class QuestSeedFactoryTest {
         assertEquals("story_driven", seed.storyMode())
         assertTrue(seed.storySignals().contains("recent_story_event_key=market_unrest"))
         assertTrue(seed.storySignals().contains("quest_hook=investigation"))
+        assertTrue(seed.storySignals().contains("structure_type=market_square"))
         assertTrue(seed.limits().contains("read_only"))
         assertTrue(seed.limits().contains("candidate_templates=1"))
     }

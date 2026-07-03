@@ -18,6 +18,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentMap
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -73,15 +74,60 @@ class MappingWandService(private val plugin: AINPCPlugin) {
     ): MappingDraft {
         val session = ensureSession(player)
         val kind = explicitKind ?: session.mode().draftKind()
+        val selection = selectionForDraft(player, kind, session.selection(), description)
         val draft = draftFactory.createDraft(
             player.uniqueId,
             kind,
-            session.selection(),
+            selection,
             description,
             worldAdmin
         )
-        sessions[player.uniqueId] = MappingWandSession(session.mode(), session.selection(), draft)
+        sessions[player.uniqueId] = MappingWandSession(session.mode(), selection, draft)
         return draft
+    }
+
+    private fun selectionForDraft(
+        player: Player,
+        kind: MappingDraftKind,
+        currentSelection: MappingWandSelection,
+        description: String?
+    ): MappingWandSelection {
+        val inlineHints = MappingIntentParser.extractInlineHints(description)
+        if (inlineHints.isEmpty()) {
+            return currentSelection
+        }
+        if (kind == MappingDraftKind.REGION || kind == MappingDraftKind.PLACE) {
+            if (currentSelection.bounds() != null) {
+                return currentSelection
+            }
+            val radius = parseSelectionRadius(inlineHints, if (kind == MappingDraftKind.REGION) 16 else 5)
+            val height = parseSelectionHeight(inlineHints, if (kind == MappingDraftKind.REGION) 32 else 8)
+            val location = player.location
+            val center = MappingPoint(location.world.name, location.blockX, location.blockY, location.blockZ)
+            val pos1 = MappingPoint(center.worldName(), center.x() - radius, center.y(), center.z() - radius)
+            val pos2 = MappingPoint(center.worldName(), center.x() + radius, center.y() + height, center.z() + radius)
+            return currentSelection.withPos1(pos1).withPos2(pos2)
+        }
+        if (kind == MappingDraftKind.NODE && !currentSelection.hasPoint()) {
+            val location = player.location
+            return currentSelection.withPoint(MappingPoint(location.world.name, location.blockX, location.blockY, location.blockZ))
+        }
+        return currentSelection
+    }
+
+    private fun parseSelectionRadius(inlineHints: Map<String, String>, fallback: Int): Int {
+        val hintedRadius = inlineHints["radius"]?.toDoubleOrNull()
+        if (hintedRadius != null) {
+            return ceil(hintedRadius).toInt().coerceIn(1, 128)
+        }
+        val hintedSize = inlineHints["size"]?.toDoubleOrNull()
+            ?: inlineHints["width"]?.toDoubleOrNull()
+        return hintedSize?.let { ceil(it / 2.0).toInt().coerceIn(1, 128) } ?: fallback
+    }
+
+    private fun parseSelectionHeight(inlineHints: Map<String, String>, fallback: Int): Int {
+        val hintedHeight = inlineHints["height"]?.toDoubleOrNull()
+        return hintedHeight?.let { ceil(it).toInt().coerceIn(1, 256) } ?: fallback
     }
 
     fun confirmDraft(player: Player, worldAdmin: WorldAdminService?): MappingDraftApplyResult {

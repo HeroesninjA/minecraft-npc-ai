@@ -55,6 +55,7 @@ class QuestAuthoringGui : GuiScreen {
                     "&7Entries progresie: &f${progressionSnapshot.allEntries().size}",
                     "&7Story signals: &f${storyContext.storySignals().size}",
                     "&7Warnings: &f${authoringSnapshot.warnings.size}",
+                    cooldownLore(authoringSnapshot, storyContext.storySignals()),
                     if (aiMode.isBlank()) "&7AI preset: &f(nu)" else "&7AI preset: &f$aiMode",
                     if (aiSelector.isBlank()) "&7AI selector: &f(nu)" else "&7AI selector: &f$aiSelector",
                     if (aiMechanic.isBlank()) "&7AI mechanic: &f(nu)" else "&7AI mechanic: &f$aiMechanic",
@@ -63,6 +64,13 @@ class QuestAuthoringGui : GuiScreen {
                 )
             )
         )
+        if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
+            context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
+                "&7MCP raporteaza modul read-only.",
+                "&7Authoring writes sunt blocate.",
+                "&8Inspectia si preview-ul raman disponibile."
+            )))
+        }
 
         context.item(
             10,
@@ -232,6 +240,37 @@ class QuestAuthoringGui : GuiScreen {
             )
         )
 
+        if (adminView) {
+            context.button(
+                24,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.CLOCK, "&dBuild status", "&7Inspecteaza rapid build mode."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode status") }
+                )
+            )
+            context.button(
+                25,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history", "&7Ultimele schimbari build mode."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode history") }
+                )
+            )
+            context.button(
+                26,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.PAPER, "&dBuild export", "&7Export compact al build mode."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode export") }
+                )
+            )
+            context.button(
+                27,
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.BARRIER, "&cClear build history", "&7Curata istoricul local build mode."),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode clear-history") }
+                )
+            )
+        }
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
@@ -316,6 +355,35 @@ class QuestAuthoringGui : GuiScreen {
         } else {
             compactLore(lines, "&e", 8)
         }
+
+    private fun cooldownLore(snapshot: ro.ainpc.engine.QuestAuthoringSnapshot, storySignals: List<String>): String {
+        return if (snapshot.decisionReason() == "structure_quest_generation_cooldown") {
+            val category = signalValue(storySignals, "quest_generation_cooldown_category")
+            val remaining = signalValue(storySignals, "quest_generation_cooldown_remaining_ms").toLongOrNull()
+            val detail = buildList {
+                if (category.isNotBlank()) add(category)
+                if (remaining != null) add(formatDuration(remaining))
+            }.joinToString(", ")
+            if (detail.isBlank()) {
+                "&7Quest generation: &ein cooldown dupa o structura recenta"
+            } else {
+                "&7Quest generation: &ein cooldown ($detail)"
+            }
+        } else {
+            "&7Quest generation: &aactiv"
+        }
+    }
+
+    private fun signalValue(signals: List<String>, prefix: String): String {
+        return signals.firstOrNull { it.startsWith("$prefix=") }
+            ?.substringAfter("=")
+            .orEmpty()
+    }
+
+    private fun formatDuration(milliseconds: Long): String {
+        val seconds = (milliseconds / 1000).coerceAtLeast(0)
+        return "${seconds}s"
+    }
 
     private fun compactLore(lines: List<String>, color: String, maxLines: Int): List<String> {
         if (lines.isEmpty()) {

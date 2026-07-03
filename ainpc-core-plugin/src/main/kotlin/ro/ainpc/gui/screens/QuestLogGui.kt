@@ -4,8 +4,6 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.debug.DebugDumpQuestText
-import ro.ainpc.gui.GuiAction
-import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiClickContext
 import ro.ainpc.gui.GuiItemFactory
@@ -16,7 +14,6 @@ import ro.ainpc.gui.QuestLogGuiFilter
 import ro.ainpc.gui.QuestLogGuiPage
 import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
-import ro.ainpc.progression.ProgressionObjectiveSnapshot
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -74,9 +71,8 @@ class QuestLogGui : GuiScreen {
                 context.button(
                     LOG_SLOTS[index],
                     GuiButton.enabled(
-                        GuiItemFactory.item(entryMaterial(entry), entryTitle(entry), entryLore(entry)),
-                        GuiAction { click -> handleEntryClick(click, entry, activeFilter) }
-                    )
+                        GuiItemFactory.item(entryMaterial(entry), entryTitle(entry), entryLore(entry))
+                    ) { click -> handleEntryClick(click, entry, activeFilter) }
                 )
             }
         }
@@ -117,9 +113,8 @@ class QuestLogGui : GuiScreen {
         context.button(
             45,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la hub-ul principal."),
-                GuiAction { click -> click.service().open(click.player(), GuiKey.MAIN) }
-            )
+                GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la hub-ul principal.")
+            ) { click -> click.service().open(click.player(), GuiKey.MAIN) }
         )
         context.button(
             46,
@@ -129,9 +124,8 @@ class QuestLogGui : GuiScreen {
                         Material.ARROW,
                         "&ePagina anterioara",
                         "&7Pagina &f${page.displayPage()}&7/&f${page.pageCount()}"
-                    ),
-                    GuiAction { click -> click.service().openQuestLogPage(click.player(), page.pageIndex() - 1) }
-                )
+                    )
+                ) { click -> click.service().openQuestLogPage(click.player(), page.pageIndex() - 1) }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
@@ -150,9 +144,8 @@ class QuestLogGui : GuiScreen {
                         Material.ARROW,
                         "&ePagina urmatoare",
                         "&7Pagina &f${page.displayPage()}&7/&f${page.pageCount()}"
-                    ),
-                    GuiAction { click -> click.service().openQuestLogPage(click.player(), page.pageIndex() + 1) }
-                )
+                    )
+                ) { click -> click.service().openQuestLogPage(click.player(), page.pageIndex() + 1) }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
@@ -172,9 +165,8 @@ class QuestLogGui : GuiScreen {
                         Material.MAP,
                         "&6Ancore progresie",
                         "&7Listeaza ancorele persistate pentru progresii."
-                    ),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }
-                )
+                    )
+                ) { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }
             )
         }
 
@@ -186,9 +178,8 @@ class QuestLogGui : GuiScreen {
                     "&aRefresh",
                     "&7Reincarca pagina curenta.",
                     "&7Pagina: &f${page.displayPage()}&7/&f${page.pageCount()}"
-                ),
-                GuiAction { click -> click.service().openQuestLogPage(click.player(), page.pageIndex()) }
-            )
+                )
+            ) { click -> click.service().openQuestLogPage(click.player(), page.pageIndex()) }
         )
         context.button(
             50,
@@ -200,9 +191,8 @@ class QuestLogGui : GuiScreen {
                         "&7Porneste tracking persistent pentru prima",
                         "&7intrare activa din filtrul curent.",
                         "&7Comanda: &f/${trackableEntry.trackStartCommand()}"
-                    ),
-                    GuiAction { click -> click.service().runCommand(click.player(), trackableEntry.trackStartCommand()) }
-                )
+                    )
+                ) { click -> click.service().runCommand(click.player(), trackableEntry.trackStartCommand()) }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
@@ -231,16 +221,14 @@ class QuestLogGui : GuiScreen {
                             "&8Nu exista progresie urmarita vizibila in filtrul curent."
                         )
                     }
-                ),
-                GuiAction { click -> click.service().runCommand(click.player(), stopTrackingCommand) }
-            )
+                )
+            ) { click -> click.service().runCommand(click.player(), stopTrackingCommand) }
         )
         context.button(
             53,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.BARRIER, "&cInchide", "&7Inchide interfata."),
-                GuiAction { click -> click.player().closeInventory() }
-            )
+            ) { click -> click.player().closeInventory() }
         )
     }
 
@@ -266,16 +254,16 @@ class QuestLogGui : GuiScreen {
                     listOf(
                         "&7Decision: &f${authoringSnapshot.decisionStatus()}",
                         "&7Reason: &f${valueOrUnknown(authoringSnapshot.decisionReason())}",
+                        cooldownLine(authoringSnapshot, storyContext.storySignals()),
                         "&7Selector: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
                         "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
                         "&7Warnings: &f${authoringSnapshot.warnings.size}",
                         "&8Click: deschide authoring GUI."
                     )
-                ),
-                GuiAction { click ->
-                    click.service().openAuthoring(click.player(), selectedEntry?.selector(), selectedEntry?.mechanicId())
-                }
-            )
+                )
+            ) { click ->
+                click.service().openAuthoring(click.player(), selectedEntry?.selector(), selectedEntry?.mechanicId())
+            }
         )
     }
 
@@ -308,6 +296,10 @@ class QuestLogGui : GuiScreen {
         val storyContext = context.plugin().storyContextService.buildForPlayer(context.player())
         val currentRegion = storyContext.worldContext().currentRegion()
         val currentPlace = storyContext.worldContext().currentPlace()
+        val recentQuestEvents = storyContext.recentStoryEvents().filter { it.eventType().startsWith("quest_") }
+        val questSignals = storyContext.storySignals().filter {
+            it.startsWith("recent_quest_") || it.startsWith("last_quest_")
+        }
         val regionState = try {
             val service = context.plugin().storyStateService
             if (currentRegion != null) {
@@ -320,10 +312,15 @@ class QuestLogGui : GuiScreen {
                 if (regionState != null) Material.AMETHYST_SHARD else Material.GRAY_DYE,
                 "&dContext poveste",
                 listOf(
+                    "&7Quest entries active: &f${snapshot.currentEntries().size}",
                     "&7Regiune: &f${currentRegion?.id() ?: "<nemapata>"}",
                     "&7Story state: &f${regionState?.stateKey() ?: "<nepersistat>"}",
                     "&7Place: &f${currentPlace?.id() ?: "<nemapat>"}",
                     "&7Ancore active: &f${storyContext.activeQuestAnchors().size}",
+                    "&7Quest events recente: &f${recentQuestEvents.size}",
+                    "&7Quest signals: &f${questSignals.size}",
+                    if (questSignals.isNotEmpty()) "&7Ultimul quest signal: &f${GuiItemFactory.compact(questSignals.first(), 32)}" else "&7Ultimul quest signal: &f<none>",
+                    if (recentQuestEvents.isNotEmpty()) "&7Ultimul quest event: &f${recentQuestEvents.first().eventType()} ${valueOrUnknown(recentQuestEvents.first().eventKey())}" else "&7Ultimul quest event: &f<none>",
                     "&7Warnings: &f${storyContext.warnings().size}"
                 )
             )
@@ -340,8 +337,7 @@ class QuestLogGui : GuiScreen {
                         "&dQuest diagnostics",
                         questDiagnosticsLore(context.plugin())
                     ),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump quest") }
-                )
+                ) { click -> click.service().runCommand(click.player(), "ainpc debugdump quest") }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
@@ -405,9 +401,8 @@ class QuestLogGui : GuiScreen {
                             if (selected) "&aFiltru curent." else "&7Click pentru filtrare.",
                             "&7Filtru de baza: &f${filter.displayLabel()}"
                         )
-                    ),
-                    GuiAction { click -> click.service().openQuestLog(click.player(), filter.filter()) }
-                )
+                    )
+                ) { click -> click.service().openQuestLog(click.player(), filter.filter()) }
             )
         }
     }
@@ -433,9 +428,8 @@ class QuestLogGui : GuiScreen {
                             if (selected) "&dFiltru curent." else "&7Click pentru filtrare.",
                             "&7Filtru avansat: &f${filter.displayLabel()}"
                         )
-                    ),
-                    GuiAction { click -> click.service().openQuestLog(click.player(), filter.filter()) }
-                )
+                    )
+                ) { click -> click.service().openQuestLog(click.player(), filter.filter()) }
             )
         }
     }
@@ -518,7 +512,7 @@ class QuestLogGui : GuiScreen {
         }
         if (totalObjectives > 0) {
             val pct = (completeObjectives * 100) / totalObjectives
-            val bar = progressBar(pct, 16)
+            val bar = progressBar(pct)
             lore.add("&7Obiective: &f$completeObjectives&7/&f$totalObjectives &8$pct%")
             lore.add(" &8$bar")
         }
@@ -542,17 +536,47 @@ class QuestLogGui : GuiScreen {
         return lore
     }
 
-    private fun progressBar(pct: Int, segments: Int): String {
+    private fun progressBar(pct: Int): String {
+        val segments = 16
         val filled = (pct * segments) / 100
         val empty = segments - filled
         val sb = StringBuilder("&a")
-        for (i in 0 until filled) sb.append('\u2588')
+        repeat(filled) { sb.append('\u2588') }
         sb.append("&7")
-        for (i in 0 until empty) sb.append('\u2588')
+        repeat(empty) { sb.append('\u2588') }
         return sb.toString()
     }
 
     private fun valueOrUnknown(value: String): String = value.ifBlank { "unknown" }
+
+    private fun cooldownLine(authoringSnapshot: ro.ainpc.engine.QuestAuthoringSnapshot, storySignals: List<String>): String {
+        return if (authoringSnapshot.decisionReason() == "structure_quest_generation_cooldown") {
+            val category = signalValue(storySignals, "quest_generation_cooldown_category")
+            val remaining = signalValue(storySignals, "quest_generation_cooldown_remaining_ms").toLongOrNull()
+            val detail = buildList {
+                if (category.isNotBlank()) add(category)
+                if (remaining != null) add(formatDuration(remaining))
+            }.joinToString(", ")
+            if (detail.isBlank()) {
+                "&7Quest generation: &ein cooldown dupa o structura recenta"
+            } else {
+                "&7Quest generation: &ein cooldown ($detail)"
+            }
+        } else {
+            "&7Quest generation: &aactiv"
+        }
+    }
+
+    private fun signalValue(signals: List<String>, prefix: String): String {
+        return signals.firstOrNull { it.startsWith("$prefix=") }
+            ?.substringAfter("=")
+            .orEmpty()
+    }
+
+    private fun formatDuration(milliseconds: Long): String {
+        val seconds = (milliseconds / 1000).coerceAtLeast(0)
+        return "${seconds}s"
+    }
 
     private fun buildQuestLogStatusLines(
         snapshot: ProgressionGuiSnapshot,
@@ -580,7 +604,7 @@ class QuestLogGui : GuiScreen {
                 summary.forEach { add("&8- $it") }
             }
             add(if (adminView) "&8Actiuni principale: detalii / track / refresh / anchors" else "&8Actiuni principale: detalii / track / refresh")
-            add("&7Filtru curent: &f${if (activeFilter.isBlank()) "all" else activeFilter}")
+            add("&7Filtru curent: &f${activeFilter.ifBlank { "all" }}")
         }
     }
 

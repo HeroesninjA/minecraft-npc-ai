@@ -499,22 +499,28 @@ object OpenAITextSupport {
         val wantsPlace = containsAny(normalizedMessage, "unde ", "locuri", "zona", "sat", "aici")
         val wantsPerson = containsAny(normalizedMessage, "cine ", "care ", "meserie", "lucreaza", "lucrează")
         val wantsSignals = containsAny(normalizedMessage, "semnal", "indici")
+        val prefersNpcLoreInHistory = containsAny(normalizedMessage, "povest", "poveste", "lore") && !containsAny(normalizedMessage, "istor")
 
         return when {
             wantsSignals -> buildStorySignalsAnswer(storySignalsLine)
                 ?: buildWorldHistoryAnswer(worldHistoryLines)
                 ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
                 ?: buildWorldLoreAnswer(worldLoreLines)
-            wantsHistory -> buildWorldHistoryAnswer(worldHistoryLines)
-                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+            wantsPerson -> buildProfessionAnswer(professionAnswer)
+                ?: buildNpcLoreAnswer(npcLines = npcLoreLines, normalizedMessage = normalizedMessage)
+            wantsHistory -> if (prefersNpcLoreInHistory) {
+                buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+                    ?: buildWorldHistoryAnswer(worldHistoryLines)
+            } else {
+                buildWorldHistoryAnswer(worldHistoryLines)
+                    ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
+            }
                 ?: buildWorldLoreAnswer(worldLoreLines)
             wantsLore -> buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
                 ?: buildWorldLoreAnswer(worldLoreLines)
                 ?: buildProfessionAnswer(professionAnswer)
             wantsPlace -> buildWorldLoreAnswer(worldLoreLines)
                 ?: buildProfessionAnswer(professionAnswer)
-            wantsPerson -> buildProfessionAnswer(professionAnswer)
-                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
             else -> buildProfessionAnswer(professionAnswer)
                 ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
                 ?: buildWorldLoreAnswer(worldLoreLines)

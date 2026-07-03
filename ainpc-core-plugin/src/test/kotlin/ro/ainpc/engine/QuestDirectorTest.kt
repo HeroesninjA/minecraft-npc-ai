@@ -115,6 +115,70 @@ class QuestDirectorTest {
     }
 
     @Test
+    fun structureSignalsSelectMatchingQuestDefinition() {
+        val smithy = definition("smithy_repair_order", "village_contracts", "Smithy Repair Order", true)
+        val farm = definition("farm_delivery", "village_contracts", "Farm Delivery", true)
+
+        val decision = director.decide(
+            QuestDirectorRequest(
+                storyContext(
+                    listOf(
+                        "structure_type=smithy",
+                        "structure_category=profession",
+                        "place_type=smithy",
+                        "place_tags=trade,craft",
+                        "quest_hook=repair_tool"
+                    ),
+                    listOf()
+                ),
+                listOf(farm, smithy),
+                "",
+                false,
+                listOf()
+            )
+        )
+
+        assertEquals(QuestDirectorDecision.Status.CANDIDATE_FOUND, decision.status())
+        assertEquals(smithy.templateId(), decision.selectedTemplateId())
+        assertEquals(smithy.progressionId(), decision.selectedProgressionId())
+        assertTrue(decision.matchedSignals().contains("structure_type=smithy"))
+        assertTrue(decision.matchedSignals().contains("quest_hook=repair_tool"))
+        assertTrue(decision.candidateTemplateIds().contains(smithy.templateId()))
+        assertFalse(decision.runtimeExecutable())
+    }
+
+    @Test
+    fun questGenerationCooldownBlocksImmediateStructureRequests() {
+        val smithy = definition("smithy_repair_order", "village_contracts", "Smithy Repair Order", true)
+
+        val decision = director.decide(
+            QuestDirectorRequest(
+                storyContext(
+                    listOf(
+                        "place_id=village_square",
+                        "structure_type=smithy",
+                        "structure_category=profession",
+                        "quest_generation_cooldown=structure_recent",
+                        "quest_generation_cooldown_place_id=village_square",
+                        "quest_generation_cooldown_category=profession",
+                        "quest_generation_cooldown_ms=22000"
+                    ),
+                    listOf()
+                ),
+                listOf(smithy),
+                "",
+                false,
+                listOf()
+            )
+        )
+
+        assertEquals(QuestDirectorDecision.Status.NO_ACTION, decision.status())
+        assertEquals("structure_quest_generation_cooldown", decision.reason())
+        assertTrue(decision.warnings().isEmpty())
+        assertFalse(decision.runtimeExecutable())
+    }
+
+    @Test
     fun storyDemandSuggestsSeedWhenNoTemplateMatchesAndSeedIsAllowed() {
         val decision = director.decide(
             QuestDirectorRequest(

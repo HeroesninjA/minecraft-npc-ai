@@ -298,6 +298,9 @@ Formular complet cu 5 secțiuni.
 # Previzualizează
 /ainpc map preview
 
+# Deschide sau redeschide editorul pentru draftul curent
+/ainpc map edit
+
 # Confirmă
 /ainpc map confirm
 
@@ -305,7 +308,34 @@ Formular complet cu 5 secțiuni.
 /ainpc world save
 ```
 
-### 5c. Comenzi Directe
+### 5c. Mapping asistat AI / intent
+
+Fluxul AI/intent creeaza tot un draft de mapping si pastreaza aceeasi regula de siguranta: preview inainte de scriere, apoi confirmare explicita.
+
+```bash
+# Ajutor si exemple acceptate
+/ainpc world create ai help
+
+# Preview-only: creeaza draft, arata sumar si particule, dar nu deschide formularul
+/ainpc world create ai preview region name=curte_castel type=castle size=48
+
+# Deschide formularul potrivit pentru draftul curent
+/ainpc map edit
+
+# Aliasuri echivalente pentru editare
+/ainpc map open
+/ainpc map gui
+
+# Confirma sau anuleaza draftul
+/ainpc map confirm
+/ainpc map cancel
+```
+
+Hinturi utile in descriere: `id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=`, `radius=`.
+
+Daca `id=` lipseste, `name=` este folosit ca ID local fallback. Foloseste `label=` cand vrei un nume afisat separat de ID.
+
+### 5d. Comenzi Directe
 
 ```bash
 # Creare regiune
@@ -348,8 +378,9 @@ Formular complet cu 5 secțiuni.
 2. Click stânga = primul colț, click dreapta = colț opus
 3. `./ainpc map Taverna din sat` — creează draft
 4. `./ainpc map preview` — vezi particulele în joc
-5. `./ainpc map confirm` — aplică în world mapping
-6. `./ainpc world save` — salvează permanent
+5. `./ainpc map edit` — ajustează draftul în editor dacă este nevoie
+6. `./ainpc map confirm` — aplică în world mapping
+7. `./ainpc world save` — salvează permanent
 
 ---
 

@@ -173,7 +173,7 @@ class ScenarioEngineTextTest {
 
     @Test
     fun questDebugIncludesAuthoringDecisionSummary() {
-        val source = File("src/main/kotlin/ro/ainpc/engine/ScenarioEngine.kt").readText()
+        val source = File("src/main/kotlin/ro/ainpc/engine/QuestProgressViewBuilder.kt").readText()
 
         assertEquals(true, source.contains("&eAuthoring: &f"))
         assertEquals(true, source.contains("authoringSnapshot.decisionStatus()"))

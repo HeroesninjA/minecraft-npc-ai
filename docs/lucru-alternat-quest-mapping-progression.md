@@ -824,7 +824,7 @@ Decision:
 
 - Mapping: adminul selecteaza un punct; sistemul prefera un `Node` existent, apoi `Place`, apoi `Region` ca ancora persistenta.
 - Quest/progression: draft-ul cere selector de progresie (`tracked`, `current`, `templateId` sau `questCode`) si `objective_id`, apoi confirma doar daca progresia exista in `player_quests`.
-- GUI/comenzi: `/ainpc map quest_anchor [player:<jucator|uuid>] <selector> <objective_id> [objective_type] [reference]` are preview si confirmare prin acelasi flux `/ainpc map preview|confirm|cancel`.
+- GUI/comenzi: `/ainpc map quest_anchor [player:<jucator|uuid>] <selector> <objective_id> [objective_type] [reference]` are preview, editare GUI si confirmare prin acelasi flux `/ainpc map preview|edit|confirm|cancel`.
 - Persistenta: confirmarea face upsert in `quest_anchor_bindings` pe cheia `player_uuid/template_id/objective_key`, cu `quest_code`, `objective_type`, `reference`, `anchor_type`, `anchor_id` si label.
 - Debug/audit: verificarea ramane `/ainpc quest anchors <player|uuid> <templateId|questCode>`, `/ainpc audit quest` si `quest-anchor-bindings.json`.
 - Limita: fluxul nu porneste questuri si nu ghiceste `objective_id`; adminul trebuie sa lege o progresie deja existenta.
@@ -889,7 +889,7 @@ Aceste faze sunt intentionat mici. Fiecare faza trebuie sa lase in urma cel puti
 11. F011 - Finalizat 2026-06-19: Ruleaza smoke manual pentru `/ainpc wand mode region` pe o zona mica.
 12. F012 - Finalizat 2026-06-19: Ruleaza smoke manual pentru `/ainpc wand mode place` intr-o regiune existenta.
 13. F013 - Finalizat 2026-06-19: Ruleaza smoke manual pentru `/ainpc wand mode node` cu `quest_board`.
-14. F014 - Finalizat 2026-06-19: Ruleaza smoke manual pentru `/ainpc map preview|confirm|cancel` pe fiecare tip de draft.
+14. F014 - Finalizat 2026-06-19: Ruleaza smoke manual pentru `/ainpc map preview|edit|confirm|cancel` pe fiecare tip de draft.
 15. F015 - Finalizat 2026-06-19: Verifica erorile de selectie invalida: fara regiune, fara place, fara point.
 16. F016 - Finalizat 2026-05-10: adauga audit pentru draft-uri wand confirmate recent, daca logul operational nu este suficient.
 17. F017 - Finalizat 2026-05-10: adauga preview vizual cu particule pentru bounds region/place.

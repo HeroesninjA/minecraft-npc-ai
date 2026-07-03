@@ -66,6 +66,13 @@ class AdminQuestGui : GuiScreen {
                 anchorCount
             )
         ))
+        if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
+            context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
+                "&7MCP raporteaza modul read-only.",
+                "&7Quest/progression writes sunt blocate.",
+                "&8Inspectia ramane disponibila."
+            )))
+        }
 
         context.button(10, GuiButton.enabled(
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest log", "&7Deschide log-ul de progresii."),
@@ -110,6 +117,23 @@ class AdminQuestGui : GuiScreen {
         context.button(18, GuiButton.enabled(
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&eProgresii stored", "&7Listeaza stored progressions in chat."),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc progression stored all") }
+        ))
+
+        context.button(20, GuiButton.enabled(
+            GuiItemFactory.item(Material.CLOCK, "&dBuild status", "&7Inspecteaza rapid build mode."),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode status") }
+        ))
+        context.button(21, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history", "&7Ultimele schimbari build mode."),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode history") }
+        ))
+        context.button(22, GuiButton.enabled(
+            GuiItemFactory.item(Material.PAPER, "&dBuild export", "&7Export compact al build mode."),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode export") }
+        ))
+        context.button(23, GuiButton.enabled(
+            GuiItemFactory.item(Material.BARRIER, "&cClear build history", "&7Curata istoricul local build mode."),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc build mode clear-history") }
         ))
 
         var slot = 19

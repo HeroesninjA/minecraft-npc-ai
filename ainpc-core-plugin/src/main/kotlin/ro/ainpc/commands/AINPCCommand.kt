@@ -317,6 +317,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (target == "duplicates" || target == "dup") {
             val mode = if (args.size >= 3) args[2].lowercase(Locale.ROOT) else "dryrun"
             val apply = mode == "apply"
+            if (apply && isRuntimeReadOnly(plugin)) {
+                plugin.messageUtils.send(sender,
+                    "&cMCP read_only este activ; repair duplicates apply este blocat pana la iesirea din modul read-only.")
+                return true
+            }
             val result = plugin.npcManager.repairDuplicateNPCs(apply)
             plugin.messageUtils.send(
                 sender,
@@ -350,6 +355,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (target == "households" || target == "household") {
             val mode = if (args.size >= 3) args[2].lowercase(Locale.ROOT) else "dryrun"
             val apply = mode == "apply"
+            if (apply && isRuntimeReadOnly(plugin)) {
+                plugin.messageUtils.send(sender,
+                    "&cMCP read_only este activ; repair households apply este blocat pana la iesirea din modul read-only.")
+                return true
+            }
             val service = requireHouseholdPersistence(sender) ?: return true
             return try {
                 val result = service.repairDuplicateResidents(apply, NPC_WORLD_BINDING_LOOKUP_LIMIT)
@@ -378,11 +388,21 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (isNpcBindingRepairTarget(target)) {
             val mode = if (args.size >= 3) args[2].lowercase(Locale.ROOT) else "dryrun"
             val apply = mode == "apply"
+            if (apply && isRuntimeReadOnly(plugin)) {
+                plugin.messageUtils.send(sender,
+                    "&cMCP read_only este activ; repair npc-bindings apply este blocat pana la iesirea din modul read-only.")
+                return true
+            }
             return handleRepairNpcBindings(sender, apply)
         }
         if (isMappingMetadataRepairTarget(target)) {
             val mode = if (args.size >= 3) args[2].lowercase(Locale.ROOT) else "dryrun"
             val apply = mode == "apply"
+            if (apply && isRuntimeReadOnly(plugin)) {
+                plugin.messageUtils.send(sender,
+                    "&cMCP read_only este activ; repair mapping-metadata apply este blocat pana la iesirea din modul read-only.")
+                return true
+            }
             return handleRepairMappingMetadata(sender, apply)
         }
         if (isRepairBatchTarget(target)) {
@@ -394,6 +414,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 return handleRepairSpawnBatchList(sender, filter)
             }
             val mode = if (args.size >= 4) args[3].lowercase(Locale.ROOT) else "dryrun"
+            if (mode == "apply" && isRuntimeReadOnly(plugin)) {
+                plugin.messageUtils.send(sender,
+                    "&cMCP read_only este activ; repair batch apply este blocat pana la iesirea din modul read-only.")
+                return true
+            }
             return handleRepairSpawnBatch(sender, args[2], mode)
         }
         sendRepairUsage(sender)
@@ -661,6 +686,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
         val mode = args[1].lowercase()
         questDebug("Parsare quest mode='' sender=" + sender.name)
+        if (isRuntimeReadOnly(plugin) && mode in setOf("track", "current", "reset", "complete", "abandon", "accept", "yes", "y", "da", "ok", "confirm", "decline", "deny", "reject", "no", "n", "nu", "refuz", "spawn", "reload", "backup", "reindex")) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; comanda quest $mode este blocata pana la iesirea din modul read-only.")
+            return true
+        }
         return when (mode) {
             "create" -> handleQuestCreateAi(sender, args)
             "anchors" -> handleQuestAnchors(sender, args)
@@ -875,7 +904,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 plugin.messageUtils.send(sender, "&eActiv: &f" + if (enabled) "da" else "nu")
                 plugin.messageUtils.send(sender, "&eMod: &f" + (state.style ?: "wand"))
                 plugin.messageUtils.send(sender, "&eTarget: &f" + (state.target ?: "region"))
-                plugin.messageUtils.send(sender, "&7/ainpc build mode on|off|sign|wand|point [region|place|node]")
+                plugin.messageUtils.send(sender, "&7/ainpc build mode on|off|sign|wand|point|status|history|export|clear-history|help [region|place|node]")
                 return true
             }
             "off", "disable" -> {
@@ -924,8 +953,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     private fun sendBuildModeUsage(sender: CommandSender) {
-        plugin.messageUtils.send(sender, "&6Utilizare: /ainpc build mode on|off|sign|wand|point|history|export|clear-history [region|place|node]")
+        plugin.messageUtils.send(sender, "&6Utilizare: /ainpc build mode on|off|sign|wand|point|status|history|export|clear-history|help [region|place|node]")
         plugin.messageUtils.send(sender, "&7Exemple: /ainpc build mode sign region | /ainpc build mode wand place | /ainpc build mode point node")
+        plugin.messageUtils.send(sender, "&7Semn AI: prima linie poate fi kind-ul, apoi name=, type=, region=, size=, radius=")
+        plugin.messageUtils.send(sender, "&7Exemple rapide: /ainpc build mode history | /ainpc build mode export | /ainpc build mode clear-history")
         plugin.messageUtils.send(sender, "&7Istoric: /ainpc build mode history")
         plugin.messageUtils.send(sender, "&7Export: /ainpc build mode export")
         plugin.messageUtils.send(sender, "&7Curatare: /ainpc build mode clear-history")
@@ -1583,6 +1614,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
+        if (isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; quest spawn este blocat pana la iesirea din modul read-only.")
+            return true
+        }
         val player = sender as? Player
         if (player == null) {
             plugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
@@ -1813,6 +1848,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
+        if (isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; quest reload este blocat pana la iesirea din modul read-only.")
+            return true
+        }
         if (args.size < 3) {
             plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reload <templateId|questCode>"); return true
         }
@@ -1831,6 +1870,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun handleQuestBackup(sender: CommandSender, args: Array<String>): Boolean {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; quest backup este blocat pana la iesirea din modul read-only.")
+            return true
         }
         val packsDir = java.io.File(plugin.dataFolder, "packs")
         if (!packsDir.exists()) {
@@ -1860,6 +1903,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun handleQuestReindex(sender: CommandSender): Boolean {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        if (isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; quest reindex este blocat pana la iesirea din modul read-only.")
+            return true
         }
         plugin.featurePackLoader.loadAllPacks()
         plugin.scenarioEngine.reloadTemplates()
@@ -1964,6 +2011,16 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendWorldUsage(sender); return true
         }
         val worldMode = args[1].lowercase(Locale.ROOT)
+        if (isRuntimeReadOnly(plugin)) {
+            if (worldMode == "bind" || worldMode == "demo" || worldMode == "save") {
+                plugin.messageUtils.send(sender, "&cMCP read_only este activ; comanda world $worldMode este blocata pana la iesirea din modul read-only.")
+                return true
+            }
+            if (worldMode == "settlement" && args.size > 2 && args[2].equals("spawn", ignoreCase = true)) {
+                plugin.messageUtils.send(sender, "&cMCP read_only este activ; world settlement spawn este blocat pana la iesirea din modul read-only.")
+                return true
+            }
+        }
         return when (worldMode) {
             "create" -> handleWorldCreateAi(sender, args)
             "whereami" -> handleWorldWhereAmI(sender, args, ::resolveQuestTargetPlayer)
@@ -1974,12 +2031,32 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "place" -> handleWorldPlace(sender, args)
             "node" -> handleWorldNode(sender, args)
             "scan" -> handleWorldScan(sender, args, this::requirePlayerSender)
-            "demo" -> handleWorldDemo(sender, args, this::ensureGenerationEnabled)
+            "demo" -> {
+                if (isRuntimeReadOnly(plugin)) {
+                    plugin.messageUtils.send(
+                        sender,
+                        "&cMCP read_only este activ; world demo create este blocat pana la iesirea din modul read-only."
+                    )
+                    true
+                } else {
+                    handleWorldDemo(sender, args, this::ensureGenerationEnabled)
+                }
+            }
             "bind" -> handleWorldBind(sender, args)
             "binding", "bindings" -> handleWorldBindings(sender, args)
             "household" -> handleWorldHousehold(sender, args)
             "settlement" -> handleWorldSettlement(sender, args)
-            "save" -> handleWorldSave(sender)
+            "save" -> {
+                if (isRuntimeReadOnly(plugin)) {
+                    plugin.messageUtils.send(
+                        sender,
+                        "&cMCP read_only este activ; world save este blocat pana la iesirea din modul read-only."
+                    )
+                    true
+                } else {
+                    handleWorldSave(sender)
+                }
+            }
             else -> {
                 sendWorldUsage(sender); true
             }
@@ -1997,6 +2074,13 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val mode = args[1].lowercase(Locale.ROOT)
         if (mode !in setOf("analyze", "analyse", "plan", "validate", "apply")) {
             sendPatchUsage(sender); return true
+        }
+        if (mode == "apply" && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(
+                sender,
+                "&cMCP read_only este activ; patch apply este blocat pana la iesirea din modul read-only."
+            )
+            return true
         }
         val worldAdmin = plugin.platform.worldAdmin
         if (mode == "apply") {
@@ -2053,6 +2137,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     // -- World Bind -------------------------------------------------
     private fun handleWorldBind(sender: CommandSender, args: Array<String>): Boolean {
+        if (isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world bind este blocat pana la iesirea din modul read-only.")
+            return true
+        }
         if (args.size < 5 || args.size > 7 || !args[2].equals("npc", ignoreCase = true)) {
             plugin.messageUtils.send(
                 sender,
@@ -2291,6 +2379,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (args.size < 4 || args.size > 5) {
             sendWorldHouseholdUsage(sender); return true
         }
+        if (args[2].equals("spawn", ignoreCase = true) && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world household spawn este blocat pana la iesirea din modul read-only.")
+            return true
+        }
         val worldAdmin = plugin.platform.worldAdminService
         if (!worldAdmin.isEnabled) {
             plugin.messageUtils.send(sender, "&cWorld admin este dezactivat."); return true
@@ -2344,6 +2436,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             ); return true
         }
         val mode = args[2].lowercase(Locale.ROOT)
+        if (mode == "spawn" && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world settlement spawn este blocat pana la iesirea din modul read-only.")
+            return true
+        }
         if (mode == "definitions") {
             val loader = ro.ainpc.settlement.SettlementConfigLoader(plugin)
             val defs = loader.loadAll()

@@ -1,6 +1,6 @@
 ﻿# Mapping
 
-Actualizat: 2026-05-10
+Actualizat: 2026-07-01
 
 Punctul de intrare recomandat pentru aceasta zona este `mapping-stack.md`.
 
@@ -228,10 +228,16 @@ Sunt disponibile deja:
 - `/ainpc wand <clear|reset> [pos1|pos2|point|all]`
   - selectiile region/place afiseaza bounds cu particule; selectiile node/npc_bind/quest_anchor afiseaza raza punctului
 - `/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere libera>`
+- `/ainpc map <descriere libera>` cu hinturi `id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=`, `radius=`
 - `/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]`
 - `/ainpc map preview`
+- `/ainpc map edit`
+- `/ainpc map open`
+- `/ainpc map gui`
 - `/ainpc map confirm`
 - `/ainpc map cancel`
+- `/ainpc world create ai help`
+- `/ainpc world create ai [preview|dryrun|inspect] [region|place|node] [descriere libera]`
 - `/ainpc world household <plan|spawn> <homePlaceId> [count]`
 - `/ainpc world settlement <plan|spawn> <regionId> [maxHouses]`
 - `/ainpc world save`
@@ -240,7 +246,9 @@ Sunt disponibile deja:
 - `/ainpc repair mapping-metadata [dryrun|apply]`
 - `/ainpc debugdump [all|npc|world|quest|story|openai]`
 
-`/ainpc wand` si `/ainpc map ...` sunt implementate initial pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`, cu draft, preview si confirmare. `quest_anchor` cere context de jucator/progresie/objective_id si scrie controlat in `quest_anchor_bindings`.
+`/ainpc wand` si `/ainpc map ...` sunt implementate initial pentru `region`, `place`, `node`, `npc_bind` si `quest_anchor`, cu draft, preview vizual si confirmare. `quest_anchor` cere context de jucator/progresie/objective_id si scrie controlat in `quest_anchor_bindings`.
+
+`/ainpc world create ai preview|dryrun|inspect ...` creeaza un draft AI/intent fara scriere directa si fara deschiderea obligatorie a formularului. Dupa inspectie, `/ainpc map edit`, `/ainpc map open` sau `/ainpc map gui` deschid editorul potrivit pentru draftul curent; `/ainpc map confirm` este singurul pas care aplica draftul in runtime.
 
 ### Demo mapping minim
 

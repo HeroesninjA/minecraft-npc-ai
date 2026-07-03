@@ -6,18 +6,16 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpStoryText
-import ro.ainpc.gui.GuiAction
+import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
-import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryEvent
-import ro.ainpc.story.StoryStateService
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.sql.SQLException
@@ -41,15 +39,8 @@ class StoryGui : GuiScreen {
         context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory snapshot", summaryLore(snapshot)))
 
         val env = context.plugin().environmentEngine.getContext(player.location.world.name)
-        context.item(5, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
-            "&7Timp: &f${env.timeOfDay.displayName}",
-            "&7Vreme: &f${env.weather.displayName}",
-            "&7Anotimp: &f${env.season.displayName}",
-            "&7Temperatura: &f${env.temperature.displayName}",
-            "&7Ziua: &f${env.dayNumber}",
-            if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
-            "&8Click: /ainpc environment"
-        )))
+        context.item(5, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
+
 
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
@@ -59,9 +50,8 @@ class StoryGui : GuiScreen {
             13,
             if (context.player().hasPermission("ainpc.admin")) {
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.PAPER, "&dStory diagnostics", storyDiagnosticsLore(context.plugin())),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump story") }
-                )
+                    GuiItemFactory.item(Material.PAPER, "&dStory diagnostics", storyDiagnosticsLore(context.plugin()))
+                ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story") }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
@@ -115,13 +105,11 @@ class StoryGui : GuiScreen {
         )
 
         context.button(6, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping."),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }
-        ))
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Mapping", "&7Deschide panoul admin mapping.")
+        ) { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) })
         context.button(7, GuiButton.enabled(
-            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest."),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
-        ))
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.")
+        ) { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) })
 
         var slot = 19
         for (event in snapshot.events) {
@@ -150,11 +138,7 @@ class StoryGui : GuiScreen {
         val region = worldAdmin.findRegion(worldName, location.blockX, location.blockY, location.blockZ)
         val place = worldAdmin.findPlace(worldName, location.blockX, location.blockY, location.blockZ)
 
-        val storyStateService: StoryStateService? = context.plugin().storyStateService
-        if (storyStateService == null) {
-            return StorySnapshot(region, place, null, null, emptyList(), "StoryStateService indisponibil.")
-        }
-
+        val storyStateService = context.plugin().storyStateService
         return try {
             val regionState = if (region != null) storyStateService.getRegionState(region.id()).orElse(null) else null
             val placeState = if (place != null) storyStateService.getPlaceState(place.id()).orElse(null) else null
@@ -197,7 +181,7 @@ class StoryGui : GuiScreen {
         lore.add("&7Nume: &f${region.name()}")
         lore.add("&7Mapping mode: &f${region.storyMode().id}")
         lore.add("&7Mapping state: &f${region.storyStateKey()}")
-        lore.add("&7Mapping pool: &f${compactList(region.storyPool(), 26)}")
+        lore.add("&7Mapping pool: &f${compactList(region.storyPool())}")
         if (state == null) {
             lore.add("&7Persistent: &f<nepersistat>")
             return lore
@@ -206,7 +190,7 @@ class StoryGui : GuiScreen {
         lore.add("&7Persistent state: &f${state.stateKey()}")
         lore.add("&7Updated: &f${formatTime(state.updatedAt())}")
         lore.add("&7Source: &f${valueOrUnknown(state.source())}")
-        addMapPreview(lore, "Vars", state.variables(), 2)
+        addMapPreview(lore, state.variables(), 2)
         return lore
     }
 
@@ -227,7 +211,7 @@ class StoryGui : GuiScreen {
         lore.add("&7Persistent state: &f${state.stateKey()}")
         lore.add("&7Updated: &f${formatTime(state.updatedAt())}")
         lore.add("&7Source: &f${valueOrUnknown(state.source())}")
-        addMapPreview(lore, "Vars", state.variables(), 3)
+        addMapPreview(lore, state.variables(), 3)
         return lore
     }
 
@@ -240,8 +224,17 @@ class StoryGui : GuiScreen {
         }
         val lore = ArrayList<String>()
         lore.add("&7Ultimele evenimente afisate: &f${snapshot.events.size}")
+        val questEvents = snapshot.events.count { it.eventType().startsWith("quest_") }
+        if (questEvents > 0) {
+            lore.add("&7Quest events: &f$questEvents")
+        }
         for (event in snapshot.events.take(4)) {
-            lore.add("&8- &f${GuiItemFactory.compact("${event.eventType()} ${event.eventKey()}", 28)}")
+            val label = if (event.eventType().startsWith("quest_")) {
+                "${event.eventType()} ${valueOrUnknown(event.payload()["quest_title"] ?: event.eventKey())}"
+            } else {
+                "${event.eventType()} ${event.eventKey()}"
+            }
+            lore.add("&8- &f${GuiItemFactory.compact(label, 28)}")
         }
         return lore
     }
@@ -273,6 +266,11 @@ class StoryGui : GuiScreen {
         lore.add("&7Key: &f${valueOrUnknown(event.eventKey())}")
         lore.add("&7Scope: &f${event.scopeType()}:${event.scopeId()}")
         lore.add("&7Created: &f${formatTime(event.createdAt())}")
+        if (event.eventType().startsWith("quest_")) {
+            lore.add("&7Quest: &f${valueOrUnknown(event.payload()["quest_title"])}")
+            lore.add("&7Quest code: &f${valueOrUnknown(event.payload()["quest_code"])}")
+            lore.add("&7Quest status: &f${valueOrUnknown(event.payload()["quest_status"])}")
+        }
         if (event.playerUuid().isNotBlank()) {
             lore.add("&7Player: &f${GuiItemFactory.compact(event.playerUuid(), 18)}")
         }
@@ -334,18 +332,6 @@ class StoryGui : GuiScreen {
         return ""
     }
 
-    private fun environmentIcon(env: EnvironmentContext): Material = when {
-        env.isExtreme() -> Material.REDSTONE_BLOCK
-        env.isStorming() -> Material.REDSTONE_TORCH
-        env.isRaining() -> Material.WATER_BUCKET
-        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
-        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
-        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
-        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
-        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
-        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
-        else -> Material.COMPASS
-    }
 
     private fun eventMaterial(event: StoryEvent): Material {
         val type = event.eventType().lowercase(Locale.ROOT)
@@ -362,7 +348,7 @@ class StoryGui : GuiScreen {
     }
 
     private fun eventTitle(event: StoryEvent): String {
-        return if (event.title().isNotBlank()) event.title() else "${event.eventType()} ${valueOrUnknown(event.eventKey())}"
+        return event.title().ifBlank { "${event.eventType()} ${valueOrUnknown(event.eventKey())}" }
     }
 
     private fun addPayloadValue(lore: MutableList<String>, payload: Map<String, String>, key: String) {
@@ -372,12 +358,12 @@ class StoryGui : GuiScreen {
         }
     }
 
-    private fun addMapPreview(lore: MutableList<String>, label: String, values: Map<String, String>?, limit: Int) {
+    private fun addMapPreview(lore: MutableList<String>, values: Map<String, String>?, limit: Int) {
         if (values.isNullOrEmpty()) {
-            lore.add("&7$label: &f{}")
+            lore.add("&7Vars: &f{}")
             return
         }
-        lore.add("&7$label:")
+        lore.add("&7Vars:")
         values.entries.take(limit).forEach { entry ->
             lore.add("&8- &f${GuiItemFactory.compact("${entry.key}=${entry.value}", 30)}")
         }
@@ -386,11 +372,11 @@ class StoryGui : GuiScreen {
         }
     }
 
-    private fun compactList(values: List<String>?, maxLength: Int): String {
+    private fun compactList(values: List<String>?): String {
         if (values.isNullOrEmpty()) {
             return "[]"
         }
-        return GuiItemFactory.compact(values.joinToString(", "), maxLength)
+        return GuiItemFactory.compact(values.joinToString(", "), 26)
     }
 
     private fun valueOrUnknown(value: String?): String = if (value.isNullOrBlank()) "<necunoscut>" else value

@@ -3,19 +3,17 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
-import ro.ainpc.gui.GuiAction
+import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
-import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
-import java.util.Locale
 
 class WorldRegionGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.REGION
@@ -79,15 +77,7 @@ class WorldRegionGui : GuiScreen {
             ))
 
             val env = context.plugin().environmentEngine.getContext(region.worldName())
-            context.item(7, GuiItemFactory.item(environmentIcon(env), "&bMediu: ${env.season.displayName}", listOf(
-                "&7Timp: &f${env.timeOfDay.displayName}",
-                "&7Vreme: &f${env.weather.displayName}",
-                "&7Anotimp: &f${env.season.displayName}",
-                "&7Temperatura: &f${env.temperature.displayName}",
-                "&7Ziua: &f${env.dayNumber}",
-                if (env.specialEvents.isNotEmpty()) "&7Evenimente: &f${env.specialEvents.joinToString(", ")}" else "&8Fara evenimente active",
-                "&8Click: /ainpc environment"
-            )))
+            context.item(7, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
             context.item(14, GuiItemFactory.item(
                 Material.OAK_DOOR, "&aPlaces (${
@@ -100,7 +90,7 @@ class WorldRegionGui : GuiScreen {
             for (place in places.take(7)) {
                 context.button(slot++, GuiButton.enabled(
                     GuiItemFactory.item(Material.OAK_DOOR, "&f${place.displayName()}", placeLore(place)),
-                    GuiAction { click -> click.service().openPlaceDetail(click.player(), place.id()) }
+                    action = { click -> click.service().openPlaceDetail(click.player(), place.id()) }
                 ))
             }
 
@@ -108,7 +98,7 @@ class WorldRegionGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.ENDER_PEARL, "&6Teleport",
                         "&7Teleporteaza-te la centrul regiunii."),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc world region info ${region.id()}") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc world region info ${region.id()}") }
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Teleport", listOf("&7Necesita admin."))))
 
@@ -116,7 +106,7 @@ class WorldRegionGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.SPYGLASS, "&6Audit",
                         "&7Ruleaza audit pentru aceasta regiune."),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc audit world") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc audit world") }
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Audit", listOf("&7Necesita admin."))))
 
@@ -124,7 +114,7 @@ class WorldRegionGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.ANVIL, "&eEdit region",
                         listOf("&7Recentreaza bounds-urile pe pozitia curenta.", "&7Editare rapida din GUI.")),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc world region edit ${region.id()}") }
+                    action = { click -> click.service().runCommand(click.player(), "ainpc world region edit ${region.id()}") }
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Edit region", listOf("&7Necesita admin."))))
 
@@ -132,7 +122,7 @@ class WorldRegionGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.BARRIER, "&cDelete region",
                         listOf("&7Sterge regiunea curenta.", "&cActiune destructiva cu confirmare.")),
-                    GuiAction { click ->
+                    action = { click ->
                         click.service().openConfirmCommand(
                             click.player(),
                             "Sterge regiune",
@@ -158,19 +148,6 @@ class WorldRegionGui : GuiScreen {
             "&7Tags: &f${region.tags().joinToString(", ").ifBlank { "<fara>" }}",
             "&7Lume: &f${region.worldName()}"
         )
-    }
-
-    private fun environmentIcon(env: EnvironmentContext): Material = when {
-        env.isExtreme() -> Material.REDSTONE_BLOCK
-        env.isStorming() -> Material.REDSTONE_TORCH
-        env.isRaining() -> Material.WATER_BUCKET
-        env.timeOfDay == EnvironmentContext.TimeOfDay.NIGHT || env.timeOfDay == EnvironmentContext.TimeOfDay.LATE_NIGHT -> Material.CLOCK
-        env.weather == EnvironmentContext.Weather.SNOW -> Material.SNOW_BLOCK
-        env.season == EnvironmentContext.Season.WINTER -> Material.ICE
-        env.season == EnvironmentContext.Season.SPRING -> Material.CHERRY_SAPLING
-        env.season == EnvironmentContext.Season.SUMMER -> Material.SUNFLOWER
-        env.season == EnvironmentContext.Season.AUTUMN -> Material.RED_MUSHROOM
-        else -> Material.COMPASS
     }
 
     private fun placeLore(place: WorldPlaceInfo): List<String> {

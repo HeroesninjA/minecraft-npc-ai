@@ -97,7 +97,8 @@ Actualizat: 2026-06-29
 - [x] Comanda `/ainpc world demo create [regionId]` pentru mapping demo minim in jurul jucatorului
 - [x] Mapping-ul demo foloseste layout mai spatios pentru case/piata/workplaces/altar si avertizeaza ca trebuie aleasa o zona relativ plata
 - [x] Comanda `/ainpc world bind npc ...` pentru legarea initiala NPC -> home/work/social places
-- [x] Mapping wand initial: `/ainpc wand`, selectie pos1/pos2/punct, parser determinist si `/ainpc map preview|confirm|cancel` pentru `region`/`place`/`node`
+- [x] Mapping wand initial: `/ainpc wand`, selectie pos1/pos2/punct, parser determinist si `/ainpc map preview|edit|confirm|cancel` pentru `region`/`place`/`node`
+- [x] Flow AI/intent preview-only: `/ainpc world create ai preview|dryrun|inspect [region|place|node] ...`, cu hinturi inline si redeschidere prin `/ainpc map edit|open|gui`
 - [x] Mapping wand poate crea si confirma draft-uri `npc_bind` pe roluri `home`/`work`/`social`, actualizand profilul NPC, metadata mapping si `npc_world_bindings`
 - [x] Mapping wand poate crea si confirma draft-uri `quest_anchor`, cu context player/progresie/objective_id si upsert in `quest_anchor_bindings`
 - [x] `scripts/smoke-paper-mapping.ps1` genereaza si checklist-ul manual pentru flux wand complet `region`/`place`/`node`/`npc_bind`/`quest_anchor`

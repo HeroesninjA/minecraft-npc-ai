@@ -167,6 +167,12 @@ fun handleQuestTrack(
     questDebug: (String) -> Unit,
     resolveQuestTargetPlayer: (CommandSender, Array<String>, Int, String) -> Player?,
 ): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest track este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val trackAction = if (args.size > 2) args[2].lowercase() else ""
     val trackRequest = resolveQuestTrackRequest(sender, args, trackAction, resolveQuestTargetPlayer)
     if (trackRequest == null) {
@@ -346,6 +352,12 @@ fun handleResetQuest(
         return true
     }
 
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest reset este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val usage = "&cUtilizare: /ainpc quest reset <numeNpc> [jucator]"
     if (args.size < 3) {
         ainpcCommandQuestPlugin.messageUtils.send(sender, usage)
@@ -397,6 +409,12 @@ fun handleCompleteQuest(
         return true
     }
 
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest complete este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val usage = "&cUtilizare: /ainpc quest complete <numeNpc> [jucator]"
     if (args.size < 3) {
         ainpcCommandQuestPlugin.messageUtils.send(sender, usage)
@@ -440,6 +458,12 @@ fun handleAbandonQuest(
     ensureQuestNpcCommandRange: (CommandSender, Player, AINPC) -> Boolean,
     deliverQuestInteraction: (CommandSender, Player, AINPC, QuestInteractionResult, String) -> Unit,
 ): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest abandon este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val usage = "&cUtilizare: /ainpc quest abandon <numeNpc>|nearest|tracked|<questCode|templateId> [jucator]"
     if (args.size < 3) {
         ainpcCommandQuestPlugin.messageUtils.send(sender, usage)
@@ -547,6 +571,11 @@ fun handleQuestCacheClean(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest cache clean este blocat pana la iesirea din modul read-only.")
+        return true
+    }
     val engine = ainpcCommandQuestPlugin.scenarioEngine
     engine.cleanupOrphanedObjectives()
     engine.cleanupStaleTemplateProgress()
@@ -625,11 +654,24 @@ fun handleQuestWarnings(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
     val msg = ainpcCommandQuestPlugin.messageUtils
-    val scenarioEngine = ainpcCommandQuestPlugin.scenarioEngine
-    val defs = scenarioEngine.questDefinitions
+    val defs = ainpcCommandQuestPlugin.progressionService.getDefinitions()
 
     msg.send(sender, "&6═══ Quest Warnings ═══")
-    val warnings = scenarioEngine.collectQuestWarnings()
+    val warnings = mutableListOf<Pair<String, String>>()
+    val duplicateTemplateIds = defs
+        .filter { it.templateId().isNotBlank() }
+        .groupBy { it.templateId().lowercase(Locale.ROOT) }
+        .filter { it.value.size > 1 }
+    for ((templateId, groupedDefs) in duplicateTemplateIds) {
+        warnings.add("definitions" to "Template duplicat '$templateId' (${groupedDefs.size} intrari).")
+    }
+    val duplicateCodes = defs
+        .filter { it.code().isNotBlank() }
+        .groupBy { it.code().lowercase(Locale.ROOT) }
+        .filter { it.value.size > 1 }
+    for ((code, groupedDefs) in duplicateCodes) {
+        warnings.add("definitions" to "Quest code duplicat '$code' (${groupedDefs.size} intrari).")
+    }
     if (warnings.isEmpty()) {
         msg.send(sender, "&aNu exista warning-uri in definitii.")
         return true
@@ -871,6 +913,12 @@ fun handleTriggerQuest(
         return true
     }
 
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest trigger este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     questDebug("Quest trigger cerut pentru npcName='$npcName' player=${targetPlayer.name}")
     var npc = ainpcCommandQuestPlugin.npcManager.getNPCByName(npcName)
     if (npc == null) {
@@ -969,6 +1017,12 @@ fun handleAcceptQuest(
     progressionKind: String,
     usage: String,
 ): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest accept este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val target = resolveQuestDecisionTarget(sender, args, "accept", usage, progressionKind) ?: return true
 
     val questInteraction = ainpcCommandQuestPlugin.scenarioEngine
@@ -996,6 +1050,12 @@ fun handleDeclineQuest(
     progressionKind: String,
     usage: String,
 ): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest decline este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     val target = resolveQuestDecisionTarget(sender, args, "decline", usage, progressionKind) ?: return true
 
     val questInteraction = ainpcCommandQuestPlugin.scenarioEngine
@@ -1171,6 +1231,12 @@ fun handleQuestAnchors(
 }
 
 private fun handleAnchorRemove(sender: CommandSender, args: Array<String>): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandQuestPlugin)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cMCP read_only este activ; quest anchors remove este blocat pana la iesirea din modul read-only.")
+        return true
+    }
+
     if (args.size < 5) {
         ainpcCommandQuestPlugin.messageUtils.send(sender,
             "&cUtilizare: /ainpc quest anchors remove <jucator|uuid> <templateId> <objectiveKey>")
@@ -1304,16 +1370,16 @@ fun handleQuestChain(sender: CommandSender, args: Array<String>): Boolean {
         msg.send(sender, "&7Nu exista template-uri de quest incarcate.")
         return true
     }
-    val engine = ainpcCommandQuestPlugin.scenarioEngine
+    val scenarioEngine = ainpcCommandQuestPlugin.scenarioEngine
     val allTemplates = defs.sortedBy { it.templateId() }
     msg.send(sender, "&6=== Quest Chain Map ===")
     msg.send(sender, "&eTemplate-uri: &f${allTemplates.size}")
     val chains = mutableListOf<String>()
     for (d in allTemplates) {
-        val template = engine.findQuestTemplate(d.templateId())
+        val template = scenarioEngine.findQuestTemplate(d.templateId())
         val nextQuest = template?.nextQuest ?: ""
         if (nextQuest.isNotBlank()) {
-            val nextTemplate = engine.findQuestTemplate(nextQuest)
+            val nextTemplate = scenarioEngine.findQuestTemplate(nextQuest)
             val nextLabel = nextTemplate?.displayName ?: nextQuest
             val exists = if (nextTemplate != null) "&a(exista)" else "&c(lipseste)"
             chains.add("${d.displayName()} -> $nextLabel $exists")

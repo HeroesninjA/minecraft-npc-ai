@@ -12,15 +12,12 @@ import ro.ainpc.api.events.story.StoryContextBuiltEvent
 import ro.ainpc.api.events.story.StoryContextBuiltEventPayload
 import ro.ainpc.api.events.story.StorySignalCollectedEvent
 import ro.ainpc.api.events.story.StorySignalCollectedEventPayload
-import ro.ainpc.database.DatabaseManager
 import ro.ainpc.npc.AINPC
-import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.LinkedHashSet
@@ -29,6 +26,8 @@ import java.util.UUID
 import java.util.logging.Level
 
 class StoryContextService(private val plugin: AINPCPlugin) {
+    private val structureSignalResolver = StoryStructureSignalResolver()
+
     fun buildForNpc(npc: AINPC?, player: Player?): StoryContextSnapshot {
         val location = resolveLocation(npc, player)
         val warnings = mutableListOf<String>()
@@ -117,11 +116,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             return listOf()
         }
 
-        val databaseManager: DatabaseManager? = plugin.databaseManager
-        if (databaseManager == null) {
-            warnings.add("database unavailable; quest anchors not loaded")
-            return listOf()
-        }
+        val databaseManager = plugin.databaseManager
 
         val sql = """
             SELECT b.template_id, b.quest_code, p.status, b.objective_key, b.objective_type,
@@ -269,16 +264,25 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             if (place.tags().isNotEmpty()) {
                 addSignal(signals, "place_tags", limit(place.tags(), 6).joinToString(","))
             }
-            collectPlaceMetadataSignals(signals, place.metadata())
+            structureSignalResolver.collectPlaceMetadataSignals(place.metadata()).forEach { (key, value) ->
+                addSignal(signals, key, value)
+            }
+            structureSignalResolver.collectPlaceStructureSignals(place).forEach { (key, value) ->
+                addSignal(signals, key, value)
+            }
         }
 
         val relevantNodeIds = worldContext.nearbyNodes().stream()
-            .filter { node -> node != null && isStoryRelevantNode(node) }
+            .filter { node -> node != null && structureSignalResolver.isStoryRelevantNode(node) }
             .map(WorldNodeInfo::id)
             .limit(5)
             .toList()
         if (relevantNodeIds.isNotEmpty()) {
             addSignal(signals, "relevant_nodes", relevantNodeIds.joinToString(","))
+        }
+
+        structureSignalResolver.addStructureQuestCooldownSignals(place, recentStoryEvents).forEach { (key, value) ->
+            addSignal(signals, key, value)
         }
 
         if (worldContext != null && !worldContext.isEmpty()) {
@@ -329,6 +333,13 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         if (!recentStoryEvents.isNullOrEmpty()) {
             addSignal(signals, "recent_story_event_count", recentStoryEvents.size.toString())
             addSignal(signals, "recent_story_event_types", collectEventTypes(recentStoryEvents).joinToString(","))
+            val questEvents = recentStoryEvents.filter { it.eventType().startsWith("quest_") }
+            if (questEvents.isNotEmpty()) {
+                addSignal(signals, "recent_quest_event_count", questEvents.size.toString())
+                addSignal(signals, "recent_quest_event_types", collectEventTypes(questEvents).joinToString(","))
+                addSignal(signals, "last_quest_event_type", questEvents.first().eventType())
+                addSignal(signals, "last_quest_event_key", questEvents.first().eventKey())
+            }
         }
     }
 
@@ -341,29 +352,6 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         }
         addSignal(signals, "active_quest_anchor_count", activeQuestAnchors.size.toString())
         addSignal(signals, "active_quest_anchor_types", collectAnchorTypes(activeQuestAnchors).joinToString(","))
-    }
-
-    private fun collectPlaceMetadataSignals(signals: MutableSet<String>, metadata: Map<String, String>?) {
-        if (metadata.isNullOrEmpty()) {
-            return
-        }
-
-        for (key in listOf("story_state", "state", "tension", "danger", "danger_level", "event", "conflict", "quest_hook")) {
-            addSignal(signals, "place_$key", metadata[key])
-        }
-    }
-
-    private fun isStoryRelevantNode(node: WorldNodeInfo): Boolean {
-        val type = node.typeId()?.lowercase(Locale.ROOT) ?: ""
-        if (type.contains("quest") || type.contains("inspect") || type.contains("event")) {
-            return true
-        }
-
-        val metadata = node.metadata()
-        return metadata.containsKey("quest")
-            || metadata.containsKey("story")
-            || metadata.containsKey("event")
-            || metadata.containsKey("interaction")
     }
 
     private fun collectAnchorTypes(anchors: List<StoryContextSnapshot.QuestAnchorSnapshot>): List<String> {
@@ -492,7 +480,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
         val region = snapshot.currentRegion()
         val place = snapshot.currentPlace()
-        val npcId = if (npc != null) npc.databaseId.toString() else ""
+        val npcId = npc?.databaseId?.toString().orEmpty()
         val npcName = npc?.name ?: ""
         val event = WorldContextBuiltEvent(
             WorldContextBuiltEventPayload(

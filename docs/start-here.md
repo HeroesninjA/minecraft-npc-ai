@@ -1,6 +1,6 @@
 # Start Here
 
-Actualizat: 2026-06-21
+Actualizat: 2026-07-01
 
 Acesta este punctul principal de intrare pentru `docs/`.
 
@@ -11,6 +11,8 @@ Acesta este punctul principal de intrare pentru `docs/`.
 - [Index arhiva](./index-arhiva.md) - documente istorice si variante vechi
 - [Taskuri prioritizate](./taskuri-prioritizate.md) - lista comuna de implementare
 - [Taskuri de lucru concrete](./taskuri-de-lucru.md) - backlog de lucru direct pe cod
+- [Mapping stack](./mapping-stack.md) - intrarea scurta pentru mapping manual, build mode si AI/intent drafts
+- [Build mode tutorial](./build-mode-tutorial.md) - flux scurt `world create ai preview` -> `map edit` -> `map confirm`
 
 ## Hub scurt
 

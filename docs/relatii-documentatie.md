@@ -1,6 +1,6 @@
 # Relatii Documentatie
 
-Actualizat: 2026-06-20
+Actualizat: 2026-07-01
 
 Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 
@@ -40,7 +40,9 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 - `npc-population-world-stack.md` este punctul de intrare pentru citirea zonei NPC population/world bindings.
 - `mapping.md` este documentul canonic pentru `WorldRegion -> WorldPlace -> WorldNode`.
 - `mapping-pentru-implementari-ulterioare.md` este redirect istoric catre `mapping.md`.
-- `mapping-harti-manuale.md` detaliaza folosirea manuala a mapping-ului.
+- `mapping-harti-manuale.md` detaliaza folosirea manuala a mapping-ului, hinturile inline, preview-ul vizual si editarea drafturilor.
+- `build-mode-tutorial.md` este ghidul scurt pentru fluxul `world create ai preview` -> `map edit` -> `map confirm`.
+- `build-mode-region-place-node.md` este contractul extins pentru build mode, selectie vizuala, preview si integrarea cu editorul.
 - `npc-world-bindings.md` depinde de `mapping.md` pentru legaturi NPC -> place/node.
 - `ordine-spawn-npc-cladiri-region-node.md` depinde de `mapping.md`, `npc-world-bindings.md` si planurile de settlement.
 - `settlement-plan.md` defineste planul de regiune care precede spawn-ul.
@@ -119,6 +121,7 @@ Acest document defineste cum sunt legate fisierele de documentatie intre ele.
 
 ### B. Lume si mapping
 
+- `mapping-stack.md` -> `mapping.md` -> `mapping-harti-manuale.md` -> `build-mode-tutorial.md`
 - `playable-village-ux.md` -> `settlement-plan.md` -> `mapping.md` -> `npc-world-bindings.md`
 - `mapping.md` -> `ordine-spawn-npc-cladiri-region-node.md` -> `households-persistente.md`
 - `mapping.md` -> `rutine-npc-si-timeline.md` -> `dialog-si-conversatii.md`
@@ -189,7 +192,7 @@ Detalierea completa este sintetizata in `Tabel compact`. Pentru trasee de citire
 |---|---|
 | Directie si stare | `constitutie-proiect.md` -> `audit-constitutie-proiect.md` -> `implementat-deja.md` -> `faze-observatii-avertizari.md` |
 | Roadmap si executie | `faze-urmatoare-categorii.md` -> `roadmap-orientativ.md` -> `server-npc-mvp-si-faze.md` |
-| World mapping | `playable-village-ux.md` -> `settlement-plan.md` -> `mapping.md` -> `npc-world-bindings.md` |
+| World mapping | `mapping-stack.md` -> `mapping.md` -> `mapping-harti-manuale.md` -> `build-mode-tutorial.md` |
 | Simulare NPC | `simulation-service.md` -> `simulation-service-partea-2.md` -> `simulation-service-partea-3.md` -> `simulation-service-partea-4.md` |
 | Quest, story si AI | `questuri-faza-1-stabilizare.md` -> `questuri-avansate-v2.md` -> `progression-service.md` -> `story-context-service.md` |
 | API si addonuri | `documentatie-api.md` -> `refactorizare-si-impartire-pe-module.md` -> `strategie-plugin-modular-si-scenarii-programabile.md` |

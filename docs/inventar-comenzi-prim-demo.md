@@ -1,6 +1,6 @@
 # Inventar Comenzi pentru Primul Demo AINPC
 
-Actualizat: 2026-06-15
+Actualizat: 2026-07-01
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
@@ -26,6 +26,12 @@ Inventarul complet al comenzilor `/ainpc` necesare pentru fiecare faza D0-D9.
 | /ainpc world region info demo_sat | Detalii regiune |
 | /ainpc world save | Salveaza harta |
 | /ainpc audit world | Audit complet al lumii |
+| /ainpc wand | Activeaza wand-ul pentru mapping manual |
+| /ainpc map <descriere> | Creeaza draft mapping din selectia curenta |
+| /ainpc map preview | Arata sumarul si preview-ul vizual al draftului |
+| /ainpc map edit | Deschide GUI-ul pentru draftul curent |
+| /ainpc world create ai preview region name=demo_extensie type=settlement size=48 | Genereaza draft AI/intent fara sa deschida formularul |
+| /ainpc map confirm | Confirma draftul in runtime dupa verificare |
 
 ## D3: NPC Population & Bindings
 

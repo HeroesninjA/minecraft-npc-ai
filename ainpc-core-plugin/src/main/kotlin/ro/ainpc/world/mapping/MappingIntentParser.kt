@@ -11,12 +11,13 @@ import java.util.Locale
 object MappingIntentParser {
     @JvmStatic
     fun suggest(kind: MappingDraftKind, description: String?): MappingDraftSuggestion {
-        val clean = cleanDescription(description)
+        val hints = extractInlineHints(description)
+        val clean = cleanDescription(withoutInlineHints(description))
         val normalized = normalize(clean)
         return when (kind) {
-            MappingDraftKind.REGION -> suggestRegion(clean, normalized)
-            MappingDraftKind.PLACE -> suggestPlace(clean, normalized)
-            MappingDraftKind.NODE -> suggestNode(clean, normalized)
+            MappingDraftKind.REGION -> suggestRegion(clean, normalized, hints)
+            MappingDraftKind.PLACE -> suggestPlace(clean, normalized, hints)
+            MappingDraftKind.NODE -> suggestNode(clean, normalized, hints)
             MappingDraftKind.NPC_BIND -> MappingDraftSuggestion(
                 slugOrFallback(clean, "npc_bind"),
                 displayName(clean, "NPC Bind"),
@@ -64,6 +65,36 @@ object MappingIntentParser {
     }
 
     @JvmStatic
+    fun withoutInlineHints(description: String?): String {
+        return description
+            ?.split(Regex("\\s+"))
+            ?.filter { token -> !looksLikeInlineHint(token) }
+            ?.joinToString(" ")
+            ?.trim()
+            .orEmpty()
+    }
+
+    @JvmStatic
+    fun extractInlineHints(description: String?): Map<String, String> {
+        val hints = LinkedHashMap<String, String>()
+        if (description.isNullOrBlank()) {
+            return hints
+        }
+        for (token in description.split(Regex("\\s+"))) {
+            val separatorIndex = token.indexOf('=').takeIf { it > 0 } ?: token.indexOf(':').takeIf { it > 0 }
+            if (separatorIndex == null) {
+                continue
+            }
+            val key = token.substring(0, separatorIndex).trim().lowercase(Locale.ROOT)
+            val value = token.substring(separatorIndex + 1).trim()
+            if (key.isNotBlank() && value.isNotBlank()) {
+                hints[key] = value
+            }
+        }
+        return hints
+    }
+
+    @JvmStatic
     fun normalize(value: String?): String {
         val raw = value?.trim()?.lowercase(Locale.ROOT).orEmpty()
         val ascii = Normalizer.normalize(raw, Normalizer.Form.NFD)
@@ -77,9 +108,14 @@ object MappingIntentParser {
             .replace('\u021b', 't')
     }
 
-    private fun suggestRegion(clean: String, normalized: String): MappingDraftSuggestion {
+    private fun suggestRegion(clean: String, normalized: String, hints: Map<String, String>): MappingDraftSuggestion {
         var type = RegionType.CUSTOM
         val tags = LinkedHashSet<String>()
+        val metadata = LinkedHashMap<String, String>()
+        val explicitType = hints["type"]?.let { RegionType.fromId(it) }
+        if (explicitType != null && explicitType != RegionType.CUSTOM) {
+            type = explicitType
+        }
         if (containsAny(normalized, "sat", "village", "asezare")) {
             type = RegionType.SETTLEMENT
             tags.addAll(listOf("settlement", "village"))
@@ -97,23 +133,37 @@ object MappingIntentParser {
             tags.addAll(listOf("wilderness"))
         }
 
+        val localId = hints["id"]?.takeIf { it.isNotBlank() }
+            ?: hints["region"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }?.let { slugOrFallback(it, type.id) }
+            ?: preferredId(clean, normalized, type.id)
+        val displayName = hints["label"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }
+            ?: displayName(clean, "Regiune")
+        hints["size"]?.takeIf { it.isNotBlank() }?.let { metadata["size"] = it }
+        hints["tags"]?.takeIf { it.isNotBlank() }?.let { metadata["tags"] = it }
         tags.add("manual")
+        metadata["source"] = "wand_prompt"
         return MappingDraftSuggestion(
-            preferredId(clean, normalized, type.id),
-            displayName(clean, "Regiune"),
+            localId,
+            displayName,
             type.id,
             tags.toList(),
-            mapOf("source" to "wand_prompt"),
+            metadata,
             2.5,
             emptyList()
         )
     }
 
-    private fun suggestPlace(clean: String, normalized: String): MappingDraftSuggestion {
+    private fun suggestPlace(clean: String, normalized: String, hints: Map<String, String>): MappingDraftSuggestion {
         var type = PlaceType.CUSTOM
         val tags = LinkedHashSet<String>()
         val metadata = LinkedHashMap<String, String>()
         var publicAccess = true
+        val explicitType = hints["type"]?.let { PlaceType.fromId(it) }
+        if (explicitType != null && explicitType != PlaceType.CUSTOM) {
+            type = explicitType
+        }
 
         if (containsAny(normalized, "casa")) {
             type = PlaceType.HOUSE
@@ -148,12 +198,22 @@ object MappingIntentParser {
             tags.addAll(listOf("cave", "danger"))
         }
 
+        val localId = hints["id"]?.takeIf { it.isNotBlank() }
+            ?: hints["place"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }?.let { slugOrFallback(it, type.id) }
+            ?: preferredId(clean, normalized, type.id)
+        val displayName = hints["label"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }
+            ?: displayName(clean, "Place")
+        hints["region"]?.takeIf { it.isNotBlank() }?.let { metadata["region"] = it }
+        hints["size"]?.takeIf { it.isNotBlank() }?.let { metadata["size"] = it }
+        hints["public"]?.takeIf { it.isNotBlank() }?.let { metadata["public"] = it }
         tags.add("manual")
         metadata["source"] = "wand_prompt"
         metadata["public_access_hint"] = if (publicAccess) "true" else "false"
         return MappingDraftSuggestion(
-            preferredId(clean, normalized, type.id),
-            displayName(clean, "Place"),
+            localId,
+            displayName,
             type.id,
             tags.toList(),
             metadata,
@@ -162,12 +222,17 @@ object MappingIntentParser {
         )
     }
 
-    private fun suggestNode(clean: String, normalized: String): MappingDraftSuggestion {
+    private fun suggestNode(clean: String, normalized: String, hints: Map<String, String>): MappingDraftSuggestion {
         var type = WorldNodeType.CUSTOM
         val metadataTags = LinkedHashSet<String>()
         val metadata = LinkedHashMap<String, String>()
         var preferredId = ""
         var radius = 2.5
+        val explicitType = hints["type"]?.let { WorldNodeType.fromId(it) }
+        if (explicitType != null && explicitType != WorldNodeType.CUSTOM) {
+            type = explicitType
+        }
+        hints["radius"]?.toDoubleOrNull()?.let { radius = it }
 
         if (containsAny(normalized, "avizier", "panou", "board", "quest board", "quest", "ancora")) {
             type = WorldNodeType.QUEST_TRIGGER
@@ -212,6 +277,16 @@ object MappingIntentParser {
             radius = 2.0
         }
 
+        val displayName = hints["label"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }
+            ?: displayName(clean, "Node")
+        val explicitId = hints["id"]?.takeIf { it.isNotBlank() }
+            ?: hints["node"]?.takeIf { it.isNotBlank() }
+            ?: hints["name"]?.takeIf { it.isNotBlank() }?.let { slugOrFallback(it, type.id) }
+        if (!explicitId.isNullOrBlank()) {
+            preferredId = explicitId
+        }
+        hints["role"]?.takeIf { it.isNotBlank() }?.let { metadata["role"] = it }
         metadata["source"] = "wand_prompt"
         if (metadataTags.isNotEmpty()) {
             metadata["tags"] = metadataTags.joinToString(",")
@@ -219,7 +294,7 @@ object MappingIntentParser {
         val id = if (preferredId.isBlank()) preferredId(clean, normalized, type.id) else preferredId
         return MappingDraftSuggestion(
             id,
-            displayName(clean, "Node"),
+            displayName,
             type.id,
             emptyList(),
             metadata,
@@ -235,6 +310,11 @@ object MappingIntentParser {
             }
         }
         return false
+    }
+
+    private fun looksLikeInlineHint(token: String): Boolean {
+        val separatorIndex = token.indexOf('=').takeIf { it > 0 } ?: token.indexOf(':').takeIf { it > 0 }
+        return separatorIndex != null
     }
 
     private fun preferredId(clean: String, normalized: String, fallback: String): String {

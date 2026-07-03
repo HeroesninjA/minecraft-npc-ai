@@ -112,12 +112,14 @@ fun sendMapUsage(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&cUtilizare:")
     msg.send(sender, "&e/ainpc map <region|place|node|npc_bind|quest_anchor> <descriere>")
+    msg.send(sender, "&e/ainpc map <descriere> &7poate include hinturi: id=, name=, label=, type=, region=, place=, size=, radius=")
     msg.send(
         sender,
         "&e/ainpc map quest_anchor [player:<jucator|uuid>] <tracked|current|templateId|questCode> <objective_id> [objective_type] [reference]"
     )
     msg.send(sender, "&e/ainpc map <descriere> &7(foloseste modul wand curent)")
     msg.send(sender, "&e/ainpc map preview")
+    msg.send(sender, "&e/ainpc map edit &7(deschide GUI-ul pentru draftul curent)")
     msg.send(sender, "&e/ainpc map confirm")
     msg.send(sender, "&e/ainpc map cancel")
 }
@@ -357,8 +359,9 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Genereaza sau executa household-uri pentru casele din regiune")
     msg.send(sender, "&e/ainpc world save")
     msg.send(sender, "&7  Salveaza modificarile runtime in config.yml")
-    msg.send(sender, "&e/ainpc build mode on|off|sign|wand|point|history|export|clear-history [region|place|node]")
+    msg.send(sender, "&e/ainpc build mode on|off|sign|wand|point|status|history|export|clear-history|help [region|place|node]")
     msg.send(sender, "&7  Activeaza Build Mode cu selectie asistata, preview persistent si export de stare")
+    msg.send(sender, "&7  Exemple: /ainpc build mode history | /ainpc build mode export | /ainpc build mode clear-history")
     msg.send(sender, "&e/ainpc building templates")
     msg.send(sender, "&7  Listeaza template-urile de cladiri disponibile")
     msg.send(sender, "&e/ainpc patch <analyze|plan|validate> <regionId> [targetPopulation] [profesiiCSV]")

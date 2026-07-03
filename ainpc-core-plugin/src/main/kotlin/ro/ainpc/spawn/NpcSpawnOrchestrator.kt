@@ -241,8 +241,13 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
 
         if (trackBatch && batchTracker != null) {
             batchTracker.finishBatch(
-                batchKey, true, false, countCreatedNpcs(householdResults),
-                countReusedNpcs(householdResults), warnings, errors
+                batchKey = batchKey,
+                success = true,
+                rolledBack = false,
+                createdNpcCount = countCreatedNpcs(householdResults),
+                reusedNpcCount = countReusedNpcs(householdResults),
+                warnings = warnings,
+                errors = errors
             )
         }
 
@@ -358,8 +363,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         errors: MutableList<String>,
         warnings: MutableList<String>
     ): List<NpcSpawnPlan> {
-        val worldAdmin = getWorldAdmin(errors) ?: return emptyList()
-        val validationResult = houseAllocationValidator.validate(allocation, worldAdmin)
+        val validationResult = validateHouseAllocation(allocation)
         errors.addAll(validationResult.errors())
         warnings.addAll(validationResult.warnings())
         if (errors.isNotEmpty()) return allocation?.toNpcSpawnPlans() ?: emptyList()
@@ -432,7 +436,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         spawnResults: List<NpcSpawnResult>,
         warnings: MutableList<String>
     ) {
-        val persistence = plugin.householdPersistenceService ?: return
+        val persistence = plugin.householdPersistenceService
         if (allocation == null) return
         try {
             val residents = persistence.saveHousehold(allocation, spawnPlans, spawnResults, "spawn_plan")
@@ -456,9 +460,9 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         val workPlace = resolvePlace(worldAdmin, plan.workPlaceId(), "workPlaceId", errors)
         val socialPlace = resolvePlace(worldAdmin, plan.socialPlaceId(), "socialPlaceId", errors)
 
-        var homeNode = resolveOptionalNode(worldAdmin, plan.homeNodeId(), "homeNodeId", errors)
-        var workNode = resolveOptionalNode(worldAdmin, plan.workNodeId(), "workNodeId", errors)
-        var socialNode = resolveOptionalNode(worldAdmin, plan.socialNodeId(), "socialNodeId", errors)
+        var homeNode = resolveNode(worldAdmin, plan.homeNodeId(), "homeNodeId", errors)
+        var workNode = resolveNode(worldAdmin, plan.workNodeId(), "workNodeId", errors)
+        var socialNode = resolveNode(worldAdmin, plan.socialNodeId(), "socialNodeId", errors)
 
         if (homeNode == null && homePlace != null) {
             homeNode = SpawnSemanticRules.bestNodeForPlace(homePlace, worldAdmin.getNodesForPlace(homePlace.id()), "home")
@@ -479,7 +483,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             errors.add("NPC-ul cu ocupatia '${plan.occupation()}' trebuie sa aiba workNodeId sau workPlaceId.")
         }
 
-        val spawnLocation = toLocation(spawnNode, "spawnNodeId", errors)
+        val spawnLocation = toLocation(spawnNode, errors)
         val homeAnchor = resolveAnchor("home", homeNode, homePlace, warnings)
         val workAnchor = resolveAnchor("work", workNode, workPlace, warnings)
         val socialAnchor = resolveAnchor("social", socialNode, socialPlace, warnings)
@@ -501,51 +505,39 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         return worldAdmin
     }
 
-    private fun resolvePlace(worldAdmin: WorldAdminApi, placeId: String?, label: String, errors: MutableList<String>): WorldPlaceInfo? {
-        if (placeId.isNullOrBlank()) return null
-        val matches = worldAdmin.places
-            .filter { idMatches(it.id(), placeId) }
-            .sortedBy { it.id() }
+    private fun resolvePlace(worldAdmin: WorldAdminApi, placeId: String?, label: String, errors: MutableList<String>): WorldPlaceInfo? =
+        resolveUnique(worldAdmin.places, placeId, label, errors) { it.id() }
+
+    private fun resolveNode(worldAdmin: WorldAdminApi, nodeId: String?, label: String, errors: MutableList<String>): WorldNodeInfo? =
+        resolveUnique(worldAdmin.nodes, nodeId, label, errors) { it.id() }
+
+    private fun <T> resolveUnique(
+        candidates: Collection<T>,
+        selector: String?,
+        label: String,
+        errors: MutableList<String>,
+        idOf: (T) -> String?
+    ): T? {
+        if (selector.isNullOrBlank()) return null
+        val matches = candidates
+            .filter { idMatches(idOf(it), selector) }
+            .sortedBy { idOf(it) ?: "" }
         return when {
             matches.size == 1 -> matches[0]
             matches.isEmpty() -> {
-                errors.add("$label '$placeId' nu exista in WorldAdmin.")
+                errors.add("$label '$selector' nu exista in WorldAdmin.")
                 null
             }
             else -> {
-                errors.add("$label '$placeId' este ambiguu: ${matches.map { it.id() }}")
-                null
-            }
-        }
-    }
-
-    private fun resolveOptionalNode(worldAdmin: WorldAdminApi, nodeId: String?, label: String, errors: MutableList<String>): WorldNodeInfo? {
-        if (nodeId.isNullOrBlank()) return null
-        return resolveNode(worldAdmin, nodeId, label, errors)
-    }
-
-    private fun resolveNode(worldAdmin: WorldAdminApi, nodeId: String?, label: String, errors: MutableList<String>): WorldNodeInfo? {
-        if (nodeId.isNullOrBlank()) return null
-        val matches = worldAdmin.nodes
-            .filter { idMatches(it.id(), nodeId) }
-            .sortedBy { it.id() }
-        return when {
-            matches.size == 1 -> matches[0]
-            matches.isEmpty() -> {
-                errors.add("$label '$nodeId' nu exista in WorldAdmin.")
-                null
-            }
-            else -> {
-                errors.add("$label '$nodeId' este ambiguu: ${matches.map { it.id() }}")
+                errors.add("$label '$selector' este ambiguu: ${matches.mapNotNull(idOf)}")
                 null
             }
         }
     }
 
     private fun idMatches(actualId: String?, selector: String?): Boolean {
-        if (actualId == null || selector == null) return false
-        val actual = actualId.trim().lowercase(Locale.ROOT)
-        val expected = selector.trim().lowercase(Locale.ROOT)
+        val actual = actualId?.trim()?.lowercase(Locale.ROOT) ?: return false
+        val expected = selector?.trim()?.lowercase(Locale.ROOT) ?: return false
         return actual == expected || actual.endsWith(":$expected")
     }
 
@@ -556,11 +548,11 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
         }
     }
 
-    private fun toLocation(node: WorldNodeInfo?, label: String, errors: MutableList<String>): Location? {
+    private fun toLocation(node: WorldNodeInfo?, errors: MutableList<String>): Location? {
         if (node == null) return null
         val world: World? = Bukkit.getWorld(node.worldName())
         if (world == null) {
-            errors.add("$label '${node.id()}' foloseste lumea indisponibila '${node.worldName()}'.")
+            errors.add("spawnNodeId '${node.id()}' foloseste lumea indisponibila '${node.worldName()}'.")
             return null
         }
         return Location(world, node.x(), node.y(), node.z())
@@ -602,7 +594,7 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             node.metadata()["name"],
             node.metadata()["display_name"]
         )
-        return if (label.isBlank()) fallbackLabel else label
+        return label.ifBlank { fallbackLabel }
     }
 
     private fun firstNonBlank(vararg values: String?): String {

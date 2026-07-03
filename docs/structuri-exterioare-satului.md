@@ -1,22 +1,22 @@
-﻿# Structuri exterioare satului
+# Structuri exterioare satului
 
-Actualizat: 2026-06-16
+Actualizat: 2026-07-02
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
 
 ## Scop
 
-Acest document defineste structurile care pot exista in afara satului principal: castel, padure, fantana izolata, casa izolata, mini-sat, sat de barbari, dungeon si alte zone de explorare.
+Acest document defineste structurile care pot exista in afara satului principal: castel, padure, fantana izolata, casa izolata, mini-sat, sat de barbari, dungeon si alte zone de explorare, plus tipuri extinse inregistrate semantic.
 
-Rolul lui este sa standardizeze cum sunt descrise aceste structuri in `Region`, `Place`, `Node`, `SettlementPlan`, quest anchors si generarea asistata. Documentul este design operational; nu inseamna ca toate tipurile sunt deja implementate complet.
+Rolul lui este sa standardizeze cum sunt descrise aceste structuri in `Region`, `Place`, `Node`, `SettlementPlan`, quest anchors si generarea asistata. Documentul este design operational; nu inseamna ca toate tipurile sunt deja implementate complet si nu limiteaza schema la o lista inchisa de exemple.
 
 ## Status implementare
 
 Implementat initial:
 
-- model canonic `ExteriorStructureType` pentru structuri exterioare;
+- model de baza `ExteriorStructureType` pentru structurile exterioare deja cunoscute;
 - `barbarian_village` este suportat ca alias pentru tipul neutru `faction_settlement`, ca sa nu forteze lore ostil in core;
-- catalog read-only `ExteriorStructureBlueprintCatalog` pentru tipurile canonice, tags, places, nodes si reguli minime;
+- catalog read-only `ExteriorStructureBlueprintCatalog` pentru tipurile de baza, alias-uri, tags, places, nodes si reguli minime;
 - comanda `/ainpc world outside types` listeaza tipurile de structuri exterioare suportate;
 - comanda `/ainpc world outside blueprint <type>` afiseaza scheletul semantic recomandat pentru mapping;
 - comanda `/ainpc world outside plan <type> <baseId>` propune read-only ID-uri de regiune, places si nodes pentru mapping manual;
@@ -25,7 +25,35 @@ Implementat initial:
 - comanda `/ainpc world outside validate <regionId>` afiseaza erori si warning-uri fara sa scrie in lume, DB sau config;
 - teste unitare pentru dungeon, casa izolata si aliasul de sat de barbari/factiune.
 
-Nu este inca implementat:
+## Tipuri de baza si extensibilitate
+
+Tipurile descrise aici sunt exemple de baza, nu o lista inchisa.
+
+Regula dorita:
+
+- tipurile noi trebuie sa poata fi adaugate fara hardcode dispersat
+- tipurile trebuie sa fie indexabile semantic prin `type`, `tags`, `aliases`, `family` si `questAnchors`
+- daca doua tipuri au acelasi rol functional, pot imparti aceeasi familie, dar trebuie sa aiba `typeId` stabil separat
+- validarea trebuie sa poata lucra cu registry sau catalog, nu doar cu un enum fix
+
+Exemple de extensii compatibile:
+
+- `garden`
+- `museum`
+- `arena`
+- `watch_post`
+- `relay_station`
+- `herbalist_hut`
+- `faction_hall`
+- `road_checkpoint`
+
+Notare importanta:
+
+- `castle`, `forest`, `hamlet`, `barbarian_village`, `dungeon` sunt puncte de plecare utile
+- ele nu acopera toate formele posibile de lume
+- catalogul poate creste cu alte tipuri de explorare, administratie, tranzit sau gameplay
+
+## Nu este inca implementat:
 
 - creare automata de structuri exterioare;
 - builder nativ sau WorldEdit pentru aceste structuri;

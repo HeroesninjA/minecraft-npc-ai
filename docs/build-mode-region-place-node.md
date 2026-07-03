@@ -1,10 +1,16 @@
 # Build Mode pentru `Region / Place / Node`
 
-Actualizat: 2026-06-30
+Actualizat: 2026-07-01
 
 Punctul de intrare recomandat pentru aceasta zona ramane `mapping-stack.md`.
 
 Pentru orientare in cod, foloseste [harta scurta a pachetelor](./harta-pachetelor-cod-scurta.md) si apoi [harta completa](./harta-pachetelor-cod.md).
+
+Ghidul pas cu pas este in `docs/build-mode-tutorial.md`.
+Pentru `Quest / Progression`, foloseste `docs/quest-progression-tutorial.md`.
+Pentru administrare si inspectie runtime, foloseste `docs/admin-mcp-tutorial.md`.
+Pentru fluxul vizual din GUI, foloseste `docs/admin-world-hub-tutorial.md`.
+Pentru `Quest Authoring / Quick Quest`, foloseste `docs/quest-authoring-tutorial.md`.
 
 ## Scop
 
@@ -108,9 +114,9 @@ Scopul este ca adminul sa poata porni de la o comanda scurta, iar asistentul sa 
 Exemple de pornire:
 
 - `/ainpc world create ai`
-- `/ainpc world create ai region`
-- `/ainpc world create ai place`
-- `/ainpc world create ai node`
+- `/ainpc world create ai preview region`
+- `/ainpc world create ai preview place`
+- `/ainpc world create ai preview node`
 - `/ainpc quest create ai`
 - `/ainpc progression create ai`
 
@@ -623,9 +629,14 @@ Fluxul trebuie sa poata fi pornit atat cu `/ainpc`, cat si cu aliasul operationa
 /ainpc build mode help
 /ainpc world create ai
 /ainpc world create ai help
-/ainpc world create ai region
-/ainpc world create ai place
-/ainpc world create ai node
+/ainpc world create ai preview region
+/ainpc world create ai preview place
+/ainpc world create ai preview node
+/ainpc world create ai dryrun region
+/ainpc world create ai inspect place
+/ainpc map edit
+/ainpc map open
+/ainpc map gui
 /ainpc build mode status
 /ainpc build mode on [region|place|node]
 /ainpc build mode off
@@ -633,6 +644,52 @@ Fluxul trebuie sa poata fi pornit atat cu `/ainpc`, cat si cu aliasul operationa
 /ainpc build mode wand [region|place|node]
 /ainpc build mode point [region|place|node]
 ```
+
+Compatibilitate: forma scurta `/ainpc world create ai region|place|node ...` ramane suportata, dar fluxul recomandat este `preview|dryrun|inspect` urmat de `map edit` si `map confirm`.
+
+Semnul poate contine si hinturi AI pe linii, de exemplu:
+
+```text
+region
+curte_castel
+type=settlement
+size=48
+```
+
+Pentru `place` sau `node`:
+
+```text
+place
+fieraria_george
+type=forge
+region=regatul_nordic
+```
+
+```text
+node
+avizier
+type=quest_trigger
+radius=2.5
+```
+
+Pentru inspectie fara deschiderea formularului, foloseste `preview`:
+
+```text
+/ainpc world create ai preview region name=curte_castel type=castle size=48
+/ainpc map edit
+/ainpc map confirm
+```
+
+`/ainpc map edit`, `/ainpc map open` si `/ainpc map gui` deschid acelasi editor pentru draftul curent dupa `preview`/`dryrun`/`inspect`.
+
+Daca draftul AI are hinturi structurate (`id=`, `name=`, `label=`, `type=`, `region=`, `place=`, `size=`, `radius=`, `height=`), dar nu exista selectie activa,
+build mode foloseste pozitia curenta a builderului ca centru:
+
+- `region` fara wand primeste implicit o zona patrata in jurul builderului
+- `place` fara wand primeste o zona mai mica in jurul builderului
+- `node` fara punct selectat primeste coordonata curenta a builderului
+- `size=` seteaza latimea/adancimea, `radius=` seteaza distanta fata de centru, `height=` seteaza inaltimea
+- daca `id=` lipseste, `name=` devine fallback pentru ID local; `label=` ramane nume afisat separat
 
 ## Flow UI propus
 
@@ -669,6 +726,16 @@ Reguli:
 - snapshot-ul MCP include si istoricul recent al schimbarilor de build mode
 - `point` captureaza pozitia blocului vizat si deschide formularul potrivit cu coordonatele precompletate
 - `sign` foloseste textul semnului ca prompt si deschide formularul potrivit cu contextul dedus
+
+### Exemple rapide
+
+- `/ainpc build mode on region` — activeaza build mode pe regiuni
+- `/ainpc build mode wand place` — deschide modul de selectie cu wand pentru place
+- `/ainpc build mode point node` — captureaza un punct si deschide editorul pentru node
+- `/ainpc build mode history` — arata ultimele modificari locale
+- `/ainpc build mode export` — afiseaza rezumatul curent si ultimele actiuni
+- `/ainpc build mode clear-history` — sterge istoricul local al playerului curent
+- `/ainpc build mode help` — afiseaza sintaxa completa si exemplele disponibile
 
 ## State machine
 

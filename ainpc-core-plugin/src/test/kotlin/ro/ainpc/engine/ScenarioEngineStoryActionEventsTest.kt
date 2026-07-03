@@ -7,12 +7,13 @@ import java.io.File
 class ScenarioEngineStoryActionEventsTest {
     @Test
     fun scenarioEnginePublishesStoryActionEvents() {
-        val source = File("src/main/kotlin/ro/ainpc/engine/ScenarioEngine.kt").readText()
+        val scenarioSource = File("src/main/kotlin/ro/ainpc/engine/ScenarioEngine.kt").readText()
+        val publisherSource = File("src/main/kotlin/ro/ainpc/engine/QuestStoryActionEventPublisher.kt").readText()
 
-        assertTrue(source.contains("StoryActionAppliedEvent("))
-        assertTrue(source.contains("publishStoryActionApplied("))
-        assertTrue(source.contains("applyQuestStoryActions("))
-        assertTrue(source.contains("set_story_state"))
-        assertTrue(source.contains("record_story_event"))
+        assertTrue(scenarioSource.contains("questStoryActionEventPublisher.publish("))
+        assertTrue(scenarioSource.contains("applyQuestStoryActions("))
+        assertTrue(publisherSource.contains("StoryActionAppliedEvent("))
+        assertTrue(publisherSource.contains("Bukkit.getPluginManager().callEvent("))
+        assertTrue(publisherSource.contains("events.public_api_enabled"))
     }
 }

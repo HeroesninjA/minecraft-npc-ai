@@ -2,7 +2,6 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
 import ro.ainpc.gui.GuiKey
@@ -26,16 +25,16 @@ class PlayerHubGui : GuiScreen {
         openBtn(context, 14, GuiKey.SHOP, Material.EMERALD, "&2Shop", "&7Tranzactii cu NPC-uri.")
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
-            GuiAction { click -> click.service().open(click.player(), GuiKey.MAIN) }))
+            action = { click -> click.service().open(click.player(), GuiKey.MAIN) }))
         context.button(53, GuiButton.enabled(GuiItemFactory.item(Material.BARRIER, "&cInchide", ""),
-            GuiAction { click -> click.player().closeInventory() }))
+            action = { click -> click.player().closeInventory() }))
         context.fillEmpty(GuiItemFactory.filler())
     }
 
     private fun openBtn(ctx: GuiRenderContext, slot: Int, key: GuiKey, mat: Material, title: String, lore: String) {
         if (ctx.service().canOpen(ctx.player(), key)) {
             ctx.button(slot, GuiButton.enabled(GuiItemFactory.item(mat, title, listOf(lore)),
-                GuiAction { click -> click.service().open(click.player(), key) }))
+                action = { click -> click.service().open(click.player(), key) }))
         } else {
             ctx.button(slot, GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, title, listOf("&8Necesita permisiune."))))
         }
