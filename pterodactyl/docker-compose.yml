@@ -1,0 +1,82 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: ainpc-pterodb
+    restart: unless-stopped
+    volumes:
+      - pterodb:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: panel
+      MYSQL_USER: pterodactyl
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - pterodactyl
+
+  cache:
+    image: redis:7-alpine
+    container_name: ainpc-pteroredis
+    restart: unless-stopped
+    volumes:
+      - pteroredis:/data
+    networks:
+      - pterodactyl
+
+  panel:
+    build: .
+    image: pterodactyl-panel
+    container_name: ainpc-pteropanel
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - pterostorage:/var/www/pterodactyl/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: panel
+      DB_USERNAME: pterodactyl
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
+    depends_on:
+      - db
+      - cache
+    networks:
+      - pterodactyl
+    entrypoint: ["/entrypoint.sh"]
+
+  wings:
+    image: pterodactyl-wings:local
+    build:
+      context: .
+      dockerfile: Dockerfile.wings
+    container_name: ainpc-pterowings
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "2022:2022"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/pterodactyl:/var/lib/pterodactyl
+      - /etc/pterodactyl:/etc/pterodactyl:ro
+    networks:
+      - pterodactyl
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pterodb:
+  pteroredis:
+  pterostorage:
+
+networks:
+  pterodactyl:
+    driver: bridge

@@ -1,0 +1,10 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y curl ca-certificates tzdata \
+    && curl -L -o /usr/local/bin/wings "https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")" \
+    && chmod +x /usr/local/bin/wings \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8080 2022
+
+CMD ["/usr/local/bin/wings", "--config", "/etc/pterodactyl/config.yml"]

@@ -142,6 +142,17 @@ class MappingCreatePlaceGui : GuiScreen {
             }
         ))
 
+        context.button(14, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAGENTA_DYE, "&dAI refine place", listOf(
+                "&7Regenereaza presetul AI din campurile curente.",
+                "&7Click: ruleaza world create ai cu hint-uri de place."
+            )),
+            GuiAction { click ->
+                val command = buildPlaceAiRefineCommand(aiPlaceRegion, aiPlaceName, aiPlaceType, aiPlaceSize, selectedRegion, placeName, placeType, size, aiMode, aiKind, aiName, aiSummary)
+                click.service().runCommand(click.player(), command)
+            }
+        ))
+
         context.button(15, GuiButton.enabled(
             if (canCreate) GuiItemFactory.item(Material.LIME_DYE, "&aCreaza Place", listOf(
                 "&7Place: $placeName ($placeType)",
@@ -222,5 +233,44 @@ class MappingCreatePlaceGui : GuiScreen {
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun buildPlaceAiRefineCommand(
+        aiPlaceRegion: String,
+        aiPlaceName: String,
+        aiPlaceType: String,
+        aiPlaceSize: String,
+        selectedRegion: String,
+        placeName: String,
+        placeType: String,
+        size: String,
+        aiMode: String,
+        aiKind: String,
+        aiName: String,
+        aiSummary: String
+    ): String {
+        val hints = mutableListOf<String>()
+        fun addHint(key: String, value: String?) {
+            val normalized = value.orEmpty().trim()
+            if (normalized.isNotBlank()) {
+                hints += "$key=${normalized.replace(' ', '_')}"
+            }
+        }
+
+        addHint("kind", if (aiKind.isBlank()) "place" else aiKind)
+        addHint("region", if (aiPlaceRegion.isBlank()) selectedRegion else aiPlaceRegion)
+        addHint("name", if (aiPlaceName.isBlank()) placeName else aiPlaceName)
+        addHint("type", if (aiPlaceType.isBlank()) placeType else aiPlaceType)
+        addHint("size", if (aiPlaceSize.isBlank()) size else aiPlaceSize)
+        addHint("mode", aiMode)
+        addHint("ai_name", aiName)
+        addHint("summary", aiSummary)
+
+        return buildString {
+            append("ainpc world create ai place ")
+            append(placeName)
+            append(' ')
+            append(hints.joinToString(" "))
+        }.trim()
     }
 }

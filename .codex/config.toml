@@ -26,3 +26,6 @@ approval_mode = "approve"
 
 [mcp_servers.ainpc-project-memory.tools.memory_search]
 approval_mode = "approve"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"

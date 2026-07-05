@@ -33,11 +33,11 @@ class AdminMappingGui : GuiScreen {
         val currentNodes = worldAdmin.findNodesNear(location.world.name, location.x, location.y, location.z, 16.0, 5)
 
         context.button(0, GuiButton.enabled(
-            GuiItemFactory.item(Material.STICK, "&6Wand", "&7Togleaza modul wand pentru mapping."),
+            GuiItemFactory.item(Material.STICK, "&6Wand", "&7Togleaza Modul Wand Pentru Mapping."),
             action = { click -> click.service().runCommand(click.player(), "ainpc wand") }
         ))
         context.button(1, GuiButton.enabled(
-            GuiItemFactory.item(Material.CHAINMAIL_BOOTS, "&eBindings", "&7Listeaza NPC-world bindings."),
+            GuiItemFactory.item(Material.CHAINMAIL_BOOTS, "&eBindings", "&7Listeaza NPC-World Bindings."),
             action = { click -> click.service().runCommand(click.player(), "ainpc world bindings") }
         ))
         context.button(2, GuiButton.enabled(
@@ -46,7 +46,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(8, GuiButton.enabled(
-            GuiItemFactory.item(Material.REDSTONE, "&cReload config", "&7Reincarca world admin din config."),
+            GuiItemFactory.item(Material.REDSTONE, "&cReload Config", "&7Reincarca World Admin Din Config."),
             action = { click ->
                 click.service().runCommand(click.player(), "ainpc world reload")
             }
@@ -76,22 +76,22 @@ class AdminMappingGui : GuiScreen {
                 "&7X: &f${location.blockX} Y: &f${location.blockY} Z: &f${location.blockZ}",
                 "&7Regiune: &f${currentRegion?.name() ?: "<nemapat>"}",
                 "&7Place: &f${currentPlace?.displayName() ?: "<nemapat>"}",
-                "&7Noduri in raza 16m: &f${currentNodes.size}"
+                "&7Noduri In Raza 16m: &f${currentNodes.size}"
             )
         ))
 
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.OAK_DOOR, "&aWhere am I", "&7Ruleaza /ainpc world whereami.", "&8Actiuni principale."),
+            GuiItemFactory.item(Material.OAK_DOOR, "&aWhere Am I", "&7Ruleaza /ainpc world whereami.", "&8Actiuni principale."),
             action = { click -> click.service().runCommand(click.player(), "ainpc world whereami") }
         ))
 
         context.button(12, GuiButton.enabled(
-            GuiItemFactory.item(Material.PAPER, "&dMapping dump", "&7Debug dump mapping text in chat."),
+            GuiItemFactory.item(Material.PAPER, "&dMapping Dump", "&7Debug Dump Mapping Text In Chat."),
             action = { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping") }
         ))
 
         context.button(13, GuiButton.enabled(
-            GuiItemFactory.item(Material.SPYGLASS, "&6Scan sat", "&7Scaneaza vanilla village in raza 48.", "&8Admin separat."),
+            GuiItemFactory.item(Material.SPYGLASS, "&6Scan sat", "&7Scaneaza Vanilla Village In Raza 48.", "&8Admin separat."),
             action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
@@ -105,29 +105,29 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", "&7Creeaza mapping demo la pozitia ta.", "&8Admin separat."),
+            GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo Mapping", "&7Creeaza Mapping Demo La Pozitia Ta.", "&8Admin separat."),
             action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
-                    "Creeaza mapping demo",
+                    "Creeaza Mapping Demo",
                     "ainpc world demo create",
                     GuiKey.ADMIN_MAPPING,
                     "",
-                    listOf("&7Creeaza regiuni, places si noduri demo.", "&cDoar pe lumi de test.")
+                    listOf("&7Creeaza Regiuni, Places Si Noduri Demo.", "&cDoar Pe Lumi De Test.")
                 )
             }
         ))
 
         context.button(15, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza mapping", "&7Persista modificarile in config.", "&8Actiune persistenta separata."),
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza Mapping", "&7Persista Modificarile In Config.", "&8Actiune persistenta separata."),
             action = { click ->
                 click.service().openConfirmCommand(
                     click.player(),
-                    "Salveaza world mapping",
+                    "Salveaza World Mapping",
                     "ainpc world save",
                     GuiKey.ADMIN_MAPPING,
                     "",
-                    listOf("&7Salveaza toate modificarile curente.")
+                    listOf("&7Salveaza Toate Modificarile Curente.")
                 )
             }
         ))
@@ -161,7 +161,7 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(17, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
+            GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide Panoul Admin Quest.", "&8Admin separat."),
             action = { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
         ))
 
@@ -171,14 +171,14 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(22, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMPARATOR, "&6Patch analyze", "&7Analizeaza decalajele regiunii curente."),
+            GuiItemFactory.item(Material.COMPARATOR, "&6Patch analyze", "&7Analizeaza Decalajele Regiunii Curente."),
             action = { click ->
                 val regionId = currentRegion?.id() ?: "demo_sat"
                 click.service().runCommand(click.player(), "ainpc patch analyze $regionId")
             }
         ))
         context.button(23, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMPARATOR, "&6Patch plan", "&7Planifica patch-uri pentru regiunea curenta."),
+            GuiItemFactory.item(Material.COMPARATOR, "&6Patch plan", "&7Planifica Patch-uri Pentru Regiunea Curenta."),
             action = { click ->
                 val regionId = currentRegion?.id() ?: "demo_sat"
                 click.service().runCommand(click.player(), "ainpc patch plan $regionId")
@@ -238,7 +238,7 @@ class AdminMappingGui : GuiScreen {
                     "&7Lume: &f${region.worldName()}",
                     "&7Story: &f${region.storyMode().id} &8(${region.storyStateKey()})",
                     "&7Mood: &f${identity.mood} &7| Threat: &f${identity.threatLevel}",
-                    "&7Click: detalii regiune"
+                    "&7Click: Detalii Regiune"
                 )),
                 action = { click -> click.service().openRegionDetail(click.player(), region.id()) }
             ))
@@ -246,8 +246,8 @@ class AdminMappingGui : GuiScreen {
 
         if (regions.isEmpty()) {
             context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNicio regiune", listOf(
-                "&7World admin nu are regiuni.",
-                "&7Foloseste butonul Demo mapping de mai sus."
+                "&7World Admin nu are regiuni.",
+                "&7Foloseste Butonul Demo Mapping De Mai Sus."
             )))
         }
 
@@ -264,7 +264,7 @@ class AdminMappingGui : GuiScreen {
 
         context.button(45, GuiButton.enabled(
             GuiItemFactory.item(Material.AMETHYST_SHARD, "&dIdentitate regiune", listOf(
-                "&7Arata identitatea tipului de regiune curent.",
+                "&7Arata Identitatea Tipului De Regiune Curent.",
                 "&7Click: /ainpc world region identity ${currentRegion?.typeId() ?: "settlement"}"
             )),
             action = { click ->
@@ -273,8 +273,8 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(47, GuiButton.enabled(
-            GuiItemFactory.item(Material.OAK_DOOR, "&aCreaza place", listOf(
-                "&7Creaza un place in regiunea curenta.",
+            GuiItemFactory.item(Material.OAK_DOOR, "&aCreaza Un Place", listOf(
+                "&7Creaza Un Place In Regiunea Curenta.",
                 "&7Foloseste: /ainpc world place create <regiune> <id> <tip> <x1> <y1> <z1> <x2> <y2> <z2>"
             )),
             action = { click ->
@@ -292,8 +292,8 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(48, GuiButton.enabled(
-            GuiItemFactory.item(Material.LODESTONE, "&bCreaza node", listOf(
-                "&7Creaza un nod la pozitia curenta.",
+            GuiItemFactory.item(Material.LODESTONE, "&bCreaza Un Nod", listOf(
+                "&7Creaza Un Nod La Pozitia Curenta.",
                 "&7Foloseste: /ainpc world node create <regiune> <placeId|-> <id> <tip> <x> <y> <z> [radius]"
             )),
             action = { click ->
@@ -306,7 +306,7 @@ class AdminMappingGui : GuiScreen {
 
         context.button(50, GuiButton.enabled(
             GuiItemFactory.item(Material.BARRIER, "&cRemove place", listOf(
-                "&7Elimina place-ul curent (daca exista).",
+                "&7Elimina Place-ul Curent (Daca Exista).",
                 "&7Click: /ainpc world place remove <placeId>"
             )),
             action = { click ->
@@ -318,7 +318,7 @@ class AdminMappingGui : GuiScreen {
                         "ainpc world place remove $placeId",
                         GuiKey.ADMIN_MAPPING,
                         "",
-                        listOf("&7Place: &f$placeId", "&cAceasta actiune sterge place-ul si nodurile asociate.")
+                        listOf("&7Place: &f$placeId", "&cAceasta Actiune Sterge Place-ul Si Nodurile Asociate.")
                     )
                 } else {
                     click.service().runCommand(click.player(), "ainpc world place remove")
@@ -327,8 +327,8 @@ class AdminMappingGui : GuiScreen {
         ))
 
         context.button(51, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&dListeaza places", listOf(
-                "&7Afiseaza toate place-urile in chat.",
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&dListeaza Places", listOf(
+                "&7Afiseaza Toate Place-urile In Chat.",
                 "&7Click: /ainpc world places"
             )),
             action = { click -> click.service().runCommand(click.player(), "ainpc world places") }
@@ -336,7 +336,7 @@ class AdminMappingGui : GuiScreen {
 
         context.button(52, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&dListeaza noduri", listOf(
-                "&7Afiseaza nodurile regiunii curente in chat.",
+                "&7Afiseaza Nodurile Regiunii Curente In Chat.",
                 "&7Click: /ainpc world nodes ${currentRegion?.id() ?: ""}"
             )),
             action = { click -> click.service().runCommand(click.player(), "ainpc world nodes ${currentRegion?.id() ?: ""}") }
@@ -349,11 +349,11 @@ class AdminMappingGui : GuiScreen {
     private fun regionTypeLore(worldAdmin: WorldAdminApi): List<String> {
         val byType = worldAdmin.regions.groupBy { it.typeId().ifBlank { "custom" } }
         val lore = mutableListOf<String>()
-        lore.add("&7Distributia tipurilor de regiuni:")
+        lore.add("&7Distributia Tipurilor De Regiuni:")
         for ((type, list) in byType.entries.sortedByDescending { it.value.size }) {
             lore.add("&7- &f${type}: &e${list.size}")
         }
-        lore.add("&8Click: listeaza places in chat")
+        lore.add("&8Click: Listeaza Places In Chat")
         return lore
     }
 
@@ -383,14 +383,14 @@ class AdminMappingGui : GuiScreen {
             add("&7Regiuni: &f$regionCount")
             add("&7Places: &f$placeCount")
             add("&7Noduri: &f$nodeCount")
-            add("&7World mode: &f$worldMode")
-            add("&7Indexare automata: &f${if (autoIndexEnabled) "activa" else "dezactivata"}")
-            add("&7Current region: &f${currentRegionId ?: "<niciuna>"}")
-            add("&7Current place: &f${currentPlaceName ?: "<niciunul>"}")
-            add("&7Noduri in raza: &f$nearbyNodeCount")
-            add(if (hasUnsavedChanges) "&cModificari nesalvate!" else "&aToate salvate")
+            add("&7World Mode: &f$worldMode")
+            add("&7Indexare Automata: &f${if (autoIndexEnabled) "activa" else "dezactivata"}")
+            add("&7Current Region: &f${currentRegionId ?: "<niciuna>"}")
+            add("&7Current Place: &f${currentPlaceName ?: "<niciunul>"}")
+            add("&7Noduri In Raza: &f$nearbyNodeCount")
+            add(if (hasUnsavedChanges) "&cModificari Nesalvate!" else "&aToate Salvate")
             add(if (hasUnsavedChanges) "&eStatus: necesita save" else "&aStatus: curat")
-            add("&8Actiuni principale: whereami / scan / save")
+            add("&8Actiuni Principale: whereami / scan / save")
         }
     }
 }

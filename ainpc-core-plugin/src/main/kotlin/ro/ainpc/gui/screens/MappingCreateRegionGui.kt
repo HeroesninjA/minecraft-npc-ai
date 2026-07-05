@@ -13,7 +13,6 @@ import java.util.Locale
 
 class MappingCreateRegionGui : GuiScreen {
     private val regionTypes = listOf("settlement", "castle", "forest", "dungeon", "village", "camp", "custom")
-    private var selectedType = "settlement"
 
     override fun key(): GuiKey = GuiKey.MAPPING_CREATE_REGION
     override fun title(player: Player): String = "&0Creaza Regiune"
@@ -32,15 +31,15 @@ class MappingCreateRegionGui : GuiScreen {
         val centerZ = context.service().getCreatorFormValue(context.player(), "region_center_z").toIntOrNull() ?: loc.blockZ
         val regionName = context.service().getCreatorFormValue(context.player(), "region_name")
             .ifBlank { "reg_${loc.blockX}_${loc.blockZ}" }
-        selectedType = context.service().getCreatorFormValue(context.player(), "region_type")
+        val regionType = context.service().getCreatorFormValue(context.player(), "region_type")
             .ifBlank { "settlement" }
         val size = context.service().getCreatorFormValue(context.player(), "region_size")
             .ifBlank { "64" }
         val sizeValue = size.toIntOrNull()
-        val regionValid = regionName.isNotBlank() && selectedType.isNotBlank() && sizeValue != null && sizeValue >= 16
+        val regionValid = regionName.isNotBlank() && regionType.isNotBlank() && sizeValue != null && sizeValue >= 16
         val regionIssue = when {
             regionName.isBlank() -> "&cLipseste numele regiunii."
-            selectedType.isBlank() -> "&cLipseste tipul regiunii."
+            regionType.isBlank() -> "&cLipseste tipul regiunii."
             sizeValue == null -> "&cMarimea trebuie sa fie un numar."
             sizeValue < 16 -> "&cMarimea minima este 16."
             else -> "&aValid pentru creare."
@@ -107,9 +106,9 @@ class MappingCreateRegionGui : GuiScreen {
         ))
 
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.SPYGLASS, "&eTip: &f$selectedType", listOf("&7Click: schimba tipul.", "&7Urmatorul tip: ${nextType(selectedType)}")),
+            GuiItemFactory.item(Material.SPYGLASS, "&eTip: &f$regionType", listOf("&7Click: schimba tipul.", "&7Urmatorul tip: ${nextType(regionType)}")),
             GuiAction { click ->
-                val next = nextType(selectedType)
+                val next = nextType(regionType)
                 context.service().setCreatorFormValue(click.player(), "region_type", next)
                 click.service().open(click.player(), GuiKey.MAPPING_CREATE_REGION)
             }
@@ -125,14 +124,25 @@ class MappingCreateRegionGui : GuiScreen {
             }
         ))
 
+        context.button(13, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAGENTA_DYE, "&dAI refine region", listOf(
+                "&7Regenereaza presetul AI din campurile curente.",
+                "&7Click: ruleaza world create ai cu hint-uri de regiune."
+            )),
+            GuiAction { click ->
+                val command = buildRegionAiRefineCommand(aiRegionName, aiRegionType, aiRegionSize, regionName, regionType, size, aiMode, aiKind, aiName, aiSummary)
+                click.service().runCommand(click.player(), command)
+            }
+        ))
+
         context.button(14, GuiButton.enabled(
             if (canCreate) GuiItemFactory.item(Material.LIME_DYE, "&aCreaza Regiunea", listOf(
-                "&7Creeaza: $regionName ($selectedType)",
+                "&7Creeaza: $regionName ($regionType)",
                 "&7Centru: ${loc.blockX}, ${loc.blockZ}",
                 "&7Marime: $size",
                 "&7Click: confirma crearea."
             )) else GuiItemFactory.item(Material.GRAY_DYE, "&7Creaza Regiunea", listOf(
-                "&7Creeaza: $regionName ($selectedType)",
+                "&7Creeaza: $regionName ($regionType)",
                 "&7Centru: ${loc.blockX}, ${loc.blockZ}",
                 "&7Marime: $size",
                 regionIssue,
@@ -145,7 +155,7 @@ class MappingCreateRegionGui : GuiScreen {
                 val x2 = centerX + s
                 val z2 = centerZ + s
                 click.service().runCommand(click.player(),
-                    "ainpc world region create $regionName $selectedType $x1 60 $z1 $x2 90 $z2")
+                    "ainpc world region create $regionName $regionType $x1 60 $z1 $x2 90 $z2")
             } else null
         ))
 
@@ -153,7 +163,7 @@ class MappingCreateRegionGui : GuiScreen {
             GuiItemFactory.item(Material.MAGENTA_DYE, "&dReaplica AI", listOf(
                 "&7Reface campurile initiale din sugestia AI.",
                 "&7Nume: ${if (aiRegionName.isBlank()) regionName else aiRegionName}",
-                "&7Tip: ${if (aiRegionType.isBlank()) selectedType else aiRegionType}",
+                "&7Tip: ${if (aiRegionType.isBlank()) regionType else aiRegionType}",
                 "&7Marime: ${if (aiRegionSize.isBlank()) size else aiRegionSize}"
             )),
             GuiAction { click ->
@@ -207,6 +217,42 @@ class MappingCreateRegionGui : GuiScreen {
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun buildRegionAiRefineCommand(
+        aiRegionName: String,
+        aiRegionType: String,
+        aiRegionSize: String,
+        regionName: String,
+        regionType: String,
+        size: String,
+        aiMode: String,
+        aiKind: String,
+        aiName: String,
+        aiSummary: String
+    ): String {
+        val hints = mutableListOf<String>()
+        fun addHint(key: String, value: String?) {
+            val normalized = value.orEmpty().trim()
+            if (normalized.isNotBlank()) {
+                hints += "$key=${normalized.replace(' ', '_')}"
+            }
+        }
+
+        addHint("kind", if (aiKind.isBlank()) "region" else aiKind)
+        addHint("name", if (aiRegionName.isBlank()) regionName else aiRegionName)
+        addHint("type", if (aiRegionType.isBlank()) regionType else aiRegionType)
+        addHint("size", if (aiRegionSize.isBlank()) size else aiRegionSize)
+        addHint("mode", aiMode)
+        addHint("ai_name", aiName)
+        addHint("summary", aiSummary)
+
+        return buildString {
+            append("ainpc world create ai region ")
+            append(regionName)
+            append(' ')
+            append(hints.joinToString(" "))
+        }.trim()
     }
 
     private fun nextType(current: String): String {

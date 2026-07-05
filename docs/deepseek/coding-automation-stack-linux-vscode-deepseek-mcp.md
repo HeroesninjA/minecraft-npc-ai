@@ -479,8 +479,8 @@ Flux standard pentru task de cod:
 ```text
 1. classify task
 2. retrieve context
-3. optional Context7 docs
-4. optional Serena symbol lookup
+3. Context7 docs when the task touches external libraries, frameworks, SDKs, or public APIs
+4. Serena symbol lookup when the task needs symbol-level code navigation
 5. rerank context
 6. LLM plan
 7. patch small slice

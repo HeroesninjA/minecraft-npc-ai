@@ -5,6 +5,7 @@ import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.engine.QuestDraftExporter
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -34,7 +35,7 @@ class QuestCreateGui : GuiScreen {
         "Combat" to listOf("kill_mob"),
     )
     private val objectiveTypes = objectiveCategories.values.flatten()
-    private val rewardTypes = listOf("item", "experience", "story_event", "reputation")
+    private val rewardTypes = listOf("item", "experience", "story_event", "record_story_event", "reputation")
     private val dialogTypes = listOf("npc_greeting", "npc_accept", "npc_progress", "npc_complete", "player_respond", "narrator")
     private val baseTypes = listOf("QUEST", "TRADE_DEAL", "BOUNTY", "DUTY", "WORLD_EVENT", "TUTORIAL", "RITUAL")
 
@@ -99,6 +100,30 @@ class QuestCreateGui : GuiScreen {
             stageIdx, stageCount, stageId, stageName, stageMode, stageNext, diagType, diagSpeaker, diagText, sysMsg
         )
 
+        context.button(3, GuiButton.enabled(
+            GuiItemFactory.item(Material.SPYGLASS, "&6Quest AI", listOf(
+                "&7Deschide fluxul asistat pentru draft rapid.",
+                "&7Comanda: &f/ainpc quest create ai",
+                "&7Click: deschide wizardul AI."
+            )),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest create ai") }
+        ))
+        context.button(2, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAGENTA_DYE, "&dQuest AI refine draft", listOf(
+                "&7Regenereaza promptul AI din campurile curente.",
+                "&7Click: ruleaza quest create ai cu hint-uri din draft."
+            )),
+            GuiAction { click ->
+                val command = buildQuestAiRefineCommand(
+                    qId, qName, qDesc, qMech, qBase, qNpc, qPlace,
+                    objType, objTarget, objCount, objDialog,
+                    rwType, rwValue, rwCount, rwEventKey, rwEventScope, rwEventTarget, rwEventTitle, rwEventPayload,
+                    stageIdx, stageCount, stageId, stageName, stageMode, stageNext,
+                    diagType, diagSpeaker, diagText, sysMsg
+                )
+                click.service().runCommand(click.player(), command)
+            }
+        ))
         context.item(4, GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Creeaza Quest", statusLines))
         context.item(46, GuiItemFactory.item(Material.PAPER, "&dPreview JSON", buildDraftJsonPreviewLines(draftJson)))
         context.button(47, GuiButton.enabled(
@@ -111,6 +136,23 @@ class QuestCreateGui : GuiScreen {
                 sendDraftValidationPreview(click.player(), statusLines)
             }
         ))
+        if (GuiAccessHelper.canAccess(player, GuiKey.QUEST_EDIT, service)) {
+            context.button(48, GuiButton.enabled(
+                GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf(
+                    "&7Deschide editorul cu lista de definitii.",
+                    "&7Click: deschide quest editor."
+                )),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }
+            ))
+        } else {
+            context.button(48, GuiButton.disabled(
+                GuiItemFactory.disabled(
+                    Material.GRAY_DYE,
+                    "&8Quest Editor",
+                    listOf("&8Necesita permisiune quest sau admin.")
+                )
+            ))
+        }
         context.button(49, GuiButton.enabled(
             GuiItemFactory.item(Material.BOOK, "&dPreview in chat", listOf(
                 "&7Trimite JSON-ul complet in chat.",
@@ -121,6 +163,23 @@ class QuestCreateGui : GuiScreen {
                 sendDraftJsonPreview(click.player(), draftJson)
             }
         ))
+        if (GuiAccessHelper.canAccess(player, GuiKey.AUTHORING, service)) {
+            context.button(50, GuiButton.enabled(
+                GuiItemFactory.item(Material.ENCHANTED_BOOK, "&dQuest Authoring", listOf(
+                    "&7Deschide analiza read-only de story, mapping si progresie.",
+                    "&7Click: deschide quest authoring."
+                )),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
+            ))
+        } else {
+            context.button(50, GuiButton.disabled(
+                GuiItemFactory.disabled(
+                    Material.GRAY_DYE,
+                    "&8Quest Authoring",
+                    listOf("&8Necesita permisiune admin sau debug.")
+                )
+            ))
+        }
         context.button(5, GuiButton.enabled(
             GuiItemFactory.item(Material.LIME_DYE, "&aReset Obiectiv", listOf(
                 "&7Curata campurile obiectivului curent.",
@@ -662,7 +721,7 @@ class QuestCreateGui : GuiScreen {
             }
         ))
 
-        // Story event fields (doar cand tipul e story_event) — sloturile 23-26 sunt libere
+        // Story Event Fields (doar cand tipul e story_event) — sloturile 23-26 sunt libere
         if (rwType == "story_event" || rwType == "record_story_event") {
             context.button(23, GuiButton.enabled(
                 GuiItemFactory.item(Material.PAPER, "&eEvent key: &f${rwEventKey.ifBlank { "<click>" }}", listOf(
@@ -735,7 +794,7 @@ class QuestCreateGui : GuiScreen {
                     if (click.clickType().isShiftClick) {
                         val questTitle = qName.ifBlank { "Quest" }
                         val nextTitle = cycleOption(
-                            listOf("$questTitle event", "$questTitle updated", "Quest event", "Story event"),
+                            listOf("$questTitle event", "$questTitle updated", "Quest Event", "Story Event"),
                             rwEventTitle.ifBlank { "$questTitle event" },
                             "$questTitle event"
                         )
@@ -863,6 +922,84 @@ class QuestCreateGui : GuiScreen {
         context.fillEmpty(GuiItemFactory.filler())
     }
 
+    private fun buildQuestAiRefineCommand(
+        qId: String,
+        qName: String,
+        qDesc: String,
+        qMech: String,
+        qBase: String,
+        qNpc: String,
+        qPlace: String,
+        objType: String,
+        objTarget: String,
+        objCount: String,
+        objDialog: String,
+        rwType: String,
+        rwValue: String,
+        rwCount: String,
+        rwEventKey: String,
+        rwEventScope: String,
+        rwEventTarget: String,
+        rwEventTitle: String,
+        rwEventPayload: String,
+        stageIdx: Int,
+        stageCount: Int,
+        stageId: String,
+        stageName: String,
+        stageMode: String,
+        stageNext: String,
+        diagType: String,
+        diagSpeaker: String,
+        diagText: String,
+        sysMsg: String
+    ): String {
+        val hints = mutableListOf<String>()
+        fun addHint(key: String, value: String?) {
+            val normalized = value.orEmpty().trim()
+            if (normalized.isNotBlank()) {
+                hints += "$key=${normalized.replace(' ', '_')}"
+            }
+        }
+
+        addHint("id", qId)
+        addHint("mechanic", qMech)
+        addHint("base", qBase)
+        addHint("npc", qNpc)
+        addHint("place", qPlace)
+        addHint("objective", "$objType:$objTarget:$objCount")
+        addHint("objective_dialog", objDialog)
+        addHint("reward", "$rwType:$rwValue:$rwCount")
+        addHint("reward_key", rwEventKey)
+        addHint("reward_scope", rwEventScope)
+        addHint("reward_target", rwEventTarget)
+        addHint("reward_title", rwEventTitle)
+        addHint("reward_payload", rwEventPayload)
+        if (stageCount > 1) {
+            hints += "stage_count=$stageCount"
+            addHint("stage${stageIdx}_id", stageId)
+            addHint("stage${stageIdx}_name", stageName)
+            addHint("stage${stageIdx}_mode", stageMode)
+            addHint("stage${stageIdx}_next", stageNext)
+        }
+        addHint("dialog", diagType)
+        addHint("speaker", diagSpeaker)
+        addHint("text", diagText)
+        addHint("system", sysMsg)
+
+        return buildString {
+            append("ainpc quest create ai ")
+            append(qName)
+            if (qDesc.isNotBlank()) {
+                append(' ')
+                append(qDesc)
+            }
+            if (hints.isNotEmpty()) {
+                append(' ')
+                append(hints.joinToString(" "))
+            }
+        }.trim()
+    }
+
     private fun captureNearestNpc(click: ro.ainpc.gui.GuiClickContext, service: ro.ainpc.gui.GuiService) {
         val player = click.player()
         val nearestNpc = click.plugin().npcManager.getNPCsNear(player.location, 16.0)
@@ -955,7 +1092,7 @@ class QuestCreateGui : GuiScreen {
         return when (rewardType) {
             "item" -> listOf("EMERALD", "DIAMOND", "IRON_INGOT", "GOLD_INGOT", "BOOK", "EXPERIENCE_BOTTLE")
             "experience" -> listOf("5", "10", "20", "50", "100")
-            "story_event" -> listOf("quest_started", "quest_completed", "npc_met", "castle_explored")
+            "story_event", "record_story_event" -> listOf("quest_started", "quest_completed", "npc_met", "castle_explored")
             "reputation" -> listOf("villagers", "guards", "merchants", "temple")
             else -> listOf("EMERALD", "BOOK", "5")
         }
@@ -1032,7 +1169,7 @@ class QuestCreateGui : GuiScreen {
 
         return buildList {
             add("&7Completeaza campurile, apoi apasa Exporta.")
-            add("&7Exportul include anchor-ul NPC chiar daca locatia lipseste.")
+            add("&7Exportul Include Anchor-ul NPC Chiar Daca Locatia Lipseste.")
             add("&7Quest: &f$qId &7| &f$qName")
             add("&7Mecanica: &f$qMech &7| Tip: &f$qBase")
             add("&7NPC: &f$qNpc &7| Place: &f${qPlace.ifBlank { "-" }}")

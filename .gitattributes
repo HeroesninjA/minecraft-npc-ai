@@ -1,0 +1,35 @@
+# Automatically normalize line endings
+* text=auto
+
+# Source code
+*.kt text diff=kotlin
+*.java text
+*.kts text
+*.gradle text
+*.gradle.kts text
+
+# Config files
+*.yml text
+*.yaml text
+*.toml text
+*.json text
+*.jsonc text
+*.properties text
+*.env text
+*.xml text
+
+# Docs
+*.md text
+*.txt text
+*.bat text
+*.ps1 text
+*.sh text eol=lf
+
+# Binary
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

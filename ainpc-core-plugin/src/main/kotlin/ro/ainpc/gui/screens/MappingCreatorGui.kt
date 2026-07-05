@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -12,7 +13,7 @@ import ro.ainpc.gui.GuiScreen
 
 class MappingCreatorGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MAPPING_CREATOR
-    override fun title(player: Player): String = "&0Creator Mapping"
+    override fun title(player: Player): String = "&0Mapping Creator"
     override fun size(player: Player): Int = 36
 
     override fun render(context: GuiRenderContext) {
@@ -24,7 +25,7 @@ class MappingCreatorGui : GuiScreen {
         val aiSummary = context.service().getCreatorFormValue(context.player(), "mc_ai_summary").ifBlank { "" }
         val aiWarnings = context.service().getCreatorFormValue(context.player(), "mc_ai_warnings").ifBlank { "" }
 
-        context.item(4, GuiItemFactory.item(Material.GRASS_BLOCK, "&6Creator Mapping", listOf(
+        context.item(4, GuiItemFactory.item(Material.GRASS_BLOCK, "&6Mapping Creator", listOf(
             "&7Regiuni: &f${wa.regionCount}",
             "&7Locatia ta: &f${loc.world.name} ${loc.blockX}, ${loc.blockY}, ${loc.blockZ}",
             if (aiMode.isBlank()) "&7AI mode: &f(nu)" else "&7AI mode: &f$aiMode",
@@ -53,12 +54,71 @@ class MappingCreatorGui : GuiScreen {
             "&7Lista regiuni existente, demo si save."
         )), GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }))
 
-        context.button(14, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza", listOf(
+        context.item(14, GuiItemFactory.item(Material.SPYGLASS, "&6AI Quick Actions", listOf(
+            "&7World Create/Refine.",
+            "&7Target curent: ${if (aiKind.isBlank()) "(nu)" else aiKind}"
+        )))
+
+        context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.SPYGLASS, "&6Mapping AI create", listOf(
+            "&7Flux asistat pentru world create ai.",
+            "&7Comanda: &f/ainpc world create ai"
+        )), GuiAction { click -> click.service().runCommand(click.player(), "ainpc world create ai") }))
+
+        context.button(16, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&bMapping AI help", listOf(
+            "&7Arata utilizarea si exemplele pentru world create ai.",
+            "&7Util cand vrei formatul exact."
+        )), GuiAction { click -> click.service().runCommand(click.player(), "ainpc world create ai help") }))
+
+        context.button(17, GuiButton.enabled(GuiItemFactory.item(Material.COMPASS, "&dMapping AI refine", listOf(
+            "&7Mergi direct la formularul potrivit pentru AI.",
+            "&7Target curent: ${if (aiKind.isBlank()) "(nu)" else aiKind}"
+        )), GuiAction { click ->
+            val targetKey = when (aiKind.lowercase()) {
+                "region" -> GuiKey.MAPPING_CREATE_REGION
+                "place" -> GuiKey.MAPPING_CREATE_PLACE
+                "node" -> GuiKey.MAPPING_CREATE_NODE
+                else -> GuiKey.MAPPING_CREATOR
+            }
+            click.service().open(click.player(), targetKey)
+        }))
+
+        context.button(18, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK, "&aSalveaza", listOf(
             "&7Persista modificarile de mapping."
         )), GuiAction { click -> click.service().runCommand(click.player(), "ainpc world save") }))
+
+        val previewKind = aiKind.ifBlank { "region" }
+        val previewDescription = aiSummary.ifBlank { aiName }
+        val previewCommand = buildMappingPreviewCommand(previewKind, previewDescription)
+        if (GuiAccessHelper.isAdmin(context.player())) {
+            context.button(19, GuiButton.enabled(GuiItemFactory.item(Material.CLOCK, "&6Mapping AI preview", listOf(
+                "&7Previzualizeaza un draft AI/intent fara scriere directa.",
+                "&7Tip curent: &f$previewKind",
+                "&7Click: ruleaza preview."
+            )), GuiAction { click -> click.service().runCommand(click.player(), previewCommand) }))
+        } else {
+            context.button(19, GuiButton.disabled(GuiItemFactory.disabled(
+                Material.GRAY_DYE,
+                "&8Mapping AI preview",
+                listOf(
+                    "&8Necesita permisiune admin.",
+                    "&8Preview-ul world create ai este rezervat administratorilor."
+                )
+            )))
+        }
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
             GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }))
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun buildMappingPreviewCommand(kind: String, description: String): String {
+        return buildString {
+            append("ainpc world create ai preview ")
+            append(kind)
+            if (description.isNotBlank()) {
+                append(' ')
+                append(description)
+            }
+        }.trim()
     }
 }

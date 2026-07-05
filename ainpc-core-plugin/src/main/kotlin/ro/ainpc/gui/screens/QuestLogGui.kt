@@ -312,13 +312,13 @@ class QuestLogGui : GuiScreen {
                 if (regionState != null) Material.AMETHYST_SHARD else Material.GRAY_DYE,
                 "&dContext poveste",
                 listOf(
-                    "&7Quest entries active: &f${snapshot.currentEntries().size}",
+                    "&7Quest Entries Active: &f${snapshot.currentEntries().size}",
                     "&7Regiune: &f${currentRegion?.id() ?: "<nemapata>"}",
-                    "&7Story state: &f${regionState?.stateKey() ?: "<nepersistat>"}",
+                    "&7Story State: &f${regionState?.stateKey() ?: "<nepersistat>"}",
                     "&7Place: &f${currentPlace?.id() ?: "<nemapat>"}",
                     "&7Ancore active: &f${storyContext.activeQuestAnchors().size}",
-                    "&7Quest events recente: &f${recentQuestEvents.size}",
-                    "&7Quest signals: &f${questSignals.size}",
+                    "&7Quest Events Recente: &f${recentQuestEvents.size}",
+                    "&7Quest Signals: &f${questSignals.size}",
                     if (questSignals.isNotEmpty()) "&7Ultimul quest signal: &f${GuiItemFactory.compact(questSignals.first(), 32)}" else "&7Ultimul quest signal: &f<none>",
                     if (recentQuestEvents.isNotEmpty()) "&7Ultimul quest event: &f${recentQuestEvents.first().eventType()} ${valueOrUnknown(recentQuestEvents.first().eventKey())}" else "&7Ultimul quest event: &f<none>",
                     "&7Warnings: &f${storyContext.warnings().size}"
@@ -334,7 +334,7 @@ class QuestLogGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(
                         Material.PAPER,
-                        "&dQuest diagnostics",
+                        "&dQuest Diagnostics",
                         questDiagnosticsLore(context.plugin())
                     ),
                 ) { click -> click.service().runCommand(click.player(), "ainpc debugdump quest") }
@@ -342,7 +342,7 @@ class QuestLogGui : GuiScreen {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
                         Material.GRAY_DYE,
-                        "&7Quest diagnostics",
+                        "&7Quest Diagnostics",
                         questDiagnosticsLore(context.plugin())
                     )
                 )
@@ -558,12 +558,12 @@ class QuestLogGui : GuiScreen {
                 if (remaining != null) add(formatDuration(remaining))
             }.joinToString(", ")
             if (detail.isBlank()) {
-                "&7Quest generation: &ein cooldown dupa o structura recenta"
+                "&7Quest Generation: &ein cooldown dupa o structura recenta"
             } else {
-                "&7Quest generation: &ein cooldown ($detail)"
+                "&7Quest Generation: &ein cooldown ($detail)"
             }
         } else {
-            "&7Quest generation: &aactiv"
+            "&7Quest Generation: &aactiv"
         }
     }
 

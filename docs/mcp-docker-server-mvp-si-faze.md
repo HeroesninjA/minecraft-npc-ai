@@ -45,7 +45,7 @@ MVP-ul serverului MCP Docker este gata doar daca toate punctele de mai jos sunt 
 | Persistenta | `data/` este montat si include memorie, changelog, rules, keyword index si Chroma |
 | Tools | sunt disponibile tool-uri pentru vectori, memory, changelog, rules, status si context pack |
 | Index | colectia `ainpc_code` are acelasi numar de chunks in keyword cache si Chroma |
-| Codex config | `.codex/config.toml`, `.ai/mcp/mcp.json`, `%USERPROFILE%\.codex` si JetBrains Codex config pointeaza la `/mcp`; config-urile Codex includ si sidecar-ul `serena` |
+| Codex config | `.codex/config.toml`, `.ai/mcp/mcp.json`, `%USERPROFILE%\.codex` si JetBrains Codex config pointeaza la `/mcp`; config-urile Codex includ si sidecar-ul `serena` si `context7` |
 | JetBrains MCP UI | `llm.mcpServers.xml` are `ainpc-project-memory` enabled cu URL-ul corect |
 | Watcher | code watcher ruleaza fara duplicate si fara lock blocat |
 | Session sync | watcherul de sesiuni Codex actualizeaza `.ai/codex-conversations.md` |
@@ -76,7 +76,7 @@ Rezultat curent:
 | Serena | sidecar-ul `serena` raspunde pe `http://127.0.0.1:9121/mcp` si expune 23 tools de coding semantic |
 | Index | `ainpc_code` are keyword cache si Chroma in parity; `ctx:status` raporteaza acelasi numar pentru keyword chunks si Chroma vectors |
 | Audit | `ctx:audit` raporteaza `ok: true`, fara missing/extra/duplicate IDs |
-| Config | JetBrains Codex, JetBrains MCP UI, global Codex, project `.codex` si `.ai/mcp` au URL-ul `http://127.0.0.1:3000/mcp`; global/project Codex si `.ai/mcp` includ si `serena` la `http://127.0.0.1:9121/mcp` |
+| Config | JetBrains Codex, JetBrains MCP UI, global Codex, project `.codex` si `.ai/mcp` au URL-ul `http://127.0.0.1:3000/mcp`; global/project Codex si `.ai/mcp` includ si `serena` la `http://127.0.0.1:9121/mcp` si `context7` la `https://mcp.context7.com/mcp` |
 | Watcher | code watcher si session-sync watcher ruleaza fara lock activ |
 | Backup | backup JSON verificat creat prin comanda de mai sus in `data/backups/`; backup cu Chroma ramane opt-in prin `-IncludeChroma` |
 | Teste U7 | `npm run ctx:test` trece pentru health, smoke, memory, vector, context pack, Serena smoke, wrapper PowerShell si lifecycle Docker fallback |
@@ -392,7 +392,7 @@ Gate:
 - `ok: true`;
 - `expected`, `keyword` si `chroma` sunt egale;
 - `missingIds` si `extraIds` sunt goale;
-- lock-ul `data/index-ainpc_code.lock` nu exista dupa terminare.
+- lock-ul `data/index-ainpc_code.lock` nu mai este activ dupa terminare; un lock ramas pe disc trebuie tratat ca stale, nu ca blocaj.
 
 ## Faza 6: Context Pack Si Optimizare Token
 
@@ -1052,7 +1052,7 @@ Dashboard-ul afiseaza:
 - comenzi copy-only pentru doctor, audit, backup, preflight si restore test.
 
 Dashboard-ul respecta parametrul `?collection=<name>` si il transmite catre `/admin/status.json`; comenzile copy-only pentru audit, backup si preflight folosesc aceeasi colectie. `/admin/status.json` expune si un inventar Chroma limitat/read-only cu lista de colectii disponibile si regulile de nume. Numele colectiilor trebuie sa aiba 3-63 caractere si sa contina doar litere, cifre, `_` si `-`; cererile admin invalide primesc HTTP 400, nu sunt sanitizate tacit in alt nume Chroma. Citirile de status raman read-only: o colectie Chroma inexistenta este raportata ca missing, nu este creata implicit.
-Aceeasi validare si aceeasi regula read-only se aplica si pentru tool-urile MCP `project_status`, `vector_search`, `vector_search_by_file` si `context_pack`: colectiile lipsa nu sunt create implicit; doar upsert-urile creeaza colectii.
+Aceeasi validare si aceeasi regula read-only se aplica si pentru tool-urile MCP `project_status`, `vector_search`, `vector_search_by_file` si `context_pack`: colectiile lipsa nu sunt create implicit; doar upsert-urile creeaza colectii. `context_pack` poate aduce automat Context7 docs cand query-ul indica o librarie, framework, SDK sau API extern.
 
 Prioritati:
 
@@ -1122,7 +1122,7 @@ Acest test acopera:
 - smoke test pentru Serena cu required tools de coding semantic;
 - `memory_add`, `memory_list`, `memory_search`;
 - `vector_upsert_many`, `vector_search`, `vector_search_by_file`, `vector_delete_by_file` pe colectia izolata `ainpc_u7_test`;
-- `context_pack` cu buget mic (`TokenBudget 900`, `TopK 8`);
+- `context_pack` cu buget mic (`TokenBudget 900`, `TopK 8`), inclusiv Context7 auto pentru query-uri despre API-uri externe;
 - statusul admin expune inventarul Chroma read-only si regulile de nume pentru colectii;
 - tool-urile MCP de citire nu creeaza colectii Chroma lipsa;
 - numele invalide de colectii sunt respinse de tool-urile MCP si `/admin/status.json`;
@@ -1140,7 +1140,7 @@ Prioritati:
 - test pentru `mcp:smoke`;
 - test pentru `memory_add/list/search`;
 - test pentru `vector_upsert/search/delete`;
-- test pentru `context_pack` cu buget mic (`TokenBudget 900`, `TopK 8`);
+- test pentru `context_pack` cu buget mic (`TokenBudget 900`, `TopK 8`) si Context7 auto;
 - test pentru scripts PowerShell cu argumente goale.
 - test pentru rezolvarea Docker/Compose in afara PATH si pentru forwarding corect al argumentelor `up -d`.
 - test pentru propagarea erorilor native din helper-ul Docker/Compose.

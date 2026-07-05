@@ -35,7 +35,7 @@ class MainHubGui : GuiScreen {
                 listOf(
                     "&7Jucator: &f${player.name}",
                     "&7NPC-uri incarcate: &f${context.plugin().npcManager.getNPCCount()}",
-                    "&7World mapping: &f${worldAdmin.regionCount} regiuni, " +
+                    "&7World Mapping: &f${worldAdmin.regionCount} regiuni, " +
                         "${worldAdmin.placeCount} places, ${worldAdmin.nodeCount} noduri",
                     "&7Locatie: &f${location.world.name} ${location.blockX}, ${location.blockY}, ${location.blockZ}",
                     "&8Actiuni principale: progresii / interactiune / world"
@@ -61,9 +61,9 @@ class MainHubGui : GuiScreen {
                     Material.BARRIER,
                     "&cRead-only activ",
                     listOf(
-                        "&7MCP raporteaza modul read-only.",
+                        "&7MCP ruleaza in mod read-only.",
                         "&7Operatiile de scriere in mapping sunt blocate.",
-                        "&8Inspectia ramanen disponibila: status / history / export."
+                        "&8Inspectia ramane disponibila: status / history / export."
                     )
                 )
             )
@@ -152,7 +152,7 @@ class MainHubGui : GuiScreen {
             GuiKey.MANAGER,
             Material.NAME_TAG,
             "&6Manager NPC",
-            listOf("&7Lista NPC admin, info si teleport.", "&8Admin separat.")
+            listOf("&7Lista NPC Admin, info si teleport.", "&8Admin separat.")
         )
         openButton(
             context,
@@ -212,21 +212,21 @@ class MainHubGui : GuiScreen {
             context.button(
                 35,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.SPYGLASS, "&6Quest debug", "&7Debug progresie curenta."),
+                    GuiItemFactory.item(Material.SPYGLASS, "&6Quest Debug", "&7Debug progresie curenta."),
                     GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest debug tracked") }
                 )
             )
             context.button(
                 36,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.MAP, "&6Quest anchors", "&7Listeaza ancore persistate."),
+                    GuiItemFactory.item(Material.MAP, "&6Quest Anchors", "&7Listeaza ancore persistate."),
                     GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors") }
                 )
             )
             context.button(
                 37,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", "&7Creaza/editeaza/stergere ancore."),
+                    GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", "&7Creeaza/editeaza/sterge ancore."),
                     GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
                 )
             )

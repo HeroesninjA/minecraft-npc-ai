@@ -68,14 +68,14 @@ class AdminQuestGui : GuiScreen {
         ))
         if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
             context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
-                "&7MCP raporteaza modul read-only.",
-                "&7Quest/progression writes sunt blocate.",
+                "&7MCP ruleaza in mod read-only.",
+                "&7Scrierea in questuri si progresii este blocata.",
                 "&8Inspectia ramane disponibila."
             )))
         }
 
         context.button(10, GuiButton.enabled(
-            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest log", "&7Deschide log-ul de progresii."),
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&eQuest Log", "&7Deschide log-ul de progresii."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST) }
         ))
 
@@ -95,7 +95,7 @@ class AdminQuestGui : GuiScreen {
         ))
 
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.PAPER, "&aQuest dump", "&7Debug dump quest in chat."),
+            GuiItemFactory.item(Material.PAPER, "&aQuest Dump", "&7Debug dump quest in chat."),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump quest") }
         ))
 
@@ -321,7 +321,7 @@ class AdminQuestGui : GuiScreen {
         ))
 
         context.button(47, GuiButton.enabled(
-            GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory snapshot", listOf(
+            GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory Snapshot", listOf(
                 "&7Deschide story snapshot.",
                 "&7Click: deschide Story GUI"
             )),

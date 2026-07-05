@@ -64,7 +64,7 @@ class DebugGui : GuiScreen {
                 Material.SPYGLASS,
                 "&9Debug tools",
                 listOf(
-                    "&7Debugdump ramane read-only.",
+                    "&7Debugdump-ul este read-only.",
                     "&7Fisierele si rezultatele sunt raportate in chat/consola.",
                     "&8Actiuni principale: debugdump / authoring / audit"
                 )
@@ -84,9 +84,8 @@ class DebugGui : GuiScreen {
         )
         if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
             context.item(6, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
-                "&7MCP raporteaza modul read-only.",
-                "&7Debug-ul ramane disponibil.",
-                "&8Scrierea in mapping este blocata."
+                "&7MCP ruleaza in mod read-only.",
+                "&8Inspectia ramane disponibila: debug / status / export."
             )))
         }
 
@@ -105,7 +104,7 @@ class DebugGui : GuiScreen {
         context.button(
             17,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest authoring", "&7Snapshot read-only pentru story, mapping si progresie."),
+                GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest Authoring", "&7Snapshot read-only pentru story, mapping si progresie."),
             ) { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
         )
 
@@ -118,13 +117,13 @@ class DebugGui : GuiScreen {
         context.button(
             7,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.REDSTONE_TORCH, "&cQuest audit", "&7Ruleaza /ainpc audit quest."),
+                GuiItemFactory.item(Material.REDSTONE_TORCH, "&cQuest Audit", "&7Ruleaza /ainpc audit quest."),
             ) { click -> click.service().runCommand(click.player(), "ainpc audit quest") }
         )
         context.button(
             8,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.COMPASS, "&bWorld audit", "&7Ruleaza /ainpc audit world."),
+                GuiItemFactory.item(Material.COMPASS, "&bWorld Audit", "&7Ruleaza /ainpc audit world."),
             ) { click -> click.service().runCommand(click.player(), "ainpc audit world") }
         )
 

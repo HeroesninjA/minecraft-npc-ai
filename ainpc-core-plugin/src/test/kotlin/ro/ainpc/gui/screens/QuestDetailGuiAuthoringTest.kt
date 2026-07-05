@@ -14,6 +14,7 @@ class QuestDetailGuiAuthoringTest {
         assertTrue(source.contains("renderAuthoringCard(context, entry)"))
         assertTrue(source.contains("context.plugin().authoringService.analyze("))
         assertTrue(source.contains("Material.ENCHANTED_BOOK"))
+        assertTrue(source.contains("Quest Generation"))
         assertTrue(source.contains("click.service().openAuthoring(click.player(), entry.selector(), entry.mechanicId())"))
     }
 }

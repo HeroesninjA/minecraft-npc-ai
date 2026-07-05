@@ -408,22 +408,13 @@ fun handleWorldCreateAi(
         return true
     }
     if (args.size >= 3 && args[2].equals("help", ignoreCase = true)) {
-        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6Utilizare: /ainpc world create ai [preview|dryrun] [region|place|node] [descriere]")
-        ainpcCommandMiscPlugin.messageUtils.send(
+        sendCreateAiHelp(
             sender,
-            "&7Exemple: /ainpc world create ai region curte castel | /ainpc world create ai node poarta intrare"
-        )
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&7Preview fara GUI: /ainpc world create ai preview region name=curte_castel type=castle"
-        )
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&7Dupa tip, descrierea poate fi naturala: nume, scop, pozitie, forma."
-        )
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&7Hinturi: id=, name=, label=, type=, region=, place=, size=, radius= (name= devine ID daca id= lipseste)"
+            header = "&6AI Quick Actions: /ainpc world create ai [preview|dryrun] [region|place|node] [descriere]",
+            examples = "&7Exemple: /ainpc world create ai region curte castel | /ainpc world create ai node poarta intrare",
+            preview = "&7Preview fara GUI: /ainpc world create ai preview region name=curte_castel type=castle",
+            flow = "&7Flow: create/refine prin presetul curent sau prin hint-uri explicite.",
+            hints = "&7Hinturi: id=, name=, label=, type=, region=, place=, size=, radius= (name= devine ID daca id= lipseste)"
         )
         return true
     }
@@ -506,6 +497,25 @@ fun handleWorldCreateAi(
     return true
 }
 
+private fun sendCreateAiHelp(
+    sender: CommandSender,
+    header: String,
+    examples: String,
+    preview: String,
+    flow: String,
+    hints: String,
+    extraLines: List<String> = emptyList()
+) {
+    ainpcCommandMiscPlugin.messageUtils.send(sender, header)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, examples)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, preview)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, flow)
+    ainpcCommandMiscPlugin.messageUtils.send(sender, hints)
+    extraLines.forEach { line ->
+        ainpcCommandMiscPlugin.messageUtils.send(sender, line)
+    }
+}
+
 private fun openMappingDraftEditor(player: Player, draft: MappingDraft) {
     when (draft.kind()) {
         MappingDraftKind.REGION -> {
@@ -556,18 +566,19 @@ fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
     if (args.size >= 3 && args[2].equals("help", ignoreCase = true)) {
-        ainpcCommandMiscPlugin.messageUtils.send(sender, "&6Utilizare: /ainpc quest create ai [selector sau text liber]")
-        ainpcCommandMiscPlugin.messageUtils.send(
+        sendCreateAiHelp(
             sender,
-            "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai tutorial salvare_sat"
-        )
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&7Daca nu dai text, se deschide Quick Quest AI ca wizard."
-        )
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&7Hinturi suportate: name=, giver=, type=, reward= (de ex. name=quest_intro giver=blacksmith type=talk_to_npc reward=xp)"
+            header = "&6AI Quick Actions: /ainpc quest create ai [selector sau text liber]",
+            examples = "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai tutorial salvare_sat",
+            preview = "&7Preview fara GUI: /ainpc quest create ai from selection",
+            flow = "&7Flow: create/refine prin quest_edit_query, from selection, sau hint-uri explicite.",
+            hints = "&7Hinturi: name=, giver=, type=, reward=, id=, desc=, mechanic=, base=, npc=.",
+            extraLines = listOf(
+                "&7Mod avansat: objective=, objective_target=, reward_value=, stage_count=.",
+                "&7Format obiectiv: objective=collect_item:OAK_LOG:3 sau objective=talk_to_npc:profession:blacksmith:4.",
+                "&7Format recompensa: reward=item:EMERALD:5 sau reward=story_event:quest_completed:quest_completed:region:current_region.",
+                "&7Alias suportat: reward=record_story_event:quest_completed:quest_completed:region:current_region."
+            )
         )
         ainpcCommandMiscPlugin.messageUtils.send(
             sender,
@@ -585,6 +596,7 @@ fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
     val payload = if (args.size > 3) args.drop(3).joinToString(" ").trim() else ""
     val inlineHints = parseInlineHints(payload)
     val payloadWithoutHints = payloadWithoutKeyValues(payload)
+    val advancedRequested = shouldOpenAdvancedQuestCreate(payload, inlineHints, payloadWithoutHints)
     if (payload.isBlank()) {
         ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "qq_step", "1")
         ainpcCommandMiscPlugin.guiService.open(player, GuiKey.QUICK_QUEST)
@@ -595,6 +607,89 @@ fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandMiscPlugin.messageUtils.send(
             sender,
             "&7Exemple: /ainpc quest create ai quest_intro | /ainpc quest create ai tutorial salvare_sat"
+        )
+        return true
+    }
+    if (advancedRequested) {
+        val selectionSource = ainpcCommandMiscPlugin.guiService.getQuestEditSelectedId(player)
+            .ifBlank { ainpcCommandMiscPlugin.guiService.getCreatorFormValue(player, "quest_edit_query") }
+        val questTitle = inlineHints["name"]?.take(48)
+            ?: inlineHints["title"]?.take(48)
+            ?: payloadWithoutHints.takeIf { it.isNotBlank() }?.take(48)
+            ?: payload.take(48)
+        val questIdSource = inlineHints["id"]?.takeIf { it.isNotBlank() }
+            ?: inlineHints["quest"]?.takeIf { it.isNotBlank() }
+            ?: if (payload.lowercase().startsWith("from selection")) selectionSource else questTitle
+        val questId = MappingIntentParser.slugOrFallback(questIdSource, "quest_draft").uppercase()
+        val questDesc = inlineHints["desc"]?.take(120)
+            ?: inlineHints["description"]?.take(120)
+            ?: inlineHints["summary"]?.take(120)
+            ?: questTitle
+        val questMechanic = inlineHints["mechanic"].orEmpty().ifBlank { inferQuestMechanicId(payload) }
+        val questBase = inlineHints["base"].orEmpty().ifBlank { inferQuestBaseType(payload) }
+        val questNpc = inlineHints["npc"].orEmpty().ifBlank { inferQuickQuestGiver(payload) }
+        val objectivePrefill = parseQuestObjectivePreset(payload, inlineHints, payloadWithoutHints)
+        val questType = objectivePrefill.type
+        val questTarget = objectivePrefill.target
+        val questCount = objectivePrefill.count
+        val questDialogType = inlineHints["dialog"].orEmpty().ifBlank { "npc_greeting" }
+        val questDialogSpeaker = inlineHints["speaker"].orEmpty().ifBlank { questNpc.ifBlank { "npc" } }
+        val questDialogText = objectivePrefill.dialog.ifBlank { inlineHints["text"].orEmpty().ifBlank { questTitle.ifBlank { "Salut!" } } }
+        val questSystemMsg = inlineHints["system"].orEmpty()
+        val rewardPrefill = parseQuestRewardPreset(payload, inlineHints, inlineHints["reward"].orEmpty(), inferQuestRewardType(payload))
+        val rewardType = rewardPrefill.type
+        val rewardValue = rewardPrefill.value
+        val rewardCount = rewardPrefill.count
+        val rewardEventKey = rewardPrefill.key
+        val rewardEventScope = rewardPrefill.scope
+        val rewardEventTarget = rewardPrefill.target
+        val rewardEventTitle = rewardPrefill.title.ifBlank { if (questTitle.isBlank()) "Quest event" else "$questTitle event" }
+        val rewardEventPayload = rewardPrefill.payload
+        val stagePrefill = buildQuestStagePrefill(payload, inlineHints)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_id", questId)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_name", questTitle)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_desc", questDesc)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_mechanic", questMechanic)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_base", questBase)
+        if (questNpc.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_npc", questNpc)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_obj_type", questType)
+        if (questTarget.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_obj_target", questTarget)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_obj_count", questCount)
+        if (inlineHints["dialog"].orEmpty().isNotBlank()) {
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_obj_dialog", inlineHints["dialog"].orEmpty())
+        }
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_type", rewardType)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_value", rewardValue)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_count", rewardCount)
+        if (rewardEventKey.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_event_key", rewardEventKey)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_event_scope", rewardEventScope)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_event_target", rewardEventTarget)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_event_title", rewardEventTitle)
+        if (rewardEventPayload.isNotBlank()) ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_reward_event_payload", rewardEventPayload)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_idx", "1")
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_count", stagePrefill.size.toString())
+        stagePrefill.forEach { stage ->
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_${stage.index}_id", stage.id)
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_${stage.index}_name", stage.name)
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_${stage.index}_mode", stage.mode)
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_stage_${stage.index}_next", stage.next)
+        }
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_dialog_type", questDialogType)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_dialog_speaker", questDialogSpeaker)
+        ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_dialog_text", questDialogText)
+        if (questSystemMsg.isNotBlank()) {
+            ainpcCommandMiscPlugin.guiService.setCreatorFormValue(player, "quest_system_msg", questSystemMsg)
+        }
+        ainpcCommandMiscPlugin.guiService.open(player, GuiKey.QUEST_CREATE)
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&aQuest create AI a precompletat formularul avansat.")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7ID: &f$questId")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nume: &f$questTitle")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Mecanica: &f$questMechanic")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Obiectiv: &f$questType")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Recompensa: &f$rewardType -> $rewardValue x$rewardCount")
+        ainpcCommandMiscPlugin.messageUtils.send(
+            sender,
+            "&7Daca vrei varianta simpla, ruleaza /ainpc quest create ai fara hints avansate."
         )
         return true
     }
@@ -622,6 +717,51 @@ fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
     return true
 }
 
+private fun shouldOpenAdvancedQuestCreate(payload: String, inlineHints: Map<String, String>, payloadWithoutHints: String): Boolean {
+    val text = payload.lowercase()
+    if (text.startsWith("from selection")) return true
+    if (text.startsWith("advanced") || text.startsWith("full") || text.startsWith("form")) return true
+    if (text.contains("stage") || text.contains("step")) return true
+    val advancedHintKeys = setOf(
+        "id",
+        "quest",
+        "desc",
+        "description",
+        "summary",
+        "mechanic",
+        "base",
+        "npc",
+        "giver",
+        "objective",
+        "objective_target",
+        "objective_count",
+        "objective_dialog",
+        "target",
+        "count",
+        "reward_type",
+        "reward_value",
+        "reward_count",
+        "reward_key",
+        "reward_scope",
+        "reward_target",
+        "reward_title",
+        "reward_payload",
+        "dialog",
+        "speaker",
+        "system",
+        "stage",
+        "stage_id",
+        "stage_name",
+        "stage_mode",
+        "stage_next",
+        "stage_count",
+        "stages",
+        "steps"
+    )
+    if (inlineHints.keys.any { it in advancedHintKeys }) return true
+    return payloadWithoutHints.equals("from selection", ignoreCase = true)
+}
+
 private fun inferQuickQuestGiver(payload: String): String {
     val text = payload.lowercase()
     return when {
@@ -634,6 +774,266 @@ private fun inferQuickQuestGiver(payload: String): String {
         else -> ""
     }
 }
+
+private fun inferQuestMechanicId(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "tutorial" in text || "onboarding" in text || "guide" in text -> "onboarding"
+        "contract" in text || "job" in text || "duty" in text -> "village_contracts"
+        "bounty" in text || "hunt" in text || "reward" in text -> "local_bounties"
+        "event" in text || "festival" in text -> "village_events"
+        "ritual" in text || "ceremony" in text -> "village_rituals"
+        "main" in text || "story" in text -> "main_quests"
+        else -> "side_quests"
+    }
+}
+
+private fun inferQuestBaseType(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "contract" in text || "job" in text || "duty" in text -> "DUTY"
+        "bounty" in text || "hunt" in text -> "BOUNTY"
+        "event" in text || "festival" in text -> "WORLD_EVENT"
+        "tutorial" in text || "onboarding" in text -> "TUTORIAL"
+        "ritual" in text || "ceremony" in text -> "RITUAL"
+        "trade" in text || "deliver" in text -> "TRADE_DEAL"
+        else -> "QUEST"
+    }
+}
+
+private fun inferQuestRewardType(payload: String): String {
+    val text = payload.lowercase()
+    return when {
+        "xp" in text || "experience" in text || "level" in text -> "experience"
+        "record" in text || "story" in text || "event" in text || "state" in text -> "record_story_event"
+        "reputation" in text || "faction" in text || "region" in text -> "reputation"
+        else -> "item"
+    }
+}
+
+private fun parseQuestRewardPreset(
+    payload: String,
+    inlineHints: Map<String, String>,
+    rewardSpec: String,
+    fallbackRewardType: String
+): QuestRewardPrefill {
+    val trimmed = rewardSpec.trim()
+    if (trimmed.isBlank()) {
+        val rewardType = inlineHints["reward_type"].orEmpty().ifBlank { fallbackRewardType }
+        val rewardValue = inlineHints["reward_value"].orEmpty().ifBlank {
+            when (rewardType) {
+                "experience" -> "50"
+                "story_event" -> "quest_completed"
+                "reputation" -> "villagers"
+                else -> "EMERALD"
+            }
+        }
+        val rewardCount = inlineHints["reward_count"].orEmpty().ifBlank { "1" }
+        return QuestRewardPrefill(
+            type = rewardType,
+            value = rewardValue,
+            count = rewardCount,
+            key = inlineHints["reward_key"].orEmpty(),
+            scope = inlineHints["reward_scope"].orEmpty().ifBlank { "region" },
+            target = inlineHints["reward_target"].orEmpty().ifBlank { "current_region" },
+            title = inlineHints["reward_title"].orEmpty(),
+            payload = inlineHints["reward_payload"].orEmpty()
+        )
+    }
+    val parts = trimmed.split(Regex("\\s+")).map { it.trim(',', ';') }.filter { it.isNotBlank() }
+    val specParts = parts.firstOrNull()
+        ?.split(Regex("""[:|]"""))
+        ?.map { it.trim() }
+        ?.filter { it.isNotBlank() }
+        .orEmpty()
+    val rewardType = specParts.getOrNull(0).orEmpty().ifBlank { inlineHints["reward_type"].orEmpty().ifBlank { fallbackRewardType } }
+    val rewardCountHint = inlineHints["reward_count"].orEmpty()
+    val rewardValueHint = inlineHints["reward_value"].orEmpty()
+    val valueToken = specParts.getOrNull(1).orEmpty().ifBlank { rewardValueHint.ifBlank { inlineHints["reward"].orEmpty() } }
+    val countToken = specParts.getOrNull(2).orEmpty().ifBlank { rewardCountHint }
+    val keyToken = specParts.getOrNull(3).orEmpty().ifBlank { inlineHints["reward_key"].orEmpty() }
+    val scopeToken = specParts.getOrNull(4).orEmpty().ifBlank { inlineHints["reward_scope"].orEmpty() }
+    val targetToken = specParts.getOrNull(5).orEmpty().ifBlank { inlineHints["reward_target"].orEmpty() }
+    val titleToken = specParts.getOrNull(6).orEmpty().ifBlank { inlineHints["reward_title"].orEmpty() }
+    val payloadToken = specParts.drop(7).joinToString(":").ifBlank { inlineHints["reward_payload"].orEmpty() }
+
+    val normalized = when (rewardType) {
+        "experience" -> {
+            val amount = when {
+                valueToken.isBlank() -> "50"
+                valueToken.matches(Regex("(?i)x?\\d+")) -> valueToken.removePrefix("x").removePrefix("X")
+                valueToken.equals("xp", ignoreCase = true) -> countToken.ifBlank { "50" }
+                else -> valueToken.filter(Char::isDigit).ifBlank { "50" }
+            }
+            QuestRewardPrefill(
+                type = rewardType,
+                value = amount,
+                count = "1",
+                key = keyToken,
+                scope = scopeToken.ifBlank { "region" },
+                target = targetToken.ifBlank { "current_region" },
+                title = titleToken,
+                payload = payloadToken
+            )
+        }
+        "story_event", "record_story_event" -> {
+            QuestRewardPrefill(
+                type = rewardType,
+                value = if (valueToken.isBlank()) "quest_completed" else valueToken.replace(' ', '_').lowercase(),
+                count = countToken.ifBlank { "1" },
+                key = keyToken,
+                scope = scopeToken.ifBlank { "region" },
+                target = targetToken.ifBlank { "current_region" },
+                title = titleToken,
+                payload = payloadToken
+            )
+        }
+        "reputation" -> {
+            QuestRewardPrefill(
+                type = rewardType,
+                value = if (valueToken.isBlank()) "villagers" else valueToken.replace(' ', '_').lowercase(),
+                count = countToken.ifBlank { "1" },
+                key = keyToken,
+                scope = scopeToken.ifBlank { "region" },
+                target = targetToken.ifBlank { "current_region" },
+                title = titleToken,
+                payload = payloadToken
+            )
+        }
+        else -> {
+            val itemValue = when {
+                valueToken.isBlank() -> "EMERALD"
+                valueToken.contains('x') -> valueToken.substringBefore('x').substringBefore('X').trim().uppercase()
+                valueToken.contains(' ') -> valueToken.substringBefore(' ').trim().uppercase()
+                else -> valueToken.uppercase()
+            }
+            QuestRewardPrefill(
+                type = rewardType.ifBlank { "item" },
+                value = itemValue,
+                count = countToken.ifBlank { "1" },
+                key = keyToken,
+                scope = scopeToken.ifBlank { "region" },
+                target = targetToken.ifBlank { "current_region" },
+                title = titleToken,
+                payload = payloadToken
+            )
+        }
+    }
+    return normalized
+}
+
+private data class QuestRewardPrefill(
+    val type: String,
+    val value: String,
+    val count: String,
+    val key: String,
+    val scope: String,
+    val target: String,
+    val title: String,
+    val payload: String
+)
+
+private fun buildQuestStagePrefill(payload: String, inlineHints: Map<String, String>): List<QuestStagePrefill> {
+    val explicitStageCount = inlineHints["stage_count"]?.toIntOrNull()
+        ?: inlineHints["stages"]?.toIntOrNull()
+        ?: inlineHints["steps"]?.toIntOrNull()
+    val maxExplicitStageIndex = inlineHints.keys.mapNotNull { key ->
+        Regex("""^stage(\d+)_(?:id|name|mode|next)$""").find(key)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    }.maxOrNull() ?: 0
+    val hintedCount = if (payload.contains("two stage", ignoreCase = true) || payload.contains("2 stage", ignoreCase = true)) 2 else 1
+    val stageCount = maxOf(explicitStageCount ?: hintedCount, maxExplicitStageIndex, 1)
+    val safeCount = stageCount.coerceIn(1, 10)
+    return (1..safeCount).map { index ->
+        val explicitId = inlineHints["stage${index}_id"].orEmpty()
+        val explicitName = inlineHints["stage${index}_name"].orEmpty()
+        val explicitMode = inlineHints["stage${index}_mode"].orEmpty()
+        val explicitNext = inlineHints["stage${index}_next"].orEmpty()
+        val fallbackId = when (index) {
+            1 -> inlineHints["stage_id"].orEmpty().ifBlank { "ACCEPTANCE" }
+            2 -> "EXECUTION"
+            else -> "S$index"
+        }
+        val fallbackName = when (index) {
+            1 -> inlineHints["stage_name"].orEmpty().ifBlank { "Acceptare" }
+            2 -> "Executie"
+            else -> "Stage $index"
+        }
+        val fallbackMode = inlineHints["stage_mode"].orEmpty().ifBlank { "all" }
+        val next = explicitNext.ifBlank {
+            if (index < safeCount) {
+                inlineHints["stage${index + 1}_id"].orEmpty().ifBlank {
+                    when (index + 1) {
+                        1 -> "ACCEPTANCE"
+                        2 -> "EXECUTION"
+                        else -> "S${index + 1}"
+                    }
+                }
+            } else {
+                "RETURN"
+            }
+        }
+        QuestStagePrefill(
+            index = index,
+            id = explicitId.ifBlank { fallbackId },
+            name = explicitName.ifBlank { fallbackName },
+            mode = explicitMode.ifBlank { fallbackMode },
+            next = next
+        )
+    }
+}
+
+private data class QuestStagePrefill(
+    val index: Int,
+    val id: String,
+    val name: String,
+    val mode: String,
+    val next: String
+)
+
+private fun parseQuestObjectivePreset(
+    payload: String,
+    inlineHints: Map<String, String>,
+    payloadWithoutHints: String
+): QuestObjectivePrefill {
+    val objectiveSpec = inlineHints["objective"].orEmpty()
+    val objectiveParts = objectiveSpec.split(Regex("""[|:/,]"""))
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+    val objectiveType = objectiveParts.getOrNull(0).orEmpty().ifBlank { inferQuickQuestObjectiveType(payload) }
+    val objectiveTargetHint = inlineHints["objective_target"].orEmpty()
+        .ifBlank { inlineHints["target"].orEmpty() }
+    val objectiveCountHint = inlineHints["objective_count"].orEmpty()
+        .ifBlank { inlineHints["count"].orEmpty() }
+    val objectiveDialogHint = inlineHints["objective_dialog"].orEmpty()
+        .ifBlank { inlineHints["dialog"].orEmpty() }
+    val objectiveDialogSpec = objectiveParts.getOrNull(3).orEmpty()
+
+    val objectiveTarget = when {
+        objectiveParts.size >= 2 && objectiveParts[1].isNotBlank() && !objectiveParts[1].matches(Regex("""\d+""")) -> objectiveParts[1]
+        objectiveTargetHint.isNotBlank() -> objectiveTargetHint
+        objectiveParts.size >= 3 && objectiveParts[2].matches(Regex("""\d+""")) -> payloadWithoutHints.takeIf { it.isNotBlank() }?.take(32).orEmpty()
+        else -> payloadWithoutHints.takeIf { it.isNotBlank() }?.take(32).orEmpty()
+    }
+    val objectiveCount = when {
+        objectiveCountHint.isNotBlank() -> objectiveCountHint
+        objectiveParts.size >= 3 && objectiveParts[2].matches(Regex("""\d+""")) -> objectiveParts[2]
+        objectiveParts.size >= 2 && objectiveParts[1].matches(Regex("""\d+""")) -> objectiveParts[1]
+        else -> "1"
+    }
+    return QuestObjectivePrefill(
+        type = objectiveType,
+        target = objectiveTarget,
+        count = objectiveCount,
+        dialog = objectiveDialogHint.ifBlank { objectiveDialogSpec }
+    )
+}
+
+private data class QuestObjectivePrefill(
+    val type: String,
+    val target: String,
+    val count: String,
+    val dialog: String
+)
 
 private fun inferQuickQuestObjectiveType(payload: String): String {
     val text = payload.lowercase()

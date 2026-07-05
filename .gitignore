@@ -32,12 +32,12 @@ Thumbs.db
 # ===== Environment =====
 .env
 
-# ===== Build artifacts =====
-deploy/
+# ===== Temp files from AI sessions =====
+tmp-*
+*.tmp
 
 # ===== Misc =====
 *.log
-*.tmp
 null
 New Text Document.txt
 

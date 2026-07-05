@@ -11,7 +11,7 @@ class AdminHubGuiDiagnosticsTest {
 
         assertTrue(source.contains("Admin Panel"))
         assertTrue(source.contains("World"))
-        assertTrue(source.contains("Mapping admin"))
+        assertTrue(source.contains("Mapping Admin"))
         assertTrue(source.contains("Manager NPC"))
         assertTrue(source.contains("Audit"))
         assertTrue(source.contains("Debug"))
@@ -34,5 +34,15 @@ class AdminHubGuiDiagnosticsTest {
         assertTrue(source.contains("Refresh"))
         assertTrue(source.contains("Inchide"))
         assertTrue(source.contains("GuiKey.ADMIN_HUB"))
+    }
+
+    @Test
+    fun adminHubShowsReadOnlyBanner() {
+        val source = File("src/main/kotlin/ro/ainpc/gui/screens/AdminHubGui.kt").readText()
+
+        assertTrue(source.contains("Read-only activ"))
+        assertTrue(source.contains("MCP ruleaza in mod read-only."))
+        assertTrue(source.contains("Scrierea in mapping este blocata."))
+        assertTrue(source.contains("Inspectia ramane disponibila: status / history / export."))
     }
 }

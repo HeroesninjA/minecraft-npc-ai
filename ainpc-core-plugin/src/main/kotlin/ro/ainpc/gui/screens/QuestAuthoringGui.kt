@@ -53,7 +53,7 @@ class QuestAuthoringGui : GuiScreen {
                     "&7Selector: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
                     "&7Mechanic: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
                     "&7Entries progresie: &f${progressionSnapshot.allEntries().size}",
-                    "&7Story signals: &f${storyContext.storySignals().size}",
+                    "&7Story Signals: &f${storyContext.storySignals().size}",
                     "&7Warnings: &f${authoringSnapshot.warnings.size}",
                     cooldownLore(authoringSnapshot, storyContext.storySignals()),
                     if (aiMode.isBlank()) "&7AI preset: &f(nu)" else "&7AI preset: &f$aiMode",
@@ -66,7 +66,7 @@ class QuestAuthoringGui : GuiScreen {
         )
         if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
             context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
-                "&7MCP raporteaza modul read-only.",
+                "&7MCP ruleaza in mod read-only.",
                 "&7Authoring writes sunt blocate.",
                 "&8Inspectia si preview-ul raman disponibile."
             )))
@@ -76,7 +76,7 @@ class QuestAuthoringGui : GuiScreen {
             10,
             GuiItemFactory.item(
                 Material.MAP,
-                "&bStory context",
+                "&bStory Context",
                 storyLore(storyContext.toPromptBlock())
             )
         )
@@ -85,7 +85,7 @@ class QuestAuthoringGui : GuiScreen {
             13,
             GuiItemFactory.item(
                 Material.WRITTEN_BOOK,
-                "&bQuest semantic",
+                "&bQuest Semantic",
                 questSemanticLore(authoringSnapshot, storyContext)
             )
         )
@@ -94,7 +94,7 @@ class QuestAuthoringGui : GuiScreen {
             14,
             GuiItemFactory.item(
                 Material.PAPER,
-                "&aQuest authoring summary",
+                "&aQuest Authoring Summary",
                 questAuthoringSummaryLore(authoringSnapshot)
             )
         )
@@ -271,6 +271,175 @@ class QuestAuthoringGui : GuiScreen {
             )
         }
 
+        context.item(
+            28,
+            GuiItemFactory.item(
+                Material.SPYGLASS,
+                "&6AI preset",
+                listOf(
+                    "&7Mode: &f${aiMode.ifBlank { "(none)" }}",
+                    "&7Selector: &f${aiSelector.ifBlank { "(auto)" }}",
+                    "&7Mechanic: &f${aiMechanic.ifBlank { "(auto)" }}",
+                    "&7Summary: &f${aiSummary.ifBlank { "(none)" }}"
+                )
+            )
+        )
+        context.button(
+            29,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ARROW,
+                    "&eSelector anterior",
+                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
+                    "&7Schimba presetul AI inapoi."
+                ),
+                GuiAction { click -> click.service().cycleAuthoringQuestSelector(click.player(), -1) }
+            )
+        )
+        context.button(
+            30,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ARROW,
+                    "&eSelector urmator",
+                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedQuestSelector)}",
+                    "&7Schimba presetul AI inainte."
+                ),
+                GuiAction { click -> click.service().cycleAuthoringQuestSelector(click.player(), 1) }
+            )
+        )
+        context.button(
+            31,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ARROW,
+                    "&dMechanic anterior",
+                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
+                    "&7Schimba mecanica AI inapoi."
+                ),
+                GuiAction { click -> click.service().cycleAuthoringMechanicId(click.player(), -1) }
+            )
+        )
+        context.button(
+            32,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.ARROW,
+                    "&dMechanic urmator",
+                    "&7Curent: &f${valueOrUnknown(authoringSnapshot.requestedMechanicId)}",
+                    "&7Schimba mecanica AI inainte."
+                ),
+                GuiAction { click -> click.service().cycleAuthoringMechanicId(click.player(), 1) }
+            )
+        )
+        context.button(
+            33,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.BARRIER,
+                    "&cReset AI preset",
+                    "&7Sterge selectorul si mecanica stocate.",
+                    "&7Revine la selectia automata."
+                ),
+                GuiAction { click -> click.service().clearAuthoringSelection(click.player()) }
+            )
+        )
+        if (context.service().canOpen(player, GuiKey.QUEST_CREATE)) {
+            context.button(
+                34,
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        Material.WRITABLE_BOOK,
+                        "&bQuest Creator",
+                        listOf(
+                            "&7Deschide formularul complet pentru quest.",
+                            "&7Click: deschide quest creator."
+                        )
+                    ),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_CREATE) }
+                )
+            )
+        } else {
+            context.button(
+                34,
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Creator",
+                        listOf("&8Necesita permisiune quest sau admin.")
+                    )
+                )
+            )
+        }
+        if (context.service().canOpen(player, GuiKey.MAPPING_CREATOR)) {
+            context.button(
+                35,
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        Material.FILLED_MAP,
+                        "&aMapping Creator",
+                        listOf(
+                            "&7Deschide formularul pentru mapping.",
+                            "&7Click: deschide mapping creator."
+                        )
+                    ),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }
+                )
+            )
+        } else {
+            context.button(
+                35,
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Mapping Creator",
+                        listOf("&8Necesita permisiune admin sau creator.")
+                    )
+                )
+            )
+        }
+        context.button(
+            36,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.CLOCK,
+                    "&dQuest Draft Preview",
+                    listOf(
+                        "&7Previzualizeaza draftul curent fara salvare.",
+                        "&7Click: ruleaza /ainpc quest preview."
+                    )
+                ),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest preview") }
+            )
+        )
+        if (context.service().canOpen(player, GuiKey.QUEST_EDIT)) {
+            context.button(
+                37,
+                GuiButton.enabled(
+                    GuiItemFactory.item(
+                        Material.CRAFTING_TABLE,
+                        "&6Quest Editor",
+                        listOf(
+                            "&7Deschide editorul cu lista de definitii.",
+                            "&7Click: deschide quest editor."
+                        )
+                    ),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_EDIT) }
+                )
+            )
+        } else {
+            context.button(
+                37,
+                GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Editor",
+                        listOf("&8Necesita permisiune quest sau admin.")
+                    )
+                )
+            )
+        }
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }
@@ -344,7 +513,7 @@ class QuestAuthoringGui : GuiScreen {
         lines.add("&7Place: &f${valueOrUnknown(snapshot.seedPlaceId())}")
         lines.add("&7Mechanic: &f${valueOrUnknown(snapshot.seedMechanicId())}")
         lines.add("&7Kind: &f${valueOrUnknown(snapshot.seedKind())}")
-        lines.add("&7Story mode: &f${valueOrUnknown(snapshot.seedStoryMode())}")
+        lines.add("&7Story Mode: &f${valueOrUnknown(snapshot.seedStoryMode())}")
         lines.add("&7Theme: &f${valueOrUnknown(snapshot.seedTheme())}")
         return lines
     }
@@ -365,12 +534,12 @@ class QuestAuthoringGui : GuiScreen {
                 if (remaining != null) add(formatDuration(remaining))
             }.joinToString(", ")
             if (detail.isBlank()) {
-                "&7Quest generation: &ein cooldown dupa o structura recenta"
+                "&7Quest Generation: &ein cooldown dupa o structura recenta"
             } else {
-                "&7Quest generation: &ein cooldown ($detail)"
+                "&7Quest Generation: &ein cooldown ($detail)"
             }
         } else {
-            "&7Quest generation: &aactiv"
+            "&7Quest Generation: &aactiv"
         }
     }
 

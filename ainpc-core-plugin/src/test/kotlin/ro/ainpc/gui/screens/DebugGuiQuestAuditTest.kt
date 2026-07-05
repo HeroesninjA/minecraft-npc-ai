@@ -10,6 +10,17 @@ class DebugGuiQuestAuditTest {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/DebugGui.kt").readText()
 
         assertTrue(source.contains("ainpc audit quest"))
-        assertTrue(source.contains("Quest audit"))
+        assertTrue(source.contains("Quest Audit"))
+        assertTrue(source.contains("Quest Authoring"))
+    }
+
+    @Test
+    fun debugGuiShowsReadOnlyBanner() {
+        val source = File("src/main/kotlin/ro/ainpc/gui/screens/DebugGui.kt").readText()
+
+        assertTrue(source.contains("Read-only activ"))
+        assertTrue(source.contains("MCP ruleaza in mod read-only."))
+        assertTrue(source.contains("Inspectia ramane disponibila: debug / status / export."))
+        assertTrue(source.contains("Debugdump-ul este read-only."))
     }
 }

@@ -1,0 +1,121 @@
+﻿{
+    "ok":  true,
+    "generated_at":  "2026-06-26T17:15:47.8643081+03:00",
+    "duration_seconds":  1.573,
+    "server":  "141.147.48.170:25575",
+    "region":  "demo_sat",
+    "step_count":  12,
+    "failed_steps":  [
+
+                     ],
+    "steps":  [
+                  {
+                      "name":  "plugins",
+                      "command":  "plugins",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "ℹ Server Plugins (7):\nBukkit Plugins:\n - AINPCPlugin, AINPCScenarioMedieval, AuthMe, ViaBackwards, ViaRewind, ViaVersion, WorldEdit"
+                  },
+                  {
+                      "name":  "ainpc-help",
+                      "command":  "ainpc",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== AI NPC Plugin - Comenzi ===\n/npc version\n  Afiseaza ultima versiune, hash-ul ultimului build si data/ora buildului\n/ainpc create \u003cnume\u003e [ocupatie] [varsta] [gen] [arhetip]\n  Creeaza un NPC nou la locatia ta\n/ainpc delete \u003cnume\u003e\n  Sterge un NPC dupa nume; evita daca numele este duplicat\n/ainpc delete-id \u003cid\u003e confirm\n  Sterge sigur un NPC dupa ID numeric\n/ainpc duplicates\n  Raporteaza duplicate dupa source_key, nume+locatie si entitati live\n/ainpc repair duplicates [dryrun|apply]\n  Curata controlat randuri/entitati NPC duplicate; ruleaza dryrun inainte de apply\n/ainpc repair households [dryrun|apply]\n  Curata rezidenti household duplicati dupa NPC/source_key; ruleaza dryrun inainte de apply\n/ainpc repair npc-bindings [dryrun|apply]\n  Sincronizeaza profilul NPC catre npc_world_bindings; ruleaza dryrun inainte de apply\n/ainpc repair mapping-metadata [dryrun|apply]\n  Sincronizeaza npc_world_bindings catre metadata WorldAdmin; ruleaza dryrun inainte de apply\n/ainpc repair batch \u003cbatchKey\u003e [dryrun|apply|inspect|mark-steps|mark-failed]\n  Inspecteaza sau ruleaza rollback controlat pentru un spawn batch esuat\n/ainpc info [nume]\n  Afiseaza informatii despre un NPC\n/ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]\n  Deschide hub-ul GUI pe rol (player/admin/creator) sau un ecran specific;\n  /ainpc gui player - hub jucator (quest, NPC, stats, rutine, shop)\n  /ainpc gui admin - hub admin (world, mapping, audit, debug, manager, authoring)\n  /ainpc gui creator - hub creator (mapping, quest authoring, demo, save)\n/ainpc authoring [next|prev|clear|questSelector [mechanicId] | dump [questSelector] [mechanicId]]\n  Deschide snapshot-ul read-only de authoring sau il afiseaza filtrat in chat\n/ainpc quest authoring [next|prev|previous|clear|reset|dump [questSelector] [mechanicId]]\n  Alias quest-side pentru authoring-ul read-only si dump-ul text\n/ainpc quest \u003cnumeNpc\u003e [jucator]\n  Declanseaza manual quest-ul unui NPC\n/ainpc scenario \u003clist|info|spawn|despawn|advance\u003e [templateId|displayName] [actorId]\n  Inspecteaza sau ruleaza actorii si fazele scenariului definit in YAML\n/ainpc progression log [jucator] [quest|contract|duty|bounty|event|active|all]\n  Listeaza progresii generice peste questuri, contracte, sarcini, bounty-uri si evenimente\n/ainpc contract log [jucator]\n  Listeaza contractele locale prin runtime-ul comun\n/ainpc duty log [jucator]\n  Listeaza sarcinile NPC prin runtime-ul comun\n/ainpc bounty log [jucator]\n  Listeaza bounty-urile locale prin runtime-ul comun\n/ainpc event log [jucator]\n  Listeaza evenimentele locale prin runtime-ul comun\n/ainpc quest track [start|stop] [questCode|templateId] [jucator]\n  Arata sau mentine busola/actionbar/particule catre tinta questului\n/ainpc quest nearest [jucator]\n  Declanseaza quest-ul celui mai apropiat NPC\n/ainpc quest reset \u003cnumeNpc\u003e [jucator]\n  Reseteaza progresul quest-ului pentru un jucator\n/ainpc quest complete \u003cnumeNpc\u003e [jucator]\n  Marcheaza manual quest-ul ca finalizat si da recompensa\n/ainpc quest anchors [jucator|uuid|all] [templateId|questCode]\n  Listeaza ancorele semantice persistate pentru questuri\n/ainpc demo \u003cdefinition|status|next|script|phases|evidence|runbook|smoke|summary|commands|restart|experimental|experimental5|experimental25|experimental25deep|experimental25ops\u003e [regionId] [player]\n  Explica, verifica si ghideaza primul demo intern jucabil; modurile experimental sunt instabile\n/ainpc list\n  Lista toate NPC-urile\n/ainpc world whereami [jucator]\n  Arata regiunea, place-ul si node-urile active pentru o locatie\n/ainpc world places [regionId]\n  Listeaza place-urile mapate\n/ainpc world outside \u003ctypes|blueprint|plan|report|validate\u003e [type|baseId|regionId]\n  Listeaza blueprint-uri si inspecteaza read-only structuri exterioare satului\n/ainpc world fixture \u003cplan|validate|apply|populate|context\u003e [prefix]\n  Afiseaza sau valideaza read-only satul controlat si structurile exterioare de test\n/ainpc world region info \u003cregionId\u003e\n  Arata detalii despre o regiune mapata\n/ainpc world region create \u003cid\u003e \u003ctype\u003e \u003cx1\u003e \u003cy1\u003e \u003cz1\u003e \u003cx2\u003e \u003cy2\u003e \u003cz2\u003e\n  Creeaza o regiune noua in lumea jucatorului\n/ainpc world place info \u003cplaceId\u003e\n  Arata detalii despre un place mapat\n/ainpc world place create \u003cregionId\u003e \u003cid\u003e \u003ctype\u003e \u003cx1\u003e \u003cy1\u003e \u003cz1\u003e \u003cx2\u003e \u003cy2\u003e \u003cz2\u003e\n  Creeaza un place nou in interiorul unei regiuni\n/ainpc world node create \u003cregionId\u003e \u003cplaceId|-\u003e \u003cid\u003e \u003ctype\u003e \u003cx\u003e \u003cy\u003e \u003cz\u003e [radius]\n  Creeaza un node de regiune sau de place\n/ainpc world scan village [radius] [import] [regionId]\n  Scaneaza sat vanilla si poate importa mapping semantic AINPC\n/ainpc world demo create [regionId]\n  Creeaza mapping demo la pozitia ta; consola/RCON foloseste spawn-ul lumii\n/ainpc world bind npc \u003cnumeNpc|nearest\u003e \u003chomePlaceId\u003e [workPlaceId|-] [socialPlaceId|-]\n  Leaga un NPC la home/work/social places din mapping\n/ainpc world bindings [list|npc|place] ...\n  Inspecteaza read-only npc_world_bindings\n/ainpc world household \u003cplan|spawn\u003e \u003chomePlaceId\u003e [count]\n  Genereaza sau executa un household spawn plan din mapping\n/ainpc world household \u003cstatus|place|resident|list\u003e ...\n  Inspecteaza read-only household-uri persistente si rezidenti\n/ainpc world settlement \u003cplan|spawn\u003e \u003cregionId\u003e [maxHouses]\n  Genereaza sau executa household-uri pentru casele din regiune\n/ainpc world save\n  Salveaza modificarile runtime in config.yml\n/ainpc patch \u003canalyze|plan|validate\u003e \u003cregionId\u003e [targetPopulation] [profesiiCSV]\n  Produce gap report si patch plan read-only pentru completarea satului\n/ainpc wand [mode|pos1|pos2|point|status|inspect|clear|reset]\n  Selecteaza geometrie sau puncte pentru mapping manual asistat\n/ainpc map \u003cregion|place|node\u003e \u003cdescriere\u003e\n  Creeaza draft mapping cu preview si confirmare inainte de scriere\n/ainpc story context [jucator] [numeNpc|nearest]\n  Afiseaza contextul narativ curent din mapping si quest anchors\n/ainpc story region \u003cregionId\u003e\n  Afiseaza story state-ul persistent pentru o regiune\n/ainpc story place \u003cplaceId\u003e\n  Afiseaza story state-ul persistent pentru un place\n/ainpc story events \u003cregionId|placeId\u003e [limit]\n  Listeaza evenimente story persistente\n/ainpc migration households \u003cdryrun|apply\u003e [limit]\n  Backfill controlat din npc_world_bindings catre household-uri persistente\n/ainpc audit [all|npc|world|db|spawn|quest]\n  Verifica probleme ascunse in NPC-uri, mapping si baza de date\n/ainpc debugdump [all|npc|world|quest|story|openai|runtime]\n  Genereaza un jurnal avansat read-only pentru debugging\n/ainpc family \u003cnume\u003e\n  Afiseaza familia unui NPC\n/ainpc routine \u003ctick|status\u003e\n  Verifica sau ruleaza rutina zilnica a NPC-urilor\n/ainpc mood \u003cnume\u003e \u003cemotie\u003e [intensitate]\n  Seteaza emotia unui NPC\n/ainpc tp \u003cnume\u003e\n  Teleporteaza-te la un NPC\n/ainpc test\n  Testeaza conexiunea OpenAI\n/ainpc health\n  Status rapid de sanatate server AINPC\n/ainpc reload\n  Reincarca configuratia"
+                  },
+                  {
+                      "name":  "world-demo",
+                      "command":  "ainpc world demo create demo_sat",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "Mapping demo creat in regiunea demo_sat.\nConsola/RCON: am folosit spawn-ul lumii world ca centru demo.\nCentru: 176, 64, 272\nPlaces create: 9 | Nodes create: 30\nPlaces: demo_sat:house_1, demo_sat:house_2, demo_sat:house_3, demo_sat:house_4, demo_sat:piata, demo_sat:fierarie, demo_sat:ferma, demo_sat:taverna, demo_sat:altar\nWarning: Demo-ul marcheaza semantic zona din jurul jucatorului; nu construieste blocuri fizice.\nWarning: Layout-ul demo este spatios pentru gameplay; alege o zona relativ plata inainte de creare.\nUrmatorul pas: /ainpc audit world\nDaca auditul arata bine, ruleaza /ainpc world save."
+                  },
+                  {
+                      "name":  "progression-definitions",
+                      "command":  "ainpc progression definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 17\ndagon_castel:side_quests:castel_dagon code=CST01 kind=quest objectives=5 stages=5\nmedieval_quest:local_bounties:B01 code=B01 kind=bounty objectives=3 stages=5\nmedieval_quest:local_bounties:B02 code=B02 kind=bounty objectives=3 stages=5\nmedieval_quest:main_quests:Q01 code=Q01 kind=quest objectives=2 stages=5\nmedieval_quest:npc_duties:D01 code=D01 kind=duty objectives=3 stages=5\nmedieval_quest:onboarding:T01 code=T01 kind=tutorial objectives=3 stages=5\nmedieval_quest:side_quests:Q02 code=Q02 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q03 code=Q03 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q04 code=Q04 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q05 code=Q05 kind=quest objectives=3 stages=5\nmedieval_quest:side_quests:Q06 code=Q06 kind=quest objectives=3 stages=5\nmedieval_quest:side_quests:Q07 code=Q07 kind=quest objectives=3 stages=5\n... inca 5 definitii. Foloseste un filtru."
+                  },
+                  {
+                      "name":  "quest-definitions",
+                      "command":  "ainpc quest definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 17\ndagon_castel:side_quests:castel_dagon code=CST01 kind=quest objectives=5 stages=5\nmedieval_quest:local_bounties:B01 code=B01 kind=bounty objectives=3 stages=5\nmedieval_quest:local_bounties:B02 code=B02 kind=bounty objectives=3 stages=5\nmedieval_quest:main_quests:Q01 code=Q01 kind=quest objectives=2 stages=5\nmedieval_quest:npc_duties:D01 code=D01 kind=duty objectives=3 stages=5\nmedieval_quest:onboarding:T01 code=T01 kind=tutorial objectives=3 stages=5\nmedieval_quest:side_quests:Q02 code=Q02 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q03 code=Q03 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q04 code=Q04 kind=quest objectives=2 stages=5\nmedieval_quest:side_quests:Q05 code=Q05 kind=quest objectives=3 stages=5\nmedieval_quest:side_quests:Q06 code=Q06 kind=quest objectives=3 stages=5\nmedieval_quest:side_quests:Q07 code=Q07 kind=quest objectives=3 stages=5\n... inca 5 definitii. Foloseste un filtru."
+                  },
+                  {
+                      "name":  "contract-definitions",
+                      "command":  "ainpc contract definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 3 filtru=contract\nmedieval_quest:npc_duties:D01 code=D01 kind=duty objectives=3 stages=5\nmedieval_quest:village_contracts:C01 code=C01 kind=contract objectives=2 stages=5\nmedieval_quest:village_contracts:C02 code=C02 kind=contract objectives=3 stages=5"
+                  },
+                  {
+                      "name":  "duty-definitions",
+                      "command":  "ainpc duty definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 1 filtru=duty\nmedieval_quest:npc_duties:D01 code=D01 kind=duty objectives=3 stages=5"
+                  },
+                  {
+                      "name":  "bounty-definitions",
+                      "command":  "ainpc bounty definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 2 filtru=bounty\nmedieval_quest:local_bounties:B01 code=B01 kind=bounty objectives=3 stages=5\nmedieval_quest:local_bounties:B02 code=B02 kind=bounty objectives=3 stages=5"
+                  },
+                  {
+                      "name":  "event-definitions",
+                      "command":  "ainpc event definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 1 filtru=event\nmedieval_quest:village_events:E01 code=E01 kind=event objectives=3 stages=5"
+                  },
+                  {
+                      "name":  "tutorial-definitions",
+                      "command":  "ainpc tutorial definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 1 filtru=tutorial\nmedieval_quest:onboarding:T01 code=T01 kind=tutorial objectives=3 stages=5"
+                  },
+                  {
+                      "name":  "ritual-definitions",
+                      "command":  "ainpc ritual definitions",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Progression Definitions ===\nTotal: 1 filtru=ritual\nmedieval_quest:village_rituals:R01 code=R01 kind=ritual objectives=4 stages=6"
+                  },
+                  {
+                      "name":  "audit-quest",
+                      "command":  "ainpc audit quest",
+                      "ok":  true,
+                      "issues":  [
+
+                                 ],
+                      "response":  "=== Audit Report ===\n[Quest Anchors]\nQuest anchor audit"
+                  }
+              ]
+}

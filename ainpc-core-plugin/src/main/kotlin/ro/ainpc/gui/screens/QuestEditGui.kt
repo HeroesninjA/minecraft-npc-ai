@@ -165,6 +165,80 @@ class QuestEditGui : GuiScreen {
                     }
                 ))
             }
+            context.button(34, GuiButton.enabled(
+                GuiItemFactory.item(Material.MAGENTA_DYE, "&dQuest AI refine selection", listOf(
+                    "&7Regenereaza draftul AI din questul selectat.",
+                    "&7Click: /ainpc quest create ai from selection"
+                )),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc quest create ai from selection")
+                }
+            ))
+            if (GuiAccessHelper.canAccess(context.player(), GuiKey.QUEST_CREATE, context.service())) {
+                context.button(36, GuiButton.enabled(
+                    GuiItemFactory.item(Material.WRITABLE_BOOK, "&bQuest Creator", listOf(
+                        "&7Deschide formularul complet pentru quest.",
+                        "&7Click: deschide quest creator."
+                    )),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_CREATE) }
+                ))
+            } else {
+                context.button(36, GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Creator",
+                        listOf("&8Necesita permisiune quest sau admin.")
+                    )
+                ))
+            }
+            if (GuiAccessHelper.adminOrPermission(context.player(), "ainpc.quest")) {
+                context.button(37, GuiButton.enabled(
+                    GuiItemFactory.item(Material.CLOCK, "&6Quest Draft Preview", listOf(
+                        "&7Previzualizeaza draftul curent fara salvare.",
+                        "&7Click: /ainpc quest preview"
+                    )),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest preview") }
+                ))
+                context.button(38, GuiButton.enabled(
+                    GuiItemFactory.item(Material.EMERALD, "&aQuest Draft Validation", listOf(
+                        "&7Ruleaza validarea draftului curent.",
+                        "&7Click: /ainpc quest validate"
+                    )),
+                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest validate") }
+                ))
+            } else {
+                context.button(37, GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Draft Preview",
+                        listOf("&8Necesita permisiune quest sau admin.")
+                    )
+                ))
+                context.button(38, GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Draft Validation",
+                        listOf("&8Necesita permisiune quest sau admin.")
+                    )
+                ))
+            }
+            if (GuiAccessHelper.canAccess(context.player(), GuiKey.AUTHORING, context.service())) {
+                context.button(39, GuiButton.enabled(
+                    GuiItemFactory.item(Material.ENCHANTED_BOOK, "&dQuest Authoring", listOf(
+                        "&7Deschide analiza read-only de story, mapping si progresie.",
+                        "&7Click: deschide quest authoring."
+                    )),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
+                ))
+            } else {
+                context.button(39, GuiButton.disabled(
+                    GuiItemFactory.disabled(
+                        Material.GRAY_DYE,
+                        "&8Quest Authoring",
+                        listOf("&8Necesita permisiune admin sau debug.")
+                    )
+                ))
+            }
             // Salvare si validare
             val validationErrors = validateQuestDef(currentDef)
             if (validationErrors.isEmpty()) {
@@ -185,7 +259,7 @@ class QuestEditGui : GuiScreen {
         if (currentDef == null && selectedId.isNotBlank()) {
             context.item(28, GuiItemFactory.item(
                 Material.BARRIER,
-                "&cQuest negasit",
+                "&cQuest Negasit",
                 listOf("&7Nu am gasit nicio definitie pentru &f$selectedId", "&7Incearca un ID mai scurt sau numele complet.")
             ))
         }
@@ -227,7 +301,7 @@ class QuestEditGui : GuiScreen {
                 add("&7Selecteaza un quest din lista.")
                 add("&7Query: &f${if (selectedId.isBlank()) "-" else selectedId}")
                 add("&7Lista: &f$pageIndex&7/&f$pageCount &7(${visibleCount} afisate)")
-                add("&eStatus: quest negasit")
+                add("&eStatus: Quest Negasit")
                 add("&7Cauta dupa ID sau nume complet.")
             }
         }

@@ -43,7 +43,7 @@ class QuestCreatorTestGui : GuiScreen {
             GuiAction { click -> click.service().openQuestLog(click.player(), "all") }
         ))
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.MAP, "&6Quest debug", listOf("&7Debug progresie curenta.", "&7Click: ruleaza debug pe target.")),
+            GuiItemFactory.item(Material.MAP, "&6Quest Debug", listOf("&7Debug progresie curenta.", "&7Click: ruleaza debug pe target.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest debug $target") }
         ))
         context.button(12, GuiButton.enabled(
@@ -51,11 +51,11 @@ class QuestCreatorTestGui : GuiScreen {
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest accept $target") }
         ))
         context.button(13, GuiButton.enabled(
-            GuiItemFactory.item(Material.AMETHYST_SHARD, "&bStory context", listOf("&7Context story pentru locatia curenta.", "&7Click: story context nearest.")),
+            GuiItemFactory.item(Material.AMETHYST_SHARD, "&bStory Context", listOf("&7Context story pentru locatia curenta.", "&7Click: story context nearest.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc story context") }
         ))
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.ENDER_PEARL, "&dQuest anchors", listOf("&7Listeaza ancorele persistate.", "&7Click: ancore.")),
+            GuiItemFactory.item(Material.ENDER_PEARL, "&dQuest Anchors", listOf("&7Listeaza ancorele persistate.", "&7Click: ancore.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors $target") }
         ))
         context.button(15, GuiButton.enabled(
@@ -67,7 +67,7 @@ class QuestCreatorTestGui : GuiScreen {
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest complete $target") }
         ))
         context.button(17, GuiButton.enabled(
-            GuiItemFactory.item(Material.PAPER, "&eQuest status", listOf("&7Afiseaza statusul questului ales.", "&7Click: /ainpc quest status $target.")),
+            GuiItemFactory.item(Material.PAPER, "&eQuest Status", listOf("&7Afiseaza statusul questului ales.", "&7Click: /ainpc quest status $target.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest status $target") }
         ))
 

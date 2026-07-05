@@ -22,9 +22,10 @@ class AdminMappingGuiDiagnosticsTest {
 
         assertTrue(source.contains("Wand"))
         assertTrue(source.contains("Bindings"))
-        assertTrue(source.contains("Where am I"))
-        assertTrue(source.contains("Demo mapping"))
-        assertTrue(source.contains("Salveaza mapping"))
+        assertTrue(source.contains("Where Am I"))
+        assertTrue(source.contains("Mapping Dump"))
+        assertTrue(source.contains("Demo Mapping"))
+        assertTrue(source.contains("Salveaza Mapping"))
     }
 
     @Test
@@ -34,7 +35,10 @@ class AdminMappingGuiDiagnosticsTest {
         assertTrue(source.contains("openRegionDetail"))
         assertTrue(source.contains("Anterioara"))
         assertTrue(source.contains("Urmatoarea"))
-        assertTrue(source.contains("Creaza place"))
-        assertTrue(source.contains("Creaza node"))
+        assertTrue(source.contains("Creaza Un Place"))
+        assertTrue(source.contains("Creaza Un Nod"))
+        assertTrue(source.contains("World Mode"))
+        assertTrue(source.contains("World Admin"))
+        assertTrue(source.contains("Foloseste Butonul Demo Mapping De Mai Sus."))
     }
 }

@@ -30,18 +30,22 @@ class NpcInteractionGuiDiagnosticsTest {
     fun npcInteractionGuiHasProgressionActions() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/NpcInteractionGui.kt").readText()
 
-        assertTrue(source.contains("Progresie nearest"))
-        assertTrue(source.contains("Accepta nearest"))
-        assertTrue(source.contains("Status nearest"))
+        assertTrue(source.contains("Quest Nearest"))
+        assertTrue(source.contains("Progresie Nearest"))
+        assertTrue(source.contains("Accepta Nearest"))
+        assertTrue(source.contains("Status Nearest"))
     }
 
     @Test
     fun npcInteractionGuiHasContextActions() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/NpcInteractionGui.kt").readText()
 
-        assertTrue(source.contains("Story nearest"))
-        assertTrue(source.contains("Rutina nearest"))
-        assertTrue(source.contains("Shop nearest"))
+        assertTrue(source.contains("Story Nearest"))
+        assertTrue(source.contains("Rutina Nearest"))
+        assertTrue(source.contains("Routine Nearest"))
+        assertTrue(source.contains("Shop Nearest"))
+        assertTrue(source.contains("Pentru Dialog Direct: Click Dreapta pe NPC In Lume."))
+        assertTrue(source.contains("Mai Apropiat NPC"))
     }
 
     @Test

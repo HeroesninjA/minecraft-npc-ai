@@ -45,7 +45,7 @@ class NpcInteractionGui : GuiScreen {
                     "&7Click pe card: info NPC.",
                     "&7Right click pe card: status progresie.",
                     "&7Shift click pe card: detalii progresie.",
-                    "&7Pentru dialog direct: click dreapta pe NPC in lume."
+                    "&7Pentru Dialog Direct: Click Dreapta pe NPC In Lume."
                 )
             )
         )
@@ -67,7 +67,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.WRITABLE_BOOK,
-                    "&eQuest nearest",
+                    "&eQuest Nearest",
                     "&7Arata oferta sau statusul questului apropiat.",
                     "&7Comanda: &f/ainpc quest nearest"
                 ),
@@ -79,7 +79,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.CLOCK,
-                    "&eRoutine nearest",
+                    "&eRoutine Nearest",
                     "&7Arata rutina NPC-ului cel mai apropiat.",
                     "&7Comanda: &f/ainpc routine status nearest"
                 ),
@@ -91,7 +91,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.MAP,
-                    "&dStory nearest",
+                    "&dStory Nearest",
                     "&7Arata context story local.",
                     "&7Comanda: &f/ainpc story context ${player.name} nearest"
                 ),
@@ -157,9 +157,9 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.WRITABLE_BOOK,
-                    "&eProgresie nearest",
+                    "&eProgresie Nearest",
                     "&7Declanseaza progresia relevanta a celui",
-                    "&7mai apropiat NPC cu progres vizibil.",
+                    "&7Mai Apropiat NPC Cu Progres Vizibil.",
                     "&7Comanda: &f/ainpc $nearestRoot nearest"
                 ),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc $nearestRoot nearest") }
@@ -170,7 +170,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.LIME_DYE,
-                    "&aAccepta nearest",
+                    "&aAccepta Nearest",
                     "&7Accepta oferta celui mai apropiat NPC",
                     "&7pentru mecanica relevanta.",
                     "&7Comanda: &f/ainpc $nearestRoot accept nearest"
@@ -183,7 +183,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.COMPASS,
-                    "&aStatus nearest",
+                    "&aStatus Nearest",
                     "&7Afiseaza statusul progresiei apropiate.",
                     "&7Comanda: &f/$nearestStatusCommand"
                 ),
@@ -195,7 +195,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.MAP,
-                    "&bStory nearest",
+                    "&bStory Nearest",
                     "&7Afiseaza context story pentru cel mai apropiat NPC."
                 ),
                 GuiAction { click ->
@@ -208,7 +208,7 @@ class NpcInteractionGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.CLOCK,
-                    "&eRutina nearest",
+                    "&eRutina Nearest",
                     "&7Afiseaza programul celui mai apropiat NPC."
                 ),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine status nearest") }
@@ -224,9 +224,9 @@ class NpcInteractionGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(
                         Material.EMERALD,
-                        "&aShop nearest",
+                        "&aShop Nearest",
                         "&7Deschide shop-ul celui mai apropiat",
-                        "&7NPC cu magazin: &f${nearestShopNpc.name}"
+                        "&7NPC Cu Magazin: &f${nearestShopNpc.name}"
                     ),
                     GuiAction { click ->
                         click.service().setShopSelectedNpcId(click.player(), nearestShopNpc.name)

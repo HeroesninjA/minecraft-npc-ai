@@ -12,6 +12,11 @@ class WorldHubGuiSnapshotTest {
         assertTrue(source.contains("mappingSnapshotLore(worldAdmin, region, place, node, nearbyNodes.size)"))
         assertTrue(source.contains("DebugDumpMappingText.buildMappingText(plugin)"))
         assertTrue(source.contains("ainpc debugdump mapping"))
+        assertTrue(source.contains("Where Am I"))
+        assertTrue(source.contains("World Context"))
+        assertTrue(source.contains("Mapping Snapshot"))
+        assertTrue(source.contains("Demo Mapping"))
+        assertTrue(source.contains("Salveaza Mapping"))
         assertTrue(source.contains("buildWorldStatusLines"))
         assertTrue(source.contains("Status: curat") || source.contains("Status: necesita save"))
     }

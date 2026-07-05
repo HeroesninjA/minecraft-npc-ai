@@ -121,6 +121,17 @@ class MappingCreateNodeGui : GuiScreen {
             }
         ))
 
+        context.button(13, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAGENTA_DYE, "&dAI refine node", listOf(
+                "&7Regenereaza presetul AI din campurile curente.",
+                "&7Click: ruleaza world create ai cu hint-uri de node."
+            )),
+            GuiAction { click ->
+                val command = buildNodeAiRefineCommand(aiNodeName, aiNodeType, aiNodeRadius, nodeName, nodeType, radius, aiMode, aiKind, aiName, aiSummary)
+                click.service().runCommand(click.player(), command)
+            }
+        ))
+
         context.button(14, GuiButton.enabled(
             if (canCreate) GuiItemFactory.item(Material.LIME_DYE, "&aCreaza Node", listOf(
                 "&7Node: $nodeName ($nodeType)",
@@ -201,5 +212,41 @@ class MappingCreateNodeGui : GuiScreen {
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
+    }
+
+    private fun buildNodeAiRefineCommand(
+        aiNodeName: String,
+        aiNodeType: String,
+        aiNodeRadius: String,
+        nodeName: String,
+        nodeType: String,
+        radius: String,
+        aiMode: String,
+        aiKind: String,
+        aiName: String,
+        aiSummary: String
+    ): String {
+        val hints = mutableListOf<String>()
+        fun addHint(key: String, value: String?) {
+            val normalized = value.orEmpty().trim()
+            if (normalized.isNotBlank()) {
+                hints += "$key=${normalized.replace(' ', '_')}"
+            }
+        }
+
+        addHint("kind", if (aiKind.isBlank()) "node" else aiKind)
+        addHint("name", if (aiNodeName.isBlank()) nodeName else aiNodeName)
+        addHint("type", if (aiNodeType.isBlank()) nodeType else aiNodeType)
+        addHint("radius", if (aiNodeRadius.isBlank()) radius else aiNodeRadius)
+        addHint("mode", aiMode)
+        addHint("ai_name", aiName)
+        addHint("summary", aiSummary)
+
+        return buildString {
+            append("ainpc world create ai node ")
+            append(nodeName)
+            append(' ')
+            append(hints.joinToString(" "))
+        }.trim()
     }
 }

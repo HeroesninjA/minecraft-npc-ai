@@ -36,7 +36,7 @@ class StoryGui : GuiScreen {
         val snapshot = readSnapshot(context)
         val player = context.player()
 
-        context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory snapshot", summaryLore(snapshot)))
+        context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory Snapshot", summaryLore(snapshot)))
 
         val env = context.plugin().environmentEngine.getContext(player.location.world.name)
         context.item(5, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
@@ -45,18 +45,18 @@ class StoryGui : GuiScreen {
         context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
         context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
-        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression verification", progressionVerificationLore(context)))
+        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", progressionVerificationLore(context)))
         context.button(
             13,
             if (context.player().hasPermission("ainpc.admin")) {
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.PAPER, "&dStory diagnostics", storyDiagnosticsLore(context.plugin()))
+                    GuiItemFactory.item(Material.PAPER, "&dStory Diagnostics", storyDiagnosticsLore(context.plugin()))
                 ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story") }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
                         Material.GRAY_DYE,
-                        "&7Story diagnostics",
+                        "&7Story Diagnostics",
                         storyDiagnosticsLore(context.plugin())
                     )
                 )
@@ -179,9 +179,9 @@ class StoryGui : GuiScreen {
         val lore = ArrayList<String>()
         lore.add("&7ID: &f${region.id()}")
         lore.add("&7Nume: &f${region.name()}")
-        lore.add("&7Mapping mode: &f${region.storyMode().id}")
-        lore.add("&7Mapping state: &f${region.storyStateKey()}")
-        lore.add("&7Mapping pool: &f${compactList(region.storyPool())}")
+        lore.add("&7Mapping Mode: &f${region.storyMode().id}")
+        lore.add("&7Mapping State: &f${region.storyStateKey()}")
+        lore.add("&7Mapping Pool: &f${compactList(region.storyPool())}")
         if (state == null) {
             lore.add("&7Persistent: &f<nepersistat>")
             return lore
@@ -226,7 +226,7 @@ class StoryGui : GuiScreen {
         lore.add("&7Ultimele evenimente afisate: &f${snapshot.events.size}")
         val questEvents = snapshot.events.count { it.eventType().startsWith("quest_") }
         if (questEvents > 0) {
-            lore.add("&7Quest events: &f$questEvents")
+            lore.add("&7Quest Events: &f$questEvents")
         }
         for (event in snapshot.events.take(4)) {
             val label = if (event.eventType().startsWith("quest_")) {
@@ -248,9 +248,9 @@ class StoryGui : GuiScreen {
             player.hasPermission("ainpc.admin")
         )
         val lore = ArrayList<String>()
-        lore.add("&7Story context read-only: &f${!storyContext.isEmpty()}")
-        lore.add("&7Story anchors: &f${storyContext.activeQuestAnchors().size}")
-        lore.add("&7Story warnings: &f${storyContext.warnings().size}")
+        lore.add("&7Story Context read-only: &f${!storyContext.isEmpty()}")
+        lore.add("&7Story Anchors: &f${storyContext.activeQuestAnchors().size}")
+        lore.add("&7Story Warnings: &f${storyContext.warnings().size}")
         lore.add("&7Progression snapshot handled: &f${progressionSnapshot.handled()}")
         lore.add("&7Current progressions: &f${progressionSnapshot.currentEntries().size}")
         lore.add("&7Archived progressions: &f${progressionSnapshot.archivedEntries().size}")
@@ -268,8 +268,8 @@ class StoryGui : GuiScreen {
         lore.add("&7Created: &f${formatTime(event.createdAt())}")
         if (event.eventType().startsWith("quest_")) {
             lore.add("&7Quest: &f${valueOrUnknown(event.payload()["quest_title"])}")
-            lore.add("&7Quest code: &f${valueOrUnknown(event.payload()["quest_code"])}")
-            lore.add("&7Quest status: &f${valueOrUnknown(event.payload()["quest_status"])}")
+            lore.add("&7Quest Code: &f${valueOrUnknown(event.payload()["quest_code"])}")
+            lore.add("&7Quest Status: &f${valueOrUnknown(event.payload()["quest_status"])}")
         }
         if (event.playerUuid().isNotBlank()) {
             lore.add("&7Player: &f${GuiItemFactory.compact(event.playerUuid(), 18)}")

@@ -6,11 +6,13 @@ This project has a local MCP context server. Use it before loading broad repo co
 - Serena coding MCP sidecar: `streamable_http` at `http://127.0.0.1:9121/mcp`; use it for symbol-level code navigation, references, diagnostics, and refactors.
 - Serena complements Chroma/MCP project memory. It does not replace `ainpc-project-memory`, Chroma, backup, audit, rules, changelog, or context history.
 - At the start of coding sessions, activate the current project with Serena and read its initial instructions before relying on broad file reads.
+- Context7 is the automatic docs MCP for external libraries, frameworks, SDKs, and public APIs; when it is available and the task touches or strongly suggests an external dependency, fetch Context7 first and fold it into the prompt context instead of guessing.
 - Docker publishes MCP, Chroma, and Postgres on `127.0.0.1` only; do not change to broad host binds unless implementing the explicit remote-access phase.
 - MCP write tools append compact metadata to `data/write-audit.json`; do not put secrets or full content in audit entries.
 - Embedding status is reported by `project_status.embeddings`; backup manifests record provider/model/url/signature without storing API key values.
 - If `ctx:status` or `ctx:audit` reports an embedding signature mismatch, back up context data first, then run `npm run ctx:index -- "C:\Users\HeroesninjA\IdeaProjects\test" ainpc_code --force` from the MCP server root.
 - Project Codex config: `.codex/config.toml` registers `ainpc-project-memory` for Codex-native MCP loading.
+- OpenCode config: `opencode.jsonc` should mirror the same local MCP stack and include `context7` so OpenCode can use the docs MCP automatically when the task needs external API knowledge.
 - Main code collection: `ainpc_code`.
 - Repair Codex-native and JetBrains MCP registration with `npm run ctx:register-codex -- -ProjectRoot "C:\Users\HeroesninjA\IdeaProjects\test"` from the MCP server root.
 - If JetBrains ACP fails with `no rollout found for thread id ...`, run `npm run ctx:repair-jetbrains-acp` to inspect stale sessions, then `npm run ctx:repair-jetbrains-acp -- -ChatId "<jetbrains-chat-id>" -Repair` to back up and quarantine the stale `.agentsession` for one chat. Use `-AllStale` only for deliberate cleanup.

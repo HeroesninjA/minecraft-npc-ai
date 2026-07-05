@@ -52,9 +52,9 @@ class AdminMcpGui : GuiScreen {
         val featureFlags = parseFeatureFlags(featureResult?.contentJson)
         if (featureFlags["read_only"] == "true") {
             context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
-                "&7MCP raporteaza modul read-only.",
+                "&7MCP ruleaza in mod read-only.",
                 "&7Scrierea in mapping este blocata.",
-                "&8Inspectia si exportul raman disponibile."
+                "&8Inspectia ramane disponibila: status / history / export."
             )))
         }
 
@@ -131,22 +131,22 @@ class AdminMcpGui : GuiScreen {
         ) { click -> click.service().runCommand(click.player(), "ainpc build mode export") })
 
         context.button(10, GuiButton.enabled(
-            GuiItemFactory.item(Material.COMPASS, "&6World context",
+            GuiItemFactory.item(Material.COMPASS, "&6World Context",
                 listOf("&7Deschide debugdump world semantic context.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc debugdump world summary") })
 
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.BOOK, "&aStory context",
+            GuiItemFactory.item(Material.BOOK, "&aStory Context",
                 listOf("&7Deschide debugdump story semantic context.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story summary") })
 
         context.button(14, GuiButton.enabled(
-            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&bQuest context",
+            GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&bQuest Context",
                 listOf("&7Deschide debugdump quest semantic context.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc debugdump quest summary") })
 
         context.button(15, GuiButton.enabled(
-            GuiItemFactory.item(Material.MAP, "&dMapping context",
+            GuiItemFactory.item(Material.MAP, "&dMapping Context",
                 listOf("&7Deschide debugdump mapping semantic context.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc debugdump mapping summary") })
 

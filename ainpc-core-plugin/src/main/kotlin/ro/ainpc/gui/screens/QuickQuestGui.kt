@@ -262,14 +262,14 @@ class QuickQuestGui : GuiScreen {
 
         return """id: quickquest_$code
 name: "$name"
-description: "Quest creat rapid: $name"
+description: "Quest Creat Rapid: $name"
 addon:
   type: scenario
   version: 1.0.0
 scenarios:
   ${code}:
     name: "$name"
-    description: "Quest creat rapid: $name"
+    description: "Quest Creat Rapid: $name"
     base_type: QUEST
     mechanic: side_quests
     trigger_probability: 0.1

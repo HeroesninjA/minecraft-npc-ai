@@ -2,6 +2,7 @@ package ro.ainpc.gui.screens
 
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.gui.GuiAccessHelper
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -15,10 +16,11 @@ class QuestCreatorGui : GuiScreen {
     override fun size(player: Player): Int = 36
 
     override fun render(context: GuiRenderContext) {
+        val player = context.player()
         val defs = context.plugin().progressionService.getDefinitions()
-        val mapTarget = context.service().getCreatorFormValue(context.player(), "creator_quest_map_target").ifBlank { "-" }
-        val logFilter = context.service().getCreatorFormValue(context.player(), "creator_quest_log_filter").ifBlank { "all" }
-        val editQuery = context.service().getCreatorFormValue(context.player(), "quest_edit_query").ifBlank { "-" }
+        val mapTarget = context.service().getCreatorFormValue(player, "creator_quest_map_target").ifBlank { "-" }
+        val logFilter = context.service().getCreatorFormValue(player, "creator_quest_log_filter").ifBlank { "all" }
+        val editQuery = context.service().getCreatorFormValue(player, "quest_edit_query").ifBlank { "-" }
 
         context.item(4, GuiItemFactory.item(Material.WRITABLE_BOOK, "&6Quest Creator", listOf(
             "&7Definitii: &f${defs.size}",
@@ -30,7 +32,7 @@ class QuestCreatorGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS) }
         ))
         context.button(11, GuiButton.enabled(
-            GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bAuthoring", listOf("&7Quest design read-only (seed, draft, validare).", "&7Click: deschide authoring.")),
+            GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest Authoring", listOf("&7Quest Authoring read-only (seed, draft, validare).", "&7Click: deschide quest authoring.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
         ))
         context.button(12, GuiButton.enabled(
@@ -79,7 +81,7 @@ class QuestCreatorGui : GuiScreen {
         ))
         context.button(16, GuiButton.enabled(
             GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quest Editor", listOf(
-                "&7Editeaza quest: selecteaza definitie, NPC giver, testeaza.",
+                "&7Editeaza Quest: Selecteaza Definitie, NPC Giver, Testeaza.",
                 "&7Query curent: &f$editQuery",
                 "&7Click: scrie ID sau nume pentru cautare directa."
             )),
@@ -97,6 +99,68 @@ class QuestCreatorGui : GuiScreen {
             GuiItemFactory.item(Material.EMERALD, "&aCreeaza Quest Nou", listOf("&7Formular pentru quest nou: ID, nume, mecanica, obiective.", "&7Click: deschide formularul.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_CREATE) }
         ))
+        context.item(18, GuiItemFactory.item(Material.SPYGLASS, "&6AI Quick Actions", listOf(
+            "&7Quest Create/Refine.",
+            "&7Query curent: &f$editQuery"
+        )))
+        context.button(19, GuiButton.enabled(
+            GuiItemFactory.item(Material.BOOK, "&eQuest AI create", listOf(
+                "&7Deschide fluxul asistat pentru quest create.",
+                "&7Se poate precompleta din text sau hint-uri."
+            )),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest create ai") }
+        ))
+        context.button(20, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&bQuest AI help", listOf(
+                "&7Arata utilizarea si exemplele pentru quest create AI.",
+                "&7Util cand vrei formatul exact."
+            )),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest create ai help") }
+        ))
+        context.button(21, GuiButton.enabled(
+            GuiItemFactory.item(Material.MAGENTA_DYE, "&dQuest AI refine selection", listOf(
+                "&7Reface draftul din quest_edit_query sau selectie.",
+                "&7Click: ruleaza /ainpc quest create ai from selection."
+            )),
+            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest create ai from selection") }
+        ))
+        if (GuiAccessHelper.adminOrPermission(player, "ainpc.quest")) {
+            context.button(22, GuiButton.enabled(
+                GuiItemFactory.item(Material.CLOCK, "&6Quest Draft Preview", listOf(
+                    "&7Previzualizeaza draftul actual fara sa salvezi.",
+                    "&7Click: ruleaza /ainpc quest preview."
+                )),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest preview") }
+            ))
+            context.button(23, GuiButton.enabled(
+                GuiItemFactory.item(Material.EMERALD, "&aQuest Draft Validation", listOf(
+                    "&7Ruleaza validarea draftului curent.",
+                    "&7Click: ruleaza /ainpc quest validate."
+                )),
+                GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest validate") }
+            ))
+        } else {
+            context.button(22, GuiButton.disabled(
+                GuiItemFactory.disabled(
+                    Material.GRAY_DYE,
+                    "&8Quest Draft Preview",
+                    listOf(
+                        "&8Necesita permisiune quest sau admin.",
+                        "&8Preview-ul este disponibil in GUI-ul avansat."
+                    )
+                )
+            ))
+            context.button(23, GuiButton.disabled(
+                GuiItemFactory.disabled(
+                    Material.GRAY_DYE,
+                    "&8Quest Draft Validation",
+                    listOf(
+                        "&8Necesita permisiune quest sau admin.",
+                        "&8Validarea este disponibila in GUI-ul avansat."
+                    )
+                )
+            ))
+        }
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST) }))

@@ -1,0 +1,28 @@
+﻿AINPC Paper quest smoke preparation
+Generated: 2026-06-26 17:15:46 +03:00
+Repo: C:\Users\HeroesninjA\IdeaProjects\test
+Server: C:\Users\HeroesninjA\IdeaProjects\test\deploy
+Plugins dir: C:\Users\HeroesninjA\IdeaProjects\test\deploy\plugins
+Player: <player>
+Region: demo_sat
+Build skipped: True
+Tests requested: False
+Copy skipped: True
+RCON preflight requested: True
+RCON player smoke requested: False
+RCON endpoint: 141.147.48.170:25575
+
+Core jar: C:\Users\HeroesninjA\IdeaProjects\test\ainpc-core-plugin\build\libs\ainpc-core-plugin-1.0.0.jar
+Core SHA256: 18D08FD51E230D4057DA40598D46C52C01C61724385BEA9AAD43B2DDB80A0464
+Medieval jar: C:\Users\HeroesninjA\IdeaProjects\test\ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-1.0.0.jar
+Medieval SHA256: EE5AD005A2A2AF8B34E4A3782BCD556A1BAB9DA155263C7209CEC2265512C720
+
+Server jar found: False
+eula.txt found: False
+server.properties found: False
+
+Next file with commands:
+C:\Users\HeroesninjA\IdeaProjects\test\deploy\ainpc-quest-smoke-commands.txt
+
+RCON preflight: True
+RCON report: C:\Users\HeroesninjA\IdeaProjects\test\deploy\ainpc-quest-smoke-rcon-report.json

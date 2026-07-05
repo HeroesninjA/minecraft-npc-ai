@@ -37,9 +37,9 @@ class AdminHubGui : GuiScreen {
         )))
         if (ro.ainpc.commands.isRuntimeReadOnly(context.plugin())) {
             context.item(5, GuiItemFactory.item(Material.BARRIER, "&cRead-only activ", listOf(
-                "&7MCP raporteaza modul read-only.",
+                "&7MCP ruleaza in mod read-only.",
                 "&7Scrierea in mapping este blocata.",
-                "&8Poti inspecta status/history/export."
+                "&8Inspectia ramane disponibila: status / history / export."
             )))
         }
 
@@ -48,7 +48,7 @@ class AdminHubGui : GuiScreen {
                 GuiAction { click -> click.service().open(click.player(), GuiKey.WORLD) }))
         }
         if (context.service().canOpen(context.player(), GuiKey.ADMIN_MAPPING)) {
-            context.button(11, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Mapping admin", listOf("&7Lista regiuni, demo, save.")),
+            context.button(11, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Mapping Admin", listOf("&7Lista regiuni, demo, save.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_MAPPING) }))
         }
         if (context.service().canOpen(context.player(), GuiKey.MANAGER)) {

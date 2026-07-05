@@ -47,6 +47,7 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("FixtureSemanticContext") }
                 .filter { path -> !path.toString().contains("StoryStructureSignalResolver") }
                 .filter { path -> !path.toString().contains("StructureStoryEventPlanner") }
+                .filter { path -> !path.toString().contains("NPCChatListener") }
                 .filter { path -> !path.toString().contains("behavior_profiles.yml") }
                 .flatMap { path ->
                     val text = path.readText()

@@ -215,12 +215,12 @@ class QuestDetailGui : GuiScreen {
                 if (remaining != null) add(formatDuration(remaining))
             }.joinToString(", ")
             if (detail.isBlank()) {
-                "&7Quest generation: &ein cooldown dupa o structura recenta"
+                "&7Quest Generation: &ein cooldown dupa o structura recenta"
             } else {
-                "&7Quest generation: &ein cooldown ($detail)"
+                "&7Quest Generation: &ein cooldown ($detail)"
             }
         } else {
-            "&7Quest generation: &aactiv"
+            "&7Quest Generation: &aactiv"
         }
     }
 
