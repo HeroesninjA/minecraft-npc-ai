@@ -18,6 +18,7 @@ class ProgressionGuiSnapshot(
     private val currentEntriesValue: List<ProgressionGuiEntry> = (currentEntries ?: emptyList()).toList()
     private val archivedEntriesValue: List<ProgressionGuiEntry> = (archivedEntries ?: emptyList()).toList()
     private val totalMatchingArchivedValue: Long = totalMatchingArchived.coerceAtLeast(0L)
+    private val allEntriesValue: List<ProgressionGuiEntry> = (currentEntries ?: emptyList()) + (archivedEntries ?: emptyList())
 
     fun handled(): Boolean = handledValue
     fun playerName(): String = playerNameValue
@@ -47,11 +48,7 @@ class ProgressionGuiSnapshot(
         }
     }
 
-    fun allEntries(): List<ProgressionGuiEntry> {
-        val entries = ArrayList(currentEntriesValue)
-        entries.addAll(archivedEntriesValue)
-        return entries.toList()
-    }
+    fun allEntries(): List<ProgressionGuiEntry> = allEntriesValue
 
     companion object {
         @JvmStatic

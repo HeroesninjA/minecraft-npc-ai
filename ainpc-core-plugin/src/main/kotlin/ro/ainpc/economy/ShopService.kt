@@ -5,19 +5,27 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 class ShopService(private val economyService: EconomyService?) {
     private val shops: MutableMap<String, NpcShopDefinition> = LinkedHashMap()
+    private val roleIndex: MutableMap<String, MutableList<NpcShopDefinition>> = LinkedHashMap()
 
     fun registerShop(shop: NpcShopDefinition) {
         shops[shop.shopId] = shop
+        val role = shop.npcRole.lowercase()
+        roleIndex.getOrPut(role) { mutableListOf() }.add(shop)
     }
 
     fun unregisterShop(shopId: String) {
-        shops.remove(shopId)
+        val shop = shops.remove(shopId) ?: return
+        val role = shop.npcRole.lowercase()
+        roleIndex[role]?.remove(shop)
+        if (roleIndex[role]?.isEmpty() == true) {
+            roleIndex.remove(role)
+        }
     }
 
     fun getShop(shopId: String): NpcShopDefinition? = shops[shopId]
 
     fun findShopsForRole(role: String): List<NpcShopDefinition> {
-        return shops.values.filter { it.npcRole.equals(role, ignoreCase = true) }
+        return roleIndex[role.lowercase()].orEmpty()
     }
 
     fun getAllShops(): Collection<NpcShopDefinition> = shops.values

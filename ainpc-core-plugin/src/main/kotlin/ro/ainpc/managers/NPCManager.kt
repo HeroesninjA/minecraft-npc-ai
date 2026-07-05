@@ -45,6 +45,7 @@ class NPCManager(
     private val npcsById: MutableMap<Int, AINPC> = ConcurrentHashMap()
     private val npcsByEntityId: MutableMap<UUID, AINPC> = ConcurrentHashMap()
     private val npcsBySourceKey: MutableMap<String, AINPC> = ConcurrentHashMap()
+    private val npcsByWorld: MutableMap<World, MutableSet<AINPC>> = ConcurrentHashMap()
     private val villagePopulationCooldowns: MutableMap<String, Long> = ConcurrentHashMap()
 
     init {
@@ -1492,6 +1493,10 @@ class NPCManager(
         npcsByUuid[npc.uuid] = npc
         npcsById[npc.databaseId] = npc
         npc.applyPersistentIdentity()
+        val npcLoc = npc.location
+        if (npcLoc != null && npcLoc.world != null) {
+            npcsByWorld.getOrPut(npcLoc.world) { ConcurrentHashMap.newKeySet() }.add(npc)
+        }
         rebuildSourceKeyIndex()
     }
 
@@ -1508,6 +1513,10 @@ class NPCManager(
         val entity = npc.bukkitEntity
         if (entity != null) {
             npcsByEntityId.remove(entity.uniqueId)
+        }
+        val npcLoc = npc.location
+        if (npcLoc != null && npcLoc.world != null) {
+            npcsByWorld[npcLoc.world]?.remove(npc)
         }
         rebuildSourceKeyIndex()
     }
@@ -2024,13 +2033,12 @@ class NPCManager(
     fun getNPCsNear(location: Location, radius: Double): List<AINPC> {
         val nearby = ArrayList<AINPC>()
         val radiusSquared = radius * radius
+        val worldNpcs = npcsByWorld[location.world] ?: return nearby
 
-        for (npc in npcsByUuid.values) {
+        for (npc in worldNpcs) {
             val npcLoc = npc.location
-            if (npcLoc != null && npcLoc.world == location.world) {
-                if (npcLoc.distanceSquared(location) <= radiusSquared) {
-                    nearby.add(npc)
-                }
+            if (npcLoc != null && npcLoc.distanceSquared(location) <= radiusSquared) {
+                nearby.add(npc)
             }
         }
 
@@ -2040,17 +2048,16 @@ class NPCManager(
     fun getActiveNPCsNear(location: Location, radius: Double): List<AINPC> {
         val nearby = ArrayList<AINPC>()
         val radiusSquared = radius * radius
+        val worldNpcs = npcsByWorld[location.world] ?: return nearby
 
-        for (npc in npcsByUuid.values) {
+        for (npc in worldNpcs) {
             if (!npc.spawned) {
                 continue
             }
 
             val npcLoc = npc.location
-            if (npcLoc != null && npcLoc.world == location.world) {
-                if (npcLoc.distanceSquared(location) <= radiusSquared) {
-                    nearby.add(npc)
-                }
+            if (npcLoc != null && npcLoc.distanceSquared(location) <= radiusSquared) {
+                nearby.add(npc)
             }
         }
 

@@ -18,7 +18,7 @@ class ProgressionService(private val plugin: AINPCPlugin) {
 
     private var cachedDefinitions: List<ProgressionDefinition>? = null
     private var cachedDefinitionsTime: Long = 0L
-    private val cacheTtlMs: Long = 30_000L
+    private val cacheTtlMs: Long = 120_000L
     private val cacheLock = Any()
 
     fun invalidateDefinitionCache() {
