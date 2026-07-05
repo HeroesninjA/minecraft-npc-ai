@@ -116,7 +116,7 @@ class WorldPlaceGui : GuiScreen {
             ))
 
             context.button(31, GuiButton.enabled(
-                GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory state", "&7Vezi starea povestii pentru acest place."),
+                GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory State", "&7Vezi starea povestii pentru acest place."),
                 GuiAction { click ->
                     click.service().runCommand(click.player(), "ainpc story place ${place.id()}")
                 }
@@ -143,7 +143,7 @@ class WorldPlaceGui : GuiScreen {
             context.button(35, if (adminView) {
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.LEAD, "&eBind NPC",
-                        listOf("&7Leaga un NPC de acest place (home/work/social).")),
+                        listOf("&7Leaga Un NPC De Acest Place (Home/Work/Social).")),
                     GuiAction { click ->
                         click.service().runCommand(click.player(), "ainpc world place bind ${place.id()}")
                     }

@@ -10,8 +10,8 @@ class RoutineGuiDiagnosticsTest {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt").readText()
 
         assertTrue(source.contains("Rutine NPC"))
-        assertTrue(source.contains("Rutine dezactivate"))
-        assertTrue(source.contains("Timp world"))
+        assertTrue(source.contains("Rutine Dezactivate"))
+        assertTrue(source.contains("Timp World"))
     }
 
     @Test
@@ -21,6 +21,7 @@ class RoutineGuiDiagnosticsTest {
         assertTrue(source.contains("getAllNPCs"))
         assertTrue(source.contains("npc.name"))
         assertTrue(source.contains("routine status"))
+        assertTrue(source.contains("NPC Bindings"))
     }
 
     @Test
@@ -36,9 +37,11 @@ class RoutineGuiDiagnosticsTest {
     fun routineGuiHasAdminActions() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt").readText()
 
-        assertTrue(source.contains("Status nearest"))
-        assertTrue(source.contains("Ruleaza tick rutina"))
+        assertTrue(source.contains("Status Nearest"))
+        assertTrue(source.contains("Ruleaza Tick Rutina"))
         assertTrue(source.contains("Manager NPC"))
+        assertTrue(source.contains("NPC Admin"))
+        assertTrue(source.contains("Deschide Managerul NPC Admin."))
     }
 
     @Test

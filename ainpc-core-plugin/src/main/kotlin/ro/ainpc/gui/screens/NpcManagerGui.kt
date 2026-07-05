@@ -45,7 +45,7 @@ class NpcManagerGui : GuiScreen {
         context.button(
             5,
             GuiButton.enabled(
-                GuiItemFactory.item(Material.PAPER, "&9NPC diagnostics", npcDiagnosticsLore(context.plugin())),
+                GuiItemFactory.item(Material.PAPER, "&9NPC Diagnostics", npcDiagnosticsLore(context.plugin())),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc debugdump npc") }
             )
         )
@@ -98,8 +98,8 @@ class NpcManagerGui : GuiScreen {
             GuiButton.enabled(
                 GuiItemFactory.item(
                     Material.REPEATER,
-                    "&6Ruleaza tick rutina",
-                    "&7Evalueaza manual rutinele NPC active."
+                    "&6Ruleaza Tick Rutina",
+                    "&7Evalueaza manual Rutinele NPC Active."
                 ),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc routine tick") }
             )

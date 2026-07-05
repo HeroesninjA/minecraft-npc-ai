@@ -29,7 +29,8 @@ class ShopGuiDiagnosticsTest {
 
         assertTrue(source.contains("renderOffers"))
         assertTrue(source.contains("shopService.findShopsForRole"))
-        assertTrue(source.contains("Inapoi la lista NPC"))
+        assertTrue(source.contains("Inapoi la Lista NPC"))
+        assertTrue(source.contains("Nicio Ofertă Disponibilă"))
     }
 
     @Test

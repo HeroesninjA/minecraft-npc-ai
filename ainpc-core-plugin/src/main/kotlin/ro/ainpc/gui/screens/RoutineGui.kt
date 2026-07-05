@@ -40,10 +40,10 @@ class RoutineGui : GuiScreen {
             4,
             GuiItemFactory.item(
                 if (routineEnabled) Material.CLOCK else Material.GRAY_DYE,
-                if (routineEnabled) "&eRutine NPC" else "&7Rutine dezactivate",
+                if (routineEnabled) "&eRutine NPC" else "&7Rutine Dezactivate",
                 listOf(
                     "&7NPC-uri afisate: &f${npcs.size}&7/&f${context.plugin().npcManager.getNPCCount()}",
-                    "&7Timp world: &f${formatWorldTime(worldTime)}",
+                    "&7Timp World: &f${formatWorldTime(worldTime)}",
                     "&7Click card: status rutina.",
                     "&7Right click card: info NPC.",
                     "&8Actiuni principale: status nearest / manager / bindings"
@@ -90,7 +90,7 @@ class RoutineGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(
                         Material.COMPASS,
-                        "&eStatus nearest",
+                        "&eStatus Nearest",
                         "&7Ruleaza /ainpc routine status nearest pentru cel mai apropiat NPC.",
                     "&8Actiuni principale."
                     ),
@@ -100,7 +100,7 @@ class RoutineGui : GuiScreen {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
                         Material.GRAY_DYE,
-                        "&7Status nearest",
+                        "&7Status Nearest",
                         listOf("&7Necesita ainpc.admin.")
                     )
                 )
@@ -112,7 +112,7 @@ class RoutineGui : GuiScreen {
                 GuiButton.enabled(
                     GuiItemFactory.item(
                         Material.REPEATER,
-                        "&6Ruleaza tick rutina",
+                        "&6Ruleaza Tick Rutina",
                         "&7Ruleaza manual evaluarea rutinelor pentru NPC-urile active.",
                         "&8Admin separat."
                     ),
@@ -122,7 +122,7 @@ class RoutineGui : GuiScreen {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
                         Material.GRAY_DYE,
-                        "&7Ruleaza tick rutina",
+                        "&7Ruleaza Tick Rutina",
                         listOf("&7Necesita ainpc.admin.")
                     )
                 )
@@ -132,7 +132,7 @@ class RoutineGui : GuiScreen {
             48,
             if (context.service().canOpen(player, GuiKey.MANAGER)) {
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.NAME_TAG, "&6Manager NPC", "&7Deschide managerul NPC admin.", "&8Admin separat."),
+                    GuiItemFactory.item(Material.NAME_TAG, "&6Manager NPC", "&7Deschide Managerul NPC Admin.", "&8Admin separat."),
                     GuiAction { click -> click.service().open(click.player(), GuiKey.MANAGER) }
                 )
             } else {
@@ -153,7 +153,7 @@ class RoutineGui : GuiScreen {
                     Material.CHAINMAIL_BOOTS,
                     "&6NpcWorldBindings",
                     listOf(
-                        "&7Listeaza NPC bindings din aceasta regiune.",
+                        "&7Listeaza NPC Bindings din aceasta regiune.",
                         "&8Click: lista bindings in chat",
                         "&8Inspectie separata."
                     )
@@ -216,7 +216,7 @@ class RoutineGui : GuiScreen {
 
     private fun addBindingLore(lore: MutableList<String>, binding: NpcWorldBinding?) {
         if (binding == null) {
-            lore.add("&7Mapping place: &8nepersistat")
+            lore.add("&7Mapping Place: &8nepersistat")
             return
         }
         lore.add(

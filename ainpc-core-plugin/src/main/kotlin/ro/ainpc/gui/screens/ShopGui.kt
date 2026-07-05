@@ -98,7 +98,7 @@ class ShopGui : GuiScreen {
 
         if (nearbyNpcs.isEmpty()) {
             context.item(22, GuiItemFactory.item(
-                Material.BARRIER, "&cNiciun NPC in apropiere",
+                Material.BARRIER, "&cNiciun NPC In Apropiere",
                 listOf("&7Nu exista NPC-uri in raza de 16m.", "&7Muta-te mai aproape de sat.")
             ))
         }
@@ -168,13 +168,13 @@ class ShopGui : GuiScreen {
 
         if (offerIndex == 0) {
             context.item(22, GuiItemFactory.item(
-                Material.BARRIER, "&cNicio oferta disponibila",
-                listOf("&7Acest NPC nu are oferte in acest moment.")
+                Material.BARRIER, "&cNicio Ofertă Disponibilă",
+                listOf("&7Acest NPC Nu Are Oferte In Acest Moment.")
             ))
         }
 
         context.button(45, GuiButton.enabled(
-            GuiItemFactory.item(Material.ARROW, "&7Inapoi la lista NPC"),
+            GuiItemFactory.item(Material.ARROW, "&7Inapoi la Lista NPC"),
             GuiAction { click ->
                 click.service().setShopSelectedNpcId(click.player(), null)
                 click.service().open(click.player(), GuiKey.SHOP)

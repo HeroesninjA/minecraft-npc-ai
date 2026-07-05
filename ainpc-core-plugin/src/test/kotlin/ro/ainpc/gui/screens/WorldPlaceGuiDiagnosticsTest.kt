@@ -23,7 +23,7 @@ class WorldPlaceGuiDiagnosticsTest {
         assertTrue(source.contains("Locuitori"))
         assertTrue(source.contains("NPC Bindings"))
         assertTrue(source.contains("Ancore quest"))
-        assertTrue(source.contains("Story state"))
+        assertTrue(source.contains("Story State"))
     }
 
     @Test
@@ -36,5 +36,6 @@ class WorldPlaceGuiDiagnosticsTest {
         assertTrue(source.contains("Edit place"))
         assertTrue(source.contains("Teleport"))
         assertTrue(source.contains("Inspectie"))
+        assertTrue(source.contains("Leaga Un NPC De Acest Place (Home/Work/Social)."))
     }
 }

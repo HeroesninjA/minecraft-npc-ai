@@ -10,6 +10,6 @@ class DebugGuiWorldAuditTest {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/DebugGui.kt").readText()
 
         assertTrue(source.contains("ainpc audit world"))
-        assertTrue(source.contains("World audit"))
+        assertTrue(source.contains("World Audit"))
     }
 }
