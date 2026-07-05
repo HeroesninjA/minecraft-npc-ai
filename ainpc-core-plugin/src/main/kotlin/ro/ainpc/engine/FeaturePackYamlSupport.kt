@@ -688,18 +688,23 @@ object FeaturePackYamlSupport {
                 if (key == "type") continue
                 val value = triggerSection.get(key)
                 if (key == "actions" && value is List<*>) {
-                    @Suppress("UNCHECKED_CAST")
-                    for (entry in value as List<Map<String, Any>>) {
-                        val ref = entry["id"]?.toString()
-                        if (!ref.isNullOrBlank()) actionRefs.add(ref)
-                        val entryType = entry["type"]?.toString() ?: continue
-                        if (entryType.isBlank()) continue
-                        val entryParams = LinkedHashMap<String, String>()
-                        for ((ek, ev) in entry) {
-                            if (ek == "id" || ek == "type") continue
-                            entryParams[ek] = ev.toString()
+                    for (entry in value) {
+                        if (entry is String) {
+                            actionRefs.add(entry)
+                        } else if (entry is Map<*, *>) {
+                            @Suppress("UNCHECKED_CAST")
+                            val typedEntry = entry as Map<String, Any>
+                            val ref = typedEntry["id"]?.toString()
+                            if (!ref.isNullOrBlank()) actionRefs.add(ref)
+                            val entryType = typedEntry["type"]?.toString() ?: continue
+                            if (entryType.isBlank()) continue
+                            val entryParams = LinkedHashMap<String, String>()
+                            for ((ek, ev) in typedEntry) {
+                                if (ek == "id" || ek == "type") continue
+                                entryParams[ek] = ev.toString()
+                            }
+                            scenario.addRuntimeAction(triggerId + "_" + ref.orEmpty(), entryType, entryParams)
                         }
-                        scenario.addRuntimeAction(triggerId + "_" + ref.orEmpty(), entryType, entryParams)
                     }
                     continue
                 }
