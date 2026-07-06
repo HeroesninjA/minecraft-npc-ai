@@ -293,6 +293,14 @@ class DialogueEngine(
         return NpcFactResolver.resolve(playerMessage, facts).orElse(null)
     }
 
+    fun clearRecentResponses() {
+        recentResponses.clear()
+    }
+
+    fun cleanRecentResponses(activeNpcUuids: Set<UUID>) {
+        recentResponses.keys.removeAll { it !in activeNpcUuids }
+    }
+
     private fun selectTemplate(npc: AINPC, intent: DialogueIntent): String {
         var intentTemplates = templates[intent]
         if (intentTemplates.isNullOrEmpty()) intentTemplates = templates[DialogueIntent.GREET]

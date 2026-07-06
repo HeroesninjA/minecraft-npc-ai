@@ -1,0 +1,4 @@
+world_admin:
+  enabled: true
+  auto_index:
+    enabled: false

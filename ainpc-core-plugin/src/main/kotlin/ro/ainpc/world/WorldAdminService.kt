@@ -6,8 +6,8 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.platform.PlatformProfile
 import java.util.Collections
-import java.util.LinkedHashMap
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.logging.Logger
 import kotlin.math.max
@@ -24,12 +24,12 @@ class WorldAdminService(
         plugin
     )
 
-    private val regionsById: MutableMap<String, WorldRegion> = LinkedHashMap()
-    private val placesById: MutableMap<String, WorldPlace> = LinkedHashMap()
-    private val placesByRegion: MutableMap<String, MutableList<WorldPlace>> = LinkedHashMap()
-    private val nodesById: MutableMap<String, WorldNode> = LinkedHashMap()
-    private val nodesByRegion: MutableMap<String, MutableList<WorldNode>> = LinkedHashMap()
-    private val nodesByPlace: MutableMap<String, MutableList<WorldNode>> = LinkedHashMap()
+    private val regionsById: MutableMap<String, WorldRegion> = ConcurrentHashMap()
+    private val placesById: MutableMap<String, WorldPlace> = ConcurrentHashMap()
+    private val placesByRegion: MutableMap<String, MutableList<WorldPlace>> = ConcurrentHashMap()
+    private val nodesById: MutableMap<String, WorldNode> = ConcurrentHashMap()
+    private val nodesByRegion: MutableMap<String, MutableList<WorldNode>> = ConcurrentHashMap()
+    private val nodesByPlace: MutableMap<String, MutableList<WorldNode>> = ConcurrentHashMap()
     private val mappingIndex = MappingIndex()
     private var enabled = true
     private var autoIndexEnabled = true
@@ -54,14 +54,39 @@ class WorldAdminService(
     override val worldMode: WorldMode
         get() = currentWorldMode
 
+    private var cachedRegions: List<WorldRegionInfo>? = null
+    private var cachedPlaces: List<WorldPlaceInfo>? = null
+    private var cachedNodes: List<WorldNodeInfo>? = null
+
+    private fun invalidateCachedLists() {
+        cachedRegions = null
+        cachedPlaces = null
+        cachedNodes = null
+    }
+
     override val regions: Collection<WorldRegionInfo>
-        get() = Collections.unmodifiableList(regionsById.values.mapNotNull { region -> toRegionInfo(region) })
+        get() {
+            if (cachedRegions == null) {
+                cachedRegions = regionsById.values.mapNotNull { region -> toRegionInfo(region) }
+            }
+            return cachedRegions!!
+        }
 
     override val places: Collection<WorldPlaceInfo>
-        get() = Collections.unmodifiableList(placesById.values.mapNotNull { place -> toPlaceInfo(place) })
+        get() {
+            if (cachedPlaces == null) {
+                cachedPlaces = placesById.values.mapNotNull { place -> toPlaceInfo(place) }
+            }
+            return cachedPlaces!!
+        }
 
     override val nodes: Collection<WorldNodeInfo>
-        get() = Collections.unmodifiableList(nodesById.values.mapNotNull { node -> toNodeInfo(node) })
+        get() {
+            if (cachedNodes == null) {
+                cachedNodes = nodesById.values.mapNotNull { node -> toNodeInfo(node) }
+            }
+            return cachedNodes!!
+        }
 
     override val regionCount: Int
         get() = regionsById.size
@@ -885,6 +910,7 @@ class WorldAdminService(
             }
         }
         rebuildMappingIndex()
+        invalidateCachedLists()
         dirty = true
         return true
     }
@@ -967,6 +993,7 @@ class WorldAdminService(
         if (autoIndexEnabled) {
             mappingIndex.indexRegion(region)
         }
+        invalidateCachedLists()
     }
 
     fun registerPlace(place: WorldPlace) {
@@ -975,6 +1002,7 @@ class WorldAdminService(
         if (autoIndexEnabled) {
             mappingIndex.indexPlace(place)
         }
+        invalidateCachedLists()
     }
 
     fun removePlace(placeId: String?): Boolean {
@@ -993,6 +1021,7 @@ class WorldAdminService(
         }
         nodesByPlace.remove(normalizedId)
         rebuildMappingIndex()
+        invalidateCachedLists()
         dirty = true
         return true
     }
@@ -1005,6 +1034,7 @@ class WorldAdminService(
             nodesByPlace[node.placeId]?.removeIf { it.id == node.id }
         }
         rebuildMappingIndex()
+        invalidateCachedLists()
         dirty = true
         return true
     }
@@ -1018,11 +1048,13 @@ class WorldAdminService(
         if (autoIndexEnabled) {
             mappingIndex.indexNode(node)
         }
+        invalidateCachedLists()
     }
 
     private fun replaceRegion(oldRegion: WorldRegion, newRegion: WorldRegion) {
         regionsById[oldRegion.id] = newRegion
         rebuildMappingIndex()
+        invalidateCachedLists()
     }
 
     private fun replacePlace(oldPlace: WorldPlace, newPlace: WorldPlace) {
@@ -1031,6 +1063,7 @@ class WorldAdminService(
             .removeIf { it.id == oldPlace.id }
         placesByRegion.getOrPut(newPlace.regionId) { ArrayList() }.add(newPlace)
         rebuildMappingIndex()
+        invalidateCachedLists()
     }
 
     private fun replaceNode(oldNode: WorldNode, newNode: WorldNode) {
@@ -1045,6 +1078,7 @@ class WorldAdminService(
             nodesByPlace.getOrPut(newNode.placeId) { ArrayList() }.add(newNode)
         }
         rebuildMappingIndex()
+        invalidateCachedLists()
     }
 
     private fun rebuildMappingIndex() {

@@ -131,9 +131,18 @@ class AINPCPlugin : JavaPlugin() {
         for (res in listOf("castel-world-admin.yml", "settlements.yml", "building_templates.yml", "behavior_profiles.yml")) {
             try {
                 saveResource(res, false)
-            } catch (ignored: java.io.IOException) {
+            } catch (ignored: Exception) {
                 logger.fine("$res deja exista sau nu este disponibil.")
             }
+        }
+        val packsDir = File(dataFolder, "packs")
+        if (!packsDir.exists()) {
+            packsDir.mkdirs()
+        }
+        try {
+            saveResource("packs/compat-26-1-2.yml", false)
+        } catch (ignored: Exception) {
+            logger.fine("packs/compat-26-1-2.yml nu este disponibil.")
         }
 
         messageUtils = MessageUtils(this)
@@ -242,6 +251,9 @@ class AINPCPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::schedulerCoordinator.isInitialized) {
+            schedulerCoordinator.stop()
+        }
         if (::scenarioEngine.isInitialized) {
             scenarioEngine.stopAllQuestTracking()
             logger.info("Salvare progres quest-uri...")
@@ -250,6 +262,16 @@ class AINPCPlugin : JavaPlugin() {
         if (::npcManager.isInitialized) {
             logger.info("Salvare date NPC-uri...")
             npcManager.saveAllNPCs()
+        }
+        if (::economyService.isInitialized) {
+            logger.info("Salvare balante jucatori...")
+            economyService.flush()
+        }
+        if (::decisionEngine.isInitialized) {
+            decisionEngine.clearCache()
+        }
+        if (::dialogueEngine.isInitialized) {
+            dialogueEngine.clearRecentResponses()
         }
         snapshotProducer?.stop()
         if (::databaseManager.isInitialized) {

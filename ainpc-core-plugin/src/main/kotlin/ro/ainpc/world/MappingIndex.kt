@@ -2,13 +2,14 @@ package ro.ainpc.world
 
 import java.util.LinkedHashSet
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ceil
 import kotlin.math.floor
 
 internal class MappingIndex {
-    private val regionsByChunk: MutableMap<ChunkKey, MutableList<WorldRegion>> = HashMap()
-    private val placesByChunk: MutableMap<ChunkKey, MutableList<WorldPlace>> = HashMap()
-    private val nodesByChunk: MutableMap<ChunkKey, MutableList<WorldNode>> = HashMap()
+    private val regionsByChunk: MutableMap<ChunkKey, MutableList<WorldRegion>> = ConcurrentHashMap()
+    private val placesByChunk: MutableMap<ChunkKey, MutableList<WorldPlace>> = ConcurrentHashMap()
+    private val nodesByChunk: MutableMap<ChunkKey, MutableList<WorldNode>> = ConcurrentHashMap()
 
     fun clear() {
         regionsByChunk.clear()

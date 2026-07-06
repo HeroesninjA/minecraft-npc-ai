@@ -18,6 +18,7 @@ class ListenerRegistry(private val plugin: AINPCPlugin) {
         register(MappingWandListener(plugin))
         register(BuildModeListener(plugin))
         register(GuiInventoryListener(plugin))
+        register(WorldListener(plugin))
         plugin.recentEventsBuffer = RecentEventsBuffer(plugin)
         plugin.recentEventsBuffer.configure(plugin.config.getInt("events.debug_recent_event_buffer", 100))
     }

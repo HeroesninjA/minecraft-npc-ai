@@ -1,4 +1,4 @@
-﻿# MCP Docker Server MVP si Faze Ulterioare
+﻿    # MCP Docker Server MVP si Faze Ulterioare
 
 Actualizat: 2026-05-22
 

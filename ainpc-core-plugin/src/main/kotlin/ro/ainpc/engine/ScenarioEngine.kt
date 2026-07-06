@@ -91,7 +91,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     var storyContextService: StoryContextService? = null
     private val trackedQuestPlayers = HashSet<UUID>()
     private val trackedQuestTemplates = ConcurrentHashMap<UUID, String>()
-    private val activeScenarios = HashMap<UUID, ActiveScenario>()
+    private val activeScenarios = ConcurrentHashMap<UUID, ActiveScenario>()
     private val npcConversationCooldowns = ConcurrentHashMap<UUID, Long>()
     private val trackedBlockLocations = ConcurrentHashMap<UUID, MutableSet<String>>()
     private val trackedVisitedPlaces = ConcurrentHashMap<UUID, MutableSet<String>>()
@@ -1667,6 +1667,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     fun recordNpcConversation(p0: Player, p1: AINPC) {
         if (p0 == null || p1 == null) return
         val now = System.currentTimeMillis()
+        npcConversationCooldowns.entries.removeIf { now - it.value > 30_000L }
         val lastTalk = npcConversationCooldowns.getOrDefault(p0.uniqueId, 0L)
         if (now - lastTalk < 3000) return
         npcConversationCooldowns[p0.uniqueId] = now

@@ -363,8 +363,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
         // Creeaza amintire doar pentru interactiuni importante
         if (importance >= 2) {
-            val content = "Jucatorul $playerName mi-a spus: \"" +
-                truncate(playerMessage, 100) + "\" (sentiment: " + sentiment + ")"
+            val content = "Jucatorul $playerName mi-a spus: \"${truncate(playerMessage, 100)}\" (sentiment: $sentiment)"
 
             plugin.memoryManager.createMemory(
                 npc, playerUuid, playerName,
@@ -404,17 +403,31 @@ class DialogManager(private val plugin: AINPCPlugin) {
     // Cooldown methods
 
     private fun isOnCooldown(playerUuid: UUID, npcUuid: UUID): Boolean {
+        val now = System.currentTimeMillis()
+        val cooldownMs = plugin.config.getInt("npc.message_cooldown", 2) * 1000L
         val playerCooldowns = cooldowns[playerUuid] ?: return false
 
         val lastTime = playerCooldowns[npcUuid] ?: return false
+        if (now - lastTime < cooldownMs) return true
 
-        val cooldownMs = plugin.config.getInt("npc.message_cooldown", 2) * 1000L
-        return System.currentTimeMillis() - lastTime < cooldownMs
+        playerCooldowns.remove(npcUuid)
+        if (playerCooldowns.isEmpty()) {
+            cooldowns.remove(playerUuid)
+        }
+        return false
     }
 
     private fun setCooldown(playerUuid: UUID, npcUuid: UUID) {
-        cooldowns.computeIfAbsent(playerUuid) { ConcurrentHashMap() }
-            .put(npcUuid, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val cooldownMs = plugin.config.getInt("npc.message_cooldown", 2) * 1000L
+        val playerCooldowns = cooldowns.computeIfAbsent(playerUuid) { ConcurrentHashMap() }
+
+        playerCooldowns.entries.removeAll { now - it.value >= cooldownMs * 2 }
+        if (playerCooldowns.isEmpty()) {
+            cooldowns.remove(playerUuid)
+            cooldowns.computeIfAbsent(playerUuid) { ConcurrentHashMap() }
+        }
+        cooldowns[playerUuid]!!.put(npcUuid, now)
     }
 
     // Helper methods

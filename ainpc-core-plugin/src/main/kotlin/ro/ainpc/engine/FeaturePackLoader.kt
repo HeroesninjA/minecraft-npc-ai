@@ -186,7 +186,19 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                 return
             }
 
+            val packMinecraftVersion = config.getString("minecraft_version")
+            if (packMinecraftVersion != null) {
+                val serverVersion = plugin.server.bukkitVersion
+                val serverMajor = serverVersion.substringBefore("-").substringBefore(".")
+                val packMajor = packMinecraftVersion.substringBefore(".")
+                if (serverMajor != packMajor) {
+                    plugin.logger.info("Feature pack '$id' (${file.name}) necesita Minecraft $packMinecraftVersion, serverul ruleaza $serverVersion. Se ignora.")
+                    return
+                }
+            }
+
             val pack = FeaturePack(id, name, description)
+            pack.minecraftVersion = packMinecraftVersion
             pack.schemaVersion = config.getInt("version", pack.schemaVersion)
             if (pack.schemaVersion < 1 || pack.schemaVersion > 1) {
                 plugin.logger.warning("Feature pack '$id' (${file.name}) are schema_version=${pack.schemaVersion}, dar versiunea curenta este 1. Posibile incompatibilitati.")
@@ -601,6 +613,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val description: String,
     ) {
         var schemaVersion: Int = 1
+        var minecraftVersion: String? = null
         val traits: MutableList<TraitDefinition> = ArrayList()
         val professions: MutableList<ProfessionDefinition> = ArrayList()
         val topologies: MutableList<TopologyDefinition> = ArrayList()

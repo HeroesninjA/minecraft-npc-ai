@@ -398,6 +398,11 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
     }
 
+    fun clearCache() {
+        scoreCache.clear()
+        lastDecisionTime.clear()
+    }
+
     private enum class RoutineFocus { WORK, REST, SOCIAL, GUARD, OBSERVE, IDLE }
 
     companion object {

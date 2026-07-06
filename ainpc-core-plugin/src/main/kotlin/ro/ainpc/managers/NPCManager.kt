@@ -1038,6 +1038,9 @@ class NPCManager(
         val cooldownMillis = Math.max(30L, plugin.config.getLong("villagers.auto_repopulate.cooldown_seconds", 180L)) * 1000L
         val now = System.currentTimeMillis()
         val villageKey = buildVillageKey(snapshot.center())
+
+        villagePopulationCooldowns.entries.removeIf { now - it.value > cooldownMillis * 2 }
+
         val lastSpawn = villagePopulationCooldowns[villageKey]
         if (lastSpawn != null && now - lastSpawn < cooldownMillis) {
             return

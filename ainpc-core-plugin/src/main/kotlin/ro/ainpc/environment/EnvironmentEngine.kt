@@ -12,6 +12,11 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
     private val worldContexts = ConcurrentHashMap<String, EnvironmentContext>()
     private val worldDayCounters = ConcurrentHashMap<String, Int>()
 
+    fun onWorldUnload(worldName: String) {
+        worldContexts.remove(worldName)
+        worldDayCounters.remove(worldName)
+    }
+
     fun tick() {
         for (world in plugin.server.worlds) {
             updateWorldContext(world)

@@ -1,0 +1,81 @@
+# ========================================
+# Compatibility Pack: Paper 26.1.2
+# Se incarca DOAR pe servere Paper 26.1.2
+# ========================================
+
+id: compat_26_1_2
+name: "Compat 26.1.2"
+description: "Ajustari de compatibilitate pentru Paper Minecraft 26.1.2"
+minecraft_version: "26.1.2"
+addon:
+  type: "feature"
+  version: "1.0.0"
+  runtime_modes: ["standalone", "hybrid", "advanced"]
+  capabilities: ["traits", "professions", "dialogues"]
+
+traits:
+  world_weary:
+    name: "Resemnat"
+    description: "Locuitor al unei lumi in schimbare, adaptabil dar obosit."
+    modifiers:
+      action_scores:
+        HELP: 5
+        REST: 10
+        DO_NOTHING: 5
+      emotions:
+        sadness: 0.1
+        trust: -0.05
+
+  explorer:
+    name: "Explorator"
+    description: "Atras de noile teritorii si schimbarile din lume."
+    modifiers:
+      action_scores:
+        INVESTIGATE: 20
+        OBSERVE: 15
+        WANDER: 25
+        FLEE: -10
+      emotions:
+        joy: 0.15
+        fear: -0.1
+
+professions:
+  cartographer:
+    name: "Cartograf"
+    description: "Intocmeste harti ale lumii in continua schimbare."
+    schedule:
+      MORNING: "Studiaza noile teritorii"
+      AFTERNOON: "Actualizeaza hartile existente"
+      EVENING: "Discuta cu calatorii despre schimbarile observate"
+      NIGHT: "Odihneste si planifica explorari"
+    work_locations:
+      - "atelier"
+      - "turn"
+      - "observator"
+    tools:
+      - "harti"
+      - "compas"
+      - "creion"
+    dialogues:
+      - "Lumea se schimba mereu, dar eu o surprind pe hartie."
+      - "Am descoperit un tinut nou dincolo de padure."
+      - "Hartile mele sunt mereu actualizate cu cele mai noi descoperiri."
+
+dialogues:
+  compat_greetings:
+    - "Bine ai venit in aceasta lume!"
+    - "Salut, calatorule! Vremurile se schimba."
+    - "Buna! Ai observat si tu schimbarile?"
+    - "O zi buna! Lumea e larga si plina de surprize."
+
+  compat_farewells:
+    - "Calatorii sigure prin lume!"
+    - "Fii cu ochii in patru, lumea e in schimbare."
+    - "Ne revedem, prietene!"
+    - "Sa ai parte de drum bun!"
+
+  compat_news:
+    - "Am auzit ca s-au descoperit teritorii noi."
+    - "Se spune ca lumea s-a extins dincolo de vechile granite."
+    - "Calatorii vorbesc despre peisaje nemaivazute pana acum."
+    - "O noua era incepe pentru acest pamant."
