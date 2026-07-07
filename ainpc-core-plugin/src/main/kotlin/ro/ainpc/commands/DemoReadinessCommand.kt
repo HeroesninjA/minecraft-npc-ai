@@ -2192,7 +2192,7 @@ private class DemoReadinessService(private val plugin: AINPCPlugin) {
     }
 
     private fun loadRegionStoryStatePresent(regionId: String) = try {
-        plugin.storyStateService.getRegionState(regionId).isPresent
+        plugin.storyStateService.getRegionState(regionId) != null
     } catch (_: SQLException) {
         false
     }

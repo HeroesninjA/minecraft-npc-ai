@@ -12,7 +12,6 @@ import ro.ainpc.progression.StoredProgressionSummary
 import java.sql.SQLException
 import java.util.Locale
 import java.util.function.BiFunction
-import java.util.function.Function
 
 lateinit var ainpcCommandProgressionPlugin: AINPCPlugin
 
@@ -56,7 +55,7 @@ fun handleProgressionStored(
     sender: CommandSender,
     args: Array<String>,
     defaultFilter: String,
-    onlinePlayerResolver: Function<String, Player?>
+    onlinePlayerResolver: (String) -> Player?
 ): Boolean {
     if (!sender.hasPermission("ainpc.admin")) {
         ainpcCommandProgressionPlugin.messageUtils.sendMessage(sender, "no_permission")

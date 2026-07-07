@@ -140,8 +140,8 @@ class StoryGui : GuiScreen {
 
         val storyStateService = context.plugin().storyStateService
         return try {
-            val regionState = if (region != null) storyStateService.getRegionState(region.id()).orElse(null) else null
-            val placeState = if (place != null) storyStateService.getPlaceState(place.id()).orElse(null) else null
+            val regionState = if (region != null) storyStateService.getRegionState(region.id()) else null
+            val placeState = if (place != null) storyStateService.getPlaceState(place.id()) else null
             val events = storyStateService.listRecentEvents(region?.id().orEmpty(), place?.id().orEmpty(), EVENT_LIMIT)
             StorySnapshot(region, place, regionState, placeState, events, "")
         } catch (exception: SQLException) {

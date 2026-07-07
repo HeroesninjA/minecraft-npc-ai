@@ -144,6 +144,41 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
     }
 
     @Synchronized
+    fun dispatchStoryEvent(eventType: String, scopeId: String, title: String) {
+        for (addon in addonsById.values) {
+            try { addon.onStoryEvent(eventType, scopeId, title) } catch (_: Exception) {}
+        }
+    }
+
+    @Synchronized
+    fun dispatchRelationshipChange(npcUuidA: String, npcUuidB: String, newType: String) {
+        for (addon in addonsById.values) {
+            try { addon.onRelationshipChange(npcUuidA, npcUuidB, newType) } catch (_: Exception) {}
+        }
+    }
+
+    @Synchronized
+    fun dispatchNpcStateChange(npcUuid: String, oldState: String, newState: String) {
+        for (addon in addonsById.values) {
+            try { addon.onNpcStateChange(npcUuid, oldState, newState) } catch (_: Exception) {}
+        }
+    }
+
+    @Synchronized
+    fun dispatchSalaryPaid(npcCount: Int, totalAmount: Int) {
+        for (addon in addonsById.values) {
+            try { addon.onDailySalaryPaid(npcCount, totalAmount) } catch (_: Exception) {}
+        }
+    }
+
+    @Synchronized
+    fun dispatchSeasonChange(worldName: String, oldSeason: String, newSeason: String) {
+        for (addon in addonsById.values) {
+            try { addon.onSeasonChange(worldName, oldSeason, newSeason) } catch (_: Exception) {}
+        }
+    }
+
+    @Synchronized
     fun shutdown() {
         val addons = ArrayList(addonsById.values)
         addons.reverse()

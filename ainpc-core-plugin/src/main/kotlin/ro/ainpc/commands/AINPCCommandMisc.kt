@@ -88,6 +88,7 @@ fun handleRoutine(sender: CommandSender, args: Array<String>): Boolean {
         "tick" -> handleRoutineTick(sender)
         "status" -> handleRoutineStatus(sender, args)
         "profiles" -> handleRoutineProfiles(sender)
+        "gatherings", "social", "grupuri" -> handleRoutineGatherings(sender)
         else -> {
             sendRoutineUsage(sender)
             true
@@ -1213,6 +1214,31 @@ fun handleHealth(sender: CommandSender): Boolean {
         "&eMCP runtime: &f$mcpColor${mcpHealth.status} &8(${mcpHealth.durationMillis}ms, ${mcpHealth.endpoint})"
     )
     msg.send(sender, "&eMCP snapshot: &fdata/mcp-runtime-snapshot.json &8(auto: ${plugin.config.getBoolean("mcp.snapshot.auto", true)})")
+
+    val relCount = plugin.relationshipService.getRelationshipCount()
+    val npcBalCount = plugin.npcEconomyService.getBalanceCount()
+    val npcEcoTotal = plugin.npcEconomyService.getTotalEconomyValue()
+    val gatherings = plugin.routineCoordinator.getActiveGatherings().size
+    val seasonName = plugin.seasonalBehaviorService.getSeasonDisplayName(
+        plugin.server.worlds.firstOrNull()?.name ?: "")
+    storyEventCount@kotlin.run {
+        try {
+            val sql = "SELECT COUNT(*) as cnt FROM story_events"
+            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                stmt.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        msg.send(sender, "&eEvenimente story: &f${rs.getInt("cnt")}")
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+    msg.send(sender, "&eRelatii NPC-NPC: &f$relCount")
+    msg.send(sender, "&eNPC cu cont bancar: &f$npcBalCount &7(total: $npcEcoTotal monede)")
+    msg.send(sender, "&eAdunari sociale: &f$gatherings &7| Anotimp: &f$seasonName")
+    msg.send(sender, "&eAI Provider: &f${plugin.config.getString("ai_provider", "openai")}")
+    msg.send(sender, "&eMCP write tools: &f${if (plugin.config.getBoolean("mcp.write_tools_enabled", false)) "&aactivate" else "&7dezactivate"}")
+
     val issues = mutableListOf<String>()
     if (!plugin.config.getBoolean("features.ai", false)) issues.add("&eAI: &cdezactivat (features.ai=false)")
     if (mcpHealth.enabled && !mcpHealth.available) issues.add("&eMCP: &c${mcpHealth.detail}")
@@ -1766,6 +1792,21 @@ fun handleMap(
         service.showDraftPreview(player, draft)
     } catch (exception: IllegalArgumentException) {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&c" + exception.message)
+    }
+    return true
+}
+
+private fun handleRoutineGatherings(sender: CommandSender): Boolean {
+    val gatherings = ainpcCommandMiscPlugin.routineCoordinator.getActiveGatherings()
+    if (gatherings.isEmpty()) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Nu exista adunari sociale active in acest moment.")
+        return true
+    }
+    ainpcCommandMiscPlugin.messageUtils.send(sender, "&6=== Adunari Sociale (${gatherings.size}) ===")
+    for ((i, g) in gatherings.withIndex()) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&e${i + 1}. &7${g.size} NPC &8la &f${g.location}")
+        val names = g.npcNames.joinToString(", ")
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&8   ${names}")
     }
     return true
 }

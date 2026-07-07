@@ -42,7 +42,7 @@ public class AinpcDebugHealthTools {
             "mcp", Map.of(
                 "protocol", environment.getProperty("spring.ai.mcp.server.protocol", "STREAMABLE"),
                 "type", environment.getProperty("spring.ai.mcp.server.type", "SYNC"),
-                "writeToolsEnabled", false
+                "writeToolsEnabled", true
             ),
             "runtimeBridge", Map.of(
                 "enabled", true,

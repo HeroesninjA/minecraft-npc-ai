@@ -1088,6 +1088,18 @@ class WorldAdminService(
         nodesById.values.forEach { mappingIndex.indexNode(it) }
     }
 
+    fun refreshIndexForWorld(worldName: String?) {
+        if (!autoIndexEnabled || worldName.isNullOrBlank()) return
+        mappingIndex.removeWorld(worldName)
+        regionsById.values.filter { it.worldName.equals(worldName, ignoreCase = true) }
+            .forEach { mappingIndex.indexRegion(it) }
+        placesById.values.filter { it.worldName.equals(worldName, ignoreCase = true) }
+            .forEach { mappingIndex.indexPlace(it) }
+        nodesById.values.filter { it.worldName.equals(worldName, ignoreCase = true) }
+            .forEach { mappingIndex.indexNode(it) }
+        plugin?.debug("Mapping index reîmprospătat pentru lumea: $worldName")
+    }
+
     fun getRegionModels(): Collection<WorldRegion> {
         return Collections.unmodifiableCollection(regionsById.values)
     }

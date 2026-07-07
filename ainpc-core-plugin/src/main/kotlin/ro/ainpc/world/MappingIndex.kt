@@ -88,6 +88,13 @@ internal class MappingIndex {
             .toList()
     }
 
+    fun removeWorld(worldName: String?) {
+        val normalized = normalizeWorld(worldName)
+        regionsByChunk.keys.removeIf { it.worldName == normalized }
+        placesByChunk.keys.removeIf { it.worldName == normalized }
+        nodesByChunk.keys.removeIf { it.worldName == normalized }
+    }
+
     fun indexedRegionChunks(): Int = regionsByChunk.size
 
     fun indexedPlaceChunks(): Int = placesByChunk.size

@@ -56,6 +56,16 @@ class SocialCoordinator(private val plugin: AINPCPlugin) {
         }
     }
 
+    fun getSocialPartnersSummary(): Map<UUID, Set<UUID>> {
+        val result = mutableMapOf<UUID, Set<UUID>>()
+        for ((npcUuid, partners) in npcSocialPartners) {
+            if (partners.isNotEmpty()) {
+                result[npcUuid] = partners.toSet()
+            }
+        }
+        return result
+    }
+
     private fun resolveNpcRegion(npc: AINPC): String? {
         val homeAnchor = npc.homeAnchor
         if (homeAnchor != null && !homeAnchor.worldName().isNullOrBlank()) {

@@ -174,7 +174,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         }
 
         return try {
-            plugin.storyStateService.getRegionState(region.id()).orElse(null)
+            plugin.storyStateService.getRegionState(region.id())
         } catch (exception: SQLException) {
             warnings.add("persistent region story state could not be loaded")
             plugin.logger.log(Level.WARNING, "Nu s-a putut incarca region_story_state pentru story context.", exception)
@@ -193,7 +193,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         }
 
         return try {
-            plugin.storyStateService.getPlaceState(place.id()).orElse(null)
+            plugin.storyStateService.getPlaceState(place.id())
         } catch (exception: SQLException) {
             warnings.add("persistent place story state could not be loaded")
             plugin.logger.log(Level.WARNING, "Nu s-a putut incarca place_story_state pentru story context.", exception)

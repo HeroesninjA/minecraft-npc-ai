@@ -26,7 +26,7 @@ class QuestLogSupportService(
     }
 
     fun questLogCurrentComparator(playerId: UUID): Comparator<PlayerQuestProgress> {
-        return Comparator { a, b -> (b.updatedAt() - a.updatedAt()).toInt() }
+        return Comparator { a, b -> b.updatedAt().compareTo(a.updatedAt()) }
     }
 
     fun buildQuestLogSummaryLines(playerId: UUID, progresses: List<PlayerQuestProgress>): List<String> {

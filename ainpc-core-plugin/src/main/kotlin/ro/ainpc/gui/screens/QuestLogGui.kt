@@ -303,7 +303,7 @@ class QuestLogGui : GuiScreen {
         val regionState = try {
             val service = context.plugin().storyStateService
             if (currentRegion != null) {
-                service.getRegionState(currentRegion.id()).orElse(null)
+                service.getRegionState(currentRegion.id())
             } else null
         } catch (_: Exception) { null }
         context.item(

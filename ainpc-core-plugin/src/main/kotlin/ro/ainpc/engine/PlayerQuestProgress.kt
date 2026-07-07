@@ -1,7 +1,5 @@
 package ro.ainpc.engine
 
-import java.util.Collections
-import java.util.LinkedHashMap
 import java.util.Locale
 
 class PlayerQuestProgress(
@@ -17,9 +15,9 @@ class PlayerQuestProgress(
 ) {
     private val currentPhase: String = currentPhase ?: ""
     private val objectiveProgress: Map<String, Int> =
-        Collections.unmodifiableMap(LinkedHashMap(objectiveProgress ?: emptyMap()))
+        (objectiveProgress ?: emptyMap()).toMap()
     private val questVariables: Map<String, String> =
-        Collections.unmodifiableMap(LinkedHashMap(questVariables ?: emptyMap()))
+        (questVariables ?: emptyMap()).toMap()
 
     fun templateId(): String? = templateId
 

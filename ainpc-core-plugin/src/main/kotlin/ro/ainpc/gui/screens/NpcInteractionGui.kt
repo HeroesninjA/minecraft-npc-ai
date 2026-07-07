@@ -246,6 +246,15 @@ class NpcInteractionGui : GuiScreen {
         lore.add("&7Stare: &f${npc.currentState.displayName}")
         lore.add("&7Rutina: &f${valueOrUnknown(npc.plannedRoutineActivity)}")
         lore.add("&7Emotie: &f${npc.emotions.dominantEmotion}")
+        val npcUuid = npc.uuid
+        if (npcUuid != null) {
+            val interactions = npc.plugin?.relationshipService?.getNPCInteractions(npcUuid)
+            if (interactions != null && interactions.isNotEmpty()) {
+                val topRelation = interactions.first()
+                val partnerName = topRelation.first?.let { npc.plugin?.npcManager?.getNPCByUUID(it)?.name } ?: "Unknown"
+                lore.add("&7Relatii: &f${interactions.size} (&7cea mai apropiata: &f$partnerName&7)")
+            }
+        }
         lore.add("&7Distanta: &f${String.format(Locale.ROOT, "%.1f", distance)}")
         if (hasShop) {
             lore.add("&a◆ Shop: $shopCount magazin(e) — Click pentru oferte")

@@ -1,6 +1,7 @@
 package ro.ainpc.ai.orchestration
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.ai.OllamaService
 import ro.ainpc.ai.OpenAIService
 import java.util.concurrent.CompletableFuture
 
@@ -29,7 +30,32 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         result.errorCode(), result.validationMessages()
     )
 
-    private val openAI: OpenAIService? get() = plugin?.openAIService
+    private val currentProvider: Any?
+        get() {
+            val p = plugin ?: return null
+            return when (p.config.getString("ai_provider", "openai")?.lowercase()) {
+                "ollama" -> p.ollamaService
+                else -> p.openAIService
+            }
+        }
+
+    private fun generateWithProvider(prompt: String): CompletableFuture<String?> {
+        val provider = currentProvider
+        return when (provider) {
+            is OllamaService -> CompletableFuture.completedFuture(provider.generateAsync(prompt))
+            is OpenAIService -> provider.generateAsync(prompt)
+            else -> CompletableFuture.completedFuture(null)
+        }
+    }
+
+    private fun isProviderAvailable(): Boolean {
+        val provider = currentProvider
+        return when (provider) {
+            is OllamaService -> provider.isAvailable
+            is OpenAIService -> provider.isAvailable
+            else -> false
+        }
+    }
 
     fun policyFor(useCase: AIUseCase?): AIOrchestrationPolicy = AIOrchestrationPolicy.forUseCase(useCase)
 
@@ -45,8 +71,7 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         if (isFreezeActive()) {
             return fallback(request, "ai_suggestion_freeze_active")
         }
-        val ai = openAI
-        if (ai == null || !ai.isAvailable) {
+        if (!isProviderAvailable()) {
             return fallback(request, "ai_provider_not_available")
         }
         val draftUseCases = listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)
@@ -65,7 +90,7 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         for (attempt in 1..maxRetries) {
             try {
                 val prompt = buildPrompt(request)
-                val response = CompletableFuture.supplyAsync { ai.generateAsync(prompt).get() }.get()
+                val response = generateWithProvider(prompt).get()
                 if (response.isNullOrBlank()) {
                     if (attempt < maxRetries) {
                         lastError = "ai_response_empty"

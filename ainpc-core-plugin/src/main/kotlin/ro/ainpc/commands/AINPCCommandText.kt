@@ -45,7 +45,6 @@ import java.util.HashSet
 import java.util.Locale
 import java.util.UUID
 import java.util.function.BiFunction
-import java.util.function.Function
 import kotlin.math.floor
 
 private val STORY_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -173,13 +172,13 @@ fun progressionAliasSelector(
     selector: String?,
     kind: String,
     progressionService: ProgressionService?,
-    onlinePlayerResolver: Function<String, Player?>
+    onlinePlayerResolver: (String) -> Player?
 ): String {
     if (selector.isNullOrBlank() ||
         selector.contains(":") ||
         selector.equals("nearest", ignoreCase = true) ||
         isTrackedQuestSelector(selector) ||
-        onlinePlayerResolver.apply(selector) != null
+        onlinePlayerResolver(selector) != null
     ) {
         return selector.orEmpty()
     }
@@ -189,22 +188,22 @@ fun progressionAliasSelector(
 
 fun shouldTreatQuestDecisionArgumentAsPlayer(
     argument: String?,
-    npcResolver: Function<String, AINPC?>,
-    onlinePlayerResolver: Function<String, Player?>
+    npcResolver: (String) -> AINPC?,
+    onlinePlayerResolver: (String) -> Player?
 ): Boolean {
     if (argument.isNullOrBlank() || argument.equals("nearest", ignoreCase = true)) {
         return false
     }
-    if (npcResolver.apply(argument) != null) {
+    if (npcResolver(argument) != null) {
         return false
     }
 
-    return onlinePlayerResolver.apply(argument) != null
+    return onlinePlayerResolver(argument) != null
 }
 
 fun shouldHandleAbandonAsQuestSelector(
     selector: String?,
-    npcResolver: Function<String, AINPC?>
+    npcResolver: (String) -> AINPC?
 ): Boolean {
     if (selector.isNullOrBlank() || selector.equals("nearest", ignoreCase = true)) {
         return false
@@ -212,12 +211,12 @@ fun shouldHandleAbandonAsQuestSelector(
     if (isTrackedQuestSelector(selector)) {
         return true
     }
-    return npcResolver.apply(selector) == null
+    return npcResolver(selector) == null
 }
 
 fun resolveProgressionStoredPlayerUuid(
     selector: String?,
-    onlinePlayerResolver: Function<String, Player?>
+    onlinePlayerResolver: (String) -> Player?
 ): String? {
     if (selector.isNullOrBlank() || selector.equals("all", ignoreCase = true)) {
         return ""
@@ -229,7 +228,7 @@ fun resolveProgressionStoredPlayerUuid(
         // Not a UUID; fall back to online player lookup.
     }
 
-    return onlinePlayerResolver.apply(selector)?.uniqueId?.toString()
+    return onlinePlayerResolver(selector)?.uniqueId?.toString()
 }
 
 fun pointFromPlayer(player: Player): MappingPoint {
@@ -251,6 +250,33 @@ fun compactUuid(uuid: String?): String {
 }
 
 fun safeAuditValue(value: String?): String = value?.trim() ?: ""
+
+fun defaultObjectiveTarget(objectiveType: String): String {
+    return when (objectiveType) {
+        "talk_to_npc", "deliver_to_npc" -> "npc:nearest"
+        "visit_place" -> "place:nearest"
+        "visit_region" -> "region:nearest"
+        "inspect_node" -> "node:nearest"
+        "collect_item" -> "item:IRON_INGOT"
+        "kill_mob" -> "mob:ZOMBIE"
+        "place_block" -> "block:OAK_PLANKS"
+        "break_block" -> "block:COBBLESTONE"
+        "craft_item" -> "item:TORCH"
+        else -> "tag:locatie"
+    }
+}
+
+fun parseStoryEventPayload(rawPayload: String, questId: String, eventKey: String): Map<String, String> {
+    val trimmed = rawPayload.trim()
+    if (trimmed.isBlank()) {
+        return if (eventKey.isBlank()) emptyMap() else mapOf("quest" to questId, "outcome" to eventKey)
+    }
+
+    val parsed = runCatching { JsonParser.parseString(trimmed).asJsonObject }.getOrNull() ?: return mapOf(
+        "_raw" to trimmed
+    )
+    return parsed.entrySet().associate { (key, value) -> key to value.toString().trim('"') }
+}
 
 fun normalizeAuditKey(value: String?): String =
     value?.trim()?.lowercase(Locale.getDefault())?.replace(' ', '_') ?: ""

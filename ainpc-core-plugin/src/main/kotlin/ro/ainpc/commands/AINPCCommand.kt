@@ -276,6 +276,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "economy" -> handleEconomy(sender, args)
             "build" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleBuild(sender, args)
             "building" -> handleBuilding(sender, args)
+            "relationship", "relationships", "relatii" -> handleRelationship(sender, args)
             "environment", "env", "time", "weather" -> handleEnvironment(sender, args)
             else -> {
                 sendHelp(sender)
@@ -754,11 +755,39 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "pay", "plateste", "trimite" -> handleEconomyPay(sender, args)
             "set", "seteaza" -> handleEconomySet(sender, args)
             "top", "clasament", "ranking" -> handleEconomyTop(sender, args)
+            "npc" -> handleNpcEconomy(sender, args)
             else -> {
-                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set> [args]")
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set|top|npc> [args]")
                 true
             }
         }
+    }
+
+    private fun handleNpcEconomy(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val npcArg = args.getOrNull(2)
+        if (npcArg == null) {
+            val count = plugin.npcEconomyService.getBalanceCount()
+            val totalValue = plugin.npcEconomyService.getTotalEconomyValue()
+            plugin.messageUtils.send(sender, "&6=== Economie NPC ===")
+            plugin.messageUtils.send(sender, "&7NPC cu balante: &f$count")
+            plugin.messageUtils.send(sender, "&7Valoare totala: &f$totalValue &7monede")
+            plugin.messageUtils.send(sender, "&7Utilizare: &f/ainpc economy npc <numeNPC>")
+            return true
+        }
+        val npc = plugin.npcManager.getNPCByName(npcArg) ?: run {
+            plugin.messageUtils.send(sender, "&cNPC negasit: $npcArg"); return true
+        }
+        val npcKey = "npc_${npc.uuid}"
+        val balance = plugin.npcEconomyService.getBalance(npcKey)
+        val salary = plugin.npcEconomyService.getSalary(npc.occupation)
+        plugin.messageUtils.send(sender, "&6=== Economie ${npc.name} ===")
+        plugin.messageUtils.send(sender, "&7Balanta: &f$balance &7monede")
+        plugin.messageUtils.send(sender, "&7Salariu: &f$salary &7monede/zi")
+        plugin.messageUtils.send(sender, "&7Ocupatie: &f${npc.occupation ?: "Nicio ocupatie"}")
+        return true
     }
 
     private fun handleEnvironment(sender: CommandSender, args: Array<String>): Boolean {
@@ -782,6 +811,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&eLumina: &f${env.lightLevel}/15")
         if (env.specialEvents.isNotEmpty()) {
             plugin.messageUtils.send(sender, "&eEvenimente: &f${env.specialEvents.joinToString(", ")}")
+        }
+        val seasonalActivity = plugin.seasonalBehaviorService.getSeasonalActivity(worldName)
+        if (seasonalActivity != null) {
+            plugin.messageUtils.send(sender, "&eActivitate sezoniera: &f${seasonalActivity.first} &7(${seasonalActivity.second.displayName})")
         }
         if (player != null) {
             val localEnv = plugin.environmentEngine.getContextForLocation(worldName, player.location.block.biome.name())
@@ -2449,6 +2482,43 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val mode = args[2].lowercase(Locale.ROOT)
         if (mode == "spawn" && isRuntimeReadOnly(plugin)) {
             plugin.messageUtils.send(sender, "&cMCP read_only este activ; world settlement spawn este blocat pana la iesirea din modul read-only.")
+            return true
+        }
+        if (mode == "auto") {
+            val regionId = args.getOrNull(3)
+            if (regionId == null) {
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc world settlement auto <regionId> [maxHouses]")
+                return true
+            }
+            val maxHouses = if (args.size >= 5) parseIntegerStrict(args[4]) ?: 0 else 0
+            var center = sender.takeIf { it is org.bukkit.entity.Player }?.let { (it as org.bukkit.entity.Player).location }
+            val region = plugin.platform.worldAdminService.getRegion(regionId)
+            if (region != null) {
+                center = org.bukkit.Location(
+                    plugin.server.getWorld(region.worldName()),
+                    (region.minX() + region.maxX()) / 2.0,
+                    (region.minY() + region.maxY()) / 2.0,
+                    (region.minZ() + region.maxZ()) / 2.0
+                )
+            }
+            if (center == null || center.world == null) {
+                plugin.messageUtils.send(sender, "&cNu pot determina centrul pentru scanare.")
+                return true
+            }
+            plugin.messageUtils.send(sender, "&7Scanare sat in jurul ${center.blockX},${center.blockY},${center.blockZ}...")
+            val result = plugin.autoSettlementGenerator.generate(center, requestedRegionId = regionId, maxHouses = maxHouses)
+            if (!result.success) {
+                plugin.messageUtils.send(sender, "&cGenerare automata esuata.")
+                for (err in result.allErrors) plugin.messageUtils.send(sender, "&c$err")
+                for (warn in result.allWarnings) plugin.messageUtils.send(sender, "&e$warn")
+                return true
+            }
+            plugin.messageUtils.send(sender, "&aSat generat automat: ${result.regionId}")
+            plugin.messageUtils.send(sender, "&7Place-uri create: ${result.createdPlaceIds.size}")
+            plugin.messageUtils.send(sender, "&7Noduri create: ${result.createdNodeIds.size}")
+            plugin.messageUtils.send(sender, "&7HouseAllocation-uri: ${result.allocations.size}")
+            for (warn in result.allWarnings) plugin.messageUtils.send(sender, "&e$warn")
+            plugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world settlement spawn ${result.regionId}${if (maxHouses > 0) " $maxHouses" else ""}&7 pentru a spawna NPC-urile.")
             return true
         }
         if (mode == "definitions") {
@@ -4618,5 +4688,49 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
 
         fun sections(): Map<String, List<String>> = _sections.mapValues { it.value.toList() }
+    }
+
+    // -- Relationship -------------------------------------------------
+    private fun handleRelationship(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission"); return true
+        }
+        val npcId = args.getOrNull(1)
+        if (npcId == null) {
+            val count = plugin.relationshipService.getRelationshipCount()
+            plugin.messageUtils.send(sender, "&6=== Relatii NPC-NPC ===")
+            plugin.messageUtils.send(sender, "&7Total relatii: &f$count")
+            plugin.messageUtils.send(sender, "&7Utilizare: &f/ainpc relationship <npcName|npcId>")
+            return true
+        }
+        val npcIdInt = npcId.toIntOrNull()
+        val npc = if (npcIdInt != null) {
+            plugin.npcManager.getNPCById(npcIdInt)
+        } else {
+            plugin.npcManager.getNPCByName(npcId)
+        }
+        if (npc == null) {
+            plugin.messageUtils.send(sender, "&cNPC negasit: $npcId"); return true
+        }
+        val npcUuid = npc.uuid ?: run {
+            plugin.messageUtils.send(sender, "&cNPC-ul nu are UUID"); return true
+        }
+        val interactions = plugin.relationshipService.getNPCInteractions(npcUuid)
+        if (interactions.isEmpty()) {
+            plugin.messageUtils.send(sender, "&7NPC-ul &f${npc.name}&7 nu are relatii cu alte NPC-uri.")
+            return true
+        }
+        plugin.messageUtils.send(sender, "&6=== Relatii pentru ${npc.name} ===")
+        for ((partnerUuid, rel) in interactions.take(20)) {
+            val partnerName = plugin.npcManager.getNPCByUUID(partnerUuid)?.name ?: "Unknown"
+            plugin.messageUtils.send(
+                sender,
+                "&7${partnerName}&8: &aA${rel.affection.toInt()} &bI${rel.familiarity.toInt()} &eR${rel.respect.toInt()} &dT${rel.trust.toInt()} &7(${rel.relationshipType ?: "stranger"}) &8x${rel.interactionCount}"
+            )
+        }
+        if (interactions.size > 20) {
+            plugin.messageUtils.send(sender, "&7... si inca ${interactions.size - 20} relatii.")
+        }
+        return true
     }
 }

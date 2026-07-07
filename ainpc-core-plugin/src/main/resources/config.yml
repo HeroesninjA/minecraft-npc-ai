@@ -2,6 +2,9 @@
 # AI NPC Plugin - Configurare
 # ========================================
 
+# Provider AI active: "openai" (default) sau "ollama"
+ai_provider: "openai"
+
 # Setari OpenAI
 openai:
   # Endpointul runtime folosit de pluginul AINPC.
@@ -37,6 +40,13 @@ openai:
     log_prompt_summary: true
     # Logheaza un preview din raspunsul returnat de model.
     log_response_preview: true
+
+# Setari Ollama (folosita cand ai_provider = "ollama")
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  model: "llama3"
+  temperature: 0.7
+  max_tokens: 150
 
 # Orchestrare AI peste mecanici. Dezactivat implicit pana cand validatorii si routerele sunt mature.
 ai:
@@ -81,6 +91,11 @@ mcp:
   snapshot:
     auto: true
     interval_ticks: 100
+  # Tool-uri MCP de scriere (prin command queue)
+  write_tools_enabled: false
+  # Calea catre directorul de comenzi MCP (relativ la server root)
+  command:
+    path: "data/mcp-commands"
 
 # Setari spawn si jurnalizare batch
 spawn:
@@ -149,6 +164,12 @@ npc:
   max_memories_per_player: 50
   # Durata pana cand NPC-ul "uita" o amintire minora (zile)
   memory_decay_days: 30
+  # Durata specifica pe tip de memorie (zile). Suprascrie memory_decay_days.
+  # memory_decay_types:
+  #   greeting: 1
+  #   trade: 7
+  #   combat: 30
+  #   quest: 90
 
 # Simulare de viata
 simulation:
@@ -188,6 +209,8 @@ routine:
   move_cooldown_seconds: 300
   # Daca NPC-ul ajunge foarte departe de ancora, rutina il poate corecta chiar daca e in cooldown.
   force_teleport_distance: 96.0
+  # Foloseste RoutineCoordinator (recomandat) in loc de SocialCoordinator direct
+  coordinator_only: true
 
 # Quest-urile fallback si preconfigurarile implicite sunt in quests.yml.
 # Mapping-ul world_admin poate fi suprascris optional din world-admin.json/yml.
@@ -212,6 +235,15 @@ emotions:
   decay_minutes: 60
   # Afiseaza particulele emotionale
   show_particles: true
+
+# Comportament sezonier NPC
+seasonal:
+  # NPC-urile au activitati diferite in functie de anotimp
+  behavior_enabled: true
+
+# Reactii NPC la evenimente story
+story:
+  npc_reactions_enabled: true
 
 # Setari dialog
 dialog:
@@ -284,6 +316,15 @@ database:
       connection_timeout_ms: 30000
       idle_timeout_ms: 600000
       max_lifetime_ms: 1800000
+
+# Economie NPC (salarii, conturi bancare)
+economy:
+  npc_salaries_enabled: false
+  salary_interval_seconds: 600
+  # npc_salary_overrides:
+  #   farmer: 8
+  #   blacksmith: 12
+  #   librarian: 6
 
 # World Admin
 world_admin:

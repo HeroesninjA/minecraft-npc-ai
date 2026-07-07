@@ -42,6 +42,7 @@ fun handleStory(sender: CommandSender, args: Array<String>): Boolean {
         "region" -> handleStoryRegion(sender, args)
         "place" -> handleStoryPlace(sender, args)
         "events" -> handleStoryEvents(sender, args)
+        "author", "create", "record" -> handleStoryAuthor(sender, args)
         else -> {
             sendStoryUsage(sender)
             true
@@ -72,7 +73,7 @@ fun handleStoryRegion(sender: CommandSender, args: Array<String>): Boolean {
 
     val regionId = mappedRegion?.id() ?: args[2]
     try {
-        val state = ainpcCommandStoryPlugin.storyStateService.getRegionState(regionId).orElse(null)
+        val state = ainpcCommandStoryPlugin.storyStateService.getRegionState(regionId)
         val events = ainpcCommandStoryPlugin.storyStateService.listRecentEvents(regionId, "", 5)
 
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Region ===")
@@ -121,7 +122,7 @@ fun handleStoryPlace(sender: CommandSender, args: Array<String>): Boolean {
     val placeId = mappedPlace?.id() ?: args[2]
     val regionId = mappedPlace?.regionId() ?: inferRegionIdFromPlaceId(placeId)
     try {
-        val state = ainpcCommandStoryPlugin.storyStateService.getPlaceState(placeId).orElse(null)
+        val state = ainpcCommandStoryPlugin.storyStateService.getPlaceState(placeId)
         val events = ainpcCommandStoryPlugin.storyStateService.listRecentEvents(regionId, placeId, 5)
 
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Place ===")
@@ -380,4 +381,73 @@ private fun sendPlaceStoryState(sender: CommandSender, state: PlaceStoryState) {
     ainpcCommandStoryPlugin.messageUtils.send(sender, "&eRegion: &f${formatOptional(state.regionId())}")
     ainpcCommandStoryPlugin.messageUtils.send(sender, "&eVariables: &f${formatMap(state.variables())}")
     ainpcCommandStoryPlugin.messageUtils.send(sender, "&eUpdated: &f${formatStoryTime(state.updatedAt())} &7by &f${formatOptional(state.updatedBy())} &7source=&f${formatOptional(state.source())}")
+}
+
+fun handleStoryAuthor(sender: CommandSender, args: Array<String>): Boolean {
+    val authoring = ainpcCommandStoryPlugin.storyAuthoringService
+    if (args.size < 3) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc story author <regionId|placeId> [eventType|templateId] [title] [description]")
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Tipuri: &f${authoring.getAvailableEventTypes().joinToString(", ")}")
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Template-uri: &f${authoring.getTemplates().joinToString(", ") { it.id }}")
+        return true
+    }
+    val scopeId = args[2]
+
+    if (args.size < 4) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&6Template-uri disponibile:")
+        for (tpl in authoring.getTemplates()) {
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&e${tpl.id} &7- &f${tpl.name}")
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  ${tpl.description}")
+        }
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Sau tipuri directe: &f${authoring.getAvailableEventTypes().joinToString(", ")}")
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Utilizare: /ainpc story author <scope> <eventType|templateId> [title] [desc]")
+        return true
+    }
+
+    val eventOrTemplate = args[3]
+
+    val templates = authoring.getTemplates()
+    val template = templates.find { it.id == eventOrTemplate }
+    if (template != null) {
+        val overrides = mutableMapOf<String, String>()
+        args.getOrNull(4)?.let { overrides["title"] = it }
+        args.drop(5).joinToString(" ").takeIf { it.isNotBlank() }?.let { overrides["description"] = it }
+        if (authoring.applyTemplate(template.id, scopeId, overrides)) {
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&aTemplate story aplicat: &f${template.name} &7pentru &f$scopeId")
+        } else {
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut aplica template-ul story.")
+        }
+        return true
+    }
+
+    if (eventOrTemplate !in authoring.getAvailableEventTypes()) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cTip/Template invalid: $eventOrTemplate")
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Tipuri: &f${authoring.getAvailableEventTypes().joinToString(", ")}")
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Template-uri: &f${templates.joinToString(", ") { it.id }}")
+        return true
+    }
+
+    val scopeType = if (ainpcCommandStoryPlugin.platform.worldAdmin.getRegion(scopeId) != null) "region" else "place"
+    val title = args.getOrNull(4) ?: "Eveniment ${eventOrTemplate}"
+    val description = args.drop(5).joinToString(" ").ifBlank { title }
+
+    val draft = ro.ainpc.story.StoryAuthoringService.StoryEventDraft(
+        scopeType = scopeType,
+        scopeId = scopeId,
+        regionId = if (scopeType == "region") scopeId else "",
+        placeId = if (scopeType == "place") scopeId else "",
+        eventType = eventOrTemplate,
+        eventKey = "manual_${System.currentTimeMillis()}",
+        title = title,
+        description = description,
+        actorType = "player",
+        actorId = sender.name
+    )
+
+    if (authoring.recordEvent(draft)) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&aEveniment story creat: &f$eventOrTemplate &7pentru &f$scopeId")
+    } else {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut crea evenimentul story.")
+    }
+    return true
 }

@@ -1,6 +1,5 @@
 package ro.ainpc.gui.screens
 
-import com.google.gson.JsonParser
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -13,6 +12,8 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.commands.defaultObjectiveTarget
+import ro.ainpc.commands.parseStoryEventPayload
 import java.nio.file.Files
 
 class QuestCreateGui : GuiScreen {
@@ -1039,10 +1040,6 @@ class QuestCreateGui : GuiScreen {
         }
     }
 
-    private fun defaultObjectiveTarget(objectiveType: String): String {
-        return targetOptionsFor(objectiveType).firstOrNull()?.ifBlank { "tag:locatie" } ?: "tag:locatie"
-    }
-
     private fun shouldResetObjectiveTarget(previousType: String, previousTarget: String): Boolean {
         if (previousTarget.isBlank()) return true
         val previousDefaults = targetOptionsFor(previousType)
@@ -1308,15 +1305,4 @@ class QuestCreateGui : GuiScreen {
         return text.take(limit - 2) + ".."
     }
 
-    private fun parseStoryEventPayload(rawPayload: String, questId: String, eventKey: String): Map<String, String> {
-        val trimmed = rawPayload.trim()
-        if (trimmed.isBlank()) {
-            return if (eventKey.isBlank()) emptyMap() else mapOf("quest" to questId, "outcome" to eventKey)
-        }
-
-        val parsed = runCatching { JsonParser.parseString(trimmed).asJsonObject }.getOrNull() ?: return mapOf(
-            "_raw" to trimmed
-        )
-        return parsed.entrySet().associate { (key, value) -> key to value.toString().trim('"') }
-    }
 }
