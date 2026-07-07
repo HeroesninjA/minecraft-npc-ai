@@ -27,7 +27,11 @@ data class FeatureSnapshot(
 data class NpcSnapshot(
     val totalCount: Int,
     val byRegion: Map<String, Int>,
-    val samples: List<NpcSample>
+    val samples: List<NpcSample>,
+    val relationshipCount: Int = 0,
+    val economyNpcCount: Int = 0,
+    val economyTotalValue: Int = 0,
+    val socialGatherings: Int = 0
 )
 
 data class NpcSample(
@@ -49,7 +53,9 @@ data class WorldSnapshot(
 data class QuestSnapshot(
     val activePlayerQuests: Int,
     val activeGlobalQuests: Int,
-    val samples: List<QuestSample>
+    val samples: List<QuestSample>,
+    val storyEventCount: Int = 0,
+    val recentStoryEvents: List<String> = emptyList()
 )
 
 data class BuildModeSnapshot(

@@ -89,7 +89,7 @@ class StoryStateServiceTest {
         )
 
         assertEquals("regional_unrest", state.stateKey())
-        assertEquals("high", service.getRegionState("demo_sat").orElseThrow().variables()["tension"])
+        assertEquals("high", service.getRegionState("demo_sat")!!.variables()["tension"])
 
         val events = service.listRecentEvents("demo_sat", "", 10)
         assertEquals(1, events.size)

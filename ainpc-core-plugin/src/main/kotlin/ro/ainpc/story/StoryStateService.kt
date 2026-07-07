@@ -18,7 +18,7 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
 import java.util.LinkedHashMap
-import java.util.Optional
+
 import java.util.UUID
 import java.util.logging.Logger
 
@@ -42,9 +42,9 @@ class StoryStateService {
     }
 
     @Throws(SQLException::class)
-    fun getRegionState(regionId: String?): Optional<RegionStoryState> {
+    fun getRegionState(regionId: String?): RegionStoryState? {
         if (regionId.isNullOrBlank()) {
-            return Optional.empty()
+            return null
         }
 
         val sql = """
@@ -57,7 +57,7 @@ class StoryStateService {
         requireDatabase().prepareStatement(sql).use { statement ->
             statement.setString(1, regionId)
             statement.executeQuery().use { resultSet ->
-                return if (resultSet.next()) Optional.of(readRegionState(resultSet)) else Optional.empty()
+                return if (resultSet.next()) readRegionState(resultSet) else null
             }
         }
     }
@@ -73,7 +73,7 @@ class StoryStateService {
         source: String?
     ): RegionStoryState {
         val normalizedRegionId = requireId(regionId, "regionId")
-        val previousState = runCatching { getRegionState(normalizedRegionId).orElse(null) }.getOrNull()
+        val previousState = runCatching { getRegionState(normalizedRegionId) }.getOrNull()
         val now = now()
         val sql = """
             INSERT INTO region_story_state (
@@ -138,9 +138,9 @@ class StoryStateService {
     }
 
     @Throws(SQLException::class)
-    fun getPlaceState(placeId: String?): Optional<PlaceStoryState> {
+    fun getPlaceState(placeId: String?): PlaceStoryState? {
         if (placeId.isNullOrBlank()) {
-            return Optional.empty()
+            return null
         }
 
         val sql = """
@@ -153,7 +153,7 @@ class StoryStateService {
         requireDatabase().prepareStatement(sql).use { statement ->
             statement.setString(1, placeId)
             statement.executeQuery().use { resultSet ->
-                return if (resultSet.next()) Optional.of(readPlaceState(resultSet)) else Optional.empty()
+                return if (resultSet.next()) readPlaceState(resultSet) else null
             }
         }
     }
@@ -168,7 +168,7 @@ class StoryStateService {
         source: String?
     ): PlaceStoryState {
         val normalizedPlaceId = requireId(placeId, "placeId")
-        val previousState = runCatching { getPlaceState(normalizedPlaceId).orElse(null) }.getOrNull()
+        val previousState = runCatching { getPlaceState(normalizedPlaceId) }.getOrNull()
         val now = now()
         val sql = """
             INSERT INTO place_story_state (

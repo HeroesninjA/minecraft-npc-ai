@@ -25,6 +25,12 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         createMemory(npc, player.uniqueId, player.name, memoryType, content, emotionalImpact, importance)
     }
 
+    fun decayDaysForType(memoryType: String): Int {
+        val defaultDecay = plugin.config.getInt("npc.memory_decay_days", 30)
+        val typeKey = "npc.memory_decay_types.$memoryType"
+        return plugin.config.getInt(typeKey, defaultDecay)
+    }
+
     fun createMemory(
         npc: AINPC,
         playerUuid: UUID,
@@ -34,8 +40,8 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         emotionalImpact: Double,
         importance: Int
     ) {
-        val decayDays = plugin.config.getInt("npc.memory_decay_days", 30)
-        val expirationDays = maxOf(0, decayDays * importance)
+        val baseDecay = decayDaysForType(memoryType)
+        val expirationDays = maxOf(0, baseDecay * importance)
 
         val sql = """
             INSERT INTO npc_memories 

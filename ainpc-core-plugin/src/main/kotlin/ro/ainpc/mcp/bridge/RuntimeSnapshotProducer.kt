@@ -113,7 +113,11 @@ class RuntimeSnapshotProducer(
             npc = NpcSnapshot(
                 totalCount = plugin.npcManager.getNPCCount(),
                 byRegion = npcByRegion,
-                samples = npcSamples
+                samples = npcSamples,
+                relationshipCount = plugin.relationshipService.getRelationshipCount(),
+                economyNpcCount = plugin.npcEconomyService.getBalanceCount(),
+                economyTotalValue = plugin.npcEconomyService.getTotalEconomyValue(),
+                socialGatherings = plugin.routineCoordinator.getActiveGatherings().size
             ),
             world = WorldSnapshot(
                 regionCount = worldAdmin.regionCount,
@@ -125,7 +129,23 @@ class RuntimeSnapshotProducer(
             quests = QuestSnapshot(
                 activePlayerQuests = storedProgressions.count { it.playerUuid().isNotEmpty() },
                 activeGlobalQuests = storedProgressions.count { it.playerUuid().isEmpty() },
-                samples = questSamples
+                samples = questSamples,
+                storyEventCount = runCatching {
+                    val sql = "SELECT COUNT(*) as cnt FROM story_events"
+                    plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                        stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt("cnt") else 0 }
+                    }
+                }.getOrDefault(0),
+                recentStoryEvents = runCatching {
+                    val sql = "SELECT event_type, title FROM story_events ORDER BY created_at DESC LIMIT 5"
+                    plugin.databaseManager.prepareStatement(sql).use { stmt ->
+                        stmt.executeQuery().use { rs ->
+                            val events = mutableListOf<String>()
+                            while (rs.next()) events.add("${rs.getString("event_type")}: ${rs.getString("title") ?: ""}")
+                            events
+                        }
+                    }
+                }.getOrDefault(emptyList())
             ),
             buildMode = BuildModeSnapshot(
                 activePlayers = buildModePlayers.size,

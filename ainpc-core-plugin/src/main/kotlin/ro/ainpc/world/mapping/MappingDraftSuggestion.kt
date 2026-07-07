@@ -1,6 +1,6 @@
 package ro.ainpc.world.mapping
 
-import java.util.Collections
+
 
 class MappingDraftSuggestion(
     localId: String?,
@@ -14,10 +14,10 @@ class MappingDraftSuggestion(
     private val localIdValue = if (localId.isNullOrBlank()) "mapping_draft" else localId.trim()
     private val displayNameValue = if (displayName.isNullOrBlank()) localIdValue else displayName.trim()
     private val typeIdValue = if (typeId.isNullOrBlank()) "custom" else typeId.trim()
-    private val tagsValue = Collections.unmodifiableList(ArrayList(tags ?: emptyList()))
-    private val metadataValue = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
+    private val tagsValue = (tags ?: emptyList()).toList()
+    private val metadataValue = (metadata ?: emptyMap()).toMap()
     private val radiusValue = if (radius <= 0.0) 2.5 else radius
-    private val warningsValue = Collections.unmodifiableList(ArrayList(warnings ?: emptyList()))
+    private val warningsValue = (warnings ?: emptyList()).toList()
 
     fun localId(): String = localIdValue
 

@@ -3,7 +3,6 @@
 
 package ro.ainpc.commands
 
-import com.google.gson.JsonParser
 import org.bukkit.Location
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -383,33 +382,6 @@ private fun buildQuestDraftPreviewContext(player: Player): QuestDraftPreviewCont
         missing = missing,
         json = exporter.exportDraft(params)
     )
-}
-
-private fun defaultObjectiveTarget(objectiveType: String): String {
-    return when (objectiveType) {
-        "talk_to_npc", "deliver_to_npc" -> "npc:nearest"
-        "visit_place" -> "place:nearest"
-        "visit_region" -> "region:nearest"
-        "inspect_node" -> "node:nearest"
-        "collect_item" -> "item:IRON_INGOT"
-        "kill_mob" -> "mob:ZOMBIE"
-        "place_block" -> "block:OAK_PLANKS"
-        "break_block" -> "block:COBBLESTONE"
-        "craft_item" -> "item:TORCH"
-        else -> "tag:locatie"
-    }
-}
-
-private fun parseStoryEventPayload(rawPayload: String, questId: String, eventKey: String): Map<String, String> {
-    val trimmed = rawPayload.trim()
-    if (trimmed.isBlank()) {
-        return if (eventKey.isBlank()) emptyMap() else mapOf("quest" to questId, "outcome" to eventKey)
-    }
-
-    val parsed = runCatching { JsonParser.parseString(trimmed).asJsonObject }.getOrNull() ?: return mapOf(
-        "_raw" to trimmed
-    )
-    return parsed.entrySet().associate { (key, value) -> key to value.toString().trim('"') }
 }
 
 private data class QuestDraftPreviewContext(
@@ -1451,8 +1423,8 @@ fun resolveQuestDecisionTarget(
     var playerArgIndex = if (args.size > 2) 3 else -1
     if (args.size == 3 && shouldTreatQuestDecisionArgumentAsPlayer(
             args[2],
-            java.util.function.Function { ainpcCommandQuestPlugin.npcManager.getNPCByName(it) },
-            java.util.function.Function { ainpcCommandQuestPlugin.server.getPlayerExact(it) ?: ainpcCommandQuestPlugin.server.getPlayer(it) },
+            { ainpcCommandQuestPlugin.npcManager.getNPCByName(it) },
+            { ainpcCommandQuestPlugin.server.getPlayerExact(it) ?: ainpcCommandQuestPlugin.server.getPlayer(it) },
         )) {
         npcSelector = ""
         playerArgIndex = 2

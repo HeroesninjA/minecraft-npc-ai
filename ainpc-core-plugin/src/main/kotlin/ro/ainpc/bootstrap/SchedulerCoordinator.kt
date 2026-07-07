@@ -19,6 +19,10 @@ class SchedulerCoordinator(
         scheduleMemoryCleanup()
         scheduleNpcStatePersistence()
         scheduleSocialCoordination()
+        scheduleRelationshipDecay()
+        scheduleNpcSalaryPayment()
+        schedulePackFileWatcher()
+        scheduleMcpCommandQueue()
         scheduleVillageRebalance()
         scheduleQuestTracking()
     }
@@ -78,14 +82,14 @@ class SchedulerCoordinator(
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
                 Runnable {
-                    val summary = plugin.routineService.runRoutineTick()
+                    val summary = plugin.routineCoordinator.tick()
                     if (plugin.config.getBoolean("debug.enabled", false)) {
                         plugin.logger.info(
                             "[Debug] Routine tick: evaluated=" + summary.evaluatedNpcs() +
                                 ", moved=" + summary.movedNpcs() +
                                 ", busy=" + summary.skippedBusy() +
                                 ", missingTarget=" + summary.skippedMissingTarget() +
-                                ", invalidTarget=" + summary.skippedInvalidTarget()
+                                ", invalidTarget" + summary.skippedInvalidTarget()
                         )
                     }
                 },
@@ -134,11 +138,56 @@ class SchedulerCoordinator(
         if (featureEnabled("features.routine", false) && plugin.config.getBoolean("routine.enabled", false)) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
-                Runnable { plugin.socialCoordinator.tick() },
+                Runnable {
+                    if (!plugin.config.getBoolean("routine.coordinator_only", true)) {
+                        plugin.socialCoordinator.tick()
+                    }
+                },
                 20L * 30,
                 20L * 120
             ))
         }
+    }
+
+    private fun schedulePackFileWatcher() {
+        if (!plugin.config.getBoolean("feature_packs.hot_reload", false)) return
+        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+            plugin,
+            Runnable { plugin.packFileWatcher.tick() },
+            20L * 15,
+            20L * 10
+        ))
+    }
+
+    private fun scheduleNpcSalaryPayment() {
+        if (!plugin.config.getBoolean("economy.npc_salaries_enabled", false)) return
+        val intervalSeconds = maxOf(120, plugin.config.getInt("economy.salary_interval_seconds", 600))
+        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+            plugin,
+            Runnable { plugin.npcEconomyService.paySalaries() },
+            20L * intervalSeconds,
+            20L * intervalSeconds
+        ))
+    }
+
+    private fun scheduleMcpCommandQueue() {
+        if (!plugin.config.getBoolean("mcp.write_tools_enabled", false)) return
+        tasks.add(plugin.server.scheduler.runTaskTimer(
+            plugin,
+            Runnable { plugin.mcpCommandQueue.tick() },
+            20L * 10,
+            20L * 5
+        ))
+    }
+
+    private fun scheduleRelationshipDecay() {
+        val decaySeconds = maxOf(60, plugin.config.getInt("relationship.decay_interval_seconds", 300))
+        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+            plugin,
+            Runnable { plugin.relationshipService.applyDecay() },
+            20L * decaySeconds,
+            20L * decaySeconds
+        ))
     }
 
     private fun scheduleVillageRebalance() {

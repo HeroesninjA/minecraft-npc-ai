@@ -615,6 +615,47 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                 """
             )
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_player_progression_level ON player_progression(level, total_xp DESC)")
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS npc_npc_relationships (
+                    id ${autoIncrementPrimaryKey()},
+                    npc_a_uuid ${shortText()} NOT NULL,
+                    npc_b_uuid ${shortText()} NOT NULL,
+                    affection REAL DEFAULT 0.0,
+                    trust REAL DEFAULT 0.0,
+                    respect REAL DEFAULT 0.0,
+                    familiarity REAL DEFAULT 0.0,
+                    interaction_count INTEGER DEFAULT 0,
+                    relationship_type TEXT DEFAULT 'stranger',
+                    last_interaction INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL DEFAULT 0,
+                    updated_at INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(npc_a_uuid, npc_b_uuid)
+                )
+                """
+            )
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_npc_relationships_a ON npc_npc_relationships(npc_a_uuid)")
+            executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_npc_relationships_b ON npc_npc_relationships(npc_b_uuid)")
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS npc_economy (
+                    npc_key ${shortText(256)} NOT NULL PRIMARY KEY,
+                    balance INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL DEFAULT 0,
+                    updated_at INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS economy_balances (
+                    player_uuid ${shortText()} NOT NULL PRIMARY KEY,
+                    balance INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL DEFAULT 0,
+                    updated_at INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
             stmt.executeUpdate(
                 """
                 INSERT OR IGNORE INTO npc_personality (npc_id)

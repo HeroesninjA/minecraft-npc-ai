@@ -35,6 +35,8 @@ data class ContextSnapshot(
     val localEconomySummary: String = "",
     val settlementSafety: String = "",
     val settlementComfort: String = "",
+    val npcRelationships: List<String> = emptyList(),
+    val npcEconomyBalance: Int = 0,
     val warnings: List<String> = emptyList()
 ) {
     fun isEmpty(): Boolean = playerName.isBlank()
@@ -70,6 +72,13 @@ data class ContextSnapshot(
         if (settlementComfort.isNotBlank()) {
             appendLine("Settlement comfort: $settlementComfort")
         }
+        if (npcRelationships.isNotEmpty()) {
+            appendLine("NPC relationships:")
+            for (rel in npcRelationships.take(3)) appendLine("  - $rel")
+        }
+        if (npcEconomyBalance > 0) {
+            appendLine("NPC economy: $npcEconomyBalance coins saved")
+        }
         if (warnings.isNotEmpty()) {
             appendLine("Warnings:")
             for (w in warnings) appendLine("  - $w")
@@ -102,6 +111,21 @@ data class ContextSnapshot(
                         .map { "${it.eventType()}: ${it.title()}" }
                 }.getOrDefault(emptyList())
             } else emptyList()
+
+            val npcRelInfo = if (npc != null && npc.uuid != null) {
+                runCatching {
+                    plugin.relationshipService.getNPCInteractions(npc.uuid)
+                        .take(3)
+                        .map { (partnerUuid, rel) ->
+                            val partnerName = plugin.npcManager.getNPCByUUID(partnerUuid)?.name ?: "Unknown"
+                            "$partnerName (affection=${rel.affection.toInt()}, ${rel.relationshipType ?: "stranger"})"
+                        }
+                }.getOrDefault(emptyList())
+            } else emptyList()
+
+            val npcBalance = if (npc != null && npc.uuid != null) {
+                plugin.npcEconomyService.getBalance("npc_${npc.uuid}")
+            } else 0
 
             val activeQuests = if (player != null) {
                 runCatching {
@@ -159,6 +183,8 @@ data class ContextSnapshot(
                 localEconomySummary = "${plugin.shopService.shopCount()} NPC shops",
                 settlementSafety = if (region != null) "region_type=${region.typeId()}" else "",
                 settlementComfort = if (place != null) "place_type=${place.placeType().id}" else "",
+                npcRelationships = npcRelInfo,
+                npcEconomyBalance = npcBalance,
                 warnings = if (!worldAdmin.isEnabled) listOf("World admin dezactivat.") else emptyList()
             )
         }

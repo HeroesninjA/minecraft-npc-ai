@@ -4,6 +4,8 @@ mcp:
     cache-ttl-seconds: 2
     stale-threshold-seconds: 60
     blocklist-fields: ""
+  command:
+    path: data/mcp-commands
   audit:
     path: data/mcp-write-audit.json
     max-entries: 1000

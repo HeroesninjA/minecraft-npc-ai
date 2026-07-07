@@ -44,6 +44,10 @@ $testPackages = @{
     "listener"    = "ro.ainpc.listeners.*"
     "economy"     = "ro.ainpc.economy.*"
     "ai"          = "ro.ainpc.ai.*"
+    "routine"     = "ro.ainpc.routine.*"
+    "topology"    = "ro.ainpc.topology.*"
+    "utils"       = "ro.ainpc.utils.*"
+    "database"    = "ro.ainpc.database.*"
 }
 
 if ($List) {

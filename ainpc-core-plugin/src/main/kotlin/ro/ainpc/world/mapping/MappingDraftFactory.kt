@@ -13,7 +13,7 @@ import ro.ainpc.world.WorldRegionInfo
 import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.UUID
-import java.util.function.Predicate
+
 
 class MappingDraftFactory {
     fun createDraft(
@@ -432,13 +432,13 @@ class MappingDraftFactory {
         }
     }
 
-    private fun uniqueId(baseId: String, available: Predicate<String>): String {
+    private fun uniqueId(baseId: String, available: (String) -> Boolean): String {
         val safeBase = MappingIntentParser.slugOrFallback(baseId, "mapping_draft")
-        if (available.test(safeBase)) {
+        if (available(safeBase)) {
             return safeBase
         }
         var index = 2
-        while (!available.test("${safeBase}_$index")) {
+        while (!available("${safeBase}_$index")) {
             index++
         }
         return "${safeBase}_$index"

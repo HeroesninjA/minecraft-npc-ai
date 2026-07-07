@@ -33,6 +33,8 @@ class QuestAnchorBindingService(private val plugin: AINPCPlugin) {
                     )
                 }
             }
+        }.onFailure { error ->
+            plugin.logger.warning("Failed to resolve quest anchor bindings: ${error.message}")
         }
 
         val worldAdmin = plugin.platform.worldAdminService

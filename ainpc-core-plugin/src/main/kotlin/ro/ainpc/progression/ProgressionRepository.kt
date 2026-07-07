@@ -5,11 +5,11 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.Locale
 import java.util.Objects
-import java.util.function.Supplier
+
 
 class ProgressionRepository(
     private val statementProvider: StatementProvider?,
-    private val definitionsSupplier: Supplier<List<ProgressionDefinition>>?
+    private val definitionsSupplier: (() -> List<ProgressionDefinition>)?
 ) {
     fun interface StatementProvider {
         @Throws(SQLException::class)
@@ -498,7 +498,7 @@ class ProgressionRepository(
         if (definitionsSupplier == null) {
             return listOf()
         }
-        val definitions = definitionsSupplier.get()
+        val definitions = definitionsSupplier()
         return definitions.toList()
     }
 

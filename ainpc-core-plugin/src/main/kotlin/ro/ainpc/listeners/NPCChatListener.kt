@@ -22,6 +22,7 @@ import ro.ainpc.api.events.dialog.DialogSessionEndedEvent
 import ro.ainpc.api.events.dialog.DialogSessionEndedEventPayload
 import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
 import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
+import ro.ainpc.commands.defaultObjectiveTarget
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.npc.AINPC
@@ -337,10 +338,6 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         if (previousTarget.isBlank()) return true
         val previousDefaults = objectiveTargetOptions(previousType)
         return previousTarget == defaultObjectiveTarget(previousType) || previousTarget in previousDefaults
-    }
-
-    private fun defaultObjectiveTarget(objectiveType: String): String {
-        return objectiveTargetOptions(objectiveType).firstOrNull()?.ifBlank { "tag:locatie" } ?: "tag:locatie"
     }
 
     private fun objectiveTargetOptions(objectiveType: String): List<String> {
