@@ -382,7 +382,7 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Backfill controlat din npc_world_bindings catre household-uri persistente")
     msg.send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]")
     msg.send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date")
-    msg.send(sender, "&e/ainpc debugdump [all|npc|world|quest|story|mapping|routing|openai|runtime] [summary]")
+    msg.send(sender, "&e/ainpc debugdump [all|npc|world|quest|questconfig|story|mapping|routing|openai|runtime] [summary]")
     msg.send(sender, "&7  Genereaza un jurnal avansat read-only pentru debugging")
     msg.send(sender, "&e/ainpc family <nume>")
     msg.send(sender, "&7  Afiseaza familia unui NPC")

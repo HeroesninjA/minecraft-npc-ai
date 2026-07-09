@@ -2,7 +2,10 @@
 
 package ro.ainpc.commands
 
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import org.bukkit.Bukkit
@@ -21,6 +24,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.debug.DebugDumpService
 import ro.ainpc.debug.DebugDumpMappingText
+import ro.ainpc.debug.DebugDumpIO
+import ro.ainpc.debug.DebugDumpQuestConfigJson
+import ro.ainpc.debug.DebugDumpQuestDefinitionJson
 import ro.ainpc.debug.DebugDumpRoutingText
 import ro.ainpc.debug.DebugDumpWorldAdminJson
 import ro.ainpc.debug.DebugDumpStoryText
@@ -1588,6 +1594,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (args.size >= 3 && args[1].equals("create", ignoreCase = true) && args[2].equals("ai", ignoreCase = true)) {
             return handleProgressionCreateAi(sender, args)
         }
+        if (args.size >= 3 && args[1].equals("save", ignoreCase = true)) {
+            return handleProgressionSave(sender, args)
+        }
         return handleProgression(sender, args, this::handleQuest, this::findOnlinePlayer)
     }
 
@@ -2894,6 +2903,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "npc_bound", "npc_bounds", "npcbound", "npcbnd" -> handleDebugDumpNpcBound(sender, args)
             "mapping" -> handleDebugDumpMapping(sender, args)
             "routing" -> handleDebugDumpRouting(sender, args)
+            "quest", "quests" -> handleDebugDumpQuest(sender, args)
+            "questconfig", "quest_config", "questcfg" -> handleDebugDumpQuestConfig(sender)
             "story" -> handleDebugDumpStory(sender, args)
             "authoring" -> handleDebugDumpAuthoring(sender, args)
             "ai", "openai" -> handleDebugDumpAi(sender, args)
@@ -2917,6 +2928,8 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&e/ainpc debugdump npcbound &7- List NPC-world bindings")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump mapping &7- Dump full mapping")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump routing [summary] &7- Dump semantic routing summary")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump quest [summary] &7- Dump quest semantic context")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump questconfig [summary] &7- Dump quest config snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump story [summary] &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
@@ -3262,6 +3275,140 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             }
         }.onFailure {
             plugin.messageUtils.send(sender, "&cNu am putut citi ancorele: ${it.message}")
+        }
+        return true
+    }
+
+    private fun handleProgressionSave(sender: CommandSender, args: Array<String>): Boolean {
+        if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+            plugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc progression save <selector>")
+            return true
+        }
+
+        val selector = args[2].trim()
+        val definition = plugin.progressionService.findDefinitionBySelector(selector)
+        if (definition == null) {
+            plugin.messageUtils.send(sender, "&cNu am gasit nicio definitie pentru selectorul &f$selector&c.")
+            return true
+        }
+
+        val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+        val snapshot = JsonObject()
+        snapshot.addProperty("source", "progression save command")
+        snapshot.addProperty("selector", selector)
+        snapshot.addProperty("saved_at", java.time.LocalDateTime.now().toString())
+        snapshot.addProperty("progression_id", definition.progressionId())
+        snapshot.addProperty("pack_id", definition.packId())
+        snapshot.addProperty("mechanic_id", definition.mechanicId())
+        snapshot.addProperty("kind", definition.kind())
+        snapshot.addProperty("definition_id", definition.definitionId())
+        snapshot.addProperty("template_id", definition.templateId())
+        snapshot.addProperty("code", definition.code())
+        snapshot.addProperty("display_name", definition.displayName())
+        snapshot.addProperty("description", definition.description())
+        snapshot.addProperty("category", definition.category())
+        snapshot.addProperty("scenario_kind", definition.scenarioKind())
+        snapshot.addProperty("base_type", definition.baseType())
+        snapshot.addProperty("label", definition.label())
+        snapshot.addProperty("singular_label", definition.singularLabel())
+        snapshot.addProperty("plural_label", definition.pluralLabel())
+        snapshot.addProperty("max_active", definition.maxActive())
+        snapshot.addProperty("objective_count", definition.objectiveCount())
+        snapshot.addProperty("stage_count", definition.stageCount())
+        snapshot.addProperty("reward_count", definition.rewardCount())
+        snapshot.addProperty("repeatable", definition.repeatable())
+        snapshot.addProperty("enabled", definition.enabled())
+        snapshot.add("quest_context", DebugDumpQuestDefinitionJson.buildLoadedQuestDefinitionsJson(plugin, gson))
+
+        val saveDir = plugin.dataFolder.toPath().resolve("debug-dumps").resolve("quest-saves")
+        java.nio.file.Files.createDirectories(saveDir)
+        val safeSelector = selector.replace(Regex("[^a-zA-Z0-9._-]+"), "_").trim('_')
+            .ifBlank { "quest" }
+        val saveFile = saveDir.resolve("progression-$safeSelector-${System.currentTimeMillis()}.json")
+        DebugDumpIO.writeJson(saveFile, snapshot, gson)
+
+        plugin.messageUtils.send(sender, "&aQuest snapshot salvat in &f${saveFile.fileName}&a.")
+        plugin.messageUtils.send(sender, "&7Continutul live ramane in feature pack-uri; snapshotul este pentru review si audit.")
+        return true
+    }
+
+    private fun handleDebugDumpQuest(sender: CommandSender, args: Array<String>): Boolean {
+        val summaryOnly = args.any { it.equals("summary", ignoreCase = true) }
+        val questConfig = runCatching { plugin.questConfig }.getOrNull()
+        val questFileName = runCatching { plugin.questConfigFile.name }.getOrDefault("quests.yml")
+        val definitions = plugin.progressionService.getDefinitions()
+
+        plugin.messageUtils.send(sender, "&6=== Quest Context Dump ===")
+        plugin.messageUtils.send(sender, "&eQuest file: &f$questFileName")
+        plugin.messageUtils.send(sender, "&eQuest config available: &f${questConfig != null}")
+        plugin.messageUtils.send(sender, "&eLoaded quest definitions: &f${definitions.size}")
+
+        val byMechanic = definitions.groupBy { it.mechanicId().ifBlank { "quest" } }
+            .entries
+            .sortedByDescending { it.value.size }
+            .take(if (summaryOnly) 4 else 10)
+        for ((mechanic, groupedDefinitions) in byMechanic) {
+            plugin.messageUtils.send(sender, "&7- &f$mechanic &7= &f${groupedDefinitions.size}")
+        }
+
+        if (!summaryOnly) {
+            val debugRows = definitions.take(8)
+            for (definition in debugRows) {
+                plugin.messageUtils.send(
+                    sender,
+                    "&7- &f${definition.progressionId()} &8| &f${definition.displayName()}" +
+                        " &7code=&f${definition.code().ifBlank { "-" }}" +
+                        " &7objectives=&f${definition.objectiveCount()}" +
+                        " &7stages=&f${definition.stageCount()}"
+                )
+            }
+            if (definitions.size > debugRows.size) {
+                plugin.messageUtils.send(sender, "&7... inca &f${definitions.size - debugRows.size} &7definitii")
+            }
+        }
+
+        val snapshot = DebugDumpQuestConfigJson.buildQuestConfigSnapshotJson(plugin)
+        val summary = snapshot.getAsJsonObject("summary")
+        if (summary != null) {
+            plugin.messageUtils.send(
+                sender,
+                "&eQuest config sections: &f${summary.get("top_level_key_count")?.asInt ?: 0} " +
+                    "&7| quest=&f${summary.get("has_quest")?.asBoolean ?: false} " +
+                    "&7| spec=&f${summary.get("has_spec")?.asBoolean ?: false} " +
+                    "&7| mapping=&f${summary.get("has_mapping")?.asBoolean ?: false}"
+            )
+        }
+        return true
+    }
+
+    private fun handleDebugDumpQuestConfig(sender: CommandSender): Boolean {
+        val snapshot = DebugDumpQuestConfigJson.buildQuestConfigSnapshotJson(plugin)
+        plugin.messageUtils.send(sender, "&6=== Quest Config Snapshot ===")
+        plugin.messageUtils.send(sender, "&eQuest file: &f${snapshot.get("quest_file_name")?.asString ?: "quests.yml"}")
+        plugin.messageUtils.send(sender, "&eAvailable: &f${snapshot.get("available")?.asBoolean ?: false}")
+        val summary = snapshot.getAsJsonObject("summary")
+        if (summary != null) {
+            plugin.messageUtils.send(sender, "&7Top-level keys: &f${summary.get("top_level_key_count")?.asInt ?: 0}")
+            plugin.messageUtils.send(sender, "&7Has type: &f${summary.get("has_type")?.asBoolean ?: false}")
+            plugin.messageUtils.send(sender, "&7Has version: &f${summary.get("has_version")?.asBoolean ?: false}")
+            plugin.messageUtils.send(sender, "&7Has meta: &f${summary.get("has_meta")?.asBoolean ?: false}")
+            plugin.messageUtils.send(sender, "&7Has spec: &f${summary.get("has_spec")?.asBoolean ?: false}")
+            plugin.messageUtils.send(sender, "&7Has quest: &f${summary.get("has_quest")?.asBoolean ?: false}")
+        }
+
+        val sections = snapshot.getAsJsonArray("sections")
+        if (sections != null && sections.size() > 0) {
+            plugin.messageUtils.send(sender, "&eSections:")
+            for (section in sections.take(12)) {
+                plugin.messageUtils.send(sender, "&7- &f${section.asString}")
+            }
+            if (sections.size() > 12) {
+                plugin.messageUtils.send(sender, "&7... inca &f${sections.size() - 12} &7sectiuni")
+            }
         }
         return true
     }

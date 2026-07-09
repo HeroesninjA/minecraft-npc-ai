@@ -36,6 +36,11 @@ abstract class AbstractPluginListener(
         plugin.server.scheduler.runTaskLater(plugin, task, delayTicks)
     }
 
+    @Deprecated(
+        "Preferinta runSync() pentru a nu bloca thread-uri async. Aceasta metoda blocheaza " +
+            "thread-ul apelant pana cand operatia se executa pe main thread.",
+        ReplaceWith("runSync { ... }")
+    )
     protected fun <T> callSync(supplier: Supplier<T>): T {
         if (Bukkit.isPrimaryThread()) {
             return supplier.get()
@@ -55,7 +60,10 @@ abstract class AbstractPluginListener(
         try {
             return future.get(2, TimeUnit.SECONDS)
         } catch (e: Exception) {
-            throw IllegalStateException("Nu s-a putut executa operatia pe main thread.", e)
+            throw IllegalStateException(
+                "Nu s-a putut executa operatia pe main thread (timeout 2s): ${e.message}",
+                e
+            )
         }
     }
 }

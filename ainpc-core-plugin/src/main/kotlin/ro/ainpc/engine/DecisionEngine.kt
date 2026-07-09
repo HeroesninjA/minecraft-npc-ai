@@ -21,14 +21,19 @@ import kotlin.math.roundToInt
 class DecisionEngine(private val plugin: AINPCPlugin) {
     private val scoreCache: MutableMap<UUID, MutableMap<NPCAction, Int>> = ConcurrentHashMap()
     private val lastDecisionTime: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private val cacheTimestamp: MutableMap<UUID, Long> = ConcurrentHashMap()
 
     fun decideAction(npc: AINPC, context: NPCContext): NPCAction {
         val now = System.currentTimeMillis()
+        evictIfNeeded(now)
         val lastTime = lastDecisionTime[npc.uuid]
         if (lastTime != null && now - lastTime < DECISION_COOLDOWN) {
-            val cached = scoreCache[npc.uuid]
-            if (!cached.isNullOrEmpty()) {
-                return getHighestScoringAction(cached)
+            val timestamp = cacheTimestamp[npc.uuid]
+            if (timestamp != null && now - timestamp < CACHE_TTL_MS) {
+                val cached = scoreCache[npc.uuid]
+                if (!cached.isNullOrEmpty()) {
+                    return getHighestScoringAction(cached)
+                }
             }
             return NPCAction.DO_NOTHING
         }
@@ -36,9 +41,18 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         lastDecisionTime[npc.uuid] = now
         val scores = calculateAllScores(npc, context)
         scoreCache[npc.uuid] = scores
+        cacheTimestamp[npc.uuid] = now
         val bestAction = getHighestScoringAction(scores)
         plugin.debug("NPC ${npc.name} decide: ${bestAction.displayName} (scor: ${scores[bestAction]})")
         return bestAction
+    }
+
+    private fun evictIfNeeded(now: Long) {
+        if (scoreCache.size > MAX_CACHE_SIZE) {
+            val cutoff = now - CACHE_TTL_MS
+            val stale = scoreCache.keys.filter { (cacheTimestamp[it] ?: 0) < cutoff }
+            stale.forEach { removeNpcFromCache(it) }
+        }
     }
 
     fun runLifeSimulationTick(npc: AINPC?) {
@@ -398,14 +412,23 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
     }
 
+    fun removeNpcFromCache(uuid: UUID) {
+        scoreCache.remove(uuid)
+        lastDecisionTime.remove(uuid)
+        cacheTimestamp.remove(uuid)
+    }
+
     fun clearCache() {
         scoreCache.clear()
         lastDecisionTime.clear()
+        cacheTimestamp.clear()
     }
 
     private enum class RoutineFocus { WORK, REST, SOCIAL, GUARD, OBSERVE, IDLE }
 
     companion object {
         private const val DECISION_COOLDOWN: Long = 1000
+        private const val CACHE_TTL_MS: Long = 300_000
+        private const val MAX_CACHE_SIZE: Int = 500
     }
 }

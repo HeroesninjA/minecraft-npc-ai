@@ -82,6 +82,17 @@ class ProgressionService(private val plugin: AINPCPlugin) {
         return getDefinitions().filter { ProgressionFilter.matchesDefinition(it, filter) }
     }
 
+    fun findDefinitionBySelector(selector: String?): ProgressionDefinition? {
+        val normalized = valueOrEmpty(selector)
+        if (normalized.isBlank()) {
+            return null
+        }
+        return getDefinitions().firstOrNull { definition ->
+            definitionSelectorCandidates(definition)
+                .any { candidate -> candidate.equals(normalized, ignoreCase = true) }
+        }
+    }
+
     fun getObjectiveIdSuggestions(player: Player, selector: String): List<String> {
         var scenario: FeaturePackLoader.ScenarioDefinition? = null
         val progressionSelector = parseSelector(selector)

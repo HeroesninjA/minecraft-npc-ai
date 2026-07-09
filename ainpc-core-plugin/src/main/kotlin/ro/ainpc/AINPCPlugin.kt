@@ -1,8 +1,6 @@
 package ro.ainpc
 
 import org.bukkit.command.PluginCommand
-import org.bukkit.configuration.file.FileConfiguration
-import org.bukkit.plugin.ServicePriority
 import org.bukkit.plugin.java.JavaPlugin
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.OllamaService
@@ -13,15 +11,21 @@ import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.bootstrap.PackFileWatcher
 import ro.ainpc.bootstrap.PerformanceMonitor
 import ro.ainpc.bootstrap.SchedulerCoordinator
-import ro.ainpc.commands.AINPCCommand
-import ro.ainpc.commands.AINPCTabCompleter
+import ro.ainpc.bootstrap.ServiceRegistry
 import ro.ainpc.database.DatabaseManager
+import ro.ainpc.debug.RecentEventsBuffer
+import ro.ainpc.economy.BankingService
+import ro.ainpc.economy.EconomyService
+import ro.ainpc.economy.NpcEconomyService
+import ro.ainpc.economy.ShopService
+import ro.ainpc.economy.VaultEconomyHook
 import ro.ainpc.engine.DecisionEngine
 import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.engine.QuestAuthoringService
 import ro.ainpc.engine.ScenarioEngine
-import ro.ainpc.engine.ScriptConfigurationLoader
+import ro.ainpc.environment.EnvironmentEngine
+import ro.ainpc.environment.SeasonalBehaviorService
 import ro.ainpc.gui.GuiService
 import ro.ainpc.listeners.ListenerRegistry
 import ro.ainpc.managers.ConversationSessionManager
@@ -30,20 +34,18 @@ import ro.ainpc.managers.FamilyManager
 import ro.ainpc.managers.MemoryManager
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.mcp.McpRuntimeClient
-import ro.ainpc.mcp.McpRuntimeClientFactory
-import ro.ainpc.mcp.McpRuntimeConfig
 import ro.ainpc.mcp.bridge.McpCommandQueue
 import ro.ainpc.mcp.bridge.RuntimeSnapshotProducer
 import ro.ainpc.platform.AINPCPlatform
+import ro.ainpc.progression.PlayerProgressionService
 import ro.ainpc.progression.ProgressionService
+import ro.ainpc.reputation.ReputationService
 import ro.ainpc.routine.RoutineCoordinator
 import ro.ainpc.routine.RoutineService
-import ro.ainpc.debug.RecentEventsBuffer
+import ro.ainpc.routine.SocialCoordinator
 import ro.ainpc.spawn.AutoSettlementGenerator
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
-import ro.ainpc.environment.EnvironmentEngine
-import ro.ainpc.environment.SeasonalBehaviorService
 import ro.ainpc.story.RandomWorldEventService
 import ro.ainpc.story.StoryAuthoringService
 import ro.ainpc.story.StoryContextService
@@ -51,372 +53,104 @@ import ro.ainpc.story.StoryReactionService
 import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
 import ro.ainpc.world.NpcWorldBindingService
-import ro.ainpc.economy.BankingService
-import ro.ainpc.economy.EconomyService
-import ro.ainpc.economy.NpcEconomyService
-import ro.ainpc.economy.ShopService
-import ro.ainpc.economy.VaultEconomyHook
 import ro.ainpc.world.mapping.MappingWandService
 import java.io.File
 import java.util.logging.Level
 
 class AINPCPlugin : JavaPlugin() {
-    lateinit var databaseManager: DatabaseManager
-        private set
-    lateinit var npcManager: NPCManager
-        private set
-    lateinit var memoryManager: MemoryManager
-        private set
-    lateinit var emotionManager: EmotionManager
-        private set
-    lateinit var familyManager: FamilyManager
-        private set
-    lateinit var conversationSessionManager: ConversationSessionManager
-        private set
-    lateinit var dialogManager: DialogManager
-        private set
-    private var _openAIService: OpenAIService? = null
-    val openAIService: OpenAIService get() {
-        if (_openAIService == null) {
-            _openAIService = OpenAIService(this)
-            logger.info("OpenAIService initializat (lazy)")
-        }
-        return _openAIService!!
-    }
-    lateinit var ollamaService: OllamaService
-        private set
-    lateinit var aiOrchestrationService: AIOrchestrationService
-        private set
-    private var _mcpRuntimeClient: McpRuntimeClient? = null
-    val mcpRuntimeClient: McpRuntimeClient get() {
-        if (_mcpRuntimeClient == null) {
-            _mcpRuntimeClient = McpRuntimeClientFactory.create(this)
-            logger.info("McpRuntimeClient initializat (lazy)")
-        }
-        return _mcpRuntimeClient!!
-    }
-    var snapshotProducer: RuntimeSnapshotProducer? = null
-        private set
-    lateinit var mcpCommandQueue: McpCommandQueue
-        private set
-    lateinit var performanceMonitor: PerformanceMonitor
-        private set
-    lateinit var routineService: RoutineService
-        private set
-    lateinit var routineCoordinator: RoutineCoordinator
-        private set
-    lateinit var autoSettlementGenerator: AutoSettlementGenerator
-        private set
-    lateinit var npcSpawnOrchestrator: NpcSpawnOrchestrator
-        private set
-    lateinit var householdPersistenceService: HouseholdPersistenceService
-        private set
-    lateinit var npcWorldBindingService: NpcWorldBindingService
-        private set
-    lateinit var messageUtils: MessageUtils
-        private set
-    lateinit var platform: AINPCPlatform
-        private set
-    lateinit var listenerRegistry: ListenerRegistry
-        private set
-    lateinit var packFileWatcher: PackFileWatcher
-        private set
-    lateinit var schedulerCoordinator: SchedulerCoordinator
-        private set
-    lateinit var questConfigFile: File
-        private set
-    lateinit var questConfig: FileConfiguration
-        private set
+    val services = ServiceRegistry(this)
 
-    lateinit var decisionEngine: DecisionEngine
-        private set
-    lateinit var dialogueEngine: DialogueEngine
-        private set
-    lateinit var scenarioEngine: ScenarioEngine
-        private set
-    lateinit var featurePackLoader: FeaturePackLoader
-        private set
-    lateinit var progressionService: ProgressionService
-        private set
-    lateinit var storyContextService: StoryContextService
-        private set
-    lateinit var storyAuthoringService: StoryAuthoringService
-        private set
-    lateinit var storyReactionService: StoryReactionService
-        private set
-    lateinit var randomWorldEventService: RandomWorldEventService
-        private set
-    lateinit var storyStateService: StoryStateService
-        private set
-    lateinit var environmentEngine: EnvironmentEngine
-        private set
-    lateinit var seasonalBehaviorService: SeasonalBehaviorService
-        private set
-    lateinit var authoringService: QuestAuthoringService
-        private set
-    lateinit var guiService: GuiService
-        private set
-    lateinit var mappingWandService: MappingWandService
-        private set
-    lateinit var economyService: EconomyService
-        private set
-    lateinit var shopService: ShopService
-        private set
-    lateinit var npcEconomyService: NpcEconomyService
-        private set
-    lateinit var bankingService: BankingService
-        private set
-    lateinit var vaultEconomyHook: VaultEconomyHook
-        private set
-    lateinit var relationshipService: RelationshipService
-        private set
-    lateinit var reputationService: ro.ainpc.reputation.ReputationService
-    lateinit var playerProgressionService: ro.ainpc.progression.PlayerProgressionService
-    lateinit var socialCoordinator: ro.ainpc.routine.SocialCoordinator
-    lateinit var recentEventsBuffer: RecentEventsBuffer
+    val databaseManager: DatabaseManager get() = services.databaseManager
+    val npcManager: NPCManager get() = services.npcManager
+    val memoryManager: MemoryManager get() = services.memoryManager
+    val emotionManager: EmotionManager get() = services.emotionManager
+    val familyManager: FamilyManager get() = services.familyManager
+    val conversationSessionManager: ConversationSessionManager get() = services.conversationSessionManager
+    val dialogManager: DialogManager get() = services.dialogManager
+    val openAIService: OpenAIService get() = services.openAIService
+    val ollamaService: OllamaService get() = services.ollamaService
+    val aiOrchestrationService: AIOrchestrationService get() = services.aiOrchestrationService
+    val mcpRuntimeClient: McpRuntimeClient get() = services.mcpRuntimeClient
+    val snapshotProducer: RuntimeSnapshotProducer? get() = services.snapshotProducer
+    val mcpCommandQueue: McpCommandQueue get() = services.mcpCommandQueue
+    val performanceMonitor: PerformanceMonitor get() = services.performanceMonitor
+    val routineService: RoutineService get() = services.routineService
+    val routineCoordinator: RoutineCoordinator get() = services.routineCoordinator
+    val autoSettlementGenerator: AutoSettlementGenerator get() = services.autoSettlementGenerator
+    val npcSpawnOrchestrator: NpcSpawnOrchestrator get() = services.npcSpawnOrchestrator
+    val householdPersistenceService: HouseholdPersistenceService get() = services.householdPersistenceService
+    val npcWorldBindingService: NpcWorldBindingService get() = services.npcWorldBindingService
+    val messageUtils: MessageUtils get() = services.messageUtils
+    val platform: AINPCPlatform get() = services.platform
+    val listenerRegistry: ListenerRegistry get() = services.listenerRegistry
+    val packFileWatcher: PackFileWatcher get() = services.packFileWatcher
+    val schedulerCoordinator: SchedulerCoordinator get() = services.schedulerCoordinator
+    val questConfigFile: File get() = services.questConfigFile
+    val questConfig: org.bukkit.configuration.file.FileConfiguration get() = services.questConfig
+    val decisionEngine: DecisionEngine get() = services.decisionEngine
+    val dialogueEngine: DialogueEngine get() = services.dialogueEngine
+    val scenarioEngine: ScenarioEngine get() = services.scenarioEngine
+    val featurePackLoader: FeaturePackLoader get() = services.featurePackLoader
+    val progressionService: ProgressionService get() = services.progressionService
+    val playerProgressionService: PlayerProgressionService get() = services.playerProgressionService
+    val storyContextService: StoryContextService get() = services.storyContextService
+    val storyAuthoringService: StoryAuthoringService get() = services.storyAuthoringService
+    val storyReactionService: StoryReactionService get() = services.storyReactionService
+    val randomWorldEventService: RandomWorldEventService get() = services.randomWorldEventService
+    val storyStateService: StoryStateService get() = services.storyStateService
+    val environmentEngine: EnvironmentEngine get() = services.environmentEngine
+    val seasonalBehaviorService: SeasonalBehaviorService get() = services.seasonalBehaviorService
+    val authoringService: QuestAuthoringService get() = services.authoringService
+    val guiService: GuiService get() = services.guiService
+    val mappingWandService: MappingWandService get() = services.mappingWandService
+    val economyService: EconomyService get() = services.economyService
+    val shopService: ShopService get() = services.shopService
+    val npcEconomyService: NpcEconomyService get() = services.npcEconomyService
+    val bankingService: BankingService get() = services.bankingService
+    val vaultEconomyHook: VaultEconomyHook get() = services.vaultEconomyHook
+    val relationshipService: RelationshipService get() = services.relationshipService
+    val reputationService: ReputationService get() = services.reputationService
+    val socialCoordinator: SocialCoordinator get() = services.socialCoordinator
+    val recentEventsBuffer: RecentEventsBuffer get() = services.recentEventsBuffer
 
     override fun onEnable() {
         instance = this
         saveDefaultConfig()
         config.options().copyDefaults(true)
         saveConfig()
-        loadQuestConfig()
+        services.loadQuestConfig()
         validateConfig()
-        for (res in listOf("castel-world-admin.yml", "settlements.yml", "building_templates.yml", "behavior_profiles.yml")) {
-            try {
-                saveResource(res, false)
-            } catch (ignored: Exception) {
-                logger.fine("$res deja exista sau nu este disponibil.")
-            }
-        }
+        saveResourceIfAbsent("castel-world-admin.yml")
+        saveResourceIfAbsent("settlements.yml")
+        saveResourceIfAbsent("building_templates.yml")
+        saveResourceIfAbsent("behavior_profiles.yml")
         val packsDir = File(dataFolder, "packs")
         if (!packsDir.exists()) {
             packsDir.mkdirs()
         }
-        try {
-            saveResource("packs/compat-26-1-2.yml", false)
-        } catch (ignored: Exception) {
-            logger.fine("packs/compat-26-1-2.yml nu este disponibil.")
-        }
+        saveResourceIfAbsent("packs/compat-26-1-2.yml")
 
-        messageUtils = MessageUtils(this)
-        platform = AINPCPlatform(this)
-        platform.initialize()
-
-        logger.info("Initializare baza de date...")
-        databaseManager = DatabaseManager(this)
-        if (!databaseManager.initialize()) {
-            logger.severe("Nu s-a putut initializa baza de date! Pluginul se opreste.")
+        val result = services.initialize()
+        if (!result.success) {
+            val error = result.error
+            logger.severe("Initializarea pluginului a esuat: ${error?.message}")
             server.pluginManager.disablePlugin(this)
-            return
         }
-        npcWorldBindingService = NpcWorldBindingService(this)
-        householdPersistenceService = HouseholdPersistenceService(this)
-
-        logger.info("Initializare servicii AI...")
-        _openAIService = null
-        ollamaService = OllamaService(this)
-        _mcpRuntimeClient = null
-        val snapshotPath = java.nio.file.Path.of(
-            McpRuntimeConfig.from(config).snapshotPath
-        )
-        snapshotProducer = RuntimeSnapshotProducer(this, snapshotPath).also { it.start() }
-        performanceMonitor = PerformanceMonitor(this)
-        mcpCommandQueue = McpCommandQueue(this)
-        mcpCommandQueue.start()
-        aiOrchestrationService = AIOrchestrationService(this)
-        openAIService.runDiagnosticsAsync("startup")
-
-        logger.info("Incarcare Feature Packs...")
-        featurePackLoader = FeaturePackLoader(this)
-        featurePackLoader.loadAllPacks()
-
-        logger.info("Initializare manageri...")
-        memoryManager = MemoryManager(this)
-        emotionManager = EmotionManager(this)
-        familyManager = FamilyManager(this)
-        npcManager = NPCManager(this)
-        routineService = RoutineService(this)
-        routineCoordinator = RoutineCoordinator(this)
-        autoSettlementGenerator = AutoSettlementGenerator(this)
-        npcSpawnOrchestrator = NpcSpawnOrchestrator(this)
-        dialogManager = DialogManager(this)
-        conversationSessionManager = ConversationSessionManager(this)
-
-        npcManager.loadAllNPCs()
-        npcManager.discoverExistingVillagers()
-        npcManager.reconcileDuplicateLiveNPCEntities("startup")
-        npcManager.restoreMissingNPCsInLoadedChunks()
-        npcManager.enforceControlledEntitySettings("startup")
-        val backfilledProfiles = npcManager.ensureAllNPCsHaveProfiles()
-        val backfilledWorldBindings = npcManager.backfillWorldBindingsFromAnchors()
-        logger.info("Profiluri NPC verificate. Profiluri create/backfill: $backfilledProfiles")
-        logger.info("Binding-uri NPC-world inferate/backfill: $backfilledWorldBindings")
-
-        logger.info("Initializare motoare AI...")
-        decisionEngine = DecisionEngine(this)
-        dialogueEngine = DialogueEngine(this, openAIService)
-        scenarioEngine = ScenarioEngine(this)
-        progressionService = ProgressionService(this)
-        storyStateService = StoryStateService(this)
-        storyContextService = StoryContextService(this)
-        storyReactionService = StoryReactionService(this)
-        randomWorldEventService = RandomWorldEventService(this)
-        storyAuthoringService = StoryAuthoringService(this)
-        environmentEngine = EnvironmentEngine(this)
-        seasonalBehaviorService = SeasonalBehaviorService(this)
-        authoringService = QuestAuthoringService()
-        guiService = GuiService(this)
-        mappingWandService = MappingWandService(this)
-        economyService = EconomyService(this)
-        shopService = ShopService(economyService, npcEconomyService)
-        npcEconomyService = NpcEconomyService(this)
-        bankingService = BankingService(this)
-        vaultEconomyHook = VaultEconomyHook(this)
-        platform.integrationRegistry.register(vaultEconomyHook)
-        relationshipService = RelationshipService(this)
-        reputationService = ro.ainpc.reputation.ReputationService(this)
-        playerProgressionService = ro.ainpc.progression.PlayerProgressionService(this)
-        socialCoordinator = ro.ainpc.routine.SocialCoordinator(this)
-
-        logger.info("Inregistrare comenzi...")
-        val command = AINPCCommand(this)
-        val ainpcCommand = getCommand("ainpc")
-        if (ainpcCommand == null) {
-            logger.severe("Comanda 'ainpc' nu a fost gasita in plugin.yml. Pluginul se opreste.")
-            server.pluginManager.disablePlugin(this)
-            return
-        }
-        ainpcCommand.setExecutor(command)
-        ainpcCommand.setTabCompleter(AINPCTabCompleter(this))
-        registerAliasCommand("npc", command)
-        registerAliasCommand("npcquest", command)
-        registerAliasCommand("quest", command)
-        registerAliasCommand("progression", command)
-        registerAliasCommand("contract", command)
-        registerAliasCommand("duty", command)
-        registerAliasCommand("bounty", command)
-        registerAliasCommand("event", command)
-        registerAliasCommand("tutorial", command)
-        registerAliasCommand("ritual", command)
-
-        logger.info("Inregistrare listenere...")
-        listenerRegistry = ListenerRegistry(this)
-        listenerRegistry.registerAll()
-
-        packFileWatcher = PackFileWatcher(this)
-        packFileWatcher.start()
-        schedulerCoordinator = SchedulerCoordinator(this)
-        schedulerCoordinator.start()
-        server.servicesManager.register(AINPCPlatformApi::class.java, platform, this, ServicePriority.Normal)
-
-        logger.info("========================================")
-        logger.info("AI NPC Plugin v${pluginMeta.version} activat!")
-        logger.info("NPC-uri incarcate: ${npcManager.getNPCCount()}")
-        logger.info("Addonuri inregistrate: ${platform.addonRegistry.size()}")
-        logger.info(
-            "World admin: ${platform.worldAdmin.regionCount} regiuni / " +
-                "${platform.worldAdmin.placeCount} places / ${platform.worldAdmin.nodeCount} noduri"
-        )
-        logger.info("========================================")
     }
 
     override fun onDisable() {
-        if (::packFileWatcher.isInitialized) {
-            packFileWatcher.stop()
-        }
-        if (::schedulerCoordinator.isInitialized) {
-            schedulerCoordinator.stop()
-        }
-        if (::scenarioEngine.isInitialized) {
-            scenarioEngine.stopAllQuestTracking()
-            logger.info("Salvare progres quest-uri...")
-            scenarioEngine.flushQuestProgress()
-        }
-        if (::npcManager.isInitialized) {
-            logger.info("Salvare date NPC-uri...")
-            npcManager.saveAllNPCs()
-        }
-        if (::economyService.isInitialized) {
-            logger.info("Salvare balante jucatori...")
-            economyService.flush()
-        }
-        if (::npcEconomyService.isInitialized) {
-            logger.info("Salvare economie NPC...")
-            npcEconomyService.flushAll()
-        }
-        if (::relationshipService.isInitialized) {
-            logger.info("Salvare relatii NPC-NPC...")
-            relationshipService.flushAll()
-        }
-        if (::decisionEngine.isInitialized) {
-            decisionEngine.clearCache()
-        }
-        if (::dialogueEngine.isInitialized) {
-            dialogueEngine.clearRecentResponses()
-        }
-        snapshotProducer?.stop()
-        if (::databaseManager.isInitialized) {
-            logger.info("Inchidere conexiune baza de date...")
-            databaseManager.close()
-        }
-        if (::platform.isInitialized) platform.shutdown()
-        if (::guiService.isInitialized) guiService.sessions().closeAll()
-        server.servicesManager.unregisterAll(this)
-        logger.info("AI NPC Plugin dezactivat!")
+        services.shutdown()
     }
 
     fun reload() {
         reloadConfig()
         config.options().copyDefaults(true)
         saveConfig()
-        loadQuestConfig()
-        messageUtils = MessageUtils(this)
-        if (::platform.isInitialized) {
-            platform.reloadFromConfig()
-        }
-        if (_openAIService != null) {
-            openAIService.reloadFromConfig()
-        }
-        if (::aiOrchestrationService.isInitialized) {
-            aiOrchestrationService.reloadFromConfig()
-        } else {
-            aiOrchestrationService = AIOrchestrationService(this)
-        }
-        _mcpRuntimeClient = null
-        _openAIService = null
-        openAIService.runDiagnosticsAsync("reload")
-        if (::memoryManager.isInitialized) {
-            dialogueEngine = DialogueEngine(this, openAIService)
-        }
-        reloadContent()
-        logger.info("Configuratie reincarcata!")
+        services.reload()
     }
 
     fun reloadContent() {
-        if (::featurePackLoader.isInitialized) featurePackLoader.loadAllPacks()
-        if (::scenarioEngine.isInitialized) scenarioEngine.reloadTemplates()
-        storyStateService = StoryStateService(this)
-        storyContextService = StoryContextService(this)
-        if (::progressionService.isInitialized) progressionService.invalidateDefinitionCache()
-        if (::npcManager.isInitialized) npcManager.ensureAllNPCsHaveProfiles()
-    }
-
-    private fun loadQuestConfig() {
-        val loaded = ScriptConfigurationLoader.loadQuestConfiguration(this)
-        questConfigFile = loaded.first
-        questConfig = loaded.second
-        logger.info("Quest config incarcat din ${questConfigFile.name}")
-    }
-
-    private fun registerAliasCommand(name: String, command: AINPCCommand) {
-        val aliasCommand: PluginCommand? = getCommand(name)
-        if (aliasCommand != null) {
-            aliasCommand.setExecutor(command)
-            aliasCommand.setTabCompleter(AINPCTabCompleter(this))
-        } else {
-            logger.warning("Comanda '$name' nu a fost gasita in plugin.yml.")
-        }
+        services.reloadContent()
     }
 
     fun debug(message: String) {
@@ -425,9 +159,16 @@ class AINPCPlugin : JavaPlugin() {
         }
     }
 
+    private fun saveResourceIfAbsent(path: String) {
+        try {
+            saveResource(path, false)
+        } catch (ignored: Exception) {
+            logger.fine("$path deja exista sau nu este disponibil.")
+        }
+    }
+
     private fun validateConfig() {
         val warnings = mutableListOf<String>()
-
         if (!config.contains("features.ai")) {
             warnings.add("config.yml: 'features.ai' nu este definit; se va folosi implicit false.")
         }
@@ -444,7 +185,6 @@ class AINPCPlugin : JavaPlugin() {
             warnings.add("config.yml: routine.enabled=true dar features.ai=false. NPC-urile nu vor avea dialog AI.")
             warnings.add("  >> Actiune: seteaza features.ai=true sau dezactiveaza routine.enabled.")
         }
-
         if (warnings.isNotEmpty()) {
             logger.warning("=== Validare config.yml ===")
             for (w in warnings) {

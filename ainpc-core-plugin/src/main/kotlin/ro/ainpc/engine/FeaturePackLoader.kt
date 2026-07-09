@@ -249,12 +249,29 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
             loadedPacks[id] = pack
             plugin.debug("Feature Pack incarcat: $name ($id)")
         } catch (exception: Exception) {
-            plugin.logger.warning("Eroare la incarcarea feature pack: ${file.name}")
+            val category = categorizeError(exception)
+            plugin.logger.warning("Eroare la incarcarea feature pack: ${file.name} [${category.label}]")
             plugin.logger.warning("  >> Cale: ${file.absolutePath}")
-            plugin.logger.warning("  >> Actiune: verifica sintaxa YAML si campurile obligatorii.")
-            plugin.logger.log(java.util.logging.Level.WARNING, "Detalii eroare feature pack", exception)
+            when (category) {
+                PackErrorCategory.PARSE -> plugin.logger.warning(
+                    "  >> Cauza: fisierul YAML contine erori de sintaxa. Verifica indentarea si structura."
+                )
+                PackErrorCategory.SCHEMA -> plugin.logger.warning(
+                    "  >> Cauza: campurile obligatorii lipsesc sau au tip gresit. Consulta documentatia formatului."
+                )
+                PackErrorCategory.DEPENDENCY -> plugin.logger.warning(
+                    "  >> Cauza: dependintele feature pack-ului nu sunt disponibile."
+                )
+                PackErrorCategory.OVERRIDE -> plugin.logger.warning(
+                    "  >> Cauza: un override invalid in configuratia pack-ului."
+                )
+                PackErrorCategory.INTERNAL -> plugin.logger.warning(
+                    "  >> Cauza: eroare interna la procesare. Verifica logs pentru detalii."
+                )
+            }
+            plugin.logger.log(java.util.logging.Level.FINE, "StackTrace feature pack", exception)
             if (plugin.config.getBoolean("feature_packs.fail_invalid_pack", false)) {
-                throw IllegalStateException("Feature pack invalid: ${file.name}", exception)
+                throw IllegalStateException("Feature pack invalid: ${file.name} [${category.label}]", exception)
             }
         }
     }
@@ -270,7 +287,8 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                     dependenciesByPackId[packId] = config.getStringList("addon.dependencies")
                 }
             } catch (exception: Exception) {
-                plugin.debug("Nu s-a putut citi metadata pentru candidate pack: ${file.name}")
+                plugin.logger.warning("Nu s-a putut citi metadata pentru candidate pack: ${file.name}")
+                plugin.logger.log(java.util.logging.Level.FINE, "Detalii metadata pack", exception)
             }
         }
         return FeaturePackDependencyValidator.resolveAvailablePackIds(dependenciesByPackId)
@@ -1003,5 +1021,31 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val payload: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(payload ?: emptyMap()))
         val entryId: String
             get() = metadata.getOrDefault("entry_id", "")
+    }
+
+    private fun categorizeError(exception: Exception): PackErrorCategory {
+        val message = exception.message?.lowercase(Locale.ROOT) ?: ""
+        return when {
+            message.contains("yaml") || message.contains("while parsing") ||
+                exception.javaClass.name.contains("yaml", ignoreCase = true) ->
+                PackErrorCategory.PARSE
+            message.contains("null") || message.contains("cannot be null") ||
+                message.contains("missing") && message.contains("field") ->
+                PackErrorCategory.SCHEMA
+            message.contains("dependency") || message.contains("dependinta") ||
+                message.contains("not found") && message.contains("pack") ->
+                PackErrorCategory.DEPENDENCY
+            message.contains("override") || message.contains("invalid value") ->
+                PackErrorCategory.OVERRIDE
+            else -> PackErrorCategory.INTERNAL
+        }
+    }
+
+    enum class PackErrorCategory(val label: String) {
+        PARSE("EROARE_PARSE"),
+        SCHEMA("EROARE_SCHEMA"),
+        DEPENDENCY("EROARE_DEPENDINTA"),
+        OVERRIDE("EROARE_OVERRIDE"),
+        INTERNAL("EROARE_INTERNA")
     }
 }

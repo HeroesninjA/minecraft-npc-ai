@@ -46,6 +46,7 @@ class PluginCommandDescriptorTest {
             assertTrue(demoHelpLine.contains(token), "Main help should mention demo token '$token'")
         }
         assertTrue(helpText.contains("/ainpc quest authoring"), "Main help should mention quest authoring alias")
+        assertTrue(helpText.contains("questconfig"), "Main help should mention questconfig debug dump alias")
     }
 
     @Test

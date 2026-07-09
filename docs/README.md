@@ -16,110 +16,24 @@ Pentru un punct de start scurt, deschide `start-here.md`.
 
 ## Citire rapida
 
-Ordinea recomandata pentru orientare:
+Incepe cu noul punct de intrare:
 
-1. `constitutie-proiect.md`
-2. `audit-constitutie-proiect.md`
-3. `implementat-deja.md`
-4. `faze-observatii-avertizari.md`
-5. `faze-urmatoare-categorii.md`
-6. `server-npc-mvp-si-faze.md`
-7. `prim-demo-functionalitate-minima-diversa.md`
-8. `mcp-docker-server-mvp-si-faze.md`
-9. `opencode-troubleshooting.md`
-10. `mcp-runtime-gap-list.md`
-11. `mcp-runtime-gap-checklist.md`
-12. `mcp-runtime-gap-phase-status.md`
-13. `mcp-runtime-gap-implementation-map.md`
-14. `mcp-runtime-remaining-work.md`
-15. `deepseek/coding-automation-stack-linux-vscode-deepseek-mcp.md`
-16. `faze-urmatoare-250.md`
-17. `faze-urmatoare-250-partea-2.md`
-18. `playable-village-ux.md`
-19. `npc-population-world-stack.md`
-20. `ordine-spawn-npc-cladiri-region-node.md`
-21. `simulare-sat-si-lume.md`
-22. `simulation-service.md`
-23. `simulation-service-partea-2.md`
-24. `simulation-service-partea-3.md`
-25. `simulation-service-partea-4.md`
-26. `simulation-stack.md`
-27. `environment-context-si-engine.md`
-28. `mapping-stack.md`
-29. `build-mode-tutorial.md`
-30. `build-mode-region-place-node.md`
-30. `interactiune-dialog-reactie-stack.md`
-31. `dialog-si-conversatii.md`
-32. `interactiuni.md`
-33. `gui-stack.md`
-34. `gui-interfete.md`
-35. `ai-orchestrare-mcp-stack.md`
-36. `ai-orchestrare-si-mecanici.md`
-37. `spring-ai-mcp-serviciu-intern.md`
-38. `story-context-quest-ai-stack.md`
-39. `generare-automata-questuri-ai.md`
-40. `story-si-context-ai.md`
-41. `story-context-service.md`
-42. `progression-service.md`
-43. `progression-events-onboarding-stack.md`
-44. `quest-evolution-stack.md`
-45. `api-events-listeners-triggers.md`
-46. `redundanta-si-consolidare.md`
-47. `player-onboarding-initiere.md`
-48. `lucru-alternat-quest-mapping-progression.md`
-49. `roadmap-orientativ.md`
-50. `server-admin-runbook.md`
-51. `release-checklist.md`
-52. `debugging-si-testare.md`
-53. `prevenire-duplicare-npc.md`
-54. `sistem-permisiuni-compatibilitate-pluginuri.md`
-50. `kotlin-style-guide.md`
-51. `kotlin-interop-api-addonuri.md`
-52. `kotlin-paper-packaging-si-smoke.md`
-53. `kotlin-code-review-checklist.md`
-54. `kotlin-coroutines-paper-policy.md`
-55. `kotlin-testing-strategy.md`
-56. `start-here.md`
-57. `index-navigare.md`
-58. `index-functional.md`
-59. `index-arhiva.md`
-60. `taskuri-prioritizate.md`
-61. `taskuri-de-lucru.md`
-62. `harta-pachetelor-cod-scurta.md`
-63. `harta-pachetelor-cod.md`
-64. `harta-clase-index.md`
-65. `arhiva/kotlin-migration/README.md`
-66. `deepseek/deepseek-batch-guide.md`
-67. `deepseek/deepseek-execution-cursor.md`
-68. `deepseek/deepseek-execution-ledger.json`
-69. `deepseek/deepseek-active-series-summary.md`
-70. `deepseek/deepseek-taskuri-audit-remediere-2026-06-25.md`
-71. `deepseek/deepseek-taskuri-archive-verification-2026-06-25.md`
-72. `deepseek/deepseek-taskuri-archive-audit-2026-06-25.md`
-73. `deepseek/deepseek-taskuri-late-50-7.md`
-74. `deepseek/deepseek-taskuri-late-50-8.md`
-75. `deepseek/deepseek-taskuri-late-50-9.md`
-76. `deepseek/deepseek-taskuri-late-50-10.md`
-77. `deepseek/deepseek-taskuri-late-50-11.md`
-78. `deepseek/deepseek-taskuri-late-50-12.md`
-79. `deepseek/deepseek-taskuri-late-50-13.md`
-80. `deepseek/deepseek-taskuri-late-50-14.md`
-81. `deepseek/deepseek-taskuri-late-50-15.md`
-82. `deepseek/deepseek-taskuri-late-50-16.md`
-83. `deepseek/deepseek-taskuri-late-50-17.md`
-84. `deepseek/deepseek-taskuri-late-50-18.md`
-85. `deepseek/deepseek-taskuri-late-50-19.md`
-86. `deepseek/deepseek-taskuri-late-50-20.md`
-87. `deepseek/deepseek-taskuri-late-50-21.md`
-88. `deepseek/deepseek-taskuri-late-50-24.md`
-89. `deepseek/deepseek-taskuri-late-50-25.md`
-90. `deepseek/deepseek-taskuri-late-50-26.md`
-91. `deepseek/deepseek-taskuri-late-50-27.md`
-92. `deepseek/deepseek-taskuri-late-50-28.md`
-93. `deepseek/deepseek-taskuri-late-50-29.md`
-94. `deepseek/deepseek-taskuri-late-50-30.md`
-95. `deepseek/deepseek-taskuri-late-50-31.md`
-96. `deepseek/arhiva/README.md`
+1. `docs v2/canonical/start-here.md`
+2. `docs v2/canonical/index-functional.md`
+3. `docs v2/canonical/constitutie-proiect.md`
+4. `docs v2/canonical/implementat-deja.md`
+5. `docs v2/architecture/mapping.md`
+6. `docs v2/guides/gui-interfete.md`
+7. `docs v2/architecture/ai-orchestrare-si-mecanici.md`
+8. `docs v2/planning/questuri-avansate-v2.md`
+9. `docs v2/reference/index-navigare.md`
+10. `docs v2/archive/index-arhiva.md`
+
+## Migrare
+
+- `docs v2/` este noul spatiu canonic pentru documentatia curata;
+- `docs/` ramane activ in timpul migrarii si contine redirecturi temporare pentru intrarile mutate;
+- documentele care nu au fost inca migrate raman in `docs/` pana la urmatorul val.
 
 ## Documente Kotlin
 

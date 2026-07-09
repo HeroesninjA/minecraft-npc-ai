@@ -45,15 +45,17 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             return
         }
 
-        val target: ResolvedDialogTarget = try {
-            callSync { resolveTarget(player, message) }
-        } catch (ex: IllegalStateException) {
-            plugin.logger.warning("Nu s-a putut rezolva tinta de dialog: " + ex.message)
-            return
-        } ?: return
-
         event.isCancelled = true
-        runSync { handleResolvedMessage(player, message, target) }
+        runSync {
+            try {
+                val target = resolveTarget(player, message)
+                if (target != null) {
+                    handleResolvedMessage(player, message, target)
+                }
+            } catch (ex: Exception) {
+                plugin.logger.warning("Eroare la rezolvarea tintei de dialog: ${ex.message}")
+            }
+        }
     }
 
     @EventHandler

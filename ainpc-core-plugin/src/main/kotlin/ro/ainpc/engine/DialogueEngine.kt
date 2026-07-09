@@ -301,6 +301,10 @@ class DialogueEngine(
         recentResponses.keys.removeAll { it !in activeNpcUuids }
     }
 
+    fun removeNpcResponses(uuid: UUID) {
+        recentResponses.remove(uuid)
+    }
+
     private fun selectTemplate(npc: AINPC, intent: DialogueIntent): String {
         var intentTemplates = templates[intent]
         if (intentTemplates.isNullOrEmpty()) intentTemplates = templates[DialogueIntent.GREET]

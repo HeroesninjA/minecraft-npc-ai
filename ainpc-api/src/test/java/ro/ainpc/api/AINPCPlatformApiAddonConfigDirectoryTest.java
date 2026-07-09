@@ -87,5 +87,35 @@ class AINPCPlatformApiAddonConfigDirectoryTest {
         @Override
         public void registerObjectiveHandler(String type, kotlin.jvm.functions.Function3<? super String, ? super Integer, ? super Integer, Integer> handler) {
         }
+
+        @Override
+        public double getPlayerBalance(java.util.UUID playerUuid) {
+            return 0.0;
+        }
+
+        @Override
+        public String getNPCName(java.util.UUID npcUuid) {
+            return null;
+        }
+
+        @Override
+        public String getNPCProfession(java.util.UUID npcUuid) {
+            return null;
+        }
+
+        @Override
+        public ro.ainpc.api.ReputationApi getReputation() {
+            return null;
+        }
+
+        @Override
+        public ro.ainpc.api.PlayerProgressionApi getPlayerProgression() {
+            return null;
+        }
+
+        @Override
+        public ro.ainpc.api.RelationshipApi getRelationships() {
+            return null;
+        }
     }
 }

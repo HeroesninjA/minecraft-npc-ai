@@ -1,6 +1,7 @@
 @file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.npc
 
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
@@ -75,6 +76,8 @@ class NPCContext(
     var isFamilyNearby: Boolean = false
     var isFriendsNearby: Boolean = false
 
+    private var lastNearbyUpdateTick: Int = -1
+
     // Evenimente recente
     var recentEvents: MutableList<String> = mutableListOf()
         private set
@@ -142,14 +145,17 @@ class NPCContext(
      * Actualizeaza lista entitatilor din apropiere
      */
     private fun updateNearbyEntities(location: Location) {
+        val currentTick = Bukkit.getCurrentTick()
+        if (currentTick == lastNearbyUpdateTick) return
+        lastNearbyUpdateTick = currentTick
+
         nearbyPlayers.clear()
         nearbyNPCs.clear()
         nearbyHostileMobs = 0
         nearbyPassiveMobs = 0
         pruneStaleInteraction()
 
-        val range = 20.0
-        location.world.getNearbyEntities(location, range, range, range).forEach { entity ->
+        location.world.getNearbyEntities(location, NEARBY_SCAN_RANGE, NEARBY_SCAN_RANGE, NEARBY_SCAN_RANGE).forEach { entity ->
             if (entity is Player) {
                 nearbyPlayers.add(entity)
             } else if (isHostileMob(entity.type.name)) {
@@ -448,5 +454,9 @@ class NPCContext(
             )
         )
         pl.server.pluginManager.callEvent(event)
+    }
+
+    companion object {
+        private const val NEARBY_SCAN_RANGE = 20.0
     }
 }

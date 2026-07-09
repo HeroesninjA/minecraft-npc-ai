@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
+import ro.ainpc.api.PlayerProgressionApi
+import ro.ainpc.api.RelationshipApi
+import ro.ainpc.api.ReputationApi
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.platform.RuntimeMode
@@ -265,11 +268,39 @@ class AddonRegistryTest {
                     limit: Int
                 ): Collection<WorldNodeInfo> = emptyList()
             }
+        override val reputation: ReputationApi
+            get() = object : ReputationApi {
+                override fun getReputation(playerUuid: String, scopeType: String, scopeId: String): Int = 0
+                override fun addReputation(playerUuid: String, scopeType: String, scopeId: String, amount: Int) {}
+                override fun setReputation(playerUuid: String, scopeType: String, scopeId: String, value: Int) {}
+                override fun getTopReputations(scopeType: String, scopeId: String, limit: Int): List<ro.ainpc.api.ReputationEntry> = emptyList()
+            }
+        override val playerProgression: PlayerProgressionApi
+            get() = object : PlayerProgressionApi {
+                override fun getSnapshot(playerUuid: String): ro.ainpc.api.PlayerProgressionSnapshot = ro.ainpc.api.PlayerProgressionSnapshot(playerUuid, 1, 0, 100, 0, emptyMap(), 0)
+                override fun grantXp(playerUuid: String, amount: Long): ro.ainpc.api.PlayerProgressionGrant = ro.ainpc.api.PlayerProgressionGrant(playerUuid, 0, 0, emptyMap(), getSnapshot(playerUuid))
+                override fun addSkillXp(playerUuid: String, skillId: String, amount: Int): ro.ainpc.api.PlayerProgressionGrant = grantXp(playerUuid, amount.toLong())
+                override fun setLevel(playerUuid: String, level: Int): ro.ainpc.api.PlayerProgressionSnapshot = getSnapshot(playerUuid)
+                override fun resetPlayer(playerUuid: String): ro.ainpc.api.PlayerProgressionSnapshot = getSnapshot(playerUuid)
+                override fun xpRequiredForLevel(level: Int): Long = 100
+                override fun levelForTotalXp(totalXp: Long): Int = 1
+            }
+        override val relationships: RelationshipApi
+            get() = object : RelationshipApi {
+                override fun getAffection(npcA: java.util.UUID, npcB: java.util.UUID): Double = 0.0
+                override fun getTrust(npcA: java.util.UUID, npcB: java.util.UUID): Double = 0.0
+                override fun getRelationshipType(npcA: java.util.UUID, npcB: java.util.UUID): String = "stranger"
+                override fun getInteractionCount(npcA: java.util.UUID, npcB: java.util.UUID): Int = 0
+                override fun getTopRelationships(npcUuid: java.util.UUID, limit: Int): List<ro.ainpc.api.RelationshipEntry> = emptyList()
+            }
         override val dataDirectory: Path
             get() = Path.of(".")
         override val packDirectory: Path
             get() = Path.of("packs")
         override fun reloadContent() {}
         override fun registerObjectiveHandler(type: String, handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int) {}
+        override fun getNPCName(npcUuid: java.util.UUID): String? = null
+        override fun getNPCProfession(npcUuid: java.util.UUID): String? = null
+        override fun getPlayerBalance(playerUuid: java.util.UUID): Double = 0.0
     }
 }
