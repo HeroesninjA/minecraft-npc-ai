@@ -1239,6 +1239,17 @@ fun handleHealth(sender: CommandSender): Boolean {
     msg.send(sender, "&eAI Provider: &f${plugin.config.getString("ai_provider", "openai")}")
     msg.send(sender, "&eMCP write tools: &f${if (plugin.config.getBoolean("mcp.write_tools_enabled", false)) "&aactivate" else "&7dezactivate"}")
 
+    val perf = plugin.performanceMonitor
+    val routineProfile = perf.getProfile("routineTick")
+    if (routineProfile != null) {
+        val color = when {
+            routineProfile.avgDurationMs > 50 -> "&c"
+            routineProfile.avgDurationMs > 20 -> "&e"
+            else -> "&a"
+        }
+        msg.send(sender, "&eRoutine tick: $color${"%.1f".format(routineProfile.avgDurationMs)}ms avg &8(${routineProfile.minDurationMs}-${routineProfile.maxDurationMs}ms, ${routineProfile.sampleCount} samples)")
+    }
+
     val issues = mutableListOf<String>()
     if (!plugin.config.getBoolean("features.ai", false)) issues.add("&eAI: &cdezactivat (features.ai=false)")
     if (mcpHealth.enabled && !mcpHealth.available) issues.add("&eMCP: &c${mcpHealth.detail}")

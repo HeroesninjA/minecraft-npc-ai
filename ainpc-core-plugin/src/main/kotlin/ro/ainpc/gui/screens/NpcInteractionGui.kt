@@ -98,6 +98,30 @@ class NpcInteractionGui : GuiScreen {
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc story context ${click.player().name} nearest") }
             )
         )
+        context.button(
+            6,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.NAME_TAG,
+                    "&bRelatii NPC",
+                    "&7Vizualizati relatiile dintre NPC-uri.",
+                    "&7Click: deschide ecranul de relatii"
+                ),
+                GuiAction { click -> click.service().open(click.player(), ro.ainpc.gui.GuiKey.RELATIONSHIP) }
+            )
+        )
+        context.button(
+            7,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.EMERALD,
+                    "&aOferte Quest",
+                    "&7Vezi quest-urile disponibile de la NPC-urile din apropiere.",
+                    "&7Click: deschide ecranul de oferte"
+                ),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_OFFER_NPC) }
+            )
+        )
 
         for (index in nearbyNpcs.indices) {
             val npc = nearbyNpcs[index]
@@ -251,7 +275,7 @@ class NpcInteractionGui : GuiScreen {
             val interactions = npc.plugin?.relationshipService?.getNPCInteractions(npcUuid)
             if (interactions != null && interactions.isNotEmpty()) {
                 val topRelation = interactions.first()
-                val partnerName = topRelation.first?.let { npc.plugin?.npcManager?.getNPCByUUID(it)?.name } ?: "Unknown"
+                val partnerName = topRelation.first?.let { npc.plugin?.npcManager?.getNPCByUuid(it)?.name } ?: "Unknown"
                 lore.add("&7Relatii: &f${interactions.size} (&7cea mai apropiata: &f$partnerName&7)")
             }
         }

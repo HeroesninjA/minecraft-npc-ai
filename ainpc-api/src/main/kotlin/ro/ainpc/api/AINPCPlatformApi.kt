@@ -6,6 +6,7 @@ import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldMode
 import java.nio.file.Path
 import java.util.Locale
+import java.util.UUID
 
 interface AINPCPlatformApi {
     val runtimeMode: RuntimeMode
@@ -19,6 +20,12 @@ interface AINPCPlatformApi {
     val integrationRegistry: IntegrationRegistryApi
 
     val worldAdmin: WorldAdminApi
+
+    val reputation: ReputationApi
+
+    val playerProgression: PlayerProgressionApi
+
+    val relationships: RelationshipApi
 
     val dataDirectory: Path
 
@@ -35,6 +42,12 @@ interface AINPCPlatformApi {
         type: String,
         handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int
     )
+
+    fun getNPCName(npcUuid: UUID): String?
+
+    fun getNPCProfession(npcUuid: UUID): String?
+
+    fun getPlayerBalance(playerUuid: UUID): Double
 
     private fun sanitizePathSegment(value: String?, fallback: String): String {
         if (value.isNullOrBlank()) {

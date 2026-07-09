@@ -3,9 +3,20 @@ package ro.ainpc.economy
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-class ShopService(private val economyService: EconomyService?) {
+
+class ShopService(
+    private val economyService: EconomyService?,
+    private val npcEconomyService: NpcEconomyService? = null
+) {
     private val shops: MutableMap<String, NpcShopDefinition> = LinkedHashMap()
     private val roleIndex: MutableMap<String, MutableList<NpcShopDefinition>> = LinkedHashMap()
+
+    companion object {
+        private const val BASE_PRICE_THRESHOLD = 100
+        private const val MIN_MULTIPLIER = 0.6
+        private const val MAX_MULTIPLIER = 1.8
+        private const val WEALTH_FACTOR = 0.003
+    }
 
     fun registerShop(shop: NpcShopDefinition) {
         shops[shop.shopId] = shop
@@ -36,14 +47,29 @@ class ShopService(private val economyService: EconomyService?) {
 
     fun shopCount(): Int = shops.size
 
+    fun getDynamicPriceMultiplier(shop: NpcShopDefinition): Double {
+        if (!npcEconomyService) return 1.0
+        val npcKey = "role_${shop.npcRole.lowercase()}"
+        val balance = npcEconomyService?.getBalance(npcKey) ?: return 1.0
+        if (balance <= BASE_PRICE_THRESHOLD) return MIN_MULTIPLIER
+        val multiplier = 1.0 + (balance - BASE_PRICE_THRESHOLD) * WEALTH_FACTOR
+        return multiplier.coerceIn(MIN_MULTIPLIER, MAX_MULTIPLIER)
+    }
+
+    fun getAdjustedCost(shop: NpcShopDefinition, originalCost: Int): Int {
+        val multiplier = getDynamicPriceMultiplier(shop)
+        return (originalCost * multiplier).toInt().coerceAtLeast(1)
+    }
+
     fun canAfford(player: Player, shop: NpcShopDefinition, offer: ShopOffer): Boolean {
         for ((material, amount) in offer.costItems) {
             if (!hasEnough(player, material, amount)) return false
         }
         if (shop.currency == ShopCurrency.VAULT_OPTIONAL && economyService != null) {
-            val coinCost = offer.costItems.entries.sumOf { it.value }
-            if (coinCost > 0) {
-                return economyService.getBalance(player) >= coinCost
+            val baseCost = offer.costItems.entries.sumOf { it.value }
+            val adjustedCost = getAdjustedCost(shop, baseCost)
+            if (adjustedCost > 0) {
+                return economyService.getBalance(player) >= adjustedCost
             }
         }
         return true
@@ -60,15 +86,17 @@ class ShopService(private val economyService: EconomyService?) {
         removeItems(player, offer.costItems)
         giveItems(player, offer.resultItems)
         if (shop.currency == ShopCurrency.VAULT_OPTIONAL) {
-            val coinCost = offer.costItems.entries.sumOf { it.value }
-            if (coinCost > 0 && economyService != null) {
-                economyService.withdraw(player, coinCost)
+            val baseCost = offer.costItems.entries.sumOf { it.value }
+            val adjustedCost = getAdjustedCost(shop, baseCost)
+            if (adjustedCost > 0 && economyService != null) {
+                economyService.withdraw(player, adjustedCost)
             }
         }
         return ShopTransactionResult(true, "Tranzactie reusita")
     }
 
     fun executeSell(player: Player, shop: NpcShopDefinition, offer: ShopOffer): ShopTransactionResult {
+        val multiplier = getDynamicPriceMultiplier(shop)
         if (!hasEnoughItems(player, offer.resultItems)) {
             return ShopTransactionResult(false, "Nu ai itemele necesare pentru vanzare")
         }
@@ -79,9 +107,10 @@ class ShopService(private val economyService: EconomyService?) {
         removeItems(player, offer.resultItems)
         giveItems(player, offer.costItems)
         if (shop.currency == ShopCurrency.VAULT_OPTIONAL) {
-            val coinReward = offer.costItems.entries.sumOf { it.value }
-            if (coinReward > 0 && economyService != null) {
-                economyService.deposit(player, coinReward)
+            val baseReward = offer.costItems.entries.sumOf { it.value }
+            val adjustedReward = (baseReward * multiplier).toInt().coerceAtLeast(1)
+            if (adjustedReward > 0 && economyService != null) {
+                economyService.deposit(player, adjustedReward)
             }
         }
         return ShopTransactionResult(true, "Vanzare reusita")
@@ -154,6 +183,8 @@ class ShopService(private val economyService: EconomyService?) {
             }
         }
     }
+
+    private operator fun NpcEconomyService?.not(): Boolean = this == null
 }
 
 data class ShopTransactionResult(

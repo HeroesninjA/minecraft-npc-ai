@@ -11,6 +11,7 @@ import ro.ainpc.api.events.npc.AINPCRoutineChangedEvent
 import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.utils.ConfigKeys
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -20,9 +21,26 @@ class RoutineService(private val plugin: AINPCPlugin) {
     private val lastRoutineSlots: ConcurrentMap<UUID, RoutineSlot> = ConcurrentHashMap()
     private val lastRoutineMoveAt: ConcurrentMap<UUID, Long> = ConcurrentHashMap()
 
+    private val externalBias: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private var batchIndex = 0
+    private var batchCount = 0
+    private val batchSize: Int get() = plugin.config.getInt(ConfigKeys.ROUTINE_BATCH_SIZE, 0).coerceAtLeast(0)
+
+    fun setExternalBias(npcUuid: UUID, biasTicks: Long) {
+        externalBias[npcUuid] = biasTicks
+    }
+
+    fun clearExternalBias() {
+        externalBias.clear()
+    }
+
+    fun getExternalBias(npcUuid: UUID): Long = externalBias.getOrDefault(npcUuid, 0L)
+
+    fun getBatchProgress(): Pair<Int, Int> = batchIndex to batchCount
+
     fun runRoutineTick(): RoutineTickSummary {
         val total = plugin.npcManager.getNPCCount()
-        if (!plugin.config.getBoolean("routine.enabled", false)) {
+        if (!plugin.config.getBoolean(ConfigKeys.ROUTINE_ENABLED, false)) {
             return RoutineTickSummary.disabled(total)
         }
 
@@ -32,17 +50,28 @@ class RoutineService(private val plugin: AINPCPlugin) {
         var skippedMissingTarget = 0
         var skippedInvalidTarget = 0
 
-        val arrivalRadius = maxOf(1.5, plugin.config.getDouble("routine.arrival_radius", 5.5))
-        val minTeleportDistance = maxOf(arrivalRadius, plugin.config.getDouble("routine.min_teleport_distance", 8.0))
-        val forceTeleportDistance = maxOf(minTeleportDistance, plugin.config.getDouble("routine.force_teleport_distance", 96.0))
-        val naturalMovementEnabled = plugin.config.getBoolean("routine.natural_movement.enabled", true)
-        val naturalMovementMaxDistance = maxOf(arrivalRadius, plugin.config.getDouble("routine.natural_movement.max_distance", 48.0))
-        val naturalMovementSpeed = maxOf(0.1, plugin.config.getDouble("routine.natural_movement.speed", 1.0))
-        val moveCooldownMillis = maxOf(0L, plugin.config.getLong("routine.move_cooldown_seconds", 300L)) * 1000L
-        val teleportEnabled = plugin.config.getBoolean("routine.teleport_enabled", true)
+        val arrivalRadius = maxOf(1.5, plugin.config.getDouble(ConfigKeys.ROUTINE_ARRIVAL_RADIUS, 5.5))
+        val minTeleportDistance = maxOf(arrivalRadius, plugin.config.getDouble(ConfigKeys.ROUTINE_MIN_TELEPORT, 8.0))
+        val forceTeleportDistance = maxOf(minTeleportDistance, plugin.config.getDouble(ConfigKeys.ROUTINE_FORCE_TELEPORT, 96.0))
+        val naturalMovementEnabled = plugin.config.getBoolean(ConfigKeys.ROUTINE_NATURAL_MOVEMENT, true)
+        val naturalMovementMaxDistance = maxOf(arrivalRadius, plugin.config.getDouble(ConfigKeys.ROUTINE_NATURAL_MAX_DIST, 48.0))
+        val naturalMovementSpeed = maxOf(0.1, plugin.config.getDouble(ConfigKeys.ROUTINE_NATURAL_SPEED, 1.0))
+        val moveCooldownMillis = maxOf(0L, plugin.config.getLong(ConfigKeys.ROUTINE_MOVE_COOLDOWN, 300L)) * 1000L
+        val teleportEnabled = plugin.config.getBoolean(ConfigKeys.ROUTINE_TELEPORT_ENABLED, true)
         val now = System.currentTimeMillis()
+        val allNpcs = plugin.npcManager.getAllNPCs().toList()
+        val totalNpcs = allNpcs.size
 
-        for (npc in plugin.npcManager.getAllNPCs()) {
+        val effectiveBatchSize = if (batchSize > 0) batchSize else totalNpcs
+        if (batchIndex >= totalNpcs || batchSize <= 0) {
+            batchIndex = 0
+        }
+        batchCount = totalNpcs
+        val endIndex = minOf(batchIndex + effectiveBatchSize, totalNpcs)
+        val batch = allNpcs.subList(batchIndex, endIndex)
+        batchIndex = endIndex
+
+        for (npc in batch) {
             if (!npc.isSpawned()) {
                 continue
             }

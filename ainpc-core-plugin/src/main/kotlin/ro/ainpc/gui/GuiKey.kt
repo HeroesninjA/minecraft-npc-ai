@@ -39,7 +39,11 @@ enum class GuiKey(
     MAPPING_CREATE_REGION("mapping_create_region", "Creaza Regiune"),
     MAPPING_CREATE_PLACE("mapping_create_place", "Creaza Place"),
     MAPPING_CREATE_NODE("mapping_create_node", "Creaza Node"),
-    CONFIRM("confirm", "Confirmare");
+    CONFIRM("confirm", "Confirmare"),
+    RELATIONSHIP("relationship", "Relatii NPC"),
+    STORY_AUTHORING("story_authoring", "Authoring Story"),
+    NPC_MEMORY("npc_memory", "Memorii NPC"),
+    QUEST_OFFER_NPC("quest_offer_npc", "Oferte Quest NPC");
 
     fun id(): String = idValue
 

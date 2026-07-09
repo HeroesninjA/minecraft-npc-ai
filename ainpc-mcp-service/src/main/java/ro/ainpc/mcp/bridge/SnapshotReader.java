@@ -1,6 +1,7 @@
 package ro.ainpc.mcp.bridge;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,11 +42,11 @@ public class SnapshotReader {
 
     public SnapshotResult read() {
         if (mcpMode.isOffline()) {
-            return SnapshotResult.missing("MCP ruleaza in mod offline. Tool-urile de date sunt dezactivate.");
+            return SnapshotResult.offline("MCP ruleaza in mod offline. Tool-urile de date sunt dezactivate.");
         }
         CachedSnapshot cached = cache.get();
         if (cached != null && !cached.isExpired(cacheTtl)) {
-            return SnapshotResult.valid(cached.snapshot(), false);
+            return cached.toResult();
         }
         return reload();
     }
@@ -57,25 +58,35 @@ public class SnapshotReader {
                 return SnapshotResult.missing("Snapshot file nu exista: " + snapshotPath);
             }
             String json = Files.readString(snapshotPath);
-            RuntimeSnapshot snapshot = gson.fromJson(json, RuntimeSnapshot.class);
+            RuntimeSnapshot snapshot;
+            try {
+                snapshot = gson.fromJson(json, RuntimeSnapshot.class);
+            } catch (JsonSyntaxException e) {
+                cache.set(null);
+                LOG.warn("Snapshot JSON invalid: {}", e.getMessage());
+                return SnapshotResult.invalid("Snapshot JSON invalid: " + e.getMessage());
+            }
 
             if (snapshot == null) {
+                cache.set(null);
                 return SnapshotResult.invalid("Snapshot-ul nu a putut fi deserializat.");
+            }
+
+            if (snapshot.getSchemaVersion() != 1) {
+                cache.set(null);
+                return SnapshotResult.invalid("schemaVersion invalid: " + snapshot.getSchemaVersion());
             }
 
             FileTime fileModTime = Files.getLastModifiedTime(snapshotPath);
             if (fileModTime.toInstant().plus(staleThreshold).isBefore(Instant.now())) {
-                CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now());
+                String detail = "Snapshot file este mai vechi de "
+                    + staleThreshold.getSeconds() + "s. Datele pot fi invechite.";
+                CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now(), SnapshotState.STALE, detail);
                 cache.set(cs);
-                return SnapshotResult.stale(snapshot, "Snapshot file este mai vechi de "
-                    + staleThreshold.getSeconds() + "s. Datele pot fi invechite.");
+                return SnapshotResult.stale(snapshot, detail);
             }
 
-            if (snapshot.getSchemaVersion() != 1) {
-                return SnapshotResult.invalid("schemaVersion invalid: " + snapshot.getSchemaVersion());
-            }
-
-            CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now());
+            CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now(), SnapshotState.FRESH, null);
             cache.set(cs);
             return SnapshotResult.valid(snapshot, true);
         } catch (IOException e) {
@@ -86,10 +97,12 @@ public class SnapshotReader {
     }
 
     public SnapshotStatus status() {
-        if (mcpMode.isOffline()) return SnapshotStatus.NO_FILE;
+        if (mcpMode.isOffline()) return SnapshotStatus.OFFLINE;
         if (!Files.exists(snapshotPath)) return SnapshotStatus.NO_FILE;
         CachedSnapshot cached = cache.get();
         if (cached == null) return SnapshotStatus.NO_CACHE;
+        if (cached.isExpired(cacheTtl)) return SnapshotStatus.EXPIRED_CACHE;
+        if (cached.state() == SnapshotState.STALE) return SnapshotStatus.STALE;
         return SnapshotStatus.AVAILABLE;
     }
 
@@ -102,43 +115,67 @@ public class SnapshotReader {
         private final RuntimeSnapshot snapshot;
         private final String detail;
         private final boolean isFresh;
+        private final SnapshotState state;
 
-        private SnapshotResult(boolean available, RuntimeSnapshot snapshot, String detail, boolean isFresh) {
+        private SnapshotResult(
+            boolean available,
+            RuntimeSnapshot snapshot,
+            String detail,
+            boolean isFresh,
+            SnapshotState state
+        ) {
             this.available = available;
             this.snapshot = snapshot;
             this.detail = detail;
             this.isFresh = isFresh;
+            this.state = state;
         }
 
         public static SnapshotResult valid(RuntimeSnapshot snapshot, boolean fresh) {
-            return new SnapshotResult(true, snapshot, null, fresh);
+            return new SnapshotResult(true, snapshot, null, fresh, fresh ? SnapshotState.FRESH : SnapshotState.CACHED);
         }
 
         public static SnapshotResult stale(RuntimeSnapshot snapshot, String detail) {
-            return new SnapshotResult(true, snapshot, detail, false);
+            return new SnapshotResult(true, snapshot, detail, false, SnapshotState.STALE);
         }
 
         public static SnapshotResult missing(String detail) {
-            return new SnapshotResult(false, null, detail, false);
+            return new SnapshotResult(false, null, detail, false, SnapshotState.MISSING);
         }
 
         public static SnapshotResult invalid(String detail) {
-            return new SnapshotResult(false, null, detail, false);
+            return new SnapshotResult(false, null, detail, false, SnapshotState.INVALID);
+        }
+
+        public static SnapshotResult offline(String detail) {
+            return new SnapshotResult(false, null, detail, false, SnapshotState.OFFLINE);
         }
 
         public boolean isAvailable() { return available; }
         public RuntimeSnapshot getSnapshot() { return snapshot; }
         public String getDetail() { return detail; }
         public boolean isFresh() { return isFresh; }
+        public SnapshotState getState() { return state; }
     }
 
     public enum SnapshotStatus {
-        AVAILABLE, NO_CACHE, NO_FILE
+        AVAILABLE, NO_CACHE, EXPIRED_CACHE, STALE, NO_FILE, OFFLINE
     }
 
-    private record CachedSnapshot(RuntimeSnapshot snapshot, Instant loadedAt) {
+    public enum SnapshotState {
+        FRESH, CACHED, STALE, MISSING, INVALID, OFFLINE
+    }
+
+    private record CachedSnapshot(RuntimeSnapshot snapshot, Instant loadedAt, SnapshotState state, String detail) {
         boolean isExpired(Duration ttl) {
             return loadedAt.plus(ttl).isBefore(Instant.now());
+        }
+
+        SnapshotResult toResult() {
+            if (state == SnapshotState.STALE) {
+                return SnapshotResult.stale(snapshot, detail);
+            }
+            return SnapshotResult.valid(snapshot, false);
         }
     }
 }

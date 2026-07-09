@@ -1,5 +1,8 @@
 # AINPC Plugin
 
+![Build Status](https://github.com/HeroesninjA/test/actions/workflows/build.yml/badge.svg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Plugin Minecraft Paper pentru NPC-uri AI cu poveste, emotii, amintiri si dialog realist.
 
 ## Descriere
@@ -33,6 +36,18 @@ ainpc-scenario-medieval/  # Scenariu medieval
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build-local.ps1
 ```
+
+## AI tooling
+
+- Codex foloseste `.codex/config.toml` pentru MCP-ul local.
+- OpenCode foloseste `opencode.json` in root-ul proiectului; `opencode.jsonc` ramane varianta comentata/editabila.
+- OpenCode are si o referinta locala `docs/` pentru notele de arhitectura si stack-ul MCP.
+- Drift-ul intre OpenCode si Codex se verifica cu `.\scripts\check-opencode-config-drift.ps1`.
+- Sincronizarea dintre `opencode.json` si `opencode.jsonc` se verifica cu `.\scripts\check-opencode-config-sync.ps1`.
+- Verificarea completa OpenCode se ruleaza cu `.\scripts\check-opencode-config.ps1`.
+- Trackerul pentru gap-urile MCP runtime se ruleaza cu `.\scripts\mcp-runtime-gap-status.ps1`.
+- Ambele expun acelasi stack MCP local: `ainpc-project-memory`, `serena` si `context7`.
+- Pentru taskuri de API sau librarii externe, OpenCode si Codex pot folosi automat `context7`.
 
 ## Testare
 

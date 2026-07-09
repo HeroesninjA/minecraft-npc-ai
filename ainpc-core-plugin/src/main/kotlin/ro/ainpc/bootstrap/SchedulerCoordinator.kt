@@ -2,6 +2,7 @@ package ro.ainpc.bootstrap
 
 import org.bukkit.scheduler.BukkitTask
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.utils.ConfigKeys
 
 class SchedulerCoordinator(
     private val plugin: AINPCPlugin
@@ -21,8 +22,10 @@ class SchedulerCoordinator(
         scheduleSocialCoordination()
         scheduleRelationshipDecay()
         scheduleNpcSalaryPayment()
+        scheduleBankInterest()
         schedulePackFileWatcher()
         scheduleMcpCommandQueue()
+        scheduleRandomWorldEvents()
         scheduleVillageRebalance()
         scheduleQuestTracking()
     }
@@ -76,20 +79,23 @@ class SchedulerCoordinator(
     }
 
     private fun scheduleRoutine() {
-        val routineTickSeconds = maxOf(20, plugin.config.getInt("routine.tick_seconds", 60))
+        val routineTickSeconds = maxOf(20, plugin.config.getInt(ConfigKeys.ROUTINE_TICK_SECONDS, 60))
 
-        if (featureEnabled("features.routine", false) && plugin.config.getBoolean("routine.enabled", false)) {
+        if (routineEnabled) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
                 Runnable {
                     val summary = plugin.routineCoordinator.tick()
                     if (plugin.config.getBoolean("debug.enabled", false)) {
+                        val (batchIdx, batchTotal) = plugin.routineService.getBatchProgress()
+                        val batchInfo = if (batchTotal > 0) "batch=$batchIdx/$batchTotal" else ""
                         plugin.logger.info(
                             "[Debug] Routine tick: evaluated=" + summary.evaluatedNpcs() +
                                 ", moved=" + summary.movedNpcs() +
                                 ", busy=" + summary.skippedBusy() +
                                 ", missingTarget=" + summary.skippedMissingTarget() +
-                                ", invalidTarget" + summary.skippedInvalidTarget()
+                                ", invalidTarget=" + summary.skippedInvalidTarget() +
+                                (if (batchInfo.isNotBlank()) ", $batchInfo" else "")
                         )
                     }
                 },
@@ -135,7 +141,7 @@ class SchedulerCoordinator(
     }
 
     private fun scheduleSocialCoordination() {
-        if (featureEnabled("features.routine", false) && plugin.config.getBoolean("routine.enabled", false)) {
+        if (routineEnabled) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
                 Runnable {
@@ -150,7 +156,7 @@ class SchedulerCoordinator(
     }
 
     private fun schedulePackFileWatcher() {
-        if (!plugin.config.getBoolean("feature_packs.hot_reload", false)) return
+        if (!plugin.config.getBoolean(ConfigKeys.HOT_RELOAD, false)) return
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
             Runnable { plugin.packFileWatcher.tick() },
@@ -159,9 +165,31 @@ class SchedulerCoordinator(
         ))
     }
 
+    private fun scheduleRandomWorldEvents() {
+        if (!plugin.config.getBoolean(ConfigKeys.STORY_RANDOM_EVENTS, false)) return
+        val intervalSeconds = maxOf(120, plugin.config.getInt(ConfigKeys.STORY_RANDOM_INTERVAL, 600))
+        tasks.add(plugin.server.scheduler.runTaskTimer(
+            plugin,
+            Runnable { plugin.randomWorldEventService.tick() },
+            20L * 60,
+            20L * intervalSeconds
+        ))
+    }
+
+    private fun scheduleBankInterest() {
+        if (!plugin.config.getBoolean(ConfigKeys.ECONOMY_INTEREST_ENABLED, false)) return
+        val intervalSeconds = maxOf(3600, plugin.config.getInt(ConfigKeys.ECONOMY_INTEREST_CHECK, 7200))
+        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+            plugin,
+            Runnable { plugin.bankingService.applyInterest() },
+            20L * intervalSeconds,
+            20L * intervalSeconds
+        ))
+    }
+
     private fun scheduleNpcSalaryPayment() {
-        if (!plugin.config.getBoolean("economy.npc_salaries_enabled", false)) return
-        val intervalSeconds = maxOf(120, plugin.config.getInt("economy.salary_interval_seconds", 600))
+        if (!plugin.config.getBoolean(ConfigKeys.ECONOMY_SALARIES_ENABLED, false)) return
+        val intervalSeconds = maxOf(120, plugin.config.getInt(ConfigKeys.ECONOMY_SALARY_INTERVAL, 600))
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
             Runnable { plugin.npcEconomyService.paySalaries() },
@@ -171,7 +199,7 @@ class SchedulerCoordinator(
     }
 
     private fun scheduleMcpCommandQueue() {
-        if (!plugin.config.getBoolean("mcp.write_tools_enabled", false)) return
+        if (!plugin.config.getBoolean(ConfigKeys.MCP_WRITE_TOOLS, false)) return
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
             Runnable { plugin.mcpCommandQueue.tick() },
@@ -239,4 +267,6 @@ class SchedulerCoordinator(
 
     private fun featureEnabled(path: String, defaultValue: Boolean): Boolean =
         plugin.config.getBoolean(path, defaultValue)
+
+    private val routineEnabled: Boolean get() = featureEnabled(ConfigKeys.FEATURE_ROUTINE, false) && plugin.config.getBoolean(ConfigKeys.ROUTINE_ENABLED, false)
 }

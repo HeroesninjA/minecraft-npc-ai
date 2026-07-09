@@ -1980,6 +1980,7 @@ class NPCManager(
         return npcsByUuid[uuid]
     }
 
+    @Deprecated("Use getNPCByUuid instead", ReplaceWith("getNPCByUuid(uuid)"))
     fun getNPCByUUID(uuid: UUID): AINPC? {
         return getNPCByUuid(uuid)
     }

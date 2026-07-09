@@ -1,35 +1,25 @@
-# Automatically normalize line endings
+# Auto detect text files and perform LF normalization
 * text=auto
 
-# Source code
+# Source files
 *.kt text diff=kotlin
-*.java text
-*.kts text
-*.gradle text
-*.gradle.kts text
-
-# Config files
+*.java text diff=java
 *.yml text
 *.yaml text
-*.toml text
 *.json text
-*.jsonc text
 *.properties text
-*.env text
-*.xml text
-
-# Docs
+*.gradle text diff=gradle
 *.md text
-*.txt text
-*.bat text
-*.ps1 text
+*.ps1 text eol=crlf
 *.sh text eol=lf
 
-# Binary
+# Binary files
 *.jar binary
 *.png binary
 *.jpg binary
-*.ico binary
-*.db binary
-*.sqlite binary
-*.sqlite3 binary
+*.gz binary
+*.zip binary
+
+# Git files
+.gitattributes text
+.gitignore text

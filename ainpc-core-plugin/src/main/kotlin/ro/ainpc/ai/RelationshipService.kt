@@ -1,12 +1,14 @@
 package ro.ainpc.ai
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.RelationshipApi
+import ro.ainpc.api.RelationshipEntry
 import java.sql.SQLException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
-class RelationshipService(private val plugin: AINPCPlugin) {
+class RelationshipService(private val plugin: AINPCPlugin) : RelationshipApi {
     private val relationships: MutableMap<String, NPCRelationship> = ConcurrentHashMap()
     private val lastInteractionTimestamps: MutableMap<String, Long> = ConcurrentHashMap()
 
@@ -138,6 +140,24 @@ class RelationshipService(private val plugin: AINPCPlugin) {
     }
 
     fun getRelationshipCount(): Int = relationships.size
+
+    override fun getAffection(npcA: UUID, npcB: UUID): Double =
+        getRelationship(npcA, npcB).affection
+
+    override fun getTrust(npcA: UUID, npcB: UUID): Double =
+        getRelationship(npcA, npcB).trust
+
+    override fun getRelationshipType(npcA: UUID, npcB: UUID): String =
+        getRelationship(npcA, npcB).relationshipType ?: "stranger"
+
+    override fun getInteractionCount(npcA: UUID, npcB: UUID): Int =
+        getRelationship(npcA, npcB).interactionCount
+
+    override fun getTopRelationships(npcUuid: UUID, limit: Int): List<RelationshipEntry> =
+        getNPCInteractions(npcUuid).take(limit).map { (partner, rel) ->
+            val partnerName = plugin.npcManager.getNPCByUuid(partner)?.name ?: "Unknown"
+            RelationshipEntry(partner, partnerName, rel.affection, rel.relationshipType ?: "stranger")
+        }
 
     fun flushAll() {
         for ((key, rel) in relationships) {

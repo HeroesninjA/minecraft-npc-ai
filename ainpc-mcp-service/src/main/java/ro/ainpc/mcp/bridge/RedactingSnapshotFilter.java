@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -99,9 +100,9 @@ public class RedactingSnapshotFilter {
     }
 
     private boolean isInBlocklist(String value) {
-        String lower = value.toLowerCase();
+        String lower = value.toLowerCase(Locale.ROOT);
         for (String blocked : blocklist) {
-            if (lower.contains(blocked.toLowerCase())) {
+            if (lower.contains(blocked.toLowerCase(Locale.ROOT))) {
                 return true;
             }
         }

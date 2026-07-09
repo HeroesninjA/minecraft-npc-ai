@@ -8,7 +8,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.Path;
+import java.time.Instant;
 
 class McpRuntimeBridgeHealthIndicatorTest {
     private final Gson gson = new Gson();
@@ -38,6 +40,41 @@ class McpRuntimeBridgeHealthIndicatorTest {
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
         assertEquals("UP", health.status());
         assertTrue("connected".equals(health.bridge()) || "fresh_read".equals(health.bridge()));
+    }
+
+    @Test
+    void reportsOfflineWhenModeIsOffline(@TempDir Path tempDir) throws IOException {
+        Path fixture = Path.of("src/test/resources/fixtures/runtime-snapshot-valid.json");
+        String json = Files.readString(fixture);
+        Path snapshotFile = tempDir.resolve("snapshot.json");
+        Files.writeString(snapshotFile, json);
+
+        McpMode mode = new McpMode("offline");
+        SnapshotReader reader = new SnapshotReader(
+            snapshotFile.toString(), 60, 3600, gson, mode);
+
+        McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
+        McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
+        assertEquals("DOWN", health.status());
+        assertEquals("offline", health.bridge());
+    }
+
+    @Test
+    void reportsStaleWhenSnapshotFileIsTooOld(@TempDir Path tempDir) throws IOException {
+        Path fixture = Path.of("src/test/resources/fixtures/runtime-snapshot-valid.json");
+        String json = Files.readString(fixture);
+        Path snapshotFile = tempDir.resolve("snapshot.json");
+        Files.writeString(snapshotFile, json);
+        Files.setLastModifiedTime(snapshotFile, FileTime.from(Instant.now().minusSeconds(7200)));
+
+        McpMode mode = new McpMode("bridge");
+        SnapshotReader reader = new SnapshotReader(
+            snapshotFile.toString(), 0, 60, gson, mode);
+
+        McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
+        McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
+        assertEquals("UP", health.status());
+        assertEquals("stale", health.bridge());
     }
 
     @Test

@@ -1,6 +1,7 @@
 package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -27,8 +28,9 @@ public class AinpcWorldMappingTools {
     )
     public Map<String, Object> worldMappingSummary() {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.world.mapping.summary");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return base("unavailable", result.getDetail());
+            return base(snapshotState, snapshotState, result.getDetail());
         }
         RuntimeSnapshot.WorldSnapshot w = result.getSnapshot().getWorld();
 
@@ -36,6 +38,7 @@ public class AinpcWorldMappingTools {
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", true,
+            "snapshotState", snapshotState,
             "regionCount", w.getRegionCount(),
             "placeCount", w.getPlaceCount(),
             "nodeCount", w.getNodeCount(),
@@ -45,12 +48,13 @@ public class AinpcWorldMappingTools {
         );
     }
 
-    private Map<String, Object> base(String status, String detail) {
+    private Map<String, Object> base(String status, String snapshotState, String detail) {
         return Map.of(
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", false,
             "status", status,
+            "snapshotState", snapshotState,
             "detail", detail != null ? detail : "N/A",
             "timestamp", Instant.now().toString()
         );

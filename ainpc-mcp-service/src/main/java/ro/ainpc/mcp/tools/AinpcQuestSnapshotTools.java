@@ -1,6 +1,7 @@
 package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,8 +30,9 @@ public class AinpcQuestSnapshotTools {
     )
     public Map<String, Object> questSummary() {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.quest.summary");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return base("unavailable", result.getDetail());
+            return base(snapshotState, snapshotState, result.getDetail());
         }
         RuntimeSnapshot.QuestSnapshot q = result.getSnapshot().getQuests();
 
@@ -43,15 +45,16 @@ public class AinpcQuestSnapshotTools {
             ))
             .collect(Collectors.toList());
 
-        return Map.of(
-            "schemaVersion", 1,
-            "service", "ainpc-mcp-service",
-            "available", true,
-            "activePlayerQuests", q.getActivePlayerQuests(),
-            "activeGlobalQuests", q.getActiveGlobalQuests(),
-            "totalActive", q.getActivePlayerQuests() + q.getActiveGlobalQuests(),
-            "samples", samples,
-            "timestamp", Instant.now().toString()
+        return Map.ofEntries(
+            Map.entry("schemaVersion", 1),
+            Map.entry("service", "ainpc-mcp-service"),
+            Map.entry("available", true),
+            Map.entry("snapshotState", snapshotState),
+            Map.entry("activePlayerQuests", q.getActivePlayerQuests()),
+            Map.entry("activeGlobalQuests", q.getActiveGlobalQuests()),
+            Map.entry("totalActive", q.getActivePlayerQuests() + q.getActiveGlobalQuests()),
+            Map.entry("samples", samples),
+            Map.entry("timestamp", Instant.now().toString())
         );
     }
 
@@ -65,8 +68,9 @@ public class AinpcQuestSnapshotTools {
     )
     public Map<String, Object> dialogContext() {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.dialog.context");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return base("unavailable", result.getDetail());
+            return base("unavailable", snapshotState, result.getDetail());
         }
         RuntimeSnapshot s = result.getSnapshot();
         RuntimeSnapshot.PluginSnapshot p = s.getPlugin();
@@ -75,42 +79,44 @@ public class AinpcQuestSnapshotTools {
         RuntimeSnapshot.QuestSnapshot q = s.getQuests();
         RuntimeSnapshot.FeatureSnapshot f = s.getFeatures();
 
-        return Map.of(
-            "schemaVersion", 1,
-            "service", "ainpc-mcp-service",
-            "available", true,
-            "server", Map.of(
+        return Map.ofEntries(
+            Map.entry("schemaVersion", 1),
+            Map.entry("service", "ainpc-mcp-service"),
+            Map.entry("available", true),
+            Map.entry("snapshotState", snapshotState),
+            Map.entry("server", Map.of(
                 "onlinePlayers", p.getOnlinePlayers(),
                 "uptimeMinutes", p.getUptimeMinutes()
-            ),
-            "world", Map.of(
+            )),
+            Map.entry("world", Map.of(
                 "totalRegions", w.getRegionCount(),
                 "totalPlaces", w.getPlaceCount(),
                 "regions", w.getRegionNames() != null ? w.getRegionNames() : List.of()
-            ),
-            "npc", Map.of(
+            )),
+            Map.entry("npc", Map.of(
                 "totalNpcs", n.getTotalCount(),
                 "samples", n.getSamples().stream()
                     .map(ns -> Map.<String, Object>of("name", ns.getName() != null ? ns.getName() : "",
                                                       "profession", ns.getProfession() != null ? ns.getProfession() : "",
                                                       "regionId", ns.getRegionId() != null ? ns.getRegionId() : ""))
                     .collect(Collectors.toList())
-            ),
-            "quests", Map.of(
+            )),
+            Map.entry("quests", Map.of(
                 "active", q.getActivePlayerQuests() + q.getActiveGlobalQuests()
-            ),
-            "features", Map.of("aiEnabled", f.isAi(), "mcpEnabled", f.isMcp()),
-            "snapshotTimestamp", s.getTimestamp(),
-            "timestamp", Instant.now().toString()
+            )),
+            Map.entry("features", Map.of("aiEnabled", f.isAi(), "mcpEnabled", f.isMcp())),
+            Map.entry("snapshotTimestamp", s.getTimestamp()),
+            Map.entry("timestamp", Instant.now().toString())
         );
     }
 
-    private Map<String, Object> base(String status, String detail) {
+    private Map<String, Object> base(String status, String snapshotState, String detail) {
         return Map.of(
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", false,
             "status", status,
+            "snapshotState", snapshotState,
             "detail", detail != null ? detail : "N/A",
             "timestamp", Instant.now().toString()
         );

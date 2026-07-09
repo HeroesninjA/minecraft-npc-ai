@@ -16,8 +16,7 @@ class AinpcServerSnapshotToolsTest {
         SnapshotReader reader = new SnapshotReader("data/nonexistent.json", 2, 60, gson, mode);
         RedactingSnapshotFilter filter = new RedactingSnapshotFilter("");
         McpAuditLogger audit = new McpAuditLogger("data/test-audit.json", 100);
-        McpRuntimeBridgeHealthIndicator health = new McpRuntimeBridgeHealthIndicator(reader);
-        return new McpSnapshotService(reader, filter, audit, health);
+        return new McpSnapshotService(reader, filter, audit);
     }
 
     @Test
@@ -27,7 +26,8 @@ class AinpcServerSnapshotToolsTest {
 
         Map<String, Object> result = tools.serverSnapshot();
         assertFalse((Boolean) result.get("available"));
-        assertEquals("unavailable", result.get("status"));
+        assertEquals("missing", result.get("status"));
+        assertEquals("missing", result.get("snapshotState"));
     }
 
     @Test

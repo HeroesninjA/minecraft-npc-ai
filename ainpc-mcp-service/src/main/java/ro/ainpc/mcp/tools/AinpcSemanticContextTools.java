@@ -1,6 +1,7 @@
 package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 
@@ -481,13 +482,24 @@ public class AinpcSemanticContextTools {
         )
     )
     public Map<String, Object> unifiedSemanticContext(String domain, Boolean summary) {
-        String d = domain != null ? domain.trim().toLowerCase() : "all";
+        String d = domain != null ? domain.trim().toLowerCase(Locale.ROOT) : "all";
         boolean sum = summary != null && summary;
+
+        if (domain != null && d.isBlank()) {
+            return Map.of(
+                "schemaVersion", 1,
+                "service", "ainpc-mcp-service",
+                "available", false,
+                "status", "invalid_query",
+                "detail", "Domain-ul pentru ainpc.semantic.context nu poate fi gol.",
+                "timestamp", Instant.now().toString()
+            );
+        }
 
         return switch (d) {
             case "world" -> sum ? semanticContextSummary() : semanticContext();
             case "quest" -> sum ? questSemanticContextSummary() : questSemanticContext();
-            case "quest_authoring" -> sum ? questAuthoringContextSummary() : questAuthoringContextSummary();
+            case "quest_authoring" -> questAuthoringContextSummary();
             case "mapping" -> sum ? mappingSemanticContextSummary() : mappingSemanticContext();
             case "story" -> sum ? storySemanticContextSummary() : storySemanticContext();
             case "routing" -> sum ? routingSemanticContextSummary() : routingSemanticContext();
@@ -496,7 +508,7 @@ public class AinpcSemanticContextTools {
                 Map<String, Object> story = sum ? storySemanticContextSummary() : storySemanticContext();
                 Map<String, Object> mapping = sum ? mappingSemanticContextSummary() : mappingSemanticContext();
                 Map<String, Object> quest = sum ? questSemanticContextSummary() : questSemanticContext();
-                Map<String, Object> questAuth = sum ? questAuthoringContextSummary() : questAuthoringContextSummary();
+                Map<String, Object> questAuth = questAuthoringContextSummary();
                 Map<String, Object> routing = sum ? routingSemanticContextSummary() : routingSemanticContext();
                 yield Map.ofEntries(
                     Map.entry("schemaVersion", 1),

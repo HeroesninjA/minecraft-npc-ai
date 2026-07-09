@@ -756,11 +756,72 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "set", "seteaza" -> handleEconomySet(sender, args)
             "top", "clasament", "ranking" -> handleEconomyTop(sender, args)
             "npc" -> handleNpcEconomy(sender, args)
+            "invest", "investeste" -> handleEconomyInvest(sender, args)
+            "collect", "colecteaza" -> handleEconomyCollect(sender, args)
+            "portfolio", "portofoliu" -> handleEconomyPortfolio(sender, args)
             else -> {
-                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set|top|npc> [args]")
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy <balance|pay|set|top|npc|invest|collect|portfolio> [args]")
                 true
             }
         }
+    }
+
+    private fun handleEconomyInvest(sender: CommandSender, args: Array<String>): Boolean {
+        val player = sender as? Player ?: run {
+            plugin.messageUtils.send(sender, "&cDoar jucatorii pot investi."); return true
+        }
+        if (args.size < 4) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc economy invest <suma> <durata_h> [descriere]")
+            plugin.messageUtils.send(sender, "&7Durate: 48h (2%), 168h (10%), 720h (15%)")
+            return true
+        }
+        val amount = args[2].toIntOrNull() ?: run {
+            plugin.messageUtils.send(sender, "&cSuma invalida."); return true
+        }
+        val duration = args[3].toIntOrNull() ?: run {
+            plugin.messageUtils.send(sender, "&cDurata invalida (ore)."); return true
+        }
+        val desc = args.drop(4).joinToString(" ").ifBlank { "Investitie ${duration}h" }
+        if (plugin.bankingService.invest(player, amount, duration, desc)) {
+            plugin.messageUtils.send(sender, "&aInvestitie creata: &e$amount &7monede pe &f$duration&7h")
+        } else {
+            plugin.messageUtils.send(sender, "&cNu ai suficiente monede sau suma minima e 100.")
+        }
+        return true
+    }
+
+    private fun handleEconomyCollect(sender: CommandSender, args: Array<String>): Boolean {
+        val player = sender as? Player ?: run {
+            plugin.messageUtils.send(sender, "&cDoar jucatorii pot colecta."); return true
+        }
+        val collected = plugin.bankingService.collectMatured(player)
+        if (collected > 0) {
+            plugin.messageUtils.send(sender, "&aAi colectat &e$collected &7monede din investitii mature.")
+        } else {
+            plugin.messageUtils.send(sender, "&7Nu ai investitii mature de colectat.")
+        }
+        return true
+    }
+
+    private fun handleEconomyPortfolio(sender: CommandSender, args: Array<String>): Boolean {
+        val player = sender as? Player ?: run {
+            plugin.messageUtils.send(sender, "&cDoar jucatorii isi pot vedea portofoliul."); return true
+        }
+        val active = plugin.bankingService.getActiveInvestments(player.uniqueId)
+        val totalInvested = plugin.bankingService.getTotalInvested(player.uniqueId)
+        val pendingReturns = plugin.bankingService.getPendingReturns(player.uniqueId)
+        val balance = plugin.economyService.getBalance(player)
+
+        plugin.messageUtils.send(sender, "&6=== Portofoliu ${player.name} ===")
+        plugin.messageUtils.send(sender, "&7Balanta: &f$balance &7monede")
+        plugin.messageUtils.send(sender, "&7Total investit: &f$totalInvested")
+        plugin.messageUtils.send(sender, "&7Returnari pending: &f$pendingReturns")
+        plugin.messageUtils.send(sender, "&7Investitii active: &f${active.size}")
+        for (inv in active) {
+            val status = if (inv.matured) "&aMATUR" else "&7${((System.currentTimeMillis() - inv.createdAt) / 3600000.0).toInt()}/${inv.durationHours}h"
+            plugin.messageUtils.send(sender, "&8- &f${inv.amount} &7@ ${"%.0f".format(inv.interestRate * 100)}% &8→ $status &7${inv.description}")
+        }
+        return true
     }
 
     private fun handleNpcEconomy(sender: CommandSender, args: Array<String>): Boolean {
@@ -828,21 +889,48 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
-        if (args.size < 2 || args[1].lowercase() != "templates") {
-            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates"); return true
+        if (args.size < 2) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates|auto-place <templateId> <regionId>"); return true
         }
-        ro.ainpc.settlement.BuildingTemplateRegistry.loadDefaults()
-        val templates = ro.ainpc.settlement.BuildingTemplateRegistry.getAll()
-        if (templates.isEmpty()) {
-            plugin.messageUtils.send(sender, "&7Nu exista template-uri de cladiri.")
-            return true
-        }
-        plugin.messageUtils.send(sender, "&6=== Building Templates ===")
-        for (t in templates) {
-            plugin.messageUtils.send(
-                sender,
-                "&e${t.templateId} &7- &f${t.displayName} &8[${t.placeType}] &7- ${t.footprintWidth}x${t.footprintDepth}x${t.footprintHeight}, ${t.anchorCount()} ancore"
-            )
+        when (args[1].lowercase()) {
+            "templates" -> {
+                ro.ainpc.settlement.BuildingTemplateRegistry.loadDefaults()
+                val templates = ro.ainpc.settlement.BuildingTemplateRegistry.getAll()
+                if (templates.isEmpty()) {
+                    plugin.messageUtils.send(sender, "&7Nu exista template-uri de cladiri.")
+                    return true
+                }
+                plugin.messageUtils.send(sender, "&6=== Building Templates ===")
+                for (t in templates) {
+                    plugin.messageUtils.send(
+                        sender,
+                        "&e${t.templateId} &7- &f${t.displayName} &8[${t.placeType}] &7- ${t.footprintWidth}x${t.footprintDepth}x${t.footprintHeight}, ${t.anchorCount()} ancore"
+                    )
+                }
+            }
+            "auto-place" -> {
+                if (args.size < 4) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building auto-place <templateId> <regionId>"); return true
+                }
+                val templateId = args[2]
+                val regionId = args[3]
+                val service = ro.ainpc.settlement.BuildingAutoPlaceService(plugin)
+                val result = service.autoPlace(templateId, regionId)
+                if (result.warnings.isNotEmpty()) {
+                    for (w in result.warnings) {
+                        plugin.messageUtils.send(sender, "&c$w")
+                    }
+                }
+                if (result.placed.isNotEmpty()) {
+                    plugin.messageUtils.send(sender, "&aAm plasat ${result.placed.size} elemente (place-uri + noduri) in $regionId:")
+                    for (id in result.placed) {
+                        plugin.messageUtils.send(sender, "  &e$id")
+                    }
+                }
+            }
+            else -> {
+                plugin.messageUtils.send(sender, "&cSubcomanda necunoscuta: ${args[1]}. Foloseste: templates|auto-place")
+            }
         }
         return true
     }
@@ -4722,7 +4810,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
         plugin.messageUtils.send(sender, "&6=== Relatii pentru ${npc.name} ===")
         for ((partnerUuid, rel) in interactions.take(20)) {
-            val partnerName = plugin.npcManager.getNPCByUUID(partnerUuid)?.name ?: "Unknown"
+            val partnerName = plugin.npcManager.getNPCByUuid(partnerUuid)?.name ?: "Unknown"
             plugin.messageUtils.send(
                 sender,
                 "&7${partnerName}&8: &aA${rel.affection.toInt()} &bI${rel.familiarity.toInt()} &eR${rel.respect.toInt()} &dT${rel.trust.toInt()} &7(${rel.relationshipType ?: "stranger"}) &8x${rel.interactionCount}"

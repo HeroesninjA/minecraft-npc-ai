@@ -220,4 +220,12 @@ class AinpcSemanticContextToolsTest {
             "ainpc.routing.semantic.context.summary"
         ), recommendedOrder);
     }
+
+    @Test
+    void unifiedSemanticContextRejectsBlankDomain() {
+        Map<String, Object> result = new AinpcSemanticContextTools().unifiedSemanticContext("   ", false);
+
+        assertEquals(false, result.get("available"));
+        assertEquals("invalid_query", result.get("status"));
+    }
 }

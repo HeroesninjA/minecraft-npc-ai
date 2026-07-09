@@ -1,5 +1,7 @@
 package ro.ainpc.mcp.bridge;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -8,11 +10,7 @@ public class McpMode {
     private final String mode;
 
     public McpMode(@Value("${mcp.mode:static}") String mode) {
-        this.mode = mode != null ? mode.trim().toLowerCase() : "static";
-    }
-
-    public boolean isOnline() {
-        return "bridge".equals(mode);
+        this.mode = mode != null ? mode.trim().toLowerCase(Locale.ROOT) : "static";
     }
 
     public boolean isOffline() {
@@ -21,9 +19,5 @@ public class McpMode {
 
     public boolean isStatic() {
         return "static".equals(mode);
-    }
-
-    public String getMode() {
-        return mode;
     }
 }

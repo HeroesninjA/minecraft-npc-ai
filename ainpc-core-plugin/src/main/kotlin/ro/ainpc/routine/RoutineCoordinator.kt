@@ -36,6 +36,11 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
     private val gatheringCooldown = 30000L
 
     fun tick(): RoutineTickSummary {
+        val timer = plugin.performanceMonitor.timer("routineTick")
+        timer.begin()
+        if (plugin.config.getBoolean("routine.sync_social_movement", true)) {
+            syncSocialGroupTiming()
+        }
         val summary = routineService.runRoutineTick()
         socialCoordinator.tick()
         linkSocialToRelationships(summary)
@@ -46,7 +51,34 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         if (plugin.config.getBoolean("seasonal.behavior_enabled", true)) {
             applySeasonalActivities()
         }
+        timer.end(plugin.npcManager.getNPCCount())
         return summary
+    }
+
+    private fun syncSocialGroupTiming() {
+        val groups = mutableMapOf<Int, MutableList<Pair<UUID, String>>>()
+        for (npc in plugin.npcManager.getAllNPCs()) {
+            if (!npc.isSpawned()) continue
+            val anchor = npc.socialAnchor ?: continue
+            val loc = anchor.toLocation() ?: continue
+            val chunkKey = loc.world.name.hashCode() * 31 + (loc.blockX shr 4) * 31 + (loc.blockZ shr 4)
+            groups.getOrPut(chunkKey) { mutableListOf() }.add(npc.uuid to loc.world.name)
+        }
+
+        routineService.clearExternalBias()
+        val groupSyncOverrides = mutableMapOf<String, Long>()
+        for ((_, members) in groups) {
+            if (members.size < 2) continue
+            val groupHash = members.sortedBy { it.first }.joinToString("") { it.first.toString() }.hashCode()
+            val baseBias = Math.floorMod(groupHash.toLong(), 300L)
+            val groupOffset = Math.floorMod(groupHash.toLong(), 300L)
+            for ((uuid, _) in members) {
+                routineService.setExternalBias(uuid, baseBias)
+                groupSyncOverrides[uuid.toString()] = groupOffset
+            }
+        }
+        routineService.routineEngine.setExternalBiasSupplier { uuid -> routineService.getExternalBias(uuid) }
+        routineService.routineEngine.timeResolver.setGroupSyncOverride(groupSyncOverrides)
     }
 
     private fun applySeasonalActivities() {

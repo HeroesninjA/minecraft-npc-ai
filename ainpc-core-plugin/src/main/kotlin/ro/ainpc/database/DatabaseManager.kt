@@ -15,6 +15,7 @@ import java.sql.SQLException
 import java.sql.Statement
 import javax.sql.DataSource
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
@@ -32,6 +33,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     private var connection: Connection? = null
     private var dataSource: DataSource? = null
     private var dialect: DatabaseDialect = DatabaseDialect.SQLITE
+    private val queryCache: MutableMap<String, CacheEntry<String>> = ConcurrentHashMap()
+    private val cacheTtlMillis: Long = 5000L
 
     fun initialize(): Boolean {
         return try {
@@ -252,7 +255,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             executeSchemaSql(
                 stmt,
                 """
-                CREATE INDEX IF NOT EXISTS idx_memories_npc_player 
+                CREATE INDEX IF NOT EXISTS idx_memories_npc_player
                 ON npc_memories(npc_id, player_uuid)
                 """
             )
@@ -307,7 +310,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             executeSchemaSql(
                 stmt,
                 """
-                CREATE INDEX IF NOT EXISTS idx_dialog_npc_player 
+                CREATE INDEX IF NOT EXISTS idx_dialog_npc_player
                 ON dialog_history(npc_id, player_uuid, created_at DESC)
                 """
             )
@@ -638,6 +641,19 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_npc_npc_relationships_b ON npc_npc_relationships(npc_b_uuid)")
             stmt.execute(
                 """
+                CREATE TABLE IF NOT EXISTS player_investments (
+                    investment_id ${shortText(256)} NOT NULL PRIMARY KEY,
+                    player_uuid ${shortText()} NOT NULL,
+                    amount INTEGER NOT NULL,
+                    interest_rate REAL NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    duration_hours INTEGER NOT NULL,
+                    description TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
+            stmt.execute(
+                """
                 CREATE TABLE IF NOT EXISTS npc_economy (
                     npc_key ${shortText(256)} NOT NULL PRIMARY KEY,
                     balance INTEGER NOT NULL DEFAULT 0,
@@ -878,4 +894,33 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             return thread
         }
     }
+
+    fun getCachedQueryResult(cacheKey: String): String? {
+        val entry = queryCache[cacheKey] ?: return null
+        if (System.currentTimeMillis() - entry.createdAt > cacheTtlMillis) {
+            queryCache.remove(cacheKey)
+            return null
+        }
+        return entry.value
+    }
+
+    fun putCachedQueryResult(cacheKey: String, value: String) {
+        queryCache[cacheKey] = CacheEntry(value, System.currentTimeMillis())
+    }
+
+    fun invalidateCache(prefix: String? = null) {
+        if (prefix == null) {
+            queryCache.clear()
+        } else {
+            queryCache.keys.removeIf { it.startsWith(prefix) }
+        }
+    }
+
+    fun getCacheStats(): Triple<Int, Int, Long> {
+        val now = System.currentTimeMillis()
+        val valid = queryCache.count { (_, e) -> now - e.createdAt <= cacheTtlMillis }
+        return Triple(queryCache.size, valid, cacheTtlMillis)
+    }
+
+    private data class CacheEntry<T>(val value: T, val createdAt: Long)
 }

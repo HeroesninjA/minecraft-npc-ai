@@ -31,7 +31,7 @@ class AinpcFeatureStateToolsTest {
 
         Map<?, ?> tools = (Map<?, ?>) result.get("tools");
         assertEquals(true, tools.get("readOnly"));
-        assertEquals(false, tools.get("writeToolsEnabled"));
+        assertEquals(true, tools.get("writeToolsEnabled"));
         assertEquals(true, tools.get("semanticContextExport"));
         assertEquals(true, tools.get("semanticContextSummaryExport"));
         assertEquals(true, tools.get("questSemanticContextExport"));

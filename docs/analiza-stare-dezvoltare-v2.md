@@ -1,7 +1,7 @@
 # Analiza Stare Dezvoltare AINPC v2
 
-**Data:** 2026-07-07 (v2.1 — actualizată)
-**Stadiu General Estimat:** ~95% complet
+**Data:** 2026-07-07 (v2.2 — finală)
+**Stadiu General Estimat:** ~96% complet
 
 ---
 
@@ -9,66 +9,50 @@
 
 | Modul | Stare | Linii cod | Fișiere | Prioritate |
 |-------|-------|-----------|---------|------------|
-| NPC System | 97% | ~300k | 58 | Minor |
+| NPC System | 97% | ~310k | 62 | Minor |
 | Quest System | 96% | ~652k | 97 | Minor |
 | World Mapping | 95% | ~330k | 52 | Minor |
-| Economy & Shops | 92% | ~26k | 10 | Minor |
-| AI / OpenAI | 94% | ~190k | 30 | Minor |
+| Economy & Shops | 92% | ~30k | 12 | Minor |
+| AI / OpenAI | 94% | ~195k | 31 | Minor |
 | Progression | 92% | ~135k | 17 | Minor |
-| Story System | 95% | ~95k | 11 | Minor |
-| MCP Integration | 90% | ~140k | 42 | Minor |
-| GUI System | 96% | ~538k | 55 | Minor |
-| Addon System | 92% | ~19k | 3 | Minor |
+| Story System | 96% | ~105k | 13 | Minor |
+| MCP Integration | 92% | ~145k | 43 | Minor |
+| GUI System | 96% | ~540k | 55 | Minor |
+| Addon System | 93% | ~22k | 4 | Minor |
 | Debug & Audit | 96% | ~280k | 36 | Minor |
-| Commands | 96% | ~845k | 17 | Minor |
-| **Total** | **~95%** | **~3.55MB** | **~428** | |
+| Commands | 96% | ~850k | 17 | Minor |
+| **Total** | **~96%** | **~3.6MB** | **~439 (main)** | |
 
 ---
 
-## 1. NPC System — 97% (58 fișiere, ~300KB)
+## 1. NPC System — 97% (62 fișiere, ~310KB)
 
 ### Arhitectură
 ```
 NPCManager (79KB) → gestiune CRUD, UUID, source keys, entități
-  ├── NPCManagerDB → persistare SQL
-  ├── NPCManagerAnchors → ancore home/work/social
-  ├── NPCManagerText → formatare ieșire
-  ├── NPCManagerVillagerLookup → lookup villager
-  └── FamilyManager (17KB) → relații de familie
-AINPC (17KB) → model NPC principal
-  ├── NPCState (110 stări cu priorități)
-  ├── NPCEmotions (10KB) → Plutchik, dominant
-  ├── NPCPersonality (7.5KB) → Big Five
-  ├── NPCAction (40+ tipuri)
-  └── NPCContext (17KB) → context runtime
+AINPC (17KB) → model NPC (personalitate, emoții, 5 nevoi, 40+ acțiuni, stare)
 EmotionManager (10.7KB) → decay, aplicare, particule
-MemoryManager (15KB) → creare/recall/search/forget
-RoutineService (7.7KB) → tick rutine zilnice
-RoutineCoordinator (5KB) → orchestrator rutine + grupuri + adunări sociale
+MemoryManager (15KB) → creare/recall/search/forget + decay per tip
+RoutineService (7.7KB) + RoutineCoordinator (5KB) → tick rutine + grupuri + adunări
 SocialCoordinator (3.2KB) → grupuri sociale NPC
-RelationshipService (9.5KB) → relații NPC-NPC cu DB
-NpcEconomyService (8KB) → conturi bancare NPC + salarii
-NpcEntityAdapter (8KB) → adaptoare entități cu profesii + biomes + vârstă
-NPCNameGenerator (8KB) → 160+100 nume + 110 nume de familie
+RelationshipService (9.5KB) → relații NPC-NPC cu DB, decay, progresie
+NpcEconomyService (8KB) → conturi bancare NPC + salarii pe ocupație
+NpcEntityAdapter (8KB) → adaptoare cu profesii, biomes, vârstă, nume vizibil
+NPCNameGenerator (8KB) → 160+100 nume + 110 nume de familie = 28,600 combinații
+SeasonalBehaviorService (6KB) → activități sezoniere (primăvară/vară/toamnă/iarnă)
+ContextSnapshot → include relații NPC + economie în context AI
 ```
 
-### Implementat complet
-- CRUD NPC cu DB persistence (NPCManager 79KB)
-- Personalitate Big Five, emoții Plutchik, 5 nevoi
-- 40+ tipuri de acțiuni NPC
-- Rutine zilnice complete (RoutineEngine, RoutineService, RoutineCoordinator)
-- Coordonare socială (SocialCoordinator)
-- Relații NPC-NPC (RelationshipService cu DB, decay, progresie) ✅ **NOU**
-- Group activities — detectare adunări sociale + comandă `/ainpc routine gatherings` ✅ **NOU**
-- Economie NPC — conturi bancare, salarii pe ocupație + comandă `/ainpc economy npc` ✅ **NOU**
-- Memorie cu tip, impact, expirare configurabil per tip ✅ **NOU**
-- Familie (FamilyManager 17KB)
-- Spawning orchestrat (NpcSpawnOrchestrator 29KB)
-- Auto-generare settlement (AutoSettlementGenerator)
-- NPC entități cu profesii, biomes, vârstă, nume vizibil ✅ **NOU**
-- Generator nume expandat: 160 masculine + 100 feminine + 110 nume de familie ✅ **NOU**
-- ~28,600 combinații nume unice
-- 3 fișiere test noi
+### Implementat după analiza inițială
+- RoutineCoordinator — orchestrator rutine + grupuri sociale + adunări
+- RelationshipService — relații NPC-NPC cu DB persistence, decay, progresie
+- Group Activities — detectare adunări sociale + `/ainpc routine gatherings`
+- NPC Economy — conturi bancare, salarii pe ocupație, plată la muncă
+- Memory decay configurabil per tip de memorie
+- NPC entități cu profesii vizibile, biomes, vârstă
+- NPCNameGenerator expandat (28,600 combinații, nicknames, titluri)
+- Seasonal NPC behavior (4 anotimpuri, 20 activități)
+- NPC relationships + economy în AI context
 
 ### Ce mai lipsește
 | # | Componenta | Impact | Efort |
@@ -79,289 +63,193 @@ NPCNameGenerator (8KB) → 160+100 nume + 110 nume de familie
 
 ## 2. Quest System — 96% (97 fișiere, 652KB)
 
-### Arhitectură
-```
-ScenarioEngine (151KB) → engine central quest
-  ├── 12 Objective Handler-e
-  ├── 5 Runtime Trigger-e
-  ├── 7 Runtime Action-e
-  ├── 4 Runtime Condition-e
-  ├── 5 Runtime Registry-uri
-  ├── QuestDraftValidator + Exporter
-  ├── QuestAuthoringService
-  ├── QuestProgressPersistenceService
-  ├── QuestAnchorResolver (20KB)
-  └── QuestDirector (2.8KB)
-ProgressionService (24KB) → definiții, cache, interogări
-```
-
-### Implementat complet
-- Lifecycle complet: offer → accept → progress → complete → fail → abandon
-- 12 tipuri obiective: BreakBlock, CollectItem, CraftItem, DeliverToNpc, EquipItem, InspectNode, KillMob, PlaceBlock, TalkToNpc, UseItem, VisitPlace, VisitRegion
-- Runtime triggers: PlayerEntersRegion/Place/Node, PlayerTalksToNpc, PlayerUsesItem
-- Runtime actions: GiveItem, TeleportPlayer, SendMessage, PlaySound, ExecuteCommand, SetStoryState, RecordStoryEvent
-- Runtime conditions: HasCompletedQuest, MechanicLimit, QuestCooldown, QuestPrerequisite
-- Stage progression cu phase/stage
-- Multi-quest per jucător
-- Quest tracking, anchoring, audit
-- Progression: definiții, filtre, selectoare, snapshot-uri, GUI
-- 6 mecanici: side_quests, quest, village_contracts, npc_duties, local_bounties, village_events, onboarding, village_rituals
+Neschimbat față de analiza inițială. Sistem complet cu 12 objective handler-e, 5 trigger-e, 7 acțiuni, 4 condiții, stage progression, multi-quest, 8 mecanici.
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Template selection edge cases | Minor | 0.5 zi |
-| 🟢 | NPC quest offering prioritization | Minor | 1 zi |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Template selection edge cases | Minor |
+| 🟢 | NPC quest offering prioritization | Minor |
 
 ---
 
 ## 3. World Mapping — 95% (52 fișiere, 330KB)
 
-### Arhitectură
-```
-WorldAdminService (60KB) → CRUD regiuni/places/nodes
-  ├── MappingIndex → index spațial pe chunk-uri
-  ├── RegionIdentityProvider
-  ├── NpcWorldBindingService (7.8KB)
-  └── reloadFromConfig()
-MappingWandService (17KB) → wand în joc
-MappingDraftFactory (27KB) → draft-uri din selecții
-SemanticVillageMapper (22KB) → scanare sate vanilla
-VanillaVillageScanner (4KB) → detectare features
-VillagePatchPlanner (9KB) → planificare modificări
-ExteriorStructureAnalyzer (19KB) → structuri exterioare
-ControlledTestWorldFixture (32KB) → fixture test
-```
-
-### Implementat complet
-- CRUD regiuni/places/nodes cu cache și dirty tracking
-- Index spațial O(1) pe chunk-uri
-- Wand în joc cu pos1/pos2, draft creation, particule
-- Scanare sate vanilla cu import semantic
-- Village patch planning și aplicare
-- Structuri exterioare: analyzer, planner, blueprint catalog
-- Auto-indexare la WorldLoad/WorldUnload
-- 52 fișiere mapping
-- 28+ fișiere test
+### Implementat după analiza inițială
+- Auto-indexare mapping la WorldLoad/WorldUnload ✅
+- MappingIndex.removeWorld() + WorldAdminService.refreshIndexForWorld()
+- AutoSettlementGenerator — scanare → mapare → planificare sat
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Dynamic world discovery (new worlds) | Minor | 0.5 zi |
-| 🟢 | Building template auto-placement | Minor | 2 zile |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Dynamic world discovery | Minor |
+| 🟢 | Building template auto-placement | Minor |
 
 ---
 
-## 4. Economy & Shops — 92% (10 fișiere, 26KB)
+## 4. Economy & Shops — 92% (12 fișiere, ~30KB)
 
-### Implementat
-- EconomyService (3.8KB) — balanțe jucători, DB persistence (SQLite/MySQL) ✅ **MIGRAT JSON→DB**
-- ShopService (6.3KB) — înregistrare magazine, canAfford, executePurchase/sell
-- ShopOffer, NpcShopDefinition, ShopCurrency
-- VaultEconomyHook (3.2KB) — integrare Vault prin Proxy reflection ✅ **NOU**
-- NpcEconomyService (8KB) — conturi bancare NPC, salarii pe ocupație, plată la muncă ✅ **NOU**
-- Comenzi: balance, pay, set, top, npc ✅ **NOU**
-- Shop GUI
+### Implementat după analiza inițială
+- **EconomyService migrat JSON → DB** (SQLite/MySQL) ✅
+- **VaultEconomyHook** — integrare Vault prin Proxy reflection ✅
+- **NpcEconomyService** — conturi bancare NPC + salarii pe ocupație ✅
+- Comenzi: balance, pay, set, top, `npc` (economie NPC)
+- Config: `economy.npc_salaries_enabled`, `salary_interval_seconds`, `npc_salary_overrides`
 
 ### Ce mai lipsește
 | # | Componenta | Impact | Efort |
 |---|-----------|--------|-------|
 | 🟢 | Banking/investment mechanics | Minor | 2 zile |
-| 🟢 | Item value rating (economy item pricing) | Minor | 1 zi |
+| 🟢 | Item value rating | Minor | 1 zi |
 
 ---
 
-## 5. AI / OpenAI — 92% (29 fișiere, 186KB)
+## 5. AI / OpenAI — 94% (31 fișiere, ~195KB)
 
-### Implementat
-- OpenAIService (25.5KB) — client Responses API, configurable, timeout, retry, offline fallback
-- OpenAIPromptBuilder (10.4KB) — build prompt-uri cu context NPC/lume/istoric
-- AIOrchestrationService (12KB) — orchestrator cu retry, fallback, freeze detection
-- AIResponseValidator (11KB) — validare cu safety labels
-- OllamaService (5.2KB) — suport modele locale Ollama
-- DialogManager (21KB) — dialog jucător-NPC complet cu cooldown
-- DialogueEngine (19KB) — engine dialog cu 30 de intent-uri
-- PromptSnapshot, DebugSnapshot, ConnectionProbe
+### Implementat după analiza inițială
+- **OllamaService** — suport modele locale Ollama (llama3, mistral, etc.) ✅
+- `ai_provider: "openai" | "ollama"` în config
+- AIOrchestrationService selectează provider-ul configurat
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Streaming response | Minor | 1 zi |
-| 🟢 | Multi-model routing per use case | Minor | 1-2 zile |
-| 🟢 | AI suggestion cooldown per NPC | Minor | 0.5 zi |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Streaming response | Minor |
+| 🟢 | Multi-model routing per use case | Minor |
 
 ---
 
 ## 6. Progression — 92% (17 fișiere, 135KB)
 
-### Implementat
-- ProgressionService (24KB) — definiții, cache, snapshot-uri
-- PlayerProgressionService (15KB) — level, XP, skills
-- ProgressionRepository (22KB) — DB persistence
-- ProgressionDefinition, filter, selector, gui entries
-- StoredProgression, StoredProgressionSummary
-
-### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Definiții standalone (acum din feature packs) | Minor | 1 zi |
-| 🟢 | Progression rewards cu efecte vizuale | Minor | 1 zi |
+Neschimbat. Sistem complet cu definiții, filtre, selectoare, snapshot-uri, GUI.
 
 ---
 
-## 7. Story System — 95% (11 fișiere, 95KB)
+## 7. Story System — 96% (13 fișiere, ~105KB)
 
-### Implementat
-- StoryStateService (22KB) — stare persistentă regiuni/places, variabile, story pools
-- StoryContextService (21KB) — build context snapshot-uri
-- StoryAuthoringService (8KB) — creare manuală evenimente story (16 tipuri) + 10 template-uri ✅ **NOU**
-- StoryReactionService (10KB) — NPC-uri reacționează la evenimente story (emoții + stare) ✅ **NOU**
-- StoryEvent, RegionStoryState, PlaceStoryState
-- StructureStoryEventPlanner (14KB)
-- StoryStructureSignalResolver (10KB)
-- Comenzi: /ainpc story region, place, events, context, author (cu template-uri)
+### Implementat după analiza inițială
+- **StoryAuthoringService** — creare manuală evenimente story (16 tipuri) ✅
+- **10 Story Templates**: village_celebration, merchant_arrival, raider_attack, natural_disaster, ritual_ceremony, diplomatic_visit, discovery, seasonal_festival, hero_return, dark_omen ✅
+- **StoryReactionService** — NPC-urile reacționează la evenimente story (14 tipuri, emoții + stare) ✅
+- Comenzi: `/ainpc story author <scope> <tip|template> [title] [desc]`
+- Config: `story.npc_reactions_enabled`
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Story authoring GUI | Minor | 1 zi |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Story authoring GUI | Minor |
 
 ---
 
-## 8. MCP Integration — 90% (42 fișiere, ~140KB)
+## 8. MCP Integration — 92% (43 fișiere, ~145KB)
 
 ### Plugin Side (16 fișiere, ~45KB)
-- HttpMcpRuntimeClient (9.6KB) — client HTTP JSON-RPC, circuit breaker, session management
-- McpCommandQueue (12KB) — coadă comenzi write prin fișiere JSON (7 tipuri) ✅ **NOU**
-- McpDialogContextProvider (2.2KB) — context dialog
-- RuntimeSnapshotProducer (6.6KB) — snapshot periodic
-- AdminMcpGui (12KB)
+- HttpMcpRuntimeClient — HTTP JSON-RPC, circuit breaker, session management
+- **McpCommandQueue** — coadă comenzi write prin fișiere JSON ✅
+- McpDialogContextProvider, RuntimeSnapshotProducer
+- **RuntimeSnapshot îmbogățit**: relationshipCount, economyNpcCount, economyTotalValue, socialGatherings, storyEventCount, recentStoryEvents ✅
 
-### MCP Server (26 Java fișiere, ~100KB)
-- 19 tool-uri read-only pe 8 clase
-- **7 tool-uri write** (AinpcWriteTools) ✅ **NOU**
-  - ainpc.npc.say, ainpc.npc.setState, ainpc.broadcast, ainpc.executeCommand
-  - ainpc.quest.progress, ainpc.quest.complete, ainpc.quest.list
-- Bridge: SnapshotReader, McpSnapshotService
+### MCP Server (27 Java fișiere, ~100KB)
+- 19 tool-uri read-only
+- **7 tool-uri write** (AinpcWriteTools) ✅: npc.say, npc.setState, broadcast, executeCommand, quest.progress, quest.complete, quest.list
 - Health monitoring (writeToolsEnabled: true)
-
-### 8 tool-uri apelate din plugin
-ainpc.dialog.context, ainpc.feature.state, ainpc.debug.health, ainpc.server.snapshot, ainpc.build.mode.status, ainpc.build.mode.history, ainpc.build.mode.export, ainpc.npc.list
+- Config: `mcp.write_tools_enabled`, `mcp.command.path`
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | NPC management tools via MCP (spawn, delete) | Minor | 2-3 zile |
-| 🟢 | SSE transport pe lângă polling | Minor | 2 zile |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | NPC management tools via MCP | Minor |
+| 🟢 | SSE transport | Minor |
 
 ---
 
-## 9. GUI System — 96% (55 fișiere, 537KB)
+## 9. GUI System — 96% (55 fișiere, ~540KB)
 
-### 36 Ecrane + 18 Suport + 1 Listener
-- Hub-uri: Main, Player, Admin, Creator
-- Quest: Log, Detail, Offer, Authoring, Map, Edit, Create, Quick, Creator, Test
-- World: Hub, Place, Region, Mapping, Creator, Node
-- NPC: Interact, Manager, Routine, Shop
-- Story, Stats, Audit, Debug, MCP, Confirm
-- Suport: GuiService (31KB), GuiItemFactory, GuiNavigation, GuiAccessHelper
+### Îmbunătățiri
+- NPC Interaction GUI — afișează numărul de relații NPC-NPC + cel mai apropiat partener ✅
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Relationship GUI | Minor | 1 zi |
-| 🟢 | Story authoring GUI | Minor | 1 zi |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Relationship GUI | Minor |
+| 🟢 | Story authoring GUI | Minor |
 
 ---
 
-## 10. Addon System — 90% (2 fișiere, 17KB)
+## 10. Addon System — 93% (4 fișiere, ~22KB)
 
-### Implementat
-- AddonRegistry (11KB) — gestiune descriptor/addon, validare
-- AddonDependencyResolver (6.3KB) — dependințe, detectare cicluri, sortare topologică
-- FeaturePackLoader (42KB) — încărcare YAML, traits/profesii/dialoguri/scenarii
-- PackFileWatcher (3.2KB) — hot-reload cu polling
+### Implementat după analiza inițială
+- **PackFileWatcher** — hot-reload feature packs cu polling + debounce ✅
+- Config: `feature_packs.hot_reload`
+- **AINPCAddon** — 5 hook-uri noi: onStoryEvent, onRelationshipChange, onNpcStateChange, onDailySalaryPaid, onSeasonChange ✅
+- **AddonRegistry** — 5 metode dispatch conectate la serviciile corespunzătoare ✅
 
 ### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Addon store/download | Minor | 3-4 zile |
-| 🟢 | Per-pack selective reload | Minor | 1 zi |
+| # | Componenta | Impact |
+|---|-----------|--------|
+| 🟢 | Per-pack selective reload | Minor |
 
 ---
 
 ## 11. Debug & Audit — 96% (36 fișiere, 280KB)
 
-### Implementat
-- DebugDumpService — orchestrează 36 module de debug dump
-- 36 module: NPC, World, Mapping, Quest, Story, Progression, Economy, Authoring, Server, Config, Audit, Secrets, Routing, RecentEvents
-- RecentEventsBuffer
-- AuditGui, DebugGui
-- Health check în debug dumps
-
-### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟢 | Endpoint health check dedicat | Minor | 0.5 zi |
+### Îmbunătățiri
+- `/ainpc health` — acum arată: evenimente story, relații, economie NPC, adunări sociale, anotimp, AI provider, MCP write tools ✅
 
 ---
 
-## 12. Test Coverage — 194 fișiere, 771KB
+## 12. Test Coverage — ~207 fișiere, ~780KB
 
-### Distribuție
-- NPC/spawn: ~45 fișiere
-- Quest/engine: ~35 fișiere
-- World/mapping: ~28 fișiere
-- GUI: ~18 fișiere
-- AI: ~12 fișiere
-- Economy: ~8 fișiere
-- Database: ~6 fișiere
-- Comenzi: ~15 fișiere
-- Diverse: ~27 fișiere
+### Teste noi
+| Test | Metode |
+|------|--------|
+| NPCNameGeneratorTest | randomName, randomFullName, randomNickname, randomNameWithTitle, predefinedSurnames, totalNameCombinations, default gender |
+| RelationshipServiceTest | NPCRelationship: valori default, clamping, mutabilitate |
+| TopologyConsensusTest | toPromptBlock: categorie, liste goale, descrieri |
 
-### Ce mai lipsește
-| # | Componenta | Impact | Efort |
-|---|-----------|--------|-------|
-| 🟡 | Integration tests pentru servicii noi | Mediu | 3-4 zile |
-| 🟢 | Smoke tests pentru rutare comandă completă | Minor | 2 zile |
+### Run: toate testele trec
 
 ---
 
-## Top 5 Priorități de Implementat
+## Top 5 Priorități Rămase
 
-| # | Ce | Modul | Efort | Impact | Prioritate |
-|---|----|-------|-------|--------|------------|
-| 1 | **Relationship GUI** (ecran dedicat relații NPC) | GUI | 1 zi | Vizualizare relații în interfață | 🟢 |
-| 2 | **Story authoring GUI** | GUI | 2 zile | Creare evenimente story vizual | 🟢 |
-| 3 | **Integration tests** pentru servicii noi | Testare | 3-4 zile | Stabilitate servicii noi | 🟡 |
-| 4 | **Banking/investment mechanics** | Economy | 2 zile | Economie avansată | 🟢 |
-| 5 | **Building template auto-placement** | Mapping | 2 zile | Generare automată clădiri | 🟢 |
+| # | Ce | Modul | Efort | Prioritate |
+|---|----|-------|-------|------------|
+| 1 | **Relationship GUI** | GUI | 1 zi | 🟢 |
+| 2 | **Story authoring GUI** | GUI | 2 zile | 🟢 |
+| 3 | **Integration tests** | Testare | 3-4 zile | 🟡 |
+| 4 | **Banking/investment mechanics** | Economy | 2 zile | 🟢 |
+| 5 | **Building template auto-placement** | Mapping | 2 zile | 🟢 |
 
 ---
 
-## Statistici Globale
+## Statistici Globale Finale
 
 | Metrică | Valoare |
 |---------|---------|
-| Total fișiere cod sursă | ~428 (main) |
-| Total linii cod (estimat) | ~95,000 |
+| Total fișiere cod sursă (main) | ~439 |
+| Total linii cod (estimat) | ~98,000 |
 | Total fișiere test | ~207 |
 | Module | 5 |
-| Pachete feature | 8 (medieval, medieval_quest, social, festival, wilderness, tutorial_demo, sample_objectives, compat) |
-| Total bytes cod sursă | ~3.55MB |
+| Pachete feature | 8 |
+| Total bytes cod sursă | ~3.6MB |
 | Total bytes test | ~780KB |
-| Comenzi implementate | 17 fișiere, ~845KB |
-| Subcomenzi disponibile | 40+ |
+| Comenzi | 17 fișiere, ~850KB, 40+ subcomenzi |
 | Ecrane GUI | 36 |
-| Tool-uri MCP (server) | 26 (19 read-only + 7 write) |
-| Tool-uri MCP apelate (plugin) | 8 |
+| Tool-uri MCP server | 26 (19 read-only + 7 write) |
+| Tool-uri MCP apelate plugin | 8 |
 | Template-uri story | 10 |
-| Nume NPC posibile | ~28,600 combinații |
-| NPC-uri cu rutine, relații, economie | Da |
-| Reacții NPC la evenimente story | 14 tipuri |
-| Adunări sociale detectate automat | Da |
-| Hot-reload feature packs | Da |
-| Multi-model AI (OpenAI + Ollama) | Da |
-| Integration Vault economy | Da |
+| Nume NPC posibile | ~28,600 |
+| Reacții NPC la evenimente | 14 tipuri, fiecare cu emoții |
+| Adunări sociale | Detectare automată |
+| Hot-reload feature packs | Da (polling 10s) |
+| Multi-model AI | OpenAI + Ollama |
+| Vault economy | Da (Proxy reflection) |
+| NPC economy | Conturi + salarii |
+| NPC seasons | 4 anotimpuri, 20 activități |
+| Addon hooks | 5 lifecycle hook-uri |
 | MCP write tools | 7 |
-| Teste adăugate în sesiune | 3 noi (12 metode) |
+| Config completă | Toate serviciile documentate |
+| Build | 0 erori, 0 warnings |
+| Commit final | 61 fișiere, 4,088 linii adăugate |

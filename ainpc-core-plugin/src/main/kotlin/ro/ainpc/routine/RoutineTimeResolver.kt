@@ -3,8 +3,19 @@ package ro.ainpc.routine
 import ro.ainpc.npc.AINPC
 
 class RoutineTimeResolver {
+    private var groupSyncOverride: Map<String, Long> = emptyMap()
+
+    fun setGroupSyncOverride(override: Map<String, Long>) {
+        groupSyncOverride = override
+    }
+
+    fun clearGroupSyncOverride() {
+        groupSyncOverride = emptyMap()
+    }
+
     fun routineTimeFor(npc: AINPC, worldTime: Long, routineBiasTicks: Long): Long {
-        val adjusted = (normalizeWorldTime(worldTime) + stableRoutineOffset(npc) + routineBiasTicks) % 24000L
+        val offset = groupSyncOverride[npc.uuid.toString()] ?: stableRoutineOffset(npc)
+        val adjusted = (normalizeWorldTime(worldTime) + offset + routineBiasTicks) % 24000L
         return if (adjusted < 0) adjusted + 24000L else adjusted
     }
 

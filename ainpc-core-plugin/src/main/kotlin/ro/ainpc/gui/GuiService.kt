@@ -11,11 +11,15 @@ import ro.ainpc.gui.screens.DebugGui
 import ro.ainpc.gui.screens.MainHubGui
 import ro.ainpc.gui.screens.NpcManagerGui
 import ro.ainpc.gui.screens.PlaceholderGui
+import ro.ainpc.gui.screens.NpcMemoryGui
 import ro.ainpc.gui.screens.QuestAuthoringGui
 import ro.ainpc.gui.screens.QuestDetailGui
 import ro.ainpc.gui.screens.QuestLogGui
+import ro.ainpc.gui.screens.QuestOfferNpcGui
 import ro.ainpc.gui.screens.QuestOfferGui
+import ro.ainpc.gui.screens.RelationshipGui
 import ro.ainpc.gui.screens.RoutineGui
+import ro.ainpc.gui.screens.StoryAuthoringGui
 import ro.ainpc.gui.screens.StatsGui
 import ro.ainpc.gui.screens.StoryGui
 import ro.ainpc.gui.screens.WorldHubGui
@@ -242,8 +246,11 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(AdminMappingGui())
         register(AdminQuestGui())
         register(AdminMcpGui())
+        register(StoryAuthoringGui())
         register(StatsGui())
+        register(NpcMemoryGui())
         register(NpcInteractionGui())
+        register(RelationshipGui())
         register(RoutineGui())
         register(NpcManagerGui())
         register(AuditGui())
@@ -259,6 +266,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(QuestCreatorTestGui())
         register(QuestEditGui())
         register(QuestCreateGui())
+        register(QuestOfferNpcGui())
         register(QuickQuestGui())
         register(MappingCreatorGui())
         register(MappingCreateRegionGui())
@@ -734,6 +742,9 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.STATS -> hasAny(player, "ainpc.admin", "ainpc.gui.stats", "ainpc.info")
             GuiKey.INTERACT -> hasAny(player, "ainpc.admin", "ainpc.gui.interact", "ainpc.talk")
             GuiKey.ROUTINE -> hasAny(player, "ainpc.admin", "ainpc.gui.routine", "ainpc.gui.manager")
+            GuiKey.RELATIONSHIP -> hasAny(player, "ainpc.admin", "ainpc.gui.relationship", "ainpc.gui.manager")
+            GuiKey.STORY_AUTHORING -> hasAny(player, "ainpc.admin", "ainpc.gui.story", "ainpc.creator")
+            GuiKey.NPC_MEMORY -> hasAny(player, "ainpc.admin", "ainpc.gui.npc", "ainpc.info")
             GuiKey.SHOP -> hasAny(player, "ainpc.admin", "ainpc.gui.shop")
             GuiKey.MANAGER -> hasAny(player, "ainpc.admin", "ainpc.gui.manager")
             GuiKey.AUDIT -> hasAny(player, "ainpc.admin", "ainpc.gui.audit")
@@ -746,6 +757,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE, GuiKey.QUICK_QUEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
             GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world")
             GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
+            GuiKey.QUEST_OFFER_NPC -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.talk")
             GuiKey.QUEST_OFFER -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
             GuiKey.CONFIRM -> true
         }

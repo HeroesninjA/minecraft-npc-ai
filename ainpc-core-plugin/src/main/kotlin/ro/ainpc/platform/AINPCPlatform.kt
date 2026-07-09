@@ -9,6 +9,9 @@ import ro.ainpc.addons.AddonType
 import ro.ainpc.addons.DependencyResolver
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
+import ro.ainpc.api.PlayerProgressionApi
+import ro.ainpc.api.RelationshipApi
+import ro.ainpc.api.ReputationApi
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.engine.ScriptConfigurationLoader
@@ -23,6 +26,7 @@ import java.io.InputStreamReader
 import java.nio.file.Path
 import java.util.EnumSet
 import java.util.Locale
+import java.util.UUID
 
 class AINPCPlatform(
     private val plugin: AINPCPlugin
@@ -87,6 +91,27 @@ class AINPCPlatform(
 
     override val packDirectory: Path
         get() = dataDirectory.resolve("packs")
+
+    override val reputation: ReputationApi
+        get() = plugin.reputationService
+
+    override val playerProgression: PlayerProgressionApi
+        get() = error("PlayerProgressionService nu implementeaza inca PlayerProgressionApi. Foloseste plugin.playerProgressionService.")
+
+    override val relationships: RelationshipApi
+        get() = plugin.relationshipService
+
+    override fun getNPCName(npcUuid: UUID): String? {
+        return plugin.npcManager.getNPCByUuid(npcUuid)?.name
+    }
+
+    override fun getNPCProfession(npcUuid: UUID): String? {
+        return plugin.npcManager.getNPCByUuid(npcUuid)?.occupation
+    }
+
+    override fun getPlayerBalance(playerUuid: UUID): Double {
+        return plugin.economyService.getBalanceByUuid(playerUuid).toDouble()
+    }
 
     override fun getAddonConfigDirectory(addonId: String?): Path {
         return dataDirectory

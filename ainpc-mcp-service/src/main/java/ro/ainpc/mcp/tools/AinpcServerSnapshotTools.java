@@ -2,6 +2,7 @@ package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Locale;
 
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.stereotype.Component;
@@ -27,8 +28,9 @@ public class AinpcServerSnapshotTools {
     )
     public Map<String, Object> serverSnapshot() {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.server.snapshot");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return base("unavailable", result.getDetail());
+            return base(snapshotState, snapshotState, result.getDetail());
         }
         RuntimeSnapshot s = result.getSnapshot();
         RuntimeSnapshot.PluginSnapshot p = s.getPlugin();
@@ -40,6 +42,7 @@ public class AinpcServerSnapshotTools {
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", true,
+            "snapshotState", snapshotState,
             "plugin", Map.of(
                 "version", p.getVersion(),
                 "serverType", p.getServerType(),
@@ -65,12 +68,13 @@ public class AinpcServerSnapshotTools {
         );
     }
 
-    private Map<String, Object> base(String status, String detail) {
+    private Map<String, Object> base(String status, String snapshotState, String detail) {
         return Map.of(
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", false,
             "status", status,
+            "snapshotState", snapshotState,
             "detail", detail != null ? detail : "N/A",
             "timestamp", Instant.now().toString()
         );

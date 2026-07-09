@@ -36,3 +36,26 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    networks:
+      - ainpc-net
+
+  mcp-sidecar:
+    image: openjdk:21-slim
+    container_name: ainpc-mcp-sidecar
+    ports:
+      - "${MCP_PORT:-9121}:9121"
+    volumes:
+      - ./ainpc-mcp-service/build/libs:/app/libs
+      - ./paper-data/plugins/AINPCPlugin:/app/config
+    working_dir: /app
+    entrypoint: >
+      sh -c "java -jar libs/ainpc-mcp-service-*.jar --spring.config.location=file:/app/config/application.yml"
+    restart: unless-stopped
+    depends_on:
+      - paper
+    networks:
+      - ainpc-net
+
+networks:
+  ainpc-net:
+    driver: bridge

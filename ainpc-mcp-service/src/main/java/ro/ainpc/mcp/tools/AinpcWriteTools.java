@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,11 +38,21 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> npcSay(String npcId, String npcName, String uuid, String message, Double range) {
+        String normalizedNpcId = trimToNull(npcId);
+        String normalizedNpcName = trimToNull(npcName);
+        String normalizedUuid = trimToNull(uuid);
+        String normalizedMessage = trimToNull(message);
+        if (!hasAnyText(normalizedNpcId, normalizedNpcName, normalizedUuid)) {
+            return invalidQuery("Trebuie specificat npcId, npcName sau uuid.");
+        }
+        if (normalizedMessage == null) {
+            return invalidQuery("Mesajul pentru npc.say nu poate fi gol.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        if (npcId != null) params.put("npcId", npcId);
-        if (npcName != null) params.put("npcName", npcName);
-        if (uuid != null) params.put("uuid", uuid);
-        params.put("message", message != null ? message : "");
+        if (normalizedNpcId != null) params.put("npcId", normalizedNpcId);
+        if (normalizedNpcName != null) params.put("npcName", normalizedNpcName);
+        if (normalizedUuid != null) params.put("uuid", normalizedUuid);
+        params.put("message", normalizedMessage);
         if (range != null) params.put("range", range);
         return writeCommand("npc.say", params);
     }
@@ -55,11 +66,18 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> npcSetState(String npcId, String npcName, String uuid, String state) {
+        String normalizedNpcId = trimToNull(npcId);
+        String normalizedNpcName = trimToNull(npcName);
+        String normalizedUuid = trimToNull(uuid);
+        String normalizedState = trimToNull(state);
+        if (!hasAnyText(normalizedNpcId, normalizedNpcName, normalizedUuid)) {
+            return invalidQuery("Trebuie specificat npcId, npcName sau uuid.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        if (npcId != null) params.put("npcId", npcId);
-        if (npcName != null) params.put("npcName", npcName);
-        if (uuid != null) params.put("uuid", uuid);
-        params.put("state", state != null ? state : "IDLE");
+        if (normalizedNpcId != null) params.put("npcId", normalizedNpcId);
+        if (normalizedNpcName != null) params.put("npcName", normalizedNpcName);
+        if (normalizedUuid != null) params.put("uuid", normalizedUuid);
+        params.put("state", normalizedState != null ? normalizedState.toUpperCase(Locale.ROOT) : "IDLE");
         return writeCommand("npc.setState", params);
     }
 
@@ -72,8 +90,12 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> broadcast(String message) {
+        String normalizedMessage = trimToNull(message);
+        if (normalizedMessage == null) {
+            return invalidQuery("Mesajul pentru broadcast nu poate fi gol.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("message", message != null ? message : "");
+        params.put("message", normalizedMessage);
         return writeCommand("broadcast", params);
     }
 
@@ -86,8 +108,12 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> executeCommand(String command) {
+        String normalizedCommand = trimToNull(command);
+        if (normalizedCommand == null) {
+            return invalidQuery("Comanda console nu poate fi goală.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("command", command != null ? command : "");
+        params.put("command", normalizedCommand);
         return writeCommand("executeCommand", params);
     }
 
@@ -100,8 +126,12 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> questProgress(String player) {
+        String normalizedPlayer = trimToNull(player);
+        if (normalizedPlayer == null) {
+            return invalidQuery("Player-ul pentru quest.progress nu poate fi gol.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("player", player != null ? player : "");
+        params.put("player", normalizedPlayer);
         return writeCommand("quest.progress", params);
     }
 
@@ -114,9 +144,17 @@ public class AinpcWriteTools {
         )
     )
     public Map<String, Object> questComplete(String player, String objective) {
+        String normalizedPlayer = trimToNull(player);
+        String normalizedObjective = trimToNull(objective);
+        if (normalizedPlayer == null) {
+            return invalidQuery("Player-ul pentru quest.complete nu poate fi gol.");
+        }
+        if (normalizedObjective == null) {
+            return invalidQuery("Objective-ul pentru quest.complete nu poate fi gol.");
+        }
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("player", player != null ? player : "");
-        params.put("objective", objective != null ? objective : "");
+        params.put("player", normalizedPlayer);
+        params.put("objective", normalizedObjective);
         return writeCommand("quest.complete", params);
     }
 
@@ -130,9 +168,42 @@ public class AinpcWriteTools {
     )
     public Map<String, Object> questList(String player, String filter) {
         Map<String, Object> params = new LinkedHashMap<>();
-        if (player != null) params.put("player", player);
-        params.put("filter", filter != null ? filter : "all");
+        String normalizedPlayer = trimToNull(player);
+        String normalizedFilter = trimToNull(filter);
+        if (normalizedPlayer != null) params.put("player", normalizedPlayer);
+        if (filter != null && normalizedFilter == null) {
+            return invalidQuery("Filtrul pentru quest.list nu poate fi gol.");
+        }
+        params.put("filter", normalizedFilter != null ? normalizedFilter : "all");
         return writeCommand("quest.list", params);
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static boolean hasAnyText(String... values) {
+        for (String value : values) {
+            if (value != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Map<String, Object> invalidQuery(String detail) {
+        return Map.of(
+            "schemaVersion", 1,
+            "service", "ainpc-mcp-service",
+            "available", false,
+            "status", "invalid_query",
+            "detail", detail,
+            "timestamp", Instant.now().toString()
+        );
     }
 
     private Map<String, Object> writeCommand(String type, Map<String, Object> params) {
@@ -149,34 +220,22 @@ public class AinpcWriteTools {
             Files.writeString(cmdFile, json, StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
 
-            Path resultFile = commandDir.resolve(commandId + ".result.json");
-            long deadline = System.currentTimeMillis() + 5000;
-            while (System.currentTimeMillis() < deadline) {
-                if (Files.exists(resultFile)) {
-                    String resultJson = Files.readString(resultFile, StandardCharsets.UTF_8);
-                    Map<String, Object> result = new com.google.gson.Gson().fromJson(resultJson, Map.class);
-                    Files.deleteIfExists(resultFile);
-                    return result;
-                }
-                Thread.sleep(100);
-            }
             return Map.of(
                     "commandId", commandId,
-                    "success", false,
-                    "message", "Timeout asteptand rezultatul comenzii (5s)"
+                    "success", true,
+                    "completed", false,
+                    "status", "queued",
+                    "queued", true,
+                    "queuedAt", Instant.now().toString(),
+                    "message", "Comanda MCP a fost trimisa in coada; rezultatul va fi scris in directorul de comenzi."
             );
         } catch (IOException e) {
             return Map.of(
                     "commandId", commandId,
                     "success", false,
+                    "completed", false,
+                    "status", "error",
                     "message", "Eroare IO: " + e.getMessage()
-            );
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return Map.of(
-                    "commandId", commandId,
-                    "success", false,
-                    "message", "Intrerupt"
             );
         }
     }

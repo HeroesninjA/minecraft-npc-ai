@@ -110,6 +110,10 @@ class StoryGui : GuiScreen {
         context.button(7, GuiButton.enabled(
             GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.")
         ) { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) })
+        context.button(8, GuiButton.enabled(
+            GuiItemFactory.item(Material.WRITABLE_BOOK, "&aAuthoring Story",
+                "&7Creeaza evenimente story visual.")
+        ) { click -> click.service().open(click.player(), GuiKey.STORY_AUTHORING) })
 
         var slot = 19
         for (event in snapshot.events) {

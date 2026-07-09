@@ -11,6 +11,7 @@ import ro.ainpc.ai.RelationshipService
 import ro.ainpc.ai.orchestration.AIOrchestrationService
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.bootstrap.PackFileWatcher
+import ro.ainpc.bootstrap.PerformanceMonitor
 import ro.ainpc.bootstrap.SchedulerCoordinator
 import ro.ainpc.commands.AINPCCommand
 import ro.ainpc.commands.AINPCTabCompleter
@@ -43,12 +44,14 @@ import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
 import ro.ainpc.environment.EnvironmentEngine
 import ro.ainpc.environment.SeasonalBehaviorService
+import ro.ainpc.story.RandomWorldEventService
 import ro.ainpc.story.StoryAuthoringService
 import ro.ainpc.story.StoryContextService
 import ro.ainpc.story.StoryReactionService
 import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
 import ro.ainpc.world.NpcWorldBindingService
+import ro.ainpc.economy.BankingService
 import ro.ainpc.economy.EconomyService
 import ro.ainpc.economy.NpcEconomyService
 import ro.ainpc.economy.ShopService
@@ -72,17 +75,31 @@ class AINPCPlugin : JavaPlugin() {
         private set
     lateinit var dialogManager: DialogManager
         private set
-    lateinit var openAIService: OpenAIService
-        private set
+    private var _openAIService: OpenAIService? = null
+    val openAIService: OpenAIService get() {
+        if (_openAIService == null) {
+            _openAIService = OpenAIService(this)
+            logger.info("OpenAIService initializat (lazy)")
+        }
+        return _openAIService!!
+    }
     lateinit var ollamaService: OllamaService
         private set
     lateinit var aiOrchestrationService: AIOrchestrationService
         private set
-    lateinit var mcpRuntimeClient: McpRuntimeClient
-        private set
+    private var _mcpRuntimeClient: McpRuntimeClient? = null
+    val mcpRuntimeClient: McpRuntimeClient get() {
+        if (_mcpRuntimeClient == null) {
+            _mcpRuntimeClient = McpRuntimeClientFactory.create(this)
+            logger.info("McpRuntimeClient initializat (lazy)")
+        }
+        return _mcpRuntimeClient!!
+    }
     var snapshotProducer: RuntimeSnapshotProducer? = null
         private set
     lateinit var mcpCommandQueue: McpCommandQueue
+        private set
+    lateinit var performanceMonitor: PerformanceMonitor
         private set
     lateinit var routineService: RoutineService
         private set
@@ -127,6 +144,8 @@ class AINPCPlugin : JavaPlugin() {
         private set
     lateinit var storyReactionService: StoryReactionService
         private set
+    lateinit var randomWorldEventService: RandomWorldEventService
+        private set
     lateinit var storyStateService: StoryStateService
         private set
     lateinit var environmentEngine: EnvironmentEngine
@@ -144,6 +163,8 @@ class AINPCPlugin : JavaPlugin() {
     lateinit var shopService: ShopService
         private set
     lateinit var npcEconomyService: NpcEconomyService
+        private set
+    lateinit var bankingService: BankingService
         private set
     lateinit var vaultEconomyHook: VaultEconomyHook
         private set
@@ -193,13 +214,14 @@ class AINPCPlugin : JavaPlugin() {
         householdPersistenceService = HouseholdPersistenceService(this)
 
         logger.info("Initializare servicii AI...")
-        openAIService = OpenAIService(this)
+        _openAIService = null
         ollamaService = OllamaService(this)
-        mcpRuntimeClient = McpRuntimeClientFactory.create(this)
+        _mcpRuntimeClient = null
         val snapshotPath = java.nio.file.Path.of(
             McpRuntimeConfig.from(config).snapshotPath
         )
         snapshotProducer = RuntimeSnapshotProducer(this, snapshotPath).also { it.start() }
+        performanceMonitor = PerformanceMonitor(this)
         mcpCommandQueue = McpCommandQueue(this)
         mcpCommandQueue.start()
         aiOrchestrationService = AIOrchestrationService(this)
@@ -239,6 +261,7 @@ class AINPCPlugin : JavaPlugin() {
         storyStateService = StoryStateService(this)
         storyContextService = StoryContextService(this)
         storyReactionService = StoryReactionService(this)
+        randomWorldEventService = RandomWorldEventService(this)
         storyAuthoringService = StoryAuthoringService(this)
         environmentEngine = EnvironmentEngine(this)
         seasonalBehaviorService = SeasonalBehaviorService(this)
@@ -246,8 +269,9 @@ class AINPCPlugin : JavaPlugin() {
         guiService = GuiService(this)
         mappingWandService = MappingWandService(this)
         economyService = EconomyService(this)
-        shopService = ShopService(economyService)
+        shopService = ShopService(economyService, npcEconomyService)
         npcEconomyService = NpcEconomyService(this)
+        bankingService = BankingService(this)
         vaultEconomyHook = VaultEconomyHook(this)
         platform.integrationRegistry.register(vaultEconomyHook)
         relationshipService = RelationshipService(this)
@@ -351,17 +375,16 @@ class AINPCPlugin : JavaPlugin() {
         if (::platform.isInitialized) {
             platform.reloadFromConfig()
         }
-        if (::openAIService.isInitialized) {
+        if (_openAIService != null) {
             openAIService.reloadFromConfig()
-        } else {
-            openAIService = OpenAIService(this)
         }
         if (::aiOrchestrationService.isInitialized) {
             aiOrchestrationService.reloadFromConfig()
         } else {
             aiOrchestrationService = AIOrchestrationService(this)
         }
-        mcpRuntimeClient = McpRuntimeClientFactory.create(this)
+        _mcpRuntimeClient = null
+        _openAIService = null
         openAIService.runDiagnosticsAsync("reload")
         if (::memoryManager.isInitialized) {
             dialogueEngine = DialogueEngine(this, openAIService)

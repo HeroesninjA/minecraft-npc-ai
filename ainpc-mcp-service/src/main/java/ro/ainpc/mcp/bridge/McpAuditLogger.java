@@ -29,8 +29,9 @@ public class McpAuditLogger {
         @Value("${mcp.audit.max-entries:1000}") int maxEntries
     ) {
         this.auditPath = Path.of(auditPath);
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.gson = new GsonBuilder().create();
         this.maxEntries = maxEntries;
+        this.writeCount.set(countExistingEntries());
     }
 
     public void logToolCall(String toolName, boolean available, long durationMs, int payloadSize) {
@@ -66,6 +67,18 @@ public class McpAuditLogger {
             writeCount.set(0);
         } catch (IOException e) {
             LOG.warn("Nu s-a putut trimite audit log: {}", e.getMessage());
+        }
+    }
+
+    private int countExistingEntries() {
+        try {
+            if (!Files.exists(auditPath)) {
+                return 0;
+            }
+            return Files.readAllLines(auditPath).size();
+        } catch (IOException e) {
+            LOG.warn("Nu s-a putut citi audit log existent: {}", e.getMessage());
+            return 0;
         }
     }
 }

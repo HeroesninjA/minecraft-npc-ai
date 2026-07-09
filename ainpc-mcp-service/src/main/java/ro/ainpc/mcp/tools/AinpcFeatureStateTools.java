@@ -40,7 +40,7 @@ public class AinpcFeatureStateTools {
             ),
             "tools", Map.ofEntries(
                 Map.entry("readOnly", true),
-                Map.entry("writeToolsEnabled", false),
+                Map.entry("writeToolsEnabled", true),
                 Map.entry("semanticContextExport", true),
                 Map.entry("semanticContextSummaryExport", true),
                 Map.entry("questSemanticContextExport", true),

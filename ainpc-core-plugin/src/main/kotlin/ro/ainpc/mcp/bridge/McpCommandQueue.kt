@@ -97,7 +97,7 @@ class McpCommandQueue(private val plugin: AINPCPlugin) {
         val npcName = params["npcName"]?.toString()
         val npcUuid = params["uuid"]?.toString()
         return when {
-            npcUuid != null -> plugin.npcManager.getNPCByUUID(UUID.fromString(npcUuid))
+            npcUuid != null -> plugin.npcManager.getNPCByUuid(UUID.fromString(npcUuid))
             npcId != null -> plugin.npcManager.getNPCById(npcId.toIntOrNull() ?: return null)
             npcName != null -> plugin.npcManager.getNPCByName(npcName)
             else -> null

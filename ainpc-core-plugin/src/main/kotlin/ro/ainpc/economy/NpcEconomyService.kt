@@ -72,7 +72,7 @@ class NpcEconomyService(private val plugin: AINPCPlugin) {
 
     fun paySalaryForWork(npcUuid: UUID?, npcDbId: Int) {
         if (npcUuid == null) return
-        val npc = plugin.npcManager.getNPCByUUID(npcUuid) ?: return
+        val npc = plugin.npcManager.getNPCByUuid(npcUuid) ?: return
         val occupation = npc.occupation ?: return
         val salary = getSalary(occupation)
         if (salary <= 0) return

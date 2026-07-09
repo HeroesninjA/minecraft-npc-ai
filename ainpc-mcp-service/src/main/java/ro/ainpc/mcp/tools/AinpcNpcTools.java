@@ -1,6 +1,7 @@
 package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,8 +30,9 @@ public class AinpcNpcTools {
     )
     public Map<String, Object> npcList() {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.npc.list");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return unavailable(result.getDetail());
+            return unavailable(snapshotState, result.getDetail());
         }
         RuntimeSnapshot.NpcSnapshot n = result.getSnapshot().getNpc();
         List<Map<String, Object>> samples = n.getSamples().stream()
@@ -47,6 +49,7 @@ public class AinpcNpcTools {
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", true,
+            "snapshotState", snapshotState,
             "totalCount", n.getTotalCount(),
             "displayedCount", samples.size(),
             "samples", samples,
@@ -65,14 +68,30 @@ public class AinpcNpcTools {
     )
     public Map<String, Object> npcContext(String query) {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.npc.context");
+        String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
-            return unavailable(result.getDetail());
+            return unavailable(snapshotState, result.getDetail());
         }
         List<RuntimeSnapshot.NpcSample> samples = result.getSnapshot().getNpc().getSamples();
-        String q = query != null ? query.trim().toLowerCase() : "";
+        String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
+
+        if (q.isBlank()) {
+            return Map.of(
+                "schemaVersion", 1,
+                "service", "ainpc-mcp-service",
+                "available", false,
+                "status", "invalid_query",
+                "snapshotState", snapshotState,
+                "detail", "Query-ul pentru npcContext nu poate fi gol.",
+                "timestamp", Instant.now().toString()
+            );
+        }
 
         RuntimeSnapshot.NpcSample match = samples.stream()
-            .filter(s -> s.getName() != null && s.getName().toLowerCase().contains(q))
+            .filter(s ->
+                (s.getName() != null && s.getName().toLowerCase(Locale.ROOT).contains(q))
+                    || String.valueOf(s.getNpcId()).equals(q)
+            )
             .findFirst()
             .orElse(null);
 
@@ -82,6 +101,7 @@ public class AinpcNpcTools {
                 "service", "ainpc-mcp-service",
                 "available", false,
                 "status", "not_found",
+                "snapshotState", snapshotState,
                 "detail", "Niciun NPC gasit pentru: " + query,
                 "timestamp", Instant.now().toString()
             );
@@ -91,6 +111,7 @@ public class AinpcNpcTools {
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", true,
+            "snapshotState", snapshotState,
             "npc", Map.of(
                 "npcId", match.getNpcId(),
                 "name", match.getName(),
@@ -102,12 +123,13 @@ public class AinpcNpcTools {
         );
     }
 
-    private Map<String, Object> unavailable(String detail) {
+    private Map<String, Object> unavailable(String snapshotState, String detail) {
         return Map.of(
             "schemaVersion", 1,
             "service", "ainpc-mcp-service",
             "available", false,
-            "status", "bridge_stale",
+            "status", snapshotState,
+            "snapshotState", snapshotState,
             "detail", detail != null ? detail : "Runtime bridge indisponibil.",
             "timestamp", Instant.now().toString()
         );

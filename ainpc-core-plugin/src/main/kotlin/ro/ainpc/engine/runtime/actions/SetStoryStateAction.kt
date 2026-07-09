@@ -3,12 +3,13 @@ package ro.ainpc.engine.runtime.actions
 import ro.ainpc.engine.runtime.ScenarioActionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
+import java.util.logging.Logger
 
 class SetStoryStateAction : ScenarioActionHandler {
     override fun type(): String = "set_story_state"
 
     companion object {
-        private val logger = java.util.logging.Logger.getLogger(SetStoryStateAction::class.java.name)
+        private val logger = Logger.getLogger(SetStoryStateAction::class.java.name)
     }
 
     override fun execute(context: ScenarioExecutionContext, action: ScenarioRuntimeDefinition) {

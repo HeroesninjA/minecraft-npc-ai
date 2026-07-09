@@ -117,7 +117,7 @@ data class ContextSnapshot(
                     plugin.relationshipService.getNPCInteractions(npc.uuid)
                         .take(3)
                         .map { (partnerUuid, rel) ->
-                            val partnerName = plugin.npcManager.getNPCByUUID(partnerUuid)?.name ?: "Unknown"
+                            val partnerName = plugin.npcManager.getNPCByUuid(partnerUuid)?.name ?: "Unknown"
                             "$partnerName (affection=${rel.affection.toInt()}, ${rel.relationshipType ?: "stranger"})"
                         }
                 }.getOrDefault(emptyList())
