@@ -1,9 +1,9 @@
 # Implementat Deja
 
 Status: canonical in `docs v2`.
-Actualizat: 2026-07-10.
+Actualizat: 2026-07-14.
 
-Acest document descrie ce exista deja in cod si nu trebuie reconstruit de la zero.
+Acest document este sursa canonica pentru ce exista deja in cod si nu trebuie reconstruit de la zero.
 
 ## Module existente
 
@@ -71,4 +71,5 @@ Acest document descrie ce exista deja in cod si nu trebuie reconstruit de la zer
 
 ## Regula de lucru
 
-Daca o functionalitate exista deja, documentul v2 trebuie sa o trateze ca punct de plecare, nu ca backlog nou.
+- daca o functionalitate exista deja, documentatia trebuie sa o trateze ca punct de plecare, nu ca backlog nou;
+- analizele si sumarurile derivate trimit aici si nu redefinesc separat starea proiectului.

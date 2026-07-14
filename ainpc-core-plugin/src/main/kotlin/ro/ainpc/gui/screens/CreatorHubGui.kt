@@ -26,7 +26,15 @@ class CreatorHubGui : GuiScreen {
             return
         }
 
+        val worldAdmin = context.plugin().platform.worldAdmin
+        val defCount = context.plugin().progressionService.getDefinitions().size
+        val anchorCount = runCatching {
+            context.plugin().progressionService.getAnchorBindings(null, null, 1000)
+        }.getOrDefault(emptyList()).size
+
         context.item(4, GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Creator Tools", listOf(
+            "&7Quest definitii: &f$defCount &7| Ancore: &f$anchorCount",
+            "&7Regiuni: &f${worldAdmin.regionCount} &7| Places: &f${worldAdmin.placeCount} &7| Noduri: &f${worldAdmin.nodeCount}",
             "&7Creeaza, editeaza si testeaza questuri si mapping."
         )))
 
@@ -41,8 +49,8 @@ class CreatorHubGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_QUEST) }))
         context.button(14, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", listOf("&7Leaga obiective de locatii in lume.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }))
-        context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.ANVIL, "&7Ancore (Quest Anchors)", listOf("&7Listeaza toate ancorele persistate.")),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors all") }))
+        context.button(15, GuiButton.enabled(GuiItemFactory.item(Material.ANVIL, "&7Ancore (Quest Anchors)", listOf("&7Listeaza si mapeaza ancorele persistate.", "&7Click: deschide Quest Map.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }))
         context.button(16, GuiButton.enabled(GuiItemFactory.item(Material.SPYGLASS, "&6Quest Admin", listOf("&7Panou admin: definitii, statistici, stocare.")),
             GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }))
         context.button(17, GuiButton.enabled(GuiItemFactory.item(Material.ENCHANTED_BOOK, "&bQuest Authoring", listOf("&7Snapshot story si progresie.")),

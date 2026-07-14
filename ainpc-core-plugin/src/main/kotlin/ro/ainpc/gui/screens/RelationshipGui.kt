@@ -42,6 +42,12 @@ class RelationshipGui : GuiScreen {
             )
         ))
 
+        context.button(8, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                "&7Leaga obiective de locatii."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
+
         if (selectedNpcUuid != null) {
             renderNpcDetail(context, selectedNpcUuid!!)
         } else {

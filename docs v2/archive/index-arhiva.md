@@ -1,15 +1,20 @@
 # Index arhiva
 
-Status: index pentru continut istoric.
+Catalog istoric pentru documente pastrate doar ca referinta.
 
-Folosește aceasta pagina pentru documente pastrate doar pentru context, comparatie sau trasabilitate.
+## Hub-uri
 
-## Ce intra aici
+- `README.md` - hub-ul arhivei.
+- `deepseek/README.md` - colectia DeepSeek.
+- `kotlin-migration/README.md` - colectia Kotlin.
 
-- documente vechi inlocuite de versiuni canonice noi;
-- experimente sau variante abandonate;
-- materiale utile doar ca referinta istorica.
+## Snapshot-uri
+
+- `questuri-avansate-v1.md` - questuri istorice.
+- `taskuri-finalizate.md` - taskuri inchise.
+- `ordine-spawn-npc-cladiri-region-node-v1.md` - spawn order istoric.
 
 ## Regula
 
-Arhiva nu trebuie sa concureze cu documentele canonice. Daca apare contradictie, documentul canonic castiga.
+- arhiva nu concureaza cu documentele canonice;
+- daca exista contradictii, documentul canonic castiga.

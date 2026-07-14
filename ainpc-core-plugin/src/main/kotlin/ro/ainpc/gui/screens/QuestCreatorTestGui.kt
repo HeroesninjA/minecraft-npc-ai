@@ -51,6 +51,10 @@ class QuestCreatorTestGui : GuiScreen {
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest accept $target") }
         ))
         context.button(13, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf("&7Verifica ancorele pentru questuri.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
+        context.button(13, GuiButton.enabled(
             GuiItemFactory.item(Material.AMETHYST_SHARD, "&bStory Context", listOf("&7Context story pentru locatia curenta.", "&7Click: story context nearest.")),
             GuiAction { click -> click.service().runCommand(click.player(), "ainpc story context") }
         ))

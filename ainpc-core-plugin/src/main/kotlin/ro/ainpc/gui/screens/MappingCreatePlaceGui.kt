@@ -170,6 +170,14 @@ class MappingCreatePlaceGui : GuiScreen {
             } else null
         ))
 
+        context.button(22, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf(
+                "&7Dupa creare, leaga place-ul",
+                "&7de obiectivele quest prin Quest Map."
+            )),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
+
         context.button(16, GuiButton.enabled(
             GuiItemFactory.item(Material.MAGENTA_DYE, "&dReaplica AI", listOf(
                 "&7Reface campurile initiale din sugestia AI.",

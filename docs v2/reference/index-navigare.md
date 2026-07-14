@@ -1,18 +1,16 @@
 # Index navigare
 
-Status: shortcut de navigare pentru `docs v2`.
+Alias compact pentru navigarea in `docs v2`.
 
-Foloseste aceasta pagina daca vrei acces rapid la intrarile curente.
+## Alege traseul
 
-## Legaturi rapide
-
-- `canonical/start-here.md`
-- `canonical/index-functional.md`
-- `archive/index-arhiva.md`
-- `planning/`
-- `operations/`
-- `reference/`
+- inceput si ordine de citire: `canonical/start-here.md`;
+- domenii functionale: `canonical/index-functional.md`;
+- categorii tematice: `reference/categorii/README.md`;
+- catalog complet: `README.md`;
+- continut istoric: `archive/README.md`.
 
 ## Regula
 
-Acesta este doar un alias de navigare; nu introduce continut nou.
+- acest document doar ruteaza;
+- nu introduce continut nou.

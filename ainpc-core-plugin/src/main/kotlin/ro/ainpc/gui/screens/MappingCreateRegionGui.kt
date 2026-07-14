@@ -215,6 +215,14 @@ class MappingCreateRegionGui : GuiScreen {
             ))
         }
 
+        context.button(22, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf(
+                "&7Dupa creare, leaga regiunea",
+                "&7de obiectivele quest."
+            )),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

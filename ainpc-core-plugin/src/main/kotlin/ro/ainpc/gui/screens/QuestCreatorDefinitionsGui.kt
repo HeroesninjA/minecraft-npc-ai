@@ -63,15 +63,36 @@ class QuestCreatorDefinitionsGui : GuiScreen {
                 click.service().open(click.player(), GuiKey.CREATOR_QUEST_DEFS)
             }
         ))
+        context.button(33, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf("&7Leaga definitii de locatii.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
 
         var slot = 9
         for (def in visibleDefs) {
             val cmd = "/ainpc progression definitions ${def.progressionId()}"
+            val anchorCount = runCatching {
+                context.plugin().progressionService.getAnchorBindings(
+                    context.player().uniqueId.toString(), def.templateId(), 50
+                )
+            }.getOrDefault(emptyList()).size
+            val totalObj = def.objectiveCount()
+            val anchorLabel = when {
+                anchorCount == 0 -> "&70/$totalObj"
+                anchorCount >= totalObj -> "&a$anchorCount/$totalObj"
+                else -> "&e$anchorCount/$totalObj"
+            }
+            val material = when {
+                anchorCount == 0 -> Material.PAPER
+                anchorCount >= totalObj -> Material.LIME_DYE
+                else -> Material.ORANGE_DYE
+            }
             context.button(slot++, GuiButton.enabled(
-                GuiItemFactory.item(Material.PAPER, "&f${def.progressionId()}", listOf(
+                GuiItemFactory.item(material, "&f${def.progressionId()}", listOf(
                     "&7Mecanica: &f${def.mechanicId().ifBlank { "?" }}",
                     "&7Kind: &f${def.kind().ifBlank { "?" }}",
-                    "&7Obiective: &f${def.objectiveCount()}",
+                    "&7Obiective: &f$totalObj",
+                    "&7Ancore: $anchorLabel",
                     "&7Click: detalii in chat"
                 )),
                 GuiAction { click -> click.service().runCommand(click.player(), cmd) }

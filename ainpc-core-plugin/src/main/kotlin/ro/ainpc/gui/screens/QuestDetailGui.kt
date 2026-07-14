@@ -50,6 +50,7 @@ class QuestDetailGui : GuiScreen {
         renderDiagnosticCards(context, entry)
         renderAuthoringCard(context, entry)
         renderAnchorDiagnostics(context, entry, anchors, adminView)
+        renderMappingProximityCard(context, entry)
         renderObjectives(context, entry, anchors)
         renderStages(context, entry)
         renderRewards(context, entry)
@@ -279,6 +280,55 @@ class QuestDetailGui : GuiScreen {
         } else {
             context.item(ANCHOR_SLOT, GuiItemFactory.item(Material.MAP, "&bAncore persistate", lore))
         }
+    }
+
+    private fun renderMappingProximityCard(
+        context: GuiRenderContext,
+        entry: ProgressionGuiEntry
+    ) {
+        val loc = context.player().location
+        val worldAdmin = context.plugin().platform.worldAdmin
+        val place = worldAdmin.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val region = worldAdmin.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val nodes = worldAdmin.findNodesNear(loc.world.name, loc.x, loc.y, loc.z, 32.0, 5)
+
+        val storyEvents = if (region != null || place != null) runCatching {
+            val regionEvents = if (region != null) context.plugin().storyStateService.listRecentEvents(region.id(), null, 3) else emptyList()
+            val placeEvents = if (place != null) context.plugin().storyStateService.listRecentEvents(null, place.id(), 3) else emptyList()
+            (regionEvents + placeEvents).distinctBy { it.id() }.sortedByDescending { it.createdAt() }.take(4)
+        }.getOrDefault(emptyList()) else emptyList()
+
+        val lore = buildList {
+            add("&7Regiune: &f${region?.id() ?: "<nemapata>"}")
+            add("&7Place: &f${place?.id() ?: "<nemapat>"}")
+            add("&7Noduri apropiate: &f${nodes.size}")
+            nodes.take(3).forEach { n ->
+                add("&8- ${n.id()} [${n.typeId()}]")
+            }
+            if (entry.mechanicId().isNotBlank()) {
+                add("&7Mecanica progresie: &f${entry.mechanicId()}")
+            }
+            if (storyEvents.isNotEmpty()) {
+                add("&7Evenimente story: &f${storyEvents.size}")
+                storyEvents.forEach { ev ->
+                    add("&8- ${ev.eventType().take(12)} &f${GuiItemFactory.compact(ev.title().ifBlank { ev.eventKey() }, 20)}")
+                }
+            }
+            add("&8Click: deschide Quest Map")
+        }
+
+        context.button(
+            1,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    if (region != null) Material.FILLED_MAP else Material.GRAY_DYE,
+                    "&bContext mapping",
+                    lore
+                )
+            ) { click ->
+                click.service().open(click.player(), GuiKey.QUEST_MAP)
+            }
+        )
     }
 
     private fun renderActions(

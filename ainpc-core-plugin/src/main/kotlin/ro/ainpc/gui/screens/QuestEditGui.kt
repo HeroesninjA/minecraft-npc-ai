@@ -113,6 +113,18 @@ class QuestEditGui : GuiScreen {
         }
 
         if (currentDef != null) {
+            val anchorCount = runCatching {
+                context.plugin().progressionService.getAnchorBindings(
+                    context.player().uniqueId.toString(), currentDef.templateId(), 50
+                )
+            }.getOrDefault(emptyList()).size
+
+            context.button(27, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    listOf("&7Ancore: &f$anchorCount", "&7Click: deschide Quest Map pentru", "&7acest template.")),
+                GuiAction { click -> click.service().openQuestMap(click.player(), currentDef.templateId()) }
+            ))
+
             // Obiective (slot 28-34)
             context.item(28, GuiItemFactory.item(Material.TARGET, "&cObiective", listOf(
                 "&7Numar: &f${currentDef.objectiveCount()}",

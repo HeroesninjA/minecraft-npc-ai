@@ -1,51 +1,34 @@
-# AI Orchestration si Mecanici Runtime
+# AI orchestration si mecanici runtime
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-05-08.
-
-Acest document rezuma rolul AI-ului: asistenta, nu autoritate finala.
-
-## Regula de baza
+Status: contract canonic pentru folosirea AI-ului in core.
+Actualizat: 2026-07-14.
 
 AI-ul propune, formuleaza si explica. Runtime-ul valideaza, executa si persista.
 
-## Ce coordoneaza AI-ul
+## Responsabilitate
+
+- construieste contextul necesar capabilitatii solicitate;
+- routeaza intentia catre modelul sau serviciul potrivit;
+- valideaza raspunsul inainte de folosire;
+- transmite efectele aprobate serviciilor deterministe.
+
+## Utilizari permise
 
 - dialog contextual;
-- quest drafturi;
-- story drafturi;
+- drafturi de quest si story;
 - explicatii pentru admin;
-- reactii NPC;
-- rutine explicate;
-- constructie sau generare asistata;
-- tool calls validate.
+- rezumate si propuneri inspectabile;
+- generare asistata si tool calls validate.
 
-## Ce nu face AI-ul
+## Limite
 
-- nu acorda reward-uri direct;
-- nu modifica DB sau world state fara serviciu determinist;
-- nu decide progresul questurilor;
-- nu trateaza promptul ca sursa de adevar pentru mapping sau story;
-- nu executa actiuni riscante fara validare si confirmare.
-
-## Arhitectura recomandata
-
-- `AIOrchestrationService` construieste contextul si alege capabilitatea;
-- `AIIntentRouter` trimite intentia catre serviciul potrivit;
-- `AIResponseValidator` verifica raspunsul;
-- serviciile specializate executa efectele validate;
-- contextul vine din mapping, quest, story, NPC si admin tools.
-
-## Stare curenta
-
-- AI este deja folosit ca strat transversal pentru asistenta;
-- exista separare intre draft si executie;
-- prompturile si output-urile trebuie tratate ca artefacte validate;
-- business logic ramane in runtime, nu in model.
+- nu acorda reward-uri si nu decide progresul;
+- nu modifica direct DB sau world state;
+- nu trateaza promptul sau raspunsul drept sursa de adevar;
+- nu defineste transportul MCP sau persistenta snapshot-urilor.
 
 ## Legaturi
 
+- `architecture/spring-ai-mcp-serviciu-intern.md`
+- `architecture/mcp-runtime-bridge-design.md`
 - `canonical/implementat-deja.md`
-- `architecture/mapping.md`
-- `planning/questuri-avansate-v2.md`
-- `guides/gui-interfete.md`

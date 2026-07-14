@@ -56,6 +56,10 @@ class AuditGui : GuiScreen {
             GuiItemFactory.item(Material.KNOWLEDGE_BOOK, "&6Admin Quest", "&7Deschide panoul admin quest.", "&8Admin separat."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
         ))
+        context.button(25, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", "&7Leaga obiective de locatii.", "&8Admin separat."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())

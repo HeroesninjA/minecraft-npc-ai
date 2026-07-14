@@ -56,7 +56,7 @@ class PluginCommandDescriptorTest {
 
         val source = guiSource.readText()
 
-        assertTrue(source.contains("Rutina nearest"), "GUI should expose a nearest routine action")
+        assertTrue(source.contains("Routine Nearest"), "GUI should expose a nearest routine action")
         assertTrue(
             source.contains("\"ainpc routine status nearest\""),
             "Nearest routine GUI action should keep the nearest selector"

@@ -34,6 +34,12 @@ class NpcMemoryGui : GuiScreen {
             listOf("&7Click pe un NPC pentru a vedea amintirile lui.")
         ))
 
+        context.button(8, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                "&7Leaga obiective de locatii."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
+
         if (targetNpc == null) {
             renderNpcSelection(context, plugin)
         } else {

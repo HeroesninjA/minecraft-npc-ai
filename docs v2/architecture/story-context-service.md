@@ -1,34 +1,31 @@
 # StoryContextService
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-06-29.
+Status: contract canonic pentru proiectia narativa read-only.
+Actualizat: 2026-07-14.
 
-Acesta este rezumatul stratului read-only dintre mapping, quest anchors si story state.
+Serviciul construieste un snapshot compact pentru NPC, jucator si locatie.
 
-## Rol
+## Intrari
 
-- construieste context narativ compact pentru NPC, jucator si locatie;
-- combina mapping semantic, quest anchors si semnale story;
-- expune context pentru AI si GUI fara sa lase AI-ul sa inventeze stare executabila;
-- ajuta la briefing si la explicarea starii curente.
+- mapping semantic;
+- quest anchors si progres relevant;
+- story state persistent;
+- evenimente recente si context local.
 
-## Stare curenta
+## Iesire
 
-- serviciul este read-only;
-- scrierile controlate trec prin `StoryStateService` si actiuni de quest;
-- snapshot-ul include regiune, place, node-uri relevante si evenimente recente;
-- exista comenzi admin read-only pentru inspectie si debugdump.
+- context narativ redactat pentru AI, GUI, briefing si diagnostic;
+- warnings explicite cand datele sau lumea lipsesc.
 
-## Reguli
+## Limite
 
-- nu creeaza story state nou;
-- nu scrie in DB;
+- nu creeaza story state si nu scrie in DB;
+- nu decide progresul questurilor;
 - nu inlocuieste `QuestAnchorResolver`;
-- depinde de mapping existent;
-- degradeaza cu warnings cand lumea sau datele lipsesc.
+- nu transforma indicii narative in stare executabila.
 
 ## Legaturi
 
+- `architecture/story-state-service.md`
 - `architecture/mapping.md`
-- `architecture/ai-orchestrare-si-mecanici.md`
-- `canonical/implementat-deja.md`
+- `architecture/story-si-context-ai.md`

@@ -59,6 +59,11 @@ class StoryAuthoringGui : GuiScreen {
                 click.service().open(click.player(), GuiKey.STORY_AUTHORING)
             }
         ))
+        context.button(2, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                "&7Leaga obiectivele de locatii."),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+        ))
 
         when (step) {
             0 -> renderTemplateSelection(context, authoring.getTemplates())
@@ -102,9 +107,21 @@ class StoryAuthoringGui : GuiScreen {
         val worldAdmin = plugin.platform.worldAdmin
         val regions = worldAdmin.regions.take(36)
 
+        val totalAnchors = runCatching {
+            plugin.progressionService.getAnchorBindings(null, null, 500).size
+        }.getOrDefault(0)
+        val regionAnchorCounts = runCatching {
+            val all = plugin.progressionService.getAnchorBindings(null, null, 500)
+            all.filter { it.anchorType() == "region" }.groupBy { it.anchorId() }.mapValues { it.value.size }
+        }.getOrDefault(emptyMap())
+
         context.item(4, GuiItemFactory.item(
             Material.MAP, "&eSelecteaza o regiune",
-            listOf("&7Sunt disponibile ${worldAdmin.regionCount} regiuni")
+            listOf(
+                "&7Sunt disponibile ${worldAdmin.regionCount} regiuni",
+                "&7Ancore quest totale: &f$totalAnchors",
+                "&7Regiuni cu ancore: &f${regionAnchorCounts.size}"
+            )
         ))
 
         if (selectedRegion != null) {
@@ -136,12 +153,29 @@ class StoryAuthoringGui : GuiScreen {
 
     private fun renderPlaceSelection(context: GuiRenderContext, plugin: ro.ainpc.AINPCPlugin, region: WorldRegionInfo) {
         val places = plugin.platform.worldAdmin.getPlaces(region.id()).take(36)
+        val regionAnchors = runCatching {
+            plugin.progressionService.getAnchorBindings(null, null, 200)
+                .count { it.anchorType() == "region" && it.anchorId().equals(region.id(), ignoreCase = true) }
+        }.getOrDefault(0)
+        val placeAnchorCounts = runCatching {
+            val all = plugin.progressionService.getAnchorBindings(null, null, 500)
+            all.filter { it.anchorType() == "place" }.groupBy { it.anchorId() }.mapValues { it.value.size }
+        }.getOrDefault(emptyMap())
         val slots = intArrayOf(
             9, 10, 11, 12, 13, 14, 15, 16, 17,
             18, 19, 20, 21, 22, 23, 24, 25, 26,
             27, 28, 29, 30, 31, 32, 33, 34, 35,
             36, 37, 38, 39, 40, 41, 42, 43, 44
         )
+
+        context.item(4, GuiItemFactory.item(
+            Material.MAP, "&eRegiune: ${region.name()}",
+            listOf(
+                "&7Alege un place sau foloseste regiunea.",
+                "&7Ancore regiune: &f$regionAnchors",
+                "&7Places disponibile: &f${places.size}"
+            )
+        ))
 
         context.button(8, GuiButton.enabled(
             GuiItemFactory.item(Material.ARROW, "&7Foloseste regiunea (fara place)",
@@ -181,16 +215,29 @@ class StoryAuthoringGui : GuiScreen {
         val eventType = if (template.id.isNotBlank()) template.eventType else "story_event"
         val scopeType = if (place != null) "place: ${place.displayName()}" else "region: ${region?.name()}"
 
+        val anchorType = if (place != null) "place" else "region"
+        val anchorId = place?.id() ?: region?.id() ?: ""
+        val anchorCount = runCatching {
+            plugin.progressionService.getAnchorBindings(null, null, 200)
+                .count { it.anchorType().equals(anchorType, ignoreCase = true) && it.anchorId().equals(anchorId, ignoreCase = true) }
+        }.getOrDefault(0)
+
+        val reviewLore = buildList {
+            add("&7Template: &f$templateName")
+            add("&7Tip: &f$eventType")
+            add("&7Aplicat pe: &f$scopeType")
+            add("&7ID: &f$scopeId")
+            if (anchorCount > 0) {
+                add("&7Ancore quest la aceasta locatie: &f$anchorCount")
+                add("&8Story event-ul poate interactiona cu questurile existente.")
+            } else {
+                add("&7Ancore quest: &f0")
+            }
+            add("")
+            add("&7Click &aConfirma&7 pentru a crea evenimentul.")
+        }
         context.item(22, GuiItemFactory.item(Material.FILLED_MAP,
-            "&6Review Eveniment",
-            listOf(
-                "&7Template: &f$templateName",
-                "&7Tip: &f$eventType",
-                "&7Aplicat pe: &f$scopeType",
-                "&7ID: &f$scopeId",
-                "",
-                "&7Click &aConfirma&7 pentru a crea evenimentul."
-            )
+            "&6Review Eveniment", reviewLore
         ))
 
         context.button(38, GuiButton.enabled(
@@ -216,6 +263,15 @@ class StoryAuthoringGui : GuiScreen {
                 context.service().open(context.player(), GuiKey.STORY)
             }
         ))
+
+        if (anchorCount > 0) {
+            context.button(39, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    listOf("&7Vezi ancorele quest pentru aceasta locatie.",
+                        "&7Ancore existente: &f$anchorCount")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            ))
+        }
 
         context.button(42, GuiButton.enabled(
             GuiItemFactory.item(Material.RED_DYE, "&cAnuleaza",

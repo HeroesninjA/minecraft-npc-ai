@@ -23,7 +23,7 @@ class QuestMapGuiDiagnosticsTest {
         assertTrue(source.contains("saveAnchorBinding"))
         assertTrue(source.contains("Delete binding"))
         assertTrue(source.contains("Edit binding"))
-        assertTrue(source.contains("Alege din mapping"))
+        assertTrue(source.contains("Listeaza places"))
     }
 
     @Test

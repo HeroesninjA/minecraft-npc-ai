@@ -86,14 +86,32 @@ class QuestMapGui : GuiScreen {
         var slot = 19
         for (def in definitions.take(21)) {
             val anchors = loadAnchors(context, player.uniqueId.toString(), def.templateId())
+            val totalObj = def.objectiveCount()
+            val anchorCount = anchors.size
+            val coverage: String
+            val material: Material
+            when {
+                anchorCount == 0 -> {
+                    coverage = "&c0/$totalObj (fara ancore)"
+                    material = Material.PAPER
+                }
+                anchorCount >= totalObj -> {
+                    coverage = "&a$anchorCount/$totalObj (complet)"
+                    material = Material.LIME_DYE
+                }
+                else -> {
+                    coverage = "&e$anchorCount/$totalObj (partial)"
+                    material = Material.ORANGE_DYE
+                }
+            }
             context.button(slot++, GuiButton.enabled(
                 GuiItemFactory.item(
-                    if (anchors.isNotEmpty()) Material.LIME_DYE else Material.PAPER,
+                    material,
                     "&f${GuiItemFactory.compact(def.displayName(), 32)}",
                     listOf(
                         "&7Template: &f${def.templateId()}",
-                        "&7Obiective: &f${def.objectiveCount()}",
-                        "&7Ancore: &f${anchors.size}",
+                        "&7Obiective: &f${totalObj}",
+                        "&7Ancore: $coverage",
                         "&8Click: vezi obiectivele"
                     )
                 ),
@@ -119,6 +137,8 @@ class QuestMapGui : GuiScreen {
         val suggestions = runCatching {
             context.plugin().progressionService.getObjectiveIdSuggestions(player, templateId)
         }.getOrDefault(emptyList())
+        val filterText = context.service().getCreatorFormValue(player, "quest_map_obj_filter")
+        val hasFilter = filterText.isNotBlank()
 
         context.item(4, GuiItemFactory.item(
             Material.KNOWLEDGE_BOOK,
@@ -126,7 +146,8 @@ class QuestMapGui : GuiScreen {
             listOf(
                 "&7Template: &f$templateId",
                 "&7Ancore: &f${anchors.size}",
-                if (suggestions.isNotEmpty()) "&7Sugestii: &f${suggestions.size}" else "&7Fara sugestii"
+                if (suggestions.isNotEmpty()) "&7Sugestii: &f${suggestions.size}" else "&7Fara sugestii",
+                if (hasFilter) "&7Filtru: &f$filterText" else "&7Filtru: &f-"
             )
         ))
 
@@ -138,14 +159,43 @@ class QuestMapGui : GuiScreen {
             }
         ))
 
+        context.button(7, GuiButton.enabled(
+            GuiItemFactory.item(
+                if (hasFilter) Material.LIME_DYE else Material.NAME_TAG,
+                if (hasFilter) "&aFiltru: $filterText" else "&eCauta obiectiv",
+                listOf("&7Click: scrie un fragment din numele", "&7obiectivului pentru a filtra lista.", if (hasFilter) "&8Click dreapta: sterge filtrul" else "")
+            ),
+            GuiAction { click ->
+                if (click.clickType().isRightClick && hasFilter) {
+                    context.service().setCreatorFormValue(player, "quest_map_obj_filter", null)
+                    click.service().open(click.player(), GuiKey.QUEST_MAP)
+                } else {
+                    click.service().openTextInput(
+                        click.player(),
+                        "quest_map_obj_filter",
+                        "quest_map_obj_filter",
+                        GuiKey.QUEST_MAP,
+                        promptLines = listOf("&7Filtreaza obiectivele dupa nume.", "&7Lasa gol pentru a sterge filtrul.")
+                    )
+                }
+            }
+        ))
+
         context.button(8, GuiButton.enabled(
             GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", "&7Reincarca."),
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
         ))
 
+        val allKeys = (suggestions + anchors.map { it.objectiveKey() }).distinct()
+        val missingAnchorCount = allKeys.count { key -> anchors.none { it.objectiveKey().equals(key, ignoreCase = true) } }
+        val filteredKeys = if (hasFilter) {
+            allKeys.filter { it.contains(filterText, ignoreCase = true) }
+        } else {
+            allKeys
+        }.take(12)
+
         var slot = 19
-        val allKeys = (suggestions + anchors.map { it.objectiveKey() }).distinct().take(14)
-        for (key in allKeys) {
+        for (key in filteredKeys) {
             val anchor = anchors.firstOrNull { it.objectiveKey().equals(key, ignoreCase = true) }
             context.button(slot++, GuiButton.enabled(
                 GuiItemFactory.item(
@@ -165,6 +215,18 @@ class QuestMapGui : GuiScreen {
             ))
         }
 
+        if (filteredKeys.isEmpty() && hasFilter) {
+            context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNiciun obiectiv gasit",
+                listOf("&7Filtrul &f$filterText &7nu gaseste nimic.")))
+            context.button(21, GuiButton.enabled(
+                GuiItemFactory.item(Material.NAME_TAG, "&eSterge filtrul", listOf("&7Revine la lista completa.")),
+                GuiAction { click ->
+                    context.service().setCreatorFormValue(player, "quest_map_obj_filter", null)
+                    click.service().open(click.player(), GuiKey.QUEST_MAP)
+                }
+            ))
+        }
+
         if (allKeys.isEmpty()) {
             context.item(22, GuiItemFactory.item(Material.BARRIER, "&cNiciun obiectiv",
                 listOf("&7Nu exista obiective.", "&7Click mai jos: foloseste templateId ca obiectiv.")))
@@ -175,6 +237,64 @@ class QuestMapGui : GuiScreen {
                     context.service().setQuestMapObjectiveKey(player, templateId)
                     click.service().open(click.player(), GuiKey.QUEST_MAP)
                 }
+            ))
+        }
+
+        if (missingAnchorCount > 0 && anchors.size < allKeys.size) {
+            context.button(43, GuiButton.enabled(
+                GuiItemFactory.item(Material.LIME_DYE, "&aBind all (${missingAnchorCount})",
+                    listOf(
+                        "&7Leaga toate obiectivele fara ancora",
+                        "&7la locatia curenta (place/regiune).",
+                        "&8Click: bind automat."
+                    )),
+                GuiAction { click ->
+                    val loc = click.player().location
+                    val wa = click.plugin().platform.worldAdmin
+                    val p = wa.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+                    val r = wa.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+                    val unbound = allKeys.filter { k -> anchors.none { it.objectiveKey().equals(k, ignoreCase = true) } }
+                    var bound = 0
+                    val def = context.plugin().progressionService.getDefinitions(templateId).firstOrNull()
+                    val globalMode = context.service().getQuestMapGlobalMode(click.player())
+                    val playerUuid = if (globalMode) "" else click.player().uniqueId.toString()
+                    for (key in unbound) {
+                        if (p != null) {
+                            runCatching {
+                                context.plugin().progressionService.saveAnchorBinding(ProgressionAnchorBinding(
+                                    playerUuid, templateId, key, def?.code() ?: "",
+                                    "location", "", "place", p.id(), p.displayName(),
+                                    System.currentTimeMillis(), System.currentTimeMillis(), "active"
+                                ))
+                                bound++
+                            }
+                        } else if (r != null) {
+                            runCatching {
+                                context.plugin().progressionService.saveAnchorBinding(ProgressionAnchorBinding(
+                                    playerUuid, templateId, key, def?.code() ?: "",
+                                    "location", "", "region", r.id(), r.name(),
+                                    System.currentTimeMillis(), System.currentTimeMillis(), "active"
+                                ))
+                                bound++
+                            }
+                        }
+                    }
+                    if (bound > 0) {
+                        click.plugin().messageUtils.send(click.player(), "&aBind automat: &f$bound &aobiective legate.")
+                        click.service().open(click.player(), GuiKey.QUEST_MAP)
+                    } else {
+                        click.plugin().messageUtils.send(click.player(), "&cNu s-a gasit place sau regiune la locatia curenta.")
+                    }
+                }
+            ))
+            context.button(44, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Mapping Creator",
+                    listOf(
+                        "&7${missingAnchorCount} obiectiv(e) fara ancora.",
+                        "&7Deschide Mapping Creator pentru a",
+                        "&7creea place-uri si regiuni noi."
+                    )),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }
             ))
         }
 
@@ -216,10 +336,49 @@ class QuestMapGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
         ))
 
+        val storyEvents = if (region != null || place != null) runCatching {
+            val regionEvents = if (region != null) context.plugin().storyStateService.listRecentEvents(region.id(), null, 3) else emptyList()
+            val placeEvents = if (place != null) context.plugin().storyStateService.listRecentEvents(null, place.id(), 3) else emptyList()
+            (regionEvents + placeEvents).distinctBy { it.id() }.sortedByDescending { it.createdAt() }.take(4)
+        }.getOrDefault(emptyList()) else emptyList()
+        if (storyEvents.isNotEmpty()) {
+            context.item(9, GuiItemFactory.item(
+                Material.BOOK,
+                "&dStory context",
+                buildList {
+                    add("&7Regiune: &f${region?.id() ?: "-"}")
+                    add("&7Place: &f${place?.id() ?: "-"}")
+                    add("&7Evenimente recente:")
+                    storyEvents.forEach { ev ->
+                        add("&8- &d${ev.eventType().take(12)} &f${GuiItemFactory.compact(ev.title().ifBlank { ev.eventKey() }, 18)}")
+                    }
+                }
+            ))
+        }
+
         if (existing != null) {
+            val linkedProgressions = runCatching {
+                context.plugin().progressionService.getProgressionsByAnchor(
+                    existing.anchorType(), existing.anchorId(), 8
+                )
+            }.getOrDefault(emptyList())
+            val activeLinked = linkedProgressions.filter { it.status().equals("active", ignoreCase = true) }
+
             context.item(10, GuiItemFactory.item(
                 Material.FILLED_MAP, "&aAncora: ${existing.anchorType()}:${existing.anchorId()}",
-                listOf("&7Label: &f${existing.displayLabel()}", "&7Status: &f${existing.status()}")
+                buildList {
+                    add("&7Label: &f${existing.displayLabel()}")
+                    add("&7Status: &f${existing.status()}")
+                    if (linkedProgressions.isNotEmpty()) {
+                        add("&7Progresii legate: &f${linkedProgressions.size} &7(active: &f${activeLinked.size}&7)")
+                        linkedProgressions.take(4).forEach { p ->
+                            val playerLabel = p.playerUuid().take(8)
+                            add("&8- ${p.status()} | ${p.templateId().take(20)} | $playerLabel")
+                        }
+                    } else {
+                        add("&7Progresii legate: &f0")
+                    }
+                }
             ))
             if (place != null) {
                 context.button(12, GuiButton.enabled(
@@ -270,8 +429,12 @@ class QuestMapGui : GuiScreen {
                     GuiAction { click -> saveBinding(context, player, templateId, objectiveKey, "region", region.id(), region.name()) }
                 ))
             }
+            context.button(15, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Mapping Creator", listOf("&7Deschide creatorul de mapping.")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }
+            ))
             context.button(16, GuiButton.enabled(
-                GuiItemFactory.item(Material.MAP, "&bAlege din mapping", listOf("&7Click: /ainpc world places")),
+                GuiItemFactory.item(Material.MAP, "&bListeaza places", listOf("&7Click: /ainpc world places")),
                 GuiAction { click -> click.service().runCommand(click.player(), "ainpc world places") }
             ))
         }

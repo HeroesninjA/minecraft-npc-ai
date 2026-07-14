@@ -219,15 +219,15 @@ class MainHubGui : GuiScreen {
             context.button(
                 36,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.MAP, "&6Quest Anchors", "&7Listeaza ancore persistate."),
-                    GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors") }
+                    GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Anchors", "&7Listeaza si mapeaza ancorele persistate."),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
                 )
             )
             context.button(
                 37,
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.FILLED_MAP, "&eQuest Mapping", "&7Creeaza/editeaza/sterge ancore."),
-                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+                    GuiItemFactory.item(Material.CRAFTING_TABLE, "&eCreator Tools", "&7Quest si mapping tools."),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_HUB) }
                 )
             )
             context.button(

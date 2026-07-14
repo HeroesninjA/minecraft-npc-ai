@@ -76,6 +76,29 @@ class WorldRegionGui : GuiScreen {
                 )
             ))
 
+            val regionStoryEvents = runCatching {
+                context.plugin().storyStateService.listRecentEvents(region.id(), null, 5)
+            }.getOrDefault(emptyList())
+            if (regionStoryEvents.isNotEmpty()) {
+                context.item(16, GuiItemFactory.item(
+                    Material.BOOK,
+                    "&dEvenimente Story Recente (${regionStoryEvents.size})",
+                    regionStoryEvents.map { ev ->
+                        "&8${formatRelativeTime(ev.createdAt())} &d${ev.eventType().take(14)} &f${GuiItemFactory.compact(ev.title().ifBlank { ev.eventKey() }, 24)}"
+                    }
+                ))
+            }
+
+            context.button(15, if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.WRITABLE_BOOK, "&dCreeaza Story Event",
+                        listOf("&7Creaza un eveniment story.", "&7Click: /ainpc story author")),
+                    action = { click ->
+                        click.service().runCommand(click.player(), "ainpc story author ${region.id()}")
+                    }
+                )
+            } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Creeaza Story Event", listOf("&7Necesita admin."))))
+
             val env = context.plugin().environmentEngine.getContext(region.worldName())
             context.item(7, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
@@ -134,6 +157,14 @@ class WorldRegionGui : GuiScreen {
                     }
                 )
             } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Delete region", listOf("&7Necesita admin."))))
+
+            context.button(33, if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                        listOf("&7Leaga regiunea de obiectivele quest.", "&7Click: deschide Quest Map.")),
+                    action = { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+                )
+            } else GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Quest Map", listOf("&7Necesita admin."))))
         }
 
         GuiNavigation.addStandardControls(context, key())
@@ -156,5 +187,15 @@ class WorldRegionGui : GuiScreen {
             "&7Owner: &f${place.ownerNpcId().ifBlank { "<niciunul>" }}",
             "&7Click: detalii place"
         )
+    }
+
+    private fun formatRelativeTime(epochMs: Long): String {
+        val diff = System.currentTimeMillis() - epochMs
+        return when {
+            diff < 60_000 -> "<1m"
+            diff < 3_600_000 -> "${diff / 60_000}m"
+            diff < 86_400_000 -> "${diff / 3_600_000}h"
+            else -> "${diff / 86_400_000}d"
+        }
     }
 }

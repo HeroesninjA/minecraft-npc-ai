@@ -36,8 +36,8 @@ class QuestCreatorGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.AUTHORING) }
         ))
         context.button(12, GuiButton.enabled(
-            GuiItemFactory.item(Material.MAP, "&6Ancore", listOf("&7Listeaza ancorele persistate pentru questuri.", "&7Click: ancore.")),
-            GuiAction { click -> click.service().runCommand(click.player(), "ainpc quest anchors") }
+            GuiItemFactory.item(Material.MAP, "&6Ancore", listOf("&7Listeaza si mapeaza ancorele persistate.", "&7Click: deschide Quest Map.")),
+            GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
         ))
         context.button(13, GuiButton.enabled(
             GuiItemFactory.item(Material.SPYGLASS, "&6Test Quest", listOf("&7Testeaza questuri: debug, status, accept.", "&7Click: deschide test panel.")),

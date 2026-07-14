@@ -116,6 +116,19 @@ class NpcManagerGui : GuiScreen {
             )
         )
 
+        context.button(
+            49,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.FILLED_MAP,
+                    "&6Quest Map",
+                    "&7Leaga obiectivele de locatii.",
+                    "&7NPC-urile sunt plasate in zone mapate."
+                ),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            )
+        )
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

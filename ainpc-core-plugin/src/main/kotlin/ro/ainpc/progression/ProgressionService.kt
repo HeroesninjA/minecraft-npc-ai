@@ -255,6 +255,19 @@ class ProgressionService(private val plugin: AINPCPlugin) {
                         "este deja folosita de template-ul ${duplicate.templateId()}."
                 )
             }
+            val wa = plugin.platform.worldAdmin
+            val anchorExists = when (binding.anchorType().lowercase()) {
+                "region" -> wa.getRegion(binding.anchorId()) != null
+                "place" -> wa.getPlace(binding.anchorId()) != null
+                "node" -> wa.getNode(binding.anchorId()) != null
+                else -> true
+            }
+            if (!anchorExists) {
+                plugin.logger.warning(
+                    "Ancora orfana detectata: ${binding.anchorType()}:${binding.anchorId()} " +
+                        "nu exista in world mapping pentru template-ul ${binding.templateId()}."
+                )
+            }
         }
         repository.saveAnchorBinding(binding)
     }

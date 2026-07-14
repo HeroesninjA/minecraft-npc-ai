@@ -14,8 +14,16 @@ class PlayerHubGui : GuiScreen {
     override fun size(player: Player): Int = 36
 
     override fun render(context: GuiRenderContext) {
+        val player = context.player()
+        val wa = context.plugin().platform.worldAdmin
+        val loc = player.location
+        val region = wa.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val place = wa.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+
         context.item(4, GuiItemFactory.item(Material.NETHER_STAR, "&6AINPC", listOf(
-            "&7NPC-uri in raza 32: &f${context.plugin().npcManager.getNPCsNear(context.player().location, 32.0).size}"
+            "&7NPC-uri in raza 32: &f${context.plugin().npcManager.getNPCsNear(player.location, 32.0).size}",
+            if (region != null) "&7Regiune: &f${region.name()}" else "&7Regiune: &f<nemapata>",
+            if (place != null) "&7Place: &f${place.displayName()}" else "&7Place: &f<nemapat>"
         )))
 
         openBtn(context, 10, GuiKey.QUEST, Material.WRITABLE_BOOK, "&eProgresii", "&7Questuri, contracte si tracking.")
@@ -23,6 +31,7 @@ class PlayerHubGui : GuiScreen {
         openBtn(context, 12, GuiKey.STATS, Material.CLOCK, "&dStatistici", "&7Snapshot personal.")
         openBtn(context, 13, GuiKey.ROUTINE, Material.COMPASS, "&eRutine", "&7Programul NPC-urilor.")
         openBtn(context, 14, GuiKey.SHOP, Material.EMERALD, "&2Shop", "&7Tranzactii cu NPC-uri.")
+        openBtn(context, 15, GuiKey.QUEST_MAP, Material.FILLED_MAP, "&bQuest Map", "&7Vezi locatiile questurilor.")
 
         context.button(49, GuiButton.enabled(GuiItemFactory.item(Material.SUNFLOWER, "&aRefresh", ""),
             action = { click -> click.service().open(click.player(), GuiKey.MAIN) }))

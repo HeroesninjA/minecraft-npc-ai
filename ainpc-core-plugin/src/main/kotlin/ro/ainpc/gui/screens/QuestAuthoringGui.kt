@@ -399,6 +399,17 @@ class QuestAuthoringGui : GuiScreen {
             )
         }
         context.button(
+            38,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.FILLED_MAP,
+                    "&6Quest Map",
+                    listOf("&7Leaga obiectivele de locatii.", "&7Click: deschide Quest Map.")
+                ),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            )
+        )
+        context.button(
             36,
             GuiButton.enabled(
                 GuiItemFactory.item(

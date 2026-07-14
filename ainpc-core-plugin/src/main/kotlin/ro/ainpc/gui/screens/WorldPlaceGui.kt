@@ -106,19 +106,38 @@ class WorldPlaceGui : GuiScreen {
 
             context.button(30, GuiButton.enabled(
                 GuiItemFactory.item(
-                    Material.ENDER_EYE,
-                    "&bAncore quest",
-                    listOf("&7Click: vezi ancorele de quest pentru acest place.")
+                    Material.FILLED_MAP,
+                    "&6Quest Map",
+                    listOf("&7Leaga acest place de obiective.", "&7Click: deschide Quest Map.")
                 ),
-                GuiAction { click ->
-                    click.service().runCommand(click.player(), "ainpc quest anchors ${place.id()}")
-                }
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
             ))
+
+            val placeStoryEvents = runCatching {
+                plugin.storyStateService.listRecentEvents(null, place.id(), 5)
+            }.getOrDefault(emptyList())
+            if (placeStoryEvents.isNotEmpty()) {
+                context.item(17, GuiItemFactory.item(
+                    Material.BOOK,
+                    "&dEvenimente Story Recente (${placeStoryEvents.size})",
+                    placeStoryEvents.map { ev ->
+                        "&8${formatRelativeTime(ev.createdAt())} &d${ev.eventType().take(14)} &f${GuiItemFactory.compact(ev.title().ifBlank { ev.eventKey() }, 24)}"
+                    }
+                ))
+            }
 
             context.button(31, GuiButton.enabled(
                 GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory State", "&7Vezi starea povestii pentru acest place."),
                 GuiAction { click ->
                     click.service().runCommand(click.player(), "ainpc story place ${place.id()}")
+                }
+            ))
+
+            context.button(8, GuiButton.enabled(
+                GuiItemFactory.item(Material.WRITABLE_BOOK, "&dCreeaza Story Event",
+                    listOf("&7Creaza un eveniment story rapid.", "&7Click: /ainpc story author")),
+                GuiAction { click ->
+                    click.service().runCommand(click.player(), "ainpc story author ${place.id()}")
                 }
             ))
 
@@ -237,5 +256,14 @@ class WorldPlaceGui : GuiScreen {
         )
     }
 
+    private fun formatRelativeTime(epochMs: Long): String {
+        val diff = System.currentTimeMillis() - epochMs
+        return when {
+            diff < 60_000 -> "<1m"
+            diff < 3_600_000 -> "${diff / 60_000}m"
+            diff < 86_400_000 -> "${diff / 3_600_000}h"
+            else -> "${diff / 86_400_000}d"
+        }
+    }
 
 }

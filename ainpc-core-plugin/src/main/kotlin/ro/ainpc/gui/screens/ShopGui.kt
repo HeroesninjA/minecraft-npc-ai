@@ -35,6 +35,9 @@ class ShopGui : GuiScreen {
         val location = player.location
         val adminView = player.hasPermission("ainpc.admin")
         val shopService = context.plugin().shopService
+        val wa = context.plugin().platform.worldAdmin
+        val region = wa.findRegion(location.world.name, location.blockX, location.blockY, location.blockZ)
+        val place = wa.findPlace(location.world.name, location.blockX, location.blockY, location.blockZ)
         val nearbyNpcs = context.plugin().npcManager.getNPCsNear(location, 16.0).stream()
             .sorted(Comparator.comparing { npc: AINPC -> npc.name.lowercase(Locale.ROOT) })
             .toList()
@@ -43,10 +46,20 @@ class ShopGui : GuiScreen {
 
         val headerLore = mutableListOf(
             "&7Total NPC-uri: &f$totalNpcs",
-            "&7In raza 16m: &f${nearbyNpcs.size}"
+            "&7In raza 16m: &f${nearbyNpcs.size}",
+            "&7Regiune: &f${region?.name() ?: "<nemapata>"}",
+            "&7Place: &f${place?.displayName() ?: "<nemapat>"}"
         )
         if (shopCount > 0) headerLore.add("&7Magazine disponibile: &f$shopCount")
         context.item(4, GuiItemFactory.item(Material.EMERALD, "&2Shop & NPCs", headerLore))
+
+        if (region != null || place != null) {
+            context.button(8, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    "&7Leaga obiective de locatii."),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            ))
+        }
 
         val balance = context.plugin().economyService.getBalance(player)
         context.button(5, GuiButton.enabled(

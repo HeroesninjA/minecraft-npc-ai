@@ -22,12 +22,29 @@ class QuestOfferNpcGui : GuiScreen {
     override fun render(context: GuiRenderContext) {
         val player = context.player()
         val plugin = context.plugin()
+        val wa = plugin.platform.worldAdmin
+        val loc = player.location
+        val region = wa.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val place = wa.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
 
         context.item(4, GuiItemFactory.item(
             Material.VILLAGER_SPAWN_EGG,
             "&eNPC in apropiere",
-            listOf("&7Click pe un NPC pentru a interactiona.")
+            listOf(
+                "&7Click pe un NPC pentru a interactiona.",
+                "&7Regiune: &f${region?.name() ?: "<nemapata>"}",
+                "&7Place: &f${place?.displayName() ?: "<nemapat>"}"
+            )
         ))
+
+        if (region != null || place != null) {
+            context.button(8, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    "&7Leaga obiectivele de locatii.",
+                    "&7Click: deschide Quest Map."),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            ))
+        }
 
         val nearbyNpcs = plugin.npcManager.getNPCsNear(player.location, 16.0)
             .sortedBy { it.name.lowercase(Locale.ROOT) }

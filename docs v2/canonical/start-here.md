@@ -1,34 +1,25 @@
 # Start Here
 
-Status: canonical in `docs v2`.
-
-Acesta este punctul principal de intrare pentru documentatia restructurata.
+Punctul principal de intrare pentru documentatia activa din `docs v2`.
 
 ## Traseu recomandat
 
-1. `canonical/index-functional.md`
-2. `canonical/constitutie-proiect.md`
-3. `canonical/implementat-deja.md`
-4. `planning/taskuri-prioritizate.md`
-5. `reference/index-navigare.md`
-6. `archive/index-arhiva.md`
-7. documentele specifice pe subdomeniu
+1. `canonical/index-functional.md` - alege domeniul functional.
+2. `canonical/constitutie-proiect.md` - citeste regulile proiectului.
+3. `canonical/implementat-deja.md` - verifica starea confirmata.
+4. `planning/taskuri-prioritizate.md` - consulta backlog-ul curent.
+5. documentul specific domeniului in care lucrezi.
+
+## Navigare
+
+- `README.md` - catalogul complet;
+- `reference/categorii/README.md` - navigare tematica;
+- `reference/index-navigare.md` - alias compact;
+- `archive/README.md` - continut istoric.
 
 ## Principii
 
-- foloseste un singur document canonic pentru fiecare tema;
-- pastreaza doar continut verificat si actual;
-- muta ideile istorice sau abandonate in `archive/`;
-- lasa in `docs/` doar redirecturi scurte pana cand migrarea se incheie.
-
-## Zonele principale
-
-- `canonical/` - intrari si starea curenta a proiectului;
-- `canonical/constitutie-proiect.md` - regulile de baza ale proiectului;
-- `canonical/implementat-deja.md` - starea curenta a implementarii;
-- `architecture/` - relatii, contracte si structuri tehnice;
-- `guides/` - tutoriale si fluxuri pas-cu-pas;
-- `operations/` - runbook, backup, debug, deploy;
-- `planning/` - roadmap, faze, backlog si prioritati;
-- `reference/` - indexuri, scheme si cataloage;
-- `archive/` - istoric, variante vechi, materiale retrase.
+- pastreaza un singur document canonic pentru fiecare tema;
+- actualizeaza documentul canonic inaintea indexurilor derivate;
+- muta continutul depasit in `archive/`;
+- `docs/` ramane doar stratul vechi de redirecturi.

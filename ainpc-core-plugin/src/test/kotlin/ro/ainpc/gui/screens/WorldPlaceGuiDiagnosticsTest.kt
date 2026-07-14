@@ -22,7 +22,7 @@ class WorldPlaceGuiDiagnosticsTest {
 
         assertTrue(source.contains("Locuitori"))
         assertTrue(source.contains("NPC Bindings"))
-        assertTrue(source.contains("Ancore quest"))
+        assertTrue(source.contains("Quest Map"))
         assertTrue(source.contains("Story State"))
     }
 

@@ -23,6 +23,6 @@ class MainHubGuiDiagnosticsTest {
         assertTrue(source.contains("Quest Anchors"))
         assertTrue(source.contains("World Mapping"))
         assertTrue(source.contains("Lista NPC Admin"))
-        assertTrue(source.contains("Creeaza/editeaza/sterge ancore."))
+        assertTrue(source.contains("Listeaza si mapeaza ancorele persistate"))
     }
 }

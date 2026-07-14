@@ -84,6 +84,20 @@ class StatsGui : GuiScreen {
             GuiAction { click -> click.service().open(click.player(), GuiKey.STORY) }
         ))
 
+        val wa = context.plugin().platform.worldAdmin
+        val region = wa.findRegion(location.world.name, location.blockX, location.blockY, location.blockZ)
+        val place = wa.findPlace(location.world.name, location.blockX, location.blockY, location.blockZ)
+        if (region != null || place != null) {
+            context.button(17, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    listOf(
+                        "&7Regiune: &f${region?.name() ?: "-"}",
+                        "&7Place: &f${place?.displayName() ?: "-"}"
+                    )),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            ))
+        }
+
         val isAdmin = player.hasPermission("ainpc.admin")
         if (isAdmin) {
             context.button(13, GuiButton.enabled(

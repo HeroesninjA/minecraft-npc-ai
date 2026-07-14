@@ -1,34 +1,31 @@
-# Story si Context AI
+# Story si context AI
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-10.
+Status: document derivat pentru integrarea dintre contextul narativ si AI.
+Actualizat: 2026-07-14.
 
-Acesta este rezumatul pentru legatura dintre story, context local si questuri.
+Aceasta pagina descrie consumul contextului validat, nu stocarea sau modificarea story state-ului.
 
-## Rol
+## Flux
 
-- conecteaza mapping-ul semantic cu progresul si naratiunea;
-- expune context read-only pentru AI si GUI;
-- pastreaza separarea dintre indicii narative si starea canonica;
-- ajuta questurile sa identifice locuri, personaje si evenimente relevante.
+1. `StoryContextService` construieste snapshot-ul read-only.
+2. orchestration-ul AI selecteaza capabilitatea si formuleaza cererea.
+3. raspunsul este validat si ramane sugestie, briefing sau draft.
+4. orice efect executabil trece prin serviciul determinist responsabil.
 
-## Reguli
+## Consumatori
 
-- contextul se construieste din surse validate;
-- AI primeste context, nu autoritate asupra starii;
-- quest anchors, story events si mapping-ul semantic raman auditable;
-- schimbarea de story state trece prin servicii specializate.
+- dialog si briefing;
+- GUI si inspectie admin;
+- quest authoring si generare asistata;
+- rezumate narative.
 
-## Stare curenta
+## Regula
 
-- exista baza pentru story context read-only;
-- questurile pot folosi context narativ pentru briefing si progres;
-- GUI-ul poate prezenta starea story fara sa o modifice;
-- pipeline-ul de generare ramane asistat si controlat.
+- contextul AI nu este autoritate asupra starii;
+- acest document nu redefineste contractele story state sau story context.
 
 ## Legaturi
 
-- `canonical/implementat-deja.md`
-- `architecture/mapping.md`
+- `architecture/story-state-service.md`
+- `architecture/story-context-service.md`
 - `architecture/ai-orchestrare-si-mecanici.md`
-- `planning/questuri-avansate-v2.md`

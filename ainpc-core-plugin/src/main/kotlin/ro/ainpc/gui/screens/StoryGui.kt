@@ -46,6 +46,33 @@ class StoryGui : GuiScreen {
         context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
         context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
         context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", progressionVerificationLore(context)))
+
+        val anchorRegionCount = if (snapshot.region != null) {
+            val regionId = snapshot.region.id()
+            runCatching {
+                context.plugin().progressionService.getAnchorBindings(player.uniqueId.toString(), null, 200)
+                    .count { it.anchorType() == "region" && it.anchorId().equals(regionId, ignoreCase = true) }
+            }.getOrDefault(0)
+        } else 0
+        val anchorPlaceCount = if (snapshot.place != null) {
+            val placeId = snapshot.place.id()
+            runCatching {
+                context.plugin().progressionService.getAnchorBindings(player.uniqueId.toString(), null, 200)
+                    .count { it.anchorType() == "place" && it.anchorId().equals(placeId, ignoreCase = true) }
+            }.getOrDefault(0)
+        } else 0
+        if (anchorRegionCount + anchorPlaceCount > 0) {
+            context.item(3, GuiItemFactory.item(
+                Material.LIME_DYE,
+                "&aQuest Mapping",
+                buildList {
+                    if (snapshot.region != null) add("&7Ancore regiune: &f$anchorRegionCount")
+                    if (snapshot.place != null) add("&7Ancore place: &f$anchorPlaceCount")
+                    add("&8Click: deschide Quest Map")
+                }
+            ))
+        }
+        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", progressionVerificationLore(context)))
         context.button(
             13,
             if (context.player().hasPermission("ainpc.admin")) {
@@ -114,6 +141,10 @@ class StoryGui : GuiScreen {
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&aAuthoring Story",
                 "&7Creeaza evenimente story visual.")
         ) { click -> click.service().open(click.player(), GuiKey.STORY_AUTHORING) })
+        context.button(2, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                "&7Leaga obiective de locatii.")
+        ) { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) })
 
         var slot = 19
         for (event in snapshot.events) {

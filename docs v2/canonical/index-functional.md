@@ -1,32 +1,21 @@
 # Index functional
 
-Status: canonical in `docs v2`.
+Index pentru alegerea punctului de intrare potrivit fiecarui domeniu.
 
-Acesta este indexul de orientare pentru documentatia functionala curenta.
+## Domenii
 
-## Intrari rapide
-
-- `canonical/start-here.md` - punctul principal de intrare;
-- `canonical/constitutie-proiect.md` - regulile si limitele proiectului;
-- `canonical/implementat-deja.md` - starea actuala a implementarii;
-- `architecture/` - harti si relatii tehnice;
-- `guides/` - fluxuri de lucru si tutoriale;
-- `operations/` - mentenanta si runbook;
-- `planning/taskuri-prioritizate.md` - backlog-ul curatat;
-- `planning/` - roadmap si backlog;
-- `reference/` - indexuri si liste de control;
-- `archive/` - continut istoric.
-
-## Domenii curente
-
-- `mapping` - world mapping, build mode, ancore si inspectie;
-- `quest` - authoring, editare, progresie si validare;
-- `gui` - ecrane administrative, creator si player;
-- `ai` - orchestrare, MCP si generare asistata;
-- `story` - context narativ, evenimente si progresie;
-- `debug` - dumps, verificari si diagnostic;
-- `kotlin` - ghiduri de stil, testare si packaging.
+- mapping si world: `reference/mapping-stack.md`;
+- NPC, rutine si simulare: `reference/simulation-stack.md`;
+- quest si progresie: `planning/quest-evolution-stack.md`;
+- onboarding si evenimente: `reference/progression-events-onboarding-stack.md`;
+- story si context: `reference/story-context-quest-ai-stack.md`;
+- AI si MCP: `reference/ai-orchestrare-mcp-stack.md`;
+- GUI: `reference/gui-stack.md`;
+- API si addonuri: `reference/documentatie-api.md`;
+- operare si debug: `operations/server-admin-runbook.md`;
+- stare si prioritati: `canonical/implementat-deja.md` si `planning/taskuri-prioritizate.md`.
 
 ## Regula
 
-Daca un subiect are doua documente care spun acelasi lucru, unul dintre ele trebuie marcat ca arhivat sau rescris.
+- acest document ruteaza catre sursele principale;
+- nu dubleaza contractele sau ghidurile domeniilor.

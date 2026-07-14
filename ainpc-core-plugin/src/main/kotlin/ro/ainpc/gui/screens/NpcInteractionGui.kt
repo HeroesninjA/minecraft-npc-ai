@@ -122,6 +122,18 @@ class NpcInteractionGui : GuiScreen {
                 GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_OFFER_NPC) }
             )
         )
+        context.button(
+            8,
+            GuiButton.enabled(
+                GuiItemFactory.item(
+                    Material.FILLED_MAP,
+                    "&6Quest Map",
+                    "&7Leaga obiectivele de locatii.",
+                    "&7Click: deschide Quest Map."
+                ),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            )
+        )
 
         for (index in nearbyNpcs.indices) {
             val npc = nearbyNpcs[index]

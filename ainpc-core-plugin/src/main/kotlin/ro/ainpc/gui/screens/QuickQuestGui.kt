@@ -30,7 +30,27 @@ class QuickQuestGui : GuiScreen {
         val qTarget = service.getCreatorFormValue(player, "qq_target").ifBlank { "" }
         val qReward = service.getCreatorFormValue(player, "qq_reward").ifBlank { "" }
 
-        context.item(4, GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quick Quest - Pas $step", progressLore(step, qGiver, qName, qType, qCount, qTarget, qReward)))
+        val wa = context.plugin().platform.worldAdmin
+        val loc = player.location
+        val region = wa.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val place = wa.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+
+        val headerLore = buildList {
+            addAll(progressLore(step, qGiver, qName, qType, qCount, qTarget, qReward))
+            if (region != null || place != null) {
+                add("&7Regiune: &f${region?.name() ?: "-"}")
+                add("&7Place: &f${place?.displayName() ?: "-"}")
+                val anchorCount = runCatching {
+                    val all = context.plugin().progressionService.getAnchorBindings(null, null, 200)
+                    all.count {
+                        (region != null && it.anchorType() == "region" && it.anchorId().equals(region.id(), ignoreCase = true)) ||
+                        (place != null && it.anchorType() == "place" && it.anchorId().equals(place.id(), ignoreCase = true))
+                    }
+                }.getOrDefault(0)
+                if (anchorCount > 0) add("&7Ancore quest aici: &f$anchorCount")
+            }
+        }
+        context.item(4, GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Quick Quest - Pas $step", headerLore))
 
         when (step) {
             "0" -> renderStep0(context, player, service, qGiver)
@@ -154,18 +174,59 @@ class QuickQuestGui : GuiScreen {
 
     private fun renderStep3(ctx: GuiRenderContext, player: Player, svc: ro.ainpc.gui.GuiService, target: String, type: String, count: String) {
         val objCount = count.toIntOrNull() ?: 1
-        ctx.item(10, GuiItemFactory.item(Material.TARGET, "&eTintele ($objCount obiective)", listOf("&7Scrie tinta pentru fiecare obiectiv.")))
-        val suggestions = when (type) {
+        val worldAdmin = ctx.plugin().platform.worldAdmin
+        val loc = player.location
+        val currentRegion = worldAdmin.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val regionPlaces = if (currentRegion != null) worldAdmin.getPlaces(currentRegion.id()) else emptyList()
+        val nearbyNodes = worldAdmin.findNodesNear(loc.world.name, loc.x, loc.y, loc.z, 64.0, 12)
+
+        val mappedSuggestions = when (type) {
+            "visit_place" -> if (regionPlaces.isNotEmpty()) {
+                regionPlaces.take(6).joinToString(", ") { "${currentRegion?.id() ?: "region"}:${it.id()}" }
+            } else {
+                "demo_sat:piata, castel:curte_castel"
+            }
+            "inspect_node" -> if (nearbyNodes.isNotEmpty()) {
+                nearbyNodes.take(6).joinToString(", ") { n ->
+                    val region = worldAdmin.findRegion(n.worldName(), n.x().toInt(), n.y().toInt(), n.z().toInt())
+                    "${region?.id() ?: "region"}:${n.id()}"
+                }
+            } else {
+                "castel:curte_castel:cufar"
+            }
             "talk_to_npc", "deliver_to_npc" -> "profession:garda, profession:fermier, profession:blacksmith"
             "collect_item" -> "OAK_LOG, EMERALD, IRON_INGOT"
-            "visit_place" -> "demo_sat:piata, castel:curte_castel"
-            "inspect_node" -> "castel:curte_castel:cufar"
             "kill_mob" -> "ZOMBIE, SKELETON, SPIDER, WITCH"
             "craft_item" -> "IRON_SWORD, TORCH, BOOK"
             "place_block" -> "OAK_PLANKS, STONE"
             "break_block" -> "COBBLESTONE, DEEPSLATE"
             else -> "tag:locatie"
         }
+
+        val isMappingType = type == "visit_place" || type == "inspect_node"
+        ctx.item(10, GuiItemFactory.item(
+            Material.TARGET,
+            "&eTintele ($objCount obiective)",
+            buildList {
+                add("&7Scrie tinta pentru fiecare obiectiv.")
+                if (isMappingType) {
+                    add("&7Regiune: &f${currentRegion?.id() ?: "<nemapata>"}")
+                    if (type == "visit_place") add("&7Places disponibile: &f${regionPlaces.size}")
+                    if (type == "inspect_node") add("&7Noduri apropiate: &f${nearbyNodes.size}")
+                }
+            }
+        ))
+
+        if (isMappingType && (regionPlaces.isEmpty() && nearbyNodes.isEmpty())) {
+            ctx.button(18, GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Mapeaza zona intai",
+                    listOf("&7Nu exista places sau noduri.",
+                        "&7Deschide Mapping Creator pentru a",
+                        "&7creea locatii inainte de quest.")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.MAPPING_CREATOR) }
+            ))
+        }
+
         var slot = 20
         for (i in 1..objCount) {
             val tgt = readTarget(svc, player, i)
@@ -173,11 +234,11 @@ class QuickQuestGui : GuiScreen {
             ctx.button(slot, GuiButton.enabled(GuiItemFactory.item(
                 Material.WRITABLE_BOOK,
                 "&eObiectiv $i: &f${tgt.ifBlank { "<click>" }} &7x$amt",
-                listOf("&7Sugestii: $suggestions")
+                listOf("&7Sugestii: $mappedSuggestions")
             ), GuiAction { click ->
                 click.service().openTextInput(
                     click.player(), "qq_target_$i", "qq_target_$i", GuiKey.QUICK_QUEST,
-                    promptLines = listOf("&7Scrie tinta pentru obiectivul $i:", "&7Sugestii: $suggestions", "&7Amount: foloseste /amount X in chat")
+                    promptLines = listOf("&7Scrie tinta pentru obiectivul $i:", "&7Sugestii: $mappedSuggestions", "&7Amount: foloseste /amount X in chat")
                 )
             }))
             slot++
@@ -384,6 +445,13 @@ $objectives      rewards:
                     click.service().runCommand(click.player(), "ainpc quest quick-export $name $type $target $reward")
                 }
             ))
+            if (type == "visit_place" || type == "inspect_node") {
+                ctx.button(13, GuiButton.enabled(
+                    GuiItemFactory.item(Material.FILLED_MAP, "&6Dupa export: Quest Map",
+                        listOf("&7Leaga obiectivele de locatii.", "&7Click: deschide Quest Map.")),
+                    GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+                ))
+            }
         } else {
             ctx.button(11, GuiButton.disabled(
                 GuiItemFactory.disabled(Material.BOOK, "&7Previzualizare YAML", listOf("&cCorectati erorile mai intai."))

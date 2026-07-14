@@ -64,7 +64,8 @@ class AdminMappingGui : GuiScreen {
                 currentRegion?.id(),
                 currentPlace?.displayName(),
                 currentNodes.size,
-                worldAdmin.hasUnsavedChanges()
+                worldAdmin.hasUnsavedChanges(),
+                runCatching { context.plugin().progressionService.getAnchorBindings(null, null, 1000) }.getOrDefault(emptyList()).size
             )
         ))
 
@@ -163,6 +164,16 @@ class AdminMappingGui : GuiScreen {
         context.button(17, GuiButton.enabled(
             GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Quest", "&7Deschide Panoul Admin Quest.", "&8Admin separat."),
             action = { click -> click.service().open(click.player(), GuiKey.ADMIN_QUEST) }
+        ))
+
+        val anchorCount = runCatching { worldAdmin.regionCount + worldAdmin.placeCount + worldAdmin.nodeCount }.getOrDefault(0)
+        context.button(3, GuiButton.enabled(
+            GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf(
+                "&7Deschide Quest Mapping pentru",
+                "&7a lega obiectivele de locatii.",
+                "&7Entitati mappate: &f$anchorCount"
+            )),
+            action = { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
         ))
 
         context.button(18, GuiButton.enabled(
@@ -377,12 +388,14 @@ class AdminMappingGui : GuiScreen {
         currentRegionId: String?,
         currentPlaceName: String?,
         nearbyNodeCount: Int,
-        hasUnsavedChanges: Boolean
+        hasUnsavedChanges: Boolean,
+        anchorBindingCount: Int
     ): List<String> {
         return buildList {
             add("&7Regiuni: &f$regionCount")
             add("&7Places: &f$placeCount")
             add("&7Noduri: &f$nodeCount")
+            add("&7Ancore quest: &f$anchorBindingCount")
             add("&7World Mode: &f$worldMode")
             add("&7Indexare Automata: &f${if (autoIndexEnabled) "activa" else "dezactivata"}")
             add("&7Current Region: &f${currentRegionId ?: "<niciuna>"}")

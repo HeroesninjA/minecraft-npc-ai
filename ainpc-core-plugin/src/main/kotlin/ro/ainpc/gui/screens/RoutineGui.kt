@@ -163,6 +163,15 @@ class RoutineGui : GuiScreen {
                 }
             )
         )
+        context.button(
+            45,
+            GuiButton.enabled(
+                GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                    "&7Leaga obiective de locatii.",
+                    "&7Rutinele NPC sunt legate de zone mapate."),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+            )
+        )
 
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())

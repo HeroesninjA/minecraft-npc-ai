@@ -382,14 +382,21 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun renderBaseFilters(context: GuiRenderContext, activeFilter: String) {
+        val allEntries = context.plugin().progressionService
+            .getProgressionGuiSnapshot(context.player(), "all", context.player().hasPermission("ainpc.admin"))
+            .allEntries()
+        val activeCount = allEntries.count { it.active() }
+        val questCount = allEntries.count { it.commandRoot() == "quest" }
+        val contractCount = allEntries.count { it.commandRoot() == "contract" }
+
         var slot = 9
         val baseFilters = listOf(
-            QuestLogGuiFilter.ALL,
-            QuestLogGuiFilter.ACTIVE,
-            QuestLogGuiFilter.QUEST,
-            QuestLogGuiFilter.CONTRACT
+            QuestLogGuiFilter.ALL to allEntries.size,
+            QuestLogGuiFilter.ACTIVE to activeCount,
+            QuestLogGuiFilter.QUEST to questCount,
+            QuestLogGuiFilter.CONTRACT to contractCount
         )
-        for (filter in baseFilters) {
+        for ((filter, count) in baseFilters) {
             val selected = filter.matches(activeFilter)
             context.button(
                 slot++,
@@ -399,7 +406,8 @@ class QuestLogGui : GuiScreen {
                         if (selected) "&a${filter.buttonLabel()}" else "&f${filter.buttonLabel()}",
                         listOf(
                             if (selected) "&aFiltru curent." else "&7Click pentru filtrare.",
-                            "&7Filtru de baza: &f${filter.displayLabel()}"
+                            "&7Filtru de baza: &f${filter.displayLabel()}",
+                            "&7Intrari: &f$count"
                         )
                     )
                 ) { click -> click.service().openQuestLog(click.player(), filter.filter()) }
@@ -408,15 +416,19 @@ class QuestLogGui : GuiScreen {
     }
 
     private fun renderAdvancedFilters(context: GuiRenderContext, activeFilter: String) {
+        val allEntries = context.plugin().progressionService
+            .getProgressionGuiSnapshot(context.player(), "all", context.player().hasPermission("ainpc.admin"))
+            .allEntries()
+
         val advancedFilters = listOf(
-            QuestLogGuiFilter.DUTY,
-            QuestLogGuiFilter.BOUNTY,
-            QuestLogGuiFilter.EVENT,
-            QuestLogGuiFilter.TUTORIAL,
-            QuestLogGuiFilter.RITUAL
+            QuestLogGuiFilter.DUTY to allEntries.count { it.commandRoot() == "duty" },
+            QuestLogGuiFilter.BOUNTY to allEntries.count { it.commandRoot() == "bounty" },
+            QuestLogGuiFilter.EVENT to allEntries.count { it.commandRoot() == "event" },
+            QuestLogGuiFilter.TUTORIAL to allEntries.count { it.commandRoot() == "tutorial" },
+            QuestLogGuiFilter.RITUAL to allEntries.count { it.commandRoot() == "ritual" }
         )
         var slot = 14
-        for (filter in advancedFilters) {
+        for ((filter, count) in advancedFilters) {
             val selected = filter.matches(activeFilter)
             context.button(
                 slot++,
@@ -426,7 +438,8 @@ class QuestLogGui : GuiScreen {
                         if (selected) "&d${filter.buttonLabel()}" else "&f${filter.buttonLabel()}",
                         listOf(
                             if (selected) "&dFiltru curent." else "&7Click pentru filtrare.",
-                            "&7Filtru avansat: &f${filter.displayLabel()}"
+                            "&7Filtru avansat: &f${filter.displayLabel()}",
+                            "&7Intrari: &f$count"
                         )
                     )
                 ) { click -> click.service().openQuestLog(click.player(), filter.filter()) }

@@ -86,6 +86,11 @@ class MappingCreatorGui : GuiScreen {
             "&7Persista modificarile de mapping."
         )), GuiAction { click -> click.service().runCommand(click.player(), "ainpc world save") }))
 
+        context.button(22, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf(
+            "&7Dupa creare, leaga locatiile",
+            "&7de obiectivele quest."
+        )), GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }))
+
         val previewKind = aiKind.ifBlank { "region" }
         val previewDescription = aiSummary.ifBlank { aiName }
         val previewCommand = buildMappingPreviewCommand(previewKind, previewDescription)

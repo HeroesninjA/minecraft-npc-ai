@@ -47,6 +47,21 @@ class QuestOfferGui : GuiScreen {
             )
         ))
 
+        val loc = context.player().location
+        val worldAdmin = context.plugin().platform.worldAdmin
+        val place = worldAdmin.findPlace(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val region = worldAdmin.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        if (region != null || place != null) {
+            context.item(0, GuiItemFactory.item(
+                if (place != null) Material.OAK_DOOR else Material.FILLED_MAP,
+                "&bContext mapping",
+                listOf(
+                    "&7Regiune: &f${region?.id() ?: "<nemapata>"}",
+                    "&7Place: &f${place?.id() ?: "<nemapat>"}"
+                )
+            ))
+        }
+
         val objectives = entry.objectives()
         val objectiveSlots = listOf(10, 11, 12, 13, 14, 15, 16)
         for (i in 0 until minOf(objectiveSlots.size, objectives.size)) {

@@ -91,6 +91,29 @@ class WorldHubGui : GuiScreen {
         val env = context.plugin().environmentEngine.getContext(worldName)
         context.item(7, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
+        if (region != null || place != null) {
+            val storyEventsRegion = if (region != null) runCatching {
+                context.plugin().storyStateService.listRecentEvents(region.id(), null, 4)
+            }.getOrDefault(emptyList()) else emptyList()
+            val storyEventsPlace = if (place != null) runCatching {
+                context.plugin().storyStateService.listRecentEvents(null, place.id(), 4)
+            }.getOrDefault(emptyList()) else emptyList()
+            val allStoryEvents = (storyEventsRegion + storyEventsPlace).distinctBy { it.id() }.sortedByDescending { it.createdAt() }.take(5)
+            if (allStoryEvents.isNotEmpty()) {
+                context.item(25, GuiItemFactory.item(
+                    Material.BOOK,
+                    "&dEvenimente Story Recente",
+                    buildList {
+                        add("&7Regiune: &f${region?.id() ?: "-"} | Place: &f${place?.id() ?: "-"}")
+                        add("&7Evenimente: &f${allStoryEvents.size}")
+                        allStoryEvents.forEach { ev ->
+                            add("&8${formatStoryEventTime(ev.createdAt())} &d${ev.eventType().take(14)} &f${GuiItemFactory.compact(ev.title().ifBlank { ev.eventKey() }, 22)}")
+                        }
+                    }
+                ))
+            }
+        }
+
         context.button(10, if (region != null) {
             GuiButton.enabled(
                 GuiItemFactory.item(Material.FILLED_MAP, "&eRegiune Curenta", regionLore(region)),
@@ -259,6 +282,19 @@ class WorldHubGui : GuiScreen {
                 )
             } else {
                 GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Admin Quest",
+                    listOf("&7Necesita Admin.")))
+            }
+        )
+        context.button(
+            34,
+            if (adminView) {
+                GuiButton.enabled(
+                    GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map",
+                        listOf("&7Leaga obiectivele de locatii.", "&7Click: deschide Quest Map.")),
+                    action = { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }
+                )
+            } else {
+                GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Quest Map",
                     listOf("&7Necesita Admin.")))
             }
         )
@@ -500,6 +536,16 @@ class WorldHubGui : GuiScreen {
         warningLines: List<String>
     ) {
         service.openConfirmCommand(player, title, command, GuiKey.WORLD, "", warningLines)
+    }
+
+    private fun formatStoryEventTime(epochMs: Long): String {
+        val diff = System.currentTimeMillis() - epochMs
+        return when {
+            diff < 60_000 -> "<1m"
+            diff < 3_600_000 -> "${diff / 60_000}m"
+            diff < 86_400_000 -> "${diff / 3_600_000}h"
+            else -> "${diff / 86_400_000}d"
+        }
     }
 
     private fun valueOrUnknown(value: String?): String = if (value.isNullOrBlank()) "necunoscut" else value
