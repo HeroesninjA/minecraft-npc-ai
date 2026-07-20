@@ -2,6 +2,8 @@ package ro.ainpc.integration
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.addons.AddonDescriptor
@@ -75,11 +77,115 @@ class IntegrationRegistryTest {
         assertEquals(IntegrationType.PROTECTION, registry.findByType(IntegrationType.PROTECTION).first().integrationType)
     }
 
+    @Test
+    fun replacementRunsLifecycleInOrder() {
+        val events = mutableListOf<String>()
+        val previous = lifecycleIntegration("Same", IntegrationType.ECONOMY, events)
+        val replacement = lifecycleIntegration("Same", IntegrationType.PROTECTION, events)
+
+        registry.register(previous)
+        registry.register(replacement)
+
+        assertEquals(listOf("Same:register:ECONOMY", "Same:unregister:ECONOMY", "Same:register:PROTECTION"), events)
+        assertSame(replacement, registry.integrations.single())
+    }
+
+    @Test
+    fun failedInitialRegistrationIsCleanedUpAndNotTracked() {
+        val events = mutableListOf<String>()
+        val integration = lifecycleIntegration("Broken", IntegrationType.CUSTOM, events, failOnRegister = true)
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.register(integration)
+        }
+
+        assertEquals(listOf("Broken:register:CUSTOM", "Broken:unregister:CUSTOM"), events)
+        assertFalse(registry.isRegistered("Broken"))
+    }
+
+    @Test
+    fun failedReplacementRestoresPreviousIntegration() {
+        val events = mutableListOf<String>()
+        val previous = lifecycleIntegration("Same", IntegrationType.ECONOMY, events)
+        val replacement = lifecycleIntegration("Same", IntegrationType.PROTECTION, events, failOnRegister = true)
+        registry.register(previous)
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.register(replacement)
+        }
+
+        assertEquals(
+            listOf(
+                "Same:register:ECONOMY",
+                "Same:unregister:ECONOMY",
+                "Same:register:PROTECTION",
+                "Same:unregister:PROTECTION",
+                "Same:register:ECONOMY"
+            ),
+            events
+        )
+        assertSame(previous, registry.integrations.single())
+    }
+
+    @Test
+    fun registeringSameInstanceIsIdempotent() {
+        val events = mutableListOf<String>()
+        val integration = lifecycleIntegration("Same", IntegrationType.CUSTOM, events)
+
+        registry.register(integration)
+        registry.register(integration)
+
+        assertEquals(listOf("Same:register:CUSTOM"), events)
+    }
+
+    @Test
+    fun clearContinuesAfterUnregisterFailure() {
+        val events = mutableListOf<String>()
+        registry.register(lifecycleIntegration("Broken", IntegrationType.CUSTOM, events, failOnUnregister = true))
+        registry.register(lifecycleIntegration("Healthy", IntegrationType.CUSTOM, events))
+
+        registry.clear()
+
+        assertEquals(0, registry.size())
+        assertTrue(events.contains("Broken:unregister:CUSTOM"))
+        assertTrue(events.contains("Healthy:unregister:CUSTOM"))
+    }
+
     private fun testIntegration(name: String, type: IntegrationType): ExternalPluginIntegration {
         return object : ExternalPluginIntegration {
             override val pluginName = name
             override val pluginVersion = "1.0"
             override val integrationType = type
+            override fun getDescriptor(): AddonDescriptor? = null
+        }
+    }
+
+    private fun lifecycleIntegration(
+        name: String,
+        type: IntegrationType,
+        events: MutableList<String>,
+        failOnRegister: Boolean = false,
+        failOnUnregister: Boolean = false
+    ): ExternalPluginIntegration {
+        return object : ExternalPluginIntegration {
+            override val pluginName = name
+            override val pluginVersion = "1.0"
+            override val integrationType = type
+
+            override fun onRegister() {
+                events += "$name:register:$type"
+                if (failOnRegister) {
+                    throw IllegalStateException("register failed: $name")
+                }
+            }
+
+            override fun onUnregister() {
+                events += "$name:unregister:$type"
+                if (failOnUnregister) {
+                    throw IllegalStateException("unregister failed: $name")
+                }
+            }
+
             override fun getDescriptor(): AddonDescriptor? = null
         }
     }

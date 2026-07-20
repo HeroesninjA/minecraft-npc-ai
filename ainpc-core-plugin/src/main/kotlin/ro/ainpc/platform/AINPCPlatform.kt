@@ -1,22 +1,23 @@
 package ro.ainpc.platform
 
 import ro.ainpc.AINPCPlugin
-import ro.ainpc.addons.AddonDependencyGraph
-import ro.ainpc.addons.AddonDependencyResolver
 import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.addons.AddonRegistry
 import ro.ainpc.addons.AddonType
-import ro.ainpc.addons.DependencyResolver
 import ro.ainpc.api.AINPCPlatformApi
 import ro.ainpc.api.AddonRegistryApi
+import ro.ainpc.api.NpcEconomyApi
 import ro.ainpc.api.PlayerProgressionApi
 import ro.ainpc.api.RelationshipApi
 import ro.ainpc.api.ReputationApi
+import ro.ainpc.api.StoryAuthoringApi
+import ro.ainpc.api.StoryEventSummary
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.engine.ScriptConfigurationLoader
 import ro.ainpc.platform.features.RuntimeFeatureResolver
 import ro.ainpc.platform.features.RuntimeFeatureSnapshot
+import ro.ainpc.story.StoryAuthoringService
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMode
@@ -34,10 +35,18 @@ class AINPCPlatform(
     override val addonRegistry: AddonRegistry = AddonRegistry(this)
     override val integrationRegistry: IntegrationRegistryApi = ro.ainpc.integration.IntegrationRegistry()
     val worldAdminService: WorldAdminService = WorldAdminService(plugin)
-    private val dependencyResolver: DependencyResolver = AddonDependencyResolver()
     private val featureResolver: RuntimeFeatureResolver = RuntimeFeatureResolver()
     private var profile: PlatformProfile = PlatformProfile.fromConfig(plugin.config)
     private var featureSnapshot: RuntimeFeatureSnapshot = featureResolver.resolve(plugin.config)
+    private val storyAuthoringApi: StoryAuthoringApi = StoryAuthoringApiAdapter(
+        templatesProvider = { plugin.storyAuthoringService.getTemplates() },
+        eventsProvider = { scopeType, scopeId, limit ->
+            plugin.storyAuthoringService.listRecentEvents(scopeType, scopeId, limit)
+        },
+        pendingEventsProvider = { scopeType, scopeId ->
+            plugin.storyAuthoringService.hasPendingEvents(scopeType, scopeId)
+        },
+    )
 
     fun initialize() {
         reloadFromConfig()
@@ -96,10 +105,16 @@ class AINPCPlatform(
         get() = plugin.reputationService
 
     override val playerProgression: PlayerProgressionApi
-        get() = error("PlayerProgressionService nu implementeaza inca PlayerProgressionApi. Foloseste plugin.playerProgressionService.")
+        get() = plugin.playerProgressionService
 
     override val relationships: RelationshipApi
         get() = plugin.relationshipService
+
+    override val npcEconomy: NpcEconomyApi
+        get() = plugin.npcEconomyService
+
+    override val storyAuthoring: StoryAuthoringApi
+        get() = storyAuthoringApi
 
     override fun getNPCName(npcUuid: UUID): String? {
         return plugin.npcManager.getNPCByUuid(npcUuid)?.name
@@ -148,14 +163,6 @@ class AINPCPlatform(
     fun getProfile(): PlatformProfile = profile
 
     fun runtimeFeatures(): RuntimeFeatureSnapshot = featureSnapshot
-
-    fun getDependencyResolver(): DependencyResolver = dependencyResolver
-
-    fun getDependencyGraph(): AddonDependencyGraph {
-        val descriptors = addonRegistry.descriptors
-        val enabledIds = descriptors.map { it.id }.toSet()
-        return dependencyResolver.resolve(descriptors, enabledIds)
-    }
 
     fun shutdown() {
         addonRegistry.shutdown()
@@ -233,4 +240,27 @@ class AINPCPlatform(
         val sanitized = normalized.replace(Regex("[^a-z0-9._-]"), "-")
         return if (sanitized.isBlank()) fallback else sanitized
     }
+}
+
+internal class StoryAuthoringApiAdapter(
+    private val templatesProvider: () -> List<StoryAuthoringService.StoryTemplate>,
+    private val eventsProvider: (String, String, Int) -> List<StoryAuthoringService.StoryEventInfo>,
+    private val pendingEventsProvider: (String, String) -> Boolean,
+) : StoryAuthoringApi {
+    override fun getAvailableTemplates(): List<String> =
+        templatesProvider().map { it.id }
+
+    override fun getRecentEvents(scopeType: String, scopeId: String, limit: Int): List<StoryEventSummary> =
+        eventsProvider(scopeType, scopeId, limit).map {
+            StoryEventSummary(
+                eventKey = it.eventKey,
+                eventType = it.eventType,
+                title = it.title,
+                description = it.description,
+                createdAt = it.createdAt,
+            )
+        }
+
+    override fun hasPendingEvents(scopeType: String, scopeId: String): Boolean =
+        pendingEventsProvider(scopeType, scopeId)
 }

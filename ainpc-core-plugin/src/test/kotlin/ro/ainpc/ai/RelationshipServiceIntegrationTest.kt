@@ -89,7 +89,10 @@ class RelationshipServiceIntegrationTest {
         val old = System.currentTimeMillis() - 7 * 24 * 3600000L
 
         connection!!.prepareStatement("""
-            INSERT INTO npc_npc_relationships VALUES (?, ?, ?, 0.8, 0.6, 0.5, 0.4, 5, 'friend', ?, ?, ?)
+            INSERT INTO npc_npc_relationships
+            (npc_a_uuid, npc_b_uuid, affection, trust, respect, familiarity,
+             interaction_count, relationship_type, last_interaction, created_at, updated_at)
+            VALUES (?, ?, 0.8, 0.6, 0.5, 0.4, 5, 'friend', ?, ?, ?)
         """).use { stmt ->
             stmt.setString(1, npcA)
             stmt.setString(2, npcB)
@@ -121,7 +124,10 @@ class RelationshipServiceIntegrationTest {
         val now = System.currentTimeMillis()
 
         connection!!.prepareStatement("""
-            INSERT INTO npc_npc_relationships VALUES (?, ?, ?, 0.2, 0.2, 0.2, 0.2, ?, 'stranger', ?, ?, ?)
+            INSERT INTO npc_npc_relationships
+            (npc_a_uuid, npc_b_uuid, affection, trust, respect, familiarity,
+             interaction_count, relationship_type, last_interaction, created_at, updated_at)
+            VALUES (?, ?, 0.2, 0.2, 0.2, 0.2, ?, 'stranger', ?, ?, ?)
         """).use { stmt ->
             stmt.setString(1, npcA)
             stmt.setString(2, npcB)

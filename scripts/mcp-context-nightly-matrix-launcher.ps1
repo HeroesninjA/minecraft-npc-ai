@@ -8,6 +8,7 @@ param(
     [switch]$UseAdaptiveThresholds = $true,
     [switch]$EnsureQueryTemplates = $true,
     [switch]$WriteCsvReports = $true,
+    [switch]$FailOnQueryErrors = $true,
     [switch]$FreshRun
 )
 
@@ -15,6 +16,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptDir
 $matrixScript = Join-Path $scriptDir "mcp-context-nightly-matrix.ps1"
 
 if (-not (Test-Path -LiteralPath $matrixScript)) {
@@ -31,6 +33,12 @@ if ($NoTests) { $invokeParams["NoTests"] = $true }
 if ($UseAdaptiveThresholds) { $invokeParams["UseAdaptiveThresholds"] = $true }
 if ($EnsureQueryTemplates) { $invokeParams["EnsureQueryTemplates"] = $true }
 if ($WriteCsvReports) { $invokeParams["WriteCsvReports"] = $true }
+if ($FailOnQueryErrors) { $invokeParams["FailOnQueryErrors"] = $true }
 if ($FreshRun) { $invokeParams["FreshRun"] = $true }
 
-& $matrixScript @invokeParams
+Push-Location $projectRoot
+try {
+    & $matrixScript @invokeParams
+} finally {
+    Pop-Location
+}

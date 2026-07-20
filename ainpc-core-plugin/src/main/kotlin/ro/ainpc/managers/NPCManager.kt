@@ -24,6 +24,7 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.ResolvedNpcSpawnPlan
 import ro.ainpc.world.NpcWorldBinding
@@ -316,7 +317,7 @@ class NPCManager(
             val currentState = readString(json, "current_state", "")
             if (!currentState.isBlank()) {
                 try {
-                    npc.currentState = NPCState.valueOf(currentState)
+                    npc.restorePersistedState(NPCState.valueOf(currentState))
                 } catch (ignored: IllegalArgumentException) {
                     plugin.debug("Stare necunoscuta in profilul NPC-ului " + npc.name + ": " + currentState)
                 }
@@ -440,6 +441,10 @@ class NPCManager(
         val spawnLocation = resolvedPlan.spawnLocation()!!
         val existingNpc = findReusableNPCForSpawn(plan, spawnLocation)
         if (existingNpc != null) {
+            existingNpc.profileDataJson = mergeSpawnPlanNarrativeProfileData(existingNpc.profileDataJson, plan, gson)
+            if (!saveProfile(existingNpc)) {
+                plugin.getLogger().warning("Nu am putut actualiza metadata narativa pentru NPC-ul existent '" + existingNpc.name + "'.")
+            }
             plugin.getLogger().warning("Sar peste spawn plan pentru '" + plan.name() + "' deoarece exista deja la " + formatLocation(spawnLocation) + ": id=" + existingNpc.databaseId + ".")
             return existingNpc
         }
@@ -461,6 +466,7 @@ class NPCManager(
         npc.gender = resolveGender(plan.gender())
         npc.profileSource = "spawn_plan"
         npc.sourceKey = plan.sourceKey()
+        npc.profileDataJson = mergeSpawnPlanNarrativeProfileData(npc.profileDataJson, plan, gson)
 
         if (!plan.archetype().isBlank()) {
             npc.personality = NPCPersonality.fromArchetype(plan.archetype())
@@ -997,7 +1003,14 @@ class NPCManager(
             if (!npc.spawned) {
                 continue
             }
+            if (npc.simulationMode == NpcSimulationMode.NONE) {
+                continue
+            }
             ensureSimulationAnchors(npc)
+            if (npc.simulationMode == NpcSimulationMode.LIGHT) {
+                plugin.decisionEngine.updateBasicNeeds(npc)
+                continue
+            }
             plugin.decisionEngine.runLifeSimulationTick(npc)
         }
     }

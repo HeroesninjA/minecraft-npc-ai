@@ -6,7 +6,16 @@ import org.bukkit.World
 import java.util.EnumSet
 
 class VanillaVillageScanner {
+    @Deprecated("Fluxurile de productie trebuie sa foloseasca VanillaVillageScanService.submit.")
     fun scan(center: Location?, horizontalRadius: Int, verticalRadius: Int): VanillaVillageScanResult {
+        val session = beginScan(center, horizontalRadius, verticalRadius)
+        while (!session.isComplete) {
+            session.scanNext(Int.MAX_VALUE)
+        }
+        return session.result()
+    }
+
+    fun beginScan(center: Location?, horizontalRadius: Int, verticalRadius: Int): VanillaVillageScanSession {
         require(!(center == null || center.world == null)) {
             "Locatia de scanare trebuie sa aiba o lume valida."
         }
@@ -20,44 +29,19 @@ class VanillaVillageScanner {
         val minY = maxOf(world.minHeight, centerY - safeVerticalRadius)
         val maxY = minOf(world.maxHeight - 1, centerY + safeVerticalRadius)
 
-        val features = mutableListOf<VanillaVillageFeature>()
-        val warnings = mutableListOf<String>()
-        for (x in centerX - safeHorizontalRadius..centerX + safeHorizontalRadius) {
-            for (z in centerZ - safeHorizontalRadius..centerZ + safeHorizontalRadius) {
-                for (y in minY..maxY) {
-                    val block = world.getBlockAt(x, y, z)
-                    val material = block.type
-                    val type = classify(material)
-                    if (type != null) {
-                        features.add(VanillaVillageFeature(type, material.name, x, y, z))
-                    }
-                }
-            }
-        }
-
-        if (features.isEmpty()) {
-            warnings.add("Nu au fost gasite semnale vanilla de sat in raza scanata.")
-        } else if (features.none { it.type() == VanillaVillageFeatureType.BELL }) {
-            warnings.add("Nu a fost gasit niciun clopot. Satul poate fi incomplet sau scanarea este prea mica.")
-        }
-        if (horizontalRadius > MAX_HORIZONTAL_RADIUS) {
-            warnings.add("Raza orizontala a fost limitata la $MAX_HORIZONTAL_RADIUS blocuri.")
-        }
-        if (verticalRadius > MAX_VERTICAL_RADIUS) {
-            warnings.add("Raza verticala a fost limitata la $MAX_VERTICAL_RADIUS blocuri.")
-        }
-
-        return VanillaVillageScanResult(
-            world.name,
-            centerX,
-            centerY,
-            centerZ,
-            safeHorizontalRadius,
-            safeVerticalRadius,
-            minY,
-            maxY,
-            features,
-            warnings
+        return VanillaVillageScanSession(
+            worldName = world.name,
+            centerX = centerX,
+            centerY = centerY,
+            centerZ = centerZ,
+            horizontalRadius = safeHorizontalRadius,
+            verticalRadius = safeVerticalRadius,
+            minY = minY,
+            maxY = maxY,
+            horizontalRadiusClamped = horizontalRadius > MAX_HORIZONTAL_RADIUS,
+            verticalRadiusClamped = verticalRadius > MAX_VERTICAL_RADIUS,
+            materialAt = { x, y, z -> world.getBlockAt(x, y, z).type },
+            classifier = ::classify,
         )
     }
 
@@ -111,5 +95,130 @@ class VanillaVillageScanner {
             Material.SMOKER,
             Material.STONECUTTER
         )
+    }
+}
+
+class VanillaVillageScanSession internal constructor(
+    private val worldName: String,
+    private val centerX: Int,
+    private val centerY: Int,
+    private val centerZ: Int,
+    private val horizontalRadius: Int,
+    private val verticalRadius: Int,
+    private val minY: Int,
+    private val maxY: Int,
+    private val horizontalRadiusClamped: Boolean,
+    private val verticalRadiusClamped: Boolean,
+    private val materialAt: (x: Int, y: Int, z: Int) -> Material,
+    private val classifier: (Material?) -> VanillaVillageFeatureType?,
+) {
+    private val ownerThread = Thread.currentThread()
+    private val features = mutableListOf<VanillaVillageFeature>()
+    private val cursor = VanillaVillageScanCursor(
+        minX = centerX - horizontalRadius,
+        maxX = centerX + horizontalRadius,
+        minY = minY,
+        maxY = maxY,
+        minZ = centerZ - horizontalRadius,
+        maxZ = centerZ + horizontalRadius,
+    )
+
+    val totalBlocks: Long get() = cursor.totalBlocks
+
+    val scannedBlocks: Long get() = cursor.scannedBlocks
+
+    val isComplete: Boolean get() = cursor.isComplete
+
+    fun scanNext(blockBudget: Int): Int {
+        check(Thread.currentThread() === ownerThread) {
+            "Sesiunea de scanare trebuie continuata pe acelasi thread pe care a fost creata."
+        }
+        return cursor.consume(blockBudget) { x, y, z ->
+            val material = materialAt(x, y, z)
+            val type = classifier(material)
+            if (type != null) {
+                features.add(VanillaVillageFeature(type, material.name, x, y, z))
+            }
+        }
+    }
+
+    fun result(): VanillaVillageScanResult {
+        check(isComplete) { "Scanarea nu este finalizata." }
+        val warnings = mutableListOf<String>()
+        if (features.isEmpty()) {
+            warnings.add("Nu au fost gasite semnale vanilla de sat in raza scanata.")
+        } else if (features.none { it.type() == VanillaVillageFeatureType.BELL }) {
+            warnings.add("Nu a fost gasit niciun clopot. Satul poate fi incomplet sau scanarea este prea mica.")
+        }
+        if (horizontalRadiusClamped) {
+            warnings.add("Raza orizontala a fost limitata la ${VanillaVillageScanner.MAX_HORIZONTAL_RADIUS} blocuri.")
+        }
+        if (verticalRadiusClamped) {
+            warnings.add("Raza verticala a fost limitata la ${VanillaVillageScanner.MAX_VERTICAL_RADIUS} blocuri.")
+        }
+
+        return VanillaVillageScanResult(
+            worldName,
+            centerX,
+            centerY,
+            centerZ,
+            horizontalRadius,
+            verticalRadius,
+            minY,
+            maxY,
+            features,
+            warnings,
+        )
+    }
+}
+
+internal class VanillaVillageScanCursor(
+    private val minX: Int,
+    private val maxX: Int,
+    private val minY: Int,
+    private val maxY: Int,
+    private val minZ: Int,
+    private val maxZ: Int,
+) {
+    private var nextX = minX
+    private var nextY = minY
+    private var nextZ = minZ
+
+    val totalBlocks: Long =
+        (maxX.toLong() - minX + 1L) *
+            (maxY.toLong() - minY + 1L) *
+            (maxZ.toLong() - minZ + 1L)
+
+    var scannedBlocks: Long = 0L
+        private set
+
+    val isComplete: Boolean get() = scannedBlocks >= totalBlocks
+
+    init {
+        require(minX <= maxX && minY <= maxY && minZ <= maxZ) {
+            "Volumul de scanare trebuie sa aiba limite valide."
+        }
+    }
+
+    fun consume(blockBudget: Int, consumer: (x: Int, y: Int, z: Int) -> Unit): Int {
+        require(blockBudget > 0) { "Bugetul de blocuri trebuie sa fie pozitiv." }
+        var processed = 0
+        while (processed < blockBudget && !isComplete) {
+            consumer(nextX, nextY, nextZ)
+            scannedBlocks++
+            processed++
+            advance()
+        }
+        return processed
+    }
+
+    private fun advance() {
+        nextY++
+        if (nextY <= maxY) return
+        nextY = minY
+        nextZ++
+        if (nextZ <= maxZ) return
+        nextZ = minZ
+        nextX++
     }
 }

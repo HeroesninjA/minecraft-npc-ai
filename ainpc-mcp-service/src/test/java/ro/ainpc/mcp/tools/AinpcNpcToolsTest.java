@@ -22,7 +22,7 @@ class AinpcNpcToolsTest {
 
     private McpSnapshotService createService(Path snapshotFile, Path auditFile) {
         McpMode mode = new McpMode("bridge");
-        SnapshotReader reader = new SnapshotReader(snapshotFile.toString(), 60, 3600, gson, mode);
+        SnapshotReader reader = new SnapshotReader(snapshotFile.toString(), 60, 3600, "", gson, mode);
         RedactingSnapshotFilter filter = new RedactingSnapshotFilter("");
         McpAuditLogger audit = new McpAuditLogger(auditFile.toString(), 100);
         return new McpSnapshotService(reader, filter, audit);

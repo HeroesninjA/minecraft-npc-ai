@@ -1,1 +1,1 @@
-This document was moved to "docs v2/guides/player-onboarding-initiere.md".
+This document was moved to `docs v2/planning/player-onboarding-initiere.md`.

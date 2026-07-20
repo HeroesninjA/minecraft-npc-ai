@@ -1,39 +1,70 @@
-# Build Mode pentru `Region / Place / Node`
+# Build Mode pentru Region / Place / Node
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-01.
+Status: ghid operational detaliat.
+Verificat in cod: 2026-07-15.
+Depinde de: `architecture/mapping.md`.
 
-Acesta este ghidul detaliat pentru authoring-ul semantic al mapping-ului.
+## Separarea responsabilitatilor
 
-## Scop
+- `Build Mode` pastreaza stilul si tinta sesiunii de authoring;
+- `MappingWandService` pastreaza selectia, draftul si preview-ul jucatorului;
+- `MappingDraftFactory` transforma selectia si descrierea intr-un draft;
+- `WorldAdminService` valideaza si aplica modificarea runtime;
+- `/ainpc world save` persista modificarile in `config.yml`.
 
-- selectie vizuala pentru `Region`, `Place` si `Node`;
-- preview persistent pe durata sesiunii;
-- compatibilitate cu `maintenance mode`;
-- fluxuri asistate pentru mapping si comenzi legate de world.
+## Stiluri recomandate
 
-## Moduri
+### Wand pentru Region si Place
 
-- `Sign Mode` pentru cazuri simple si rapide;
-- `Multi-Selection Wand` pentru forme neregulate;
-- `Point / Anchor Mode` pentru node-uri si ancore exacte.
+- foloseste `pos1` si `pos2` pentru bounds;
+- `Region` defineste containerul mare;
+- `Place` trebuie selectat complet in interiorul regiunii;
+- preview-ul ramane temporar si poate fi refacut inainte de confirmare.
 
-## Reguli
+```text
+/ainpc build mode wand region
+/ainpc build mode wand place
+```
 
-- `Build Mode` descrie intentie, nu reconstructie completa a lumii;
-- selectia trebuie sa ramana vizibila pana la confirmare sau anulare;
-- fiecare selectie produce un rezultat semantic verificabil;
-- AI poate sugera, dar runtime-ul valideaza;
-- mapping-ul si questurile folosesc acelasi strat semantic.
+### Point pentru Node
 
-## Rezultat asteptat
+- foloseste un singur punct si o raza pozitiva;
+- node-ul poate indica un place sau poate ramane direct sub regiune;
+- `npc_bind` si `quest_anchor` sunt moduri specializate ale wand-ului, nu niveluri noi in ierarhia mapping.
 
-- adminul poate crea sau corecta mapping fara sa scrie manual fiecare camp;
-- preview-ul si auditul arata conflictul inainte de scriere;
-- fluxul ramane sigur pentru lume si date.
+```text
+/ainpc build mode point node
+/ainpc wand mode npc_bind
+/ainpc wand mode quest_anchor
+```
+
+### Sign
+
+`sign` este o intrare alternativa pentru authoring asistat. Nu o trata ca scriere directa: rezultatul trebuie verificat ca draft si confirmat prin acelasi lant de validare.
+
+## Ciclul unei sesiuni
+
+1. alege stilul si tinta;
+2. captureaza bounds-ul sau punctul;
+3. creeaza draftul cu `/ainpc map ...`;
+4. verifica `/ainpc map preview`;
+5. corecteaza cu `/ainpc map edit` sau anuleaza;
+6. confirma cu `/ainpc map confirm`;
+7. ruleaza `/ainpc audit world`;
+8. persista cu `/ainpc world save`.
+
+## Ce nu garanteaza Build Mode
+
+- nu salveaza automat dupa confirmare;
+- nu transforma preview-ul in sursa de adevar;
+- nu permite unui place sa iasa din regiune;
+- nu permite unui node sa iasa din containerul ales;
+- nu ocoleste modul MCP `read_only`;
+- nu transforma descrierea libera sau o sugestie AI in autoritate asupra datelor.
 
 ## Legaturi
 
 - `guides/build-mode-tutorial.md`
+- `guides/mapping-harti-manuale.md`
 - `reference/mapping-stack.md`
 - `architecture/mapping.md`

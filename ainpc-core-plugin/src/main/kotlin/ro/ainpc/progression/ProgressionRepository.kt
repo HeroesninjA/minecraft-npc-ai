@@ -253,7 +253,10 @@ class ProgressionRepository(
         val safePlayerUuid = valueOrEmpty(playerUuid)
         val safeTemplateId = valueOrEmpty(templateId)
         val safeObjectiveKey = valueOrEmpty(objectiveKey)
-        if (safePlayerUuid.isBlank() || safeTemplateId.isBlank() || safeObjectiveKey.isBlank()) {
+        if ((!ProgressionAnchorBinding.isGlobalNamespace(safePlayerUuid) && safePlayerUuid.isBlank())
+            || safeTemplateId.isBlank()
+            || safeObjectiveKey.isBlank()
+        ) {
             throw IllegalArgumentException("Parametri insuficienti pentru stergerea binding-ului.")
         }
 
@@ -274,12 +277,12 @@ class ProgressionRepository(
         if (binding == null) {
             throw IllegalArgumentException("Binding-ul quest anchor este null.")
         }
-        if (binding.playerUuid().isBlank()
-            || binding.templateId().isBlank()
+        if (binding.templateId().isBlank()
             || binding.objectiveKey().isBlank()
             || binding.objectiveType().isBlank()
             || binding.anchorType().isBlank()
             || binding.anchorId().isBlank()
+            || (!ProgressionAnchorBinding.isGlobalNamespace(binding.playerUuid()) && binding.playerUuid().isBlank())
         ) {
             throw IllegalArgumentException("Quest anchor binding incomplet.")
         }
@@ -386,7 +389,10 @@ class ProgressionRepository(
             """.trimIndent()
         )
         val parameters = mutableListOf<String>()
-        if (safePlayerUuid.isNotBlank()) {
+        if (ProgressionAnchorBinding.isGlobalNamespace(safePlayerUuid)) {
+            sql.append(" AND b.player_uuid = ?")
+            parameters.add(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID)
+        } else if (safePlayerUuid.isNotBlank()) {
             sql.append(" AND b.player_uuid = ?")
             parameters.add(safePlayerUuid)
         }

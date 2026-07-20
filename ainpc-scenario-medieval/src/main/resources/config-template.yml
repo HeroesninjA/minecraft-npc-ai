@@ -10,7 +10,9 @@
 
 addon:
   id: "ainpc-scenario-medieval"
-  config_version: 1
+  config_version: 2
+  # auto: backup + completarea cheilor lipsa; validate_only: doar validare si warnings, fara scriere.
+  config_migration: "auto"
   # Dezactiveaza doar addonul medieval. Pentru dezactivare globala foloseste addons.disabled in config-ul core.
   enabled: true
 

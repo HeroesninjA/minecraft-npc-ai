@@ -85,7 +85,8 @@ class QuestEngineRegressionTest {
     @Test
     fun objectiveTypeRequiredFields() {
         assertEquals(listOf("item"), ObjectiveTypeAliasRegistry.requiredFields("collect_item"))
-        assertEquals(listOf("item"), ObjectiveTypeAliasRegistry.requiredFields("talk_to_npc"))
+        assertEquals(listOf("npc_target"), ObjectiveTypeAliasRegistry.requiredFields("talk_to_npc"))
+        assertEquals(listOf("item", "npc_target"), ObjectiveTypeAliasRegistry.requiredFields("deliver_to_npc"))
         assertEquals(listOf("item"), ObjectiveTypeAliasRegistry.requiredFields("craft_item"))
         assertEquals(listOf("item"), ObjectiveTypeAliasRegistry.requiredFields("break_block"))
         assertEquals(listOf("item"), ObjectiveTypeAliasRegistry.requiredFields("use_item"))

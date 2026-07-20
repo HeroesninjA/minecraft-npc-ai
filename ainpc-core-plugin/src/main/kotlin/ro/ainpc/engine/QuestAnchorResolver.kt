@@ -51,8 +51,14 @@ class QuestAnchorResolver(
                 "visit_region" -> resolveRegionObjective(objectiveKey, reference, playerLocation, anchors, issues)
                 "visit_place" -> resolvePlaceObjective(objectiveKey, reference, playerLocation, anchors, issues)
                 "inspect_node" -> resolveNodeObjective(objectiveKey, reference, playerLocation, anchors, issues)
-                "talk_to_npc" -> resolveNpcObjective(objectiveKey, reference, questGiver, anchors)
-                "deliver_to_npc" -> resolveNpcObjective(objectiveKey, reference, questGiver, anchors)
+                "talk_to_npc" -> {
+                    val npcRef = objective.npcTarget.takeIf { it.isNotBlank() } ?: reference
+                    resolveNpcObjective(objectiveKey, npcRef, questGiver, anchors)
+                }
+                "deliver_to_npc" -> {
+                    val npcRef = objective.npcTarget.takeIf { it.isNotBlank() } ?: ""
+                    resolveNpcObjective(objectiveKey, npcRef, questGiver, anchors)
+                }
                 else -> {
                     // Non-semantic objectives are validated by their own systems.
                 }

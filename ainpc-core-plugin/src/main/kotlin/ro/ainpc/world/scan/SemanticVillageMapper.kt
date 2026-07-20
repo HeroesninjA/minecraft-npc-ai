@@ -3,6 +3,7 @@ package ro.ainpc.world.scan
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldAdminService
+import ro.ainpc.world.WorldMappingCompensator
 import ro.ainpc.world.WorldNode
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldPlace
@@ -18,10 +19,12 @@ class SemanticVillageMapper {
     fun importScan(
         worldAdmin: WorldAdminService,
         scan: VanillaVillageScanResult,
-        requestedRegionId: String?
+        requestedRegionId: String?,
+        allowExistingRegion: Boolean = false
     ): SemanticVillageImportResult {
         val warnings = scan.warnings().toMutableList()
         val errors = mutableListOf<String>()
+        val createdRegionIds = mutableListOf<String>()
         val createdPlaceIds = mutableListOf<String>()
         val createdNodeIds = mutableListOf<String>()
         if (!scan.hasVillageSignals()) {
@@ -32,28 +35,50 @@ class SemanticVillageMapper {
         val regionId = normalizeId(
             if (requestedRegionId.isNullOrBlank()) "vanilla_village_${scan.centerX()}_${scan.centerZ()}" else requestedRegionId
         )
-        if (worldAdmin.getRegion(regionId) != null) {
+        val existingRegion = worldAdmin.getRegion(regionId)
+        if (existingRegion != null && (!allowExistingRegion || requestedRegionId.isNullOrBlank())) {
             errors.add("Exista deja o regiune cu ID-ul $regionId.")
             return SemanticVillageImportResult(regionId, createdPlaceIds, createdNodeIds, warnings, errors)
+        }
+        if (existingRegion != null && !existingRegion.worldName().equals(scan.worldName(), ignoreCase = true)) {
+            errors.add(
+                "Regiunea existenta $regionId este in lumea ${existingRegion.worldName()}, " +
+                    "dar scanarea este in ${scan.worldName()}."
+            )
+            return SemanticVillageImportResult(regionId, createdPlaceIds, createdNodeIds, warnings, errors)
+        }
+        if (existingRegion != null &&
+            !existingRegion.contains(scan.worldName(), scan.centerX(), scan.centerY(), scan.centerZ())
+        ) {
+            errors.add("Centrul scanarii nu se afla in regiunea existenta $regionId.")
+            return SemanticVillageImportResult(regionId, createdPlaceIds, createdNodeIds, warnings, errors)
+        }
+        if (existingRegion != null) {
+            warnings.add(
+                "Regiunea existenta $regionId este reutilizata; importul adauga numai place-uri si node-uri noi."
+            )
         }
 
         val anchorFeatures = scan.features().filter { it.type() != VanillaVillageFeatureType.DOOR }
         val scanBox = Box.around(anchorFeatures).expand(24, 8, 24).clampY(scan.minY(), scan.maxY())
 
         try {
-            val region: WorldRegion = worldAdmin.createRegion(
-                regionId,
-                "Vanilla Village ${scan.centerX()} ${scan.centerZ()}",
-                scan.worldName(),
-                RegionType.SETTLEMENT,
-                scanBox.minX,
-                scanBox.minY,
-                scanBox.minZ,
-                scanBox.maxX,
-                scanBox.maxY,
-                scanBox.maxZ
-            )
-            region.setTags(listOf("vanilla", "village", "scanned", "ainpc_phase_5"))
+            if (existingRegion == null) {
+                val region: WorldRegion = worldAdmin.createRegion(
+                    regionId,
+                    "Vanilla Village ${scan.centerX()} ${scan.centerZ()}",
+                    scan.worldName(),
+                    RegionType.SETTLEMENT,
+                    scanBox.minX,
+                    scanBox.minY,
+                    scanBox.minZ,
+                    scanBox.maxX,
+                    scanBox.maxY,
+                    scanBox.maxZ
+                )
+                createdRegionIds.add(region.id)
+                region.setTags(listOf("vanilla", "village", "scanned", "ainpc_phase_5"))
+            }
 
             createMeetingNodes(worldAdmin, scan, regionId, createdNodeIds, warnings)
             val placeBoxes = mutableListOf<CreatedPlaceBox>()
@@ -70,8 +95,21 @@ class SemanticVillageMapper {
                 placeBoxes,
                 warnings
             )
-        } catch (exception: IllegalArgumentException) {
+        } catch (exception: RuntimeException) {
             errors.add(exception.message ?: "")
+        }
+
+        if (errors.isNotEmpty() &&
+            (createdRegionIds.isNotEmpty() || createdPlaceIds.isNotEmpty() || createdNodeIds.isNotEmpty())
+        ) {
+            val compensation = WorldMappingCompensator.rollback(
+                worldAdmin,
+                createdRegionIds,
+                createdPlaceIds,
+                createdNodeIds,
+            )
+            warnings.add(compensation.summary())
+            errors.addAll(compensation.failures)
         }
 
         return SemanticVillageImportResult(regionId, createdPlaceIds, createdNodeIds, warnings, errors)
@@ -97,8 +135,8 @@ class SemanticVillageMapper {
                 scan.centerZ().toDouble(),
                 4.0
             )
-            tagNode(fallback, "vanilla_scan", "fallback_center", "meeting_point")
             createdNodeIds.add(fallback.id)
+            tagNode(fallback, "vanilla_scan", "fallback_center", "meeting_point")
             warnings.add("A fost creat meeting_point fallback la centrul scanarii.")
             return
         }
@@ -116,8 +154,8 @@ class SemanticVillageMapper {
                 bell.z().toDouble(),
                 5.0
             )
-            tagNode(node, "vanilla_scan", bell.material(), "meeting_point")
             createdNodeIds.add(node.id)
+            tagNode(node, "vanilla_scan", bell.material(), "meeting_point")
             index++
         }
     }
@@ -155,12 +193,12 @@ class SemanticVillageMapper {
                 box.maxY,
                 box.maxZ
             )
+            createdPlaceIds.add(house.id)
             house.setTags(listOf("vanilla", "house", "residential"))
             house.isPublicAccess = false
             house.putMetadata("source", "vanilla_scan")
             house.putMetadata("max_residents", cluster.features.size.toString())
             house.putMetadata("vanilla_beds", cluster.features.size.toString())
-            createdPlaceIds.add(house.id)
             placeBoxes.add(CreatedPlaceBox(house.id, box))
             houseBoxes[house.id] = box
 
@@ -177,8 +215,8 @@ class SemanticVillageMapper {
                     bed.z().toDouble(),
                     1.5
                 )
-                tagNode(bedNode, "vanilla_scan", bed.material(), "bed")
                 createdNodeIds.add(bedNode.id)
+                tagNode(bedNode, "vanilla_scan", bed.material(), "bed")
                 bedIndex++
             }
 
@@ -194,8 +232,8 @@ class SemanticVillageMapper {
                 homeBed.z().toDouble(),
                 2.5
             )
-            tagNode(homeNode, "vanilla_scan", homeBed.material(), "home_anchor")
             createdNodeIds.add(homeNode.id)
+            tagNode(homeNode, "vanilla_scan", homeBed.material(), "home_anchor")
 
             addEntranceNode(worldAdmin, scan, regionId, house.id, box, createdNodeIds)
             addContainedWorkstationNodes(worldAdmin, scan, regionId, house.id, box, createdNodeIds)

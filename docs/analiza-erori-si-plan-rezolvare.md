@@ -1,1 +1,1 @@
-This document was moved to `docs v2/reference/analiza-erori-si-plan-rezolvare.md`.
+This generic page was consolidated into `docs v2/operations/debugging-si-testare.md`.

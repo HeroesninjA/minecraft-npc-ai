@@ -1,12 +1,10 @@
 package ro.ainpc.spawn
 
-import org.bukkit.Location
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.scan.SemanticVillageMapper
-import ro.ainpc.world.scan.VanillaVillageScanner
+import ro.ainpc.world.scan.VanillaVillageScanResult
 
 class AutoSettlementGenerator(private val plugin: AINPCPlugin) {
-    private val scanner = VanillaVillageScanner()
     private val mapper = SemanticVillageMapper()
     private val planner = HouseAllocationPlanner()
 
@@ -25,15 +23,12 @@ class AutoSettlementGenerator(private val plugin: AINPCPlugin) {
         val allErrors: List<String> get() = scanErrors + planningErrors
     }
 
-    fun generate(
-        center: Location?,
-        horizontalRadius: Int = VanillaVillageScanner.DEFAULT_HORIZONTAL_RADIUS,
-        verticalRadius: Int = VanillaVillageScanner.DEFAULT_VERTICAL_RADIUS,
+    fun generateFromScan(
+        scan: VanillaVillageScanResult,
         requestedRegionId: String? = null,
         maxHouses: Int = 0
     ): AutoSettlementResult {
         val worldAdmin = plugin.platform.worldAdminService
-        val scan = scanner.scan(center, horizontalRadius, verticalRadius)
         val scanWarnings = scan.warnings()
         val scanErrors = mutableListOf<String>()
 
@@ -51,7 +46,12 @@ class AutoSettlementGenerator(private val plugin: AINPCPlugin) {
             )
         }
 
-        val import = mapper.importScan(worldAdmin, scan, requestedRegionId)
+        val import = mapper.importScan(
+            worldAdmin,
+            scan,
+            requestedRegionId,
+            allowExistingRegion = true
+        )
         val regionId = import.regionId()
 
         if (import.errors().isNotEmpty()) {

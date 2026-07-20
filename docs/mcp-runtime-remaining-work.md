@@ -1,1 +1,1 @@
-This document was moved to "docs v2/reference/mcp-runtime-remaining-work.md".
+This duplicate backlog was consolidated into `docs v2/reference/mcp-runtime-gap-checklist.md`.

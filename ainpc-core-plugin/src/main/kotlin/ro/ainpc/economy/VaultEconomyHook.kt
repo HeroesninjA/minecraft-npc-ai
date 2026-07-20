@@ -1,7 +1,6 @@
 package ro.ainpc.economy
 
 import org.bukkit.Bukkit
-import org.bukkit.OfflinePlayer
 import org.bukkit.plugin.ServicePriority
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.addons.AddonDescriptor
@@ -12,7 +11,8 @@ import java.util.logging.Level
 
 class VaultEconomyHook(private val plugin: AINPCPlugin) : ExternalPluginIntegration {
     override val pluginName: String = "Vault"
-    override val pluginVersion: String = "1.7"
+    override val pluginVersion: String
+        get() = plugin.server.pluginManager.getPlugin(pluginName)?.pluginMeta?.version ?: "unknown"
     override val integrationType: IntegrationType = IntegrationType.ECONOMY
 
     private var vaultRegistered = false
@@ -25,21 +25,32 @@ class VaultEconomyHook(private val plugin: AINPCPlugin) : ExternalPluginIntegrat
         capability == "economy" || capability == "vault"
 
     override fun onRegister() {
+        if (vaultRegistered) {
+            return
+        }
+        vaultPresent = false
+        proxyRef = null
         try {
             Class.forName("net.milkbowl.vault.economy.Economy")
             vaultPresent = true
-            registerVaultEconomy()
-            plugin.logger.info("[Vault] Integrare Vault Economy activata cu succes.")
+            if (registerVaultEconomy()) {
+                plugin.logger.info("[Vault] Integrare Vault Economy activata cu succes.")
+            }
         } catch (e: ClassNotFoundException) {
             vaultPresent = false
             plugin.logger.info("[Vault] Vault nu este prezent - integrarea este dezactivata.")
         } catch (e: Exception) {
+            vaultRegistered = false
+            proxyRef = null
             plugin.logger.log(Level.WARNING, "[Vault] Eroare la initializarea integrarii Vault", e)
         }
     }
 
     override fun onUnregister() {
-        if (vaultRegistered && proxyRef != null) {
+        try {
+            if (!vaultRegistered || proxyRef == null) {
+                return
+            }
             try {
                 val servicesManager = Bukkit.getServicesManager()
                 val unregisterMethod = servicesManager.javaClass.getMethod(
@@ -48,10 +59,14 @@ class VaultEconomyHook(private val plugin: AINPCPlugin) : ExternalPluginIntegrat
                 unregisterMethod.invoke(servicesManager, 
                     Class.forName("net.milkbowl.vault.economy.Economy"), proxyRef)
             } catch (_: Exception) {}
+        } finally {
+            vaultRegistered = false
+            vaultPresent = false
+            proxyRef = null
         }
     }
 
-    private fun registerVaultEconomy() {
+    private fun registerVaultEconomy(): Boolean {
         val economyInterface = Class.forName("net.milkbowl.vault.economy.Economy")
         val handler = VaultEconomyInvocationHandler(plugin)
         val proxy = Proxy.newProxyInstance(
@@ -69,8 +84,12 @@ class VaultEconomyHook(private val plugin: AINPCPlugin) : ExternalPluginIntegrat
             registerMethod.invoke(servicesManager, economyInterface, proxy, plugin, ServicePriority.Normal)
             vaultRegistered = true
             plugin.logger.info("[Vault] Provider Vault Economy inregistrat in ServicesManager.")
+            return true
         } catch (e: Exception) {
+            vaultRegistered = false
+            proxyRef = null
             plugin.logger.log(Level.WARNING, "[Vault] Eroare la inregistrarea provider-ului Vault", e)
+            return false
         }
     }
 

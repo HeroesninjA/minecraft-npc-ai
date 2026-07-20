@@ -5,6 +5,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryAction
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.commands.AINPCCommandMutationPolicy
 import ro.ainpc.gui.screens.AuditGui
 import ro.ainpc.gui.screens.ConfirmActionGui
 import ro.ainpc.gui.screens.DebugGui
@@ -53,6 +54,8 @@ import java.util.concurrent.ConcurrentMap
 class GuiService(private val plugin: AINPCPlugin) {
     private val skipConfirmations: Boolean
         get() = plugin.config.getBoolean("gui.skip_confirmations", false)
+    private val guiEnabled: Boolean
+        get() = plugin.config.getBoolean("features.gui", true)
     private val sessionManager = GuiSessionManager()
     private val screens: MutableMap<GuiKey, GuiScreen> = EnumMap(GuiKey::class.java)
     private val questDetailSelectors: ConcurrentMap<UUID, String> = ConcurrentHashMap()
@@ -161,6 +164,12 @@ class GuiService(private val plugin: AINPCPlugin) {
         }
     }
 
+    fun resetDraft(player: Player?) {
+        if (player == null) return
+        creatorFormValues.remove(player.uniqueId)
+        plugin.messageUtils.send(player, "&eDraft resetat.&7 Schimbarile doar in memorie (nesalvate) au fost pierdute.")
+    }
+
     fun openTextInput(
         player: Player?,
         title: String?,
@@ -170,28 +179,42 @@ class GuiService(private val plugin: AINPCPlugin) {
         promptLines: List<String> = listOf()
     ) {
         if (player == null || formKey.isBlank()) return
-        textInputRequests[player.uniqueId] = TextInputRequest(
+        val request = TextInputRequest(
             title = title,
             formKey = formKey,
             returnKey = returnKey ?: GuiKey.MAIN,
             returnSelector = returnSelector,
             promptLines = promptLines
         )
+        request.recordCreation()
+        textInputRequests[player.uniqueId] = request
         player.closeInventory()
         plugin.messageUtils.send(player, "&eInput text: &f${title ?: formKey}")
         for (line in promptLines) {
             plugin.messageUtils.send(player, line)
         }
-        plugin.messageUtils.send(player, "&7Scrie in chat. Scrie &fclear&7 ca sa cureti campul.")
+        plugin.messageUtils.send(player, "&7Scrie in chat. Scrie &fclear&7 ca sa cureti, &fcancel&7 ca sa anulezi. Expira in ${request.timeoutTicks * 50}ms.")
     }
 
     fun hasTextInputRequest(player: Player?): Boolean {
         if (player == null) return false
-        return textInputRequests.containsKey(player.uniqueId)
+        val existing = textInputRequests[player.uniqueId]
+        if (existing != null && existing.isExpired()) {
+            textInputRequests.remove(player.uniqueId)
+            plugin.messageUtils.send(player, "&cSolicitarea de input a expirat (${existing.timeoutTicks * 50}ms). Incearca din nou.")
+            return false
+        }
+        return existing != null
     }
 
     fun consumeTextInputRequest(player: Player?): TextInputRequest? {
         if (player == null) return null
+        val existing = textInputRequests[player.uniqueId]
+        if (existing != null && existing.isExpired()) {
+            textInputRequests.remove(player.uniqueId)
+            plugin.messageUtils.send(player, "&cSolicitarea de input a expirat (${existing.timeoutTicks * 50}ms). Incearca din nou.")
+            return null
+        }
         return textInputRequests.remove(player.uniqueId)
     }
 
@@ -279,6 +302,10 @@ class GuiService(private val plugin: AINPCPlugin) {
 
     fun open(player: Player?, key: GuiKey?) {
         if (player == null || key == null) {
+            return
+        }
+        if (!guiEnabled) {
+            plugin.messageUtils.send(player, "&cGUI dezactivat (features.gui=false). Foloseste comenzi chat.")
             return
         }
         if (!canOpen(player, key)) {
@@ -462,6 +489,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         sessionManager.closePlayer(playerId)
         questDetailSelectors.remove(playerId)
         questDetailFilters.remove(playerId)
+        questOfferSelectors.remove(playerId)
         authoringQuestSelectors.remove(playerId)
         authoringMechanicIds.remove(playerId)
         questLogFilters.remove(playerId)
@@ -480,6 +508,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         questEditSelectedIds.remove(playerId)
         creatorFormValues.remove(playerId)
         textInputRequests.remove(playerId)
+        shopSelectedNpcIds.remove(playerId)
+        lastGuiKeys.remove(playerId)
     }
 
     fun getQuestMapGlobalMode(player: Player?): Boolean {
@@ -626,6 +656,10 @@ class GuiService(private val plugin: AINPCPlugin) {
         if (player == null || command.isNullOrBlank()) {
             return
         }
+        if (!guiEnabled) {
+            plugin.messageUtils.send(player, "&cGUI dezactivat (features.gui=false). Foloseste comenzi chat.")
+            return
+        }
 
         if (skipConfirmations) {
             if (warningLines.isNullOrEmpty()) {
@@ -634,7 +668,7 @@ class GuiService(private val plugin: AINPCPlugin) {
                 val firstWarning = warningLines.firstOrNull() ?: title ?: "Actiune"
                 plugin.messageUtils.send(player, "&7[Auto-confirm] &f$firstWarning")
             }
-            runCommand(player, command)
+            runCommand(player, AINPCCommandMutationPolicy.confirmedCommand(command))
             return
         }
 
@@ -672,7 +706,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             return
         }
         confirmRequests.remove(player.uniqueId)
-        runCommand(player, request.command())
+        runCommand(player, AINPCCommandMutationPolicy.confirmedCommand(request.command()))
     }
 
     fun handleClick(
@@ -688,6 +722,10 @@ class GuiService(private val plugin: AINPCPlugin) {
 
         val session = sessionManager.find(sessionId) ?: return
         if (session.getPlayerId() != player.uniqueId) {
+            return
+        }
+        if (!canOpen(player, session.getKey())) {
+            plugin.messageUtils.sendActionBar(player, "&cNu mai ai permisiunea pentru acest ecran.")
             return
         }
 
@@ -722,8 +760,22 @@ class GuiService(private val plugin: AINPCPlugin) {
         if (player == null || command.isNullOrBlank()) {
             return
         }
-        player.closeInventory()
         val normalized = if (command.startsWith("/")) command.substring(1) else command
+        if (AINPCCommandMutationPolicy.requiresConfirmation(normalized)) {
+            openConfirmCommand(
+                player,
+                "Confirma mutatia",
+                normalized,
+                getLastGuiKey(player) ?: GuiKey.MAIN,
+                "",
+                listOf(
+                    "&eOperatia modifica mapping-ul sau starea asociata.",
+                    "&7Dupa succes ruleaza &f/ainpc world save&7.",
+                ),
+            )
+            return
+        }
+        player.closeInventory()
         plugin.server.dispatchCommand(player, normalized)
     }
 
@@ -732,33 +784,34 @@ class GuiService(private val plugin: AINPCPlugin) {
             return false
         }
         return when (key) {
-            GuiKey.MAIN -> hasAny(player, "ainpc.admin", "ainpc.gui")
-            GuiKey.PLAYER_HUB -> hasAny(player, "ainpc.gui", "ainpc.gui.quest")
-            GuiKey.QUEST, GuiKey.QUEST_DETAIL -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
-            GuiKey.STORY -> hasAny(player, "ainpc.admin", "ainpc.gui.story")
-            GuiKey.AUTHORING -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
-            GuiKey.WORLD -> hasAny(player, "ainpc.admin", "ainpc.gui.world")
-            GuiKey.PLACE, GuiKey.REGION -> hasAny(player, "ainpc.admin", "ainpc.gui.world")
-            GuiKey.STATS -> hasAny(player, "ainpc.admin", "ainpc.gui.stats", "ainpc.info")
-            GuiKey.INTERACT -> hasAny(player, "ainpc.admin", "ainpc.gui.interact", "ainpc.talk")
-            GuiKey.ROUTINE -> hasAny(player, "ainpc.admin", "ainpc.gui.routine", "ainpc.gui.manager")
-            GuiKey.RELATIONSHIP -> hasAny(player, "ainpc.admin", "ainpc.gui.relationship", "ainpc.gui.manager")
-            GuiKey.STORY_AUTHORING -> hasAny(player, "ainpc.admin", "ainpc.gui.story", "ainpc.creator")
-            GuiKey.NPC_MEMORY -> hasAny(player, "ainpc.admin", "ainpc.gui.npc", "ainpc.info")
-            GuiKey.SHOP -> hasAny(player, "ainpc.admin", "ainpc.gui.shop")
-            GuiKey.MANAGER -> hasAny(player, "ainpc.admin", "ainpc.gui.manager")
-            GuiKey.AUDIT -> hasAny(player, "ainpc.admin", "ainpc.gui.audit")
-            GuiKey.DEBUG -> hasAny(player, "ainpc.admin", "ainpc.gui.debug")
-            GuiKey.ADMIN_MAPPING, GuiKey.ADMIN_QUEST -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.quest")
-            GuiKey.MCP -> hasAny(player, "ainpc.admin", "ainpc.gui.debug", "ainpc.gui.mcp")
-            GuiKey.ADMIN_HUB -> hasAny(player, "ainpc.admin", "ainpc.gui.world", "ainpc.gui.audit", "ainpc.gui.debug")
-            GuiKey.CREATOR_HUB -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world", "ainpc.gui.quest")
-            GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
-            GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE, GuiKey.QUICK_QUEST -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.quest")
-            GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, "ainpc.admin", "ainpc.creator", "ainpc.gui.world")
-            GuiKey.QUEST_MAP -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.gui.quest_map", "ainpc.creator")
-            GuiKey.QUEST_OFFER_NPC -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.talk")
-            GuiKey.QUEST_OFFER -> hasAny(player, "ainpc.admin", "ainpc.gui.quest", "ainpc.quest")
+            GuiKey.MAIN -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI)
+            GuiKey.PLAYER_HUB -> hasAny(player, ro.ainpc.api.PermissionNode.GUI, ro.ainpc.api.PermissionNode.GUI_QUEST)
+            GuiKey.QUEST, GuiKey.QUEST_DETAIL -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_QUEST, ro.ainpc.api.PermissionNode.QUEST)
+            GuiKey.STORY -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_STORY)
+            GuiKey.AUTHORING -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR, ro.ainpc.api.PermissionNode.GUI_DEBUG)
+            GuiKey.WORLD -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_WORLD)
+            GuiKey.PLACE, GuiKey.REGION -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_WORLD)
+            GuiKey.STATS -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_STATS, ro.ainpc.api.PermissionNode.INFO)
+            GuiKey.INTERACT -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_INTERACT, ro.ainpc.api.PermissionNode.TALK)
+            GuiKey.ROUTINE -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_ROUTINE, ro.ainpc.api.PermissionNode.GUI_MANAGER)
+            GuiKey.RELATIONSHIP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_RELATIONSHIP, ro.ainpc.api.PermissionNode.GUI_MANAGER)
+            GuiKey.STORY_AUTHORING -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_STORY, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.NPC_MEMORY -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_NPC, ro.ainpc.api.PermissionNode.INFO)
+            GuiKey.SHOP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_SHOP)
+            GuiKey.MANAGER -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_MANAGER)
+            GuiKey.AUDIT -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_AUDIT)
+            GuiKey.DEBUG -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_DEBUG)
+            GuiKey.ADMIN_MAPPING -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR, ro.ainpc.api.PermissionNode.GUI_WORLD)
+            GuiKey.ADMIN_QUEST -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.MCP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_DEBUG, ro.ainpc.api.PermissionNode.GUI_MCP)
+            GuiKey.ADMIN_HUB -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_WORLD, ro.ainpc.api.PermissionNode.GUI_AUDIT, ro.ainpc.api.PermissionNode.GUI_DEBUG)
+            GuiKey.CREATOR_HUB -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.CREATOR_QUEST, GuiKey.CREATOR_QUEST_DEFS, GuiKey.CREATOR_QUEST_TEST -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.QUEST_EDIT, GuiKey.QUEST_CREATE, GuiKey.QUICK_QUEST -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.MAPPING_CREATOR, GuiKey.MAPPING_CREATE_REGION, GuiKey.MAPPING_CREATE_PLACE, GuiKey.MAPPING_CREATE_NODE -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR, ro.ainpc.api.PermissionNode.GUI_WORLD)
+            GuiKey.QUEST_MAP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.CREATOR, ro.ainpc.api.PermissionNode.GUI_QUEST_MAP)
+            GuiKey.QUEST_OFFER_NPC -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_QUEST, ro.ainpc.api.PermissionNode.TALK)
+            GuiKey.QUEST_OFFER -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_QUEST, ro.ainpc.api.PermissionNode.QUEST)
             GuiKey.CONFIRM -> true
         }
     }
@@ -783,23 +836,41 @@ class GuiService(private val plugin: AINPCPlugin) {
         fun warningLines(): List<String> = safeWarningLines.toList()
     }
 
-    data class TextInputRequest(
-        val title: String?,
-        val formKey: String,
-        val returnKey: GuiKey,
-        val returnSelector: String?,
-        val promptLines: List<String>
+    class TextInputRequest(
+        title: String?,
+        formKey: String,
+        returnKey: GuiKey,
+        returnSelector: String?,
+        promptLines: List<String>,
+        val timeoutTicks: Int = 600
     ) {
-        private val safeTitle = title ?: formKey
-        private val safeFormKey = formKey
-        private val safeReturnSelector = returnSelector ?: ""
-        private val safePromptLines = promptLines.toList()
+        private val _title: String? = title
+        private val _formKey: String = formKey
+        private val _returnKey: GuiKey = returnKey
+        private val _returnSelector: String? = returnSelector
+        private val _promptLines: List<String> = promptLines
+        private var _createdAtMillis: Long = 0L
 
-        fun title(): String = safeTitle
-        fun formKey(): String = safeFormKey
-        fun returnKey(): GuiKey = this.returnKey
-        fun returnSelector(): String = safeReturnSelector
-        fun promptLines(): List<String> = safePromptLines.toList()
+        fun title(): String? = _title
+        fun formKey(): String = _formKey
+        fun returnKey(): GuiKey = _returnKey
+        fun returnSelector(): String? = _returnSelector
+        fun promptLines(): List<String> = _promptLines
+        val safeTitle: String get() = (_title ?: "").filter { it.isLetterOrDigit() || it == ' ' || it == '_' || it == '-' }
+        val safeFormKey: String get() = _formKey.filter { it.isLetterOrDigit() || it == '_' || it == '-' || it == ':' }
+        val safeReturnSelector: String? get() = _returnSelector
+        val safePromptLines: List<String> get() = _promptLines.map { it.filter { c -> c.isLetterOrDigit() || c == ' ' || c == '_' || c == '-' || c == ':' || c == '.' || c == ',' || c == '!' || c == '?' } }
+        val createdAtMillis: Long get() = _createdAtMillis
+
+        fun recordCreation() {
+            _createdAtMillis = System.currentTimeMillis()
+        }
+
+        fun isExpired(): Boolean {
+            if (timeoutTicks <= 0) return false
+            val timeoutMillis = timeoutTicks * 50L
+            return (System.currentTimeMillis() - _createdAtMillis) >= timeoutMillis
+        }
     }
 
     data class BuildModeHistoryEntry(
@@ -813,9 +884,9 @@ class GuiService(private val plugin: AINPCPlugin) {
         screens[screen.key()] = screen
     }
 
-    private fun hasAny(player: Player, vararg permissions: String): Boolean {
-        for (permission in permissions) {
-            if (player.hasPermission(permission)) {
+    private fun hasAny(player: Player, vararg nodes: ro.ainpc.api.PermissionNode): Boolean {
+        for (node in nodes) {
+            if (player.hasPermission(node.node)) {
                 return true
             }
         }

@@ -3,6 +3,7 @@ package ro.ainpc.ai.orchestration
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.OllamaService
 import ro.ainpc.ai.OpenAIService
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import java.util.concurrent.CompletableFuture
 
 class AIOrchestrationService(private val plugin: AINPCPlugin?) {
@@ -60,6 +61,21 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
     fun policyFor(useCase: AIUseCase?): AIOrchestrationPolicy = AIOrchestrationPolicy.forUseCase(useCase)
 
     fun orchestrate(request: AIOrchestrationRequest?): AIOrchestrationResult {
+        val timer = plugin?.let {
+            runCatching { it.performanceMonitor.timer(RuntimeMetricNames.AI_ORCHESTRATION) }.getOrNull()
+        }
+        timer?.begin()
+        return try {
+            orchestrateMeasured(request).also { result ->
+                timer?.end(success = result.status() == AIResultStatus.SUCCESS)
+            }
+        } catch (error: Throwable) {
+            timer?.fail()
+            throw error
+        }
+    }
+
+    private fun orchestrateMeasured(request: AIOrchestrationRequest?): AIOrchestrationResult {
         if (request == null) {
             return AIResultStatus.VALIDATION_FAILED.result(
                 AIUseCase.DIALOGUE_REPLY, "Cererea AI nu este valida.", "invalid_request"
@@ -170,8 +186,8 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         val context = request.context()
         val confidenceStr = context["confidence"] ?: context["score"]
         if (confidenceStr == null) return true
-        val confidence = confidenceStr.toDoubleOrNull() ?: return true
-        return confidence >= minConfidence
+        val confidence = confidenceStr.toDoubleOrNull()
+        return confidence != null && confidence >= minConfidence
     }
 
     private fun backoffDelay(attempt: Int, baseDelayMs: Long, maxDelayMs: Long) {

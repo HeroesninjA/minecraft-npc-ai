@@ -5,99 +5,102 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
-import java.util.logging.Level
+import java.util.Locale
+import java.util.UUID
 
 class VaultEconomyInvocationHandler(private val plugin: AINPCPlugin) : InvocationHandler {
     override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
         return when (method.name) {
-            "isEnabled" -> true
+            "isEnabled" -> plugin.isEnabled
             "getName" -> "AINPC Economy"
             "currencyNameSingular" -> "coin"
             "currencyNamePlural" -> "coins"
-            "format" -> formatAmount(args)
+            "format" -> formatVaultAmount((args?.firstOrNull() as? Number)?.toDouble() ?: 0.0)
             "fractionalDigits" -> 0
             "has" -> hasBalance(args)
             "hasAccount" -> true
-            "createPlayerAccount" -> createAccount(args)
+            "createPlayerAccount" -> true
             "getBalance" -> getBalance(args)
             "withdrawPlayer" -> withdrawPlayer(args)
             "depositPlayer" -> depositPlayer(args)
             "bankBalance", "bankDeposit", "bankHas", "bankWithdraw",
-            "createBank", "deleteBank", "bankBreak",
-            "isBankMember", "isBankOwner" -> null
+            "createBank", "deleteBank", "isBankMember", "isBankOwner" ->
+                createResponse(false, 0.0, 0.0, "Operatiunile bancare nu sunt suportate")
+            "getBanks" -> emptyList<String>()
+            "hasBankSupport" -> false
             "toString" -> "AINPC Economy Vault Bridge"
             "hashCode" -> System.identityHashCode(proxy)
             "equals" -> args?.firstOrNull() === proxy
-            "bankX" -> if (method.name.startsWith("bank")) null else fallback(method)
             else -> fallback(method)
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun resolvePlayer(args: Array<out Any>?): OfflinePlayer? {
-        if (args == null || args.isEmpty()) return null
-        val first = args[0]
+        val first = args?.firstOrNull() ?: return null
         return when (first) {
             is OfflinePlayer -> first
-            is Player -> first as OfflinePlayer
-            is String -> plugin.server.getOfflinePlayer(java.util.UUID.fromString(first))
+            is String -> {
+                val value = first.trim()
+                if (value.isEmpty()) {
+                    null
+                } else {
+                    runCatching { UUID.fromString(value) }
+                        .fold(
+                            onSuccess = { plugin.server.getOfflinePlayer(it) },
+                            onFailure = { plugin.server.getOfflinePlayer(value) }
+                        )
+                }
+            }
             else -> null
         }
     }
 
-    private fun getOnlinePlayer(offline: OfflinePlayer?): Player? {
-        return offline?.player
-    }
-
-    private fun getAmount(args: Array<out Any>?): Double {
-        if (args == null || args.size < 2) return 0.0
-        return (args[1] as? Number)?.toDouble() ?: 0.0
-    }
-
-    private fun formatAmount(args: Array<out Any>?): String {
-        val amount = getAmount(args)
-        return "%.0f %s".format(amount, if (amount == 1.0) "coin" else "coins")
-    }
+    private fun getOnlinePlayer(offline: OfflinePlayer?): Player? = offline?.player
 
     private fun hasBalance(args: Array<out Any>?): Boolean {
         val player = resolvePlayer(args) ?: return false
-        val amount = getAmount(args)
+        val amount = parseVaultWholeAmount(args) ?: return false
         return getPlayerBalance(player) >= amount
     }
 
-    private fun createAccount(args: Array<out Any>?): Boolean = true
-
     private fun getBalance(args: Array<out Any>?): Double {
         val player = resolvePlayer(args) ?: return 0.0
-        return getPlayerBalance(player)
+        return getPlayerBalance(player).toDouble()
     }
 
     private fun withdrawPlayer(args: Array<out Any>?): Any? {
         val player = resolvePlayer(args) ?: return createResponse(false, 0.0, 0.0, "Jucator negasit")
-        val amount = getAmount(args)
+        val amount = parseVaultWholeAmount(args)
+            ?: return createResponse(false, 0.0, getPlayerBalance(player).toDouble(), "Suma invalida")
         val online = getOnlinePlayer(player)
-        if (online == null) return createResponse(false, amount, getPlayerBalance(player), "Jucatorul este offline")
+            ?: return createResponse(false, amount.toDouble(), getPlayerBalance(player).toDouble(), "Jucatorul este offline")
         val balance = getPlayerBalance(player)
         if (balance < amount) {
-            return createResponse(false, amount, balance, "Fonduri insuficiente")
+            return createResponse(false, amount.toDouble(), balance.toDouble(), "Fonduri insuficiente")
         }
-        plugin.economyService.setBalance(online, (balance - amount).toInt())
-        return createResponse(true, amount, (balance - amount), "")
+        val newBalance = balance - amount
+        plugin.economyService.setBalance(online, newBalance)
+        return createResponse(true, amount.toDouble(), newBalance.toDouble(), "")
     }
 
     private fun depositPlayer(args: Array<out Any>?): Any? {
         val player = resolvePlayer(args) ?: return createResponse(false, 0.0, 0.0, "Jucator negasit")
-        val amount = getAmount(args)
+        val amount = parseVaultWholeAmount(args)
+            ?: return createResponse(false, 0.0, getPlayerBalance(player).toDouble(), "Suma invalida")
         val online = getOnlinePlayer(player)
-        if (online == null) return createResponse(false, amount, getPlayerBalance(player), "Jucatorul este offline")
+            ?: return createResponse(false, amount.toDouble(), getPlayerBalance(player).toDouble(), "Jucatorul este offline")
         val balance = getPlayerBalance(player)
-        plugin.economyService.setBalance(online, (balance + amount).toInt())
-        return createResponse(true, amount, (balance + amount), "")
+        val newBalance = balance.toLong() + amount.toLong()
+        if (newBalance > Int.MAX_VALUE) {
+            return createResponse(false, amount.toDouble(), balance.toDouble(), "Soldul depaseste limita suportata")
+        }
+        plugin.economyService.setBalance(online, newBalance.toInt())
+        return createResponse(true, amount.toDouble(), newBalance.toDouble(), "")
     }
 
-    private fun getPlayerBalance(player: OfflinePlayer?): Double {
-        if (player == null) return 0.0
-        return plugin.economyService.getBalanceByUuid(player.uniqueId).toDouble()
-    }
+    private fun getPlayerBalance(player: OfflinePlayer): Int =
+        plugin.economyService.getBalanceByUuid(player.uniqueId)
 
     private fun fallback(method: Method): Any? {
         return when (method.returnType.name) {
@@ -110,28 +113,55 @@ class VaultEconomyInvocationHandler(private val plugin: AINPCPlugin) : Invocatio
     }
 
     private fun createResponse(success: Boolean, amount: Double, balance: Double, errorMessage: String): Any? {
-        try {
-            val economyClass = Class.forName("net.milkbowl.vault.economy.Economy")
-            for (inner in economyClass.declaredClasses) {
-                if (inner.simpleName == "EconomyResponse") {
-                    val responseTypeClass = Class.forName("net.milkbowl.vault.economy.EconomyResponse\$ResponseType")
-                    val responseType = if (success) {
-                        responseTypeClass.enumConstants.first { it.toString() == "SUCCESS" }
-                    } else {
-                        responseTypeClass.enumConstants.first { it.toString() == "FAILURE" }
-                    }
-                    val constructor = inner.getDeclaredConstructor(
-                        responseTypeClass, Double::class.javaPrimitiveType,
-                        Double::class.javaPrimitiveType, String::class.java
-                    )
-                    constructor.isAccessible = true
-                    return constructor.newInstance(responseType, amount, balance, errorMessage)
-                }
-            }
-            return null
-        } catch (e: Exception) {
-            plugin.logger.fine("[Vault] Nu am putut crea EconomyResponse: ${e.message}")
-            return null
+        return try {
+            createVaultEconomyResponse(
+                responseTypeName = if (success) "SUCCESS" else "FAILURE",
+                amount = amount,
+                balance = balance,
+                errorMessage = errorMessage
+            )
+        } catch (exception: ReflectiveOperationException) {
+            plugin.logger.fine("[Vault] Nu am putut crea EconomyResponse: ${exception.message}")
+            null
         }
     }
+}
+
+internal fun formatVaultAmount(amount: Double): String =
+    String.format(Locale.ROOT, "%.0f %s", amount, if (amount == 1.0) "coin" else "coins")
+
+internal fun parseVaultWholeAmount(args: Array<out Any>?): Int? {
+    val amount = args
+        ?.drop(1)
+        ?.firstOrNull { it is Number }
+        ?.let { (it as Number).toDouble() }
+        ?: return null
+    if (!amount.isFinite() || amount < 0.0 || amount > Int.MAX_VALUE || amount % 1.0 != 0.0) {
+        return null
+    }
+    return amount.toInt()
+}
+
+internal fun createVaultEconomyResponse(
+    responseTypeName: String,
+    amount: Double,
+    balance: Double,
+    errorMessage: String,
+    classLoader: ClassLoader = VaultEconomyInvocationHandler::class.java.classLoader,
+    responseClassName: String = "net.milkbowl.vault.economy.EconomyResponse",
+    responseTypeClassName: String = "net.milkbowl.vault.economy.EconomyResponse\$ResponseType",
+): Any {
+    val responseTypeClass = Class.forName(responseTypeClassName, true, classLoader)
+    val responseType = responseTypeClass.enumConstants.first {
+        (it as Enum<*>).name == responseTypeName
+    }
+    val responseClass = Class.forName(responseClassName, true, classLoader)
+    val constructor = responseClass.getDeclaredConstructor(
+        Double::class.javaPrimitiveType,
+        Double::class.javaPrimitiveType,
+        responseTypeClass,
+        String::class.java
+    )
+    constructor.isAccessible = true
+    return constructor.newInstance(amount, balance, responseType, errorMessage)
 }

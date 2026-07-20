@@ -1,6 +1,5 @@
 package ro.ainpc.story
 
-import com.google.gson.Gson
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldPlaceInfo
@@ -33,6 +32,7 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
         val id: Long,
         val scopeType: String,
         val scopeId: String,
+        val eventKey: String,
         val eventType: String,
         val title: String,
         val description: String,
@@ -41,35 +41,86 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
 
     fun recordEvent(draft: StoryEventDraft): Boolean {
         return try {
-            val sql = """
-                INSERT INTO story_events 
-                (scope_type, scope_id, region_id, place_id, event_type, event_key, 
-                 title, description, payload, actor_type, actor_id, 
-                 player_uuid, npc_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """.trimIndent()
-            plugin.databaseManager.prepareStatement(sql).use { stmt ->
-                stmt.setString(1, draft.scopeType)
-                stmt.setString(2, draft.scopeId)
-                stmt.setString(3, draft.regionId)
-                stmt.setString(4, draft.placeId)
-                stmt.setString(5, draft.eventType)
-                stmt.setString(6, draft.eventKey)
-                stmt.setString(7, draft.title)
-                stmt.setString(8, draft.description)
-                stmt.setString(9, Gson().toJson(draft.payload))
-                stmt.setString(10, draft.actorType)
-                stmt.setString(11, draft.actorId)
-                stmt.setString(12, draft.playerUuid)
-                stmt.setString(13, draft.npcId)
-                stmt.setLong(14, System.currentTimeMillis())
-                stmt.executeUpdate()
-            }
-            reactionService.reactToEvent(draft.eventType, draft.scopeId, draft.regionId)
-            plugin.platform.addonRegistry.dispatchStoryEvent(draft.eventType, draft.scopeId, draft.title)
+            val event = storyStateService.recordEvent(
+                draft.scopeType,
+                draft.scopeId,
+                draft.regionId,
+                draft.placeId,
+                draft.eventType,
+                draft.eventKey,
+                draft.title,
+                draft.description,
+                draft.payload,
+                draft.actorType,
+                draft.actorId,
+                draft.playerUuid,
+                draft.npcId,
+            )
+            notifyPublishedEvent(event)
             true
-        } catch (e: SQLException) {
+        } catch (e: Exception) {
             plugin.logger.log(Level.WARNING, "Eroare la salvarea evenimentului story", e)
+            false
+        }
+    }
+
+    fun queueEvent(draft: StoryEventDraft): StoryPendingEvent? {
+        return try {
+            storyStateService.queueEvent(
+                draft.scopeType,
+                draft.scopeId,
+                draft.regionId,
+                draft.placeId,
+                draft.eventType,
+                draft.eventKey,
+                draft.title,
+                draft.description,
+                draft.payload,
+                draft.actorType,
+                draft.actorId,
+                draft.playerUuid,
+                draft.npcId,
+            )
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la adaugarea evenimentului story in coada pending", e)
+            null
+        }
+    }
+
+    fun hasPendingEvents(scopeType: String, scopeId: String): Boolean {
+        return try {
+            storyStateService.hasPendingEvents(scopeType, scopeId)
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la verificarea cozii story pending", e)
+            false
+        }
+    }
+
+    fun listPendingEvents(scopeType: String, scopeId: String, limit: Int = 20): List<StoryPendingEvent> {
+        return try {
+            storyStateService.listPendingEvents(scopeType, scopeId, limit)
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la listarea cozii story pending", e)
+            emptyList()
+        }
+    }
+
+    fun publishPendingEvent(id: Long): Boolean {
+        return try {
+            val event = storyStateService.publishPendingEvent(id) ?: return false
+            notifyPublishedEvent(event)
+            true
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la publicarea evenimentului story pending $id", e)
+            false
+        }
+    }
+
+    fun discardPendingEvent(id: Long): Boolean {
+        return try {
+            storyStateService.discardPendingEvent(id)
+        } catch (e: Exception) {
+            plugin.logger.log(Level.WARNING, "Eroare la anularea evenimentului story pending $id", e)
             false
         }
     }
@@ -77,7 +128,7 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
     fun listRecentEvents(scopeType: String, scopeId: String, limit: Int = 20): List<StoryEventInfo> {
         return try {
             val sql = """
-                SELECT id, scope_type, scope_id, event_type, title, description, created_at
+                SELECT id, scope_type, scope_id, event_key, event_type, title, description, created_at
                 FROM story_events
                 WHERE scope_type = ? AND scope_id = ?
                 ORDER BY created_at DESC
@@ -94,6 +145,7 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
                             id = rs.getLong("id"),
                             scopeType = rs.getString("scope_type"),
                             scopeId = rs.getString("scope_id"),
+                            eventKey = rs.getString("event_key") ?: "",
                             eventType = rs.getString("event_type"),
                             title = rs.getString("title") ?: "",
                             description = rs.getString("description") ?: "",
@@ -206,7 +258,44 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
     )
 
     fun applyTemplate(templateId: String, scopeId: String, overrides: Map<String, String> = emptyMap()): Boolean {
-        val template = getTemplates().find { it.id == templateId } ?: return false
+        val draft = buildTemplateDraft(
+            templateId,
+            scopeId,
+            overrides,
+            actorType = "system",
+            actorId = "template:$templateId",
+        ) ?: return false
+        return recordEvent(draft)
+    }
+
+    fun queueTemplate(
+        templateId: String,
+        scopeId: String,
+        actorType: String,
+        actorId: String,
+        overrides: Map<String, String> = emptyMap(),
+    ): StoryPendingEvent? {
+        if (actorType.isBlank() || actorId.isBlank()) {
+            return null
+        }
+        val draft = buildTemplateDraft(
+            templateId,
+            scopeId,
+            overrides,
+            actorType.trim(),
+            actorId.trim(),
+        ) ?: return null
+        return queueEvent(draft)
+    }
+
+    private fun buildTemplateDraft(
+        templateId: String,
+        scopeId: String,
+        overrides: Map<String, String>,
+        actorType: String,
+        actorId: String,
+    ): StoryEventDraft? {
+        val template = getTemplates().find { it.id == templateId } ?: return null
         val scopeType = if (plugin.platform.worldAdmin.getRegion(scopeId) != null) "region" else "place"
         val resolvedTitle = overrides["title"] ?: "${template.suggestedTitle} @ $scopeId"
         val resolvedDesc = overrides["description"] ?: template.suggestedDescription
@@ -222,9 +311,26 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
             title = resolvedTitle,
             description = resolvedDesc,
             payload = mergedPayload,
-            actorType = "system",
-            actorId = "template:$templateId"
+            actorType = actorType,
+            actorId = actorId,
         )
-        return recordEvent(draft)
+        return draft
+    }
+
+    private fun notifyPublishedEvent(event: StoryEvent) {
+        try {
+            reactionService.reactToEvent(event.eventType(), event.scopeId(), event.regionId())
+        } catch (e: RuntimeException) {
+            plugin.logger.log(Level.WARNING, "Reactia la evenimentul story ${event.id()} a esuat", e)
+        }
+        try {
+            plugin.platform.addonRegistry.dispatchStoryEvent(
+                event.eventType(),
+                event.scopeId(),
+                event.title(),
+            )
+        } catch (e: RuntimeException) {
+            plugin.logger.log(Level.WARNING, "Dispatch-ul addon pentru evenimentul story ${event.id()} a esuat", e)
+        }
     }
 }

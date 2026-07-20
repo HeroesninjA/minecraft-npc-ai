@@ -189,6 +189,51 @@ class ProgressionRepositoryTest {
 
     @Test
     @Throws(Exception::class)
+    fun globalNamespaceIsolatedFromPlayerBindings() {
+        insertProgression("player-1", "medieval_quest:C02", "C02", "active", "READ_BOARD", "READ_BOARD", "{}", "{}", 100L, 0L, 150L, true)
+        insertProgression("player-2", "medieval_quest:C02", "C02", "active", "READ_BOARD", "READ_BOARD", "{}", "{}", 100L, 0L, 145L, false)
+        insertAnchorBinding("player-1", "medieval_quest:C02", "visit_market", "C02", "visit_place", "tag:market", "place", "market_player1", "Piata P1", 100L, 160L)
+        insertAnchorBinding("player-2", "medieval_quest:C02", "visit_market", "C02", "visit_place", "tag:market", "place", "market_player2", "Piata P2", 100L, 150L)
+        insertAnchorBinding(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "visit_market", "C02", "visit_place", "tag:market_global", "place", "market_global", "Piata Globala", 100L, 155L)
+        val repository = ProgressionRepository(connection!!::prepareStatement) { listOf(contractDefinition()) }
+
+        val globalRows = repository.findAnchorBindingsForProgression(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "", 10)
+        val allRows = repository.findAnchorBindingsForProgression("", "medieval_quest:C02", "", 10)
+        val player1Rows = repository.findAnchorBindingsForProgression("player-1", "medieval_quest:C02", "", 10)
+
+        assertEquals(1, globalRows.size)
+        assertEquals("market_global", globalRows[0].anchorId())
+        assertEquals(3, allRows.size)
+        assertEquals(1, player1Rows.size)
+        assertEquals("market_player1", player1Rows[0].anchorId())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun savesAndDeletesGlobalAnchorBinding() {
+        insertProgression("player-1", "medieval_quest:C02", "C02", "active", "READ_BOARD", "READ_BOARD", "{}", "{}", 100L, 0L, 150L, true)
+        val repository = ProgressionRepository(connection!!::prepareStatement) { listOf(contractDefinition()) }
+
+        repository.saveAnchorBinding(
+            ProgressionAnchorBinding(
+                ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "inspect_board",
+                "C02", "inspect_node", "node:quest_board",
+                "node", "demo_sat:global_board", "quest_board_global", 100L, 160L, ""
+            )
+        )
+
+        val saved = repository.findAnchorBindingsForProgression(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "", 10)
+        assertEquals(1, saved.size)
+        assertEquals("inspect_board", saved[0].objectiveKey())
+        assertEquals("demo_sat:global_board", saved[0].anchorId())
+
+        repository.deleteAnchorBinding(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "inspect_board")
+        val afterDelete = repository.findAnchorBindingsForProgression(ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, "medieval_quest:C02", "", 10)
+        assertEquals(0, afterDelete.size)
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun savesAndUpdatesManualAnchorBinding() {
         insertProgression("player-1", "medieval_quest:C02", "C02", "active", "READ_BOARD", "READ_BOARD", "{}", "{}", 100L, 0L, 150L, true)
         val repository = ProgressionRepository(connection!!::prepareStatement) { listOf(contractDefinition()) }

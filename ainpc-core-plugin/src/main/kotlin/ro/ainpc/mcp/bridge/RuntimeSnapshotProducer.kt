@@ -4,22 +4,29 @@ import com.google.gson.GsonBuilder
 import org.bukkit.Bukkit
 import org.bukkit.scheduler.BukkitRunnable
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.mcp.McpRuntimeConfig
 import java.nio.file.Path
 import java.time.Instant
 
 class RuntimeSnapshotProducer(
     private val plugin: AINPCPlugin,
-    private val snapshotPath: Path = Path.of("data", "mcp-runtime-snapshot.json")
+    snapshotPath: Path = Path.of("data", "mcp-runtime-snapshot.json")
 ) : BukkitRunnable() {
+    private val resolvedSnapshotPath: Path = if (snapshotPath.isAbsolute) snapshotPath
+        else plugin.dataFolder.toPath().resolve(snapshotPath).normalize()
     private val gson = GsonBuilder().setPrettyPrinting().create()
     private val startTime = System.currentTimeMillis()
 
     override fun run() {
+        val timer = plugin.performanceMonitor.timer(RuntimeMetricNames.RUNTIME_SNAPSHOT_EXPORT)
+        timer.begin()
         try {
             val snapshot = buildSnapshot()
             writeSnapshot(snapshot)
+            timer.end()
         } catch (e: Exception) {
+            timer.fail()
             plugin.logger.warning("RuntimeSnapshotProducer: eroare la producerea snapshot-ului: ${e.message}")
         }
     }
@@ -153,15 +160,17 @@ class RuntimeSnapshotProducer(
                 byTarget = buildModeByTarget,
                 players = buildModePlayers,
                 history = buildModeHistory
-            )
+            ),
+            health = plugin.performanceMonitor.snapshot(),
         )
     }
 
     private fun writeSnapshot(snapshot: RuntimeSnapshot) {
-        val tmpFile = snapshotPath.resolveSibling("${snapshotPath.fileName}.tmp")
+        val tmpFile = resolvedSnapshotPath.resolveSibling("${resolvedSnapshotPath.fileName}.tmp")
         try {
+            resolvedSnapshotPath.parent.toFile().mkdirs()
             tmpFile.toFile().writeText(gson.toJson(snapshot))
-            tmpFile.toFile().renameTo(snapshotPath.toFile())
+            tmpFile.toFile().renameTo(resolvedSnapshotPath.toFile())
         } catch (e: Exception) {
             try { tmpFile.toFile().delete() } catch (_: Exception) {}
             throw e
@@ -173,7 +182,7 @@ class RuntimeSnapshotProducer(
         if (!config.enabled || !config.snapshotAuto) return
         val ticks = config.snapshotIntervalTicks
         runTaskTimerAsynchronously(plugin, 40L, ticks)
-        plugin.logger.info("RuntimeSnapshotProducer pornit (la fiecare ${ticks}tick, fisier: $snapshotPath).")
+        plugin.logger.info("RuntimeSnapshotProducer pornit (la fiecare ${ticks}tick, fisier: $resolvedSnapshotPath).")
     }
 
     fun stop() {

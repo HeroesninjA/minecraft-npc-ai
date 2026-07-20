@@ -3,6 +3,7 @@ package ro.ainpc.addons
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.api.AINPCPlatformApi
@@ -20,6 +21,10 @@ import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldMode
 import java.nio.file.Path
 import java.util.EnumSet
+import java.util.logging.Handler
+import java.util.logging.Level
+import java.util.logging.LogRecord
+import java.util.logging.Logger
 
 class AddonRegistryTest {
     @Test
@@ -179,6 +184,676 @@ class AddonRegistryTest {
         assertEquals(AddonType.DATAPACK, AddonType.fromId("data-pack"))
     }
 
+    @Test
+    fun registerAddonRunsLifecycleBeforeCommitCompletes() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+
+        registry.registerAddon(lifecycleAddon("demo", "1.0.0", events))
+
+        assertEquals(listOf("demo:1.0.0:load", "demo:1.0.0:enable"), events)
+        assertEquals("1.0.0", registry.getDescriptor("demo")?.version)
+    }
+
+    @Test
+    fun dependencyGateRejectsMissingDependencyBeforeLifecycle() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("missing-lib"))
+        )
+
+        assertTrue(events.isEmpty())
+        assertNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun dependencyGateAllowsAddonAfterDependencyIsRegistered() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("shared-lib", "1.0.0", events))
+
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("shared-lib"))
+        )
+
+        assertEquals(
+            listOf(
+                "shared-lib:1.0.0:load",
+                "shared-lib:1.0.0:enable",
+                "consumer:1.0.0:load",
+                "consumer:1.0.0:enable"
+            ),
+            events
+        )
+        assertNotNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun dependencyGateRejectsCycleBeforeReplacingActiveAddon() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("addon-a", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("addon-b", "1.0.0", events, dependencies = listOf("addon-a"))
+        )
+        events.clear()
+
+        registry.registerAddon(
+            lifecycleAddon("addon-a", "2.0.0", events, dependencies = listOf("addon-b"))
+        )
+
+        assertTrue(events.isEmpty())
+        assertEquals("1.0.0", registry.getDescriptor("addon-a")?.version)
+        assertEquals("1.0.0", registry.getDescriptor("addon-b")?.version)
+    }
+
+    @Test
+    fun dependencyGateRejectsSecondPrimaryScenarioBeforeLifecycle() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(
+            lifecycleAddon(
+                "scenario-a",
+                "1.0.0",
+                events,
+                type = AddonType.SCENARIO,
+                primaryScenario = true
+            )
+        )
+        events.clear()
+
+        registry.registerAddon(
+            lifecycleAddon(
+                "scenario-b",
+                "1.0.0",
+                events,
+                type = AddonType.SCENARIO,
+                primaryScenario = true
+            )
+        )
+
+        assertTrue(events.isEmpty())
+        assertEquals("scenario-a", registry.primaryScenario?.id)
+        assertNull(registry.getDescriptor("scenario-b"))
+    }
+
+    @Test
+    fun registerDescriptorKeepsPrimaryScenarioConflictAsDiagnostic() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        registry.registerDescriptor(
+            descriptor("scenario-a", AddonType.SCENARIO, true, EnumSet.allOf(RuntimeMode::class.java))
+        )
+        val records = mutableListOf<LogRecord>()
+        val handler = recordingHandler(records)
+        val registryLogger = Logger.getLogger(AddonRegistry::class.java.name)
+        registryLogger.addHandler(handler)
+
+        try {
+            registry.registerDescriptor(
+                descriptor("scenario-b", AddonType.SCENARIO, true, EnumSet.allOf(RuntimeMode::class.java))
+            )
+        } finally {
+            registryLogger.removeHandler(handler)
+        }
+
+        assertNotNull(registry.getDescriptor("scenario-a"))
+        assertNotNull(registry.getDescriptor("scenario-b"))
+        assertEquals("scenario-a", registry.primaryScenario?.id)
+        assertTrue(records.any { record ->
+            record.level == Level.WARNING &&
+                record.message.contains("Descriptor declarativ pastrat cu diagnostice") &&
+                record.message.contains("Doua scenarii primare") &&
+                record.message.contains("scenario-b")
+        })
+    }
+
+    @Test
+    fun dependencyGateIgnoresUnrelatedDeclarativeGraphErrors() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerDescriptor(
+            AddonDescriptor(
+                AddonDescriptor.ORIGIN_FEATURE_PACK,
+                "orphan-pack",
+                "Orphan pack",
+                "1.0.0",
+                dependencies = listOf("missing-pack")
+            )
+        )
+
+        registry.registerAddon(lifecycleAddon("healthy", "1.0.0", events))
+
+        assertEquals(listOf("healthy:1.0.0:load", "healthy:1.0.0:enable"), events)
+        assertNotNull(registry.getDescriptor("healthy"))
+    }
+
+    @Test
+    fun dependencyGateRejectsTransitivelyMissingDeclarativeDependency() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerDescriptor(
+            AddonDescriptor(
+                AddonDescriptor.ORIGIN_FEATURE_PACK,
+                "bridge-pack",
+                "Bridge pack",
+                "1.0.0",
+                dependencies = listOf("missing-pack")
+            )
+        )
+
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("bridge-pack"))
+        )
+
+        assertTrue(events.isEmpty())
+        assertNull(registry.getDescriptor("consumer"))
+        assertNotNull(registry.getDescriptor("bridge-pack"))
+    }
+
+    @Test
+    fun nonStrictValidationAllowsMissingCodeDependency() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.configure(true, false, emptyList())
+
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("missing-lib"))
+        )
+
+        assertEquals(listOf("consumer:1.0.0:load", "consumer:1.0.0:enable"), events)
+        assertNotNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun unregisterCascadesActiveDependentsInReverseDependencyOrder() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("mid", "1.0.0", events, dependencies = listOf("base"))
+        )
+        registry.registerAddon(
+            lifecycleAddon("top", "1.0.0", events, dependencies = listOf("mid"))
+        )
+        registry.registerAddon(lifecycleAddon("unrelated", "1.0.0", events))
+        events.clear()
+
+        registry.unregisterAddon("base")
+
+        assertEquals(
+            listOf("top:1.0.0:disable", "mid:1.0.0:disable", "base:1.0.0:disable"),
+            events
+        )
+        assertNull(registry.getDescriptor("top"))
+        assertNull(registry.getDescriptor("mid"))
+        assertNull(registry.getDescriptor("base"))
+        assertNotNull(registry.getDescriptor("unrelated"))
+    }
+
+    @Test
+    fun unregisterCascadesThroughDeclarativeDependencyBridge() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerDescriptor(
+            AddonDescriptor(
+                AddonDescriptor.ORIGIN_FEATURE_PACK,
+                "bridge-pack",
+                "Bridge pack",
+                "1.0.0",
+                dependencies = listOf("base")
+            )
+        )
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("bridge-pack"))
+        )
+        events.clear()
+
+        registry.unregisterAddon("base")
+
+        assertEquals(listOf("consumer:1.0.0:disable", "base:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("consumer"))
+        assertNull(registry.getDescriptor("base"))
+        assertNotNull(registry.getDescriptor("bridge-pack"))
+    }
+
+    @Test
+    fun unregisterCascadeContinuesAndAggregatesDisableFailures() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon(
+                "mid",
+                "1.0.0",
+                events,
+                failOnDisable = true,
+                dependencies = listOf("base")
+            )
+        )
+        registry.registerAddon(
+            lifecycleAddon(
+                "top",
+                "1.0.0",
+                events,
+                failOnDisable = true,
+                dependencies = listOf("mid")
+            )
+        )
+        events.clear()
+
+        val failure = assertThrows(IllegalStateException::class.java) {
+            registry.unregisterAddon("base")
+        }
+
+        assertEquals(
+            listOf("top:1.0.0:disable", "mid:1.0.0:disable", "base:1.0.0:disable"),
+            events
+        )
+        assertEquals("disable failed: top", failure.message)
+        assertEquals(1, failure.suppressed.size)
+        assertEquals("disable failed: mid", failure.suppressed.single().message)
+        assertNull(registry.getDescriptor("top"))
+        assertNull(registry.getDescriptor("mid"))
+        assertNull(registry.getDescriptor("base"))
+    }
+
+    @Test
+    fun replacementKeepsActiveDependentsRegistered() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("base"))
+        )
+        events.clear()
+
+        registry.registerAddon(lifecycleAddon("base", "2.0.0", events))
+
+        assertEquals(
+            listOf("base:1.0.0:disable", "base:2.0.0:load", "base:2.0.0:enable"),
+            events
+        )
+        assertEquals("2.0.0", registry.getDescriptor("base")?.version)
+        assertNotNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun failedDependencyReplacementRestoresPreviousAddonWithoutCascade() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("base"))
+        )
+        events.clear()
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("base", "2.0.0", events, failOnEnable = true))
+        }
+
+        assertEquals(
+            listOf(
+                "base:1.0.0:disable",
+                "base:2.0.0:load",
+                "base:2.0.0:enable",
+                "base:2.0.0:disable",
+                "base:1.0.0:load",
+                "base:1.0.0:enable"
+            ),
+            events
+        )
+        assertEquals("1.0.0", registry.getDescriptor("base")?.version)
+        assertNotNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun configureDisablingDependencyCascadesActiveDependents() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("base"))
+        )
+        events.clear()
+
+        registry.configure(true, true, listOf("base"))
+
+        assertEquals(listOf("consumer:1.0.0:disable", "base:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("consumer"))
+        assertNull(registry.getDescriptor("base"))
+    }
+
+    @Test
+    fun featurePackRefreshDefersCascadeUntilFinalReconciliation() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        val packDescriptor = AddonDescriptor(
+            AddonDescriptor.ORIGIN_FEATURE_PACK,
+            "shared-pack",
+            "Shared pack",
+            "1.0.0"
+        )
+        registry.registerDescriptor(packDescriptor)
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("shared-pack"))
+        )
+        events.clear()
+
+        registry.removeByOriginForRefresh(AddonDescriptor.ORIGIN_FEATURE_PACK)
+        assertNull(registry.getDescriptor("shared-pack"))
+        assertNotNull(registry.getDescriptor("consumer"))
+
+        registry.registerDescriptor(packDescriptor)
+        registry.reconcileActiveDependencies()
+        assertTrue(events.isEmpty())
+        assertNotNull(registry.getDescriptor("consumer"))
+
+        registry.removeByOriginForRefresh(AddonDescriptor.ORIGIN_FEATURE_PACK)
+        registry.reconcileActiveDependencies()
+        assertEquals(listOf("consumer:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun cascadeRejectsRegistrationDependingOnRemovingAddon() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(
+            lifecycleAddon(
+                "base",
+                "1.0.0",
+                events,
+                onDisableAction = {
+                    registry.registerAddon(
+                        lifecycleAddon(
+                            "late-consumer",
+                            "1.0.0",
+                            events,
+                            dependencies = listOf("base")
+                        )
+                    )
+                }
+            )
+        )
+        events.clear()
+
+        registry.unregisterAddon("base")
+
+        assertEquals(listOf("base:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("base"))
+        assertNull(registry.getDescriptor("late-consumer"))
+    }
+
+    @Test
+    fun nonStrictUnregisterKeepsDependentActive() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.configure(true, false, emptyList())
+        registry.registerAddon(lifecycleAddon("base", "1.0.0", events))
+        registry.registerAddon(
+            lifecycleAddon("consumer", "1.0.0", events, dependencies = listOf("base"))
+        )
+        events.clear()
+
+        registry.unregisterAddon("base")
+
+        assertEquals(listOf("base:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("base"))
+        assertNotNull(registry.getDescriptor("consumer"))
+    }
+
+    @Test
+    fun failedLoadIsCleanedUpAndNotRegistered() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("broken", "1.0.0", events, failOnLoad = true))
+        }
+
+        assertEquals(listOf("broken:1.0.0:load", "broken:1.0.0:disable"), events)
+        assertNull(registry.getDescriptor("broken"))
+    }
+
+    @Test
+    fun failedEnableIsCleanedUpAndNotRegistered() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("broken", "1.0.0", events, failOnEnable = true))
+        }
+
+        assertEquals(
+            listOf("broken:1.0.0:load", "broken:1.0.0:enable", "broken:1.0.0:disable"),
+            events
+        )
+        assertNull(registry.getDescriptor("broken"))
+    }
+
+    @Test
+    fun replacementDisablesPreviousBeforeActivatingNewAddon() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("same", "1.0.0", events))
+
+        registry.registerAddon(lifecycleAddon("same", "2.0.0", events))
+
+        assertEquals(
+            listOf(
+                "same:1.0.0:load",
+                "same:1.0.0:enable",
+                "same:1.0.0:disable",
+                "same:2.0.0:load",
+                "same:2.0.0:enable"
+            ),
+            events
+        )
+        assertEquals("2.0.0", registry.getDescriptor("same")?.version)
+    }
+
+    @Test
+    fun failedReplacementRestoresPreviousAddon() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("same", "1.0.0", events))
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("same", "2.0.0", events, failOnEnable = true))
+        }
+
+        assertEquals(
+            listOf(
+                "same:1.0.0:load",
+                "same:1.0.0:enable",
+                "same:1.0.0:disable",
+                "same:2.0.0:load",
+                "same:2.0.0:enable",
+                "same:2.0.0:disable",
+                "same:1.0.0:load",
+                "same:1.0.0:enable"
+            ),
+            events
+        )
+        assertEquals("1.0.0", registry.getDescriptor("same")?.version)
+    }
+
+    @Test
+    fun failedReplacementRestoresDescriptorOnlyRegistration() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerDescriptor(descriptor("same", EnumSet.allOf(RuntimeMode::class.java)))
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("same", "2.0.0", events, failOnEnable = true))
+        }
+
+        assertEquals("1.0.0", registry.getDescriptor("same")?.version)
+        assertEquals(
+            listOf("same:2.0.0:load", "same:2.0.0:enable", "same:2.0.0:disable"),
+            events
+        )
+    }
+
+    @Test
+    fun failedPreviousDisableRestoresPreviousAddon() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("same", "1.0.0", events, failOnDisable = true))
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.registerAddon(lifecycleAddon("same", "2.0.0", events))
+        }
+
+        assertEquals(
+            listOf(
+                "same:1.0.0:load",
+                "same:1.0.0:enable",
+                "same:1.0.0:disable",
+                "same:1.0.0:load",
+                "same:1.0.0:enable"
+            ),
+            events
+        )
+        assertEquals("1.0.0", registry.getDescriptor("same")?.version)
+    }
+
+    @Test
+    fun registeringSameAddonInstanceIsIdempotent() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        val addon = lifecycleAddon("same", "1.0.0", events)
+
+        registry.registerAddon(addon)
+        registry.registerAddon(addon)
+
+        assertEquals(listOf("same:1.0.0:load", "same:1.0.0:enable"), events)
+    }
+
+    @Test
+    fun removeByOriginRunsAddonLifecycle() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("demo", "1.0.0", events))
+
+        registry.removeByOrigin(AddonDescriptor.ORIGIN_PLUGIN_ADDON)
+
+        assertEquals("demo:1.0.0:disable", events.last())
+        assertNull(registry.getDescriptor("demo"))
+    }
+
+    @Test
+    fun unregisterRemovesDescriptorWhenDisableFails() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("broken", "1.0.0", events, failOnDisable = true))
+
+        assertThrows(IllegalStateException::class.java) {
+            registry.unregisterAddon("broken")
+        }
+
+        assertNull(registry.getDescriptor("broken"))
+    }
+
+    @Test
+    fun shutdownContinuesAfterDisableFailure() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(lifecycleAddon("broken", "1.0.0", events, failOnDisable = true))
+        registry.registerAddon(lifecycleAddon("healthy", "1.0.0", events))
+
+        registry.shutdown()
+
+        assertEquals(0, registry.size())
+        assertTrue(events.contains("broken:1.0.0:disable"))
+        assertTrue(events.contains("healthy:1.0.0:disable"))
+    }
+
+    @Test
+    fun callbackFailureIsLoggedAndDoesNotStopDispatch() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(storyCallbackAddon("broken") {
+            events += "broken"
+            throw IllegalStateException("story callback failed")
+        })
+        registry.registerAddon(storyCallbackAddon("healthy") {
+            events += "healthy"
+        })
+        val records = mutableListOf<LogRecord>()
+        val handler = recordingHandler(records)
+        val registryLogger = Logger.getLogger(AddonRegistry::class.java.name)
+        registryLogger.addHandler(handler)
+
+        try {
+            registry.dispatchStoryEvent("demo", "village", "Demo")
+        } finally {
+            registryLogger.removeHandler(handler)
+        }
+
+        assertEquals(listOf("broken", "healthy"), events)
+        assertTrue(records.any { record ->
+            record.level == Level.WARNING &&
+                record.message.contains("onStoryEvent") &&
+                record.message.contains("broken") &&
+                record.thrown is IllegalStateException
+        })
+    }
+
+    @Test
+    fun callbackCanUnregisterItselfWithoutStoppingDispatch() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        registry.registerAddon(storyCallbackAddon("self") {
+            events += "self"
+            registry.unregisterAddon("self")
+        })
+        registry.registerAddon(storyCallbackAddon("healthy") {
+            events += "healthy"
+        })
+
+        registry.dispatchStoryEvent("demo", "village", "Demo")
+
+        assertEquals(listOf("self", "healthy"), events)
+        assertNull(registry.getDescriptor("self"))
+    }
+
+    @Test
+    fun dispatchRoutesEveryAddonCallbackType() {
+        val registry = AddonRegistry(TestPlatform(RuntimeMode.STANDALONE))
+        val events = mutableListOf<String>()
+        val addonDescriptor = descriptor("callbacks", EnumSet.allOf(RuntimeMode::class.java))
+        registry.registerAddon(object : AINPCAddon {
+            override fun getDescriptor(): AddonDescriptor = addonDescriptor
+            override fun onStoryEvent(eventType: String, scopeId: String, title: String) {
+                events += "story"
+            }
+            override fun onRelationshipChange(npcUuidA: String, npcUuidB: String, newType: String) {
+                events += "relationship"
+            }
+            override fun onNpcStateChange(npcUuid: String, oldState: String, newState: String) {
+                events += "npc-state"
+            }
+            override fun onDailySalaryPaid(npcCount: Int, totalAmount: Int) {
+                events += "salary"
+            }
+            override fun onSeasonChange(worldName: String, oldSeason: String, newSeason: String) {
+                events += "season"
+            }
+        })
+
+        registry.dispatchStoryEvent("demo", "village", "Demo")
+        registry.dispatchRelationshipChange("a", "b", "friend")
+        registry.dispatchNpcStateChange("a", "idle", "working")
+        registry.dispatchSalaryPaid(2, 40)
+        registry.dispatchSeasonChange("world", "Spring", "Summer")
+
+        assertEquals(listOf("story", "relationship", "npc-state", "salary", "season"), events)
+    }
+
     private fun descriptor(id: String, runtimeModes: EnumSet<RuntimeMode>): AddonDescriptor {
         return descriptor(id, AddonType.FEATURE, false, runtimeModes)
     }
@@ -196,6 +871,79 @@ class AddonRegistryTest {
             if (type == AddonType.SCENARIO) listOf("scenarios", "demo") else listOf("demo"),
             listOf()
         )
+    }
+
+    private fun lifecycleAddon(
+        id: String,
+        version: String,
+        events: MutableList<String>,
+        failOnLoad: Boolean = false,
+        failOnEnable: Boolean = false,
+        failOnDisable: Boolean = false,
+        dependencies: List<String> = emptyList(),
+        type: AddonType = AddonType.FEATURE,
+        primaryScenario: Boolean = false,
+        onDisableAction: (() -> Unit)? = null
+    ): AINPCAddon {
+        val addonDescriptor = AddonDescriptor(
+            AddonDescriptor.ORIGIN_PLUGIN_ADDON,
+            id,
+            "Lifecycle $id",
+            version,
+            "",
+            type,
+            primaryScenario,
+            EnumSet.allOf(RuntimeMode::class.java),
+            if (type == AddonType.SCENARIO) listOf("scenarios", "demo") else listOf("demo"),
+            dependencies
+        )
+        return object : AINPCAddon {
+            override fun getDescriptor(): AddonDescriptor = addonDescriptor
+
+            override fun onLoad(api: AINPCPlatformApi) {
+                events += "$id:$version:load"
+                if (failOnLoad) {
+                    throw IllegalStateException("load failed: $id")
+                }
+            }
+
+            override fun onEnable(api: AINPCPlatformApi) {
+                events += "$id:$version:enable"
+                if (failOnEnable) {
+                    throw IllegalStateException("enable failed: $id")
+                }
+            }
+
+            override fun onDisable(api: AINPCPlatformApi) {
+                events += "$id:$version:disable"
+                onDisableAction?.invoke()
+                if (failOnDisable) {
+                    throw IllegalStateException("disable failed: $id")
+                }
+            }
+        }
+    }
+
+    private fun storyCallbackAddon(id: String, callback: () -> Unit): AINPCAddon {
+        val addonDescriptor = descriptor(id, EnumSet.allOf(RuntimeMode::class.java))
+        return object : AINPCAddon {
+            override fun getDescriptor(): AddonDescriptor = addonDescriptor
+            override fun onStoryEvent(eventType: String, scopeId: String, title: String) = callback()
+        }
+    }
+
+    private fun recordingHandler(records: MutableList<LogRecord>): Handler {
+        return object : Handler() {
+            override fun publish(record: LogRecord) {
+                records += record
+            }
+
+            override fun flush() {}
+
+            override fun close() {}
+        }.apply {
+            level = Level.ALL
+        }
     }
 
     private data class TestPlatform(private val runtimeModeValue: RuntimeMode) : AINPCPlatformApi {
@@ -292,6 +1040,22 @@ class AddonRegistryTest {
                 override fun getRelationshipType(npcA: java.util.UUID, npcB: java.util.UUID): String = "stranger"
                 override fun getInteractionCount(npcA: java.util.UUID, npcB: java.util.UUID): Int = 0
                 override fun getTopRelationships(npcUuid: java.util.UUID, limit: Int): List<ro.ainpc.api.RelationshipEntry> = emptyList()
+            }
+        override val npcEconomy: ro.ainpc.api.NpcEconomyApi
+            get() = object : ro.ainpc.api.NpcEconomyApi {
+                override fun getBalance(npcKey: String): Int = 0
+                override fun getSalary(occupation: String?): Int = 0
+                override fun paySalaryForWork(npcUuid: java.util.UUID, npcDbId: Int): Boolean = false
+                override fun deposit(npcKey: String, amount: Int): Boolean = false
+                override fun withdraw(npcKey: String, amount: Int): Boolean = false
+                override fun getBalanceCount(): Int = 0
+                override fun getTotalEconomyValue(): Int = 0
+            }
+        override val storyAuthoring: ro.ainpc.api.StoryAuthoringApi
+            get() = object : ro.ainpc.api.StoryAuthoringApi {
+                override fun getAvailableTemplates(): List<String> = emptyList()
+                override fun getRecentEvents(scopeType: String, scopeId: String, limit: Int): List<ro.ainpc.api.StoryEventSummary> = emptyList()
+                override fun hasPendingEvents(scopeType: String, scopeId: String): Boolean = false
             }
         override val dataDirectory: Path
             get() = Path.of(".")

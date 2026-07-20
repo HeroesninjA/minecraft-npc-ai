@@ -687,14 +687,25 @@ fun formatWandSelectionPart(rawPart: String): String =
 fun formatMappingDraftKind(kind: MappingDraftKind?): String =
     kind?.id() ?: "<nesetat>"
 
-fun isAuditOptionSupported(mode: String, option: String?): Boolean =
-    option.isNullOrBlank() || ((mode == "quest" || mode == "all") && isStrictQuestAuditOption(option))
+fun isAuditOptionSupported(mode: String, option: String?): Boolean {
+    val arguments = mutableListOf(mode)
+    if (!option.isNullOrBlank()) {
+        arguments.add(option)
+    }
+    return parseAuditCommandRequest(arguments) != null
+}
 
 fun isStrictQuestAuditOption(option: String): Boolean =
-    option == "strict" || option == "full" || option == "offline"
+    AuditProfile.fromArgument(option)?.let { profile -> profile != AuditProfile.STANDARD } == true
 
-fun auditModeLabel(mode: String, option: String?): String =
-    if (option.isNullOrBlank()) mode else "$mode $option"
+fun auditModeLabel(mode: String, option: String?): String {
+    val arguments = mutableListOf(mode)
+    if (!option.isNullOrBlank()) {
+        arguments.add(option)
+    }
+    return parseAuditCommandRequest(arguments)?.displayLabel()
+        ?: if (option.isNullOrBlank()) mode else "$mode $option"
+}
 
 fun progressionAliasLogFilter(filter: String?, kind: String): String =
     when (normalizeQuestLogFilter(filter)) {
@@ -1258,6 +1269,35 @@ fun findScenarioForQuestAnchorRow(
     }
     scenario = scenariosBySelector[normalizeQuestObjectiveLookupKey(row.questCode())]
     return scenario ?: scenariosBySelector[normalizeQuestObjectiveLookupKey(lastSelectorSegment(row.templateId()))]
+}
+
+fun validateQuestAnchorStructure(report: AuditReport, label: String, row: QuestAnchorBindingRow) {
+    if (row.playerUuid().isNullOrBlank()) {
+        report.error("$label nu are player_uuid.")
+    }
+    if (row.templateId().isNullOrBlank()) {
+        report.error("$label nu are template_id.")
+    }
+    if (row.objectiveKey().isNullOrBlank()) {
+        report.error("$label nu are objective_key.")
+    }
+    if (row.objectiveType().isNullOrBlank()) {
+        report.warn("$label nu are objective_type.")
+    }
+    if (row.anchorType().isNullOrBlank()) {
+        report.error("$label nu are anchor_type.")
+    }
+    if (row.anchorId().isNullOrBlank()) {
+        report.error("$label nu are anchor_id.")
+    }
+    if (!row.objectiveType().isNullOrBlank() &&
+        !row.anchorType().isNullOrBlank() &&
+        !isQuestAnchorTypeCompatible(row.objectiveType(), row.anchorType())
+    ) {
+        report.error(
+            "$label are tipuri incompatibile: objective_type=${row.objectiveType()}, anchor_type=${row.anchorType()}."
+        )
+    }
 }
 
 fun validateQuestAnchorObjectiveDefinition(

@@ -1,41 +1,56 @@
 # Harta claselor pentru NPC
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-06-21.
+Status: harta derivata din cod.
+Actualizat: 2026-07-15.
 
-Aceasta harta urmareste subsistemul NPC: identitate persistenta, stare si relatii.
+Aceasta harta separa identitatea NPC, contextul temporar si cele doua domenii de relatie.
 
-## Noduri principale
+## Identitate si lifecycle
 
-- `AINPC`;
-- `NPCManager`;
-- `NPCContext`;
-- `NPCPersonality`;
-- `NPCEmotions`;
-- `NPCState`;
-- `NPCAction`;
-- `NPCRelationship`;
-- `NpcVillageSnapshot`;
-- `NpcRepairCounters`;
-- `NpcFactResolver`.
+- `AINPC` - identitate, profil, stare curenta, emotii si legatura cu entitatea;
+- `NPCManager` - incarcare, spawn, reparare, deduplicare si persistenta operationala;
+- `NPCPersonality`, `NPCEmotions`, `NPCState` si `NPCAction` - modelul local de comportament;
+- `NpcVillageSnapshot` si `NpcRepairCounters` - inspectie si reparare, nu autoritate de gameplay.
 
-## Flux
+## Context si dialog
 
-- `AINPC` tine identitatea;
-- `NPCManager` coordoneaza ciclul de viata;
-- `NPCContext` colecteaza semnale;
-- personalitatea, emotiile si starea definesc comportamentul;
-- relatiile si fact resolver-ul leaga NPC-ul de dialog si AI.
+- `NPCContext` - semnale din lume, simulare, environment, playerul activ si text pentru prompt;
+- `ConversationSessionManager` - mapare temporara player -> NPC si timestampul sesiunii;
+- `NpcFactResolver` - raspunsuri deterministe despre NPC;
+- `DialogManager` - istoric, memorii si relatia player-NPC persistata;
+- `DialogueEngine` - selectie fapt, intentie, template si AI optional.
+
+## Relatii distincte
+
+- `DialogManager` citeste si scrie `npc_relationships`, indexat prin NPC si UUID-ul playerului;
+- `RelationshipService` citeste si scrie `npc_npc_relationships`, indexat prin doua UUID-uri de NPC;
+- ambele folosesc modelul `NPCRelationship`, dar nu impart acelasi lifecycle.
+
+## Reactii
+
+- `EmotionManager` aplica si persista efectele dialogului;
+- `StoryReactionService` modifica direct stare, activitate si emotii pentru evenimente story;
+- `ScenarioEngine` poate produce raspunsuri de quest fara `DialogManager`.
 
 ## Reguli
 
-- identitatea NPC-ului trebuie sa ramana persistenta;
-- contextul si emotiile trebuie sa fie inspectabile;
-- repair si audit trebuie sa fie separate de gameplay;
-- AI si dialog citesc starea, nu o inventeaza.
+- AI si dialog citesc starea; nu devin autoritate asupra questului sau story state-ului;
+- sesiunea de conversatie si playerul din `NPCContext` sunt stari temporare diferite;
+- nu combina statisticile player-NPC cu relatiile NPC-NPC;
+- auditul si repararea raman separate de gameplay.
+
+## Surse in cod
+
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/AINPC.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NPCContext.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManager.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/ConversationSessionManager.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/DialogManager.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/RelationshipService.kt`
 
 ## Legaturi
 
-- `architecture/harta-clase-world.md`
+- `architecture/interactiune-dialog-reactie-stack.md`
 - `architecture/harta-clase-ai.md`
+- `architecture/harta-clase-context.md`
 - `reference/harta-clase-cod.md`

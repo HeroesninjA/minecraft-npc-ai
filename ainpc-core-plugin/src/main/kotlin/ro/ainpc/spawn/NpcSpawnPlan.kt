@@ -10,6 +10,12 @@ data class NpcSpawnPlan(
     val age: Int,
     val gender: String,
     val archetype: String,
+    val relationRole: String,
+    val socialRole: String,
+    val ageGroup: String,
+    val routineProfile: String,
+    val questRole: String,
+    val backstorySeed: String,
     val homePlaceId: String,
     val workPlaceId: String,
     val socialPlaceId: String,
@@ -26,6 +32,12 @@ data class NpcSpawnPlan(
     private val cleanedAge = if (age > 0) age else 30
     private val cleanedGender = clean(gender).let { if (it.isBlank()) "male" else it.lowercase(Locale.getDefault()) }
     private val cleanedArchetype = clean(archetype)
+    private val cleanedRelationRole = clean(relationRole)
+    private val cleanedSocialRole = clean(socialRole)
+    private val cleanedAgeGroup = clean(ageGroup)
+    private val cleanedRoutineProfile = clean(routineProfile)
+    private val cleanedQuestRole = clean(questRole)
+    private val cleanedBackstorySeed = clean(backstorySeed)
     private val cleanedHomePlaceId = clean(homePlaceId)
     private val cleanedWorkPlaceId = clean(workPlaceId)
     private val cleanedSocialPlaceId = clean(socialPlaceId)
@@ -42,6 +54,12 @@ data class NpcSpawnPlan(
     fun age(): Int = cleanedAge
     fun gender(): String = cleanedGender
     fun archetype(): String = cleanedArchetype
+    fun relationRole(): String = cleanedRelationRole
+    fun socialRole(): String = cleanedSocialRole
+    fun ageGroup(): String = cleanedAgeGroup
+    fun routineProfile(): String = cleanedRoutineProfile
+    fun questRole(): String = cleanedQuestRole
+    fun backstorySeed(): String = cleanedBackstorySeed
     fun homePlaceId(): String = cleanedHomePlaceId
     fun workPlaceId(): String = cleanedWorkPlaceId
     fun socialPlaceId(): String = cleanedSocialPlaceId
@@ -66,6 +84,12 @@ data class NpcSpawnPlan(
         private var age = 30
         private var gender = "male"
         private var archetype = ""
+        private var relationRole = ""
+        private var socialRole = ""
+        private var ageGroup = ""
+        private var routineProfile = ""
+        private var questRole = ""
+        private var backstorySeed = ""
         private var homePlaceId = ""
         private var workPlaceId = ""
         private var socialPlaceId = ""
@@ -97,6 +121,36 @@ data class NpcSpawnPlan(
 
         fun archetype(archetype: String): Builder {
             this.archetype = archetype
+            return this
+        }
+
+        fun relationRole(relationRole: String): Builder {
+            this.relationRole = relationRole
+            return this
+        }
+
+        fun socialRole(socialRole: String): Builder {
+            this.socialRole = socialRole
+            return this
+        }
+
+        fun ageGroup(ageGroup: String): Builder {
+            this.ageGroup = ageGroup
+            return this
+        }
+
+        fun routineProfile(routineProfile: String): Builder {
+            this.routineProfile = routineProfile
+            return this
+        }
+
+        fun questRole(questRole: String): Builder {
+            this.questRole = questRole
+            return this
+        }
+
+        fun backstorySeed(backstorySeed: String): Builder {
+            this.backstorySeed = backstorySeed
             return this
         }
 
@@ -149,6 +203,12 @@ data class NpcSpawnPlan(
                 age,
                 gender,
                 archetype,
+                relationRole,
+                socialRole,
+                ageGroup,
+                routineProfile,
+                questRole,
+                backstorySeed,
                 homePlaceId,
                 workPlaceId,
                 socialPlaceId,

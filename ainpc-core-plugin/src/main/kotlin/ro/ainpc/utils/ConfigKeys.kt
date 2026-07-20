@@ -32,8 +32,11 @@ object ConfigKeys {
     const val STORY_REACTIONS = "story.npc_reactions_enabled"
     const val STORY_RANDOM_EVENTS = "story.random_events_enabled"
     const val STORY_RANDOM_INTERVAL = "story.random_events_interval_seconds"
+    const val STORY_RANDOM_REVIEW_REQUIRED = "story.random_events_require_review"
 
     const val NPC_MEMORY_DECAY_DAYS = "npc.memory_decay_days"
+
+    const val WORLD_SCAN_BLOCKS_PER_TICK = "world_admin.scan.blocks_per_tick"
 
     const val FEATURE_AI = "features.ai"
     const val FEATURE_ROUTINE = "features.routine"

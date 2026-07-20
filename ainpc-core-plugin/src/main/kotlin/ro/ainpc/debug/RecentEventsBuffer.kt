@@ -1,36 +1,28 @@
 package ro.ainpc.debug
 
-import org.bukkit.plugin.Plugin
+import org.bukkit.event.Cancellable
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedDeque
 
-class RecentEventsBuffer(private val plugin: Plugin) {
+class RecentEventsBuffer {
     private val buffer: ConcurrentLinkedDeque<RecentEvent> = ConcurrentLinkedDeque()
-    private var capacity: Int = 100
-
-    private val AINPC_EVENT_PREFIXES = setOf(
-        "AINPC", "Progression", "Dialog", "Story",
-        "WorldContext", "NPCContext", "ContextSignal", "PlayerContext"
-    )
+    @Volatile
+    private var capacity: Int = DEFAULT_CAPACITY
 
     fun configure(maxCapacity: Int) {
-        capacity = maxOf(10, maxCapacity)
+        capacity = maxCapacity.coerceIn(MIN_CAPACITY, MAX_CAPACITY)
         trimToCapacity()
     }
 
     fun addEvent(event: org.bukkit.event.Event) {
-        if (capacity <= 0) return
-        val name = event.eventName
-        if (!AINPC_EVENT_PREFIXES.any { name.startsWith(it) }) return
         buffer.addLast(
             RecentEvent(
-                UUID.randomUUID(),
                 System.currentTimeMillis(),
-                name,
-                event.isAsynchronous
+                event.eventName,
+                event.isAsynchronous,
+                (event as? Cancellable)?.isCancelled,
             )
         )
         trimToCapacity()
@@ -51,20 +43,20 @@ class RecentEventsBuffer(private val plugin: Plugin) {
     }
 
     data class RecentEvent(
-        val eventId: UUID,
         val createdAtMillis: Long,
         val eventName: String,
-        val isAsync: Boolean
+        val isAsync: Boolean,
+        val isCancelled: Boolean?,
     )
 
     private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-    fun buildRecentEventsText(): String {
+    fun buildRecentApiEventsText(): String {
         val sb = StringBuilder()
         val events = snapshot()
-        sb.append("=== Recent Public Events (in-memory buffer) ===\n\n")
+        sb.append("=== Recent AINPC API Events (in-memory buffer) ===\n\n")
         if (events.isEmpty()) {
-            sb.append("Niciun eveniment public inregistrat in buffer.\n")
+            sb.append("Niciun eveniment API AINPC inregistrat in buffer.\n")
             sb.append("Asigura-te ca events.public_api_enabled = true si ca exista activitate.\n")
             return sb.toString()
         }
@@ -77,9 +69,16 @@ class RecentEventsBuffer(private val plugin: Plugin) {
                 .format(DATE_FORMAT)
             sb.append("#${index + 1} [$time] ${entry.eventName}")
             if (entry.isAsync) sb.append(" [ASYNC]")
+            if (entry.isCancelled == true) sb.append(" [CANCELLED]")
             sb.append("\n")
         }
-        sb.append("\n--- Sfarsit buffer evenimente ---\n")
+        sb.append("\n--- Sfarsit buffer evenimente API ---\n")
         return sb.toString()
+    }
+
+    companion object {
+        const val DEFAULT_CAPACITY = 100
+        const val MIN_CAPACITY = 10
+        const val MAX_CAPACITY = 1_000
     }
 }

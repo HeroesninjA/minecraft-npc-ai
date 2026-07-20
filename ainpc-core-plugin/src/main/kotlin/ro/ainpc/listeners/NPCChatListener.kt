@@ -217,10 +217,14 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         if (handleSpecialGuiTextInput(player, request, normalized)) {
             return
         }
-        if (normalized.equals("clear", ignoreCase = true) ||
-            normalized.equals("cancel", ignoreCase = true) ||
+        if (normalized.equals("cancel", ignoreCase = true) ||
             normalized.equals("anuleaza", ignoreCase = true)
         ) {
+            messages().send(player, "&7Input anulat pentru &f${request.title()}&7.")
+            reopenAfterTextInput(player, request)
+            return
+        }
+        if (normalized.equals("clear", ignoreCase = true)) {
             plugin.guiService.setCreatorFormValue(player, request.formKey(), null)
             messages().send(player, "&7Campul &f${request.title()} &7a fost curatat.")
             reopenAfterTextInput(player, request)
@@ -405,7 +409,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     }
 
     private fun reopenAfterTextInput(player: Player, request: ro.ainpc.gui.GuiService.TextInputRequest) {
-        if (request.returnKey() == ro.ainpc.gui.GuiKey.QUEST_DETAIL && request.returnSelector().isNotBlank()) {
+        if (request.returnKey() == ro.ainpc.gui.GuiKey.QUEST_DETAIL && request.returnSelector()?.isNotBlank() == true) {
             plugin.guiService.openQuestDetail(player, request.returnSelector(), plugin.guiService.getQuestDetailFilter(player))
             return
         }

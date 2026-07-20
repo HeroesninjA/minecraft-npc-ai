@@ -10,6 +10,7 @@ class SchedulerCoordinator(
     private val tasks = mutableListOf<BukkitTask>()
 
     fun start() {
+        scheduleEnvironmentEngine()
         scheduleInitialNpcRestore()
         scheduleQuestProgressResume()
         scheduleQuestProgressPersistence()
@@ -37,11 +38,36 @@ class SchedulerCoordinator(
         tasks.clear()
     }
 
+    private fun observedTask(taskName: String, action: () -> Unit): Runnable {
+        val metricName = RuntimeMetricNames.scheduler(taskName)
+        return Runnable {
+            val timer = plugin.performanceMonitor.timer(metricName)
+            timer.begin()
+            try {
+                action()
+            } catch (error: Throwable) {
+                timer.fail()
+                throw error
+            } finally {
+                timer.end()
+            }
+        }
+    }
+
+    private fun scheduleEnvironmentEngine() {
+        tasks.add(plugin.server.scheduler.runTaskTimer(
+            plugin,
+            observedTask("environment") { plugin.environmentEngine.tick() },
+            20L * 30,
+            20L * 60
+        ))
+    }
+
     private fun scheduleObjectiveCleanup() {
         val cleanupSeconds = maxOf(60, plugin.config.getInt("quest.cleanup_interval_seconds", 300))
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.scenarioEngine.cleanupOrphanedObjectives() },
+            observedTask("objective_cleanup") { plugin.scenarioEngine.cleanupOrphanedObjectives() },
             20L * cleanupSeconds,
             20L * cleanupSeconds
         ))
@@ -71,7 +97,7 @@ class SchedulerCoordinator(
         if (featureEnabled("features.simulation", false) && plugin.config.getBoolean("simulation.enabled", false)) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
-                Runnable { plugin.npcManager.runLifeSimulationTick() },
+                observedTask("life_simulation") { plugin.npcManager.runLifeSimulationTick() },
                 20L * 15,
                 20L * simulationTickSeconds
             ))
@@ -84,7 +110,7 @@ class SchedulerCoordinator(
         if (routineEnabled) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
-                Runnable {
+                observedTask("routine") {
                     val summary = plugin.routineCoordinator.tick()
                     if (plugin.config.getBoolean("debug.enabled", false)) {
                         val (batchIdx, batchTotal) = plugin.routineService.getBatchProgress()
@@ -108,7 +134,7 @@ class SchedulerCoordinator(
     private fun scheduleEmotionDecay() {
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.emotionManager.decayEmotions() },
+            observedTask("emotion_decay") { plugin.emotionManager.decayEmotions() },
             20L * 60,
             20L * 60
         ))
@@ -117,7 +143,7 @@ class SchedulerCoordinator(
     private fun scheduleMemoryCleanup() {
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.databaseManager.runAsync { plugin.memoryManager.cleanOldMemories() } },
+            observedTask("memory_cleanup") { plugin.databaseManager.runAsync { plugin.memoryManager.cleanOldMemories() } },
             20L * 60 * 60,
             20L * 60 * 60
         ))
@@ -126,7 +152,7 @@ class SchedulerCoordinator(
     private fun scheduleNpcStatePersistence() {
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable {
+            observedTask("npc_state_persistence") {
                 plugin.npcManager.syncAllNPCEntityState()
                 plugin.databaseManager.runAsync {
                     plugin.npcManager.saveAllNPCs(syncFromEntity = false)
@@ -144,7 +170,7 @@ class SchedulerCoordinator(
         if (routineEnabled) {
             tasks.add(plugin.server.scheduler.runTaskTimer(
                 plugin,
-                Runnable {
+                observedTask("social_coordination") {
                     if (!plugin.config.getBoolean("routine.coordinator_only", true)) {
                         plugin.socialCoordinator.tick()
                     }
@@ -159,7 +185,7 @@ class SchedulerCoordinator(
         if (!plugin.config.getBoolean(ConfigKeys.HOT_RELOAD, false)) return
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
-            Runnable { plugin.packFileWatcher.tick() },
+            observedTask("pack_file_watcher") { plugin.packFileWatcher.tick() },
             20L * 15,
             20L * 10
         ))
@@ -170,7 +196,7 @@ class SchedulerCoordinator(
         val intervalSeconds = maxOf(120, plugin.config.getInt(ConfigKeys.STORY_RANDOM_INTERVAL, 600))
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.randomWorldEventService.tick() },
+            observedTask("random_world_events") { plugin.randomWorldEventService.tick() },
             20L * 60,
             20L * intervalSeconds
         ))
@@ -181,7 +207,7 @@ class SchedulerCoordinator(
         val intervalSeconds = maxOf(3600, plugin.config.getInt(ConfigKeys.ECONOMY_INTEREST_CHECK, 7200))
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
-            Runnable { plugin.bankingService.applyInterest() },
+            observedTask("bank_interest") { plugin.bankingService.applyInterest() },
             20L * intervalSeconds,
             20L * intervalSeconds
         ))
@@ -192,7 +218,7 @@ class SchedulerCoordinator(
         val intervalSeconds = maxOf(120, plugin.config.getInt(ConfigKeys.ECONOMY_SALARY_INTERVAL, 600))
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
-            Runnable { plugin.npcEconomyService.paySalaries() },
+            observedTask("npc_salary") { plugin.npcEconomyService.paySalaries() },
             20L * intervalSeconds,
             20L * intervalSeconds
         ))
@@ -202,7 +228,7 @@ class SchedulerCoordinator(
         if (!plugin.config.getBoolean(ConfigKeys.MCP_WRITE_TOOLS, false)) return
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.mcpCommandQueue.tick() },
+            observedTask("mcp_command_queue") { plugin.mcpCommandQueue.tick() },
             20L * 10,
             20L * 5
         ))
@@ -212,7 +238,7 @@ class SchedulerCoordinator(
         val decaySeconds = maxOf(60, plugin.config.getInt("relationship.decay_interval_seconds", 300))
         tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
             plugin,
-            Runnable { plugin.relationshipService.applyDecay() },
+            observedTask("relationship_decay") { plugin.relationshipService.applyDecay() },
             20L * decaySeconds,
             20L * decaySeconds
         ))
@@ -221,7 +247,7 @@ class SchedulerCoordinator(
     private fun scheduleVillageRebalance() {
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.npcManager.rebalanceLoadedVillages() },
+            observedTask("village_rebalance") { plugin.npcManager.rebalanceLoadedVillages() },
             20L * 45,
             20L * 120
         ))
@@ -241,7 +267,7 @@ class SchedulerCoordinator(
         val saveSeconds = maxOf(30, plugin.config.getInt("quest.progress_save_seconds", 120))
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable { plugin.scenarioEngine.flushQuestProgress() },
+            observedTask("quest_progress_persistence") { plugin.scenarioEngine.flushQuestProgress() },
             20L * 30,
             20L * saveSeconds
         ))
@@ -254,7 +280,7 @@ class SchedulerCoordinator(
         val refreshSeconds = maxOf(2, plugin.config.getInt("quest.tracking_refresh_seconds", 5))
         tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
-            Runnable {
+            observedTask("quest_tracking") {
                 val updated = plugin.scenarioEngine.tickQuestTrackingMarkers()
                 if (updated > 0 && plugin.config.getBoolean("debug.enabled", false)) {
                     plugin.logger.info("[Debug] Quest tracking refresh: updated=$updated")

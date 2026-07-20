@@ -5,6 +5,7 @@ api-version: '1.21'
 authors: [v0]
 description: Plugin Minecraft cu NPC-uri AI care au poveste, emotii, amintiri si dialog realist
 website: https://v0.dev
+softdepend: [Vault]
 
 commands:
   ainpc:
@@ -79,6 +80,12 @@ permissions:
   ainpc.gui.interact:
     description: Permite deschiderea GUI-ului de interactiuni NPC
     default: true
+  ainpc.gui.relationship:
+    description: Permite deschiderea GUI-ului de relatii NPC
+    default: op
+  ainpc.gui.npc:
+    description: Permite deschiderea GUI-ului de memorii NPC fara ainpc.info
+    default: op
   ainpc.gui.routine:
     description: Permite deschiderea GUI-ului de rutine NPC
     default: op
@@ -96,6 +103,9 @@ permissions:
     default: op
   ainpc.gui.debug:
     description: Permite deschiderea GUI-ului debug
+    default: op
+  ainpc.gui.mcp:
+    description: Permite deschiderea GUI-ului administrativ MCP
     default: op
   ainpc.creator:
     description: Permite accesul la modul creator (mapping si quest design)

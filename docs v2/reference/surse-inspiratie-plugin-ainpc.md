@@ -22,6 +22,5 @@ Acesta este rezumatul surselor publice de inspiratie pentru directia AINPC.
 
 ## Legaturi
 
-- `reference/documentatie-lipsa.md`
 - `reference/addon-developer-guide.md`
 - `planning/questuri-avansate-v2.md`

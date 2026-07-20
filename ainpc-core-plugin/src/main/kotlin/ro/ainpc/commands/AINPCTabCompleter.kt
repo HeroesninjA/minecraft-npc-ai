@@ -7,6 +7,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.npc.AINPC
+import ro.ainpc.spawn.PopulationPlanRepository
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldNodeType
@@ -24,36 +25,25 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         alias: String,
         args: Array<String>
     ): List<String> {
-        if ("npcquest".equals(command.name, ignoreCase = true)
-            || "quest".equals(command.name, ignoreCase = true)
-            || "progression".equals(command.name, ignoreCase = true)
-            || "progress".equals(command.name, ignoreCase = true)
-            || "contract".equals(command.name, ignoreCase = true)
-            || "contracts".equals(command.name, ignoreCase = true)
-            || "duty".equals(command.name, ignoreCase = true)
-            || "duties".equals(command.name, ignoreCase = true)
-            || "sarcina".equals(command.name, ignoreCase = true)
-            || "sarcini".equals(command.name, ignoreCase = true)
-            || "bounty".equals(command.name, ignoreCase = true)
-            || "bounties".equals(command.name, ignoreCase = true)
-            || "event".equals(command.name, ignoreCase = true)
-            || "events".equals(command.name, ignoreCase = true)
-            || "tutorial".equals(command.name, ignoreCase = true)
-            || "tutorials".equals(command.name, ignoreCase = true)
-            || "onboarding".equals(command.name, ignoreCase = true)
-            || "ritual".equals(command.name, ignoreCase = true)
-            || "rituals".equals(command.name, ignoreCase = true)
-            || "ceremony".equals(command.name, ignoreCase = true)
-            || "ceremonies".equals(command.name, ignoreCase = true)
-        ) {
-            return if (isProgressionAliasCommand(command.name)) completeProgressionAliasArgs(args) else completeQuestArgs(
-                args
-            )
+        when (AINPCCommandCatalog.resolveDirectCommand(command.name)) {
+            AINPCDirectCommandRoute.QUEST,
+            AINPCDirectCommandRoute.PROGRESSION -> return completeQuestArgs(args)
+
+            AINPCDirectCommandRoute.CONTRACT,
+            AINPCDirectCommandRoute.DUTY,
+            AINPCDirectCommandRoute.BOUNTY,
+            AINPCDirectCommandRoute.EVENT,
+            AINPCDirectCommandRoute.TUTORIAL,
+            AINPCDirectCommandRoute.RITUAL -> return completeProgressionAliasArgs(args)
+
+            AINPCDirectCommandRoute.MAIN, null -> Unit
         }
 
         val completions = ArrayList<String>()
         if (args.size == 1) {
-            completions.addAll(filterStartsWith(generationActions(SUBCOMMANDS), args[0]))
+            completions.addAll(
+                filterStartsWith(generationActions(AINPCCommandCatalog.suggestedSubcommands), args[0])
+            )
         } else if (args.size >= 2) {
             val subCommand = args[0].lowercase()
             when (subCommand) {
@@ -235,16 +225,30 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                         if (args.size == 3) completions.addAll(getRegionIdsSafe(args[2]))
                         else if (args.size == 4) completions.addAll(filterStartsWith(listOf("6", "8", "10", "12"), args[3]))
                         else if (args.size == 5) completions.add("<seed>")
+                    } else if (args.size == 3 && "list".equals(args[1], true)) {
+                        completions.addAll(getRegionIdsSafe(args[2]))
+                    } else if (args.size == 3 &&
+                        ("inspect".equals(args[1], true) || "select".equals(args[1], true))
+                    ) {
+                        completions.addAll(getPopulationPlanIdsSafe(args[2]))
                     }
                 }
 
                 "audit" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(AUDIT_MODES, args[1]))
-                    else if (args.size == 3 && ("quest".equals(args[1], true) || "all".equals(
-                            args[1],
-                            true
-                        ))
-                    ) completions.addAll(filterStartsWith(AUDIT_QUEST_OPTIONS, args[2]))
+                    else if (args.size == 3) {
+                        val options = mutableListOf(AUDIT_JSON_OPTION)
+                        if ("quest".equals(args[1], true) || "all".equals(args[1], true)) {
+                            options.addAll(AUDIT_PROFILE_OPTIONS)
+                        }
+                        completions.addAll(filterStartsWith(options, args[2]))
+                    } else if (
+                        args.size == 4 &&
+                        ("quest".equals(args[1], true) || "all".equals(args[1], true)) &&
+                        AuditProfile.fromArgument(args[2]) != null
+                    ) {
+                        completions.addAll(filterStartsWith(listOf(AUDIT_JSON_OPTION), args[3]))
+                    }
                 }
 
                 "economy" -> {
@@ -262,7 +266,20 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     }
                 }
 
-                "debugdump" -> if (args.size == 2) completions.addAll(filterStartsWith(DEBUG_DUMP_SCOPES, args[1]))
+                "debugdump" -> {
+                    if (args.size == 2) {
+                        completions.addAll(filterStartsWith(DEBUG_DUMP_SCOPES, args[1]))
+                    } else if (args.size in 3..4 && args[1].lowercase() in DEBUG_DUMP_EXPORT_SCOPES) {
+                        val current = args.last()
+                        val priorArguments = args.drop(2).dropLast(1)
+                        if (priorArguments.none { it.equals(DEBUG_DUMP_PRIVACY_OPTION, ignoreCase = true) }) {
+                            completions.addAll(filterStartsWith(listOf(DEBUG_DUMP_PRIVACY_OPTION), current))
+                        }
+                        if (priorArguments.none { !it.equals(DEBUG_DUMP_PRIVACY_OPTION, ignoreCase = true) }) {
+                            completions.addAll(getOnlinePlayerNames(current))
+                        }
+                    }
+                }
                 "routine" -> {
                     if (args.size == 2) completions.addAll(filterStartsWith(ROUTINE_ACTIONS, args[1]))
                     else if (args.size == 3 && "status".equals(args[1], true)) {
@@ -297,10 +314,10 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             completions.addAll(getNPCNames(args[3]))
         } else if (args.size == 3 && "region".equals(args[1], true)) completions.addAll(getRegionIds(args[2]))
         else if (args.size == 3 && "place".equals(args[1], true)) completions.addAll(getPlaceIds(args[2]))
-        else if (args.size == 3 && "events".equals(args[1], true)) {
+        else if (args.size == 3 && args[1].lowercase() in listOf("events", "pending", "author")) {
             completions.addAll(getRegionIds(args[2]))
             completions.addAll(getPlaceIds(args[2]))
-        } else if (args.size == 4 && "events".equals(args[1], true)) completions.addAll(
+        } else if (args.size == 4 && args[1].lowercase() in listOf("events", "pending")) completions.addAll(
             filterStartsWith(
                 listOf(
                     "5",
@@ -836,6 +853,17 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         return if (plugin?.platform?.worldAdmin == null) listOf("<regionId>") else getRegionIds(prefix)
     }
 
+    private fun getPopulationPlanIdsSafe(prefix: String): List<String> {
+        val dataFolder = plugin?.dataFolder?.toPath()
+            ?: return filterStartsWith(listOf("<planId>"), prefix)
+        val planIds = runCatching {
+            PopulationPlanRepository(
+                dataFolder.resolve(PopulationPlanRepository.DIRECTORY_NAME)
+            ).list().map { stored -> stored.plan.planId }.distinct()
+        }.getOrDefault(emptyList())
+        return filterStartsWith(planIds, prefix)
+    }
+
     private fun getPlaceIds(prefix: String): List<String> {
         return (plugin?.platform?.worldAdmin?.places ?: return listOf()).stream()
             .map(WorldPlaceInfo::id)
@@ -873,45 +901,6 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     }
 
     companion object {
-        private val SUBCOMMANDS = listOf(
-            "create",
-            "delete",
-            "delete-id",
-            "duplicates",
-            "repair",
-            "info",
-            "gui",
-            "authoring",
-            "quest",
-            "scenario",
-            "progression",
-            "contract",
-            "duty",
-            "bounty",
-            "event",
-            "tutorial",
-            "ritual",
-            "demo",
-            "build",
-            "world",
-            "patch",
-            "wand",
-            "map",
-            "story",
-            "migration",
-            "population",
-            "audit",
-            "debugdump",
-            "list",
-            "family",
-            "routine",
-            "mood",
-            "version",
-            "tp",
-            "reload",
-            "test",
-            "economy"
-        )
         private val GUI_MODES = listOf(
             "main",
             "quest",
@@ -1077,12 +1066,17 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "task25ops",
             "ops25"
         )
-        private val AUDIT_MODES = listOf("all", "npc", "world", "db", "spawn", "quest", "wand")
-        private val AUDIT_QUEST_OPTIONS = listOf("strict", "full", "offline")
+        private val AUDIT_MODES = AuditMode.values().map { mode -> mode.argument }
+        private val AUDIT_PROFILE_OPTIONS = AuditProfile.values()
+            .filter { profile -> profile != AuditProfile.STANDARD }
+            .map { profile -> profile.argument }
+        private const val AUDIT_JSON_OPTION = "json"
         private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai", "mcp", "scenario")
+        private val DEBUG_DUMP_EXPORT_SCOPES = setOf("all", "npc")
+        private const val DEBUG_DUMP_PRIVACY_OPTION = "privacy-safe"
         private val MIGRATION_TARGETS = listOf("households")
         private val MIGRATION_MODES = listOf("dryrun", "apply")
-        private val POPULATION_ACTIONS = listOf("plan", "inspect")
+        private val POPULATION_ACTIONS = listOf("plan", "list", "inspect", "select", "stats")
         private val REPAIR_TARGETS =
             listOf("duplicates", "households", "npc-bindings", "mapping-metadata", "batch", "spawn-batch")
         private val REPAIR_MODES = listOf("dryrun", "apply")
@@ -1292,7 +1286,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 "use_item",
                 "equip_item"
             )
-        private val STORY_MODES = listOf("context", "region", "place", "events")
+        private val STORY_MODES = listOf("context", "region", "place", "events", "author", "pending", "publish", "discard")
         private val REGION_ACTIONS = listOf("info", "create", "edit", "remove", "delete", "summary", "identity", "nodes", "places")
         private val OUTSIDE_ACTIONS = listOf("types", "blueprint", "plan", "report", "validate")
         private val OUTSIDE_TYPE_ACTIONS = listOf("blueprint", "plan")

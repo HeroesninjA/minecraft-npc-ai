@@ -1,14 +1,22 @@
+plugins {
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
 description = 'AINPC Core Plugin'
 
 dependencies {
     api project(':ainpc-api')
 
     compileOnly "io.papermc.paper:paper-api:${paperVersion}"
+    // WorldEdit API is resolved at runtime via reflection if WorldEdit is installed
+    // No compile-time dependency needed
 
     implementation "com.google.code.gson:gson:${gsonVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
     implementation "com.zaxxer:HikariCP:${hikariVersion}"
     implementation "com.mysql:mysql-connector-j:${mysqlConnectorVersion}"
+    // kotlinx.serialization for template files
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3"
     testImplementation "io.papermc.paper:paper-api:${paperVersion}"
 }
 

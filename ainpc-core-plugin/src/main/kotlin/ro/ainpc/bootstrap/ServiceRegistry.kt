@@ -57,6 +57,12 @@ import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
 import ro.ainpc.world.NpcWorldBindingService
 import ro.ainpc.world.mapping.MappingWandService
+import ro.ainpc.world.scan.VanillaVillageScanService
+import ro.ainpc.worldgen.WorldGenService
+import ro.ainpc.worldgen.WorldGenServiceProvider
+import ro.ainpc.worldgen.BlockExecutorRegistry
+import ro.ainpc.worldgen.NativeBlockExecutorProvider
+import ro.ainpc.worldgen.WorldEditBlockExecutorProvider
 import java.nio.file.Path
 import java.util.logging.Level
 
@@ -101,6 +107,8 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
     lateinit var routineCoordinator: RoutineCoordinator
         private set
     lateinit var autoSettlementGenerator: AutoSettlementGenerator
+        private set
+    lateinit var vanillaVillageScanService: VanillaVillageScanService
         private set
     lateinit var npcSpawnOrchestrator: NpcSpawnOrchestrator
         private set
@@ -156,6 +164,10 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         private set
     lateinit var recentEventsBuffer: RecentEventsBuffer
         private set
+    lateinit var worldGenService: WorldGenService
+        private set
+    lateinit var worldGenServiceProvider: WorldGenServiceProvider
+        private set
     lateinit var listenerRegistry: ListenerRegistry
         private set
     lateinit var packFileWatcher: PackFileWatcher
@@ -192,12 +204,18 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
 
     private fun phase1ConfigAndResources() {
         val log = plugin.logger
-        databaseManager = DatabaseManager(plugin)
+        performanceMonitor = PerformanceMonitor(plugin)
+        databaseManager = DatabaseManager(plugin, performanceMonitor)
         messageUtils = MessageUtils(plugin)
         platform = AINPCPlatform(plugin)
         platform.initialize()
         npcWorldBindingService = NpcWorldBindingService(plugin)
         householdPersistenceService = HouseholdPersistenceService(plugin)
+        
+        // Register block executors
+        BlockExecutorRegistry.register(NativeBlockExecutorProvider(plugin))
+        BlockExecutorRegistry.register(WorldEditBlockExecutorProvider(plugin))
+        
         log.info("[Faza 1/10] Configuratie si resurse incarcate")
     }
 
@@ -219,7 +237,6 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         ollamaService = OllamaService(plugin)
         val snapshotPath = Path.of(McpRuntimeConfig.from(plugin.config).snapshotPath)
         snapshotProducer = RuntimeSnapshotProducer(plugin, snapshotPath).also { it.start() }
-        performanceMonitor = PerformanceMonitor(plugin)
         mcpCommandQueue = McpCommandQueue(plugin)
         mcpCommandQueue.start()
         mcpRuntimeClient = McpRuntimeClientFactory.create(plugin)
@@ -242,6 +259,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         routineService = RoutineService(plugin)
         routineCoordinator = RoutineCoordinator(plugin)
         autoSettlementGenerator = AutoSettlementGenerator(plugin)
+        vanillaVillageScanService = VanillaVillageScanService(plugin)
         npcSpawnOrchestrator = NpcSpawnOrchestrator(plugin)
         dialogManager = DialogManager(plugin)
         conversationSessionManager = ConversationSessionManager(plugin)
@@ -284,8 +302,10 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         relationshipService = RelationshipService(plugin)
         reputationService = ReputationService(plugin)
         socialCoordinator = SocialCoordinator(plugin)
-        recentEventsBuffer = RecentEventsBuffer(plugin)
-        recentEventsBuffer.configure(plugin.config.getInt("events.debug_recent_event_buffer", 100))
+        recentEventsBuffer = RecentEventsBuffer()
+        recentEventsBuffer.configure(
+            plugin.config.getInt("events.debug_recent_event_buffer", RecentEventsBuffer.DEFAULT_CAPACITY)
+        )
         plugin.logger.info("[Faza 7/10] Engine-uri si servicii de domeniu initializate")
     }
 
@@ -319,6 +339,15 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         packFileWatcher.start()
         schedulerCoordinator = SchedulerCoordinator(plugin)
         schedulerCoordinator.start()
+
+        // Initialize WorldGen service (physical building)
+        worldGenServiceProvider = WorldGenServiceProvider(plugin)
+        worldGenService = worldGenServiceProvider.initialize(
+            worldAdmin = platform.worldAdminService,
+            executorPreference = plugin.config.getStringList("worldgen.executor_preference") ?: listOf("worldedit", "native")
+        )
+        plugin.logger.info("[Faza 9/10] WorldGen Service initializat (${worldGenService.executorId})")
+
         plugin.server.servicesManager.register(
             ro.ainpc.api.AINPCPlatformApi::class.java,
             platform, plugin, org.bukkit.plugin.ServicePriority.Normal
@@ -341,6 +370,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
 
     fun shutdown() {
         val log = plugin.logger
+        if (::vanillaVillageScanService.isInitialized) vanillaVillageScanService.shutdown()
         if (::packFileWatcher.isInitialized) packFileWatcher.stop()
         if (::schedulerCoordinator.isInitialized) schedulerCoordinator.stop()
         if (::scenarioEngine.isInitialized) {
@@ -373,6 +403,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         }
         if (::platform.isInitialized) platform.shutdown()
         if (::guiService.isInitialized) guiService.sessions().closeAll()
+        if (::worldGenServiceProvider.isInitialized) worldGenServiceProvider.shutdown()
         plugin.server.servicesManager.unregisterAll(plugin)
         log.info("AI NPC Plugin dezactivat!")
     }
@@ -383,6 +414,13 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         plugin.saveConfig()
         loadQuestConfig()
         messageUtils = MessageUtils(plugin)
+        performanceMonitor.reloadFromConfig()
+        if (::vanillaVillageScanService.isInitialized) vanillaVillageScanService.reloadFromConfig()
+        if (::recentEventsBuffer.isInitialized) {
+            recentEventsBuffer.configure(
+                plugin.config.getInt("events.debug_recent_event_buffer", RecentEventsBuffer.DEFAULT_CAPACITY)
+            )
+        }
         if (::platform.isInitialized) platform.reloadFromConfig()
         openAIService.reloadFromConfig()
         if (::aiOrchestrationService.isInitialized) {

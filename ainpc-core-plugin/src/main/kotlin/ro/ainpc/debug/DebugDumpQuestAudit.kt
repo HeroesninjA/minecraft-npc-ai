@@ -139,6 +139,11 @@ object DebugDumpQuestAudit {
             if (!supportedTypes.contains(type)) {
                 errors.add("$templateId are $entryKind cu tip nesuportat: ${entry.type}.")
             }
+            if (entryKind == "objective" && ro.ainpc.engine.ObjectiveTypeAliasRegistry.isDeprecated(entry.type)) {
+                val recommended = ro.ainpc.engine.ObjectiveTypeAliasRegistry.recommendedType(entry.type)
+                warnings.add("$templateId are $entryKind cu alias deprecated '${entry.type}'" +
+                    if (recommended != null) ". Foloseste '$recommended'." else ".")
+            }
             if (entryKind == "objective") {
                 auditQuestSemanticReference(templateId, entry, type, worldSemanticIndex, warnings)
             }
@@ -416,7 +421,7 @@ object DebugDumpQuestAudit {
         }
 
         auditTrackedQuestPersistence(databaseManager, errors, warnings)
-        auditQuestAnchorPersistence(databaseManager, errors, warnings)
+        auditQuestAnchorPersistence(databaseManager, plugin, errors, warnings)
         auditStoredQuestJson(databaseManager, warnings)
         auditStoryProgressionConsistency(plugin, databaseManager, warnings)
     }
@@ -504,6 +509,7 @@ object DebugDumpQuestAudit {
 
     private fun auditQuestAnchorPersistence(
         databaseManager: DatabaseManager,
+        plugin: AINPCPlugin,
         errors: MutableList<String>,
         warnings: MutableList<String>,
     ) {
@@ -615,6 +621,46 @@ object DebugDumpQuestAudit {
             }
         } catch (exception: SQLException) {
             warnings.add("Nu pot valida timestamp-urile din quest_anchor_bindings: ${exception.message}")
+        }
+
+        val worldAdmin = plugin.platform.worldAdmin
+        val mappingAnchorSql = """
+            SELECT DISTINCT anchor_type, anchor_id
+            FROM quest_anchor_bindings
+            WHERE anchor_type IN ('region','place','node')
+              AND anchor_id IS NOT NULL AND anchor_id != ''
+            ORDER BY anchor_type, anchor_id
+            LIMIT 200
+        """.trimIndent()
+        try {
+            databaseManager.prepareStatement(mappingAnchorSql).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    var orphanCount = 0
+                    while (resultSet.next()) {
+                        val anchorType = resultSet.getString("anchor_type")
+                        val anchorId = resultSet.getString("anchor_id")
+                        val exists = when (anchorType.lowercase()) {
+                            "region" -> worldAdmin.getRegion(anchorId) != null
+                            "place" -> worldAdmin.getPlace(anchorId) != null
+                            "node" -> worldAdmin.getNode(anchorId) != null
+                            else -> true
+                        }
+                        if (!exists) {
+                            orphanCount++
+                            if (orphanCount <= 10) {
+                                warnings.add(
+                                    "Ancora orfana in mapping: $anchorType:$anchorId nu exista in world admin."
+                                )
+                            }
+                        }
+                    }
+                    if (orphanCount > 10) {
+                        warnings.add("... si inca ${orphanCount - 10} ancore orfane in mapping.")
+                    }
+                }
+            }
+        } catch (exception: SQLException) {
+            warnings.add("Nu pot valida ancorele in world mapping: ${exception.message}")
         }
     }
 

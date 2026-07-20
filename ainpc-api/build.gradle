@@ -1,6 +1,81 @@
 description = 'AINPC API'
+version = rootProject.property('apiVersion').toString()
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:${paperVersion}"
     testImplementation "io.papermc.paper:paper-api:${paperVersion}"
+}
+
+def apiAbiScript = rootProject.file('scripts/api-abi-check.ps1')
+def apiAbiBaseline = project.file('abi/ainpc-api-abi-baseline.json')
+def apiJarFile = layout.buildDirectory.file("libs/${project.name}-${project.version}.jar").get().asFile
+def apiAbiReport = layout.buildDirectory.file('reports/abi/ainpc-api-abi-report.json').get().asFile
+def apiAbiSnapshot = layout.buildDirectory.file('reports/abi/ainpc-api-abi-report.txt').get().asFile
+def isWindows = System.getProperty('os.name').toLowerCase(Locale.ENGLISH).contains('windows')
+def windowsRoot = System.getenv('SystemRoot') ?: 'C:/Windows'
+def powerShellCommand = isWindows ? new File(windowsRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe').absolutePath : 'pwsh'
+
+tasks.named('jar', Jar) {
+    manifest {
+        attributes(
+            'Implementation-Title': project.description,
+            'Implementation-Version': project.version,
+            'AINPC-API-Version': project.version
+        )
+    }
+}
+
+tasks.register('verifyApiAbi', Exec) {
+    group = 'verification'
+    description = 'Verifies the public JVM ABI of ainpc-api against the committed baseline.'
+    dependsOn tasks.named('jar')
+    inputs.file(apiAbiScript)
+    inputs.file(apiAbiBaseline)
+    inputs.file(apiJarFile)
+    inputs.property('apiVersion', project.version.toString())
+    outputs.files(apiAbiReport, apiAbiSnapshot)
+
+    def arguments = [
+        powerShellCommand,
+        '-NoProfile',
+    ]
+    if (isWindows) {
+        arguments.addAll(['-ExecutionPolicy', 'Bypass'])
+    }
+    arguments.addAll([
+        '-File', apiAbiScript.absolutePath,
+        '-ProjectRoot', rootProject.projectDir.absolutePath,
+        '-ApiJar', apiJarFile.absolutePath,
+        '-BaselinePath', apiAbiBaseline.absolutePath,
+        '-ReportPath', apiAbiReport.absolutePath,
+    ])
+    commandLine arguments
+}
+
+tasks.register('updateApiAbiBaseline', Exec) {
+    group = 'verification'
+    description = 'Updates the committed ainpc-api ABI baseline after an intentional apiVersion bump.'
+    dependsOn tasks.named('jar')
+    outputs.upToDateWhen { false }
+
+    def arguments = [
+        powerShellCommand,
+        '-NoProfile',
+    ]
+    if (isWindows) {
+        arguments.addAll(['-ExecutionPolicy', 'Bypass'])
+    }
+    arguments.addAll([
+        '-File', apiAbiScript.absolutePath,
+        '-ProjectRoot', rootProject.projectDir.absolutePath,
+        '-ApiJar', apiJarFile.absolutePath,
+        '-BaselinePath', apiAbiBaseline.absolutePath,
+        '-ReportPath', apiAbiReport.absolutePath,
+        '-UpdateBaseline',
+    ])
+    commandLine arguments
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyApiAbi')
 }

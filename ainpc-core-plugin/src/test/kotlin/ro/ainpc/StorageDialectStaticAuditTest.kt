@@ -32,6 +32,7 @@ class StorageDialectStaticAuditTest {
             mapOf(
                 "ON_CONFLICT" to mapOf(
                     "kotlin/ro/ainpc/ai/DialogManager.kt" to 1,
+                    "kotlin/ro/ainpc/database/DatabaseManager.kt" to 1,
                     "kotlin/ro/ainpc/managers/NPCManager.kt" to 1,
                     "kotlin/ro/ainpc/progression/PlayerProgressionService.kt" to 3,
                     "kotlin/ro/ainpc/progression/ProgressionRepository.kt" to 1,
@@ -41,9 +42,13 @@ class StorageDialectStaticAuditTest {
                     "kotlin/ro/ainpc/world/NpcWorldBindingService.kt" to 1
                 ),
                 "INSERT_OR" to mapOf(
+                    "kotlin/ro/ainpc/ai/RelationshipService.kt" to 1,
                     "kotlin/ro/ainpc/database/DatabaseManager.kt" to 2,
-                    "kotlin/ro/ainpc/managers/NPCManagerDB.kt" to 3,
+                    "kotlin/ro/ainpc/economy/BankingService.kt" to 1,
+                    "kotlin/ro/ainpc/economy/EconomyService.kt" to 1,
+                    "kotlin/ro/ainpc/economy/NpcEconomyService.kt" to 1,
                     "kotlin/ro/ainpc/engine/QuestProgressPersistenceService.kt" to 3,
+                    "kotlin/ro/ainpc/managers/NPCManagerDB.kt" to 3,
                     "kotlin/ro/ainpc/reputation/ReputationService.kt" to 1
                 ),
                 "SQLITE_DATETIME" to mapOf(
@@ -61,7 +66,7 @@ class StorageDialectStaticAuditTest {
                 )
             ),
             actual,
-            "SQLite-specific SQL changed. Port it through dialect helpers or update docs/storage-provider-roadmap.md deliberately."
+            "SQLite-specific SQL changed. Port it through dialect helpers or update docs v2/planning/storage-provider-roadmap.md deliberately."
         )
     }
 

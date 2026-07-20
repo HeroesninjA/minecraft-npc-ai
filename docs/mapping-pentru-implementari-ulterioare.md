@@ -1,1 +1,1 @@
-This document was moved to `docs v2/reference/mapping-pentru-implementari-ulterioare.md`.
+This legacy entry now points to the canonical contract at `docs v2/architecture/mapping.md`.

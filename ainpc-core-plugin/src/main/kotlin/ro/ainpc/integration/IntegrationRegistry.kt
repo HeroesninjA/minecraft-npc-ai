@@ -5,6 +5,7 @@ import ro.ainpc.api.integration.IntegrationRegistryApi
 import ro.ainpc.api.integration.IntegrationType
 import java.util.LinkedHashMap
 import java.util.Locale
+import java.util.logging.Level
 import java.util.logging.Logger
 
 class IntegrationRegistry : IntegrationRegistryApi {
@@ -14,13 +15,32 @@ class IntegrationRegistry : IntegrationRegistryApi {
     @Synchronized
     override fun register(integration: ExternalPluginIntegration) {
         val key = normalizeName(integration.pluginName)
-        val previous = integrationsByName.put(key, integration)
-        if (previous != null) {
-            logger.info("[AINPC Integration] Inlocuit integrarea '${integration.pluginName}' (${integration.integrationType})")
-        } else {
-            logger.info("[AINPC Integration] Inregistrata integrarea '${integration.pluginName}' (${integration.integrationType})")
+        val previous = integrationsByName[key]
+        if (previous === integration) {
+            return
         }
-        integration.onRegister()
+
+        if (previous != null) {
+            previous.onUnregister()
+        }
+
+        try {
+            activate(integration)
+        } catch (exception: Exception) {
+            if (previous != null) {
+                try {
+                    activate(previous)
+                } catch (rollbackException: Exception) {
+                    integrationsByName.remove(key)
+                    exception.addSuppressed(rollbackException)
+                }
+            }
+            throw exception
+        }
+
+        integrationsByName[key] = integration
+        val action = if (previous == null) "Inregistrata" else "Inlocuita"
+        logger.info("[AINPC Integration] $action integrarea '${integration.pluginName}' (${integration.integrationType})")
     }
 
     @Synchronized
@@ -59,7 +79,28 @@ class IntegrationRegistry : IntegrationRegistryApi {
     fun clear() {
         val names = integrationsByName.keys.toList()
         for (name in names) {
-            unregister(name)
+            try {
+                unregister(name)
+            } catch (exception: Exception) {
+                logger.log(
+                    Level.WARNING,
+                    "[AINPC Integration] Eroare la eliminarea integrarii '$name' in timpul shutdown-ului",
+                    exception
+                )
+            }
+        }
+    }
+
+    private fun activate(integration: ExternalPluginIntegration) {
+        try {
+            integration.onRegister()
+        } catch (exception: Exception) {
+            try {
+                integration.onUnregister()
+            } catch (cleanupException: Exception) {
+                exception.addSuppressed(cleanupException)
+            }
+            throw exception
         }
     }
 

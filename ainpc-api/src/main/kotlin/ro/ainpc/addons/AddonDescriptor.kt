@@ -4,17 +4,17 @@ import ro.ainpc.platform.RuntimeMode
 import java.util.Collections
 import java.util.EnumSet
 
-class AddonDescriptor(
+class AddonDescriptor @JvmOverloads constructor(
     val origin: String,
     val id: String,
     val name: String,
     val version: String,
-    val description: String,
-    val type: AddonType,
-    val isPrimaryScenario: Boolean,
-    supportedRuntimeModes: Set<RuntimeMode>?,
-    capabilities: List<String>?,
-    dependencies: List<String>?
+    val description: String = "",
+    val type: AddonType = AddonType.FEATURE,
+    val isPrimaryScenario: Boolean = false,
+    supportedRuntimeModes: Set<RuntimeMode>? = null,
+    capabilities: List<String>? = null,
+    dependencies: List<String>? = null
 ) {
     val supportedRuntimeModes: Set<RuntimeMode> =
         if (supportedRuntimeModes.isNullOrEmpty()) {

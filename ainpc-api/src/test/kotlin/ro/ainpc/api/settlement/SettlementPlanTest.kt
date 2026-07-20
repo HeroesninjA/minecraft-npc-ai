@@ -4,8 +4,20 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.io.File
 
+@Suppress("DEPRECATION")
 class SettlementPlanTest {
+
+    @Test
+    fun settlementPlanIsExplicitlyDeprecatedAsNonExecutableScaffold() {
+        val source = File("src/main/kotlin/ro/ainpc/api/settlement/SettlementPlan.kt").readText()
+
+        assertTrue(source.contains("@Deprecated("))
+        assertTrue(source.contains("non-executable API scaffold retained for compatibility"))
+        assertTrue(source.contains("level = DeprecationLevel.WARNING"))
+        assertFalse(source.contains("replaceWith ="))
+    }
 
     @Test
     fun settlementPlanDefaults() {

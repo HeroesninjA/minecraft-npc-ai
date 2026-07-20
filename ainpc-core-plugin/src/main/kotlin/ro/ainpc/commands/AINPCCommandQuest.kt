@@ -45,7 +45,7 @@ fun handleQuestResetDraft(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -66,7 +66,7 @@ fun handleQuestResetObjective(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -87,7 +87,7 @@ fun handleQuestResetReward(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -108,7 +108,7 @@ fun handleQuestResetDialog(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -129,7 +129,7 @@ fun handleQuestPreview(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -149,7 +149,7 @@ fun handleQuestValidate(
     args: Array<String>,
     requirePlayerSender: (CommandSender) -> Player?,
 ): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -162,6 +162,128 @@ fun handleQuestValidate(
     val preview = buildQuestDraftPreviewContext(player)
     sendQuestDraftPreviewSummary(sender, preview, "&6=== Quest Draft Validation ===", includeJson = false)
     return true
+}
+
+fun handleQuestAiDraft(
+    sender: CommandSender,
+    args: Array<String>,
+    requirePlayerSender: (CommandSender) -> Player?,
+): Boolean {
+    if (!sender.hasPermission("ainpc.admin")) {
+        ainpcCommandQuestPlugin.messageUtils.sendMessage(sender, "no_permission")
+        return true
+    }
+
+    if (!ainpcCommandQuestPlugin.config.getBoolean("quest.ai_draft_enabled", false)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cAI draft generation nu este activata. Seteaza quest.ai_draft_enabled=true in config.yml.")
+        return true
+    }
+
+    if (!ainpcCommandQuestPlugin.config.getBoolean("features.ai", true)) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&cAI features sunt dezactivate. Seteaza features.ai=true in config.yml.")
+        return true
+    }
+
+    val action = if (args.size > 2) args[2].lowercase() else "preview"
+    val player = requirePlayerSender(sender) ?: return true
+
+    if (action == "confirm") {
+        val exported = exportCurrentDraftToFile(player)
+        if (exported != null) {
+            ainpcCommandQuestPlugin.messageUtils.send(sender,
+                "&aDraft AI exportat si salvat in packs/: &f${exported.name}")
+            ainpcCommandQuestPlugin.messageUtils.send(sender,
+                "&7Ruleaza &f/ainpc reload &7pentru a incarca quest-ul generat.")
+        } else {
+            ainpcCommandQuestPlugin.messageUtils.send(sender,
+                "&cNu am putut exporta draftul. Completeaza toate campurile in Quest Create GUI.")
+        }
+        return true
+    }
+
+    val preview = buildQuestDraftPreviewContext(player)
+
+    if (preview.missing.isNotEmpty()) {
+        ainpcCommandQuestPlugin.messageUtils.send(sender,
+            "&eDraftul nu este complet. Completeaza campurile in Quest Create GUI:")
+        sendQuestDraftPreviewSummary(sender, preview, "&6=== AI Draft Status ===", includeJson = false)
+        return true
+    }
+
+    sendQuestDraftPreviewSummary(sender, preview, "&6=== AI Draft Preview ===", includeJson = true)
+    ainpcCommandQuestPlugin.messageUtils.send(sender,
+        "&aDraft valid. Ruleaza &f/ainpc quest ai-draft confirm &apentru a exporta in packs/.")
+    ainpcCommandQuestPlugin.messageUtils.send(sender,
+        "&7NOTA: AI enrichment necesita un provider AI configurat. Draftul curent foloseste continutul din formular.")
+
+    return true
+}
+
+private fun exportCurrentDraftToFile(player: Player): java.io.File? {
+    val preview = buildQuestDraftPreviewContext(player)
+    if (preview.missing.isNotEmpty()) return null
+
+    val packsDir = java.io.File(ainpcCommandQuestPlugin.dataFolder, "packs")
+    packsDir.mkdirs()
+
+    val safeName = preview.questId.replace(Regex("[^A-Za-z0-9_-]"), "_")
+    val outputFile = java.io.File(packsDir, "ai_draft_$safeName.yml")
+
+    val yaml = exportQuestDraftAsFeaturePack(preview)
+    outputFile.writeText(yaml)
+    return outputFile
+}
+
+private fun exportQuestDraftAsFeaturePack(preview: QuestDraftPreviewContext): String {
+    val code = preview.questId
+    return """id: ai_draft_$code
+name: "${preview.questName}"
+description: "Quest generat AI: ${preview.questName}"
+addon:
+  type: scenario
+  version: 1.0.0
+scenarios:
+  ${code}:
+    name: "${preview.questName}"
+    description: "Quest generat AI: ${preview.questName}"
+    base_type: ${preview.baseType}
+    mechanic: ${preview.mechanicId}
+    trigger_probability: 0.1
+    min_npcs: 1
+    requires_player: true
+    phases:
+      INTRODUCTION: "Inceput"
+      ACCEPTANCE: "Acceptare"
+      EXECUTION: "Executie"
+      RETURN: "Intoarcere"
+      COMPLETION: "Finalizare"
+    quest:
+      code: "$code"
+      kind: "fetch"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      objectives:
+        obj_01:
+          type: "${preview.objectiveType}"
+          item: "${preview.objectiveTarget}"
+          amount: ${preview.objectiveCount.toIntOrNull() ?: 1}
+          phase: "EXECUTION"
+          description: "${preview.questName} - etapa 1."
+        return_to_giver:
+          type: "talk_to_npc"
+          amount: 1
+          phase: "RETURN"
+          description: "Intoarce-te la giver."
+      rewards:
+        reward:
+          type: "${preview.rewardType}"
+          item: "${preview.rewardValue}"
+          amount: ${preview.rewardCount.toIntOrNull() ?: 1}
+"""
 }
 
 private fun resolveQuestPreviewTarget(

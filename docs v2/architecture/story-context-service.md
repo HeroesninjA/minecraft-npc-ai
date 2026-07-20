@@ -1,31 +1,55 @@
 # StoryContextService
 
-Status: contract canonic pentru proiectia narativa read-only.
-Actualizat: 2026-07-14.
+Status: contract canonic verificat in cod.
+Actualizat: 2026-07-15.
 
-Serviciul construieste un snapshot compact pentru NPC, jucator si locatie.
+`StoryContextService` construieste o proiectie read-only pentru NPC, player si locatie. Snapshot-ul este folosit de GUI, debug, quest views si prompturile de dialog.
 
-## Intrari
+## Constructie
 
-- mapping semantic;
-- quest anchors si progres relevant;
-- story state persistent;
-- evenimente recente si context local.
+- locatia NPC-ului are prioritate; locatia playerului este fallback;
+- `buildForPlayer(player)` delega la `buildForNpc(null, player)`;
+- mapping-ul furnizeaza regiunea, place-ul, node-urile si NPC-urile apropiate;
+- pentru player sunt incarcate ancorele quest active;
+- `StoryStateService` furnizeaza starea persistenta de regiune/place si evenimentele recente;
+- serviciul produce `storySignals` si warnings cand lipsesc lumea, playerul sau datele persistente;
+- construirea publica un eveniment `StoryContextBuilt`.
 
-## Iesire
+## Continutul snapshot-ului
 
-- context narativ redactat pentru AI, GUI, briefing si diagnostic;
-- warnings explicite cand datele sau lumea lipsesc.
+- nume si rol NPC;
+- nume player;
+- `WorldContextSnapshot`;
+- stare persistenta de regiune si place;
+- evenimente story recente;
+- ancore quest active;
+- semnale story si warnings.
 
-## Limite
+## Limite de siguranta
 
-- nu creeaza story state si nu scrie in DB;
-- nu decide progresul questurilor;
-- nu inlocuieste `QuestAnchorResolver`;
-- nu transforma indicii narative in stare executabila.
+- `StoryContextSnapshot.toPromptBlock()` serializeaza valorile direct;
+- metoda nu apeleaza `ContextRedactor` si nu garanteaza redactarea datelor;
+- snapshot-ul nu este un boundary de incredere pentru prompturi sau loguri;
+- consumatorul trebuie sa limiteze, sa redacteze si sa valideze textul la iesirea finala;
+- serviciul nu scrie story state si nu decide progresul questurilor.
+
+## Consumatori confirmati
+
+- `OpenAISemanticWorldContextBuilder` si `OpenAIPromptBuilder`;
+- `NPCContext`;
+- `QuestAuthoringGui`, `QuestLogGui`, `QuestDetailGui` si `StoryGui`;
+- comenzile story si debugdump-urile.
+
+## Surse in cod
+
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/story/StoryContextService.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/story/StoryContextSnapshot.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAISemanticWorldContextBuilder.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIPromptBuilder.kt`
 
 ## Legaturi
 
 - `architecture/story-state-service.md`
 - `architecture/mapping.md`
 - `architecture/story-si-context-ai.md`
+- `reference/prompt-safety-guide.md`

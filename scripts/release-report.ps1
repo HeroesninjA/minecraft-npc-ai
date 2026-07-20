@@ -248,12 +248,16 @@ $jsonPath = Join-Path $outputDirFull "$safeReleaseId-release-report.json"
 $markdownPath = Join-Path $outputDirFull "$safeReleaseId-release-report.md"
 
 $version = "1.0.0"
-$props = Get-Content -LiteralPath (Join-Path $repoRoot "gradle.properties") -ErrorAction SilentlyContinue | Where-Object { $_ -match '^projectVersion=(.+)$' }
-if ($props) { $version = $matches[1] }
+$apiVersion = "1.0.0"
+$gradleProperties = Get-Content -LiteralPath (Join-Path $repoRoot "gradle.properties") -ErrorAction SilentlyContinue
+$projectVersionProperty = $gradleProperties | Where-Object { $_ -match '^projectVersion=(.+)$' } | Select-Object -First 1
+if ($projectVersionProperty -and $projectVersionProperty -match '^projectVersion=(.+)$') { $version = $Matches[1].Trim() }
+$apiVersionProperty = $gradleProperties | Where-Object { $_ -match '^apiVersion=(.+)$' } | Select-Object -First 1
+if ($apiVersionProperty -and $apiVersionProperty -match '^apiVersion=(.+)$') { $apiVersion = $Matches[1].Trim() } else { $apiVersion = $version }
 
 $defaultCoreJar = Join-Path $repoRoot "ainpc-core-plugin\build\libs\ainpc-core-plugin-$version.jar"
 $defaultMedievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-$version.jar"
-$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-$version.jar"
+$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-$apiVersion.jar"
 
 $artifactSummaries = @(
     New-ArtifactSummary -Name "core" -Path ($(if ($CoreJar) { $CoreJar } else { $defaultCoreJar })) -Required $true
@@ -328,13 +332,20 @@ $questPlayerSummary = if ($questPlayerObject) {
 
 $apiAddonFreezeObject = Read-JsonObject -Path $ApiAddonFreezeReport
 $apiAddonFreezeSummary = if ($apiAddonFreezeObject) {
-    $apiSignature = ""
+    $apiSourceSignature = ""
+    $apiAbiSignature = ""
+    $apiAbiOk = $null
     $addonSignature = ""
     $apiProperty = $apiAddonFreezeObject.PSObject.Properties["api"]
     if ($null -ne $apiProperty -and $null -ne $apiProperty.Value) {
         $sourceProperty = $apiProperty.Value.PSObject.Properties["source"]
         if ($null -ne $sourceProperty -and $null -ne $sourceProperty.Value) {
-            $apiSignature = Get-OptionalJsonValue -Object $sourceProperty.Value -Name "normalized_sha256" -Default ""
+            $apiSourceSignature = Get-OptionalJsonValue -Object $sourceProperty.Value -Name "normalized_sha256" -Default ""
+        }
+        $abiProperty = $apiProperty.Value.PSObject.Properties["abi"]
+        if ($null -ne $abiProperty -and $null -ne $abiProperty.Value) {
+            $apiAbiSignature = Get-OptionalJsonValue -Object $abiProperty.Value -Name "signature_sha256" -Default ""
+            $apiAbiOk = Get-OptionalJsonValue -Object $abiProperty.Value -Name "ok" -Default $null
         }
     }
     $addonProperty = $apiAddonFreezeObject.PSObject.Properties["addon"]
@@ -349,7 +360,11 @@ $apiAddonFreezeSummary = if ($apiAddonFreezeObject) {
         report_path = (Resolve-OptionalPath -Path $ApiAddonFreezeReport)
         ok = $apiAddonFreezeObject.ok
         project_version = Get-OptionalJsonValue -Object $apiAddonFreezeObject -Name "project_version" -Default ""
-        api_signature_sha256 = $apiSignature
+        api_version = Get-OptionalJsonValue -Object $apiAddonFreezeObject -Name "api_version" -Default ""
+        api_signature_sha256 = $(if ($apiAbiSignature) { $apiAbiSignature } else { $apiSourceSignature })
+        api_source_sha256 = $apiSourceSignature
+        api_abi_sha256 = $apiAbiSignature
+        api_abi_ok = $apiAbiOk
         addon_signature_sha256 = $addonSignature
         warning_count = @($apiAddonFreezeObject.warnings).Count
     }
@@ -359,7 +374,11 @@ $apiAddonFreezeSummary = if ($apiAddonFreezeObject) {
         report_path = (Resolve-OptionalPath -Path $ApiAddonFreezeReport)
         ok = $null
         project_version = ""
+        api_version = ""
         api_signature_sha256 = ""
+        api_source_sha256 = ""
+        api_abi_sha256 = ""
+        api_abi_ok = $null
         addon_signature_sha256 = ""
         warning_count = 0
     }
@@ -394,8 +413,12 @@ if (-not $backupSummary.exists) {
 if ($Decision -eq "release" -and (-not $questPlayerSummary.exists -or $questPlayerSummary.ok -ne $true)) {
     $warnings.Add("Decizia este release, dar quest player smoke nu este atasat sau nu confirma ok=true.")
 }
-if ($Decision -eq "release" -and (-not $apiAddonFreezeSummary.exists -or $apiAddonFreezeSummary.ok -ne $true)) {
-    $warnings.Add("Decizia este release, dar API/addon freeze report nu este atasat sau nu confirma ok=true.")
+if ($Decision -eq "release") {
+    if (-not $apiAddonFreezeSummary.exists -or $apiAddonFreezeSummary.ok -ne $true) {
+        $warnings.Add("Decizia este release, dar API/addon freeze report nu este atasat sau nu confirma ok=true.")
+    } elseif ($apiAddonFreezeSummary.api_abi_ok -ne $true) {
+        $warnings.Add("Decizia este release, dar API/addon freeze report nu confirma api.abi.ok=true.")
+    }
 }
 if ($Decision -eq "release" -and $warnings.Count -gt 0) {
     $warnings.Add("Decizia este release, dar exista warning-uri de gate.")
@@ -407,6 +430,8 @@ $report = [pscustomobject]@{
     release_id = $safeReleaseId
     decision = $Decision
     project_root = $repoRoot
+    project_version = $version
+    api_version = $apiVersion
     server_dir = Resolve-OptionalPath -Path $ServerDir
     git = [pscustomobject]@{
         commit = $gitCommit
@@ -436,6 +461,7 @@ $report = [pscustomobject]@{
         backup_restore_check_ok = $backupSummary.restore_check_ok
         quest_player_smoke_ok = $questPlayerSummary.ok
         api_addon_freeze_ok = $apiAddonFreezeSummary.ok
+        api_abi_ok = $apiAddonFreezeSummary.api_abi_ok
         ready_for_release = ($Decision -eq "release" -and $warnings.Count -eq 0)
     }
 }
@@ -448,6 +474,8 @@ Add-MarkdownLine -Lines $lines
 Add-MarkdownLine -Lines $lines -Text "- Release ID: $safeReleaseId"
 Add-MarkdownLine -Lines $lines -Text "- Generated: $($report.generated_at)"
 Add-MarkdownLine -Lines $lines -Text "- Decision: $Decision"
+Add-MarkdownLine -Lines $lines -Text "- Project version: $version"
+Add-MarkdownLine -Lines $lines -Text "- API version: $apiVersion"
 Add-MarkdownLine -Lines $lines -Text "- Commit: $gitCommit"
 Add-MarkdownLine -Lines $lines -Text "- Branch: $gitBranch"
 Add-MarkdownLine -Lines $lines
@@ -499,7 +527,10 @@ Add-MarkdownLine -Lines $lines
 Add-MarkdownLine -Lines $lines -Text "- Report: $($apiAddonFreezeSummary.report_path)"
 Add-MarkdownLine -Lines $lines -Text "- OK: $($apiAddonFreezeSummary.ok)"
 Add-MarkdownLine -Lines $lines -Text "- Project version: $($apiAddonFreezeSummary.project_version)"
-Add-MarkdownLine -Lines $lines -Text "- API signature SHA256: $($apiAddonFreezeSummary.api_signature_sha256)"
+Add-MarkdownLine -Lines $lines -Text "- API version: $($apiAddonFreezeSummary.api_version)"
+Add-MarkdownLine -Lines $lines -Text "- API source SHA256: $($apiAddonFreezeSummary.api_source_sha256)"
+Add-MarkdownLine -Lines $lines -Text "- API ABI SHA256: $($apiAddonFreezeSummary.api_abi_sha256)"
+Add-MarkdownLine -Lines $lines -Text "- API ABI OK: $($apiAddonFreezeSummary.api_abi_ok)"
 Add-MarkdownLine -Lines $lines -Text "- Add-on signature SHA256: $($apiAddonFreezeSummary.addon_signature_sha256)"
 Add-MarkdownLine -Lines $lines -Text "- Warning count: $($apiAddonFreezeSummary.warning_count)"
 Add-MarkdownLine -Lines $lines

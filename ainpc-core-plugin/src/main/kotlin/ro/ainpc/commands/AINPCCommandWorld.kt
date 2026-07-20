@@ -494,7 +494,7 @@ private fun sendControlledTestWorldFixtureApplyResult(
     sendExteriorMessages(sender, "&eWarning-uri", result.warnings())
     ainpcCommandWorldPlugin.messageUtils.send(
         sender,
-        "&aFixture-ul a fost aplicat. Ruleaza &f/ainpc world save &asi &f/ainpc audit world&a pentru verificare."
+        "&aFixture-ul a fost aplicat. Ruleaza &f/ainpc audit world &apentru verificare."
     )
 }
 
@@ -518,7 +518,7 @@ private fun sendControlledTestWorldFixturePopulateResult(
     sendExteriorMessages(sender, "&eWarning-uri", result.warnings())
     ainpcCommandWorldPlugin.messageUtils.send(
         sender,
-        "&aNPC-urile au fost spawnate. Ruleaza &f/ainpc world save &asi &f/ainpc audit spawn&a pentru verificare."
+        "&aNPC-urile au fost spawnate. Ruleaza &f/ainpc audit spawn &apentru verificare."
     )
 }
 
@@ -657,9 +657,31 @@ fun handleWorldScan(
     }
     val regionId = if (args.size >= 6) args[5] else null
 
-    val scan = VanillaVillageScanner().scan(
-        player.location, radius, VanillaVillageScanner.DEFAULT_VERTICAL_RADIUS
+    val ticket = ainpcCommandWorldPlugin.vanillaVillageScanService.submit(
+        center = player.location,
+        horizontalRadius = radius,
+        verticalRadius = VanillaVillageScanner.DEFAULT_VERTICAL_RADIUS,
+        onComplete = { scan ->
+            completeWorldVillageScan(sender, worldAdmin, scan, shouldImport, regionId)
+        },
+        onFailure = { error ->
+            ainpcCommandWorldPlugin.messageUtils.send(
+                sender,
+                "&cScanarea vanilla incrementala a esuat: &f${error.message ?: error.javaClass.simpleName}"
+            )
+        },
     )
+    sendVillageScanQueued(sender, ticket.totalBlocks, ticket.blockBudgetPerTick, ticket.queuePosition)
+    return true
+}
+
+private fun completeWorldVillageScan(
+    sender: CommandSender,
+    worldAdmin: WorldAdminService,
+    scan: VanillaVillageScanResult,
+    shouldImport: Boolean,
+    regionId: String?,
+) {
     sendVillageScanSummary(sender, scan)
 
     if (!shouldImport) {
@@ -667,8 +689,9 @@ fun handleWorldScan(
             sender,
             "&7Dry-run. Pentru import ruleaza &f/ainpc world scan village ${scan.horizontalRadius()} import [regionId]&7."
         )
-        return true
+        return
     }
+    if (!ensureDeferredVillageMappingAllowed(sender, "importul mapping-ului vanilla")) return
 
     val result = SemanticVillageMapper().importScan(worldAdmin, scan, regionId)
     if (result.errors().isNotEmpty()) {
@@ -676,7 +699,11 @@ fun handleWorldScan(
         for (error in result.errors()) {
             ainpcCommandWorldPlugin.messageUtils.send(sender, "&7- &f$error")
         }
-        return true
+        for (warning in result.warnings()) {
+            ainpcCommandWorldPlugin.messageUtils.send(sender, "&eWarning: &f$warning")
+        }
+        sendWorldSaveReminderIfNeeded(sender)
+        return
     }
 
     ainpcCommandWorldPlugin.messageUtils.send(
@@ -693,7 +720,52 @@ fun handleWorldScan(
             ainpcCommandWorldPlugin.messageUtils.send(sender, "&7- &f$warning")
         }
     }
-    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti mapping-ul.")
+    sendWorldSaveReminderIfNeeded(sender)
+}
+
+internal fun sendVillageScanQueued(
+    sender: CommandSender,
+    totalBlocks: Long,
+    blockBudgetPerTick: Int,
+    queuePosition: Int,
+) {
+    ainpcCommandWorldPlugin.messageUtils.send(
+        sender,
+        "&7Scanare incrementala programata: &f$totalBlocks &7blocuri, buget global &f$blockBudgetPerTick/tick" +
+            " &7| pozitie coada: &f$queuePosition&7."
+    )
+}
+
+internal fun sendWorldSaveReminderIfNeeded(sender: CommandSender) {
+    if (!ainpcCommandWorldPlugin.platform.worldAdminService.hasUnsavedChanges()) return
+    ainpcCommandWorldPlugin.messageUtils.send(
+        sender,
+        "&7Mapping-ul are modificari nesalvate. Ruleaza &f/ainpc world save &7pentru persistenta."
+    )
+}
+
+internal fun ensureDeferredVillageMappingAllowed(sender: CommandSender, operation: String): Boolean {
+    if (isRuntimeReadOnly(ainpcCommandWorldPlugin)) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cMCP read_only a fost activat in timpul scanarii; $operation a fost anulat."
+        )
+        return false
+    }
+    if (!ainpcCommandWorldPlugin.config.getBoolean("features.mapping", true)) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cMapping-ul a fost dezactivat in timpul scanarii; $operation a fost anulat."
+        )
+        return false
+    }
+    if (!ainpcCommandWorldPlugin.platform.worldAdminService.isEnabled) {
+        ainpcCommandWorldPlugin.messageUtils.send(
+            sender,
+            "&cWorld admin a fost dezactivat in timpul scanarii; $operation a fost anulat."
+        )
+        return false
+    }
     return true
 }
 
@@ -708,10 +780,6 @@ fun sendNpcWorldBindingSummary(sender: CommandSender, binding: NpcWorldBinding) 
 }
 
 fun handleWorldSave(sender: CommandSender): Boolean {
-    if (isRuntimeReadOnly(ainpcCommandWorldPlugin)) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world save este blocat.")
-        return true
-    }
     val worldAdmin = ainpcCommandWorldPlugin.platform.worldAdminService
     if (!worldAdmin.isEnabled) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&cWorld admin este dezactivat.")
@@ -813,10 +881,6 @@ fun handleWorldRegionCreate(
                 )
             }"
         )
-        ainpcCommandWorldPlugin.messageUtils.send(
-            sender,
-            "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile."
-        )
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -906,10 +970,6 @@ fun handleWorldPlaceCreate(sender: CommandSender, args: Array<String>): Boolean 
                 )
             }"
         )
-        ainpcCommandWorldPlugin.messageUtils.send(
-            sender,
-            "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile."
-        )
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -936,7 +996,6 @@ fun handleWorldPlaceRemove(sender: CommandSender, args: Array<String>): Boolean 
     }
 
     ainpcCommandWorldPlugin.messageUtils.send(sender, "&aPlace sters: &f$placeId")
-    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
     return true
 }
 
@@ -960,10 +1019,6 @@ fun handleWorldRegion(
     }
 
     val action = args[2].lowercase()
-    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world region $action este blocat.")
-        return true
-    }
     if (action == "create") {
         return handleWorldRegionCreate(sender, args, requirePlayerSender)
     }
@@ -1163,7 +1218,6 @@ fun handleWorldRegionEdit(
             return true
         }
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&aRegiune editata: &f${updated.id} &7-> bounds centrate pe jucator.")
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -1185,7 +1239,6 @@ fun handleWorldRegionRemove(sender: CommandSender, args: Array<String>): Boolean
     }
 
     ainpcCommandWorldPlugin.messageUtils.send(sender, "&aRegiune stearsa: &f$regionId")
-    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
     return true
 }
 
@@ -1205,10 +1258,6 @@ fun handleWorldPlace(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val action = args[2].lowercase()
-    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world place $action este blocat.")
-        return true
-    }
     if (action == "create") {
         return handleWorldPlaceCreate(sender, args)
     }
@@ -1310,7 +1359,6 @@ fun handleWorldPlaceEdit(sender: CommandSender, args: Array<String>): Boolean {
             return true
         }
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&aPlace editat: &f${updated.id} &7-> bounds centrate pe jucator.")
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -1327,10 +1375,6 @@ fun handleWorldNode(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val action = args[2].lowercase()
-    if (isRuntimeReadOnly(ainpcCommandWorldPlugin) && action in setOf("create", "edit", "remove", "delete")) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world node $action este blocat.")
-        return true
-    }
     if (action == "create") {
         return handleWorldNodeCreate(sender, args)
     }
@@ -1477,10 +1521,6 @@ fun handleWorldNodeCreate(sender: CommandSender, args: Array<String>): Boolean {
             "&7Regiune: &f${nodeInfo.regionId()} &7| Place: &f${formatOptional(nodeInfo.placeId())}" +
                 " &7| Pozitie: &f${String.format("%.1f, %.1f, %.1f", nodeInfo.x(), nodeInfo.y(), nodeInfo.z())}"
         )
-        ainpcCommandWorldPlugin.messageUtils.send(
-            sender,
-            "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile."
-        )
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -1512,7 +1552,6 @@ fun handleWorldNodeEdit(sender: CommandSender, args: Array<String>): Boolean {
             return true
         }
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&aNode editat: &f${updated.id} &7-> mutat la pozitia curenta.")
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7ca sa persisti modificarile.")
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")
     }
@@ -1534,7 +1573,6 @@ fun handleWorldNodeRemove(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     ainpcCommandWorldPlugin.messageUtils.send(sender, "&aNode sters: &f$nodeId")
-    ainpcCommandWorldPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world save &7pentru a persista.")
     return true
 }
 
@@ -1577,10 +1615,6 @@ fun handleWorldDemo(
     args: Array<String>,
     ensureGenerationEnabled: (CommandSender, String) -> Boolean,
 ): Boolean {
-    if (isRuntimeReadOnly(ainpcCommandWorldPlugin)) {
-        ainpcCommandWorldPlugin.messageUtils.send(sender, "&cMCP read_only este activ; world demo create este blocat.")
-        return true
-    }
     if (args.size < 3 || args.size > 4 || args[2].lowercase() != "create") {
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
@@ -1658,7 +1692,7 @@ fun handleWorldDemo(
         )
         ainpcCommandWorldPlugin.messageUtils.send(
             sender,
-            "&7Daca auditul arata bine, ruleaza &f/ainpc world save&7."
+            "&7Ruleaza &f/ainpc audit world &7pentru verificare."
         )
     } catch (exception: IllegalArgumentException) {
         ainpcCommandWorldPlugin.messageUtils.send(sender, "&c${exception.message}")

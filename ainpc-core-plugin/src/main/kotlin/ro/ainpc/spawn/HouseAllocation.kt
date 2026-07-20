@@ -126,6 +126,11 @@ data class HouseAllocation(
         val age: Int,
         val gender: String,
         val archetype: String,
+        val socialRole: String,
+        val ageGroup: String,
+        val routineProfile: String,
+        val questRole: String,
+        val backstorySeed: String,
         val spawnNodeId: String,
         val homeNodeId: String,
         val bedNodeId: String,
@@ -142,6 +147,11 @@ data class HouseAllocation(
         private val cleanedAge = if (age > 0) age else 30
         private val cleanedGender = clean(gender)
         private val cleanedArchetype = clean(archetype)
+        private val cleanedSocialRole = clean(socialRole)
+        private val cleanedAgeGroup = clean(ageGroup)
+        private val cleanedRoutineProfile = clean(routineProfile)
+        private val cleanedQuestRole = clean(questRole)
+        private val cleanedBackstorySeed = clean(backstorySeed)
         private val cleanedSpawnNodeId = clean(spawnNodeId)
         private val cleanedHomeNodeId = clean(homeNodeId)
         private val cleanedBedNodeId = clean(bedNodeId)
@@ -158,6 +168,11 @@ data class HouseAllocation(
         fun age(): Int = cleanedAge
         fun gender(): String = cleanedGender
         fun archetype(): String = cleanedArchetype
+        fun socialRole(): String = cleanedSocialRole
+        fun ageGroup(): String = cleanedAgeGroup
+        fun routineProfile(): String = cleanedRoutineProfile
+        fun questRole(): String = cleanedQuestRole
+        fun backstorySeed(): String = cleanedBackstorySeed
         fun spawnNodeId(): String = cleanedSpawnNodeId
         fun homeNodeId(): String = cleanedHomeNodeId
         fun bedNodeId(): String = cleanedBedNodeId
@@ -175,6 +190,12 @@ data class HouseAllocation(
                 .age(cleanedAge)
                 .gender(cleanedGender)
                 .archetype(cleanedArchetype)
+                .relationRole(cleanedRelationRole)
+                .socialRole(cleanedSocialRole)
+                .ageGroup(cleanedAgeGroup)
+                .routineProfile(cleanedRoutineProfile)
+                .questRole(cleanedQuestRole)
+                .backstorySeed(cleanedBackstorySeed)
                 .homePlaceId(homePlaceId)
                 .workPlaceId(cleanedWorkPlaceId)
                 .socialPlaceId(cleanedSocialPlaceId)
@@ -202,6 +223,11 @@ data class HouseAllocation(
         private var age = 30
         private var gender = "male"
         private var archetype = ""
+        private var socialRole = ""
+        private var ageGroup = ""
+        private var routineProfile = ""
+        private var questRole = ""
+        private var backstorySeed = ""
         private var spawnNodeId = ""
         private var homeNodeId = ""
         private var bedNodeId = ""
@@ -237,6 +263,31 @@ data class HouseAllocation(
 
         fun archetype(archetype: String): ResidentBuilder {
             this.archetype = archetype
+            return this
+        }
+
+        fun socialRole(socialRole: String): ResidentBuilder {
+            this.socialRole = socialRole
+            return this
+        }
+
+        fun ageGroup(ageGroup: String): ResidentBuilder {
+            this.ageGroup = ageGroup
+            return this
+        }
+
+        fun routineProfile(routineProfile: String): ResidentBuilder {
+            this.routineProfile = routineProfile
+            return this
+        }
+
+        fun questRole(questRole: String): ResidentBuilder {
+            this.questRole = questRole
+            return this
+        }
+
+        fun backstorySeed(backstorySeed: String): ResidentBuilder {
+            this.backstorySeed = backstorySeed
             return this
         }
 
@@ -285,6 +336,11 @@ data class HouseAllocation(
                 age,
                 gender,
                 archetype,
+                socialRole,
+                ageGroup,
+                routineProfile,
+                questRole,
+                backstorySeed,
                 spawnNodeId,
                 homeNodeId,
                 bedNodeId,

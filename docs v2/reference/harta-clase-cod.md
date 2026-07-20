@@ -1,18 +1,22 @@
 # Harta Claselor de Cod
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-06-21.
+Status: index derivat din hartile specializate.
+Actualizat: 2026-07-16.
 
 Acesta este rezumatul global pentru clasele principale din codul AINPC.
 
 ## Citire rapida
 
 - `AINPCPlugin` este punctul de intrare;
-- `AINPCPlatform` leaga addonuri, profil si platforma;
-- `WorldAdminService` acopera mapping-ul semantic;
-- `DialogManager` si `AIOrchestrationService` acopera AI-ul;
+- `ServiceRegistry` detine bootstrap-ul, iar `AINPCPlatform` expune profilul si fatada publica;
+- `AddonRegistry`, `FeaturePackLoader` si `AINPCScenarioMedievalPlugin` separa lifecycle-ul de cod de continutul declarativ;
+- `WorldAdminService`, `VanillaVillageScanner`, `SemanticVillageMapper` si clasele `VillagePatch*` acopera mapping-ul semantic si completarea lui;
+- `NPCInteractionListener`, `NPCChatListener` si `ConversationSessionManager` formeaza intrarea player-NPC;
+- `DialogManager`, `DialogueEngine` si `OpenAIService` formeaza calea de dialog activa, iar `AIOrchestrationService` este scaffold;
+- `DialogManager` detine relatia player-NPC, iar `RelationshipService` relatiile NPC-NPC;
 - `ProgressionService`, `QuestDirector` si `StoryContextService` acopera quest/story;
-- `NpcSpawnOrchestrator` si `RoutineService` acopera spawn si rutina;
+- `HouseAllocationPlanner` si `NpcSpawnOrchestrator` acopera spawn-ul, iar `NarrativeGenerator` ramane preview separat;
+- `RoutineService` acopera atribuirea si miscarea de rutina;
 - `GuiService` acopera ecranele;
 - `DebugDumpService` si `RecentEventsBuffer` acopera diagnosticul.
 
@@ -26,8 +30,10 @@ Acesta este rezumatul global pentru clasele principale din codul AINPC.
 
 - `reference/harta-clase-index.md`
 - `architecture/harta-clase-world.md`
+- `architecture/harta-clase-addons.md`
+- `architecture/harta-clase-settlement.md`
 - `architecture/harta-clase-ai.md`
 - `architecture/harta-clase-quest.md`
 - `architecture/harta-clase-spawn.md`
-- `guides/harta-clase-gui.md`
+- `architecture/harta-clase-gui.md`
 - `architecture/harta-clase-debug.md`

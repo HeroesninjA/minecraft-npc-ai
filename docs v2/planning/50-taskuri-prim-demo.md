@@ -27,5 +27,5 @@ Acesta este lista compacta pentru primul demo jucabil.
 ## Legaturi
 
 - `planning/prim-demo-functionalitate-minima-diversa.md`
-- `planning/server-npc-mvp-si-faze.md`
+- `reference/criterii-gata-prim-demo.md`
 - `operations/release-checklist.md`

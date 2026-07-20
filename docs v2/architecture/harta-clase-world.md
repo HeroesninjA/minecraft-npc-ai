@@ -1,36 +1,49 @@
 # Harta claselor pentru world
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-06-21.
+Status: harta verificata in cod.
+Actualizat: 2026-07-18.
 
-Aceasta harta urmareste subsistemul world: mapping semantic, context, bindings si audit.
+Subsistemul world separa mapping-ul semantic, proiectiile read-only si binding-urile NPC de orice constructie fizica a lumii.
 
-## Noduri principale
+## Mapping si persistenta
 
-- `WorldAdminService`;
-- `WorldContextSnapshotBuilder`;
-- `WorldContextSnapshot`;
-- `NpcWorldBindingService`;
-- `WorldMappingSemanticIndex`;
-- `VillageGapAnalyzer`;
-- `VillagePatchPlanner`;
-- `ExteriorStructureAnalyzer`.
+- `WorldAdminService` detine in runtime `Region`, `Place` si `Node`;
+- `/ainpc world save` persista explicit modificarile de mapping;
+- `WorldContextSnapshotBuilder` si `WorldMappingSemanticIndex` proiecteaza context read-only;
+- `NpcWorldBindingService` persista separat ancorele NPC.
 
-## Flux
+## Scanare si import vanilla
 
-- world admin construieste contextul;
-- snapshot-ul este consumat de dialog, quest si AI;
-- bindings-ul NPC se pastreaza separat;
-- gap analysis si patch planning completeaza lumea.
+- `VanillaVillageScanner` descrie sesiunea/cursorul, iar `VanillaVillageScanService` citeste incremental blocurile pe schedulerul sincron Bukkit si produce raportul complet;
+- `SemanticVillageMapper` transforma semnalele in mapping semantic;
+- `AutoSettlementGenerator` consuma raportul complet si adauga planificarea `HouseAllocation` dupa import;
+- niciuna dintre aceste clase nu construieste blocuri.
 
-## Reguli
+## Analiza si completare
 
-- mapping-ul semantic este sursa de orientare, nu doar coordonatele;
-- snapshot-urile trebuie sa fie inspectabile;
-- corectiile si patch-urile trebuie sa ramana auditable.
+- `VillageGapAnalyzer` detecteaza lipsuri in mapping;
+- `VillagePatchPlanner` ordoneaza candidatii si verifica capabilitati;
+- `VillagePatchApplier` creeaza node-uri si, in apeluri interne permise explicit, place-uri semantice;
+- `BuildingAutoPlaceService` creeaza tot mapping semantic, in pofida numelui de auto-place.
+
+## Structuri exterioare si fixture
+
+- `ExteriorStructureBlueprintCatalog`, `ExteriorStructurePlanner` si `ExteriorStructureAnalyzer` descriu sau valideaza mapping existent;
+- `ControlledTestWorldFixturePlanner` produce un plan hardcodat;
+- `ControlledTestWorldFixtureApplier` creeaza mapping de test;
+- `ControlledTestWorldFixturePopulator` este un flux separat care poate spawna NPC-uri de test.
+
+## Limite
+
+- scanarea vanilla nu paraseste main thread-ul Bukkit, dar toate cererile impart bugetul global configurabil de blocuri per tick; bugetul nu garanteaza un prag de timp daca accesul la un bloc incarca date costisitoare;
+- importul, auto-place-ul, patch apply si fixture apply compenseaza creatiile partiale la esec, pastrand obiectele preexistente;
+- nu exista tranzactie comuna intre mapping, spawn, binding si persistenta;
+- nu exista adaptor WorldEdit sau executor de blocuri in codul de productie.
 
 ## Legaturi
 
 - `architecture/mapping.md`
-- `architecture/story-context-service.md`
+- `architecture/harta-clase-settlement.md`
+- `architecture/structuri-exterioare-satului.md`
+- `architecture/worldedit-integration-contract.md`
 - `reference/harta-clase-index.md`

@@ -430,13 +430,6 @@ fun handleWorldCreateAi(
         )
         return true
     }
-    if (isRuntimeReadOnly(ainpcCommandMiscPlugin)) {
-        ainpcCommandMiscPlugin.messageUtils.send(
-            sender,
-            "&cMCP read_only este activ; build/create este blocat pana la iesirea din modul read-only."
-        )
-        return true
-    }
     val player = sender as? Player ?: run {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
         return true
@@ -562,7 +555,7 @@ private fun openMappingDraftEditor(player: Player, draft: MappingDraft) {
 }
 
 fun handleQuestCreateAi(sender: CommandSender, args: Array<String>): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -1065,7 +1058,7 @@ private fun inferQuickQuestReward(payload: String): String {
 }
 
 fun handleProgressionCreateAi(sender: CommandSender, args: Array<String>): Boolean {
-    if (!sender.hasPermission("ainpc.admin") && !sender.hasPermission("ainpc.quest")) {
+    if (!hasCreatorAccess(sender)) {
         ainpcCommandMiscPlugin.messageUtils.sendMessage(sender, "no_permission")
         return true
     }
@@ -1240,14 +1233,39 @@ fun handleHealth(sender: CommandSender): Boolean {
     msg.send(sender, "&eMCP write tools: &f${if (plugin.config.getBoolean("mcp.write_tools_enabled", false)) "&aactivate" else "&7dezactivate"}")
 
     val perf = plugin.performanceMonitor
-    val routineProfile = perf.getProfile("routineTick")
-    if (routineProfile != null) {
-        val color = when {
-            routineProfile.avgDurationMs > 50 -> "&c"
-            routineProfile.avgDurationMs > 20 -> "&e"
+    val runtimeHealth = perf.snapshot()
+    val runtimeHealthColor = when (runtimeHealth.status) {
+        "FAIL" -> "&c"
+        "WARN" -> "&e"
+        "PASS" -> "&a"
+        else -> "&7"
+    }
+    msg.send(
+        sender,
+        "&eMetrici runtime: $runtimeHealthColor${runtimeHealth.status} &8(" +
+            "${runtimeHealth.activeSeries}/${runtimeHealth.maxSeries} serii, " +
+            "fereastra=${runtimeHealth.samplesPerSeries}, dropped=${runtimeHealth.droppedMeasurements})"
+    )
+    val runtimeTracing = perf.traceSnapshot()
+    val tracingState = if (runtimeTracing.enabled) "&aactiv" else "&7dezactivat"
+    msg.send(
+        sender,
+        "&eTracing anomaly: $tracingState &8(" +
+            "${runtimeTracing.retainedSpans}/${runtimeTracing.maxSpans} spans, dropped=${runtimeTracing.droppedSpans})"
+    )
+    for (metric in runtimeHealth.metrics.take(6)) {
+        val metricColor = when (metric.status) {
+            "FAIL" -> "&c"
+            "WARN" -> "&e"
             else -> "&a"
         }
-        msg.send(sender, "&eRoutine tick: $color${"%.1f".format(routineProfile.avgDurationMs)}ms avg &8(${routineProfile.minDurationMs}-${routineProfile.maxDurationMs}ms, ${routineProfile.sampleCount} samples)")
+        msg.send(
+            sender,
+            "&8- &f${metric.name}: $metricColor${metric.status} &7" +
+                "avg=${"%.1f".format(metric.avgDurationMillis)}ms " +
+                "last=${"%.1f".format(metric.lastDurationMillis)}ms " +
+                "(${metric.windowSamples} samples)"
+        )
     }
 
     val issues = mutableListOf<String>()
@@ -1776,7 +1794,7 @@ fun handleMap(
             val result = service.confirmDraft(player, ainpcCommandMiscPlugin.platform.worldAdminService)
             ainpcCommandMiscPlugin.messageUtils.send(sender,
                 "&a" + result.message() + ": &f" + result.createdId() + "&a.")
-            ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc audit world &7si apoi &f/ainpc world save&7.")
+            ainpcCommandMiscPlugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc audit world &7pentru verificare.")
         } catch (exception: IllegalArgumentException) {
             ainpcCommandMiscPlugin.messageUtils.send(sender, "&c" + exception.message)
         }

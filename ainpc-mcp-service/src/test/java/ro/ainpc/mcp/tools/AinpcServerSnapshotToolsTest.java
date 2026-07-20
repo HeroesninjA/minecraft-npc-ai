@@ -13,7 +13,7 @@ class AinpcServerSnapshotToolsTest {
 
     private McpSnapshotService createService() {
         McpMode mode = new McpMode("bridge");
-        SnapshotReader reader = new SnapshotReader("data/nonexistent.json", 2, 60, gson, mode);
+        SnapshotReader reader = new SnapshotReader("data/nonexistent.json", 2, 60, "", gson, mode);
         RedactingSnapshotFilter filter = new RedactingSnapshotFilter("");
         McpAuditLogger audit = new McpAuditLogger("data/test-audit.json", 100);
         return new McpSnapshotService(reader, filter, audit);

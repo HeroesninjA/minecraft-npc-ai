@@ -27,6 +27,10 @@ interface AINPCPlatformApi {
 
     val relationships: RelationshipApi
 
+    val npcEconomy: NpcEconomyApi
+
+    val storyAuthoring: StoryAuthoringApi
+
     val dataDirectory: Path
 
     val packDirectory: Path
@@ -42,6 +46,20 @@ interface AINPCPlatformApi {
         type: String,
         handler: (playerUuid: String, currentProgress: Int, requiredAmount: Int) -> Int
     )
+
+    fun registerObjectiveHandler(
+        type: String,
+        handler: ObjectiveProgressHandler,
+    ) {
+        registerObjectiveHandler(type) { uuid, current, required ->
+            handler.handleProgress(uuid, current, required)
+        }
+    }
+
+    @FunctionalInterface
+    interface ObjectiveProgressHandler {
+        fun handleProgress(playerUuid: String, currentProgress: Int, requiredAmount: Int): Int
+    }
 
     fun getNPCName(npcUuid: UUID): String?
 

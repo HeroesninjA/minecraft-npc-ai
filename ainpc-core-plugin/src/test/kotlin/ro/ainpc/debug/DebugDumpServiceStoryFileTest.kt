@@ -9,7 +9,7 @@ class DebugDumpServiceStoryFileTest {
     fun debugDumpServiceWritesStoryTextForStoryScope() {
         val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt").readText()
 
-        assertTrue(source.contains("dumpRoot.resolve(\"story.txt\")"))
-        assertTrue(source.contains("DebugDumpStoryText.buildStoryText(plugin)"))
+        assertTrue(source.contains("artifacts.addText(\n                \"story.txt\""))
+        assertTrue(source.contains("DebugDumpStoryText.buildCapturedStoryText("))
     }
 }

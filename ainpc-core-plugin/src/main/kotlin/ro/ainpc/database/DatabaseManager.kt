@@ -3,6 +3,8 @@ package ro.ainpc.database
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.PerformanceMonitor
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import java.io.File
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -26,7 +28,10 @@ import java.util.logging.Level
 
 private const val MYSQL_DUPLICATE_KEY_NAME = 1061
 
-open class DatabaseManager(private val plugin: AINPCPlugin?) {
+open class DatabaseManager(
+    private val plugin: AINPCPlugin?,
+    private val performanceMonitor: PerformanceMonitor? = null,
+) {
     private val databaseExecutor: ExecutorService =
         Executors.newSingleThreadExecutor(DatabaseThreadFactory())
     private val statementLock: ReentrantLock = ReentrantLock(true)
@@ -35,6 +40,10 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
     private var dialect: DatabaseDialect = DatabaseDialect.SQLITE
     private val queryCache: MutableMap<String, CacheEntry<String>> = ConcurrentHashMap()
     private val cacheTtlMillis: Long = 5000L
+
+    companion object {
+        const val CURRENT_SCHEMA_VERSION = 1
+    }
 
     fun initialize(): Boolean {
         return try {
@@ -52,6 +61,7 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             }
             configureConnection()
             createTables()
+            runMigrations()
             plugin.logger.info("Baza de date initializata cu succes (${dialect.label}).")
             true
         } catch (e: ClassNotFoundException) {
@@ -592,6 +602,32 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_story_events_place ON story_events(place_id, created_at DESC)")
             stmt.execute(
                 """
+                CREATE TABLE IF NOT EXISTS story_pending_events (
+                    id ${autoIncrementPrimaryKey()},
+                    scope_type ${shortText(64)} NOT NULL,
+                    scope_id ${shortText(128)} NOT NULL,
+                    region_id TEXT NOT NULL DEFAULT '',
+                    place_id TEXT NOT NULL DEFAULT '',
+                    event_type ${shortText(64)} NOT NULL,
+                    event_key TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    description TEXT NOT NULL DEFAULT '',
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    actor_type TEXT NOT NULL DEFAULT '',
+                    actor_id TEXT NOT NULL DEFAULT '',
+                    player_uuid TEXT NOT NULL DEFAULT '',
+                    npc_id TEXT NOT NULL DEFAULT '',
+                    queued_at INTEGER NOT NULL
+                )
+                """
+            )
+            executeSchemaSql(
+                stmt,
+                "CREATE INDEX IF NOT EXISTS idx_story_pending_events_scope " +
+                    "ON story_pending_events(scope_type, scope_id, queued_at ASC)"
+            )
+            stmt.execute(
+                """
                 CREATE TABLE IF NOT EXISTS player_reputation (
                     player_uuid ${shortText()} NOT NULL,
                     scope_type ${shortText(64)} NOT NULL,
@@ -773,7 +809,9 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
         return connection
     }
 
-    fun executeTransaction(block: (Connection) -> Unit) {
+    open fun executeTransaction(block: (Connection) -> Unit) {
+        val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
+        timer?.begin()
         statementLock.lock()
         try {
             val conn = getConnection()!!
@@ -788,7 +826,11 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
             } finally {
                 try { conn.autoCommit = autoCommit } catch (_: Exception) {}
             }
+        } catch (error: Throwable) {
+            timer?.fail()
+            throw error
         } finally {
+            timer?.end()
             statementLock.unlock()
         }
     }
@@ -843,10 +885,16 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
 
     @Throws(SQLException::class)
     fun executeUpdate(sql: String) {
+        val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
+        timer?.begin()
         statementLock.lock()
         try {
             getConnection()!!.createStatement().use { stmt -> stmt.executeUpdate(translateSqlForDialect(sql)) }
+        } catch (error: Throwable) {
+            timer?.fail()
+            throw error
         } finally {
+            timer?.end()
             statementLock.unlock()
         }
     }
@@ -858,7 +906,11 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
         CompletableFuture.supplyAsync(supplier, databaseExecutor)
 
     private fun wrapStatement(statement: PreparedStatement): PreparedStatement {
-        val handler: InvocationHandler = LockedStatementInvocationHandler(statement, statementLock)
+        val handler: InvocationHandler = LockedStatementInvocationHandler(
+            statement,
+            statementLock,
+            performanceMonitor,
+        )
         return Proxy.newProxyInstance(
             statement.javaClass.classLoader,
             arrayOf<Class<*>>(PreparedStatement::class.java),
@@ -868,7 +920,8 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
 
     private class LockedStatementInvocationHandler(
         private val delegate: PreparedStatement,
-        private val lock: ReentrantLock
+        private val lock: ReentrantLock,
+        private val performanceMonitor: PerformanceMonitor?,
     ) : InvocationHandler {
         private var closed = false
 
@@ -883,7 +936,19 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
                     lock.unlock()
                 }
             }
-            return method.invoke(delegate, *(args ?: emptyArray()))
+            if (!method.name.startsWith("execute")) {
+                return method.invoke(delegate, *(args ?: emptyArray()))
+            }
+            val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
+            timer?.begin()
+            return try {
+                method.invoke(delegate, *(args ?: emptyArray()))
+            } catch (error: Throwable) {
+                timer?.fail()
+                throw error
+            } finally {
+                timer?.end()
+            }
         }
     }
 
@@ -920,6 +985,86 @@ open class DatabaseManager(private val plugin: AINPCPlugin?) {
         val now = System.currentTimeMillis()
         val valid = queryCache.count { (_, e) -> now - e.createdAt <= cacheTtlMillis }
         return Triple(queryCache.size, valid, cacheTtlMillis)
+    }
+
+    @Throws(SQLException::class)
+    private fun runMigrations() {
+        createSchemaVersionTable()
+        val storedVersion = readSchemaVersion()
+        if (storedVersion == 0) {
+            setSchemaVersion(CURRENT_SCHEMA_VERSION)
+            plugin?.logger?.info("Schema version initializat la $CURRENT_SCHEMA_VERSION. Tabele create.")
+            return
+        }
+        if (storedVersion > CURRENT_SCHEMA_VERSION) {
+            throw SQLException(
+                "Baza de date are schema version $storedVersion, dar pluginul suporta maxim $CURRENT_SCHEMA_VERSION. " +
+                    "Actualizeaza pluginul sau restaureaza un backup compatibil."
+            )
+        }
+        if (storedVersion < CURRENT_SCHEMA_VERSION) {
+            plugin?.logger?.info("Migrare schema de la $storedVersion la $CURRENT_SCHEMA_VERSION...")
+            for (v in storedVersion until CURRENT_SCHEMA_VERSION) {
+                applyMigration(v)
+                setSchemaVersion(v + 1)
+                plugin?.logger?.info("Migrare completa: versiunea ${v + 1}.")
+            }
+            plugin?.logger?.info("Toate migrarile au fost aplicate. Schema la versiunea $CURRENT_SCHEMA_VERSION.")
+            return
+        }
+        plugin?.logger?.info("Schema version $storedVersion este la zi.")
+    }
+
+    @Throws(SQLException::class)
+    private fun createSchemaVersionTable() {
+        connection!!.createStatement().use { stmt ->
+            stmt.execute(
+                "CREATE TABLE IF NOT EXISTS schema_version (" +
+                    "  version_key TEXT PRIMARY KEY DEFAULT 'current'," +
+                    "  version INTEGER NOT NULL DEFAULT 0," +
+                    "  updated_at INTEGER NOT NULL DEFAULT 0" +
+                    ")"
+            )
+        }
+    }
+
+    @Throws(SQLException::class)
+    private fun readSchemaVersion(): Int {
+        connection!!.createStatement().use { stmt ->
+            stmt.executeQuery(
+                "SELECT version FROM schema_version WHERE version_key = 'current'"
+            ).use { rs ->
+                return if (rs.next()) rs.getInt("version") else 0
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    private fun setSchemaVersion(version: Int) {
+        val now = System.currentTimeMillis()
+        if (dialect == DatabaseDialect.MYSQL) {
+            connection!!.prepareStatement(
+                "INSERT INTO schema_version (version_key, version, updated_at) VALUES ('current', ?, ?) " +
+                    "ON DUPLICATE KEY UPDATE version = VALUES(version), updated_at = VALUES(updated_at)"
+            ).use { stmt ->
+                stmt.setInt(1, version)
+                stmt.setLong(2, now)
+                stmt.executeUpdate()
+            }
+        } else {
+            connection!!.prepareStatement(
+                "INSERT INTO schema_version (version_key, version, updated_at) VALUES ('current', ?, ?) " +
+                    "ON CONFLICT(version_key) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at"
+            ).use { stmt ->
+                stmt.setInt(1, version)
+                stmt.setLong(2, now)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    private fun applyMigration(fromVersion: Int) {
     }
 
     private data class CacheEntry<T>(val value: T, val createdAt: Long)

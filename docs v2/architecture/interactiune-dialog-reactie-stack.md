@@ -1,16 +1,24 @@
 # Interactiune, dialog si reactie
 
-Status: index derivat pentru fluxul player-NPC.
-Actualizat: 2026-07-14.
+Status: index derivat pentru fluxurile player-NPC si story-NPC.
+Actualizat: 2026-07-15.
 
-## Flux
+## Flux player-NPC
 
-1. `architecture/interactiuni.md` capteaza si routeaza intentia.
-2. serviciul determinist valideaza si executa actiunea.
-3. `architecture/reactie-npc-jucator.md` evalueaza si aplica reactia NPC.
-4. `architecture/dialog-si-conversatii.md` formuleaza raspunsul final.
+1. `architecture/interactiuni.md` detine click-ul, chatul, sesiunea si alegerea tintei.
+2. `ScenarioEngine` are prioritate pentru intentiile de quest si poate inchide fluxul cu mesaje proprii.
+3. Pentru dialogul normal, `architecture/dialog-si-conversatii.md` detine selectia fapt-template-AI si fallback-ul.
+4. Dupa o replica nevida, `DialogManager` aplica mutatiile player-NPC descrise in `architecture/reactie-npc-jucator.md`.
 
-## Regula
+## Flux story-NPC
 
-- acest document descrie ordinea si nu redefineste contractele celor trei componente;
-- progresul si persistenta raman la serviciile deterministe.
+1. `StoryAuthoringService` persista evenimentul.
+2. `StoryReactionService` aplica reactia locala configurata in cod NPC-urilor din regiune.
+3. Acest flux nu trece prin `DialogManager` si nu foloseste relatia player-NPC.
+
+## Regula de proprietate
+
+- acest document ruteaza si nu redefinește contractele;
+- nu descrie cele doua fluxuri drept un motor unic;
+- `RelationshipService` inseamna relatii NPC-NPC, iar `DialogManager` detine relatia player-NPC;
+- progresul de quest si story state raman la serviciile lor deterministe.

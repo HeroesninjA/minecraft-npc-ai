@@ -1,13 +1,14 @@
 package ro.ainpc.economy
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.NpcEconomyApi
 import ro.ainpc.npc.NPCState
 import java.sql.SQLException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
-class NpcEconomyService(private val plugin: AINPCPlugin) {
+class NpcEconomyService(private val plugin: AINPCPlugin) : NpcEconomyApi {
     private val npcBalances: MutableMap<String, Int> = ConcurrentHashMap()
     private val npcSalaries: MutableMap<String, Int> = ConcurrentHashMap()
 
@@ -20,14 +21,14 @@ class NpcEconomyService(private val plugin: AINPCPlugin) {
         loadAllBalances()
     }
 
-    fun getBalance(npcId: String): Int = npcBalances.getOrDefault(npcId, 0)
+    override fun getBalance(npcId: String): Int = npcBalances.getOrDefault(npcId, 0)
 
     fun setBalance(npcId: String, amount: Int) {
         npcBalances[npcId] = amount.coerceIn(0, MAX_BALANCE)
         saveBalance(npcId, npcBalances[npcId]!!)
     }
 
-    fun deposit(npcId: String, amount: Int): Boolean {
+    override fun deposit(npcId: String, amount: Int): Boolean {
         if (amount <= 0) return false
         val current = npcBalances.getOrDefault(npcId, 0)
         npcBalances[npcId] = (current + amount).coerceAtMost(MAX_BALANCE)
@@ -35,7 +36,7 @@ class NpcEconomyService(private val plugin: AINPCPlugin) {
         return true
     }
 
-    fun withdraw(npcId: String, amount: Int): Boolean {
+    override fun withdraw(npcId: String, amount: Int): Boolean {
         if (amount <= 0) return false
         val current = npcBalances.getOrDefault(npcId, 0)
         if (current < amount) return false
@@ -44,7 +45,7 @@ class NpcEconomyService(private val plugin: AINPCPlugin) {
         return true
     }
 
-    fun getSalary(occupation: String?): Int {
+    override fun getSalary(occupation: String?): Int {
         if (occupation.isNullOrBlank()) return 0
         return npcSalaries.getOrElse(occupation) { DEFAULT_SALARY }
     }
@@ -70,18 +71,18 @@ class NpcEconomyService(private val plugin: AINPCPlugin) {
         plugin.debug("[NpcEconomy] Salarii platite pentru NPC-uri active.")
     }
 
-    fun paySalaryForWork(npcUuid: UUID?, npcDbId: Int) {
-        if (npcUuid == null) return
-        val npc = plugin.npcManager.getNPCByUuid(npcUuid) ?: return
-        val occupation = npc.occupation ?: return
+    override fun paySalaryForWork(npcUuid: UUID, npcDbId: Int): Boolean {
+        val npc = plugin.npcManager.getNPCByUuid(npcUuid) ?: return false
+        val occupation = npc.occupation ?: return false
         val salary = getSalary(occupation)
-        if (salary <= 0) return
+        if (salary <= 0) return false
         deposit(npcKey(npcUuid, npcDbId), salary)
+        return true
     }
 
-    fun getBalanceCount(): Int = npcBalances.size
+    override fun getBalanceCount(): Int = npcBalances.size
 
-    fun getTotalEconomyValue(): Int = npcBalances.values.sum()
+    override fun getTotalEconomyValue(): Int = npcBalances.values.sum()
 
     fun flushAll() {
         for ((key, balance) in npcBalances) {

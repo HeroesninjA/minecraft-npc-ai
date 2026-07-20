@@ -30,10 +30,15 @@ public class SnapshotReader {
         @Value("${mcp.snapshot.path:data/mcp-runtime-snapshot.json}") String snapshotPath,
         @Value("${mcp.snapshot.cache-ttl-seconds:2}") long cacheTtlSeconds,
         @Value("${mcp.snapshot.stale-threshold-seconds:60}") long staleThresholdSeconds,
+        @Value("${mcp.snapshot.base-dir:}") String baseDir,
         Gson gson,
         McpMode mcpMode
     ) {
-        this.snapshotPath = Path.of(snapshotPath);
+        Path path = Path.of(snapshotPath);
+        if (!path.isAbsolute() && !baseDir.isBlank()) {
+            path = Path.of(baseDir).resolve(snapshotPath);
+        }
+        this.snapshotPath = path;
         this.cacheTtl = Duration.ofSeconds(cacheTtlSeconds);
         this.staleThreshold = Duration.ofSeconds(staleThresholdSeconds);
         this.gson = gson;
@@ -72,7 +77,7 @@ public class SnapshotReader {
                 return SnapshotResult.invalid("Snapshot-ul nu a putut fi deserializat.");
             }
 
-            if (snapshot.getSchemaVersion() != 1) {
+            if (snapshot.getSchemaVersion() < 1 || snapshot.getSchemaVersion() > 3) {
                 cache.set(null);
                 return SnapshotResult.invalid("schemaVersion invalid: " + snapshot.getSchemaVersion());
             }
@@ -86,9 +91,10 @@ public class SnapshotReader {
                 return SnapshotResult.stale(snapshot, detail);
             }
 
-            CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now(), SnapshotState.FRESH, null);
+            SnapshotState loadState = cacheTtl.toSeconds() <= 0 ? SnapshotState.CACHED : SnapshotState.FRESH;
+            CachedSnapshot cs = new CachedSnapshot(snapshot, Instant.now(), loadState, null);
             cache.set(cs);
-            return SnapshotResult.valid(snapshot, true);
+            return new SnapshotResult(true, snapshot, null, cacheTtl.toSeconds() > 0, loadState);
         } catch (IOException e) {
             cache.set(null);
             LOG.warn("Eroare la citirea snapshot-ului: {}", e.getMessage());
@@ -168,6 +174,7 @@ public class SnapshotReader {
 
     private record CachedSnapshot(RuntimeSnapshot snapshot, Instant loadedAt, SnapshotState state, String detail) {
         boolean isExpired(Duration ttl) {
+            if (ttl.toSeconds() <= 0) return true;
             return loadedAt.plus(ttl).isBefore(Instant.now());
         }
 

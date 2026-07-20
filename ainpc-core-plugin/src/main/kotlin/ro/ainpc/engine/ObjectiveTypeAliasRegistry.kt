@@ -46,8 +46,8 @@ object ObjectiveTypeAliasRegistry {
         val normalized = normalize(type)
         return when (normalized) {
             "collect_item" -> listOf("item")
-            "deliver_to_npc" -> listOf("item")
-            "talk_to_npc" -> listOf("item")
+            "deliver_to_npc" -> listOf("item", "npc_target")
+            "talk_to_npc" -> listOf("npc_target")
             "visit_region" -> listOf("item")
             "visit_place" -> listOf("item")
             "inspect_node" -> listOf("item")

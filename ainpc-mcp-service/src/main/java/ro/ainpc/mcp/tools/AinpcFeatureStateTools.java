@@ -7,12 +7,21 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import ro.ainpc.mcp.bridge.McpRuntimeBridgeHealthIndicator;
+import ro.ainpc.mcp.bridge.SnapshotReader;
+
 @Component
 public class AinpcFeatureStateTools {
     private final Environment environment;
+    private final McpRuntimeBridgeHealthIndicator bridgeHealth;
+    private final SnapshotReader snapshotReader;
 
-    public AinpcFeatureStateTools(Environment environment) {
+    public AinpcFeatureStateTools(Environment environment,
+                                   McpRuntimeBridgeHealthIndicator bridgeHealth,
+                                   SnapshotReader snapshotReader) {
         this.environment = environment;
+        this.bridgeHealth = bridgeHealth;
+        this.snapshotReader = snapshotReader;
     }
 
     @McpTool(
@@ -26,21 +35,43 @@ public class AinpcFeatureStateTools {
         )
     )
     public Map<String, Object> featureState() {
+        boolean mcpEnabled = environment.getProperty("mcp.enabled", Boolean.class, true);
+        boolean writeToolsEnabled = environment.getProperty("mcp.write_tools_enabled", Boolean.class, false);
+
+        McpRuntimeBridgeHealthIndicator.BridgeHealthResult bridgeResult = bridgeHealth.check();
+
+        Map<String, Object> snapshotInfo;
+        if (snapshotReader != null) {
+            snapshotInfo = Map.of(
+                "status", snapshotReader.status().name(),
+                "path", snapshotReader.getSnapshotPath().toString()
+            );
+        } else {
+            snapshotInfo = Map.of(
+                "status", "NO_READER",
+                "path", "unavailable"
+            );
+        }
+
         return Map.of(
-            "schemaVersion", 1,
+            "schemaVersion", 2,
             "service", environment.getProperty("spring.application.name", "ainpc-mcp-service"),
             "mcp", Map.of(
-                "enabled", true,
+                "enabled", mcpEnabled,
                 "protocol", environment.getProperty("spring.ai.mcp.server.protocol", "STREAMABLE"),
-                "type", environment.getProperty("spring.ai.mcp.server.type", "SYNC")
+                "type", environment.getProperty("spring.ai.mcp.server.type", "SYNC"),
+                "writeToolsEnabled", writeToolsEnabled
             ),
             "runtimeBridge", Map.of(
-                "enabled", false,
-                "status", "not_configured"
+                "enabled", bridgeResult.bridge() != null && !"not_configured".equals(bridgeResult.bridge()),
+                "status", bridgeResult.status(),
+                "bridge", bridgeResult.bridge() != null ? bridgeResult.bridge() : "not_configured",
+                "detail", bridgeResult.detail() != null ? bridgeResult.detail() : "OK"
             ),
+            "snapshot", snapshotInfo,
             "tools", Map.ofEntries(
-                Map.entry("readOnly", true),
-                Map.entry("writeToolsEnabled", true),
+                Map.entry("readOnly", !writeToolsEnabled),
+                Map.entry("writeToolsEnabled", writeToolsEnabled),
                 Map.entry("semanticContextExport", true),
                 Map.entry("semanticContextSummaryExport", true),
                 Map.entry("questSemanticContextExport", true),

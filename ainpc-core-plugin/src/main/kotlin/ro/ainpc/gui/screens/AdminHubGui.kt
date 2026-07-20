@@ -28,10 +28,21 @@ class AdminHubGui : GuiScreen {
 
         val wa: WorldAdminApi = context.plugin().platform.worldAdmin
         val mcpHealth = context.plugin().mcpRuntimeClient.health()
+        val defCount = context.plugin().progressionService.getDefinitions().size
+        val anchorTotal = runCatching {
+            context.plugin().progressionService.getAnchorBindings(null, null, 300).size
+        }.getOrDefault(0)
+        val storyEventCount = runCatching {
+            context.plugin().storyStateService.listRecentEvents(null, null, 50).size
+        }.getOrDefault(0)
+        val activeQuests = context.plugin().progressionService
+            .getProgressionGuiSnapshot(player, "active", true).currentEntries().size
 
         context.item(4, GuiItemFactory.item(Material.COMMAND_BLOCK, "&6Admin Panel", listOf(
             "&7Mapping: &f${wa.regionCount}r / ${wa.placeCount}p / ${wa.nodeCount}n",
             "&7NPC: &f${context.plugin().npcManager.getNPCCount()}",
+            "&7Quest: &f${defCount} def | ${activeQuests} active | ${anchorTotal} ancore",
+            "&7Story: &f${storyEventCount} evenimente",
             "&7MCP: &f${mcpHealth.status} &8(${mcpHealth.durationMillis}ms)",
             if (wa.hasUnsavedChanges()) "&cModificari nesalvate!" else "&aSalvat"
         )))
@@ -82,6 +93,14 @@ class AdminHubGui : GuiScreen {
         if (context.service().canOpen(context.player(), GuiKey.STORY)) {
             context.button(16, GuiButton.enabled(GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory", listOf("&7Context narativ.")),
                 GuiAction { click -> click.service().open(click.player(), GuiKey.STORY) }))
+        }
+        if (context.service().canOpen(context.player(), GuiKey.QUEST_MAP)) {
+            context.button(22, GuiButton.enabled(GuiItemFactory.item(Material.FILLED_MAP, "&6Quest Map", listOf("&7Leaga obiective de locatii.")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) }))
+        }
+        if (context.service().canOpen(context.player(), GuiKey.CREATOR_HUB)) {
+            context.button(23, GuiButton.enabled(GuiItemFactory.item(Material.CRAFTING_TABLE, "&6Creator Tools", listOf("&7Quest si mapping tools.")),
+                GuiAction { click -> click.service().open(click.player(), GuiKey.CREATOR_HUB) }))
         }
 
         context.button(28, GuiButton.enabled(GuiItemFactory.item(Material.GRASS_BLOCK, "&6Demo mapping", listOf("&7Creeaza mapping demo.")),

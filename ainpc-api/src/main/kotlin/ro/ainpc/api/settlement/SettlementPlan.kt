@@ -1,5 +1,9 @@
 package ro.ainpc.api.settlement
 
+@Deprecated(
+    message = "SettlementPlan is a non-executable API scaffold retained for compatibility; no public settlement executor is available.",
+    level = DeprecationLevel.WARNING
+)
 data class SettlementPlan @JvmOverloads constructor(
     val planId: String,
     val version: Int = 1,

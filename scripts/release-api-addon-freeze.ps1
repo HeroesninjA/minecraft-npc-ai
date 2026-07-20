@@ -7,6 +7,8 @@ param(
 
     [string]$ApiJar = "",
 
+    [string]$ApiAbiBaseline = "",
+
     [string]$MedievalJar = "",
 
     [switch]$FailOnWarnings
@@ -285,17 +287,24 @@ if (-not (Test-Path -LiteralPath $outputDirFull)) {
 $outputDirFull = (Resolve-Path -LiteralPath $outputDirFull).Path
 $jsonPath = Join-Path $outputDirFull "$safeReleaseId-api-addon-freeze.json"
 $markdownPath = Join-Path $outputDirFull "$safeReleaseId-api-addon-freeze.md"
+$apiAbiReportPath = Join-Path $outputDirFull "$safeReleaseId-api-abi.json"
 
 $properties = Read-GradleProperties -Path (Join-Path $repoRoot "gradle.properties")
 $projectVersion = if ($properties.ContainsKey("projectVersion")) { $properties["projectVersion"] } else { "" }
+$apiVersion = if ($properties.ContainsKey("apiVersion")) { $properties["apiVersion"] } else { $projectVersion }
 $paperVersion = if ($properties.ContainsKey("paperVersion")) { $properties["paperVersion"] } else { "" }
 
 $apiSourceDir = Join-Path $repoRoot "ainpc-api\src\main\kotlin"
 $addonSourceDir = Join-Path $repoRoot "ainpc-scenario-medieval\src\main\kotlin"
-$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-$projectVersion.jar"
+$defaultApiJar = Join-Path $repoRoot "ainpc-api\build\libs\ainpc-api-$apiVersion.jar"
 $defaultMedievalJar = Join-Path $repoRoot "ainpc-scenario-medieval\build\libs\ainpc-scenario-medieval-$projectVersion.jar"
 $apiJarPath = if ($ApiJar) { $ApiJar } else { $defaultApiJar }
 $medievalJarPath = if ($MedievalJar) { $MedievalJar } else { $defaultMedievalJar }
+$apiAbiBaselinePath = if ($ApiAbiBaseline) {
+    $ApiAbiBaseline
+} else {
+    Join-Path $repoRoot "ainpc-api\abi\ainpc-api-abi-baseline.json"
+}
 $apiJarSummary = New-FileSummary -Name "ainpc-api" -Path $apiJarPath -Required $true
 $medievalJarSummary = New-FileSummary -Name "ainpc-scenario-medieval" -Path $medievalJarPath -Required $true
 
@@ -356,6 +365,37 @@ $addonRuntimeChecks = [pscustomobject]@{
     exposes_config_template = $addonSourceText -match 'config-template\.yml'
 }
 
+$apiAbi = $null
+$apiAbiError = ""
+$apiAbiScript = Join-Path $PSScriptRoot "api-abi-check.ps1"
+if ($apiJarSummary.exists -and (Test-Path -LiteralPath $apiAbiScript -PathType Leaf)) {
+    try {
+        & $apiAbiScript `
+            -ProjectRoot $repoRoot `
+            -ApiJar $apiJarSummary.path `
+            -BaselinePath $apiAbiBaselinePath `
+            -ReportPath $apiAbiReportPath `
+            -NoFailOnMismatch | Out-Null
+        if (Test-Path -LiteralPath $apiAbiReportPath -PathType Leaf) {
+            $apiAbi = Get-Content -LiteralPath $apiAbiReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        }
+    } catch {
+        $apiAbiError = $_.Exception.Message
+    }
+} elseif (-not (Test-Path -LiteralPath $apiAbiScript -PathType Leaf)) {
+    $apiAbiError = "Lipseste scriptul ABI: $apiAbiScript"
+}
+$apiAbiOk = $null -ne $apiAbi -and $apiAbi.ok -eq $true
+$apiAbiSignature = if ($null -ne $apiAbi) { [string]$apiAbi.signature_sha256 } else { "" }
+$apiAbiAdded = @()
+$apiAbiRemoved = @()
+$apiAbiChanged = @()
+if ($null -ne $apiAbi) {
+    $apiAbiAdded = @($apiAbi.added_classes)
+    $apiAbiRemoved = @($apiAbi.removed_classes)
+    $apiAbiChanged = @($apiAbi.changed_classes)
+}
+
 $warnings = New-Object System.Collections.Generic.List[string]
 if (-not $apiJarSummary.exists) {
     $warnings.Add("Lipseste JAR-ul API: $($apiJarSummary.path)")
@@ -368,6 +408,14 @@ if ($apiSource.file_count -eq 0) {
 }
 if ($apiSource.public_declaration_count -eq 0) {
     $warnings.Add("Nu s-au detectat declaratii publice in API.")
+}
+if ($apiAbiError) {
+    $warnings.Add("Verificarea ABI a esuat: $apiAbiError")
+} elseif (-not $apiAbiOk) {
+    $warnings.Add(
+        "ABI ainpc-api nu corespunde baseline-ului: " +
+        "added=$($apiAbiAdded.Count), removed=$($apiAbiRemoved.Count), changed=$($apiAbiChanged.Count)."
+    )
 }
 foreach ($missing in $missingApiClasses) {
     $warnings.Add("JAR-ul API nu contine clasa asteptata: $missing")
@@ -404,16 +452,18 @@ if (-not $addonRuntimeChecks.exposes_config_template) {
 }
 
 $report = [pscustomobject]@{
-    schema = "ainpc.api-addon-freeze.v1"
+    schema = "ainpc.api-addon-freeze.v2"
     generated_at = (Get-Date).ToString("o")
     release_id = $safeReleaseId
     project_root = $repoRoot
     project_version = $projectVersion
+    api_version = $apiVersion
     paper_version = $paperVersion
     ok = $warnings.Count -eq 0
     api = [pscustomobject]@{
         source = $apiSource
         jar = $apiJarSummary
+        abi = $apiAbi
         required_classes = $requiredApiClasses
         missing_classes = @($missingApiClasses)
     }
@@ -436,6 +486,7 @@ Add-MarkdownLine -Lines $lines
 Add-MarkdownLine -Lines $lines -Text "- Release ID: $safeReleaseId"
 Add-MarkdownLine -Lines $lines -Text "- Generated: $($report.generated_at)"
 Add-MarkdownLine -Lines $lines -Text "- Project version: $projectVersion"
+Add-MarkdownLine -Lines $lines -Text "- API version: $apiVersion"
 Add-MarkdownLine -Lines $lines -Text "- Paper version: $paperVersion"
 Add-MarkdownLine -Lines $lines -Text "- OK: $($report.ok)"
 Add-MarkdownLine -Lines $lines
@@ -446,6 +497,12 @@ Add-MarkdownLine -Lines $lines -Text "- Public declarations: $($apiSource.public
 Add-MarkdownLine -Lines $lines -Text "- Normalized source SHA256: $($apiSource.normalized_sha256)"
 Add-MarkdownLine -Lines $lines -Text "- API JAR: $($apiJarSummary.path)"
 Add-MarkdownLine -Lines $lines -Text "- API JAR SHA256: $($apiJarSummary.sha256)"
+Add-MarkdownLine -Lines $lines -Text "- ABI baseline: $apiAbiBaselinePath"
+Add-MarkdownLine -Lines $lines -Text "- ABI OK: $apiAbiOk"
+Add-MarkdownLine -Lines $lines -Text "- ABI SHA256: $apiAbiSignature"
+Add-MarkdownLine -Lines $lines -Text "- ABI added classes: $($apiAbiAdded -join ', ')"
+Add-MarkdownLine -Lines $lines -Text "- ABI removed classes: $($apiAbiRemoved -join ', ')"
+Add-MarkdownLine -Lines $lines -Text "- ABI changed classes: $($apiAbiChanged -join ', ')"
 Add-MarkdownLine -Lines $lines -Text "- Missing required classes: $(@($missingApiClasses) -join ', ')"
 Add-MarkdownLine -Lines $lines
 Add-MarkdownLine -Lines $lines -Text "## Add-on"
@@ -500,5 +557,6 @@ Write-Host "API/addon freeze Markdown: $markdownPath"
     markdown = $markdownPath
     warning_count = $warnings.Count
     api_signature_sha256 = $apiSource.normalized_sha256
+    api_abi_sha256 = $apiAbiSignature
     addon_signature_sha256 = $addonSource.normalized_sha256
 } | ConvertTo-Json -Compress

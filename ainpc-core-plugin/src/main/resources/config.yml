@@ -68,6 +68,7 @@ features:
   mapping: true
   routine: true
   simulation: true
+  environment: true
   ai: true
   mcp: true
   generation: true
@@ -112,6 +113,29 @@ platform:
   # static | evolutive | rotative
   default_story_mode: "evolutive"
 
+# WorldGen - Constructie fizica a structurilor
+worldgen:
+  # Activarea construcției fizice a blocurilor (necesită executor disponibil)
+  enabled: false
+  # Preferința executor: "worldedit" (dacă e instalat) sau "native" (Bukkit API fallback)
+  executor_preference: ["worldedit", "native"]
+  # Construiește automat blocurile fizice când se aplică patch-uri native
+  auto_build_on_patch: true
+  # Construiește automat blocurile fizice când se plasează clădiri auto
+  auto_build_on_building_auto_place: true
+  # Director pentru template-uri de clădiri (JSON)
+  templates_dir: "templates"
+  # Director pentru schematic-uri WorldEdit
+  schematics_dir: "schematics"
+  # Număr maxim de blocuri per operație (prevenire lag)
+  max_blocks_per_operation: 50000
+  # Activează preview înainte de construcție (WorldEdit only)
+  enable_preview: true
+  # Activează undo pentru operațiuni anterioare
+  enable_undo: true
+  # Persistă schematic-urile după construcție reușită
+  persist_schematics: true
+
 # Setari universale pentru addonuri. Continutul specific unui addon sta in
 # plugins/AINPC/addons/<addon-id>/config.yml, nu in config-ul core.
 addons:
@@ -119,11 +143,11 @@ addons:
   enabled: true
   # Folderul standard pentru configuratiile per-addon.
   config_directory: "addons"
-  # Daca este activ, descriptorii addonurilor sunt validati mai strict la startup/reload.
+  # Daca este activ, descriptorii si graful candidatului sunt validate inainte de lifecycle.
   strict_validation: true
-  # Addonuri dezactivate explicit dupa ID.
+  # Addonuri dezactivate explicit dupa ID; in mod strict se opresc si dependentii activi.
   disabled: []
-  # Ordine optionala de incarcare pentru addonuri care au dependinte functionale intre ele.
+  # Ordine optionala a descriptorilor; nu schimba ordinea de activare Paper a pluginurilor.
   load_order: []
 
 # Setari universale pentru feature packs incarcate de core sau instalate de addonuri.
@@ -226,6 +250,12 @@ quest:
   tracking_particles: true
   # Distanta maxima la care se deseneaza waypoint-ul direct pe tinta. Sageata de langa jucator ramane activa.
   tracking_particle_range: 96
+  # Permite generarea de drafturi quest prin AI (/ainpc quest ai-draft).
+  # Necesita features.ai=true si un provider AI configurat. Drafturile generate necesita
+  # aprobare explicita prin /ainpc quest ai-draft confirm. Nu se publica automat.
+  ai_draft_enabled: false
+  # Daca true, drafturile generate AI sunt validate in plus fata de schema inainte de preview.
+  ai_draft_strict_validation: true
 
 # Setari emotii
 emotions:
@@ -244,6 +274,12 @@ seasonal:
 # Reactii NPC la evenimente story
 story:
   npc_reactions_enabled: true
+  # Activeaza producatorul scheduler pentru evenimente random bazate pe template-uri built-in.
+  random_events_enabled: false
+  # Intervalul schedulerului; runtime-ul aplica o limita minima de 120 secunde.
+  random_events_interval_seconds: 600
+  # Daca este activ, schedulerul adauga un singur draft pending per scope in loc sa publice direct.
+  random_events_require_review: false
 
 # Setari dialog
 dialog:
@@ -293,8 +329,8 @@ villagers:
 
 # Setari baza de date
 database:
-  # Tipul bazei de date: sqlite | mysql.
-  # SQLite ramane default local. MySQL/HikariCP este pentru productie si trebuie activat explicit.
+  # Tipul bazei de date: sqlite | mysql. Aliasul mariadb foloseste dialectul MySQL.
+  # SQLite ramane default local. MySQL/HikariCP trebuie activat explicit si validat pe serverul tinta.
   type: "sqlite"
   # Numele fisierului SQLite. Cheia veche database.filename este pastrata pentru compatibilitate.
   filename: "ainpc_data.db"
@@ -333,6 +369,10 @@ world_admin:
     # Daca este activ, mapping-ul construieste automat un index intern pe chunk-uri pentru cautari rapide dupa locatie.
     # Daca este dezactivat, sistemul foloseste cautarea liniara peste regions/places.
     enabled: true
+  scan:
+    # Buget global impartit de toate scanarile vanilla in fiecare tick, executat numai pe main thread.
+    # Runtime-ul limiteaza valoarea la intervalul 256..65536.
+    blocks_per_tick: 4096
   # Regiunile, places si nodurile sunt definite manual pentru harti preconstruite.
 
 # Mesaje personalizate
@@ -350,3 +390,49 @@ messages:
 debug:
   enabled: false
   quest: false
+  dumps:
+    # Exporturile debug-dump-* mai vechi sunt eliminate automat la urmatorul export.
+    retention_days: 14
+    # Sunt numarate numai directoarele managed debug-dump-*, nu quest-saves/quest-drafts.
+    max_exports: 20
+    # Quota cumulata pentru exporturile managed; dump-ul tocmai creat este protejat de cleanup.
+    max_total_mib: 512
+
+# Evenimente Bukkit publice emise de AINPC si retinute fara payload pentru diagnostic.
+events:
+  public_api_enabled: true
+  # Valoarea este limitata la intervalul 10..1000 pentru memorie predictibila.
+  debug_recent_event_buffer: 100
+
+# Metrici runtime bounded, fara label-uri provenite din inputul playerului.
+observability:
+  metrics:
+    # Numar maxim de serii distincte retinute in memorie.
+    max_series: 32
+    # Fereastra bounded folosita pentru medie, maxim si erori recente.
+    samples_per_series: 100
+    # Pragurile sunt semnale operationale, nu timeout-uri si nu opresc executia.
+    budgets:
+      tick:
+        warn_ms: 20
+        fail_ms: 50
+      database:
+        warn_ms: 50
+        fail_ms: 250
+      command:
+        warn_ms: 100
+        fail_ms: 1000
+      scheduler:
+        warn_ms: 50
+        fail_ms: 250
+      ai:
+        warn_ms: 3000
+        fail_ms: 15000
+      export:
+        warn_ms: 2000
+        fail_ms: 10000
+  tracing:
+    # Retine numai esecuri si operatii care ating pragurile warn/fail de mai sus.
+    enabled: true
+    # Buffer global newest-first; valoarea este limitata la intervalul 8..256.
+    max_spans: 64

@@ -3,6 +3,7 @@ package ro.ainpc.engine
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
+import ro.ainpc.progression.ProgressionAnchorBinding
 
 class QuestAnchorBindingService(private val plugin: AINPCPlugin) {
     fun resolve(template: ScenarioTemplate, player: Player, npc: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
@@ -21,7 +22,9 @@ class QuestAnchorBindingService(private val plugin: AINPCPlugin) {
                     binding.anchorId(), binding.displayLabel()
                 )
             })
-            val global = plugin.progressionService.getAnchorBindings("", template.templateId, 50)
+            val global = plugin.progressionService.getAnchorBindings(
+                ProgressionAnchorBinding.GLOBAL_PLAYER_UUID, template.templateId, 50
+            )
             for (binding in global) {
                 if (bindings.none { it.objectiveKey().equals(binding.objectiveKey(), ignoreCase = true) }) {
                     bindings.add(

@@ -59,7 +59,9 @@ class QuestSeedFactory {
             "kill_mob",
             "place_block",
             "break_block",
-            "craft_item"
+            "craft_item",
+            "use_item",
+            "equip_item"
         )
         val rewardTypes = linkedSetOf("item", "experience", "story")
         val limits = LinkedHashSet<String>()

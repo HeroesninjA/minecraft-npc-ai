@@ -1,14 +1,17 @@
 package ro.ainpc.mcp.bridge
 
+import ro.ainpc.bootstrap.RuntimeHealthSnapshot
+
 data class RuntimeSnapshot(
-    val schemaVersion: Int = 2,
+    val schemaVersion: Int = 3,
     val timestamp: String,
     val plugin: PluginSnapshot,
     val features: FeatureSnapshot,
     val npc: NpcSnapshot,
     val world: WorldSnapshot,
     val quests: QuestSnapshot,
-    val buildMode: BuildModeSnapshot
+    val buildMode: BuildModeSnapshot,
+    val health: RuntimeHealthSnapshot,
 )
 
 data class PluginSnapshot(

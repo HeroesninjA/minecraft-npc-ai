@@ -30,4 +30,4 @@ Acesta este ghidul scurt pentru verificarea setup-ului OpenCode.
 ## Legaturi
 
 - `reference/mcp-runtime-gap-checklist.md`
-- `reference/mcp-runtime-remaining-work.md`
+- `reference/mcp-runtime-gap-checklist.md`

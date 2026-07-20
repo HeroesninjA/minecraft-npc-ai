@@ -12,7 +12,7 @@ Punctul principal de intrare pentru documentatia activa din `docs v2`.
 
 ## Navigare
 
-- `README.md` - catalogul complet;
+- `../README.md` - catalogul complet;
 - `reference/categorii/README.md` - navigare tematica;
 - `reference/index-navigare.md` - alias compact;
 - `archive/README.md` - continut istoric.

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "timestamp": "2026-06-28T12:00:00Z",
   "plugin": {
     "version": "1.0.0",
@@ -33,7 +33,11 @@
         "regionId": "demo_sat",
         "worldName": "world"
       }
-    ]
+    ],
+    "relationshipCount": 0,
+    "economyNpcCount": 0,
+    "economyTotalValue": 0,
+    "socialGatherings": 0
   },
   "world": {
     "regionCount": 2,
@@ -51,6 +55,64 @@
         "mechanic": "village_contracts",
         "playerUuid": "player-1",
         "status": "active"
+      }
+    ],
+    "storyEventCount": 0,
+    "recentStoryEvents": []
+  },
+  "buildMode": {
+    "activePlayers": 0,
+    "byStyle": {},
+    "byTarget": {},
+    "players": [],
+    "history": []
+  },
+  "health": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "generatedAt": "2026-06-28T12:00:00Z",
+    "activeSeries": 2,
+    "droppedMeasurements": 0,
+    "maxSeries": 32,
+    "samplesPerSeries": 100,
+    "budgets": {
+      "tick": { "warnMillis": 20.0, "failMillis": 50.0 },
+      "database": { "warnMillis": 50.0, "failMillis": 250.0 },
+      "command": { "warnMillis": 100.0, "failMillis": 1000.0 },
+      "scheduler": { "warnMillis": 50.0, "failMillis": 250.0 },
+      "ai": { "warnMillis": 3000.0, "failMillis": 15000.0 },
+      "export": { "warnMillis": 2000.0, "failMillis": 10000.0 }
+    },
+    "metrics": [
+      {
+        "name": "tick.routine",
+        "domain": "tick",
+        "status": "PASS",
+        "totalCount": 12,
+        "windowSamples": 12,
+        "windowFailures": 0,
+        "lastDurationMillis": 8.0,
+        "avgDurationMillis": 7.5,
+        "maxDurationMillis": 12.0,
+        "lastObservedAt": "2026-06-28T12:00:00Z",
+        "itemCount": 8,
+        "warnBudgetMillis": 20.0,
+        "failBudgetMillis": 50.0
+      },
+      {
+        "name": "database.operation",
+        "domain": "database",
+        "status": "PASS",
+        "totalCount": 24,
+        "windowSamples": 24,
+        "windowFailures": 0,
+        "lastDurationMillis": 2.0,
+        "avgDurationMillis": 1.5,
+        "maxDurationMillis": 4.0,
+        "lastObservedAt": "2026-06-28T12:00:00Z",
+        "itemCount": 0,
+        "warnBudgetMillis": 50.0,
+        "failBudgetMillis": 250.0
       }
     ]
   }

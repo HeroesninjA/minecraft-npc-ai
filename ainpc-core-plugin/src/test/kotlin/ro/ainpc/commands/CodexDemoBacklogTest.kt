@@ -454,7 +454,7 @@ class CodexDemoBacklogTest {
     @Test
     fun codexFastExperimentalGuideDocumentsExplicitOperatingRules() {
         val guide = File("../.ai/codex-fast-250-experimental-guide.md")
-        val docs = File("../docs/prim-demo-functionalitate-minima-diversa.md")
+        val docs = File("../docs v2/planning/prim-demo-functionalitate-minima-diversa.md")
         assertTrue(guide.isFile, "Fast experimental guide should exist")
         assertTrue(docs.isFile, "Primary demo docs should exist")
 

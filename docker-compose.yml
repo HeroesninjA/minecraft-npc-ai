@@ -5,6 +5,7 @@ services:
     ports:
       - "${SERVER_PORT:-25565}:25565"
       - "${RCON_PORT:-25575}:25575"
+      - "127.0.0.1:${MCP_PORT:-39841}:39841"
     environment:
       EULA: "TRUE"
       TYPE: PAPER
@@ -20,7 +21,7 @@ services:
       MAX_PLAYERS: "${MAX_PLAYERS:-5}"
       MOTD: "${MOTD:-AINPC Demo - SAT DEMO}"
       ENABLE_RCON: "${ENABLE_RCON:-TRUE}"
-      RCON_PASSWORD: "${RCON_PASSWORD:-demo}"
+      RCON_PASSWORD: "${RCON_PASSWORD:?Set RCON_PASSWORD before starting the demo server}"
       RCON_PORT: "${RCON_PORT:-25575}"
       OVERRIDE_SERVER_PROPERTIES: "TRUE"
       ANNOUNCE_PLAYER_ACHIEVEMENTS: "FALSE"
@@ -42,19 +43,24 @@ services:
   mcp-sidecar:
     image: openjdk:21-slim
     container_name: ainpc-mcp-sidecar
-    ports:
-      - "${MCP_PORT:-9121}:9121"
+    network_mode: "service:paper"
+    environment:
+      SPRING_PROFILES_ACTIVE: local-bridge
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 39841
+      MCP_MODE: bridge
+      MCP_SNAPSHOT_PATH: /app/ainpc-plugin/data/mcp-runtime-snapshot.json
+      MCP_COMMAND_PATH: /app/ainpc-plugin/data/mcp-commands
+      MCP_AUDIT_PATH: /app/ainpc-plugin/data/mcp-write-audit.json
     volumes:
       - ./ainpc-mcp-service/build/libs:/app/libs
-      - ./paper-data/plugins/AINPCPlugin:/app/config
+      - ./paper-data/plugins/AINPCPlugin:/app/ainpc-plugin
     working_dir: /app
     entrypoint: >
-      sh -c "java -jar libs/ainpc-mcp-service-*.jar --spring.config.location=file:/app/config/application.yml"
+      sh -c "java -jar libs/ainpc-mcp-service.jar --spring.config.additional-location=optional:file:/app/ainpc-plugin/application.yml"
     restart: unless-stopped
     depends_on:
       - paper
-    networks:
-      - ainpc-net
 
 networks:
   ainpc-net:

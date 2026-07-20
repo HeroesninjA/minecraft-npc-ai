@@ -134,7 +134,7 @@ public class AinpcSemanticContextTools {
     );
 
     @McpTool(
-        name = "ainpc.semantic.context",
+        name = "ainpc.semantic.context.world",
         description = "Read-only semantic context contract for WORLD_LORE, WORLD_HISTORY, NPC_LORE, and STORY_SIGNALS.",
         annotations = @McpTool.McpAnnotations(
             readOnlyHint = true,

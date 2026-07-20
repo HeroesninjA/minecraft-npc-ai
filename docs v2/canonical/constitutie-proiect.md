@@ -1,7 +1,7 @@
 # Constitutie Proiect AINPC
 
 Status: canonical in `docs v2`.
-Actualizat: 2026-07-14.
+Actualizat: 2026-07-15.
 
 Acesta este documentul constitutional al proiectului. Stabileste directia, limitele si regulile care au prioritate peste backlog, idei temporare si implementari incomplete.
 
@@ -31,9 +31,10 @@ Obiectivul nu este doar functionalitate izolata. Obiectivul este un server in ca
 
 | Zona | Rol |
 |---|---|
-| `ainpc-api` | Contract public stabil pentru addonuri |
+| `ainpc-api` | Contract public destinat addonurilor; stabilizarea este obiectiv constitutional |
 | `ainpc-core-plugin` | Implementarea Paper: comenzi, NPC, quest, story, mapping, GUI, AI, debug |
 | `ainpc-scenario-medieval` | Addon exemplar de scenariu |
+| `ainpc-mcp-service` | Sidecar Spring Boot pentru transportul MCP |
 | Addonuri de scenariu/story/resurse | Continut si reguli specifice |
 | Datapack-uri compatibile | Interoperabilitate optionala |
 | `docs v2` | Documentatia activa: reguli, design, roadmap si runbook |

@@ -33,6 +33,17 @@ class SpawnBatchPlanHasherTest {
     }
 
     @Test
+    fun settlementHashChangesWhenNarrativeMetadataChanges() {
+        val original = allocation("sat_01:casa_a", "family_a", "npc_ion", "Ion", "resident")
+        val changed = allocation("sat_01:casa_a", "family_a", "npc_ion", "Ion", "giver")
+
+        assertNotEquals(
+            SpawnBatchPlanHasher.settlementPlanHash(listOf(original)),
+            SpawnBatchPlanHasher.settlementPlanHash(listOf(changed))
+        )
+    }
+
+    @Test
     fun settlementBatchKeyUsesCommonRegionAndShortHash() {
         val allocation = allocation("Sat 01/Casa A", "family_a", "npc_ion", "Ion")
 
@@ -58,7 +69,13 @@ class SpawnBatchPlanHasherTest {
         assertTrue(SpawnBatchPlanHasher.dryRunSettlementBatchKey(listOf(allocation)).startsWith("dryrun:settlement:"))
     }
 
-    private fun allocation(placeId: String, familyId: String, npcKey: String, name: String): HouseAllocation {
+    private fun allocation(
+        placeId: String,
+        familyId: String,
+        npcKey: String,
+        name: String,
+        questRole: String = ""
+    ): HouseAllocation {
         return HouseAllocation.builder(placeId)
             .familyId(familyId)
             .primaryOwnerNpcKey(npcKey)
@@ -67,6 +84,7 @@ class SpawnBatchPlanHasherTest {
                 HouseAllocation.ResidentPlan.builder(npcKey, name)
                     .relationRole("resident")
                     .occupation("locuitor")
+                    .questRole(questRole)
                     .spawnNodeId("$placeId:spawn")
                     .bedNodeId("$placeId:bed")
                     .build()

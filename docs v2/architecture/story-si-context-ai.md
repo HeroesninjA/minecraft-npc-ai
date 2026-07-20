@@ -1,31 +1,45 @@
-# Story si context AI
+# Story si context in fluxul AI
 
-Status: document derivat pentru integrarea dintre contextul narativ si AI.
-Actualizat: 2026-07-14.
+Status: document derivat din fluxul runtime activ.
+Actualizat: 2026-07-15.
 
-Aceasta pagina descrie consumul contextului validat, nu stocarea sau modificarea story state-ului.
+Story context ajunge in dialogul contextual existent, dar nu trece prin `AIOrchestrationService`.
 
-## Flux
+## Flux activ
 
-1. `StoryContextService` construieste snapshot-ul read-only.
-2. orchestration-ul AI selecteaza capabilitatea si formuleaza cererea.
-3. raspunsul este validat si ramane sugestie, briefing sau draft.
-4. orice efect executabil trece prin serviciul determinist responsabil.
+1. `DialogManager` pregateste istoricul, memoriile si relatia player-NPC.
+2. `DialogueEngine` incearca raspunsuri factuale si template-uri deterministe.
+3. Cand criteriile cer ramura contextuala, `OpenAIService` captureaza un `PromptSnapshot` pe thread-ul Paper.
+4. `NPCContext.generateContextDescription()` poate include `StoryContextService.buildForNpc(npc, playerul activ)`.
+5. `OpenAISemanticWorldContextBuilder` include separat un snapshot construit prin `buildForNpc(npc, null)`.
+6. `OpenAIPromptBuilder` adauga istoricul, memoriile si relatia, iar `McpDialogContextProvider` poate adauga context MCP read-only.
+7. `OpenAIService` foloseste providerul sau un fallback local, in functie de flag, cheie, backoff si erori.
 
-## Consumatori
+## Consecinte
 
-- dialog si briefing;
-- GUI si inspectie admin;
-- quest authoring si generare asistata;
-- rezumate narative.
+- snapshot-ul semantic construit cu player `null` nu include ancorele quest active ale playerului;
+- blocul din `NPCContext` poate include playerul, inclusiv numele si story context-ul lui;
+- acelasi prompt poate contine proiectii story cu scope diferit;
+- inchiderea sesiunii nu goleste imediat playerul din `NPCContext`;
+- `ContextRedactor` nu este apelat automat;
+- raspunsul providerului nu este trecut prin `AIResponseValidator`;
+- `OpenAIService.isAvailable` nu confirma flag activ sau cheie configurata.
+
+## Flux neconectat
+
+`AIOrchestrationService` contine use case-uri pentru dialog, story, quest si build-plan drafts, dar nu are apelant in codul de productie. El ramane scaffold dezactivat implicit, nu etapa activa a dialogului sau authoring-ului.
 
 ## Regula
 
-- contextul AI nu este autoritate asupra starii;
-- acest document nu redefineste contractele story state sau story context.
+- story state-ul persistent ramane autoritatea;
+- contextul serializat este continut, nu tranzactie si nu dovada de validare;
+- orice integrare viitoare trebuie sa conecteze explicit redactarea, validatorul si serviciul determinist care detine efectul.
 
 ## Legaturi
 
+- `architecture/dialog-si-conversatii.md`
 - `architecture/story-state-service.md`
 - `architecture/story-context-service.md`
+- `architecture/harta-clase-context.md`
 - `architecture/ai-orchestrare-si-mecanici.md`
+- `reference/prompt-safety-guide.md`

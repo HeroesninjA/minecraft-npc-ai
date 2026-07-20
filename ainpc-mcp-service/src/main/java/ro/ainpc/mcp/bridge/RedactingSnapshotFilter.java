@@ -42,6 +42,8 @@ public class RedactingSnapshotFilter {
         copy.setNpc(redactNpc(snapshot.getNpc()));
         copy.setWorld(snapshot.getWorld());
         copy.setQuests(redactQuests(snapshot.getQuests()));
+        copy.setBuildMode(snapshot.getBuildMode());
+        copy.setHealth(snapshot.getHealth());
         return copy;
     }
 
@@ -51,6 +53,10 @@ public class RedactingSnapshotFilter {
         copy.setTotalCount(npc.getTotalCount());
         copy.setByRegion(npc.getByRegion());
         copy.setSamples(redactNpcSamples(npc.getSamples()));
+        copy.setRelationshipCount(npc.getRelationshipCount());
+        copy.setEconomyNpcCount(npc.getEconomyNpcCount());
+        copy.setEconomyTotalValue(npc.getEconomyTotalValue());
+        copy.setSocialGatherings(npc.getSocialGatherings());
         return copy;
     }
 
@@ -75,6 +81,8 @@ public class RedactingSnapshotFilter {
         copy.setActivePlayerQuests(quests.getActivePlayerQuests());
         copy.setActiveGlobalQuests(quests.getActiveGlobalQuests());
         copy.setSamples(redactQuestSamples(quests.getSamples()));
+        copy.setStoryEventCount(quests.getStoryEventCount());
+        copy.setRecentStoryEvents(quests.getRecentStoryEvents());
         return copy;
     }
 

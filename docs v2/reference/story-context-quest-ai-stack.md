@@ -1,16 +1,19 @@
-# Story context quest AI stack
+# Story, context, quest si AI: ordine de citire
 
-Status: index derivat pentru traseul story-context-generare.
-Actualizat: 2026-07-14.
+Status: index derivat.
+Actualizat: 2026-07-15.
 
 ## Ordine
 
-1. `architecture/story-state-service.md` - starea persistenta si scrierile validate.
-2. `architecture/story-context-service.md` - proiectia narativa read-only.
-3. `architecture/story-si-context-ai.md` - consumul contextului de catre AI.
-4. `architecture/generare-automata-questuri-ai.md` - pipeline-ul de drafturi quest.
+1. `architecture/story-state-service.md` - persistenta region/place si evenimente.
+2. `architecture/story-context-service.md` - proiectia read-only si limitele de redactare.
+3. `architecture/story-si-context-ai.md` - consumul real in dialog.
+4. `architecture/generare-automata-questuri-ai.md` - authoring si drafturi quest.
+5. `planning/questuri-avansate-v2.md` - lucrul ramas.
 
 ## Regula
 
-- acest document doar stabileste ordinea de citire;
-- nu redefineste contractele componentelor.
+- story state nu are model global in serviciul curent;
+- `toPromptBlock()` nu inseamna redactare;
+- scaffold-ul orchestration nu este pipeline activ;
+- acest document doar stabileste ordinea de citire.

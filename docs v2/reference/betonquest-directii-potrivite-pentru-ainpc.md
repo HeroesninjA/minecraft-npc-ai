@@ -1,25 +1,31 @@
-# Directii din BetonQuest care se potrivesc pentru AINPC
+# Idei BetonQuest relevante pentru AINPC
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-11.
+Status: nota de inspiratie, non-normativa.
+Actualizat: 2026-07-15.
 
-Rezumatul ideilor din BetonQuest care merita preluate in AINPC.
+Acest document pastreaza cateva principii de design utile. Nu este dovada ca o functie exista si nu poate suprascrie contractele AINPC verificate in cod.
 
-## Ce preia
+## Idei utile
 
 - building blocks declarative;
-- registri pentru extensie;
+- registri expliciti pentru extensii;
 - API public separat de core;
 - progres persistent pe obiective;
-- event bus pentru schimbari de stare.
+- evenimente pentru schimbari de stare.
 
-## Ce nu copiaza direct
+## Ce nu se copiaza implicit
 
 - API static greu de controlat;
-- DSL prea mare prea devreme;
-- suprafata mare de hooks inainte de runtime stabil.
+- DSL extins inaintea unui runtime stabil;
+- hooks publice fara lifecycle si compatibilitate definite;
+- concepte externe fara traducere in schema, audit si teste AINPC.
+
+## Regula de adoptie
+
+O idee devine directie AINPC numai dupa ce apare intr-un contract local, are owner, criterii de acceptare si test. Pana atunci ramane inspiratie.
 
 ## Legaturi
 
 - `architecture/progression-service.md`
 - `reference/api-events-listeners-triggers.md`
+- `planning/questuri-avansate-v2.md`

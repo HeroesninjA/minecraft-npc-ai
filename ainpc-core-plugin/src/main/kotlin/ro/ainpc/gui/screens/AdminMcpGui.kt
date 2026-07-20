@@ -72,18 +72,6 @@ class AdminMcpGui : GuiScreen {
             plugin.mcpRuntimeClient.callTool("ainpc.server.snapshot")
         } else null
         val runtimeInfo = parseSnapshot(snapshot?.contentJson)
-        val buildModeResult = if (health.available) {
-            plugin.mcpRuntimeClient.callTool("ainpc.build.mode.status")
-        } else null
-        val buildModeInfo = parseBuildModeStatus(buildModeResult?.contentJson)
-        val buildModeHistoryResult = if (health.available) {
-            plugin.mcpRuntimeClient.callTool("ainpc.build.mode.history")
-        } else null
-        val buildModeHistoryInfo = parseBuildModeHistory(buildModeHistoryResult?.contentJson)
-        val buildModeExportResult = if (health.available) {
-            plugin.mcpRuntimeClient.callTool("ainpc.build.mode.export")
-        } else null
-        val buildModeExportInfo = parseBuildModeExport(buildModeExportResult?.contentJson)
 
         context.item(22, GuiItemFactory.item(Material.CLOCK,
             "&eRuntime snapshot",
@@ -97,16 +85,13 @@ class AdminMcpGui : GuiScreen {
         ))
 
         context.item(30, GuiItemFactory.item(
-            if ((buildModeInfo["build_players"] ?: runtimeInfo["build_players"] ?: "0").toIntOrNull() ?: 0 > 0) Material.LIME_DYE else Material.GRAY_DYE,
+            if ((runtimeInfo["build_players"] ?: "0").toIntOrNull() ?: 0 > 0) Material.LIME_DYE else Material.GRAY_DYE,
             "&dBuild mode",
             listOf(
-                "&7Activi: &f${buildModeInfo["build_players"] ?: runtimeInfo["build_players"] ?: "0"}",
-                "&7Style: &f${buildModeInfo["build_styles"] ?: runtimeInfo["build_styles"] ?: "?"}",
-                "&7Target: &f${buildModeInfo["build_targets"] ?: runtimeInfo["build_targets"] ?: "?"}",
-                "&7Players: &f${buildModeInfo["build_players_list"] ?: "?"}",
-                "&7History: &f${buildModeHistoryInfo["build_history_count"] ?: "0"}",
-                "&7Recent: &f${buildModeHistoryInfo["build_history_items"] ?: "[]"}",
-                "&7Export: &f${buildModeExportInfo["build_export_status"] ?: "?"}"
+                "&7Activi: &f${runtimeInfo["build_players"] ?: "0"}",
+                "&7Style: &f${runtimeInfo["build_styles"] ?: "?"}",
+                "&7Target: &f${runtimeInfo["build_targets"] ?: "?"}",
+                "&7Players: &f${runtimeInfo["build_players_list"] ?: "?"}"
             )
         ))
 
@@ -120,12 +105,12 @@ class AdminMcpGui : GuiScreen {
                 listOf("&7Afiseaza starea curenta a build mode.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc build mode status") })
 
-        context.button(38, GuiButton.enabled(
+        context.button(34, GuiButton.enabled(
             GuiItemFactory.item(Material.WRITABLE_BOOK, "&bBuild history",
                 listOf("&7Afiseaza ultimele schimbari ale build mode.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc build mode history") })
 
-        context.button(39, GuiButton.enabled(
+        context.button(35, GuiButton.enabled(
             GuiItemFactory.item(Material.PAPER, "&dBuild export",
                 listOf("&7Afiseaza exportul compact al build mode.")),
         ) { click -> click.service().runCommand(click.player(), "ainpc build mode export") })
@@ -201,45 +186,6 @@ class AdminMcpGui : GuiScreen {
                 val entry = it.asJsonObject
                 "${entry.get("name")?.asString ?: "?"}:${entry.get("style")?.asString ?: "?"}/${entry.get("target")?.asString ?: "?"}"
             } ?: "[]")
-        )
-    }
-
-    private fun parseBuildModeStatus(contentJson: String?): Map<String, String> {
-        val root = runCatching { JsonParser.parseString(contentJson ?: "{}").asJsonObject }.getOrNull() ?: return emptyMap()
-        val available = root.get("available")?.asBoolean ?: false
-        if (!available) return emptyMap()
-        val buildMode = root.getAsJsonObject("buildMode")
-        val players = buildMode?.getAsJsonArray("players")
-        return mapOf(
-            "build_players" to (buildMode?.get("activePlayers")?.asString ?: "0"),
-            "build_styles" to (buildMode?.get("byStyle")?.toString() ?: "{}"),
-            "build_targets" to (buildMode?.get("byTarget")?.toString() ?: "{}"),
-            "build_players_list" to (players?.joinToString(", ") {
-                val entry = it.asJsonObject
-                "${entry.get("name")?.asString ?: "?"}:${entry.get("style")?.asString ?: "?"}/${entry.get("target")?.asString ?: "?"}"
-            } ?: "[]")
-        )
-    }
-
-    private fun parseBuildModeHistory(contentJson: String?): Map<String, String> {
-        val root = runCatching { JsonParser.parseString(contentJson ?: "{}").asJsonObject }.getOrNull() ?: return emptyMap()
-        val history = root.getAsJsonArray("history")
-        return mapOf(
-            "build_history_count" to (history?.size()?.toString() ?: "0"),
-            "build_history_items" to (history?.take(8)?.joinToString(" | ") {
-                val entry = it.asJsonObject
-                "${entry.get("playerName")?.asString ?: "?"}:${entry.get("action")?.asString ?: "?"}"
-            } ?: "[]")
-        )
-    }
-
-    private fun parseBuildModeExport(contentJson: String?): Map<String, String> {
-        val root = runCatching { JsonParser.parseString(contentJson ?: "{}").asJsonObject }.getOrNull() ?: return emptyMap()
-        val available = root.get("available")?.asBoolean ?: false
-        val activePlayers = root.get("activePlayers")?.asString ?: "0"
-        val history = root.getAsJsonArray("history")
-        return mapOf(
-            "build_export_status" to if (available) "ok:$activePlayers/${history?.size() ?: 0}" else "offline"
         )
     }
 }

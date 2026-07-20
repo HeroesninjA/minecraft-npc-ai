@@ -2,6 +2,7 @@ package ro.ainpc.world
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -249,5 +250,27 @@ class VillagePatchApplierTest {
         val result = VillagePatchApplier().apply(service, plan)
         assertFalse(result.success())
         assertTrue(result.errors().any { it.contains("Nu pot crea node-ul") })
+    }
+
+    @Test
+    fun rollsBackCreatedNodeWhenLaterNodeCreationFails() {
+        val plan = PatchPlan(
+            "test:patch:rollback",
+            PatchType.ADD_NODE,
+            PatchBuildMode.SEMANTIC_ONLY,
+            "test_sat", "",
+            "", emptyList(),
+            listOf("test_sat:duplicate_node", "test_sat:duplicate_node"),
+            emptyList(), PatchValidationStatus.VALID,
+            emptyList(), emptyList(),
+            "test", 3, 1, 1,
+        )
+
+        val result = VillagePatchApplier().apply(service, plan)
+
+        assertFalse(result.success())
+        assertTrue(result.createdNodeIds().isEmpty())
+        assertNull(service.getNode("test_sat:duplicate_node"))
+        assertTrue(result.warnings().any { it.startsWith("Compensare mapping reusita") })
     }
 }

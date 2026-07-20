@@ -3,28 +3,42 @@ package ro.ainpc.debug
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.routine.BehaviorProfile
+import ro.ainpc.routine.BehaviorProfileLoader
+import java.nio.file.Files
+import java.nio.file.Path
 
 object DebugDumpBehaviorProfileJson {
     @JvmStatic
-    fun buildBehaviorProfilesJson(plugin: AINPCPlugin): JsonArray {
+    fun buildBehaviorProfilesJson(plugin: AINPCPlugin): JsonArray =
+        profilesJson(BehaviorProfileLoader(plugin).loadAll())
+
+    internal fun buildBehaviorProfilesJson(dataFolder: Path): JsonArray {
+        val configFile = dataFolder.resolve("behavior_profiles.yml")
+        if (!Files.isRegularFile(configFile)) {
+            return JsonArray()
+        }
+        val profiles = BehaviorProfileLoader(null).parseYamlString(Files.readString(configFile))
+        return profilesJson(profiles)
+    }
+
+    private fun profilesJson(profiles: Collection<BehaviorProfile>): JsonArray {
         val arr = JsonArray()
-        val loader = ro.ainpc.routine.BehaviorProfileLoader(plugin)
-        val profiles = loader.loadAll()
-        for (p in profiles) {
+        for (profile in profiles) {
             val json = JsonObject()
-            json.addProperty("profile_id", p.profileId)
-            json.addProperty("occupation", p.occupation)
-            json.addProperty("display_name", p.displayName)
-            json.addProperty("movement_speed", p.movementSpeed)
-            json.addProperty("wander_radius", p.wanderRadius)
-            json.addProperty("home_return", p.homeReturn)
-            json.addProperty("socialize_chance", p.socializeChance)
-            json.addProperty("weather_reactions", p.weatherReactions)
-            json.addProperty("night_return", p.nightReturn)
-            json.addProperty("danger_avoidance", p.dangerAvoidance)
+            json.addProperty("profile_id", profile.profileId)
+            json.addProperty("occupation", profile.occupation)
+            json.addProperty("display_name", profile.displayName)
+            json.addProperty("movement_speed", profile.movementSpeed)
+            json.addProperty("wander_radius", profile.wanderRadius)
+            json.addProperty("home_return", profile.homeReturn)
+            json.addProperty("socialize_chance", profile.socializeChance)
+            json.addProperty("weather_reactions", profile.weatherReactions)
+            json.addProperty("night_return", profile.nightReturn)
+            json.addProperty("danger_avoidance", profile.dangerAvoidance)
 
             val scheduleArr = JsonArray()
-            for (entry in p.schedule) {
+            for (entry in profile.schedule) {
                 val entryJson = JsonObject()
                 entryJson.addProperty("label", entry.label)
                 entryJson.addProperty("start_tick", entry.startTick)
@@ -37,11 +51,10 @@ object DebugDumpBehaviorProfileJson {
             json.add("schedule", scheduleArr)
 
             val metaObj = JsonObject()
-            for ((key, value) in p.metadata) {
+            for ((key, value) in profile.metadata) {
                 metaObj.addProperty(key, value)
             }
             json.add("metadata", metaObj)
-
             arr.add(json)
         }
         return arr

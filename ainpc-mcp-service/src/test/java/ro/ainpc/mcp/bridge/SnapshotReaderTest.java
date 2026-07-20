@@ -17,7 +17,7 @@ class SnapshotReaderTest {
     void returnsMissingWhenFileDoesNotExist(@TempDir Path tempDir) {
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            tempDir.resolve("nonexistent.json").toString(), 2, 60, gson, mode);
+            tempDir.resolve("nonexistent.json").toString(), 2, 60, "", gson, mode);
         SnapshotReader.SnapshotResult result = reader.read();
         assertFalse(result.isAvailable());
         assertTrue(result.getDetail().contains("nu exista"));
@@ -32,15 +32,18 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 3600, gson, mode);
+            snapshotFile.toString(), 60, 3600, "", gson, mode);
         SnapshotReader.SnapshotResult result = reader.read();
         assertTrue(result.isAvailable());
         assertTrue(result.isFresh());
-        assertEquals(1, result.getSnapshot().getSchemaVersion());
+        assertEquals(3, result.getSnapshot().getSchemaVersion());
         assertEquals("1.0.0", result.getSnapshot().getPlugin().getVersion());
         assertEquals(8, result.getSnapshot().getNpc().getTotalCount());
         assertEquals(2, result.getSnapshot().getNpc().getSamples().size());
         assertEquals("Gheorghe", result.getSnapshot().getNpc().getSamples().getFirst().getName());
+        assertNotNull(result.getSnapshot().getHealth());
+        assertEquals("PASS", result.getSnapshot().getHealth().getStatus());
+        assertEquals(2, result.getSnapshot().getHealth().getMetrics().size());
     }
 
     @Test
@@ -52,7 +55,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 3600, gson, mode);
+            snapshotFile.toString(), 60, 3600, "", gson, mode);
         SnapshotReader.SnapshotResult first = reader.read();
         assertTrue(first.isAvailable());
 
@@ -70,7 +73,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("offline");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 2, 60, gson, mode);
+            snapshotFile.toString(), 2, 60, "", gson, mode);
         SnapshotReader.SnapshotResult result = reader.read();
         assertFalse(result.isAvailable());
         assertTrue(result.getDetail().contains("offline"));
@@ -86,7 +89,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("offline");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 2, 60, gson, mode);
+            snapshotFile.toString(), 2, 60, "", gson, mode);
         assertEquals(SnapshotReader.SnapshotStatus.OFFLINE, reader.status());
     }
 
@@ -97,7 +100,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 2, 60, gson, mode);
+            snapshotFile.toString(), 2, 60, "", gson, mode);
         SnapshotReader.SnapshotResult result = reader.read();
         assertFalse(result.isAvailable());
         assertNotNull(result.getDetail());
@@ -113,7 +116,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 0, 3600, gson, mode);
+            snapshotFile.toString(), 0, 3600, "", gson, mode);
         SnapshotReader.SnapshotResult result = reader.read();
         assertTrue(result.isAvailable());
         assertFalse(result.isFresh());
@@ -131,7 +134,7 @@ class SnapshotReaderTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 60, gson, mode);
+            snapshotFile.toString(), 60, 60, "", gson, mode);
 
         SnapshotReader.SnapshotResult first = reader.read();
         assertTrue(first.isAvailable());

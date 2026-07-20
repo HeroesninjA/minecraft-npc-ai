@@ -26,7 +26,7 @@ class ContextRedactorTest {
     fun redactsUuid() {
         val input = "Player 550e8400-e29b-41d4-a716-446655440000 a facut o actiune."
         val result = ContextRedactor.redact(input)
-        assertTrue(result.contains("550e8400-****-****-****-************"))
+        assertTrue(result.contains("[REDACTED]"))
         assertFalse(result.contains("550e8400-e29b-41d4-a716-446655440000"))
     }
 
@@ -43,7 +43,7 @@ class ContextRedactorTest {
         val input = "Server IP: 192.168.1.1"
         val result = ContextRedactor.redact(input)
         assertFalse(result.contains("192.168.1.1"))
-        assertTrue(result.contains("192.168.*.*"))
+        assertTrue(result.contains("[REDACTED]"))
     }
 
     @Test
@@ -58,8 +58,8 @@ class ContextRedactorTest {
         val input = "API: sk-test12345678901234567890, UUID: 550e8400-e29b-41d4-a716-446655440000, email: test@test.com, IP: 10.0.0.1"
         val result = ContextRedactor.redact(input)
         assertTrue(result.contains("[REDACTED]"))
-        assertTrue(result.contains("****"))
-        assertTrue(result.contains("10.0.*.*"))
+        assertFalse(result.contains("550e8400-e29b-41d4-a716-446655440000"))
+        assertFalse(result.contains("10.0.0.1"))
     }
 
     @Test

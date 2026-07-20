@@ -19,7 +19,7 @@ class McpRuntimeBridgeHealthIndicatorTest {
     void reportsDownWhenFileDoesNotExist(@TempDir Path tempDir) {
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            tempDir.resolve("missing.json").toString(), 2, 60, gson, mode);
+            tempDir.resolve("missing.json").toString(), 2, 60, "", gson, mode);
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
         assertEquals("DOWN", health.status());
@@ -34,7 +34,7 @@ class McpRuntimeBridgeHealthIndicatorTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 3600, gson, mode);
+            snapshotFile.toString(), 60, 3600, "", gson, mode);
 
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
@@ -51,7 +51,7 @@ class McpRuntimeBridgeHealthIndicatorTest {
 
         McpMode mode = new McpMode("offline");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 3600, gson, mode);
+            snapshotFile.toString(), 60, 3600, "", gson, mode);
 
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
@@ -69,7 +69,7 @@ class McpRuntimeBridgeHealthIndicatorTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 0, 60, gson, mode);
+            snapshotFile.toString(), 0, 60, "", gson, mode);
 
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
@@ -81,7 +81,7 @@ class McpRuntimeBridgeHealthIndicatorTest {
     void checkReturnsNonNullStatus() {
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            "data/missing-snapshot.json", 2, 60, gson, mode);
+            "data/missing-snapshot.json", 2, 60, "", gson, mode);
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(reader);
         McpRuntimeBridgeHealthIndicator.BridgeHealthResult health = indicator.check();
         assertNotNull(health.status());

@@ -1,9 +1,26 @@
 # TODO Caracteristici
 
-Actualizat: 2026-06-29
+Actualizat: 2026-07-16
 
 ## Exista deja
 
+- [x] EnvironmentEngine tick() chemat din SchedulerCoordinator la fiecare 60s
+- [x] Schema versioning in DatabaseManager (CURRENT_SCHEMA_VERSION=1, runMigrations, startup guard)
+- [x] API: PlayerProgressionService implementeaza PlayerProgressionApi, platform accesor fixat
+- [x] API: ObjectiveProgressHandler @FunctionalInterface pentru consumatori Java
+- [x] Routine: pause/override conectate in runRoutineTick()
+- [x] Routine: NpcSimulationMode (FULL/LIGHT/NONE) aplicat in runLifeSimulationTick()
+- [x] Performance: log tail bounded memory (BufferedReader + circular buffer)
+- [x] Performance: MCP debugdump async (7 tool calls pe thread separat)
+- [x] MCP: schema version aliniat v2, model Java + fixtures actualizate
+- [x] MCP: feature state + debug health raporteaza valori reale din config
+- [x] MCP: duplicat ainpc.semantic.context eliminat
+- [x] MCP: AdminMcpGui sloturi 38/39 → 34/35 in limita 36
+- [x] MCP: STALE state pastrat, redactor copiaza campuri v2
+- [x] Build mode owner: AdminMcpGui citeste din snapshot, nu din tool-uri MCP inexistente
+- [x] Quest V2 roadmap complet (8 iteme P0-P2 + gate demo)
+- [x] Deploy: credential leak fixed, env vars only
+- [x] Smoke: verificare raspunsuri RCON cu ExpectContains
 - [x] NPC-uri AI bazate pe `Villager`
 - [x] Dialog contextual cu memorie, emotii si relatie cu jucatorul
 - [x] Comenzi administrative prin `/ainpc`, `/npc` si `/ai`

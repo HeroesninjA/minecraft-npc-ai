@@ -8,6 +8,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
+import ro.ainpc.mcp.bridge.McpRuntimeBridgeHealthIndicator;
+import ro.ainpc.mcp.bridge.SnapshotReader;
+
 class AinpcFeatureStateToolsTest {
     @Test
     void featureStateReportsReadOnlyMcpSidecar() {
@@ -16,33 +19,33 @@ class AinpcFeatureStateToolsTest {
             .withProperty("spring.ai.mcp.server.protocol", "STREAMABLE")
             .withProperty("spring.ai.mcp.server.type", "SYNC");
 
-        Map<String, Object> result = new AinpcFeatureStateTools(environment).featureState();
+        McpRuntimeBridgeHealthIndicator.BridgeHealthResult stubHealth =
+            new McpRuntimeBridgeHealthIndicator.BridgeHealthResult("OK", "local-bridge", "Bridge connected");
+        McpRuntimeBridgeHealthIndicator stubIndicator = new McpRuntimeBridgeHealthIndicator(null) {
+            @Override
+            public BridgeHealthResult check() {
+                return stubHealth;
+            }
+        };
 
-        assertEquals(1, result.get("schemaVersion"));
+        Map<String, Object> result = new AinpcFeatureStateTools(environment, stubIndicator, null).featureState();
+
+        assertEquals(2, result.get("schemaVersion"));
         assertEquals("ainpc-mcp-service", result.get("service"));
         assertTrue(result.containsKey("timestamp"));
 
         Map<?, ?> mcp = (Map<?, ?>) result.get("mcp");
         assertEquals(true, mcp.get("enabled"));
         assertEquals("STREAMABLE", mcp.get("protocol"));
+        assertEquals(false, mcp.get("writeToolsEnabled"));
 
         Map<?, ?> runtimeBridge = (Map<?, ?>) result.get("runtimeBridge");
-        assertEquals(false, runtimeBridge.get("enabled"));
+        assertEquals(true, runtimeBridge.get("enabled"));
+        assertEquals("OK", runtimeBridge.get("status"));
 
         Map<?, ?> tools = (Map<?, ?>) result.get("tools");
         assertEquals(true, tools.get("readOnly"));
-        assertEquals(true, tools.get("writeToolsEnabled"));
+        assertEquals(false, tools.get("writeToolsEnabled"));
         assertEquals(true, tools.get("semanticContextExport"));
-        assertEquals(true, tools.get("semanticContextSummaryExport"));
-        assertEquals(true, tools.get("questSemanticContextExport"));
-        assertEquals(true, tools.get("questSemanticContextSummaryExport"));
-        assertEquals(true, tools.get("questAuthoringContextSummaryExport"));
-        assertEquals(true, tools.get("mappingSemanticContextExport"));
-        assertEquals(true, tools.get("mappingSemanticContextSummaryExport"));
-        assertEquals(true, tools.get("storySemanticContextExport"));
-        assertEquals(true, tools.get("storySemanticContextSummaryExport"));
-        assertEquals(true, tools.get("routingSemanticContextExport"));
-        assertEquals(true, tools.get("routingSemanticContextSummaryExport"));
-        assertEquals(true, tools.get("semanticRoutingSummaryExport"));
     }
 }

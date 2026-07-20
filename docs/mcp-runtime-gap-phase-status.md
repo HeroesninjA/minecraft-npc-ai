@@ -1,1 +1,1 @@
-This document was moved to "docs v2/reference/mcp-runtime-gap-phase-status.md".
+This obsolete phase status was consolidated into `docs v2/reference/mcp-runtime-gap-checklist.md`.

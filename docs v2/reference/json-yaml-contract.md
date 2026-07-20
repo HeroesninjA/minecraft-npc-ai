@@ -1,25 +1,42 @@
-# Contract JSON/YAML pentru scripturi
+# Contract JSON/YAML pentru documente declarative
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-10.
+Status: referinta derivata; nu inlocuieste schemele de domeniu.
+Actualizat: 2026-07-17.
 
-Contractul comun pentru scripturi si feature packs scrise in JSON sau YAML.
+JSON si YAML pot reprezenta acelasi arbore logic in fixture-urile de contract, dar fiecare domeniu isi pastreaza propria schema si propriul loader.
 
-## Principiu
+## Ce este implementat
 
-- JSON si YAML sunt doar forme de exprimare;
-- modelul logic este acelasi;
-- validarea se face pe straturi;
-- extensiile se adauga fara a rupe campurile vechi.
+- `JsonYamlContractFixturesTest` incarca perechi JSON/YAML pentru quest si world admin;
+- testele compara aceleasi valori logice si alimenteaza helper-ele de snapshot/debug;
+- `ScriptDocumentNormalizer` normalizeaza documente de script pentru diagnostic;
+- `FeaturePackLoader` selecteaza fisiere `.yml`, `.yaml` si `.json` din directorul de pack-uri.
+- `FeaturePackLoader` foloseste `ScriptConfigurationLoader` pentru pre-scanarea metadata si pentru incarcarea efectiva a fiecarui pack;
+- testul JSON feature-pack continua dupa parsare prin validatorul metadata si `FeaturePackYamlSupport`, pana la modelele runtime.
 
-## Ce normalizeaza
+## Ce nu trebuie dedus
 
-- structura;
-- semantica;
-- compatibilitate intre versiuni;
-- reguli pentru Feature Pack YAML.
+- nu exista o singura schema comuna pentru world admin, quest drafts si feature packs;
+- paritatea sintactica nu garanteaza ca fiecare consumer accepta ambele formate;
+- fixture-urile din `src/test/resources` nu sunt continut instalat pe server;
+- schema feature pack este definita in `reference/scenario-pack-schema.md` si in codul loaderului.
+
+## Regula
+
+- defineste mai intai schema de domeniu;
+- foloseste JSON/YAML doar ca reprezentari;
+- valideaza separat sintaxa, metadata si semantica runtime;
+- nu promite suport de format fara fixture si test pentru consumerul respectiv.
+
+## Surse in cod
+
+- `ainpc-core-plugin/src/test/kotlin/ro/ainpc/engine/JsonYamlContractFixturesTest.kt`
+- `ainpc-core-plugin/src/test/resources/json-yaml-contract/`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/debug/ScriptDocumentNormalizer.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/FeaturePackLoader.kt`
 
 ## Legaturi
 
 - `reference/json-yaml-contract-exemple.md`
 - `reference/scenario-pack-schema.md`
+- `reference/mapping-stack.md`

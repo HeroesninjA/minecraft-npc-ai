@@ -71,6 +71,16 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         context.syncSimulationState(location.location)
     }
 
+    fun updateBasicNeeds(npc: AINPC?) {
+        if (npc == null) return
+        val location = LocationWrapper.fromNpc(npc) ?: return
+
+        val context = npc.context
+        context.updateFromWorld(location.world, location.location)
+        updateNeeds(npc, context)
+        context.syncSimulationState(location.location)
+    }
+
     private fun calculateAllScores(npc: AINPC, context: NPCContext): MutableMap<NPCAction, Int> {
         val scores: MutableMap<NPCAction, Int> = EnumMap(NPCAction::class.java)
         val possibleActions = filterActionsByState(npc.currentState)
@@ -323,7 +333,7 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
 
     private fun applySimulationOutcome(npc: AINPC, context: NPCContext, action: NPCAction) {
         val targetState = mapActionToState(action, context)
-        npc.currentState = targetState
+        npc.changeStateFromSimulation(targetState)
         npc.currentGoal = resolveGoal(action, npc, context)
     }
 

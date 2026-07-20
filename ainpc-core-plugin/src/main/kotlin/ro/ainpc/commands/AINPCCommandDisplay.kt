@@ -92,6 +92,10 @@ fun sendStoryUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc story region <regionId>")
     msg.send(sender, "&e/ainpc story place <placeId>")
     msg.send(sender, "&e/ainpc story events <regionId|placeId> [limit]")
+    msg.send(sender, "&e/ainpc story author <regionId|placeId> [eventType|templateId] [title] [description]")
+    msg.send(sender, "&e/ainpc story pending <regionId|placeId> [limit]")
+    msg.send(sender, "&e/ainpc story publish <pendingId>")
+    msg.send(sender, "&e/ainpc story discard <pendingId>")
     msg.send(sender, "&7Fara NPC tinta, contextul este construit pentru locatia jucatorului.")
 }
 
@@ -139,11 +143,19 @@ fun sendPatchUsage(sender: CommandSender) {
         sender,
         "&7apply: scrie mapping-ul din plan (place-uri si node-uri lipsa)."
     )
+    msg.send(
+        sender,
+        semanticMappingOnlyNotice("Native patch apply", "place-uri si node-uri de mapping semantic")
+    )
 }
 
 fun sendPatchApplyResult(sender: CommandSender, result: VillagePatchApplyResult) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&6=== Patch Apply Result ===")
+    msg.send(
+        sender,
+        semanticMappingOnlyNotice("Native patch apply", "place-uri si node-uri de mapping semantic")
+    )
     msg.send(sender, "&ePatch: &f${result.patchId()}")
     msg.send(sender, "&ePlace-uri create: &f${result.placeCount()} &7| Node-uri create: &f${result.nodeCount()}")
     if (result.createdPlaceIds().isNotEmpty()) {
@@ -169,7 +181,7 @@ fun sendPatchApplyResult(sender: CommandSender, result: VillagePatchApplyResult)
         }
     }
     if (result.success()) {
-        msg.send(sender, "&aPatch aplicat cu succes. Ruleaza &f/ainpc world save &apentru a persista.")
+        msg.send(sender, "&aPatch-ul de mapping semantic a fost aplicat cu succes.")
     } else {
         msg.send(sender, "&cPatch-ul nu a putut fi aplicat complet. Verifica erorile de mai sus.")
     }
@@ -239,8 +251,9 @@ fun sendAuditUsage(sender: CommandSender) {
     msg.send(sender, "&e/ainpc audit db &7- verifica tabelele si profile_data")
     msg.send(sender, "&e/ainpc audit spawn &7- verifica ordinea casa/node/NPC/familie")
     msg.send(sender, "&e/ainpc audit quest &7- verifica quest templates si quest_anchor_bindings")
-    msg.send(sender, "&e/ainpc audit quest <strict|full|offline> &7- verifica toate randurile quest_anchor_bindings")
-    msg.send(sender, "&e/ainpc audit wand &7- verifica draft-urile wand confirmate recent")
+    msg.send(sender, "&e/ainpc audit quest <strict|full|offline> [json] &7- profile distincte si iesire optionala machine-readable")
+    msg.send(sender, "&e/ainpc audit <mod> json &7- JSON compact schema v1 cu exit_code 0/1/2")
+    msg.send(sender, "&e/ainpc audit wand &7- placeholder read-only; validarea wand nu este implementata")
 }
 
 fun sendRoutineUsage(sender: CommandSender) {
@@ -378,12 +391,14 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Afiseaza story state-ul persistent pentru un place")
     msg.send(sender, "&e/ainpc story events <regionId|placeId> [limit]")
     msg.send(sender, "&7  Listeaza evenimente story persistente")
+    msg.send(sender, "&e/ainpc story pending <regionId|placeId> [limit]")
+    msg.send(sender, "&7  Listeaza drafturi; foloseste story publish/discard <pendingId> pentru review")
     msg.send(sender, "&e/ainpc migration households <dryrun|apply> [limit]")
     msg.send(sender, "&7  Backfill controlat din npc_world_bindings catre household-uri persistente")
-    msg.send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest]")
+    msg.send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest|wand] [strict|full|offline] [json]")
     msg.send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date")
-    msg.send(sender, "&e/ainpc debugdump [all|npc|world|quest|questconfig|story|mapping|routing|openai|runtime] [summary]")
-    msg.send(sender, "&7  Genereaza un jurnal avansat read-only pentru debugging")
+    msg.send(sender, "&e/ainpc debugdump <all|npc|world|mapping|quest|questconfig|story|ai|runtime|mcp|features|scenario|progression> [summary|player] [privacy-safe]")
+    msg.send(sender, "&7  Exporta fisiere pentru all/npc sau afiseaza un sumar read-only; vezi /ainpc debugdump")
     msg.send(sender, "&e/ainpc family <nume>")
     msg.send(sender, "&7  Afiseaza familia unui NPC")
     msg.send(sender, "&e/ainpc routine <tick|status>")

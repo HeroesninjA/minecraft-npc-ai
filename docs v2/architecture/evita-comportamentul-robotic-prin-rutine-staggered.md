@@ -1,25 +1,31 @@
-# Evita comportamentul robotic prin rutine staggered
+# Rutine staggered
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-10.
+Status: comportament verificat in cod.
+Actualizat: 2026-07-15.
 
-Modelul de variatie controlata pentru rutinele NPC.
+Variatia curenta este determinista. Documentatia nu presupune jitter zilnic sau coordonare pe household.
 
-## Principiu
+## Implementat
 
-- satul are ritm, nu sincronizare perfecta;
-- fiecare NPC are offset stabil;
-- jitter-ul zilnic este mic;
-- rolurile au ferestre diferite;
-- plecarile si intoarcerile apar in valuri.
+- fiecare NPC primeste un offset stabil calculat din `UUID|name`, modulo 1800 tick-uri;
+- profilele de comportament pot avea ferestre diferite pe rol sau ocupatie;
+- `RoutineCoordinator` grupeaza NPC-urile dupa chunk-ul ancorei sociale;
+- grupurile cu minimum doi membri primesc temporar acelasi bias, modulo 300 tick-uri;
+- offsetul se recalculeaza determinist si nu necesita persistenta.
 
-## Ce evita
+## Neimplementat
 
-- ora fixa identica pentru toti;
-- acelasi minut pentru toate tranzitiile;
-- pattern mecanic pentru toate gospodariile.
+- jitter aleator nou in fiecare zi;
+- plecari coordonate dupa household sau familie;
+- valuri calculate la nivel de sat;
+- calendar, anotimp sau sarbatoare ca sursa pentru offsetul de baza.
+
+## Efect real
+
+Offsetul stabil reduce tranzitiile simultane, iar biasul de grup apropie ferestrele sociale. Nu garanteaza distributie uniforma si nu este un scheduler global.
 
 ## Legaturi
 
 - `architecture/comportament-natural-npc-rutine-alocari.md`
-- `planning/ce-mai-trebuie-pentru-sat-semantic.md`
+- `architecture/simulation-service.md`
+- `planning/rutine-npc-si-timeline.md`

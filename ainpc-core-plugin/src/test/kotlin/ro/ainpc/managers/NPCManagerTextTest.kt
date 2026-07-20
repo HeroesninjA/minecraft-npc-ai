@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCPersonality
+import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.utils.NPCNameGenerator
 import ro.ainpc.world.PlaceType
@@ -536,6 +537,44 @@ class NPCManagerTextTest {
         assertTrue(profile.getAsJsonObject("emotions").has("short_description"))
         assertEquals("Casa", profile.getAsJsonObject("owned_locations").getAsJsonObject("home").get("label").asString)
         assertFalse(profile.getAsJsonObject("owned_locations").has("work"))
+    }
+
+    @Test
+    fun spawnPlanNarrativeMetadataSurvivesProfileRebuild() {
+        val gson = Gson()
+        val plan = NpcSpawnPlan.builder("npc_mara", "Mara")
+            .familyId("family_popescu")
+            .relationRole("owner")
+            .socialRole("artisan")
+            .ageGroup("adult")
+            .routineProfile("day_worker")
+            .questRole("giver")
+            .archetype("steady_artisan")
+            .backstorySeed("mara_forge_01")
+            .build()
+        val merged = mergeSpawnPlanNarrativeProfileData(
+            "{\"custom\":\"kept\",\"narrative\":{\"existing\":\"yes\",\"quest_role\":\"old\"}}",
+            plan,
+            gson
+        )
+        val mergedJson = gson.fromJson(merged, JsonObject::class.java)
+        val npc = npcRecord(databaseId = 78).apply {
+            profileDataJson = merged
+        }
+
+        val rebuilt = gson.fromJson(buildProfileData(npc, gson), JsonObject::class.java)
+        val narrative = rebuilt.getAsJsonObject("narrative")
+
+        assertEquals("kept", mergedJson.get("custom").asString)
+        assertEquals("yes", narrative.get("existing").asString)
+        assertEquals("family_popescu", narrative.get("family_id").asString)
+        assertEquals("owner", narrative.get("relation_role").asString)
+        assertEquals("artisan", narrative.get("social_role").asString)
+        assertEquals("adult", narrative.get("age_group").asString)
+        assertEquals("day_worker", narrative.get("routine_profile").asString)
+        assertEquals("giver", narrative.get("quest_role").asString)
+        assertEquals("steady_artisan", narrative.get("personality_seed").asString)
+        assertEquals("mara_forge_01", narrative.get("backstory_seed").asString)
     }
 
     @Test

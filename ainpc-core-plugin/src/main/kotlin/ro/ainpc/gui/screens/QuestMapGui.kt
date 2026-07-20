@@ -298,6 +298,36 @@ class QuestMapGui : GuiScreen {
             ))
         }
 
+        if (anchors.isNotEmpty()) {
+            context.button(52, GuiButton.enabled(
+                GuiItemFactory.item(Material.BARRIER, "&cUnbind all (${anchors.size})",
+                    listOf(
+                        "&7Sterge toate ancorele pentru acest template.",
+                        "&cActiune ireversibila!",
+                        "&8Click: confirma stergerea."
+                    )),
+                GuiAction { click ->
+                    val globalMode = context.service().getQuestMapGlobalMode(click.player())
+                    val playerUuid = if (globalMode) "" else click.player().uniqueId.toString()
+                    var removed = 0
+                    for (a in anchors.toList()) {
+                        runCatching {
+                            context.plugin().progressionService.deleteAnchorBinding(
+                                playerUuid, templateId, a.objectiveKey()
+                            )
+                            removed++
+                        }
+                    }
+                    if (removed > 0) {
+                        click.plugin().messageUtils.send(click.player(), "&cUnbind: &f$removed &cancore sterse.")
+                        click.service().open(click.player(), GuiKey.QUEST_MAP)
+                    } else {
+                        click.plugin().messageUtils.send(click.player(), "&cNu s-au putut sterge ancorele.")
+                    }
+                }
+            ))
+        }
+
         GuiNavigation.addStandardControls(context, key())
         context.fillEmpty(GuiItemFactory.filler())
     }

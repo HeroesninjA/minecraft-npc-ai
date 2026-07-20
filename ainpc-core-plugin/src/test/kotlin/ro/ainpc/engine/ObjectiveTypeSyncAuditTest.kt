@@ -56,4 +56,35 @@ class ObjectiveTypeSyncAuditTest {
         assertTrue(extra.isEmpty(),
             "Registrul contine tipuri neasteptate: $extra")
     }
+
+    @Test
+    fun quickQuestGuiSubsetIsValid() {
+        val guiSource = File("src/main/kotlin/ro/ainpc/gui/screens/QuickQuestGui.kt").readText()
+        val registry = ObjectiveTypeAliasRegistry.supportedTypes()
+
+        val quickQuestList = listOf("talk_to_npc", "deliver_to_npc", "collect_item",
+            "visit_place", "visit_region", "inspect_node", "kill_mob",
+            "craft_item", "place_block", "break_block")
+        for (type in quickQuestList) {
+            assertTrue(type in registry,
+                "QuickQuestGui.kt contine tipul '$type' care nu exista in registru")
+            assertTrue(guiSource.contains("\"$type\""),
+                "QuickQuestGui.kt nu contine tipul '$type' declarat in lista sa")
+        }
+        val notInQuickQuest = registry - quickQuestList.toSet()
+        assertTrue(notInQuickQuest.isNotEmpty(),
+            "QuickQuest trebuie sa fie un subset (nu toate tipurile). Missing: $notInQuickQuest")
+    }
+
+    @Test
+    fun questSeedFactorySubsetIsValid() {
+        val factorySource = File("src/main/kotlin/ro/ainpc/engine/QuestSeedFactory.kt").readText()
+        val registry = ObjectiveTypeAliasRegistry.supportedTypes()
+
+        val seedList = registry.toList()
+        for (type in seedList) {
+            assertTrue(factorySource.contains("\"$type\""),
+                "QuestSeedFactory.kt nu contine tipul '$type' (prezent in registru)")
+        }
+    }
 }

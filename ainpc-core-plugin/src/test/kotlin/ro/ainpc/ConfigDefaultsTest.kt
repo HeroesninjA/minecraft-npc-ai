@@ -34,5 +34,8 @@ class ConfigDefaultsTest {
         assertEquals("sqlite", config.getString("database.type"))
         assertEquals("ainpc_data.db", config.getString("database.sqlite.filename"))
         assertEquals("AINPC_MYSQL_PASSWORD", config.getString("database.mysql.password_env"))
+        assertEquals(4096, config.getInt("world_admin.scan.blocks_per_tick"))
+        assertTrue(config.getBoolean("observability.tracing.enabled"))
+        assertEquals(64, config.getInt("observability.tracing.max_spans"))
     }
 }

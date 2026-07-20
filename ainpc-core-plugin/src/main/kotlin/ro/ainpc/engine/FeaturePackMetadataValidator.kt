@@ -1,7 +1,7 @@
 package ro.ainpc.engine
 
 import org.bukkit.configuration.ConfigurationSection
-import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.configuration.file.FileConfiguration
 import ro.ainpc.addons.AddonType
 import ro.ainpc.platform.RuntimeMode
 import java.io.File
@@ -10,7 +10,7 @@ import java.util.Locale
 
 object FeaturePackMetadataValidator {
     @JvmStatic
-    fun validate(config: YamlConfiguration, file: File?, runtimeMode: RuntimeMode?): ValidationResult {
+    fun validate(config: FileConfiguration, file: File?, runtimeMode: RuntimeMode?): ValidationResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
         val effectiveRuntimeMode = runtimeMode ?: RuntimeMode.STANDALONE

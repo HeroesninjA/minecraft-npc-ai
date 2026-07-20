@@ -20,8 +20,6 @@ Write-Host ""
 # 1. Build
 if (-not $SkipBuild) {
     Write-Host "[1/4] Build..." -ForegroundColor Yellow
-    $env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.2"
-    $env:Path = "$env:JAVA_HOME\bin;$env:Path"
     $result = ./gradlew.bat clean build 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "BUILD ESICAT!" -ForegroundColor Red
@@ -44,8 +42,7 @@ if (-not $SkipBackup) {
 Write-Host "[3/4] Copiere JAR-uri..." -ForegroundColor Yellow
 $jars = @(
     "ainpc-core-plugin/build/libs/ainpc-core-plugin-$version.jar",
-    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar",
-    "ainpc-api/build/libs/ainpc-api-$version.jar"
+    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar"
 )
 foreach ($jar in $jars) {
     if (Test-Path -LiteralPath $jar) {

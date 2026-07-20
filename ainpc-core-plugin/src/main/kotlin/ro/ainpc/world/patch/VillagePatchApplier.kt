@@ -2,6 +2,7 @@ package ro.ainpc.world.patch
 
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldAdminService
+import ro.ainpc.world.WorldMappingCompensator
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.patch.PatchValidationStatus
 
@@ -60,6 +61,17 @@ class VillagePatchApplier {
                 warnings.add("WorldEdit templates nu sunt suportate pentru apply direct. " +
                     "Patch-ul ${plan.patchId()} necesita WorldEdit.")
             }
+        }
+
+        if (errors.isNotEmpty() && (createdPlaceIds.isNotEmpty() || createdNodeIds.isNotEmpty())) {
+            val compensation = WorldMappingCompensator.rollback(
+                worldAdmin,
+                mutableListOf(),
+                createdPlaceIds,
+                createdNodeIds,
+            )
+            warnings.add(compensation.summary())
+            errors.addAll(compensation.failures)
         }
 
         return result(plan, createdPlaceIds, createdNodeIds, errors, warnings)
@@ -131,6 +143,7 @@ class VillagePatchApplier {
                     placeCenterX - PLACE_SIZE / 2, minY, placeCenterZ - PLACE_SIZE / 2,
                     placeCenterX + PLACE_SIZE / 2, maxY, placeCenterZ + PLACE_SIZE / 2
                 )
+                createdPlaceIds.add(place.id)
                 if (plan.type() == PatchType.ADD_HOUSE) {
                     place.putMetadata("role", "home")
                     place.setTags(listOf("home", "house"))
@@ -141,7 +154,6 @@ class VillagePatchApplier {
                     place.putMetadata("role", "social")
                     place.setTags(listOf("social", "hub"))
                 }
-                createdPlaceIds.add(place.id)
             } catch (ex: IllegalArgumentException) {
                 errors.add("Nu pot crea place-ul $localPlaceId: ${ex.message}")
                 continue
@@ -162,7 +174,7 @@ class VillagePatchApplier {
                     )
                     createdNodeIds.add(node.id)
                 } catch (ex: IllegalArgumentException) {
-                    warnings.add("Nu pot crea node-ul implicit pentru $localPlaceId: ${ex.message}")
+                    errors.add("Nu pot crea node-ul implicit pentru $localPlaceId: ${ex.message}")
                 }
             } else {
                 for (nodeFullId in placeNodeIds) {
@@ -181,7 +193,7 @@ class VillagePatchApplier {
                         )
                         createdNodeIds.add(node.id)
                     } catch (ex: IllegalArgumentException) {
-                        warnings.add("Nu pot crea node-ul $nodeFullId: ${ex.message}")
+                        errors.add("Nu pot crea node-ul $nodeFullId: ${ex.message}")
                     }
                 }
             }

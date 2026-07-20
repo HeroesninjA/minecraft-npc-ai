@@ -3,17 +3,18 @@ package ro.ainpc.progression
 
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.PlayerProgressionApi
 import ro.ainpc.api.PlayerProgressionGrant
 import ro.ainpc.api.PlayerProgressionSnapshot
 import java.sql.SQLException
 import java.util.logging.Level
 
-class PlayerProgressionService(private val plugin: AINPCPlugin) {
+class PlayerProgressionService(private val plugin: AINPCPlugin) : PlayerProgressionApi {
     fun getSnapshot(player: Player): PlayerProgressionSnapshot {
         return loadSnapshot(player.uniqueId.toString())
     }
 
-    fun getSnapshot(playerUuid: String): PlayerProgressionSnapshot {
+    override fun getSnapshot(playerUuid: String): PlayerProgressionSnapshot {
         return loadSnapshot(playerUuid)
     }
 
@@ -59,7 +60,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return grantXp(player.uniqueId.toString(), amount)
     }
 
-    fun grantXp(playerUuid: String, amount: Long): PlayerProgressionGrant {
+    override fun grantXp(playerUuid: String, amount: Long): PlayerProgressionGrant {
         if (amount <= 0L) {
             return PlayerProgressionGrant(playerUuid, 0L, 0, emptyMap(), loadSnapshot(playerUuid))
         }
@@ -70,7 +71,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return addSkillXp(player.uniqueId.toString(), skillId, amount)
     }
 
-    fun addSkillXp(playerUuid: String, skillId: String, amount: Int): PlayerProgressionGrant {
+    override fun addSkillXp(playerUuid: String, skillId: String, amount: Int): PlayerProgressionGrant {
         val normalizedSkill = skillId.trim().lowercase()
         if (normalizedSkill.isEmpty() || amount <= 0) {
             return PlayerProgressionGrant(playerUuid, 0L, 0, emptyMap(), loadSnapshot(playerUuid))
@@ -82,7 +83,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return setLevel(player.uniqueId.toString(), level)
     }
 
-    fun setLevel(playerUuid: String, level: Int): PlayerProgressionSnapshot {
+    override fun setLevel(playerUuid: String, level: Int): PlayerProgressionSnapshot {
         val target = level.coerceAtLeast(1)
         val totalXp = cumulativeXpForLevel(target)
         return persistTotalXp(playerUuid, totalXp)
@@ -148,7 +149,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return resetPlayer(player.uniqueId.toString())
     }
 
-    fun resetPlayer(playerUuid: String): PlayerProgressionSnapshot {
+    override fun resetPlayer(playerUuid: String): PlayerProgressionSnapshot {
         try {
             val sql = "DELETE FROM player_progression WHERE player_uuid = ?"
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
@@ -161,7 +162,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return PlayerProgressionSnapshot(playerUuid, 1, 0L, xpRequiredForLevel(1), 0L, emptyMap(), 0L)
     }
 
-    fun xpRequiredForLevel(level: Int): Long {
+    override fun xpRequiredForLevel(level: Int): Long {
         val safe = level.coerceAtLeast(1)
         return (100L * safe) + (50L * (safe - 1) * safe)
     }
@@ -175,7 +176,7 @@ class PlayerProgressionService(private val plugin: AINPCPlugin) {
         return total
     }
 
-    fun levelForTotalXp(totalXp: Long): Int {
+    override fun levelForTotalXp(totalXp: Long): Int {
         var level = 1
         var accumulated = 0L
         while (true) {

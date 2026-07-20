@@ -7,6 +7,7 @@ import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEvent
 import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEventPayload
 import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NpcInteractionProfile
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -48,6 +49,12 @@ class DialogManager(private val plugin: AINPCPlugin) {
         // Verifica cooldown
         if (isOnCooldown(playerUuid, npc.uuid)) {
             return CompletableFuture.completedFuture(DialogResult.cooldown())
+        }
+
+        // Verifica interaction profile
+        val profileBlock = checkInteractionProfile(npc, player)
+        if (profileBlock != null) {
+            return CompletableFuture.completedFuture(DialogResult.success(profileBlock))
         }
 
         // Seteaza cooldown
@@ -415,6 +422,20 @@ class DialogManager(private val plugin: AINPCPlugin) {
             cooldowns.remove(playerUuid)
         }
         return false
+    }
+
+    private fun checkInteractionProfile(npc: AINPC, player: Player): String? {
+        return when (npc.interactionProfile) {
+            NpcInteractionProfile.MINIMAL -> "NPC-ul nu doreste sa vorbeasca acum."
+            NpcInteractionProfile.QUEST_ONLY -> {
+                if (!plugin.scenarioEngine.hasOfferedQuest(player)) "NPC-ul interactioneaza doar pentru questuri." else null
+            }
+            NpcInteractionProfile.SHOP_ONLY -> {
+                if (npc.occupation.isNullOrBlank()) "NPC-ul interactioneaza doar pentru comert." else null
+            }
+            NpcInteractionProfile.SCENE_ONLY -> null
+            NpcInteractionProfile.FULL_AI -> null
+        }
     }
 
     private fun setCooldown(playerUuid: UUID, npcUuid: UUID) {

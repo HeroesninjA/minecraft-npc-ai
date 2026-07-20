@@ -21,7 +21,10 @@ import org.bukkit.entity.Villager
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.debug.DebugDumpSupport
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.debug.DebugDumpExportGate
+import ro.ainpc.debug.DebugDumpExportOptions
 import ro.ainpc.debug.DebugDumpService
 import ro.ainpc.debug.DebugDumpMappingText
 import ro.ainpc.debug.DebugDumpIO
@@ -33,6 +36,7 @@ import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.debug.WorldMappingSemanticIndex
 import ro.ainpc.engine.*
 import ro.ainpc.gui.GuiKey
+import ro.ainpc.context.SensitiveDataRedactor
 import ro.ainpc.npc.AINPC
 import ro.ainpc.progression.ProgressionAnchorBinding
 import ro.ainpc.progression.ProgressionDefinition
@@ -40,13 +44,16 @@ import ro.ainpc.progression.StoredProgression
 import ro.ainpc.progression.StoredProgressionSummary
 import ro.ainpc.spawn.HouseAllocation
 import ro.ainpc.spawn.HouseAllocationPlanner
+import ro.ainpc.spawn.AutoSettlementGenerator.AutoSettlementResult
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.HouseholdSpawnResult
 import ro.ainpc.spawn.NarrativeGenerator
 import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.NpcSpawnResult
 import ro.ainpc.spawn.PopulationPlan
+import ro.ainpc.spawn.PopulationPlanRepository
 import ro.ainpc.spawn.SettlementSpawnResult
+import ro.ainpc.spawn.SpawnBatchHistoryPager
 import ro.ainpc.spawn.SpawnBatchTracker
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
@@ -80,7 +87,6 @@ import ro.ainpc.world.scan.SemanticVillageMapper
 import ro.ainpc.world.scan.VanillaVillageFeatureType
 import ro.ainpc.world.scan.VanillaVillageScanResult
 import ro.ainpc.world.scan.VanillaVillageScanner
-import java.io.IOException
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -99,6 +105,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         private const val SPAWN_BATCH_DEFAULT_LIMIT = 10
         private const val SPAWN_BATCH_STEP_PREVIEW_LIMIT = 12
         private const val QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT = 500
+        private const val AUDIT_RETAINED_MESSAGE_LIMIT = 100
 
         private val CONTRACT_ALIAS =
             ProgressionAliasConfig("contract", "contract", "contract", "C01", "village_contracts", "TRADE_DEAL")
@@ -124,53 +131,54 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
-        if ("npcquest".equals(command.name, ignoreCase = true) || "quest".equals(command.name, ignoreCase = true)) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            val routedArgs = arrayOfNulls<String>(args.size + 1)
-            routedArgs[0] = "quest"
-            System.arraycopy(args, 0, routedArgs, 1, args.size)
-            return handleQuest(sender, routedArgs.requireNoNulls())
-        }
-        if ("progression".equals(command.name, ignoreCase = true) || "progress".equals(
-                command.name,
-                ignoreCase = true
-            )
-        ) {
-            if (!ensureFeatureEnabled(sender, "features.progression", true, "Progresia")) return true
-            return handleProgression(sender, routeDirectCommandToQuest(args))
-        }
-        if ("contract".equals(command.name, ignoreCase = true) || "contracts".equals(command.name, ignoreCase = true)) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleContract(sender, routeDirectCommandToQuest(args))
-        }
-        if ("duty".equals(command.name, ignoreCase = true) || "duties".equals(command.name, ignoreCase = true)
-            || "sarcina".equals(command.name, ignoreCase = true) || "sarcini".equals(command.name, ignoreCase = true)
-        ) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleDuty(sender, routeDirectCommandToQuest(args))
-        }
-        if ("bounty".equals(command.name, ignoreCase = true) || "bounties".equals(command.name, ignoreCase = true)) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleBounty(sender, routeDirectCommandToQuest(args))
-        }
-        if ("event".equals(command.name, ignoreCase = true) || "events".equals(command.name, ignoreCase = true)) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleEvent(sender, routeDirectCommandToQuest(args))
-        }
-        if ("tutorial".equals(command.name, ignoreCase = true) || "tutorials".equals(command.name, ignoreCase = true)
-            || "onboarding".equals(command.name, ignoreCase = true)
-        ) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleTutorial(sender, routeDirectCommandToQuest(args))
-        }
-        if ("ritual".equals(command.name, ignoreCase = true) || "rituals".equals(command.name, ignoreCase = true)
-            || "ceremony".equals(command.name, ignoreCase = true) || "ceremonies".equals(
-                command.name,
-                ignoreCase = true
-            )
-        ) {
-            if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
-            return handleRitual(sender, routeDirectCommandToQuest(args))
+        val timer = plugin.performanceMonitor.timer(RuntimeMetricNames.COMMAND_DISPATCH)
+        timer.begin()
+        try {
+        when (AINPCCommandCatalog.resolveDirectCommand(command.name)) {
+            AINPCDirectCommandRoute.QUEST -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                val routedArgs = arrayOfNulls<String>(args.size + 1)
+                routedArgs[0] = "quest"
+                System.arraycopy(args, 0, routedArgs, 1, args.size)
+                return handleQuest(sender, routedArgs.requireNoNulls())
+            }
+
+            AINPCDirectCommandRoute.PROGRESSION -> {
+                if (!ensureFeatureEnabled(sender, "features.progression", true, "Progresia")) return true
+                return handleProgression(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.CONTRACT -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleContract(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.DUTY -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleDuty(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.BOUNTY -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleBounty(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.EVENT -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleEvent(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.TUTORIAL -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleTutorial(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.RITUAL -> {
+                if (!ensureFeatureEnabled(sender, "features.quest", true, "Questurile")) return true
+                return handleRitual(sender, routeDirectCommandToQuest(args))
+            }
+
+            AINPCDirectCommandRoute.MAIN, null -> Unit
         }
 
         if (args.isEmpty()) {
@@ -178,118 +186,175 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             return true
         }
 
-        val subCommand = args[0].lowercase()
-        return when (subCommand) {
-            "create" -> ensureGenerationEnabled(sender, "Generarea NPC") && handleCreate(sender, args)
-            "delete", "remove" -> handleDelete(sender, args)
-            "delete-id" -> handleDeleteId(sender, args)
-            "duplicates" -> handleDuplicates(sender, args)
-            "repair" -> handleRepair(sender, args)
-            "info" -> handleInfo(sender, args)
-            "gui" -> ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)
-            "authoring" -> handleAuthoring(sender, args)
-            "version" -> handleVersion(sender)
-            "quest" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleQuest(sender, args)
-            "reset-objective", "resetobjective" -> handleQuestResetObjective(sender, args, this::requirePlayerSender)
-            "reset-reward", "resetreward" -> handleQuestResetReward(sender, args, this::requirePlayerSender)
-            "reset-dialog", "resetdialog" -> handleQuestResetDialog(sender, args, this::requirePlayerSender)
-            "reset-draft", "resetdraft" -> handleQuestResetDraft(sender, args, this::requirePlayerSender)
-            "progression", "progress" -> ensureFeatureEnabled(
+        val subCommand = AINPCCommandCatalog.resolveSubcommand(args[0]) ?: run {
+            sendHelp(sender)
+            return true
+        }
+        val mutation = AINPCCommandMutationPolicy.mutation(subCommand, args)
+        val adminMutation = mutation?.takeIf { sender.hasPermission("ainpc.admin") }
+        if (adminMutation != null && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(
+                sender,
+                "&cMCP read_only este activ; operatia &f/${adminMutation.operation} &ceste blocata pana la iesirea din modul read-only."
+            )
+            return true
+        }
+        if (
+            adminMutation?.requiresConfirmation == true &&
+            !AINPCCommandMutationPolicy.hasExplicitConfirmation(args)
+        ) {
+            plugin.messageUtils.send(
+                sender,
+                "&eConfirmare necesara pentru &f/${adminMutation.operation}&e. Ruleaza &f${AINPCCommandMutationPolicy.confirmationCommand(args)}&e."
+            )
+            return true
+        }
+        val executionArgs = if (mutation != null) AINPCCommandMutationPolicy.executionArgs(args) else args
+        val handled = when (subCommand) {
+            AINPCSubcommandRoute.CREATE -> ensureGenerationEnabled(sender, "Generarea NPC") && handleCreate(sender, args)
+            AINPCSubcommandRoute.DELETE -> handleDelete(sender, args)
+            AINPCSubcommandRoute.DELETE_ID -> handleDeleteId(sender, args)
+            AINPCSubcommandRoute.DUPLICATES -> handleDuplicates(sender, args)
+            AINPCSubcommandRoute.REPAIR -> handleRepair(sender, args)
+            AINPCSubcommandRoute.INFO -> handleInfo(sender, args)
+            AINPCSubcommandRoute.GUI ->
+                ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)
+
+            AINPCSubcommandRoute.AUTHORING -> handleAuthoring(sender, args)
+            AINPCSubcommandRoute.VERSION -> handleVersion(sender)
+            AINPCSubcommandRoute.QUEST ->
+                ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleQuest(sender, args)
+
+            AINPCSubcommandRoute.RESET_OBJECTIVE ->
+                handleQuestResetObjective(sender, args, this::requirePlayerSender)
+
+            AINPCSubcommandRoute.RESET_REWARD -> handleQuestResetReward(sender, args, this::requirePlayerSender)
+            AINPCSubcommandRoute.RESET_DIALOG -> handleQuestResetDialog(sender, args, this::requirePlayerSender)
+            AINPCSubcommandRoute.RESET_DRAFT -> handleQuestResetDraft(sender, args, this::requirePlayerSender)
+            AINPCSubcommandRoute.PROGRESSION -> ensureFeatureEnabled(
                 sender,
                 "features.progression",
                 true,
                 "Progresia"
             ) && handleProgression(sender, args)
 
-            "reputation", "reputatie" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.REPUTATION -> ensureFeatureEnabled(
                 sender,
                 "features.progression",
                 true,
                 "Reputatia"
             ) && handleReputation(sender, args, this::findOnlinePlayer)
 
-            "contract", "contracts" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.CONTRACT -> ensureFeatureEnabled(
                 sender,
                 "features.quest",
                 true,
                 "Questurile"
             ) && handleContract(sender, args)
 
-            "duty", "duties", "sarcina", "sarcini" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.DUTY -> ensureFeatureEnabled(
                 sender,
                 "features.quest",
                 true,
                 "Questurile"
             ) && handleDuty(sender, args)
 
-            "bounty", "bounties" -> ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleBounty(
-                sender,
-                args
-            )
+            AINPCSubcommandRoute.BOUNTY ->
+                ensureFeatureEnabled(sender, "features.quest", true, "Questurile") && handleBounty(sender, args)
 
-            "event", "events", "eveniment", "evenimente" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.EVENT -> ensureFeatureEnabled(
                 sender,
                 "features.quest",
                 true,
                 "Questurile"
             ) && handleEvent(sender, args)
 
-            "tutorial", "tutorials", "onboarding" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.TUTORIAL -> ensureFeatureEnabled(
                 sender,
                 "features.quest",
                 true,
                 "Questurile"
             ) && handleTutorial(sender, args)
 
-            "ritual", "rituals", "ceremony", "ceremonies", "ceremonie", "ceremonii" -> ensureFeatureEnabled(
+            AINPCSubcommandRoute.RITUAL -> ensureFeatureEnabled(
                 sender,
                 "features.quest",
                 true,
                 "Questurile"
             ) && handleRitual(sender, args)
 
-            "demo" -> DemoReadinessCommand.handle(plugin, sender, args)
-            "world" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWorld(sender, args)
-            "patch" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handlePatch(sender, args)
-            "wand" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWand(sender, args)
-            "map" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleMap(
+            AINPCSubcommandRoute.DEMO -> DemoReadinessCommand.handle(plugin, sender, args)
+            AINPCSubcommandRoute.WORLD ->
+                ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWorld(sender, executionArgs)
+
+            AINPCSubcommandRoute.PATCH ->
+                ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handlePatch(sender, executionArgs)
+
+            AINPCSubcommandRoute.WAND ->
+                ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWand(sender, args)
+
+            AINPCSubcommandRoute.MAP -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleMap(
                 sender,
-                args,
+                executionArgs,
                 this::applyNpcBindDraft,
                 this::applyQuestAnchorDraft
             )
 
-            "story" -> ensureFeatureEnabled(sender, "features.story", true, "Story-ul") && handleStory(sender, args)
-            "migration" -> handleMigration(sender, args)
-            "population" -> handlePopulation(sender, args)
-            "audit" -> handleAudit(sender, args)
-            "debugdump" -> handleDebugDump(sender, args)
-            "debugdialog" -> handleDebugDialog(sender, args)
-            "scenario" -> handleScenario(sender, args)
-            "list" -> handleList(sender, args)
-            "family" -> handleFamily(sender, args)
-            "routine" -> ensureFeatureEnabled(sender, "features.routine", true, "Rutinele") && handleRoutine(
+            AINPCSubcommandRoute.STORY ->
+                ensureFeatureEnabled(sender, "features.story", true, "Story-ul") && handleStory(sender, args)
+
+            AINPCSubcommandRoute.MIGRATION -> handleMigration(sender, args)
+            AINPCSubcommandRoute.POPULATION -> handlePopulation(sender, args)
+            AINPCSubcommandRoute.AUDIT -> handleAudit(sender, args)
+            AINPCSubcommandRoute.DEBUG_DUMP -> handleDebugDump(sender, args)
+            AINPCSubcommandRoute.DEBUG_DIALOG -> handleDebugDialog(sender, args)
+            AINPCSubcommandRoute.SCENARIO -> handleScenario(sender, args)
+            AINPCSubcommandRoute.LIST -> handleList(sender, args)
+            AINPCSubcommandRoute.FAMILY -> handleFamily(sender, args)
+            AINPCSubcommandRoute.ROUTINE -> ensureFeatureEnabled(
+                sender,
+                "features.routine",
+                true,
+                "Rutinele"
+            ) && handleRoutine(
                 sender,
                 args
             )
 
-            "mood", "emotion" -> handleMood(sender, args)
-            "tp", "teleport" -> handleTeleport(sender, args)
-            "reload" -> handleReload(sender)
-            "test" -> handleTest(sender)
-            "health", "status", "healthcheck" -> handleHealth(sender)
-            "overview", "preview", "summary" -> handleOverview(sender)
-            "economy" -> handleEconomy(sender, args)
-            "build" -> ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleBuild(sender, args)
-            "building" -> handleBuilding(sender, args)
-            "relationship", "relationships", "relatii" -> handleRelationship(sender, args)
-            "environment", "env", "time", "weather" -> handleEnvironment(sender, args)
-            else -> {
-                sendHelp(sender)
-                true
-            }
+            AINPCSubcommandRoute.MOOD -> handleMood(sender, args)
+            AINPCSubcommandRoute.TELEPORT -> handleTeleport(sender, args)
+            AINPCSubcommandRoute.RELOAD -> handleReload(sender)
+            AINPCSubcommandRoute.TEST -> handleTest(sender)
+            AINPCSubcommandRoute.HEALTH -> handleHealth(sender)
+            AINPCSubcommandRoute.OVERVIEW -> handleOverview(sender)
+            AINPCSubcommandRoute.ECONOMY -> handleEconomy(sender, args)
+            AINPCSubcommandRoute.BUILD ->
+                ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleBuild(sender, args)
+
+            AINPCSubcommandRoute.BUILDING -> handleBuilding(sender, executionArgs)
+            AINPCSubcommandRoute.RELATIONSHIP -> handleRelationship(sender, args)
+            AINPCSubcommandRoute.ENVIRONMENT -> handleEnvironment(sender, args)
+        }
+        if (
+            handled &&
+            adminMutation?.worldSaveReminder == true &&
+            plugin.platform.worldAdminService.hasUnsavedChanges()
+        ) {
+            plugin.messageUtils.send(
+                sender,
+                "&7Mapping-ul are modificari nesalvate. Ruleaza &f/ainpc world save &7pentru persistenta."
+            )
+        }
+        return handled
+        } catch (error: Throwable) {
+            timer.fail()
+            throw error
+        } finally {
+            timer.end()
         }
     }
+
+    private val debugDumpExportGate = DebugDumpExportGate()
 
     private fun ensureFeatureEnabled(
         sender: CommandSender,
@@ -737,6 +802,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "complete" -> handleCompleteQuest(sender, args)
             "validate" -> handleQuestValidate(sender, args, this::requirePlayerSender)
             "preview" -> handleQuestPreview(sender, args, this::requirePlayerSender)
+            "ai-draft" -> handleQuestAiDraft(sender, args, this::requirePlayerSender)
             "summary" -> handleQuestSummary(sender, args)
             "metrics" -> handleQuestMetrics(sender, args)
             "rewards" -> handleQuestRewards(sender, args)
@@ -896,7 +962,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
         if (args.size < 2) {
-            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates|auto-place <templateId> <regionId>"); return true
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates|auto-place <templateId> <regionId>")
+            plugin.messageUtils.send(
+                sender,
+                semanticMappingOnlyNotice("Building auto-place", "place-uri si node-uri de mapping semantic")
+            )
+            return true
         }
         when (args[1].lowercase()) {
             "templates" -> {
@@ -916,15 +987,29 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             }
             "auto-place" -> {
                 if (args.size < 4) {
-                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building auto-place <templateId> <regionId>"); return true
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building auto-place <templateId> <regionId>")
+                    plugin.messageUtils.send(
+                        sender,
+                        semanticMappingOnlyNotice("Building auto-place", "place-uri si node-uri de mapping semantic")
+                    )
+                    return true
                 }
                 val templateId = args[2]
                 val regionId = args[3]
+                plugin.messageUtils.send(
+                    sender,
+                    semanticMappingOnlyNotice("Building auto-place", "place-uri si node-uri de mapping semantic")
+                )
                 val service = ro.ainpc.settlement.BuildingAutoPlaceService(plugin)
                 val result = service.autoPlace(templateId, regionId)
+                if (result.errors.isNotEmpty()) {
+                    for (error in result.errors) {
+                        plugin.messageUtils.send(sender, "&c$error")
+                    }
+                }
                 if (result.warnings.isNotEmpty()) {
-                    for (w in result.warnings) {
-                        plugin.messageUtils.send(sender, "&c$w")
+                    for (warning in result.warnings) {
+                        plugin.messageUtils.send(sender, "&e$warning")
                     }
                 }
                 if (result.placed.isNotEmpty()) {
@@ -1898,6 +1983,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     // -- Quick quest ------------------------------------------------
     private fun handleQuickQuest(sender: CommandSender): Boolean {
+        if (!hasCreatorAccess(sender)) {
+            plugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
         val player = sender as? Player ?: run {
             plugin.messageUtils.send(sender, "&cAceasta comanda poate fi folosita doar de jucatori.")
             return true
@@ -1908,39 +1997,102 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     private fun handleQuickQuestExport(sender: CommandSender, args: Array<String>): Boolean {
-        if (args.size < 6) {
-            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest quick-export <name> <type> <target> <reward>")
+        if (!hasCreatorAccess(sender)) {
+            plugin.messageUtils.sendMessage(sender, "no_permission")
+            return true
+        }
+        if (args.size < 8) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest quick-export <name> <type> <target1> <amount1> [target2 amount2 ...] <rewardItem> <rewardAmount>")
             return true
         }
         val name = args[2]
         val type = args[3]
-        val target = args[4]
-        val reward = args[5]
-        val yaml = buildString {
-            appendLine("quick_quest:")
-            appendLine("  name: \"$name\"")
-            appendLine("  base_type: \"QUEST\"")
-            appendLine("  mechanic: \"side_quests\"")
-            appendLine("  quest:")
-            appendLine("    code: \"QQ01\"")
-            appendLine("    kind: \"side\"")
-            appendLine("    objectives:")
-            appendLine("      obj_01:")
-            appendLine("        type: \"$type\"")
-            appendLine("        item: \"$target\"")
-            appendLine("        amount: 1")
-            appendLine("        description: \"$name\"")
-            appendLine("    rewards:")
-            appendLine("      reward_01:")
-            appendLine("        type: \"item\"")
-            appendLine("        item: \"${reward.split(" ")[0]}\"")
-            appendLine("        amount: ${reward.split(" ").getOrElse(1) { "1" }}")
+        val rewardItem = args[args.size - 2]
+        val rewardAmount = args[args.size - 1].toIntOrNull() ?: 1
+        val targetArgs = args.slice(4 until args.size - 2)
+        val objCount = targetArgs.size / 2
+        if (objCount == 0 || targetArgs.size % 2 != 0) {
+            plugin.messageUtils.send(sender, "&cSpecificati perechi target amount.")
+            return true
         }
-        plugin.messageUtils.send(sender, "&6=== Quick Quest YAML ===")
+        val code = "QQ_${System.currentTimeMillis() % 10000}"
+        val kind = when (type) { "kill_mob" -> "hunt"; "collect_item" -> "fetch"; "deliver_to_npc" -> "delivery"; "talk_to_npc" -> "social"; "visit_place", "visit_region", "inspect_node" -> "exploration"; else -> "fetch" }
+        val phases = buildString {
+            appendLine("      INTRODUCTION: \"Inceput\"")
+            appendLine("      ACCEPTANCE: \"Acceptare\"")
+            for (i in 0 until objCount) { appendLine("      STAGE_${i + 1}: \"Etapa ${i + 1}\"") }
+            appendLine("      RETURN: \"Intoarcere\"")
+            appendLine("      COMPLETION: \"Finalizare\"")
+        }
+        val stages = buildString {
+            for (i in 0 until objCount) {
+                val si = i + 1
+                appendLine("      STAGE_$si:")
+                appendLine("        completion_mode: \"all_objectives\"")
+                appendLine("        ${if (i < objCount - 1) "next_stage: \"STAGE_${i + 2}\"" else "next_stage: \"RETURN\""}")
+                appendLine("        objectives:")
+                appendLine("          - \"obj_$si\"")
+            }
+            appendLine("      RETURN:")
+            appendLine("        completion_mode: \"manual_turn_in\"")
+            appendLine("        objectives:")
+            appendLine("          - \"return_to_giver\"")
+        }
+        val objectives = buildString {
+            for (i in 0 until objCount) {
+                val si = i + 1
+                val tgt = targetArgs[i * 2]
+                val amt = targetArgs[i * 2 + 1].toIntOrNull() ?: 1
+                appendLine("        obj_$si:")
+                appendLine("          type: \"$type\"")
+                appendLine("          item: \"$tgt\"")
+                appendLine("          amount: $amt")
+                appendLine("          phase: \"STAGE_$si\"")
+                appendLine("          description: \"$name etapa $si.\"")
+            }
+            appendLine("        return_to_giver:")
+            appendLine("          type: \"talk_to_npc\"")
+            appendLine("          amount: 1")
+            appendLine("          phase: \"RETURN\"")
+            appendLine("          description: \"Intoarce-te la giver.\"")
+        }
+        val yaml = """id: quickquest_$code
+name: "$name"
+description: "Quick Quest: $name"
+addon:
+  type: scenario
+  version: 1.0.0
+scenarios:
+  ${code}:
+    name: "$name"
+    description: "Quick Quest: $name"
+    base_type: QUEST
+    mechanic: side_quests
+    trigger_probability: 0.1
+    min_npcs: 1
+    requires_player: true
+    phases:
+$phases    quest:
+      code: "$code"
+      kind: "$kind"
+      category: "side"
+      acceptance_mode: "explicit"
+      completion_mode: "return_to_giver"
+      tracking_mode: "next_objective"
+      stages:
+$stages      objectives:
+$objectives      rewards:
+        reward:
+          type: "item"
+          item: "$rewardItem"
+          amount: $rewardAmount
+          description: "Recompensa: $rewardItem x$rewardAmount."
+"""
+        plugin.messageUtils.send(sender, "&6=== Quick Quest YAML (Feature Pack Format) ===")
         for (line in yaml.lines()) {
             plugin.messageUtils.send(sender, "&f$line")
         }
-        plugin.messageUtils.send(sender, "&7Copiază acest YAML intr-un fisier .yml in folderul packs/.")
+        plugin.messageUtils.send(sender, "&7Copiază acest YAML intr-un fisier .yml in folderul packs/ si ruleaza /ainpc reload.")
         return true
     }
 
@@ -1993,10 +2145,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.send(sender, "&cMCP read_only este activ; quest reload este blocat pana la iesirea din modul read-only.")
             return true
         }
-        if (args.size < 3) {
-            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc quest reload <templateId|questCode>"); return true
+        val questId = if (args.size >= 3) args[2] else ""
+        if (questId.isBlank()) {
+            plugin.reloadContent()
+            plugin.messageUtils.send(sender, "&aContinut reincarcat complet.")
+            return true
         }
-        val questId = args[2]
         val template = plugin.featurePackLoader.getAllScenarios().find {
             it.questCode.equals(questId, ignoreCase = true) || it.id.equals(questId, ignoreCase = true)
         }
@@ -2125,6 +2279,10 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, if (validationView) "&6=== Patch Validation ===" else "&6=== Patch Plan ===")
         plugin.messageUtils.send(
             sender,
+            semanticMappingOnlyNotice("Native patch plan", "planuri de place-uri si node-uri pentru mapping semantic")
+        )
+        plugin.messageUtils.send(
+            sender,
             "&eCandidati: &f" + result.candidates().size + " &7| Patch-uri: &f" + result.patchPlans().size + " &7| Blocate: &f" + result.patchPlans()
                 .count { !it.valid() })
         sendAuditMessages(sender, "&cErori planner", result.errors())
@@ -2152,16 +2310,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendWorldUsage(sender); return true
         }
         val worldMode = args[1].lowercase(Locale.ROOT)
-        if (isRuntimeReadOnly(plugin)) {
-            if (worldMode == "bind" || worldMode == "demo" || worldMode == "save") {
-                plugin.messageUtils.send(sender, "&cMCP read_only este activ; comanda world $worldMode este blocata pana la iesirea din modul read-only.")
-                return true
-            }
-            if (worldMode == "settlement" && args.size > 2 && args[2].equals("spawn", ignoreCase = true)) {
-                plugin.messageUtils.send(sender, "&cMCP read_only este activ; world settlement spawn este blocat pana la iesirea din modul read-only.")
-                return true
-            }
-        }
         return when (worldMode) {
             "create" -> handleWorldCreateAi(sender, args)
             "whereami" -> handleWorldWhereAmI(sender, args, ::resolveQuestTargetPlayer)
@@ -2172,32 +2320,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "place" -> handleWorldPlace(sender, args)
             "node" -> handleWorldNode(sender, args)
             "scan" -> handleWorldScan(sender, args, this::requirePlayerSender)
-            "demo" -> {
-                if (isRuntimeReadOnly(plugin)) {
-                    plugin.messageUtils.send(
-                        sender,
-                        "&cMCP read_only este activ; world demo create este blocat pana la iesirea din modul read-only."
-                    )
-                    true
-                } else {
-                    handleWorldDemo(sender, args, this::ensureGenerationEnabled)
-                }
-            }
+            "demo" -> handleWorldDemo(sender, args, this::ensureGenerationEnabled)
             "bind" -> handleWorldBind(sender, args)
             "binding", "bindings" -> handleWorldBindings(sender, args)
             "household" -> handleWorldHousehold(sender, args)
             "settlement" -> handleWorldSettlement(sender, args)
-            "save" -> {
-                if (isRuntimeReadOnly(plugin)) {
-                    plugin.messageUtils.send(
-                        sender,
-                        "&cMCP read_only este activ; world save este blocat pana la iesirea din modul read-only."
-                    )
-                    true
-                } else {
-                    handleWorldSave(sender)
-                }
-            }
+            "save" -> handleWorldSave(sender)
             else -> {
                 sendWorldUsage(sender); true
             }
@@ -2215,13 +2343,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         val mode = args[1].lowercase(Locale.ROOT)
         if (mode !in setOf("analyze", "analyse", "plan", "validate", "apply")) {
             sendPatchUsage(sender); return true
-        }
-        if (mode == "apply" && isRuntimeReadOnly(plugin)) {
-            plugin.messageUtils.send(
-                sender,
-                "&cMCP read_only este activ; patch apply este blocat pana la iesirea din modul read-only."
-            )
-            return true
         }
         val worldAdmin = plugin.platform.worldAdmin
         if (mode == "apply") {
@@ -2278,10 +2399,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     // -- World Bind -------------------------------------------------
     private fun handleWorldBind(sender: CommandSender, args: Array<String>): Boolean {
-        if (isRuntimeReadOnly(plugin)) {
-            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world bind este blocat pana la iesirea din modul read-only.")
-            return true
-        }
         if (args.size < 5 || args.size > 7 || !args[2].equals("npc", ignoreCase = true)) {
             plugin.messageUtils.send(
                 sender,
@@ -2520,10 +2637,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (args.size < 4 || args.size > 5) {
             sendWorldHouseholdUsage(sender); return true
         }
-        if (args[2].equals("spawn", ignoreCase = true) && isRuntimeReadOnly(plugin)) {
-            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world household spawn este blocat pana la iesirea din modul read-only.")
-            return true
-        }
         val worldAdmin = plugin.platform.worldAdminService
         if (!worldAdmin.isEnabled) {
             plugin.messageUtils.send(sender, "&cWorld admin este dezactivat."); return true
@@ -2556,9 +2669,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         sendHouseholdSpawnResult(sender, result)
         if (!result.success()) return true
         if (shouldSpawn) {
-            bindSpawnedHouseholdToMapping(sender, worldAdmin, result); plugin.messageUtils.send(
+            val bindingResult = bindSpawnedHouseholdToMapping(sender, worldAdmin, result)
+            sendPostSpawnBindingResult(sender, bindingResult)
+            plugin.messageUtils.send(
                 sender,
-                "&7NPC-urile au fost create si legate la mapping. Ruleaza &f/ainpc world save &7si &f/ainpc audit spawn&7."
+                postSpawnBindingCompletionNotice("NPC-urile au fost create", bindingResult)
             )
         } else plugin.messageUtils.send(
             sender,
@@ -2573,18 +2688,18 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (args.size < 3) {
             plugin.messageUtils.send(
                 sender,
-                "&cUtilizare: /ainpc world settlement <definitions|plan|spawn> [regionId] [maxHouses]"
+                "&cUtilizare: /ainpc world settlement <definitions|auto|plan|spawn> [regionId] [maxHouses]"
             ); return true
         }
         val mode = args[2].lowercase(Locale.ROOT)
-        if (mode == "spawn" && isRuntimeReadOnly(plugin)) {
-            plugin.messageUtils.send(sender, "&cMCP read_only este activ; world settlement spawn este blocat pana la iesirea din modul read-only.")
-            return true
-        }
         if (mode == "auto") {
             val regionId = args.getOrNull(3)
             if (regionId == null) {
                 plugin.messageUtils.send(sender, "&cUtilizare: /ainpc world settlement auto <regionId> [maxHouses]")
+                plugin.messageUtils.send(
+                    sender,
+                    semanticMappingOnlyNotice("Settlement auto", "mapping semantic si HouseAllocation-uri")
+                )
                 return true
             }
             val maxHouses = if (args.size >= 5) parseIntegerStrict(args[4]) ?: 0 else 0
@@ -2602,20 +2717,33 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 plugin.messageUtils.send(sender, "&cNu pot determina centrul pentru scanare.")
                 return true
             }
+            plugin.messageUtils.send(
+                sender,
+                semanticMappingOnlyNotice("Settlement auto", "mapping semantic si HouseAllocation-uri")
+            )
             plugin.messageUtils.send(sender, "&7Scanare sat in jurul ${center.blockX},${center.blockY},${center.blockZ}...")
-            val result = plugin.autoSettlementGenerator.generate(center, requestedRegionId = regionId, maxHouses = maxHouses)
-            if (!result.success) {
-                plugin.messageUtils.send(sender, "&cGenerare automata esuata.")
-                for (err in result.allErrors) plugin.messageUtils.send(sender, "&c$err")
-                for (warn in result.allWarnings) plugin.messageUtils.send(sender, "&e$warn")
-                return true
-            }
-            plugin.messageUtils.send(sender, "&aSat generat automat: ${result.regionId}")
-            plugin.messageUtils.send(sender, "&7Place-uri create: ${result.createdPlaceIds.size}")
-            plugin.messageUtils.send(sender, "&7Noduri create: ${result.createdNodeIds.size}")
-            plugin.messageUtils.send(sender, "&7HouseAllocation-uri: ${result.allocations.size}")
-            for (warn in result.allWarnings) plugin.messageUtils.send(sender, "&e$warn")
-            plugin.messageUtils.send(sender, "&7Ruleaza &f/ainpc world settlement spawn ${result.regionId}${if (maxHouses > 0) " $maxHouses" else ""}&7 pentru a spawna NPC-urile.")
+            val ticket = plugin.vanillaVillageScanService.submit(
+                center = center,
+                horizontalRadius = VanillaVillageScanner.DEFAULT_HORIZONTAL_RADIUS,
+                verticalRadius = VanillaVillageScanner.DEFAULT_VERTICAL_RADIUS,
+                onComplete = scanComplete@ { scan ->
+                    if (!ensureDeferredVillageMappingAllowed(sender, "settlement auto")) return@scanComplete
+                    val result = plugin.autoSettlementGenerator.generateFromScan(
+                        scan,
+                        requestedRegionId = regionId,
+                        maxHouses = maxHouses,
+                    )
+                    sendAutoSettlementResult(sender, result, maxHouses)
+                    sendWorldSaveReminderIfNeeded(sender)
+                },
+                onFailure = { error ->
+                    plugin.messageUtils.send(
+                        sender,
+                        "&cScanarea vanilla incrementala a esuat: &f${error.message ?: error.javaClass.simpleName}"
+                    )
+                },
+            )
+            sendVillageScanQueued(sender, ticket.totalBlocks, ticket.blockBudgetPerTick, ticket.queuePosition)
             return true
         }
         if (mode == "definitions") {
@@ -2637,7 +2765,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (args.size < 4 || args.size > 5 || (mode !in setOf("plan", "spawn"))) {
             plugin.messageUtils.send(
                 sender,
-                "&cUtilizare: /ainpc world settlement <definitions|plan|spawn> [regionId] [maxHouses]"
+                "&cUtilizare: /ainpc world settlement <definitions|auto|plan|spawn> [regionId] [maxHouses]"
             ); return true
         }
         val worldAdmin = plugin.platform.worldAdminService
@@ -2674,9 +2802,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         sendSettlementSpawnResult(sender, result)
         if (result.success()) {
             if (shouldSpawn) {
-                bindSpawnedSettlementToMapping(sender, worldAdmin, result); plugin.messageUtils.send(
+                val bindingResult = bindSpawnedSettlementToMapping(sender, worldAdmin, result)
+                sendPostSpawnBindingResult(sender, bindingResult)
+                plugin.messageUtils.send(
                     sender,
-                    "&7Settlement spawn terminat. Ruleaza &f/ainpc world save &7si &f/ainpc audit spawn&7."
+                    postSpawnBindingCompletionNotice("Settlement spawn reusit", bindingResult)
                 )
             } else plugin.messageUtils.send(
                 sender,
@@ -2691,12 +2821,14 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
-        if (args.size < 3) {
+        if (args.size < 2) {
             sendPopulationUsage(sender); return true
         }
         return when (args[1].lowercase()) {
             "plan" -> handlePopulationPlan(sender, args)
+            "list" -> handlePopulationList(sender, args)
             "inspect" -> handlePopulationInspect(sender, args)
+            "select" -> handlePopulationSelect(sender, args)
             "stats" -> handlePopulationStats(sender, args)
             else -> { sendPopulationUsage(sender); true }
         }
@@ -2704,12 +2836,16 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     private fun sendPopulationUsage(sender: CommandSender) {
         plugin.messageUtils.send(sender, "&6=== /ainpc population ===")
-        plugin.messageUtils.send(sender, "&e/ainpc population plan <regionId> [targetPopulation] [seed] &7- Generate narrative population plan")
-        plugin.messageUtils.send(sender, "&e/ainpc population inspect <regionId> &7- Inspect last generated plan")
+        plugin.messageUtils.send(sender, "&e/ainpc population plan <regionId> [targetPopulation] [seed] &7- Genereaza si persista un plan narativ")
+        plugin.messageUtils.send(sender, "&e/ainpc population list [regionId] &7- Listeaza planurile persistate")
+        plugin.messageUtils.send(sender, "&e/ainpc population inspect <planId> &7- Inspecteaza exact un plan persistat")
+        plugin.messageUtils.send(sender, "&e/ainpc population select <planId> &7- Selecteaza persistent planul pentru regiunea sa")
         plugin.messageUtils.send(sender, "&e/ainpc population stats [worldName] &7- Show NPC population statistics")
     }
 
-    private var lastPopulationPlan: PopulationPlan? = null
+    private val populationPlanRepository = PopulationPlanRepository(
+        plugin.dataFolder.toPath().resolve(PopulationPlanRepository.DIRECTORY_NAME)
+    )
 
     private fun handlePopulationPlan(sender: CommandSender, args: Array<String>): Boolean {
         val worldAdmin = plugin.platform?.worldAdminService
@@ -2740,16 +2876,128 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             return true
         }
         val plan = result.plan() ?: return true
-        lastPopulationPlan = plan
+        val stored = try {
+            populationPlanRepository.save(plan)
+        } catch (exception: Exception) {
+            return sendPopulationRepositoryFailure(sender, "salvare", exception)
+        }
+        val selected = runCatching {
+            populationPlanRepository.selectedPlanId(plan.regionId) == plan.planId
+        }.getOrDefault(false)
+        sendPopulationPlanDetails(sender, stored.plan, selected)
+        sendAuditMessages(sender, "&eWarning-uri", result.warnings())
+        plugin.messageUtils.send(sender, "\n&aPlan persistat: &f${plan.planId} &7(schema v1, scriere atomica)")
+        plugin.messageUtils.send(sender, "&7Inspectie: &f/ainpc population inspect ${plan.planId}")
+        plugin.messageUtils.send(sender, "&7Selectie explicita: &f/ainpc population select ${plan.planId}")
+        return true
+    }
 
-        plugin.messageUtils.send(sender, "&6=== Population Plan: &f${plan.planId} &6===")
+    private fun sendAutoSettlementResult(
+        sender: CommandSender,
+        result: AutoSettlementResult,
+        maxHouses: Int,
+    ) {
+        if (!result.success) {
+            plugin.messageUtils.send(sender, "&cGenerare automata esuata.")
+            for (error in result.allErrors) plugin.messageUtils.send(sender, "&c$error")
+            for (warning in result.allWarnings) plugin.messageUtils.send(sender, "&e$warning")
+            return
+        }
+        plugin.messageUtils.send(sender, "&aMapping semantic de sat generat: ${result.regionId}")
+        plugin.messageUtils.send(sender, "&7Place-uri create: ${result.createdPlaceIds.size}")
+        plugin.messageUtils.send(sender, "&7Noduri create: ${result.createdNodeIds.size}")
+        plugin.messageUtils.send(sender, "&7HouseAllocation-uri: ${result.allocations.size}")
+        for (warning in result.allWarnings) plugin.messageUtils.send(sender, "&e$warning")
+        plugin.messageUtils.send(
+            sender,
+            "&7Ruleaza &f/ainpc world settlement spawn ${result.regionId}" +
+                "${if (maxHouses > 0) " $maxHouses" else ""}&7 pentru a spawna NPC-urile."
+        )
+    }
+
+    private fun handlePopulationInspect(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc population inspect <planId>"); return true
+        }
+        val stored = try {
+            populationPlanRepository.find(args[2])
+        } catch (exception: Exception) {
+            return sendPopulationRepositoryFailure(sender, "inspectie", exception)
+        } ?: run {
+            plugin.messageUtils.send(sender, "&cPlanul &e${args[2]} &cnu exista."); return true
+        }
+        val plan = stored.plan
+        val selected = runCatching {
+            populationPlanRepository.selectedPlanId(plan.regionId) == plan.planId
+        }.getOrDefault(false)
+        sendPopulationPlanDetails(sender, plan, selected)
+        val allocations = plan.toHouseAllocations()
+        plugin.messageUtils.send(sender, "\n&6=== Preview PopulationPlan -> HouseAllocation ===")
+        plugin.messageUtils.send(sender, "&ePlan: &f${plan.planId} &7-> &f${allocations.size} &eHouseAllocation-uri")
+        for (allocation in allocations) {
+            sendHouseholdAllocationSummary(sender, allocation)
+        }
+        plugin.messageUtils.send(sender, "\n&7Preview persistent only: spawn-ul curent regenereaza alocari separate si nu executa acest plan.")
+        return true
+    }
+
+    private fun handlePopulationList(sender: CommandSender, args: Array<String>): Boolean {
+        val regionFilter = args.getOrNull(2)
+        val storedPlans = try {
+            populationPlanRepository.list(regionFilter)
+        } catch (exception: Exception) {
+            return sendPopulationRepositoryFailure(sender, "listare", exception)
+        }
+        if (storedPlans.isEmpty()) {
+            val suffix = regionFilter?.let { " pentru regiunea &f$it" } ?: ""
+            plugin.messageUtils.send(sender, "&eNu exista planuri de populatie persistate$suffix&e.")
+            return true
+        }
+        plugin.messageUtils.send(sender, "&6=== Population Plans persistate (${storedPlans.size}) ===")
+        for (stored in storedPlans) {
+            val plan = stored.plan
+            val selected = runCatching {
+                populationPlanRepository.selectedPlanId(plan.regionId) == plan.planId
+            }.getOrDefault(false)
+            val marker = if (selected) "&a[selected] " else "&7"
+            plugin.messageUtils.send(
+                sender,
+                "$marker${plan.planId} &7region=&f${plan.regionId} &7households=&f${plan.households.size} " +
+                    "&7residents=&f${plan.totalResidents()} &7updated=&f${formatStoryTime(stored.updatedAt)}"
+            )
+        }
+        return true
+    }
+
+    private fun handlePopulationSelect(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.size < 3) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc population select <planId>"); return true
+        }
+        val stored = try {
+            populationPlanRepository.select(args[2])
+        } catch (exception: Exception) {
+            return sendPopulationRepositoryFailure(sender, "selectie", exception)
+        } ?: run {
+            plugin.messageUtils.send(sender, "&cPlanul &e${args[2]} &cnu exista."); return true
+        }
+        plugin.messageUtils.send(
+            sender,
+            "&aPlan selectat persistent: &f${stored.plan.planId} &7pentru regiunea &f${stored.plan.regionId}&7."
+        )
+        plugin.messageUtils.send(sender, "&7Selectia nu declanseaza spawn si nu este consumata inca de orchestrator.")
+        plugin.messageUtils.send(sender, "&7Inspectie: &f/ainpc population inspect ${stored.plan.planId}")
+        return true
+    }
+
+    private fun sendPopulationPlanDetails(sender: CommandSender, plan: PopulationPlan, selected: Boolean) {
+        val selectedTag = if (selected) " &a[selected]" else ""
+        plugin.messageUtils.send(sender, "&6=== Population Plan: &f${plan.planId}$selectedTag &6===")
         plugin.messageUtils.send(sender, "&eRegiune: &f${plan.regionId}")
         plugin.messageUtils.send(sender, "&eTema: &f${plan.themeId}")
         plugin.messageUtils.send(sender, "&eSeed: &f${plan.seed}")
         plugin.messageUtils.send(sender, "&ePopulatie tinta: &f${plan.targetPopulation}")
         plugin.messageUtils.send(sender, "&eHousehold-uri: &f${plan.households.size}")
         plugin.messageUtils.send(sender, "&eTotal rezidenti: &f${plan.totalResidents()}")
-
         for (household in plan.households) {
             plugin.messageUtils.send(sender, "\n&7[${household.familyType}] &f${household.homePlaceId} &7(cap=${household.capacity}, family=${household.familyId})")
             for (resident in household.residents) {
@@ -2759,26 +3007,18 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 plugin.messageUtils.send(sender, "    &7home=&f${resident.homePlaceId} &7work=&f${if (resident.workPlaceId.isNotBlank()) resident.workPlaceId else "~"} &7social=&f${if (resident.socialPlaceId.isNotBlank()) resident.socialPlaceId else "~"}")
             }
         }
-
         if (plan.unassignedWorkplaces.isNotEmpty()) {
             plugin.messageUtils.send(sender, "\n&7Locuri de munca neatribuite: &f${plan.unassignedWorkplaces.joinToString(", ")}")
         }
-        sendAuditMessages(sender, "&eWarning-uri", result.warnings())
-        plugin.messageUtils.send(sender, "\n&7Pentru conversie in HouseAllocation: &f/ainpc population inspect ${plan.regionId}")
-        return true
     }
 
-    private fun handlePopulationInspect(sender: CommandSender, args: Array<String>): Boolean {
-        val plan = lastPopulationPlan ?: run {
-            plugin.messageUtils.send(sender, "&cNu exista un plan generat. Ruleaza mai intai /ainpc population plan <regionId>."); return true
-        }
-        val allocations = plan.toHouseAllocations()
-        plugin.messageUtils.send(sender, "&6=== Population Plan -> HouseAllocations ===")
-        plugin.messageUtils.send(sender, "&ePlan: &f${plan.planId} &7-> &f${allocations.size} &eHouseAllocation-uri")
-        for (allocation in allocations) {
-            sendHouseholdAllocationSummary(sender, allocation)
-        }
-        plugin.messageUtils.send(sender, "\n&7Pentru spawn: &f/ainpc world settlement spawn ${plan.regionId}")
+    private fun sendPopulationRepositoryFailure(
+        sender: CommandSender,
+        operation: String,
+        exception: Exception
+    ): Boolean {
+        plugin.logger.warning("PopulationPlan $operation esuata: ${exception.message}")
+        plugin.messageUtils.send(sender, "&cOperatia de $operation a planului a esuat: &f${exception.message}")
         return true
     }
 
@@ -2851,40 +3091,33 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         if (!sender.hasPermission("ainpc.admin")) {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
-        val mode = if (args.size > 1) args[1].lowercase() else "all"
-        if (mode !in setOf("all", "npc", "world", "db", "spawn", "quest", "wand")) {
+        val request = parseAuditCommandRequest(args.drop(1))
+        if (request == null) {
             sendAuditUsage(sender); return true
         }
-        val option = if (args.size > 2) args[2].lowercase() else ""
-        if (args.size > 3 || !isAuditOptionSupported(mode, option)) {
-            sendAuditUsage(sender); return true
+        val plan = request.executionPlan()
+        val report = AuditReport(AUDIT_RETAINED_MESSAGE_LIMIT)
+        report.addSection("Scope")
+        report.addNote("Mod: ${request.displayLabel()}.")
+        report.addNote(
+            if (plan.liveRuntimeChecks) {
+                "Verificarile live sunt active."
+            } else {
+                "Profil offline: sunt folosite numai date persistente si definitii incarcate."
+            }
+        )
+        for (section in plan.sections) {
+            executeAuditSection(report, section, plan)
         }
-        val strictQuestAnchorAudit = isStrictQuestAuditOption(option)
-        val report = AuditReport()
-        if (mode in setOf("all", "npc")) {
-            val loadedWorlds = plugin.server.worlds.map { it.name }.toSet()
-            auditNpcs(
-                report,
-                plugin.npcManager.getAllNPCs().toList(),
-                loadedWorlds,
-                plugin.npcManager.auditManagedVillagerEntities(),
-                plugin.npcManager.auditPersistentSourceKeyIndex()
-            )
-        }
-        if (mode in setOf("all", "world")) {
-            val loadedWorlds = plugin.server.worlds.map { it.name }.toSet()
-            auditWorld(report, plugin.platform.worldAdmin, loadedWorlds, plugin.npcManager.getAllNPCs().toList())
-        }
-        if (mode in setOf("all", "db")) auditDatabase(report)
-        if (mode in setOf("all", "spawn")) auditSpawnOrder(report)
-        if (mode in setOf("all", "quest")) auditQuestAnchors(report, strictQuestAnchorAudit)
-        if (mode in setOf("all", "wand")) auditWand(report)
-        sendAuditReport(sender, report)
+        sendAuditReport(sender, report, request, plan)
         return true
     }
 
     private fun sendAuditUsage(sender: CommandSender) {
-        plugin.messageUtils.send(sender, "&cUtilizare: /ainpc audit <all|npc|world|db|spawn|quest|wand> [strict|full|offline]")
+        plugin.messageUtils.send(
+            sender,
+            "&cUtilizare: /ainpc audit <all|npc|world|db|spawn|quest|wand> [strict|full|offline] [json]"
+        )
     }
 
     // -- Debug Dump -------------------------------------------------
@@ -2896,6 +3129,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendDebugDumpUsage(sender); return true
         }
         return when (args[1].lowercase()) {
+            "all", "npc" -> handleDebugDumpExport(sender, args)
             "world", "worlds" -> handleDebugDumpWorld(sender, args)
             "regions", "region" -> handleDebugDumpRegions(sender, args)
             "places", "place" -> handleDebugDumpPlaces(sender, args)
@@ -2919,8 +3153,84 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         }
     }
 
+    private fun handleDebugDumpExport(sender: CommandSender, args: Array<String>): Boolean {
+        val options = try {
+            DebugDumpExportOptions.parse(args.drop(2))
+        } catch (exception: IllegalArgumentException) {
+            plugin.messageUtils.send(sender, "&c${exception.message}")
+            sendDebugDumpUsage(sender)
+            return true
+        }
+
+        val scope = args[1].lowercase()
+        if (!debugDumpExportGate.tryAcquire()) {
+            plugin.messageUtils.send(sender, "&eUn export debug dump este deja in curs. Asteapta finalizarea lui.")
+            return true
+        }
+
+        val service = DebugDumpService(plugin)
+        val capture = try {
+            service.captureRuntimeSnapshot(scope, options.playerName, options.privacyMode)
+        } catch (exception: Exception) {
+            debugDumpExportGate.release()
+            sendDebugDumpFailure(sender, exception)
+            return true
+        }
+
+        val scheduler = plugin.server.scheduler
+        try {
+            scheduler.runTaskAsynchronously(plugin, Runnable {
+                val outcome = runCatching { service.writeCapturedDump(capture) }
+                debugDumpExportGate.release()
+                try {
+                    scheduler.runTask(plugin, Runnable {
+                        outcome.fold(
+                            onSuccess = { result -> sendDebugDumpResult(sender, result) },
+                            onFailure = { error -> sendDebugDumpFailure(sender, error) },
+                        )
+                    })
+                } catch (exception: RuntimeException) {
+                    plugin.logger.warning("Nu am putut programa rezultatul debug dump pe main thread: ${exception.message}")
+                }
+            })
+            plugin.messageUtils.send(sender, "&eSnapshot runtime capturat; exportul continua asincron.")
+        } catch (exception: RuntimeException) {
+            debugDumpExportGate.release()
+            sendDebugDumpFailure(sender, exception)
+        }
+        return true
+    }
+
+    private fun sendDebugDumpResult(sender: CommandSender, result: DebugDumpService.DebugDumpResult) {
+        plugin.messageUtils.send(sender, "&aDebug dump generat.")
+        plugin.messageUtils.send(sender, "&eScope: &f${result.scope()}")
+        plugin.messageUtils.send(sender, "&ePrivacy: &f${result.privacyMode().cliValue}")
+        plugin.messageUtils.send(sender, "&eFolder: &f${result.directory().toAbsolutePath()}")
+        plugin.messageUtils.send(
+            sender,
+            "&eRetentie: &f${result.retainedExportCount()} exporturi / ${result.retainedExportBytes()} bytes; " +
+                "cleanup=${result.cleanupDeletedCount()} directoare / ${result.cleanupFreedBytes()} bytes."
+        )
+        if (result.cleanupFailureCount() > 0 || !result.retentionLimitsSatisfied()) {
+            plugin.messageUtils.send(
+                sender,
+                "&cRetentia nu a putut satisface toate limitele; failures=${result.cleanupFailureCount()}. " +
+                    "Verifica index.txt, manifest.json si permisiunile folderului."
+            )
+        }
+    }
+
+    private fun sendDebugDumpFailure(sender: CommandSender, error: Throwable) {
+        val detail = error.message ?: error.javaClass.simpleName
+        plugin.logger.warning("Nu am putut genera debug dump: $detail")
+        plugin.messageUtils.send(sender, "&cNu am putut genera debug dump: $detail")
+    }
+
     private fun sendDebugDumpUsage(sender: CommandSender) {
         plugin.messageUtils.send(sender, "&6=== /ainpc debugdump ===")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump all [player] [privacy-safe] &7- Exporta diagnosticul complet")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump npc [player] [privacy-safe] &7- Exporta diagnosticul NPC")
+        plugin.messageUtils.send(sender, "&7  privacy-safe elimina prompt/response si redacteaza identificatori, IP-uri, emailuri si cai locale")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump world [summary] &7- Dump world admin state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump regions &7- List all regions")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump places &7- List all places")
@@ -2933,8 +3243,11 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&e/ainpc debugdump story [summary] &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump runtime &7- Show registered runtime handlers")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump mcp &7- Probe Spring AI MCP sidecar")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump features &7- Show feature flag state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump scenario &7- Show active scenario state")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump progression &7- Show progression summary")
     }
 
     private fun handleDebugDialog(sender: CommandSender, args: Array<String>): Boolean {
@@ -2998,71 +3311,40 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&6=== MCP Runtime Dump ===")
         val health = plugin.mcpRuntimeClient.health()
         plugin.messageUtils.send(sender, "&eStatus: &f${health.status}")
-        plugin.messageUtils.send(sender, "&eEndpoint: &f${health.endpoint}")
+        plugin.messageUtils.send(sender, "&eEndpoint: &f${redactDiagnosticText(health.endpoint)}")
         plugin.messageUtils.send(sender, "&eDisponibil: &f${if (health.available) "&ada" else "&cnu"} &8(${health.durationMillis}ms)")
-        plugin.messageUtils.send(sender, "&7${health.detail}")
+        plugin.messageUtils.send(sender, "&7${redactDiagnosticText(health.detail)}")
         if (!health.enabled || !health.available) {
             plugin.messageUtils.send(sender, "&7Tool-call omis: MCP nu este activ sau disponibil.")
             return true
         }
 
-        val featureState = plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
-        plugin.messageUtils.send(sender, "&eTool ainpc.feature.state: &f${featureState.status} &8(${featureState.durationMillis}ms)")
-        if (featureState.available) {
-            plugin.messageUtils.send(sender, "&7${featureState.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${featureState.detail}")
-        }
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val featureState = plugin.mcpRuntimeClient.callTool("ainpc.feature.state")
+            val debugHealth = plugin.mcpRuntimeClient.callTool("ainpc.debug.health")
+            val serverSnapshot = plugin.mcpRuntimeClient.callTool("ainpc.server.snapshot")
+            val npcList = plugin.mcpRuntimeClient.callTool("ainpc.npc.list")
 
-        val debugHealth = plugin.mcpRuntimeClient.callTool("ainpc.debug.health")
-        plugin.messageUtils.send(sender, "&eTool ainpc.debug.health: &f${debugHealth.status} &8(${debugHealth.durationMillis}ms)")
-        if (debugHealth.available) {
-            plugin.messageUtils.send(sender, "&7${debugHealth.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${debugHealth.detail}")
-        }
-
-        val serverSnapshot = plugin.mcpRuntimeClient.callTool("ainpc.server.snapshot")
-        plugin.messageUtils.send(sender, "&eTool ainpc.server.snapshot: &f${serverSnapshot.status} &8(${serverSnapshot.durationMillis}ms)")
-        if (serverSnapshot.available) {
-            plugin.messageUtils.send(sender, "&7${serverSnapshot.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${serverSnapshot.detail}")
-        }
-
-        val buildModeStatus = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.status")
-        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.status: &f${buildModeStatus.status} &8(${buildModeStatus.durationMillis}ms)")
-        if (buildModeStatus.available) {
-            plugin.messageUtils.send(sender, "&7${buildModeStatus.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${buildModeStatus.detail}")
-        }
-
-        val buildModeHistory = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.history")
-        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.history: &f${buildModeHistory.status} &8(${buildModeHistory.durationMillis}ms)")
-        if (buildModeHistory.available) {
-            plugin.messageUtils.send(sender, "&7${buildModeHistory.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${buildModeHistory.detail}")
-        }
-
-        val buildModeExport = plugin.mcpRuntimeClient.callTool("ainpc.build.mode.export")
-        plugin.messageUtils.send(sender, "&eTool ainpc.build.mode.export: &f${buildModeExport.status} &8(${buildModeExport.durationMillis}ms)")
-        if (buildModeExport.available) {
-            plugin.messageUtils.send(sender, "&7${buildModeExport.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${buildModeExport.detail}")
-        }
-
-        val npcList = plugin.mcpRuntimeClient.callTool("ainpc.npc.list")
-        plugin.messageUtils.send(sender, "&eTool ainpc.npc.list: &f${npcList.status} &8(${npcList.durationMillis}ms)")
-        if (npcList.available) {
-            plugin.messageUtils.send(sender, "&7${npcList.contentJson.take(500)}")
-        } else {
-            plugin.messageUtils.send(sender, "&c${npcList.detail}")
-        }
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                sendToolResult(sender, "ainpc.feature.state", featureState)
+                sendToolResult(sender, "ainpc.debug.health", debugHealth)
+                sendToolResult(sender, "ainpc.server.snapshot", serverSnapshot)
+                sendToolResult(sender, "ainpc.npc.list", npcList)
+            })
+        })
         return true
     }
+
+    private fun sendToolResult(sender: CommandSender, toolName: String, result: ro.ainpc.mcp.McpToolCallResult) {
+        plugin.messageUtils.send(sender, "&eTool $toolName: &f${result.status} &8(${result.durationMillis}ms)")
+        if (result.available) {
+            plugin.messageUtils.send(sender, "&7${redactDiagnosticText(result.contentJson.take(500))}")
+        } else {
+            plugin.messageUtils.send(sender, "&c${redactDiagnosticText(result.detail)}")
+        }
+    }
+
+    private fun redactDiagnosticText(value: String?): String = SensitiveDataRedactor.redact(value)
 
     private fun handleDebugDumpScenario(sender: CommandSender): Boolean {
         val engine = plugin.scenarioEngine
@@ -3230,8 +3512,12 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         plugin.messageUtils.send(sender, "&eBackoff: &f${if (snapshot.backoffActive) "activ (${snapshot.backoffRemainingSeconds}s)" else "inactiv"}")
         plugin.messageUtils.send(sender, "&eLast prompt: &f${snapshot.lastPromptChars} chars")
         plugin.messageUtils.send(sender, "&eLast response: &f${snapshot.lastResponseChars} chars")
-        if (snapshot.lastFailureMessage.isNotBlank()) plugin.messageUtils.send(sender, "&cLast error: &f${snapshot.lastFailureMessage}")
-        if (snapshot.lastFallbackReason.isNotBlank()) plugin.messageUtils.send(sender, "&eLast fallback: &f${snapshot.lastFallbackReason}")
+        if (snapshot.lastFailureMessage.isNotBlank()) {
+            plugin.messageUtils.send(sender, "&cLast error: &f${redactDiagnosticText(snapshot.lastFailureMessage)}")
+        }
+        if (snapshot.lastFallbackReason.isNotBlank()) {
+            plugin.messageUtils.send(sender, "&eLast fallback: &f${redactDiagnosticText(snapshot.lastFallbackReason)}")
+        }
 
         plugin.messageUtils.send(sender, "\n&6=== Recent AI Interactions (${interactions.size}) ===")
         if (interactions.isEmpty()) {
@@ -3250,10 +3536,18 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             }
             plugin.messageUtils.send(sender, "&7#${index + 1} [$time] $status &f${interaction.npcName} &7<-> &f${interaction.playerName}")
             plugin.messageUtils.send(sender, "&7  prompt: &f${interaction.promptChars}c &7response: &f${interaction.responseChars}c")
-            if (interaction.wasFallback) plugin.messageUtils.send(sender, "&7  fallback: &f${interaction.fallbackReason ?: "N/A"}")
-            if (interaction.hadError) plugin.messageUtils.send(sender, "&7  error: &f${interaction.errorMessage ?: "N/A"}")
-            if (interaction.promptPreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  prompt: &7${interaction.promptPreview}")
-            if (interaction.responsePreview.isNotBlank()) plugin.messageUtils.send(sender, "&8  response: &7${interaction.responsePreview}")
+            if (interaction.wasFallback) {
+                plugin.messageUtils.send(sender, "&7  fallback: &f${redactDiagnosticText(interaction.fallbackReason ?: "N/A")}")
+            }
+            if (interaction.hadError) {
+                plugin.messageUtils.send(sender, "&7  error: &f${redactDiagnosticText(interaction.errorMessage ?: "N/A")}")
+            }
+            if (interaction.promptPreview.isNotBlank()) {
+                plugin.messageUtils.send(sender, "&8  prompt: &7${redactDiagnosticText(interaction.promptPreview)}")
+            }
+            if (interaction.responsePreview.isNotBlank()) {
+                plugin.messageUtils.send(sender, "&8  response: &7${redactDiagnosticText(interaction.responsePreview)}")
+            }
         }
         return true
     }
@@ -4032,49 +4326,130 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         sender: CommandSender,
         worldAdmin: WorldAdminService,
         result: SettlementSpawnResult
-    ) {
-        var count = 0
-        for (hr in result.householdResults()) {
-            if (!hr.success()) continue; bindSpawnedHouseholdToMapping(sender, worldAdmin, hr); count++
+    ): PostSpawnBindingResult {
+        var bindingResult = PostSpawnBindingResult.EMPTY
+        for ((index, householdResult) in result.householdResults().withIndex()) {
+            bindingResult += if (householdResult.success()) {
+                bindSpawnedHouseholdToMapping(sender, worldAdmin, householdResult)
+            } else {
+                PostSpawnBindingResult(
+                    householdsAttempted = 1,
+                    householdsCompleted = 0,
+                    npcsAttempted = 0,
+                    npcsCompleted = 0,
+                    mappingWritesApplied = 0,
+                    persistentBindingsSaved = 0,
+                    failures = listOf("Household-ul #${index + 1} nu este eligibil pentru binding post-spawn.")
+                )
+            }
         }
-        plugin.messageUtils.send(sender, "&eHousehold-uri legate la mapping: &f$count")
+        return bindingResult
     }
 
     private fun bindSpawnedHouseholdToMapping(
         sender: CommandSender,
         worldAdmin: WorldAdminService,
         result: HouseholdSpawnResult
-    ) {
-        var bound = 0
-        for (i in 0 until minOf(result.spawnPlans().size, result.spawnResults().size)) {
-            val plan = result.spawnPlans()[i]
-            val sr = result.spawnResults()[i]
-            if (!sr.success() || sr.npc() == null) continue
-            val npc = sr.npc() ?: continue
+    ): PostSpawnBindingResult {
+        val failures = mutableListOf<String>()
+        val spawnPlans = result.spawnPlans()
+        val spawnResults = result.spawnResults()
+        if (spawnPlans.size != spawnResults.size) {
+            failures.add(
+                "Planurile spawn (${spawnPlans.size}) nu corespund rezultatelor (${spawnResults.size})."
+            )
+        }
+        var npcsAttempted = 0
+        var npcsCompleted = 0
+        var mappingWritesApplied = 0
+        var persistentBindingsSaved = 0
+        for (index in 0 until minOf(spawnPlans.size, spawnResults.size)) {
+            val plan = spawnPlans[index]
+            val spawnResult = spawnResults[index]
+            if (!spawnResult.success()) {
+                failures.add("Planul spawn #${index + 1} nu are un rezultat NPC reusit pentru binding.")
+                continue
+            }
+            val npc = spawnResult.npc()
+            if (npc == null) {
+                failures.add("Planul spawn #${index + 1} este reusit, dar nu contine NPC-ul pentru binding.")
+                continue
+            }
+            npcsAttempted++
             val bindingId = npcBindingId(npc)
-            try {
-                if (!plan.homePlaceId().isBlank()) worldAdmin.bindNpcToHomePlace(
-                    plan.homePlaceId(),
-                    bindingId,
-                    npc.name
+            val npcLabel = "${npc.name} ($bindingId)"
+            val mappingActions = mutableListOf<Pair<String, () -> Unit>>()
+            if (plan.homePlaceId().isNotBlank()) {
+                mappingActions.add(
+                    "home=${plan.homePlaceId()}" to {
+                        worldAdmin.bindNpcToHomePlace(plan.homePlaceId(), bindingId, npc.name)
+                        Unit
+                    }
                 )
-                if (!plan.workPlaceId().isBlank()) worldAdmin.bindNpcToWorkPlace(
-                    plan.workPlaceId(),
-                    bindingId,
-                    npc.name
+            }
+            if (plan.workPlaceId().isNotBlank()) {
+                mappingActions.add(
+                    "work=${plan.workPlaceId()}" to {
+                        worldAdmin.bindNpcToWorkPlace(plan.workPlaceId(), bindingId, npc.name)
+                        Unit
+                    }
                 )
-                if (!plan.socialPlaceId().isBlank()) worldAdmin.bindNpcToSocialPlace(
-                    plan.socialPlaceId(),
-                    bindingId,
-                    npc.name
+            }
+            if (plan.socialPlaceId().isNotBlank()) {
+                mappingActions.add(
+                    "social=${plan.socialPlaceId()}" to {
+                        worldAdmin.bindNpcToSocialPlace(plan.socialPlaceId(), bindingId, npc.name)
+                        Unit
+                    }
                 )
-                saveNpcWorldBinding(sender, NpcWorldBinding.fromSpawnPlan(npc, plan, "spawn_plan"), false)
-                bound++
-            } catch (e: IllegalArgumentException) {
-                plugin.messageUtils.send(sender, "&eWarning: &f" + e.message)
+            }
+            var mappingComplete = true
+            for ((target, action) in mappingActions) {
+                try {
+                    action()
+                    mappingWritesApplied++
+                } catch (exception: RuntimeException) {
+                    mappingComplete = false
+                    failures.add(
+                        "NPC $npcLabel, $target: ${exception.message ?: "eroare runtime fara mesaj"}"
+                    )
+                }
+            }
+            if (!mappingComplete) continue
+            val persistentBinding = try {
+                NpcWorldBinding.fromSpawnPlan(npc, plan, "spawn_plan")
+            } catch (exception: RuntimeException) {
+                failures.add(
+                    "NPC $npcLabel: nu am putut construi binding-ul persistent: " +
+                        (exception.message ?: "eroare runtime fara mesaj")
+                )
+                continue
+            }
+            if (saveNpcWorldBinding(sender, persistentBinding, false)) {
+                persistentBindingsSaved++
+                npcsCompleted++
+            } else {
+                failures.add("NPC $npcLabel: npc_world_bindings nu a fost salvat.")
             }
         }
-        plugin.messageUtils.send(sender, "&eBind-uri mapping actualizate: &f" + bound)
+        if (npcsAttempted == 0) {
+            failures.add("Household-ul nu contine NPC-uri spawnate eligibile pentru binding.")
+        }
+        val householdCompleted = failures.isEmpty() && npcsCompleted == npcsAttempted
+        return PostSpawnBindingResult(
+            householdsAttempted = 1,
+            householdsCompleted = if (householdCompleted) 1 else 0,
+            npcsAttempted = npcsAttempted,
+            npcsCompleted = npcsCompleted,
+            mappingWritesApplied = mappingWritesApplied,
+            persistentBindingsSaved = persistentBindingsSaved,
+            failures = failures.toList()
+        )
+    }
+
+    private fun sendPostSpawnBindingResult(sender: CommandSender, result: PostSpawnBindingResult) {
+        plugin.messageUtils.send(sender, postSpawnBindingSummary(result))
+        sendAuditMessages(sender, "&eProbleme binding post-spawn", result.failures)
     }
 
     private fun saveNpcWorldBinding(sender: CommandSender, binding: NpcWorldBinding, mergeExisting: Boolean): Boolean {
@@ -4391,32 +4766,50 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     }
 
     // -- Audit helpers ----------------------------------------------
-    private fun auditNpcs(
+    private fun executeAuditSection(
         report: AuditReport,
-        npcs: List<AINPC>,
-        loadedWorlds: Set<String>,
-        villagerEntities: Any,
-        sourceKeyIndex: Any
+        section: AuditSection,
+        plan: AuditExecutionPlan
     ) {
-        report.addSection("NPCs")
-        for (npc in npcs) {
-            val loc = npc.location ?: continue
-            if (loc.world != null && loc.world.name !in loadedWorlds) report.addWarning("NPC " + npc.name + " este intr-o lume neincarcata: " + loc.world.name)
+        when (section) {
+            AuditSection.NPC -> auditNpcSection(report, plan)
+            AuditSection.WORLD -> auditWorldSection(report, plan)
+            AuditSection.DATABASE -> auditDatabase(report)
+            AuditSection.SPAWN -> auditSpawnOrder(report, plan)
+            AuditSection.QUEST -> auditQuestAnchors(report, plan)
+            AuditSection.WAND -> auditWand(report, plan)
         }
-        report.addNote("Total NPC: " + npcs.size)
     }
 
-    private fun auditWorld(
-        report: AuditReport,
-        worldAdmin: WorldAdminApi?,
-        loadedWorlds: Set<String>,
-        npcs: List<AINPC>
-    ) {
-        report.addSection("World Mapping")
-        if (worldAdmin == null || !worldAdmin.isEnabled) {
-            report.addWarning("World admin nu este activat."); return
+    private fun auditNpcSection(report: AuditReport, plan: AuditExecutionPlan) {
+        report.addSection("NPCs")
+        if (!plan.liveRuntimeChecks) {
+            report.addNote("SKIPPED in profil offline: NPC manager si entitatile managed sunt stare live.")
+            return
         }
-        report.addNote("Regiuni: " + worldAdmin.regions.size + ", Places: " + worldAdmin.places.size + ", Nodes: " + worldAdmin.nodes.size)
+        val loadedWorlds = plugin.server.worlds.map { world -> world.name }.toSet()
+        ro.ainpc.commands.auditNpcs(
+            report,
+            plugin.npcManager.getAllNPCs().toList(),
+            loadedWorlds,
+            plugin.npcManager.auditManagedVillagerEntities(),
+            plugin.npcManager.auditPersistentSourceKeyIndex()
+        )
+    }
+
+    private fun auditWorldSection(report: AuditReport, plan: AuditExecutionPlan) {
+        report.addSection("World Mapping")
+        if (!plan.liveRuntimeChecks) {
+            report.addNote("SKIPPED in profil offline: mapping-ul incarcat si lumile sunt stare live.")
+            return
+        }
+        val loadedWorlds = plugin.server.worlds.map { world -> world.name }.toSet()
+        ro.ainpc.commands.auditWorld(
+            report,
+            plugin.platform.worldAdmin,
+            loadedWorlds,
+            plugin.npcManager.getAllNPCs().toList()
+        )
     }
 
     private fun auditDatabase(report: AuditReport) {
@@ -4426,90 +4819,228 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             return
         }
         try {
-            val tables = listOf(
-                "npcs", "npc_personality", "npc_emotions", "npc_profiles",
-                "npc_traits", "npc_memories", "npc_relationships", "npc_family",
-                "dialog_history", "player_quests", "quest_anchor_bindings",
-                "npc_world_bindings", "households", "household_residents",
-                "spawn_batches", "spawn_batch_steps",
-                "region_story_state", "place_story_state", "story_events"
-            )
-            var totalRows = 0
-            for (table in tables) {
-                try {
-                    val stmt = db.getConnection()?.prepareStatement("SELECT COUNT(*) FROM $table")
-                    if (stmt != null) {
-                        val rs = stmt.executeQuery()
-                        if (rs.next()) {
-                            val count = rs.getInt(1)
-                            report.addNote("$table: $count randuri")
-                            totalRows += count
-                        }
-                        rs.close()
-                        stmt.close()
-                    }
-                } catch (_: Exception) {
-                    report.addNote("$table: <neaccesibil>")
-                }
+            val connection = db.getConnection() ?: run {
+                report.addWarning("Conexiunea DB este indisponibila.")
+                return
             }
-            report.addNote("Total randuri: $totalRows")
+            appendDatabaseSchemaAudit(report, connection)
         } catch (e: Exception) {
             report.addWarning("Eroare audit DB: ${e.message}")
         }
     }
 
-    private fun auditSpawnOrder(report: AuditReport) {
+    private fun auditSpawnOrder(report: AuditReport, plan: AuditExecutionPlan) {
         report.addSection("Spawn Order")
         val tracker = SpawnBatchTracker(plugin.databaseManager, plugin.logger)
-        val recent = tracker.findRecentBatches("all", 10)
-        report.addNote("Batch-uri recente: ${recent.size}")
-        val familyData = runCatching {
-            val sql = "SELECT npc_id_1, npc_id_2, relationship_type FROM npc_family"
+        val recent = tracker.findRecentBatches("all", plan.spawnBatchLimit)
+        report.addNote("Batch-uri recente scanate: ${recent.size} (limita ${plan.spawnBatchLimit}).")
+        val problematicBatches = recent.filter { batch ->
+            batch.status() == "RUNNING" || batch.status() == "FAILED" || batch.status() == "ROLLED_BACK"
+        }
+        if (problematicBatches.isNotEmpty()) {
+            report.addWarning(
+                "Batch-uri recente problematice: ${problematicBatches.size} " +
+                    problematicBatches.take(8).joinToString(prefix = "[", postfix = "]") { batch ->
+                        "${batch.batchKey()}:${batch.status()}"
+                    }
+            )
+        }
+        val familyResult = runCatching {
+            val sql = "SELECT npc_id, related_npc_id, relation_type FROM npc_family"
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
                 stmt.executeQuery().use { rs ->
-                    val pairs = mutableListOf<Triple<Int, Int, String>>()
+                    val relationships = mutableListOf<Triple<Int, Int?, String>>()
                     while (rs.next()) {
-                        val id1 = rs.getInt("npc_id_1")
-                        val id2 = rs.getInt("npc_id_2")
-                        val type = rs.getString("relationship_type") ?: ""
-                        pairs.add(Triple(id1, id2, type))
+                        val npcId = rs.getInt("npc_id")
+                        val rawRelatedNpcId = rs.getInt("related_npc_id")
+                        val relatedNpcId = if (rs.wasNull()) null else rawRelatedNpcId
+                        val type = rs.getString("relation_type") ?: ""
+                        relationships.add(Triple(npcId, relatedNpcId, type))
                     }
-                    pairs
+                    relationships
                 }
             }
-        }.getOrNull()
-        if (familyData != null && familyData.isNotEmpty()) {
+        }
+        familyResult.exceptionOrNull()?.let { exception ->
+            report.addWarning("Nu am putut audita npc_family: ${exception.message ?: "eroare necunoscuta"}")
+        }
+        val familyData = familyResult.getOrNull().orEmpty()
+        if (familyData.isNotEmpty()) {
             report.addNote("Relatii de familie: ${familyData.size}")
-            val seen = mutableSetOf<Pair<Int, Int>>()
-            for ((id1, id2, type) in familyData) {
-                val inverse = familyData.any { it.second == id1 && it.first == id2 && it.third == type }
-                if (!inverse) {
-                    report.addWarning("Relatia $id1 -> $id2 ($type) nu are pereche reciproca in npc_family.")
+            val seen = mutableSetOf<Triple<Int, Int?, String>>()
+            for ((npcId, relatedNpcId, type) in familyData) {
+                val relationship = Triple(npcId, relatedNpcId, type.lowercase(Locale.ROOT))
+                if (!seen.add(relationship)) {
+                    report.addWarning("Relatia $npcId -> ${relatedNpcId ?: "extern"} ($type) este duplicata in npc_family.")
                 }
-                val pair = Pair(minOf(id1, id2), maxOf(id1, id2))
-                if (!seen.add(pair)) {
-                    report.addWarning("Perechea $id1-$id2 are intrari duplicate in npc_family.")
+                if (relatedNpcId == npcId) {
+                    report.addError("Relatia $npcId -> $relatedNpcId ($type) este autoreferentiala.")
+                } else if (relatedNpcId != null && familyData.none { row ->
+                        row.first == relatedNpcId && row.second == npcId
+                    }
+                ) {
+                    report.addWarning("Relatia $npcId -> $relatedNpcId ($type) nu are o legatura reciproca in npc_family.")
                 }
+            }
+        }
+        if (plan.scanCompleteSpawnHistory) {
+            auditCompleteSpawnHistory(report, requireNotNull(plan.spawnHistoryPageSize))
+        }
+    }
+
+    private fun auditCompleteSpawnHistory(report: AuditReport, pageSize: Int) {
+        try {
+            val pager = SpawnBatchHistoryPager { sql ->
+                plugin.databaseManager.prepareStatement(sql)
+            }
+            appendCompleteSpawnHistoryAudit(report, pager, pageSize)
+        } catch (exception: Exception) {
+            report.addWarning("Nu am putut pagina istoricul complet de spawn: ${exception.message ?: "eroare necunoscuta"}")
+        }
+    }
+
+    private fun auditQuestAnchors(report: AuditReport, plan: AuditExecutionPlan) {
+        report.addSection("Quest Anchors")
+        try {
+            val totalAvailable = countQuestAnchorBindings()
+            val worldAdmin = if (plan.liveRuntimeChecks) plugin.platform.worldAdmin else null
+            val regionsById = worldAdmin?.regions?.associateBy { region -> region.id() }.orEmpty()
+            val placesById = worldAdmin?.places?.associateBy { place -> place.id() }.orEmpty()
+            val nodesById = worldAdmin?.nodes?.associateBy { node -> node.id() }.orEmpty()
+            val loadedNpcs = if (plan.liveRuntimeChecks) plugin.npcManager.getAllNPCs().toList() else emptyList()
+            val scenariosBySelector = buildProgressionScenarioLookup(
+                runCatching { plugin.featurePackLoader }.getOrNull()
+            )
+            if (scenariosBySelector.isEmpty()) {
+                report.addWarning("Definitiile progresiilor nu sunt incarcate; objective_key nu poate fi validat.")
+            }
+
+            val maximumRows = plan.questAnchorLimit ?: Int.MAX_VALUE
+            var scannedRows = 0
+            var offset = 0
+            while (scannedRows < maximumRows) {
+                val pageLimit = minOf(QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT, maximumRows - scannedRows)
+                val rows = queryQuestAnchorAuditPage(pageLimit, offset)
+                if (rows.isEmpty()) {
+                    break
+                }
+                for (row in rows) {
+                    val label = "Quest anchor ${row.templateId() ?: "<fara template>"}/${row.objectiveKey() ?: "<fara obiectiv>"}"
+                    validateQuestAnchorStructure(report, label, row)
+                    if (scenariosBySelector.isNotEmpty()) {
+                        validateQuestAnchorObjectiveDefinition(report, label, row, scenariosBySelector)
+                    }
+                    if (plan.liveRuntimeChecks) {
+                        validateQuestAnchorTarget(
+                            report,
+                            label,
+                            row,
+                            worldAdmin,
+                            regionsById,
+                            placesById,
+                            nodesById,
+                            loadedNpcs
+                        )
+                    }
+                }
+                scannedRows += rows.size
+                offset += rows.size
+                if (rows.size < pageLimit) {
+                    break
+                }
+            }
+            report.addNote("Quest anchors scanate: $scannedRows din $totalAvailable.")
+            if (plan.questAnchorLimit != null && totalAvailable > scannedRows) {
+                report.addNote(
+                    "Scanarea este bounded la ${plan.questAnchorLimit}; foloseste profilul full pentru toate randurile."
+                )
+            } else if (plan.questAnchorLimit == null) {
+                report.addNote("Scanare persistenta completa, paginata cu maximum $QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT randuri/pagina.")
+            }
+            if (!plan.liveRuntimeChecks) {
+                report.addNote("Tintele live din world mapping si NPC manager nu au fost rezolvate in profil offline.")
+            }
+        } catch (exception: Exception) {
+            report.addError("Nu am putut valida quest anchors: ${exception.message ?: "eroare necunoscuta"}")
+        }
+    }
+
+    private fun countQuestAnchorBindings(): Int {
+        plugin.databaseManager.prepareStatement("SELECT COUNT(*) FROM quest_anchor_bindings").use { statement ->
+            statement.executeQuery().use { resultSet ->
+                return if (resultSet.next()) resultSet.getInt(1) else 0
             }
         }
     }
 
-    private fun auditQuestAnchors(report: AuditReport, strict: Boolean) {
-        report.addSection("Quest Anchors")
-        report.addNote("Quest anchor audit" + if (strict) " (strict)" else "")
+    private fun queryQuestAnchorAuditPage(limit: Int, offset: Int): List<QuestAnchorBindingRow> {
+        val sql = """
+            SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
+                   b.objective_type, b.reference, b.anchor_type, b.anchor_id,
+                   b.anchor_label, b.created_at, b.updated_at, p.status
+            FROM quest_anchor_bindings b
+            LEFT JOIN player_quests p
+              ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            ORDER BY b.updated_at DESC, b.template_id, b.objective_key, b.player_uuid
+            LIMIT ? OFFSET ?
+        """.trimIndent()
+        plugin.databaseManager.prepareStatement(sql).use { statement ->
+            statement.setInt(1, limit.coerceIn(1, QUEST_ANCHOR_AUDIT_DEFAULT_LIMIT))
+            statement.setInt(2, offset.coerceAtLeast(0))
+            statement.executeQuery().use { resultSet ->
+                val rows = mutableListOf<QuestAnchorBindingRow>()
+                while (resultSet.next()) {
+                    rows.add(readQuestAnchorBindingRow(resultSet))
+                }
+                return rows.toList()
+            }
+        }
     }
 
-    private fun auditWand(report: AuditReport) {
+    private fun auditWand(report: AuditReport, plan: AuditExecutionPlan) {
         report.addSection("Wand")
-        report.addNote("Wand audit efectuat.")
+        if (!plan.liveRuntimeChecks) {
+            report.addNote("SKIPPED in profil offline: istoricul wand este pastrat numai in memorie.")
+            return
+        }
+        auditMappingWandDrafts(
+            report,
+            plugin.mappingWandService,
+            plugin.platform.worldAdmin,
+            plugin.npcManager.getAllNPCs().toList(),
+            AUDIT_PREVIEW_LIMIT
+        )
     }
 
-    private fun sendAuditReport(sender: CommandSender, report: AuditReport) {
-        plugin.messageUtils.send(sender, "&6=== Audit Report ===")
+    private fun sendAuditReport(
+        sender: CommandSender,
+        report: AuditReport,
+        request: AuditCommandRequest,
+        plan: AuditExecutionPlan
+    ) {
+        val verdict = auditVerdict(report.errorCount(), report.warningCount(), plan.failOnWarnings)
+        if (request.outputFormat == AuditOutputFormat.JSON) {
+            sender.sendMessage(AuditReportJson.serialize(report, request, plan))
+            return
+        }
+        plugin.messageUtils.send(sender, "&6=== Audit Report: ${request.displayLabel()} ===")
         for ((section, items) in report.sections()) {
             plugin.messageUtils.send(sender, "&e[$section]")
-            for (item in items) plugin.messageUtils.send(sender, item)
+            for (item in items.take(AUDIT_PREVIEW_LIMIT)) plugin.messageUtils.send(sender, item)
+            val omitted = report.sectionItemCount(section) - minOf(items.size, AUDIT_PREVIEW_LIMIT)
+            if (omitted > 0) {
+                plugin.messageUtils.send(sender, "&7... inca $omitted constatari in aceasta sectiune.")
+            }
         }
+        val color = when (verdict) {
+            AuditVerdict.PASS -> "&a"
+            AuditVerdict.WARN -> "&e"
+            AuditVerdict.FAIL -> "&c"
+        }
+        plugin.messageUtils.send(
+            sender,
+            "$color Verdict $verdict &7| errors=${report.errorCount()} warnings=${report.warningCount()} infos=${report.infoCount()}"
+        )
     }
 
     private fun sendAuditMessages(sender: CommandSender, label: String, messages: List<String>) {
@@ -4686,14 +5217,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             "null",
             ignoreCase = true
         )
-
-    private fun isStrictQuestAuditOption(option: String): Boolean =
-        option == "strict" || option == "stricta" || option == "full" || option == "offline"
-
-    private fun isAuditOptionSupported(mode: String, option: String): Boolean {
-        if (option.isBlank()) return true
-        return (mode == "quest" || mode == "all") && isStrictQuestAuditOption(option)
-    }
 
     private fun questDebug(message: String) {
         if (plugin.config.getBoolean("debug.quest", false)) plugin.logger.info("[QuestDebug] " + message)
@@ -4902,28 +5425,6 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     data class QuestTrackRequest(val player: Player, val questSelector: String, val action: String)
 
     data class QuestDecisionTarget(val player: Player, val npc: AINPC)
-
-    class AuditReport {
-        private val _sections = linkedMapOf<String, MutableList<String>>()
-
-        fun addSection(name: String) {
-            if (name !in _sections) _sections[name] = mutableListOf()
-        }
-
-        fun addNote(note: String) {
-            if (_sections.isNotEmpty()) _sections.values.last().add("&7$note")
-        }
-
-        fun addWarning(warning: String) {
-            if (_sections.isNotEmpty()) _sections.values.last().add("&e$warning")
-        }
-
-        fun addError(error: String) {
-            if (_sections.isNotEmpty()) _sections.values.last().add("&c$error")
-        }
-
-        fun sections(): Map<String, List<String>> = _sections.mapValues { it.value.toList() }
-    }
 
     // -- Relationship -------------------------------------------------
     private fun handleRelationship(sender: CommandSender, args: Array<String>): Boolean {

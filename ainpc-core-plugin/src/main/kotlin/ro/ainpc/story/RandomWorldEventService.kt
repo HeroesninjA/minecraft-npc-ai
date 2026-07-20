@@ -1,6 +1,7 @@
 package ro.ainpc.story
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.utils.ConfigKeys
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Random
 import java.util.logging.Level
@@ -31,7 +32,7 @@ class RandomWorldEventService(private val plugin: AINPCPlugin) {
     )
 
     fun tick() {
-        if (!plugin.config.getBoolean("story.random_events_enabled", false)) return
+        if (!plugin.config.getBoolean(ConfigKeys.STORY_RANDOM_EVENTS, false)) return
         val worldAdmin = plugin.platform.worldAdmin
         if (!worldAdmin.isEnabled) return
 
@@ -77,23 +78,41 @@ class RandomWorldEventService(private val plugin: AINPCPlugin) {
         return true
     }
 
-    private fun fireEvent(config: WorldEventConfig, region: WorldRegionInfo) {
-        try {
-            val success = plugin.storyAuthoringService.applyTemplate(config.templateId, region.id())
-            if (success) {
-                lastEventTime[region.id()] = System.currentTimeMillis()
-                plugin.logger.info("[RandomEvent] ${config.templateId} declansat in ${region.id()}")
+    private fun fireEvent(config: WorldEventConfig, region: WorldRegionInfo): Boolean {
+        return try {
+            val regionId = region.id()
+            val authoring = plugin.storyAuthoringService
+            val reviewRequired = plugin.config.getBoolean(ConfigKeys.STORY_RANDOM_REVIEW_REQUIRED, false)
+            val success = if (reviewRequired) {
+                if (authoring.hasPendingEvents("region", regionId)) {
+                    plugin.logger.fine("[RandomEvent] Draft pending existent in $regionId; generarea este amanata")
+                    return false
+                }
+                authoring.queueTemplate(
+                    config.templateId,
+                    regionId,
+                    actorType = "scheduler",
+                    actorId = "random-world-events",
+                ) != null
+            } else {
+                authoring.applyTemplate(config.templateId, regionId)
             }
+            if (success) {
+                lastEventTime[regionId] = System.currentTimeMillis()
+                val action = if (reviewRequired) "adaugat in coada pending" else "declansat"
+                plugin.logger.info("[RandomEvent] ${config.templateId} $action in $regionId")
+            }
+            success
         } catch (e: Exception) {
             plugin.logger.log(Level.WARNING, "[RandomEvent] Eroare la declansarea ${config.templateId}", e)
+            false
         }
     }
 
     fun forceEvent(templateId: String, regionId: String): Boolean {
         val config = eventConfigs.find { it.templateId == templateId } ?: return false
         val region = plugin.platform.worldAdmin.getRegion(regionId) ?: return false
-        fireEvent(config, region)
-        return true
+        return fireEvent(config, region)
     }
 
     fun getCooldownStatus(regionId: String): Long {

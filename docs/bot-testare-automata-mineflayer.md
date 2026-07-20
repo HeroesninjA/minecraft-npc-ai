@@ -1,1 +1,1 @@
-This document was moved to `docs v2/operations/bot-testare-automata-mineflayer.md`.
+This compatible, unimplemented proposal was moved to `docs v2/planning/testare-automata-bot.md`.

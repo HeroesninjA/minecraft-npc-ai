@@ -32,5 +32,7 @@ Acesta este planul executabil pentru primul demo intern jucabil.
 ## Legaturi
 
 - `canonical/implementat-deja.md`
-- `planning/server-npc-mvp-si-faze.md`
+- `reference/criterii-gata-prim-demo.md`
 - `operations/release-checklist.md`
+- `.ai/codex-fast-250-experimental-backlog.md`
+- `.ai/codex-fast-250-experimental-guide.md`

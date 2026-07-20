@@ -4,7 +4,7 @@ param(
     [string]$PlayerName = "Hero",
     [string]$RconHost = "localhost",
     [int]$RconPort = 25575,
-    [string]$RconPass = "demo",
+    [string]$RconPass = $env:RCON_PASSWORD,
     [switch]$Quick,        # skip build, use existing JARs
     [switch]$NoBackup,
     [switch]$Rcon          # executa comenzile automat prin RCON
@@ -37,8 +37,6 @@ Log ""
 # 1. Build
 if (-not $Quick) {
     Info "[1/10] BUILD"
-    $env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.2"
-    $env:Path = "$env:JAVA_HOME\bin;$env:Path"
     $result = ./gradlew.bat clean build 2>&1
     if ($LASTEXITCODE -eq 0) { Ok } else { Fail; exit 1 }
 } else {
@@ -50,8 +48,7 @@ if (-not $Quick) {
 Info "[2/10] DEPLOY"
 $jars = @(
     "ainpc-core-plugin/build/libs/ainpc-core-plugin-$version.jar",
-    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar",
-    "ainpc-api/build/libs/ainpc-api-$version.jar"
+    "ainpc-scenario-medieval/build/libs/ainpc-scenario-medieval-$version.jar"
 )
 if (-not (Test-Path $ServerDir/plugins)) { New-Item -ItemType Directory -Path "$ServerDir/plugins" -Force | Out-Null }
 foreach ($jar in $jars) {
@@ -89,6 +86,9 @@ Log ""
 $rconConnected = $false
 if ($Rcon) {
     Info "[3b/10] RCON"
+    if ([string]::IsNullOrWhiteSpace($RconPass)) {
+        throw "RCON_PASSWORD nu este configurat. Furnizeaza secretul extern inainte de rulare."
+    }
     . .\scripts\rcon-client.ps1
     $rconConnected = Connect-Rcon -Hostname $RconHost -Port $RconPort -Password $RconPass
     if ($rconConnected) { Ok } else { Fail }
@@ -97,17 +97,31 @@ if ($Rcon) {
 # =====================================================================
 # 4-10. Comenzi de verificat pe server (sau prin RCON)
 function Run-Check {
-    param([string]$Phase, [string]$Cmd)
+    param([string]$Phase, [string]$Cmd, [string]$ExpectContains)
     if ($rconConnected) {
         Write-Host "  [$Phase] > $cmd" -ForegroundColor Yellow
         $result = Send-Rcon $Cmd
-        if ($result) { $result.Trim() -split "`n" | Where-Object { $_.Trim() } | ForEach-Object { Write-Host "    $_" -ForegroundColor Gray } }
-        else { Write-Host "    (no output)" -ForegroundColor Gray }
-        Log "[$Phase] $Cmd -> OK"
+        if ($result) {
+            $lines = $result -split "`r`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) { Write-Host "    $line" -ForegroundColor Gray }
+            if ($ExpectContains -and $result -notmatch [regex]::Escape($ExpectContains)) {
+                Write-Host "    EXPECTED: $ExpectContains" -ForegroundColor Red
+                Log "[$Phase] $Cmd -> FAIL (expected '$ExpectContains' not found)"
+                $global:hasVerificationErrors = $true
+            } elseif ($ExpectContains) {
+                Log "[$Phase] $Cmd -> PASS"
+            } else {
+                Log "[$Phase] $Cmd -> EXECUTED_UNVERIFIED"
+            }
+        } else {
+            Write-Host "    (no output)" -ForegroundColor Gray
+            Log "[$Phase] $Cmd -> NO_OUTPUT"
+        }
     } else {
         Log "  $cmd"
     }
 }
+$global:hasVerificationErrors = $false
 $steps = @(
     @("PLUGIN",  "/plugins"),
     @("PLUGIN",  "/ainpc"),
@@ -135,7 +149,7 @@ $steps = @(
     @("DEMO",    "/ainpc demo status $RegionId"),
     @("DEMO",    "/ainpc demo phases $RegionId $PlayerName"),
     @("DEMO",    "/ainpc demo summary $RegionId $PlayerName"),
-    @("FINAL",   "/ainpc audit all"),
+    @("FINAL",   "/ainpc audit all", "Errors: 0"),
     @("FINAL",   "/ainpc debugdump all")
 )
 
@@ -143,12 +157,13 @@ $currentPhase = ""
 foreach ($step in $steps) {
     $phase = $step[0]
     $cmd = $step[1]
+    $expect = if ($step.Count -ge 3) { $step[2] } else { $null }
     if ($phase -ne $currentPhase) {
         $currentPhase = $phase
         Log ""
         Log "--- $phase ---"
     }
-    if ($rconConnected) { Run-Check -Phase $phase -Cmd $cmd } else { Log "  $cmd" }
+    if ($rconConnected) { Run-Check -Phase $phase -Cmd $cmd -ExpectContains $expect } else { Log "  $cmd" }
 }
 
 Log ""
@@ -168,9 +183,15 @@ if ($rconConnected) {
 if ($global:hasErrors) {
     Log "REZULTAT: Smoke INCOMPLET (unele fisiere lipsesc)"
     Write-Host "`nREZULTAT: Smoke INCOMPLET" -ForegroundColor Yellow
+} elseif ($global:hasVerificationErrors) {
+    Log "REZULTAT: Smoke cu verificari esuate"
+    Write-Host "`nREZULTAT: Verificari esuate" -ForegroundColor Red
+} elseif ($rconConnected) {
+    Log "REZULTAT: Smoke complet, verificari de baza trecute"
+    Write-Host "`nREZULTAT: Smoke OK" -ForegroundColor Green
 } else {
-    Log "REZULTAT: Smoke gata de verificare pe server"
-    Write-Host "`nREZULTAT: Smoke gata de verificare pe server" -ForegroundColor Green
+    Log "REZULTAT: Pregatire completa; raspunsurile necesita validare semantica manuala"
+    Write-Host "`nREZULTAT: Comenzi executate, validare manuala obligatorie" -ForegroundColor Yellow
 }
 
 Log "Raport: $logFile"

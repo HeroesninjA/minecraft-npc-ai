@@ -4,6 +4,7 @@ import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldAdminService
+import ro.ainpc.world.WorldMappingCompensator
 
 class ControlledTestWorldFixtureApplyResult(
     fixtureId: String?,
@@ -90,10 +91,10 @@ class ControlledTestWorldFixtureApplier {
                     regMinX, DEFAULT_Y - 4, regMinZ,
                     regMaxX, DEFAULT_Y + REGION_HEIGHT, regMaxZ
                 )
+                createdRegionIds.add(region.id)
                 if (regionPlan.tags().isNotEmpty()) {
                     region.setTags(regionPlan.tags())
                 }
-                createdRegionIds.add(region.id)
             } catch (ex: IllegalArgumentException) {
                 errors.add("Nu pot crea regiunea $regionId: ${ex.message}")
                 continue
@@ -104,7 +105,7 @@ class ControlledTestWorldFixtureApplier {
                 if (node != null) {
                     createdNodeIds.add(node.id)
                 } else {
-                    warnings.add("Nu pot crea node-ul de regiune $regionId:$nodeId.")
+                    errors.add("Nu pot crea node-ul de regiune $regionId:$nodeId.")
                 }
             }
 
@@ -130,24 +131,36 @@ class ControlledTestWorldFixtureApplier {
                         placePos.x - PLACE_SIZE / 2, DEFAULT_Y - 1, placePos.z - PLACE_SIZE / 2,
                         placePos.x + PLACE_SIZE / 2, DEFAULT_Y + 7, placePos.z + PLACE_SIZE / 2
                     )
+                    createdPlaceIds.add(place.id)
                     place.putMetadata("role", placePlan.role())
                     if (placePlan.tags().isNotEmpty()) {
                         place.setTags(placePlan.tags())
                     }
-                    createdPlaceIds.add(place.id)
-
                     for (nodeId in placePlan.requiredNodes()) {
                         val node = createPlaceNode(worldAdminService, regionId, placeId, safeWorldName, nodeId, placePos.x, placePos.z)
                         if (node != null) {
                             createdNodeIds.add(node.id)
                         } else {
-                            warnings.add("Nu pot crea node-ul $placeId:$nodeId.")
+                            errors.add("Nu pot crea node-ul $placeId:$nodeId.")
                         }
                     }
                 } catch (ex: IllegalArgumentException) {
                     errors.add("Nu pot crea place-ul $placeId: ${ex.message}")
                 }
             }
+        }
+
+        if (errors.isNotEmpty() &&
+            (createdRegionIds.isNotEmpty() || createdPlaceIds.isNotEmpty() || createdNodeIds.isNotEmpty())
+        ) {
+            val compensation = WorldMappingCompensator.rollback(
+                worldAdminService,
+                createdRegionIds,
+                createdPlaceIds,
+                createdNodeIds,
+            )
+            warnings.add(compensation.summary())
+            errors.addAll(compensation.failures)
         }
 
         return result(plan, createdRegionIds, createdPlaceIds, createdNodeIds, errors, warnings)

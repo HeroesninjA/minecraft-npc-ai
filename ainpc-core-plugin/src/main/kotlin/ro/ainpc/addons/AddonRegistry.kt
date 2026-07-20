@@ -6,10 +6,13 @@ import java.util.Collections
 import java.util.EnumMap
 import java.util.LinkedHashMap
 import java.util.Locale
+import java.util.logging.Level
 import java.util.logging.Logger
 
 class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryApi {
     private val logger: Logger = Logger.getLogger(AddonRegistry::class.java.name)
+    private val dependencyResolver = AddonDependencyResolver()
+    private val addonIdsBeingRemoved: MutableSet<String> = LinkedHashSet()
     private val descriptorsById: MutableMap<String, AddonDescriptor> = LinkedHashMap()
     private val addonsById: MutableMap<String, AINPCAddon> = LinkedHashMap()
     private val descriptorsByType: MutableMap<AddonType, MutableList<AddonDescriptor>> = EnumMap(AddonType::class.java)
@@ -37,7 +40,7 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
 
         val idsToRemove = descriptorsById.keys.filter { id -> !isAddonEnabled(id) }
         for (id in idsToRemove) {
-            unregisterAddon(id)
+            unregisterBestEffort(id, "reconfigurare")
         }
         sortDescriptorLists()
     }
@@ -50,7 +53,9 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
             return
         }
         val safeDescriptor = descriptor!!
+        val graphDiagnostics = dependencyGraphErrors(safeDescriptor)
         registerDescriptorInternal(safeDescriptor)
+        logDescriptorDiagnostics(safeDescriptor, graphDiagnostics)
     }
 
     @Synchronized
@@ -65,11 +70,35 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
             return
         }
 
-        unregisterAddon(descriptor.id)
-        addon.onLoad(platformApi)
-        registerDescriptorInternal(descriptor)
-        addonsById[descriptor.id] = addon
-        addon.onEnable(platformApi)
+        val addonId = descriptor.id
+        val previousAddon = addonsById[addonId]
+        if (previousAddon === addon) {
+            return
+        }
+        val dependencyErrors = dependencyGraphErrors(descriptor)
+        if (dependencyErrors.isNotEmpty()) {
+            logRegistrationRejection(descriptor, dependencyErrors)
+            return
+        }
+        val previousDescriptor = descriptorsById[addonId] ?: previousAddon?.getDescriptor()
+
+        if (previousAddon != null || previousDescriptor != null) {
+            try {
+                unregisterSingleAddon(addonId)
+            } catch (exception: Exception) {
+                restoreRegistration(previousAddon, previousDescriptor, exception)
+                reconcileActiveDependencies("rollback dezactivare addon '$addonId'")
+                throw exception
+            }
+        }
+
+        try {
+            activateAddon(addon, descriptor)
+        } catch (exception: Exception) {
+            restoreRegistration(previousAddon, previousDescriptor, exception)
+            reconcileActiveDependencies("rollback activare addon '$addonId'")
+            throw exception
+        }
     }
 
     @Synchronized
@@ -77,16 +106,7 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
         if (addonId.isNullOrBlank()) {
             return
         }
-
-        val addon = addonsById.remove(addonId)
-        if (addon != null) {
-            addon.onDisable(platformApi)
-        }
-
-        val removed = descriptorsById.remove(addonId)
-        if (removed != null) {
-            removeDescriptorFromType(removed)
-        }
+        unregisterInDependencyOrder(dependencyRemovalOrder(addonId))
     }
 
     @Synchronized
@@ -96,11 +116,46 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
             .map { descriptor -> descriptor.id }
 
         for (id in idsToRemove) {
-            val removed = descriptorsById.remove(id)
-            if (removed != null) {
-                removeDescriptorFromType(removed)
+            unregisterBestEffort(id, "removeByOrigin($origin)")
+        }
+    }
+
+    @Synchronized
+    internal fun removeByOriginForRefresh(origin: String?) {
+        val idsToRemove = descriptorsById.values
+            .filter { descriptor -> descriptor.origin.equals(origin, ignoreCase = true) }
+            .map { descriptor -> descriptor.id }
+
+        for (id in idsToRemove) {
+            unregisterSingleBestEffort(id, "refresh descriptori origin=$origin")
+        }
+    }
+
+    @Synchronized
+    internal fun reconcileActiveDependencies(operation: String = "reconciliere dependinte") {
+        if (!strictValidation) {
+            return
+        }
+        fun hasMissingDependencyPath(addonId: String, visiting: MutableSet<String>): Boolean {
+            val descriptor = descriptorsById[addonId] ?: return true
+            if (!visiting.add(addonId)) {
+                return false
             }
-            addonsById.remove(id)
+            val hasMissingDependency = descriptor.dependencies.any { dependency ->
+                hasMissingDependencyPath(dependency, visiting)
+            }
+            visiting.remove(addonId)
+            return hasMissingDependency
+        }
+
+        val invalidAddonIds = addonsById.keys.filter { addonId ->
+            if (addonIdsBeingRemoved.contains(addonId)) {
+                return@filter false
+            }
+            hasMissingDependencyPath(addonId, mutableSetOf())
+        }
+        for (addonId in invalidAddonIds) {
+            unregisterBestEffort(addonId, operation)
         }
     }
 
@@ -145,49 +200,211 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
 
     @Synchronized
     fun dispatchStoryEvent(eventType: String, scopeId: String, title: String) {
-        for (addon in addonsById.values) {
-            try { addon.onStoryEvent(eventType, scopeId, title) } catch (_: Exception) {}
+        dispatchToAddons("onStoryEvent") { addon ->
+            addon.onStoryEvent(eventType, scopeId, title)
         }
     }
 
     @Synchronized
     fun dispatchRelationshipChange(npcUuidA: String, npcUuidB: String, newType: String) {
-        for (addon in addonsById.values) {
-            try { addon.onRelationshipChange(npcUuidA, npcUuidB, newType) } catch (_: Exception) {}
+        dispatchToAddons("onRelationshipChange") { addon ->
+            addon.onRelationshipChange(npcUuidA, npcUuidB, newType)
         }
     }
 
     @Synchronized
     fun dispatchNpcStateChange(npcUuid: String, oldState: String, newState: String) {
-        for (addon in addonsById.values) {
-            try { addon.onNpcStateChange(npcUuid, oldState, newState) } catch (_: Exception) {}
+        dispatchToAddons("onNpcStateChange") { addon ->
+            addon.onNpcStateChange(npcUuid, oldState, newState)
         }
     }
 
     @Synchronized
     fun dispatchSalaryPaid(npcCount: Int, totalAmount: Int) {
-        for (addon in addonsById.values) {
-            try { addon.onDailySalaryPaid(npcCount, totalAmount) } catch (_: Exception) {}
+        dispatchToAddons("onDailySalaryPaid") { addon ->
+            addon.onDailySalaryPaid(npcCount, totalAmount)
         }
     }
 
     @Synchronized
     fun dispatchSeasonChange(worldName: String, oldSeason: String, newSeason: String) {
-        for (addon in addonsById.values) {
-            try { addon.onSeasonChange(worldName, oldSeason, newSeason) } catch (_: Exception) {}
+        dispatchToAddons("onSeasonChange") { addon ->
+            addon.onSeasonChange(worldName, oldSeason, newSeason)
         }
     }
 
     @Synchronized
     fun shutdown() {
-        val addons = ArrayList(addonsById.values)
-        addons.reverse()
-        for (addon in addons) {
-            addon.onDisable(platformApi)
+        val addonIds = addonsById.keys.toList().asReversed()
+        for (addonId in addonIds) {
+            unregisterBestEffort(addonId, "shutdown")
         }
         addonsById.clear()
         descriptorsById.clear()
         descriptorsByType.clear()
+    }
+
+    private fun dependencyRemovalOrder(addonId: String): List<String> {
+        if (!descriptorsById.containsKey(addonId) && !addonsById.containsKey(addonId)) {
+            return emptyList()
+        }
+        if (!strictValidation) {
+            return listOf(addonId)
+        }
+
+        val visited = mutableSetOf<String>()
+        val addonIdsToRemove = mutableSetOf(addonId)
+        val removalOrder = mutableListOf<String>()
+
+        fun visit(dependencyId: String) {
+            if (!visited.add(dependencyId)) {
+                return
+            }
+            val dependentDescriptors = descriptorsById.values
+                .filter { descriptor -> descriptor.dependencies.contains(dependencyId) }
+            for (dependentDescriptor in dependentDescriptors) {
+                if (addonsById.containsKey(dependentDescriptor.id)) {
+                    addonIdsToRemove.add(dependentDescriptor.id)
+                }
+                visit(dependentDescriptor.id)
+            }
+            if (addonIdsToRemove.contains(dependencyId)) {
+                removalOrder.add(dependencyId)
+            }
+        }
+
+        visit(addonId)
+        return removalOrder
+    }
+
+    private fun unregisterInDependencyOrder(addonIds: List<String>) {
+        if (addonIds.isEmpty()) {
+            return
+        }
+        val newlyMarkedIds = addonIds.filter { addonId -> addonIdsBeingRemoved.add(addonId) }
+        var failure: Exception? = null
+        try {
+            for (addonId in addonIds) {
+                try {
+                    unregisterSingleAddon(addonId)
+                } catch (exception: Exception) {
+                    val previousFailure = failure
+                    if (previousFailure == null) {
+                        failure = exception
+                    } else {
+                        previousFailure.addSuppressed(exception)
+                    }
+                }
+            }
+        } finally {
+            for (addonId in newlyMarkedIds) {
+                addonIdsBeingRemoved.remove(addonId)
+            }
+        }
+        failure?.let { exception -> throw exception }
+    }
+
+    private fun unregisterSingleAddon(addonId: String) {
+        val addon = addonsById.remove(addonId)
+        val descriptor = descriptorsById[addonId]
+        try {
+            addon?.onDisable(platformApi)
+        } finally {
+            if (descriptor != null && descriptorsById[addonId] === descriptor) {
+                removeDescriptorInternal(addonId)
+            }
+        }
+    }
+
+    private fun activateAddon(addon: AINPCAddon, descriptor: AddonDescriptor) {
+        try {
+            addon.onLoad(platformApi)
+            registerDescriptorInternal(descriptor)
+            addonsById[descriptor.id] = addon
+            addon.onEnable(platformApi)
+        } catch (exception: Exception) {
+            if (addonsById[descriptor.id] === addon) {
+                addonsById.remove(descriptor.id)
+            }
+            try {
+                addon.onDisable(platformApi)
+            } catch (cleanupException: Exception) {
+                exception.addSuppressed(cleanupException)
+            }
+            if (descriptorsById[descriptor.id] === descriptor) {
+                removeDescriptorInternal(descriptor.id)
+            }
+            throw exception
+        }
+    }
+
+    private fun restoreRegistration(
+        previousAddon: AINPCAddon?,
+        previousDescriptor: AddonDescriptor?,
+        failure: Exception
+    ) {
+        if (previousDescriptor == null) {
+            return
+        }
+        try {
+            if (previousAddon == null) {
+                registerDescriptorInternal(previousDescriptor)
+            } else {
+                activateAddon(previousAddon, previousDescriptor)
+            }
+        } catch (rollbackException: Exception) {
+            addonsById.remove(previousDescriptor.id)
+            removeDescriptorInternal(previousDescriptor.id)
+            failure.addSuppressed(rollbackException)
+        }
+    }
+
+    private fun unregisterBestEffort(addonId: String, operation: String) {
+        try {
+            unregisterAddon(addonId)
+        } catch (exception: Exception) {
+            logger.log(
+                Level.WARNING,
+                "[AINPC AddonRegistry] Eroare la dezactivarea addonului '$addonId' in timpul operatiei $operation",
+                exception
+            )
+        }
+    }
+
+    private fun unregisterSingleBestEffort(addonId: String, operation: String) {
+        try {
+            unregisterSingleAddon(addonId)
+        } catch (exception: Exception) {
+            logger.log(
+                Level.WARNING,
+                "[AINPC AddonRegistry] Eroare la dezactivarea addonului '$addonId' in timpul operatiei $operation",
+                exception
+            )
+        }
+    }
+
+    private fun dispatchToAddons(callbackName: String, callback: (AINPCAddon) -> Unit) {
+        val addonIds = addonsById.keys.toList()
+        for (addonId in addonIds) {
+            val addon = addonsById[addonId] ?: continue
+            try {
+                callback(addon)
+            } catch (exception: Exception) {
+                logger.log(
+                    Level.WARNING,
+                    "[AINPC AddonRegistry] Callback '$callbackName' esuat pentru addon '$addonId'",
+                    exception
+                )
+            }
+        }
+    }
+
+    private fun removeDescriptorInternal(addonId: String): AddonDescriptor? {
+        val removed = descriptorsById.remove(addonId)
+        if (removed != null) {
+            removeDescriptorFromType(removed)
+        }
+        return removed
     }
 
     private fun removeDescriptorFromType(descriptor: AddonDescriptor) {
@@ -309,6 +526,81 @@ class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryAp
         }
 
         return errors
+    }
+
+    private fun dependencyGraphErrors(descriptor: AddonDescriptor): List<String> {
+        if (!strictValidation || AddonDescriptor.ORIGIN_CORE.equals(descriptor.origin, ignoreCase = true)) {
+            return emptyList()
+        }
+
+        if (addonIdsBeingRemoved.contains(descriptor.id)) {
+            return listOf("addon in curs de dezactivare: ${descriptor.id}")
+        }
+
+        val candidateDescriptors = descriptorsById.values
+            .filterNot { registered ->
+                registered.id == descriptor.id || addonIdsBeingRemoved.contains(registered.id)
+            }
+            .toMutableList()
+        candidateDescriptors.add(descriptor)
+        val enabledIds = candidateDescriptors.mapTo(LinkedHashSet()) { candidate -> candidate.id }
+        val graph = dependencyResolver.resolve(candidateDescriptors, enabledIds)
+        val descriptorsByCandidateId = candidateDescriptors.associateBy { candidate -> candidate.id }
+        val dependencyClosureIds = mutableSetOf<String>()
+        fun collectDependencyClosure(addonId: String) {
+            if (!dependencyClosureIds.add(addonId)) {
+                return
+            }
+            descriptorsByCandidateId[addonId]?.dependencies?.forEach(::collectDependencyClosure)
+        }
+        collectDependencyClosure(descriptor.id)
+        val candidateId = normalizeId(descriptor.id)
+        val errors = mutableListOf<String>()
+
+        graph.missingDependencies.entries
+            .filter { (addonId, _) -> dependencyClosureIds.contains(addonId) }
+            .forEach { (addonId, dependencies) ->
+                val prefix = if (normalizeId(addonId) == candidateId) {
+                    "dependinte lipsa"
+                } else {
+                    "dependinte tranzitive lipsa prin $addonId"
+                }
+                errors.add("$prefix: ${dependencies.joinToString(", ")}")
+            }
+
+        graph.cycles
+            .filter { cycle -> cycle.any(dependencyClosureIds::contains) }
+            .distinctBy { cycle -> cycle.map(::normalizeId).sorted().joinToString("|") }
+            .forEach { cycle ->
+                val closedCycle = if (cycle.isEmpty()) cycle else cycle + cycle.first()
+                errors.add("ciclu de dependinte: ${closedCycle.joinToString(" -> ")}")
+            }
+
+        graph.conflicts
+            .filter { conflict ->
+                normalizeId(conflict.addonId) == candidateId ||
+                    normalizeId(conflict.conflictingAddonId) == candidateId
+            }
+            .distinctBy { conflict ->
+                val pair = listOf(
+                    normalizeId(conflict.addonId),
+                    normalizeId(conflict.conflictingAddonId)
+                ).sorted()
+                "${conflict.reason}:${pair.joinToString("|")}"
+            }
+            .forEach { conflict -> errors.add("conflict addon: ${conflict.description}") }
+
+        return errors
+    }
+
+    private fun logDescriptorDiagnostics(descriptor: AddonDescriptor, diagnostics: List<String>) {
+        if (diagnostics.isEmpty()) {
+            return
+        }
+        logger.warning(
+            "[AINPC AddonRegistry] Descriptor declarativ pastrat cu diagnostice " +
+                "id=${descriptor.id} origin=${descriptor.origin}: ${diagnostics.joinToString(" | ")}"
+        )
     }
 
     private fun logRegistrationRejection(descriptor: AddonDescriptor?, errors: List<String>) {

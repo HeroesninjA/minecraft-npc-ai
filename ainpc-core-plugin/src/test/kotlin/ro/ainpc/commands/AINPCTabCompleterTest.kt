@@ -5,6 +5,7 @@ import org.bukkit.command.CommandSender
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.lang.reflect.Proxy
 
 class AINPCTabCompleterTest {
@@ -28,6 +29,24 @@ class AINPCTabCompleterTest {
 
     private fun tab(completer: AINPCTabCompleter, command: String, vararg args: String): List<String> {
         return completer.onTabComplete(sender, TestCommand(command), command, args.toList().toTypedArray())
+    }
+
+    @Test
+    fun completesEveryCommandAdvertisedByMainHelp() {
+        val help = File("src/main/kotlin/ro/ainpc/commands/AINPCCommandDisplay.kt").readText()
+        val documented = Regex("&e/ainpc\\s+([a-z][a-z-]*)")
+            .findAll(help)
+            .map { match -> match.groupValues[1] }
+            .toSortedSet()
+        val completions = tab(AINPCTabCompleter(null), "ainpc", "")
+
+        assertTrue(documented.isNotEmpty())
+        assertTrue(AINPCCommandCatalog.suggestedSubcommands.containsAll(documented))
+        val visibleWithoutGeneration = documented - "create"
+        assertTrue(
+            completions.containsAll(visibleWithoutGeneration),
+            "Help fara tab completion: ${visibleWithoutGeneration - completions.toSet()}",
+        )
     }
 
     @Test
@@ -77,6 +96,13 @@ class AINPCTabCompleterTest {
         val c = tab(completer, "ainpc", "audit", "quest", "")
         assertTrue(c.contains("strict"))
         assertTrue(c.contains("full"))
+        assertTrue(c.contains("offline"))
+        assertTrue(c.contains("json"))
+        assertTrue(tab(completer, "ainpc", "audit", "all", "").containsAll(c))
+        val npc = tab(completer, "ainpc", "audit", "npc", "")
+        assertFalse(npc.contains("strict"))
+        assertTrue(npc.contains("json"))
+        assertTrue(tab(completer, "ainpc", "audit", "all", "strict", "").contains("json"))
     }
 
     @Test
@@ -99,6 +125,7 @@ class AINPCTabCompleterTest {
         assertTrue(tab(completer, "ainpc", "repair", "").contains("duplicates"))
         assertTrue(tab(completer, "ainpc", "repair", "duplicates", "").contains("dryrun"))
         assertTrue(tab(completer, "ainpc", "debugdump", "").contains("npc"))
+        assertTrue(tab(completer, "ainpc", "debugdump", "all", "").contains("privacy-safe"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("list"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("spawn"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("advance"))
@@ -126,6 +153,18 @@ class AINPCTabCompleterTest {
         assertTrue(p.contains("worker"))
         assertTrue(p.contains("worker,caretaker"))
         assertFalse(p.contains("blacksmith"))
+    }
+
+    @Test
+    fun completesPopulationPersistenceActionsAndPlanIdHint() {
+        val completer = AINPCTabCompleter(null)
+        val actions = tab(completer, "ainpc", "population", "")
+
+        assertTrue(actions.containsAll(listOf("plan", "list", "inspect", "select", "stats")))
+        assertTrue(tab(completer, "ainpc", "population", "plan", "").contains("<regionId>"))
+        assertTrue(tab(completer, "ainpc", "population", "list", "").contains("<regionId>"))
+        assertTrue(tab(completer, "ainpc", "population", "inspect", "").contains("<planId>"))
+        assertTrue(tab(completer, "ainpc", "population", "select", "").contains("<planId>"))
     }
 
     @Test

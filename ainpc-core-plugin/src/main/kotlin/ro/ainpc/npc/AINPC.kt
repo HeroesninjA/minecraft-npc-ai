@@ -19,7 +19,10 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-class AINPC(val plugin: AINPCPlugin?) {
+class AINPC(
+    val plugin: AINPCPlugin?,
+    private val stateChangePublisher: ((String, String, String) -> Unit)? = null
+) {
     var databaseId = 0
     var uuid: UUID = UUID.randomUUID()
     var name: String = ""
@@ -75,6 +78,7 @@ class AINPC(val plugin: AINPCPlugin?) {
     var emotions = NPCEmotions()
     var context = NPCContext(this)
     var currentState = NPCState.IDLE
+        private set
     var traits: MutableList<String> = ArrayList()
     var bukkitEntity: Entity? = null
     var spawned = false
@@ -287,15 +291,39 @@ class AINPC(val plugin: AINPCPlugin?) {
         }
     }
 
-    fun changeState(newState: NPCState): Boolean {
-        if (currentState.getPriority() > newState.getPriority() && currentState.getPriority() >= 60) {
+    fun changeState(newState: NPCState): Boolean = transitionState(newState, enforcePriority = true)
+
+    internal fun changeStateFromSimulation(newState: NPCState): Boolean =
+        transitionState(newState, enforcePriority = false)
+
+    internal fun restorePersistedState(newState: NPCState) {
+        currentState = newState
+    }
+
+    private fun transitionState(newState: NPCState, enforcePriority: Boolean): Boolean {
+        if (currentState == newState) {
+            return true
+        }
+        if (enforcePriority && currentState.getPriority() > newState.getPriority() && currentState.getPriority() >= 60) {
             plugin?.debug("NPC $name nu poate trece din $currentState la $newState")
             return false
         }
         val oldState = currentState
         currentState = newState
         plugin?.debug("NPC $name stare: $oldState -> $newState")
+        publishStateChange(oldState, newState)
         return true
+    }
+
+    private fun publishStateChange(oldState: NPCState, newState: NPCState) {
+        val npcUuid = uuid.toString()
+        val publisher = stateChangePublisher
+        if (publisher != null) {
+            publisher(npcUuid, oldState.name, newState.name)
+            return
+        }
+        val activePlugin = plugin ?: return
+        activePlugin.platform.addonRegistry.dispatchNpcStateChange(npcUuid, oldState.name, newState.name)
     }
 
     fun updateContext() {

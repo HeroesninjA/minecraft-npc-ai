@@ -1,1 +1,1 @@
-This document was moved to "docs v2/reference/documentatie-lipsa.md".
+This closed historical audit is archived at `docs v2/archive/documentatie-lipsa-legacy.md`.

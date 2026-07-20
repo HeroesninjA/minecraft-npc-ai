@@ -8,18 +8,28 @@ import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldPlace
 import ro.ainpc.world.WorldRegion
 import ro.ainpc.world.WorldAdminService
+import ro.ainpc.world.WorldMappingCompensator
 
-class BuildingAutoPlaceService(private val plugin: AINPCPlugin) {
+class BuildingAutoPlaceService private constructor(
+    private val worldAdminProvider: () -> WorldAdminService,
+) {
+    constructor(plugin: AINPCPlugin) : this({ plugin.platform.worldAdminService })
+
+    internal constructor(worldAdminService: WorldAdminService) : this({ worldAdminService })
 
     data class AutoPlaceResult(
         val templateId: String,
         val regionId: String,
         val placed: MutableList<String> = mutableListOf(),
         val warnings: MutableList<String> = mutableListOf(),
-    )
+        val errors: MutableList<String> = mutableListOf(),
+        var compensated: Boolean = false,
+    ) {
+        fun success(): Boolean = errors.isEmpty()
+    }
 
     fun autoPlace(templateId: String, regionId: String): AutoPlaceResult {
-        val worldAdmin = plugin.platform.worldAdminService
+        val worldAdmin = worldAdminProvider()
         val region = worldAdmin.getRegionModels().find { it.id == regionId }
             ?: return AutoPlaceResult(templateId, regionId, warnings = mutableListOf("Regiunea $regionId nu exista."))
 
@@ -28,6 +38,8 @@ class BuildingAutoPlaceService(private val plugin: AINPCPlugin) {
             ?: return AutoPlaceResult(templateId, regionId, warnings = mutableListOf("Template-ul $templateId nu exista."))
 
         val result = AutoPlaceResult(templateId, regionId)
+        val createdPlaceIds = mutableListOf<String>()
+        val createdNodeIds = mutableListOf<String>()
         val existingPlaces = worldAdmin.getPlaceModels(regionId)
         val offset = findFreeOffset(region, template, existingPlaces)
 
@@ -51,6 +63,7 @@ class BuildingAutoPlaceService(private val plugin: AINPCPlugin) {
                 regionId, placeId, placeName, region.worldName, placeType,
                 minX, y, minZ, maxX, y + template.footprintHeight, maxZ
             )
+            createdPlaceIds.add(place.id)
             place.setTags(listOf("auto_placed", templateId))
             place.putMetadata("template_id", templateId)
             place.putMetadata("source", "auto_place")
@@ -68,16 +81,32 @@ class BuildingAutoPlaceService(private val plugin: AINPCPlugin) {
                         regionId, place.id, anchor.anchorId, nodeType,
                         region.worldName, nx, ny, nz, radius
                     )
+                    createdNodeIds.add(node.id)
                     node.putMetadata("source", "auto_place")
                     node.putMetadata("anchor_role", anchor.role)
                     worldAdmin.registerNode(node)
                     result.placed.add(node.id)
                 } catch (e: IllegalArgumentException) {
-                    result.warnings.add("Nu s-a putut crea nodul ${anchor.anchorId}: ${e.message}")
+                    result.errors.add("Nu s-a putut crea nodul ${anchor.anchorId}: ${e.message}")
                 }
             }
         } catch (e: IllegalArgumentException) {
-            result.warnings.add("Eroare la plasare: ${e.message}")
+            result.errors.add("Eroare la plasare: ${e.message}")
+        }
+
+        if (result.errors.isNotEmpty() && (createdPlaceIds.isNotEmpty() || createdNodeIds.isNotEmpty())) {
+            val compensation = WorldMappingCompensator.rollback(
+                worldAdmin,
+                mutableListOf(),
+                createdPlaceIds,
+                createdNodeIds,
+            )
+            result.placed.clear()
+            result.placed.addAll(createdPlaceIds)
+            result.placed.addAll(createdNodeIds)
+            result.compensated = compensation.success()
+            result.warnings.add(compensation.summary())
+            result.errors.addAll(compensation.failures)
         }
 
         return result

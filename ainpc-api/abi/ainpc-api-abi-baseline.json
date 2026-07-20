@@ -1,0 +1,841 @@
+﻿{
+    "schema":  "ainpc.api-abi-baseline.v1",
+    "api_version":  "1.0.0",
+    "java_release":  "21",
+    "generator":  "javap-protected-descriptors-v2",
+    "javap_version":  "25.0.2",
+    "class_count":  166,
+    "signature_sha256":  "3386BB5483CB3C186D83422F98E038828139456F3C4EA7723F4B0B5883FBBC67",
+    "classes":  [
+                    {
+                        "name":  "ro.ainpc.addons.AddonConflict",
+                        "sha256":  "E80120293A157CF25F865BA82BD2108EF242D5825050EE7A5B578167AFB2E9A6",
+                        "line_count":  30
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AddonDependencyGraph",
+                        "sha256":  "763347FCB9CB4DDA351E2B4686F7C7979C83F59A747AC924A81144540B74193B",
+                        "line_count":  40
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AddonDescriptor",
+                        "sha256":  "B9A965A447297A67FF311B9F7887E749FED869A6B9EAFBA6CF97CF1BEA9EB530",
+                        "line_count":  48
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AddonDescriptor$Companion",
+                        "sha256":  "C56356C32FD28F1A5DA468555BF429E185611ABF6EE1BCEFBF62DDA94A70B760",
+                        "line_count":  4
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AddonType",
+                        "sha256":  "6F009EC7E955C6032390D6142AA7927D3175C15E0DC48C5FFFB074D250C820C7",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AddonType$Companion",
+                        "sha256":  "2A3EBCF7A503AA47042A88BD40503D369A8200F7C775144F13DEB51A6BAFEF76",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AINPCAddon",
+                        "sha256":  "04EB873396D60BAA126D9CFDE6DABE7BC345DC04B210F841D637D3D6FE97B59B",
+                        "line_count":  36
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.AINPCAddon$DefaultImpls",
+                        "sha256":  "68D427CC577E9BE7D57CD0652BA0CB60CB8545A348ED9C5086AADA6F0EEB4712",
+                        "line_count":  18
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.ConflictReason",
+                        "sha256":  "08E254B911ECE1ABFBEAB70DDF430F1A4D3474F230582A3758246088D02FC902",
+                        "line_count":  18
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.DependencyResolver",
+                        "sha256":  "B9D463C27EA57C76D96CD59777D5E295694589448B6D0BB54599405937622DA7",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.addons.DependencyResolver$DefaultImpls",
+                        "sha256":  "B5AF770E9DE7466D27BD4C8B949B227B4B41348D6957000E55B3BA0C8F363B88",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.AddonRegistryApi",
+                        "sha256":  "E5EBA3F4FB9094A95D738E10F5E240B0E214D8A2A8BFE3A939AC059382391749",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.api.AddonRegistryApi$DefaultImpls",
+                        "sha256":  "813E72645AEFFFD3DCD61D6CB838E7814BBF6EECE7F2716003012F0E1B547A2C",
+                        "line_count":  4
+                    },
+                    {
+                        "name":  "ro.ainpc.api.AINPCPlatformApi",
+                        "sha256":  "5C9A94CEB412C05AC66D9C6D033BAB68DFE1B8D1A62277B49FE726F8678F0B73",
+                        "line_count":  46
+                    },
+                    {
+                        "name":  "ro.ainpc.api.AINPCPlatformApi$DefaultImpls",
+                        "sha256":  "0397BD1E796D95AFC1C88BB089CA46D994CF3504D7FDDC1CF729A5510A00EF36",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.AINPCPlatformApi$ObjectiveProgressHandler",
+                        "sha256":  "2EA56C99C71FE26D9B76FCE483E16EAFC9B6BAD7AA67B23047C7BF2007E784BF",
+                        "line_count":  4
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.AINPCEventSource",
+                        "sha256":  "ED47B0C04B9887F1A6ABAB9EAF44649F4210FE14C8BC1C2A5AFA08E43738D221",
+                        "line_count":  22
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.ContextSignalCollectedEvent",
+                        "sha256":  "9E4CE0A7601BB7259D137FE4762862C02E61D6EBABCC023439E54C071616C0DC",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.ContextSignalCollectedEvent$Companion",
+                        "sha256":  "7DA27CD06C9977B6C95F2C55D376FA61EE34693A589504153F41AE1BA4DEDD61",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.ContextSignalCollectedEventPayload",
+                        "sha256":  "2188FD31C848C0DC302F48AB3F29B293EDD046A3C3DC342117C3413253A3F426",
+                        "line_count":  26
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.NPCContextUpdatedEvent",
+                        "sha256":  "2E8E5A2CF936134761ECBA5E6F4E43EA64CF1C369D658759C3A0FE78AE84A17D",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.NPCContextUpdatedEvent$Companion",
+                        "sha256":  "ABBD8BB13D0172C489AD0ADB438A03AC31531C2B7EBD690D79A207F77DEFFDC2",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.NPCContextUpdatedEventPayload",
+                        "sha256":  "667A9FBD73FBC790CF0E32A5920782F75BB92FBCC0AFFDFAD1AF803DCF0BE90B",
+                        "line_count":  38
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.PlayerContextChangedEvent",
+                        "sha256":  "962443508F1ADFA99CF310B4247B4C6DCFE6183E7157DD96E5CE90112C888758",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.PlayerContextChangedEvent$Companion",
+                        "sha256":  "35598FC802ECDFE51AB882A81F5362CC2FE69A941529FD634B74812116F23037",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.PlayerContextChangedEventPayload",
+                        "sha256":  "AC2FA6D5AEF6BD780CC5CBA6C9DD4E1FB8100ED872FAE6EC704734A69A04C759",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.WorldContextBuiltEvent",
+                        "sha256":  "C6C52494061623F5FD6712B932F0F7BDB68B4C7A84A83F5BFDB90995F15325FA",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.WorldContextBuiltEvent$Companion",
+                        "sha256":  "BFB7A092662017566E25996B1D56D4ADF3F78B85F79B2EDC122250C260A09F94",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.context.WorldContextBuiltEventPayload",
+                        "sha256":  "79C314F11979566C7ED8519E70A54BCE6BF1F0069D3ED13C127CD615A84C360C",
+                        "line_count":  26
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogAIRequestBuiltEvent",
+                        "sha256":  "CE93C9621BCDB673C8E9D372A03999339FF615E88A2425C5AE9D13CE797FCC75",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogAIRequestBuiltEvent$Companion",
+                        "sha256":  "70D2FE31FB457C46B4AA55C3F1493E5308875645A3F4C1F789ADF9F2C4DA51CE",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogAIRequestBuiltEventPayload",
+                        "sha256":  "6F8CF44E5EE7E92A8818402FCF1C121F2AC6FF6D4724F86EAFBEFE3FE41A3D8E",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogIntentResolvedEvent",
+                        "sha256":  "0759275BF8A4BB835A40CFA4A2A8BEF4CC5472060D9CEDB7D170A8AD2A5A7157",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogIntentResolvedEvent$Companion",
+                        "sha256":  "2F4045530469C52F4D223AE7077CB196EF659E4F1FE18870242B97FEEEA139F3",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogIntentResolvedEventPayload",
+                        "sha256":  "D50DB57DEE626EC9F8D47AB528150D98C321E9598B2B9F3C3214C1105BB7CD24",
+                        "line_count":  40
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogMessageReceivedEvent",
+                        "sha256":  "7200CF44A4B484494F57635AFED2371AACAC1174994A78E500CC9A981E4C5442",
+                        "line_count":  18
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogMessageReceivedEvent$Companion",
+                        "sha256":  "0ABB30E1A4A777C4D37E93D89AFEEA7C21A7C249EF594CD75C208BB4FB9602FD",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogMessageReceivedEventPayload",
+                        "sha256":  "28358A270A9890411F1286FEDDE01A3F333B0040CED59AD7381C0F8CCF7C23FA",
+                        "line_count":  36
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogResponseGeneratedEvent",
+                        "sha256":  "B1D9C97628B222E6760B2BCBEE8659AD553410F90581B6EFD12879283665AC6C",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogResponseGeneratedEvent$Companion",
+                        "sha256":  "DBA79E6C105494BE4E219435DCB015D47F59E3C295A1FC0D7FC7C19B6843E683",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogResponseGeneratedEventPayload",
+                        "sha256":  "4AC66946EA2BA96B2DD6A4509BBA33398C685114F866CEBD5A069ED2FB237591",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionEndedEvent",
+                        "sha256":  "B78DE5F39820E691C49090EE0E82F4657FABC7AF2A1092DB5EF5F960541A8BF9",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionEndedEvent$Companion",
+                        "sha256":  "A9B074EA311CE6891D7DC9B7019651483ABB342BA60114D14C02B87E146E27D1",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionEndedEventPayload",
+                        "sha256":  "CA2C04382C1CA4CF1FF9FA6B8223B2207C6529653ADF9C8E26C6873F77C3B552",
+                        "line_count":  26
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionStartedEvent",
+                        "sha256":  "FBEFD3A446976CCCE842144C2DEC69F5F20A955C2B4F0EC1672A1522758880BC",
+                        "line_count":  18
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionStartedEvent$Companion",
+                        "sha256":  "E12436ACD99221D0137D9536E90D8B76F6F07290046EB7081EF0A3CBF468330A",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload",
+                        "sha256":  "04A8CF2FEC010378CDDF90AACEEDE796882B9A1B855A9E09C1ED274B888C5C74",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDeathEvent",
+                        "sha256":  "315CE7C71C0EB50C0BBFC20C9116CEDA57B32EE112BD57E40C6775B987B5AF81",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDeathEvent$Companion",
+                        "sha256":  "DA48DA5A0CF22E64D927FF18FDF5C7E31F67E079B1F3D234CBDF4D459B6DAEE1",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDeathEventPayload",
+                        "sha256":  "0C210815473E40F45001898EFCD57FD03F87214CA04D0205A0AD086424D43494",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDiscoveredEvent",
+                        "sha256":  "058B32234D8347F93AE3B18DE42C21C07AAC7D1F473CE77AC519A48222624698",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDiscoveredEvent$Companion",
+                        "sha256":  "AED4489AC0B1AA2BB1A8ABC18954D4B6E3DDC8D2814F0A50C4D389AE3A88A745",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCDiscoveredEventPayload",
+                        "sha256":  "8D320692328AA2E4E02E4DAEF7EFA0C791908CD98CC3E1EA054AC4C2B8C1EB99",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCEmotionChangedEvent",
+                        "sha256":  "AB70BF6976AD58AAD46F7F76992C44FF39C9A5CD8CDAA035DE1C8904BAC7129C",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCEmotionChangedEvent$Companion",
+                        "sha256":  "65F31C979CD1CFE62B6F1C107A1A4AA3FB66E7E8138C86402475BD78E0D740D4",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCEmotionChangedEventPayload",
+                        "sha256":  "B50A419245E13ADAD93CF08CF0267F1FF66B7F2F7160CF20C14C7E4FA1A26465",
+                        "line_count":  26
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCInteractedEvent",
+                        "sha256":  "1548277199675A8E2D0E770B87FE72B99F48B53B46F2CF95909F53892309E4CD",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCInteractedEvent$Companion",
+                        "sha256":  "F33AABD700375AB281B1A2D59BC4A95B5F586745C597399FACE17BC857234CE9",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCInteractedEventPayload",
+                        "sha256":  "D37B025C824836E4442A38E195BFDCB68A7105929F09E3A5598E758215865AF7",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCMemoryRecordedEvent",
+                        "sha256":  "08E98F327A6074DEC93A6C27258B768ACD6C5D958A9B759A54671DCF78BE37C3",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCMemoryRecordedEvent$Companion",
+                        "sha256":  "6644A29E16D8BBFBCF097601B528ADFB240F727D9493929D0199F741903A2D67",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCMemoryRecordedEventPayload",
+                        "sha256":  "298ACDFCC014DBA67587D927344F2924378DD322CD591D283A3AA51BB352511A",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCProfileRefreshedEvent",
+                        "sha256":  "C820882E50E7FAC9C69700C587D439D343D69C1A1575CFFC63763B708EFAD3DB",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCProfileRefreshedEvent$Companion",
+                        "sha256":  "6604EF823FEA7E2FC71D4E455C01987E7689E57FEA239E6D9D35666C9DAB5FDC",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCProfileRefreshedEventPayload",
+                        "sha256":  "16930B2213CF066B2C70D42A224D6965480E69BD2FD23432C7B7DE394E70ADDD",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCRoutineChangedEvent",
+                        "sha256":  "5545402665075289158387299170E371BCCFADE7DF5D613DB0D0A348CD9B4D12",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCRoutineChangedEvent$Companion",
+                        "sha256":  "8DE62E6A3D9DCE889064F7CB1AD94DBE62BF7C4AF9CAB8356FA34A1A48B57909",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload",
+                        "sha256":  "ED33E4183EB98538FF9D8EB45AB85474E27183B3C43470CFB61EEC2491EB935A",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCSpawnedEvent",
+                        "sha256":  "779CE5BF8D2A509E342535388B9ECD7BA25FBE2A3E8038C2E20EBCEF75D58F0E",
+                        "line_count":  18
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCSpawnedEvent$Companion",
+                        "sha256":  "A2E0175C6231B63F6B18B9E681167EF8C2C3EE28E4FD8FB5BCB42C64E8FD54A3",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.npc.AINPCSpawnedEventPayload",
+                        "sha256":  "90E95D6B7CA116EBC8309581AF0C5F783F1FF54A6CD03DD7FD60E964B986000E",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAbandonedEvent",
+                        "sha256":  "EF734BB315CD8FA7662153178FA7B7FC6477282BE05104266A227815C051E529",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAbandonedEvent$Companion",
+                        "sha256":  "9ACE35DC742C2E58FD0FB2A8836BB9AD71976F308C1352ECBFB0EF1EA4566372",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAcceptedEvent",
+                        "sha256":  "0753F9658AB69C7E54CAB12EA37FBA6CF57799593184B77EA2EDC60A2B37ABB4",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAcceptedEvent$Companion",
+                        "sha256":  "A513F412A968DF615C94EC2CC77BC8765B4AB17FCEFBBF3AA3C8FCF2BCFD73D3",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAnchorBinding",
+                        "sha256":  "2CFF848C607757C9B167732640EABE64850549F6FE08E696B8C2318EAD1BDA7F",
+                        "line_count":  16
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAnchorBoundEvent",
+                        "sha256":  "E6220A962059AAB14CC9AC4066648D30700C59CF7188B99863DBFC4934508AF4",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAnchorBoundEvent$Companion",
+                        "sha256":  "3859DB2B046DAE6D1020BA7F91CC73BFF66F51804B9FEC16C904E5DE4708189D",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionAnchorBoundEventPayload",
+                        "sha256":  "F293697D89AC578AA16BFDB9BE536D96642612D76143B59FA30AAE902F7C6EBD",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionCompletedEvent",
+                        "sha256":  "5107B9C5E4A6FDD1EAC0624BF84282875558CDFFEF7921155048007BA3786E8E",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionCompletedEvent$Companion",
+                        "sha256":  "B08CE2EE3B99A74076D8D6D445C53430FCB0DF821105CB504F27142400937F44",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionDeclinedEvent",
+                        "sha256":  "27BE48D00EAE1B14E32456DEECDE93F61B61550D4A2A9BADC2701839613809CC",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionDeclinedEvent$Companion",
+                        "sha256":  "8A3C4C0ADEA6A84488010C5B15695F450ECE3DADB2BDC9F6B1DFE934239A7C4D",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionEventPayload",
+                        "sha256":  "EAC91AA5F3B03F9BBD2E95A36F9516ECF934547FDCDE9E25C8C12862014FE759",
+                        "line_count":  36
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionFailedEvent",
+                        "sha256":  "A1E47737DCE59F7EE6FECBEDCFB606D8B83C21C984EBF097B1D6640B5D1C75C9",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionFailedEvent$Companion",
+                        "sha256":  "8586CF3C9A9543E1DA49ADC141F5409BB3AF2365D6C1E918786E63D01C4D2CB2",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionFailedEventPayload",
+                        "sha256":  "15EDD5AD55E9D548B10575F863D0A82848AE86DFAB31DEBE642FFA332A21B868",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionLifecycleEvent",
+                        "sha256":  "097129D00E6FA05358A799F2508EEC5A743977455E9B9F62CBD92EA50A724291",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionObjectiveProgressEvent",
+                        "sha256":  "52C2E3F0E31810B6A774913EF00FA967592793C7738A0208F16B0A2D91E94C92",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionObjectiveProgressEvent$Companion",
+                        "sha256":  "F5BE50C1CE82DC4720160CE1D8FB6F3061E707E9A5D7C8040AA01432DD5FC383",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionObjectiveProgressEventPayload",
+                        "sha256":  "2D4B6EB298B1820FE1D9FDB62C6043E66AAA6A759861C3655279F3CC81FFBC84",
+                        "line_count":  50
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionOfferEvent",
+                        "sha256":  "6335DB1A822D66446B283F23C8AD8FB12BE7A02EC4864D9F56B5759449CCA8BD",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionOfferEvent$Companion",
+                        "sha256":  "88B2B5B3475533A263B17566DE77038714C435CFD592F64D7B8ECAACA6A3B632",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionOfferEventPayload",
+                        "sha256":  "11D7C487B2603B00544470167F3D89AA030F6E82554F0003C32713550A9B141B",
+                        "line_count":  38
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionStageChangedEvent",
+                        "sha256":  "02BBED0E3510A095A5B4897E5DC75453711AF77ED2598037F39631D597D6CFE0",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionStageChangedEvent$Companion",
+                        "sha256":  "46E02B558C2E7D5F82CA887B515BE32FB561F362332EFAB8A6524AD0F302D394",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionStageChangedEventPayload",
+                        "sha256":  "586F7B8A0BF1E8F0AA5A5145B2F51F1B03448E9799C1A2BB74196B5FE62F3880",
+                        "line_count":  38
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionTrackingChangedEvent",
+                        "sha256":  "D32031A5D5DA9BEBA3166B36B43DE0A7AEF3DD3B61A822474341A928A95D948B",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionTrackingChangedEvent$Companion",
+                        "sha256":  "3B51031BC3E981F1442E99FFED46C1A3D8AE844F18B7E7E72621A25F2D5E6707",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.quest.ProgressionTrackingChangedEventPayload",
+                        "sha256":  "A767B20D80BD9EC94F03A271B15BB93137E0D352643D61C21268629D80F82B42",
+                        "line_count":  56
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryActionAppliedEvent",
+                        "sha256":  "0D17885C374136B4F0BA9FA923DB18CC6FAB88B34B8F456BBC276F21D97FA815",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryActionAppliedEvent$Companion",
+                        "sha256":  "A23E9AECBF5B254AD87D23E6EF2E27100C7F947951EB7E2795AECCB33E3BFBD8",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryActionAppliedEventPayload",
+                        "sha256":  "BD2F6496E250F34D5703B8BDF7137EA7EE6BC3CB29732739D3E429AFF2242B8D",
+                        "line_count":  54
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryContextBuiltEvent",
+                        "sha256":  "730090B692A4144E89EBADD50A6D62B8B0751475DA4D5995687C9BEFFA573E9F",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryContextBuiltEvent$Companion",
+                        "sha256":  "CCE9490E02B7BFEF4A680FBED3DA3555F52737F9EB9BBF5CB5EDD0660F7E04D6",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryContextBuiltEventPayload",
+                        "sha256":  "2C9BB32358D5B46DAF2815F2237BEC8BF6C629E4F10944A362D88930D869CE7E",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryEventRecordedEvent",
+                        "sha256":  "BEED0848FE159B52E4811E4B0B8C54C3A7F0F10E10B796FB8540DBB5A74202F4",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryEventRecordedEvent$Companion",
+                        "sha256":  "9F91D9C615F8B231A0D12A9B0B76054483AB99A77CDFA9697D7FBDF32E400010",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryEventRecordedEventPayload",
+                        "sha256":  "EFD9FAA484AC0B261BA770AAB7143B2451FA38EE735E6C1EDF17DF6A492B1E56",
+                        "line_count":  38
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StorySignalCollectedEvent",
+                        "sha256":  "483CE229BE31A107413C06F93242BD9BDED91DB34923BE0E642745CCBE96C8C1",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StorySignalCollectedEvent$Companion",
+                        "sha256":  "A451E1DC2E3761487257A1B401784205493DD5F283A32037C993E7CAC5A5A781",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StorySignalCollectedEventPayload",
+                        "sha256":  "B0D14A5C632A14D606C938746A793B7F2E98E0BB2B45A1B932033FE00DCABBEA",
+                        "line_count":  22
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryStateChangedEvent",
+                        "sha256":  "2933D0B39A8589BA49B34C207F6176B10D428ED86CCC96136813694F294E09CA",
+                        "line_count":  14
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryStateChangedEvent$Companion",
+                        "sha256":  "4DEC538EB8FE40B7CFDC906979A6A9846BBA172494E5BAF0A311E8AB08B43122",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.events.story.StoryStateChangedEventPayload",
+                        "sha256":  "E132446CB1AB279B855F922BF23F1236CD2A70BC3AE4A4E4A175436F9886527B",
+                        "line_count":  32
+                    },
+                    {
+                        "name":  "ro.ainpc.api.integration.ExternalPluginIntegration",
+                        "sha256":  "0CCE9A0448B600C72ADF55AEA2E87373961430D438CCF26A6F71A6D223AD4B7B",
+                        "line_count":  22
+                    },
+                    {
+                        "name":  "ro.ainpc.api.integration.ExternalPluginIntegration$DefaultImpls",
+                        "sha256":  "13A99DF1803E0DAEA503E7964935A6B828150C67E3AF57BEEB5E55C9B8F60D02",
+                        "line_count":  8
+                    },
+                    {
+                        "name":  "ro.ainpc.api.integration.IntegrationRegistryApi",
+                        "sha256":  "025A39BE37CB774036DD113DA62CF248CBB9DA77DFA0BAA2443638B4DB2035CD",
+                        "line_count":  16
+                    },
+                    {
+                        "name":  "ro.ainpc.api.integration.IntegrationType",
+                        "sha256":  "17D6389C86946D8A7EBD303A9D9F288539974BA4464007A1B63301FAF8BDD302",
+                        "line_count":  28
+                    },
+                    {
+                        "name":  "ro.ainpc.api.NpcEconomyApi",
+                        "sha256":  "1F214632E0BECD54B9D2B1FB51DD9A410939F44B71F0752A6E2D38FA786FC5CC",
+                        "line_count":  16
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PermissionLevel",
+                        "sha256":  "35CA6C53180FD348A6F760A00809D91756C48660659910898E30DB3DAF205302",
+                        "line_count":  20
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PermissionNode",
+                        "sha256":  "DC8DB216C4D5B5C9D89B96FEDCA09C04AB769EB732898035891DB0E301DDC964",
+                        "line_count":  62
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PermissionNode$Companion",
+                        "sha256":  "AE3A62EE1BD72BFC46F3534998758F9036A77138A2F8A468C76D3B913664EE13",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PlayerProgressionApi",
+                        "sha256":  "3735AF26B8A5C9AA8370EB77E60457FE92CC1A6ACEA87B6E917B04A82DF7EF0E",
+                        "line_count":  16
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PlayerProgressionGrant",
+                        "sha256":  "3FF31DD13196F52AC582789F197756D168298472C0B0F00CE8F51CEC2FCEAB97",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.PlayerProgressionSnapshot",
+                        "sha256":  "783F5A12BA3C717C0E5E5FFBE757BB2BCEB2CC9179E3661F6619300BEEB6DD17",
+                        "line_count":  42
+                    },
+                    {
+                        "name":  "ro.ainpc.api.RelationshipApi",
+                        "sha256":  "C5FC8815B06C591A74FEB729DCD2269C84412C240419281E6681A159FB28A10C",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.RelationshipEntry",
+                        "sha256":  "C8A2BFC38A2AFC62C7A9D8D310CECEB95431E018EECBA4F75803313699753EDF",
+                        "line_count":  30
+                    },
+                    {
+                        "name":  "ro.ainpc.api.ReputationApi",
+                        "sha256":  "60EDC7E5659918781EC436A17F187BB95787DD55100320CB84A1B9347A6D349A",
+                        "line_count":  10
+                    },
+                    {
+                        "name":  "ro.ainpc.api.ReputationEntry",
+                        "sha256":  "E7D624178724B269C79934A93DEB4910713BC321964944CC057CADA6D7000C48",
+                        "line_count":  26
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildingAnchorDefinition",
+                        "sha256":  "AD64054605B906157260EC1A8FEECE45213616730293D02A26F5EF685DAA23B7",
+                        "line_count":  52
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildingPlacementPlan",
+                        "sha256":  "EE554684BBB1F5F706F7126B1F3C73C8AF2354EDDACE4981A81FED9856E346CF",
+                        "line_count":  62
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildingPlan",
+                        "sha256":  "AC4D4055908C01B8E08D3769100C0D97FEF03644F3637675C6E9572B9FF0FA81",
+                        "line_count":  110
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildingTemplateDefinition",
+                        "sha256":  "23CF2E33116932BAF7200A52144F3FB1206EA35972B78F661EA86C55DF460359",
+                        "line_count":  70
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildingVariantDefinition",
+                        "sha256":  "58B1B67D286BF199C15DF82F4FE1835A8C8733E6E428083DA01B1BD575C78BA3",
+                        "line_count":  40
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildMode",
+                        "sha256":  "644CF9786DC8B2C800F1EFD0ABAD3CA51F1DDEEACC0E46914F18E07F6D5D236C",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.BuildMode$Companion",
+                        "sha256":  "2451A035627236938079339D5DF884E56DE37282A8F91085F077DFF934B098CF",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.HouseholdPlan",
+                        "sha256":  "8459146A2893342671B0F2C08A461E9BC44BA8B77FCDF0A2E4B409B65D408295",
+                        "line_count":  60
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.NodePlan",
+                        "sha256":  "342E78E8BCCA59A375BDB4EBFA5BDE0DBCA41138360680CEB16B44808691157E",
+                        "line_count":  64
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.RegionPlan",
+                        "sha256":  "5172DBA0FDE10CF87B42588475A9D8D5A167BC860171DB5CE0BD319EEAB25EF7",
+                        "line_count":  86
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.RoadPlacementPlan",
+                        "sha256":  "43265B980C2B7DAFA3423F9A16ADCD884093D5AE78ED620F1B413B49313E390D",
+                        "line_count":  54
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementDefinition",
+                        "sha256":  "AE42CD20FBF65550F161BBCCA7F7A248283D3D490677D940B0A654BE114193A9",
+                        "line_count":  78
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementGenerationPlan",
+                        "sha256":  "6FD451ECCE8B99D82ACF3150E33D955BCA7317DCD608F303DA1B3631C37491EA",
+                        "line_count":  46
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementLayoutProfile",
+                        "sha256":  "3A535DA1342C695A9401FEDDA863E7356BE9F0BEF99533FED354881C5EF66F19",
+                        "line_count":  66
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementLayoutProfile$Companion",
+                        "sha256":  "A427D1A3416C08E0D304425814EF98C841CDB281BD4B2147E54DDF26CFB4FF8C",
+                        "line_count":  12
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementPlan",
+                        "sha256":  "66345C7758FB4D77E2594B185B024055210745EFE3E2515BE53978C54BCEB2D0",
+                        "line_count":  116
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementPlanSource",
+                        "sha256":  "5350E6DF2DAC53CB6D387F25CEE1C27FD61C5466ADA2A98A9A61FB92D3E9EE57",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementPlanSource$Companion",
+                        "sha256":  "F754F42F19C84B7471678F5188C98772F0DFBDED3F85E18EFBDE9C0BA5D0D94A",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementPlanStatus",
+                        "sha256":  "E3A7C983D3632AD24DC9F6D4CBBB1471ADDEB02F7F5B3BFC4766645A1E208769",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementPlanStatus$Companion",
+                        "sha256":  "288203FBD376F0F9E4B7FF24C1D927DF590435F71C0562186C84EED93E5EA50C",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.api.settlement.SettlementValidationReport",
+                        "sha256":  "BB9C9A519BFFB8F8CFB16BA9052456D5A4CBC3821EAEFDF34344D8BB16140D75",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.StoryAuthoringApi",
+                        "sha256":  "6ECE6914169026C0A5609C674229882271D3A8B33D5736142C17DC744A9A75DE",
+                        "line_count":  8
+                    },
+                    {
+                        "name":  "ro.ainpc.api.StoryEventSummary",
+                        "sha256":  "C95B13CB3F4FD9108C6408656FC26761820B40C33484A260761656A9D9D5E8DD",
+                        "line_count":  34
+                    },
+                    {
+                        "name":  "ro.ainpc.api.WorldAdminApi",
+                        "sha256":  "EA1FA88A1E1018415633A5F4B532B74422D3CAB9F1262FFEF7C76234D246FBC3",
+                        "line_count":  98
+                    },
+                    {
+                        "name":  "ro.ainpc.api.WorldAdminApi$DefaultImpls",
+                        "sha256":  "9F8058A596EA73359CACCE773C1ECF130D85CC46AD499647A002035D54655CE0",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.platform.RuntimeMode",
+                        "sha256":  "F6AD03D5CB77B0672C13DB466610838E754B543F3954F0BD705A1032C589C646",
+                        "line_count":  30
+                    },
+                    {
+                        "name":  "ro.ainpc.platform.RuntimeMode$Companion",
+                        "sha256":  "9F4AABD58E9F19E12FB1B19AE600E1945F3C311373AE1A043E5585130F7EBF3C",
+                        "line_count":  8
+                    },
+                    {
+                        "name":  "ro.ainpc.world.PlaceType",
+                        "sha256":  "DBC0ACCF455B1BF20F264B58BAB0C7CFDC44F7BA6982C00C3BA9A2A4D9C828A9",
+                        "line_count":  40
+                    },
+                    {
+                        "name":  "ro.ainpc.world.PlaceType$Companion",
+                        "sha256":  "82D8084034A9DA72F98343B6390A2625007138AA694620B65A7A21DB5A9F54FF",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.world.StoryMode",
+                        "sha256":  "2FD2E79037E252A1CD918A26E38DB51F6C0727927106CA4699B04DE602FEEA84",
+                        "line_count":  22
+                    },
+                    {
+                        "name":  "ro.ainpc.world.StoryMode$Companion",
+                        "sha256":  "4AA1ACC57C447347B6B650EF6422F971CB39EDD79A5FD6597129F83552DDC530",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.world.WorldMode",
+                        "sha256":  "40405FACC873958B8F20BB3D5C44A15ACC5AAB104099B6E2925D33F31CAFD1E3",
+                        "line_count":  22
+                    },
+                    {
+                        "name":  "ro.ainpc.world.WorldMode$Companion",
+                        "sha256":  "127B9EEF3048D56F57BBEE3D8FC9599D76F186D8858D41A7E12B4D1228C49689",
+                        "line_count":  6
+                    },
+                    {
+                        "name":  "ro.ainpc.world.WorldNodeInfo",
+                        "sha256":  "AFA31DE4A5B25781EE21504441E4716C8A1E2A84F7C2D13FE1B96384ABE774B4",
+                        "line_count":  24
+                    },
+                    {
+                        "name":  "ro.ainpc.world.WorldPlaceInfo",
+                        "sha256":  "419C70D8D8877657EE1A604E9886BE00C05DB370777B4020C09F371041E924C4",
+                        "line_count":  38
+                    },
+                    {
+                        "name":  "ro.ainpc.world.WorldRegionInfo",
+                        "sha256":  "4F3973D0737EE68D3E8BA8115923AC38484FF7F25422A9C4911060A1EDEA4EE3",
+                        "line_count":  36
+                    }
+                ]
+}

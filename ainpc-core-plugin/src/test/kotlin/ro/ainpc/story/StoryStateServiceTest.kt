@@ -2,6 +2,10 @@ package ro.ainpc.story
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -98,6 +102,110 @@ class StoryStateServiceTest {
         assertEquals("council_warned_village", events.first().eventKey())
     }
 
+    @Test
+    @Throws(Exception::class)
+    fun pendingEventsAreScopedAndSeparateFromPublishedHistory() {
+        val pending = queuePendingEvent("festival_review")
+
+        assertTrue(pending.id > 0L)
+        assertTrue(service.hasPendingEvents("REGION", "demo_sat"))
+        assertFalse(service.hasPendingEvents("region", "other_region"))
+        assertFalse(service.hasPendingEvents("", "demo_sat"))
+        assertTrue(service.listRecentEvents("demo_sat", "", 10).isEmpty())
+
+        val queued = service.listPendingEvents("region", "demo_sat", 10)
+        assertEquals(1, queued.size)
+        assertEquals("festival_review", queued.first().eventKey)
+        assertEquals("review", queued.first().payload["state"])
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun schedulerDraftKeepsProvenanceUntilExplicitPublication() {
+        val pending = queuePendingEvent(
+            "scheduled_festival",
+            actorType = "scheduler",
+            actorId = "random-world-events",
+        )
+
+        assertEquals("scheduler", pending.actorType)
+        assertEquals("random-world-events", pending.actorId)
+        assertTrue(service.listRecentEvents("demo_sat", "", 10).isEmpty())
+
+        val published = service.publishPendingEvent(pending.id)
+
+        assertNotNull(published)
+        assertEquals("scheduler", published!!.actorType())
+        assertEquals("random-world-events", published.actorId())
+        assertFalse(service.hasPendingEvents("region", "demo_sat"))
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun publishesPendingEventAndRemovesItFromQueueAtomically() {
+        val pending = queuePendingEvent("festival_publish")
+
+        val published = service.publishPendingEvent(pending.id)
+
+        assertNotNull(published)
+        assertEquals("festival_publish", published!!.eventKey())
+        assertFalse(service.hasPendingEvents("region", "demo_sat"))
+        assertTrue(service.listPendingEvents("region", "demo_sat", 10).isEmpty())
+        assertEquals(
+            listOf("festival_publish"),
+            service.listRecentEvents("demo_sat", "", 10).map { it.eventKey() },
+        )
+        assertNull(service.publishPendingEvent(pending.id))
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun failedPublicationRollsBackAndKeepsPendingEvent() {
+        val pending = queuePendingEvent("festival_retry")
+        connection!!.createStatement().use { it.execute("DROP TABLE story_events") }
+
+        assertThrows(SQLException::class.java) {
+            service.publishPendingEvent(pending.id)
+        }
+
+        assertTrue(service.hasPendingEvents("region", "demo_sat"))
+        assertEquals("festival_retry", service.listPendingEvents("region", "demo_sat", 10).single().eventKey)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun discardsPendingEventWithoutPublishingIt() {
+        val pending = queuePendingEvent("festival_discard")
+
+        assertTrue(service.discardPendingEvent(pending.id))
+        assertFalse(service.discardPendingEvent(pending.id))
+        assertFalse(service.hasPendingEvents("region", "demo_sat"))
+        assertTrue(service.listRecentEvents("demo_sat", "", 10).isEmpty())
+    }
+
+    @Throws(SQLException::class)
+    private fun queuePendingEvent(
+        eventKey: String,
+        actorType: String = "system",
+        actorId: String = "story_test",
+    ): StoryPendingEvent {
+        return service.queueEvent(
+            "region",
+            "demo_sat",
+            "demo_sat",
+            "",
+            "story_event",
+            eventKey,
+            "Festival pending",
+            "Draft care asteapta publicarea.",
+            mapOf("state" to "review"),
+            actorType,
+            actorId,
+            "",
+            "",
+        )
+    }
+
     @Throws(SQLException::class)
     private fun createStoryTables(connection: Connection) {
         connection.createStatement().use { statement ->
@@ -151,6 +259,27 @@ class StoryStateServiceTest {
                 )
                 """
             )
+            statement.execute(
+                """
+                CREATE TABLE story_pending_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scope_type TEXT NOT NULL,
+                    scope_id TEXT NOT NULL,
+                    region_id TEXT NOT NULL DEFAULT '',
+                    place_id TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL,
+                    event_key TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    description TEXT NOT NULL DEFAULT '',
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    actor_type TEXT NOT NULL DEFAULT '',
+                    actor_id TEXT NOT NULL DEFAULT '',
+                    player_uuid TEXT NOT NULL DEFAULT '',
+                    npc_id TEXT NOT NULL DEFAULT '',
+                    queued_at INTEGER NOT NULL
+                )
+                """
+            )
         }
     }
 
@@ -163,6 +292,20 @@ class StoryStateServiceTest {
         @Throws(SQLException::class)
         override fun prepareStatement(sql: String, autoGeneratedKeys: Int): PreparedStatement {
             return connection.prepareStatement(sql, autoGeneratedKeys)
+        }
+
+        override fun executeTransaction(block: (Connection) -> Unit) {
+            val autoCommit = connection.autoCommit
+            connection.autoCommit = false
+            try {
+                block(connection)
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = autoCommit
+            }
         }
     }
 }

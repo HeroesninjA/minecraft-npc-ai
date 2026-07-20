@@ -75,9 +75,42 @@ class RoutineService(private val plugin: AINPCPlugin) {
             if (!npc.isSpawned()) {
                 continue
             }
+            if (npc.uuid != null && plugin.routineCoordinator.isRoutinePaused(npc.uuid)) {
+                continue
+            }
             if (isBusy(npc.currentState)) {
                 skippedBusy++
                 continue
+            }
+
+            val overridden = npc.uuid?.let { plugin.routineCoordinator.getOverride(it) }
+            if (overridden != null) {
+                val overrideAge = now - overridden.createdAt
+                if (overridden.durationTicks > 0 && overrideAge >= overridden.durationTicks * 50) {
+                    plugin.routineCoordinator.clearOverride(npc.uuid)
+                } else {
+                    overridden.forcedSlot?.let { slot ->
+                        npc.plannedRoutineActivity = slot.name.lowercase()
+                        npc.changeState(NPCState.IDLE)
+                    }
+                    overridden.forcedAnchor?.let { anchor ->
+                        val target = anchor.toLocation()
+                        if (target != null && target.world != null) {
+                            val currentLocation = npc.location
+                            if (currentLocation != null) {
+                                val distanceSquared = if (target.world == currentLocation.world)
+                                    currentLocation.distanceSquared(target) else Double.MAX_VALUE
+                                val arrived = anchor.isNear(currentLocation, arrivalRadius)
+                                if (!arrived) {
+                                    evaluated++
+                                    tryMoveNaturally(npc, target, naturalMovementSpeed)
+                                    moved++
+                                }
+                            }
+                        }
+                    }
+                    continue
+                }
             }
 
             val currentLocation = npc.location

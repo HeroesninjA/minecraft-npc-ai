@@ -1,1 +1,1 @@
-This document was moved to `docs v2/planning/lucru-alternat-quest-mapping-progression.md`.
+This generic coordination note was consolidated into `docs v2/planning/questuri-avansate-v2.md`.

@@ -38,10 +38,23 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
 
         val addonConfig: YamlConfiguration
         try {
-            val addonConfigPath = syncAddonConfig()
-            addonConfig = YamlConfiguration.loadConfiguration(addonConfigPath.toFile())
+            val configFiles = syncAddonConfig()
+            val configResult = VersionedAddonConfigManager(ADDON_ID, CURRENT_CONFIG_VERSION).prepare(
+                configFiles.config,
+                configFiles.template,
+            )
+            configResult.warnings.forEach(logger::warning)
+            if (!configResult.valid) {
+                configResult.errors.forEach { error -> logger.severe("Config addon medieval invalid: $error") }
+                server.pluginManager.disablePlugin(this)
+                return
+            }
+            if (configResult.migrated) {
+                logger.info("Config addon medieval migrat; backup: ${configResult.backupPath?.toAbsolutePath()}")
+            }
+            addonConfig = requireNotNull(configResult.config)
             if (addonConfig.getBoolean("debug.log_config_path", false)) {
-                logger.info("Config addon medieval: ${addonConfigPath.toAbsolutePath()}")
+                logger.info("Config addon medieval: ${configFiles.config.toAbsolutePath()}")
             }
         } catch (exception: IOException) {
             logger.severe("Nu s-a putut pregati config-ul addonului medieval: ${exception.message}")
@@ -117,7 +130,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
     }
 
     @Throws(IOException::class)
-    private fun syncAddonConfig(): Path {
+    private fun syncAddonConfig(): ManagedConfigFiles {
         val addonDirectory = managedConfigDirectory
         Files.createDirectories(addonDirectory)
 
@@ -129,7 +142,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
             copyResource(CONFIG_RESOURCE_PATH, config)
             logger.info("Config addon medieval creat: ${config.toAbsolutePath()}")
         }
-        return config
+        return ManagedConfigFiles(template, config)
     }
 
     @Throws(IOException::class)
@@ -197,6 +210,7 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
         private const val CONFIG_TEMPLATE_FILE_NAME = "config-template.yml"
         private const val CONFIG_FILE_NAME = "config.yml"
         private const val CONFIG_RESOURCE_PATH = CONFIG_TEMPLATE_FILE_NAME
+        private const val CURRENT_CONFIG_VERSION = 2
         private const val MANAGED_PACK_FOLDER = "addons/$ADDON_ID"
         private val MANAGED_PACKS = listOf(
             ManagedPack("medieval.yml", "packs/medieval.yml"),
@@ -205,5 +219,6 @@ class AINPCScenarioMedievalPlugin : JavaPlugin() {
         )
     }
 
+    private data class ManagedConfigFiles(val template: Path, val config: Path)
     private data class ManagedPack(val fileName: String, val resourcePath: String)
 }

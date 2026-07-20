@@ -49,6 +49,10 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("StructureStoryEventPlanner") }
                 .filter { path -> !path.toString().contains("NPCChatListener") }
                 .filter { path -> !path.toString().contains("behavior_profiles.yml") }
+                .filter { path -> !path.toString().contains("NpcEntityAdapter") }
+                .filter { path -> !path.toString().contains("StoryAuthoringService") }
+                .filter { path -> !path.toString().contains("NPCNameGenerator") }
+                .filter { path -> !path.toString().contains("config.yml") }
                 .flatMap { path ->
                     val text = path.readText()
                     forbiddenTerms

@@ -26,7 +26,7 @@ class McpSnapshotServiceTest {
 
         McpMode mode = new McpMode("bridge");
         SnapshotReader reader = new SnapshotReader(
-            snapshotFile.toString(), 60, 3600, gson, mode);
+            snapshotFile.toString(), 60, 3600, "", gson, mode);
         RedactingSnapshotFilter filter = new RedactingSnapshotFilter("");
         McpAuditLogger auditLogger = new McpAuditLogger(auditFile.toString(), 100);
         McpSnapshotService service = new McpSnapshotService(reader, filter, auditLogger);

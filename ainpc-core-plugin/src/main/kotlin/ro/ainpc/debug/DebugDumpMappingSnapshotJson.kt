@@ -96,11 +96,19 @@ object DebugDumpMappingSnapshotJson {
     }
 
     private fun storySummaryJson(plugin: AINPCPlugin): JsonObject {
-        val summary = JsonObject()
         val gson = GsonBuilder().disableHtmlEscaping().create()
         val states = DebugDumpStoryStateJson.buildStoryStatesJson(plugin)
         val events = DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson)
         val progressionGaps = DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJson(plugin)
+        return buildStorySummaryJson(states, events, progressionGaps)
+    }
+
+    internal fun buildStorySummaryJson(
+        states: JsonObject,
+        events: JsonObject,
+        progressionGaps: JsonObject,
+    ): JsonObject {
+        val summary = JsonObject()
         summary.addProperty("available", true)
         summary.addProperty("story_state_available", states.getBoolean("available"))
         summary.addProperty("story_event_available", events.getBoolean("available"))

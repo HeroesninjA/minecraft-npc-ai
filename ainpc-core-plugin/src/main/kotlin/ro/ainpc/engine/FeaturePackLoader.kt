@@ -1,7 +1,7 @@
 package ro.ainpc.engine
 
 import org.bukkit.configuration.ConfigurationSection
-import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.configuration.file.FileConfiguration
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.addons.AddonType
@@ -33,6 +33,14 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
     private val allProgressionMechanics: MutableMap<String, ProgressionMechanicDefinition> = LinkedHashMap()
 
     fun loadAllPacks() {
+        try {
+            loadAllPacksInternal()
+        } finally {
+            plugin.platform.addonRegistry.reconcileActiveDependencies("reload feature-pack")
+        }
+    }
+
+    private fun loadAllPacksInternal() {
         loadedPacks.clear()
         allTraits.clear()
         allProfessions.clear()
@@ -41,7 +49,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         topologiesByCategory.clear()
         allScenarios.clear()
         allProgressionMechanics.clear()
-        plugin.platform.addonRegistry.removeByOrigin(AddonDescriptor.ORIGIN_FEATURE_PACK)
+        plugin.platform.addonRegistry.removeByOriginForRefresh(AddonDescriptor.ORIGIN_FEATURE_PACK)
 
         val packsFolder = File(plugin.dataFolder, "packs")
         if (!packsFolder.exists()) {
@@ -145,8 +153,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                 continue
             }
 
-            val fileName = entry.name.lowercase(Locale.ROOT)
-            if (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".json")) {
+            if (isSupportedPackFile(entry)) {
                 files.add(entry)
             }
         }
@@ -161,7 +168,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
     private fun loadPack(file: File, candidatePackIds: Set<String>?) {
         try {
-            val config = YamlConfiguration.loadConfiguration(file)
+            val config = loadPackConfiguration(file)
             if (shouldValidatePackMetadata()) {
                 val validation = FeaturePackMetadataValidator.validate(config, file, currentRuntimeMode())
                 logPackMetadataWarnings(file, validation)
@@ -199,10 +206,10 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
             val pack = FeaturePack(id, name, description)
             pack.minecraftVersion = packMinecraftVersion
-            pack.schemaVersion = config.getInt("version", pack.schemaVersion)
-            if (pack.schemaVersion < 1 || pack.schemaVersion > 1) {
-                plugin.logger.warning("Feature pack '$id' (${file.name}) are schema_version=${pack.schemaVersion}, dar versiunea curenta este 1. Posibile incompatibilitati.")
-            plugin.logger.warning("  >> Recomandare: actualizeaza schema_version la 1 sau verifica documentatia pack-ului.")
+            pack.schemaVersion = config.getInt(PACK_VERSION_KEY, pack.schemaVersion)
+            if (pack.schemaVersion != CURRENT_PACK_SCHEMA_VERSION) {
+                plugin.logger.warning("Feature pack '$id' (${file.name}) are $PACK_VERSION_KEY=${pack.schemaVersion}, dar versiunea curenta este $CURRENT_PACK_SCHEMA_VERSION. Posibile incompatibilitati.")
+                plugin.logger.warning("  >> Recomandare: actualizeaza cheia top-level '$PACK_VERSION_KEY' la $CURRENT_PACK_SCHEMA_VERSION sau verifica documentatia pack-ului.")
             }
 
             config.getConfigurationSection("traits")?.let { section ->
@@ -280,7 +287,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val dependenciesByPackId = LinkedHashMap<String, List<String>>()
         for (file in files) {
             try {
-                val config = YamlConfiguration.loadConfiguration(file)
+                val config = loadPackConfiguration(file)
                 val validation = FeaturePackMetadataValidator.validate(config, file, currentRuntimeMode())
                 val packId = validation.packId()
                 if (validation.valid() && !isFeaturePackDisabled(packId)) {
@@ -296,7 +303,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
     private fun validateFeaturePackDependencies(
         file: File,
-        config: YamlConfiguration,
+        config: FileConfiguration,
         packId: String,
         candidatePackIds: Set<String>?,
     ): Boolean {
@@ -622,7 +629,18 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
     }
 
     companion object {
+        private const val PACK_VERSION_KEY = "version"
+        private const val CURRENT_PACK_SCHEMA_VERSION = 1
+        private val SUPPORTED_PACK_EXTENSIONS = setOf("yml", "yaml", "json")
         private val CORE_DEMO_PACK_IDS = setOf("medieval", "modern", "social")
+
+        internal fun isSupportedPackFile(file: File): Boolean {
+            return file.extension.lowercase(Locale.ROOT) in SUPPORTED_PACK_EXTENSIONS
+        }
+
+        internal fun loadPackConfiguration(file: File): FileConfiguration {
+            return ScriptConfigurationLoader.loadConfiguration(file)
+        }
     }
 
     class FeaturePack(
@@ -630,7 +648,7 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val name: String,
         val description: String,
     ) {
-        var schemaVersion: Int = 1
+        var schemaVersion: Int = CURRENT_PACK_SCHEMA_VERSION
         var minecraftVersion: String? = null
         val traits: MutableList<TraitDefinition> = ArrayList()
         val professions: MutableList<ProfessionDefinition> = ArrayList()
@@ -943,12 +961,15 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
                         }
                         addValidationWarning(msg)
                     }
-                } else if (normalized != "kill_mob" && objective.itemId.isNullOrBlank()) {
+                } else if (normalized != "kill_mob" && normalized != "talk_to_npc" && objective.itemId.isNullOrBlank()) {
                     addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}' nu are target/itemId.")
                 }
                 val required = ro.ainpc.engine.ObjectiveTypeAliasRegistry.requiredFields(objective.type)
                 if (required.contains("item") && objective.itemId.isNullOrBlank() && normalized != "kill_mob") {
                     addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}': campul 'item' este obligatoriu.")
+                }
+                if (required.contains("npc_target") && !required.contains("item") && objective.itemId.isNullOrBlank() && objective.npcTarget.isNullOrBlank()) {
+                    addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}': campul 'npc_target' este recomandat pentru selectia NPC-ului.")
                 }
                 if (objective.amount < 1) {
                     addValidationWarning("Objective '${objective.type}' in '${questCode.ifBlank { id }}': 'amount' trebuie sa fie >= 1.")
@@ -1021,6 +1042,8 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val payload: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(payload ?: emptyMap()))
         val entryId: String
             get() = metadata.getOrDefault("entry_id", "")
+        val npcTarget: String
+            get() = metadata.getOrDefault("npc_target", "")
     }
 
     private fun categorizeError(exception: Exception): PackErrorCategory {

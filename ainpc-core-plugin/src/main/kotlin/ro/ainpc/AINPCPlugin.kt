@@ -4,6 +4,7 @@ import org.bukkit.command.PluginCommand
 import org.bukkit.plugin.java.JavaPlugin
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.OllamaService
+import ro.ainpc.util.PermissionAudit
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.ai.RelationshipService
 import ro.ainpc.ai.orchestration.AIOrchestrationService
@@ -54,6 +55,7 @@ import ro.ainpc.story.StoryStateService
 import ro.ainpc.utils.MessageUtils
 import ro.ainpc.world.NpcWorldBindingService
 import ro.ainpc.world.mapping.MappingWandService
+import ro.ainpc.world.scan.VanillaVillageScanService
 import java.io.File
 import java.util.logging.Level
 
@@ -77,6 +79,7 @@ class AINPCPlugin : JavaPlugin() {
     val routineService: RoutineService get() = services.routineService
     val routineCoordinator: RoutineCoordinator get() = services.routineCoordinator
     val autoSettlementGenerator: AutoSettlementGenerator get() = services.autoSettlementGenerator
+    val vanillaVillageScanService: VanillaVillageScanService get() = services.vanillaVillageScanService
     val npcSpawnOrchestrator: NpcSpawnOrchestrator get() = services.npcSpawnOrchestrator
     val householdPersistenceService: HouseholdPersistenceService get() = services.householdPersistenceService
     val npcWorldBindingService: NpcWorldBindingService get() = services.npcWorldBindingService
@@ -191,6 +194,8 @@ class AINPCPlugin : JavaPlugin() {
                 logger.warning("  ! $w")
             }
         }
+        PermissionAudit(this).runStartupAudit()
+        PermissionAudit.auditRegisteredCommands(this)
     }
 
     companion object {

@@ -223,3 +223,43 @@ ainpc audit quest
 # Daca vrei sa retestezi acelasi quest:
 # ainpc quest abandon Q08 <player>
 # ainpc quest reset nearest <player>
+
+# ============================================================
+# NOU: Quest-Story-Mapping Integration Smoke (2026-07-15)
+# ============================================================
+# Testeaza functionalitatile noi de integrare quest-story-mapping.
+
+# --- Anchor validation ---
+# Verifica ancorele cu auditul nou
+ainpc audit quest
+# Verifica ancorele persistate (comanda text, pastrata pt consola)
+ainpc quest anchors <player>
+# Verifica ancorele globale
+ainpc quest anchors all
+# Debug dump cu validare ancore contra world mapping
+ainpc debugdump quest
+
+# --- Story events per location ---
+# Creeaza mapping demo daca nu exista
+ainpc world demo create demo_sat
+# Verifica story events in regiunea demo
+ainpc story events demo_sat 10
+# Verifica story state persistent
+ainpc story region demo_sat
+# Verifica context story pentru jucator
+ainpc story context <player> nearest
+# Creeaza un story event rapid (authoring)
+ainpc story author demo_sat celebration "Festival de test" "Test smoke"
+ainpc story events demo_sat 5
+
+# --- Quick quest cu mapping ---
+# Testeaza quick quest wizard
+ainpc quest quick-export "Test Smoke" talk_to_npc "profession:guard" "EMERALD x1"
+# Verifica ca definitia a fost creata
+ainpc progression definitions quest
+
+# --- Verificare finala audit ---
+ainpc audit quest
+ainpc audit world
+ainpc debugdump quest
+ainpc story events

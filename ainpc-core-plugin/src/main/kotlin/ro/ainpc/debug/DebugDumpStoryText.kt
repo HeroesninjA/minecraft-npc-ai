@@ -5,6 +5,12 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.ActiveScenario
 
+internal data class DebugDumpStoryScenarioSnapshot(
+    val displayName: String,
+    val shortId: String,
+    val currentPhase: String,
+)
+
 object DebugDumpStoryText {
     @JvmStatic
     fun buildStoryText(plugin: AINPCPlugin): String {
@@ -34,6 +40,13 @@ object DebugDumpStoryText {
         states: JsonObject,
         events: JsonObject,
         progressionGaps: JsonObject,
+    ): String = buildCapturedStoryText(scenarios.map(::snapshot), states, events, progressionGaps)
+
+    internal fun buildCapturedStoryText(
+        scenarios: List<DebugDumpStoryScenarioSnapshot>,
+        states: JsonObject,
+        events: JsonObject,
+        progressionGaps: JsonObject,
     ): String {
         val sb = StringBuilder()
         sb.append("AINPC Story Dump\n")
@@ -48,6 +61,13 @@ object DebugDumpStoryText {
     @JvmStatic
     fun buildSummaryText(
         scenarios: List<ActiveScenario>,
+        states: JsonObject,
+        events: JsonObject,
+        progressionGaps: JsonObject,
+    ): String = buildCapturedSummaryText(scenarios.map(::snapshot), states, events, progressionGaps)
+
+    internal fun buildCapturedSummaryText(
+        scenarios: List<DebugDumpStoryScenarioSnapshot>,
         states: JsonObject,
         events: JsonObject,
         progressionGaps: JsonObject,
@@ -113,7 +133,17 @@ object DebugDumpStoryText {
         appendCountMap(sb, "Progression gaps by mechanic", root.getAsJsonObject("by_mechanic"))
     }
 
-    private fun appendScenarios(sb: StringBuilder, scenarios: List<ActiveScenario>) {
+    internal fun captureScenarioSnapshots(plugin: AINPCPlugin): List<DebugDumpStoryScenarioSnapshot> =
+        plugin.scenarioEngine.getActiveScenarios().values.map(::snapshot)
+
+    private fun snapshot(scenario: ActiveScenario): DebugDumpStoryScenarioSnapshot =
+        DebugDumpStoryScenarioSnapshot(
+            scenario.displayName.ifBlank { scenario.type.displayName },
+            scenario.id.toString().take(8),
+            scenario.currentPhase.ifBlank { "unknown" },
+        )
+
+    private fun appendScenarios(sb: StringBuilder, scenarios: List<DebugDumpStoryScenarioSnapshot>) {
         if (scenarios.isEmpty()) {
             sb.append("No active scenarios.\n")
             return
@@ -121,11 +151,11 @@ object DebugDumpStoryText {
         sb.append("Active scenario details:\n")
         for (scenario in scenarios) {
             sb.append("- ")
-                .append(scenario.displayName.ifBlank { scenario.type.displayName })
+                .append(scenario.displayName)
                 .append(" [")
-                .append(scenario.id.toString().take(8))
+                .append(scenario.shortId)
                 .append("] phase=")
-                .append(scenario.currentPhase.ifBlank { "unknown" })
+                .append(scenario.currentPhase)
                 .append("\n")
         }
     }

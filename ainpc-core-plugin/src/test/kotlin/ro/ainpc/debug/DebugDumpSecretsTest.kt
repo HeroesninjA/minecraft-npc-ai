@@ -51,4 +51,16 @@ class DebugDumpSecretsTest {
         assertFalse(DebugDumpSecrets.containsPotentialSecret("debugdump completed without credentials"))
         assertFalse(DebugDumpSecrets.containsPotentialSecret("api_key: \"<redacted>\""))
     }
+
+    @Test
+    fun redactsSecretsFromStructuredJsonAndCredentialUrls() {
+        val raw = """{"api_key":"sk-json-secret-value","authorization":"Bearer abcdefghijklmnopqrstuvwxyz","database_url":"mysql://admin:very-secret@localhost/ainpc"}"""
+
+        val redacted = DebugDumpSecrets.redactText(raw)
+
+        assertFalse(redacted.contains("sk-json-secret-value"))
+        assertFalse(redacted.contains("abcdefghijklmnopqrstuvwxyz"))
+        assertFalse(redacted.contains("admin:very-secret"))
+        assertFalse(DebugDumpSecrets.containsPotentialSecret(redacted))
+    }
 }

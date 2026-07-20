@@ -8,7 +8,10 @@ object DebugDumpMappingText {
     fun buildMappingText(plugin: AINPCPlugin): String {
         val snapshot = DebugDumpMappingSnapshotJson.buildMappingSnapshotJson(plugin)
         val npcBindings = DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJson(plugin)
+        return buildCapturedMappingText(snapshot, npcBindings)
+    }
 
+    internal fun buildCapturedMappingText(snapshot: JsonObject, npcBindings: JsonObject): String {
         val sb = StringBuilder()
         sb.append("AINPC Mapping Dump\n")
         appendWorldSummary(sb, snapshot)

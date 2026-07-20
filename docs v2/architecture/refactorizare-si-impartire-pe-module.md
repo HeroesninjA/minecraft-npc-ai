@@ -1,24 +1,57 @@
 # Refactorizare si Impartire pe Module
 
-Acesta este planul curat pentru finalizarea modularizarii codului.
+Status: baseline implementat plus roadmap activ.
+Actualizat: 2026-07-15.
 
-## Scop
+Repository-ul este deja un build Gradle multi-project. Referintele vechi la module Maven nu mai descriu proiectul curent.
 
-- muta codul legacy in modulele Maven reale;
-- separa clar API, core si addonuri;
-- sparge clasele mari din nucleu in componente testabile;
-- lasa scenariile si continutul sa evolueze fara atingeri dese in infrastructura centrala.
+## Module curente
 
-## Stare actuala
+| Modul | Rol | Limbaj principal | Packaging |
+| --- | --- | --- | --- |
+| `ainpc-api` | contracte publice, evenimente si DTO-uri | Kotlin | JAR de biblioteca |
+| `ainpc-core-plugin` | runtime Paper si persistenta | Kotlin | JAR Paper cu dependinte runtime incluse |
+| `ainpc-scenario-medieval` | addon Paper, config si pack-uri tematice | Kotlin | JAR subtire, dependent de core |
+| `ainpc-mcp-service` | sidecar Spring Boot MCP | Java | `bootJar` separat |
 
-- layout-ul Maven este deja mutat pe `ainpc-api`, `ainpc-core-plugin` si `ainpc-scenario-medieval`;
-- sursele si resursele core sunt acum in propriul modul;
-- `src/src` a fost eliminat dupa migrare;
-- task-urile programate au fost extrase din `AINPCPlugin` in `SchedulerCoordinator`;
-- validarea curenta confirma ca build-ul trece dupa mutari.
+Modulele sunt declarate in `settings.gradle`; versiunile comune si conventiile JVM sunt in `build.gradle` si `gradle.properties`.
 
-## Ramas de facut
+## Separare implementata
 
-- continua extragerea bootstrap-ului si a reload-ului din `AINPCPlugin`;
-- sparge `ScenarioEngine`, `FeaturePackLoader`, `NPCManager` si serviciile mari in componente mai mici;
-- sterge referintele istorice la structura veche doar daca nu mai ajuta navigarea.
+- `ainpc-api` nu depinde de internals core;
+- core-ul expune `AINPCPlatformApi` prin Bukkit `ServicesManager`;
+- addonul medieval compileaza cu `ainpc-api` si declara dependinta Paper fata de core;
+- continutul tematic este livrat prin resursele addonului, nu prin default packs instalate de core;
+- `ServiceRegistry` detine fazele de initializare, reload si shutdown;
+- `SchedulerCoordinator` detine pornirea si oprirea task-urilor programate.
+
+## Datorie structurala activa
+
+- `ScenarioEngine`, `FeaturePackLoader`, `NPCManager` si unele servicii raman clase mari;
+- suprafata `ainpc-api` contine contracte partiale sau neexpuse;
+- dependintele addonurilor de cod sunt diagnosticate, nu impuse in lifecycle;
+- granita dintre API Kotlin-first si consum Java nu este stabilizata complet;
+- packaging-ul core este un fat JAR construit manual din `runtimeClasspath`, deci necesita smoke test de duplicate si classloading.
+
+## Directie de refactorizare
+
+1. stabilizeaza contractele publice si elimina accessorii runtime nefunctionali;
+2. decide daca graful de dependinte devine gate sau ramane diagnostic explicit;
+3. extrage parsarea, validarea si registrul din `FeaturePackLoader` fara schimbarea schemei;
+4. extrage lifecycle-ul quest/scenario din `ScenarioEngine` pe limite deja testabile;
+5. mentine core-ul ca plugin universal si addonurile tematice ca module separate;
+6. adauga verificari ABI, packaging si Paper smoke la release.
+
+## Ce nu este obiectiv
+
+- revenirea la Maven;
+- mutarea tuturor claselor in module mici fara limita functionala clara;
+- expunerea internals core doar pentru a evita un adaptor API;
+- prezentarea roadmap-ului drept refactor deja finalizat.
+
+## Legaturi
+
+- `architecture/strategie-plugin-modular-si-scenarii-programabile.md`
+- `reference/documentatie-api.md`
+- `reference/kotlin-paper-packaging-si-smoke.md`
+- `planning/stabilizare-api-si-addonuri.md`

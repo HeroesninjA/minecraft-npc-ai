@@ -42,6 +42,9 @@ fun handleStory(sender: CommandSender, args: Array<String>): Boolean {
         "region" -> handleStoryRegion(sender, args)
         "place" -> handleStoryPlace(sender, args)
         "events" -> handleStoryEvents(sender, args)
+        "pending" -> handleStoryPending(sender, args)
+        "publish" -> handleStoryPublish(sender, args)
+        "discard" -> handleStoryDiscard(sender, args)
         "author", "create", "record" -> handleStoryAuthor(sender, args)
         else -> {
             sendStoryUsage(sender)
@@ -197,6 +200,82 @@ fun handleStoryEvents(sender: CommandSender, args: Array<String>): Boolean {
     } catch (exception: SQLException) {
         ainpcCommandStoryPlugin.logger.warning("Nu am putut lista story events: ${exception.message}")
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut lista story events: ${exception.message}")
+    }
+    return true
+}
+
+fun handleStoryPending(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 3) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc story pending <regionId|placeId> [limit]")
+        return true
+    }
+
+    var limit = STORY_EVENT_DEFAULT_LIMIT
+    if (args.size >= 4) {
+        val parsedLimit = parseIntegerStrict(args[3])
+        if (parsedLimit == null || parsedLimit <= 0) {
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&cLimit trebuie sa fie un numar pozitiv.")
+            return true
+        }
+        limit = minOf(parsedLimit, STORY_EVENT_MAX_LIMIT)
+    }
+
+    val target = resolveStoryEventTarget(sender, args[2]) ?: return true
+    val scopeType = if (target.placeId().isBlank()) "region" else "place"
+    val scopeId = target.placeId().ifBlank { target.regionId() }
+    val pendingEvents = ainpcCommandStoryPlugin.storyAuthoringService.listPendingEvents(scopeType, scopeId, limit)
+
+    ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Pending Events ===")
+    ainpcCommandStoryPlugin.messageUtils.send(sender, "&eTinta: &f${target.label()}")
+    if (pendingEvents.isEmpty()) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Nu exista drafturi story pending pentru tinta curenta.")
+        return true
+    }
+    for (event in pendingEvents) {
+        ainpcCommandStoryPlugin.messageUtils.send(
+            sender,
+            "&7- &f#${event.id} &e${event.eventType} &7key=&f${event.eventKey} &7queued=&f${formatStoryTime(event.queuedAt)}",
+        )
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  ${event.title} | actor=${event.actorType}:${event.actorId}")
+        if (event.description.isNotBlank()) {
+            ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  ${event.description}")
+        }
+    }
+    return true
+}
+
+fun handleStoryPublish(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 3) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc story publish <pendingId>")
+        return true
+    }
+    val pendingId = args[2].toLongOrNull()
+    if (pendingId == null || pendingId <= 0L) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cPending ID trebuie sa fie un numar pozitiv.")
+        return true
+    }
+    if (ainpcCommandStoryPlugin.storyAuthoringService.publishPendingEvent(pendingId)) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&aDraftul story &f#$pendingId &aa fost publicat.")
+    } else {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cDraftul story #$pendingId nu exista sau nu a putut fi publicat.")
+    }
+    return true
+}
+
+fun handleStoryDiscard(sender: CommandSender, args: Array<String>): Boolean {
+    if (args.size < 3) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cUtilizare: /ainpc story discard <pendingId>")
+        return true
+    }
+    val pendingId = args[2].toLongOrNull()
+    if (pendingId == null || pendingId <= 0L) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cPending ID trebuie sa fie un numar pozitiv.")
+        return true
+    }
+    if (ainpcCommandStoryPlugin.storyAuthoringService.discardPendingEvent(pendingId)) {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&aDraftul story &f#$pendingId &aa fost eliminat.")
+    } else {
+        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cDraftul story #$pendingId nu exista sau nu a putut fi eliminat.")
     }
     return true
 }

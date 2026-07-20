@@ -87,6 +87,12 @@ class ProgressionAnchorBinding(
     }
 
     companion object {
+        const val GLOBAL_PLAYER_UUID = "__global__"
+
+        fun isGlobalNamespace(uuid: String?): Boolean {
+            return valueOrEmpty(uuid) == GLOBAL_PLAYER_UUID
+        }
+
         private fun normalize(value: String?): String = valueOrEmpty(value).lowercase(Locale.ROOT)
 
         private fun valueOrEmpty(value: String?): String = value?.trim().orEmpty()

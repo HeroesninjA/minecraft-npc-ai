@@ -1,24 +1,45 @@
-# Audit conformitate cu constitutia proiectului
+# Audit de conformitate cu constitutia proiectului
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-11.
+Status: checklist operational derivat.
+Actualizat: 2026-07-15.
 
-Audit static al conformitatii fata de constitutia proiectului.
+Constitutia este `canonical/constitutie-proiect.md`. Nu exista un singur test care demonstreaza conformitatea completa.
 
-## Ce verifica
+## Automatizare existenta
 
-- core neutru;
-- continut demo dezactivabil;
-- feature flags si runtime state;
-- tipuri addon constitutionale;
-- storage si AI ca asistenta, nu autoritate.
+`ainpc-core-plugin/src/test/kotlin/ro/ainpc/CoreNeutralityStaticAuditTest.kt` scaneaza fisierele Java, Kotlin si YAML din `ainpc-core-plugin/src/main` pentru o lista explicita de termeni tematici de profesie.
 
-## Folosire
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.CoreNeutralityStaticAuditTest"
+```
 
-- reper pentru riscuri constitutionale;
-- baza pentru follow-up operational si refactor.
+Testul are excluderi explicite pentru mai multe fisiere si verifica numai aceasta felie de neutralitate. Un rezultat verde nu confirma automat:
+
+- separarea completa core/addon;
+- lifecycle-ul feature flags;
+- siguranta storage sau AI;
+- compatibilitatea API/ABI;
+- lipsa continutului tematic in toate formele;
+- respectarea regulilor operationale si de release.
+
+## Checklist manual
+
+- [ ] schimbarea respecta autoritatea documentelor canonice;
+- [ ] continutul de scenariu ramane in addon/config sau are o exceptie justificata;
+- [ ] o functie optionala are flag, stare runtime si degradare sigura;
+- [ ] API-ul public nu expune accidental implementarea interna;
+- [ ] AI propune sau explica, iar mutatiile raman validate determinist;
+- [ ] persistenta si comenzile mutatoare au teste si procedura de rollback;
+- [ ] documentatia separa implementat, partial si roadmap;
+- [ ] ideile compatibile neimplementate nu sunt etichetate abandonate.
+
+## Dovezi
+
+Pastreaza rezultatul testelor relevante, diff-ul modulelor afectate, decizia de owner si orice exceptie asumata. Auditul runtime `/ainpc audit` verifica stare operationala, nu constitutia proiectului.
 
 ## Legaturi
 
 - `canonical/constitutie-proiect.md`
+- `canonical/implementat-deja.md`
 - `reference/feature-flags-lifecycle.md`
+- `operations/release-checklist.md`

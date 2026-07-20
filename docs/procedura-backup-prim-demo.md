@@ -1,1 +1,1 @@
-This document was moved to `docs v2/operations/procedura-backup-prim-demo.md`.
+This document was consolidated into `docs v2/operations/migration-si-backup.md`.

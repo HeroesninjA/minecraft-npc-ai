@@ -6,8 +6,28 @@ import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
+
+private const val POPULATION_THEME_TAG_PREFIX = "theme:"
+internal const val GENERIC_POPULATION_THEME_ID = "generic"
+private val POPULATION_THEME_ID_SEPARATOR = Regex("[^a-z0-9]+")
+
+internal fun resolveTaggedPopulationTheme(tags: Iterable<String>): String? = tags.asSequence()
+    .map { it.trim() }
+    .filter { it.startsWith(POPULATION_THEME_TAG_PREFIX, ignoreCase = true) }
+    .map { it.substring(POPULATION_THEME_TAG_PREFIX.length) }
+    .map { rawThemeId ->
+        rawThemeId.trim()
+            .lowercase(Locale.ROOT)
+            .replace(POPULATION_THEME_ID_SEPARATOR, "_")
+            .trim('_')
+    }
+    .filter { it.isNotBlank() }
+    .distinct()
+    .sorted()
+    .firstOrNull()
 
 class NarrativeGenerator {
     fun generatePopulationPlan(
@@ -78,7 +98,6 @@ class NarrativeGenerator {
                 val socialRole = socialRoleForProfession(profession, relationRole)
                 val questRole = questRoleForNpc(profession, socialRole, relationRole, popIndex + randomSeed)
                 val archetype = archetypeForWorkplace(workPlace)
-                val backstory = generateBackstory(displayName, profession, socialRole, relationRole, familyName, workPlace)
 
                 residents.add(
                     ResidentNarrativePlan(
@@ -101,7 +120,7 @@ class NarrativeGenerator {
                         routineProfile = routineForProfession(profession),
                         questRole = questRole,
                         personalitySeed = archetype,
-                        backstorySeed = archetype
+                        backstorySeed = "$effectiveSeed:backstory:$popIndex"
                     )
                 )
                 assignedNpcs.add(npcKey)
@@ -134,10 +153,16 @@ class NarrativeGenerator {
             warnings.add("Nu exista locuri de munca in regiunea ${region.id()}.")
         }
 
+        val taggedThemeId = resolveTaggedPopulationTheme(region.tags())
+        if (taggedThemeId == null) {
+            warnings.add("Regiunea ${region.id()} nu are un tag valid theme:<id>; preview-ul foloseste tema generica.")
+        }
+
+        val planHash = Integer.toUnsignedString(effectiveSeed.hashCode(), 16).padStart(8, '0')
         val plan = PopulationPlan(
-            planId = "${SpawnSemanticRules.normalizeId(region.id())}_pop_${abs(effectiveSeed.hashCode()) % 1000}",
+            planId = "${SpawnSemanticRules.normalizeId(region.id())}_pop_$planHash",
             regionId = region.id(),
-            themeId = "medieval",
+            themeId = taggedThemeId ?: GENERIC_POPULATION_THEME_ID,
             seed = effectiveSeed,
             targetPopulation = popIndex,
             households = households,
@@ -287,30 +312,6 @@ class NarrativeGenerator {
         "preot" -> "work_temple"
         "vraci", "vindecator", "medic", "healer" -> "work_healer"
         else -> "idle"
-    }
-
-    private fun generateBackstory(name: String, profession: String, socialRole: String, relationRole: String, familyName: String, workplace: WorldPlaceInfo?): String {
-        val prof = profession.ifBlank { "locuitor" }
-        val workPart = if (workplace != null) " la ${workplace.displayName().ifBlank { workplace.id() }}" else ""
-        val socialHints = when (socialRole) {
-            "gossip_hub" -> "Stie tot ce se intampla prin sat si ii place sa vorbeasca."
-            "merchant" -> "E cunoscut pentru preturile corecte si marfa de calitate."
-            "healer" -> "Oamenii din sat vin la el/ea cand au nevoie de leacuri."
-            "guardian" -> "Pazește linistea in sat zi si noapte."
-            "teacher" -> "Le place sa invete pe altii meserii si povesti vechi."
-            "informant" -> "Asculta atent si stie ce se vorbeste pe la fiecare casa."
-            else -> ""
-        }
-        val backstory = when (relationRole) {
-            "father" -> "$name este $prof al familiei $familyName si munceste$workPart."
-            "mother" -> "$name este $prof al familiei $familyName si are grija de casa$workPart."
-            "child" -> "$name este copilul familiei $familyName si invata meseria."
-            "grandparent" -> "$name este batranul intelept al familiei $familyName si povesteste despre vremurile de demult."
-            "uncle", "aunt" -> "$name este $prof si traieste impreuna cu familia $familyName, ajutand la treburi$workPart."
-            "resident" -> "$name este $prof si face parte din comunitatea locala$workPart."
-            else -> "$name are rolul de $prof$workPart."
-        }
-        return if (socialHints.isNotBlank()) "$backstory $socialHints" else backstory
     }
 
     private fun calculateTargetPopulation(houses: List<WorldPlaceInfo>, workplaces: List<WorldPlaceInfo>): Int {

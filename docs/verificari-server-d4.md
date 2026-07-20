@@ -1,1 +1,1 @@
-This document was moved to `docs v2/operations/verificari-server-d4.md`.
+This gate was consolidated into `docs v2/operations/demo-server-verification.md`.

@@ -2,6 +2,7 @@ package ro.ainpc.routine
 
 import org.bukkit.Location
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import java.util.UUID
@@ -36,23 +37,29 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
     private val gatheringCooldown = 30000L
 
     fun tick(): RoutineTickSummary {
-        val timer = plugin.performanceMonitor.timer("routineTick")
+        val timer = plugin.performanceMonitor.timer(RuntimeMetricNames.ROUTINE_TICK)
         timer.begin()
-        if (plugin.config.getBoolean("routine.sync_social_movement", true)) {
-            syncSocialGroupTiming()
+        try {
+            if (plugin.config.getBoolean("routine.sync_social_movement", true)) {
+                syncSocialGroupTiming()
+            }
+            val summary = routineService.runRoutineTick()
+            socialCoordinator.tick()
+            linkSocialToRelationships(summary)
+            detectSocialGatherings()
+            if (plugin.config.getBoolean("economy.npc_salaries_enabled", false)) {
+                payWorkingNpcs()
+            }
+            if (plugin.config.getBoolean("seasonal.behavior_enabled", true)) {
+                applySeasonalActivities()
+            }
+            return summary
+        } catch (error: Throwable) {
+            timer.fail(plugin.npcManager.getNPCCount())
+            throw error
+        } finally {
+            timer.end(plugin.npcManager.getNPCCount())
         }
-        val summary = routineService.runRoutineTick()
-        socialCoordinator.tick()
-        linkSocialToRelationships(summary)
-        detectSocialGatherings()
-        if (plugin.config.getBoolean("economy.npc_salaries_enabled", false)) {
-            payWorkingNpcs()
-        }
-        if (plugin.config.getBoolean("seasonal.behavior_enabled", true)) {
-            applySeasonalActivities()
-        }
-        timer.end(plugin.npcManager.getNPCCount())
-        return summary
     }
 
     private fun syncSocialGroupTiming() {
@@ -99,7 +106,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         for (npc in plugin.npcManager.getAllNPCs()) {
             if (!npc.isSpawned()) continue
             if (npc.currentState.isWorkState() && npc.uuid != null) {
-                plugin.npcEconomyService.paySalaryForWork(npc.uuid, npc.databaseId)
+                plugin.npcEconomyService.paySalaryForWork(npc.uuid!!, npc.databaseId)
             }
         }
     }

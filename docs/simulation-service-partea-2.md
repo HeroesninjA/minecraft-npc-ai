@@ -1,1 +1,2 @@
-This document was moved to `docs v2/reference/simulation-service-partea-2.md`.
+This extraction concept was superseded by the implemented distributed simulation/routine runtime and archived in `docs v2/archive/simulation-service-extraction-concept.md`.
+Use `docs v2/architecture/simulation-service.md` for the verified runtime.

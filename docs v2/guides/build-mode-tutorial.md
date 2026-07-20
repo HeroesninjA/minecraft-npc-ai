@@ -1,33 +1,41 @@
-# Build Mode Tutorial
+# Build Mode - pornire rapida
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-01.
+Status: ghid operational.
+Verificat in cod: 2026-07-15.
+Depinde de: `architecture/mapping.md`.
 
-Ghid scurt pentru folosirea `Build Mode` in `AINPC`.
+`Build Mode` pregateste o sesiune de authoring. Selectia, draftul si preview-ul nu sunt persistenta.
 
-## Cand il folosesti
+## Exemplu minim
 
-- crearea sau corectarea rapida de `Region`, `Place` si `Node`;
-- selectie cu `wand`, `sign` sau `point`;
-- pornirea unui draft de mapping care va fi confirmat ulterior.
+```text
+/ainpc build mode wand region
+/ainpc wand pos1
+/ainpc wand pos2
+/ainpc map region id=zona_demo type=settlement
+/ainpc map preview
+/ainpc map confirm
+/ainpc audit world
+/ainpc world save
+/ainpc build mode off
+```
 
-## Flux scurt
+Pentru un `Place`, schimba tinta in `place`. Pentru un `Node`, foloseste `point node` si seteaza punctul cu `/ainpc wand point`.
 
-1. activeaza modul;
-2. alege metoda de selectie;
-3. corecteaza valorile;
-4. confirma doar dupa preview;
-5. verifica exportul sau istoricul.
+## Comenzi de control
 
-## Reguli
+- `/ainpc build mode status` - afiseaza stilul si tinta sesiunii;
+- `/ainpc build mode history` - afiseaza istoricul pasilor Build Mode;
+- `/ainpc build mode export` - exporta starea de authoring disponibila;
+- `/ainpc map edit` - deschide GUI-ul pentru draftul curent;
+- `/ainpc map cancel` - anuleaza draftul, fara a sterge mapping confirmat.
 
-- selectia trebuie sa ramana vizibila;
-- preview-ul vine inainte de confirmare;
-- corectia asistata nu inlocuieste validarea runtime;
-- `map edit`, `map open` si `map gui` trebuie sa redeschida editorul potrivit.
+## Regula de siguranta
+
+Ordinea obligatorie este `selectie -> draft -> preview/edit -> confirm -> audit -> save`. Oprirea Build Mode sau existenta unui preview nu salveaza mapping-ul.
 
 ## Legaturi
 
 - `guides/build-mode-region-place-node.md`
+- `guides/mapping-harti-manuale.md`
 - `reference/mapping-stack.md`
-- `architecture/mapping.md`

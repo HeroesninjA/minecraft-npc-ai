@@ -1,23 +1,30 @@
-# Exemple JSON/YAML pentru contract
+# Exemple JSON/YAML pentru contracte
 
-Status: canonical in `docs v2`.
-Actualizat: 2026-07-10.
+Status: index catre fixture-urile reale.
+Actualizat: 2026-07-15.
 
-Exemple concrete pentru contractul JSON/YAML al feature pack-urilor.
+Acest document nu inventeaza exemple noi; indica fisierele folosite efectiv de teste si pack-urile livrate.
 
-## Ce contine
+## Fixture-uri pereche
 
-- exemple YAML pentru quest pack;
-- exemple JSON pentru acelasi model;
-- exemple de structurare pentru world admin si quest.
+- `ainpc-core-plugin/src/test/resources/json-yaml-contract/quests.yml`
+- `ainpc-core-plugin/src/test/resources/json-yaml-contract/quests.json`
+- `ainpc-core-plugin/src/test/resources/json-yaml-contract/world-admin.yml`
+- `ainpc-core-plugin/src/test/resources/json-yaml-contract/world-admin.json`
 
-## Folosire
+Aceste fisiere verifica paritatea arborelui logic si helper-ele de snapshot. Ele nu sunt schema feature pack de productie.
 
-- referinta de implementare;
-- ghid de validare pentru parser;
-- material pentru documentatie si testare.
+## Exemple feature pack
+
+- `ainpc-scenario-medieval/src/main/resources/packs/medieval.yml`
+- `ainpc-scenario-medieval/src/main/resources/packs/social.yml`
+- `ainpc-scenario-medieval/src/main/resources/packs/medieval_quest.yml`
+- celelalte fisiere din acelasi director sunt mostre ambalate, dar nu toate sunt instalate automat.
+
+Pack-urile livrate sunt YAML. Pentru un feature pack JSON, aceeasi semantica trebuie verificata printr-un test dedicat loaderului inainte de a fi tratata drept garantie operationala.
 
 ## Legaturi
 
 - `reference/json-yaml-contract.md`
 - `reference/scenario-pack-schema.md`
+- `reference/objective-examples.md`

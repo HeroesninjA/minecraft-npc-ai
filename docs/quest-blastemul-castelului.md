@@ -1,1 +1,2 @@
-This document was moved to `docs v2/reference/quest-blastemul-castelului.md`.
+This compatible content concept is tracked in `docs v2/planning/quest-blastemul-castelului.md`.
+It is not currently a runtime quest definition.

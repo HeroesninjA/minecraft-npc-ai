@@ -1,10 +1,25 @@
 package ro.ainpc.debug
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
 class DebugDumpOutputContractTest {
+    @Test
+    fun debugDumpCommandRoutesFileExportScopesToService() {
+        val source = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt").readText()
+
+        assertTrue(source.contains("\"all\", \"npc\" -> handleDebugDumpExport(sender, args)"))
+        assertTrue(source.contains("service.captureRuntimeSnapshot(scope, options.playerName, options.privacyMode)"))
+        assertTrue(source.contains("scheduler.runTaskAsynchronously(plugin"))
+        assertTrue(source.contains("service.writeCapturedDump(capture)"))
+        assertTrue(source.contains("scheduler.runTask(plugin"))
+        assertTrue(source.contains("result.privacyMode().cliValue"))
+        assertTrue(source.contains("result.directory().toAbsolutePath()"))
+        assertTrue(source.contains("result.retentionLimitsSatisfied()"))
+    }
+
     @Test
     fun debugDumpServiceDeclaresExpectedExportFiles() {
         val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt").readText()
@@ -12,6 +27,18 @@ class DebugDumpOutputContractTest {
         EXPECTED_EXPORT_FILES.forEach { fileName ->
             assertTrue(source.contains("\"$fileName\""), "DebugDumpService should write $fileName")
         }
+    }
+
+    @Test
+    fun recentApiAndStoryEventExportsHaveDistinctContracts() {
+        val serviceSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt").readText()
+        val storySource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpStoryEventsText.kt").readText()
+
+        assertTrue(serviceSource.contains("plugin.recentEventsBuffer.buildRecentApiEventsText()"))
+        assertTrue(serviceSource.contains("DebugDumpStoryEventsText.buildStoryEventsText(plugin)"))
+        assertTrue(storySource.contains("Recent Story Events (story_events"))
+        assertTrue(storySource.contains("FROM story_events"))
+        assertFalse(serviceSource.contains("recent-" + "public-events.txt"))
     }
 
     @Test
@@ -121,8 +148,13 @@ class DebugDumpOutputContractTest {
     fun textExportsRouteSensitiveContentThroughRedaction() {
         val serviceSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt").readText()
         val formattingSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpFormatting.kt").readText()
+        val ioSource = File("src/main/kotlin/ro/ainpc/debug/DebugDumpIO.kt").readText()
 
-        assertTrue(serviceSource.contains("DebugDumpSecrets.redactText(DebugDumpIO.readRecentServerLog"))
+        assertTrue(serviceSource.contains("DebugDumpIO.writeJson(path, value, gson, redactionPolicy, MAX_ARTIFACT_BYTES)"))
+        assertTrue(serviceSource.contains("MAX_ARTIFACT_BYTES"))
+        assertTrue(serviceSource.contains("Truncated artifacts:"))
+        assertTrue(ioSource.contains("SensitiveDataRedactor.redact(content, redactionPolicy)"))
+        assertTrue(ioSource.contains("readLogTail(latestLog, recentLogLines, maxBytes)"))
         assertTrue(formattingSource.contains("DebugDumpSecrets.redactText(raw)"))
         assertTrue(formattingSource.contains("DebugDumpSecrets.redactText(sb.toString())"))
     }
@@ -133,6 +165,8 @@ class DebugDumpOutputContractTest {
             "server.txt",
             "config-sanitized.yml",
             "audit.txt",
+            "health.json",
+            "traces.json",
             "quest.txt",
             "mapping.txt",
             "npcs.json",
@@ -156,7 +190,9 @@ class DebugDumpOutputContractTest {
             "authoring.txt",
             "openai.txt",
             "recent-server-log.txt",
-            "recent-public-events.txt",
+            "recent-api-events.txt",
+            "recent-story-events.txt",
+            "manifest.json",
             "narrative-plans.json",
             "quest-director-decision.json",
             "objective-types-contract.json",

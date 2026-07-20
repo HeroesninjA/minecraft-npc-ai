@@ -11,6 +11,7 @@ import ro.ainpc.debug.DebugDumpWorldAdminJson
 import ro.ainpc.debug.ScriptDocumentNormalizer
 import com.google.gson.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -44,6 +45,58 @@ class JsonYamlContractFixturesTest {
         assertEquals(yamlConfig.getString("meta.title"), jsonConfig.getString("meta.title"))
         assertEquals(yamlConfig.getString("spec.objectives.0.target.ref"), jsonConfig.getString("spec.objectives.0.target.ref"))
         assertEquals(yamlConfig.getInt("spec.rewards.0.amount"), jsonConfig.getInt("spec.rewards.0.amount"))
+    }
+
+    @Test
+    fun jsonFeaturePackFlowsThroughLoaderPathIntoRuntimeModels() {
+        val resource = requireNotNull(javaClass.classLoader.getResource("json-yaml-contract/quests.json")) {
+            "Missing JSON feature-pack fixture"
+        }
+        val jsonFile = tempDir.resolve("feature-pack.json").toFile()
+        jsonFile.writeText(Files.readString(Path.of(resource.toURI())))
+
+        assertTrue(FeaturePackLoader.isSupportedPackFile(jsonFile))
+        assertTrue(FeaturePackLoader.isSupportedPackFile(tempDir.resolve("feature-pack.YAML").toFile()))
+        assertFalse(FeaturePackLoader.isSupportedPackFile(tempDir.resolve("feature-pack.txt").toFile()))
+
+        val config = FeaturePackLoader.loadPackConfiguration(jsonFile)
+        val validation = FeaturePackMetadataValidator.validate(config, jsonFile, RuntimeMode.STANDALONE)
+        assertTrue(validation.valid(), "JSON feature-pack metadata errors: ${validation.errors()}")
+
+        val pack = FeaturePackLoader.FeaturePack(
+            requireNotNull(config.getString("id")),
+            requireNotNull(config.getString("name")),
+            config.getString("description", "") ?: "",
+        )
+        pack.schemaVersion = config.getInt("version", pack.schemaVersion)
+
+        val traits = linkedMapOf<String, FeaturePackLoader.TraitDefinition>()
+        val dialogues = linkedMapOf<String, List<String>>()
+        val scenarios = linkedMapOf<String, FeaturePackLoader.ScenarioDefinition>()
+        FeaturePackYamlSupport.loadTraits(pack, requireNotNull(config.getConfigurationSection("traits")), traits)
+        FeaturePackYamlSupport.loadDialogues(
+            pack,
+            requireNotNull(config.getConfigurationSection("dialogues")),
+            dialogues,
+        )
+        FeaturePackYamlSupport.loadScenarios(
+            pack,
+            requireNotNull(config.getConfigurationSection("scenarios")),
+            scenarios,
+            {},
+            { _, _ -> null },
+        )
+
+        assertEquals(1, pack.schemaVersion)
+        assertEquals("Ajutator", traits.getValue("helpful").name)
+        assertEquals(30, traits.getValue("helpful").getActionModifier("HELP"))
+        assertEquals(listOf("Bine ai venit!", "Ce mai faci?"), dialogues["contract_example:greeting"])
+        val scenario = scenarios.getValue("contract_example:quest_intro_market")
+        assertEquals("QM01", scenario.questCode)
+        assertEquals(2, scenario.objectives.size)
+        assertEquals(2, scenario.rewards.size)
+        assertEquals(listOf("peaceful", "trade", "festival"), config.getStringList("story_defaults.settlement.pool"))
+        assertTrue(pack.hasScenarioDefinitions())
     }
 
     @Test

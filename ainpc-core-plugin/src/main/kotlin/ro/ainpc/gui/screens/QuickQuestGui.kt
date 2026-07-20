@@ -12,7 +12,7 @@ import ro.ainpc.gui.GuiScreen
 
 class QuickQuestGui : GuiScreen {
     private val giverOptions = listOf("profession:blacksmith", "profession:guard", "profession:innkeeper", "profession:farmer", "profession:merchant", "profession:healer")
-    private val objectiveTypes = listOf("talk_to_npc", "collect_item", "visit_place", "inspect_node", "kill_mob", "craft_item", "place_block", "break_block")
+    private val objectiveTypes = listOf("talk_to_npc", "deliver_to_npc", "collect_item", "visit_place", "visit_region", "inspect_node", "kill_mob", "craft_item", "place_block", "break_block")
     private val rewardPresets = listOf("EMERALD x5", "DIAMOND x1", "IRON_SWORD x1", "BOOK x1", "XP 50")
 
     override fun key(): GuiKey = GuiKey.QUICK_QUEST
@@ -177,10 +177,16 @@ class QuickQuestGui : GuiScreen {
         val worldAdmin = ctx.plugin().platform.worldAdmin
         val loc = player.location
         val currentRegion = worldAdmin.findRegion(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val nearbyRegions = if (currentRegion != null) listOf(currentRegion) else worldAdmin.regions.take(6)
         val regionPlaces = if (currentRegion != null) worldAdmin.getPlaces(currentRegion.id()) else emptyList()
         val nearbyNodes = worldAdmin.findNodesNear(loc.world.name, loc.x, loc.y, loc.z, 64.0, 12)
 
         val mappedSuggestions = when (type) {
+            "visit_region" -> if (nearbyRegions.isNotEmpty()) {
+                nearbyRegions.take(6).joinToString(", ") { it.id() }
+            } else {
+                "demo_sat, castel"
+            }
             "visit_place" -> if (regionPlaces.isNotEmpty()) {
                 regionPlaces.take(6).joinToString(", ") { "${currentRegion?.id() ?: "region"}:${it.id()}" }
             } else {
@@ -203,7 +209,7 @@ class QuickQuestGui : GuiScreen {
             else -> "tag:locatie"
         }
 
-        val isMappingType = type == "visit_place" || type == "inspect_node"
+        val isMappingType = type == "visit_place" || type == "inspect_node" || type == "visit_region"
         ctx.item(10, GuiItemFactory.item(
             Material.TARGET,
             "&eTintele ($objCount obiective)",
@@ -340,7 +346,7 @@ scenarios:
 $phases    quest:
       code: "$code"
       giver_profession: "${giver.removePrefix("profession:")}"
-      kind: "${when (type) { "kill_mob" -> "hunt"; "collect_item" -> "fetch"; "visit_place", "visit_region", "inspect_node" -> "exploration"; else -> "fetch" }}"
+      kind: "${when (type) { "kill_mob" -> "hunt"; "collect_item" -> "fetch"; "deliver_to_npc" -> "delivery"; "talk_to_npc" -> "social"; "visit_place", "visit_region", "inspect_node" -> "exploration"; else -> "fetch" }}"
       category: "side"
       acceptance_mode: "explicit"
       completion_mode: "return_to_giver"
@@ -442,7 +448,16 @@ $objectives      rewards:
                         svc.setCreatorFormValue(player, "qq_target_$i", "")
                         svc.setCreatorFormValue(player, "qq_amount_$i", "")
                     }
-                    click.service().runCommand(click.player(), "ainpc quest quick-export $name $type $target $reward")
+                    val rewardItem = reward.split(" ").getOrElse(0) { "EMERALD" }
+                    val rewardAmount = reward.split(" ").getOrElse(1) { "1" }
+                    val targetArgs = buildString {
+                        for (e in targets.entries.sortedBy { it.key }) {
+                            val (tgt, amt) = e.value
+                            append(" ${tgt.takeIf { it.isNotBlank() && !it.startsWith("target_") } ?: "IRON_INGOT"}")
+                            append(" ${amt.toIntOrNull()?.takeIf { it > 0 } ?: 1}")
+                        }
+                    }
+                    click.service().runCommand(click.player(), "ainpc quest quick-export $name $type$targetArgs $rewardItem $rewardAmount")
                 }
             ))
             if (type == "visit_place" || type == "inspect_node") {

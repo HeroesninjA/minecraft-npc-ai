@@ -34,5 +34,6 @@ Acesta este rezumatul criteriilor de ready pentru primul demo AINPC.
 ## Legaturi
 
 - `planning/prim-demo-functionalitate-minima-diversa.md`
-- `planning/server-npc-mvp-si-faze.md`
+- `planning/roadmap-orientativ.md`
+- `operations/demo-server-verification.md`
 - `operations/release-checklist.md`

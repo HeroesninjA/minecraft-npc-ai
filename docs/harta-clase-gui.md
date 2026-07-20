@@ -1,1 +1,1 @@
-This document was moved to "docs v2/guides/harta-clase-gui.md".
+This document was moved to `docs v2/architecture/harta-clase-gui.md`.

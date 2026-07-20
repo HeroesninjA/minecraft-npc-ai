@@ -245,79 +245,207 @@ class StoryStateService {
         playerUuid: String?,
         npcId: String?
     ): StoryEvent {
-        val normalizedScopeType = requireId(scopeType, "scopeType").lowercase()
-        val normalizedScopeId = requireId(scopeId, "scopeId")
-        val normalizedEventType = requireId(eventType, "eventType").lowercase()
         val createdAt = now()
+        val normalizedEvent = normalizePendingEvent(
+            scopeType,
+            scopeId,
+            regionId,
+            placeId,
+            eventType,
+            eventKey,
+            title,
+            description,
+            payload,
+            actorType,
+            actorId,
+            playerUuid,
+            npcId,
+            createdAt,
+        )
+        val database = requireDatabase()
+        val storyEvent = insertStoryEvent(
+            { sql, generatedKeys -> database.prepareStatement(sql, generatedKeys) },
+            normalizedEvent,
+            createdAt,
+        )
+        publishStoryEventRecorded(
+            storyEvent,
+            mapOf(
+                "scopeType" to storyEvent.scopeType(),
+                "scopeId" to storyEvent.scopeId(),
+            )
+        )
+        return storyEvent
+    }
+
+    @Throws(SQLException::class)
+    fun queueEvent(
+        scopeType: String?,
+        scopeId: String?,
+        regionId: String?,
+        placeId: String?,
+        eventType: String?,
+        eventKey: String?,
+        title: String?,
+        description: String?,
+        payload: Map<String, String>?,
+        actorType: String?,
+        actorId: String?,
+        playerUuid: String?,
+        npcId: String?,
+    ): StoryPendingEvent {
+        val queuedAt = now()
+        val pendingEvent = normalizePendingEvent(
+            scopeType,
+            scopeId,
+            regionId,
+            placeId,
+            eventType,
+            eventKey,
+            title,
+            description,
+            payload,
+            actorType,
+            actorId,
+            playerUuid,
+            npcId,
+            queuedAt,
+        )
         val sql = """
-            INSERT INTO story_events (
+            INSERT INTO story_pending_events (
                 scope_type, scope_id, region_id, place_id, event_type, event_key,
                 title, description, payload, actor_type, actor_id, player_uuid,
-                npc_id, created_at
+                npc_id, queued_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-
-        val normalizedRegionId = valueOrEmpty(regionId)
-        val normalizedPlaceId = valueOrEmpty(placeId)
-        val normalizedEventKey = valueOrEmpty(eventKey)
-        val normalizedTitle = valueOrEmpty(title)
-        val normalizedDescription = valueOrEmpty(description)
-        val normalizedPayload = copyMap(payload)
-        val normalizedActorType = valueOrEmpty(actorType)
-        val normalizedActorId = valueOrEmpty(actorId)
-        val normalizedPlayerUuid = valueOrEmpty(playerUuid)
-        val normalizedNpcId = valueOrEmpty(npcId)
         var id = 0L
-
         requireDatabase().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { statement ->
-            statement.setString(1, normalizedScopeType)
-            statement.setString(2, normalizedScopeId)
-            statement.setString(3, normalizedRegionId)
-            statement.setString(4, normalizedPlaceId)
-            statement.setString(5, normalizedEventType)
-            statement.setString(6, normalizedEventKey)
-            statement.setString(7, normalizedTitle)
-            statement.setString(8, normalizedDescription)
-            statement.setString(9, gson.toJson(normalizedPayload))
-            statement.setString(10, normalizedActorType)
-            statement.setString(11, normalizedActorId)
-            statement.setString(12, normalizedPlayerUuid)
-            statement.setString(13, normalizedNpcId)
-            statement.setLong(14, createdAt)
+            bindPendingEvent(statement, pendingEvent)
             statement.executeUpdate()
-
             statement.generatedKeys.use { keys ->
                 if (keys.next()) {
                     id = keys.getLong(1)
                 }
             }
         }
+        return pendingEvent.copy(id = id)
+    }
 
-        val storyEvent = StoryEvent(
-            id,
-            normalizedScopeType,
-            normalizedScopeId,
-            normalizedRegionId,
-            normalizedPlaceId,
-            normalizedEventType,
-            normalizedEventKey,
-            normalizedTitle,
-            normalizedDescription,
-            normalizedPayload,
-            normalizedActorType,
-            normalizedActorId,
-            normalizedPlayerUuid,
-            normalizedNpcId,
-            createdAt
-        )
+    @Throws(SQLException::class)
+    fun hasPendingEvents(scopeType: String?, scopeId: String?): Boolean {
+        val normalizedScopeType = scopeType?.trim()?.lowercase().orEmpty()
+        val normalizedScopeId = scopeId?.trim().orEmpty()
+        if (normalizedScopeType.isBlank() || normalizedScopeId.isBlank()) {
+            return false
+        }
+        val sql = """
+            SELECT 1
+            FROM story_pending_events
+            WHERE scope_type = ? AND scope_id = ?
+            LIMIT 1
+        """.trimIndent()
+        requireDatabase().prepareStatement(sql).use { statement ->
+            statement.setString(1, normalizedScopeType)
+            statement.setString(2, normalizedScopeId)
+            statement.executeQuery().use { resultSet ->
+                return resultSet.next()
+            }
+        }
+    }
+
+    @Throws(SQLException::class)
+    fun listPendingEvents(scopeType: String?, scopeId: String?, limit: Int): List<StoryPendingEvent> {
+        val normalizedScopeType = scopeType?.trim()?.lowercase().orEmpty()
+        val normalizedScopeId = scopeId?.trim().orEmpty()
+        if (normalizedScopeType.isBlank() || normalizedScopeId.isBlank()) {
+            return emptyList()
+        }
+        val sql = """
+            SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
+                   title, description, payload, actor_type, actor_id, player_uuid,
+                   npc_id, queued_at
+            FROM story_pending_events
+            WHERE scope_type = ? AND scope_id = ?
+            ORDER BY queued_at ASC, id ASC
+            LIMIT ?
+        """.trimIndent()
+        val events = mutableListOf<StoryPendingEvent>()
+        requireDatabase().prepareStatement(sql).use { statement ->
+            statement.setString(1, normalizedScopeType)
+            statement.setString(2, normalizedScopeId)
+            statement.setInt(3, limit.coerceIn(1, 100))
+            statement.executeQuery().use { resultSet ->
+                while (resultSet.next()) {
+                    events.add(readPendingStoryEvent(resultSet))
+                }
+            }
+        }
+        return events
+    }
+
+    @Throws(SQLException::class)
+    fun publishPendingEvent(id: Long): StoryEvent? {
+        if (id <= 0L) {
+            return null
+        }
+        var publishedEvent: StoryEvent? = null
+        requireDatabase().executeTransaction { connection ->
+            val pendingEvent = connection.prepareStatement(
+                """
+                SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
+                       title, description, payload, actor_type, actor_id, player_uuid,
+                       npc_id, queued_at
+                FROM story_pending_events
+                WHERE id = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setLong(1, id)
+                statement.executeQuery().use { resultSet ->
+                    if (resultSet.next()) readPendingStoryEvent(resultSet) else null
+                }
+            } ?: return@executeTransaction
+
+            val createdAt = now()
+            val storyEvent = insertStoryEvent(
+                { sql, generatedKeys -> connection.prepareStatement(sql, generatedKeys) },
+                pendingEvent,
+                createdAt,
+            )
+            val removed = connection.prepareStatement(
+                "DELETE FROM story_pending_events WHERE id = ?"
+            ).use { statement ->
+                statement.setLong(1, id)
+                statement.executeUpdate()
+            }
+            if (removed != 1) {
+                throw SQLException("Evenimentul story pending $id nu a putut fi eliminat dupa publicare.")
+            }
+            publishedEvent = storyEvent
+        }
+
+        val storyEvent = publishedEvent ?: return null
         publishStoryEventRecorded(
             storyEvent,
             mapOf(
-                "scopeType" to normalizedScopeType,
-                "scopeId" to normalizedScopeId
+                "scopeType" to storyEvent.scopeType(),
+                "scopeId" to storyEvent.scopeId(),
+                "pendingEventId" to id.toString(),
             )
         )
         return storyEvent
+    }
+
+    @Throws(SQLException::class)
+    fun discardPendingEvent(id: Long): Boolean {
+        if (id <= 0L) {
+            return false
+        }
+        requireDatabase().prepareStatement(
+            "DELETE FROM story_pending_events WHERE id = ?"
+        ).use { statement ->
+            statement.setLong(1, id)
+            return statement.executeUpdate() == 1
+        }
     }
 
     @Throws(SQLException::class)
@@ -407,6 +535,134 @@ class StoryStateService {
             readText(resultSet, "player_uuid"),
             readText(resultSet, "npc_id"),
             resultSet.getLong("created_at")
+        )
+    }
+
+    @Throws(SQLException::class)
+    private fun readPendingStoryEvent(resultSet: ResultSet): StoryPendingEvent {
+        return StoryPendingEvent(
+            id = resultSet.getLong("id"),
+            scopeType = readText(resultSet, "scope_type"),
+            scopeId = readText(resultSet, "scope_id"),
+            regionId = readText(resultSet, "region_id"),
+            placeId = readText(resultSet, "place_id"),
+            eventType = readText(resultSet, "event_type"),
+            eventKey = readText(resultSet, "event_key"),
+            title = readText(resultSet, "title"),
+            description = readText(resultSet, "description"),
+            payload = parseStringMap(readText(resultSet, "payload")),
+            actorType = readText(resultSet, "actor_type"),
+            actorId = readText(resultSet, "actor_id"),
+            playerUuid = readText(resultSet, "player_uuid"),
+            npcId = readText(resultSet, "npc_id"),
+            queuedAt = resultSet.getLong("queued_at"),
+        )
+    }
+
+    private fun normalizePendingEvent(
+        scopeType: String?,
+        scopeId: String?,
+        regionId: String?,
+        placeId: String?,
+        eventType: String?,
+        eventKey: String?,
+        title: String?,
+        description: String?,
+        payload: Map<String, String>?,
+        actorType: String?,
+        actorId: String?,
+        playerUuid: String?,
+        npcId: String?,
+        queuedAt: Long,
+    ): StoryPendingEvent {
+        return StoryPendingEvent(
+            id = 0L,
+            scopeType = requireId(scopeType, "scopeType").lowercase(),
+            scopeId = requireId(scopeId, "scopeId"),
+            regionId = valueOrEmpty(regionId),
+            placeId = valueOrEmpty(placeId),
+            eventType = requireId(eventType, "eventType").lowercase(),
+            eventKey = valueOrEmpty(eventKey),
+            title = valueOrEmpty(title),
+            description = valueOrEmpty(description),
+            payload = copyMap(payload),
+            actorType = valueOrEmpty(actorType),
+            actorId = valueOrEmpty(actorId),
+            playerUuid = valueOrEmpty(playerUuid),
+            npcId = valueOrEmpty(npcId),
+            queuedAt = queuedAt,
+        )
+    }
+
+    private fun bindPendingEvent(statement: PreparedStatement, event: StoryPendingEvent) {
+        statement.setString(1, event.scopeType)
+        statement.setString(2, event.scopeId)
+        statement.setString(3, event.regionId)
+        statement.setString(4, event.placeId)
+        statement.setString(5, event.eventType)
+        statement.setString(6, event.eventKey)
+        statement.setString(7, event.title)
+        statement.setString(8, event.description)
+        statement.setString(9, gson.toJson(event.payload))
+        statement.setString(10, event.actorType)
+        statement.setString(11, event.actorId)
+        statement.setString(12, event.playerUuid)
+        statement.setString(13, event.npcId)
+        statement.setLong(14, event.queuedAt)
+    }
+
+    @Throws(SQLException::class)
+    private fun insertStoryEvent(
+        prepareStatement: (String, Int) -> PreparedStatement,
+        event: StoryPendingEvent,
+        createdAt: Long,
+    ): StoryEvent {
+        val sql = """
+            INSERT INTO story_events (
+                scope_type, scope_id, region_id, place_id, event_type, event_key,
+                title, description, payload, actor_type, actor_id, player_uuid,
+                npc_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+        var id = 0L
+        prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { statement ->
+            statement.setString(1, event.scopeType)
+            statement.setString(2, event.scopeId)
+            statement.setString(3, event.regionId)
+            statement.setString(4, event.placeId)
+            statement.setString(5, event.eventType)
+            statement.setString(6, event.eventKey)
+            statement.setString(7, event.title)
+            statement.setString(8, event.description)
+            statement.setString(9, gson.toJson(event.payload))
+            statement.setString(10, event.actorType)
+            statement.setString(11, event.actorId)
+            statement.setString(12, event.playerUuid)
+            statement.setString(13, event.npcId)
+            statement.setLong(14, createdAt)
+            statement.executeUpdate()
+            statement.generatedKeys.use { keys ->
+                if (keys.next()) {
+                    id = keys.getLong(1)
+                }
+            }
+        }
+        return StoryEvent(
+            id,
+            event.scopeType,
+            event.scopeId,
+            event.regionId,
+            event.placeId,
+            event.eventType,
+            event.eventKey,
+            event.title,
+            event.description,
+            event.payload,
+            event.actorType,
+            event.actorId,
+            event.playerUuid,
+            event.npcId,
+            createdAt,
         )
     }
 

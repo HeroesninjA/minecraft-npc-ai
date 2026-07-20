@@ -72,7 +72,7 @@ function Receive-RconPacket {
     }
     $len = [System.BitConverter]::ToInt32($lenBuf, 0)
     
-    if ($len -le 0 -or $len -gt 4096) { return $null }
+    if ($len -le 0 -or $len -gt 16384) { return $null }
     
     $data = New-Object byte[] $len
     $read = 0
@@ -82,9 +82,12 @@ function Receive-RconPacket {
         $read += $r
     }
     
+    if ($data.Length -lt 8) { return $null }
+    
     $reqId = [System.BitConverter]::ToInt32($data, 0)
     $type = [System.BitConverter]::ToInt32($data, 4)
     $bodyEnd = [Array]::IndexOf($data, 0, 8)
+    if ($bodyEnd -eq -1) { $bodyEnd = $data.Length }
     $body = if ($bodyEnd -gt 8) { [System.Text.Encoding]::ASCII.GetString($data, 8, $bodyEnd - 8) } else { "" }
     
     return @{ RequestId = $reqId; Type = $type; Body = $body }
@@ -99,7 +102,9 @@ function Send-Rcon {
     }
     
     Send-RconPacket -Stream $script:rconStream -Type 2 -Body $Command
+    Start-Sleep -Milliseconds 100
     $response = Receive-RconPacket -Stream $script:rconStream
+    if (-not $response) { return "" }
     
     # For long responses, may need multiple reads
     $fullResponse = $response.Body

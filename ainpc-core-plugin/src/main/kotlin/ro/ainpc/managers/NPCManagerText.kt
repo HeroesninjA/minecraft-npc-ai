@@ -19,8 +19,9 @@ import org.bukkit.entity.Villager
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCPersonality
-import ro.ainpc.utils.NPCNameGenerator
+import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.SpawnSemanticRules
+import ro.ainpc.utils.NPCNameGenerator
 import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
@@ -616,7 +617,30 @@ fun buildSpawnState(npc: AINPC): JsonObject {
     return state
 }
 
+fun mergeSpawnPlanNarrativeProfileData(existingProfileData: String?, plan: NpcSpawnPlan, gson: Gson): String {
+    val profile = parseProfileData(existingProfileData, gson)
+    val narrative = profile.get("narrative")
+        ?.takeIf { it.isJsonObject }
+        ?.asJsonObject
+        ?: JsonObject()
+    addNarrativeProperty(narrative, "family_id", plan.familyId())
+    addNarrativeProperty(narrative, "relation_role", plan.relationRole())
+    addNarrativeProperty(narrative, "social_role", plan.socialRole())
+    addNarrativeProperty(narrative, "age_group", plan.ageGroup())
+    addNarrativeProperty(narrative, "routine_profile", plan.routineProfile())
+    addNarrativeProperty(narrative, "quest_role", plan.questRole())
+    addNarrativeProperty(narrative, "personality_seed", plan.archetype())
+    addNarrativeProperty(narrative, "backstory_seed", plan.backstorySeed())
+    if (narrative.size() > 0) {
+        profile.add("narrative", narrative)
+    }
+    return gson.toJson(profile)
+}
+
 fun buildProfileData(npc: AINPC, gson: Gson): String {
+    val preservedNarrative = parseProfileData(npc.profileDataJson, gson)
+        .get("narrative")
+        ?.takeIf { it.isJsonObject }
     val profile = JsonObject()
     profile.addProperty("npc_id", npc.databaseId)
     profile.addProperty("uuid", npc.uuid.toString())
@@ -639,6 +663,9 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     profile.addProperty("spawned", npc.spawned)
     profile.add("spawn_state", buildSpawnState(npc))
     profile.addProperty("profile_summary", buildProfileSummary(npc))
+    if (preservedNarrative != null) {
+        profile.add("narrative", preservedNarrative)
+    }
 
     val traitsArray = JsonArray()
     for (traitId in npc.traits) {
@@ -687,6 +714,24 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     profile.add("owned_locations", ownedLocations)
 
     return gson.toJson(profile)
+}
+
+private fun parseProfileData(profileData: String?, gson: Gson): JsonObject {
+    if (profileData.isNullOrBlank()) {
+        return JsonObject()
+    }
+    return try {
+        gson.fromJson(profileData, JsonObject::class.java) ?: JsonObject()
+    } catch (_: RuntimeException) {
+        JsonObject()
+    }
+}
+
+private fun addNarrativeProperty(narrative: JsonObject, key: String, value: String?) {
+    val cleanedValue = value?.trim().orEmpty()
+    if (cleanedValue.isNotEmpty()) {
+        narrative.addProperty(key, cleanedValue)
+    }
 }
 
 @Suppress("UNUSED_PARAMETER")
