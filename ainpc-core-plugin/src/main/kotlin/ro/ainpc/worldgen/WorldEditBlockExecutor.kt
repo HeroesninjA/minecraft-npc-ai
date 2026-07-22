@@ -8,7 +8,7 @@ import com.sk89q.worldedit.bukkit.BukkitWorld
 import com.sk89q.worldedit.extent.clipboard.Clipboard
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats
-import com.sk89q.worldedit.extent.transform.AffineTransform
+import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
@@ -81,16 +81,12 @@ class WorldEditBlockExecutor(
                     errors.add("Failed at ${op.x},${op.y},${op.z}: ${e.message}")
                 }
             }
-            session.flush()
         } catch (e: Exception) {
             errors.add("Batch failed: ${e.message}")
             failed = operations.size
             placed = 0
-        } finally {
-            session.close()
         }
 
-        val sessionData = WorldEditSessionData(sessionId, successfulOps.toList())
         activePreviews[sessionId] = WorldEditPreviewSession(sessionId, successfulOps.toList(), this)
 
         if (enablePersistence && placed > 0) {
@@ -133,11 +129,8 @@ class WorldEditBlockExecutor(
                     errors.add("Failed to undo ${op.x},${op.y},${op.z}: ${e.message}")
                 }
             }
-            editSession.flush()
         } catch (e: Exception) {
             errors.add("Undo failed: ${e.message}")
-        } finally {
-            editSession.close()
         }
 
         return UndoResult(errors.isEmpty(), restored, errors)
@@ -158,10 +151,15 @@ class WorldEditBlockExecutor(
                 session.operations.maxByOrNull { it.y }?.y ?: 0,
                 session.operations.maxByOrNull { it.z }?.z ?: 0
             )
-            val region = CuboidRegionSelector(weWorld).select(minPos, maxPos)
-            val clipboard = ForwardExtentCopy(region, weWorld, minPos).copy()
+            val region = CuboidRegion(weWorld, minPos, maxPos)
+            val clipboard = com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard(region)
+            val forwardCopy = ForwardExtentCopy(weWorld, region, clipboard, minPos)
+            Operations.complete(forwardCopy)
             file.parentFile?.mkdirs()
-            ClipboardFormats.findByAlias("schem")?.write(clipboard, FileOutputStream(file))
+            val schemFormat = ClipboardFormats.findByAlias("schem") ?: ClipboardFormats.findByAlias("schematic")
+            if (schemFormat != null) {
+                schemFormat.getWriter(FileOutputStream(file)).use { writer -> writer.write(clipboard) }
+            }
             true
         } catch (e: Exception) {
             plugin.logger.warning("Failed to save schematic: ${e.message}")
@@ -170,51 +168,69 @@ class WorldEditBlockExecutor(
     }
 
     override fun loadSchematic(file: File): List<BlockOperation> {
-        return clipboardCache.getOrPut(file.name) {
-            try {
-                ClipboardFormats.findByFile(file)?.read(FileInputStream(file))
-            } catch (e: Exception) {
-                plugin.logger.warning("Failed to load schematic ${file.name}: ${e.message}")
-                null
-            }
-        }?.let { clipboard ->
-            val weWorld = BukkitAdapter.adapt(Bukkit.getWorlds().firstOrNull()) ?: return emptyList()
-            val origin = clipboard.origin
-            clipboard.regions.flatMap { region ->
-                region.allBlocks().map { pos ->
+        val format = ClipboardFormats.findByFile(file) ?: return emptyList()
+        val clipboard = try {
+            format.getReader(FileInputStream(file)).use { reader -> reader.read() }
+        } catch (e: Exception) {
+            plugin.logger.warning("Failed to load schematic ${file.name}: ${e.message}")
+            return emptyList()
+        }
+
+        val origin = clipboard.origin
+        val min = clipboard.minimumPoint
+        val max = clipboard.maximumPoint
+        val operations = mutableListOf<BlockOperation>()
+
+        for (x in min.blockX..max.blockX) {
+            for (y in min.blockY..max.blockY) {
+                for (z in min.blockZ..max.blockZ) {
+                    val pos = BlockVector3.at(x, y, z)
                     val relative = pos.subtract(origin)
-                    val block = weWorld.getBlock(pos)
-                    BlockOperation(
-                        worldName = weWorld.name,
-                        x = relative.x,
-                        y = relative.y,
-                        z = relative.z,
-                        material = BukkitAdapter.adapt(block.blockData).material,
-                        blockData = BukkitAdapter.adapt(block.blockData)
-                    )
+                    val blockState = clipboard.getBlock(pos)
+                    val blockData = BukkitAdapter.adapt(blockState)
+                    val material = blockData.material
+                    if (material != Material.AIR) {
+                        operations.add(BlockOperation(
+                            worldName = "unknown",
+                            x = relative.blockX,
+                            y = relative.blockY,
+                            z = relative.blockZ,
+                            material = material,
+                            blockData = blockData
+                        ))
+                    }
                 }
             }
-        } ?: emptyList()
+        }
+        clipboardCache[file.name] = clipboard
+        return operations
     }
 
     fun pasteSchematic(world: World, fileName: String, originX: Int, originY: Int, originZ: Int, player: Player? = null): ExecutionResult {
-        val clipboard = loadSchematic(File(schematicsDir, fileName)) ?: return ExecutionResult.failure(listOf("Schematic not found: $fileName"))
+        val schematicFile = File(schematicsDir, fileName)
+        val format = ClipboardFormats.findByFile(schematicFile)
+            ?: return ExecutionResult.failure(listOf("Unknown schematic format: $fileName"))
 
         return try {
             val weWorld = BukkitAdapter.adapt(world)
             val session = createEditSession(weWorld)
             val origin = BlockVector3.at(originX, originY, originZ)
-            val operation = clipboard.paste(weWorld, origin, false, true, null)
+
+            val weClipboard = format.getReader(FileInputStream(schematicFile)).use { reader -> reader.read() }
+            val clipboardHolder = com.sk89q.worldedit.session.ClipboardHolder(weClipboard)
+            val operation = clipboardHolder.createPaste(session).to(origin).ignoreAirBlocks(false).build()
             Operations.complete(operation)
-            session.flush()
-            ExecutionResult.success(UUID.randomUUID(), clipboard.regions.sumOf { it.count() })
+            val area = (weClipboard.maximumPoint.blockX - weClipboard.minimumPoint.blockX + 1) *
+                (weClipboard.maximumPoint.blockY - weClipboard.minimumPoint.blockY + 1) *
+                (weClipboard.maximumPoint.blockZ - weClipboard.minimumPoint.blockZ + 1)
+            ExecutionResult.success(UUID.randomUUID(), area)
         } catch (e: Exception) {
             ExecutionResult.failure(listOf("Paste failed: ${e.message}"))
         }
     }
 
     private fun createEditSession(world: WEWorld): EditSession {
-        return WorldEdit.getInstance().newEditSessionBuilder(world).build()
+        return WorldEdit.getInstance().newEditSessionBuilder().world(world).build()
     }
 
     private fun persistSchematic(sessionId: UUID, operations: List<BlockOperation>) {
@@ -232,11 +248,14 @@ class WorldEditBlockExecutor(
                 operations.maxByOrNull { it.y }?.y ?: 0,
                 operations.maxByOrNull { it.z }?.z ?: 0
             )
-            val region = CuboidRegionSelector(weWorld).select(minPos, maxPos)
-            val clipboard = ForwardExtentCopy(region, weWorld, minPos).copy()
+            val region = CuboidRegion(weWorld, minPos, maxPos)
+            val clipboard = com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard(region)
+            val forwardCopy = ForwardExtentCopy(weWorld, region, clipboard, minPos)
+            Operations.complete(forwardCopy)
             val file = File(schematicsDir, "ainpc_${sessionId}.schem")
             file.parentFile?.mkdirs()
-            ClipboardFormats.findByAlias("schem")?.write(clipboard, FileOutputStream(file))
+            val schemFormat = ClipboardFormats.findByAlias("schem") ?: ClipboardFormats.findByAlias("schematic")
+            schemFormat?.getWriter(FileOutputStream(file))?.use { writer -> writer.write(clipboard) }
         } catch (e: Exception) {
             plugin.logger.warning("Failed to persist schematic for $sessionId: ${e.message}")
         }

@@ -1,10 +1,20 @@
 package ro.ainpc.worldgen
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.contextual
 import org.bukkit.Material
 import org.bukkit.block.data.BlockData
 import org.bukkit.util.Vector
 import java.io.File
 import java.util.Random
+import java.util.UUID
+
+private val templateJson = Json {
+    serializersModule = SerializersModule {
+        contextual(Vector::class, VectorSerializer)
+    }
+}
 
 class BuildingTemplateExecutor(
     private val blockExecutor: BlockExecutor,
@@ -54,8 +64,7 @@ class BuildingTemplateExecutor(
         templatesDir.mkdirs()
         val file = File(templatesDir, "${template.id}.json")
         return try {
-            import kotlinx.serialization.json.Json
-            File(file).writeText(Json.encodeToString(template))
+            file.writeText(templateJson.encodeToString(BuildingTemplate.serializer(), template))
             true
         } catch (e: Exception) {
             false
@@ -66,8 +75,7 @@ class BuildingTemplateExecutor(
         val file = File(templatesDir, "$templateId.json")
         if (!file.exists()) return null
         return try {
-            import kotlinx.serialization.json.Json
-            Json.decodeFromString<BuildingTemplate>(file.readText())
+            templateJson.decodeFromString<BuildingTemplate>(file.readText())
         } catch (e: Exception) {
             null
         }
@@ -116,7 +124,7 @@ class BuildingTemplateExecutor(
                     TemplateBlock(1, 1, 1, Material.CRAFTING_TABLE, 1, 1, 1),
                     TemplateBlock(2, 1, 1, Material.FURNACE, 1, 1, 1),
                     TemplateBlock(4, 1, 1, Material.CHEST, 1, 1, 1),
-                    TemplateBlock(5, 1, 1, Material.BED, 1, 1, 1)
+                    TemplateBlock(5, 1, 1, Material.RED_BED, 1, 1, 1)
                 ),
                 anchors = mapOf(
                     "entrance" to Vector(3, 1, -1),
@@ -225,8 +233,8 @@ class BuildingTemplateExecutor(
                     TemplateBlock(1, 6, 10, Material.SPRUCE_PLANKS, 9, 3, 1),
                     TemplateBlock(0, 6, 1, Material.SPRUCE_PLANKS, 1, 3, 9),
                     TemplateBlock(10, 6, 1, Material.SPRUCE_PLANKS, 1, 3, 9),
-                    TemplateBlock(2, 6, 2, Material.BED, 3, 1, 1),
-                    TemplateBlock(6, 6, 2, Material.BED, 3, 1, 1),
+                    TemplateBlock(2, 6, 2, Material.RED_BED, 3, 1, 1),
+                    TemplateBlock(6, 6, 2, Material.RED_BED, 3, 1, 1),
                     TemplateBlock(0, 9, 0, Material.SPRUCE_STAIRS, 11, 1, 11)
                 ),
                 anchors = mapOf(
@@ -243,97 +251,3 @@ class BuildingTemplateExecutor(
     }
 }
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-
-@Serializable
-data class BuildingTemplate(
-    val id: String,
-    val name: String,
-    val description: String,
-    val author: String,
-    val version: Int,
-    val blocks: List<TemplateBlock>,
-    val anchors: Map<String, Vector> = emptyMap()
-) {
-    fun toBlockOperations(
-        worldName: String,
-        originX: Int,
-        originY: Int,
-        originZ: Int,
-        rotation: Rotation = Rotation.NONE,
-        mirror: Mirror = Mirror.NONE
-    ): List<BlockOperation> {
-        val operations = mutableListOf<BlockOperation>()
-
-        for (templateBlock in blocks) {
-            val (x, y, z) = applyTransform(templateBlock.x, templateBlock.y, templateBlock.z, rotation, mirror)
-
-            if (templateBlock.width > 1 || templateBlock.height > 1 || templateBlock.depth > 1) {
-                for (dx in 0 until templateBlock.width) {
-                    for (dy in 0 until templateBlock.height) {
-                        for (dz in 0 until templateBlock.depth) {
-                            val (tx, ty, tz) = applyTransform(templateBlock.x + dx, templateBlock.y + dy, templateBlock.z + dz, rotation, mirror)
-                            if (templateBlock.material != Material.AIR) {
-                                operations.add(BlockOperation(
-                                    worldName = worldName,
-                                    x = originX + tx,
-                                    y = originY + ty,
-                                    z = originZ + tz,
-                                    material = templateBlock.material,
-                                    blockData = templateBlock.blockData
-                                ))
-                            }
-                        }
-                    }
-                }
-            } else {
-                val (tx, ty, tz) = applyTransform(x, y, z, rotation, mirror)
-                if (templateBlock.material != Material.AIR) {
-                    operations.add(BlockOperation(
-                        worldName = worldName,
-                        x = originX + tx,
-                        y = originY + ty,
-                        z = originZ + tz,
-                        material = templateBlock.material,
-                        blockData = templateBlock.blockData
-                    ))
-                }
-            }
-        }
-        return operations
-    }
-
-    private fun applyTransform(x: Int, y: Int, z: Int, rotation: Rotation, mirror: Mirror): Triple<Int, Int, Int> {
-        var (rx, rz) = when (rotation) {
-            Rotation.NONE -> x to z
-            Rotation.CLOCKWISE_90 -> z to -x
-            Rotation.CLOCKWISE_180 -> -x to -z
-            Rotation.CLOCKWISE_270 -> -z to x
-        }
-        val (mx, mz) = when (mirror) {
-            Mirror.NONE -> rx to rz
-            Mirror.X -> -rx to rz
-            Mirror.Z -> rx to -rz
-            Mirror.BOTH -> -rx to -rz
-        }
-        return Triple(mx, y, mz)
-    }
-}
-
-@Serializable
-data class TemplateBlock(
-    val x: Int,
-    val y: Int,
-    val z: Int,
-    val material: Material,
-    val width: Int = 1,
-    val height: Int = 1,
-    val depth: Int = 1,
-    val blockData: BlockData? = null
-)
-
-enum class Rotation { NONE, CLOCKWISE_90, CLOCKWISE_180, CLOCKWISE_270 }
-enum class Mirror { NONE, X, Z, BOTH }

@@ -17,6 +17,7 @@ import ro.ainpc.api.settlement.BuildingTemplateDefinition
 import ro.ainpc.settlement.BuildingTemplateRegistry
 import org.bukkit.Material
 import org.bukkit.World
+import org.bukkit.util.Vector
 import org.bukkit.block.data.BlockData
 import java.io.File
 import java.util.UUID
@@ -32,7 +33,8 @@ class WorldGenService(
     private val templateExecutor = BuildingTemplateExecutor(blockExecutor, templatesDir)
     private val patchApplier = VillagePatchApplier()
     private val pendingBuildOperations = ConcurrentHashMap<UUID, BuildOperation>()
-    private val autoBuildEnabled = true
+    var autoBuildEnabled: Boolean = true
+        private set
 
     fun executePatch(
         plan: PatchPlan,
@@ -96,23 +98,23 @@ class WorldGenService(
         templateId: String,
         executorPreference: List<String> = listOf("worldedit", "native")
     ): BuildResult {
-        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id() == placeId } }
+        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id == placeId } }
             ?: return BuildResult.failure(listOf("Place not found: $placeId"))
 
         val template = BuildingTemplateRegistry.get(templateId)
             ?: return BuildResult.failure(listOf("Template not found: $templateId"))
 
-        val region = worldAdmin.getRegion(place.regionId())
-            ?: return BuildResult.failure(listOf("Region not found for place: ${place.regionId()}"))
+        val region = worldAdmin.getRegion(place.regionId)
+            ?: return BuildResult.failure(listOf("Region not found for place: ${place.regionId}"))
 
         val operationId = UUID.randomUUID()
         val operation = BuildOperation(operationId, placeId, templateId, region.worldName(), System.currentTimeMillis())
         pendingBuildOperations[operationId] = operation
 
         // Calculate origin from place bounds
-        val originX = place.minX()
-        val originY = place.minY()
-        val originZ = place.minZ()
+        val originX = place.minX
+        val originY = place.minY
+        val originZ = place.minZ
 
         val result = templateExecutor.executeTemplate(
             templateId,
@@ -124,10 +126,10 @@ class WorldGenService(
 
         pendingBuildOperations.remove(operationId)
 
-        if (result.success()) {
-            return BuildResult.success(result.sessionId!!, result.blocksPlaced!!)
+        if (result.success) {
+            return BuildResult.success(result.sessionId!!, result.blocksPlaced)
         } else {
-            return BuildResult.failure(result.errors!!)
+            return BuildResult.failure(result.errors)
         }
     }
 
@@ -145,18 +147,18 @@ class WorldGenService(
         placeId: String,
         templateId: String
     ): PreviewSession? {
-        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id() == placeId } }
+        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id == placeId } }
             ?: return null
 
         val template = BuildingTemplateRegistry.get(templateId)
             ?: return null
 
-        val region = worldAdmin.getRegion(place.regionId())
+        val region = worldAdmin.getRegion(place.regionId)
             ?: return null
 
-        val originX = place.minX()
-        val originY = place.minY()
-        val originZ = place.minZ()
+        val originX = place.minX
+        val originY = place.minY
+        val originZ = place.minZ
 
         return templateExecutor.previewTemplate(
             templateId,
@@ -185,11 +187,17 @@ class WorldGenService(
         return templateExecutor.listTemplates()
     }
 
+    fun registerDefaultTemplates() {
+        BuildingTemplateExecutor.createDefaultTemplates(templatesDir).forEach { template ->
+            templateExecutor.saveTemplate(template)
+        }
+    }
+
     fun createTemplateFromPlace(placeId: String, templateId: String, name: String): Boolean {
-        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id() == placeId } }
+        val place = worldAdmin.getPlace(placeId)?.let { worldAdmin.getPlaceModels(it.regionId()).find { p -> p.id == placeId } }
             ?: return false
 
-        val region = worldAdmin.getRegion(place.regionId()) ?: return false
+        val region = worldAdmin.getRegion(place.regionId) ?: return false
 
         // Scan blocks in the place area and create template
         val world = plugin.server.getWorld(region.worldName()) ?: return false
@@ -197,9 +205,9 @@ class WorldGenService(
 
         // This is a simplified version - in production you'd scan the actual blocks
         // For now, create a basic template from the place bounds
-        val width = place.maxX() - place.minX() + 1
-        val height = place.maxY() - place.minY() + 1
-        val depth = place.maxZ() - place.minZ() + 1
+        val width = place.maxX - place.minX + 1
+        val height = place.maxY - place.minY + 1
+        val depth = place.maxZ - place.minZ + 1
 
         // Add a simple shell
         blocks.add(TemplateBlock(0, 0, 0, Material.OAK_PLANKS, width, 1, depth))
@@ -235,12 +243,6 @@ class WorldGenService(
         }
     }
 
-    val autoBuildEnabled: Boolean
-        get() = autoBuildEnabled
-        set(value) {
-            // This is a backing field issue - we can't easily modify the property
-            // In practice, this would be a mutable field
-        }
 }
 
 data class BuildResult(
@@ -278,11 +280,7 @@ class WorldGenServiceProvider(private val plugin: AINPCPlugin) {
 
         val templatesDir = File(plugin.dataFolder, "templates")
         service = WorldGenService(plugin, worldAdmin, executor, templatesDir)
-
-        // Register default templates
-        BuildingTemplateExecutor.createDefaultTemplates(templatesDir).forEach { template ->
-            templateExecutor.saveTemplate(template)
-        }
+        service!!.registerDefaultTemplates()
 
         return service!!
     }

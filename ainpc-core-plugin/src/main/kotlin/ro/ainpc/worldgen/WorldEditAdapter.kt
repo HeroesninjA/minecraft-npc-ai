@@ -60,7 +60,7 @@ class WorldEditAdapter(
                         null -> createBlockData(op.material)
                         else -> op.blockData
                     }
-                    callSetBlock(editSession, pos, blockState)
+                    callSetBlock(editSession!!, pos!!, blockState)
                     placed++
                     successfulOps.add(op)
                 } catch (e: Exception) {
@@ -115,7 +115,7 @@ class WorldEditAdapter(
             for (op in session.operations.asReversed()) {
                 val pos = createBlockVector(op.x, op.y, op.z)
                 try {
-                    callSetBlock(editSession, pos, createBlockData(Material.AIR))
+                    callSetBlock(editSession!!, pos!!, createBlockData(Material.AIR))
                     restored++
                 } catch (e: Exception) {
                     errors.add("Failed to undo ${op.x},${op.y},${op.z}: ${e.message}")
@@ -143,7 +143,7 @@ class WorldEditAdapter(
             if (weWorld == null) return false
             
             val region = createRegionFromOperations(weWorld, session.operations)
-            val clipboard = callForwardExtentCopy(region, weWorld, callGetMinimumPoint(region))
+            val clipboard = callForwardExtentCopy(region, weWorld, callGetMinimumPoint(region)!!)!!
             
             val format = findClipboardFormat("schem") ?: findClipboardFormat("schematic")
             format?.let { callWriteClipboard(it, clipboard, FileOutputStream(file)) }
@@ -159,51 +159,27 @@ class WorldEditAdapter(
             val format = findClipboardFormatByFile(file) ?: return emptyList()
             val clipboard = callReadClipboard(format, FileInputStream(file))
             
-            val region = callGetRegion(clipboard)
+            val region = callGetRegion(clipboard!!)
             val operations = mutableListOf<BlockOperation>()
-            for (pos in callGetAllPositions(region)) {
-                val block = callGetFullBlock(clipboard, pos)
-                val material = adaptMaterial(callGetBlockType(block))
+            for (pos in callGetAllPositions(region!!)) {
+                val block = callGetFullBlock(clipboard!!, pos)
+                val material = adaptMaterial(callGetBlockType(block!!))
                 if (material != Material.AIR) {
                     operations.add(BlockOperation(
                         worldName = "",
-                        x = pos.getX(),
-                        y = pos.getY(),
-                        z = pos.getZ(),
+                        x = callGetBlockVectorX(pos),
+                        y = callGetBlockVectorY(pos),
+                        z = callGetBlockVectorZ(pos),
                         material = material,
-                        blockData = callGetBlockData(block)
+                        blockData = callGetBlockData(block!!)
                     ))
                 }
             }
-            operations
+            return operations
         } catch (e: Exception) {
             plugin.logger.warning("Failed to load schematic ${file.name}: ${e.message}")
-            emptyList()
+            return emptyList()
         }
-    }
-
-    override fun getExecutorId(): String = "worldedit"
-
-    override fun supportsPreview(): Boolean = true
-
-    override fun createPreview(operations: List<BlockOperation>): PreviewSession? {
-        if (operations.size > maxPreviewBlocks) return null
-        return WorldEditPreviewSession(UUID.randomUUID(), operations, this, plugin)
-    }
-
-    override fun commitPreview(session: PreviewSession): ExecutionResult {
-        if (session is WorldEditPreviewSession) {
-            return execute(session.operations)
-        }
-        return ExecutionResult.failure(listOf("Invalid session type"))
-    }
-
-    override fun rollbackPreview(session: PreviewSession): Boolean {
-        if (session is WorldEditPreviewSession) {
-            activeSessions.remove(session.id)
-            return true
-        }
-        return false
     }
 
     fun pasteSchematic(
@@ -217,9 +193,6 @@ class WorldEditAdapter(
         val file = File(schematicsDir, fileName)
         if (!file.exists()) return ExecutionResult.failure(listOf("Schematic not found: $fileName"))
 
-        val clipboard = loadSchematic(file)
-        if (clipboard.isEmpty()) return ExecutionResult.failure(listOf("Failed to load schematic"))
-
         val weWorld = adaptWorld(world)
         if (weWorld == null) return ExecutionResult.failure(listOf("Failed to adapt world"))
         
@@ -228,14 +201,17 @@ class WorldEditAdapter(
         val origin = createBlockVector(originX, originY, originZ)
 
         try {
-            val operation = callPasteClipboard(clipboard, weWorld, origin, rotation)
-            callCompleteOperation(operation)
-            callFlush(editSession)
-            return ExecutionResult.success(UUID.randomUUID(), callGetRegionArea(clipboard))
+            val format = findClipboardFormatByFile(file) ?: return ExecutionResult.failure(listOf("Unknown schematic format"))
+            val weClipboard = callReadClipboard(format!!, FileInputStream(file))
+            val operation = callPasteClipboard(weClipboard!!, weWorld!!, origin!!, rotation)
+            callCompleteOperation(operation!!)
+            callFlush(editSession!!)
+            val area = callGetRegionArea(weClipboard)
+            return ExecutionResult.success(UUID.randomUUID(), area)
         } catch (e: Exception) {
             return ExecutionResult.failure(listOf("Paste failed: ${e.message}"))
         } finally {
-            callClose(editSession)
+            callClose(editSession!!)
         }
     }
 
@@ -260,16 +236,14 @@ class WorldEditAdapter(
         }
     }
 
-    private val weClasses = WorldEditClasses()
-
     private fun createEditSession(world: World): Any? {
         val weWorld = adaptWorld(world) ?: return null
         val builder = callNewEditSessionBuilder(weWorld)
             ?: return null
-        val fastMode = callFastMode(builder, true) ?: return null
-        val allowedRegions = callAllowedRegionsEverywhere(fastMode) ?: return null
-        val limitUnlimited = callLimitUnlimited(allowedRegions) ?: return null
-        return callBuild(limitUnlimited)
+        val fastMode = callFastMode(builder!!, true) ?: return null
+        val allowedRegions = callAllowedRegionsEverywhere(fastMode!!) ?: return null
+        val limitUnlimited = callLimitUnlimited(allowedRegions!!) ?: return null
+        return callBuild(limitUnlimited!!)
     }
 
     private fun adaptWorld(world: World): Any? {
@@ -297,8 +271,10 @@ class WorldEditAdapter(
     }
 
     private fun callNewEditSessionBuilder(world: Any): Any? {
-        val instance = weClasses.worldEditClass?.getMethod("getInstance")?.invoke(null)
-        return instance?.javaClass?.getMethod("newEditSessionBuilder", weClasses.worldEditClass?.getInterfaces().firstOrNull() ?: world.javaClass)?.invoke(instance, world)
+        val instance = weClasses.worldEditClass?.getMethod("getInstance")?.invoke(null) ?: return null
+        val builder = instance::class.java.getMethod("newEditSessionBuilder")?.invoke(instance) ?: return null
+        val worldInterface = weClasses.worldEditClass?.interfaces?.firstOrNull() ?: world::class.java
+        return builder::class.java.getMethod("world", worldInterface)?.invoke(builder, world) ?: builder
     }
 
     private fun callFastMode(builder: Any, enabled: Boolean): Any? {
@@ -322,7 +298,8 @@ class WorldEditAdapter(
     }
 
     private fun callForwardExtentCopy(region: Any, world: Any, origin: Any): Any? {
-        return weClasses.forwardExtentCopyClass?.getDeclaredConstructor(weClasses.regionClass, weClasses.worldEditClass?.getInterfaces().firstOrNull() ?: world.javaClass, weClasses.blockVector3Class)?.newInstance(region, world, origin)
+        val worldInterface = weClasses.worldEditClass?.interfaces?.firstOrNull() ?: world::class.java
+        return weClasses.forwardExtentCopyClass?.getDeclaredConstructor(weClasses.regionClass, worldInterface, weClasses.blockVector3Class)?.newInstance(region, world, origin)
     }
 
     private fun callCompleteOperation(operation: Any) {
@@ -351,7 +328,19 @@ class WorldEditAdapter(
 
     private fun callGetAllPositions(region: Any): List<Any> {
         val iterable = region as? Iterable<*> ?: return emptyList()
-        return iterable.toList()
+        return iterable.filterNotNull()
+    }
+
+    private fun callGetBlockVectorX(vector: Any): Int {
+        return (vector::class.java.getMethod("getX").invoke(vector) as? Int) ?: 0
+    }
+
+    private fun callGetBlockVectorY(vector: Any): Int {
+        return (vector::class.java.getMethod("getY").invoke(vector) as? Int) ?: 0
+    }
+
+    private fun callGetBlockVectorZ(vector: Any): Int {
+        return (vector::class.java.getMethod("getZ").invoke(vector) as? Int) ?: 0
     }
 
     private fun callGetFullBlock(clipboard: Any, pos: Any): Any? {
@@ -363,13 +352,13 @@ class WorldEditAdapter(
     }
 
     private fun adaptMaterial(blockType: Any?): Material {
-        val adapted = weClasses.bukkitAdapterClass?.getMethod("adapt", blockType?.javaClass)?.invoke(null, blockType)
-        return (adapted?.javaClass?.getMethod("toMaterial")?.invoke(adapted) as? Material) ?: Material.AIR
+        val adapted = weClasses.bukkitAdapterClass?.getMethod("adapt", blockType?.let { it::class.java })?.invoke(null, blockType)
+        return (adapted?.let { it::class.java.getMethod("toMaterial").invoke(it) } as? Material) ?: Material.AIR
     }
 
     private fun callGetBlockData(block: Any): BlockData? {
         val blockState = block.javaClass.getMethod("getBlockState")?.invoke(block)
-        return blockState?.javaClass?.getMethod("getBlockData")?.invoke(blockState) as? BlockData
+        return blockState?.let { it::class.java.getMethod("getBlockData").invoke(it) } as? BlockData
     }
 
     private fun callPasteClipboard(clipboard: Any, world: Any, origin: Any, rotation: Any?): Any? {
@@ -381,8 +370,8 @@ class WorldEditAdapter(
         return (region?.javaClass?.getMethod("getArea")?.invoke(region) as? Int) ?: 0
     }
 
-    private fun createRegionFromOperations(world: Any, operations: List<BlockOperation>): Any? {
-        if (operations.isEmpty()) return createCuboidRegion(world, createBlockVector(0, 0, 0), createBlockVector(0, 0, 0))
+    private fun createRegionFromOperations(world: Any, operations: List<BlockOperation>): Any {
+        if (operations.isEmpty()) return createCuboidRegion(world, createBlockVector(0, 0, 0)!!, createBlockVector(0, 0, 0)!!)
         
         var minX = Int.MAX_VALUE
         var minY = Int.MAX_VALUE
@@ -400,11 +389,12 @@ class WorldEditAdapter(
             maxZ = maxOf(maxZ, op.z)
         }
 
-        return createCuboidRegion(world, createBlockVector(minX, minY, minZ), createBlockVector(maxX, maxY, maxZ))
+        return createCuboidRegion(world, createBlockVector(minX, minY, minZ)!!, createBlockVector(maxX, maxY, maxZ)!!)
     }
 
-    private fun createCuboidRegion(world: Any, min: Any, max: Any): Any? {
-        return weClasses.cuboidRegionClass?.getDeclaredConstructor(weClasses.worldEditClass?.getInterfaces().firstOrNull() ?: world.javaClass, weClasses.blockVector3Class, weClasses.blockVector3Class)?.newInstance(world, min, max)
+    private fun createCuboidRegion(world: Any, min: Any, max: Any): Any {
+        val worldInterface = weClasses.worldEditClass?.interfaces?.firstOrNull() ?: world::class.java
+        return weClasses.cuboidRegionClass?.getDeclaredConstructor(worldInterface, weClasses.blockVector3Class, weClasses.blockVector3Class)?.newInstance(world, min, max)!!
     }
 
     private fun persistSchematic(sessionId: UUID, operations: List<BlockOperation>) {
@@ -413,7 +403,7 @@ class WorldEditAdapter(
             val world = Bukkit.getWorld(operations.first().worldName) ?: return
             val weWorld = adaptWorld(world) ?: return
             val region = createRegionFromOperations(weWorld, operations)
-            val clipboard = callForwardExtentCopy(region, weWorld, callGetMinimumPoint(region))
+            val clipboard = callForwardExtentCopy(region, weWorld, callGetMinimumPoint(region)!!)!!
             val file = File(schematicsDir, "ainpc_$sessionId.schem")
             val format = findClipboardFormat("schem") ?: findClipboardFormat("schematic")
             format?.let { callWriteClipboard(it, clipboard, FileOutputStream(file)) }
@@ -476,7 +466,7 @@ class WorldEditAdapter(
                 for (op in operations) {
                     val pos = executor.createBlockVector(op.x, op.y, op.z)
                     val blockData = op.blockData ?: op.material.createBlockData()
-                    executor.callSetBlock(editSession, pos, blockData)
+                    executor.callSetBlock(editSession, pos!!, blockData)
                 }
                 executor.callFlush(editSession)
 

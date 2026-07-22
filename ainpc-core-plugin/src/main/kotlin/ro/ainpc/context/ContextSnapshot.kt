@@ -112,7 +112,7 @@ data class ContextSnapshot(
                 }.getOrDefault(emptyList())
             } else emptyList()
 
-            val npcRelInfo = if (npc != null && npc.uuid != null) {
+            val npcRelInfo = if (npc != null) {
                 runCatching {
                     plugin.relationshipService.getNPCInteractions(npc.uuid)
                         .take(3)
@@ -123,7 +123,7 @@ data class ContextSnapshot(
                 }.getOrDefault(emptyList())
             } else emptyList()
 
-            val npcBalance = if (npc != null && npc.uuid != null) {
+            val npcBalance = if (npc != null) {
                 plugin.npcEconomyService.getBalance("npc_${npc.uuid}")
             } else 0
 
@@ -142,7 +142,7 @@ data class ContextSnapshot(
                     else -> "clear"
                 }
             } else ""
-            val biomeType = runCatching { location?.block?.getBiome()?.name()?.lowercase() }.getOrDefault("")
+            val biomeType = runCatching { location?.block?.getBiome()?.key?.asString()?.lowercase() }.getOrDefault("")
             val biome = if (biomeType.isNullOrBlank()) "" else biomeType
             val timeOfDay = world?.time?.let { time ->
                 val normalized = (time % 24000L + 24000L) % 24000L

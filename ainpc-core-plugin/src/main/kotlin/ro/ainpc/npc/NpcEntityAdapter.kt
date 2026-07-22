@@ -148,7 +148,7 @@ class VillagerNpcEntityAdapter : NpcEntityAdapter {
             spawnedVillager.profession = profession
             if (npcLoc != null && npcLoc.world != null) {
                 val biomeType = npcLoc.world.getBiome(npcLoc.blockX, npcLoc.blockY, npcLoc.blockZ)
-                spawnedVillager.villagerType = NpcEntityAdapters.resolveVillagerType(biomeType.name())
+                spawnedVillager.villagerType = NpcEntityAdapters.resolveVillagerType(biomeType.key.asString())
             }
             configure(npc, spawnedVillager)
         }

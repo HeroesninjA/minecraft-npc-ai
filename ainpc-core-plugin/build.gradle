@@ -8,8 +8,12 @@ dependencies {
     api project(':ainpc-api')
 
     compileOnly "io.papermc.paper:paper-api:${paperVersion}"
-    // WorldEdit API is resolved at runtime via reflection if WorldEdit is installed
-    // No compile-time dependency needed
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.9") {
+        transitive = false
+    }
+    compileOnly("com.sk89q.worldedit:worldedit-core:7.3.9") {
+        transitive = false
+    }
 
     implementation "com.google.code.gson:gson:${gsonVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"

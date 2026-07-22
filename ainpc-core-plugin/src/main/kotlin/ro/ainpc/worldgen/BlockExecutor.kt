@@ -98,7 +98,7 @@ object BlockExecutorRegistry {
     private val executors = mutableMapOf<String, BlockExecutor>()
 
     fun register(provider: BlockExecutorProvider) {
-        providers[provider.executorId] = provider
+        providers[provider.getExecutorId()] = provider
     }
 
     fun unregister(executorId: String) {
@@ -107,9 +107,10 @@ object BlockExecutorRegistry {
     }
 
     fun getExecutor(executorId: String): BlockExecutor? {
-        return executors.getOrPut(executorId) {
-            providers[executorId]?.createExecutor()
-        }
+        if (executors.containsKey(executorId)) return executors[executorId]
+        val executor = providers[executorId]?.createExecutor()
+        if (executor != null) executors[executorId] = executor
+        return executor
     }
 
     fun getAvailableExecutors(): List<BlockExecutor> {

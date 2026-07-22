@@ -252,7 +252,7 @@ class NPCContext(
         }
         environmentContext = npc.plugin.environmentEngine.getContextForLocation(
             npcLocation.world.name,
-            npcLocation.block.biome.name()
+            npcLocation.block.biome.key.asString()
         )
     }
 

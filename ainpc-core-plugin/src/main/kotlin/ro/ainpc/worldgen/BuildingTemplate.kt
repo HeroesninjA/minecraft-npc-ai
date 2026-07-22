@@ -1,10 +1,52 @@
 package ro.ainpc.worldgen
 
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.element
+import kotlinx.serialization.encoding.CompositeDecoder
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.decodeStructure
+import kotlinx.serialization.encoding.encodeStructure
 import org.bukkit.Material
 import org.bukkit.block.data.BlockData
 import org.bukkit.util.Vector
+import java.util.Random
 import java.util.UUID
+
+object VectorSerializer : KSerializer<Vector> {
+    override val descriptor = buildClassSerialDescriptor("Vector") {
+        element<Double>("x")
+        element<Double>("y")
+        element<Double>("z")
+    }
+
+    override fun serialize(encoder: Encoder, value: Vector) {
+        encoder.encodeStructure(descriptor) {
+            encodeDoubleElement(descriptor, 0, value.x)
+            encodeDoubleElement(descriptor, 1, value.y)
+            encodeDoubleElement(descriptor, 2, value.z)
+        }
+    }
+
+    override fun deserialize(decoder: Decoder): Vector {
+        return decoder.decodeStructure(descriptor) {
+            var x = 0.0; var y = 0.0; var z = 0.0
+            while (true) {
+                when (val index = decodeElementIndex(descriptor)) {
+                    0 -> x = decodeDoubleElement(descriptor, 0)
+                    1 -> y = decodeDoubleElement(descriptor, 1)
+                    2 -> z = decodeDoubleElement(descriptor, 2)
+                    CompositeDecoder.DECODE_DONE -> break
+                    else -> error("Unexpected index: $index")
+                }
+            }
+            Vector(x, y, z)
+        }
+    }
+}
 
 @Serializable
 data class BuildingTemplate(
@@ -14,7 +56,7 @@ data class BuildingTemplate(
     val author: String,
     val version: Int,
     val blocks: List<TemplateBlock>,
-    val anchors: Map<String, Vector> = emptyMap(),
+    val anchors: Map<String, @Contextual Vector> = emptyMap(),
     val metadata: Map<String, String> = emptyMap()
 ) {
     fun toBlockOperations(
@@ -139,8 +181,8 @@ enum class Rotation {
     NONE,
     CLOCKWISE_90,
     CLOCKWISE_180,
-    CLOCKWISE_270
-} {
+    CLOCKWISE_270;
+
     fun apply(vector: Vector): Vector {
         return when (this) {
             NONE -> vector
@@ -156,8 +198,8 @@ enum class Mirror {
     NONE,
     X,
     Z,
-    XZ
-} {
+    XZ;
+
     fun apply(vector: Vector): Vector {
         return when (this) {
             NONE -> vector
@@ -168,7 +210,7 @@ enum class Mirror {
     }
 }
 
-typealias Tuple5<A, B, C, D, E> = Tuple5<A, B, C, D, E>
+
 
 @Serializable
 data class Tuple5<out A, out B, out C, out D, out E>(
@@ -178,5 +220,3 @@ data class Tuple5<out A, out B, out C, out D, out E>(
     val d: D,
     val e: E
 )
-
-import java.util.Random

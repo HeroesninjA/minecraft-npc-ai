@@ -38,8 +38,7 @@ abstract class AbstractPluginListener(
 
     @Deprecated(
         "Preferinta runSync() pentru a nu bloca thread-uri async. Aceasta metoda blocheaza " +
-            "thread-ul apelant pana cand operatia se executa pe main thread.",
-        ReplaceWith("runSync { ... }")
+            "thread-ul apelant pana cand operatia se executa pe main thread."
     )
     protected fun <T> callSync(supplier: Supplier<T>): T {
         if (Bukkit.isPrimaryThread()) {

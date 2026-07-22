@@ -77,6 +77,10 @@ subprojects {
             name = 'papermc'
             url = uri('https://repo.papermc.io/repository/maven-public/')
         }
+        maven {
+            name = 'enginehub'
+            url = uri('https://maven.enginehub.org/repo/')
+        }
     }
 
     java {

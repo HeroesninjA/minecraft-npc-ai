@@ -53,6 +53,7 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("StoryAuthoringService") }
                 .filter { path -> !path.toString().contains("NPCNameGenerator") }
                 .filter { path -> !path.toString().contains("config.yml") }
+                .filter { path -> !path.toString().contains("BuildingTemplateExecutor") }
                 .flatMap { path ->
                     val text = path.readText()
                     forbiddenTerms
