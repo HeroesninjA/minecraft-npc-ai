@@ -15,6 +15,9 @@ import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineSlot
 import java.util.Locale
 
+/**
+ * Npcmanagergui.
+ */
 class NpcManagerGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MANAGER
 

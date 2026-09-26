@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Scenariorolerule.
+ */
 class ScenarioRoleRule(
     val id: String,
     val description: String,

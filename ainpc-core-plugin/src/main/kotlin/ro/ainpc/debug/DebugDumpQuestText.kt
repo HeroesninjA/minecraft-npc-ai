@@ -3,6 +3,9 @@ package ro.ainpc.debug
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Debugdumpquesttext.
+ */
 object DebugDumpQuestText {
     @JvmStatic
     fun buildQuestText(plugin: AINPCPlugin): String {

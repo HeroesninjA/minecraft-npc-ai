@@ -2,6 +2,9 @@ package ro.ainpc.story
 
 import java.util.LinkedHashMap
 
+/**
+ * Placestorystate.
+ */
 class PlaceStoryState(
     placeId: String?,
     regionId: String?,

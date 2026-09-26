@@ -4,6 +4,9 @@ import org.bukkit.configuration.file.FileConfiguration
 import ro.ainpc.world.StoryMode
 import ro.ainpc.world.WorldMode
 
+/**
+ * Platformprofile.
+ */
 class PlatformProfile(
     val runtimeMode: RuntimeMode,
     val worldMode: WorldMode,

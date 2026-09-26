@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
+/**
+ * Questtemplateselectionservice.
+ */
 class QuestTemplateSelectionService(
     private val questTemplates: Map<String, ScenarioTemplate>,
     private val scenarioTemplates: Map<ScenarioType, ScenarioTemplate>,

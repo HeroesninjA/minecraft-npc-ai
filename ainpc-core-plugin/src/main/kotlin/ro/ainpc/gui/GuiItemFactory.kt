@@ -7,6 +7,9 @@ import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 
 
+/**
+ * Guiitemfactory.
+ */
 object GuiItemFactory {
     private val LEGACY: LegacyComponentSerializer = LegacyComponentSerializer.legacyAmpersand()
     private const val DEFAULT_WRAP_LENGTH = 34

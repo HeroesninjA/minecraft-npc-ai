@@ -6,10 +6,16 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Bankingservice.
+ */
 class BankingService(private val plugin: AINPCPlugin) {
     private val investments: MutableMap<UUID, MutableList<Investment>> = ConcurrentHashMap()
     private val interestCache: MutableMap<UUID, Double> = ConcurrentHashMap()
 
+/**
+ * Investment.
+ */
     data class Investment(
         val id: String,
         val amount: Int,

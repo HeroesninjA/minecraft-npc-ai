@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.gui.GuiService
 
+/**
+ * Confirmactiongui.
+ */
 class ConfirmActionGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.CONFIRM
 

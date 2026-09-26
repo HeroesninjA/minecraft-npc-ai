@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Mappingcreateplacegui.
+ */
 class MappingCreatePlaceGui : GuiScreen {
     private val placeTypes = listOf("house", "forge", "farm", "market", "tavern", "shop", "camp", "temple", "custom")
 

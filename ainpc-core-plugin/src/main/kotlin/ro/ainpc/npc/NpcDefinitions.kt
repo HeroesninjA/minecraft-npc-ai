@@ -1,5 +1,8 @@
 package ro.ainpc.npc
 
+/**
+ * Npclifecycletype.
+ */
 enum class NpcLifecycleType {
     PERMANENT,
     TEMPORARY,
@@ -7,18 +10,27 @@ enum class NpcLifecycleType {
     SCENE_ONLY
 }
 
+/**
+ * Npcpersistencemode.
+ */
 enum class NpcPersistenceMode {
     FULL,
     LIGHT,
     RUNTIME_ONLY
 }
 
+/**
+ * Npcsimulationmode.
+ */
 enum class NpcSimulationMode {
     FULL,
     LIGHT,
     NONE
 }
 
+/**
+ * Npcinteractionprofile.
+ */
 enum class NpcInteractionProfile {
     FULL_AI,
     QUEST_ONLY,
@@ -27,6 +39,9 @@ enum class NpcInteractionProfile {
     MINIMAL
 }
 
+/**
+ * Npcentitykind.
+ */
 enum class NpcEntityKind {
     VILLAGER,
     HUMANOID,
@@ -37,6 +52,9 @@ enum class NpcEntityKind {
     NONE
 }
 
+/**
+ * Npcspawnpolicy.
+ */
 enum class NpcSpawnPolicy {
     AUTO,
     PHASE,
@@ -44,6 +62,9 @@ enum class NpcSpawnPolicy {
     MANUAL
 }
 
+/**
+ * Npcscenarioactordefinition.
+ */
 data class NpcScenarioActorDefinition(
     val id: String,
     val name: String,

@@ -5,6 +5,9 @@ import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import ro.ainpc.world.WorldPlaceInfo
 
+/**
+ * Debugdumpaudit.
+ */
 object DebugDumpAudit {
     @JvmStatic
     fun buildAuditText(plugin: AINPCPlugin): String {

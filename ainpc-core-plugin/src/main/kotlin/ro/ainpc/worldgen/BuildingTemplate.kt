@@ -16,6 +16,9 @@ import org.bukkit.util.Vector
 import java.util.Random
 import java.util.UUID
 
+/**
+ * Vectorserializer.
+ */
 object VectorSerializer : KSerializer<Vector> {
     override val descriptor = buildClassSerialDescriptor("Vector") {
         element<Double>("x")
@@ -49,6 +52,9 @@ object VectorSerializer : KSerializer<Vector> {
 }
 
 @Serializable
+/**
+ * Buildingtemplate.
+ */
 data class BuildingTemplate(
     val id: String,
     val name: String,
@@ -121,6 +127,9 @@ data class BuildingTemplate(
 }
 
 @Serializable
+/**
+ * Templateblock.
+ */
 data class TemplateBlock(
     val x: Int,
     val y: Int,
@@ -177,6 +186,9 @@ data class TemplateBlock(
 }
 
 @Serializable
+/**
+ * Rotation.
+ */
 enum class Rotation {
     NONE,
     CLOCKWISE_90,
@@ -194,6 +206,9 @@ enum class Rotation {
 }
 
 @Serializable
+/**
+ * Mirror.
+ */
 enum class Mirror {
     NONE,
     X,
@@ -213,6 +228,9 @@ enum class Mirror {
 
 
 @Serializable
+/**
+ * Tuple5.
+ */
 data class Tuple5<out A, out B, out C, out D, out E>(
     val a: A,
     val b: B,

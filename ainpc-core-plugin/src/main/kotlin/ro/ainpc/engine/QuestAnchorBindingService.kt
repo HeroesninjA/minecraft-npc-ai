@@ -5,6 +5,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import ro.ainpc.progression.ProgressionAnchorBinding
 
+/**
+ * Questanchorbindingservice.
+ */
 class QuestAnchorBindingService(private val plugin: AINPCPlugin) {
     fun resolve(template: ScenarioTemplate, player: Player, npc: AINPC): QuestAnchorResolver.ResolvedQuestAnchors {
         if (template.objectives.isEmpty()) {

@@ -4,6 +4,9 @@ import ro.ainpc.progression.ProgressionGuiEntry
 import java.util.LinkedHashMap
 import java.util.Locale
 
+/**
+ * Questlogguipage.
+ */
 class QuestLogGuiPage(
     rows: List<Row>?,
     pageIndex: Int,
@@ -68,6 +71,9 @@ class QuestLogGuiPage(
         val entries: MutableList<ProgressionGuiEntry> = mutableListOf()
     }
 
+/**
+ * Row.
+ */
     class Row(
         header: Boolean,
         groupId: String?,

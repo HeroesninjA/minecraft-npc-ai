@@ -17,6 +17,9 @@ package ro.ainpc.progression
  * - Comutare repository de la `player_quests` la `player_progressions`
  * - Backward compatibility pentru datele vechi
  */
+/**
+ * Playerprogressionrecord.
+ */
 data class PlayerProgressionRecord(
     val playerUuid: String,
     val progressionId: String,
@@ -42,6 +45,9 @@ data class PlayerProgressionRecord(
 
 /**
  * Regulile de mapare între `PlayerProgressionRecord` și definiții.
+ */
+/**
+ * Playerprogressioncontract.
  */
 object PlayerProgressionContract {
     const val TABLE_NAME = "player_progressions"

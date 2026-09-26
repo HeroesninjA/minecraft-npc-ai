@@ -4,6 +4,9 @@ import org.bukkit.entity.Player
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
+/**
+ * Questguientrybuilder.
+ */
 class QuestGuiEntryBuilder(
     private val featurePackLoader: FeaturePackLoader,
     private val resolveTemplateForProgress: (PlayerQuestProgress, AINPC?) -> ScenarioTemplate?,

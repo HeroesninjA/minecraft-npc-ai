@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import org.bukkit.entity.Player
 
+/**
+ * Guiscreen.
+ */
 interface GuiScreen {
     fun key(): GuiKey
 

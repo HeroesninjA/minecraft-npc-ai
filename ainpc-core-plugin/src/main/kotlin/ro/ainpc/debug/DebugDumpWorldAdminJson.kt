@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.WorldAdminService
 
+/**
+ * Debugdumpworldadminjson.
+ */
 object DebugDumpWorldAdminJson {
     @JvmStatic
     fun buildWorldAdminSnapshotJson(plugin: AINPCPlugin): JsonObject {

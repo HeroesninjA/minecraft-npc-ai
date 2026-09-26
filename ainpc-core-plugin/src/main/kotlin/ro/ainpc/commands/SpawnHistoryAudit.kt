@@ -5,6 +5,9 @@ import ro.ainpc.spawn.SpawnBatchHistoryPager
 import ro.ainpc.spawn.SpawnBatchHistoryRecord
 import java.util.Locale
 
+/**
+ * Spawnhistoryauditsummary.
+ */
 data class SpawnHistoryAuditSummary(
     val complete: Boolean,
     val pageSize: Int,

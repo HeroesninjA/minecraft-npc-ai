@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Objectivetypealiasregistry.
+ */
 object ObjectiveTypeAliasRegistry {
     private val ALIASES = mapOf(
         "collect_item" to listOf("item", "collect", "collectitem", "fetch", "gather"),

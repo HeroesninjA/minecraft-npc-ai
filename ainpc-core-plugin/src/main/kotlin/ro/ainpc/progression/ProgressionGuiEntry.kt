@@ -3,6 +3,9 @@ package ro.ainpc.progression
 import ro.ainpc.engine.*
 import java.util.Locale
 
+/**
+ * Progressionguientry.
+ */
 class ProgressionGuiEntry(
     selector: String?,
     progressionId: String?,

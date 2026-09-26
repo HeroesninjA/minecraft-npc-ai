@@ -7,6 +7,9 @@ import java.util.Locale
 import java.util.Objects
 
 
+/**
+ * Progressionrepository.
+ */
 class ProgressionRepository(
     private val statementProvider: StatementProvider?,
     private val definitionsSupplier: (() -> List<ProgressionDefinition>)?

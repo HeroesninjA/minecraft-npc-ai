@@ -13,6 +13,9 @@ import java.lang.reflect.Method
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Worldeditadapter.
+ */
 class WorldEditAdapter(
     private val plugin: Plugin,
     private val schematicsDir: File,
@@ -412,12 +415,18 @@ class WorldEditAdapter(
         }
     }
 
+/**
+ * Sessiondata.
+ */
     data class SessionData(
         val id: UUID,
         val operations: List<BlockOperation>,
         val worldName: String
     )
 
+/**
+ * Worldeditpreviewsession.
+ */
     class WorldEditPreviewSession(
         override val id: UUID,
         override val operations: List<BlockOperation>,
@@ -488,6 +497,9 @@ class WorldEditAdapter(
         }
     }
 
+/**
+ * Worldeditadapterprovider.
+ */
     class WorldEditAdapterProvider(private val plugin: Plugin) : BlockExecutorProvider {
         private var adapter: WorldEditAdapter? = null
 

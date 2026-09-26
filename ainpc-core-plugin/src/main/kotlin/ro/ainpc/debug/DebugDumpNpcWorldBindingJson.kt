@@ -9,6 +9,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import java.sql.ResultSet
 import java.sql.SQLException
 
+/**
+ * Debugdumpnpcworldbindingjson.
+ */
 object DebugDumpNpcWorldBindingJson {
     @JvmStatic
     fun buildNpcWorldBindingsJson(plugin: AINPCPlugin): JsonObject {

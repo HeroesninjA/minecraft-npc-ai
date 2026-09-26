@@ -70,6 +70,9 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Scenarioengine.
+ */
 class ScenarioEngine(private val plugin: AINPCPlugin) {
     private val progressionLifecyclePublisher = QuestProgressionLifecyclePublisher(plugin)
     private val progressionEventPublisher = QuestProgressionEventPublisher(plugin) { progress ->

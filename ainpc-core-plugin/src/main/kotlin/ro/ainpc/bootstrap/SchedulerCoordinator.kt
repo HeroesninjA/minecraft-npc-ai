@@ -4,6 +4,9 @@ import org.bukkit.scheduler.BukkitTask
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.utils.ConfigKeys
 
+/**
+ * Schedulercoordinator.
+ */
 class SchedulerCoordinator(
     private val plugin: AINPCPlugin
 ) {

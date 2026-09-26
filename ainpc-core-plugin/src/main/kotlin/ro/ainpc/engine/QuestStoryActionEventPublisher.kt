@@ -10,6 +10,9 @@ import ro.ainpc.npc.AINPC
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Queststoryactioneventpublisher.
+ */
 class QuestStoryActionEventPublisher(private val plugin: AINPCPlugin) {
     fun publish(
         player: Player,

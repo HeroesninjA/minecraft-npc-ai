@@ -5,6 +5,9 @@ import org.bukkit.Material
 import org.bukkit.World
 import java.util.EnumSet
 
+/**
+ * Vanillavillagescanner.
+ */
 class VanillaVillageScanner {
     @Deprecated("Fluxurile de productie trebuie sa foloseasca VanillaVillageScanService.submit.")
     fun scan(center: Location?, horizontalRadius: Int, verticalRadius: Int): VanillaVillageScanResult {
@@ -98,6 +101,9 @@ class VanillaVillageScanner {
     }
 }
 
+/**
+ * Vanillavillagescansession.
+ */
 class VanillaVillageScanSession internal constructor(
     private val worldName: String,
     private val centerX: Int,

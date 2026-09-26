@@ -1,5 +1,8 @@
 package ro.ainpc.debug
 
+/**
+ * Debugdumpmanifest.
+ */
 object DebugDumpManifest {
     const val SCHEMA_VERSION = 1
 

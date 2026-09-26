@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Useitemobjectivehandler.
+ */
 class UseItemObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "use_item"
 

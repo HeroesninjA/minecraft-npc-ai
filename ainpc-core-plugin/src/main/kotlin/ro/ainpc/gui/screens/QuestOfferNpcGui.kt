@@ -12,6 +12,9 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
 import java.util.Locale
 
+/**
+ * Questoffernpcgui.
+ */
 class QuestOfferNpcGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_OFFER_NPC
 

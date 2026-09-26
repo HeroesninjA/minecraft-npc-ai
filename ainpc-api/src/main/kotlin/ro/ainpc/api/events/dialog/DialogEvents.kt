@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Dialogsessionstartedeventpayload.
+ */
 class DialogSessionStartedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -25,6 +28,9 @@ class DialogSessionStartedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogsessionstartedevent.
+ */
 class DialogSessionStartedEvent(
     val payload: DialogSessionStartedEventPayload
 ) : org.bukkit.event.Event(), org.bukkit.event.Cancellable {
@@ -39,6 +45,9 @@ class DialogSessionStartedEvent(
     }
 }
 
+/**
+ * Dialogmessagereceivedeventpayload.
+ */
 class DialogMessageReceivedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -60,6 +69,9 @@ class DialogMessageReceivedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogmessagereceivedevent.
+ */
 class DialogMessageReceivedEvent(
     val payload: DialogMessageReceivedEventPayload
 ) : org.bukkit.event.Event(), org.bukkit.event.Cancellable {
@@ -74,6 +86,9 @@ class DialogMessageReceivedEvent(
     }
 }
 
+/**
+ * Dialogintentresolvedeventpayload.
+ */
 class DialogIntentResolvedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -97,6 +112,9 @@ class DialogIntentResolvedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogintentresolvedevent.
+ */
 class DialogIntentResolvedEvent(
     val payload: DialogIntentResolvedEventPayload
 ) : org.bukkit.event.Event() {
@@ -107,6 +125,9 @@ class DialogIntentResolvedEvent(
     }
 }
 
+/**
+ * Dialogresponsegeneratedeventpayload.
+ */
 class DialogResponseGeneratedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -127,6 +148,9 @@ class DialogResponseGeneratedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogresponsegeneratedevent.
+ */
 class DialogResponseGeneratedEvent(
     val payload: DialogResponseGeneratedEventPayload
 ) : org.bukkit.event.Event() {
@@ -137,6 +161,9 @@ class DialogResponseGeneratedEvent(
     }
 }
 
+/**
+ * Dialogsessionendedeventpayload.
+ */
 class DialogSessionEndedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -153,6 +180,9 @@ class DialogSessionEndedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogsessionendedevent.
+ */
 class DialogSessionEndedEvent(
     val payload: DialogSessionEndedEventPayload
 ) : org.bukkit.event.Event() {

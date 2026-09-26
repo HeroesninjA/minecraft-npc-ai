@@ -27,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Listener pentru progresul obiectivelor de quest bazate pe evenimente.
  */
+/**
+ * Questobjectivelistener.
+ */
 class QuestObjectiveListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     private val playerRegions: MutableMap<UUID, String> = ConcurrentHashMap()
     private val playerPlaces: MutableMap<UUID, String> = ConcurrentHashMap()

@@ -23,6 +23,9 @@ import kotlin.math.min
  * Contextul curent al unui NPC - informatii despre mediu si situatie
  * Folosit pentru luarea deciziilor si generarea dialogului
  */
+/**
+ * Npccontext.
+ */
 class NPCContext(
     // NPC-ul asociat
     val npc: AINPC

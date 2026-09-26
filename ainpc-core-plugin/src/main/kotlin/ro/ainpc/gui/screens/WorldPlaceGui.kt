@@ -15,6 +15,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
 
+/**
+ * Worldplacegui.
+ */
 class WorldPlaceGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.PLACE
 

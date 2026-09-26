@@ -6,6 +6,9 @@ import ro.ainpc.api.ReputationEntry
 import java.sql.SQLException
 import java.util.logging.Level
 
+/**
+ * Reputationservice.
+ */
 class ReputationService(private val plugin: AINPCPlugin) : ReputationApi {
 
     override fun getReputation(playerUuid: String, scopeType: String, scopeId: String): Int {

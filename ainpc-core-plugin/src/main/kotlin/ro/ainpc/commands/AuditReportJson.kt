@@ -6,6 +6,9 @@ import ro.ainpc.database.DatabaseSchemaInventory
 import java.time.Instant
 import java.util.Locale
 
+/**
+ * Auditreportjson.
+ */
 object AuditReportJson {
     const val SCHEMA_VERSION = 1
     const val DOCUMENT_TYPE = "ainpc-audit-report"

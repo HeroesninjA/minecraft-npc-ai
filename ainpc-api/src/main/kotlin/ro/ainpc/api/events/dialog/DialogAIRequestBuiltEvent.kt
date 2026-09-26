@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Dialogairequestbuilteventpayload.
+ */
 class DialogAIRequestBuiltEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -25,6 +28,9 @@ class DialogAIRequestBuiltEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Dialogairequestbuiltevent.
+ */
 class DialogAIRequestBuiltEvent(
     val payload: DialogAIRequestBuiltEventPayload
 ) : org.bukkit.event.Event() {

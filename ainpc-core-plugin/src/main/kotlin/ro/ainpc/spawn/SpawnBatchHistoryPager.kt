@@ -3,11 +3,17 @@ package ro.ainpc.spawn
 import java.sql.PreparedStatement
 import java.util.Locale
 
+/**
+ * Spawnbatchhistorycursor.
+ */
 data class SpawnBatchHistoryCursor(
     val startedAt: Long,
     val batchKey: String,
 )
 
+/**
+ * Spawnbatchhistoryrecord.
+ */
 data class SpawnBatchHistoryRecord(
     val batchKey: String,
     val scopeType: String,
@@ -25,6 +31,9 @@ data class SpawnBatchHistoryRecord(
     val completedAt: Long,
 )
 
+/**
+ * Spawnbatchhistorypager.
+ */
 class SpawnBatchHistoryPager(
     private val prepareStatement: (String) -> PreparedStatement,
 ) {

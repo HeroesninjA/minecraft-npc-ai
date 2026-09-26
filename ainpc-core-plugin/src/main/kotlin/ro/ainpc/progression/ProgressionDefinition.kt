@@ -4,6 +4,9 @@ package ro.ainpc.progression
 import ro.ainpc.engine.*
 import java.util.Locale
 
+/**
+ * Progressiondefinition.
+ */
 class ProgressionDefinition(
     progressionId: String?,
     packId: String?,

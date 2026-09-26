@@ -11,6 +11,9 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import ro.ainpc.mcp.bridge.McpCircuitBreaker
 
+/**
+ * Httpmcpruntimeclient.
+ */
 class HttpMcpRuntimeClient(
     private val config: McpRuntimeConfig,
     private val requestExecutor: (HttpRequest) -> HttpResponse<String>

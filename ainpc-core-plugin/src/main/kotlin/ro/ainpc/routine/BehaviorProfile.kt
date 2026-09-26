@@ -1,5 +1,8 @@
 package ro.ainpc.routine
 
+/**
+ * Behaviorprofile.
+ */
 data class BehaviorProfile(
     val profileId: String,
     val occupation: String = "",
@@ -24,6 +27,9 @@ data class BehaviorProfile(
     val previewPoints: List<PreviewPoint> = emptyList(),
     val metadata: Map<String, String> = emptyMap()
 ) {
+/**
+ * Scheduleentry.
+ */
     data class ScheduleEntry(
         val label: String,
         val startTick: Long,
@@ -34,6 +40,9 @@ data class BehaviorProfile(
         val state: String = ""
     )
 
+/**
+ * Fallbackrule.
+ */
     data class FallbackRule(
         val condition: String,
         val slot: String,
@@ -41,6 +50,9 @@ data class BehaviorProfile(
         val state: String = ""
     )
 
+/**
+ * Previewpoint.
+ */
     data class PreviewPoint(
         val label: String,
         val worldTime: Long

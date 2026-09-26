@@ -9,6 +9,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.mapping.MappingPoint
 import ro.ainpc.world.mapping.MappingWandMode
 
+/**
+ * Mappingwandlistener.
+ */
 class MappingWandListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {

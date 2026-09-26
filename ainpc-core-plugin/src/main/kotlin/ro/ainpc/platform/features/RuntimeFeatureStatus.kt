@@ -2,6 +2,9 @@ package ro.ainpc.platform.features
 
 import java.util.Locale
 
+/**
+ * Runtimefeaturestatus.
+ */
 enum class RuntimeFeatureStatus(
     val id: String,
     private val allowsRuntimeUseValue: Boolean

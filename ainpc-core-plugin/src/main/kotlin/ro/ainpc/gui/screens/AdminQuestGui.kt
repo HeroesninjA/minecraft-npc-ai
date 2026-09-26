@@ -15,6 +15,9 @@ import ro.ainpc.progression.ProgressionFormatUtil
 import ro.ainpc.progression.StoredProgression
 import ro.ainpc.progression.StoredProgressionSummary
 
+/**
+ * Adminquestgui.
+ */
 class AdminQuestGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.ADMIN_QUEST
 

@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import org.bukkit.Material
 
+/**
+ * Guinavigation.
+ */
 object GuiNavigation {
     @JvmStatic
     fun addStandardControls(context: GuiRenderContext, refreshKey: GuiKey) {

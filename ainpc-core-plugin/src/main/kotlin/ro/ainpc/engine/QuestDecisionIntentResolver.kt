@@ -6,7 +6,13 @@ import java.util.Locale
 /**
  * Interpreteaza raspunsurile scurte ale jucatorilor doar cand exista o oferta de quest activa.
  */
+/**
+ * Questdecisionintentresolver.
+ */
 class QuestDecisionIntentResolver {
+/**
+ * Intent.
+ */
     enum class Intent {
         NONE,
         OFFER,

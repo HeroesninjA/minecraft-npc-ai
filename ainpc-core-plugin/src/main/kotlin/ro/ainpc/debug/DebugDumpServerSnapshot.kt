@@ -34,6 +34,9 @@ internal data class DebugDumpServerSnapshotData(
     val worlds: List<DebugDumpWorldSummary>,
 )
 
+/**
+ * Debugdumpserversnapshot.
+ */
 object DebugDumpServerSnapshot {
     @JvmStatic
     fun buildSummary(scope: String, dumpRoot: Path, plugin: AINPCPlugin): String =

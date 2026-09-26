@@ -8,6 +8,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Questprogresspersistenceservice.
+ */
 class QuestProgressPersistenceService(
     private val plugin: AINPCPlugin,
     private val gson: com.google.gson.Gson

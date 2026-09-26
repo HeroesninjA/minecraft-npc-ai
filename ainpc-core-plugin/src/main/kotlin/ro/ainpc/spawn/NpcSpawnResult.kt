@@ -2,6 +2,9 @@ package ro.ainpc.spawn
 
 import ro.ainpc.npc.AINPC
 
+/**
+ * Npcspawnresult.
+ */
 class NpcSpawnResult(
     success: Boolean,
     created: Boolean,

@@ -3,6 +3,9 @@ package ro.ainpc.bootstrap
 import java.util.function.Supplier
 import java.util.logging.Logger
 
+/**
+ * Lazyservice.
+ */
 class LazyService<T> private constructor(
     private val name: String,
     private val factory: Supplier<T>

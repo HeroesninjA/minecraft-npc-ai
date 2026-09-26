@@ -1,5 +1,8 @@
 package ro.ainpc.environment
 
+/**
+ * Environmentcontext.
+ */
 data class EnvironmentContext(
     val worldName: String,
     val timeOfDay: TimeOfDay,
@@ -35,6 +38,9 @@ data class EnvironmentContext(
         }
     }
 
+/**
+ * Timeofday.
+ */
     enum class TimeOfDay(val id: String, val displayName: String) {
         DAWN("dawn", "Zori"),
         MORNING("morning", "Dimineata"),
@@ -55,6 +61,9 @@ data class EnvironmentContext(
         }
     }
 
+/**
+ * Weather.
+ */
     enum class Weather(val id: String, val displayName: String) {
         CLEAR("clear", "Senin"),
         RAIN("rain", "Ploaie"),
@@ -74,6 +83,9 @@ data class EnvironmentContext(
         }
     }
 
+/**
+ * Season.
+ */
     enum class Season(val id: String, val displayName: String) {
         SPRING("spring", "Primavara"),
         SUMMER("summer", "Vara"),
@@ -94,6 +106,9 @@ data class EnvironmentContext(
         }
     }
 
+/**
+ * Temperature.
+ */
     enum class Temperature(val id: String, val displayName: String) {
         FREEZING("freezing", "Inghet"),
         COLD("cold", "Rece"),

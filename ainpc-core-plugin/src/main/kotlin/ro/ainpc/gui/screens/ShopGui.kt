@@ -14,6 +14,9 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.npc.AINPC
 import java.util.Locale
 
+/**
+ * Shopgui.
+ */
 class ShopGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.SHOP
 

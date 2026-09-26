@@ -6,6 +6,9 @@ import org.bukkit.inventory.ItemStack
 import ro.ainpc.AINPCPlugin
 import java.util.HashMap
 
+/**
+ * Guirendercontext.
+ */
 class GuiRenderContext(
     plugin: AINPCPlugin,
     service: GuiService,

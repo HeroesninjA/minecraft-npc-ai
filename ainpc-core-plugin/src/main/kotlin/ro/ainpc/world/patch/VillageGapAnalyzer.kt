@@ -10,6 +10,9 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Villagegapanalyzer.
+ */
 class VillageGapAnalyzer {
     fun analyze(worldAdmin: WorldAdminApi?, regionSelector: String?, options: PatchPlannerOptions?): GapReport {
         val safeOptions = options ?: PatchPlannerOptions.forTargetPopulation(0)

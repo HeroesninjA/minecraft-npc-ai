@@ -12,6 +12,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import java.util.Locale
 import kotlin.math.max
 
+/**
+ * Npcspawnorchestrator.
+ */
 class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
     private val houseAllocationValidator = HouseAllocationValidator()
 

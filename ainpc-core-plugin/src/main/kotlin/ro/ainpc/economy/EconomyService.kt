@@ -7,6 +7,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Economyservice.
+ */
 class EconomyService(private val plugin: AINPCPlugin) {
     private val balances: MutableMap<UUID, Int> = ConcurrentHashMap()
     private var dirty: Boolean = false

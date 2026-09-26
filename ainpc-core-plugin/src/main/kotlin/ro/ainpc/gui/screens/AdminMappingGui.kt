@@ -13,6 +13,9 @@ import ro.ainpc.gui.GuiScreen
 import ro.ainpc.world.RegionIdentityProvider
 import ro.ainpc.world.RegionType
 
+/**
+ * Adminmappinggui.
+ */
 class AdminMappingGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.ADMIN_MAPPING
 

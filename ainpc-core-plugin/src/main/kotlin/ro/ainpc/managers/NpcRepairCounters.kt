@@ -1,5 +1,8 @@
 package ro.ainpc.managers
 
+/**
+ * Npcrepaircounters.
+ */
 class NpcRepairCounters {
     var duplicateDbRows: Int = 0
 

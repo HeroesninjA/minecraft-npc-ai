@@ -2,6 +2,9 @@ package ro.ainpc.world.mapping
 
 import java.util.UUID
 
+/**
+ * Mappingdraft.
+ */
 class MappingDraft(
     private val playerId: UUID?,
     private val kind: MappingDraftKind,

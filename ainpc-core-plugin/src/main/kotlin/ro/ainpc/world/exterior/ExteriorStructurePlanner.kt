@@ -2,6 +2,9 @@ package ro.ainpc.world.exterior
 
 import java.util.Locale
 
+/**
+ * Exteriorstructureplanner.
+ */
 class ExteriorStructurePlanner {
     fun plan(typeId: String?, baseId: String?): ExteriorStructurePlan {
         val blueprint = ExteriorStructureBlueprintCatalog.find(typeId)

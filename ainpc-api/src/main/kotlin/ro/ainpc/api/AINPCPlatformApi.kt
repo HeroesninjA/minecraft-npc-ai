@@ -8,6 +8,9 @@ import java.nio.file.Path
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Ainpcplatformapi.
+ */
 interface AINPCPlatformApi {
     val runtimeMode: RuntimeMode
 
@@ -57,6 +60,9 @@ interface AINPCPlatformApi {
     }
 
     @FunctionalInterface
+/**
+ * Objectiveprogresshandler.
+ */
     interface ObjectiveProgressHandler {
         fun handleProgress(playerUuid: String, currentProgress: Int, requiredAmount: Int): Int
     }

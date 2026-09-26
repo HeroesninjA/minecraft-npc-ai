@@ -2,6 +2,9 @@ package ro.ainpc.world.fixture
 
 import ro.ainpc.api.WorldAdminApi
 
+/**
+ * Controlledtestworldfixturevalidationreport.
+ */
 class ControlledTestWorldFixtureValidationReport(
     fixtureId: String?,
     expectedRegionsValue: Int,
@@ -44,6 +47,9 @@ class ControlledTestWorldFixtureValidationReport(
     fun success(): Boolean = errors.isEmpty()
 }
 
+/**
+ * Controlledtestworldfixturevalidator.
+ */
 class ControlledTestWorldFixtureValidator {
     fun validate(worldAdmin: WorldAdminApi, plan: ControlledTestWorldFixturePlan): ControlledTestWorldFixtureValidationReport {
         val errors = ArrayList<String>()

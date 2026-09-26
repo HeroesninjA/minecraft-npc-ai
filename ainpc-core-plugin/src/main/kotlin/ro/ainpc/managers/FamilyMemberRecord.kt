@@ -1,5 +1,8 @@
 package ro.ainpc.managers
 
+/**
+ * Familymemberrecord.
+ */
 data class FamilyMemberRecord(
     private val nameValue: String?,
     private val relationTypeValue: String?,

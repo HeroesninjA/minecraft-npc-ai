@@ -20,6 +20,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 
+/**
+ * Dialogueengine.
+ */
 class DialogueEngine(
     private val plugin: AINPCPlugin,
     private val openAIService: OpenAIService
@@ -405,6 +408,9 @@ class DialogueEngine(
         return processTemplate(template, npc, context)
     }
 
+/**
+ * Dialogueintent.
+ */
     enum class DialogueIntent(val description: String) {
         GREET("Salut simplu"),
         GREET_FRIEND("Salut prieten"),

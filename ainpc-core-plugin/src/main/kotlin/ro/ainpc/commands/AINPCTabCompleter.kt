@@ -18,6 +18,9 @@ import java.util.Arrays
 import java.util.Locale
 import java.util.stream.Collectors
 
+/**
+ * Ainpctabcompleter.
+ */
 class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
     override fun onTabComplete(
         sender: CommandSender,

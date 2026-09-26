@@ -7,6 +7,9 @@ import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.spawn.NarrativeGenerator
 import ro.ainpc.spawn.PopulationPlan
 
+/**
+ * Debugdumpnarrativeplanjson.
+ */
 object DebugDumpNarrativePlanJson {
     @JvmStatic
     fun buildNarrativePlanJson(plugin: AINPCPlugin): JsonObject {

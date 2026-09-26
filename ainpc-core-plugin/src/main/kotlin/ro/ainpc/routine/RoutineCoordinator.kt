@@ -8,6 +8,9 @@ import ro.ainpc.npc.NPCState
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Routinecoordinator.
+ */
 class RoutineCoordinator(private val plugin: AINPCPlugin) {
     val routineService: RoutineService get() = plugin.routineService
     val routineEngine: RoutineEngine get() = routineService.routineEngine
@@ -17,6 +20,9 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
     private val npcPausedRoutines: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
     private val npcCustomOverrides: MutableMap<UUID, RoutineOverride> = ConcurrentHashMap()
 
+/**
+ * Socialgathering.
+ */
     data class SocialGathering(
         val location: String,
         val npcUuids: List<UUID>,
@@ -25,6 +31,9 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         val size: Int
     )
 
+/**
+ * Routineoverride.
+ */
     data class RoutineOverride(
         val forcedSlot: RoutineSlot? = null,
         val forcedAnchor: AINPC.OwnedLocation? = null,

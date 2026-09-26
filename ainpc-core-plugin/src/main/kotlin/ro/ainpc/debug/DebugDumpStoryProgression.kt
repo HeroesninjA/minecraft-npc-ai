@@ -2,6 +2,9 @@ package ro.ainpc.debug
 
 import ro.ainpc.engine.FeaturePackLoader
 
+/**
+ * Storyprogressionlinkindex.
+ */
 class StoryProgressionLinkIndex(
     private val available: Boolean,
     private val error: String?,
@@ -14,6 +17,9 @@ class StoryProgressionLinkIndex(
     fun linksBySelector(): Map<String, List<StoryProgressionLink>> = linksBySelector
 }
 
+/**
+ * Storyprogressionlink.
+ */
 class StoryProgressionLink(
     private val playerUuid: String?,
     private val templateId: String?,
@@ -36,6 +42,9 @@ class StoryProgressionLink(
     fun scenario(): FeaturePackLoader.ScenarioDefinition? = scenario
 }
 
+/**
+ * Storyprogressionselector.
+ */
 class StoryProgressionSelector(
     private val source: String?,
     private val selector: String?,
@@ -44,6 +53,9 @@ class StoryProgressionSelector(
     fun selector(): String = selector ?: ""
 }
 
+/**
+ * Storyprogressionmatch.
+ */
 class StoryProgressionMatch(
     private val link: StoryProgressionLink,
     private val matchSource: String?,

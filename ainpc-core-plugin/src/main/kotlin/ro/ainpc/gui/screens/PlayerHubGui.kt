@@ -8,6 +8,9 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Playerhubgui.
+ */
 class PlayerHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.PLAYER_HUB
     override fun title(player: Player): String = "&0AINPC"

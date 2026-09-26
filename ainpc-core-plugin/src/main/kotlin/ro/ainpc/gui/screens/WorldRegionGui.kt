@@ -15,6 +15,9 @@ import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 
+/**
+ * Worldregiongui.
+ */
 class WorldRegionGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.REGION
 

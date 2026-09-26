@@ -4,6 +4,9 @@ import org.bukkit.configuration.ConfigurationSection
 import ro.ainpc.topology.TopologyCategory
 import java.util.function.BiConsumer
 
+/**
+ * Featurepackdefaults.
+ */
 object FeaturePackDefaults {
     @JvmStatic
     fun loadNeutralFallbackPack(

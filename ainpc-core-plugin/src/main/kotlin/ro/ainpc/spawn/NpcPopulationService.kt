@@ -3,6 +3,9 @@ package ro.ainpc.spawn
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.managers.NPCManager
 
+/**
+ * Npcpopulationservice.
+ */
 class NpcPopulationService(
     private val plugin: AINPCPlugin,
     private val npcManager: NPCManager
@@ -39,6 +42,9 @@ class NpcPopulationService(
         return PopulationStats(all.size, spawned, despawned, mapOf(worldName to all.size), byProfession.toMap())
     }
 
+/**
+ * Populationstats.
+ */
     data class PopulationStats(
         val total: Int,
         val spawned: Int,

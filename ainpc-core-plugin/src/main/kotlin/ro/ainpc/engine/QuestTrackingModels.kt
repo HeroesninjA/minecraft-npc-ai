@@ -4,6 +4,9 @@ import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
+/**
+ * Questtrackingtarget.
+ */
 class QuestTrackingTarget(
     anchorType: String?,
     anchorId: String?,
@@ -36,6 +39,9 @@ class QuestTrackingTarget(
     fun hasLocation(): Boolean = hasLocation
 }
 
+/**
+ * Questtrackingstep.
+ */
 class QuestTrackingStep(
     objectiveLabel: String?,
     private val target: QuestTrackingTarget?,

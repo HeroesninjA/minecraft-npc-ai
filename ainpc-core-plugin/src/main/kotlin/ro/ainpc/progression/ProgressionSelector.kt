@@ -3,6 +3,9 @@ package ro.ainpc.progression
 import java.util.Locale
 import java.util.regex.Pattern
 
+/**
+ * Progressionselector.
+ */
 class ProgressionSelector(
     raw: String?,
     normalized: String?,

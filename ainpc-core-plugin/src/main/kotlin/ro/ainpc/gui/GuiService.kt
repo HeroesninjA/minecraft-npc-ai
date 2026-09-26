@@ -51,6 +51,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentMap
 
+/**
+ * Guiservice.
+ */
 class GuiService(private val plugin: AINPCPlugin) {
     private val skipConfirmations: Boolean
         get() = plugin.config.getBoolean("gui.skip_confirmations", false)
@@ -816,6 +819,9 @@ class GuiService(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Confirmrequest.
+ */
     data class ConfirmRequest(
         val title: String?,
         val command: String?,
@@ -836,6 +842,9 @@ class GuiService(private val plugin: AINPCPlugin) {
         fun warningLines(): List<String> = safeWarningLines.toList()
     }
 
+/**
+ * Textinputrequest.
+ */
     class TextInputRequest(
         title: String?,
         formKey: String,
@@ -873,6 +882,9 @@ class GuiService(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Buildmodehistoryentry.
+ */
     data class BuildModeHistoryEntry(
         val timestampMillis: Long,
         val action: String,

@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import org.bukkit.entity.Player
 
+/**
+ * Guiaccesshelper.
+ */
 object GuiAccessHelper {
     @JvmStatic
     fun roleOf(player: Player): GuiRole = GuiRole.resolve(player)

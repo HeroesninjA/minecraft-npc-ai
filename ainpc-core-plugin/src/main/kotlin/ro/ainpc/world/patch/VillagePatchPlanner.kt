@@ -2,6 +2,9 @@ package ro.ainpc.world.patch
 
 import java.util.Locale
 
+/**
+ * Villagepatchplanner.
+ */
 class VillagePatchPlanner {
     fun plan(report: GapReport?, options: PatchPlannerOptions?): PatchPlannerResult {
         val safeOptions = options ?: PatchPlannerOptions.forTargetPopulation(report?.targetPopulation() ?: 0)

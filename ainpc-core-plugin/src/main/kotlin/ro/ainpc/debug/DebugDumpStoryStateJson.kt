@@ -6,6 +6,9 @@ import ro.ainpc.AINPCPlugin
 import java.sql.ResultSet
 import java.sql.SQLException
 
+/**
+ * Debugdumpstorystatejson.
+ */
 object DebugDumpStoryStateJson {
     @JvmStatic
     fun buildStoryStatesJson(plugin: AINPCPlugin): JsonObject {

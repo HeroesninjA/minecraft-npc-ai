@@ -16,6 +16,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.Locale
 
+/**
+ * Debugdumpsupport.
+ */
 object DebugDumpSupport {
     @JvmStatic
     fun normalizeQuestStageCompletionMode(completionMode: String?): String {

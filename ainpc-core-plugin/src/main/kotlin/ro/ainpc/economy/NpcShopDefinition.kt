@@ -1,10 +1,16 @@
 package ro.ainpc.economy
 
+/**
+ * Shopcurrency.
+ */
 enum class ShopCurrency {
     ITEM,
     VAULT_OPTIONAL
 }
 
+/**
+ * Restockpolicy.
+ */
 enum class RestockPolicy {
     NEVER,
     DAILY,
@@ -12,6 +18,9 @@ enum class RestockPolicy {
     ON_EMPTY
 }
 
+/**
+ * Npcshopdefinition.
+ */
 data class NpcShopDefinition(
     val shopId: String,
     val npcRole: String,

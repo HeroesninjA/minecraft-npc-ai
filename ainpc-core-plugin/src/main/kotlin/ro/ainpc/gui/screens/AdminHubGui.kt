@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Adminhubgui.
+ */
 class AdminHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.ADMIN_HUB
     override fun title(player: Player): String = "&0Admin"

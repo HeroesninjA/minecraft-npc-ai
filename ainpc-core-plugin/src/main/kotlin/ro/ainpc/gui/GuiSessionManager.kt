@@ -5,6 +5,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
+/**
+ * Guisessionmanager.
+ */
 class GuiSessionManager {
     private val sessionsById: ConcurrentMap<UUID, GuiSession> = ConcurrentHashMap()
     private val sessionsByPlayer: ConcurrentMap<UUID, UUID> = ConcurrentHashMap()

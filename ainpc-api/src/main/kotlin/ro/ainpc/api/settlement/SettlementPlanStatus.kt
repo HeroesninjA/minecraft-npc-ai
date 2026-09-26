@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Settlementplanstatus.
+ */
 enum class SettlementPlanStatus(val id: String) {
     DRAFT("draft"),
     VALIDATED("validated"),

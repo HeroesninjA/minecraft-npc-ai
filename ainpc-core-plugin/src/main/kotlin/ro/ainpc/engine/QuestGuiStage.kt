@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questguistage.
+ */
 data class QuestGuiStage(
     val id: String,
     val label: String,

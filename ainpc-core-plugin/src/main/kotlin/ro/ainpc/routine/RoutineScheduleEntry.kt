@@ -2,6 +2,9 @@ package ro.ainpc.routine
 
 import kotlin.math.max
 
+/**
+ * Routinescheduleentry.
+ */
 class RoutineScheduleEntry(
     label: String?,
     worldTime: Long,

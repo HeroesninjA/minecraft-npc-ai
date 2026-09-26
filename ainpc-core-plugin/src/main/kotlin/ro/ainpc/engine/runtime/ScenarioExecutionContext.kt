@@ -2,6 +2,9 @@ package ro.ainpc.engine.runtime
 
 import java.util.LinkedHashMap
 
+/**
+ * Scenarioexecutioncontext.
+ */
 class ScenarioExecutionContext(
     playerUuid: String?,
     playerName: String?,

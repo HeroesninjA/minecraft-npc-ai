@@ -4,6 +4,9 @@ package ro.ainpc.npc
  * Actiunile posibile pe care un NPC le poate face
  * Folosit in sistemul de scoring pentru decizii
  */
+/**
+ * Npcaction.
+ */
 enum class NPCAction(
     val displayName: String,
     val baseScore: Int
@@ -143,6 +146,9 @@ enum class NPCAction(
         REMEMBER, FORGET, RECOGNIZE -> ActionCategory.MEMORY
     }
 
+/**
+ * Actioncategory.
+ */
     enum class ActionCategory(val displayName: String) {
         MOVEMENT("Miscare"),
         INTERACTION("Interactiune"),

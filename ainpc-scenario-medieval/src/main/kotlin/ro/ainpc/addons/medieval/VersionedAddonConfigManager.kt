@@ -13,6 +13,9 @@ internal class VersionedAddonConfigManager(
     private val addonId: String,
     private val currentVersion: Int,
 ) {
+/**
+ * Result.
+ */
     data class Result(
         val config: YamlConfiguration?,
         val sourceVersion: Int,

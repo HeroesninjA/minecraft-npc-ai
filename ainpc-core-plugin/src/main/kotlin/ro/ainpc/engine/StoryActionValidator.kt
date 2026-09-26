@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Storyactionvalidationresult.
+ */
 data class StoryActionValidationResult(
     val valid: Boolean,
     val errors: List<String>,
@@ -16,6 +19,9 @@ data class StoryActionValidationResult(
     }
 }
 
+/**
+ * Storyactionvalidator.
+ */
 object StoryActionValidator {
     private val VALID_TYPES = setOf("set_story_state", "record_story_event")
     private val TARGET_KEYS = setOf(

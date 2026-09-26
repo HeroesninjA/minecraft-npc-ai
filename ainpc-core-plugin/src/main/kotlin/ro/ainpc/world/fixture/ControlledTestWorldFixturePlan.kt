@@ -1,5 +1,8 @@
 package ro.ainpc.world.fixture
 
+/**
+ * Controlledfixtureplaceplan.
+ */
 class ControlledFixturePlacePlan(
     id: String?,
     type: String?,
@@ -24,6 +27,9 @@ class ControlledFixturePlacePlan(
     fun tags(): List<String> = tags
 }
 
+/**
+ * Controlledfixtureregionplan.
+ */
 class ControlledFixtureRegionPlan(
     id: String?,
     type: String?,
@@ -67,6 +73,9 @@ class ControlledFixtureRegionPlan(
         requiredNodes.size + plannedPlaces.sumOf { place -> place.requiredNodes().size }
 }
 
+/**
+ * Controlledtestworldfixtureplan.
+ */
 class ControlledTestWorldFixturePlan(
     fixtureId: String?,
     prefix: String?,

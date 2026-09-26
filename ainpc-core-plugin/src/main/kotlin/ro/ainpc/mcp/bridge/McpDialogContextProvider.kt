@@ -4,6 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import ro.ainpc.mcp.McpRuntimeClient
 
+/**
+ * Mcpdialogcontextprovider.
+ */
 object McpDialogContextProvider {
     private val gson = Gson()
 

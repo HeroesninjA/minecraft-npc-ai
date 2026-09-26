@@ -3,6 +3,9 @@ package ro.ainpc.engine
 
 import ro.ainpc.progression.ProgressionDefinition
 
+/**
+ * Questauthoringsnapshot.
+ */
 data class QuestAuthoringSnapshot @JvmOverloads constructor(
     val handled: Boolean = false,
     val playerName: String = "",

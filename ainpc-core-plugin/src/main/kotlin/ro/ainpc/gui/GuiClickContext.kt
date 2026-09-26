@@ -5,6 +5,9 @@ import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryAction
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Guiclickcontext.
+ */
 class GuiClickContext(
     plugin: AINPCPlugin,
     service: GuiService,

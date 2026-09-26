@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressionstagechangedeventpayload.
+ */
 class ProgressionStageChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -27,6 +30,9 @@ class ProgressionStageChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Progressionstagechangedevent.
+ */
 class ProgressionStageChangedEvent(
     val payload: ProgressionStageChangedEventPayload
 ) : org.bukkit.event.Event() {

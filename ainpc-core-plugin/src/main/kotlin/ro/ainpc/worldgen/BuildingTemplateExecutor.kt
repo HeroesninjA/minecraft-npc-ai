@@ -16,6 +16,9 @@ private val templateJson = Json {
     }
 }
 
+/**
+ * Buildingtemplateexecutor.
+ */
 class BuildingTemplateExecutor(
     private val blockExecutor: BlockExecutor,
     private val templatesDir: File,

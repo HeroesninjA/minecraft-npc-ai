@@ -3,6 +3,9 @@ package ro.ainpc.routine
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 
+/**
+ * Routineprofileresolver.
+ */
 class RoutineProfileResolver(private val plugin: AINPCPlugin? = null) {
     private val pluginProfileLoader: BehaviorProfileLoader? by lazy { plugin?.let { BehaviorProfileLoader(it) } }
     private val builtInProfileLoader: BehaviorProfileLoader? by lazy { loadBuiltInProfileLoader() }

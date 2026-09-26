@@ -6,6 +6,9 @@ import java.security.NoSuchAlgorithmException
 import java.util.HexFormat
 import java.util.Locale
 
+/**
+ * Spawnbatchplanhasher.
+ */
 object SpawnBatchPlanHasher {
     @JvmStatic
     fun settlementBatchKey(allocations: List<HouseAllocation>?): String {

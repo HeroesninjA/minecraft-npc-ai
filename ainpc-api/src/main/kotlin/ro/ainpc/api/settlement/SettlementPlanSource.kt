@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Settlementplansource.
+ */
 enum class SettlementPlanSource(val id: String) {
     MANUAL("manual"),
     VANILLA_SCAN("vanilla_scan"),

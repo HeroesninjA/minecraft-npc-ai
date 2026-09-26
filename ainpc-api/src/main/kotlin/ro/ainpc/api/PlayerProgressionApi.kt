@@ -1,5 +1,8 @@
 package ro.ainpc.api
 
+/**
+ * Playerprogressionapi.
+ */
 interface PlayerProgressionApi {
     fun getSnapshot(playerUuid: String): PlayerProgressionSnapshot
     fun grantXp(playerUuid: String, amount: Long): PlayerProgressionGrant
@@ -10,6 +13,9 @@ interface PlayerProgressionApi {
     fun levelForTotalXp(totalXp: Long): Int
 }
 
+/**
+ * Playerprogressionsnapshot.
+ */
 data class PlayerProgressionSnapshot(
     val playerUuid: String,
     val level: Int,
@@ -20,6 +26,9 @@ data class PlayerProgressionSnapshot(
     val lastUpdated: Long,
 )
 
+/**
+ * Playerprogressiongrant.
+ */
 data class PlayerProgressionGrant(
     val playerUuid: String,
     val xpGranted: Long,

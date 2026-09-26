@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressiontrackingchangedeventpayload.
+ */
 class ProgressionTrackingChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -36,6 +39,9 @@ class ProgressionTrackingChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Progressiontrackingchangedevent.
+ */
 class ProgressionTrackingChangedEvent(
     val payload: ProgressionTrackingChangedEventPayload
 ) : org.bukkit.event.Event() {

@@ -14,6 +14,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+/**
+ * Semanticvillagemapper.
+ */
 class SemanticVillageMapper {
 
     fun importScan(

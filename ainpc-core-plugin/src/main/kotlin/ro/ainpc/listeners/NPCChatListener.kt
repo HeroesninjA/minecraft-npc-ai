@@ -31,6 +31,9 @@ import java.util.UUID
 /**
  * Listener dedicat chat-ului privat dintre jucator si NPC.
  */
+/**
+ * Npcchatlistener.
+ */
 class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     private val dialogManager: DialogManager = plugin.dialogManager
 

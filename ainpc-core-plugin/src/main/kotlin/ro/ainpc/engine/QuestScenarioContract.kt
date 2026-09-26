@@ -5,6 +5,9 @@ import java.util.Locale
 /**
  * Contractul mecanicii comune de quest, independent de tema scenariului.
  */
+/**
+ * Questscenariocontract.
+ */
 data class QuestScenarioContract(
     val kind: Kind?,
     val category: Category?,
@@ -172,6 +175,9 @@ data class QuestScenarioContract(
         }
     }
 
+/**
+ * Kind.
+ */
     enum class Kind {
         FETCH,
         HUNT,
@@ -205,6 +211,9 @@ data class QuestScenarioContract(
         }
     }
 
+/**
+ * Category.
+ */
     enum class Category(private val displayName: String) {
         MAIN("principal"),
         SIDE("secundar"),
@@ -235,6 +244,9 @@ data class QuestScenarioContract(
         }
     }
 
+/**
+ * Acceptancemode.
+ */
     enum class AcceptanceMode {
         EXPLICIT,
         AUTO_ACCEPT;
@@ -250,6 +262,9 @@ data class QuestScenarioContract(
         }
     }
 
+/**
+ * Completionmode.
+ */
     enum class CompletionMode {
         RETURN_TO_GIVER,
         AUTO,
@@ -267,6 +282,9 @@ data class QuestScenarioContract(
         }
     }
 
+/**
+ * Trackingmode.
+ */
     enum class TrackingMode {
         NEXT_OBJECTIVE,
         QUEST_GIVER,

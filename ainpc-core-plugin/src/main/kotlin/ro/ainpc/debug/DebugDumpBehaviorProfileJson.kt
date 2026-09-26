@@ -8,6 +8,9 @@ import ro.ainpc.routine.BehaviorProfileLoader
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Debugdumpbehaviorprofilejson.
+ */
 object DebugDumpBehaviorProfileJson {
     @JvmStatic
     fun buildBehaviorProfilesJson(plugin: AINPCPlugin): JsonArray =

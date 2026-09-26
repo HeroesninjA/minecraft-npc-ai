@@ -1,5 +1,8 @@
 package ro.ainpc.api
 
+/**
+ * Permissionnode.
+ */
 enum class PermissionNode(
     val node: String,
     val level: PermissionLevel,
@@ -50,6 +53,9 @@ enum class PermissionNode(
     }
 }
 
+/**
+ * Permissionlevel.
+ */
 enum class PermissionLevel {
     VIEW,
     PLAY,

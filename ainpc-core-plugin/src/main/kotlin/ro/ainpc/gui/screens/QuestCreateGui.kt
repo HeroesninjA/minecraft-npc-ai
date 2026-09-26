@@ -16,6 +16,9 @@ import ro.ainpc.commands.defaultObjectiveTarget
 import ro.ainpc.commands.parseStoryEventPayload
 import java.nio.file.Files
 
+/**
+ * Questcreategui.
+ */
 class QuestCreateGui : GuiScreen {
     private val mechanics = listOf(
         "main_quests",

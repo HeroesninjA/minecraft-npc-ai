@@ -3,6 +3,9 @@ package ro.ainpc.progression
 import ro.ainpc.engine.*
 import java.util.function.Function
 
+/**
+ * Progressionguisnapshot.
+ */
 class ProgressionGuiSnapshot(
     private val handledValue: Boolean,
     playerName: String?,

@@ -6,6 +6,9 @@ import ro.ainpc.addons.AddonType
 import ro.ainpc.platform.RuntimeMode
 import java.util.EnumSet
 
+/**
+ * Medievalscenarioaddon.
+ */
 class MedievalScenarioAddon(version: String) : AINPCAddon {
     private val descriptor = AddonDescriptor(
         AddonDescriptor.ORIGIN_PLUGIN_ADDON,

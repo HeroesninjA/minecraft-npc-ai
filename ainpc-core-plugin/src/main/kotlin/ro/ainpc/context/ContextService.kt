@@ -3,6 +3,9 @@ package ro.ainpc.context
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 
+/**
+ * Contextservice.
+ */
 class ContextService(private val plugin: AINPCPlugin?) {
 
     fun buildPlayerContext(playerName: String): ContextSnapshot {

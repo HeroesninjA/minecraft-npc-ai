@@ -2,6 +2,9 @@ package ro.ainpc.progression
 
 import java.util.Locale
 
+/**
+ * Progressionanchorbinding.
+ */
 class ProgressionAnchorBinding(
     playerUuid: String?,
     templateId: String?,

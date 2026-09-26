@@ -7,6 +7,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
 
+/**
+ * Exteriorstructureanalyzer.
+ */
 class ExteriorStructureAnalyzer {
     fun analyze(worldAdmin: WorldAdminApi, region: WorldRegionInfo): ExteriorStructureReport {
         val places = worldAdmin.getPlaces(region.id()).sortedBy { place -> place.id() }

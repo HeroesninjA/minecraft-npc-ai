@@ -7,6 +7,9 @@ import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.npc.NpcScenarioActorDefinition
 import java.util.Locale
 
+/**
+ * Scenariotemplate.
+ */
 class ScenarioTemplate(val type: ScenarioType) {
     val roles: MutableMap<String, ScenarioRoleRule> = LinkedHashMap()
     val phases: MutableList<String> = ArrayList()

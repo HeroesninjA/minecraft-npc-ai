@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questdraftobjective.
+ */
 class QuestDraftObjective(
     id: String?,
     type: String?,
@@ -20,6 +23,9 @@ class QuestDraftObjective(
     fun anchorReference(): String = anchorReferenceValue
 }
 
+/**
+ * Questdraftreward.
+ */
 class QuestDraftReward(
     type: String?,
     value: String?,
@@ -37,6 +43,9 @@ class QuestDraftReward(
     fun description(): String = descriptionValue
 }
 
+/**
+ * Questdraftstoryaction.
+ */
 class QuestDraftStoryAction(
     type: String?,
     scope: String?,
@@ -57,6 +66,9 @@ class QuestDraftStoryAction(
     fun value(): String = valueValue
 }
 
+/**
+ * Questdraft.
+ */
 class QuestDraft(
     draftId: String?,
     title: String?,

@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Questcreatordefinitionsgui.
+ */
 class QuestCreatorDefinitionsGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.CREATOR_QUEST_DEFS
     override fun title(player: Player): String = "&0Definitii"

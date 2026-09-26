@@ -3,6 +3,9 @@ package ro.ainpc.database
 import java.sql.Connection
 import java.util.Locale
 
+/**
+ * Databaseschemadomain.
+ */
 enum class DatabaseSchemaDomain(val id: String) {
     NPC("npc"),
     DIALOG("dialog"),
@@ -15,11 +18,17 @@ enum class DatabaseSchemaDomain(val id: String) {
     SYSTEM("system"),
 }
 
+/**
+ * Databaseschematable.
+ */
 data class DatabaseSchemaTable(
     val name: String,
     val domain: DatabaseSchemaDomain,
 )
 
+/**
+ * Databasetableinventory.
+ */
 data class DatabaseTableInventory(
     val name: String,
     val domain: DatabaseSchemaDomain?,
@@ -28,6 +37,9 @@ data class DatabaseTableInventory(
     val rowCountError: String?,
 )
 
+/**
+ * Databasedomaincoverage.
+ */
 data class DatabaseDomainCoverage(
     val domain: DatabaseSchemaDomain,
     val expectedTables: List<String>,
@@ -37,6 +49,9 @@ data class DatabaseDomainCoverage(
     val totalRows: Long,
 )
 
+/**
+ * Databaseschemainventory.
+ */
 data class DatabaseSchemaInventory(
     val tables: List<DatabaseTableInventory>,
     val domains: List<DatabaseDomainCoverage>,
@@ -65,6 +80,9 @@ data class DatabaseSchemaInventory(
         get() = tables.all { table -> table.rowCount != null && table.rowCountError == null }
 }
 
+/**
+ * Databaseschemacatalog.
+ */
 object DatabaseSchemaCatalog {
     val tables: List<DatabaseSchemaTable> = listOf(
         table(DatabaseSchemaDomain.NPC, "npcs"),

@@ -2,6 +2,9 @@ package ro.ainpc.api.integration
 
 import ro.ainpc.addons.AddonType
 
+/**
+ * Integrationregistryapi.
+ */
 interface IntegrationRegistryApi {
     val integrations: Collection<ExternalPluginIntegration>
 

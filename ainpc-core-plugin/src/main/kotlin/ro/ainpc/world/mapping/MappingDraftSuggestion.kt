@@ -2,6 +2,9 @@ package ro.ainpc.world.mapping
 
 
 
+/**
+ * Mappingdraftsuggestion.
+ */
 class MappingDraftSuggestion(
     localId: String?,
     displayName: String?,

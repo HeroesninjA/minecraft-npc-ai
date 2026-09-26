@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questdialoguecontext.
+ */
 enum class QuestDialogueContext(
     vararg dialogueKeys: String,
 ) {
@@ -17,6 +20,9 @@ enum class QuestDialogueContext(
     fun dialogueKeys(): List<String> = dialogueKeys
 }
 
+/**
+ * Questobjectivestate.
+ */
 enum class QuestObjectiveState(
     private val id: String,
     private val displayName: String,

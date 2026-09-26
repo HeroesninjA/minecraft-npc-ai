@@ -7,6 +7,9 @@ import ro.ainpc.engine.runtime.ScenarioActionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Giveitemaction.
+ */
 class GiveItemAction : ScenarioActionHandler {
     override fun type(): String = "give_item"
 

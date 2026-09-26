@@ -5,6 +5,9 @@ import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.platform.PlatformProfile
 import java.util.Locale
 
+/**
+ * Runtimefeatureresolver.
+ */
 class RuntimeFeatureResolver {
     fun resolve(config: ConfigurationSection?, addonDescriptors: Collection<AddonDescriptor>?): RuntimeFeatureSnapshot {
         return resolve(config, null, addonDescriptors)

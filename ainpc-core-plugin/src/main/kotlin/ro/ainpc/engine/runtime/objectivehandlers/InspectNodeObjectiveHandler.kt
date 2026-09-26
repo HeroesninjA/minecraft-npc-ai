@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Inspectnodeobjectivehandler.
+ */
 class InspectNodeObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "inspect_node"
     override fun handleProgress(context: ObjectiveContext): ObjectiveResult {

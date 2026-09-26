@@ -9,6 +9,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Comparator
 
+/**
+ * Debugdumpretentionpolicy.
+ */
 data class DebugDumpRetentionPolicy(
     val maxAge: Duration,
     val maxExports: Int,
@@ -21,24 +24,36 @@ data class DebugDumpRetentionPolicy(
     }
 }
 
+/**
+ * Debugdumpcleanupreason.
+ */
 enum class DebugDumpCleanupReason {
     AGE,
     COUNT,
     QUOTA
 }
 
+/**
+ * Debugdumpdeletedexport.
+ */
 data class DebugDumpDeletedExport(
     val directoryName: String,
     val bytes: Long,
     val reason: DebugDumpCleanupReason,
 )
 
+/**
+ * Debugdumpcleanupfailure.
+ */
 data class DebugDumpCleanupFailure(
     val directoryName: String,
     val operation: String,
     val errorType: String,
 )
 
+/**
+ * Debugdumpcleanupresult.
+ */
 data class DebugDumpCleanupResult(
     val deletedExports: List<DebugDumpDeletedExport>,
     val failures: List<DebugDumpCleanupFailure>,
@@ -56,6 +71,9 @@ data class DebugDumpCleanupResult(
         failures.isEmpty() && ageLimitSatisfied && countLimitSatisfied && quotaSatisfied
 }
 
+/**
+ * Debugdumpretention.
+ */
 object DebugDumpRetention {
     private val managedDirectoryPattern = Regex("^debug-dump-\\d{8}-\\d{6}(?:-\\d+)?$")
     private val timestampPattern = Regex("^\\d{8}-\\d{6}$")

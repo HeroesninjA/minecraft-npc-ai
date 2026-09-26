@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import java.util.Locale
 import java.util.function.Predicate
 
+/**
+ * Questtemplateselector.
+ */
 class QuestTemplateSelector private constructor() {
     companion object {
         @JvmStatic

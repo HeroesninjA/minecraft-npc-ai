@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressionobjectiveprogresseventpayload.
+ */
 class ProgressionObjectiveProgressEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -33,6 +36,9 @@ class ProgressionObjectiveProgressEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Progressionobjectiveprogressevent.
+ */
 class ProgressionObjectiveProgressEvent(
     val payload: ProgressionObjectiveProgressEventPayload
 ) : org.bukkit.event.Event() {

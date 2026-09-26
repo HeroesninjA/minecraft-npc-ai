@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import org.bukkit.entity.Player
 
+/**
+ * Guirole.
+ */
 enum class GuiRole(val id: String, val displayName: String) {
     PLAYER("player", "Jucator"),
     CREATOR("creator", "Creator"),

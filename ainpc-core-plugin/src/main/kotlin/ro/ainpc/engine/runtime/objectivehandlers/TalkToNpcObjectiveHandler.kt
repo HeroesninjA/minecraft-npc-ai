@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Talktonpcobjectivehandler.
+ */
 class TalkToNpcObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "talk_to_npc"
     override fun handleProgress(context: ObjectiveContext): ObjectiveResult {

@@ -1,5 +1,8 @@
 package ro.ainpc.topology
 
+/**
+ * Topologyconsensus.
+ */
 class TopologyConsensus(
     val category: TopologyCategory,
     val descriptions: List<String>,

@@ -4,6 +4,9 @@ import org.bukkit.entity.Player
 import ro.ainpc.npc.AINPC
 import ro.ainpc.spawn.HouseholdPersistenceService
 
+/**
+ * Storycontexttarget.
+ */
 class StoryContextTarget(
     private val playerValue: Player,
     private val npcSelectorValue: String
@@ -12,6 +15,9 @@ class StoryContextTarget(
     fun npcSelector(): String = npcSelectorValue
 }
 
+/**
+ * Storyeventtarget.
+ */
 class StoryEventTarget(
     private val regionIdValue: String,
     private val placeIdValue: String,
@@ -24,6 +30,9 @@ class StoryEventTarget(
     fun mapped(): Boolean = mappedValue
 }
 
+/**
+ * Questdecisiontarget.
+ */
 class QuestDecisionTarget(
     private val playerValue: Player,
     private val npcValue: AINPC
@@ -32,6 +41,9 @@ class QuestDecisionTarget(
     fun npc(): AINPC = npcValue
 }
 
+/**
+ * Questtrackrequest.
+ */
 class QuestTrackRequest(
     private val playerValue: Player,
     private val questSelectorValue: String,
@@ -42,6 +54,9 @@ class QuestTrackRequest(
     fun action(): String = actionValue
 }
 
+/**
+ * Worldcommandlocation.
+ */
 class WorldCommandLocation(
     private val worldNameValue: String,
     private val xValue: Int,
@@ -60,6 +75,9 @@ class WorldCommandLocation(
     fun consoleFallback(): Boolean = consoleFallbackValue
 }
 
+/**
+ * Questlogrequest.
+ */
 class QuestLogRequest(
     private val playerValue: Player,
     private val filterValue: String
@@ -68,6 +86,9 @@ class QuestLogRequest(
     fun filter(): String = filterValue
 }
 
+/**
+ * Householdmetadatabackfillinputs.
+ */
 class HouseholdMetadataBackfillInputs(
     private val inputsValue: List<HouseholdPersistenceService.MetadataResidentBackfillInput>,
     private val warningsValue: List<String>
@@ -76,6 +97,9 @@ class HouseholdMetadataBackfillInputs(
     fun warnings(): List<String> = warningsValue
 }
 
+/**
+ * Progressionaliasconfig.
+ */
 class ProgressionAliasConfig(
     private val commandValue: String,
     private val kindValue: String,

@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Villagepatchapplyresult.
+ */
 class VillagePatchApplyResult(
     patchId: String?,
     appliedPlanIds: List<String>?,

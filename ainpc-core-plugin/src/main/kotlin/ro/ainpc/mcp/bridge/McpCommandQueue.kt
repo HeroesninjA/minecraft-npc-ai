@@ -8,6 +8,9 @@ import java.io.File
 import java.util.UUID
 import java.util.logging.Level
 
+/**
+ * Mcpcommandqueue.
+ */
 class McpCommandQueue(private val plugin: AINPCPlugin) {
     private val commandDir: File
         get() {
@@ -22,6 +25,9 @@ class McpCommandQueue(private val plugin: AINPCPlugin) {
     private val gson = Gson()
     private val processedFiles = mutableSetOf<String>()
 
+/**
+ * Mcpcommand.
+ */
     data class McpCommand(
         val commandId: String = UUID.randomUUID().toString(),
         val type: String,
@@ -29,6 +35,9 @@ class McpCommandQueue(private val plugin: AINPCPlugin) {
         val timestamp: Long = System.currentTimeMillis()
     )
 
+/**
+ * Mcpcommandresult.
+ */
     data class McpCommandResult(
         val commandId: String,
         val success: Boolean,

@@ -5,6 +5,9 @@ import org.bukkit.configuration.file.YamlConfiguration
 import ro.ainpc.AINPCPlugin
 import java.io.File
 
+/**
+ * Behaviorprofileloader.
+ */
 class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
     private val profiles: MutableMap<String, BehaviorProfile> = LinkedHashMap()
     private var loadErrors: MutableList<String> = mutableListOf()

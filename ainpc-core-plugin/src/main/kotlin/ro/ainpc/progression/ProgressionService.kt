@@ -7,6 +7,9 @@ import ro.ainpc.engine.*
 import java.sql.SQLException
 import java.util.Locale
 
+/**
+ * Progressionservice.
+ */
 class ProgressionService(private val plugin: AINPCPlugin) {
     private val repository = ProgressionRepository(
         ProgressionRepository.StatementProvider { sql ->

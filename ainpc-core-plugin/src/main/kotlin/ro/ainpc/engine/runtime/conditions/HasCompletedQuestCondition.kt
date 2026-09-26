@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioConditionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Hascompletedquestcondition.
+ */
 class HasCompletedQuestCondition : ScenarioConditionHandler {
     override fun type(): String = "has_completed_quest"
 

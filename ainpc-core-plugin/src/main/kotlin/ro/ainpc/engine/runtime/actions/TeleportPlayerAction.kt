@@ -6,6 +6,9 @@ import ro.ainpc.engine.runtime.ScenarioActionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Teleportplayeraction.
+ */
 class TeleportPlayerAction : ScenarioActionHandler {
     override fun type(): String = "teleport_player"
 

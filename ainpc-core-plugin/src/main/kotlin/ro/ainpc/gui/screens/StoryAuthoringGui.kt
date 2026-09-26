@@ -16,6 +16,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
 
+/**
+ * Storyauthoringgui.
+ */
 class StoryAuthoringGui : GuiScreen {
     private var selectedTemplate: StoryTemplate? = null
     private var selectedRegion: WorldRegionInfo? = null

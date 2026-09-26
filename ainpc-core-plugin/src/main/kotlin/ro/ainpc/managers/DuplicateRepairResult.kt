@@ -1,5 +1,8 @@
 package ro.ainpc.managers
 
+/**
+ * Duplicaterepairresult.
+ */
 class DuplicateRepairResult(
     private val applied: Boolean,
     private val duplicateDbRows: Int,

@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.UUID
 
+/**
+ * Questprogressstoreservice.
+ */
 class QuestProgressStoreService(
     private val getActiveQuests: (UUID) -> MutableMap<String, PlayerQuestProgress>?,
     private val getArchivedQuests: (UUID) -> MutableMap<String, PlayerQuestProgress>?,

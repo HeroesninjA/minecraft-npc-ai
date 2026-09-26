@@ -25,6 +25,9 @@ import java.util.Locale
 import java.util.UUID
 import java.util.logging.Level
 
+/**
+ * Storycontextservice.
+ */
 class StoryContextService(private val plugin: AINPCPlugin) {
     private val structureSignalResolver = StoryStructureSignalResolver()
 

@@ -3,6 +3,9 @@ package ro.ainpc.addons
 import java.util.LinkedHashMap
 import java.util.Locale
 
+/**
+ * Addondependencyresolver.
+ */
 class AddonDependencyResolver : DependencyResolver {
 
     override fun resolve(

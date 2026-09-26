@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questseed.
+ */
 class QuestSeed(
     regionId: String?,
     placeId: String?,

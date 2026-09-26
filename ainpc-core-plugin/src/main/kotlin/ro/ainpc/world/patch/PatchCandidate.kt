@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Patchcandidate.
+ */
 class PatchCandidate(
     candidateId: String?,
     private val gapType: PatchGapType,

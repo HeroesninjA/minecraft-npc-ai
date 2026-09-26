@@ -4,6 +4,9 @@ import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.story.StoryContextSnapshot
 import java.util.LinkedHashSet
 
+/**
+ * Questseedfactory.
+ */
 class QuestSeedFactory {
     fun create(
         decision: QuestDirectorDecision?,

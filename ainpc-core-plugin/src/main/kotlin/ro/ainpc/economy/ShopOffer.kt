@@ -2,6 +2,9 @@ package ro.ainpc.economy
 
 import org.bukkit.Material
 
+/**
+ * Shopoffer.
+ */
 data class ShopOffer(
     val offerId: String,
     val displayItem: Material,

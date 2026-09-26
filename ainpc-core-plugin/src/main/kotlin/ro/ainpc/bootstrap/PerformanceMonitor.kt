@@ -9,6 +9,9 @@ import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Runtimemetricnames.
+ */
 object RuntimeMetricNames {
     const val ROUTINE_TICK = "tick.routine"
     const val DATABASE_OPERATION = "database.operation"
@@ -20,6 +23,9 @@ object RuntimeMetricNames {
     fun scheduler(taskName: String): String = "scheduler.$taskName"
 }
 
+/**
+ * Metricdomain.
+ */
 enum class MetricDomain(val wireName: String, val configKey: String) {
     TICK("tick", "tick"),
     DATABASE("database", "database"),
@@ -29,11 +35,17 @@ enum class MetricDomain(val wireName: String, val configKey: String) {
     EXPORT("export", "export"),
 }
 
+/**
+ * Metricbudgetsnapshot.
+ */
 data class MetricBudgetSnapshot(
     val warnMillis: Double,
     val failMillis: Double,
 )
 
+/**
+ * Runtimemetricsnapshot.
+ */
 data class RuntimeMetricSnapshot(
     val name: String,
     val domain: String,
@@ -50,6 +62,9 @@ data class RuntimeMetricSnapshot(
     val failBudgetMillis: Double,
 )
 
+/**
+ * Runtimehealthsnapshot.
+ */
 data class RuntimeHealthSnapshot(
     val schemaVersion: Int = 1,
     val status: String,
@@ -62,6 +77,9 @@ data class RuntimeHealthSnapshot(
     val metrics: List<RuntimeMetricSnapshot>,
 )
 
+/**
+ * Runtimetracespansnapshot.
+ */
 data class RuntimeTraceSpanSnapshot(
     val sequence: Long,
     val completedAt: String,
@@ -75,6 +93,9 @@ data class RuntimeTraceSpanSnapshot(
     val failBudgetMillis: Double,
 )
 
+/**
+ * Runtimetracesnapshot.
+ */
 data class RuntimeTraceSnapshot(
     val schemaVersion: Int = 1,
     val generatedAt: String,
@@ -86,7 +107,13 @@ data class RuntimeTraceSnapshot(
     val spans: List<RuntimeTraceSpanSnapshot>,
 )
 
+/**
+ * Performancemonitor.
+ */
 class PerformanceMonitor(private val plugin: AINPCPlugin? = null) {
+/**
+ * Ticktiming.
+ */
     data class TickTiming(
         val timestamp: Long,
         val durationMs: Double,
@@ -95,6 +122,9 @@ class PerformanceMonitor(private val plugin: AINPCPlugin? = null) {
         val success: Boolean = true,
     )
 
+/**
+ * Tickprofile.
+ */
     data class TickProfile(
         val avgDurationMs: Double,
         val maxDurationMs: Double,

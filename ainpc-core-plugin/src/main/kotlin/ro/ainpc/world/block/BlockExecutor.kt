@@ -5,6 +5,9 @@ import org.bukkit.World
 import org.bukkit.block.data.BlockData
 import java.util.UUID
 
+/**
+ * Blockexecutor.
+ */
 interface BlockExecutor {
     fun placeBlock(world: World, x: Int, y: Int, z: Int, material: Material): BlockOperationResult
     fun placeBlock(world: World, x: Int, y: Int, z: Int, blockData: BlockData): BlockOperationResult
@@ -17,6 +20,9 @@ interface BlockExecutor {
     fun getExecutorId(): String
 }
 
+/**
+ * Blockoperation.
+ */
 data class BlockOperation(
     val x: Int,
     val y: Int,
@@ -38,6 +44,9 @@ data class BlockOperation(
     }
 }
 
+/**
+ * Blocksnapshot.
+ */
 data class BlockSnapshot(
     val worldName: String,
     val x: Int,
@@ -52,6 +61,9 @@ data class BlockSnapshot(
     }
 }
 
+/**
+ * Blockoperationresult.
+ */
 data class BlockOperationResult(
     val success: Boolean,
     val snapshot: BlockSnapshot? = null,
@@ -63,6 +75,9 @@ data class BlockOperationResult(
     }
 }
 
+/**
+ * Blockbatchresult.
+ */
 data class BlockBatchResult(
     val successful: List<BlockSnapshot>,
     val failed: List<Pair<BlockOperation, String>>,
@@ -74,6 +89,9 @@ data class BlockBatchResult(
     val failureCount: Int get() = failed.size
 }
 
+/**
+ * Previewsession.
+ */
 interface PreviewSession {
     val operations: List<BlockOperation>
     val executorId: String

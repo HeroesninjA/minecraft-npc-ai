@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.progression.ProgressionGuiEntry
 
+/**
+ * Questoffergui.
+ */
 class QuestOfferGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_OFFER
 

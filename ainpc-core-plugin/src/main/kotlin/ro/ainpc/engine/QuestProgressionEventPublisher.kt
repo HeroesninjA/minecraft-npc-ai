@@ -19,6 +19,9 @@ import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Questprogressioneventpublisher.
+ */
 class QuestProgressionEventPublisher(
     private val plugin: AINPCPlugin,
     private val templateResolver: (PlayerQuestProgress) -> ScenarioTemplate?

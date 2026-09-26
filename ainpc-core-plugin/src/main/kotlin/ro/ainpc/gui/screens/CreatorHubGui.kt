@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Creatorhubgui.
+ */
 class CreatorHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.CREATOR_HUB
     override fun title(player: Player): String = "&0Creator Tools"

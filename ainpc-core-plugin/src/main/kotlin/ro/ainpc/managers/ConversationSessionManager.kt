@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Pastreaza doar starea de sesiune a conversatiilor active.
  * Listener-ele nu ar trebui sa detina aceasta stare direct.
  */
+/**
+ * Conversationsessionmanager.
+ */
 class ConversationSessionManager(private val plugin: AINPCPlugin) {
     private val sessions = ConcurrentHashMap<UUID, ConversationSession>()
 

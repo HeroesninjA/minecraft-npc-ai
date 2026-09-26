@@ -8,6 +8,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Npceconomyservice.
+ */
 class NpcEconomyService(private val plugin: AINPCPlugin) : NpcEconomyApi {
     private val npcBalances: MutableMap<String, Int> = ConcurrentHashMap()
     private val npcSalaries: MutableMap<String, Int> = ConcurrentHashMap()

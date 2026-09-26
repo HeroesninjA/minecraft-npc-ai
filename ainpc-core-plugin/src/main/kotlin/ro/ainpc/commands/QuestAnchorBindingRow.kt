@@ -1,5 +1,8 @@
 package ro.ainpc.commands
 
+/**
+ * Questanchorbindingrow.
+ */
 class QuestAnchorBindingRow(
     private val playerUuid: String?,
     private val templateId: String?,

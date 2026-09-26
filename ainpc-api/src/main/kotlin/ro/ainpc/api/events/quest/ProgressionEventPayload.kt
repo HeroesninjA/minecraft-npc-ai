@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressioneventpayload.
+ */
 class ProgressionEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,

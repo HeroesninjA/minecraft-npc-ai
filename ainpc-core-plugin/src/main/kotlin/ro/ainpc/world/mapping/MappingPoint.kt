@@ -1,5 +1,8 @@
 package ro.ainpc.world.mapping
 
+/**
+ * Mappingpoint.
+ */
 class MappingPoint(
     worldName: String?,
     private val xValue: Int,

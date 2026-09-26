@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questactortriggers.
+ */
 object QuestActorTriggers {
     const val ON_ACCEPT = "on_accept"
     const val ON_OBJECTIVE_COMPLETE = "on_objective_complete"

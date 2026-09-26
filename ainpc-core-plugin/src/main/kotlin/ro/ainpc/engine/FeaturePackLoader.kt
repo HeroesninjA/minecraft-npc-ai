@@ -21,6 +21,9 @@ import java.util.Locale
  * Incarca Feature Packs din fisiere YAML.
  * Feature Packs definesc traits, profesii, dialoguri, scenarii si metadata.
  */
+/**
+ * Featurepackloader.
+ */
 class FeaturePackLoader(private val plugin: AINPCPlugin) {
     private val loadedPacks: MutableMap<String, FeaturePack> = LinkedHashMap()
     private val allTraits: MutableMap<String, TraitDefinition> = HashMap()
@@ -643,6 +646,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Featurepack.
+ */
     class FeaturePack(
         val id: String,
         val name: String,
@@ -700,11 +706,17 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Packstorydefaults.
+ */
     class PackStoryDefaults(
         val defaultState: String,
         val pool: List<String>
     )
 
+/**
+ * Progressionmechanicdefinition.
+ */
     class ProgressionMechanicDefinition(
         packId: String?,
         id: String?,
@@ -726,6 +738,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
     }
 
+/**
+ * Traitdefinition.
+ */
     class TraitDefinition(
         val id: String,
         val name: String,
@@ -747,6 +762,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         fun getEmotionModifier(emotion: String): Double? = emotionModifiers[emotion]
     }
 
+/**
+ * Professiondefinition.
+ */
     class ProfessionDefinition(
         val id: String,
         val name: String,
@@ -779,6 +797,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Topologydefinition.
+ */
     class TopologyDefinition(
         val packId: String,
         val id: String,
@@ -791,12 +812,18 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         var suggestedTraits: List<String> = ArrayList()
     }
 
+/**
+ * Validationwarning.
+ */
     data class ValidationWarning(
         val type: String,
         val message: String,
         val context: String = ""
     )
 
+/**
+ * Scenariodefinition.
+ */
     class ScenarioDefinition(
         val packId: String,
         val id: String,
@@ -993,6 +1020,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
 
     }
 
+/**
+ * Scenarioroledefinition.
+ */
     class ScenarioRoleDefinition(
         val id: String,
         val description: String?,
@@ -1005,6 +1035,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         var preferredTraits: List<String> = ArrayList()
     }
 
+/**
+ * Queststagedefinition.
+ */
     class QuestStageDefinition(
         id: String?,
         description: String?,
@@ -1021,6 +1054,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         fun getNextStageId(): String = metadata.getOrDefault("next_stage", metadata.getOrDefault("next", ""))
     }
 
+/**
+ * Questentrydefinition.
+ */
     class QuestEntryDefinition(
         type: String?,
         itemId: String?,
@@ -1064,6 +1100,9 @@ class FeaturePackLoader(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Packerrorcategory.
+ */
     enum class PackErrorCategory(val label: String) {
         PARSE("EROARE_PARSE"),
         SCHEMA("EROARE_SCHEMA"),

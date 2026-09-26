@@ -2,6 +2,9 @@ package ro.ainpc.managers
 
 import org.bukkit.Location
 
+/**
+ * Npcvillagesnapshot.
+ */
 class NpcVillageSnapshot(
     private val center: Location,
     private val bedLocations: List<Location>,

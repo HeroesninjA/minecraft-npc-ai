@@ -4,6 +4,9 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import java.util.UUID
 
+/**
+ * Ainpcguiholder.
+ */
 class AINPCGuiHolder(
     private val sessionIdValue: UUID,
     private val keyValue: GuiKey

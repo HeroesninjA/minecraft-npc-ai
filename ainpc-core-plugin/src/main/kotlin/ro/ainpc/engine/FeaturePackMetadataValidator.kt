@@ -8,6 +8,9 @@ import java.io.File
 import java.util.EnumSet
 import java.util.Locale
 
+/**
+ * Featurepackmetadatavalidator.
+ */
 object FeaturePackMetadataValidator {
     @JvmStatic
     fun validate(config: FileConfiguration, file: File?, runtimeMode: RuntimeMode?): ValidationResult {
@@ -159,6 +162,9 @@ object FeaturePackMetadataValidator {
         "data-pack",
     )
 
+/**
+ * Validationresult.
+ */
     data class ValidationResult(val packId: String, val errors: List<String>, val warnings: List<String>) {
         fun packId(): String = packId
         fun errors(): List<String> = errors

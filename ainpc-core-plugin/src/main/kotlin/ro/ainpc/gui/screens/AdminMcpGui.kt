@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Adminmcpgui.
+ */
 class AdminMcpGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MCP
 

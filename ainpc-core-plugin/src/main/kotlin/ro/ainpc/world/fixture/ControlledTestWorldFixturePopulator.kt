@@ -7,6 +7,9 @@ import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldNodeType
 import java.util.Locale
 
+/**
+ * Controlledtestworldfixturepopulateresult.
+ */
 class ControlledTestWorldFixturePopulateResult(
     npcNames: List<String>?,
     errors: List<String>?,
@@ -23,6 +26,9 @@ class ControlledTestWorldFixturePopulateResult(
     fun success(): Boolean = errors.isEmpty()
 }
 
+/**
+ * Controlledtestworldfixturepopulator.
+ */
 class ControlledTestWorldFixturePopulator {
 
     private val DEFAULT_Y = 64
@@ -130,6 +136,9 @@ class ControlledTestWorldFixturePopulator {
         ControlledTestWorldFixturePopulateResult(npcNames, errors, warnings)
 }
 
+/**
+ * Fixturenpcrole.
+ */
 data class FixtureNpcRole(
     val npcId: String,
     val name: String,

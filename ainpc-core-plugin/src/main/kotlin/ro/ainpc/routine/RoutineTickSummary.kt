@@ -1,5 +1,8 @@
 package ro.ainpc.routine
 
+/**
+ * Routineticksummary.
+ */
 class RoutineTickSummary(
     private val enabledValue: Boolean,
     private val totalNpcsValue: Int,

@@ -1,5 +1,8 @@
 package ro.ainpc.spawn
 
+/**
+ * Householdspawnresult.
+ */
 class HouseholdSpawnResult(
     success: Boolean,
     dryRun: Boolean,

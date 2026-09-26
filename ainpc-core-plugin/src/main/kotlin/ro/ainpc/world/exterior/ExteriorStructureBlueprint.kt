@@ -1,5 +1,8 @@
 package ro.ainpc.world.exterior
 
+/**
+ * Exteriorstructureblueprint.
+ */
 class ExteriorStructureBlueprint(
     type: ExteriorStructureType?,
     title: String?,

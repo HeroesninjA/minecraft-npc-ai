@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import org.bukkit.entity.Player
 
+/**
+ * Queststorytargetresolver.
+ */
 class QuestStoryTargetResolver(
     private val normalizeStoryScope: (String?) -> String,
     private val getQuestEntryMetadata: (FeaturePackLoader.QuestEntryDefinition, Array<out String>) -> String,

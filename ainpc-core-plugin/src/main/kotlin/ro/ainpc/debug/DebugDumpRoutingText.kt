@@ -3,6 +3,9 @@ package ro.ainpc.debug
 import com.google.gson.JsonParser
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Debugdumproutingtext.
+ */
 object DebugDumpRoutingText {
     @JvmStatic
     fun buildRoutingText(plugin: AINPCPlugin): String {

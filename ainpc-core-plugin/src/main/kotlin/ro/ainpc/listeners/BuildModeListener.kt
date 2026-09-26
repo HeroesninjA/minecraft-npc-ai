@@ -13,6 +13,9 @@ import ro.ainpc.world.mapping.MappingDraftKind
 import ro.ainpc.world.mapping.MappingPoint
 import ro.ainpc.world.mapping.MappingWandSelection
 
+/**
+ * Buildmodelistener.
+ */
 class BuildModeListener(private val plugin: AINPCPlugin) : Listener {
     @EventHandler(ignoreCancelled = true)
     fun onPlayerInteract(event: PlayerInteractEvent) {

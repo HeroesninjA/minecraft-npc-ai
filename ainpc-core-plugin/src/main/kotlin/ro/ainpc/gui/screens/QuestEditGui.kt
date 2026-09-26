@@ -12,6 +12,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.progression.ProgressionDefinition
 
+/**
+ * Questeditgui.
+ */
 class QuestEditGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_EDIT
     override fun title(player: Player): String = "&0Editeaza Quest"

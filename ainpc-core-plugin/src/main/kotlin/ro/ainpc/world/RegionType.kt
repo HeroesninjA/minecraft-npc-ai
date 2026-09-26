@@ -1,5 +1,8 @@
 package ro.ainpc.world
 
+/**
+ * Regiontype.
+ */
 enum class RegionType(
     val id: String,
     val displayName: String,

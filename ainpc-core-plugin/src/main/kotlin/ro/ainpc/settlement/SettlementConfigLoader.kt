@@ -6,6 +6,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.settlement.SettlementDefinition
 import java.io.File
 
+/**
+ * Settlementconfigloader.
+ */
 class SettlementConfigLoader(private val plugin: AINPCPlugin?) {
     private val definitions: MutableMap<String, SettlementDefinition> = LinkedHashMap()
     private var loadErrors: MutableList<String> = mutableListOf()

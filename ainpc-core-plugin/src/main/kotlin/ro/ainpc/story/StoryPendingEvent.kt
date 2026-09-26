@@ -1,5 +1,8 @@
 package ro.ainpc.story
 
+/**
+ * Storypendingevent.
+ */
 data class StoryPendingEvent(
     val id: Long,
     val scopeType: String,

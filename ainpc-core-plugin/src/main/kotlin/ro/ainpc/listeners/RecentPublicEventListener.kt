@@ -40,6 +40,9 @@ import ro.ainpc.api.events.story.StorySignalCollectedEvent
 import ro.ainpc.api.events.story.StoryStateChangedEvent
 import ro.ainpc.debug.RecentEventsBuffer
 
+/**
+ * Recentpubliceventlistener.
+ */
 class RecentPublicEventListener(private val buffer: RecentEventsBuffer) : Listener {
     private val executor = EventExecutor { _, event -> buffer.addEvent(event) }
 

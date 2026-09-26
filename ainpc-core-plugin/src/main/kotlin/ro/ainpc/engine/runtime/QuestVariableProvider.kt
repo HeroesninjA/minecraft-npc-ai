@@ -4,6 +4,9 @@ import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.engine.ScenarioTemplate
 import java.util.UUID
 
+/**
+ * Questvariableprovider.
+ */
 class QuestVariableProvider(private val engine: ScenarioEngine) : ScenarioVariableProvider {
     override fun namespace(): String = "quest"
 

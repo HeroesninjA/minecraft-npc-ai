@@ -1,5 +1,8 @@
 package ro.ainpc.context
 
+/**
+ * Sensitivedataredactionpolicy.
+ */
 data class SensitiveDataRedactionPolicy(
     val privacySafe: Boolean,
     val identifiers: Set<String> = emptySet(),
@@ -25,11 +28,17 @@ data class SensitiveDataRedactionPolicy(
     }
 }
 
+/**
+ * Sensitivedataredactionresult.
+ */
 data class SensitiveDataRedactionResult(
     val text: String,
     val redactionCount: Int,
 )
 
+/**
+ * Sensitivedataredactor.
+ */
 object SensitiveDataRedactor {
     private val SECRET_KEY_VALUE_PATTERN = Regex(
         """(?im)((?:^\s*|[,{]\s*)["']?(?:[\w.-]+\.)?(?:api[_-]?key|openai[_-]?api[_-]?key|secret|password|token|authorization)\s*["']?\s*[:=]\s*)(?:"(?:\\.|[^"\r\n])*"|'(?:\\.|[^'\r\n])*'|[^\r\n,}]+)"""

@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressionanchorbinding.
+ */
 class ProgressionAnchorBinding(
     val objectiveKey: String,
     val objectiveType: String,
@@ -14,6 +17,9 @@ class ProgressionAnchorBinding(
     val reference: String
 )
 
+/**
+ * Progressionanchorboundeventpayload.
+ */
 class ProgressionAnchorBoundEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -35,6 +41,9 @@ class ProgressionAnchorBoundEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Progressionanchorboundevent.
+ */
 class ProgressionAnchorBoundEvent(
     val payload: ProgressionAnchorBoundEventPayload
 ) : org.bukkit.event.Event() {

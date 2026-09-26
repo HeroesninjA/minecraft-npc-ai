@@ -7,6 +7,9 @@ import ro.ainpc.progression.ProgressionGuiSnapshot
 import ro.ainpc.story.StoryContextSnapshot
 import java.time.LocalDateTime
 
+/**
+ * Debugdumpauthoringtext.
+ */
 object DebugDumpAuthoringText {
     @JvmStatic
     fun buildAuthoringText(

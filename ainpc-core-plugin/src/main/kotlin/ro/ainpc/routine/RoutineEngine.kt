@@ -4,6 +4,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
+/**
+ * Routineengine.
+ */
 class RoutineEngine(
     private val plugin: AINPCPlugin? = null,
     private val routineBiasResolver: ((String?, BehaviorProfile?) -> Long)? = null

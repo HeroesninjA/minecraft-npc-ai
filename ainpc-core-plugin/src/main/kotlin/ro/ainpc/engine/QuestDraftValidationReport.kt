@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questdraftvalidationreport.
+ */
 class QuestDraftValidationReport(
     valid: Boolean,
     executable: Boolean,

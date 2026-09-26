@@ -12,6 +12,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Questauthoringgui.
+ */
 class QuestAuthoringGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.AUTHORING
 

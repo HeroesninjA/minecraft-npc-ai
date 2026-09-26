@@ -9,6 +9,9 @@ import kotlin.math.min
 /**
  * Sistemul de emotii al NPC-ului bazat pe modelul Plutchik
  */
+/**
+ * Npcemotions.
+ */
 class NPCEmotions {
     // Emotii primare (0.0 - 1.0)
     var happiness: Double = 0.5 // Bucurie

@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerHandler
 
+/**
+ * Playertalkstonpctrigger.
+ */
 class PlayerTalksToNpcTrigger : ScenarioTriggerHandler {
     override fun type(): String = "player_talks_to_npc"
 

@@ -3,6 +3,9 @@ package ro.ainpc.debug
 import ro.ainpc.context.SensitiveDataRedactionPolicy
 import ro.ainpc.context.SensitiveDataRedactor
 
+/**
+ * Debugdumpsecrets.
+ */
 object DebugDumpSecrets {
     private val POLICY = SensitiveDataRedactionPolicy.secretsOnly()
 

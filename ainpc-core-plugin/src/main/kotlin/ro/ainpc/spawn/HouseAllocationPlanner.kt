@@ -8,6 +8,9 @@ import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
 import kotlin.math.abs
 
+/**
+ * Houseallocationplanner.
+ */
 class HouseAllocationPlanner {
 
     fun plan(worldAdmin: WorldAdminApi?, houseSelector: String?, requestedResidents: Int): PlanningResult {
@@ -309,6 +312,9 @@ class HouseAllocationPlanner {
         return dx * dx + dy * dy + dz * dz
     }
 
+/**
+ * Planningresult.
+ */
     class PlanningResult private constructor(
         private val success: Boolean,
         private val allocation: HouseAllocation?,
@@ -334,6 +340,9 @@ class HouseAllocationPlanner {
         }
     }
 
+/**
+ * Settlementplanningresult.
+ */
     class SettlementPlanningResult private constructor(
         private val success: Boolean,
         regionId: String?,

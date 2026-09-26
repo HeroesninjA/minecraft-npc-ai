@@ -2,6 +2,9 @@ package ro.ainpc.world.patch
 
 import java.util.Locale
 
+/**
+ * Patchplanneroptions.
+ */
 class PatchPlannerOptions(
     targetPopulation: Int,
     requiredProfessions: List<String>?,

@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Settlementlayoutprofile.
+ */
 data class SettlementLayoutProfile(
     val profileId: String,
     val displayName: String,

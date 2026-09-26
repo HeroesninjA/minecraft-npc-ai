@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import org.bukkit.Location
 
+/**
+ * Questtrackingmarker.
+ */
 data class QuestTrackingMarker(
     val objectiveLabel: String,
     val targetLabel: String,

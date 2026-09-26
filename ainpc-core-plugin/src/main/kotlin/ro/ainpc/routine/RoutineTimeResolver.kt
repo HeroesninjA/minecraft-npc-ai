@@ -2,6 +2,9 @@ package ro.ainpc.routine
 
 import ro.ainpc.npc.AINPC
 
+/**
+ * Routinetimeresolver.
+ */
 class RoutineTimeResolver {
     private var groupSyncOverride: Map<String, Long> = emptyMap()
 

@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Patchplan.
+ */
 class PatchPlan(
     patchId: String?,
     private val type: PatchType,

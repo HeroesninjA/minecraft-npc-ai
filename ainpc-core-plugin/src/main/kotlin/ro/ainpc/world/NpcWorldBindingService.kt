@@ -7,6 +7,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Logger
 
+/**
+ * Npcworldbindingservice.
+ */
 class NpcWorldBindingService {
     fun interface StatementProvider {
         @Throws(SQLException::class)

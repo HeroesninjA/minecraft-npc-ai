@@ -6,6 +6,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.commands.ainpcCommandEconomyPlugin
 import ro.ainpc.commands.initAinpcCommandEconomyPlugin
 
+/**
+ * Economytopcommand.
+ */
 class EconomyTopCommand {
     companion object {
         fun execute(sender: CommandSender, plugin: AINPCPlugin, limit: Int = 10): Boolean {

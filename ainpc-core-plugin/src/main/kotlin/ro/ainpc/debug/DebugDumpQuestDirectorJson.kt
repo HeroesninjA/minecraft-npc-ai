@@ -9,6 +9,9 @@ import ro.ainpc.engine.QuestDirectorRequest
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.story.StoryContextSnapshot
 
+/**
+ * Debugdumpquestdirectorjson.
+ */
 object DebugDumpQuestDirectorJson {
     @JvmStatic
     fun buildQuestDirectorSnapshotJson(plugin: AINPCPlugin): JsonObject {

@@ -1,5 +1,8 @@
 package ro.ainpc.utils
 
+/**
+ * Configkeys.
+ */
 object ConfigKeys {
     const val ROUTINE_ENABLED = "routine.enabled"
     const val ROUTINE_TICK_SECONDS = "routine.tick_seconds"

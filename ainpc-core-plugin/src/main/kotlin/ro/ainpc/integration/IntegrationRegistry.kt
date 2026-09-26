@@ -8,6 +8,9 @@ import java.util.Locale
 import java.util.logging.Level
 import java.util.logging.Logger
 
+/**
+ * Integrationregistry.
+ */
 class IntegrationRegistry : IntegrationRegistryApi {
     private val logger = Logger.getLogger(IntegrationRegistry::class.java.name)
     private val integrationsByName: MutableMap<String, ExternalPluginIntegration> = LinkedHashMap()

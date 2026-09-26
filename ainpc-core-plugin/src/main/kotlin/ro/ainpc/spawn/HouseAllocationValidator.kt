@@ -6,6 +6,9 @@ import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import java.util.Locale
 
+/**
+ * Houseallocationvalidator.
+ */
 class HouseAllocationValidator {
 
     fun validate(allocation: HouseAllocation?, worldAdmin: WorldAdminApi?): HouseAllocationValidationResult {

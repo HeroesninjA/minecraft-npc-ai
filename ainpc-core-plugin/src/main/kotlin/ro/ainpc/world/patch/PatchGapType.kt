@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Patchgaptype.
+ */
 enum class PatchGapType {
     MISSING_BEDS,
     MISSING_HOUSE_CAPACITY,

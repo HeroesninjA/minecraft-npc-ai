@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerHandler
 
+/**
+ * Playerentersplacetrigger.
+ */
 class PlayerEntersPlaceTrigger : ScenarioTriggerHandler {
     override fun type(): String = "player_enters_place"
 

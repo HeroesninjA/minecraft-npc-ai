@@ -4,6 +4,9 @@ package ro.ainpc.world.mapping
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Mappingwandselection.
+ */
 class MappingWandSelection(
     private val pos1Value: MappingPoint?,
     private val pos2Value: MappingPoint?,
@@ -72,6 +75,9 @@ class MappingWandSelection(
     override fun toString(): String =
         "MappingWandSelection[pos1=$pos1Value, pos2=$pos2Value, point=$pointValue]"
 
+/**
+ * Mappingbounds.
+ */
     class MappingBounds(
         worldName: String?,
         private val minXValue: Int,

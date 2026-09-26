@@ -1,5 +1,8 @@
 package ro.ainpc.world
 
+/**
+ * Storystate.
+ */
 class StoryState(
     val mode: StoryMode,
     var stateKey: String

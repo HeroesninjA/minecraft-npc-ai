@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questinteractionresult.
+ */
 class QuestInteractionResult private constructor(
     val isHandled: Boolean,
     val openConversation: Boolean,

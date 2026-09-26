@@ -2,6 +2,9 @@ package ro.ainpc.spawn
 
 import ro.ainpc.npc.AINPC
 
+/**
+ * Familybindingplan.
+ */
 class FamilyBindingPlan(
     familyId: String?,
     members: List<Member>?
@@ -34,6 +37,9 @@ class FamilyBindingPlan(
     override fun toString(): String =
         "FamilyBindingPlan[familyId=$familyIdValue, members=$membersValue]"
 
+/**
+ * Member.
+ */
     class Member(
         npcKey: String?,
         private val npcIdValue: Int,

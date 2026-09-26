@@ -4,6 +4,9 @@ import ro.ainpc.npc.AINPC
 import java.util.LinkedHashMap
 import java.util.Locale
 
+/**
+ * Houseallocation.
+ */
 data class HouseAllocation(
     val placeId: String,
     val familyId: String,
@@ -71,6 +74,9 @@ data class HouseAllocation(
             .filter { key -> key.isNotBlank() }
     }
 
+/**
+ * Builder.
+ */
     class Builder private constructor(private val placeId: String) {
         private var familyId = ""
         private var primaryOwnerNpcKey = ""
@@ -117,6 +123,9 @@ data class HouseAllocation(
         }
     }
 
+/**
+ * Residentplan.
+ */
     data class ResidentPlan(
         val npcKey: String,
         val name: String,
@@ -213,6 +222,9 @@ data class HouseAllocation(
         }
     }
 
+/**
+ * Residentbuilder.
+ */
     class ResidentBuilder private constructor(
         private val npcKey: String,
         private val name: String

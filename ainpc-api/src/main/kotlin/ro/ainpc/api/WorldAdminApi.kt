@@ -6,6 +6,9 @@ import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 
+/**
+ * Worldadminapi.
+ */
 interface WorldAdminApi {
     val isEnabled: Boolean
 

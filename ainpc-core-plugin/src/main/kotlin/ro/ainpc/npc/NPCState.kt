@@ -4,6 +4,9 @@ package ro.ainpc.npc
  * Starile posibile ale unui NPC - State Machine
  * NPC-ul poate fi intr-o singura stare la un moment dat
  */
+/**
+ * Npcstate.
+ */
 enum class NPCState(
     val displayName: String,
     val description: String

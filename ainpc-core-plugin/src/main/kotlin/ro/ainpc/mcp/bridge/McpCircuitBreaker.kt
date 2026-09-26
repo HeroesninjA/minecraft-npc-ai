@@ -3,6 +3,9 @@ package ro.ainpc.mcp.bridge
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Mcpcircuitbreaker.
+ */
 class McpCircuitBreaker(
     private val retryAfterMs: Long = 5000L
 ) {

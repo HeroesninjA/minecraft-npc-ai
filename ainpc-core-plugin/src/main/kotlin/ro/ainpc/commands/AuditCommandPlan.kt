@@ -2,6 +2,9 @@ package ro.ainpc.commands
 
 import java.util.Locale
 
+/**
+ * Auditsection.
+ */
 enum class AuditSection {
     NPC,
     WORLD,
@@ -11,6 +14,9 @@ enum class AuditSection {
     WAND
 }
 
+/**
+ * Auditmode.
+ */
 enum class AuditMode(val argument: String, val sections: List<AuditSection>) {
     ALL("all", AuditSection.values().toList()),
     NPC("npc", listOf(AuditSection.NPC)),
@@ -28,6 +34,9 @@ enum class AuditMode(val argument: String, val sections: List<AuditSection>) {
     }
 }
 
+/**
+ * Auditprofile.
+ */
 enum class AuditProfile(val argument: String) {
     STANDARD("standard"),
     STRICT("strict"),
@@ -45,6 +54,9 @@ enum class AuditProfile(val argument: String) {
     }
 }
 
+/**
+ * Auditcommandrequest.
+ */
 data class AuditCommandRequest(
     val mode: AuditMode,
     val profile: AuditProfile,
@@ -68,6 +80,9 @@ data class AuditCommandRequest(
     }
 }
 
+/**
+ * Auditexecutionplan.
+ */
 data class AuditExecutionPlan(
     val sections: List<AuditSection>,
     val liveRuntimeChecks: Boolean,
@@ -80,11 +95,17 @@ data class AuditExecutionPlan(
 
 const val AUDIT_SPAWN_HISTORY_PAGE_SIZE = 200
 
+/**
+ * Auditoutputformat.
+ */
 enum class AuditOutputFormat(val argument: String) {
     TEXT("text"),
     JSON("json")
 }
 
+/**
+ * Auditverdict.
+ */
 enum class AuditVerdict(val exitCode: Int) {
     PASS(0),
     WARN(1),

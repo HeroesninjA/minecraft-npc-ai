@@ -7,6 +7,9 @@ import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 
+/**
+ * Contextsnapshot.
+ */
 data class ContextSnapshot(
     val playerName: String,
     val playerLevel: Int,

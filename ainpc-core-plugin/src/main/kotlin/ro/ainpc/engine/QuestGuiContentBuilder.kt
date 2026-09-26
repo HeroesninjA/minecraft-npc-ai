@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import org.bukkit.entity.Player
 
+/**
+ * Questguicontentbuilder.
+ */
 class QuestGuiContentBuilder(
     private val buildObjectiveKey: (FeaturePackLoader.QuestEntryDefinition, Int) -> String,
     private val readObjectiveProgress: (Map<String, Int>, FeaturePackLoader.QuestEntryDefinition?, Int) -> Int,

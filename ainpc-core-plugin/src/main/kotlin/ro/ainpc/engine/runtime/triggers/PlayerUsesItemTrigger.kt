@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerHandler
 
+/**
+ * Playerusesitemtrigger.
+ */
 class PlayerUsesItemTrigger : ScenarioTriggerHandler {
     override fun type(): String = "player_uses_item"
 

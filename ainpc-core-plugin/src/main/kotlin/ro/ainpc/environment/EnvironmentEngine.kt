@@ -8,6 +8,9 @@ import ro.ainpc.environment.EnvironmentContext.Season
 import ro.ainpc.environment.EnvironmentContext.Temperature
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Environmentengine.
+ */
 class EnvironmentEngine(private val plugin: AINPCPlugin) {
     private val worldContexts = ConcurrentHashMap<String, EnvironmentContext>()
     private val worldDayCounters = ConcurrentHashMap<String, Int>()

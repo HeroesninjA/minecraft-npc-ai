@@ -1,5 +1,8 @@
 package ro.ainpc.world.fixture
 
+/**
+ * Fixturesemanticcontext.
+ */
 class FixtureSemanticContext(
     villageType: String?,
     historySummary: String?,
@@ -24,12 +27,18 @@ class FixtureSemanticContext(
     val lockedKnowledge: List<FixtureLockedKnowledge> = lockedKnowledge ?: emptyList()
 }
 
+/**
+ * Fixturesocialtension.
+ */
 data class FixtureSocialTension(
     val tensionId: String,
     val participants: List<String>,
     val state: String
 )
 
+/**
+ * Fixturenpcrelation.
+ */
 data class FixtureNpcRelation(
     val fromNpcId: String,
     val toNpcId: String,
@@ -39,17 +48,26 @@ data class FixtureNpcRelation(
     val visibleToPlayer: Boolean
 )
 
+/**
+ * Fixturerumor.
+ */
 data class FixtureRumor(
     val rumorId: String,
     val sourceNpcId: String,
     val targetPlaceId: String
 )
 
+/**
+ * Fixturelockedknowledge.
+ */
 data class FixtureLockedKnowledge(
     val knowledgeId: String,
     val unlockCondition: String
 )
 
+/**
+ * Fixturesemanticcontextbuilder.
+ */
 class FixtureSemanticContextBuilder {
     fun build(prefix: String): FixtureSemanticContext {
         val p = prefix

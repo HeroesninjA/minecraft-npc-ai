@@ -4,6 +4,9 @@ import ro.ainpc.addons.AINPCAddon
 import ro.ainpc.addons.AddonDescriptor
 import ro.ainpc.addons.AddonType
 
+/**
+ * Addonregistryapi.
+ */
 interface AddonRegistryApi {
     val descriptors: Collection<AddonDescriptor>
 

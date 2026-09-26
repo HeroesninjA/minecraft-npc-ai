@@ -4,6 +4,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.Optional
 
+/**
+ * Scenarioruntimeregistry.
+ */
 open class ScenarioRuntimeRegistry<T : ScenarioRuntimeHandler> {
     private val handlers = LinkedHashMap<String, T>()
 

@@ -9,6 +9,9 @@ import ro.ainpc.npc.AINPC
 /**
  * Listener pentru evenimente de intrare si recunoastere a jucatorului.
  */
+/**
+ * Playerjoinlistener.
+ */
 class PlayerJoinListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     @EventHandler

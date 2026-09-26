@@ -5,6 +5,9 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
+/**
+ * Packfilewatcher.
+ */
 class PackFileWatcher(private val plugin: AINPCPlugin) {
     private val fileTimestamps: MutableMap<String, Long> = ConcurrentHashMap()
     private var lastScan: MutableMap<String, Long> = ConcurrentHashMap()

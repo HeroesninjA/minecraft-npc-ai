@@ -5,6 +5,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
+/**
+ * Questprogressviewbuilder.
+ */
 class QuestProgressViewBuilder(
     private val plugin: AINPCPlugin,
     private val findQuestProgressByReference: (UUID, String, Boolean) -> PlayerQuestProgress?,

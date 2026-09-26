@@ -12,6 +12,9 @@ import java.nio.file.StandardCopyOption
 import java.util.Comparator
 import java.util.stream.Stream
 
+/**
+ * Ainpcscenariomedievalplugin.
+ */
 class AINPCScenarioMedievalPlugin : JavaPlugin() {
     private var platform: AINPCPlatformApi? = null
     private var addon: MedievalScenarioAddon? = null

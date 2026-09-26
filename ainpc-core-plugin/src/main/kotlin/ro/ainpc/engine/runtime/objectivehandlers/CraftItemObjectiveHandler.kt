@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Craftitemobjectivehandler.
+ */
 class CraftItemObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "craft_item"
     override fun handleProgress(context: ObjectiveContext): ObjectiveResult {

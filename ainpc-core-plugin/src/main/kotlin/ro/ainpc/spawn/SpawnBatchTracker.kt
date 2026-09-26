@@ -9,6 +9,9 @@ import java.util.Locale
 import java.util.Optional
 import java.util.logging.Logger
 
+/**
+ * Spawnbatchtracker.
+ */
 class SpawnBatchTracker(
     private val databaseManager: DatabaseManager?,
     private val logger: Logger?
@@ -535,6 +538,9 @@ class SpawnBatchTracker(
         private fun clean(value: String?): String = value?.trim() ?: ""
     }
 
+/**
+ * Batchrecord.
+ */
     class BatchRecord(
         private val batchKey: String,
         private val scopeType: String,
@@ -567,6 +573,9 @@ class SpawnBatchTracker(
         fun completedAt(): Long = completedAt
     }
 
+/**
+ * Batchsteprecord.
+ */
     class BatchStepRecord(
         private val batchKey: String,
         private val stepIndex: Int,

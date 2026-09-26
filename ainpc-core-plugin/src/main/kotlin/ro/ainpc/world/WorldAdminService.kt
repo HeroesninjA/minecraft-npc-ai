@@ -13,6 +13,9 @@ import java.util.logging.Logger
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Worldadminservice.
+ */
 class WorldAdminService(
     private val debugSink: Consumer<String>,
     private val logger: Logger,
@@ -1549,6 +1552,9 @@ class WorldAdminService(
         return max(min, min(max, value))
     }
 
+/**
+ * Demomappingresult.
+ */
     class DemoMappingResult(
         private val regionId: String,
         createdPlaceIds: List<String>?,

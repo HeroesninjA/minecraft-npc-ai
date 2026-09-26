@@ -10,6 +10,9 @@ import ro.ainpc.world.WorldRegionInfo
 import java.util.LinkedHashMap
 import java.util.Locale
 
+/**
+ * Questanchorresolver.
+ */
 class QuestAnchorResolver(
     private val worldAdminApi: WorldAdminApi?,
     npcs: Collection<AINPC>?
@@ -443,6 +446,9 @@ class QuestAnchorResolver(
         return dx * dx + dy * dy + dz * dz
     }
 
+/**
+ * Resolvedquestanchors.
+ */
     data class ResolvedQuestAnchors(
         val anchors: List<ResolvedQuestAnchor>?,
         val issues: List<ResolutionIssue>?
@@ -483,6 +489,9 @@ class QuestAnchorResolver(
         }
     }
 
+/**
+ * Resolvedquestanchor.
+ */
     data class ResolvedQuestAnchor(
         val objectiveKey: String,
         val objectiveType: String,
@@ -499,6 +508,9 @@ class QuestAnchorResolver(
         fun label(): String = label
     }
 
+/**
+ * Resolutionissue.
+ */
     data class ResolutionIssue(
         val objectiveKey: String,
         val anchorType: String,

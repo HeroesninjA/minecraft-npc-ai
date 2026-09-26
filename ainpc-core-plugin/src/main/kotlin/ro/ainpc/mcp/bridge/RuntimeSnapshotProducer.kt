@@ -9,6 +9,9 @@ import ro.ainpc.mcp.McpRuntimeConfig
 import java.nio.file.Path
 import java.time.Instant
 
+/**
+ * Runtimesnapshotproducer.
+ */
 class RuntimeSnapshotProducer(
     private val plugin: AINPCPlugin,
     snapshotPath: Path = Path.of("data", "mcp-runtime-snapshot.json")

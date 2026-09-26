@@ -7,6 +7,9 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Messageutils.
+ */
 class MessageUtils(private val plugin: AINPCPlugin) {
     private val miniMessage: MiniMessage = MiniMessage.miniMessage()
     private val legacySerializer: LegacyComponentSerializer = LegacyComponentSerializer.legacyAmpersand()

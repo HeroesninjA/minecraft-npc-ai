@@ -2,6 +2,9 @@ package ro.ainpc.progression
 
 import ro.ainpc.engine.*
 
+/**
+ * Progressionobjectivesnapshot.
+ */
 class ProgressionObjectiveSnapshot(
     key: String?,
     type: String?,

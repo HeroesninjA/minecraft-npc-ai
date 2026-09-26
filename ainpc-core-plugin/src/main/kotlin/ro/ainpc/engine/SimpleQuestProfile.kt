@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import org.bukkit.Material
 
+/**
+ * Simplequestprofile.
+ */
 class SimpleQuestProfile(
     private val title: String,
     private val objectiveMaterial: Material,

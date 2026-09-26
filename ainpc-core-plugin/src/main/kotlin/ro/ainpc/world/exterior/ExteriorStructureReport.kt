@@ -1,5 +1,8 @@
 package ro.ainpc.world.exterior
 
+/**
+ * Exteriorstructurereport.
+ */
 class ExteriorStructureReport(
     regionId: String?,
     regionName: String?,

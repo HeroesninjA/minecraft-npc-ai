@@ -11,6 +11,9 @@ internal data class DebugDumpStoryScenarioSnapshot(
     val currentPhase: String,
 )
 
+/**
+ * Debugdumpstorytext.
+ */
 object DebugDumpStoryText {
     @JvmStatic
     fun buildStoryText(plugin: AINPCPlugin): String {

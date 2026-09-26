@@ -1,5 +1,8 @@
 package ro.ainpc.spawn
 
+/**
+ * Houseallocationvalidationresult.
+ */
 class HouseAllocationValidationResult(
     valid: Boolean,
     errors: List<String>?,

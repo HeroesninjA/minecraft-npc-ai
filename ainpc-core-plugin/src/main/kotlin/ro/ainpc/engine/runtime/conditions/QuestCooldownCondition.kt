@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioConditionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Questcooldowncondition.
+ */
 class QuestCooldownCondition : ScenarioConditionHandler {
     override fun type(): String = "quest_cooldown"
 

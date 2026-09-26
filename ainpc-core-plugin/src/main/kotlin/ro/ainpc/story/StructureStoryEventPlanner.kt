@@ -6,6 +6,9 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Structurestoryeventplanner.
+ */
 class StructureStoryEventPlanner {
     fun planPlaceVisit(regionId: String?, place: WorldPlace?, node: WorldNode?): PlannedStructureStoryEvent? {
         if (place == null) {
@@ -324,6 +327,9 @@ class StructureStoryEventPlanner {
     }
 }
 
+/**
+ * Plannedstructurestoryevent.
+ */
 data class PlannedStructureStoryEvent(
     val scopeType: String,
     val scopeId: String,

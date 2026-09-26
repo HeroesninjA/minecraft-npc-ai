@@ -12,6 +12,9 @@ import java.time.LocalDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Memorymanager.
+ */
 class MemoryManager(private val plugin: AINPCPlugin) {
 
     fun createMemory(
@@ -317,6 +320,9 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Memorystats.
+ */
     class MemoryStats(
         private val hasMemories: Boolean,
         private val memoryCount: Int,
@@ -327,6 +333,9 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         fun emotionalImpact(): Double = emotionalImpact
     }
 
+/**
+ * Memory.
+ */
     class Memory {
         private var id: Int = 0
         private var memoryType: String = ""

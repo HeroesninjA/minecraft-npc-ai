@@ -10,6 +10,9 @@ import java.sql.SQLException
 
 private const val MAX_BINDINGS_TO_SCAN = 500
 
+/**
+ * Demoreadinesscommand.
+ */
 object DemoReadinessCommand {
     private const val DEFAULT_REGION_ID = "demo_sat"
     private const val DEFAULT_PLAYER_PLACEHOLDER = "<player>"

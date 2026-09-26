@@ -1,5 +1,8 @@
 package ro.ainpc.world.exterior
 
+/**
+ * Exteriorstructureplan.
+ */
 class ExteriorStructurePlan(
     type: ExteriorStructureType?,
     regionId: String?,

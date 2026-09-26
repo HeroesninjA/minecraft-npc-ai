@@ -2,6 +2,9 @@ package ro.ainpc.spawn
 
 import java.util.Locale
 
+/**
+ * Npcspawnplan.
+ */
 data class NpcSpawnPlan(
     val npcKey: String,
     val name: String,
@@ -75,6 +78,9 @@ data class NpcSpawnPlan(
         return "spawn_plan:${normalizeToken(scope)}:${normalizeToken(key)}"
     }
 
+/**
+ * Builder.
+ */
     class Builder private constructor(
         private val npcKey: String,
         private val name: String

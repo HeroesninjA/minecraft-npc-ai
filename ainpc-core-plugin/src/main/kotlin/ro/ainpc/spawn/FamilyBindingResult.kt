@@ -1,5 +1,8 @@
 package ro.ainpc.spawn
 
+/**
+ * Familybindingresult.
+ */
 class FamilyBindingResult(
     success: Boolean,
     familyId: String?,

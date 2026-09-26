@@ -7,11 +7,17 @@ import ro.ainpc.world.WorldRegionInfo
 import java.sql.SQLException
 import java.util.logging.Level
 
+/**
+ * Storyauthoringservice.
+ */
 class StoryAuthoringService(private val plugin: AINPCPlugin) {
     private val storyStateService: StoryStateService get() = plugin.storyStateService
     private val worldAdmin get() = plugin.platform.worldAdmin
     private val reactionService: StoryReactionService get() = plugin.storyReactionService
 
+/**
+ * Storyeventdraft.
+ */
     data class StoryEventDraft(
         val scopeType: String,
         val scopeId: String,
@@ -28,6 +34,9 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
         val npcId: String = ""
     )
 
+/**
+ * Storyeventinfo.
+ */
     data class StoryEventInfo(
         val id: Long,
         val scopeType: String,
@@ -204,6 +213,9 @@ class StoryAuthoringService(private val plugin: AINPCPlugin) {
         "evolutive", "static", "rotative"
     )
 
+/**
+ * Storytemplate.
+ */
     data class StoryTemplate(
         val id: String,
         val name: String,

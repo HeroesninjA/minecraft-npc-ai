@@ -212,6 +212,9 @@ internal class PopulationPlanRepository(
         }
     }
 
+/**
+ * Storedplan.
+ */
     data class StoredPlan(
         val plan: PopulationPlan,
         val createdAt: Long,

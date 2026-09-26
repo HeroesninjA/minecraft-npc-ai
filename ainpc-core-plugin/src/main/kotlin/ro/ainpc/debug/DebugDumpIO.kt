@@ -12,11 +12,17 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.ArrayDeque
 
+/**
+ * Debugdumpartifactformat.
+ */
 enum class DebugDumpArtifactFormat {
     TEXT,
     JSON,
 }
 
+/**
+ * Debugdumpwriteresult.
+ */
 data class DebugDumpWriteResult(
     val path: Path,
     val format: DebugDumpArtifactFormat,
@@ -25,6 +31,9 @@ data class DebugDumpWriteResult(
     val truncated: Boolean,
 )
 
+/**
+ * Debugdumplogtail.
+ */
 data class DebugDumpLogTail(
     val lines: List<String>,
     val sourceBytes: Long,
@@ -55,6 +64,9 @@ data class DebugDumpLogTail(
     }
 }
 
+/**
+ * Debugdumpio.
+ */
 object DebugDumpIO {
     @JvmStatic
     @Throws(IOException::class)

@@ -14,6 +14,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
 
+/**
+ * Mainhubgui.
+ */
 class MainHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MAIN
 

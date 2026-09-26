@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Storyactiontarget.
+ */
 class StoryActionTarget(
     private val scopeType: String,
     private val scopeId: String,

@@ -6,6 +6,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.WorldAdminService
 
+/**
+ * Debugdumpmappingsnapshotjson.
+ */
 object DebugDumpMappingSnapshotJson {
     @JvmStatic
     fun buildMappingSnapshotJson(plugin: AINPCPlugin): JsonObject {

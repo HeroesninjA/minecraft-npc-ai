@@ -1,5 +1,8 @@
 package ro.ainpc.mcp
 
+/**
+ * Noopmcpruntimeclient.
+ */
 class NoopMcpRuntimeClient(private val config: McpRuntimeConfig) : McpRuntimeClient {
     override fun health(): McpHealthResult = McpHealthResult(
         enabled = false,

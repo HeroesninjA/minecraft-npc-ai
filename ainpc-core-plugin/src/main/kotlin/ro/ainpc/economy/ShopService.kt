@@ -4,6 +4,9 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
+/**
+ * Shopservice.
+ */
 class ShopService(
     private val economyService: EconomyService?,
     private val npcEconomyService: NpcEconomyService? = null
@@ -187,6 +190,9 @@ class ShopService(
     private operator fun NpcEconomyService?.not(): Boolean = this == null
 }
 
+/**
+ * Shoptransactionresult.
+ */
 data class ShopTransactionResult(
     val success: Boolean,
     val message: String

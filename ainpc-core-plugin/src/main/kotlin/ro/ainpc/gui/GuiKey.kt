@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import java.util.Locale
 
+/**
+ * Guikey.
+ */
 enum class GuiKey(
     private val idValue: String,
     private val displayNameValue: String

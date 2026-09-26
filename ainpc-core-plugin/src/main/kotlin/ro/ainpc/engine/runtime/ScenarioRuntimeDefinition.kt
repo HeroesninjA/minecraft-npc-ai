@@ -2,6 +2,9 @@ package ro.ainpc.engine.runtime
 
 import java.util.LinkedHashMap
 
+/**
+ * Scenarioruntimedefinition.
+ */
 class ScenarioRuntimeDefinition(
     id: String?,
     type: String?,

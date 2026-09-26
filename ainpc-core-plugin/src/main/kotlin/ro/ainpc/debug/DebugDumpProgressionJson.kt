@@ -9,6 +9,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import kotlin.math.max
 
+/**
+ * Debugdumpprogressionjson.
+ */
 object DebugDumpProgressionJson {
     @JvmStatic
     fun buildPlayerProgressionsJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {

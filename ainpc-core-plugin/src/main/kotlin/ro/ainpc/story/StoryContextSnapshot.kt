@@ -5,6 +5,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.util.Locale
 
+/**
+ * Storycontextsnapshot.
+ */
 class StoryContextSnapshot(
     subjectNpcName: String?,
     subjectNpcOccupation: String?,
@@ -163,6 +166,9 @@ class StoryContextSnapshot(
         return block.toString()
     }
 
+/**
+ * Questanchorsnapshot.
+ */
     class QuestAnchorSnapshot(
         templateId: String?,
         questCode: String?,

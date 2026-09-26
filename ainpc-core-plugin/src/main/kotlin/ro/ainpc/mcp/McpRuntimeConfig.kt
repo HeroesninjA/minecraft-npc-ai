@@ -4,6 +4,9 @@ import org.bukkit.configuration.file.FileConfiguration
 import java.net.URI
 import java.time.Duration
 
+/**
+ * Mcpruntimeconfig.
+ */
 data class McpRuntimeConfig(
     val enabled: Boolean,
     val baseUrl: String,

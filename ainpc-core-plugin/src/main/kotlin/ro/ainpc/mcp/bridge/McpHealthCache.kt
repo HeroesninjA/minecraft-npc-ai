@@ -6,6 +6,9 @@ import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Mcphealthcache.
+ */
 class McpHealthCache(private val client: McpRuntimeClient) {
     private val cached = AtomicReference<CachedHealth>()
 

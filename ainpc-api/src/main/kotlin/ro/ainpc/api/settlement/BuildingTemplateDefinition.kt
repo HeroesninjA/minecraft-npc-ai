@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildingtemplatedefinition.
+ */
 data class BuildingTemplateDefinition(
     val templateId: String,
     val displayName: String = "",

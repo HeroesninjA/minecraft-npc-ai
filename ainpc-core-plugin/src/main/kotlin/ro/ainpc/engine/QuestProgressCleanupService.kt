@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.UUID
 
+/**
+ * Questprogresscleanupservice.
+ */
 class QuestProgressCleanupService(
     private val getActivePlayerQuests: () -> MutableMap<UUID, MutableMap<String, PlayerQuestProgress>>,
     private val getArchivedPlayerQuests: () -> MutableMap<UUID, MutableMap<String, PlayerQuestProgress>>,

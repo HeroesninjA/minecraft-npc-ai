@@ -3,6 +3,9 @@ package ro.ainpc.progression
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 
+/**
+ * Storedprogressionsummary.
+ */
 class StoredProgressionSummary(
     rowCount: Int,
     playerCount: Int,

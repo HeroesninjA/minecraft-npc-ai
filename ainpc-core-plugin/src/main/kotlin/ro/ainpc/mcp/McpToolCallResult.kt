@@ -1,5 +1,8 @@
 package ro.ainpc.mcp
 
+/**
+ * Mcptoolcallresult.
+ */
 data class McpToolCallResult(
     val available: Boolean,
     val toolName: String,

@@ -28,6 +28,9 @@ import java.util.logging.Level
 
 private const val MYSQL_DUPLICATE_KEY_NAME = 1061
 
+/**
+ * Databasemanager.
+ */
 open class DatabaseManager(
     private val plugin: AINPCPlugin?,
     private val performanceMonitor: PerformanceMonitor? = null,

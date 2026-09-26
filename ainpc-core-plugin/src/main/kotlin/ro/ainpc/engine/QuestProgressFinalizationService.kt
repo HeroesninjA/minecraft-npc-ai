@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.UUID
 
+/**
+ * Questprogressfinalizationservice.
+ */
 class QuestProgressFinalizationService(
     private val getCurrentQuestProgress: (UUID, String) -> PlayerQuestProgress?,
     private val removeActiveQuestProgress: (UUID, String) -> Boolean,

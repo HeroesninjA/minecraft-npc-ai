@@ -9,6 +9,9 @@ import ro.ainpc.engine.QuestScenarioContract
 import ro.ainpc.engine.formatRewardLabel
 import ro.ainpc.progression.ProgressionDefinition
 
+/**
+ * Debugdumpquestdefinitionjson.
+ */
 object DebugDumpQuestDefinitionJson {
     @JvmStatic
     fun buildLoadedQuestDefinitionsJson(plugin: AINPCPlugin, gson: Gson): JsonObject {

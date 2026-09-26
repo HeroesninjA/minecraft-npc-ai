@@ -5,6 +5,9 @@ import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import java.util.logging.Logger
 
+/**
+ * Recordstoryeventaction.
+ */
 class RecordStoryEventAction : ScenarioActionHandler {
     override fun type(): String = "record_story_event"
 

@@ -3,6 +3,9 @@ package ro.ainpc.engine.runtime
 import java.util.Collections
 import java.util.LinkedHashMap
 
+/**
+ * Objectivehandlerregistry.
+ */
 class ObjectiveHandlerRegistry {
     private val handlers = LinkedHashMap<String, ObjectiveHandler>()
 

@@ -4,6 +4,9 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import ro.ainpc.api.PermissionNode
 
+/**
+ * Permissionaudit.
+ */
 class PermissionAudit(private val plugin: JavaPlugin) {
 
     fun runStartupAudit() {

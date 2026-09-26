@@ -7,6 +7,9 @@ import ro.ainpc.progression.ProgressionDefinition
 import java.sql.SQLException
 import java.time.LocalDateTime
 
+/**
+ * Debugdumpquestaudit.
+ */
 object DebugDumpQuestAudit {
     @JvmStatic
     fun buildQuestAuditReportText(plugin: AINPCPlugin): String {

@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Killmobobjectivehandler.
+ */
 class KillMobObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "kill_mob"
 

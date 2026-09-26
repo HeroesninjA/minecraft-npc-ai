@@ -2,6 +2,9 @@ package ro.ainpc.platform.features
 
 import java.util.Locale
 
+/**
+ * Runtimefeaturekey.
+ */
 enum class RuntimeFeatureKey(
     val id: String,
     val configPath: String,

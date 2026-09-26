@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Debuggui.
+ */
 class DebugGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.DEBUG
 

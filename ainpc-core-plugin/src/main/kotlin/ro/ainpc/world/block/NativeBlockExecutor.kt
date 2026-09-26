@@ -7,6 +7,9 @@ import org.bukkit.block.Block
 import org.bukkit.block.data.BlockData
 import java.util.UUID
 
+/**
+ * Nativeblockexecutor.
+ */
 class NativeBlockExecutor : BlockExecutor {
     override fun placeBlock(world: World, x: Int, y: Int, z: Int, material: Material): BlockOperationResult {
         return placeBlock(world, x, y, z, material.createBlockData())
@@ -75,6 +78,9 @@ class NativeBlockExecutor : BlockExecutor {
     override fun getExecutorId(): String = "native"
 }
 
+/**
+ * Nativeblockexecutorprovider.
+ */
 class NativeBlockExecutorProvider : BlockExecutorProvider {
     override fun createExecutor(): BlockExecutor = NativeBlockExecutor()
     override fun getExecutorId(): String = "native"
@@ -82,6 +88,9 @@ class NativeBlockExecutorProvider : BlockExecutorProvider {
     override fun getDescription(): String = "Native Bukkit API block placement (no dependencies)"
 }
 
+/**
+ * Blockexecutorprovider.
+ */
 interface BlockExecutorProvider {
     fun createExecutor(): BlockExecutor
     fun getExecutorId(): String
@@ -89,6 +98,9 @@ interface BlockExecutorProvider {
     fun getDescription(): String
 }
 
+/**
+ * Blockexecutorregistry.
+ */
 object BlockExecutorRegistry {
     private val providers = mutableMapOf<String, BlockExecutorProvider>()
     private var currentExecutor: BlockExecutor? = null

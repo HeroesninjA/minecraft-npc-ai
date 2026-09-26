@@ -5,6 +5,9 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Debugdumpquestmappingcontractjson.
+ */
 object DebugDumpQuestMappingContractJson {
     @JvmStatic
     fun buildQuestMappingContractJson(plugin: AINPCPlugin, gson: Gson): JsonObject {

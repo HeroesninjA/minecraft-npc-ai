@@ -23,6 +23,9 @@ import ro.ainpc.world.WorldRegionInfo
 import java.sql.SQLException
 import java.util.Locale
 
+/**
+ * Worldhubgui.
+ */
 class WorldHubGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.WORLD
 

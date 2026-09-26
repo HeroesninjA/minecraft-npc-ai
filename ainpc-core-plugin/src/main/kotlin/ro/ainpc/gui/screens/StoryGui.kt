@@ -25,6 +25,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * Storygui.
+ */
 class StoryGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.STORY
 

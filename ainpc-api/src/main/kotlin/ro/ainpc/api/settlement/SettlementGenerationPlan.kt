@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildingplacementplan.
+ */
 data class BuildingPlacementPlan @JvmOverloads constructor(
     val buildingKey: String,
     val templateId: String,
@@ -13,6 +16,9 @@ data class BuildingPlacementPlan @JvmOverloads constructor(
     val metadata: Map<String, String> = emptyMap()
 )
 
+/**
+ * Roadplacementplan.
+ */
 data class RoadPlacementPlan @JvmOverloads constructor(
     val roadId: String,
     val fromX: Int,
@@ -24,6 +30,9 @@ data class RoadPlacementPlan @JvmOverloads constructor(
     val metadata: Map<String, String> = emptyMap()
 )
 
+/**
+ * Settlementgenerationplan.
+ */
 data class SettlementGenerationPlan @JvmOverloads constructor(
     val planId: String,
     val settlementId: String,

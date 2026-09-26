@@ -2,6 +2,9 @@ package ro.ainpc.database
 
 import java.sql.SQLException
 
+/**
+ * Databasedialect.
+ */
 enum class DatabaseDialect(val label: String) {
     SQLITE("sqlite"),
     MYSQL("mysql");
@@ -18,6 +21,9 @@ enum class DatabaseDialect(val label: String) {
     }
 }
 
+/**
+ * Databasedialectsql.
+ */
 object DatabaseDialectSql {
     fun autoIncrementPrimaryKey(dialect: DatabaseDialect): String =
         when (dialect) {

@@ -7,6 +7,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Ainpcdiscoveredeventpayload.
+ */
 class AINPCDiscoveredEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -24,6 +27,9 @@ class AINPCDiscoveredEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcdiscoveredevent.
+ */
 class AINPCDiscoveredEvent(
     val payload: AINPCDiscoveredEventPayload
 ) : Event() {
@@ -37,6 +43,9 @@ class AINPCDiscoveredEvent(
     }
 }
 
+/**
+ * Ainpcspawnedeventpayload.
+ */
 class AINPCSpawnedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -54,6 +63,9 @@ class AINPCSpawnedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcspawnedevent.
+ */
 class AINPCSpawnedEvent(
     val payload: AINPCSpawnedEventPayload
 ) : Event(), org.bukkit.event.Cancellable {
@@ -70,6 +82,9 @@ class AINPCSpawnedEvent(
     }
 }
 
+/**
+ * Ainpcprofilerefreshedeventpayload.
+ */
 class AINPCProfileRefreshedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -87,6 +102,9 @@ class AINPCProfileRefreshedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcprofilerefreshedevent.
+ */
 class AINPCProfileRefreshedEvent(
     val payload: AINPCProfileRefreshedEventPayload
 ) : Event() {
@@ -100,6 +118,9 @@ class AINPCProfileRefreshedEvent(
     }
 }
 
+/**
+ * Ainpcemotionchangedeventpayload.
+ */
 class AINPCEmotionChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -116,6 +137,9 @@ class AINPCEmotionChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcemotionchangedevent.
+ */
 class AINPCEmotionChangedEvent(
     val payload: AINPCEmotionChangedEventPayload
 ) : Event() {
@@ -129,6 +153,9 @@ class AINPCEmotionChangedEvent(
     }
 }
 
+/**
+ * Ainpcmemoryrecordedeventpayload.
+ */
 class AINPCMemoryRecordedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -146,6 +173,9 @@ class AINPCMemoryRecordedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcmemoryrecordedevent.
+ */
 class AINPCMemoryRecordedEvent(
     val payload: AINPCMemoryRecordedEventPayload
 ) : Event() {
@@ -159,6 +189,9 @@ class AINPCMemoryRecordedEvent(
     }
 }
 
+/**
+ * Ainpcroutinechangedeventpayload.
+ */
 class AINPCRoutineChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -174,6 +207,9 @@ class AINPCRoutineChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcroutinechangedevent.
+ */
 class AINPCRoutineChangedEvent(
     val payload: AINPCRoutineChangedEventPayload
 ) : Event() {
@@ -187,6 +223,9 @@ class AINPCRoutineChangedEvent(
     }
 }
 
+/**
+ * Ainpcdeatheventpayload.
+ */
 class AINPCDeathEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -204,6 +243,9 @@ class AINPCDeathEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Ainpcdeathevent.
+ */
 class AINPCDeathEvent(
     val payload: AINPCDeathEventPayload
 ) : Event() {

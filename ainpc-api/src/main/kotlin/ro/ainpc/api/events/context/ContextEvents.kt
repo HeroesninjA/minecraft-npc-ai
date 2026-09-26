@@ -7,6 +7,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Worldcontextbuilteventpayload.
+ */
 class WorldContextBuiltEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -23,6 +26,9 @@ class WorldContextBuiltEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Worldcontextbuiltevent.
+ */
 class WorldContextBuiltEvent(
     val payload: WorldContextBuiltEventPayload
 ) : Event() {
@@ -36,6 +42,9 @@ class WorldContextBuiltEvent(
     }
 }
 
+/**
+ * Npccontextupdatedeventpayload.
+ */
 class NPCContextUpdatedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -58,6 +67,9 @@ class NPCContextUpdatedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Npccontextupdatedevent.
+ */
 class NPCContextUpdatedEvent(
     val payload: NPCContextUpdatedEventPayload
 ) : Event() {
@@ -71,6 +83,9 @@ class NPCContextUpdatedEvent(
     }
 }
 
+/**
+ * Contextsignalcollectedeventpayload.
+ */
 class ContextSignalCollectedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -87,6 +102,9 @@ class ContextSignalCollectedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Contextsignalcollectedevent.
+ */
 class ContextSignalCollectedEvent(
     val payload: ContextSignalCollectedEventPayload
 ) : Event() {
@@ -100,6 +118,9 @@ class ContextSignalCollectedEvent(
     }
 }
 
+/**
+ * Playercontextchangedeventpayload.
+ */
 class PlayerContextChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -119,6 +140,9 @@ class PlayerContextChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Playercontextchangedevent.
+ */
 class PlayerContextChangedEvent(
     val payload: PlayerContextChangedEventPayload
 ) : Event() {

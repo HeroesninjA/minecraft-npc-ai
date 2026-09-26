@@ -19,6 +19,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
+/**
+ * Ainpc.
+ */
 class AINPC(
     val plugin: AINPCPlugin?,
     private val stateChangePublisher: ((String, String, String) -> Unit)? = null
@@ -414,6 +417,9 @@ class AINPC(
 
     private fun clampNeed(value: Int): Int = max(0, min(100, value))
 
+/**
+ * Ownedlocation.
+ */
     class OwnedLocation(
         private val type: String,
         private val label: String,

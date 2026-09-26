@@ -2,6 +2,9 @@ package ro.ainpc.world.fixture
 
 import java.util.Locale
 
+/**
+ * Controlledtestworldfixtureplanner.
+ */
 class ControlledTestWorldFixturePlanner {
     fun plan(prefix: String? = DEFAULT_PREFIX): ControlledTestWorldFixturePlan {
         val normalizedPrefix = normalizePrefix(prefix)

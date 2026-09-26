@@ -1,5 +1,8 @@
 package ro.ainpc.api
 
+/**
+ * Npceconomyapi.
+ */
 interface NpcEconomyApi {
     fun getBalance(npcKey: String): Int
     fun getSalary(occupation: String?): Int

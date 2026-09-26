@@ -21,6 +21,9 @@ import java.util.UUID
 /**
  * Listener pentru interactiunile cu NPC-urile
  */
+/**
+ * Npcinteractionlistener.
+ */
 class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     private val dialogManager: DialogManager = plugin.dialogManager
 

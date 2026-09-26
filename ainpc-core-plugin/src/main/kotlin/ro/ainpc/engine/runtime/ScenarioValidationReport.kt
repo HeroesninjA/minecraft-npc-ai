@@ -1,5 +1,8 @@
 package ro.ainpc.engine.runtime
 
+/**
+ * Scenariovalidationreport.
+ */
 class ScenarioValidationReport {
     private val errors = ArrayList<String>()
     private val warnings = ArrayList<String>()

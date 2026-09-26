@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import java.sql.SQLException
 
+/**
+ * Debugdumpplayerprogressionjson.
+ */
 object DebugDumpPlayerProgressionJson {
     @JvmStatic
     fun buildPlayerProgressionJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {

@@ -1,10 +1,16 @@
 package ro.ainpc.debug
 
+/**
+ * Debugdumpprivacymode.
+ */
 enum class DebugDumpPrivacyMode(val cliValue: String) {
     STANDARD("standard"),
     PRIVACY_SAFE("privacy-safe"),
 }
 
+/**
+ * Debugdumpexportoptions.
+ */
 data class DebugDumpExportOptions(
     val playerName: String? = null,
     val privacyMode: DebugDumpPrivacyMode = DebugDumpPrivacyMode.STANDARD,

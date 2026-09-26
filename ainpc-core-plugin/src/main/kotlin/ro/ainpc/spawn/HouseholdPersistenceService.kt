@@ -7,6 +7,9 @@ import java.sql.SQLException
 import java.util.Optional
 import java.util.logging.Logger
 
+/**
+ * Householdpersistenceservice.
+ */
 class HouseholdPersistenceService {
     fun interface StatementProvider {
         @Throws(SQLException::class)
@@ -78,6 +81,9 @@ class HouseholdPersistenceService {
     fun recalculateResidentCounts(householdIds: Collection<String>?): Int =
         state.recalculateResidentCounts(householdIds)
 
+/**
+ * Householdrecord.
+ */
     class HouseholdRecord(
         householdId: String?,
         familyId: String?,
@@ -111,6 +117,9 @@ class HouseholdPersistenceService {
         fun updatedAt(): Long = updatedAt
     }
 
+/**
+ * Householdbackfillreport.
+ */
     class HouseholdBackfillReport(
         val apply: Boolean,
         val scannedBindings: Int,
@@ -142,6 +151,9 @@ class HouseholdPersistenceService {
         fun success(): Boolean = errors.isEmpty()
     }
 
+/**
+ * Metadataresidentbackfillinput.
+ */
     class MetadataResidentBackfillInput(
         homePlaceId: String?,
         familyId: String?,
@@ -155,6 +167,9 @@ class HouseholdPersistenceService {
         fun npcId(): Int = npcId
     }
 
+/**
+ * Householdresidentrepairreport.
+ */
     class HouseholdResidentRepairReport(
         val apply: Boolean,
         val duplicateNpcGroups: Int,
@@ -181,6 +196,9 @@ class HouseholdPersistenceService {
         fun errors(): List<String> = errors
     }
 
+/**
+ * Householdresidentrecord.
+ */
     class HouseholdResidentRecord(
         householdId: String?,
         residentKey: String?,

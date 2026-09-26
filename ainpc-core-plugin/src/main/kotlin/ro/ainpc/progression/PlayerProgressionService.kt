@@ -9,6 +9,9 @@ import ro.ainpc.api.PlayerProgressionSnapshot
 import java.sql.SQLException
 import java.util.logging.Level
 
+/**
+ * Playerprogressionservice.
+ */
 class PlayerProgressionService(private val plugin: AINPCPlugin) : PlayerProgressionApi {
     fun getSnapshot(player: Player): PlayerProgressionSnapshot {
         return loadSnapshot(player.uniqueId.toString())

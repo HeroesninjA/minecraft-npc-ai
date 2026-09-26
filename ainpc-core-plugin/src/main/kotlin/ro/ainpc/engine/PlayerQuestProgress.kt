@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.Locale
 
+/**
+ * Playerquestprogress.
+ */
 class PlayerQuestProgress(
     private val templateId: String?,
     private val questCode: String?,
@@ -46,6 +49,9 @@ class PlayerQuestProgress(
     fun isCompleted(): Boolean = status == QuestStatus.COMPLETED
 }
 
+/**
+ * Queststatus.
+ */
 enum class QuestStatus {
     NOT_STARTED,
     OFFERED,

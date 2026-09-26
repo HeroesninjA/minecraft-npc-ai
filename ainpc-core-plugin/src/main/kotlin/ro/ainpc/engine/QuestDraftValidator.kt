@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.Locale
 
+/**
+ * Questdraftvalidator.
+ */
 class QuestDraftValidator(
     allowedObjectiveTypes: Set<String> = DEFAULT_OBJECTIVE_TYPES,
     allowedRewardTypes: Set<String> = DEFAULT_REWARD_TYPES,

@@ -1,5 +1,8 @@
 package ro.ainpc.world.exterior
 
+/**
+ * Exteriorstructuretype.
+ */
 enum class ExteriorStructureType(
     private val idValue: String,
     private val aliases: Set<String> = emptySet()

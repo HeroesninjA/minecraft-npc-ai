@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questguiobjective.
+ */
 data class QuestGuiObjective @JvmOverloads constructor(
     val key: String,
     val type: String,

@@ -1,5 +1,8 @@
 package ro.ainpc.world
 
+/**
+ * Worldplace.
+ */
 class WorldPlace(
     val id: String,
     val regionId: String,

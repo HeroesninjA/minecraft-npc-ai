@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import java.util.UUID
 
+/**
+ * Guisession.
+ */
 class GuiSession(
     sessionId: UUID,
     playerId: UUID,

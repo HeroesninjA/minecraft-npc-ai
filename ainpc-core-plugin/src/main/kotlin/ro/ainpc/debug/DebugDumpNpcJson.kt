@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 
+/**
+ * Debugdumpnpcjson.
+ */
 object DebugDumpNpcJson {
     @JvmStatic
     fun buildNpcsJson(plugin: AINPCPlugin): JsonArray {

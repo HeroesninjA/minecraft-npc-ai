@@ -11,6 +11,9 @@ import ro.ainpc.AINPCPlugin
 import java.io.File
 import java.util.Locale
 
+/**
+ * Scriptconfigurationloader.
+ */
 object ScriptConfigurationLoader {
     @JvmStatic
     fun loadQuestConfiguration(plugin: AINPCPlugin): Pair<File, FileConfiguration> {

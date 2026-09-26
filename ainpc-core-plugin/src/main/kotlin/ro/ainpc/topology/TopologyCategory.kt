@@ -2,6 +2,9 @@ package ro.ainpc.topology
 
 import java.util.Locale
 
+/**
+ * Topologycategory.
+ */
 enum class TopologyCategory(
     val id: String,
     val displayName: String,

@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.WorldAdminService
 
+/**
+ * Debugdumpworldjson.
+ */
 object DebugDumpWorldJson {
     @JvmStatic
     fun buildWorldMappingSemanticIndexForAudit(plugin: AINPCPlugin): WorldMappingSemanticIndex? {

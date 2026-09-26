@@ -2,6 +2,9 @@ package ro.ainpc.world.mapping
 
 import java.util.Locale
 
+/**
+ * Mappingdraftkind.
+ */
 enum class MappingDraftKind(private val idValue: String) {
     REGION("region"),
     PLACE("place"),

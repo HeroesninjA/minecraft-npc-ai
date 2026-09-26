@@ -9,6 +9,9 @@ import ro.ainpc.progression.ProgressionDefinition
 import java.sql.SQLException
 import java.util.LinkedHashMap
 
+/**
+ * Debugdumpstoryprogressiongapjson.
+ */
 object DebugDumpStoryProgressionGapJson {
     @JvmStatic
     fun buildStoryProgressionGapJson(plugin: AINPCPlugin): JsonObject {

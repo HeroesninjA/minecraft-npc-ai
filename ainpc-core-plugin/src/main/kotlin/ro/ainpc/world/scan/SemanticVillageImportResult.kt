@@ -2,6 +2,9 @@ package ro.ainpc.world.scan
 
 import java.util.Collections
 
+/**
+ * Semanticvillageimportresult.
+ */
 class SemanticVillageImportResult(
     private val regionIdValue: String,
     createdPlaceIds: List<String>,

@@ -3,6 +3,9 @@ package ro.ainpc.platform.features
 import java.util.Collections
 import java.util.EnumMap
 
+/**
+ * Runtimefeaturesnapshot.
+ */
 class RuntimeFeatureSnapshot(states: Collection<RuntimeFeatureState>?) {
     private val statesByFeatureValue: Map<RuntimeFeatureKey, RuntimeFeatureState>
     private val statesValue: List<RuntimeFeatureState>

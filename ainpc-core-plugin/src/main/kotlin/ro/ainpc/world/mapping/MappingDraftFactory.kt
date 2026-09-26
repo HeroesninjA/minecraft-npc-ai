@@ -15,6 +15,9 @@ import java.util.Locale
 import java.util.UUID
 
 
+/**
+ * Mappingdraftfactory.
+ */
 class MappingDraftFactory {
     fun createDraft(
         playerId: UUID?,

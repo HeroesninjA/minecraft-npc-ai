@@ -15,6 +15,9 @@ import ro.ainpc.progression.ProgressionGuiEntry
 import ro.ainpc.progression.ProgressionGuiSnapshot
 import java.util.Locale
 
+/**
+ * Npcinteractiongui.
+ */
 class NpcInteractionGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.INTERACT
 

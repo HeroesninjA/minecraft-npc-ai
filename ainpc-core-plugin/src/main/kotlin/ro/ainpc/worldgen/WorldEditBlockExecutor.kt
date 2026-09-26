@@ -29,6 +29,9 @@ import java.io.FileOutputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Worldeditblockexecutor.
+ */
 class WorldEditBlockExecutor(
     private val plugin: Plugin,
     private val schematicsDir: File,
@@ -267,6 +270,9 @@ class WorldEditBlockExecutor(
     )
 }
 
+/**
+ * Worldeditpreviewsession.
+ */
 class WorldEditPreviewSession(
     override val id: UUID,
     override val operations: List<BlockOperation>,
@@ -314,6 +320,9 @@ class WorldEditPreviewSession(
     }
 }
 
+/**
+ * Worldeditblockexecutorprovider.
+ */
 class WorldEditBlockExecutorProvider(private val plugin: Plugin) : BlockExecutorProvider {
     override fun createExecutor(): BlockExecutor {
         val schematicsDir = File(plugin.dataFolder, "schematics")

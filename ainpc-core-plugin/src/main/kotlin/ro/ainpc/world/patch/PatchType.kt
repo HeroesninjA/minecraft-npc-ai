@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Patchtype.
+ */
 enum class PatchType(private val idValue: String) {
     ADD_HOUSE("add_house"),
     ADD_WORKPLACE("add_workplace"),

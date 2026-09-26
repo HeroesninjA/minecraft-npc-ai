@@ -5,6 +5,9 @@ import ro.ainpc.engine.runtime.ScenarioActionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Executecommandaction.
+ */
 class ExecuteCommandAction : ScenarioActionHandler {
     override fun type(): String = "execute_command"
 

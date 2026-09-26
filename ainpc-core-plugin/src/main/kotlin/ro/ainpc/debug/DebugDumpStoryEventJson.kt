@@ -9,6 +9,9 @@ import ro.ainpc.progression.ProgressionDefinition
 import java.sql.ResultSet
 import java.sql.SQLException
 
+/**
+ * Debugdumpstoryeventjson.
+ */
 object DebugDumpStoryEventJson {
     @JvmStatic
     fun buildStoryEventsJson(plugin: AINPCPlugin, gson: Gson): JsonObject {

@@ -66,6 +66,9 @@ import ro.ainpc.worldgen.WorldEditBlockExecutorProvider
 import java.nio.file.Path
 import java.util.logging.Level
 
+/**
+ * Serviceregistry.
+ */
 class ServiceRegistry(private val plugin: AINPCPlugin) {
 
     lateinit var databaseManager: DatabaseManager
@@ -464,6 +467,9 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         }
     }
 
+/**
+ * Initializationresult.
+ */
     class InitializationResult private constructor(
         val success: Boolean,
         val error: Exception?

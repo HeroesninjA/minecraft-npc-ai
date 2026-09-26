@@ -2,6 +2,9 @@ package ro.ainpc.world
 
 import java.util.Locale
 
+/**
+ * Worldcontextsnapshot.
+ */
 class WorldContextSnapshot(
     private val currentRegion: WorldRegionInfo?,
     private val currentPlace: WorldPlaceInfo?,
@@ -131,6 +134,9 @@ class WorldContextSnapshot(
         return block.toString()
     }
 
+/**
+ * Npcbindinginfo.
+ */
     class NpcBindingInfo(
         private val role: String?,
         private val label: String?,
@@ -147,6 +153,9 @@ class WorldContextSnapshot(
         fun z(): Double = z
     }
 
+/**
+ * Nearbynpcinfo.
+ */
     class NearbyNpcInfo(
         private val name: String?,
         private val occupation: String?,

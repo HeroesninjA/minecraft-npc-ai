@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Mappingcreatenodegui.
+ */
 class MappingCreateNodeGui : GuiScreen {
     private val nodeTypes = listOf("interaction", "npc_spawn", "bed", "home", "work", "workstation", "social", "meeting_point", "quest_trigger", "entrance", "ritual_circle", "altar")
 

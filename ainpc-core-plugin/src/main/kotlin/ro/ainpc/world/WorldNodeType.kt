@@ -1,5 +1,8 @@
 package ro.ainpc.world
 
+/**
+ * Worldnodetype.
+ */
 enum class WorldNodeType(
     val id: String,
     val displayName: String,

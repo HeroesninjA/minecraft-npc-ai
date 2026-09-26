@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Gapreport.
+ */
 class GapReport(
     regionId: String?,
     targetPopulation: Int,

@@ -1,5 +1,8 @@
 package ro.ainpc.engine.runtime
 
+/**
+ * Scenariovariableproviderregistry.
+ */
 class ScenarioVariableProviderRegistry {
     private val providers = LinkedHashMap<String, ScenarioVariableProvider>()
 

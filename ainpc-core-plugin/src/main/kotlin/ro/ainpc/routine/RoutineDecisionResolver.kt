@@ -4,6 +4,9 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import ro.ainpc.topology.TopologyCategory
 
+/**
+ * Routinedecisionresolver.
+ */
 class RoutineDecisionResolver {
     fun assign(
         npc: AINPC?,

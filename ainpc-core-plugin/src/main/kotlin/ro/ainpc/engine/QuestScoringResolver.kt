@@ -6,6 +6,9 @@ import java.text.Normalizer
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Questscoringresolver.
+ */
 class QuestScoringResolver {
     fun score(
         definition: ProgressionDefinition,
@@ -259,6 +262,9 @@ class QuestScoringResolver {
             .replace(Regex("_+"), "_")
     }
 
+/**
+ * Candidatescore.
+ */
     data class CandidateScore(
         val definition: ProgressionDefinition,
         val score: Int,

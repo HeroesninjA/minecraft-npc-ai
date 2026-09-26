@@ -6,6 +6,9 @@ import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.Zombie
 import org.bukkit.entity.Villager
 
+/**
+ * Npcentityadapter.
+ */
 interface NpcEntityAdapter {
     val entityKind: NpcEntityKind
 
@@ -19,6 +22,9 @@ interface NpcEntityAdapter {
     }
 }
 
+/**
+ * Npcentityadapters.
+ */
 object NpcEntityAdapters {
     private val villagerAdapter = VillagerNpcEntityAdapter()
     private val zombieAdapter = ZombieNpcEntityAdapter()
@@ -94,6 +100,9 @@ object NpcEntityAdapters {
     }
 }
 
+/**
+ * Zombienpcentityadapter.
+ */
 class ZombieNpcEntityAdapter : NpcEntityAdapter {
     override val entityKind: NpcEntityKind = NpcEntityKind.MONSTER
 
@@ -113,6 +122,9 @@ class ZombieNpcEntityAdapter : NpcEntityAdapter {
     }
 }
 
+/**
+ * Armorstandnpcentityadapter.
+ */
 class ArmorStandNpcEntityAdapter : NpcEntityAdapter {
     override val entityKind: NpcEntityKind = NpcEntityKind.SPIRIT
 
@@ -137,6 +149,9 @@ class ArmorStandNpcEntityAdapter : NpcEntityAdapter {
     }
 }
 
+/**
+ * Villagernpcentityadapter.
+ */
 class VillagerNpcEntityAdapter : NpcEntityAdapter {
     override val entityKind: NpcEntityKind = NpcEntityKind.VILLAGER
 
@@ -170,6 +185,9 @@ class VillagerNpcEntityAdapter : NpcEntityAdapter {
     }
 }
 
+/**
+ * Noopnpcentityadapter.
+ */
 class NoopNpcEntityAdapter : NpcEntityAdapter {
     override val entityKind: NpcEntityKind = NpcEntityKind.NONE
 

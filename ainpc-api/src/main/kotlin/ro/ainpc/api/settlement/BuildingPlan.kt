@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildingplan.
+ */
 data class BuildingPlan @JvmOverloads constructor(
     val buildingKey: String,
     val placeId: String,

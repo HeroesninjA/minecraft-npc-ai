@@ -3,6 +3,9 @@ package ro.ainpc.settlement
 import ro.ainpc.api.settlement.BuildingAnchorDefinition
 import ro.ainpc.api.settlement.BuildingTemplateDefinition
 
+/**
+ * Buildingtemplateregistry.
+ */
 object BuildingTemplateRegistry {
     private val templates: MutableMap<String, BuildingTemplateDefinition> = LinkedHashMap()
 

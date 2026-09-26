@@ -1,5 +1,8 @@
 package ro.ainpc.progression
 
+/**
+ * Storedprogression.
+ */
 class StoredProgression(
     playerUuid: String?,
     progressionId: String?,

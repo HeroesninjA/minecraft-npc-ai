@@ -10,6 +10,9 @@ import ro.ainpc.world.WorldRegion
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMappingCompensator
 
+/**
+ * Buildingautoplaceservice.
+ */
 class BuildingAutoPlaceService private constructor(
     private val worldAdminProvider: () -> WorldAdminService,
 ) {
@@ -17,6 +20,9 @@ class BuildingAutoPlaceService private constructor(
 
     internal constructor(worldAdminService: WorldAdminService) : this({ worldAdminService })
 
+/**
+ * Autoplaceresult.
+ */
     data class AutoPlaceResult(
         val templateId: String,
         val regionId: String,

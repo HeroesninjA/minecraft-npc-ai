@@ -7,6 +7,9 @@ import ro.ainpc.gui.listeners.GuiInventoryListener
 /**
  * Punct unic pentru inregistrarea listener-elor pluginului.
  */
+/**
+ * Listenerregistry.
+ */
 class ListenerRegistry(private val plugin: AINPCPlugin) {
     fun registerAll() {
         register(NPCInteractionListener(plugin))

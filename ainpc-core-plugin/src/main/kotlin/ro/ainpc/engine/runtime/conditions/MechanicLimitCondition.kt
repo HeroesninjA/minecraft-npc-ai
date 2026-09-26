@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioConditionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Mechaniclimitcondition.
+ */
 class MechanicLimitCondition : ScenarioConditionHandler {
     override fun type(): String = "mechanic_limit"
 

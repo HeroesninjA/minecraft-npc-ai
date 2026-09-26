@@ -4,6 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 
+/**
+ * Mcpstreamablehttpcodec.
+ */
 object McpStreamableHttpCodec {
     private val gson = Gson()
     fun jsonRpcRequest(id: String, method: String, paramsJson: String = "{}"): String =

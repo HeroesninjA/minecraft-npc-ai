@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.Locale
 
+/**
+ * Scenariotype.
+ */
 enum class ScenarioType(val displayName: String) {
     THEFT("Furt"),
     CONFLICT("Conflict"),

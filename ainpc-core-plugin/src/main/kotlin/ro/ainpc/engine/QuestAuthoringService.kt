@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.story.StoryContextSnapshot
 
+/**
+ * Questauthoringservice.
+ */
 class QuestAuthoringService(
     private val questDirector: QuestDirector = QuestDirector(),
     private val seedFactory: QuestSeedFactory = QuestSeedFactory()

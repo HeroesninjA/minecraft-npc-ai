@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildingvariantdefinition.
+ */
 data class BuildingVariantDefinition(
     val variantId: String,
     val displayName: String = "",

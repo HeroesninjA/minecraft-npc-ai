@@ -22,6 +22,9 @@ import java.util.LinkedHashMap
 import java.util.UUID
 import java.util.logging.Logger
 
+/**
+ * Storystateservice.
+ */
 class StoryStateService {
     private val databaseManager: DatabaseManager?
     private val logger: Logger

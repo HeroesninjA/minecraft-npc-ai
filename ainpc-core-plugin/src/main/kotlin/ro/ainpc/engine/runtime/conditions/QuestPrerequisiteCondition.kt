@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ScenarioConditionHandler
 import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 
+/**
+ * Questprerequisitecondition.
+ */
 class QuestPrerequisiteCondition : ScenarioConditionHandler {
     override fun type(): String = "quest_prerequisite"
 

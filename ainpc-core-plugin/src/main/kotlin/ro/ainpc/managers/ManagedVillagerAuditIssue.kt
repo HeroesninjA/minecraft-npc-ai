@@ -1,5 +1,8 @@
 package ro.ainpc.managers
 
+/**
+ * Managedvillagerauditissue.
+ */
 class ManagedVillagerAuditIssue(
     private val error: Boolean,
     message: String?,

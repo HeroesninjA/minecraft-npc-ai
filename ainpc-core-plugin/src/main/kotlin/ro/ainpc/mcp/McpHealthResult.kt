@@ -1,5 +1,8 @@
 package ro.ainpc.mcp
 
+/**
+ * Mcphealthresult.
+ */
 data class McpHealthResult(
     val enabled: Boolean,
     val available: Boolean,

@@ -7,6 +7,9 @@ import org.bukkit.World
 import java.io.File
 import java.util.UUID
 
+/**
+ * Blockexecutor.
+ */
 interface BlockExecutor {
     val executorId: String
     val displayName: String
@@ -21,6 +24,9 @@ interface BlockExecutor {
     fun loadSchematic(file: File): List<BlockOperation>
 }
 
+/**
+ * Blockoperation.
+ */
 data class BlockOperation(
     val worldName: String,
     val x: Int,
@@ -33,6 +39,9 @@ data class BlockOperation(
     fun toLocation(world: World) = org.bukkit.Location(world, x.toDouble(), y.toDouble(), z.toDouble())
 }
 
+/**
+ * Executionresult.
+ */
 data class ExecutionResult(
     val success: Boolean,
     val sessionId: UUID?,
@@ -49,6 +58,9 @@ data class ExecutionResult(
     }
 }
 
+/**
+ * Previewsession.
+ */
 interface PreviewSession {
     val id: UUID
     val operations: List<BlockOperation>
@@ -61,6 +73,9 @@ interface PreviewSession {
     fun getBoundingBox(): BoundingBox?
 }
 
+/**
+ * Blocksnapshot.
+ */
 data class BlockSnapshot(
     val worldName: String,
     val x: Int,
@@ -70,6 +85,9 @@ data class BlockSnapshot(
     val blockData: BlockData? = null
 )
 
+/**
+ * Boundingbox.
+ */
 data class BoundingBox(
     val minX: Int, val minY: Int, val minZ: Int,
     val maxX: Int, val maxY: Int, val maxZ: Int
@@ -80,12 +98,18 @@ data class BoundingBox(
     fun volume(): Long = (maxX - minX + 1L) * (maxY - minY + 1L) * (maxZ - minZ + 1L)
 }
 
+/**
+ * Undoresult.
+ */
 data class UndoResult(
     val success: Boolean,
     val blocksRestored: Int,
     val errors: List<String>
 )
 
+/**
+ * Blockexecutorprovider.
+ */
 interface BlockExecutorProvider {
     fun createExecutor(): BlockExecutor
     fun getExecutorId(): String
@@ -93,6 +117,9 @@ interface BlockExecutorProvider {
     fun getDescription(): String
 }
 
+/**
+ * Blockexecutorregistry.
+ */
 object BlockExecutorRegistry {
     private val providers = mutableMapOf<String, BlockExecutorProvider>()
     private val executors = mutableMapOf<String, BlockExecutor>()

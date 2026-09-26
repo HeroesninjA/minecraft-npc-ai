@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Scoperegistry.
+ */
 object ScopeRegistry {
 
     private val VALID_SCOPES = setOf("region", "place")

@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import ro.ainpc.progression.ProgressionDefinition
 
+/**
+ * Authoringselectionsupport.
+ */
 object AuthoringSelectionSupport {
     @JvmStatic
     fun questSelectorOptions(definitions: List<ProgressionDefinition>): List<String> {

@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader
 
+/**
+ * Debugdumpwarningsjson.
+ */
 object DebugDumpWarningsJson {
 
     @JvmStatic

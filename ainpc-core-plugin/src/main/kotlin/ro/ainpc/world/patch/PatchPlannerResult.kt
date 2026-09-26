@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Patchplannerresult.
+ */
 class PatchPlannerResult(
     private val gapReport: GapReport?,
     candidates: List<PatchCandidate>?,

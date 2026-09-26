@@ -4,6 +4,9 @@ package ro.ainpc.world
 import ro.ainpc.npc.AINPC
 import ro.ainpc.spawn.NpcSpawnPlan
 
+/**
+ * Npcworldbinding.
+ */
 class NpcWorldBinding(
     npcId: Int,
     npcUuid: String?,

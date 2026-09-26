@@ -2,6 +2,9 @@ package ro.ainpc.routine
 
 import ro.ainpc.npc.AINPC
 
+/**
+ * Routinepreviewresolver.
+ */
 class RoutinePreviewResolver(
     private val profileResolver: RoutineProfileResolver,
     private val assignmentProvider: (AINPC?, Long) -> RoutineAssignment

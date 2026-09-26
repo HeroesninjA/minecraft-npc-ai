@@ -29,6 +29,9 @@ internal fun resolveTaggedPopulationTheme(tags: Iterable<String>): String? = tag
     .sorted()
     .firstOrNull()
 
+/**
+ * Narrativegenerator.
+ */
 class NarrativeGenerator {
     fun generatePopulationPlan(
         worldAdmin: WorldAdminApi?,
@@ -324,6 +327,9 @@ class NarrativeGenerator {
         nodes.filter { node -> tokens.any { token -> SpawnSemanticRules.matchesAnyToken(node.typeId(), token) } }
             .sortedBy { it.id() }
 
+/**
+ * Populationplanresult.
+ */
     class PopulationPlanResult private constructor(
         private val success: Boolean,
         private val plan: PopulationPlan?,

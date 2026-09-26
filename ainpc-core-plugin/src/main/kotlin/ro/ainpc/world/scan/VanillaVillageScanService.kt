@@ -8,6 +8,9 @@ import ro.ainpc.utils.ConfigKeys
 import java.util.ArrayDeque
 import java.util.logging.Level
 
+/**
+ * Vanillavillagescanservice.
+ */
 class VanillaVillageScanService(
     private val plugin: AINPCPlugin,
     private val scanner: VanillaVillageScanner = VanillaVillageScanner(),
@@ -117,6 +120,9 @@ class VanillaVillageScanService(
     }
 }
 
+/**
+ * Vanillavillagescanticket.
+ */
 data class VanillaVillageScanTicket(
     val totalBlocks: Long,
     val blockBudgetPerTick: Int,

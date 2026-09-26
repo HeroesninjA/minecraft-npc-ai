@@ -6,6 +6,9 @@ import com.google.gson.JsonObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Questdraftexporter.
+ */
 class QuestDraftExporter {
 
     fun exportDraft(params: QuestDraftParams): String {
@@ -98,6 +101,9 @@ class QuestDraftExporter {
         return gson.toJson(root)
     }
 
+/**
+ * Questdraftparams.
+ */
     data class QuestDraftParams(
         val draftId: String,
         val title: String,
@@ -114,6 +120,9 @@ class QuestDraftExporter {
         val systemMessages: List<String> = listOf()
     )
 
+/**
+ * Objectivedef.
+ */
     data class ObjectiveDef(
         val type: String,
         val target: String,
@@ -122,6 +131,9 @@ class QuestDraftExporter {
         val dialog: String = ""
     )
 
+/**
+ * Stagedef.
+ */
     data class StageDef(
         val id: String,
         val name: String = "",
@@ -129,6 +141,9 @@ class QuestDraftExporter {
         val nextStage: String = ""
     )
 
+/**
+ * Rewarddef.
+ */
     data class RewardDef(
         val type: String,
         val value: String,
@@ -141,6 +156,9 @@ class QuestDraftExporter {
         val eventPayload: Map<String, String> = emptyMap()
     )
 
+/**
+ * Dialogdef.
+ */
     data class DialogDef(
         val type: String,
         val speaker: String,

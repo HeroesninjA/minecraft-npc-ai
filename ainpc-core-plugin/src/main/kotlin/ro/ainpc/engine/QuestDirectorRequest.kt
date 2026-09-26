@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.story.StoryContextSnapshot
 
+/**
+ * Questdirectorrequest.
+ */
 class QuestDirectorRequest(
     storyContext: StoryContextSnapshot?,
     definitions: List<ProgressionDefinition>?,

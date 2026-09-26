@@ -1,10 +1,16 @@
 package ro.ainpc.commands
 
+/**
+ * Authoringcommandrequest.
+ */
 data class AuthoringCommandRequest(
     val mode: Mode,
     val questSelector: String?,
     val mechanicId: String?
 ) {
+/**
+ * Mode.
+ */
     enum class Mode {
         OPEN,
         DUMP,
@@ -15,16 +21,25 @@ data class AuthoringCommandRequest(
     }
 }
 
+/**
+ * Authoringcommandplan.
+ */
 data class AuthoringCommandPlan(
     val requiresPlayer: Boolean,
     val mode: AuthoringCommandRequest.Mode
 )
 
+/**
+ * Authoringresolvedselection.
+ */
 data class AuthoringResolvedSelection(
     val questSelector: String?,
     val mechanicId: String?
 )
 
+/**
+ * Authoringcommandsupport.
+ */
 object AuthoringCommandSupport {
     private val primaryAliases = listOf("next", "prev", "clear", "dump", "summary")
     private val secondaryAliases = listOf("next" to "forward", "prev" to "previous", "clear" to "reset", "dump" to "summarize")

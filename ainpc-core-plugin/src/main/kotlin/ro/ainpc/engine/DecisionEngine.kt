@@ -18,6 +18,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+/**
+ * Decisionengine.
+ */
 class DecisionEngine(private val plugin: AINPCPlugin) {
     private val scoreCache: MutableMap<UUID, MutableMap<NPCAction, Int>> = ConcurrentHashMap()
     private val lastDecisionTime: MutableMap<UUID, Long> = ConcurrentHashMap()

@@ -3,6 +3,9 @@ package ro.ainpc.routine
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 
+/**
+ * Routineassignment.
+ */
 class RoutineAssignment(
     private val slotValue: RoutineSlot?,
     private val activityValue: String?,

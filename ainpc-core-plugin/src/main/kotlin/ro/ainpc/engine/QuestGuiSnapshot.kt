@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questguisnapshot.
+ */
 data class QuestGuiSnapshot @JvmOverloads constructor(
     val handled: Boolean = false,
     val playerName: String = "",

@@ -3,6 +3,9 @@ package ro.ainpc.utils
 import java.util.Locale
 import java.util.Random
 
+/**
+ * Npcnamegenerator.
+ */
 object NPCNameGenerator {
     private val MALE_NAMES = arrayOf(
         "Aaron", "Abel", "Achim", "Adam", "Adelin", "Adi", "Adrian", "Alec", "Alexandru", "Alin",

@@ -17,6 +17,9 @@ import ro.ainpc.progression.ProgressionGuiSnapshot
 import java.text.SimpleDateFormat
 import java.util.Date
 
+/**
+ * Questloggui.
+ */
 class QuestLogGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST
 

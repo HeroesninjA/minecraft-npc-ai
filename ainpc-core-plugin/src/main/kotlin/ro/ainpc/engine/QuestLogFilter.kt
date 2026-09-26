@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questlogfilter.
+ */
 enum class QuestLogFilter(
     private val displayName: String,
 ) {

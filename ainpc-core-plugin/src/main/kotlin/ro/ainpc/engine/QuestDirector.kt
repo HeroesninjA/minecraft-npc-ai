@@ -7,6 +7,9 @@ import java.text.Normalizer
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Questdirector.
+ */
 class QuestDirector {
     private val scoringResolver = QuestScoringResolver()
 

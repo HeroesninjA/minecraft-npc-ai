@@ -14,6 +14,9 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Debugdumpservice.
+ */
 class DebugDumpService(private val plugin: AINPCPlugin) {
     private val gson: Gson = GsonBuilder()
         .setPrettyPrinting()
@@ -405,6 +408,9 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         writer.writeText(dumpRoot.resolve("index.txt"), index.toString())
     }
 
+/**
+ * Debugdumpresult.
+ */
     data class DebugDumpResult(
         private val directoryValue: Path,
         private val scopeValue: String,

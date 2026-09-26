@@ -4,6 +4,9 @@ import ro.ainpc.engine.runtime.ObjectiveContext
 import ro.ainpc.engine.runtime.ObjectiveHandler
 import ro.ainpc.engine.runtime.ObjectiveResult
 
+/**
+ * Placeblockobjectivehandler.
+ */
 class PlaceBlockObjectiveHandler : ObjectiveHandler {
     override fun type(): String = "place_block"
     override fun handleProgress(context: ObjectiveContext): ObjectiveResult {

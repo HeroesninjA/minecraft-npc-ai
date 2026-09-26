@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import ro.ainpc.addons.AddonType
 import java.util.Locale
 
+/**
+ * Featurepacksupport.
+ */
 object FeaturePackSupport {
     @JvmStatic
     fun inferAddonType(pack: FeaturePackLoader.FeaturePack): AddonType {

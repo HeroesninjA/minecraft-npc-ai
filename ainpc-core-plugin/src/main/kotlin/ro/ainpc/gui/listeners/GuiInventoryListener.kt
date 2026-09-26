@@ -10,6 +10,9 @@ import org.bukkit.event.player.PlayerQuitEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.gui.AINPCGuiHolder
 
+/**
+ * Guiinventorylistener.
+ */
 class GuiInventoryListener(
     private val plugin: AINPCPlugin
 ) : Listener {

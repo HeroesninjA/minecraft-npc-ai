@@ -1,5 +1,8 @@
 package ro.ainpc.world
 
+/**
+ * Regionidentity.
+ */
 data class RegionIdentity(
     val type: RegionType,
     val displayName: String,
@@ -13,6 +16,9 @@ data class RegionIdentity(
     val threatLevel: String
 )
 
+/**
+ * Regionidentityprovider.
+ */
 object RegionIdentityProvider {
 
     fun identity(type: RegionType): RegionIdentity {

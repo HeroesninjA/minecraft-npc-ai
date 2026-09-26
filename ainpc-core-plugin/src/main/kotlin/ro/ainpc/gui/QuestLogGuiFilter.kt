@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import java.util.Locale
 
+/**
+ * Questlogguifilter.
+ */
 enum class QuestLogGuiFilter(
     private val filterValue: String,
     private val buttonLabelValue: String,

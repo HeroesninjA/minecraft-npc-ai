@@ -4,6 +4,9 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.PlayerInventory
 import java.util.UUID
 
+/**
+ * Questprogresslifecycleservice.
+ */
 class QuestProgressLifecycleService(
     private val getCurrentQuestProgress: (UUID, String) -> PlayerQuestProgress?,
     private val putActiveQuestProgress: (UUID, PlayerQuestProgress) -> Unit,

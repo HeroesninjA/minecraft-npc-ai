@@ -2,6 +2,9 @@ package ro.ainpc.progression
 
 import ro.ainpc.engine.*
 
+/**
+ * Progressionprogresssnapshot.
+ */
 class ProgressionProgressSnapshot(
     private val handledValue: Boolean,
     playerName: String?,

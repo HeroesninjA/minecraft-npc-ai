@@ -1,5 +1,8 @@
 package ro.ainpc.spawn
 
+/**
+ * Settlementspawnresult.
+ */
 class SettlementSpawnResult(
     success: Boolean,
     dryRun: Boolean,

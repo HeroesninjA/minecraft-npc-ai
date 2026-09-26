@@ -3,6 +3,9 @@ package ro.ainpc.spawn
 import org.bukkit.Location
 import ro.ainpc.npc.AINPC
 
+/**
+ * Resolvednpcspawnplan.
+ */
 class ResolvedNpcSpawnPlan(
     plan: NpcSpawnPlan?,
     spawnLocation: Location?,

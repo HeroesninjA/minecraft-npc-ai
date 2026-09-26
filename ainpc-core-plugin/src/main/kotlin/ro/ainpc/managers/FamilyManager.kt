@@ -12,6 +12,9 @@ import java.sql.Types
 import java.util.Locale
 import java.util.Random
 
+/**
+ * Familymanager.
+ */
 class FamilyManager(private val plugin: AINPCPlugin) {
     private val random = Random()
 

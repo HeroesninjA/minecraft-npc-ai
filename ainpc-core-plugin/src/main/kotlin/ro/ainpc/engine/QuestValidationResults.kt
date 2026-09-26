@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questavailability.
+ */
 class QuestAvailability private constructor(
     private val available: Boolean,
     issues: List<String>?,
@@ -19,6 +22,9 @@ class QuestAvailability private constructor(
     }
 }
 
+/**
+ * Questrewardcheck.
+ */
 class QuestRewardCheck private constructor(
     private val canGrant: Boolean,
     issues: List<String>?,

@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import ro.ainpc.progression.ProgressionDefinition
 
+/**
+ * Questdirectordecision.
+ */
 class QuestDirectorDecision(
     status: Status?,
     reason: String?,
@@ -39,6 +42,9 @@ class QuestDirectorDecision(
     fun warnings(): List<String> = warningsValue
     fun runtimeExecutable(): Boolean = runtimeExecutableValue
 
+/**
+ * Status.
+ */
     enum class Status(private val idValue: String) {
         NO_ACTION("no_action"),
         CANDIDATE_FOUND("candidate_found"),

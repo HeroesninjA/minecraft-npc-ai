@@ -2,6 +2,9 @@ package ro.ainpc.world
 
 import kotlin.math.max
 
+/**
+ * Worldnode.
+ */
 class WorldNode(
     val id: String,
     val regionId: String,

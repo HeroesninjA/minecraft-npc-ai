@@ -1,5 +1,8 @@
 package ro.ainpc.world.mapping
 
+/**
+ * Mappingdraftapplyresult.
+ */
 class MappingDraftApplyResult(
     kind: MappingDraftKind?,
     createdId: String?,

@@ -5,6 +5,9 @@ import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import java.util.LinkedHashMap
 
+/**
+ * Worldcontextsnapshotbuilder.
+ */
 class WorldContextSnapshotBuilder(
     private val worldAdminService: WorldAdminApi?
 ) {

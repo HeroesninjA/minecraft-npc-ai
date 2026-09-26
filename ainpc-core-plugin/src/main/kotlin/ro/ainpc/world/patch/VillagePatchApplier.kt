@@ -6,6 +6,9 @@ import ro.ainpc.world.WorldMappingCompensator
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.patch.PatchValidationStatus
 
+/**
+ * Villagepatchapplier.
+ */
 class VillagePatchApplier {
 
     private val PLACE_SIZE = 12

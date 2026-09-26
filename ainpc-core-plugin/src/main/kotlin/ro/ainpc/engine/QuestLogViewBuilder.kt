@@ -4,6 +4,9 @@ import org.bukkit.entity.Player
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
+/**
+ * Questlogviewbuilder.
+ */
 class QuestLogViewBuilder(
     private val parseQuestLogFilter: (String?) -> QuestLogFilter,
     private val getCurrentQuestProgress: (UUID) -> List<PlayerQuestProgress>,

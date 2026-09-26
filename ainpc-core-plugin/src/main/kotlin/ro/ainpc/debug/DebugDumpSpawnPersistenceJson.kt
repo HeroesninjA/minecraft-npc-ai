@@ -6,6 +6,9 @@ import ro.ainpc.AINPCPlugin
 import java.sql.ResultSet
 import java.sql.SQLException
 
+/**
+ * Debugdumpspawnpersistencejson.
+ */
 object DebugDumpSpawnPersistenceJson {
     @JvmStatic
     fun buildSpawnBatchesJson(plugin: AINPCPlugin): JsonObject {

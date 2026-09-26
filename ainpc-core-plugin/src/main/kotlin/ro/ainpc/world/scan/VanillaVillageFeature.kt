@@ -1,5 +1,8 @@
 package ro.ainpc.world.scan
 
+/**
+ * Vanillavillagefeature.
+ */
 class VanillaVillageFeature(
     private val typeValue: VanillaVillageFeatureType,
     private val materialValue: String,

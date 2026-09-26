@@ -1,5 +1,8 @@
 package ro.ainpc.world.patch
 
+/**
+ * Villagegap.
+ */
 class VillageGap(
     private val type: PatchGapType,
     amount: Int,

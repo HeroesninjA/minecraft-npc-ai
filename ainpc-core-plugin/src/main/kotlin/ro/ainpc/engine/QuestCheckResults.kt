@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questinventorycheck.
+ */
 class QuestInventoryCheck(
     private val complete: Boolean,
     private val missingItems: List<String>,
@@ -9,6 +12,9 @@ class QuestInventoryCheck(
     fun missingItems(): List<String> = missingItems
 }
 
+/**
+ * Questobjectivecheck.
+ */
 class QuestObjectiveCheck(
     private val complete: Boolean,
     private val missingObjectives: List<String>,

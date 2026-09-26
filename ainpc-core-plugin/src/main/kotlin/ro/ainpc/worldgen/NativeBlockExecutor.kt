@@ -14,6 +14,9 @@ import java.io.ObjectOutputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Nativeblockexecutor.
+ */
 class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
     override val executorId: String = "native"
     override val displayName: String = "Native Bukkit API"
@@ -127,6 +130,9 @@ class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
     )
 }
 
+/**
+ * Nativepreviewsession.
+ */
 class NativePreviewSession(
     override val id: UUID,
     override val operations: List<BlockOperation>,
@@ -166,6 +172,9 @@ class NativePreviewSession(
     }
 }
 
+/**
+ * Nativeblockexecutorprovider.
+ */
 class NativeBlockExecutorProvider(private val plugin: Plugin) : BlockExecutorProvider {
     override fun createExecutor(): BlockExecutor = NativeBlockExecutor(plugin)
     override fun getExecutorId(): String = "native"

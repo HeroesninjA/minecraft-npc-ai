@@ -2,6 +2,9 @@ package ro.ainpc.mcp
 
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Mcpruntimeclient.
+ */
 interface McpRuntimeClient {
     fun health(): McpHealthResult
     fun callTool(toolName: String, argumentsJson: String = "{}"): McpToolCallResult

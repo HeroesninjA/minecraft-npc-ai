@@ -6,6 +6,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentLinkedDeque
 
+/**
+ * Recenteventsbuffer.
+ */
 class RecentEventsBuffer {
     private val buffer: ConcurrentLinkedDeque<RecentEvent> = ConcurrentLinkedDeque()
     @Volatile
@@ -42,6 +45,9 @@ class RecentEventsBuffer {
         }
     }
 
+/**
+ * Recentevent.
+ */
     data class RecentEvent(
         val createdAtMillis: Long,
         val eventName: String,

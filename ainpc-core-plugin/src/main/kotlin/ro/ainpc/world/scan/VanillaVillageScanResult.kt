@@ -2,6 +2,9 @@ package ro.ainpc.world.scan
 
 import java.util.Collections
 
+/**
+ * Vanillavillagescanresult.
+ */
 class VanillaVillageScanResult(
     private val worldNameValue: String,
     private val centerXValue: Int,

@@ -4,6 +4,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.environment.EnvironmentContext.Season
 import ro.ainpc.npc.NPCState
 
+/**
+ * Seasonalbehaviorservice.
+ */
 class SeasonalBehaviorService(private val plugin: AINPCPlugin) {
     private val springActivities = listOf(
         "plantează în grădină" to NPCState.FARMING,

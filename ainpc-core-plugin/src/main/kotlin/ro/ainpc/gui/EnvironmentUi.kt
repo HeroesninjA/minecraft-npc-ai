@@ -3,6 +3,9 @@ package ro.ainpc.gui
 import org.bukkit.Material
 import ro.ainpc.environment.EnvironmentContext
 
+/**
+ * Environmentui.
+ */
 object EnvironmentUi {
     fun icon(env: EnvironmentContext): Material = when {
         env.isExtreme() -> Material.REDSTONE_BLOCK

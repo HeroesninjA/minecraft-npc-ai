@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Storystatechangedeventpayload.
+ */
 class StoryStateChangedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -26,6 +29,9 @@ class StoryStateChangedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Storystatechangedevent.
+ */
 class StoryStateChangedEvent(
     val payload: StoryStateChangedEventPayload
 ) : org.bukkit.event.Event() {
@@ -39,6 +45,9 @@ class StoryStateChangedEvent(
     }
 }
 
+/**
+ * Storyeventrecordedeventpayload.
+ */
 class StoryEventRecordedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -61,6 +70,9 @@ class StoryEventRecordedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Storyeventrecordedevent.
+ */
 class StoryEventRecordedEvent(
     val payload: StoryEventRecordedEventPayload
 ) : org.bukkit.event.Event() {

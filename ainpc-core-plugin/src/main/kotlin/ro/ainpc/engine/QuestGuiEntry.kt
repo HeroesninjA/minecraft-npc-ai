@@ -1,5 +1,8 @@
 package ro.ainpc.engine
 
+/**
+ * Questguientry.
+ */
 data class QuestGuiEntry @JvmOverloads constructor(
     val selector: String = "",
     val templateId: String = "",

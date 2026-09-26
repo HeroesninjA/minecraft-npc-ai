@@ -6,6 +6,9 @@ import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldAdminService
 import ro.ainpc.world.WorldMappingCompensator
 
+/**
+ * Controlledtestworldfixtureapplyresult.
+ */
 class ControlledTestWorldFixtureApplyResult(
     fixtureId: String?,
     regionIds: List<String>?,
@@ -33,6 +36,9 @@ class ControlledTestWorldFixtureApplyResult(
     fun success(): Boolean = errors.isEmpty()
 }
 
+/**
+ * Controlledtestworldfixtureapplier.
+ */
 class ControlledTestWorldFixtureApplier {
 
     private val EXTERIOR_REGION_SIZE = 80

@@ -1,5 +1,8 @@
 package ro.ainpc.platform.features
 
+/**
+ * Runtimefeaturesource.
+ */
 class RuntimeFeatureSource private constructor(
     private val kindValue: String,
     private val keyValue: String,

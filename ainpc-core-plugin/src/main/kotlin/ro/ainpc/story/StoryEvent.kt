@@ -2,6 +2,9 @@ package ro.ainpc.story
 
 import java.util.LinkedHashMap
 
+/**
+ * Storyevent.
+ */
 class StoryEvent(
     private val idValue: Long,
     scopeType: String?,

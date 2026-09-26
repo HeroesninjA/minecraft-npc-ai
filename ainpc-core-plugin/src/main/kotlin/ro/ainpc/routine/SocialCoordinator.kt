@@ -7,6 +7,9 @@ import ro.ainpc.topology.TopologyCategory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Socialcoordinator.
+ */
 class SocialCoordinator(private val plugin: AINPCPlugin) {
     private val socialGroups: MutableMap<String, MutableList<UUID>> = ConcurrentHashMap()
     private val npcSocialPartners: MutableMap<UUID, MutableList<UUID>> = ConcurrentHashMap()

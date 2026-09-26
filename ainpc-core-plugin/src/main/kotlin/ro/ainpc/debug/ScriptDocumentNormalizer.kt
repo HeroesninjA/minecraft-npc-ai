@@ -11,6 +11,9 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import java.util.Locale
 
+/**
+ * Scriptdocumentnormalizer.
+ */
 object ScriptDocumentNormalizer {
     private val gson: Gson = GsonBuilder()
         .setPrettyPrinting()

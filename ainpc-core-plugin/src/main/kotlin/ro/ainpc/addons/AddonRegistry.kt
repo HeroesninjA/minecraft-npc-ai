@@ -9,6 +9,9 @@ import java.util.Locale
 import java.util.logging.Level
 import java.util.logging.Logger
 
+/**
+ * Addonregistry.
+ */
 class AddonRegistry(private val platformApi: AINPCPlatformApi) : AddonRegistryApi {
     private val logger: Logger = Logger.getLogger(AddonRegistry::class.java.name)
     private val dependencyResolver = AddonDependencyResolver()

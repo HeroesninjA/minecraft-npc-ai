@@ -15,6 +15,9 @@ import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Questprogressionlifecyclepublisher.
+ */
 class QuestProgressionLifecyclePublisher(private val plugin: AINPCPlugin) {
     fun publishAccepted(
         player: Player,

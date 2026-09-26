@@ -1,5 +1,8 @@
 package ro.ainpc.context
 
+/**
+ * Contextredactor.
+ */
 object ContextRedactor {
     private val POLICY = SensitiveDataRedactionPolicy.privacySafe(
         secretReplacement = "[REDACTED]",

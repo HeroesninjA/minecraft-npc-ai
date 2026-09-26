@@ -5,6 +5,9 @@ import ro.ainpc.engine.runtime.ScenarioExecutionContext
 import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import java.util.logging.Logger
 
+/**
+ * Setstorystateaction.
+ */
 class SetStoryStateAction : ScenarioActionHandler {
     override fun type(): String = "set_story_state"
 

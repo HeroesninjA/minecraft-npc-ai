@@ -5,6 +5,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.UUID
 
+/**
+ * Progressionfailedeventpayload.
+ */
 class ProgressionFailedEventPayload(
     val eventId: UUID,
     val createdAtMillis: Long,
@@ -22,6 +25,9 @@ class ProgressionFailedEventPayload(
     val metadata: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(metadata ?: emptyMap()))
 }
 
+/**
+ * Progressionfailedevent.
+ */
 class ProgressionFailedEvent(
     val payload: ProgressionFailedEventPayload
 ) : org.bukkit.event.Event() {

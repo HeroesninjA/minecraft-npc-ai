@@ -5,6 +5,9 @@ import ro.ainpc.engine.runtime.ScenarioRuntimeDefinition
 import ro.ainpc.engine.runtime.ScenarioTriggerHandler
 import java.util.logging.Logger
 
+/**
+ * Playerentersregiontrigger.
+ */
 class PlayerEntersRegionTrigger : ScenarioTriggerHandler {
     override fun type(): String = "player_enters_region"
 

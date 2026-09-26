@@ -2,6 +2,9 @@ package ro.ainpc.engine
 
 import java.util.UUID
 
+/**
+ * Questlogsupportservice.
+ */
 class QuestLogSupportService(
     private val getQuestTemplate: (String) -> ScenarioTemplate?,
     private val getCurrentQuestProgress: (UUID, String) -> PlayerQuestProgress?,

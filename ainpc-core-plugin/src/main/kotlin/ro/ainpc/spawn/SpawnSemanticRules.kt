@@ -6,6 +6,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import java.util.Locale
 import kotlin.math.min
 
+/**
+ * Spawnsemanticrules.
+ */
 object SpawnSemanticRules {
     fun isHousePlace(place: WorldPlaceInfo): Boolean =
         place.placeType() == PlaceType.HOUSE ||

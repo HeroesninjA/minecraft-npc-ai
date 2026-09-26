@@ -8,6 +8,9 @@ import java.lang.reflect.Method
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Vaulteconomyinvocationhandler.
+ */
 class VaultEconomyInvocationHandler(private val plugin: AINPCPlugin) : InvocationHandler {
     override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
         return when (method.name) {

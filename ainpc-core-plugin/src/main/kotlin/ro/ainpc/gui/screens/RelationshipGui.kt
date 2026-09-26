@@ -13,6 +13,9 @@ import ro.ainpc.npc.AINPC
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Relationshipgui.
+ */
 class RelationshipGui : GuiScreen {
     private var selectedNpcUuid: UUID? = null
 

@@ -7,6 +7,9 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.Locale
 
+/**
+ * Worldmappingsemanticindex.
+ */
 class WorldMappingSemanticIndex(
     regionCandidates: Map<String, List<String>>?,
     placeCandidates: Map<String, List<String>>?,

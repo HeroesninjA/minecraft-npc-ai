@@ -4,6 +4,9 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.NPCState
 import java.util.logging.Level
 
+/**
+ * Storyreactionservice.
+ */
 class StoryReactionService(private val plugin: AINPCPlugin) {
     private val eventReactions: Map<String, EventReaction> = mapOf(
         "celebration" to EventReaction(
@@ -162,6 +165,9 @@ class StoryReactionService(private val plugin: AINPCPlugin) {
         )
     )
 
+/**
+ * Eventreaction.
+ */
     data class EventReaction(
         val targetState: NPCState,
         val messages: List<String>,

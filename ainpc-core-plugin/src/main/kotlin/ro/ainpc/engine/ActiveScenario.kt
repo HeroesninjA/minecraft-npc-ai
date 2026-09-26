@@ -4,6 +4,9 @@ import ro.ainpc.npc.NpcScenarioActorDefinition
 import org.bukkit.Location
 import java.util.UUID
 
+/**
+ * Activescenario.
+ */
 class ActiveScenario(val id: UUID, template: ScenarioTemplate) {
     val type: ScenarioType = template.type
     val templateId: String = template.templateId

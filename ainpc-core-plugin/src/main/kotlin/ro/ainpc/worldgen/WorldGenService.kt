@@ -23,6 +23,9 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Worldgenservice.
+ */
 class WorldGenService(
     private val plugin: AINPCPlugin,
     private val worldAdmin: WorldAdminService,
@@ -245,6 +248,9 @@ class WorldGenService(
 
 }
 
+/**
+ * Buildresult.
+ */
 data class BuildResult(
     val success: Boolean,
     val sessionId: UUID? = null,
@@ -257,6 +263,9 @@ data class BuildResult(
     }
 }
 
+/**
+ * Buildoperation.
+ */
 data class BuildOperation(
     val id: UUID,
     val placeId: String,
@@ -268,6 +277,9 @@ data class BuildOperation(
     var error: String? = null
 )
 
+/**
+ * Worldgenserviceprovider.
+ */
 class WorldGenServiceProvider(private val plugin: AINPCPlugin) {
     private var service: WorldGenService? = null
 

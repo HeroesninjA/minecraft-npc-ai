@@ -5,6 +5,9 @@ import ro.ainpc.world.WorldPlaceInfo
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Storystructuresignalresolver.
+ */
 class StoryStructureSignalResolver {
     fun collectPlaceMetadataSignals(metadata: Map<String, String>?): List<Pair<String, String>> {
         if (metadata.isNullOrEmpty()) {

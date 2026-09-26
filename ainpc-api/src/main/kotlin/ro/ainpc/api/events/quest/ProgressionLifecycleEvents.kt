@@ -7,6 +7,9 @@ abstract class ProgressionLifecycleEvent(
     val payload: ProgressionEventPayload
 ) : Event()
 
+/**
+ * Progressionacceptedevent.
+ */
 class ProgressionAcceptedEvent(
     payload: ProgressionEventPayload
 ) : ProgressionLifecycleEvent(payload) {
@@ -20,6 +23,9 @@ class ProgressionAcceptedEvent(
     }
 }
 
+/**
+ * Progressiondeclinedevent.
+ */
 class ProgressionDeclinedEvent(
     payload: ProgressionEventPayload
 ) : ProgressionLifecycleEvent(payload) {
@@ -33,6 +39,9 @@ class ProgressionDeclinedEvent(
     }
 }
 
+/**
+ * Progressionabandonedevent.
+ */
 class ProgressionAbandonedEvent(
     payload: ProgressionEventPayload
 ) : ProgressionLifecycleEvent(payload) {
@@ -46,6 +55,9 @@ class ProgressionAbandonedEvent(
     }
 }
 
+/**
+ * Progressioncompletedevent.
+ */
 class ProgressionCompletedEvent(
     payload: ProgressionEventPayload
 ) : ProgressionLifecycleEvent(payload) {

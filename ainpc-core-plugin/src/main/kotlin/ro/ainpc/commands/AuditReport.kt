@@ -2,17 +2,26 @@ package ro.ainpc.commands
 
 import ro.ainpc.database.DatabaseSchemaInventory
 
+/**
+ * Auditseverity.
+ */
 enum class AuditSeverity(val chatPrefix: String) {
     INFO("&7"),
     WARN("&e"),
     ERROR("&c")
 }
 
+/**
+ * Auditfinding.
+ */
 data class AuditFinding(
     val severity: AuditSeverity,
     val message: String,
 )
 
+/**
+ * Auditreport.
+ */
 class AuditReport(retainedMessageLimit: Int = Int.MAX_VALUE) {
     private val retainedLimit = retainedMessageLimit.coerceAtLeast(0)
     private val sectionItems = linkedMapOf<String, MutableList<AuditFinding>>()

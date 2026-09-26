@@ -2,6 +2,9 @@ package ro.ainpc.platform.features
 
 import java.util.Collections
 
+/**
+ * Runtimefeaturestate.
+ */
 class RuntimeFeatureState private constructor(
     private val featureValue: RuntimeFeatureKey,
     private val statusValue: RuntimeFeatureStatus,

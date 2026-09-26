@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import ro.ainpc.progression.ProgressionAnchorBinding
 
+/**
+ * Questmapgui.
+ */
 class QuestMapGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_MAP
 

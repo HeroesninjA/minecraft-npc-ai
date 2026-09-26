@@ -4,6 +4,9 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Debugdumpquestconfigjson.
+ */
 object DebugDumpQuestConfigJson {
     @JvmStatic
     fun buildQuestConfigSnapshotJson(plugin: AINPCPlugin): JsonObject {

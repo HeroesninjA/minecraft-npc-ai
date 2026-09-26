@@ -8,6 +8,9 @@ import kotlin.math.min
 /**
  * Personalitatea NPC-ului bazata pe modelul Big Five (OCEAN)
  */
+/**
+ * Npcpersonality.
+ */
 class NPCPersonality {
     // Big Five Personality Traits (0.0 - 1.0)
     var openness: Double = 0.5 // Deschidere catre experiente noi

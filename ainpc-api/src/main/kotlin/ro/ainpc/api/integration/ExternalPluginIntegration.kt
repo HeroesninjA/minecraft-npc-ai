@@ -2,6 +2,9 @@ package ro.ainpc.api.integration
 
 import ro.ainpc.addons.AddonDescriptor
 
+/**
+ * Externalpluginintegration.
+ */
 interface ExternalPluginIntegration {
     val pluginName: String
     val pluginVersion: String
@@ -15,6 +18,9 @@ interface ExternalPluginIntegration {
     fun getDescriptor(): AddonDescriptor?
 }
 
+/**
+ * Integrationtype.
+ */
 enum class IntegrationType {
     ECONOMY,
     PROTECTION,

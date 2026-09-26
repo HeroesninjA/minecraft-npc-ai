@@ -8,6 +8,9 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
 
+/**
+ * Mappingintentparser.
+ */
 object MappingIntentParser {
     @JvmStatic
     fun suggest(kind: MappingDraftKind, description: String?): MappingDraftSuggestion {

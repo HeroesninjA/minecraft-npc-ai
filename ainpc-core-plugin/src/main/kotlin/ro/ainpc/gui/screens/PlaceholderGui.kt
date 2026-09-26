@@ -8,6 +8,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Placeholdergui.
+ */
 class PlaceholderGui(
     private val keyValue: GuiKey,
     private val titleValue: String,

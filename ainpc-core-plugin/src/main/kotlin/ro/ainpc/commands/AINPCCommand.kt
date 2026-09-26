@@ -93,6 +93,9 @@ import java.sql.SQLException
 import java.util.*
 import java.util.stream.Collectors
 
+/**
+ * Ainpccommand.
+ */
 class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
     companion object {
@@ -5422,8 +5425,14 @@ $objectives      rewards:
     }
 
     // -- Inner data classes (converted from Java records/inner classes) --
+/**
+ * Questtrackrequest.
+ */
     data class QuestTrackRequest(val player: Player, val questSelector: String, val action: String)
 
+/**
+ * Questdecisiontarget.
+ */
     data class QuestDecisionTarget(val player: Player, val npc: AINPC)
 
     // -- Relationship -------------------------------------------------

@@ -2,6 +2,9 @@ package ro.ainpc.gui
 
 import org.bukkit.inventory.ItemStack
 
+/**
+ * Guibutton.
+ */
 class GuiButton(
     icon: ItemStack?,
     action: GuiAction?,

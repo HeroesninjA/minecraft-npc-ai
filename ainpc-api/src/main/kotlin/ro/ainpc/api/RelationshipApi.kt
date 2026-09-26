@@ -2,6 +2,9 @@ package ro.ainpc.api
 
 import java.util.UUID
 
+/**
+ * Relationshipapi.
+ */
 interface RelationshipApi {
     fun getAffection(npcA: UUID, npcB: UUID): Double
     fun getTrust(npcA: UUID, npcB: UUID): Double
@@ -10,6 +13,9 @@ interface RelationshipApi {
     fun getTopRelationships(npcUuid: UUID, limit: Int): List<RelationshipEntry>
 }
 
+/**
+ * Relationshipentry.
+ */
 data class RelationshipEntry(
     val partnerUuid: UUID,
     val partnerName: String,

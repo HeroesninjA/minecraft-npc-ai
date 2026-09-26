@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Quickquestgui.
+ */
 class QuickQuestGui : GuiScreen {
     private val giverOptions = listOf("profession:blacksmith", "profession:guard", "profession:innkeeper", "profession:farmer", "profession:merchant", "profession:healer")
     private val objectiveTypes = listOf("talk_to_npc", "deliver_to_npc", "collect_item", "visit_place", "visit_region", "inspect_node", "kill_mob", "craft_item", "place_block", "break_block")

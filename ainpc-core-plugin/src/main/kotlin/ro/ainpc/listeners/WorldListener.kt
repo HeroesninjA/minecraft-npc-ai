@@ -6,6 +6,9 @@ import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.event.world.WorldUnloadEvent
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Worldlistener.
+ */
 class WorldListener(private val plugin: AINPCPlugin) : Listener {
 
     @EventHandler

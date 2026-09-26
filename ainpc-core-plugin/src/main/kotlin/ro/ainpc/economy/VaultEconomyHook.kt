@@ -9,6 +9,9 @@ import ro.ainpc.api.integration.IntegrationType
 import java.lang.reflect.Proxy
 import java.util.logging.Level
 
+/**
+ * Vaulteconomyhook.
+ */
 class VaultEconomyHook(private val plugin: AINPCPlugin) : ExternalPluginIntegration {
     override val pluginName: String = "Vault"
     override val pluginVersion: String

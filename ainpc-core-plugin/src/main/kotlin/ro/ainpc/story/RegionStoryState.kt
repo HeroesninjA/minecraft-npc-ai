@@ -3,6 +3,9 @@ package ro.ainpc.story
 import ro.ainpc.world.StoryMode
 import java.util.LinkedHashMap
 
+/**
+ * Regionstorystate.
+ */
 class RegionStoryState(
     regionId: String?,
     storyMode: StoryMode?,

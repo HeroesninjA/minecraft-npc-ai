@@ -4,6 +4,9 @@ import org.bukkit.configuration.file.FileConfiguration
 import ro.ainpc.ai.OpenAIDebugSnapshot
 import java.time.Instant
 
+/**
+ * Debugdumpformatting.
+ */
 object DebugDumpFormatting {
     @JvmStatic
     fun normalizeScope(scope: String?): String {

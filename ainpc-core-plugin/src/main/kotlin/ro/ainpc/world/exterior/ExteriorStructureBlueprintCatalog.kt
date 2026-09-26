@@ -1,5 +1,8 @@
 package ro.ainpc.world.exterior
 
+/**
+ * Exteriorstructureblueprintcatalog.
+ */
 object ExteriorStructureBlueprintCatalog {
     private val blueprints: Map<ExteriorStructureType, ExteriorStructureBlueprint> = linkedMapOf(
         ExteriorStructureType.CASTLE to blueprint(

@@ -14,6 +14,9 @@ import java.util.logging.Logger
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Householdpersistenceservicestate.
+ */
 class HouseholdPersistenceServiceState(
     private val statements: HouseholdPersistenceService.StatementProvider?,
     logger: Logger?

@@ -3,6 +3,9 @@ package ro.ainpc.version
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.Properties
 
+/**
+ * Buildversioninfo.
+ */
 object BuildVersionInfo {
     private const val RESOURCE_PATH = "/build-info.properties"
 
@@ -37,6 +40,9 @@ object BuildVersionInfo {
     }
 }
 
+/**
+ * Buildversionsnapshot.
+ */
 data class BuildVersionSnapshot(
     val version: String,
     val buildHash: String,

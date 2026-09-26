@@ -29,6 +29,9 @@ import java.util.EnumSet
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Ainpcplatform.
+ */
 class AINPCPlatform(
     private val plugin: AINPCPlugin
 ) : AINPCPlatformApi {

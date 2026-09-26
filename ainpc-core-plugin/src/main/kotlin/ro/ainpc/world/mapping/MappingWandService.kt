@@ -22,6 +22,9 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Mappingwandservice.
+ */
 class MappingWandService(private val plugin: AINPCPlugin) {
     private val wandKey = NamespacedKey(plugin, "mapping_wand")
     private val draftFactory = MappingDraftFactory()
@@ -351,6 +354,9 @@ class MappingWandService(private val plugin: AINPCPlugin) {
         fun update(selection: MappingWandSelection): MappingWandSelection
     }
 
+/**
+ * Mappingwandsession.
+ */
     class MappingWandSession(
         mode: MappingWandMode?,
         selection: MappingWandSelection?,
@@ -364,6 +370,9 @@ class MappingWandService(private val plugin: AINPCPlugin) {
         fun draft(): MappingDraft? = draftValue
     }
 
+/**
+ * Mappingwandauditentry.
+ */
     class MappingWandAuditEntry(
         private val confirmedAtValue: Long,
         private val playerIdValue: UUID?,

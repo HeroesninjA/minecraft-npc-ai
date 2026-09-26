@@ -12,6 +12,9 @@ import ro.ainpc.AINPCPlugin
 /**
  * Sincronizeaza villagerii noi sau incarcati din chunk cu sistemul de NPC-uri.
  */
+/**
+ * Villagerlifecyclelistener.
+ */
 class VillagerLifecycleListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onVillagerSpawn(event: CreatureSpawnEvent) {

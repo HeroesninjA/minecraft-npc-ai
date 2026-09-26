@@ -3,6 +3,9 @@ package ro.ainpc.debug
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 
+/**
+ * Debugdumpmappingtext.
+ */
 object DebugDumpMappingText {
     @JvmStatic
     fun buildMappingText(plugin: AINPCPlugin): String {

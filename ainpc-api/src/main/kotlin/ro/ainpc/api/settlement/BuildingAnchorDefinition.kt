@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildinganchordefinition.
+ */
 data class BuildingAnchorDefinition(
     val anchorId: String,
     val nodeType: String,

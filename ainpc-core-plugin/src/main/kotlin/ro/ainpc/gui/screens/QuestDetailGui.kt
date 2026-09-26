@@ -14,6 +14,9 @@ import ro.ainpc.progression.ProgressionObjectiveSnapshot
 import ro.ainpc.progression.ProgressionStageSnapshot
 import java.sql.SQLException
 
+/**
+ * Questdetailgui.
+ */
 class QuestDetailGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.QUEST_DETAIL
 

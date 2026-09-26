@@ -1,5 +1,8 @@
 package ro.ainpc.api.settlement
 
+/**
+ * Buildmode.
+ */
 enum class BuildMode(val id: String) {
     EXISTING("existing"),
     SEMANTIC_ONLY("semantic_only"),

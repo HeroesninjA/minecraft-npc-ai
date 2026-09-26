@@ -10,6 +10,9 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Questcreatorgui.
+ */
 class QuestCreatorGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.CREATOR_QUEST
     override fun title(player: Player): String = "&0Creator Quest"

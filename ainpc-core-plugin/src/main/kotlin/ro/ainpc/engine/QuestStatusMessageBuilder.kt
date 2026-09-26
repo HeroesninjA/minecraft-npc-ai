@@ -3,6 +3,9 @@ package ro.ainpc.engine
 import org.bukkit.entity.Player
 import java.util.UUID
 
+/**
+ * Queststatusmessagebuilder.
+ */
 class QuestStatusMessageBuilder(
     private val collectFailureReasons: (UUID, String) -> List<String>,
 ) {

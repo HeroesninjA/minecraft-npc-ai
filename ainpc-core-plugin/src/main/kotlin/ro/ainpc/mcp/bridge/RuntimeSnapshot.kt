@@ -2,6 +2,9 @@ package ro.ainpc.mcp.bridge
 
 import ro.ainpc.bootstrap.RuntimeHealthSnapshot
 
+/**
+ * Runtimesnapshot.
+ */
 data class RuntimeSnapshot(
     val schemaVersion: Int = 3,
     val timestamp: String,
@@ -14,6 +17,9 @@ data class RuntimeSnapshot(
     val health: RuntimeHealthSnapshot,
 )
 
+/**
+ * Pluginsnapshot.
+ */
 data class PluginSnapshot(
     val version: String,
     val serverType: String,
@@ -21,12 +27,18 @@ data class PluginSnapshot(
     val uptimeMinutes: Long
 )
 
+/**
+ * Featuresnapshot.
+ */
 data class FeatureSnapshot(
     val ai: Boolean,
     val mcp: Boolean,
     val aiOrchestration: Boolean
 )
 
+/**
+ * Npcsnapshot.
+ */
 data class NpcSnapshot(
     val totalCount: Int,
     val byRegion: Map<String, Int>,
@@ -37,6 +49,9 @@ data class NpcSnapshot(
     val socialGatherings: Int = 0
 )
 
+/**
+ * Npcsample.
+ */
 data class NpcSample(
     val npcId: Int,
     val name: String,
@@ -45,6 +60,9 @@ data class NpcSample(
     val worldName: String?
 )
 
+/**
+ * Worldsnapshot.
+ */
 data class WorldSnapshot(
     val regionCount: Int,
     val placeCount: Int,
@@ -53,6 +71,9 @@ data class WorldSnapshot(
     val placeNames: List<String>
 )
 
+/**
+ * Questsnapshot.
+ */
 data class QuestSnapshot(
     val activePlayerQuests: Int,
     val activeGlobalQuests: Int,
@@ -61,6 +82,9 @@ data class QuestSnapshot(
     val recentStoryEvents: List<String> = emptyList()
 )
 
+/**
+ * Buildmodesnapshot.
+ */
 data class BuildModeSnapshot(
     val activePlayers: Int,
     val byStyle: Map<String, Int>,
@@ -69,12 +93,18 @@ data class BuildModeSnapshot(
     val history: List<BuildModeHistorySnapshot>
 )
 
+/**
+ * Buildmodeplayersnapshot.
+ */
 data class BuildModePlayerSnapshot(
     val name: String,
     val style: String,
     val target: String
 )
 
+/**
+ * Buildmodehistorysnapshot.
+ */
 data class BuildModeHistorySnapshot(
     val playerName: String,
     val timestampMillis: Long,
@@ -83,6 +113,9 @@ data class BuildModeHistorySnapshot(
     val target: String?
 )
 
+/**
+ * Questsample.
+ */
 data class QuestSample(
     val templateId: String?,
     val mechanic: String?,

@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 import java.util.Locale
 
+/**
+ * Mappingcreateregiongui.
+ */
 class MappingCreateRegionGui : GuiScreen {
     private val regionTypes = listOf("settlement", "castle", "forest", "dungeon", "village", "camp", "custom")
 

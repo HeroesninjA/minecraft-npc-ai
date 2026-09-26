@@ -11,6 +11,9 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
 
+/**
+ * Mappingcreatorgui.
+ */
 class MappingCreatorGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.MAPPING_CREATOR
     override fun title(player: Player): String = "&0Mapping Creator"

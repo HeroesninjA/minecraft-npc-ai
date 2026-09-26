@@ -14,6 +14,9 @@ import ro.ainpc.npc.AINPC
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * Npcmemorygui.
+ */
 class NpcMemoryGui : GuiScreen {
     private var targetNpc: AINPC? = null
 

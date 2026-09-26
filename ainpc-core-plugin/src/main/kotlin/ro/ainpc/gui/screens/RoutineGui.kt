@@ -19,6 +19,9 @@ import ro.ainpc.world.NpcWorldBinding
 import java.sql.SQLException
 import java.util.Locale
 
+/**
+ * Routinegui.
+ */
 class RoutineGui : GuiScreen {
     override fun key(): GuiKey = GuiKey.ROUTINE
 

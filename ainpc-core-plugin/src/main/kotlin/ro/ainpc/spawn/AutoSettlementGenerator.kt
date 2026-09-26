@@ -4,10 +4,16 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.scan.SemanticVillageMapper
 import ro.ainpc.world.scan.VanillaVillageScanResult
 
+/**
+ * Autosettlementgenerator.
+ */
 class AutoSettlementGenerator(private val plugin: AINPCPlugin) {
     private val mapper = SemanticVillageMapper()
     private val planner = HouseAllocationPlanner()
 
+/**
+ * Autosettlementresult.
+ */
     data class AutoSettlementResult(
         val regionId: String,
         val scanWarnings: List<String>,

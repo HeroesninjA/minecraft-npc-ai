@@ -2,6 +2,9 @@ package ro.ainpc.progression
 
 import java.util.Locale
 
+/**
+ * Progressionfilter.
+ */
 object ProgressionFilter {
     @JvmStatic
     fun isAllFilter(filter: String?): Boolean {

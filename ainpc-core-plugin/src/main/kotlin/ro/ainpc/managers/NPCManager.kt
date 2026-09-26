@@ -38,6 +38,9 @@ import java.sql.Statement
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Npcmanager.
+ */
 class NPCManager(
     private val plugin: AINPCPlugin
 ) {

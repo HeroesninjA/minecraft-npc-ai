@@ -6,11 +6,17 @@ import ro.ainpc.world.WorldRegionInfo
 import java.util.Random
 import java.util.logging.Level
 
+/**
+ * Randomworldeventservice.
+ */
 class RandomWorldEventService(private val plugin: AINPCPlugin) {
     private val random = Random()
     private var lastEventTime = mutableMapOf<String, Long>()
     private val dayLengthTicks = 24000L
 
+/**
+ * Worldeventconfig.
+ */
     data class WorldEventConfig(
         val templateId: String,
         val minIntervalHours: Int,

@@ -15,6 +15,9 @@ import java.util.UUID
 /**
  * Manager pentru sistemul de emotii al NPC-urilor
  */
+/**
+ * Emotionmanager.
+ */
 class EmotionManager(private val plugin: AINPCPlugin) {
     /**
      * Aplica o emotie unui NPC

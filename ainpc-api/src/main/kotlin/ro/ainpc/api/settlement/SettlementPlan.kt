@@ -4,6 +4,9 @@ package ro.ainpc.api.settlement
     message = "SettlementPlan is a non-executable API scaffold retained for compatibility; no public settlement executor is available.",
     level = DeprecationLevel.WARNING
 )
+/**
+ * Settlementplan.
+ */
 data class SettlementPlan @JvmOverloads constructor(
     val planId: String,
     val version: Int = 1,
@@ -30,6 +33,9 @@ data class SettlementPlan @JvmOverloads constructor(
     fun isDraft(): Boolean = status == SettlementPlanStatus.DRAFT
 }
 
+/**
+ * Settlementvalidationreport.
+ */
 data class SettlementValidationReport(
     val valid: Boolean = true,
     val errors: List<String> = emptyList(),

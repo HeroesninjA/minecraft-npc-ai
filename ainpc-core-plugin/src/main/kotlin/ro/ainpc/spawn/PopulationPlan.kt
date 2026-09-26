@@ -1,5 +1,8 @@
 package ro.ainpc.spawn
 
+/**
+ * Populationplan.
+ */
 data class PopulationPlan(
     val planId: String,
     val regionId: String,
@@ -54,6 +57,9 @@ data class PopulationPlan(
     }
 }
 
+/**
+ * Householdplan.
+ */
 data class HouseholdPlan(
     val householdKey: String,
     val familyId: String,
@@ -64,6 +70,9 @@ data class HouseholdPlan(
     val familyType: String
 )
 
+/**
+ * Residentnarrativeplan.
+ */
 data class ResidentNarrativePlan(
     val npcKey: String,
     val displayName: String,
