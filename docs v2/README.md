@@ -4,6 +4,7 @@ This is the canonical documentation set.
 
 ## Start here
 
+- [Clădiri pentru muncă, comerț și socializare](guides/cladiri-munca-comert-socializare.md)
 - `canonical/start-here.md`
 - `canonical/index-functional.md`
 - `canonical/constitutie-proiect.md`
@@ -55,6 +56,9 @@ This is the canonical documentation set.
 
 ## Guides
 
+- [Inițiere lume, hartă, structuri, NPC și story](guides/initiere-lume-harta-structuri-npc-story.md)
+- [Exemplu complet: sat, fierar și story](guides/exemplu-complet-sat-npc-story.md)
+- [Exemplu: familie, proprietar și doi rezidenți](guides/exemplu-familie-proprietar-npc.md)
 - `guides/mapping-harti-manuale.md`
 - `guides/gui-interfete.md`
 - `guides/quest-authoring-tutorial.md`
@@ -69,6 +73,10 @@ This is the canonical documentation set.
 
 ## Reference
 
+- [Template-uri configurabile: implementare runtime](reference/template-config-runtime.md)
+- [Configurare lume, hartă și generare](reference/configurare-lume-harta-generare.md)
+- [Configurare NPC și asociere cu structuri](reference/configurare-npc-asociere-structuri.md)
+- [Configurare story pentru lume și NPC](reference/configurare-story-lume-npc.md)
 - `reference/documentatie-api.md`
 - `reference/storage-runtime.md`
 - `reference/mapping-stack.md`
@@ -76,6 +84,7 @@ This is the canonical documentation set.
 - `reference/harta-clase-index.md`
 - `reference/categorii/README.md`
 - `reference/simulation-stack.md`
+- `reference/mecanici-mcp-simulare.md`
 - `reference/story-context-quest-ai-stack.md`
 - `reference/ai-orchestrare-mcp-stack.md`
 - `reference/progression-events-onboarding-stack.md`
@@ -115,6 +124,7 @@ This is the canonical documentation set.
 
 ## Planning
 
+- [Simulare de conștiință pentru NPC-uri: momentul potrivit și etape](planning/simulare-constiinta-npc.md)
 - `planning/authorization-and-plugin-compatibility-hardening.md`
 - `planning/gui-ux-hardening.md`
 - `planning/player-onboarding-initiere.md`
@@ -125,6 +135,7 @@ This is the canonical documentation set.
 - `planning/quest-blastemul-castelului.md`
 - `planning/generare-ai-si-constructie-automata.md`
 - `planning/generare-sate-worldedit-si-npc.md`
+- `planning/plan-remediere-generare-sat-si-rutine.md`
 - `planning/schema-authoring-structuri-world.md`
 - `planning/analiza-imbunatatiri-viitoare.md`
 - `planning/ce-mai-trebuie-pentru-sat-semantic.md`

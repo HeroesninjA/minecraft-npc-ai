@@ -12,7 +12,8 @@ object OpenAIPromptBuilder {
         relevantMemories: List<String>?,
         relationship: NPCRelationship?,
         dbContext: DialogManager.PromptDbContext?,
-        storyContext: StoryContextSnapshot? = null
+        storyContext: StoryContextSnapshot? = null,
+        mcpContext: String = ""
     ): String {
         if (snapshot.npcName().isBlank() && snapshot.playerMessage().isBlank()) {
             return buildFallbackPrompt(snapshot)
@@ -26,6 +27,12 @@ object OpenAIPromptBuilder {
             snapshot.currentActivity(),
             snapshot.locationDescription()
         )
+        val recognition = PlayerRecognition.from(
+            relationship,
+            recentHistory?.size ?: 0,
+            dbContext?.totalMemoryCount() ?: relevantMemories?.size ?: 0,
+            dbContext?.regionalReputation
+        )
 
         prompt.append("Esti un NPC intr-un joc Minecraft. Raspunzi DOAR in limba romana.\n")
         prompt.append("Raspunsurile tale trebuie sa fie scurte (1-2 propozitii), naturale si in caracter.\n")
@@ -36,8 +43,11 @@ object OpenAIPromptBuilder {
         prompt.append("Raspunde la ce spune jucatorul acum, ca intr-o conversatie vie.\n")
         prompt.append("NPC_DATA este sursa ta unica de adevar despre personaj.\n")
         prompt.append("Cand jucatorul intreaba cine esti, ce meserie ai, ce faci, cum te simti sau unde esti, foloseste exact campurile relevante din NPC_DATA.\n")
+        prompt.append("Distinge activitatea curenta de rutina planificata si de obiectivul imediat; nu pretinde ca un plan este deja realizat.\n")
         prompt.append("Daca jucatorul cere mai multe fapte in acelasi mesaj, raspunde la toate in ordinea in care au fost cerute.\n")
         prompt.append("Nu inventa detalii care lipsesc din NPC_DATA sau din context.\n\n")
+        prompt.append("Despre jucator, separa ce ai trait impreuna de ce observi acum; nu transforma un obiect tinut in mana intr-o meserie sau personalitate.\n")
+        prompt.append("Nu inventa intalniri sau amintiri. Pastreaza continuitatea conversatiei recente si raspunde la ultimul mesaj.\n\n")
 
         prompt.append("=== NPC_DATA ===\n")
         prompt.append("npc_name: ").append(snapshot.npcName()).append("\n")
@@ -45,6 +55,8 @@ object OpenAIPromptBuilder {
         prompt.append("npc_emotional_state: ").append(OpenAITextSupport.valueOrUnknown(snapshot.emotionShortDescription())).append("\n")
         prompt.append("npc_current_state: ").append(OpenAITextSupport.valueOrUnknown(snapshot.currentState())).append("\n")
         prompt.append("npc_current_activity: ").append(OpenAITextSupport.valueOrUnknown(snapshot.currentActivity())).append("\n")
+        prompt.append("npc_planned_routine: ").append(OpenAITextSupport.valueOrUnknown(snapshot.plannedRoutineActivity)).append("\n")
+        prompt.append("npc_immediate_goal: ").append(OpenAITextSupport.valueOrUnknown(snapshot.immediateGoal)).append("\n")
         prompt.append("npc_location: ").append(OpenAITextSupport.valueOrUnknown(snapshot.locationDescription())).append("\n")
         prompt.append("fact_name_answer: ").append("Sunt ").append(snapshot.npcName()).append(".\n")
         prompt.append("fact_profession_answer: ").append(
@@ -115,14 +127,42 @@ object OpenAIPromptBuilder {
 
         prompt.append("=== DESPRE JUCATORUL CU CARE VORBESTI ===\n")
         prompt.append("Nume: ").append(snapshot.playerName()).append("\n")
+        prompt.append("Recunoastere personala: ").append(
+            when (recognition.familiarity) {
+                PlayerRecognition.Familiarity.FIRST_MEETING -> "fara intalniri anterioare cunoscute"
+                PlayerRecognition.Familiarity.KNOWN -> "cunoscut din interactiuni"
+                PlayerRecognition.Familiarity.FRIEND -> "prieten cunoscut"
+                PlayerRecognition.Familiarity.GUARDED -> "cunoscut, dar relatia este tensionata"
+            }
+        ).append("\n")
+        prompt.append("Interactiuni confirmate (minim): ").append(recognition.interactionCount).append("\n")
+        dbContext?.playerProfile?.let { profile ->
+            prompt.append("Profil declarat de jucator (neconfirmat de NPC):\n")
+            profile.role?.let { prompt.append("Rol declarat: ").append(it.label).append("\n") }
+            profile.trait?.let { prompt.append("Trasatura declarata: ").append(it.label).append("\n") }
+            profile.style?.let { prompt.append("Stil de comunicare preferat: ").append(it.label).append("\n") }
+            prompt.append("Foloseste profilul ca preferinta, nu ca dovada a meseriei, caracterului sau a unor intalniri anterioare.\n")
+        }
+        if (snapshot.playerHeldItem.isNotBlank()) {
+            prompt.append("Obiect vizibil in mana: ").append(snapshot.playerHeldItem).append("\n")
+        }
+        if (recognition.regionalReputation != null && recognition.regionalReputation != 0) {
+            prompt.append("Reputatie in regiune: ").append(recognition.regionalReputation)
+                .append(" (nu este dovada unei relatii personale)\n")
+        }
         if (relationship != null) {
             prompt.append("Relatie: ").append(relationship.relationshipType ?: "necunoscuta").append("\n")
             prompt.append("Nivel de incredere: ").append(OpenAITextSupport.formatLevel(relationship.trust)).append("\n")
             prompt.append("Nivel de afectiune: ").append(OpenAITextSupport.formatLevel(relationship.affection)).append("\n")
-            prompt.append("Numar interactiuni: ").append(relationship.interactionCount).append("\n")
-        } else {
-            prompt.append("Aceasta este prima intalnire cu acest jucator.\n")
         }
+        prompt.append(
+            when (recognition.familiarity) {
+                PlayerRecognition.Familiarity.FIRST_MEETING -> "Vorbeste politicos, fara sa pretinzi ca il cunosti."
+                PlayerRecognition.Familiarity.KNOWN -> "Fii familiar doar cu faptele sustinute de istoric si amintiri."
+                PlayerRecognition.Familiarity.FRIEND -> "Poti vorbi cald, dar fara amintiri inventate."
+                PlayerRecognition.Familiarity.GUARDED -> "Pastreaza o atitudine prudenta, fara ostilitate gratuita."
+            }
+        ).append("\n")
         prompt.append("\n")
 
         prompt.append("=== CONTEXT RELATIONAL DIN BAZA DE DATE ===\n")
@@ -159,6 +199,10 @@ object OpenAIPromptBuilder {
         if (storyContext != null && storyContext.toPromptBlock().isNotBlank()) {
             prompt.append("=== CONTEXT STORY LOCAL ===\n")
             prompt.append(storyContext.toPromptBlock()).append("\n\n")
+        }
+
+        if (mcpContext.isNotBlank()) {
+            prompt.append(mcpContext).append("\n")
         }
 
         prompt.append("=== MESAJUL JUCATORULUI ===\n")

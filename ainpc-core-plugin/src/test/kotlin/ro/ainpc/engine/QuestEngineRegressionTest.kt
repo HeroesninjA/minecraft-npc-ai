@@ -130,19 +130,6 @@ class QuestEngineRegressionTest {
     }
 
     @Test
-    fun staleTemplateProgressRemovesOrphanedKeys() {
-        val knownTemplates = setOf("quest_a", "quest_b")
-        val playerQuests = mutableMapOf(
-            "quest_a" to PlayerQuestProgress("quest_a", "qa", QuestStatus.ACTIVE, 0, 0, 0, "", emptyMap(), emptyMap()),
-            "quest_b" to PlayerQuestProgress("quest_b", "qb", QuestStatus.ACTIVE, 0, 0, 0, "", emptyMap(), emptyMap()),
-            "quest_c" to PlayerQuestProgress("quest_c", "qc", QuestStatus.ACTIVE, 0, 0, 0, "", emptyMap(), emptyMap()),
-        )
-        val staleKeys = playerQuests.keys.filter { it !in knownTemplates }
-        assertEquals(1, staleKeys.size)
-        assertEquals("quest_c", staleKeys.first())
-    }
-
-    @Test
     fun isCacheStaleReturnsCorrectAge() {
         val loadedAt = System.currentTimeMillis()
         val age = (System.currentTimeMillis() - loadedAt) / 1000

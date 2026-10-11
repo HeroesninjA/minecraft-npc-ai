@@ -6,10 +6,8 @@ import java.util.UUID
  * Questprogresscleanupservice.
  */
 class QuestProgressCleanupService(
-    private val getActivePlayerQuests: () -> MutableMap<UUID, MutableMap<String, PlayerQuestProgress>>,
-    private val getArchivedPlayerQuests: () -> MutableMap<UUID, MutableMap<String, PlayerQuestProgress>>,
+    private val getActivePlayerQuests: () -> Map<UUID, Map<String, PlayerQuestProgress>>,
     private val getQuestTemplates: () -> Map<String, ScenarioTemplate>,
-    private val deleteQuestProgress: (UUID, String) -> Unit,
     private val trackedBlockLocations: MutableMap<UUID, MutableSet<String>>,
     private val trackedVisitedPlaces: MutableMap<UUID, MutableSet<String>>,
     private val npcConversationCooldowns: MutableMap<UUID, Long>,
@@ -42,38 +40,32 @@ class QuestProgressCleanupService(
 
     fun cleanupOrphanedObjectives() {
         val onlinePlayerIds = onlinePlayerIdsProvider()
-        getActivePlayerQuests().keys.removeIf { it !in onlinePlayerIds }
-        getArchivedPlayerQuests().keys.removeIf { it !in onlinePlayerIds }
-        sentCompletionMessages.removeIf { key ->
-            key.split(":").firstOrNull()?.let { uid ->
-                runCatching { UUID.fromString(uid) }.getOrNull()?.let { it !in onlinePlayerIds } ?: false
-            } == true
-        }
+        val resumablePlayerIds = getActivePlayerQuests().asSequence()
+            .filter { (_, quests) -> quests.values.any { it.isCurrent() || it.status() == QuestStatus.SUSPENDED } }
+            .map { (playerId, _) -> playerId }
+            .toSet()
+        trackedBlockLocations.keys.removeIf { it !in resumablePlayerIds }
+        trackedVisitedPlaces.keys.removeIf { it !in resumablePlayerIds }
+        regionEntryCounts.keys.removeIf { it !in resumablePlayerIds }
+        npcConversationCooldowns.keys.removeIf { it !in onlinePlayerIds }
+        sentCompletionMessages.removeIf { isOfflinePlayerKey(it, onlinePlayerIds) }
         trackedQuestPlayers.removeIf { it !in onlinePlayerIds }
         trackedQuestTemplates.keys.removeIf { it !in onlinePlayerIds }
-        eventDebounceBuffer.keys.removeIf { key ->
-            key.split(":").firstOrNull()?.let { uid ->
-                runCatching { UUID.fromString(uid) }.getOrNull()?.let { it !in onlinePlayerIds } ?: false
-            } == true
-        }
+        eventDebounceBuffer.keys.removeIf { isOfflinePlayerKey(it, onlinePlayerIds) }
         cleanupStaleTemplateProgress()
     }
 
     fun cleanupStaleTemplateProgress() {
-        val knownTemplateIds = getQuestTemplates().keys.toSet()
-        for ((playerId, quests) in getActivePlayerQuests()) {
-            val staleKeys = quests.keys.filter { it !in knownTemplateIds }
-            for (key in staleKeys) {
-                quests.remove(key)
-                deleteQuestProgress(playerId, key)
-            }
+        val knownTemplateIds = getQuestTemplates().keys
+        val activePlayerQuests = getActivePlayerQuests()
+        trackedQuestTemplates.entries.removeIf { (playerId, templateId) ->
+            templateId !in knownTemplateIds || activePlayerQuests[playerId]?.get(templateId)?.isCurrent() != true
         }
-        for ((playerId, quests) in getArchivedPlayerQuests()) {
-            val staleKeys = quests.keys.filter { it !in knownTemplateIds }
-            for (key in staleKeys) {
-                quests.remove(key)
-                deleteQuestProgress(playerId, key)
-            }
-        }
+        trackedQuestPlayers.retainAll(trackedQuestTemplates.keys)
+    }
+
+    private fun isOfflinePlayerKey(key: String, onlinePlayerIds: Set<UUID>): Boolean {
+        val playerId = runCatching { UUID.fromString(key.substringBefore(':')) }.getOrNull() ?: return false
+        return playerId !in onlinePlayerIds
     }
 }

@@ -30,6 +30,8 @@ import java.util.logging.Level
  */
 class StoryContextService(private val plugin: AINPCPlugin) {
     private val structureSignalResolver = StoryStructureSignalResolver()
+    private val npcStorySignalResolver = NpcStorySignalResolver()
+    private val npcBindingStorySignalResolver = NpcBindingStorySignalResolver()
 
     fun buildForNpc(npc: AINPC?, player: Player?): StoryContextSnapshot {
         val location = resolveLocation(npc, player)
@@ -59,7 +61,8 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             persistentRegionState,
             persistentPlaceState,
             recentStoryEvents
-        )
+        ) + npcStorySignalResolver.collect(npc?.profileDataJson) +
+            npcBindingStorySignalResolver.collect(worldContext.npcBindings(), plugin.platform.worldAdmin)
         val snapshot = StoryContextSnapshot(
             npc?.name ?: "",
             npc?.occupation ?: "",
@@ -275,14 +278,17 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             }
         }
 
-        val relevantNodeIds = worldContext.nearbyNodes().stream()
-            .filter { node -> node != null && structureSignalResolver.isStoryRelevantNode(node) }
-            .map(WorldNodeInfo::id)
-            .limit(5)
-            .toList()
+        val relevantNodes = structureSignalResolver.selectStoryRelevantNodes(
+            worldContext.nearbyNodes(),
+            place?.id().orEmpty(),
+            place?.let { plugin.platform.worldAdmin.getNodesForPlace(it.id()) } ?: emptyList()
+        )
+        val relevantNodeIds = relevantNodes.map(WorldNodeInfo::id)
         if (relevantNodeIds.isNotEmpty()) {
             addSignal(signals, "relevant_nodes", relevantNodeIds.joinToString(","))
         }
+        structureSignalResolver.collectNearbyNodeQuestHookSignals(relevantNodes, place?.id().orEmpty())
+            .forEach { (key, value) -> addSignal(signals, key, value) }
 
         structureSignalResolver.addStructureQuestCooldownSignals(place, recentStoryEvents).forEach { (key, value) ->
             addSignal(signals, key, value)

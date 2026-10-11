@@ -9,6 +9,10 @@ import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.NpcFactResolver
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.ai.OpenAISemanticWorldContextBuilder
+import ro.ainpc.ai.PlayerRecognition
+import ro.ainpc.ai.PlayerProfileGreeting
+import ro.ainpc.ai.PlayerIdentityResponse
+import ro.ainpc.ai.PlayerConversationRecall
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCEmotions
@@ -53,9 +57,14 @@ class DialogueEngine(
         templates[DialogueIntent.GREET_STRANGER] = listOf(
             "Hmm? Cine esti tu?",
             "Nu cred ca ne-am mai intalnit...",
-            "Un calator nou? Interesant.",
-            "Salut, strainule. Cu ce te pot ajuta?",
-            "Nu te cunosc, dar bine ai venit."
+            "Ai ajuns de curand pe aici?",
+            "Salut! Cu ce te pot ajuta?",
+            "Nu cred ca am mai vorbit. Bine ai venit."
+        )
+        templates[DialogueIntent.GREET_GUARDED] = listOf(
+            "Buna, {player}. Cu ce te pot ajuta?",
+            "Te ascult, {player}. Spune-mi ce doresti.",
+            "Putem vorbi, dar as prefera sa fim directi."
         )
         templates[DialogueIntent.FAREWELL] = listOf(
             "Pa, {player}! Drum bun!",
@@ -185,7 +194,13 @@ class DialogueEngine(
         )
     }
 
-    fun selectIntent(npc: AINPC, context: NPCContext, playerMessage: String): DialogueIntent {
+    @JvmOverloads
+    fun selectIntent(
+        npc: AINPC,
+        context: NPCContext,
+        playerMessage: String,
+        recognition: PlayerRecognition? = null
+    ): DialogueIntent {
         val emotions: NPCEmotions = npc.emotions
         val dominantEmotion = emotions.dominantEmotion
         val relationStatus = context.relationshipStatus
@@ -195,7 +210,9 @@ class DialogueEngine(
         }
 
         val msg = playerMessage.lowercase()
-        if (containsAny(msg, "salut", "buna", "hei", "noroc", "servus")) return selectGreetIntent(relationStatus)
+        if (containsAny(msg, "salut", "buna", "hei", "noroc", "servus")) {
+            return recognition?.let { selectGreetIntent(it) } ?: selectGreetIntent(relationStatus)
+        }
         if (containsAny(msg, "pa", "la revedere", "adio", "pe curand")) return DialogueIntent.FAREWELL
         if (containsAny(msg, "cumpara", "vinde", "pret", "comert", "marfa", "afaceri")) return DialogueIntent.TRADE
         if (containsAny(msg, "ajutor", "ajuta", "nevoie")) return DialogueIntent.HELP
@@ -222,6 +239,14 @@ class DialogueEngine(
             else -> DialogueIntent.GREET
         }
 
+    private fun selectGreetIntent(recognition: PlayerRecognition): DialogueIntent =
+        when (recognition.familiarity) {
+            PlayerRecognition.Familiarity.FIRST_MEETING -> DialogueIntent.GREET_STRANGER
+            PlayerRecognition.Familiarity.KNOWN -> DialogueIntent.GREET
+            PlayerRecognition.Familiarity.FRIEND -> DialogueIntent.GREET_FRIEND
+            PlayerRecognition.Familiarity.GUARDED -> DialogueIntent.GREET_GUARDED
+        }
+
     private fun isOutOfWorldQuestion(message: String): Boolean {
         val msg = message.lowercase()
         return containsAny(
@@ -243,20 +268,42 @@ class DialogueEngine(
     ): CompletableFuture<String> {
         val npc = request.npc()
         val context = npc.context ?: NPCContext(npc)
-        if (request.player() != null && context.interactingPlayer == null) {
-            context.setInteractingPlayer(request.player())
-        }
         context.lastPlayerMessage = request.message()
 
         val factResponse = resolveFactResponse(npc, context, request.message())
-        if (factResponse != null) return CompletableFuture.completedFuture(factResponse)
+        val semanticFactResponse = if (factResponse == null) {
+            OpenAISemanticWorldContextBuilder.resolveProfessionFact(plugin, npc, request.message())
+        } else {
+            null
+        }
 
-        val semanticFactResponse = OpenAISemanticWorldContextBuilder.resolveProfessionFact(plugin, npc, request.message())
-        if (semanticFactResponse != null) return CompletableFuture.completedFuture(semanticFactResponse)
+        val recognition = PlayerRecognition.from(
+            relationship,
+            recentHistory.size,
+            dbContext.totalMemoryCount,
+            dbContext.regionalReputation
+        )
+        val identityResponse = PlayerIdentityResponse.resolve(
+            request.message(), request.player().name, recognition, dbContext.playerProfile
+        )
+        val recallResponse = PlayerConversationRecall.resolve(request.message(), recentHistory)
+        val factualResponses = listOfNotNull(factResponse ?: semanticFactResponse, identityResponse, recallResponse)
+        if (factualResponses.isNotEmpty()) return CompletableFuture.completedFuture(factualResponses.joinToString(" "))
 
-        val intent = selectIntent(npc, context, request.message())
+        val intent = selectIntent(npc, context, request.message(), recognition)
         val template = selectTemplate(npc, intent)
-        val processed = processTemplate(template, npc, context)
+        val defaultResponse = processTemplate(template, npc, context, request.player().name)
+        val processed = if (intent in setOf(
+                DialogueIntent.GREET,
+                DialogueIntent.GREET_FRIEND,
+                DialogueIntent.GREET_STRANGER,
+                DialogueIntent.GREET_GUARDED,
+            )
+        ) {
+            PlayerProfileGreeting.adapt(defaultResponse, dbContext.playerProfile, recognition, request.player().name)
+        } else {
+            defaultResponse
+        }
 
         if (!shouldUseContextualAI(intent, context, request, recentHistory, relevantMemories, relationship)) {
             return CompletableFuture.completedFuture(processed)
@@ -278,7 +325,7 @@ class DialogueEngine(
         val template = selectTemplate(npc, intent)
         val processed = processTemplate(template, npc, context)
         val useAI = shouldUseAI(intent, context)
-        if (useAI && openAIService.isAvailable) {
+        if (useAI && openAIService.canGenerateContextualResponse) {
             return reformulateWithAI(npc, context, intent, processed, playerMessage)
         }
         return CompletableFuture.completedFuture(processed)
@@ -326,12 +373,10 @@ class DialogueEngine(
         return selected
     }
 
-    private fun processTemplate(template: String, npc: AINPC, context: NPCContext): String {
+    private fun processTemplate(template: String, npc: AINPC, context: NPCContext, playerName: String? = null): String {
         var result = template
-        val interactingPlayer = context.interactingPlayer
-        if (interactingPlayer != null) {
-            result = result.replace("{player}", interactingPlayer.name)
-        }
+        val currentPlayerName = playerName ?: context.interactingPlayer?.name ?: "calatorule"
+        result = result.replace("{player}", currentPlayerName)
         result = result.replace("{occupation}", npc.occupation ?: "locuitor")
         result = result.replace("{name}", npc.name)
 
@@ -356,7 +401,7 @@ class DialogueEngine(
         relevantMemories: List<String>?,
         relationship: NPCRelationship?
     ): Boolean {
-        if (!openAIService.isAvailable) return false
+        if (!openAIService.canGenerateContextualResponse) return false
         if (shouldUseAI(intent, context)) return true
         if (!relevantMemories.isNullOrEmpty()) return true
         if (recentHistory != null && recentHistory.size >= 2) return true
@@ -415,6 +460,7 @@ class DialogueEngine(
         GREET("Salut simplu"),
         GREET_FRIEND("Salut prieten"),
         GREET_STRANGER("Salut strain"),
+        GREET_GUARDED("Salut prudent"),
         FAREWELL("La revedere"),
         TRADE("Comert"),
         WARN("Avertizare"),

@@ -4,6 +4,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.Block
+import org.bukkit.block.BlockState
 import org.bukkit.block.data.BlockData
 import org.bukkit.plugin.Plugin
 import java.io.File
@@ -17,7 +18,11 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Nativeblockexecutor.
  */
-class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
+class NativeBlockExecutor internal constructor(
+    private val worldProvider: (String) -> World?,
+    private val primaryThread: () -> Boolean,
+) : BlockExecutor {
+    constructor(plugin: Plugin) : this({ Bukkit.getWorld(it) }, { Bukkit.isPrimaryThread() })
     override val executorId: String = "native"
     override val displayName: String = "Native Bukkit API"
 
@@ -25,28 +30,32 @@ class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
 
     override fun isAvailable(): Boolean = true
 
-    override fun getDescription(): String = "Direct Bukkit API block placement. No external dependencies. No preview/undo support."
+    override fun getDescription(): String = "Direct Bukkit API block placement with read-only preview and in-memory snapshot undo."
 
     override fun execute(operations: List<BlockOperation>): ExecutionResult {
+        if (!primaryThread()) return ExecutionResult.failure(listOf("Block placement requires the server primary thread"))
         val sessionId = UUID.randomUUID()
         var placed = 0
         var failed = 0
         val errors = mutableListOf<String>()
         val sessionOps = mutableListOf<BlockOperation>()
+        val snapshots = linkedMapOf<BlockPosition, BlockState>()
 
         for (op in operations) {
-            val world = Bukkit.getWorld(op.worldName) ?: run {
+            val world = worldProvider(op.worldName) ?: run {
                 errors.add("World ${op.worldName} not found")
                 failed++
                 continue
             }
 
-            val block = world.getBlockAt(op.x, op.y, op.z)
             try {
+                val block = world.getBlockAt(op.x, op.y, op.z)
+                val key = BlockPosition(op.worldName, op.x, op.y, op.z)
+                if (key !in snapshots) snapshots[key] = block.state
                 if (op.blockData != null) {
-                    block.blockData = op.blockData
+                    block.setBlockData(op.blockData, false)
                 } else {
-                    block.type = op.material
+                    block.setType(op.material, false)
                 }
                 placed++
                 sessionOps.add(op)
@@ -56,43 +65,42 @@ class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
             }
         }
 
-        val sessionData = SessionData(sessionId, sessionOps.toList())
+        val sessionData = SessionData(sessionId, sessionOps.toList(), snapshots.values.toMutableList())
         activeSessions[sessionId] = sessionData
 
         return if (failed == 0) {
             ExecutionResult.success(sessionId, placed)
         } else if (placed > 0) {
-            ExecutionResult.partial(sessionId, placed, failed, errors, listOf("$failed blocks failed to place"))
+            ExecutionResult(false, sessionId, placed, failed, errors, listOf("$failed blocks failed to place; undo session retained"))
         } else {
-            ExecutionResult.failure(errors)
+            ExecutionResult(false, sessionId, placed, failed, errors)
         }
     }
 
     override fun executeWithPreview(operations: List<BlockOperation>): PreviewSession {
         val sessionId = UUID.randomUUID()
-        val sessionData = SessionData(sessionId, operations)
-        activeSessions[sessionId] = sessionData
-        return NativePreviewSession(sessionId, operations, this)
+        return NativePreviewSession(sessionId, operations.toList(), this)
     }
 
     override fun undo(sessionId: UUID): UndoResult {
-        val session = activeSessions.remove(sessionId) ?: return UndoResult(false, 0, listOf("Session not found"))
+        if (!primaryThread()) return UndoResult(false, 0, listOf("Block undo requires the server primary thread"))
+        val session = activeSessions[sessionId] ?: return UndoResult(false, 0, listOf("Executed session not found"))
         var restored = 0
         val errors = mutableListOf<String>()
 
-        for (op in session.operations.asReversed()) {
-            val world = Bukkit.getWorld(op.worldName) ?: run {
-                errors.add("World ${op.worldName} not found")
-                continue
-            }
-            val block = world.getBlockAt(op.x, op.y, op.z)
+        for (snapshot in session.snapshots.toList().asReversed()) {
             try {
-                block.type = Material.AIR
+                val world = worldProvider(snapshot.world.name)
+                check(world != null && world.uid == snapshot.world.uid) { "Original world is unavailable" }
+                check(snapshot.update(true, false)) { "Snapshot restoration refused" }
+                session.snapshots.remove(snapshot)
                 restored++
             } catch (e: Exception) {
-                errors.add("Failed to undo at ${op.x},${op.y},${op.z}: ${e.message}")
+                errors.add("Failed to restore block snapshot: ${e.message}")
             }
         }
+
+        if (session.snapshots.isEmpty()) activeSessions.remove(sessionId)
 
         return UndoResult(errors.isEmpty(), restored, errors)
     }
@@ -124,9 +132,12 @@ class NativeBlockExecutor(private val plugin: Plugin) : BlockExecutor {
         }
     }
 
+    private data class BlockPosition(val worldName: String, val x: Int, val y: Int, val z: Int)
+
     private data class SessionData(
         val id: UUID,
-        val operations: List<BlockOperation>
+        val operations: List<BlockOperation>,
+        val snapshots: MutableList<BlockState>,
     )
 }
 

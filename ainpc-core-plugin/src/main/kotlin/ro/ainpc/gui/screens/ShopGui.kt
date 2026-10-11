@@ -4,6 +4,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.economy.NpcShopDefinition
 import ro.ainpc.economy.ShopOffer
+import ro.ainpc.economy.ShopTransactionResult
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -160,7 +161,11 @@ class ShopGui : GuiScreen {
         for (shop in npcShops) {
             for (offer in shop.offers) {
                 if (slot >= 44) break
-                val costDesc = offer.costItems.entries.joinToString(", ") { "${it.value} x ${it.key.name.lowercase()}" }
+                val costDesc = if (shopService.usesCoinCurrency(shop)) {
+                    shopService.getCoinPrice(shop, offer)?.let { "$it monede" } ?: "Pret invalid"
+                } else {
+                    offer.costItems.entries.joinToString(", ") { "${it.value} x ${it.key.name.lowercase()}" }
+                }
                 val resultDesc = offer.resultItems.entries.joinToString(", ") { "${it.value} x ${it.key.name.lowercase()}" }
                 val usesDesc = if (offer.isUnlimited()) "&7Nelimitat" else "&7Max ${offer.maxUses} folosiri"
                 context.button(slot++, GuiButton.enabled(
@@ -171,11 +176,20 @@ class ShopGui : GuiScreen {
                             "&7Platesti: &e$costDesc",
                             "&7Primesti: &a$resultDesc",
                             usesDesc,
-                            "&8Click pentru a cumpara"
+                            if (offer.isUnlimited() && offer.requirements.isEmpty()) "&8Click pentru a cumpara"
+                            else "&cOferta cu restrictii inca nesuportate"
                         )
                     ),
                     GuiAction { click ->
-                        click.service().runCommand(click.player(), "ainpc economy balance")
+                        val currentShop = shopService.getShop(shop.shopId)
+                        val currentOffer = currentShop?.getOffer(offer.offerId)
+                        val result = if (currentShop != null && currentOffer != null) {
+                            shopService.executePurchase(click.player(), currentShop, currentOffer)
+                        } else {
+                            ShopTransactionResult(false, "Oferta nu mai este disponibila")
+                        }
+                        click.plugin().messageUtils.send(click.player(), (if (result.success) "&a" else "&c") + result.message)
+                        click.service().open(click.player(), GuiKey.SHOP)
                     }
                 ))
                 offerIndex++

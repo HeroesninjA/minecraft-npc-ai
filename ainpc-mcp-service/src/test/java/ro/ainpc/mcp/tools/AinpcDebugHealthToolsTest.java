@@ -6,6 +6,8 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,7 @@ class AinpcDebugHealthToolsTest {
     void debugHealthIncludesRuntimeHealthSnapshot(@TempDir Path tempDir) throws IOException {
         Path snapshotFile = tempDir.resolve("runtime-snapshot.json");
         Files.copy(Path.of("src/test/resources/fixtures/runtime-snapshot-valid.json"), snapshotFile);
+        Files.setLastModifiedTime(snapshotFile, FileTime.from(Instant.now()));
         SnapshotReader reader = new SnapshotReader(
             snapshotFile.toString(), 60, 3600, "", new Gson(), new McpMode("bridge"));
         McpRuntimeBridgeHealthIndicator indicator = new McpRuntimeBridgeHealthIndicator(null) {

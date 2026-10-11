@@ -82,6 +82,12 @@ class PostSpawnBindingResultTest {
         assertTrue(source.contains("val bindingResult = bindSpawnedSettlementToMapping"))
         assertTrue(source.contains("sendPostSpawnBindingResult(sender, bindingResult)"))
         assertTrue(source.contains("if (saveNpcWorldBinding(sender, persistentBinding, false))"))
+        assertTrue(source.contains("bindSpawnedHouseholdToMapping(sender, worldAdmin, result, allocation)"))
+        assertTrue(source.contains("bindSpawnedHouseholdToMapping(sender, worldAdmin, householdResult, result.allocations()[index])"))
+        assertTrue(source.contains("HouseholdOwnerBinding.resolve(allocation, result)"))
+        assertTrue(source.contains("worldAdmin.addNpcResidentToHomePlace(plan.homePlaceId(), bindingId, npc.name)"))
+        assertTrue(source.contains("ownerBinding.complete(worldAdmin, bindingProgress)"))
+        assertFalse(source.contains("worldAdmin.bindNpcToHomePlace(plan.homePlaceId(), bindingId, npc.name)"))
         assertFalse(source.contains("NPC-urile au fost create si legate la mapping."))
         assertFalse(source.contains("Settlement spawn terminat. Ruleaza"))
     }

@@ -1,7 +1,6 @@
 @file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.routine
 
-import com.destroystokyo.paper.entity.Pathfinder
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Mob
@@ -21,6 +20,7 @@ import java.util.concurrent.ConcurrentMap
  */
 class RoutineService(private val plugin: AINPCPlugin) {
     val routineEngine = RoutineEngine(plugin)
+    private val activityExecutor = RoutineActivityExecutor()
     private val lastRoutineSlots: ConcurrentMap<UUID, RoutineSlot> = ConcurrentHashMap()
     private val lastRoutineMoveAt: ConcurrentMap<UUID, Long> = ConcurrentHashMap()
 
@@ -94,23 +94,20 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 } else {
                     overridden.forcedSlot?.let { slot ->
                         npc.plannedRoutineActivity = slot.name.lowercase()
-                        npc.changeState(NPCState.IDLE)
                     }
-                    overridden.forcedAnchor?.let { anchor ->
-                        val target = anchor.toLocation()
-                        if (target != null && target.world != null) {
-                            val currentLocation = npc.location
-                            if (currentLocation != null) {
-                                val distanceSquared = if (target.world == currentLocation.world)
-                                    currentLocation.distanceSquared(target) else Double.MAX_VALUE
-                                val arrived = anchor.isNear(currentLocation, arrivalRadius)
-                                if (!arrived) {
-                                    evaluated++
-                                    tryMoveNaturally(npc, target, naturalMovementSpeed)
-                                    moved++
-                                }
-                            }
+                    evaluated++
+                    val outcome = activityExecutor.executeOverride(
+                        npc, overridden, arrivalRadius, naturalMovementEnabled, naturalMovementMaxDistance,
+                    ) { target -> tryMoveNaturally(npc, target, naturalMovementSpeed, arrivalRadius) }
+                    when (outcome) {
+                        RoutineActivityExecutor.Outcome.BUSY -> skippedBusy++
+                        RoutineActivityExecutor.Outcome.MISSING_TARGET -> skippedMissingTarget++
+                        RoutineActivityExecutor.Outcome.INVALID_TARGET -> skippedInvalidTarget++
+                        RoutineActivityExecutor.Outcome.MOVING -> {
+                            npc.updateContext()
+                            moved++
                         }
+                        else -> Unit
                     }
                     continue
                 }
@@ -118,6 +115,12 @@ class RoutineService(private val plugin: AINPCPlugin) {
 
             val currentLocation = npc.location
             if (currentLocation == null || currentLocation.world == null) {
+                npc.currentGoal = "pozitia NPC nu este disponibila ori valida"
+                if (npc.currentState == NPCState.SLEEPING) {
+                    npc.changeStateFromSimulation(NPCState.IDLE)
+                } else {
+                    npc.changeState(NPCState.IDLE)
+                }
                 skippedInvalidTarget++
                 continue
             }
@@ -133,60 +136,41 @@ class RoutineService(private val plugin: AINPCPlugin) {
             val previousSlot = if (npcId != null) lastRoutineSlots.put(npcId, assignment.slot()) else null
             npc.plannedRoutineActivity = assignment.activity() ?: ""
             npc.currentGoal = assignment.goal() ?: ""
-            npc.changeState(assignment.targetState() ?: NPCState.IDLE)
+            val slotChanged = previousSlot == null || previousSlot != assignment.slot()
+            val cooldownElapsed = npcId == null || now - lastRoutineMoveAt.getOrDefault(npcId, 0L) >= moveCooldownMillis
+            val outcome = activityExecutor.execute(
+                npc, assignment, arrivalRadius,
+                moveNaturally = { target ->
+                    naturalMovementEnabled && currentWorld == target.world &&
+                        currentLocation.distanceSquared(target) <= naturalMovementMaxDistance * naturalMovementMaxDistance &&
+                        tryMoveNaturally(npc, target, naturalMovementSpeed, arrivalRadius)
+                },
+                teleport = { target ->
+                    val sameWorld = currentWorld == target.world
+                    val distanceSquared = if (sameWorld) currentLocation.distanceSquared(target) else Double.MAX_VALUE
+                    val farEnough = !sameWorld || distanceSquared >= minTeleportDistance * minTeleportDistance
+                    val forcedByDistance = !sameWorld || distanceSquared >= forceTeleportDistance * forceTeleportDistance
+                    teleportEnabled && farEnough && (slotChanged || cooldownElapsed || forcedByDistance) &&
+                        RoutineTeleport.tryTeleport(npc.bukkitEntity, target)
+                },
+            )
             if (previousActivity != npc.plannedRoutineActivity) {
                 publishRoutineChanged(npc, previousActivity, npc.plannedRoutineActivity, currentWorld.time)
             }
-
-            if (!assignment.hasTargetAnchor()) {
-                skippedMissingTarget++
-                continue
-            }
-
-            val targetAnchor = assignment.targetAnchor() ?: run {
-                skippedMissingTarget++
-                continue
-            }
-            val target = targetAnchor.toLocation()
-            if (target == null || target.world == null || !target.chunk.isLoaded) {
-                skippedInvalidTarget++
-                continue
-            }
-
-            val targetWorld = target.world ?: run {
-                skippedInvalidTarget++
-                continue
-            }
-            val sameWorld = currentWorld == targetWorld
-            val distanceSquared = if (sameWorld) currentLocation.distanceSquared(target) else Double.MAX_VALUE
-            val arrived = targetAnchor.isNear(currentLocation, arrivalRadius)
-            val farEnough = !sameWorld || distanceSquared >= minTeleportDistance * minTeleportDistance
-            val slotChanged = previousSlot == null || previousSlot != assignment.slot()
-            val cooldownElapsed = npcId == null || now - lastRoutineMoveAt.getOrDefault(npcId, 0L) >= moveCooldownMillis
-            val forcedByDistance = !sameWorld || distanceSquared >= forceTeleportDistance * forceTeleportDistance
-
-            if (!arrived &&
-                naturalMovementEnabled &&
-                sameWorld &&
-                distanceSquared <= naturalMovementMaxDistance * naturalMovementMaxDistance &&
-                tryMoveNaturally(npc, target, naturalMovementSpeed)
-            ) {
-                npc.updateContext()
-                moved++
-                continue
-            }
-
-            if (teleportEnabled &&
-                !arrived &&
-                farEnough &&
-                (slotChanged || cooldownElapsed || forcedByDistance)
-            ) {
-                npc.teleport(target)
-                npc.updateContext()
-                if (npcId != null) {
-                    lastRoutineMoveAt[npcId] = now
+            when (outcome) {
+                RoutineActivityExecutor.Outcome.BUSY -> skippedBusy++
+                RoutineActivityExecutor.Outcome.MISSING_TARGET -> skippedMissingTarget++
+                RoutineActivityExecutor.Outcome.INVALID_TARGET -> skippedInvalidTarget++
+                RoutineActivityExecutor.Outcome.MOVING -> {
+                    npc.updateContext()
+                    moved++
                 }
-                moved++
+                RoutineActivityExecutor.Outcome.TELEPORTED -> {
+                    npc.updateContext()
+                    if (npcId != null) lastRoutineMoveAt[npcId] = now
+                    moved++
+                }
+                else -> Unit
             }
         }
 
@@ -203,30 +187,16 @@ class RoutineService(private val plugin: AINPCPlugin) {
     }
 
     private fun isBusy(state: NPCState): Boolean {
-        return when (state) {
-            NPCState.TALKING,
-            NPCState.LISTENING,
-            NPCState.TRADING,
-            NPCState.COMBAT,
-            NPCState.FLEEING,
-            NPCState.PANICKING,
-            NPCState.HIDING,
-            NPCState.QUEST_GIVING,
-            NPCState.FOLLOWING -> true
-            else -> false
-        }
+        return RoutineActivityExecutor.isBusy(state)
     }
 
-    private fun tryMoveNaturally(npc: AINPC, target: Location, speed: Double): Boolean {
+    private fun tryMoveNaturally(npc: AINPC, target: Location, speed: Double, arrivalRadius: Double): Boolean {
         val entity: Entity = npc.bukkitEntity ?: return false
         if (entity !is Mob || !entity.hasAI()) {
             return false
         }
 
-        val pathfinder: Pathfinder = entity.pathfinder
-        pathfinder.setCanOpenDoors(true)
-        pathfinder.setCanPassDoors(true)
-        return pathfinder.moveTo(target, speed)
+        return RoutineNavigation.start(entity.pathfinder, target, speed, arrivalRadius)
     }
 
     private fun publishRoutineChanged(npc: AINPC, previousActivity: String?, newActivity: String, worldTime: Long) {

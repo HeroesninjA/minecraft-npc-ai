@@ -109,6 +109,7 @@ class RelationshipService(private val plugin: AINPCPlugin) : RelationshipApi {
             val lastInteraction = lastInteractionTimestamps[key] ?: 0L
             val hoursSinceInteraction = (now - lastInteraction) / 3600000.0
             if (hoursSinceInteraction < 1.0) continue
+            if (rel.affection <= 0.0 && rel.trust <= 0.0 && rel.familiarity <= 0.0) continue
             val decayFactor = minOf(hoursSinceInteraction * 0.01, 1.0)
             rel.affection = (rel.affection - AFFECTION_DECAY_PER_TICK * decayFactor).coerceAtLeast(0.0)
             rel.trust = (rel.trust - TRUST_DECAY_PER_TICK * decayFactor).coerceAtLeast(0.0)
@@ -205,7 +206,7 @@ class RelationshipService(private val plugin: AINPCPlugin) : RelationshipApi {
                 stmt.setDouble(6, rel.familiarity)
                 stmt.setInt(7, rel.interactionCount)
                 stmt.setString(8, rel.relationshipType ?: "stranger")
-                stmt.setLong(9, System.currentTimeMillis())
+                stmt.setLong(9, lastInteractionTimestamps.getOrPut(relationshipKey(npcA, npcB)) { System.currentTimeMillis() })
                 stmt.executeUpdate()
             }
         } catch (e: SQLException) {

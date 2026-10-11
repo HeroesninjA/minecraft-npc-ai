@@ -32,6 +32,7 @@ data class EnvironmentContext(
 
     fun toPromptBlock(): String = buildString {
         appendLine("[Environment]")
+        appendLine("world=$worldName day=$dayNumber light=$lightLevel")
         appendLine("time=$timeOfDay weather=$weather season=$season temperature=$temperature")
         if (specialEvents.isNotEmpty()) {
             appendLine("events=${specialEvents.joinToString(",")}")

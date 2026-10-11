@@ -1,0 +1,70 @@
+profiles:
+  house_family:
+    display_name: Casa familiei
+    place_type: house
+    footprint: {width: 12, depth: 10, height: 5}
+    rotations: [0]
+    tags: [home, family_house]
+    metadata:
+      max_residents: "2"
+      story_state: daily_life
+    anchors:
+      spawn_01:
+        node_type: npc_spawn
+        offset: {x: 3, y: 1, z: 3}
+        radius: 1.0
+      spawn_02:
+        node_type: npc_spawn
+        offset: {x: 8, y: 1, z: 3}
+        radius: 1.0
+      bed_01:
+        node_type: bed
+        offset: {x: 3, y: 1, z: 7}
+        radius: 1.0
+      bed_02:
+        node_type: bed
+        offset: {x: 8, y: 1, z: 7}
+        radius: 1.0
+  forge:
+    display_name: Fierarie
+    place_type: forge
+    footprint: {width: 7, depth: 6, height: 5}
+    rotations: [0]
+    tags: [work]
+    metadata:
+      profession: blacksmith
+      max_workers: 1
+      story_state: shortage
+      quest_hook: supply_delivery
+    anchors:
+      workstation:
+        node_type: workstation
+        offset: {x: 3, y: 1, z: 3}
+        radius: 1.0
+  farm:
+    display_name: Ferma
+    place_type: farm
+    footprint: {width: 10, depth: 8, height: 4}
+    rotations: [0]
+    tags: [work]
+    metadata:
+      profession: farmer
+      max_workers: 1
+    anchors:
+      workstation:
+        node_type: workstation
+        offset: {x: 5, y: 1, z: 4}
+        radius: 1.0
+  market:
+    display_name: Piata
+    place_type: market
+    footprint: {width: 10, depth: 10, height: 4}
+    rotations: [0]
+    tags: [social, public]
+    metadata:
+      max_workers: 0
+    anchors:
+      meeting:
+        node_type: social
+        offset: {x: 5, y: 1, z: 5}
+        radius: 2.0

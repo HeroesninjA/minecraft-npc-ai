@@ -115,6 +115,10 @@ platform:
 
 # WorldGen - Constructie fizica a structurilor
 worldgen:
+  activity_build:
+    enabled: false
+    allowed_regions: []
+    protection: deny
   # Activarea construcției fizice a blocurilor (necesită executor disponibil)
   enabled: false
   # Preferința executor: "worldedit" (dacă e instalat) sau "native" (Bukkit API fallback)

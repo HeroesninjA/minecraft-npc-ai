@@ -1,0 +1,102 @@
+{
+  "world_admin": {
+    "enabled": true,
+    "auto_index": { "enabled": true },
+    "scan": { "blocks_per_tick": 4096 },
+    "regions": {
+      "sat_familie_demo": {
+        "name": "Sat familie demo",
+        "world": "world",
+        "type": "settlement",
+        "min": { "x": 400, "y": 60, "z": 400 },
+        "max": { "x": 480, "y": 90, "z": 460 },
+        "tags": ["documentation_family_demo"],
+        "story": {
+          "mode": "evolutive",
+          "state": "daily_life",
+          "pool": ["daily_life", "trade", "festival"]
+        },
+        "places": {
+          "casa_familiei_demo": {
+            "name": "Casa familiei demo",
+            "type": "house",
+            "min": { "x": 405, "y": 64, "z": 405 },
+            "max": { "x": 419, "y": 72, "z": 419 },
+            "tags": ["home"],
+            "public_access": false,
+            "metadata": { "max_residents": "2" },
+            "nodes": {
+              "spawn_01": {
+                "type": "npc_spawn",
+                "x": 408.0, "y": 65.0, "z": 408.0,
+                "radius": 1.0
+              },
+              "spawn_02": {
+                "type": "npc_spawn",
+                "x": 414.0, "y": 65.0, "z": 408.0,
+                "radius": 1.0
+              },
+              "pat_01": {
+                "type": "bed",
+                "x": 408.0, "y": 65.0, "z": 414.0,
+                "radius": 1.0
+              },
+              "pat_02": {
+                "type": "bed",
+                "x": 414.0, "y": 65.0, "z": 414.0,
+                "radius": 1.0
+              }
+            }
+          },
+          "fierarie": {
+            "name": "Fierarie",
+            "type": "forge",
+            "min": { "x": 425, "y": 64, "z": 405 },
+            "max": { "x": 435, "y": 72, "z": 415 },
+            "tags": ["work"],
+            "public_access": true,
+            "metadata": { "profession": "fierar" },
+            "nodes": {
+              "lucru_01": {
+                "type": "workstation",
+                "x": 430.0, "y": 65.0, "z": 410.0,
+                "radius": 1.0
+              }
+            }
+          },
+          "ferma": {
+            "name": "Ferma",
+            "type": "farm",
+            "min": { "x": 445, "y": 64, "z": 405 },
+            "max": { "x": 459, "y": 72, "z": 419 },
+            "tags": ["work"],
+            "public_access": true,
+            "metadata": { "profession": "fermier" },
+            "nodes": {
+              "lucru_01": {
+                "type": "workstation",
+                "x": 452.0, "y": 65.0, "z": 412.0,
+                "radius": 1.0
+              }
+            }
+          },
+          "piata": {
+            "name": "Piata",
+            "type": "market",
+            "min": { "x": 465, "y": 64, "z": 405 },
+            "max": { "x": 475, "y": 72, "z": 415 },
+            "tags": ["social", "public"],
+            "public_access": true,
+            "nodes": {
+              "intalnire_01": {
+                "type": "social",
+                "x": 470.0, "y": 65.0, "z": 410.0,
+                "radius": 2.0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

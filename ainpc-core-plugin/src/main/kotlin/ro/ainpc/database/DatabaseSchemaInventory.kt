@@ -108,10 +108,12 @@ object DatabaseSchemaCatalog {
         table(DatabaseSchemaDomain.STORY, "story_events"),
         table(DatabaseSchemaDomain.STORY, "story_pending_events"),
         table(DatabaseSchemaDomain.PROGRESSION, "player_reputation"),
+        table(DatabaseSchemaDomain.PROGRESSION, "player_profiles"),
         table(DatabaseSchemaDomain.PROGRESSION, "player_progression"),
         table(DatabaseSchemaDomain.ECONOMY, "player_investments"),
         table(DatabaseSchemaDomain.ECONOMY, "npc_economy"),
         table(DatabaseSchemaDomain.ECONOMY, "economy_balances"),
+        table(DatabaseSchemaDomain.ECONOMY, "bank_interest_payments"),
         table(DatabaseSchemaDomain.SYSTEM, "schema_version"),
     )
 

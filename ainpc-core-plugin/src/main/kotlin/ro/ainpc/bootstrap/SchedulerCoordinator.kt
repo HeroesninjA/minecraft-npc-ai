@@ -11,11 +11,13 @@ class SchedulerCoordinator(
     private val plugin: AINPCPlugin
 ) {
     private val tasks = mutableListOf<BukkitTask>()
+    private var started = false
 
     fun start() {
+        if (started) return
+        started = true
         scheduleEnvironmentEngine()
         scheduleInitialNpcRestore()
-        scheduleQuestProgressResume()
         scheduleQuestProgressPersistence()
         scheduleObjectiveCleanup()
         scheduleLifeSimulation()
@@ -39,6 +41,7 @@ class SchedulerCoordinator(
             task.cancel()
         }
         tasks.clear()
+        started = false
     }
 
     private fun observedTask(taskName: String, action: () -> Unit): Runnable {
@@ -208,7 +211,7 @@ class SchedulerCoordinator(
     private fun scheduleBankInterest() {
         if (!plugin.config.getBoolean(ConfigKeys.ECONOMY_INTEREST_ENABLED, false)) return
         val intervalSeconds = maxOf(3600, plugin.config.getInt(ConfigKeys.ECONOMY_INTEREST_CHECK, 7200))
-        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+        tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
             observedTask("bank_interest") { plugin.bankingService.applyInterest() },
             20L * intervalSeconds,
@@ -219,7 +222,7 @@ class SchedulerCoordinator(
     private fun scheduleNpcSalaryPayment() {
         if (!plugin.config.getBoolean(ConfigKeys.ECONOMY_SALARIES_ENABLED, false)) return
         val intervalSeconds = maxOf(120, plugin.config.getInt(ConfigKeys.ECONOMY_SALARY_INTERVAL, 600))
-        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+        tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
             observedTask("npc_salary") { plugin.npcEconomyService.paySalaries() },
             20L * intervalSeconds,
@@ -239,7 +242,7 @@ class SchedulerCoordinator(
 
     private fun scheduleRelationshipDecay() {
         val decaySeconds = maxOf(60, plugin.config.getInt("relationship.decay_interval_seconds", 300))
-        tasks.add(plugin.server.scheduler.runTaskTimerAsynchronously(
+        tasks.add(plugin.server.scheduler.runTaskTimer(
             plugin,
             observedTask("relationship_decay") { plugin.relationshipService.applyDecay() },
             20L * decaySeconds,
@@ -253,16 +256,6 @@ class SchedulerCoordinator(
             observedTask("village_rebalance") { plugin.npcManager.rebalanceLoadedVillages() },
             20L * 45,
             20L * 120
-        ))
-    }
-
-    private fun scheduleQuestProgressResume() {
-        tasks.add(plugin.server.scheduler.runTaskLater(
-            plugin,
-            Runnable {
-                plugin.scenarioEngine.loadPlayerQuests()
-            },
-            40L
         ))
     }
 

@@ -2,6 +2,7 @@ package ro.ainpc.engine
 
 import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.story.StoryContextSnapshot
+import ro.ainpc.story.StructureQuestCooldown
 import java.text.Normalizer
 import java.util.LinkedHashSet
 import java.util.Locale
@@ -9,7 +10,7 @@ import java.util.Locale
 /**
  * Questscoringresolver.
  */
-class QuestScoringResolver {
+class QuestScoringResolver(private val currentTimeMillis: () -> Long = System::currentTimeMillis) {
     fun score(
         definition: ProgressionDefinition,
         storyDemandSignals: List<String>,
@@ -85,34 +86,41 @@ class QuestScoringResolver {
 
         val signals = context.storySignals()
         val cooldownCategory = signalValue(signals, "quest_generation_cooldown_category")
-        if (cooldownCategory.isBlank()) {
-            return false
-        }
-
-        if (!isCooldownRelevantToDemand(cooldownCategory, storyDemandSignals, signals)) {
-            return false
-        }
-
-        if (signals.any { it.startsWith("quest_generation_cooldown=") }) {
+        val currentPlaceId = signalValue(signals, "place_id")
+        val cooldownPlaceId = signalValue(signals, "quest_generation_cooldown_place_id")
+        if ((cooldownPlaceId.isBlank() || cooldownPlaceId == currentPlaceId)
+            && isCooldownRelevantToDemand(cooldownCategory, storyDemandSignals, signals)
+            && signals.any { it.startsWith("quest_generation_cooldown=") }
+        ) {
             return true
         }
 
-        val currentPlaceId = signalValue(signals, "place_id")
         if (currentPlaceId.isBlank()) {
             return false
         }
 
-        val cooldownMs = signalValue(signals, "quest_generation_cooldown_ms").toLongOrNull()
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         return context.recentStoryEvents().any { event ->
+            val elapsed = now - event.createdAt()
             event.eventType().startsWith("structure_")
                 && event.placeId() == currentPlaceId
-                && now - event.createdAt() <= (cooldownMs ?: cooldownMsForEventType(event.eventType()))
+                && event.createdAt() <= now
+                && elapsed >= 0L
+                && elapsed < StructureQuestCooldown.durationForEvent(event.eventType())
+                && isCooldownRelevantToDemand(
+                    StructureQuestCooldown.categoryForEvent(event.eventType()), storyDemandSignals, signals
+                )
         }
     }
 
     private fun isDemandSignal(normalizedSignal: String): Boolean {
         if (normalizedSignal.isBlank()) {
+            return false
+        }
+        if (normalizedSignal.startsWith("npc_home_place_id_") ||
+            normalizedSignal.startsWith("npc_work_place_id_") ||
+            normalizedSignal.startsWith("npc_social_place_id_")
+        ) {
             return false
         }
         return normalizedSignal.contains("persistent")
@@ -122,6 +130,8 @@ class QuestScoringResolver {
             || normalizedSignal.contains("place_type")
             || normalizedSignal.contains("place_tags")
             || normalizedSignal.contains("quest_hook")
+            || normalizedSignal.startsWith("npc_quest_role_")
+            || normalizedSignal.startsWith("npc_social_role_")
             || normalizedSignal.contains("danger")
             || normalizedSignal.contains("tension")
             || normalizedSignal.contains("conflict")
@@ -186,25 +196,6 @@ class QuestScoringResolver {
                 normalized.contains("quest_hook") || normalized.contains("quest_trigger") || normalized.contains("recover_artifact") || normalized.contains("investigation")
             }
             else -> false
-        }
-    }
-
-    private fun cooldownMsForEventType(eventType: String): Long {
-        val normalized = normalize(eventType)
-        val category = when {
-            normalized.startsWith("structure_visit_") -> normalized.removePrefix("structure_visit_")
-            normalized.startsWith("structure_node_") -> normalized.removePrefix("structure_node_")
-            else -> "unknown"
-        }
-        return when (category) {
-            "residential" -> 10_000L
-            "profession" -> 22_000L
-            "utility" -> 12_000L
-            "leisure" -> 6_000L
-            "public" -> 14_000L
-            "exterior" -> 30_000L
-            "quest" -> 45_000L
-            else -> 15_000L
         }
     }
 

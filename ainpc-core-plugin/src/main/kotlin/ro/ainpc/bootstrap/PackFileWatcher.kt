@@ -10,11 +10,9 @@ import java.util.logging.Level
  */
 class PackFileWatcher(private val plugin: AINPCPlugin) {
     private val fileTimestamps: MutableMap<String, Long> = ConcurrentHashMap()
-    private var lastScan: MutableMap<String, Long> = ConcurrentHashMap()
-    private var dirty = false
     private var debounceStart = 0L
     private var hasChanges = false
-    private var enabled = false
+    @Volatile private var enabled = false
 
     private val packDir: File
         get() = File(plugin.dataFolder, "packs")
@@ -29,14 +27,16 @@ class PackFileWatcher(private val plugin: AINPCPlugin) {
             plugin.debug("[PackWatcher] Directorul packs/ nu exista. Se va crea la prima scriere.")
             return
         }
-        snapshotTimestamps()
+        fileTimestamps.clear()
+        fileTimestamps.putAll(snapshotTimestamps())
+        hasChanges = false
         plugin.logger.info("[PackWatcher] Urmarirea fisierelor activata pentru: ${packDir.absolutePath}")
     }
 
     fun stop() {
         enabled = false
         fileTimestamps.clear()
-        lastScan.clear()
+        hasChanges = false
     }
 
     fun tick() {
@@ -45,22 +45,22 @@ class PackFileWatcher(private val plugin: AINPCPlugin) {
         val current = snapshotTimestamps()
         val now = System.currentTimeMillis()
 
+        if (current != fileTimestamps) {
+            val changedPath = (current.keys + fileTimestamps.keys).firstOrNull {
+                current[it] != fileTimestamps[it]
+            }
+            plugin.logger.info("[PackWatcher] Fisier modificat: $changedPath")
+            fileTimestamps.clear()
+            fileTimestamps.putAll(current)
+            hasChanges = true
+            debounceStart = now
+            return
+        }
+
         if (hasChanges) {
             if (now - debounceStart >= 5000) {
                 triggerReload()
                 hasChanges = false
-            }
-            return
-        }
-
-        for ((path, timestamp) in current) {
-            val lastTs = fileTimestamps[path]
-            if (lastTs != null && lastTs != timestamp) {
-                plugin.logger.info("[PackWatcher] Fisier modificat: $path")
-                fileTimestamps[path] = timestamp
-                hasChanges = true
-                debounceStart = now
-                return
             }
         }
     }
@@ -91,8 +91,15 @@ class PackFileWatcher(private val plugin: AINPCPlugin) {
     private fun triggerReload() {
         try {
             plugin.logger.info("[PackWatcher] Fisier(e) modificate — reincarc pachetele...")
-            plugin.reloadContent()
-            plugin.logger.info("[PackWatcher] Reincarcare completata.")
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (!enabled) return@Runnable
+                try {
+                    plugin.reloadContent()
+                    plugin.logger.info("[PackWatcher] Reincarcare completata.")
+                } catch (e: Exception) {
+                    plugin.logger.log(Level.WARNING, "[PackWatcher] Eroare la reincarcarea pachetelor", e)
+                }
+            })
         } catch (e: Exception) {
             plugin.logger.log(Level.WARNING, "[PackWatcher] Eroare la reincarcarea pachetelor", e)
         }

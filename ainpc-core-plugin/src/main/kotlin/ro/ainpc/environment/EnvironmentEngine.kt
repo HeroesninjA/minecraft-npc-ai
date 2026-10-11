@@ -42,7 +42,13 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
         val base = getContext(worldName)
         if (biome.isNullOrBlank()) return base
         val season = base.season
-        return base.copy(temperature = Temperature.fromBiome(biome, season))
+        val localWeather = if (base.weather == Weather.RAIN) {
+            Weather.fromBukkit(true, false, biome.uppercase())
+        } else base.weather
+        return base.copy(
+            weather = localWeather,
+            temperature = Temperature.fromBiome(biome, season)
+        )
     }
 
     fun registerSpecialEvent(worldName: String?, event: String) {

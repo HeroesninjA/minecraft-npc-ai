@@ -1,7 +1,7 @@
 # Catalogul tool-urilor MCP AINPC
 
 Status: referinta canonica extrasa din adnotarile `@McpTool`.
-Actualizat: 2026-07-18.
+Actualizat: 2026-10-11.
 
 Catalogul de mai jos apartine modulului Spring `ainpc-mcp-service`, nu serverului Node de context al proiectului.
 
@@ -21,6 +21,8 @@ Catalogul de mai jos apartine modulului Spring `ainpc-mcp-service`, nu serverulu
 - `ainpc.world.mapping.summary`.
 
 Aceste tool-uri sunt inregistrate, iar readerul accepta schemele runtime `1..3`. Datele raman indisponibile in profilul `static`, `offline`, cand fisierul lipseste sau cand producerul si sidecar-ul nu folosesc aceeasi cale.
+
+`ainpc.dialog.context` accepta optional `regionId`. Daca snapshotul contine acea regiune, raspunsul adauga `local.regionId`, `local.npcCount` si pana la cinci `local.npcExamples` din esantionul global; absenta lui `local` inseamna ca nu exista date locale confirmate. Clientul de dialog ignora snapshoturile `stale` si nu expune in replica metadatele globale ale serverului.
 
 ## Tool-uri semantice statice
 

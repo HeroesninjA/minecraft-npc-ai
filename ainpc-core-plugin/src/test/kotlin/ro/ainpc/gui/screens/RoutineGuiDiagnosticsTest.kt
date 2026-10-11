@@ -34,6 +34,16 @@ class RoutineGuiDiagnosticsTest {
     }
 
     @Test
+    fun routineGuiSeparatesPlannedStateFromActualStateAndGoal() {
+        val source = File("src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt").readText()
+        assertTrue(source.contains("Goal planificat"))
+        assertTrue(source.contains("Stare efectiva"))
+        assertTrue(source.contains("npc.currentState.name"))
+        assertTrue(source.contains("Obiectiv imediat"))
+        assertTrue(source.contains("npc.currentGoal.ifBlank"))
+    }
+
+    @Test
     fun routineGuiHasAdminActions() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/RoutineGui.kt").readText()
 

@@ -27,11 +27,30 @@ class BankingServiceIntegrationTest {
                 description TEXT NOT NULL DEFAULT ''
             )
         """)
+        connection!!.createStatement().execute("""
+            CREATE TABLE IF NOT EXISTS bank_interest_payments (
+                player_uuid TEXT NOT NULL PRIMARY KEY,
+                last_applied INTEGER NOT NULL
+            )
+        """)
     }
 
     @AfterEach
     fun tearDown() {
         connection?.close()
+    }
+
+    @Test
+    fun interestPaymentTimestampSurvivesStoreRecreation() {
+        val playerUuid = UUID.randomUUID()
+        val firstPayment = 1_700_000_000_000L
+        val nextPayment = firstPayment + 86_400_000L
+        BankInterestPaymentStore(connection!!::prepareStatement).save(playerUuid, firstPayment)
+
+        val restartedStore = BankInterestPaymentStore(connection!!::prepareStatement)
+        assertEquals(firstPayment, restartedStore.load()[playerUuid])
+        restartedStore.save(playerUuid, nextPayment)
+        assertEquals(nextPayment, BankInterestPaymentStore(connection!!::prepareStatement).load()[playerUuid])
     }
 
     @Test

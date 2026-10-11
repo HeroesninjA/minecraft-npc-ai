@@ -8,7 +8,7 @@ import java.util.Locale
 /**
  * Storystructuresignalresolver.
  */
-class StoryStructureSignalResolver {
+class StoryStructureSignalResolver(private val currentTimeMillis: () -> Long = System::currentTimeMillis) {
     fun collectPlaceMetadataSignals(metadata: Map<String, String>?): List<Pair<String, String>> {
         if (metadata.isNullOrEmpty()) {
             return emptyList()
@@ -35,11 +35,12 @@ class StoryStructureSignalResolver {
 
         val signals = mutableListOf<Pair<String, String>>()
         signals.add("structure_type" to place.placeType().id)
-        signals.add("structure_category" to structureCategoryForPlaceType(placeTypeId))
+        signals.add("structure_category" to StructureStoryCategory.forPlaceType(placeTypeId, place.tags(), place.metadata()))
 
         val questHooks = LinkedHashSet<String>()
-        questHooks.addAll(questHooksForPlaceType(placeTypeId))
-        questHooks.addAll(questHooksForPlaceTags(place.tags()))
+        questHooks.addAll(StructureStoryHooks.forPlaceType(placeTypeId))
+        questHooks.addAll(StructureStoryHooks.forPlaceTags(place.tags()))
+        questHooks.addAll(StructureStoryHooks.forPlaceMetadata(place.metadata()))
         questHooks.forEach { hook ->
             signals.add("quest_hook" to hook)
         }
@@ -71,18 +72,20 @@ class StoryStructureSignalResolver {
             return signals
         }
 
-        val now = System.currentTimeMillis()
-        val recentSamePlaceEvent = structureEvents.firstOrNull { event ->
-            event.placeId() == currentPlaceId && now - event.createdAt() <= 30_000L
-        } ?: return signals
+        val now = currentTimeMillis()
+        val recentSamePlaceEvent = structureEvents.asSequence()
+            .filter { it.placeId() == currentPlaceId && it.createdAt() <= now }
+            .filter { event ->
+                val elapsed = now - event.createdAt()
+                elapsed >= 0L && elapsed < StructureQuestCooldown.durationForEvent(event.eventType())
+            }
+            .maxByOrNull { event ->
+                StructureQuestCooldown.durationForEvent(event.eventType()) - (now - event.createdAt())
+            } ?: return signals
 
-        val structureCategory = structureCategoryFromEventType(recentSamePlaceEvent.eventType())
-        val cooldownMs = structureCooldownMs(structureCategory)
+        val structureCategory = StructureQuestCooldown.categoryForEvent(recentSamePlaceEvent.eventType())
+        val cooldownMs = StructureQuestCooldown.durationForCategory(structureCategory)
         val elapsedMs = now - recentSamePlaceEvent.createdAt()
-        if (elapsedMs >= cooldownMs) {
-            return signals
-        }
-
         signals.add("quest_generation_cooldown" to "structure_recent")
         signals.add("quest_generation_cooldown_place_id" to currentPlaceId)
         signals.add("quest_generation_cooldown_category" to structureCategory)
@@ -106,102 +109,41 @@ class StoryStructureSignalResolver {
             || metadata.containsKey("story")
             || metadata.containsKey("event")
             || metadata.containsKey("interaction")
+            || !metadata["quest_hook"].isNullOrBlank()
     }
 
-    private fun structureCooldownMs(structureCategory: String): Long {
-        return when (structureCategory) {
-            "residential" -> 10_000L
-            "profession" -> 22_000L
-            "utility" -> 12_000L
-            "leisure" -> 6_000L
-            "public" -> 14_000L
-            "exterior" -> 30_000L
-            "quest" -> 45_000L
-            else -> 15_000L
+    fun selectStoryRelevantNodes(
+        nodes: List<WorldNodeInfo>,
+        placeId: String,
+        currentPlaceNodes: Collection<WorldNodeInfo> = emptyList()
+    ): List<WorldNodeInfo> {
+        val candidates = if (placeId.isBlank()) nodes else
+            (nodes + currentPlaceNodes.filter { it.placeId() == placeId }).distinctBy(WorldNodeInfo::id)
+        val relevant = candidates.filter(::isStoryRelevantNode)
+        if (placeId.isBlank()) return relevant.take(5)
+        val (currentPlaceNodes, otherNodes) = relevant.partition { it.placeId() == placeId }
+        val (hookNodes, remainingCurrentNodes) = currentPlaceNodes.partition {
+            !it.metadata()["quest_hook"].isNullOrBlank()
         }
+        val seenHooks = mutableSetOf<String>()
+        val (distinctHookNodes, duplicateHookNodes) = hookNodes.partition {
+            seenHooks.add(it.metadata()["quest_hook"]!!.trim())
+        }
+        return (distinctHookNodes + duplicateHookNodes + remainingCurrentNodes + otherNodes).take(5)
     }
 
-    private fun structureCategoryFromEventType(eventType: String): String {
-        val normalized = normalizeStructureValue(eventType)
-        return when {
-            normalized.startsWith("structure_visit_") -> normalized.removePrefix("structure_visit_")
-            normalized.startsWith("structure_node_") -> normalized.removePrefix("structure_node_")
-            else -> "unknown"
-        }
+    fun collectNearbyNodeQuestHookSignals(nodes: List<WorldNodeInfo>, placeId: String): List<Pair<String, String>> {
+        if (placeId.isBlank()) return emptyList()
+        return nodes.asSequence()
+            .filter { it.placeId() == placeId }
+            .mapNotNull { it.metadata()["quest_hook"]?.trim()?.takeIf(String::isNotBlank) }
+            .distinct()
+            .map { "node_quest_hook" to it }
+            .toList()
     }
 
     private fun buildQuestGenerationCooldownReason(structureCategory: String, eventType: String): String {
         return "structure_category=$structureCategory,event_type=$eventType"
-    }
-
-    private fun questHooksForPlaceType(placeTypeId: String): List<String> {
-        return when (placeTypeId) {
-            "house", "home", "apartment", "farmhouse", "shared_house", "inn_room" -> listOf("home_life", "household_request", "family_help")
-            "farm" -> listOf("harvest", "field_work", "delivery")
-            "smithy" -> listOf("forge_order", "repair_tool", "metal_supply")
-            "shop" -> listOf("market_supply", "customer_request", "shortage")
-            "bakery" -> listOf("bread_order", "grain_supply", "delivery")
-            "mill" -> listOf("grain_supply", "machine_repair", "delivery")
-            "workshop", "carpentry", "tailor_shop" -> listOf("craft_order", "repair_order", "material_supply")
-            "tavern" -> listOf("social_event", "rumor", "missing_person")
-            "town_hall", "administration", "court", "library", "church", "civic_hall" -> listOf("civic_request", "public_event", "lost_record")
-            "park", "market_square", "plaza", "public_garden", "campfire_area", "performance_area" -> listOf("community_event", "social_meeting", "festival")
-            "watchtower", "outpost" -> listOf("route_report", "observe_tracks", "patrol_request")
-            "forest", "ruin", "cave", "fort", "shrine", "caravan_stop", "hidden_camp", "border_watch" -> listOf("exploration", "route_report", "danger")
-            "quest_board", "ancient_altar", "sealed_door", "investigation_house", "delivery_point", "secret_cellar", "bandit_camp", "abandoned_tower", "crypt" -> listOf("quest_hook", "investigation", "recover_artifact")
-            else -> emptyList()
-        }
-    }
-
-    private fun questHooksForPlaceTags(tags: List<String>?): List<String> {
-        if (tags.isNullOrEmpty()) {
-            return emptyList()
-        }
-
-        val normalizedTags = tags.asSequence()
-            .map { normalizeStructureValue(it) }
-            .filter { it.isNotBlank() }
-            .toSet()
-
-        val hooks = LinkedHashSet<String>()
-        if (normalizedTags.any { it == "market" || it == "trade" || it == "merchant" }) {
-            hooks.add("market_supply")
-        }
-        if (normalizedTags.any { it == "farming" || it == "farm" || it == "harvest" }) {
-            hooks.add("harvest")
-        }
-        if (normalizedTags.any { it == "social" || it == "culture" || it == "public" }) {
-            hooks.add("community_event")
-        }
-        if (normalizedTags.any { it == "danger" || it == "dungeon" || it == "ambush" }) {
-            hooks.add("danger")
-        }
-        if (normalizedTags.any { it == "quest" || it == "story" }) {
-            hooks.add("quest_hook")
-        }
-        if (normalizedTags.any { it == "admin" || it == "civil" || it == "civic" }) {
-            hooks.add("civic_request")
-        }
-        if (normalizedTags.any { it == "route" || it == "watch" || it == "border" }) {
-            hooks.add("route_report")
-        }
-        if (normalizedTags.any { it == "resource" || it == "wilderness" }) {
-            hooks.add("exploration")
-        }
-        return hooks.toList()
-    }
-
-    private fun structureCategoryForPlaceType(placeTypeId: String): String {
-        return when (placeTypeId) {
-            "house", "home", "apartment", "farmhouse", "shared_house", "inn_room" -> "residential"
-            "farm", "smithy", "shop", "bakery", "mill", "workshop", "carpentry", "tailor_shop", "tavern", "town_hall", "temple" -> "profession"
-            "well", "storage", "barn", "gate", "bridge", "path", "road", "stable", "collection_point", "lighting" -> "utility"
-            "park", "market_square", "plaza", "bench_area", "public_garden", "campfire_area", "performance_area" -> "leisure"
-            "administration", "court", "church", "library", "watchtower", "training_ground", "civic_hall" -> "public"
-            "forest", "ruin", "cave", "outpost", "fort", "shrine", "caravan_stop", "hidden_camp", "border_watch" -> "exterior"
-            "quest_board", "ancient_altar", "sealed_door", "investigation_house", "delivery_point", "secret_cellar", "bandit_camp", "abandoned_tower", "crypt" -> "quest"
-            else -> "unknown"
-        }
     }
 
     private fun normalizeStructureValue(value: String?): String {

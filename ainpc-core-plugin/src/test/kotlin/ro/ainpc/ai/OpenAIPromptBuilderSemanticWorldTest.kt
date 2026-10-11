@@ -1,10 +1,92 @@
 package ro.ainpc.ai
 
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class OpenAIPromptBuilderSemanticWorldTest {
+    @Test
+    fun `prompt treats editable player profile as unverified declaration`() {
+        val prompt = OpenAIPromptBuilder.buildPrompt(
+            semanticSnapshot(), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(
+                0, 0.0, null,
+                PlayerProfile(PlayerRole.COMERCIANT, PlayerStyle.FORMAL, PlayerTrait.PRUDENT)
+            )
+        )
+
+        assertTrue(prompt.contains("Rol declarat: comerciant"))
+        assertTrue(prompt.contains("Stil de comunicare preferat: formal"))
+        assertTrue(prompt.contains("Trasatura declarata: prudent"))
+        assertTrue(prompt.contains("nu ca dovada a meseriei"))
+    }
+
+    @Test
+    fun `prompt recognizes past player interactions without a relationship row`() {
+        val prompt = OpenAIPromptBuilder.buildPrompt(
+            semanticSnapshot().copy(playerHeldItem = "minecraft:iron_sword"),
+            listOf(DialogHistory("Salut", "Buna", 1L)),
+            emptyList(),
+            null,
+            DialogManager.PromptDbContext(1, 0.0, 12)
+        )
+
+        assertTrue(prompt.contains("Recunoastere personala: cunoscut din interactiuni"))
+        assertTrue(prompt.contains("Obiect vizibil in mana: minecraft:iron_sword"))
+        assertTrue(prompt.contains("Reputatie in regiune: 12"))
+        assertFalse(prompt.contains("Aceasta este prima intalnire"))
+    }
+
+    @Test
+    fun `prompt distinguishes first personal meeting from regional reputation`() {
+        val prompt = OpenAIPromptBuilder.buildPrompt(
+            semanticSnapshot(), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0, 20)
+        )
+
+        assertTrue(prompt.contains("Recunoastere personala: fara intalniri anterioare cunoscute"))
+        assertTrue(prompt.contains("Reputatie in regiune: 20"))
+        assertTrue(prompt.contains("fara sa pretinzi ca il cunosti"))
+    }
+
+    @Test
+    fun `neutral or absent regional reputation is not presented as a known trait`() {
+        val prompt = OpenAIPromptBuilder.buildPrompt(
+            semanticSnapshot(), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0, 0)
+        )
+
+        assertFalse(prompt.contains("Reputatie in regiune:"))
+    }
+
+    @Test
+    fun `prompt separates current activity from planned routine and goal`() {
+        val snapshot = semanticSnapshot().copy(
+            currentActivity = "vorbeste cu jucatorul",
+            plannedRoutineActivity = "merge la fierarie",
+            immediateGoal = "termina reparatia"
+        )
+
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+
+        assertTrue(prompt.contains("npc_current_activity: vorbeste cu jucatorul"))
+        assertTrue(prompt.contains("npc_planned_routine: merge la fierarie"))
+        assertTrue(prompt.contains("npc_immediate_goal: termina reparatia"))
+        assertTrue(prompt.contains("nu pretinde ca un plan este deja realizat"))
+    }
+
+    @Test
+    fun `MCP context precedes player message and NPC response prefix`() {
+        val prompt = OpenAIPromptBuilder.buildPrompt(
+            semanticSnapshot(), emptyList(), emptyList(), null, null,
+            mcpContext = "=== CONTEXT LOCAL DIN MCP ===\n6 NPC-uri inregistrate."
+        )
+
+        assertTrue(prompt.indexOf("=== CONTEXT LOCAL DIN MCP ===") < prompt.indexOf("=== MESAJUL JUCATORULUI ==="))
+        assertTrue(prompt.trimEnd().endsWith("Ion:"))
+    }
+
     @Test
     fun `prompt includes semantic world context for profession questions`() {
         val snapshot = semanticSnapshot()

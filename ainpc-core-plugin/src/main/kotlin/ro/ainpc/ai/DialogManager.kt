@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DialogManager(private val plugin: AINPCPlugin) {
     private val cooldowns: MutableMap<UUID, MutableMap<UUID, Long>> = ConcurrentHashMap()
+    private val playerProfiles = PlayerProfileRepository(plugin.databaseManager)
 
     /**
      * Proceseaza un mesaj de la jucator catre NPC
@@ -45,6 +46,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val message = request.message()
         val playerUuid = player.uniqueId
         val playerName = player.name
+        val regionId = npc.context.worldContextSnapshot.currentRegion()?.id().orEmpty()
 
         // Verifica cooldown
         if (isOnCooldown(playerUuid, npc.uuid)) {
@@ -71,12 +73,21 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
             // Obtine relatia
             val relationship = getRelationship(npc, playerUuid)
+            val regionalReputation = regionId.takeIf { it.isNotBlank() }?.let {
+                plugin.reputationService.getReputation(playerUuid.toString(), "region", it)
+            }
+            val playerProfile = try {
+                playerProfiles.find(playerUuid)
+            } catch (error: SQLException) {
+                plugin.logger.warning("Profilul jucatorului nu a putut fi citit: ${error.message}")
+                null
+            }
 
             DialogContext(
                 history,
                 memories,
                 relationship,
-                PromptDbContext(totalMemoryCount, weightedMemoryImpact)
+                PromptDbContext(totalMemoryCount, weightedMemoryImpact, regionalReputation, playerProfile)
             )
         }.thenCompose { context ->
             publishAiRequestBuilt(npc, player, message, request, context)
@@ -523,7 +534,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
     data class PromptDbContext(
         val totalMemoryCount: Int,
-        val weightedMemoryImpact: Double
+        val weightedMemoryImpact: Double,
+        val regionalReputation: Int? = null,
+        val playerProfile: PlayerProfile? = null,
     ) {
         fun totalMemoryCount(): Int = totalMemoryCount
         fun weightedMemoryImpact(): Double = weightedMemoryImpact

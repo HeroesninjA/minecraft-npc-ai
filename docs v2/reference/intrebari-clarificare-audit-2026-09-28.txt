@@ -1,0 +1,184 @@
+ÎNTREBĂRI DE CLARIFICARE PENTRU RAPORTUL DE AUDIT
+===================================================
+
+Scop
+----
+Acest fișier conține întrebările care trebuie lămurite înainte ca raportul
+să fie rescris într-o formă finală, fără afirmații ambigue, duplicate sau
+contradictorii. Răspunsurile pot fi date pe rând, în mai multe taskuri.
+
+1. Domeniul și statutul proiectului
+-----------------------------------
+1.1. Care este mediul oficial de rulare: Paper, Spigot sau alt server Bukkit?
+paper
+1.2. Este proiectul considerat production-ready sau încă experimental/beta?
+ in dezvoltare de lunga durata fara versiune  lansata  planific un proiect de lunga durata pana la lansare ani
+1.3. Feature-pack-urile sunt scrise exclusiv de administratori de încredere sau
+     pot fi generate/modificate de jucători, operatori limitați ori un serviciu AI? administrator
+1.4. MySQL/MariaDB este suportat oficial sau doar SQLite este suportat în
+     producție? pentru dezvoltare sqllite pentru versiunea final relase mai multe modalitati dar e prea devreme
+1.5. Ollama trebuie să fie un provider funcțional pentru dialoguri sau este doar
+     o integrare planificată/nefolosită momentan?
+      ollama e doar o medota va suporta appi universal la inceput apoi voi face un model ai fine tuning dedicat dar va ramane si api ai public  asta dupa lansare
+
+2. Severitate și limbaj
+-----------------------
+2.1. Doriți ca P1/P2 să aibă o definiție explicită în raport? Propunere:
+     P1 = pierdere de bani/date, crash sau execuție privilegiată posibilă;
+     P2 = defect important, dar cu impact limitat ori condiționat.
+     acesta trebuie sa fie o caracteristica customizabila sua chiar eliminata ca sa ce pottriveasca cu orc e scenariu
+2.2. Pentru comenzi din feature-pack, păstrăm un singur nivel de severitate?
+     Raportul folosește acum „P1/P2” deoarece impactul depinde de cine poate
+     modifica pack-ul. Preferința recomandată este P1 dacă sursa nu este
+     garantat de încredere și P2 dacă pack-urile sunt strict administrative.
+     momentan e in dezvoltare ulterior cand e apoape de lansare voi adauga si permisiuni
+2.3. Doriți să separăm în raport „defect confirmat prin test” de „risc dedus
+     prin analiză statică”? În forma actuală ambele apar în aceeași listă.
+     da
+2.4. Pentru afirmațiile condiționale („poate”, „ar putea”), preferați o secțiune
+     separată de riscuri neconfirmate sau marcaje explicite în fiecare constatare?
+da
+3. Posibile duplicate sau suprapuneri
+-------------------------------------
+3.1. Problemele despre cleanup-ul questurilor și reload-ul feature-pack-urilor
+     ating ambele ștergerea progresului. Le păstrăm ca două constatări separate
+     (cleanup la offline vs. reload invalid) sau le reunim într-o constatare despre
+     pierderea progresului? da
+3.2. Problemele „shop-ul nu are date/butoane funcționale” și
+     „ShopService.clear() lasă indexul contaminat” sunt defecte independente sau
+     fac parte din aceeași funcționalitate incompletă? shopu e un feautures inplementat prea devreme si nu e potrivit ca features universal
+3.3. Problemele smoke deploy și logul smoke sunt independente sau doriți o singură
+     constatare despre faptul că smoke-testul nu este de încredere?  da
+3.4. Problemele providerului Ollama și validatorului AI trebuie raportate separat
+     (configurație neconectată vs. validare neconectată) sau într-o singură
+     constatare despre fluxul AI incomplet? da
+
+4. Comportament așteptat
+------------------------
+4.1. La deconectarea unui jucător, progresul questului trebuie păstrat în memorie,
+     reîncărcat din DB la reconnect sau ambele? in db
+4.2. La reload eșuat, comportamentul dorit este păstrarea ultimului snapshot valid,
+     anularea completă a reload-ului sau altă politică? da
+4.3. O investiție cu durata zero trebuie respinsă sau este intenționată ca investiție
+     instant pentru teste/admin? nu
+4.4. Shop-ul trebuie încărcat din feature-pack-uri, din config separat sau din cod? nu
+4.5. Butoanele shop trebuie să cumpere/vândă direct la click sau să deschidă mai
+     întâi un ecran de confirmare? conform scenariului de utilizare
+4.6. Undo WorldEdit trebuie să fie garantat după restart sau este acceptabil să fie
+     disponibil doar cât timp procesul serverului rămâne pornit? d permanent daca lumea este depententa de world edit
+
+5. Dovezi și validare
+---------------------
+5.1. Aveți un server Paper de test, o bază MySQL/MariaDB, Ollama și un VPS pe care
+     să verificăm comportamentul raportat? Fără aceste medii, acele puncte rămân
+     concluzii din cod și nu teste end-to-end. da  in fara incipienta
+5.2. Doriți ca următoarele taskuri să adauge pentru fiecare constatare un câmp
+     standard: „Dovadă”, „Impact”, „Condiții de reproducere”, „Remediere” și
+     „Status de verificare”? da
+5.3. Doriți păstrarea numerelor de linie exacte sau preferați referințe la simboluri
+     pentru a reduce necesitatea actualizării raportului după refactorizări? nu
+
+6. Format și istoric
+--------------------
+6.1. Raportul final trebuie să fie un singur document sau doriți documente separate
+     pentru defecte, securitate, arhitectură și plan de remediere? separat
+6.2. Rapoartele istorice trebuie doar referențiate sau trebuie reconciliate într-un
+     document unic? da
+6.3. Păstrăm data auditului fixă pentru această versiune sau actualizăm data la
+     fiecare revizie editorială? actualizam
+
+Instrucțiune pentru răspuns
+---------------------------
+Poți răspunde compact, de exemplu: „1.1 Paper, 1.2 beta, 2.1 accept, 3.1 separat,
+4.3 respinsă”. Întrebările fără răspuns vor rămâne marcate ca presupuneri în
+următoarea revizie a raportului.
+
+
+ANALIZĂ APROFUNDATĂ A ÎNTREGII DOCUMENTAȚII — ÎNTREBĂRI NOI
+============================================================
+
+Aceste întrebări provin din compararea raportului de audit cu documentele
+canonice, roadmap-urile, ghidurile și raportul istoric din `docs v2/reference`.
+
+7. Contradicții despre baza de date
+-----------------------------------
+7.1. Raportul de audit tratează MySQL/MariaDB ca suport viitor, condiționat, dar
+     `storage-runtime.md` descrie deja implementarea MySQL/MariaDB și Hikari ca
+     suport existent. Care este formularea oficială?
+     - „implementat tehnic, neverificat end-to-end” sau
+     - „planificat, neasumat pentru versiunea curentă”?
+7.2. Dacă SQLite este singurul backend asumat acum, constatarea despre SQL
+     SQLite în calea generică trebuie mutată din defect/risc în backlog pentru
+     versiunea multi-backend?
+
+8. Contradicții despre WorldEdit
+-------------------------------
+8.1. Auditul analizează `WorldEditBlockExecutor` și lifecycle-ul undo, dar
+     `sistem-permisiuni-compatibilitate-pluginuri.md` declară WorldEdit fără
+     adaptor runtime. Care document descrie realitatea curentă?
+8.2. Dacă WorldEdit este doar cod experimental/izolat, trebuie mutat din probleme
+     active în „cod neactivat”?
+8.3. „Undo permanent” înseamnă persistență după restart, sau doar aplicarea
+     permanentă a modificărilor în lume fără posibilitate de rollback?
+
+9. Contradicții despre AI
+-------------------------
+9.1. Raportul de audit spune că validatorul AI nu este conectat în producție,
+     în timp ce `prompt-safety-guide.md` descrie reguli și gate-uri obligatorii.
+     Sunt acele gate-uri doar politică/documentație sau există și apel executabil?
+9.2. Pentru versiunea curentă, OpenAI este providerul oficial activ? Dacă da,
+     descriem Ollama exclusiv ca roadmap și eliminăm formulările de „configurație
+     defectă” din raportul de defecte.
+9.3. Cine are voie să activeze fluxuri AI: doar adminul sau și creatorul? Această
+     decizie trebuie aliniată cu documentul de permisiuni și cu exportul AI.
+
+10. Contradicții despre feature-pack și securitate
+--------------------------------------------------
+10.1. Documentația de permisiuni declară exportul/importul/reload-ul ca operații
+      `ainpc.admin`, iar auditul tratează comenzile din pack ca risc. Este suficient
+      controlul `ainpc.admin` pentru etapa actuală sau dorești și allowlist tehnic?
+10.2. Un pack modificat de un administrator este considerat automat de încredere,
+      sau trebuie validat chiar și atunci când accesul este administrativ?
+10.3. Trebuie documentată o regulă explicită: „nu încărca pack-uri din surse
+      externe/nevalidate”?
+
+11. Contradicții și suprapuneri între audituri
+----------------------------------------------
+11.1. Raportul din 2026-09-13 listează smoke VPS, lint, log smoke și RCON ca
+      probleme P1/P2, iar auditul nou le reia cu alte severități. Vrei ca raportul
+      vechi să fie marcat „istoric” și să nu mai fie folosit pentru prioritizare?
+11.2. Raportul vechi menționează și CI pe ramura `work4`, secrete implicite,
+      README/licență și reproducibilitatea buildului. Acestea trebuie adăugate în
+      documentele noi sau rămân exclusiv în raportul istoric?
+11.3. Constatările smoke deploy și log smoke sunt declarate comasate în deciziile
+      editoriale, dar apar încă separat în raportul sursă. Care document devine
+      autoritatea finală?
+
+12. Starea și data documentelor
+-------------------------------
+12.1. Multe documente canonice au data 2026-07-14/16/18, iar auditul este din
+      2026-09-28/29. Actualizăm toate datele la fiecare revizie sau păstrăm data
+      ultimei verificări tehnice a fiecărui document?
+12.2. `analiza-stare-dezvoltare.md` spune că runtime-ul acoperă NPC, quest,
+      mapping, GUI și AI, în timp ce auditul listează integrații neconectate.
+      „Acoperă” trebuie să însemne „cod existent” sau „flux verificat end-to-end”?
+12.3. Dorești un câmp obligatoriu `Status: implementat / parțial / roadmap /
+      neconfirmat` în toate documentele canonice?
+
+13. Lipsuri de inventar
+-----------------------
+13.1. Auditul nou nu include explicit problema README/licență, triggerul CI pentru
+      `work4`, secretele implicite din scripturi și reproducibilitatea buildului.
+      Le includem în auditul curent sau le păstrăm în raportul istoric?
+13.2. Există alte documente în afara `docs v2/reference` care trebuie incluse în
+      reconciliere: `TODO.md`, `README.md`, `planning/`, `architecture/` sau
+      `operations/`?
+13.3. Vrei ca analiza finală să compare automat toate afirmațiile „implementat”
+      cu teste/cod, sau doar afirmațiile din documentele de audit?
+
+14. Formatul final al întrebărilor
+----------------------------------
+14.1. Păstrăm toate întrebările istorice și cele noi în același fișier text, sau
+      separăm „întrebări rezolvate” de „întrebări încă deschise”?
+14.2. După fiecare răspuns, dorești să marchez întrebarea ca `REZOLVAT`, să
+      actualizez documentele afectate și să las istoricul modificării?

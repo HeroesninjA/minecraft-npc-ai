@@ -288,6 +288,8 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Inspecteaza sau ruleaza rollback controlat pentru un spawn batch esuat")
     msg.send(sender, "&e/ainpc info [nume]")
     msg.send(sender, "&7  Afiseaza informatii despre un NPC")
+    msg.send(sender, "&e/ainpc profile [show|rol|stil|trasatura|reset]")
+    msg.send(sender, "&7  Alege cum te prezinti NPC-urilor; profilul declarat nu confirma relatii sau meserii")
     msg.send(sender, "&e/ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")
     msg.send(
         sender,

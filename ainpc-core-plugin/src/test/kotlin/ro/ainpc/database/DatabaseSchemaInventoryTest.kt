@@ -27,10 +27,10 @@ class DatabaseSchemaInventoryTest {
                 coverage.domain == DatabaseSchemaDomain.STORY
             }
 
-            assertEquals(28, inventory.expectedTableCount)
-            assertEquals(28, inventory.discoveredTableCount)
-            assertEquals(28, inventory.mappedTableCount)
-            assertEquals(28, inventory.rowCountedTableCount)
+            assertEquals(30, inventory.expectedTableCount)
+            assertEquals(30, inventory.discoveredTableCount)
+            assertEquals(30, inventory.mappedTableCount)
+            assertEquals(30, inventory.rowCountedTableCount)
             assertEquals(3L, inventory.totalRows)
             assertTrue(inventory.coverageComplete)
             assertTrue(inventory.rowCountsComplete)
@@ -59,7 +59,7 @@ class DatabaseSchemaInventoryTest {
 
             assertEquals(2, inventory.discoveredTableCount)
             assertEquals(1, inventory.mappedTableCount)
-            assertEquals(27, inventory.missingExpectedTables.size)
+            assertEquals(29, inventory.missingExpectedTables.size)
             assertEquals(listOf("extension_table"), inventory.unmappedTables)
             assertEquals(3L, inventory.tables.single { table -> table.name == "extension_table" }.rowCount)
             assertEquals(listOf("npcs"), npcCoverage.presentTables)

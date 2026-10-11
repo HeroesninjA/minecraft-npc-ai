@@ -33,6 +33,20 @@ class SpawnSemanticRulesTest {
         assertNull(SpawnSemanticRules.bestNodeForPlace(house, listOf(unrelated), "work"))
     }
 
+    @Test
+    fun explicitWorkstationBeatsCloserSpawnAndInteractionNodes() {
+        val forge = place("demo:forge", PlaceType.FORGE)
+        val spawn = node("demo:forge:spawn", forge.id(), "npc_spawn", 5.0, 1.0, 5.0)
+        val interaction = node("demo:forge:counter", forge.id(), "interaction", 6.0, 1.0, 5.0)
+        val workstation = node("demo:forge:anvil", forge.id(), "workstation", 9.0, 1.0, 9.0)
+
+        for (candidates in listOf(listOf(spawn, interaction, workstation), listOf(workstation, interaction, spawn))) {
+            assertEquals(workstation, SpawnSemanticRules.bestNodeForPlace(forge, candidates, "work"))
+        }
+        assertEquals(interaction, SpawnSemanticRules.bestNodeForPlace(forge, listOf(spawn, interaction), "work"))
+        assertEquals(spawn, SpawnSemanticRules.bestNodeForPlace(forge, listOf(spawn), "work"))
+    }
+
     private fun place(
         id: String,
         placeType: PlaceType,

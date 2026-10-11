@@ -10,7 +10,10 @@ Roadmap pentru maturizarea persistentei. Starea implementata este detinuta de `r
 - SQLite este backend-ul implicit si are acoperire directa in testele repository;
 - dialectul MySQL, Connector/J si Hikari exista;
 - traducerea SQL si auditul static acopera pattern-urile cunoscute;
-- inventarul acceptat include utilizarile `INSERT OR` din relationship si economy;
+- inventarul acceptat include utilizarile `INSERT OR` din relationship si economy, inclusiv persistenta ultimei plati de dobanda;
+- `player_investments` foloseste acum `INSERT` standard cu ID UUID; singurul `INSERT OR` ramas in `BankingService` este pentru ultima plata de dobanda;
+- progresul questurilor foloseste un singur upsert non-destructiv, tradus prin `DatabaseManager`; ancorele folosesc `INSERT` standard, iar testele SQLite acopera ordinea operatiilor si rollback-ul;
+- profilul declarat al jucatorului foloseste un upsert `ON CONFLICT` tradus de `DatabaseManager` pentru MySQL; testul repository SQLite acopera editarea si resetarea, dar verificarea runtime MySQL ramane de facut;
 - MySQL nu are inca o suita de integrare pe server real;
 - nu exista versiuni de schema sau migrare automata intre backend-uri;
 - pool-ul Hikari furnizeaza in prezent o singura conexiune retinuta si serializata de runtime.

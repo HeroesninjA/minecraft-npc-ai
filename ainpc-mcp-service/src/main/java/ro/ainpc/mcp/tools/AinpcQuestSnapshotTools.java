@@ -1,12 +1,14 @@
 package ro.ainpc.mcp.tools;
 
 import java.time.Instant;
-import java.util.Locale;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 import ro.ainpc.mcp.bridge.McpSnapshotService;
 import ro.ainpc.mcp.bridge.RuntimeSnapshot;
@@ -60,13 +62,15 @@ public class AinpcQuestSnapshotTools {
 
     @McpTool(
         name = "ainpc.dialog.context",
-        description = "Read-only dialog context snapshot: NPC and player context for enriched NPC dialogue.",
+        description = "Read-only runtime dialog context with optional region NPC count and samples.",
         annotations = @McpTool.McpAnnotations(
             readOnlyHint = true, destructiveHint = false,
             idempotentHint = true, openWorldHint = false
         )
     )
-    public Map<String, Object> dialogContext() {
+    public Map<String, Object> dialogContext(
+        @McpToolParam(description = "Optional region ID for local NPC context", required = false) String regionId
+    ) {
         SnapshotReader.SnapshotResult result = mcpSnapshotService.read("ainpc.dialog.context");
         String snapshotState = result.getState().name().toLowerCase(Locale.ROOT);
         if (!result.isAvailable()) {
@@ -79,7 +83,7 @@ public class AinpcQuestSnapshotTools {
         RuntimeSnapshot.QuestSnapshot q = s.getQuests();
         RuntimeSnapshot.FeatureSnapshot f = s.getFeatures();
 
-        return Map.ofEntries(
+        Map<String, Object> context = new LinkedHashMap<>(Map.ofEntries(
             Map.entry("schemaVersion", 1),
             Map.entry("service", "ainpc-mcp-service"),
             Map.entry("available", true),
@@ -95,7 +99,7 @@ public class AinpcQuestSnapshotTools {
             )),
             Map.entry("npc", Map.of(
                 "totalNpcs", n.getTotalCount(),
-                "samples", n.getSamples().stream()
+                "samples", (n.getSamples() != null ? n.getSamples() : List.<RuntimeSnapshot.NpcSample>of()).stream()
                     .map(ns -> Map.<String, Object>of("name", ns.getName() != null ? ns.getName() : "",
                                                       "profession", ns.getProfession() != null ? ns.getProfession() : "",
                                                       "regionId", ns.getRegionId() != null ? ns.getRegionId() : ""))
@@ -107,7 +111,26 @@ public class AinpcQuestSnapshotTools {
             Map.entry("features", Map.of("aiEnabled", f.isAi(), "mcpEnabled", f.isMcp())),
             Map.entry("snapshotTimestamp", s.getTimestamp()),
             Map.entry("timestamp", Instant.now().toString())
-        );
+        ));
+
+        String requestedRegion = regionId != null ? regionId.trim() : "";
+        if (!requestedRegion.isEmpty() && n.getByRegion() != null && n.getByRegion().containsKey(requestedRegion)) {
+            List<Map<String, String>> examples = (n.getSamples() != null ? n.getSamples() : List.<RuntimeSnapshot.NpcSample>of())
+                .stream()
+                .filter(sample -> requestedRegion.equals(sample.getRegionId()))
+                .limit(5)
+                .map(sample -> Map.of(
+                    "name", sample.getName() != null ? sample.getName() : "",
+                    "profession", sample.getProfession() != null ? sample.getProfession() : ""
+                ))
+                .toList();
+            context.put("local", Map.of(
+                "regionId", requestedRegion,
+                "npcCount", n.getByRegion().get(requestedRegion),
+                "npcExamples", examples
+            ));
+        }
+        return context;
     }
 
     private Map<String, Object> base(String status, String snapshotState, String detail) {

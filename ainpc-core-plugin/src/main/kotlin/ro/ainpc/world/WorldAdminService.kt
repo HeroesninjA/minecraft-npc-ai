@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.FileConfiguration
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.platform.PlatformProfile
+import ro.ainpc.spawn.SpawnSemanticRules
 import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -299,49 +300,168 @@ class WorldAdminService(
 
     override fun hasUnsavedChanges(): Boolean = dirty
 
-    override fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
-        val place = requireExistingPlace(placeId)
-        val normalizedNpcId = normalizeBindingValue(npcId)
-        if (normalizedNpcId.isBlank()) {
-            throw IllegalArgumentException("NPC id este obligatoriu pentru bind-ul home.")
+    @Synchronized
+    fun validateNpcBindingTargets(homePlaceId: String?, workPlaceId: String?, socialPlaceId: String?, npcId: String?) {
+        if (homePlaceId != null) {
+            requireHomeResidentBinding(requireExistingPlace(homePlaceId), npcId)
         }
+        if (workPlaceId != null) {
+            requireWorkBinding(requireExistingPlace(workPlaceId), npcId)
+        }
+        if (socialPlaceId != null) {
+            requireSocialBinding(requireExistingPlace(socialPlaceId), npcId)
+        }
+    }
 
-        place.setOwnerNpcId(normalizedNpcId)
-        place.putMetadata("owner_status", "assigned")
-        putMetadataIfPresent(place, "owner_name", npcName)
+    @Synchronized
+    fun bindNpcToPlaces(
+        homePlaceId: String?,
+        workPlaceId: String?,
+        socialPlaceId: String?,
+        npcId: String?,
+        npcName: String?
+    ) {
+        validateNpcBindingTargets(homePlaceId, workPlaceId, socialPlaceId, npcId)
+        if (homePlaceId != null) {
+            bindNpcToHomePlace(homePlaceId, npcId, npcName)
+        }
+        if (workPlaceId != null) {
+            bindNpcToWorkPlace(workPlaceId, npcId, npcName)
+        }
+        if (socialPlaceId != null) {
+            bindNpcToSocialPlace(socialPlaceId, npcId, npcName)
+        }
+    }
+
+    @Synchronized
+    override fun bindNpcToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+        val home = addNpcResidentToHomePlace(placeId, npcId, npcName)
+        return if (home.ownerNpcId().isBlank() || home.ownerNpcId().equals(normalizeBindingValue(npcId), ignoreCase = true)) {
+            assignHomeOwner(placeId, npcId, npcName)
+        } else {
+            home
+        }
+    }
+
+    @Synchronized
+    fun addNpcResidentToHomePlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+        val place = requireExistingPlace(placeId)
+        val normalizedNpcId = requireHomeResidentBinding(place, npcId)
+
         appendMetadataValue(place, "resident_npc_ids", normalizedNpcId)
         appendMetadataValue(place, "resident_names", npcName)
         place.putMetadata("residents_status", "assigned")
         dirty = true
+        invalidateCachedLists()
         return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
     }
 
-    override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+    fun assignHomeOwner(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
         val place = requireExistingPlace(placeId)
         val normalizedNpcId = normalizeBindingValue(npcId)
-        if (normalizedNpcId.isBlank()) {
-            throw IllegalArgumentException("NPC id este obligatoriu pentru bind-ul work.")
+        require(normalizedNpcId.isNotBlank()) { "NPC id este obligatoriu pentru proprietarul casei." }
+        require(toPlaceInfo(place)?.let(SpawnSemanticRules::isHousePlace) == true) {
+            "Place-ul ${place.id} nu este o locuinta compatibila."
         }
+        val currentOwner = place.getOwnerNpcId()
+        require(currentOwner.isBlank() || currentOwner.equals(normalizedNpcId, ignoreCase = true)) {
+            "Casa ${place.id} are deja proprietarul $currentOwner; refuz inlocuirea cu $normalizedNpcId."
+        }
+        val residents = place.getMetadata().getOrDefault("resident_npc_ids", "").split(Regex("[,;]"))
+        require(residents.any { normalizeBindingValue(it).equals(normalizedNpcId, ignoreCase = true) }) {
+            "Proprietarul $normalizedNpcId nu este rezident al casei ${place.id}."
+        }
+        place.setOwnerNpcId(normalizedNpcId)
+        place.putMetadata("owner_status", "assigned")
+        putMetadataIfPresent(place, "owner_name", npcName)
+        dirty = true
+        invalidateCachedLists()
+        return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
+    }
+
+    @Synchronized
+    override fun bindNpcToWorkPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
+        val place = requireExistingPlace(placeId)
+        val normalizedNpcId = requireWorkBinding(place, npcId)
 
         appendMetadataValue(place, "worker_npc_ids", normalizedNpcId)
         appendMetadataValue(place, "worker_names", npcName)
         place.putMetadata("worker_status", "assigned")
         dirty = true
+        invalidateCachedLists()
         return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
     }
 
+    @Synchronized
     override fun bindNpcToSocialPlace(placeId: String?, npcId: String?, npcName: String?): WorldPlaceInfo {
         val place = requireExistingPlace(placeId)
-        val normalizedNpcId = normalizeBindingValue(npcId)
-        if (normalizedNpcId.isBlank()) {
-            throw IllegalArgumentException("NPC id este obligatoriu pentru bind-ul social.")
-        }
+        val normalizedNpcId = requireSocialBinding(place, npcId)
 
         appendMetadataValue(place, "social_npc_ids", normalizedNpcId)
         appendMetadataValue(place, "social_names", npcName)
         place.putMetadata("social_status", "assigned")
         dirty = true
+        invalidateCachedLists()
         return toPlaceInfo(place) ?: throw IllegalStateException("Failed to convert place: ${place.id}")
+    }
+
+    private fun requireHomeResidentBinding(place: WorldPlace, npcId: String?): String {
+        val normalizedNpcId = normalizeBindingValue(npcId)
+        require(normalizedNpcId.isNotBlank()) { "NPC id este obligatoriu pentru bind-ul home." }
+        require(toPlaceInfo(place)?.let(SpawnSemanticRules::isHousePlace) == true) {
+            "Place-ul ${place.id} nu este o locuinta compatibila."
+        }
+        val metadata = place.getMetadata()
+        val configuredCapacity = listOf("max_residents", "maxResidents", "capacity")
+            .firstNotNullOfOrNull { key -> metadata[key]?.takeIf { it.isNotBlank() } }
+        if (configuredCapacity != null) {
+            val capacity = configuredCapacity.trim().toIntOrNull()
+            require(capacity != null && capacity > 0) {
+                "Casa ${place.id} are max_residents invalid; este necesar un intreg pozitiv."
+            }
+            val residents = metadata["resident_npc_ids"].orEmpty().split(Regex("[,;]"))
+                .map { it.trim().lowercase(Locale.ROOT) }
+                .filter { it.isNotBlank() }
+                .toSet()
+            require(normalizedNpcId.lowercase(Locale.ROOT) in residents || residents.size < capacity) {
+                "Casa ${place.id} nu mai are locuri disponibile (max_residents=$capacity)."
+            }
+        }
+        return normalizedNpcId
+    }
+
+    private fun requireWorkBinding(place: WorldPlace, npcId: String?): String {
+        val normalizedNpcId = normalizeBindingValue(npcId)
+        require(normalizedNpcId.isNotBlank()) { "NPC id este obligatoriu pentru bind-ul work." }
+        require(toPlaceInfo(place)?.let(SpawnSemanticRules::isWorkplace) == true) {
+            "Place-ul ${place.id} nu este un workplace compatibil."
+        }
+        val configuredCapacity = place.getMetadata()["max_workers"]
+        val capacity = if (configuredCapacity == null) 1 else configuredCapacity.trim().toIntOrNull()
+        require(capacity != null && capacity >= 0) {
+            "Workplace-ul ${place.id} are max_workers invalid; este necesar un intreg nenegativ."
+        }
+        val existingWorkers = WorkplaceOccupancy.workerIds(place.getMetadata())
+        require(normalizedNpcId.lowercase(Locale.ROOT) in existingWorkers || existingWorkers.size < capacity) {
+            "Workplace-ul ${place.id} nu mai are posturi disponibile (max_workers=$capacity)."
+        }
+        return normalizedNpcId
+    }
+
+    private fun requireSocialBinding(place: WorldPlace, npcId: String?): String {
+        val normalizedNpcId = normalizeBindingValue(npcId)
+        require(normalizedNpcId.isNotBlank()) { "NPC id este obligatoriu pentru bind-ul social." }
+        require(toPlaceInfo(place)?.let(SpawnSemanticRules::isSocialPlace) == true) {
+            "Place-ul ${place.id} nu este un loc social compatibil."
+        }
+        val metadata = place.getMetadata()
+        val capacity = SocialAssociationOccupancy.capacity(metadata)
+        val existingAssociations = SocialAssociationOccupancy.associatedIds(metadata)
+        require(normalizedNpcId.lowercase(Locale.ROOT) in existingAssociations ||
+            SocialAssociationOccupancy.hasAvailableSlot(capacity, existingAssociations.size)) {
+            "Locul social ${place.id} nu mai are asocieri disponibile (max_social_associations=$capacity)."
+        }
+        return normalizedNpcId
     }
 
     fun createDemoSettlement(

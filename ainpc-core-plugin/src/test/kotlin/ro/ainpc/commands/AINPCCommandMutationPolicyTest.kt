@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test
 
 class AINPCCommandMutationPolicyTest {
     @Test
+    fun physicalBuildConfirmationRequiresExplicitFlagButPreviewDoesNot() {
+        assertNull(AINPCCommandMutationPolicy.mutation(AINPCSubcommandRoute.BUILDING, arrayOf("building", "preview", "sat:shop", "shop")))
+        val prepare = AINPCCommandMutationPolicy.mutation(AINPCSubcommandRoute.BUILDING, arrayOf("building", "prepare", "sat:shop", "shop"))!!
+        assertFalse(prepare.requiresConfirmation)
+        assertFalse(prepare.worldSaveReminder)
+        val confirm = AINPCCommandMutationPolicy.mutation(AINPCSubcommandRoute.BUILDING, arrayOf("building", "confirm", "token"))!!
+        assertTrue(confirm.requiresConfirmation)
+        assertFalse(confirm.worldSaveReminder)
+        assertTrue(AINPCCommandMutationPolicy.requiresConfirmation("/ainpc building confirm token"))
+        assertFalse(AINPCCommandMutationPolicy.requiresConfirmation("/ainpc building confirm token --confirm"))
+        assertEquals(listOf("building", "confirm", "token"), AINPCCommandMutationPolicy.executionArgs(arrayOf("building", "confirm", "token", "--confirm")).toList())
+    }
+
+    @Test
     fun blocksEveryMappingAndFixtureMutationRoute() {
         val cases = linkedMapOf(
             command(AINPCSubcommandRoute.MAP, "map", "confirm") to "ainpc map confirm",

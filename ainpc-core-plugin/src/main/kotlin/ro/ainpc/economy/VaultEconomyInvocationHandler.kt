@@ -82,9 +82,10 @@ class VaultEconomyInvocationHandler(private val plugin: AINPCPlugin) : Invocatio
         if (balance < amount) {
             return createResponse(false, amount.toDouble(), balance.toDouble(), "Fonduri insuficiente")
         }
-        val newBalance = balance - amount
-        plugin.economyService.setBalance(online, newBalance)
-        return createResponse(true, amount.toDouble(), newBalance.toDouble(), "")
+        if (amount > 0 && !plugin.economyService.withdraw(online, amount)) {
+            return createResponse(false, amount.toDouble(), getPlayerBalance(player).toDouble(), "Retragerea nu a putut fi salvata")
+        }
+        return createResponse(true, amount.toDouble(), getPlayerBalance(player).toDouble(), "")
     }
 
     private fun depositPlayer(args: Array<out Any>?): Any? {
@@ -98,8 +99,10 @@ class VaultEconomyInvocationHandler(private val plugin: AINPCPlugin) : Invocatio
         if (newBalance > Int.MAX_VALUE) {
             return createResponse(false, amount.toDouble(), balance.toDouble(), "Soldul depaseste limita suportata")
         }
-        plugin.economyService.setBalance(online, newBalance.toInt())
-        return createResponse(true, amount.toDouble(), newBalance.toDouble(), "")
+        if (amount > 0 && !plugin.economyService.deposit(online, amount)) {
+            return createResponse(false, amount.toDouble(), getPlayerBalance(player).toDouble(), "Depunerea nu a putut fi salvata")
+        }
+        return createResponse(true, amount.toDouble(), getPlayerBalance(player).toDouble(), "")
     }
 
     private fun getPlayerBalance(player: OfflinePlayer): Int =

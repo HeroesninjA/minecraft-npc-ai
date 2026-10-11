@@ -234,7 +234,7 @@ class HouseAllocationValidator {
             } else if (workNode != null) {
                 warnings.add("$label workNodeId '${resident.workNodeId()}' este node de regiune, nu node sub workplace.")
             }
-            validateNodeSemantics(workNode, "$label workNodeId", errors, "workstation", "work", "npc_spawn", "interaction")
+            validateNodeSemantics(workNode, "$label workNodeId", errors, "workstation", "work", "work_anchor", "npc_spawn", "interaction")
         }
     }
 
@@ -248,6 +248,9 @@ class HouseAllocationValidator {
         var socialPlace: WorldPlaceInfo? = null
         if (resident.socialPlaceId().isNotBlank()) {
             socialPlace = resolvePlace(worldAdmin, resident.socialPlaceId(), "$label socialPlaceId", errors)
+            if (socialPlace != null && !SpawnSemanticRules.isSocialPlace(socialPlace)) {
+                errors.add("$label socialPlaceId '${resident.socialPlaceId()}' nu indica un loc social compatibil.")
+            }
         }
 
         if (resident.socialNodeId().isNotBlank()) {

@@ -12,6 +12,8 @@ Punctul principal de intrare pentru documentatia activa din `docs v2`.
 
 ## Navigare
 
+- [Initiere lume, harta, structuri, NPC si story](../guides/initiere-lume-harta-structuri-npc-story.md) - configuratia fiecarui domeniu;
+- [Exemplu complet: sat, fierar si story](../guides/exemplu-complet-sat-npc-story.md) - fisier de mapping, comenzi si verificari;
 - `../README.md` - catalogul complet;
 - `reference/categorii/README.md` - navigare tematica;
 - `reference/index-navigare.md` - alias compact;

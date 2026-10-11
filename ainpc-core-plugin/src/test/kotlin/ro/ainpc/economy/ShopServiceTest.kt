@@ -50,6 +50,17 @@ class ShopServiceTest {
     }
 
     @Test
+    fun replacingShopUpdatesRoleIndex() {
+        val svc = ShopService(null)
+        svc.registerShop(testShop)
+        svc.registerShop(testShop.copy(npcRole = "fermier"))
+
+        assertTrue(svc.findShopsForRole("negustor").isEmpty())
+        assertEquals(1, svc.findShopsForRole("fermier").size)
+        assertEquals(1, svc.shopCount())
+    }
+
+    @Test
     fun findShopsForRole() {
         val svc = ShopService(null)
         svc.registerShop(testShop)
@@ -79,6 +90,7 @@ class ShopServiceTest {
         svc.clear()
         assertEquals(0, svc.shopCount())
         assertTrue(svc.getAllShops().isEmpty())
+        assertTrue(svc.findShopsForRole("negustor").isEmpty())
     }
 
     @Test
@@ -146,6 +158,19 @@ class ShopServiceTest {
     }
 
     @Test
+    fun shopListingsAreSnapshots() {
+        val svc = ShopService(null)
+        svc.registerShop(testShop)
+        val roleShops = svc.findShopsForRole("negustor")
+        val allShops = svc.getAllShops()
+        svc.registerShop(testShop.copy(shopId = "second"))
+
+        assertEquals(1, roleShops.size)
+        assertEquals(1, allShops.size)
+        assertEquals(2, svc.shopCount())
+    }
+
+    @Test
     fun economyIntegrationDetection() {
         val svc = ShopService(null)
         val vaultShop = NpcShopDefinition(
@@ -159,4 +184,5 @@ class ShopServiceTest {
         svc.registerShop(vaultShop)
         assertEquals(ShopCurrency.VAULT_OPTIONAL, svc.getShop("vault_shop")!!.currency)
     }
+
 }

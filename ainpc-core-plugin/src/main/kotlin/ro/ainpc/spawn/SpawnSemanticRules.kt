@@ -155,13 +155,16 @@ object SpawnSemanticRules {
             else -> -1
         }
         "work" -> when {
-            nodeMatchesAny(node, "workstation", "work", "npc_spawn") -> 0
+            nodeMatchesAny(node, "workstation", "work") ||
+                matchesAnyToken(node.metadata()["semantic"], "work_anchor") -> 0
             nodeMatchesAny(node, "interaction") -> 1
+            nodeMatchesAny(node, "npc_spawn") -> 2
             else -> -1
         }
         "social" -> when {
-            nodeMatchesAny(node, "social", "meeting_point", "interaction") -> 0
-            nodeMatchesAny(node, "npc_spawn") -> 1
+            nodeMatchesAny(node, "social", "meeting_point") -> 0
+            nodeMatchesAny(node, "interaction") -> 1
+            nodeMatchesAny(node, "npc_spawn") -> 2
             else -> -1
         }
         else -> -1

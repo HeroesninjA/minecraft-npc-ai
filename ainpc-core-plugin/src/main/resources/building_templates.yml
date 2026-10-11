@@ -6,6 +6,10 @@ profiles:
   house_small:
     display_name: "Casa mica"
     place_type: "house"
+    tags: ["home"]
+    metadata:
+      max_residents: "1"
+      geometry: house_small
     footprint:
       width: 5
       depth: 5
@@ -22,22 +26,60 @@ profiles:
         node_type: "entrance"
         offset:
           x: 2
-          y: 0
+          y: 1
           z: 0
         radius: 1.5
         role: "main"
       spawn:
         node_type: "npc_spawn"
         offset:
-          x: 2
-          y: 0
+          x: 3
+          y: 1
           z: 2
+        radius: 1.0
+    rotations: [0, 90, 180, 270]
+
+  house_family:
+    display_name: "Casa familiei"
+    place_type: "house"
+    tags: ["home", "family_house"]
+    metadata:
+      max_residents: "2"
+      geometry: house_small
+    footprint:
+      width: 7
+      depth: 7
+      height: 4
+    anchors:
+      bed_01:
+        node_type: "bed"
+        offset: {x: 2, y: 1, z: 4}
+        radius: 1.0
+      bed_02:
+        node_type: "bed"
+        offset: {x: 5, y: 1, z: 4}
+        radius: 1.0
+      entrance:
+        node_type: "entrance"
+        offset: {x: 3, y: 1, z: 0}
+        radius: 1.5
+        role: "main"
+      spawn_01:
+        node_type: "npc_spawn"
+        offset: {x: 2, y: 1, z: 2}
+        radius: 1.0
+      spawn_02:
+        node_type: "npc_spawn"
+        offset: {x: 5, y: 1, z: 2}
         radius: 1.0
     rotations: [0, 90, 180, 270]
 
   forge:
     display_name: "Fierarie"
     place_type: "forge"
+    tags: ["work"]
+    metadata:
+      max_workers: "1"
     footprint:
       width: 7
       depth: 6
@@ -54,7 +96,7 @@ profiles:
         node_type: "entrance"
         offset:
           x: 3
-          y: 0
+          y: 1
           z: 0
         radius: 2.0
         role: "main"
@@ -62,7 +104,7 @@ profiles:
         node_type: "npc_spawn"
         offset:
           x: 3
-          y: 0
+          y: 1
           z: 3
         radius: 1.0
     rotations: [0, 90, 180, 270]
@@ -70,6 +112,9 @@ profiles:
   farm:
     display_name: "Ferma"
     place_type: "farm"
+    tags: ["work"]
+    metadata:
+      max_workers: "1"
     footprint:
       width: 10
       depth: 8
@@ -86,7 +131,7 @@ profiles:
         node_type: "entrance"
         offset:
           x: 5
-          y: 0
+          y: 1
           z: 0
         radius: 2.0
         role: "main"
@@ -94,7 +139,222 @@ profiles:
         node_type: "npc_spawn"
         offset:
           x: 5
-          y: 0
+          y: 1
           z: 4
         radius: 1.0
     rotations: [0, 90]
+
+  shop:
+    display_name: "Magazin"
+    place_type: shop
+    footprint: {width: 8, depth: 7, height: 5}
+    rotations: [0]
+    tags: [work, commerce, public]
+    metadata: {max_workers: 1}
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 4, y: 1, z: 0}
+      counter:
+        node_type: workstation
+        offset: {x: 4, y: 1, z: 5}
+        role: service
+      customer:
+        node_type: interaction
+        offset: {x: 4, y: 1, z: 3}
+        role: trade
+
+  tavern:
+    display_name: "Taverna"
+    place_type: tavern
+    footprint: {width: 12, depth: 10, height: 5}
+    rotations: [0]
+    tags: [work, social, public, leisure]
+    metadata: {max_workers: 1}
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 6, y: 1, z: 0}
+      counter:
+        node_type: workstation
+        offset: {x: 9, y: 1, z: 7}
+        role: service
+      tables:
+        node_type: social
+        offset: {x: 4, y: 1, z: 5}
+        radius: 3.0
+        role: leisure
+
+  market:
+    display_name: "Piata"
+    place_type: market
+    footprint: {width: 14, depth: 12, height: 4}
+    rotations: [0]
+    tags: [work, commerce, social, public]
+    metadata: {max_workers: 1}
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 7, y: 1, z: 0}
+      stall:
+        node_type: workstation
+        offset: {x: 3, y: 1, z: 6}
+        role: service
+      customer:
+        node_type: interaction
+        offset: {x: 5, y: 1, z: 6}
+        role: trade
+      square:
+        node_type: meeting_point
+        offset: {x: 10, y: 1, z: 6}
+        radius: 3.0
+
+  leisure_garden:
+    display_name: "Gradina de recreere"
+    place_type: custom
+    footprint: {width: 10, depth: 10, height: 4}
+    rotations: [0]
+    tags: [social, public, leisure]
+    metadata: {max_workers: 0, geometry: leisure_garden}
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 5, y: 1, z: 0}
+      benches:
+        node_type: social
+        offset: {x: 5, y: 1, z: 5}
+        radius: 3.0
+        role: leisure
+
+  community_hall:
+    display_name: "Sala comunitara"
+    place_type: custom
+    footprint: {width: 9, depth: 8, height: 5}
+    rotations: [0]
+    tags: [social, public, leisure]
+    metadata:
+      max_workers: 0
+      max_social_associations: 2
+      geometry: community_hall
+      story_category: public
+      quest_hooks: "meeting_notice, festival_preparation"
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 4, y: 1, z: 0}
+      gathering_west:
+        node_type: social
+        offset: {x: 3, y: 1, z: 4}
+        radius: 2.0
+        role: gathering
+      gathering_east:
+        node_type: social
+        offset: {x: 6, y: 1, z: 4}
+        radius: 2.0
+        role: gathering
+
+  workshop:
+    display_name: "Atelier de tamplarie"
+    place_type: custom
+    footprint: {width: 9, depth: 8, height: 5}
+    rotations: [0]
+    tags: [work, craft]
+    metadata:
+      max_workers: 1
+      profession: tamplar
+      geometry: workshop
+      story_category: profession
+      quest_hooks: "craft_order, repair_order, material_supply"
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 4, y: 1, z: 0}
+      bench:
+        node_type: workstation
+        offset: {x: 5, y: 1, z: 5}
+        role: craft
+      customer:
+        node_type: interaction
+        offset: {x: 3, y: 1, z: 4}
+        role: order
+
+  workshop_shared:
+    display_name: "Atelier comun de tamplarie"
+    place_type: custom
+    footprint: {width: 11, depth: 9, height: 5}
+    rotations: [0]
+    tags: [work, craft]
+    metadata:
+      max_workers: 2
+      profession: tamplar
+      geometry: workshop
+      story_category: profession
+      quest_hooks: "craft_order, repair_order, material_supply"
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 5, y: 1, z: 0}
+      bench_west:
+        node_type: workstation
+        offset: {x: 3, y: 1, z: 5}
+        role: craft
+      bench_east:
+        node_type: workstation
+        offset: {x: 7, y: 1, z: 5}
+        role: craft
+      customer:
+        node_type: interaction
+        offset: {x: 5, y: 1, z: 3}
+        role: order
+
+  bakery:
+    display_name: "Brutarie"
+    place_type: custom
+    footprint: {width: 9, depth: 8, height: 5}
+    rotations: [0]
+    tags: [work, commerce, public, food]
+    metadata:
+      max_workers: 1
+      profession: brutar
+      geometry: bakery
+      story_category: profession
+      quest_hooks: "bread_order, grain_supply, delivery"
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 4, y: 1, z: 0}
+      oven:
+        node_type: workstation
+        offset: {x: 5, y: 1, z: 5}
+        role: baking
+      customer:
+        node_type: interaction
+        offset: {x: 3, y: 1, z: 4}
+        role: trade
+
+  library:
+    display_name: "Biblioteca"
+    place_type: custom
+    footprint: {width: 11, depth: 9, height: 5}
+    rotations: [0]
+    tags: [work, social, public, leisure, education]
+    metadata:
+      max_workers: 1
+      max_social_associations: 2
+      profession: lucrator
+      geometry: library
+      story_category: profession
+      quest_hooks: "lost_book, research_request, book_delivery"
+    anchors:
+      entrance:
+        node_type: entrance
+        offset: {x: 5, y: 1, z: 0}
+      desk:
+        node_type: workstation
+        offset: {x: 6, y: 1, z: 5}
+        role: librarian
+      reading:
+        node_type: social
+        offset: {x: 3, y: 1, z: 5}
+        radius: 2.0
+        role: reading

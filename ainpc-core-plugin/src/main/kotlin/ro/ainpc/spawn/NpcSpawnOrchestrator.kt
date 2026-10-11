@@ -129,8 +129,9 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             }
         }
 
-        persistHousehold(allocation, spawnPlans, spawnResults, warnings)
-        val result = HouseholdSpawnResult.success(spawnPlans, spawnResults, familyBindingResult, warnings)
+        val result = HouseholdSpawnPersistence.complete(allocation, spawnPlans, spawnResults, familyBindingResult, warnings) {
+            plugin.householdPersistenceService.saveHousehold(allocation, spawnPlans, spawnResults, "spawn_plan")
+        }
         finishTrackedHouseholdBatch(trackedBatch, allocation, result)
         return result
     }
@@ -192,46 +193,22 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             }
 
             if (!result.success()) {
-                errors.addAll(prefixMessages(allocation.placeId(), result.errors()))
-                if (result.rolledBack()) {
-                    warnings.add("${allocation.placeId()}: rollback local executat pentru household-ul esuat.")
-                }
-                val globallyRolledBack = !dryRun &&
-                    rollbackSettlementBatchCreatedNpcs(batchTracker, batchKey, spawnedNpcs, warnings)
-                if (!dryRun && globallyRolledBack) {
-                    val persistedCount = householdResults.size
-                    var cleanedUp = 0
-                    for (prevIndex in 0 until persistedCount) {
-                        val prevAllocation = safeAllocations[prevIndex]
-                        try {
-                            plugin.householdPersistenceService.removeHousehold(prevAllocation.householdId())
-                            cleanedUp++
-                        } catch (e: Exception) {
-                            warnings.add("Nu am putut curata datele DB pentru ${prevAllocation.placeId()}: ${e.message}")
-                        }
+                val failure = SettlementSpawnFailureHandler.finish(
+                    dryRun, safeAllocations, householdResults, errors, warnings,
+                    rollbackCreatedNpcs = { failureWarnings ->
+                        rollbackSettlementBatchCreatedNpcs(batchTracker, batchKey, spawnedNpcs, failureWarnings)
+                    },
+                    removeHousehold = { previousAllocation ->
+                        plugin.householdPersistenceService.removeHousehold(previousAllocation.householdId())
                     }
-                    if (cleanedUp > 0) warnings.add("Curatare DB pentru $cleanedUp household-uri persistate anterior.")
-                }
+                )
                 if (trackBatch && batchTracker != null) {
-                    if (dryRun) {
-                        warnings.add("Spawn batch dry-run settlement finalizat cu erori; nu s-au creat NPC-uri.")
-                    } else {
-                        warnings.add(
-                            if (globallyRolledBack) {
-                                "Rollback global settlement executat pentru household-urile create anterior."
-                            } else {
-                                "Rollback global settlement incomplet pentru household-urile create anterior."
-                            }
-                        )
-                    }
                     batchTracker.finishBatch(
-                        batchKey, false, globallyRolledBack, countCreatedNpcs(householdResults),
-                        countReusedNpcs(householdResults), warnings, errors
+                        batchKey, false, failure.rolledBack(), countCreatedNpcs(householdResults),
+                        countReusedNpcs(householdResults), failure.warnings(), failure.errors()
                     )
                 }
-                return SettlementSpawnResult.failed(
-                    dryRun, !dryRun && globallyRolledBack, safeAllocations, householdResults, errors, warnings
-                )
+                return failure
             }
 
             if (!dryRun) {
@@ -431,22 +408,6 @@ class NpcSpawnOrchestrator(val plugin: AINPCPlugin) {
             warnings.add("Rollback batch a marcat $rolledBackSteps pasi ca ROLLED_BACK.")
         }
         return rollbackComplete
-    }
-
-    private fun persistHousehold(
-        allocation: HouseAllocation?,
-        spawnPlans: List<NpcSpawnPlan>,
-        spawnResults: List<NpcSpawnResult>,
-        warnings: MutableList<String>
-    ) {
-        val persistence = plugin.householdPersistenceService
-        if (allocation == null) return
-        try {
-            val residents = persistence.saveHousehold(allocation, spawnPlans, spawnResults, "spawn_plan")
-            warnings.add("Household persistent actualizat: ${allocation.householdId()} rezidenti=$residents.")
-        } catch (exception: java.sql.SQLException) {
-            warnings.add("Nu am putut salva household-ul persistent ${allocation.householdId()}: ${exception.message}")
-        }
     }
 
     fun resolve(plan: NpcSpawnPlan?, errors: MutableList<String>, warnings: MutableList<String>): ResolvedNpcSpawnPlan? {

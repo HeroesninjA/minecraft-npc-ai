@@ -1,7 +1,7 @@
 # Playable Village Runbook
 
 Status: runbook operational derivat.
-Actualizat: 2026-07-15.
+Actualizat: 2026-10-05 (salvare mapping si verificare dupa restart).
 
 Procedura aduce un sat demo verificabil pe un server Paper controlat. Nu promite worldgen fizic complet si nu considera output-ul unui script drept PASS fara inspectie.
 
@@ -23,8 +23,11 @@ Procedura aduce un sat demo verificabil pe un server Paper controlat. Nu promite
 6. planifica si creeaza populatia, apoi verifica bindings-urile;
 7. executa interactiunea, rutina, questul, progresia si story context-ul activate;
 8. ruleaza gate-urile din `operations/demo-server-verification.md`;
-9. opreste controlat, reporneste si verifica persistenta;
-10. genereaza auditul final si un debugdump revizuit manual.
+9. ruleaza `/ainpc world save` si sincronizeaza sectiunea completa `world_admin` in overlay-ul prioritar; salvarea in `config.yml` nu actualizeaza overlay-ul;
+10. opreste controlat, reporneste si verifica separat mapping-ul, NPC-urile, household-urile, binding-urile si evenimentele/starea story;
+11. genereaza auditul final si un debugdump revizuit manual.
+
+Procedura de sincronizare este in [configurarea lumii](../reference/configurare-lume-harta-generare.md). Pentru un traseu concret cu o casa, fierarie, piata si un NPC, foloseste [exemplul complet](../guides/exemplu-complet-sat-npc-story.md). Exemplul contine rezultate asteptate, nu dovada unui test live reusit.
 
 ## Automatizari existente
 

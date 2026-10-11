@@ -4,6 +4,8 @@ Index pentru alegerea punctului de intrare potrivit fiecarui domeniu.
 
 ## Domenii
 
+- initiere si configurare lume, structuri, NPC si story: [ghid integrator](../guides/initiere-lume-harta-structuri-npc-story.md);
+- exemplu practic cu configuratie completa de mapping: [sat, fierar si story](../guides/exemplu-complet-sat-npc-story.md);
 - mapping si world: `reference/mapping-stack.md`;
 - NPC, rutine si simulare: `reference/simulation-stack.md`;
 - interactiune player-NPC, dialog si reactii: `architecture/interactiune-dialog-reactie-stack.md`;

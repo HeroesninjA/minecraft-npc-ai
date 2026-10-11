@@ -3,12 +3,14 @@ package ro.ainpc.spawn
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import ro.ainpc.npc.AINPC
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.SQLException
 import java.util.UUID
 import java.util.logging.Logger
 
@@ -173,6 +175,230 @@ class HouseholdPersistenceServiceTest {
         assertEquals("sat_01:casa_popescu", residents[0].homePlaceId())
         assertEquals("spawn_plan:family_popescu:npc_ion", residents[0].sourceKey())
         assertTrue(service.findResidentByNpcId(999).isEmpty)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun rejectsHouseholdIdCollisionWithoutChangingSavedRows() {
+        insertNpc(1, "Ion")
+        insertNpc(2, "Maria")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_house_1", "npc_ion", "Ion")
+        val conflictingHome = singleResidentAllocation("sat_b:house_1", "family_house_1", "npc_maria", "Maria")
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf())), "test")
+        val savedRows = householdRows()
+
+        val failure = assertThrows(SQLException::class.java) {
+            service.saveHousehold(
+                conflictingHome,
+                conflictingHome.toNpcSpawnPlans(),
+                listOf(NpcSpawnResult.created(npc(2, "Maria"), listOf())),
+                "test"
+            )
+        }
+
+        assertTrue(failure.message.orEmpty().contains("family_house_1"))
+        assertTrue(failure.message.orEmpty().contains("sat_a:house_1"))
+        assertTrue(failure.message.orEmpty().contains("sat_b:house_1"))
+        assertEquals(savedRows, householdRows())
+        assertTrue(service.findHouseholdByHomePlace("sat_b:house_1").isEmpty)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun rejectsCollisionBeforeRemovingHouseholdAtTargetHome() {
+        insertNpc(1, "Ion")
+        insertNpc(2, "Maria")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_a", "npc_ion", "Ion")
+        val secondHome = singleResidentAllocation("sat_b:house_1", "family_b", "npc_maria", "Maria")
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf())), "test")
+        service.saveHousehold(secondHome, secondHome.toNpcSpawnPlans(), listOf(NpcSpawnResult.created(npc(2, "Maria"), listOf())), "test")
+        val savedRows = householdRows()
+        val conflictingHome = secondHome.copy(familyId = firstHome.familyId())
+
+        assertThrows(SQLException::class.java) {
+            service.saveHousehold(
+                conflictingHome,
+                conflictingHome.toNpcSpawnPlans(),
+                listOf(NpcSpawnResult.reused(npc(2, "Maria"), listOf())),
+                "test"
+            )
+        }
+
+        assertEquals(savedRows, householdRows())
+        assertEquals(2, service.countHouseholds())
+        assertEquals(2, service.countResidents())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun collisionFailsCompletionWithoutDeletingPreviouslyPersistedHouseholds() {
+        insertNpc(1, "Ion")
+        insertNpc(2, "Maria")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_a", "npc_ion", "Ion")
+        val secondHome = singleResidentAllocation("sat_b:house_1", "family_b", "npc_maria", "Maria")
+        val firstSpawnResults = listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf()))
+        val secondSpawnResults = listOf(NpcSpawnResult.reused(npc(2, "Maria"), listOf()))
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), firstSpawnResults, "test")
+        service.saveHousehold(secondHome, secondHome.toNpcSpawnPlans(), secondSpawnResults, "test")
+        val savedRows = householdRows()
+        val conflictingHome = secondHome.copy(familyId = firstHome.familyId())
+        val conflictingPlans = conflictingHome.toNpcSpawnPlans()
+
+        val failure = HouseholdSpawnPersistence.complete(conflictingHome, conflictingPlans, secondSpawnResults, null, emptyList()) {
+            service.saveHousehold(conflictingHome, conflictingPlans, secondSpawnResults, "test")
+        }
+        val settlement = SettlementSpawnFailureHandler.finish(
+            false,
+            listOf(firstHome, conflictingHome),
+            listOf(HouseholdSpawnResult.success(firstHome.toNpcSpawnPlans(), firstSpawnResults, null, emptyList()), failure),
+            emptyList(),
+            failure.warnings(),
+            rollbackCreatedNpcs = { error("Persistence failure must not delete NPCs") },
+            removeHousehold = { error("Persistence failure must not delete households") }
+        )
+
+        assertFalse(failure.success())
+        assertTrue(failure.persistenceFailed())
+        assertFalse(settlement.success())
+        assertFalse(settlement.rolledBack())
+        assertEquals(1, settlement.successfulHouseholds())
+        assertEquals(secondSpawnResults, failure.spawnResults())
+        assertTrue(settlement.errors().any { it.contains("sat_b:house_1") && it.contains("family_a") })
+        assertEquals(savedRows, householdRows())
+        assertEquals(2, service.countHouseholds())
+        assertEquals(2, service.countResidents())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun sqlFailureAfterPartialWriteRemainsInspectableWithoutGlobalRollback() {
+        insertNpc(1, "Ion")
+        insertNpc(2, "Maria")
+        insertNpc(3, "Gigel")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_a", "npc_ion", "Ion")
+        val firstSpawnResults = listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf()))
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), firstSpawnResults, "test")
+        val secondHome = HouseAllocation.builder("sat_a:house_2")
+            .familyId("family_b")
+            .maxResidents(2)
+            .addResident(resident("npc_maria", "Maria", "resident", "sat_a:house_2:spawn_maria", "sat_a:house_2:bed_maria"))
+            .addResident(resident("npc_gigel", "Gigel", "resident", "sat_a:house_2:spawn_gigel", "sat_a:house_2:bed_gigel"))
+            .build()
+        val secondPlans = secondHome.toNpcSpawnPlans()
+        val secondSpawnResults = listOf(
+            NpcSpawnResult.reused(npc(2, "Maria"), listOf()),
+            NpcSpawnResult.created(npc(3, "Gigel"), listOf())
+        )
+        connection!!.createStatement().use { statement ->
+            statement.execute(
+                """
+                CREATE TRIGGER fail_second_resident BEFORE INSERT ON household_residents
+                WHEN NEW.npc_id = 3
+                BEGIN
+                    SELECT RAISE(ABORT, 'injected resident write failure');
+                END
+                """
+            )
+        }
+
+        val failure = HouseholdSpawnPersistence.complete(secondHome, secondPlans, secondSpawnResults, null, emptyList()) {
+            service.saveHousehold(secondHome, secondPlans, secondSpawnResults, "test")
+        }
+        val partialRows = householdRows()
+        val settlement = SettlementSpawnFailureHandler.finish(
+            false,
+            listOf(firstHome, secondHome),
+            listOf(HouseholdSpawnResult.success(firstHome.toNpcSpawnPlans(), firstSpawnResults, null, emptyList()), failure),
+            emptyList(),
+            failure.warnings(),
+            rollbackCreatedNpcs = { error("Partial persistence must not delete NPCs") },
+            removeHousehold = { error("Partial persistence must not delete households") }
+        )
+
+        assertFalse(failure.success())
+        assertTrue(failure.persistenceFailed())
+        assertFalse(settlement.success())
+        assertFalse(settlement.rolledBack())
+        assertTrue(settlement.errors().any { it.contains("injected resident write failure") })
+        assertEquals(secondSpawnResults, failure.spawnResults())
+        assertEquals(partialRows, householdRows())
+        assertEquals("family_a", service.findResidentByNpcId(1).orElseThrow().householdId())
+        assertEquals("family_b", service.findResidentByNpcId(2).orElseThrow().householdId())
+        assertTrue(service.findResidentByNpcId(3).isEmpty)
+        assertEquals(2, service.countHouseholds())
+        connection!!.createStatement().use { statement ->
+            statement.executeQuery("SELECT COUNT(*) FROM npcs").use { resultSet ->
+                assertTrue(resultSet.next())
+                assertEquals(3, resultSet.getInt(1))
+            }
+        }
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun rejectsClearingTheHomeOfAnExistingHousehold() {
+        insertNpc(1, "Ion")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_a", "npc_ion", "Ion")
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf())), "test")
+        val savedRows = householdRows()
+        val missingHome = firstHome.copy(placeId = "")
+
+        assertThrows(SQLException::class.java) {
+            service.saveHousehold(
+                missingHome,
+                missingHome.toNpcSpawnPlans(),
+                listOf(NpcSpawnResult.reused(npc(1, "Ion"), listOf())),
+                "test"
+            )
+        }
+
+        assertEquals(savedRows, householdRows())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun allowsUpdatingHouseholdAtSameHome() {
+        insertNpc(1, "Ion")
+        val firstHome = singleResidentAllocation("sat_a:house_1", "family_a", "npc_ion", "Ion")
+        service.saveHousehold(firstHome, firstHome.toNpcSpawnPlans(), listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf())), "test")
+        val createdAt = service.getHousehold("family_a").orElseThrow().createdAt()
+        val updatedHome = firstHome.copy(maxResidents = 2)
+
+        val saved = service.saveHousehold(
+            updatedHome,
+            updatedHome.toNpcSpawnPlans(),
+            listOf(NpcSpawnResult.reused(npc(1, "Ion"), listOf())),
+            "test"
+        )
+
+        assertEquals(1, saved)
+        assertEquals(1, service.countHouseholds())
+        assertEquals(1, service.countResidents())
+        val savedHousehold = service.getHousehold("family_a").orElseThrow()
+        assertEquals("sat_a:house_1", savedHousehold.homePlaceId())
+        assertEquals(2, savedHousehold.maxResidents())
+        assertEquals(createdAt, savedHousehold.createdAt())
+        assertEquals("family_a", service.findResidentByNpcId(1).orElseThrow().householdId())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun allowsBindingLegacyHouseholdWithoutHome() {
+        insertNpc(1, "Ion")
+        insertHouseholdRow("family_legacy", "", 0, 2L)
+        val allocation = singleResidentAllocation("sat_a:house_1", "family_legacy", "npc_ion", "Ion")
+
+        val saved = service.saveHousehold(
+            allocation,
+            allocation.toNpcSpawnPlans(),
+            listOf(NpcSpawnResult.created(npc(1, "Ion"), listOf())),
+            "test"
+        )
+
+        assertEquals(1, saved)
+        assertEquals(1, service.countHouseholds())
+        assertEquals("sat_a:house_1", service.getHousehold("family_legacy").orElseThrow().homePlaceId())
+        assertEquals("family_legacy", service.findResidentByNpcId(1).orElseThrow().householdId())
     }
 
     @Test
@@ -407,6 +633,36 @@ class HouseholdPersistenceServiceTest {
             statement.executeUpdate()
         }
     }
+
+    private fun householdRows(): List<List<String?>> {
+        val queries = listOf(
+            "SELECT * FROM households ORDER BY household_id",
+            "SELECT * FROM household_residents ORDER BY household_id, resident_key"
+        )
+        return queries.flatMap { query ->
+            connection!!.prepareStatement(query).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    buildList {
+                        while (resultSet.next()) {
+                            add((1..resultSet.metaData.columnCount).map { columnIndex -> resultSet.getString(columnIndex) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun singleResidentAllocation(
+        homePlaceId: String,
+        familyId: String,
+        npcKey: String,
+        npcName: String
+    ): HouseAllocation = HouseAllocation.builder(homePlaceId)
+        .familyId(familyId)
+        .primaryOwnerNpcKey(npcKey)
+        .maxResidents(1)
+        .addResident(resident(npcKey, npcName, "resident", "$homePlaceId:spawn", "$homePlaceId:bed"))
+        .build()
 
     private fun npc(id: Int, name: String): AINPC {
         val npc = AINPC(null)

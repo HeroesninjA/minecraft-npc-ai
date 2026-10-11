@@ -12,6 +12,7 @@ object OpenAIPromptSnapshotFactory {
     fun createPromptSnapshot(plugin: AINPCPlugin, request: DialogManager.DialogRequest): PromptSnapshot {
         val npc: AINPC = request.npc()
         val player: Player = request.player()
+        npc.context.setInteractingPlayer(player)
 
         val npcDescription = npc.generateContextDescription()
         var environmentDescription = ""
@@ -39,6 +40,7 @@ object OpenAIPromptSnapshotFactory {
 
         val traitsList = npc.traits.toList()
         val stateDisplayName = npc.currentState.displayName
+        val heldMaterial = player.inventory.itemInMainHand.type
         return PromptSnapshot(
             npc.uuid,
             npc.name,
@@ -65,7 +67,11 @@ object OpenAIPromptSnapshotFactory {
             request.explicitConversation(),
             request.triggerReason(),
             request.nearbyNpcCount(),
-            request.distanceToNpc()
+            request.distanceToNpc(),
+            npc.context.worldContextSnapshot.currentRegion()?.id().orEmpty(),
+            npc.plannedRoutineActivity,
+            npc.currentGoal,
+            if (heldMaterial.isAir) "" else heldMaterial.key.asString()
         )
     }
 }

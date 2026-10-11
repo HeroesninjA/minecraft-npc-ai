@@ -14,6 +14,27 @@ class RoutineDecisionResolver {
         defaultProfile: BehaviorProfile?,
         routineTime: Long
     ): RoutineAssignment {
+        val assignment = resolve(npc, profile, defaultProfile, routineTime)
+        if (assignment.slot() == RoutineSlot.IDLE) return assignment
+        val anchor = assignment.targetAnchor()
+        if (anchor != null && anchor.worldName().isNotBlank() && anchor.x().isFinite() && anchor.y().isFinite() && anchor.z().isFinite()) {
+            return assignment
+        }
+        return RoutineAssignment(
+            RoutineSlot.IDLE,
+            "ancora ${assignment.slot()?.name ?: "UNKNOWN"} lipseste sau este invalida",
+            "sa astepte configurarea unei destinatii valide",
+            NPCState.IDLE,
+            null,
+        )
+    }
+
+    private fun resolve(
+        npc: AINPC?,
+        profile: BehaviorProfile?,
+        defaultProfile: BehaviorProfile?,
+        routineTime: Long
+    ): RoutineAssignment {
         if (npc == null) {
             return idle(null, null, "nu exista NPC valid")
         }

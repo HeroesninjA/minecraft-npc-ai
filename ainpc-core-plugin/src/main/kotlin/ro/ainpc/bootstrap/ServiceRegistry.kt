@@ -46,6 +46,7 @@ import ro.ainpc.reputation.ReputationService
 import ro.ainpc.routine.RoutineCoordinator
 import ro.ainpc.routine.RoutineService
 import ro.ainpc.routine.SocialCoordinator
+import ro.ainpc.settlement.BuildingTemplateRegistry
 import ro.ainpc.spawn.AutoSettlementGenerator
 import ro.ainpc.spawn.HouseholdPersistenceService
 import ro.ainpc.spawn.NpcSpawnOrchestrator
@@ -207,6 +208,8 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
 
     private fun phase1ConfigAndResources() {
         val log = plugin.logger
+        BuildingTemplateRegistry.clear()
+        BuildingTemplateRegistry.reload(plugin.dataFolder.resolve("building_templates.yml"))
         performanceMonitor = PerformanceMonitor(plugin)
         databaseManager = DatabaseManager(plugin, performanceMonitor)
         messageUtils = MessageUtils(plugin)
@@ -284,6 +287,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         decisionEngine = DecisionEngine(plugin)
         dialogueEngine = DialogueEngine(plugin, openAIService)
         scenarioEngine = ScenarioEngine(plugin)
+        scenarioEngine.loadPlayerQuests()
         progressionService = ProgressionService(plugin)
         playerProgressionService = PlayerProgressionService(plugin)
         storyStateService = StoryStateService(plugin)
@@ -412,6 +416,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
     }
 
     fun reload() {
+        BuildingTemplateRegistry.reload(plugin.dataFolder.resolve("building_templates.yml"))
         plugin.reloadConfig()
         plugin.config.options().copyDefaults(true)
         plugin.saveConfig()

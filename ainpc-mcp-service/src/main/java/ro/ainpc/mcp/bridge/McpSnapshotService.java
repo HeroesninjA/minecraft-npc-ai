@@ -32,7 +32,9 @@ public class McpSnapshotService {
         if (result.isAvailable() && result.getSnapshot() != null) {
             RuntimeSnapshot redacted = redactingFilter.redact(result.getSnapshot());
             if (redacted != null) {
-                result = SnapshotReader.SnapshotResult.valid(redacted, result.isFresh());
+                result = result.getState() == SnapshotReader.SnapshotState.STALE
+                    ? SnapshotReader.SnapshotResult.stale(redacted, result.getDetail())
+                    : SnapshotReader.SnapshotResult.valid(redacted, result.isFresh());
                 payloadSizeBytes = GSON.toJson(redacted).getBytes(StandardCharsets.UTF_8).length;
             }
         }

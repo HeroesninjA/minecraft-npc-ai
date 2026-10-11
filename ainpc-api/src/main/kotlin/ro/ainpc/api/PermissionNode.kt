@@ -12,6 +12,7 @@ enum class PermissionNode(
     ADMIN("ainpc.admin", PermissionLevel.ADMIN, "Acces la toate comenzile admin"),
     CREATOR("ainpc.creator", PermissionLevel.AUTHOR, "Acces la modul creator (mapping si quest design)"),
     TALK("ainpc.talk", PermissionLevel.PLAY, "Permite jucatorilor sa vorbeasca cu NPC-urile", "true"),
+    PROFILE("ainpc.profile", PermissionLevel.PLAY, "Editarea profilului propriu declarat", "true"),
     INFO("ainpc.info", PermissionLevel.VIEW, "Vizualizarea informatiilor despre NPC-uri", "true"),
     QUEST("ainpc.quest", PermissionLevel.PLAY, "Folosirea quest log-ului si comenzilor normale de quest", "true"),
     GUI("ainpc.gui", PermissionLevel.VIEW, "Deschiderea hub-ului GUI AINPC", "true"),

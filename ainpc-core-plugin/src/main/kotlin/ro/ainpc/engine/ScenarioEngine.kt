@@ -142,9 +142,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     )
     private val questProgressCleanupService = QuestProgressCleanupService(
         getActivePlayerQuests = { activePlayerQuests },
-        getArchivedPlayerQuests = { archivedPlayerQuests },
         getQuestTemplates = { questTemplates },
-        deleteQuestProgress = questProgressPersistence::deleteQuestProgress,
         trackedBlockLocations = trackedBlockLocations,
         trackedVisitedPlaces = trackedVisitedPlaces,
         npcConversationCooldowns = npcConversationCooldowns,
@@ -1562,7 +1560,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         val tid = selectedProgress?.templateId()
         if (tid != null && tid.isNotBlank()) {
             trackedQuestTemplates.put(p0.uniqueId, tid)
-            questProgressPersistence.persistQuestProgressAsync(p0.uniqueId, selectedProgress)
+            questProgressPersistence.persistQuestTrackingPreferenceAsync(p0.uniqueId, selectedProgress)
         }
         publishProgressionTrackingChanged(
             p0,
@@ -2665,7 +2663,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     
 
     fun loadPlayerQuests() {
-        questProgressPersistence.loadPlayerQuests(activePlayerQuests, archivedPlayerQuests) { message -> plugin.debug(message) }
+        check(questProgressPersistence.loadPlayerQuests(activePlayerQuests, archivedPlayerQuests) { message -> plugin.debug(message) }) {
+            "Progresul questurilor nu a putut fi restaurat. Verificati baza de date si logul inainte de repornire."
+        }
     }
     private fun refreshTrackedQuestProgress(p0: Player, p1: ScenarioTemplate, p2: PlayerQuestProgress): PlayerQuestProgress {
         updateTrackedQuestProgress(p0.uniqueId, p1, p2, p2.objectiveProgress())

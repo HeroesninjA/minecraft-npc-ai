@@ -17,7 +17,6 @@ import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
 import java.util.Locale
 import java.util.UUID
-import kotlin.math.min
 
 /**
  * Contextul curent al unui NPC - informatii despre mediu si situatie
@@ -256,7 +255,7 @@ class NPCContext(
         environmentContext = npc.plugin.environmentEngine.getContextForLocation(
             npcLocation.world.name,
             npcLocation.block.biome.key.asString()
-        )
+        ).copy(lightLevel = npcLocation.block.lightLevel.toInt().coerceIn(0, 15))
     }
 
     fun addRecentEvent(event: String) {
@@ -283,9 +282,16 @@ class NPCContext(
         }
 
         val env = environmentContext
-        if (env.season != EnvironmentContext.Season.SPRING || env.temperature != EnvironmentContext.Temperature.MILD) {
+        if (env.worldName.isNotBlank()) {
             sb.append("Anotimp: ").append(env.season.displayName).append(". ")
             sb.append("Temperatura: ").append(env.temperature.displayName).append(".\n")
+            sb.append("Lumina locala: ").append(
+                when {
+                    env.lightLevel < 5 -> "slaba"
+                    env.lightLevel < 11 -> "moderata"
+                    else -> "puternica"
+                }
+            ).append(".\n")
         }
         if (env.specialEvents.isNotEmpty()) {
             sb.append("Evenimente active: ").append(env.specialEvents.joinToString(", ")).append(".\n")
@@ -329,12 +335,6 @@ class NPCContext(
         val player = interactingPlayer
         if (player != null) {
             sb.append("\nVorbesc cu: ").append(player.name).append("\n")
-            sb.append("Relatia noastra: ").append(getRelationshipDescription()).append("\n")
-            if (sharedMemories.isNotEmpty()) {
-                sb.append("Amintiri comune: ")
-                    .append(sharedMemories.subList(0, min(3, sharedMemories.size)).joinToString(", "))
-                    .append("\n")
-            }
         }
 
         if (lastSignificantEvent != null) {
@@ -354,7 +354,8 @@ class NPCContext(
     }
 
     private fun getWeatherDescription(): String {
-        return when (weather) {
+        val localWeather = if (environmentContext.worldName.isNotBlank()) environmentContext.weather.name else weather
+        return when (localWeather) {
             "RAIN" -> "ploua"
             "THUNDER" -> "furtuna cu tunete"
             "SNOW" -> "ninge"
@@ -391,19 +392,6 @@ class NPCContext(
             return "topologie necunoscuta"
         }
         return category.displayName.lowercase(Locale.ROOT)
-    }
-
-    private fun getRelationshipDescription(): String {
-        return when (relationshipStatus) {
-            "STRANGER" -> "strain/straina - nu il/o cunosc"
-            "ACQUAINTANCE" -> "cunoscut/cunoscuta - am mai vorbit"
-            "FRIEND" -> "prieten/prietena - ne intelegem bine"
-            "CLOSE_FRIEND" -> "prieten apropiat - am incredere totala"
-            "ENEMY" -> "dusman - nu vreau sa am de-a face"
-            "FAMILY" -> "familie - rudenie de sange"
-            "SPOUSE" -> "sot/sotie - partener de viata"
-        else -> "necunoscut"
-        }
     }
 
     private fun publishNpcContextUpdated(reason: String) {

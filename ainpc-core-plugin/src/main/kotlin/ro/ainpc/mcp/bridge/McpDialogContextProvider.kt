@@ -13,45 +13,42 @@ object McpDialogContextProvider {
     fun enrich(
         client: McpRuntimeClient?,
         mcpEnabled: Boolean,
-        orchestrationEnabled: Boolean
+        orchestrationEnabled: Boolean,
+        regionId: String
     ): String {
-        if (client == null || !mcpEnabled || !orchestrationEnabled) return ""
+        if (client == null || !mcpEnabled || !orchestrationEnabled || regionId.isBlank()) return ""
         try {
-            val result = client.callTool("ainpc.dialog.context", "{}")
+            val result = client.callTool("ainpc.dialog.context", gson.toJson(mapOf("regionId" to regionId)))
             if (!result.available || result.status != "success") return ""
 
             val payload = gson.fromJson(result.contentJson, JsonObject::class.java)
-            val snapshot = payload?.getAsJsonObject("result")?.getAsJsonObject("content")
-                ?: return ""
-
-            val contextParts = mutableListOf<String>()
-            val server = snapshot.getAsJsonObject("server")
-            if (server != null) {
-                contextParts.add("jucatori online: ${server.get("onlinePlayers")?.asInt ?: 0}")
-                contextParts.add("server activ de ${server.get("uptimeMinutes")?.asLong ?: 0} min")
+            if (payload?.get("available")?.asBoolean != true) return ""
+            if (payload.get("snapshotState")?.asString !in setOf("fresh", "cached")) return ""
+            val local = payload.getAsJsonObject("local") ?: return ""
+            if (local.get("regionId")?.asString != regionId) return ""
+            val npcCount = local.get("npcCount")?.asInt ?: return ""
+            val examples = local.getAsJsonArray("npcExamples")
+                ?.mapNotNull { entry ->
+                    val sample = entry.asJsonObject
+                    val name = compact(sample.get("name")?.asString.orEmpty(), 80)
+                    val profession = compact(sample.get("profession")?.asString.orEmpty(), 60)
+                    if (name.isBlank()) null else if (profession.isBlank()) name else "$name ($profession)"
+                }
+                .orEmpty()
+            return buildString {
+                append("=== CONTEXT LOCAL DIN MCP ===\n")
+                append("In regiunea curenta sunt $npcCount NPC-uri inregistrate.\n")
+                if (examples.isNotEmpty()) {
+                    append("Exemple de NPC-uri din regiune (lista incompleta): ")
+                    append(examples.joinToString(", "))
+                    append(".\n")
+                }
+                append("Foloseste aceste date doar cand intrebarea este despre regiune sau locuitorii ei.\n\n")
             }
-            val npcData = snapshot.getAsJsonObject("npc")
-            if (npcData != null) {
-                contextParts.add("NPC-uri in lume: ${npcData.get("totalNpcs")?.asInt ?: 0}")
-            }
-            val world = snapshot.getAsJsonObject("world")
-            if (world != null) {
-                contextParts.add("regiuni: ${world.get("totalRegions")?.asInt ?: 0}")
-                contextParts.add("locuri: ${world.get("totalPlaces")?.asInt ?: 0}")
-            }
-            val quests = snapshot.getAsJsonObject("quests")
-            if (quests != null) {
-                contextParts.add("questuri active: ${quests.get("active")?.asInt ?: 0}")
-            }
-            val features = snapshot.getAsJsonObject("features")
-            if (features != null) {
-                contextParts.add("AI activ: ${features.get("aiEnabled")?.asBoolean ?: false}")
-            }
-            return if (contextParts.isNotEmpty()) {
-                "=== CONTEXT DIN MCP RUNTIME ===\n${contextParts.joinToString("\n")}\n\n"
-            } else ""
         } catch (_: Exception) {
             return ""
         }
     }
+
+    private fun compact(value: String, limit: Int): String = value.replace(Regex("\\s+"), " ").trim().take(limit)
 }

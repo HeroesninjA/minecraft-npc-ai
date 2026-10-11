@@ -1,0 +1,81 @@
+{
+  "world_admin": {
+    "enabled": true,
+    "auto_index": { "enabled": true },
+    "scan": { "blocks_per_tick": 4096 },
+    "regions": {
+      "sat_documentatie": {
+        "name": "Sat documentatie",
+        "world": "world",
+        "type": "settlement",
+        "min": { "x": 200, "y": 60, "z": 200 },
+        "max": { "x": 264, "y": 90, "z": 264 },
+        "tags": ["documentation_demo"],
+        "story": {
+          "mode": "evolutive",
+          "state": "peaceful",
+          "pool": ["peaceful", "trade", "daily_life"]
+        },
+        "places": {
+          "casa_fierarului": {
+            "name": "Casa fierarului",
+            "type": "house",
+            "min": { "x": 205, "y": 64, "z": 205 },
+            "max": { "x": 215, "y": 72, "z": 215 },
+            "tags": ["home"],
+            "public_access": false,
+            "metadata": { "max_residents": "1" },
+            "nodes": {
+              "spawn_01": {
+                "type": "npc_spawn",
+                "x": 208.0, "y": 65.0, "z": 208.0,
+                "radius": 1.0
+              },
+              "pat_01": {
+                "type": "bed",
+                "x": 212.0, "y": 65.0, "z": 212.0,
+                "radius": 1.0
+              }
+            }
+          },
+          "fierarie": {
+            "name": "Fierarie",
+            "type": "forge",
+            "min": { "x": 225, "y": 64, "z": 205 },
+            "max": { "x": 235, "y": 72, "z": 215 },
+            "tags": ["work"],
+            "public_access": true,
+            "metadata": {
+              "profession": "fierar",
+              "story_state": "shortage",
+              "tension": "low",
+              "quest_hook": "supply_delivery"
+            },
+            "nodes": {
+              "lucru_01": {
+                "type": "workstation",
+                "x": 230.0, "y": 65.0, "z": 210.0,
+                "radius": 1.0
+              }
+            }
+          },
+          "piata": {
+            "name": "Piata satului",
+            "type": "market",
+            "min": { "x": 245, "y": 64, "z": 205 },
+            "max": { "x": 255, "y": 72, "z": 215 },
+            "tags": ["social", "public"],
+            "public_access": true,
+            "nodes": {
+              "intalnire_01": {
+                "type": "social",
+                "x": 250.0, "y": 65.0, "z": 210.0,
+                "radius": 2.0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

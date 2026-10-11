@@ -1,7 +1,7 @@
 # Mapping pentru harti construite manual
 
 Status: ghid operational.
-Verificat in cod: 2026-07-18.
+Verificat in cod: 2026-07-18; completat cu persistenta overlay: 2026-10-05.
 Depinde de: `architecture/mapping.md`.
 
 Foloseste acest flux pentru a adauga semantica peste o lume construita manual. Comenzile de draft necesita un jucator cu permisiunea `ainpc.admin`, mapping activ si world admin disponibil.
@@ -55,6 +55,12 @@ O ancora regionala poate omite `place`; punctul trebuie totusi sa fie in interio
 
 `/ainpc map confirm` este deja actiunea explicita de confirmare si aplica draftul doar in runtime. Fara `/ainpc world save`, modificarile raman nesalvate. Atat confirmarea, cat si salvarea sunt blocate cand runtime-ul MCP este `read_only`; preview-ul, editarea si anularea draftului raman disponibile.
 
+### 5. Pastreaza mapping-ul la reload/restart
+
+`world save` scrie mapping-ul in `config.yml`. Overlay-ul prioritar (`world-admin.json/yml/yaml`, apoi variantele `world_admin`, apoi `castel-world-admin.yml`) inlocuieste intreaga sectiune `world_admin` la incarcare si nu este sincronizat de aceasta comanda.
+
+Inainte de reload/restart, copiaza sectiunea completa salvata in overlay-ul autoritar, pastrand si celelalte regiuni si optiuni. Un overlay minimal poate ascunde mapping-ul tocmai salvat. Vezi [ordinea exacta si procedura](../reference/configurare-lume-harta-generare.md).
+
 ## Corectare si anulare
 
 - `/ainpc map preview` reafiseaza draftul curent;
@@ -86,6 +92,8 @@ Pentru valori deja cunoscute, comenzile world pot evita draftul:
 
 ## Legaturi
 
-- `architecture/mapping.md`
-- `reference/mapping-stack.md`
-- `guides/build-mode-region-place-node.md`
+- [Arhitectura mapping](../architecture/mapping.md).
+- [Mapping stack](../reference/mapping-stack.md).
+- [Build mode region/place/node](build-mode-region-place-node.md).
+- [Configurare lume si generare](../reference/configurare-lume-harta-generare.md).
+- [Exemplu complet de sat, NPC si story](exemplu-complet-sat-npc-story.md).

@@ -50,6 +50,18 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         } else if (args.size >= 2) {
             val subCommand = args[0].lowercase()
             when (subCommand) {
+                "profile", "profil" -> when (args.size) {
+                    2 -> completions.addAll(filterStartsWith(listOf("show", "rol", "stil", "trasatura", "reset"), args[1]))
+                    3 -> {
+                        val options = when (args[1].lowercase()) {
+                            "rol" -> listOf("calator", "comerciant", "mestesugar", "explorator")
+                            "stil" -> listOf("direct", "prietenos", "formal")
+                            "trasatura" -> listOf("curios", "prudent", "generos")
+                            else -> emptyList()
+                        }
+                        completions.addAll(filterStartsWith(options, args[2]))
+                    }
+                }
                 "create" -> when (args.size) {
                     2 -> completions.add("<nume>")
                     3 -> completions.addAll(filterStartsWith(getProfessionSuggestions(), args[2]))

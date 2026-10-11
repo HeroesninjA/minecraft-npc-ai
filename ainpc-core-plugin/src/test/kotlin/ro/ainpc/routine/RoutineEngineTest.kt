@@ -46,14 +46,16 @@ class RoutineEngineTest {
     }
 
     @Test
-    fun missingWorkAnchorFallsBackToSocialAnchor() {
+    fun missingWorkAnchorWaitsInsteadOfReportingWorkWithoutDestination() {
         val npc = npcWithAnchors()
         npc.workAnchor = null
 
         val assignment = engine.assign(npc, 6000)
 
-        assertEquals(RoutineSlot.WORK, assignment.slot())
+        assertEquals(RoutineSlot.IDLE, assignment.slot())
+        assertEquals(NPCState.IDLE, assignment.targetState())
         assertNull(assignment.targetAnchor())
+        assertTrue(assignment.activity()!!.contains("WORK"))
     }
 
     @Test
@@ -82,11 +84,10 @@ class RoutineEngineTest {
 
         val assignment = engine.assign(npc, 6000)
 
-        assertEquals(RoutineSlot.WORK, assignment.slot())
-        assertEquals(NPCState.WORKING, assignment.targetState())
+        assertEquals(RoutineSlot.IDLE, assignment.slot())
+        assertEquals(NPCState.IDLE, assignment.targetState())
         assertNull(assignment.targetAnchor())
-        assertEquals("munca", assignment.activity())
-        assertEquals("Munca", assignment.goal())
+        assertTrue(assignment.activity()!!.contains("ancora WORK"))
     }
 
     @Test

@@ -3,7 +3,7 @@ package ro.ainpc.spawn
 /**
  * Householdspawnresult.
  */
-class HouseholdSpawnResult(
+class HouseholdSpawnResult @JvmOverloads constructor(
     success: Boolean,
     dryRun: Boolean,
     rolledBack: Boolean,
@@ -11,7 +11,8 @@ class HouseholdSpawnResult(
     spawnResults: List<NpcSpawnResult>?,
     familyBindingResult: FamilyBindingResult?,
     errors: List<String>?,
-    warnings: List<String>?
+    warnings: List<String>?,
+    persistenceFailed: Boolean = false
 ) {
     private val successValue = success
     private val dryRunValue = dryRun
@@ -21,12 +22,15 @@ class HouseholdSpawnResult(
     private val familyBindingResultValue = familyBindingResult
     private val errorsValue = java.util.List.copyOf(errors ?: emptyList())
     private val warningsValue = java.util.List.copyOf(warnings ?: emptyList())
+    private val persistenceFailedValue = persistenceFailed
 
     fun success(): Boolean = successValue
 
     fun dryRun(): Boolean = dryRunValue
 
     fun rolledBack(): Boolean = rolledBackValue
+
+    fun persistenceFailed(): Boolean = persistenceFailedValue
 
     fun spawnPlans(): List<NpcSpawnPlan> = spawnPlansValue
 
@@ -49,6 +53,7 @@ class HouseholdSpawnResult(
         return successValue == other.successValue &&
             dryRunValue == other.dryRunValue &&
             rolledBackValue == other.rolledBackValue &&
+            persistenceFailedValue == other.persistenceFailedValue &&
             spawnPlansValue == other.spawnPlansValue &&
             spawnResultsValue == other.spawnResultsValue &&
             familyBindingResultValue == other.familyBindingResultValue &&
@@ -60,6 +65,7 @@ class HouseholdSpawnResult(
         var result = successValue.hashCode()
         result = 31 * result + dryRunValue.hashCode()
         result = 31 * result + rolledBackValue.hashCode()
+        result = 31 * result + persistenceFailedValue.hashCode()
         result = 31 * result + spawnPlansValue.hashCode()
         result = 31 * result + spawnResultsValue.hashCode()
         result = 31 * result + (familyBindingResultValue?.hashCode() ?: 0)
@@ -69,11 +75,21 @@ class HouseholdSpawnResult(
     }
 
     override fun toString(): String =
-        "HouseholdSpawnResult[success=$successValue, dryRun=$dryRunValue, rolledBack=$rolledBackValue, " +
+        "HouseholdSpawnResult[success=$successValue, dryRun=$dryRunValue, rolledBack=$rolledBackValue, persistenceFailed=$persistenceFailedValue, " +
             "spawnPlans=$spawnPlansValue, spawnResults=$spawnResultsValue, " +
             "familyBindingResult=$familyBindingResultValue, errors=$errorsValue, warnings=$warningsValue]"
 
     companion object {
+        @JvmStatic
+        fun failedPersistence(
+            spawnPlans: List<NpcSpawnPlan>?,
+            spawnResults: List<NpcSpawnResult>?,
+            familyBindingResult: FamilyBindingResult?,
+            errors: List<String>?,
+            warnings: List<String>?
+        ): HouseholdSpawnResult =
+            HouseholdSpawnResult(false, false, false, spawnPlans, spawnResults, familyBindingResult, errors, warnings, true)
+
         @JvmStatic
         fun dryRunSuccess(spawnPlans: List<NpcSpawnPlan>?, warnings: List<String>?): HouseholdSpawnResult =
             HouseholdSpawnResult(true, true, false, spawnPlans, emptyList(), null, emptyList(), warnings)

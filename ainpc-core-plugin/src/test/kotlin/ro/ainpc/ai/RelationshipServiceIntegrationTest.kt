@@ -86,7 +86,7 @@ class RelationshipServiceIntegrationTest {
     fun relationshipDecayAfterTimestamp() {
         val npcA = UUID.randomUUID().toString()
         val npcB = UUID.randomUUID().toString()
-        val old = System.currentTimeMillis() - 7 * 24 * 3600000L
+        val old = System.currentTimeMillis() - 7 * 24 * 3600000L - 1000L
 
         connection!!.prepareStatement("""
             INSERT INTO npc_npc_relationships

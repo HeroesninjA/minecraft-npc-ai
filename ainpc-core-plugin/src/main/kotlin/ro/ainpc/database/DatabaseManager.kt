@@ -7,14 +7,18 @@ import ro.ainpc.bootstrap.PerformanceMonitor
 import ro.ainpc.bootstrap.RuntimeMetricNames
 import java.io.File
 import java.lang.reflect.InvocationHandler
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.ParameterMetaData
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.ResultSetMetaData
 import java.sql.SQLException
 import java.sql.Statement
+import java.util.IdentityHashMap
 import javax.sql.DataSource
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -35,10 +39,15 @@ open class DatabaseManager(
     private val plugin: AINPCPlugin?,
     private val performanceMonitor: PerformanceMonitor? = null,
 ) {
+    private val databaseThreadFactory = DatabaseThreadFactory()
     private val databaseExecutor: ExecutorService =
-        Executors.newSingleThreadExecutor(DatabaseThreadFactory())
+        Executors.newSingleThreadExecutor(databaseThreadFactory)
     private val statementLock: ReentrantLock = ReentrantLock(true)
+    private var closed = false
     private var connection: Connection? = null
+    private var activeTransaction: Connection? = null
+    @Volatile
+    private var connectionFailure: Throwable? = null
     private var dataSource: DataSource? = null
     private var dialect: DatabaseDialect = DatabaseDialect.SQLITE
     private val queryCache: MutableMap<String, CacheEntry<String>> = ConcurrentHashMap()
@@ -49,30 +58,36 @@ open class DatabaseManager(
     }
 
     fun initialize(): Boolean {
+        statementLock.lock()
         return try {
-            if (plugin == null) {
-                return false
-            }
-            if (!plugin.dataFolder.exists()) {
-                plugin.dataFolder.mkdirs()
-            }
-
-            dialect = DatabaseDialect.fromConfig(plugin.config.getString("database.type", "sqlite"))
-            connection = when (dialect) {
-                DatabaseDialect.SQLITE -> openSqliteConnection()
-                DatabaseDialect.MYSQL -> openMysqlConnection()
-            }
+            if (closed || connectionFailure != null || activeTransaction != null) return false
+            if (connection?.isClosed == false) return true
+            connection = openConnection() ?: return false
             configureConnection()
             createTables()
             runMigrations()
-            plugin.logger.info("Baza de date initializata cu succes (${dialect.label}).")
+            plugin?.logger?.info("Baza de date initializata cu succes (${dialect.label}).")
             true
-        } catch (e: ClassNotFoundException) {
-            plugin?.logger?.log(Level.SEVERE, "Driverul bazei de date este negasit!", e)
+        } catch (error: Throwable) {
+            connectionFailure = error
+            closeResources(error)
+            plugin?.logger?.log(Level.SEVERE, "Eroare la initializarea bazei de date!", error)
+            if (error !is SQLException && error !is ClassNotFoundException) throw error
             false
-        } catch (e: SQLException) {
-            plugin?.logger?.log(Level.SEVERE, "Eroare la conectarea la baza de date!", e)
-            false
+        } finally {
+            statementLock.unlock()
+        }
+    }
+
+    internal open fun openConnection(): Connection? {
+        val pool = dataSource as? HikariDataSource
+        if (pool != null && !pool.isClosed) return pool.connection
+        if (plugin == null) return null
+        if (!plugin.dataFolder.exists()) plugin.dataFolder.mkdirs()
+        dialect = DatabaseDialect.fromConfig(plugin.config.getString("database.type", "sqlite"))
+        return when (dialect) {
+            DatabaseDialect.SQLITE -> openSqliteConnection()
+            DatabaseDialect.MYSQL -> openMysqlConnection()
         }
     }
 
@@ -646,6 +661,16 @@ open class DatabaseManager(
             executeSchemaSql(stmt, "CREATE INDEX IF NOT EXISTS idx_player_reputation_scope ON player_reputation(scope_type, scope_id)")
             stmt.execute(
                 """
+                CREATE TABLE IF NOT EXISTS player_profiles (
+                    player_uuid ${shortText()} NOT NULL PRIMARY KEY,
+                    role ${shortText(32)},
+                    style ${shortText(32)},
+                    trait ${shortText(32)}
+                )
+                """
+            )
+            stmt.execute(
+                """
                 CREATE TABLE IF NOT EXISTS player_progression (
                     player_uuid ${shortText()} NOT NULL PRIMARY KEY,
                     level INTEGER NOT NULL DEFAULT 1,
@@ -697,10 +722,12 @@ open class DatabaseManager(
                     npc_key ${shortText(256)} NOT NULL PRIMARY KEY,
                     balance INTEGER NOT NULL DEFAULT 0,
                     created_at INTEGER NOT NULL DEFAULT 0,
-                    updated_at INTEGER NOT NULL DEFAULT 0
+                    updated_at INTEGER NOT NULL DEFAULT 0,
+                    last_salary_at BIGINT NOT NULL DEFAULT 0
                 )
                 """
             )
+            ensureColumnExists("npc_economy", "last_salary_at", "BIGINT NOT NULL DEFAULT 0")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS economy_balances (
@@ -708,6 +735,14 @@ open class DatabaseManager(
                     balance INTEGER NOT NULL DEFAULT 0,
                     created_at INTEGER NOT NULL DEFAULT 0,
                     updated_at INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS bank_interest_payments (
+                    player_uuid ${shortText()} NOT NULL PRIMARY KEY,
+                    last_applied INTEGER NOT NULL
                 )
                 """
             )
@@ -802,87 +837,196 @@ open class DatabaseManager(
     }
 
     fun getConnection(): Connection? {
+        statementLock.lock()
         try {
-            if (connection == null || connection!!.isClosed) {
-                initialize()
+            if (closed || connectionFailure != null) return null
+            val transactionConnection = activeTransaction
+            try {
+                if (transactionConnection != null) {
+                    if (connection !== transactionConnection || transactionConnection.isClosed) {
+                        throw SQLException("Conexiunea tranzactiei active a fost pierduta sau inlocuita.")
+                    }
+                } else if (connection == null || connection!!.isClosed) {
+                    if (!initialize()) return null
+                }
+            } catch (e: SQLException) {
+                if (transactionConnection != null) connectionFailure = e
+                plugin?.logger?.log(Level.SEVERE, "Eroare la verificarea conexiunii!", e)
+                return null
             }
-        } catch (e: SQLException) {
-            plugin?.logger?.log(Level.SEVERE, "Eroare la verificarea conexiunii!", e)
+            return connection
+        } finally {
+            statementLock.unlock()
         }
-        return connection
     }
 
+    @Throws(SQLException::class)
+    private fun requireConnection(): Connection = getConnection()
+        ?: throw SQLException("Conexiunea la baza de date este indisponibila.", connectionFailure)
+
+    @Throws(SQLException::class)
     open fun executeTransaction(block: (Connection) -> Unit) {
         val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
         timer?.begin()
         statementLock.lock()
         try {
-            val conn = getConnection()!!
-            val autoCommit = conn.autoCommit
-            conn.autoCommit = false
+            if (activeTransaction != null) {
+                throw SQLException("Tranzactiile imbricate sau incepute extern nu sunt suportate.")
+            }
+            val conn = requireConnection()
+            if (!conn.autoCommit) {
+                throw SQLException("Tranzactiile imbricate sau incepute extern nu sunt suportate.")
+            }
+            try {
+                conn.autoCommit = false
+            } catch (error: Throwable) {
+                invalidateConnection(conn, error)
+                throw error
+            }
+            activeTransaction = conn
+            var transactionFailure: Throwable? = null
+            var connectionReusable = true
             try {
                 block(conn)
+                requireConnection()
                 conn.commit()
-            } catch (e: Exception) {
-                try { conn.rollback() } catch (_: Exception) {}
-                throw e
+            } catch (error: Throwable) {
+                transactionFailure = error
+                try {
+                    conn.rollback()
+                } catch (rollbackError: Throwable) {
+                    if (rollbackError !== error) error.addSuppressed(rollbackError)
+                    connectionReusable = false
+                }
+                if (connectionFailure != null || connection !== conn) connectionReusable = false
+                if (!connectionReusable) {
+                    invalidateConnection(conn, error)
+                }
+                throw error
             } finally {
-                try { conn.autoCommit = autoCommit } catch (_: Exception) {}
+                try {
+                    if (connectionReusable) {
+                        try {
+                            conn.autoCommit = true
+                        } catch (resetError: Throwable) {
+                            val failure = transactionFailure
+                            if (failure != null && resetError !== failure) failure.addSuppressed(resetError)
+                            invalidateConnection(conn, failure ?: resetError)
+                        }
+                    }
+                } finally {
+                    activeTransaction = null
+                }
             }
         } catch (error: Throwable) {
             timer?.fail()
             throw error
         } finally {
-            timer?.end()
-            statementLock.unlock()
-        }
-    }
-
-    fun close() {
-        try {
-            databaseExecutor.shutdown()
-            if (!databaseExecutor.awaitTermination(15, TimeUnit.SECONDS)) {
-                plugin?.logger?.warning("Executorul DB nu s-a inchis la timp. Fortez oprirea task-urilor ramase.")
-                databaseExecutor.shutdownNow()
-            }
-            statementLock.lock()
             try {
-                if (connection != null && !connection!!.isClosed) {
-                    connection!!.close()
-                    plugin?.logger?.info("Conexiunea la baza de date a fost inchisa.")
-                }
-                (dataSource as? HikariDataSource)?.close()
-                dataSource = null
+                timer?.end()
             } finally {
                 statementLock.unlock()
             }
-        } catch (e: SQLException) {
-            plugin?.logger?.log(Level.SEVERE, "Eroare la inchiderea conexiunii!", e)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            plugin?.logger?.log(Level.SEVERE, "Inchiderea executorului DB a fost intrerupta!", e)
+        }
+    }
+
+    private fun invalidateConnection(conn: Connection, failure: Throwable) {
+        connectionFailure = failure
+        try {
+            conn.close()
+        } catch (closeError: Throwable) {
+            if (closeError !== failure) failure.addSuppressed(closeError)
+        }
+        plugin?.logger?.log(Level.SEVERE,
+            "Conexiunea DB a fost dezactivata dupa o eroare de tranzactie. Verificati datele si reporniti pluginul.", failure)
+    }
+
+    fun close() {
+        check(!statementLock.isHeldByCurrentThread && !databaseThreadFactory.isCurrentThread()) {
+            "Baza de date nu poate fi inchisa dintr-o operatie activa sau de pe executorul DB."
+        }
+        var interrupted = false
+        try {
+            try {
+                databaseExecutor.shutdown()
+                try {
+                    if (!databaseExecutor.awaitTermination(15, TimeUnit.SECONDS)) {
+                        plugin?.logger?.warning("Executorul DB nu s-a inchis la timp. Fortez oprirea task-urilor ramase.")
+                        cancelQueuedTasks()
+                    }
+                } catch (error: InterruptedException) {
+                    interrupted = true
+                    cancelQueuedTasks()
+                    plugin?.logger?.log(Level.SEVERE, "Inchiderea executorului DB a fost intrerupta!", error)
+                }
+            } finally {
+                statementLock.lock()
+                try {
+                    closed = true
+                    val failure = closeResources()
+                    if (failure != null) {
+                        plugin?.logger?.log(Level.SEVERE, "Eroare la inchiderea resurselor DB!", failure)
+                        if (failure !is SQLException) throw failure
+                    }
+                } finally {
+                    statementLock.unlock()
+                }
+            }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt()
+        }
+    }
+
+    private fun closeResources(primaryFailure: Throwable? = null): Throwable? {
+        var failure = primaryFailure
+        try {
+            connection?.close()
+            connection = null
+        } catch (error: Throwable) {
+            if (failure == null) failure = error
+            else if (error !== failure) failure.addSuppressed(error)
+        }
+        try {
+            (dataSource as? HikariDataSource)?.close()
+            dataSource = null
+        } catch (error: Throwable) {
+            if (failure == null) failure = error
+            else if (error !== failure) failure.addSuppressed(error)
+        }
+        return failure
+    }
+
+    private fun cancelQueuedTasks() {
+        databaseExecutor.shutdownNow().forEach { task ->
+            (task as? DatabaseTask<*>)?.future?.cancel(false)
         }
     }
 
     @Throws(SQLException::class)
-    open fun prepareStatement(sql: String): PreparedStatement {
-        statementLock.lock()
-        return try {
-            wrapStatement(getConnection()!!.prepareStatement(translateSqlForDialect(sql)))
-        } catch (e: SQLException) {
-            statementLock.unlock()
-            throw e
-        }
+    open fun prepareStatement(sql: String): PreparedStatement = createLockedStatement { conn ->
+        conn.prepareStatement(translateSqlForDialect(sql))
     }
 
     @Throws(SQLException::class)
-    open fun prepareStatement(sql: String, autoGeneratedKeys: Int): PreparedStatement {
+    open fun prepareStatement(sql: String, autoGeneratedKeys: Int): PreparedStatement = createLockedStatement { conn ->
+        conn.prepareStatement(translateSqlForDialect(sql), autoGeneratedKeys)
+    }
+
+    private fun createLockedStatement(create: (Connection) -> PreparedStatement): PreparedStatement {
         statementLock.lock()
+        var statement: PreparedStatement? = null
         return try {
-            wrapStatement(getConnection()!!.prepareStatement(translateSqlForDialect(sql), autoGeneratedKeys))
-        } catch (e: SQLException) {
-            statementLock.unlock()
-            throw e
+            statement = create(requireConnection())
+            wrapStatement(statement)
+        } catch (error: Throwable) {
+            try {
+                statement?.close()
+            } catch (closeError: Throwable) {
+                if (closeError !== error) error.addSuppressed(closeError)
+            } finally {
+                statementLock.unlock()
+            }
+            throw error
         }
     }
 
@@ -892,21 +1036,31 @@ open class DatabaseManager(
         timer?.begin()
         statementLock.lock()
         try {
-            getConnection()!!.createStatement().use { stmt -> stmt.executeUpdate(translateSqlForDialect(sql)) }
+            requireConnection().createStatement().use { stmt -> stmt.executeUpdate(translateSqlForDialect(sql)) }
         } catch (error: Throwable) {
             timer?.fail()
             throw error
         } finally {
-            timer?.end()
-            statementLock.unlock()
+            try {
+                timer?.end()
+            } finally {
+                statementLock.unlock()
+            }
         }
     }
 
-    fun runAsync(task: Runnable): CompletableFuture<Void> =
-        CompletableFuture.runAsync(task, databaseExecutor)
+    fun runAsync(task: Runnable): CompletableFuture<Void> = submitAsync {
+        task.run()
+        null
+    }
 
-    fun <T> supplyAsync(supplier: Supplier<T>): CompletableFuture<T> =
-        CompletableFuture.supplyAsync(supplier, databaseExecutor)
+    fun <T> supplyAsync(supplier: Supplier<T>): CompletableFuture<T> = submitAsync { supplier.get() }
+
+    private fun <T> submitAsync(supplier: () -> T?): CompletableFuture<T> {
+        val task = DatabaseTask(supplier)
+        databaseExecutor.execute(task)
+        return task.future
+    }
 
     private fun wrapStatement(statement: PreparedStatement): PreparedStatement {
         val handler: InvocationHandler = LockedStatementInvocationHandler(
@@ -926,39 +1080,237 @@ open class DatabaseManager(
         private val lock: ReentrantLock,
         private val performanceMonitor: PerformanceMonitor?,
     ) : InvocationHandler {
+        private val ownerThread = Thread.currentThread()
         private var closed = false
+        private var closeOnCompletion = false
+        private val resultSets = IdentityHashMap<ResultSet, LockedResultSetInvocationHandler>(2)
+        private var currentResult: LockedResultSetInvocationHandler? = null
 
         @Throws(Exception::class)
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
+            if (method.declaringClass == Any::class.java) {
+                return invokeObjectMethod(proxy, method, args, "LockedPreparedStatement")
+            }
+            checkOwner()
             if ("close" == method.name) {
-                if (closed) return null
-                closed = true
-                return try {
-                    method.invoke(delegate, *(args ?: emptyArray()))
-                } finally {
-                    lock.unlock()
+                closeStatement()
+                return null
+            }
+            if (closed) {
+                if (method.name == "isClosed") return true
+                throw SQLException("Statement-ul este inchis.")
+            }
+            return withCompletionCheck {
+                val result = if (method.name.startsWith("execute")) {
+                    closeResultSets()
+                    val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
+                    timer?.begin()
+                    try {
+                        invokeGuardedDelegate(proxy, delegate, method, args)
+                    } catch (error: Throwable) {
+                        timer?.fail()
+                        throw error
+                    } finally {
+                        timer?.end()
+                    }
+                } else {
+                    invokeGuardedDelegate(proxy, delegate, method, args)
+                }
+                if (method.name == "closeOnCompletion") closeOnCompletion = true
+                if (method.name == "isClosed" && result == true) closeStatement()
+                if (method.name == "getMoreResults") {
+                    when (args?.firstOrNull() ?: Statement.CLOSE_CURRENT_RESULT) {
+                        Statement.CLOSE_CURRENT_RESULT -> currentResult?.invalidate()
+                        Statement.CLOSE_ALL_RESULTS -> resultSets.values.toList().forEach { it.invalidate() }
+                    }
+                    currentResult = null
+                }
+                when {
+                    method.name == "unwrap" -> result
+                    result is ResultSetMetaData && method.returnType == ResultSetMetaData::class.java ->
+                        wrapMetadata(result, ResultSetMetaData::class.java) { !closed }
+                    result is ParameterMetaData && method.returnType == ParameterMetaData::class.java ->
+                        wrapMetadata(result, ParameterMetaData::class.java) { !closed }
+                    result is ResultSet -> {
+                        val handler = resultSets.getOrPut(result) {
+                            LockedResultSetInvocationHandler(result, proxy as PreparedStatement)
+                        }
+                        if (method.name != "getGeneratedKeys") currentResult = handler
+                        handler.proxy
+                    }
+                    else -> result
                 }
             }
-            if (!method.name.startsWith("execute")) {
-                return method.invoke(delegate, *(args ?: emptyArray()))
+        }
+
+        private fun checkOwner() {
+            if (Thread.currentThread() !== ownerThread) {
+                throw SQLException("Resursa JDBC trebuie folosita si inchisa pe firul care a creat statement-ul.")
             }
-            val timer = performanceMonitor?.timer(RuntimeMetricNames.DATABASE_OPERATION)
-            timer?.begin()
+        }
+
+        private fun closeStatement() {
+            if (closed) return
+            closed = true
+            var failure: Throwable? = null
+            try {
+                try {
+                    closeResultSets()
+                } catch (error: Throwable) {
+                    failure = error
+                }
+                try {
+                    delegate.close()
+                } catch (error: Throwable) {
+                    if (failure == null) failure = error
+                    else if (error !== failure) failure.addSuppressed(error)
+                }
+                failure?.let { throw it }
+            } finally {
+                resultSets.values.toList().forEach { it.invalidate() }
+                lock.unlock()
+            }
+        }
+
+        private fun closeResultSets() {
+            var failure: Throwable? = null
+            resultSets.values.toList().forEach { handler ->
+                try {
+                    handler.closeResult()
+                } catch (error: Throwable) {
+                    val previous = failure
+                    if (previous == null) failure = error
+                    else if (error !== previous) previous.addSuppressed(error)
+                }
+            }
+            failure?.let { throw it }
+        }
+
+        private fun <T> withCompletionCheck(operation: () -> T): T {
+            var failure: Throwable? = null
             return try {
-                method.invoke(delegate, *(args ?: emptyArray()))
+                operation()
             } catch (error: Throwable) {
-                timer?.fail()
+                failure = error
                 throw error
             } finally {
-                timer?.end()
+                if (!closed && closeOnCompletion) {
+                    try {
+                        if (delegate.isClosed) closeStatement()
+                    } catch (error: Throwable) {
+                        val previous = failure
+                        if (previous == null) throw error
+                        if (error !== previous) previous.addSuppressed(error)
+                    }
+                }
+            }
+        }
+
+        private inner class LockedResultSetInvocationHandler(
+            private val resultSet: ResultSet,
+            private val statement: PreparedStatement,
+        ) : InvocationHandler {
+            private var resultClosed = false
+            private var cleanupPending = true
+            val proxy: ResultSet = Proxy.newProxyInstance(
+                resultSet.javaClass.classLoader, arrayOf(ResultSet::class.java), this
+            ) as ResultSet
+
+            override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
+                if (method.declaringClass == Any::class.java) {
+                    return invokeObjectMethod(proxy, method, args, "LockedResultSet")
+                }
+                checkOwner()
+                if (method.name == "close") {
+                    if (!closed) withCompletionCheck { closeResult() }
+                    return null
+                }
+                if (closed || resultClosed) {
+                    if (method.name == "isClosed") return true
+                    throw SQLException("ResultSet-ul este inchis.")
+                }
+                if (method.name == "getStatement") return statement
+                return withCompletionCheck {
+                    val result = invokeGuardedDelegate(proxy, resultSet, method, args)
+                    if (method.name == "isClosed" && result == true) invalidate()
+                    if (method.name == "getMetaData" && result is ResultSetMetaData) {
+                        wrapMetadata(result, ResultSetMetaData::class.java) { !closed && !resultClosed }
+                    } else result
+                }
+            }
+
+            fun closeResult() {
+                if (!cleanupPending) return
+                resultClosed = true
+                resultSet.close()
+                invalidate()
+            }
+
+            fun invalidate() {
+                resultClosed = true
+                cleanupPending = false
+                resultSets.remove(resultSet)
+                if (currentResult === this) currentResult = null
+            }
+        }
+
+        private fun wrapMetadata(delegate: Any, type: Class<*>, isOpen: () -> Boolean): Any =
+            Proxy.newProxyInstance(delegate.javaClass.classLoader, arrayOf(type)) { proxy, method, args ->
+                if (method.declaringClass == Any::class.java) {
+                    invokeObjectMethod(proxy, method, args, "Locked${type.simpleName}")
+                } else {
+                    checkOwner()
+                    if (!isOpen()) throw SQLException("Resursa JDBC asociata metadatelor este inchisa.")
+                    invokeGuardedDelegate(proxy, delegate, method, args)
+                }
+            }
+
+        private fun invokeObjectMethod(proxy: Any, method: Method, args: Array<out Any>?, label: String): Any =
+            when (method.name) {
+                "equals" -> proxy === args?.firstOrNull()
+                "hashCode" -> System.identityHashCode(proxy)
+                "toString" -> "$label@${Integer.toHexString(System.identityHashCode(proxy))}"
+                else -> throw IllegalStateException("Metoda Object nesuportata: ${method.name}")
+            }
+
+        private fun invokeGuardedDelegate(proxy: Any, delegate: Any, method: Method, args: Array<out Any>?): Any? {
+            if (method.name == "unwrap" || method.name == "isWrapperFor") {
+                val type = args?.firstOrNull() as? Class<*> ?: throw SQLException("Tip JDBC absent.")
+                if (method.name == "isWrapperFor") return type.isInstance(proxy)
+                if (type.isInstance(proxy)) return proxy
+                throw SQLException("Accesul direct la implementarea JDBC nu este suportat: ${type.name}")
+            }
+            return try {
+                method.invoke(delegate, *(args ?: emptyArray()))
+            } catch (exception: InvocationTargetException) {
+                throw exception.targetException
+            }
+        }
+    }
+
+    private class DatabaseTask<T>(private val supplier: () -> T?) : Runnable {
+        val future = CompletableFuture<T>()
+
+        override fun run() {
+            if (future.isDone) return
+            try {
+                future.complete(supplier())
+            } catch (error: Throwable) {
+                future.completeExceptionally(error)
             }
         }
     }
 
     private class DatabaseThreadFactory : ThreadFactory {
+        @Volatile
+        private var worker: Thread? = null
+
+        fun isCurrentThread(): Boolean = Thread.currentThread() === worker
+
         override fun newThread(runnable: Runnable): Thread {
             val thread = Thread(runnable, "AINPC-DB")
             thread.isDaemon = true
+            worker = thread
             return thread
         }
     }

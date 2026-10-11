@@ -28,7 +28,11 @@ data class PromptSnapshot(
     val explicitConversation: Boolean,
     val triggerReason: String,
     val nearbyNpcCount: Int,
-    val distanceToNpc: Double
+    val distanceToNpc: Double,
+    val regionId: String = "",
+    val plannedRoutineActivity: String = "",
+    val immediateGoal: String = "",
+    val playerHeldItem: String = ""
 ) {
     fun npcUuid(): UUID = npcUuid
     fun npcName(): String = npcName

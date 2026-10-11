@@ -55,6 +55,7 @@ import ro.ainpc.spawn.PopulationPlanRepository
 import ro.ainpc.spawn.SettlementSpawnResult
 import ro.ainpc.spawn.SpawnBatchHistoryPager
 import ro.ainpc.spawn.SpawnBatchTracker
+import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryContextSnapshot
@@ -131,6 +132,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
         initAinpcCommandReputationPlugin(plugin)
         initAinpcCommandWorldPlugin(plugin)
         initAinpcCommandQuestPlugin(plugin)
+        initAinpcCommandEconomyPlugin(plugin)
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
@@ -220,6 +222,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             AINPCSubcommandRoute.DUPLICATES -> handleDuplicates(sender, args)
             AINPCSubcommandRoute.REPAIR -> handleRepair(sender, args)
             AINPCSubcommandRoute.INFO -> handleInfo(sender, args)
+            AINPCSubcommandRoute.PLAYER_PROFILE -> PlayerProfileCommand.handle(plugin, sender, args)
             AINPCSubcommandRoute.GUI ->
                 ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)
 
@@ -965,7 +968,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.sendMessage(sender, "no_permission"); return true
         }
         if (args.size < 2) {
-            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates|auto-place <templateId> <regionId>")
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building templates|auto-place|preview|prepare|confirm")
             plugin.messageUtils.send(
                 sender,
                 semanticMappingOnlyNotice("Building auto-place", "place-uri si node-uri de mapping semantic")
@@ -973,6 +976,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             return true
         }
         when (args[1].lowercase()) {
+            "preview", "prepare", "confirm" -> return handleActivityBuilding(sender, args)
             "templates" -> {
                 ro.ainpc.settlement.BuildingTemplateRegistry.loadDefaults()
                 val templates = ro.ainpc.settlement.BuildingTemplateRegistry.getAll()
@@ -1023,8 +1027,49 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
                 }
             }
             else -> {
-                plugin.messageUtils.send(sender, "&cSubcomanda necunoscuta: ${args[1]}. Foloseste: templates|auto-place")
+                plugin.messageUtils.send(sender, "&cSubcomanda necunoscuta: ${args[1]}. Foloseste: templates|auto-place|preview|prepare|confirm")
             }
+        }
+        return true
+    }
+
+    private fun handleActivityBuilding(sender: CommandSender, args: Array<String>): Boolean {
+        val mode = args[1].lowercase()
+        if (args.size != if (mode == "confirm") 3 else 4) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc building preview|prepare <placeId> <templateId> sau confirm <token> --confirm")
+            return true
+        }
+        if (mode != "preview" && !isActivityBuildRuntimeWritable(plugin)) {
+            plugin.messageUtils.send(sender, "&cConstruirea este blocata: read-only activ sau starea MCP nu poate fi verificata.")
+            return true
+        }
+        val actor = if (sender is Player) "player:${sender.uniqueId}" else "sender:${sender.javaClass.name}:${sender.name}"
+        try {
+            val service = plugin.services.worldGenService
+            when (mode) {
+                "preview" -> {
+                    val definition = ro.ainpc.settlement.BuildingTemplateRegistry.get(args[3])
+                    require(ro.ainpc.worldgen.ActivityBuildingGeometry.supports(definition)) { "Preview fizic disponibil pentru shop/forge/farm/tavern/market, house cu geometry=house_small si custom cu geometry=leisure_garden/community_hall/workshop/bakery/library." }
+                    val preview = requireNotNull(service.previewBuild(args[2], args[3])) {
+                        "Preview refuzat: verifica dimensiunile, ancorele, terenul, chunk-urile si entitatile."
+                    }
+                    plugin.messageUtils.send(sender, "&aPreview fara scriere: ${preview.operations.size} celule; limite ${preview.getBoundingBox()}.")
+                    plugin.messageUtils.send(sender, "&7Pregatire: /ainpc building prepare ${args[2]} ${args[3]}")
+                }
+                "prepare" -> {
+                    val token = service.prepareActivityBuild(actor, args[2], args[3])
+                    plugin.messageUtils.send(sender, "&eToken valabil 60 secunde; confirma: /ainpc building confirm $token --confirm")
+                }
+                "confirm" -> {
+                    val token = requireNotNull(runCatching { UUID.fromString(args[2]) }.getOrNull()) { "Token UUID invalid." }
+                    val result = service.confirmActivityBuild(actor, token)
+                    plugin.messageUtils.send(sender, "${if (result.success) "&aConstruire reusita" else "&cConstruire esuata"}: ${result.blocksPlaced} blocuri scrise.")
+                    result.errors.forEach { plugin.messageUtils.send(sender, "&c$it") }
+                    result.sessionId?.let { plugin.messageUtils.send(sender, "&7Sesiune recuperare: $it (numai in memorie, fara rollback automat).") }
+                }
+            }
+        } catch (exception: Exception) {
+            plugin.messageUtils.send(sender, "&cOperatie refuzata: ${exception.message}")
         }
         return true
     }
@@ -2423,18 +2468,13 @@ $objectives      rewards:
         if (args.size >= 7 && !isNoneSelector(args[6])) {
             socialPlace = resolveSingleWorldPlace(sender, worldAdmin, args[6], "social") ?: return true
         }
-        if (!isHousePlace(homePlace)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: homePlace-ul &f" + homePlace.id() + " &enu este marcat ca house/home."
-        )
-        if (workPlace != null && !isWorkplace(workPlace)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: workPlace-ul &f" + workPlace.id() + " &enu este marcat clar ca workplace."
-        )
-        if (socialPlace != null && !isSocialPlace(socialPlace)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: socialPlace-ul &f" + socialPlace.id() + " &enu este marcat clar ca loc social."
-        )
+        val validationId = if (npc.databaseId > 0) npcBindingId(npc) else "pending:${npc.uuid}"
+        try {
+            worldAdmin.validateNpcBindingTargets(homePlace.id(), workPlace?.id(), socialPlace?.id(), validationId)
+        } catch (exception: IllegalArgumentException) {
+            plugin.messageUtils.send(sender, "&c" + exception.message)
+            return true
+        }
         val prevHome = npc.homeAnchor
         val prevWork = npc.workAnchor
         val prevSocial = npc.socialAnchor
@@ -2456,11 +2496,16 @@ $objectives      rewards:
         }
         val bindingId = npcBindingId(npc)
         try {
-            worldAdmin.bindNpcToHomePlace(homePlace.id(), bindingId, npc.name)
-            if (workPlace != null) worldAdmin.bindNpcToWorkPlace(workPlace.id(), bindingId, npc.name)
-            if (socialPlace != null) worldAdmin.bindNpcToSocialPlace(socialPlace.id(), bindingId, npc.name)
+            worldAdmin.bindNpcToPlaces(homePlace.id(), workPlace?.id(), socialPlace?.id(), bindingId, npc.name)
         } catch (e: IllegalArgumentException) {
-            plugin.messageUtils.send(sender, "&c" + e.message); return true
+            npc.homeAnchor = prevHome
+            npc.workAnchor = prevWork
+            npc.socialAnchor = prevSocial
+            if (!plugin.npcManager.saveNPC(npc, false)) {
+                plugin.messageUtils.send(sender, "&eWarning: &fNu am putut restaura ancorele NPC dupa esecul bind-ului.")
+            }
+            plugin.messageUtils.send(sender, "&c" + e.message)
+            return true
         }
         saveNpcWorldBinding(
             sender,
@@ -2672,7 +2717,7 @@ $objectives      rewards:
         sendHouseholdSpawnResult(sender, result)
         if (!result.success()) return true
         if (shouldSpawn) {
-            val bindingResult = bindSpawnedHouseholdToMapping(sender, worldAdmin, result)
+            val bindingResult = bindSpawnedHouseholdToMapping(sender, worldAdmin, result, allocation)
             sendPostSpawnBindingResult(sender, bindingResult)
             plugin.messageUtils.send(
                 sender,
@@ -4333,7 +4378,7 @@ $objectives      rewards:
         var bindingResult = PostSpawnBindingResult.EMPTY
         for ((index, householdResult) in result.householdResults().withIndex()) {
             bindingResult += if (householdResult.success()) {
-                bindSpawnedHouseholdToMapping(sender, worldAdmin, householdResult)
+                bindSpawnedHouseholdToMapping(sender, worldAdmin, householdResult, result.allocations()[index])
             } else {
                 PostSpawnBindingResult(
                     householdsAttempted = 1,
@@ -4352,14 +4397,18 @@ $objectives      rewards:
     private fun bindSpawnedHouseholdToMapping(
         sender: CommandSender,
         worldAdmin: WorldAdminService,
-        result: HouseholdSpawnResult
+        result: HouseholdSpawnResult,
+        allocation: HouseAllocation
     ): PostSpawnBindingResult {
         val failures = mutableListOf<String>()
         val spawnPlans = result.spawnPlans()
         val spawnResults = result.spawnResults()
-        if (spawnPlans.size != spawnResults.size) {
-            failures.add(
-                "Planurile spawn (${spawnPlans.size}) nu corespund rezultatelor (${spawnResults.size})."
+        val ownerBinding = try {
+            HouseholdOwnerBinding.resolve(allocation, result)
+        } catch (exception: IllegalArgumentException) {
+            return PostSpawnBindingResult(
+                1, 0, 0, 0, 0, 0,
+                listOf(exception.message ?: "Nu am putut rezolva proprietarul household-ului.")
             )
         }
         var npcsAttempted = 0
@@ -4385,7 +4434,7 @@ $objectives      rewards:
             if (plan.homePlaceId().isNotBlank()) {
                 mappingActions.add(
                     "home=${plan.homePlaceId()}" to {
-                        worldAdmin.bindNpcToHomePlace(plan.homePlaceId(), bindingId, npc.name)
+                        worldAdmin.addNpcResidentToHomePlace(plan.homePlaceId(), bindingId, npc.name)
                         Unit
                     }
                 )
@@ -4439,7 +4488,7 @@ $objectives      rewards:
             failures.add("Household-ul nu contine NPC-uri spawnate eligibile pentru binding.")
         }
         val householdCompleted = failures.isEmpty() && npcsCompleted == npcsAttempted
-        return PostSpawnBindingResult(
+        val bindingProgress = PostSpawnBindingResult(
             householdsAttempted = 1,
             householdsCompleted = if (householdCompleted) 1 else 0,
             npcsAttempted = npcsAttempted,
@@ -4448,6 +4497,7 @@ $objectives      rewards:
             persistentBindingsSaved = persistentBindingsSaved,
             failures = failures.toList()
         )
+        return ownerBinding.complete(worldAdmin, bindingProgress)
     }
 
     private fun sendPostSpawnBindingResult(sender: CommandSender, result: PostSpawnBindingResult) {
@@ -4490,20 +4540,20 @@ $objectives      rewards:
                 "&cPlace-ul din draft nu mai exista: &e" + draft.placeId() + "&c."
             ); return false
         }
-        if (role == "home" && !isHousePlace(place)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: place-ul &f" + place.id() + " &enu este marcat ca house/home."
-        )
-        else if (role == "work" && !isWorkplace(place)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: place-ul &f" + place.id() + " &enu este marcat clar ca workplace."
-        )
-        else if (role == "social" && !isSocialPlace(place)) plugin.messageUtils.send(
-            sender,
-            "&eWarning: place-ul &f" + place.id() + " &enu este marcat clar ca loc social."
-        )
-        else if (role !in setOf("home", "work", "social")) {
+        if (role !in setOf("home", "work", "social")) {
             plugin.messageUtils.send(sender, "&cRol bind invalid in draft: &e$role&c."); return false
+        }
+        val validationId = if (npc.databaseId > 0) npcBindingId(npc) else "pending:${npc.uuid}"
+        try {
+            worldAdmin.validateNpcBindingTargets(
+                place.id().takeIf { role == "home" },
+                place.id().takeIf { role == "work" },
+                place.id().takeIf { role == "social" },
+                validationId
+            )
+        } catch (exception: IllegalArgumentException) {
+            plugin.messageUtils.send(sender, "&c" + exception.message)
+            return false
         }
         val prevHome = npc.homeAnchor;
         val prevWork = npc.workAnchor;
@@ -5306,31 +5356,14 @@ $objectives      rewards:
         return binding.homePlaceId() in placeIds || binding.workPlaceId() in placeIds || binding.socialPlaceId() in placeIds
     }
 
-    private fun isHousePlace(place: WorldPlaceInfo): Boolean {
-        val t = place.placeType().id.lowercase()
-        return t in setOf("house", "home", "residence", "locuinta", "casa")
-    }
-
-    private fun isWorkplace(place: WorldPlaceInfo): Boolean {
-        val t = place.placeType().id.lowercase()
-        return !isHousePlace(place) && (t.contains("work") || t.contains("shop") || t.contains("craft") || t.contains("mine") || t.contains(
-            "farm"
-        ) || t.contains("loc_de_munca") || t.contains("atelier"))
-    }
-
-    private fun isSocialPlace(place: WorldPlaceInfo): Boolean {
-        val t = place.placeType().id.lowercase()
-        return !isHousePlace(place) && !isWorkplace(place) && (t.contains("social") || t.contains("tavern") || t.contains(
-            "church"
-        ) || t.contains("temple") || t.contains("meeting") || t.contains("piata") || t.contains("market"))
-    }
+    private fun isHousePlace(place: WorldPlaceInfo): Boolean = SpawnSemanticRules.isHousePlace(place)
 
     private fun findBestAnchorNodeForPlace(
         worldAdmin: WorldAdminService,
         place: WorldPlaceInfo,
         role: String
     ): WorldNodeInfo? {
-        return worldAdmin.getNodesForPlace(place.id()).minByOrNull { it.y() }
+        return SpawnSemanticRules.bestNodeForPlace(place, worldAdmin.getNodesForPlace(place.id()), role)
     }
 
     private fun createOwnedLocationFromPlace(

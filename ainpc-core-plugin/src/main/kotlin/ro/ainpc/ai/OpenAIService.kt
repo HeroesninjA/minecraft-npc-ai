@@ -134,19 +134,18 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 }
 
                 val prompt = try {
-                    val basePrompt = OpenAIPromptBuilder.buildPrompt(snapshot, recentHistory, relevantMemories, relationship, dbContext)
                     val mcpEnabled = plugin.config.getBoolean("features.mcp", true)
                     val orchestrationEnabled = plugin.config.getBoolean("ai.orchestration.enabled", true)
                     val mcpContext = McpDialogContextProvider.enrich(
                         client = if (mcpEnabled) plugin.mcpRuntimeClient else null,
                         mcpEnabled = mcpEnabled,
-                        orchestrationEnabled = orchestrationEnabled
+                        orchestrationEnabled = orchestrationEnabled,
+                        regionId = snapshot.regionId
                     )
-                    if (mcpContext.isNotBlank()) {
-                        "$basePrompt\n$mcpContext"
-                    } else {
-                        basePrompt
-                    }
+                    OpenAIPromptBuilder.buildPrompt(
+                        snapshot, recentHistory, relevantMemories, relationship, dbContext,
+                        mcpContext = mcpContext
+                    )
                 } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("prompt_build_error: ${OpenAITextSupport.compactExceptionMessage(e)}")
@@ -278,6 +277,9 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     val isAvailable: Boolean
         get() = !isInOfflineBackoffWindow()
+
+    val canGenerateContextualResponse: Boolean
+        get() = aiFeatureEnabled() && apiKey.isNotBlank() && isAvailable
 
     private fun isInOfflineBackoffWindow(): Boolean {
         return System.currentTimeMillis() < offlineRetryAfterMillis

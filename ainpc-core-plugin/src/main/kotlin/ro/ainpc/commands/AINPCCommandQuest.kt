@@ -1034,8 +1034,7 @@ fun handleQuestCacheClean(sender: CommandSender, args: Array<String>): Boolean {
     }
     val engine = ainpcCommandQuestPlugin.scenarioEngine
     engine.cleanupOrphanedObjectives()
-    engine.cleanupStaleTemplateProgress()
-    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aCache curatat: obiective orfane si progres pentru template-uri sterse.")
+    ainpcCommandQuestPlugin.messageUtils.send(sender, "&aCache temporar curatat. Progresul questurilor si istoricul au fost pastrate.")
     return true
 }
 

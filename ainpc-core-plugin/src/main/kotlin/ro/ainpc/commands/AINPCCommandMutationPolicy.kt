@@ -22,8 +22,12 @@ internal object AINPCCommandMutationPolicy {
             } else {
                 null
             }
-        AINPCSubcommandRoute.BUILDING ->
-            if (token(args, 1) == "auto-place") AINPCCommandMutation("ainpc building auto-place") else null
+        AINPCSubcommandRoute.BUILDING -> when (token(args, 1)) {
+            "auto-place" -> AINPCCommandMutation("ainpc building auto-place")
+            "prepare" -> AINPCCommandMutation("ainpc building prepare", requiresConfirmation = false, worldSaveReminder = false)
+            "confirm" -> AINPCCommandMutation("ainpc building confirm", worldSaveReminder = false)
+            else -> null
+        }
         else -> null
     }
 

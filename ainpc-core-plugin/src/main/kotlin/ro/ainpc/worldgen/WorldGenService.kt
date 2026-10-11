@@ -36,6 +36,15 @@ class WorldGenService(
     private val templateExecutor = BuildingTemplateExecutor(blockExecutor, templatesDir)
     private val patchApplier = VillagePatchApplier()
     private val pendingBuildOperations = ConcurrentHashMap<UUID, BuildOperation>()
+    var activityBuildAuthorization: (String, List<BlockOperation>) -> Boolean = { _, _ -> false }
+    private val activityBuildExecutor = ConfirmedBuildingExecutor(
+        blockExecutor,
+        { org.bukkit.Bukkit.isPrimaryThread() },
+        { actor, operations ->
+            authorizeActivityBuild(actor, operations)
+        },
+        { validateActivityTerrain(it) },
+    )
     var autoBuildEnabled: Boolean = true
         private set
 
@@ -111,6 +120,9 @@ class WorldGenService(
             ?: return BuildResult.failure(listOf("Region not found for place: ${place.regionId}"))
 
         val operationId = UUID.randomUUID()
+        if (ActivityBuildingGeometry.supports(template)) {
+            return BuildResult.failure(listOf("Activity building geometry is preview-only until terrain validation and confirmed execution are connected"))
+        }
         val operation = BuildOperation(operationId, placeId, templateId, region.worldName(), System.currentTimeMillis())
         pendingBuildOperations[operationId] = operation
 
@@ -163,6 +175,22 @@ class WorldGenService(
         val originY = place.minY
         val originZ = place.minZ
 
+        if (ActivityBuildingGeometry.supports(template)) {
+            if (place.maxX - place.minX != template.footprintWidth ||
+                place.maxY - place.minY != template.footprintHeight ||
+                place.maxZ - place.minZ != template.footprintDepth
+            ) return null
+            return try {
+                ActivityBuildSourceSnapshot.capture(worldAdmin, template, placeId)
+                val geometry = ActivityBuildingGeometry().generate(template)
+                val operations = geometry.toBlockOperations(region.worldName(), originX, originY, originZ)
+                if (validateActivityTerrain(operations).isNotEmpty()) return null
+                blockExecutor.executeWithPreview(operations)
+            } catch (exception: IllegalArgumentException) {
+                null
+            }
+        }
+
         return templateExecutor.previewTemplate(
             templateId,
             region.worldName(),
@@ -174,6 +202,57 @@ class WorldGenService(
 
     fun undoBuild(sessionId: UUID): UndoResult {
         return blockExecutor.undo(sessionId)
+    }
+
+    fun prepareActivityBuild(actor: String, placeId: String, templateId: String): UUID {
+        val definition = requireNotNull(BuildingTemplateRegistry.get(templateId)) { "Template not found" }
+        require(ActivityBuildingGeometry.supports(definition)) { "Unsupported activity building" }
+        val snapshot = ActivityBuildSourceSnapshot.capture(worldAdmin, definition, placeId)
+        val preview = requireNotNull(previewBuild(placeId, templateId)) { "Activity building preview refused" }
+        return activityBuildExecutor.prepare(actor, preview.operations) {
+            runCatching {
+                val current = requireNotNull(BuildingTemplateRegistry.get(templateId))
+                snapshot == ActivityBuildSourceSnapshot.capture(worldAdmin, current, placeId)
+            }.getOrDefault(false)
+        }
+    }
+
+    fun confirmActivityBuild(actor: String, token: UUID): ExecutionResult = activityBuildExecutor.confirm(actor, token)
+
+    private fun authorizeActivityBuild(actor: String, operations: List<BlockOperation>): Boolean {
+        if (!plugin.config.getBoolean("worldgen.enabled", false) ||
+            !plugin.config.getBoolean("worldgen.activity_build.enabled", false) || blockExecutor.executorId != "native"
+        ) return false
+        if (!actor.startsWith("player:")) return false
+        val playerId = runCatching { UUID.fromString(actor.removePrefix("player:")) }.getOrNull() ?: return false
+        val player = org.bukkit.Bukkit.getPlayer(playerId) ?: return false
+        if (!player.isOnline || !player.hasPermission("ainpc.admin")) return false
+        if (!ro.ainpc.commands.isActivityBuildRuntimeWritable(plugin)) return false
+        val allowedRegions = plugin.config.getStringList("worldgen.activity_build.allowed_regions").toSet()
+        if (!ActivityBuildRegionPolicy.allows(operations, allowedRegions, worldAdmin.regions)) return false
+        return activityBuildAuthorization(actor, operations)
+    }
+
+    private fun validateActivityTerrain(operations: List<BlockOperation>): List<String> {
+        if (!org.bukkit.Bukkit.isPrimaryThread()) return listOf("Terrain inspection requires the server primary thread")
+        val world = operations.firstOrNull()?.worldName?.let { org.bukkit.Bukkit.getWorld(it) }
+            ?: return listOf("Building world is not loaded")
+        return try {
+            val errors = BuildingTerrainValidator().validate(operations, world.minHeight, world.maxHeight,
+                { chunkX, chunkZ -> world.isChunkLoaded(chunkX, chunkZ) },
+                { blockX, blockY, blockZ ->
+                    val block = world.getBlockAt(blockX, blockY, blockZ)
+                    BuildingTerrainValidator.Cell(block.type.isAir, block.type.isSolid && !block.isLiquid)
+                })
+            if (errors.isNotEmpty()) return errors
+            val bounds = org.bukkit.util.BoundingBox(
+                operations.minOf { it.x }.toDouble(), operations.minOf { it.y }.toDouble(), operations.minOf { it.z }.toDouble(),
+                operations.maxOf { it.x }.toDouble() + 1, operations.maxOf { it.y }.toDouble() + 1, operations.maxOf { it.z }.toDouble() + 1,
+            )
+            if (world.getNearbyEntities(bounds).isNotEmpty()) listOf("Building volume contains entities") else emptyList()
+        } catch (exception: Exception) {
+            listOf("Terrain inspection failed: ${exception.message}")
+        }
     }
 
     fun saveSchematic(sessionId: UUID, fileName: String): Boolean {
@@ -292,6 +371,11 @@ class WorldGenServiceProvider(private val plugin: AINPCPlugin) {
 
         val templatesDir = File(plugin.dataFolder, "templates")
         service = WorldGenService(plugin, worldAdmin, executor, templatesDir)
+        val worldGuardProtection = WorldGuardActivityProtection.bukkit()
+        service!!.activityBuildAuthorization = { actor, operations ->
+            plugin.config.getString("worldgen.activity_build.protection", "deny") == "worldguard" &&
+                worldGuardProtection.allows(actor, operations)
+        }
         service!!.registerDefaultTemplates()
 
         return service!!

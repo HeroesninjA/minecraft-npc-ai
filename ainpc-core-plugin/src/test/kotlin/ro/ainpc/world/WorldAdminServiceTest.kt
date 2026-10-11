@@ -16,6 +16,194 @@ import java.util.function.Consumer
 import java.util.logging.Logger
 
 class WorldAdminServiceTest {
+    @Test
+    fun socialBindingHonorsCapacityAndAllowsExistingAssociation() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val place = service.getPlaceModels("demo_sat").single { it.id == "demo_sat:piata" }
+        place.putMetadata("max_social_associations", "1")
+        service.bindNpcToSocialPlace(place.id, "npc_1", "First")
+        val before = service.getPlace(place.id)!!.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToSocialPlace(place.id, "npc_2", "Second")
+        }
+        assertEquals(before, service.getPlace(place.id)!!.metadata())
+        place.putMetadata("max_social_associations", "0")
+        service.bindNpcToSocialPlace(place.id, " NPC_1 ", "First")
+        assertEquals("npc_1", service.getPlace(place.id)!!.metadata()["social_npc_ids"])
+    }
+
+    @Test
+    fun groupedBindingRejectsFullSocialPlaceBeforeChangingHomeOrWork() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.getPlaceModels("demo_sat").single { it.id == "demo_sat:piata" }
+            .putMetadata("max_social_associations", "0")
+        val before = service.getPlaces("demo_sat").associate { it.id() to it.metadata() }
+
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToPlaces("demo_sat:house_1", "demo_sat:fierarie", "demo_sat:piata", "npc_1", "First")
+        }
+
+        assertTrue(exception.message.orEmpty().contains("max_social_associations"))
+        assertEquals(before, service.getPlaces("demo_sat").associate { it.id() to it.metadata() })
+    }
+
+    @Test
+    fun groupedBindingLeavesHomeUnchangedWhenWorkplaceIsFull() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_1", "First")
+        val before = service.getPlaces("demo_sat").associate { it.id() to it.metadata() }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToPlaces("demo_sat:house_2", "demo_sat:fierarie", "demo_sat:piata", "npc_2", "Second")
+        }
+
+        assertEquals(before, service.getPlaces("demo_sat").associate { it.id() to it.metadata() })
+    }
+
+    @Test
+    fun groupedBindingAssignsAllThreeCompatiblePlaces() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+
+        service.bindNpcToPlaces("demo_sat:house_1", "demo_sat:fierarie", "demo_sat:piata", "npc_1", "First")
+
+        assertEquals("npc_1", service.getPlace("demo_sat:house_1")!!.metadata()["resident_npc_ids"])
+        assertEquals("npc_1", service.getPlace("demo_sat:fierarie")!!.metadata()["worker_npc_ids"])
+        assertEquals("npc_1", service.getPlace("demo_sat:piata")!!.metadata()["social_npc_ids"])
+    }
+
+    @Test
+    fun bindingPreflightRejectsFullWorkplaceWithoutChangingFreeHome() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_1", "First")
+        val before = service.getPlaces("demo_sat").associate { it.id() to it.metadata() }
+
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            service.validateNpcBindingTargets("demo_sat:house_2", "demo_sat:fierarie", "demo_sat:piata", "npc_2")
+        }
+
+        assertTrue(exception.message.orEmpty().contains("max_workers"))
+        assertEquals(before, service.getPlaces("demo_sat").associate { it.id() to it.metadata() })
+        service.validateNpcBindingTargets("demo_sat:house_2", null, "demo_sat:piata", "npc_2")
+        assertEquals(before, service.getPlaces("demo_sat").associate { it.id() to it.metadata() })
+    }
+
+    @Test
+    fun homeBindingHonorsCapacityAndAllowsExistingResident() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val houseId = "demo_sat:house_3"
+        service.bindNpcToHomePlace(houseId, "npc_1", "First")
+        val before = service.getPlace(houseId)!!.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.addNpcResidentToHomePlace(houseId, "npc_2", "Second")
+        }
+        assertEquals(before, service.getPlace(houseId)!!.metadata())
+
+        service.addNpcResidentToHomePlace(houseId, " NPC_1 ", "First")
+        assertEquals("npc_1", service.getPlace(houseId)!!.metadata()["resident_npc_ids"])
+    }
+
+    @Test
+    fun homeBindingRejectsWorkplaceWithoutChangingMetadata() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val forge = service.getPlace("demo_sat:fierarie")!!
+        val before = forge.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToHomePlace(forge.id(), "npc_1", "First")
+        }
+
+        assertEquals(before, service.getPlace(forge.id())!!.metadata())
+    }
+
+    @Test
+    fun socialBindingRejectsPrivateHouseAndRefreshesPlaceCache() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val house = service.getPlace("demo_sat:house_1")!!
+        val before = house.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToSocialPlace(house.id(), "npc_1", "First")
+        }
+        assertEquals(before, service.getPlace(house.id())!!.metadata())
+
+        service.places
+        service.bindNpcToSocialPlace("demo_sat:piata", "npc_1", "First")
+        assertEquals("npc_1", service.places.first { it.id() == "demo_sat:piata" }.metadata()["social_npc_ids"])
+    }
+
+    @Test
+    fun workBindingRejectsPlacesWithoutWorkplaceSemantics() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val house = service.getPlace("demo_sat:house_1")!!
+        val before = house.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToWorkPlace(house.id(), "npc_1", "First")
+        }
+
+        assertEquals(before, service.getPlace(house.id())!!.metadata())
+    }
+
+    @Test
+    fun workBindingRejectsOverflowWithoutChangingMetadataAndRefreshesCache() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.places
+        service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_1", "First")
+        val before = service.getPlace("demo_sat:fierarie")!!.metadata()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_2", "Second")
+        }
+
+        assertEquals(before, service.getPlace("demo_sat:fierarie")!!.metadata())
+        assertEquals("npc_1", service.places.first { it.id() == "demo_sat:fierarie" }.metadata()["worker_npc_ids"])
+        service.bindNpcToWorkPlace("demo_sat:fierarie", " NPC_1 ", "First")
+        assertEquals("npc_1", service.getPlace("demo_sat:fierarie")!!.metadata()["worker_npc_ids"])
+    }
+
+    @Test
+    fun workBindingHonorsCapacityAfterMappingReload() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.getPlaceModels("demo_sat").first { it.id == "demo_sat:fierarie" }.putMetadata("max_workers", "2")
+        service.bindNpcToWorkPlace("demo_sat:fierarie", "npc_1", "First")
+        val config = YamlConfiguration()
+        service.saveToConfig(config)
+        val reloaded = WorldAdminService({ }, Logger.getLogger("WorkCapacityReloadTest"))
+        reloaded.reloadFromConfig(config, profile())
+
+        reloaded.bindNpcToWorkPlace("demo_sat:fierarie", "npc_2", "Second")
+        assertThrows(IllegalArgumentException::class.java) {
+            reloaded.bindNpcToWorkPlace("demo_sat:fierarie", "npc_3", "Third")
+        }
+        assertEquals("npc_1,npc_2", reloaded.getPlace("demo_sat:fierarie")!!.metadata()["worker_npc_ids"])
+    }
+
+    @Test
+    fun workBindingDeduplicatesExistingWorkersAndPreservesOverCapacityAssignments() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val place = service.getPlaceModels("demo_sat").first { it.id == "demo_sat:fierarie" }
+        place.putMetadata("worker_npc_ids", "npc_1; NPC_1, ,npc_2")
+        place.putMetadata("max_workers", "0")
+
+        service.bindNpcToWorkPlace(place.id, "npc_1", "First")
+        assertEquals("npc_1,npc_2", service.getPlace(place.id)!!.metadata()["worker_npc_ids"])
+        assertThrows(IllegalArgumentException::class.java) { service.bindNpcToWorkPlace(place.id, "npc_3", "Third") }
+    }
+
+    @Test
+    fun workBindingRejectsInvalidOrDisabledCapacityBeforeAnyMutation() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val place = service.getPlaceModels("demo_sat").first { it.id == "demo_sat:fierarie" }
+        for (capacity in listOf("0", "-1", "invalid", "1.5", "2147483648")) {
+            place.putMetadata("max_workers", capacity)
+            val before = service.getPlace(place.id)!!.metadata()
+            assertThrows(IllegalArgumentException::class.java) { service.bindNpcToWorkPlace(place.id, "npc_1", "First") }
+            assertEquals(before, service.getPlace(place.id)!!.metadata())
+        }
+    }
+
     private lateinit var service: WorldAdminService
 
     @BeforeEach
@@ -528,6 +716,120 @@ class WorldAdminServiceTest {
         assertEquals("npc_42", reloadedHome.metadata()["resident_npc_ids"])
         assertEquals("npc_42", reloadedWork!!.metadata()["worker_npc_ids"])
         assertEquals("npc_42", reloadedSocial!!.metadata()["social_npc_ids"])
+    }
+
+    @Test
+    fun bindingAnotherResidentPreservesOwnerAndOwnerMetadata() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+
+        val home = service.bindNpcToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+
+        assertEquals("npc_42", home.ownerNpcId())
+        assertEquals("Gigel", home.metadata()["owner_name"])
+        assertEquals("assigned", home.metadata()["owner_status"])
+        assertEquals("npc_42,npc_43", home.metadata()["resident_npc_ids"])
+        assertEquals("Gigel,Maria", home.metadata()["resident_names"])
+    }
+
+    @Test
+    fun residentBindingDoesNotReplaceOwnerAfterConfigReload() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+        val configuration = YamlConfiguration()
+        service.saveToConfig(configuration)
+        val reloaded = WorldAdminService({ }, Logger.getLogger("OwnerReloadTest"))
+        reloaded.reloadFromConfig(configuration, profile())
+
+        reloaded.bindNpcToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+        reloaded.bindNpcToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+
+        val home = reloaded.getPlace("demo_sat:house_1")!!
+        assertEquals("npc_42", home.ownerNpcId())
+        assertEquals("Gigel", home.metadata()["owner_name"])
+        assertEquals("npc_42,npc_43", home.metadata()["resident_npc_ids"])
+    }
+
+    @Test
+    fun homeBindingRefreshesPreviouslyCachedPlaces() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        assertEquals("", service.places.single { it.id() == "demo_sat:house_1" }.ownerNpcId())
+
+        service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+
+        val cachedHome = service.places.single { it.id() == "demo_sat:house_1" }
+        assertEquals("npc_42", cachedHome.ownerNpcId())
+        assertEquals("npc_42", cachedHome.metadata()["resident_npc_ids"])
+    }
+
+    @Test
+    fun residentOnlyBindingDoesNotChooseAnOwner() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val initialHome = service.getPlace("demo_sat:house_1")!!
+
+        service.addNpcResidentToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+        val home = service.addNpcResidentToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+
+        assertEquals("", home.ownerNpcId())
+        assertEquals(initialHome.metadata()["owner_name"], home.metadata()["owner_name"])
+        assertEquals(initialHome.metadata()["owner_status"], home.metadata()["owner_status"])
+        assertEquals("npc_42,npc_43", home.metadata()["resident_npc_ids"])
+        assertEquals("assigned", home.metadata()["residents_status"])
+    }
+
+    @Test
+    fun explicitOwnerAssignmentSelectsAResidentInsteadOfBindingOrder() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.addNpcResidentToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+        service.addNpcResidentToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+        service.places
+
+        service.assignHomeOwner("demo_sat:house_1", "npc_43", "Maria")
+        service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+        service.assignHomeOwner("demo_sat:house_1", "npc_43", "Maria")
+
+        val home = service.places.single { it.id() == "demo_sat:house_1" }
+        assertEquals("npc_43", home.ownerNpcId())
+        assertEquals("Maria", home.metadata()["owner_name"])
+        assertEquals("npc_42,npc_43", home.metadata()["resident_npc_ids"])
+        assertEquals("Gigel,Maria", home.metadata()["resident_names"])
+    }
+
+    @Test
+    fun assigningADifferentOwnerFailsWithoutMutatingMapping() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        service.bindNpcToHomePlace("demo_sat:house_1", "npc_42", "Gigel")
+        service.addNpcResidentToHomePlace("demo_sat:house_1", "npc_43", "Maria")
+        val configuration = YamlConfiguration()
+        service.saveToConfig(configuration)
+        val before = service.getPlace("demo_sat:house_1")!!
+
+        val failure = assertThrows(IllegalArgumentException::class.java) {
+            service.assignHomeOwner("demo_sat:house_1", "npc_43", "Maria")
+        }
+
+        val after = service.getPlace("demo_sat:house_1")!!
+        assertEquals(before.ownerNpcId(), after.ownerNpcId())
+        assertEquals(before.metadata(), after.metadata())
+        assertFalse(service.hasUnsavedChanges())
+        assertTrue(failure.message!!.contains("npc_42"))
+        assertTrue(failure.message!!.contains("npc_43"))
+    }
+
+    @Test
+    fun ownerMustHaveANonBlankIdAndAlreadyBeAResident() {
+        service.createDemoSettlement("demo_sat", "world", 0, 64, 0, -64, 320)
+        val before = service.getPlace("demo_sat:house_1")!!
+
+        for (ownerId in listOf(null, "", "  ", "npc_42")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                service.assignHomeOwner("demo_sat:house_1", ownerId, "Gigel")
+            }
+        }
+
+        val after = service.getPlace("demo_sat:house_1")!!
+        assertEquals(before.ownerNpcId(), after.ownerNpcId())
+        assertEquals(before.metadata(), after.metadata())
     }
 
     @Test

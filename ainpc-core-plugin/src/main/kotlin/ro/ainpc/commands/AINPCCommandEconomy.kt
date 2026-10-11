@@ -96,7 +96,10 @@ fun handleEconomySet(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandEconomyPlugin.messageUtils.send(sender, "&cSuma invalida: &f${args[3]}")
         return true
     }
-    ainpcCommandEconomyPlugin.economyService.setBalance(target, amount)
+    if (!ainpcCommandEconomyPlugin.economyService.setBalance(target, amount)) {
+        ainpcCommandEconomyPlugin.messageUtils.send(sender, "&cSoldul nu a putut fi salvat. Incearca din nou.")
+        return true
+    }
     ainpcCommandEconomyPlugin.messageUtils.send(sender, "&aBalanța lui &f${target.name} &aeste acum &e$amount &amonede.")
     return true
 }

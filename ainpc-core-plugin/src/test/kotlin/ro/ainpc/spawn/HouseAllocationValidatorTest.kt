@@ -71,6 +71,28 @@ class HouseAllocationValidatorTest {
         assertTrue(result.errors().any { error -> error.contains("workPlaceId sau workNodeId") })
     }
 
+    @Test
+    fun rejectsPrivateHouseAsSocialDestination() {
+        val allocation = HouseAllocation.builder("sat_01:casa_popescu")
+            .familyId("family_popescu_001")
+            .primaryOwnerNpcKey("npc_ion")
+            .maxResidents(1)
+            .addResident(
+                HouseAllocation.ResidentPlan.builder("npc_ion", "Ion")
+                    .occupation("locuitor")
+                    .spawnNodeId("spawn_ion")
+                    .bedNodeId("bed_ion")
+                    .socialPlaceId("sat_01:casa_popescu")
+                    .build()
+            )
+            .build()
+
+        val result = validator.validate(allocation, worldAdmin())
+
+        assertFalse(result.valid())
+        assertTrue(result.errors().any { error -> error.contains("socialPlaceId") && error.contains("compatibil") })
+    }
+
     private fun validAllocation(): HouseAllocation {
         return HouseAllocation.builder("sat_01:casa_popescu")
             .familyId("family_popescu_001")

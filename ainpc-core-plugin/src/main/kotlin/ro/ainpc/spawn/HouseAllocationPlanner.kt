@@ -2,6 +2,8 @@ package ro.ainpc.spawn
 
 import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.world.PlaceType
+import ro.ainpc.world.WorkplaceOccupancy
+import ro.ainpc.world.SocialAssociationOccupancy
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
@@ -13,7 +15,16 @@ import kotlin.math.abs
  */
 class HouseAllocationPlanner {
 
-    fun plan(worldAdmin: WorldAdminApi?, houseSelector: String?, requestedResidents: Int): PlanningResult {
+    fun plan(worldAdmin: WorldAdminApi?, houseSelector: String?, requestedResidents: Int): PlanningResult =
+        plan(worldAdmin, houseSelector, requestedResidents, emptyMap())
+
+    private fun plan(
+        worldAdmin: WorldAdminApi?,
+        houseSelector: String?,
+        requestedResidents: Int,
+        reservedWorkplaces: Map<String, Int>,
+        reservedSocialPlaces: Map<String, Int> = emptyMap(),
+    ): PlanningResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
@@ -23,6 +34,10 @@ class HouseAllocationPlanner {
         }
 
         val house = resolveHouse(worldAdmin, houseSelector, errors) ?: return PlanningResult.failed(errors, warnings)
+        if (hasMappedResidents(house)) {
+            errors.add("Casa ${house.id()} are deja rezidenti in mapping; inspecteaza household-ul existent inainte de replanificare.")
+            return PlanningResult.failed(errors, warnings)
+        }
 
         val houseNodes = worldAdmin.getNodesForPlace(house.id()).sortedBy { it.id() }
         val spawnNodes = nodesMatching(houseNodes, "npc_spawn", "spawn")
@@ -68,20 +83,86 @@ class HouseAllocationPlanner {
             .sortedWith(compareBy<WorldPlaceInfo> { SpawnSemanticRules.socialPriority(it) }.thenBy { it.id() })
             .toList()
 
+        val workSlots = mutableListOf<WorldPlaceInfo>()
+        for (workplace in workplaces) {
+            val configuredCapacity = workplace.metadata()["max_workers"]
+            val capacity = if (configuredCapacity == null) 1 else configuredCapacity.trim().toIntOrNull()
+            if (capacity == null || capacity < 0) {
+                errors.add("Workplace-ul ${workplace.id()} are max_workers invalid; este necesar un intreg nenegativ.")
+                continue
+            }
+            val existingWorkerCount = WorkplaceOccupancy.workerIds(workplace.metadata()).size
+            val regionalReservation = reservedWorkplaces[workplace.id()] ?: 0
+            if (existingWorkerCount > 0 || regionalReservation > 0) {
+                warnings.add(
+                    "Workplace-ul ${workplace.id()} are $existingWorkerCount angajati existenti si " +
+                        "$regionalReservation posturi rezervate in plan; max_workers=$capacity."
+                )
+            }
+            val available = WorkplaceOccupancy.availableSlots(capacity, workplace.metadata(), regionalReservation)
+            repeat(minOf(available, residentCount - workSlots.size)) { workSlots.add(workplace) }
+        }
+        if (errors.isNotEmpty()) {
+            return PlanningResult.failed(errors, warnings)
+        }
+        val socialCapacities = mutableMapOf<String, Int?>()
+        for (place in socialPlaces) {
+            try {
+                socialCapacities[place.id()] = SocialAssociationOccupancy.capacity(place.metadata())
+            } catch (exception: IllegalArgumentException) {
+                errors.add("Locul social ${place.id()} are ${exception.message}")
+            }
+        }
+        if (errors.isNotEmpty()) return PlanningResult.failed(errors, warnings)
+        if (workSlots.size < residentCount && workplaces.isNotEmpty()) {
+            warnings.add("Capacitate workplace insuficienta in regiunea ${house.regionId()}; ${residentCount - workSlots.size} rezidenti primesc ocupatia locuitor.")
+        }
+
         val builder = HouseAllocation.builder(house.id()).maxResidents(maxResidents)
         if (residentCount > 1) {
             builder.familyId("family_${SpawnSemanticRules.normalizeId(SpawnSemanticRules.localId(house.id()))}")
         }
 
+        val workAssignments = workplaces.associate { place ->
+            place.id() to WorkplaceOccupancy.workerIds(place.metadata()).size + (reservedWorkplaces[place.id()] ?: 0)
+        }.toMutableMap()
+        val workNodesByPlace = workplaces.associate { place ->
+            val nodes = worldAdmin.getNodesForPlace(place.id()).toList()
+            val preferred = SpawnSemanticRules.bestNodeForPlace(place, nodes, "work")
+            val workNodes = SpawnSemanticRules.nodesMatching(nodes, "workstation", "work")
+            place.id() to if (preferred == null) workNodes else listOf(preferred) + workNodes.filter { it.id() != preferred.id() }
+        }
+        val socialAssignments = socialPlaces.associate { place ->
+            place.id() to SocialAssociationOccupancy.associatedIds(place.metadata()).size + (reservedSocialPlaces[place.id()] ?: 0)
+        }.toMutableMap()
+        val socialNodesByPlace = socialPlaces.associate { place ->
+            val nodes = worldAdmin.getNodesForPlace(place.id()).toList()
+            val preferred = SpawnSemanticRules.bestNodeForPlace(place, nodes, "social")
+            val socialNodes = SpawnSemanticRules.nodesMatching(nodes, "social", "meeting_point")
+            place.id() to if (preferred == null) socialNodes else listOf(preferred) + socialNodes.filter { it.id() != preferred.id() }
+        }
         var firstNpcKey = ""
+        var residentsWithoutSocial = 0
         for (index in 0 until residentCount) {
             val npcKey = "${SpawnSemanticRules.normalizeId(house.id())}_resident_${index + 1}"
             val npcName = buildNpcName(house, index)
             val relationRole = relationRole(index, residentCount)
-            val workPlace = workplaces.getOrNull(index)
-            val workNode = if (workPlace != null) SpawnSemanticRules.bestNodeForPlace(workPlace, worldAdmin.getNodesForPlace(workPlace.id()), "work") else null
-            val socialPlace = if (socialPlaces.isEmpty()) null else socialPlaces[index % socialPlaces.size]
-            val socialNode = if (socialPlace != null) SpawnSemanticRules.bestNodeForPlace(socialPlace, worldAdmin.getNodesForPlace(socialPlace.id()), "social") else null
+            val workPlace = workSlots.getOrNull(index)
+            val workAssignmentIndex = workPlace?.let { workAssignments.getValue(it.id()) } ?: 0
+            if (workPlace != null) workAssignments[workPlace.id()] = workAssignmentIndex + 1
+            val workNodes = workPlace?.let { workNodesByPlace.getValue(it.id()) }.orEmpty()
+            val workNode = if (workNodes.isNotEmpty()) workNodes[workAssignmentIndex % workNodes.size] else null
+            val socialPlace = socialPlaces.asSequence()
+                .filter { place -> SocialAssociationOccupancy.hasAvailableSlot(socialCapacities[place.id()], socialAssignments.getValue(place.id())) }
+                .minByOrNull { socialAssignments.getValue(it.id()) }
+            val socialAssignmentIndex = socialPlace?.let { socialAssignments.getValue(it.id()) } ?: 0
+            if (socialPlace != null) {
+                socialAssignments[socialPlace.id()] = socialAssignmentIndex + 1
+            } else if (socialPlaces.isNotEmpty()) {
+                residentsWithoutSocial++
+            }
+            val socialNodes = socialPlace?.let { socialNodesByPlace.getValue(it.id()) }.orEmpty()
+            val socialNode = if (socialNodes.isNotEmpty()) socialNodes[socialAssignmentIndex % socialNodes.size] else null
 
             val residentBuilder = HouseAllocation.ResidentPlan.builder(npcKey, npcName)
                 .relationRole(relationRole)
@@ -123,6 +204,8 @@ class HouseAllocationPlanner {
         }
         if (socialPlaces.isEmpty()) {
             warnings.add("Nu exista loc social in regiunea ${house.regionId()}; planul nu seteaza socialPlaceId.")
+        } else if (residentsWithoutSocial > 0) {
+            warnings.add("Capacitate sociala insuficienta in regiunea ${house.regionId()}; $residentsWithoutSocial rezidenti raman fara socialPlaceId.")
         }
 
         return PlanningResult.success(allocation, warnings)
@@ -150,19 +233,37 @@ class HouseAllocationPlanner {
             return SettlementPlanningResult.failed(region.id(), allocations, errors, warnings)
         }
 
-        val limit = if (maxHouses > 0) minOf(maxHouses, houses.size) else houses.size
-        for (house in houses.take(limit)) {
-            val planning = plan(worldAdmin, house.id(), 0)
+        val availableHouses = houses.filter { house ->
+            if (hasMappedResidents(house)) {
+                warnings.add("${house.id()}: casa are deja rezidenti in mapping; este omisa din planul nou.")
+                false
+            } else true
+        }
+        if (availableHouses.isEmpty()) {
+            errors.add("Regiunea ${region.id()} nu are case fara rezidenti in mapping pentru un plan nou.")
+            return SettlementPlanningResult.failed(region.id(), allocations, errors, warnings)
+        }
+        val limit = if (maxHouses > 0) minOf(maxHouses, availableHouses.size) else availableHouses.size
+        val reservedWorkplaces = mutableMapOf<String, Int>()
+        val reservedSocialPlaces = mutableMapOf<String, Int>()
+        for (house in availableHouses.take(limit)) {
+            val planning = plan(worldAdmin, house.id(), 0, reservedWorkplaces, reservedSocialPlaces)
             if (planning.success()) {
                 val allocation = planning.allocation() ?: continue
                 allocations.add(allocation)
+                allocation.residentPlans().map { it.workPlaceId() }.filter { it.isNotBlank() }.forEach { workplaceId ->
+                    reservedWorkplaces[workplaceId] = (reservedWorkplaces[workplaceId] ?: 0) + 1
+                }
+                allocation.residentPlans().map { it.socialPlaceId() }.filter { it.isNotBlank() }.forEach { socialPlaceId ->
+                    reservedSocialPlaces[socialPlaceId] = (reservedSocialPlaces[socialPlaceId] ?: 0) + 1
+                }
             }
             planning.warnings().forEach { warning -> warnings.add("${house.id()}: $warning") }
             planning.errors().forEach { error -> errors.add("${house.id()}: $error") }
         }
 
-        if (maxHouses > 0 && houses.size > maxHouses) {
-            warnings.add("Regiunea ${region.id()} are ${houses.size} case; au fost planificate primele $maxHouses.")
+        if (maxHouses > 0 && availableHouses.size > maxHouses) {
+            warnings.add("Regiunea ${region.id()} are ${availableHouses.size} case disponibile; au fost planificate primele $maxHouses.")
         }
         if (allocations.isEmpty()) {
             errors.add("Nu a fost generat niciun HouseAllocation valid pentru regiunea ${region.id()}.")
@@ -174,6 +275,9 @@ class HouseAllocationPlanner {
             SettlementPlanningResult.failed(region.id(), allocations, errors, warnings)
         }
     }
+
+    private fun hasMappedResidents(house: WorldPlaceInfo): Boolean =
+        house.metadata()["resident_npc_ids"].orEmpty().split(Regex("[,;]")).any { it.isNotBlank() }
 
     private fun resolveHouse(worldAdmin: WorldAdminApi, houseSelector: String?, errors: MutableList<String>): WorldPlaceInfo? {
         if (houseSelector.isNullOrBlank()) {

@@ -1,7 +1,7 @@
 # MCP runtime bridge
 
 Status: contract canonic al implementarii curente; smoke-ul producer-reader si hardening-ul write tools raman deschise.
-Actualizat: 2026-07-18.
+Actualizat: 2026-10-11.
 
 Bridge-ul are un canal read-only prin snapshot si un canal separat, optional, prin fisiere de comanda.
 
@@ -24,8 +24,8 @@ Bridge-ul are un canal read-only prin snapshot si un canal separat, optional, pr
 - modelul Java oglindeste campurile v3 pastrate de producer;
 - filtrul mascheaza valori sensibile numai in anumite campuri de sample;
 - `McpSnapshotService` auditeaza durata, disponibilitatea si marimea payload-ului;
-- transformarea prin `McpSnapshotService` reconstruieste rezultatul si poate pierde distinctia `STALE`, raportand-o ca `CACHED`;
-- health indicator-ul citeste direct `SnapshotReader` si vede starea stale originala.
+- transformarea prin `McpSnapshotService` pastreaza distinctia `STALE` dupa redactare; dialogul ignora snapshoturile invechite;
+- health indicator-ul citeste direct `SnapshotReader` si vede aceeasi stare stale.
 
 ## Canalul de comenzi
 

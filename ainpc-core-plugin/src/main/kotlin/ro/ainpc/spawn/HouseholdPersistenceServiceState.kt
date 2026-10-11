@@ -800,6 +800,13 @@ class HouseholdPersistenceServiceState(
         source: String?,
         now: Long
     ) {
+        val existingHomePlaceId = getHousehold(householdId).orElse(null)?.homePlaceId()
+        if (!existingHomePlaceId.isNullOrBlank() && existingHomePlaceId != allocation.placeId()) {
+            throw SQLException(
+                "Household $householdId apartine deja casei $existingHomePlaceId; " +
+                    "refuz salvarea pentru home_place_id='${allocation.placeId()}'."
+            )
+        }
         removeConflictingHousehold(allocation.placeId(), householdId)
         val sql = """
             INSERT INTO households (

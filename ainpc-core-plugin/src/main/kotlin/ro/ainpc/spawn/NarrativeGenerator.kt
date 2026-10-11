@@ -6,6 +6,9 @@ import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
+import ro.ainpc.world.WorkplaceOccupancy
+import ro.ainpc.world.mappedNpcIds
+import ro.ainpc.world.SocialAssociationOccupancy
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
@@ -53,21 +56,56 @@ class NarrativeGenerator {
             errors.add("Regiunea ${region.id()} nu are case.")
             return PopulationPlanResult.failed(errors)
         }
+        val availableHouses = houses.filter { house ->
+            if (mappedNpcIds(house.metadata(), "resident_npc_ids").isNotEmpty()) {
+                warnings.add("${house.id()}: casa are deja rezidenti in mapping; este omisa din planul narativ.")
+                false
+            } else true
+        }
+        if (availableHouses.isEmpty()) {
+            errors.add("Regiunea ${region.id()} nu are case fara rezidenti in mapping pentru un plan narativ nou.")
+            return PopulationPlanResult.failed(errors)
+        }
 
         val workplaces = findWorkplaces(worldAdmin, region)
         val socialPlaces = findSocialPlaces(worldAdmin, region)
+        val remainingWorkSlots = mutableMapOf<String, Int>()
+        for (workplace in workplaces) {
+            val configuredCapacity = workplace.metadata()["max_workers"]
+            val capacity = if (configuredCapacity == null) 1 else configuredCapacity.trim().toIntOrNull()
+            if (capacity == null || capacity < 0) {
+                errors.add("Workplace-ul ${workplace.id()} are max_workers invalid; este necesar un intreg nenegativ.")
+                continue
+            }
+            remainingWorkSlots[workplace.id()] = WorkplaceOccupancy.availableSlots(capacity, workplace.metadata())
+        }
+        if (errors.isNotEmpty()) return PopulationPlanResult.failed(errors)
+        val socialCapacities = mutableMapOf<String, Int?>()
+        for (place in socialPlaces) {
+            try {
+                socialCapacities[place.id()] = SocialAssociationOccupancy.capacity(place.metadata())
+            } catch (exception: IllegalArgumentException) {
+                errors.add("Locul social ${place.id()} are ${exception.message}")
+            }
+        }
+        if (errors.isNotEmpty()) return PopulationPlanResult.failed(errors)
+        val socialAssignments = socialPlaces.associate { place ->
+            place.id() to SocialAssociationOccupancy.associatedIds(place.metadata()).size
+        }.toMutableMap()
         val effectiveSeed = seed ?: "${region.id()}:narrative:01"
         val randomSeed = abs(effectiveSeed.hashCode())
         var popIndex = 0
 
-        var remainingPopulation = targetPopulation ?: calculateTargetPopulation(houses, workplaces)
-        if (remainingPopulation <= 0) remainingPopulation = minOf(10, maxOf(2, houses.size * 2))
+        var remainingPopulation = targetPopulation ?: calculateTargetPopulation(availableHouses, workplaces)
+        if (remainingPopulation <= 0) remainingPopulation = minOf(10, maxOf(2, availableHouses.size * 2))
 
         val households = mutableListOf<HouseholdPlan>()
         val assignedNpcs = mutableSetOf<String>()
         val assignedWorkplaces = mutableSetOf<String>()
+        var residentsWithoutWork = 0
+        var residentsWithoutSocial = 0
 
-        for (house in houses) {
+        for (house in availableHouses) {
             if (remainingPopulation <= 0) break
 
             val houseNodes = worldAdmin.getNodesForPlace(house.id()).sortedBy { it.id() }
@@ -75,7 +113,7 @@ class NarrativeGenerator {
             val bedNodes = nodesMatching(houseNodes, "bed", "home")
             if (spawnNodes.isEmpty() || bedNodes.isEmpty()) continue
 
-            val capacity = resolveCapacity(house, spawnNodes.size, bedNodes.size)
+            val capacity = minOf(resolveCapacity(house, spawnNodes.size, bedNodes.size), spawnNodes.size, bedNodes.size)
             val residentCount = minOf(remainingPopulation, capacity)
             if (residentCount <= 0) continue
 
@@ -93,9 +131,19 @@ class NarrativeGenerator {
                 val familyName = selectFamilyName(house, index, randomSeed + popIndex)
                 val displayName = "$firstName $familyName"
                 val relationRole = relationRoleForFamily(index, residentCount, familyType)
-                val workPlace = findWorkplaceForIndex(workplaces, popIndex, assignedWorkplaces, randomSeed)
+                val workPlace = findWorkplaceForIndex(workplaces, remainingWorkSlots, popIndex, assignedWorkplaces, randomSeed)
+                if (workPlace != null) {
+                    remainingWorkSlots[workPlace.id()] = remainingWorkSlots.getValue(workPlace.id()) - 1
+                } else if (workplaces.isNotEmpty()) {
+                    residentsWithoutWork++
+                }
                 val workNode = workPlace?.let { SpawnSemanticRules.bestNodeForPlace(it, worldAdmin.getNodesForPlace(it.id()), "work") }
-                val socialPlace = selectSocialPlace(socialPlaces, popIndex, randomSeed)
+                val socialPlace = selectSocialPlace(socialPlaces, socialAssignments, socialCapacities, popIndex, randomSeed)
+                if (socialPlace != null) {
+                    socialAssignments[socialPlace.id()] = socialAssignments.getValue(socialPlace.id()) + 1
+                } else if (socialPlaces.isNotEmpty()) {
+                    residentsWithoutSocial++
+                }
                 val socialNode = socialPlace?.let { SpawnSemanticRules.bestNodeForPlace(it, worldAdmin.getNodesForPlace(it.id()), "social") }
                 val profession = if (workPlace != null) professionForWorkplace(workPlace) else ""
                 val socialRole = socialRoleForProfession(profession, relationRole)
@@ -114,8 +162,8 @@ class NarrativeGenerator {
                         age = age,
                         gender = gender,
                         homePlaceId = house.id(),
-                        bedNodeId = bedNodes[index % bedNodes.size].id(),
-                        spawnNodeId = spawnNodes[index % spawnNodes.size].id(),
+                        bedNodeId = bedNodes[index].id(),
+                        spawnNodeId = spawnNodes[index].id(),
                         workPlaceId = workPlace?.id() ?: "",
                         workNodeId = workNode?.id() ?: "",
                         socialPlaceId = socialPlace?.id() ?: "",
@@ -147,13 +195,25 @@ class NarrativeGenerator {
             remainingPopulation -= residentCount
         }
 
+        if (households.isEmpty()) {
+            errors.add("Regiunea ${region.id()} nu are case cu noduri spawn si bed/home disponibile pentru planul narativ.")
+            return PopulationPlanResult.failed(errors)
+        }
+        if (remainingPopulation > 0) {
+            warnings.add("Capacitatea caselor disponibile este insuficienta; rezidenti neplanificati: $remainingPopulation.")
+        }
+
         val unassignedWorkplaces = workplaces.map { it.id() } - assignedWorkplaces
 
         if (socialPlaces.isEmpty()) {
             warnings.add("Nu exista locuri sociale in regiunea ${region.id()}.")
+        } else if (residentsWithoutSocial > 0) {
+            warnings.add("Capacitate sociala insuficienta in regiunea ${region.id()}; $residentsWithoutSocial rezidenti raman fara socialPlaceId.")
         }
         if (workplaces.isEmpty()) {
             warnings.add("Nu exista locuri de munca in regiunea ${region.id()}.")
+        } else if (residentsWithoutWork > 0) {
+            warnings.add("Capacitate workplace insuficienta in regiunea ${region.id()}; $residentsWithoutWork rezidenti raman fara loc de munca.")
         }
 
         val taggedThemeId = resolveTaggedPopulationTheme(region.tags())
@@ -233,17 +293,24 @@ class NarrativeGenerator {
     }
 
     private fun findWorkplaceForIndex(
-        workplaces: List<WorldPlaceInfo>, index: Int, assigned: MutableSet<String>, seed: Int
+        workplaces: List<WorldPlaceInfo>, remainingSlots: Map<String, Int>, index: Int,
+        assigned: Set<String>, seed: Int
     ): WorldPlaceInfo? {
-        val unassigned = workplaces.filter { it.id() !in assigned }
-        if (unassigned.isNotEmpty()) return unassigned.first()
-        if (workplaces.isNotEmpty()) return workplaces[abs(index + seed) % workplaces.size]
-        return null
+        val available = workplaces.filter { remainingSlots.getValue(it.id()) > 0 }
+        available.firstOrNull { it.id() !in assigned }?.let { return it }
+        if (available.isEmpty()) return null
+        return available[Math.floorMod(index.toLong() + seed, available.size.toLong()).toInt()]
     }
 
-    private fun selectSocialPlace(socialPlaces: List<WorldPlaceInfo>, index: Int, seed: Int): WorldPlaceInfo? {
+    private fun selectSocialPlace(
+        socialPlaces: List<WorldPlaceInfo>, assignments: Map<String, Int>, capacities: Map<String, Int?>, index: Int, seed: Int
+    ): WorldPlaceInfo? {
         if (socialPlaces.isEmpty()) return null
-        return socialPlaces[abs(index + seed) % socialPlaces.size]
+        val startIndex = Math.floorMod(index.toLong() + seed, socialPlaces.size.toLong()).toInt()
+        return socialPlaces.indices.asSequence()
+            .map { offset -> socialPlaces[(startIndex + offset) % socialPlaces.size] }
+            .filter { place -> SocialAssociationOccupancy.hasAvailableSlot(capacities[place.id()], assignments.getValue(place.id())) }
+            .minByOrNull { place -> assignments.getValue(place.id()) }
     }
 
     private fun selectFamilyName(house: WorldPlaceInfo, index: Int, seed: Int): String {

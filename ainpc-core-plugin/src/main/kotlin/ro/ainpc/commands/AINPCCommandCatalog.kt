@@ -63,6 +63,7 @@ internal enum class AINPCSubcommandRoute {
     BUILDING,
     RELATIONSHIP,
     ENVIRONMENT,
+    PLAYER_PROFILE,
 }
 
 internal object AINPCCommandCatalog {
@@ -101,6 +102,7 @@ internal object AINPCCommandCatalog {
         subcommand(AINPCSubcommandRoute.DUPLICATES, "duplicates"),
         subcommand(AINPCSubcommandRoute.REPAIR, "repair"),
         subcommand(AINPCSubcommandRoute.INFO, "info"),
+        subcommand(AINPCSubcommandRoute.PLAYER_PROFILE, "profile", "profil"),
         subcommand(AINPCSubcommandRoute.GUI, "gui"),
         subcommand(AINPCSubcommandRoute.AUTHORING, "authoring"),
         subcommand(AINPCSubcommandRoute.QUEST, "quest"),
