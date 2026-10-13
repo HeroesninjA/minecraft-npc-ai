@@ -18,6 +18,7 @@ import ro.ainpc.economy.BankingService
 import ro.ainpc.economy.EconomyService
 import ro.ainpc.economy.NpcEconomyService
 import ro.ainpc.economy.ShopService
+import ro.ainpc.economy.ShopConfigLoader
 import ro.ainpc.economy.VaultEconomyHook
 import ro.ainpc.engine.DecisionEngine
 import ro.ainpc.engine.DialogueEngine
@@ -303,6 +304,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         economyService = EconomyService(plugin)
         npcEconomyService = NpcEconomyService(plugin)
         shopService = ShopService(economyService, npcEconomyService)
+        reloadShops()
         bankingService = BankingService(plugin)
         vaultEconomyHook = VaultEconomyHook(plugin)
         platform.integrationRegistry.register(vaultEconomyHook)
@@ -447,12 +449,23 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
     }
 
     fun reloadContent() {
+        if (::shopService.isInitialized) reloadShops()
         if (::featurePackLoader.isInitialized) featurePackLoader.loadAllPacks()
         if (::scenarioEngine.isInitialized) scenarioEngine.reloadTemplates()
         storyStateService = StoryStateService(plugin)
         storyContextService = StoryContextService(plugin)
         if (::progressionService.isInitialized) progressionService.invalidateDefinitionCache()
         if (::npcManager.isInitialized) npcManager.ensureAllNPCsHaveProfiles()
+    }
+
+    private fun reloadShops() {
+        try {
+            val shops = ShopConfigLoader.load(plugin.dataFolder.resolve("shops.yml"))
+            shopService.replaceShops(shops)
+            plugin.logger.info("Magazine NPC incarcate: ${shops.size}")
+        } catch (exception: Exception) {
+            plugin.logger.log(Level.WARNING, "Nu s-a putut incarca shops.yml; magazinele existente au fost pastrate", exception)
+        }
     }
 
     fun loadQuestConfig() {

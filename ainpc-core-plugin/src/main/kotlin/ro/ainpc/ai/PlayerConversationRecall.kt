@@ -1,8 +1,5 @@
 package ro.ainpc.ai
 
-import java.text.Normalizer
-import java.util.Locale
-
 object PlayerConversationRecall {
     private val recallQuestions = listOf(
         "despre ce am vorbit",
@@ -17,9 +14,8 @@ object PlayerConversationRecall {
 
     fun resolve(message: String, recentHistory: List<DialogHistory>): String? {
         if (!isRecallQuestion(message)) return null
-        val lastExchange = recentHistory.lastOrNull { exchange ->
-            exchange.isStable() && exchange.playerMessage.isNotBlank() && !isRecallQuestion(exchange.playerMessage)
-        } ?: return "Nu am un schimb anterior disponibil despre care sa-ti povestesc."
+        val lastExchange = lastSubjectExchange(recentHistory)
+            ?: return "Nu am un schimb anterior disponibil despre care sa-ti povestesc."
 
         val topic = topicOf(lastExchange.playerMessage)
         return if (topic == null) {
@@ -30,26 +26,27 @@ object PlayerConversationRecall {
     }
 
     private fun isRecallQuestion(message: String): Boolean {
-        val normalized = normalize(message)
+        val normalized = DialogueMessageText.normalize(message)
         return recallQuestions.any { question -> normalized.contains(question) }
     }
 
-    private fun topicOf(message: String): String? {
-        val normalized = normalize(message)
+    internal fun lastSubjectExchange(recentHistory: List<DialogHistory>): DialogHistory? =
+        DialogHistory.recentStable(recentHistory).lastOrNull { exchange ->
+            !isRecallQuestion(exchange.playerMessage) && !PlayerConversationContinuation.isFollowUp(exchange.playerMessage)
+        }
+
+    internal fun topicOf(message: String): String? {
+        val normalized = DialogueMessageText.normalize(message)
         return when {
-            Regex("\\b(unde|locatie|regiune|drum)\\b").containsMatchIn(normalized) -> "un loc"
-            Regex("\\b(meserie|profesie|munca|lucrezi)\\b").containsMatchIn(normalized) -> "o meserie"
-            Regex("\\b(cumpara|vinde|pret|marfa|comert|magazin)\\b").containsMatchIn(normalized) -> "comert"
-            Regex("\\b(misiune|quest|sarcina)\\b").containsMatchIn(normalized) -> "o misiune"
-            Regex("\\b(familie|copii|sot|sotie|parinti)\\b").containsMatchIn(normalized) -> "familie"
-            Regex("\\b(vreme|ploaie|soare|furtuna)\\b").containsMatchIn(normalized) -> "vreme"
-            Regex("\\b(salut|buna|servus)\\b").containsMatchIn(normalized) -> "un salut"
+            DialogueMessageText.matches(normalized, "unde", "locatie", "locatia", "regiune", "regiunea", "drum", "drumul") -> "un loc"
+            DialogueMessageText.matches(normalized, "meserie", "meseria", "profesie", "profesia", "munca", "lucrezi") -> "o meserie"
+            DialogueMessageText.matches(normalized, "cumpar", "cumpara", "vinde", "pret", "pretul", "preturi", "marfa", "comert", "magazin", "magazinul") -> "comert"
+            DialogueMessageText.matches(normalized, "misiune", "misiunea", "quest", "sarcina") -> "o misiune"
+            DialogueMessageText.matches(normalized, "familie", "familia", "copii", "sot", "sotie", "parinti") -> "familie"
+            DialogueMessageText.matches(normalized, "vreme", "vremea", "ploaie", "ploaia", "ploua", "soare", "furtuna") -> "vreme"
+            DialogueMessageText.matches(normalized, "poveste", "povestea", "istorie", "istoria") -> "o poveste"
+            DialogueMessageText.isSimpleGreeting(normalized) -> "un salut"
             else -> null
         }
     }
-
-    private fun normalize(text: String): String =
-        Normalizer.normalize(text, Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-            .lowercase(Locale.ROOT)
 }

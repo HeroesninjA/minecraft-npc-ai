@@ -843,6 +843,48 @@ class WorldAdminServiceTest {
         assertTrue(exception.message!!.contains("interiorul regiunii"))
     }
 
+    @Test
+    fun storyDescriptionsSurviveYamlLoadAndSave() {
+        service.reloadFromConfig(loadConfig("""
+            world_admin:
+              enabled: true
+              regions:
+                sat:
+                  world: world
+                  min: {x: 0, y: 0, z: 0}
+                  max: {x: 20, y: 100, z: 20}
+                  story:
+                    state: shortage
+                    descriptions:
+                      shortage: "Lipsesc proviziile, așteptăm livrările."
+                      peaceful: "Satul își urmează liniștit rutina."
+                  places:
+                    atelier:
+                      type: custom
+                      min: {x: 1, y: 1, z: 1}
+                      max: {x: 10, y: 10, z: 10}
+                      metadata:
+                        story_state: shortage
+                        story_description_shortage: "Lipsesc materialele, așteptăm livrările."
+                        story_description_open: "Atelierul primește comenzi."
+        """.trimIndent()), profile())
+        val configuration = YamlConfiguration()
+        service.saveToConfig(configuration)
+        val reloaded = WorldAdminService({ }, Logger.getLogger("StoryDescriptionReloadTest"))
+        reloaded.reloadFromConfig(loadConfig(configuration.saveToString()), profile())
+
+        val metadata = reloaded.getPlace("sat:atelier")!!.metadata()
+        val region = reloaded.getRegion("sat")!!
+        assertEquals("shortage", region.storyStateKey())
+        assertEquals("Lipsesc proviziile, așteptăm livrările.", region.storyDescriptions()["shortage"])
+        assertEquals("Satul își urmează liniștit rutina.", region.storyDescriptions()["peaceful"])
+        assertEquals("Lipsesc proviziile, așteptăm livrările.",
+            ro.ainpc.story.StoryStateViewResolver.region(region, null)?.description)
+        assertEquals("shortage", metadata["story_state"])
+        assertEquals("Lipsesc materialele, așteptăm livrările.", metadata["story_description_shortage"])
+        assertEquals("Atelierul primește comenzi.", metadata["story_description_open"])
+    }
+
     private fun profile(): PlatformProfile {
         return PlatformProfile(RuntimeMode.STANDALONE, WorldMode.FINITE_DYNAMIC, StoryMode.EVOLUTIVE)
     }

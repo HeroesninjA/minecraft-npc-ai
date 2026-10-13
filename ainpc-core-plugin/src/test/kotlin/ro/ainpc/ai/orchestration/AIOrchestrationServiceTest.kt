@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.concurrent.CompletableFuture
 import java.util.LinkedHashMap
 
 class AIOrchestrationServiceTest {
@@ -167,5 +168,96 @@ class AIOrchestrationServiceTest {
         assertThrows(UnsupportedOperationException::class.java) {
             (request.context() as MutableMap<String, String>)["new"] = "value"
         }
+    }
+
+    @Test
+    fun asyncOrchestrationWaitsForProviderWithoutBlockingCaller() {
+        val providerResponse = CompletableFuture<String?>()
+        val service = AIOrchestrationService { providerResponse }
+        val request = AIOrchestrationRequest(AIUseCase.DIALOGUE_REPLY, "npc-1", "Hero", "dialogue", emptyMap())
+
+        val resultFuture = service.orchestrateAsync(request)
+        assertFalse(resultFuture.isDone)
+
+        providerResponse.complete("Salut, calatorule!")
+        val result = resultFuture.join()
+        assertEquals(AIResultStatus.SUCCESS, result.status())
+        assertEquals("Salut, calatorule!", result.message())
+        assertFalse(result.runtimeExecutable())
+        assertFalse(service.isExecuted(result))
+    }
+
+    @Test
+    fun invalidProviderOutputIsRejectedBeforePublication() {
+        val service = AIOrchestrationService { CompletableFuture.completedFuture("Text cu {{template}}.") }
+        val request = AIOrchestrationRequest(AIUseCase.DIALOGUE_REPLY, "npc-1", "Hero", "dialogue", emptyMap())
+
+        val result = service.orchestrateAsync(request).join()
+
+        assertEquals(AIResultStatus.VALIDATION_FAILED, result.status())
+        assertEquals("pattern_interzis", result.errorCode())
+        assertTrue(result.fallbackUsed())
+        assertEquals(AISafetyLabel.BLOCKED, result.safetyLabel())
+        assertFalse(result.message().contains("{{template}}"))
+    }
+
+    @Test
+    fun draftKeepsQueuedLifecycleAndNeverExecutesRuntime() {
+        val service = AIOrchestrationService {
+            CompletableFuture.completedFuture("""{"name":"test quest","objective":"visit village"}""")
+        }
+        val request = AIOrchestrationRequest(AIUseCase.QUEST_DRAFT, "npc-1", "Hero", "quest", emptyMap())
+
+        val result = service.orchestrateAsync(request).join()
+
+        assertEquals(AIResultStatus.SUCCESS, result.status())
+        assertTrue(service.isDraft(result))
+        assertEquals(AISuggestionLifecycle.QUEUED, result.lifecycle())
+        assertEquals(AISafetyLabel.SAFE, result.safetyLabel())
+        assertFalse(result.runtimeExecutable())
+    }
+
+    @Test
+    fun promptRedactsSecretsBeforeProviderCall() {
+        val service = AIOrchestrationService(null)
+        val request = AIOrchestrationRequest(
+            AIUseCase.ADMIN_DEBUG_SUMMARY, "npc-1", "Hero", "debug",
+            mapOf("api_key" to "sk-12345678901234567890", "region" to "spawn")
+        )
+
+        val prompt = service.buildPrompt(request)
+
+        assertFalse(prompt.contains("sk-12345678901234567890"))
+        assertTrue(prompt.contains("region: spawn"))
+        assertTrue(prompt.contains("Rezumă în română"))
+    }
+
+    @Test
+    fun intentPromptLimitsModelToReadOnlyLabels() {
+        val service = AIOrchestrationService(null)
+        val request = AIOrchestrationRequest(
+            AIUseCase.INTENT_CLASSIFICATION, "", "", "dialogue",
+            mapOf("player_message" to "Taraba?", "has_accessible_shop" to "true")
+        )
+
+        val prompt = service.buildPrompt(request)
+
+        assertTrue(prompt.contains("TRADE, WORK_TALK sau NONE"))
+        assertTrue(prompt.contains("player_message: Taraba?"))
+        assertFalse(prompt.contains("QUEST_OFFER"))
+    }
+
+    @Test
+    fun nonRetryableProviderFailureUsesDeterministicFallback() {
+        val service = AIOrchestrationService {
+            CompletableFuture.failedFuture(IllegalArgumentException("invalid provider request"))
+        }
+        val request = AIOrchestrationRequest(AIUseCase.ADMIN_DEBUG_SUMMARY, "server", "", "debug", emptyMap())
+
+        val result = service.orchestrateAsync(request).join()
+
+        assertEquals(AIResultStatus.FALLBACK_USED, result.status())
+        assertEquals("ai_provider_error", result.errorCode())
+        assertFalse(result.runtimeExecutable())
     }
 }

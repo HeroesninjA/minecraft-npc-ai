@@ -8,6 +8,7 @@ import ro.ainpc.api.events.npc.AINPCMemoryRecordedEvent
 import ro.ainpc.api.events.npc.AINPCMemoryRecordedEventPayload
 import ro.ainpc.npc.AINPC
 import java.sql.SQLException
+import java.sql.Types
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -16,6 +17,7 @@ import java.util.concurrent.CompletableFuture
  * Memorymanager.
  */
 class MemoryManager(private val plugin: AINPCPlugin) {
+    private val playerStatements by lazy { PlayerStatementRepository(plugin.databaseManager) }
 
     fun createMemory(
         npc: AINPC,
@@ -43,6 +45,108 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         emotionalImpact: Double,
         importance: Int
     ) {
+        insertMemory(npc, playerUuid, playerName, memoryType, content, emotionalImpact, importance)
+    }
+
+    enum class PlayerStatementSaveResult { STORED, ALREADY_STORED, FAILED }
+    enum class PlayerStatementCorrectionResult { UPDATED, NOT_FOUND, UNCHANGED, FAILED }
+
+    fun rememberPlayerStatement(
+        npc: AINPC,
+        playerUuid: UUID,
+        playerName: String,
+        statement: String,
+    ): PlayerStatementSaveResult {
+        val existingSql = """
+            SELECT 1 FROM npc_memories
+            WHERE npc_id = ? AND player_uuid = ? AND memory_type = 'player_confirmed_statement'
+                AND LOWER(content) = LOWER(?)
+            LIMIT 1
+        """
+        val alreadyStored = try {
+            plugin.databaseManager.prepareStatement(existingSql).use { query ->
+                query.setInt(1, npc.databaseId)
+                query.setString(2, playerUuid.toString())
+                query.setString(3, statement)
+                query.executeQuery().use { result -> result.next() }
+            }
+        } catch (error: SQLException) {
+            plugin.logger.warning("Eroare la verificarea declaratiei jucatorului: ${error.message}")
+            return PlayerStatementSaveResult.FAILED
+        }
+        if (alreadyStored) return PlayerStatementSaveResult.ALREADY_STORED
+        return if (insertMemory(npc, playerUuid, playerName, "player_confirmed_statement", statement, 0.0, 2)) {
+            cleanExcessPlayerStatements(npc, playerUuid)
+            PlayerStatementSaveResult.STORED
+        } else {
+            PlayerStatementSaveResult.FAILED
+        }
+    }
+
+    fun correctPlayerStatement(
+        npc: AINPC,
+        playerUuid: UUID,
+        previousContent: String,
+        replacement: String,
+    ): PlayerStatementCorrectionResult = try {
+        playerStatements.correct(npc.databaseId, playerUuid, previousContent, replacement)
+    } catch (error: SQLException) {
+        plugin.logger.warning("Eroare la corectarea declaratiei jucatorului: ${error.message}")
+        PlayerStatementCorrectionResult.FAILED
+    }
+
+    fun forgetPlayerStatements(npc: AINPC, playerUuid: UUID): Int? =
+        forgetStatements(npc, playerUuid, null)
+
+    fun forgetPlayerStatement(npc: AINPC, playerUuid: UUID, content: String): Int? =
+        forgetStatements(npc, playerUuid, content)
+
+    fun playerStatementRevision(npc: AINPC, playerUuid: UUID): Long =
+        playerStatements.revision(npc.databaseId, playerUuid)
+
+    private fun forgetStatements(npc: AINPC, playerUuid: UUID, content: String?): Int? {
+        return try {
+            playerStatements.forget(npc.databaseId, playerUuid, content)
+        } catch (error: SQLException) {
+            plugin.logger.warning("Eroare la uitarea declaratiilor jucatorului: ${error.message}")
+            null
+        }
+    }
+
+    fun getPlayerConfirmedStatements(npc: AINPC, playerUuid: UUID, limit: Int): List<String> {
+        if (limit <= 0) return emptyList()
+        val sql = """
+            SELECT content FROM npc_memories
+            WHERE npc_id = ? AND player_uuid = ? AND memory_type = 'player_confirmed_statement'
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        """
+        return try {
+            plugin.databaseManager.prepareStatement(sql).use { statement ->
+                statement.setInt(1, npc.databaseId)
+                statement.setString(2, playerUuid.toString())
+                statement.setInt(3, limit.coerceAtMost(10))
+                statement.executeQuery().use { result ->
+                    buildList {
+                        while (result.next()) add(result.getString("content"))
+                    }
+                }
+            }
+        } catch (error: SQLException) {
+            plugin.logger.warning("Eroare la citirea declaratiilor jucatorului: ${error.message}")
+            emptyList()
+        }
+    }
+
+    private fun insertMemory(
+        npc: AINPC,
+        playerUuid: UUID,
+        playerName: String,
+        memoryType: String,
+        content: String,
+        emotionalImpact: Double,
+        importance: Int,
+    ): Boolean {
         val baseDecay = decayDaysForType(memoryType)
         val expirationDays = maxOf(0, baseDecay * importance)
 
@@ -61,15 +165,21 @@ class MemoryManager(private val plugin: AINPCPlugin) {
                 stmt.setString(5, content)
                 stmt.setDouble(6, emotionalImpact)
                 stmt.setInt(7, importance)
-                stmt.setInt(8, expirationDays)
+                if (memoryType == "player_confirmed_statement") {
+                    stmt.setNull(8, Types.INTEGER)
+                } else {
+                    stmt.setInt(8, expirationDays)
+                }
                 stmt.executeUpdate()
             }
 
             plugin.debug("Amintire creata pentru ${npc.name} despre $playerName")
             cleanExcessMemories(npc, playerUuid)
             publishMemoryRecorded(npc, playerUuid, playerName, memoryType, emotionalImpact, importance)
+            return true
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la crearea amintirii: ${e.message}")
+            return false
         }
     }
 
@@ -81,7 +191,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         val sql = """
             SELECT content, memory_type, emotional_impact, importance, created_at
             FROM npc_memories
-            WHERE npc_id = ? AND player_uuid = ?
+            WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
         """
@@ -93,7 +203,12 @@ class MemoryManager(private val plugin: AINPCPlugin) {
                 stmt.setInt(3, limit)
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
-                        memories.add(rs.getString("content"))
+                        val source = when (rs.getString("memory_type")) {
+                            "dialog" -> "conversation_quote"
+                            "first_meeting", "gift", "help", "betrayal" -> "game_event"
+                            else -> "unclassified"
+                        }
+                        memories.add("[source=$source] ${rs.getString("content")}")
                     }
                 }
             }
@@ -144,6 +259,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         val deleteExpired = """
             DELETE FROM npc_memories
             WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
+                AND memory_type <> 'player_confirmed_statement'
         """
 
         try {
@@ -168,11 +284,11 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             DELETE FROM npc_memories
             WHERE id IN (
                 SELECT id FROM npc_memories
-                WHERE npc_id = ? AND player_uuid = ?
+                WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
                 ORDER BY importance ASC, created_at ASC
                 LIMIT MAX(0, (
                     SELECT COUNT(*) FROM npc_memories
-                    WHERE npc_id = ? AND player_uuid = ?
+                    WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
                 ) - ?)
             )
         """
@@ -188,6 +304,32 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             }
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la curatarea amintirilor in exces: ${e.message}")
+        }
+    }
+
+    private fun cleanExcessPlayerStatements(npc: AINPC, playerUuid: UUID) {
+        val maxStatements = plugin.config.getInt("npc.personal_memory.max_stored_statements", 10).coerceIn(1, 50)
+        val sql = """
+            DELETE FROM npc_memories
+            WHERE npc_id = ? AND player_uuid = ? AND memory_type = 'player_confirmed_statement'
+                AND id NOT IN (
+                    SELECT id FROM npc_memories
+                    WHERE npc_id = ? AND player_uuid = ? AND memory_type = 'player_confirmed_statement'
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ?
+                )
+        """
+        try {
+            plugin.databaseManager.prepareStatement(sql).use { statement ->
+                statement.setInt(1, npc.databaseId)
+                statement.setString(2, playerUuid.toString())
+                statement.setInt(3, npc.databaseId)
+                statement.setString(4, playerUuid.toString())
+                statement.setInt(5, maxStatements)
+                statement.executeUpdate()
+            }
+        } catch (error: SQLException) {
+            plugin.logger.warning("Eroare la limitarea declaratiilor jucatorului: ${error.message}")
         }
     }
 
@@ -281,7 +423,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         val sql = """
             SELECT SUM(emotional_impact * importance) / SUM(importance) as weighted_avg
             FROM npc_memories
-            WHERE npc_id = ? AND player_uuid = ?
+            WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
         """
         return try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
@@ -366,6 +508,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             when (memoryType) {
                 "first_meeting" -> "👋"
                 "dialog" -> "💬"
+                "player_confirmed_statement" -> "🧠"
                 "gift" -> "🎁"
                 "help" -> "🤝"
                 "betrayal" -> "💔"

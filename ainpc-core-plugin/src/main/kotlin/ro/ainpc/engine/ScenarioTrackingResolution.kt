@@ -207,13 +207,21 @@ fun resolveQuestGiverNpc(progress: PlayerQuestProgress?): AINPC? {
     val databaseId = progress.questVariables().getOrDefault("quest_giver_db_id", "")
     npc = resolveNpcByAnchorId(databaseId)
     if (npc != null) return npc
+    val boundNpcId = progress.questVariables().getOrDefault("quest_giver_npc_id", "")
+    npc = resolveNpcByAnchorId(boundNpcId)
+    if (npc != null) return npc
     val name = progress.questVariables().getOrDefault("quest_giver_name", "")
     if (!name.isBlank()) {
         npc = npcManager.getNPCByName(name)
         if (npc != null) return npc
     }
     val displayName = progress.questVariables().getOrDefault("quest_giver_display_name", "")
-    return if (displayName.isBlank()) null else npcManager.getNPCByName(displayName)
+    if (displayName.isNotBlank()) {
+        npc = npcManager.getNPCByName(displayName)
+        if (npc != null) return npc
+    }
+    val boundNpcName = progress.questVariables().getOrDefault("quest_giver_npc_name", "")
+    return if (boundNpcName.isBlank()) null else npcManager.getNPCByName(boundNpcName)
 }
 
 fun resolveNpcByAnchorId(anchorId: String?): AINPC? {

@@ -1395,6 +1395,9 @@ fun handleTest(sender: CommandSender): Boolean {
     ainpcCommandMiscPlugin.messageUtils.send(sender, "&eBackoff: &f${
         if (snapshot.backoffActive) "activ (${snapshot.backoffRemainingSeconds}s)" else "inactiv"
     }")
+    if (snapshot.apiSuspendedReason != null) {
+        ainpcCommandMiscPlugin.messageUtils.send(sender, "&cAPI suspendat pana la reload: &f${snapshot.apiSuspendedReason}")
+    }
     if (snapshot.lastPromptChars > 0) {
         ainpcCommandMiscPlugin.messageUtils.send(sender, "&eUltimul prompt: &f${snapshot.lastPromptChars} chars &7la &f${formatStoryTime(snapshot.lastRequestAtMillis)}")
     }

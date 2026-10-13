@@ -36,6 +36,9 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     private var offlineMode = false
 
     @Volatile
+    private var apiSuspendedReason: String? = null
+
+    @Volatile
     private var lastRequestAtMillis = 0L
 
     @Volatile
@@ -70,8 +73,6 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
     private val interactionHistory = java.util.concurrent.ConcurrentLinkedDeque<OpenAIDebugInteraction>()
     private val maxInteractionHistory = 50
-    private var pendingNpcName: String = ""
-    private var pendingPlayerName: String = ""
 
     init {
         baseUrl = OpenAITextSupport.sanitizeBaseUrl(
@@ -96,28 +97,44 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         logConfigurationDiagnostics()
     }
 
+    @JvmOverloads
     fun generateResponse(
         request: DialogManager.DialogRequest,
         recentHistory: List<DialogHistory>?,
         relevantMemories: List<String>?,
         relationship: NPCRelationship?,
-        dbContext: DialogManager.PromptDbContext?
+        dbContext: DialogManager.PromptDbContext?,
+        groundedFactResponse: String? = null,
     ): CompletableFuture<String> {
-        pendingNpcName = request.npc().name
-        pendingPlayerName = request.player().name
+        val conversationHistory = DialogHistory.recentStable(recentHistory)
+        val npcName = request.npc().name
+        val playerName = request.player().name
         return capturePromptSnapshot(request).thenCompose { snapshot ->
+            val fallbackReply = {
+                OpenAITextSupport.generateGroundedFallbackResponse(
+                    snapshot, conversationHistory, groundedFactResponse,
+                )
+            }
             if (!aiFeatureEnabled()) {
-                val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
+                val fallback = fallbackReply()
                 recordFallback("feature_disabled")
-                recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "feature_disabled")
+                recordInteractionFallback(npcName, playerName, fallback, "feature_disabled")
                 return@thenCompose CompletableFuture.completedFuture(fallback)
             }
             CompletableFuture.supplyAsync {
                 if (apiKey.isBlank()) {
                     diagInfo("Sar peste cerere OpenAI: cheia API lipseste; folosesc fallback local.")
                     recordFallback("missing_api_key")
-                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
-                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "missing_api_key")
+                    val fallback = fallbackReply()
+                    recordInteractionFallback(npcName, playerName, fallback, "missing_api_key")
+                    return@supplyAsync fallback
+                }
+
+                val suspendedReason = apiSuspendedReason
+                if (suspendedReason != null) {
+                    recordFallback("api_suspended: $suspendedReason")
+                    val fallback = fallbackReply()
+                    recordInteractionFallback(npcName, playerName, fallback, "api_suspended")
                     return@supplyAsync fallback
                 }
 
@@ -128,8 +145,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                             remainingSeconds + "s."
                     )
                     recordFallback("offline_backoff_active (${remainingSeconds}s remaining)")
-                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
-                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "offline_backoff")
+                    val fallback = fallbackReply()
+                    recordInteractionFallback(npcName, playerName, fallback, "offline_backoff")
                     return@supplyAsync fallback
                 }
 
@@ -143,26 +160,28 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                         regionId = snapshot.regionId
                     )
                     OpenAIPromptBuilder.buildPrompt(
-                        snapshot, recentHistory, relevantMemories, relationship, dbContext,
-                        mcpContext = mcpContext
+                        snapshot, conversationHistory, relevantMemories, relationship, dbContext,
+                        mcpContext = mcpContext,
+                        groundedFacts = groundedFactResponse.orEmpty(),
                     )
                 } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("prompt_build_error: ${OpenAITextSupport.compactExceptionMessage(e)}")
-                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
-                    recordInteractionFallback(pendingNpcName, pendingPlayerName, fallback, "prompt_build_error")
+                    val fallback = fallbackReply()
+                    recordInteractionFallback(npcName, playerName, fallback, "prompt_build_error")
                     return@supplyAsync fallback
                 }
                 try {
+                    val requestStartedAtMillis = System.currentTimeMillis()
                     val response = callOpenAI(prompt, snapshot.npcName())
-                    recordInteractionSuccess(pendingNpcName, pendingPlayerName, prompt, response)
-                    clearOfflineState()
+                    recordInteractionSuccess(npcName, playerName, prompt, response)
+                    clearOfflineState(requestStartedAtMillis)
                     response
                 } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("exception: ${OpenAITextSupport.compactExceptionMessage(e)}")
-                    val fallback = OpenAITextSupport.generateFallbackResponse(snapshot)
-                    recordInteractionError(pendingNpcName, pendingPlayerName, prompt, fallback, OpenAITextSupport.compactExceptionMessage(e))
+                    val fallback = fallbackReply()
+                    recordInteractionError(npcName, playerName, prompt, fallback, OpenAITextSupport.compactExceptionMessage(e))
                     fallback
                 }
             }
@@ -201,7 +220,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
             .build()
 
-        plugin.debug("Trimitere cerere OpenAI: " + prompt.substring(0, minOf(100, prompt.length)) + "...")
+        plugin.debug("Trimitere cerere OpenAI: model=$model, prompt_chars=${prompt.length}")
         val startedAt = System.nanoTime()
 
         try {
@@ -211,15 +230,20 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
             if (response.statusCode() !in 200..299) {
                 val errorMessage = OpenAITextSupport.extractOpenAIErrorMessage(gson, responseBody)
+                val errorCode = OpenAITextSupport.extractOpenAIErrorCode(gson, responseBody)
                 diagWarning(
                     "Responses esuat: url=$baseUrl" +
                         ", status=${response.statusCode()}" +
+                        ", code=${errorCode.ifBlank { "necunoscut" }}" +
                         ", ms=$elapsedMs" +
-                        ", body=\"${OpenAITextSupport.abbreviate(responseBody, 220)}\""
+                        ", retry_after=${response.headers().firstValue("Retry-After").orElse("absent")}"
                 )
-                throw IOException(
+                throw OpenAIHttpException(
+                    response.statusCode(),
+                    errorCode,
+                    response.headers().firstValue("Retry-After").orElse(null),
                     "OpenAI a returnat HTTP ${response.statusCode()}" +
-                        if (errorMessage.isBlank()) "" else ": $errorMessage"
+                        if (errorMessage.isBlank()) "" else ": $errorMessage",
                 )
             }
 
@@ -235,7 +259,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                         ""
                     }
             )
-            plugin.debug("Raspuns OpenAI: $generatedText")
+            plugin.debug("Raspuns OpenAI: response_chars=${generatedText.length}")
 
             return generatedText
         } catch (e: InterruptedException) {
@@ -276,7 +300,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     val isAvailable: Boolean
-        get() = !isInOfflineBackoffWindow()
+        get() = apiSuspendedReason == null && !isInOfflineBackoffWindow()
 
     val canGenerateContextualResponse: Boolean
         get() = aiFeatureEnabled() && apiKey.isNotBlank() && isAvailable
@@ -285,20 +309,35 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         return System.currentTimeMillis() < offlineRetryAfterMillis
     }
 
-    private fun clearOfflineState() {
-        if (offlineMode) {
+    private fun clearOfflineState(requestStartedAtMillis: Long) {
+        val wasOffline = synchronized(this) {
+            if (apiSuspendedReason != null || offlineRetryAfterMillis > requestStartedAtMillis) {
+                false
+            } else {
+                val previous = offlineMode
+                offlineMode = false
+                offlineRetryAfterMillis = 0L
+                previous
+            }
+        }
+        if (wasOffline) {
             plugin.logger.info("OpenAI este din nou disponibil. Reiau raspunsurile AI.")
         }
-        offlineMode = false
-        offlineRetryAfterMillis = 0L
     }
 
-    private fun handleOfflineFailure(exception: Exception) {
-        val retrySeconds = plugin.config.getLong("openai.offline_retry_seconds", 15L)
-        offlineRetryAfterMillis = System.currentTimeMillis() + retrySeconds * 1000L
+    private fun handleOfflineFailure(exception: Exception, delayMillis: Long = minimumOfflineDelayMillis()) {
+        val retrySeconds = (delayMillis / 1000L) + if (delayMillis % 1000L == 0L) 0L else 1L
+        val retryAt = OpenAIHttpBackoff.saturatingAdd(System.currentTimeMillis(), delayMillis)
+        val newlyOffline = synchronized(this) {
+            offlineRetryAfterMillis = maxOf(offlineRetryAfterMillis, retryAt)
+            if (offlineMode) false else {
+                offlineMode = true
+                true
+            }
+        }
         recordFallback("offline_failure: ${OpenAITextSupport.compactExceptionMessage(exception)}")
 
-        if (offlineMode) {
+        if (!newlyOffline) {
             plugin.debug(
                 "OpenAI este indisponibil, raspuns fallback folosit: " +
                     OpenAITextSupport.compactExceptionMessage(exception)
@@ -306,7 +345,6 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             return
         }
 
-        offlineMode = true
         plugin.logger.warning(
             "OpenAI indisponibil, folosesc fallback local pentru $retrySeconds" +
                 "s: ${OpenAITextSupport.compactExceptionMessage(exception)}"
@@ -317,6 +355,25 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     private fun handleGenerationFailure(exception: Exception) {
         recordFailure(exception)
 
+        if (exception is OpenAIHttpException) {
+            val suspensionReason = OpenAIHttpBackoff.suspensionReason(exception.statusCode, exception.errorCode)
+            if (suspensionReason != null) {
+                suspendApi(suspensionReason)
+                return
+            }
+            val delayMillis = OpenAIHttpBackoff.delayMillis(
+                exception.statusCode,
+                exception.errorCode,
+                exception.retryAfter,
+                System.currentTimeMillis(),
+                minimumOfflineDelayMillis(),
+            )
+            if (delayMillis != null) {
+                handleOfflineFailure(exception, delayMillis)
+                return
+            }
+        }
+
         if (OpenAITextSupport.isReadTimeout(exception)) {
             diagWarning(
                 "OpenAI a raspuns prea lent pentru timeout-ul curent: " +
@@ -326,6 +383,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 "OpenAI a depasit timpul de raspuns (${readTimeoutSeconds}s). " +
                     "Mareste openai.read_timeout sau redu lungimea promptului."
             )
+            handleOfflineFailure(exception)
             return
         }
 
@@ -341,6 +399,23 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         plugin.logger.warning("Cerere OpenAI esuata: " + OpenAITextSupport.compactExceptionMessage(exception))
     }
 
+    private fun suspendApi(reason: String) {
+        val newlySuspended = synchronized(this) {
+            if (apiSuspendedReason != null) false else {
+                apiSuspendedReason = reason
+                true
+            }
+        }
+        if (newlySuspended) {
+            plugin.logger.warning("OpenAI API suspendat pana la reincarcarea configuratiei: $reason.")
+        }
+    }
+
+    private fun minimumOfflineDelayMillis(): Long =
+        plugin.config.getLong("openai.offline_retry_seconds", 15L)
+            .coerceAtLeast(1L)
+            .coerceAtMost(Long.MAX_VALUE / 1000L) * 1000L
+
     fun generateAsync(prompt: String): CompletableFuture<String?> {
         if (!aiFeatureEnabled()) {
             recordFallback("feature_disabled")
@@ -353,14 +428,20 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 return@supplyAsync null
             }
 
+            if (apiSuspendedReason != null) {
+                recordFallback("api_suspended: $apiSuspendedReason")
+                return@supplyAsync null
+            }
+
             if (isInOfflineBackoffWindow()) {
                 diagInfo("Sar peste generateAsync din cauza backoff-ului activ.")
                 return@supplyAsync null
             }
 
             try {
+                val requestStartedAtMillis = System.currentTimeMillis()
                 val response = callOpenAI(prompt, null)
-                clearOfflineState()
+                clearOfflineState(requestStartedAtMillis)
                 response
             } catch (e: java.io.IOException) {
                 handleGenerationFailure(e)
@@ -379,6 +460,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             offlineRetryAfterMillis = 0L
             offlineMode = false
         }
+        apiSuspendedReason = null
         plugin.debug("[OpenAI] Config reincarcata. Model: ${plugin.config.getString("openai.model", "gpt-5.4-nano")}")
     }
 
@@ -490,7 +572,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             lastFallbackAtMillis = lastFallbackAtMillis,
             lastFallbackReason = lastFallbackReason,
             connectionStatus = lastConnectionStatus ?: OpenAIConnectionProbe.getLastProbeResult(),
-            recentInteractions = getRecentInteractions()
+            recentInteractions = getRecentInteractions(),
+            apiSuspendedReason = apiSuspendedReason,
         )
     }
 

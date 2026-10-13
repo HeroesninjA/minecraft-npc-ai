@@ -20,6 +20,7 @@ data class BehaviorProfile(
     val phaseTicks: Map<String, Long> = emptyMap(),
     val routineTexts: Map<String, String> = emptyMap(),
     val fallbackRules: List<FallbackRule> = emptyList(),
+    val worldStateRules: List<WorldStateRule> = emptyList(),
     val thresholds: Map<String, Int> = emptyMap(),
     val slotStates: Map<String, String> = emptyMap(),
     val zoneStates: Map<String, String> = emptyMap(),
@@ -48,6 +49,15 @@ data class BehaviorProfile(
         val slot: String,
         val activityKey: String,
         val state: String = ""
+    )
+
+    data class WorldStateRule(
+        val scope: String,
+        val storyState: String,
+        val slot: String,
+        val activityKey: String,
+        val state: String = "",
+        val storyMode: String = ""
     )
 
 /**

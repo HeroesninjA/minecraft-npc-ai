@@ -22,6 +22,9 @@ profiles:
     routine_texts:
       night_sleep: "doarme acasa"
       wake_start: "se trezeste si isi pregateste ziua"
+      weather_shelter: "se adaposteste acasa din cauza vremii extreme"
+      personality_social: "merge la punctul social in timpul liber"
+      world_festival: "participa la sarbatoarea din regiune"
       low_needs_home: "revine acasa pentru siguranta si refacere"
       work_day: "merge la lucru"
       work_afternoon: "inchide treburile principale ale zilei"
@@ -31,6 +34,13 @@ profiles:
       fallback_home: "ramane aproape de casa"
       fallback_idle: "sa astepte pana exista o ancora utila"
       idle: "isi urmeaza rutina obisnuita"
+    # Exemplu: o stare story poate inlocui slotul curent al programului.
+    # world_state_rules:
+    #   - scope: "REGION"
+    #     story_state: "festival"
+    #     slot: "SOCIAL"
+    #     activity_key: "world_festival"
+    #     state: "SOCIALIZING"
     fallback_rules:
       - condition: "night"
         slot: "HOME"

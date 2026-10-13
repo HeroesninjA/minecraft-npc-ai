@@ -14,10 +14,12 @@ import java.util.concurrent.ConcurrentHashMap
 class EnvironmentEngine(private val plugin: AINPCPlugin) {
     private val worldContexts = ConcurrentHashMap<String, EnvironmentContext>()
     private val worldDayCounters = ConcurrentHashMap<String, Int>()
+    private val specialEvents = WorldSpecialEventRegistry()
 
     fun onWorldUnload(worldName: String) {
         worldContexts.remove(worldName)
         worldDayCounters.remove(worldName)
+        specialEvents.clear(worldName)
     }
 
     fun tick() {
@@ -28,14 +30,15 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
 
     fun getContext(world: World?): EnvironmentContext {
         if (world == null) return EnvironmentContext.empty()
-        return worldContexts.getOrPut(world.name) { buildContext(world) }
+        return withSpecialEvents(worldContexts.getOrPut(world.name) { buildContext(world) })
     }
 
     fun getContext(worldName: String?): EnvironmentContext {
         if (worldName.isNullOrBlank()) return EnvironmentContext.empty()
-        return worldContexts[worldName] ?: run {
+        val context = worldContexts[worldName] ?: run {
             plugin.server.getWorld(worldName)?.let { updateWorldContext(it) } ?: EnvironmentContext.empty(worldName)
         }
+        return withSpecialEvents(context)
     }
 
     fun getContextForLocation(worldName: String?, biome: String?): EnvironmentContext {
@@ -52,24 +55,20 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
     }
 
     fun registerSpecialEvent(worldName: String?, event: String) {
-        if (worldName.isNullOrBlank()) return
-        worldContexts.computeIfPresent(worldName) { _, ctx ->
-            if (event !in ctx.specialEvents) {
-                ctx.copy(specialEvents = ctx.specialEvents + event)
-            } else ctx
-        }
+        specialEvents.add(worldName, event)
     }
 
     fun clearSpecialEvent(worldName: String?, event: String) {
-        if (worldName.isNullOrBlank()) return
-        worldContexts.computeIfPresent(worldName) { _, ctx ->
-            ctx.copy(specialEvents = ctx.specialEvents - event)
-        }
+        specialEvents.remove(worldName, event)
     }
 
     fun clearAllSpecialEvents(worldName: String?) {
-        if (worldName.isNullOrBlank()) return
-        worldContexts.computeIfPresent(worldName) { _, ctx -> ctx.copy(specialEvents = emptyList()) }
+        specialEvents.clear(worldName)
+    }
+
+    private fun withSpecialEvents(context: EnvironmentContext): EnvironmentContext {
+        val events = specialEvents.get(context.worldName)
+        return if (context.specialEvents == events) context else context.copy(specialEvents = events)
     }
 
     fun getDayNumber(world: World?): Int {
@@ -88,7 +87,6 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
         val dayNumber = (fullTime / 24000L).toInt()
         worldDayCounters[world.name] = dayNumber
 
-        val existing = worldContexts[world.name]
         val timeOfDay = TimeOfDay.fromTick(tickOfDay)
         val weather = Weather.fromBukkit(world.hasStorm(), world.isThundering, null)
         val season = Season.fromDay(dayNumber)
@@ -100,7 +98,7 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
             season = season,
             lightLevel = (world.getBlockAt(0, 64, 0).lightLevel.toInt()).coerceIn(0, 15),
             temperature = Temperature.MILD,
-            specialEvents = existing?.specialEvents ?: emptyList(),
+            specialEvents = specialEvents.get(world.name),
             dayNumber = dayNumber,
             tickOfDay = tickOfDay
         )
@@ -117,7 +115,7 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
             season = Season.fromDay((fullTime / 24000L).toInt()),
             lightLevel = 15,
             temperature = Temperature.MILD,
-            specialEvents = emptyList(),
+            specialEvents = specialEvents.get(world.name),
             dayNumber = (fullTime / 24000L).toInt(),
             tickOfDay = fullTime % 24000L
         )

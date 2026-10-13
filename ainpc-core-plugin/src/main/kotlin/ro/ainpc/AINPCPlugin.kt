@@ -127,6 +127,7 @@ class AINPCPlugin : JavaPlugin() {
         saveResourceIfAbsent("settlements.yml")
         saveResourceIfAbsent("building_templates.yml")
         saveResourceIfAbsent("behavior_profiles.yml")
+        saveResourceIfAbsent("shops.yml")
         val packsDir = File(dataFolder, "packs")
         if (!packsDir.exists()) {
             packsDir.mkdirs()

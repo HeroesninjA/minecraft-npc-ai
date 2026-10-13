@@ -71,7 +71,9 @@ object OpenAIPromptSnapshotFactory {
             npc.context.worldContextSnapshot.currentRegion()?.id().orEmpty(),
             npc.plannedRoutineActivity,
             npc.currentGoal,
-            if (heldMaterial.isAir) "" else heldMaterial.key.asString()
+            if (heldMaterial.isAir) "" else heldMaterial.key.asString(),
+            NpcFactResolver.describePersonality(npc.personality),
+            npc.context.environmentContext.takeIf { it.worldName.isNotBlank() },
         )
     }
 }

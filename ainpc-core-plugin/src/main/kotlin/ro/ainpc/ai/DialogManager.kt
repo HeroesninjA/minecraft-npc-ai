@@ -6,8 +6,11 @@ import ro.ainpc.api.events.AINPCEventSource
 import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEvent
 import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEventPayload
 import ro.ainpc.engine.DialogueEngine
+import ro.ainpc.engine.DialogueAiIntentClassification
+import ro.ainpc.managers.MemoryManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NpcInteractionProfile
+import ro.ainpc.world.WorldContextSnapshot
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -21,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
 class DialogManager(private val plugin: AINPCPlugin) {
     private val cooldowns: MutableMap<UUID, MutableMap<UUID, Long>> = ConcurrentHashMap()
     private val playerProfiles = PlayerProfileRepository(plugin.databaseManager)
+    private val dialogHistory = DialogHistoryRepository(plugin.databaseManager)
+    private val interactionProfileResponses = NpcInteractionProfileResponses()
 
     /**
      * Proceseaza un mesaj de la jucator catre NPC
@@ -47,27 +52,101 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val playerUuid = player.uniqueId
         val playerName = player.name
         val regionId = npc.context.worldContextSnapshot.currentRegion()?.id().orEmpty()
+        val storyWorldContext = npc.context.worldContextSnapshot
 
         // Verifica cooldown
         if (isOnCooldown(playerUuid, npc.uuid)) {
             return CompletableFuture.completedFuture(DialogResult.cooldown())
         }
 
+        val personalMemoryEnabled = plugin.config.getBoolean("npc.personal_memory.enabled", true)
+        val personalMemoryAction = if (request.directAddress() && request.explicitConversation()) {
+            PlayerPersonalMemoryCommand.parse(
+                message,
+                plugin.config.getInt("npc.personal_memory.max_statement_chars", 160).coerceIn(40, 300),
+            )
+        } else {
+            null
+        }
+        if (personalMemoryAction == PlayerPersonalMemoryCommand.Action.Forget ||
+            personalMemoryAction is PlayerPersonalMemoryCommand.Action.ForgetOne ||
+            personalMemoryAction == PlayerPersonalMemoryCommand.Action.MissingForgetStatement ||
+            personalMemoryAction == PlayerPersonalMemoryCommand.Action.InvalidForgetStatement
+        ) {
+            setCooldown(playerUuid, npc.uuid)
+            return processPersonalMemoryAction(npc, playerUuid, playerName, personalMemoryAction)
+        }
+
+        val classificationEnabled = plugin.config.getBoolean("features.ai", false) &&
+            plugin.config.getBoolean("ai.orchestration.enabled", false) &&
+            plugin.config.getBoolean("ai.orchestration.intent_classification.enabled", false)
+        val inspectDomainContextForIntent = DialogueAiIntentClassification.shouldPrefetchDomainContext(
+            message,
+            npc.context.relationshipStatus,
+            !npc.occupation.isNullOrBlank(),
+            classificationEnabled,
+        )
+        val associatedShops = if (npc.interactionProfile == NpcInteractionProfile.SHOP_ONLY ||
+            DialogueAiIntentClassification.shouldInspectShops(
+                message,
+                npc.context.relationshipStatus,
+                !npc.occupation.isNullOrBlank(),
+                classificationEnabled,
+            )
+        ) {
+            NpcShopAssociation.findShops(plugin.shopService, npc, plugin.platform.worldAdmin)
+        } else {
+            emptyList()
+        }
+        val snapshotWorkFacts = DialogueAiIntentClassification.shouldSnapshotWorkFacts(
+            message,
+            npc.context.relationshipStatus,
+            !npc.occupation.isNullOrBlank(),
+            classificationEnabled,
+        )
+        val workFacts = if (snapshotWorkFacts) {
+            NpcWorkFactResponse.Facts(
+                npc.occupation,
+                npc.plannedRoutineActivity,
+                OpenAISemanticWorldContextBuilder
+                    .resolveWorkPlace(plugin.platform.worldAdmin, npc.workAnchor)?.displayName(),
+            )
+        } else {
+            null
+        }
+        val accessibleShops = associatedShops.filter { plugin.shopService.canAccess(player, it) }
+        val shopAvailable = NpcShopFactResolver.hasListedGoods(accessibleShops)
+        val shopAccessDenied = !shopAvailable && NpcShopFactResolver.hasListedGoods(associatedShops)
+
         // Verifica interaction profile
-        val profileBlock = checkInteractionProfile(npc, player)
+        val profileBlock = checkInteractionProfile(npc, player, shopAvailable, shopAccessDenied)
         if (profileBlock != null) {
+            setCooldown(playerUuid, npc.uuid)
             return CompletableFuture.completedFuture(DialogResult.success(profileBlock))
         }
 
         // Seteaza cooldown
         setCooldown(playerUuid, npc.uuid)
 
+        if (personalMemoryAction != null && !personalMemoryEnabled) {
+            return CompletableFuture.completedFuture(DialogResult.success("Nu pot retine informatii personale acum."))
+        }
+        if (personalMemoryAction != null) {
+            return processPersonalMemoryAction(npc, playerUuid, playerName, personalMemoryAction)
+        }
+
         return plugin.databaseManager.supplyAsync {
+            val playerStatementRevision = plugin.memoryManager.playerStatementRevision(npc, playerUuid)
             // Obtine istoricul conversatiei
-            val history = getRecentHistory(npc, playerUuid, 5)
+            val history = DialogHistory.recentStable(getRecentHistory(npc, playerUuid, 5))
 
             // Obtine amintiri relevante
             val memories = plugin.memoryManager.getRelevantMemories(npc, playerUuid, message, 5)
+            val playerConfirmedStatements = if (personalMemoryEnabled) {
+                plugin.memoryManager.getPlayerConfirmedStatements(npc, playerUuid, 10)
+            } else {
+                emptyList()
+            }
             val totalMemoryCount = plugin.memoryManager.getMemoryCount(npc, playerUuid)
             val weightedMemoryImpact = plugin.memoryManager.getTotalEmotionalImpact(npc, playerUuid)
 
@@ -87,7 +166,16 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 history,
                 memories,
                 relationship,
-                PromptDbContext(totalMemoryCount, weightedMemoryImpact, regionalReputation, playerProfile)
+                PromptDbContext(
+                    totalMemoryCount,
+                    weightedMemoryImpact,
+                    regionalReputation,
+                    playerProfile,
+                    playerConfirmedStatements,
+                    plugin.config.getInt("npc.personal_memory.max_prompt_statements", 3).coerceIn(0, 10),
+                ),
+                playerStatementRevision,
+                loadStoryFactResponse(message, storyWorldContext),
             )
         }.thenCompose { context ->
             publishAiRequestBuilt(npc, player, message, request, context)
@@ -98,7 +186,11 @@ class DialogManager(private val plugin: AINPCPlugin) {
                     context.history,
                     context.memories,
                     context.relationship,
-                    context.dbContext
+                    context.dbContext,
+                    accessibleShops,
+                    shopAccessDenied,
+                    workFacts,
+                    context.storyFactResponse,
                 )
             } else {
                 plugin.openAIService.generateResponse(
@@ -110,7 +202,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 )
             }
 
-            responseFuture.thenApply { response -> GeneratedDialog(response, context.relationship) }
+            responseFuture.thenApply { response ->
+                GeneratedDialog(response, context.relationship, context.playerStatementRevision)
+            }
         }.thenCompose { generated ->
             if (generated.response().isNullOrBlank()) {
                 return@thenCompose CompletableFuture.completedFuture(DialogResult.error())
@@ -124,6 +218,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
             )
 
             plugin.databaseManager.supplyAsync {
+                if (plugin.memoryManager.playerStatementRevision(npc, playerUuid) != generated.playerStatementRevision) {
+                    return@supplyAsync null
+                }
                 saveDialog(npc, playerUuid, message, generated.response())
                 recordBranchDecision(npc, playerUuid, branchDecision)
                 updateRelationship(npc, playerUuid, playerName, sentiment)
@@ -140,6 +237,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 }
                 PostProcessResult(generated.response(), sentiment, generated.relationship())
             }.thenApply { postProcess ->
+                if (postProcess == null) {
+                    return@thenApply DialogResult.success("Mi-am actualizat amintirile intre timp. Te rog sa repeti intrebarea.")
+                }
                 updateEmotions(npc, postProcess.relationship(), postProcess.sentiment())
                 DialogResult.success(postProcess.response())
             }
@@ -153,6 +253,101 @@ class DialogManager(private val plugin: AINPCPlugin) {
             }
             DialogResult.error()
         }
+    }
+
+    private fun loadStoryFactResponse(message: String, worldContext: WorldContextSnapshot): String? {
+        val locationFacts = StoryFactResolver.Facts(
+            regionName = worldContext.currentRegion()?.name().orEmpty(),
+            placeName = worldContext.currentPlace()?.displayName().orEmpty(),
+        )
+        if (!StoryFactResolver.isLookupQuestion(message, locationFacts)) return null
+        val regionId = worldContext.currentRegion()?.id().orEmpty()
+        val placeId = worldContext.currentPlace()?.id().orEmpty()
+        val storyService = plugin.storyStateService
+        val wantsState = StoryFactResolver.wantsCurrentState(message, locationFacts)
+        val regionState = if (!wantsState || regionId.isBlank()) null else try {
+            storyService.getRegionState(regionId)
+        } catch (error: SQLException) {
+            plugin.logger.warning("Starea story a regiunii nu a putut fi citita: ${error.message}")
+            null
+        }
+        val placeState = if (!wantsState || placeId.isBlank()) null else try {
+            storyService.getPlaceState(placeId)
+        } catch (error: SQLException) {
+            plugin.logger.warning("Starea story a locului nu a putut fi citita: ${error.message}")
+            null
+        }
+        val recentEvents = if (!StoryFactResolver.wantsHistory(message) ||
+            (regionId.isBlank() && placeId.isBlank())) emptyList() else try {
+            storyService.listRecentEvents(regionId, placeId, 2)
+        } catch (error: SQLException) {
+            plugin.logger.warning("Evenimentele story recente nu au putut fi citite: ${error.message}")
+            emptyList()
+        }
+        val facts = StoryFactResolver.fromWorldContext(worldContext, regionState, placeState, recentEvents)
+        return StoryFactResolver.resolve(message, facts)
+    }
+
+    private fun processPersonalMemoryAction(
+        npc: AINPC,
+        playerUuid: UUID,
+        playerName: String,
+        action: PlayerPersonalMemoryCommand.Action,
+    ): CompletableFuture<DialogResult> = plugin.databaseManager.supplyAsync {
+        when (action) {
+            is PlayerPersonalMemoryCommand.Action.Remember -> when (
+                plugin.memoryManager.rememberPlayerStatement(npc, playerUuid, playerName, action.statement)
+            ) {
+                MemoryManager.PlayerStatementSaveResult.STORED ->
+                    DialogResult.success("Am retinut ce mi-ai spus, $playerName.")
+                MemoryManager.PlayerStatementSaveResult.ALREADY_STORED ->
+                    DialogResult.success("Tin minte deja ca mi-ai spus asta.")
+                MemoryManager.PlayerStatementSaveResult.FAILED -> DialogResult.error()
+            }
+            is PlayerPersonalMemoryCommand.Action.Correct -> when (
+                plugin.memoryManager.correctPlayerStatement(npc, playerUuid, action.previousStatement, action.statement)
+            ) {
+                MemoryManager.PlayerStatementCorrectionResult.UPDATED ->
+                    DialogResult.success("Am corectat declaratia pe care mi-ai cerut sa o retin.")
+                MemoryManager.PlayerStatementCorrectionResult.NOT_FOUND ->
+                    DialogResult.success("Nu am gasit declaratia veche. Spune-mi exact ce mi-ai cerut sa retin.")
+                MemoryManager.PlayerStatementCorrectionResult.UNCHANGED ->
+                    DialogResult.success("Declaratia este deja memorata astfel.")
+                MemoryManager.PlayerStatementCorrectionResult.FAILED -> DialogResult.error()
+            }
+            PlayerPersonalMemoryCommand.Action.InvalidCorrection ->
+                DialogResult.success("Foloseste: corecteaza ce ti-am cerut sa tii minte: text vechi -> text nou.")
+            PlayerPersonalMemoryCommand.Action.Forget -> {
+                val forgotten = plugin.memoryManager.forgetPlayerStatements(npc, playerUuid)
+                when {
+                    forgotten == null -> DialogResult.error()
+                    forgotten > 0 -> DialogResult.success("Am uitat ce mi-ai cerut sa tin minte.")
+                    else -> DialogResult.success("Nu am astfel de informatii de uitat.")
+                }
+            }
+            is PlayerPersonalMemoryCommand.Action.ForgetOne -> {
+                val forgotten = plugin.memoryManager.forgetPlayerStatement(npc, playerUuid, action.statement)
+                when {
+                    forgotten == null -> DialogResult.error()
+                    forgotten > 0 -> DialogResult.success("Am uitat doar aceasta declaratie.")
+                    else -> DialogResult.success("Nu am gasit aceasta declaratie in memoria mea.")
+                }
+            }
+            PlayerPersonalMemoryCommand.Action.MissingForgetStatement ->
+                DialogResult.success("Spune-mi ce declaratie sa uit dupa doua puncte.")
+            PlayerPersonalMemoryCommand.Action.InvalidForgetStatement ->
+                DialogResult.success("Scrie declaratia exacta pe un singur rand, in cel mult 300 de caractere.")
+            PlayerPersonalMemoryCommand.Action.MissingStatement ->
+                DialogResult.success("Spune-mi ce sa retin: tine minte ca ...")
+            is PlayerPersonalMemoryCommand.Action.TooLong ->
+                DialogResult.success("Spune-mi mai pe scurt, in cel mult ${action.maxChars} caractere.")
+            PlayerPersonalMemoryCommand.Action.InvalidStatement ->
+                DialogResult.success("Pot retine doar o propozitie simpla, pe un singur rand.")
+        }
+    }.exceptionally { error ->
+        val root = unwrapCompletionException(error)
+        plugin.logger.warning("Eroare la memoria declarata de jucator: ${root.message}")
+        DialogResult.error()
     }
 
     private fun unwrapCompletionException(error: Throwable): Throwable {
@@ -175,41 +370,12 @@ class DialogManager(private val plugin: AINPCPlugin) {
     }
 
     fun getRecentHistory(npc: AINPC, playerUuid: UUID, limit: Int): List<DialogHistory> {
-        val history = mutableListOf<DialogHistory>()
-
-        val sql = """
-            SELECT player_message, npc_response, created_at
-            FROM dialog_history
-            WHERE npc_id = ? AND player_uuid = ?
-            ORDER BY created_at DESC
-            LIMIT ?
-        """.trimIndent()
-
-        try {
-            plugin.databaseManager.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, npc.databaseId)
-                stmt.setString(2, playerUuid.toString())
-                stmt.setInt(3, limit)
-
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        history.add(
-                            DialogHistory(
-                                rs.getString("player_message"),
-                                rs.getString("npc_response"),
-                                rs.getTimestamp("created_at").time
-                            )
-                        )
-                    }
-                }
-            }
+        return try {
+            dialogHistory.findRecent(npc.databaseId, playerUuid, limit)
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la obtinerea istoricului: " + e.message)
+            emptyList()
         }
-
-        // Inverseaza pentru ordine cronologica
-        history.reverse()
-        return history
     }
 
     /**
@@ -435,18 +601,22 @@ class DialogManager(private val plugin: AINPCPlugin) {
         return false
     }
 
-    private fun checkInteractionProfile(npc: AINPC, player: Player): String? {
-        return when (npc.interactionProfile) {
-            NpcInteractionProfile.MINIMAL -> "NPC-ul nu doreste sa vorbeasca acum."
-            NpcInteractionProfile.QUEST_ONLY -> {
-                if (!plugin.scenarioEngine.hasOfferedQuest(player)) "NPC-ul interactioneaza doar pentru questuri." else null
-            }
-            NpcInteractionProfile.SHOP_ONLY -> {
-                if (npc.occupation.isNullOrBlank()) "NPC-ul interactioneaza doar pentru comert." else null
-            }
-            NpcInteractionProfile.SCENE_ONLY -> null
-            NpcInteractionProfile.FULL_AI -> null
-        }
+    private fun checkInteractionProfile(
+        npc: AINPC,
+        player: Player,
+        shopAvailable: Boolean,
+        shopAccessDenied: Boolean,
+    ): String? {
+        return interactionProfileResponses.resolve(
+            profile = npc.interactionProfile,
+            npcUuid = npc.uuid,
+            playerUuid = player.uniqueId,
+            playerName = player.name,
+            questAvailable = npc.interactionProfile == NpcInteractionProfile.QUEST_ONLY &&
+                plugin.scenarioEngine.hasOfferedQuest(player, npc),
+            shopAvailable = shopAvailable,
+            shopAccessDenied = shopAccessDenied,
+        )
     }
 
     private fun setCooldown(playerUuid: UUID, npcUuid: UUID) {
@@ -511,12 +681,15 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val history: List<DialogHistory>,
         val memories: List<String>,
         val relationship: NPCRelationship?,
-        val dbContext: PromptDbContext
+        val dbContext: PromptDbContext,
+        val playerStatementRevision: Long,
+        val storyFactResponse: String?,
     )
 
     private data class GeneratedDialog(
         val response: String,
-        val relationship: NPCRelationship?
+        val relationship: NPCRelationship?,
+        val playerStatementRevision: Long,
     ) {
         fun response(): String = response
         fun relationship(): NPCRelationship? = relationship
@@ -537,6 +710,8 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val weightedMemoryImpact: Double,
         val regionalReputation: Int? = null,
         val playerProfile: PlayerProfile? = null,
+        val playerConfirmedStatements: List<String> = emptyList(),
+        val maxPromptStatements: Int = 3,
     ) {
         fun totalMemoryCount(): Int = totalMemoryCount
         fun weightedMemoryImpact(): Double = weightedMemoryImpact

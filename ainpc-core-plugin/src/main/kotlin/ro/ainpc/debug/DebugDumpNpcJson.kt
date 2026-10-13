@@ -60,7 +60,7 @@ object DebugDumpNpcJson {
             snapshot.addProperty("current_goal", preview.goal())
             snapshot.addProperty("target_state", preview.targetState()?.name ?: "")
         }
-        val dayPreview = runCatching { plugin.routineService.routineEngine.previewDay(npc) }.getOrNull()
+        val dayPreview = runCatching { plugin.routineService.previewDay(npc) }.getOrNull()
         if (dayPreview != null && dayPreview.isNotEmpty()) {
             val dayArray = JsonArray()
             for (entry in dayPreview) {

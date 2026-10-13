@@ -60,6 +60,9 @@ story:
     - peaceful
     - trade
     - daily_life
+  descriptions:
+    peaceful: "Localnicii își desfășoară activitățile în liniște."
+    trade: "Piața este plină, negustorii primesc clienți."
 ```
 
 | Câmp | Semnificație | Fallback loader |
@@ -67,6 +70,7 @@ story:
 | `mode` | Profil narativ al regiunii | `platform.default_story_mode` |
 | `state` | Cheie text pentru starea declarată | `default` |
 | `pool` | Lista cheilor narative disponibile | Listă goală |
+| `descriptions` | Texte pentru stările regiunii, indexate după cheia exactă a stării | Hartă goală |
 
 Aceste date sunt proprietăți ale mapping-ului. Nu produc automat rânduri în `region_story_state`. Nici `evolutive`, nici `rotative` nu trebuie interpretate ca promisiunea că un motor schimbă automat toate stările doar fiindcă valoarea a fost setată.
 
@@ -152,6 +156,42 @@ Stările/variabilele DB se scriu prin serviciile `saveRegionState(...)` și `sav
 Pentru o integrare care inițializează direct DB, trebuie implementat un apel valid la serviciul adecvat, păstrând câmpurile care nu trebuie resetate. Aceste metode interne nu sunt prezentate aici ca un API public stabil pentru addonuri.
 
 Limitare: `StoryAuthoringService.setRegionStoryMode()` transmite `null` pentru state/pool/variables, ceea ce salvează `default` și colecții goale. Nu îl folosi drept operație care garantează păstrarea restului stării existente.
+
+### Descrieri pentru starea story curentă
+
+Descrierile opționale oferă o explicație narativă pentru o stare exactă. NPC-ul le folosește în răspunsurile despre starea curentă, în locul ID-ului tehnic. Aceeași descriere ajunge în contextul AI și în răspunsul fără furnizor AI. Pentru o regiune din mapping, configurează `world_admin.regions.<id>.story.descriptions.<stateKey>` ca în exemplul de mai sus. Se folosește numai descrierea cheii `story.state` active; lista `pool` nu schimbă singură starea.
+
+Pentru starea unei clădiri din mapping, adaugă chei plate în metadata place-ului existent:
+
+```yaml
+metadata:
+  story_state: shortage
+  story_description_shortage: "Lipsesc materialele, așteptăm livrările."
+  story_description_open: "Atelierul primește comenzi."
+```
+
+La întrebarea „Care este starea clădirii?”, prima descriere explică starea `shortage`. Descrierea `open` rămâne inactivă până când starea din mapping devine exact `open`. Dacă există un rând persistent valid pentru acest place, **starea și descrierea vin numai din acel rând**, nu din metadata YAML.
+
+Pentru regiuni și place-uri persistente, adaugă aceleași chei în harta `variables` trimisă către `saveRegionState(...)` sau `savePlaceState(...)`. Exemplu Kotlin de variabile de îmbinat cu cele existente, păstrând celelalte câmpuri ale stării:
+
+```kotlin
+val variables = existingState.variables() + mapOf(
+    "story_description_shortage" to "Lipsesc proviziile, așteptăm livrările.",
+    "story_description_peaceful" to "Localnicii își desfășoară activitățile în liniște.",
+)
+```
+
+Fragmentul nu salvează singur în DB. Pentru regiunea din mapping se folosește `story.descriptions`, iar pentru starea persistentă a regiunii se folosesc cheile `story_description_<stateKey>` din `variables`. Un rând persistent valid are prioritate peste descrierea din YAML. Configurarea YAML a regiunii supraviețuiește ciclului de salvare și reîncărcare a mapping-ului.
+
+Contractul comun:
+- cheia include exact `stateKey`, cu aceeași capitalizare; schimbarea stării nu reutilizează descrierea veche;
+- un rând persistent pentru altă locație nu poate furniza nici starea, nici descrierea;
+- un rând persistent fără descriere nu preia textul din mapping, chiar dacă starea are același nume;
+- textul efectiv este redus la o singură linie și cel mult 200 de caractere; lipsa textului, spațiile și `<none>` păstrează răspunsul anterior bazat pe cheia stării;
+- descrierea nu creează o stare, un eveniment, un quest sau o regulă de rutină; regulile continuă să folosească `stateKey`;
+- întrebările despre istoric folosesc în continuare istoria locului și titlurile evenimentelor, nu această descriere curentă.
+
+### Proprietăți narative NPC
 
 Proprietățile narative ale NPC-ului — `backstory`, `backstorySeed`, `archetype`, `socialRole`, `questRole` — aparțin profilului/planului descris în [referința NPC](configurare-npc-asociere-structuri.md). Nu există un bloc YAML `npc.story` consumat universal de aceste servicii.
 

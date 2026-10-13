@@ -1,6 +1,7 @@
 package ro.ainpc.routine
 
 import org.bukkit.configuration.ConfigurationSection
+import ro.ainpc.world.StoryMode
 import org.bukkit.configuration.file.YamlConfiguration
 import ro.ainpc.AINPCPlugin
 import java.io.File
@@ -120,6 +121,7 @@ class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
         val phaseTicks = readLongMap(section.getConfigurationSection("phase_ticks"))
         val routineTexts = readStringMap(section.getConfigurationSection("routine_texts"))
         val fallbackRules = readFallbackRules(section.getMapList("fallback_rules"))
+        val worldStateRules = readWorldStateRules(section.getMapList("world_state_rules"))
         val thresholds = readIntMap(section.getConfigurationSection("thresholds"))
         val slotStates = readStringMap(section.getConfigurationSection("slot_states"))
         val zoneStates = readStringMap(section.getConfigurationSection("zone_states"))
@@ -167,6 +169,7 @@ class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
             phaseTicks = phaseTicks,
             routineTexts = routineTexts,
             fallbackRules = fallbackRules,
+            worldStateRules = worldStateRules,
             thresholds = thresholds,
             slotStates = slotStates,
             zoneStates = zoneStates,
@@ -226,6 +229,32 @@ class BehaviorProfileLoader(private val plugin: AINPCPlugin?) {
             val state = entry["state"]?.toString().orEmpty()
             if (condition.isNotBlank() && slot.isNotBlank() && activityKey.isNotBlank()) {
                 rules.add(BehaviorProfile.FallbackRule(condition, slot, activityKey, state))
+            }
+        }
+        return rules
+    }
+
+    private fun readWorldStateRules(entries: List<Map<*, *>>?): List<BehaviorProfile.WorldStateRule> {
+        if (entries == null || entries.isEmpty()) {
+            return emptyList()
+        }
+        val validScopes = setOf("REGION", "PLACE")
+        val validSlots = setOf("HOME", "WORK", "SOCIAL", "IDLE")
+        val rules = mutableListOf<BehaviorProfile.WorldStateRule>()
+        for (entry in entries) {
+            val scope = entry["scope"]?.toString().orEmpty().uppercase()
+            val storyState = entry["story_state"]?.toString().orEmpty()
+            val storyMode = entry["story_mode"]?.toString().orEmpty()
+            val slot = entry["slot"]?.toString().orEmpty().uppercase()
+            val activityKey = entry["activity_key"]?.toString().orEmpty()
+            val state = entry["state"]?.toString().orEmpty()
+            val modeIsValid = storyMode.isBlank() || StoryMode.values().any {
+                it.id.equals(storyMode, ignoreCase = true) || it.name.equals(storyMode, ignoreCase = true)
+            }
+            val hasSelector = storyState.isNotBlank() || storyMode.isNotBlank()
+            val modeScopeIsValid = storyMode.isBlank() || scope == "REGION"
+            if (scope in validScopes && hasSelector && modeIsValid && modeScopeIsValid && slot in validSlots && activityKey.isNotBlank()) {
+                rules.add(BehaviorProfile.WorldStateRule(scope, storyState, slot, activityKey, state, storyMode))
             }
         }
         return rules

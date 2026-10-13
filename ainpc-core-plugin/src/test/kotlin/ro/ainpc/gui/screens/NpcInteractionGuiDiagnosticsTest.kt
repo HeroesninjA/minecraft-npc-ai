@@ -19,7 +19,7 @@ class NpcInteractionGuiDiagnosticsTest {
     fun npcInteractionGuiHasShopIntegration() {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/NpcInteractionGui.kt").readText()
 
-        assertTrue(source.contains("shopService.findShopsForRole"))
+        assertTrue(source.contains("NpcShopAssociation.findShops"))
         assertTrue(source.contains("hasShop"))
         assertTrue(source.contains("EMERALD"))
         assertTrue(source.contains("setShopSelectedNpcId"))

@@ -1239,6 +1239,12 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         if (p0 == null) return false
         return getCurrentQuestProgress(p0.uniqueId).any { it.isOffered() }
     }
+    fun hasOfferedQuest(p0: Player, p1: AINPC): Boolean {
+        if (p0 == null || p1 == null) return false
+        return getCurrentQuestProgress(p0.uniqueId).any { progress ->
+            QuestOfferNpcMatcher.matches(progress, p1.uuid, p1.databaseId, p1.name)
+        }
+    }
     fun resolveActiveQuestNpc(p0: Player): AINPC? {
         for (progress in getCurrentQuestProgress(p0.uniqueId)) {
             if (!progress.isCurrent()) continue

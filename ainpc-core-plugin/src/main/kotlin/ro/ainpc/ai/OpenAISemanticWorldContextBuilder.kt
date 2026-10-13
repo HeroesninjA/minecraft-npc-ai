@@ -1,12 +1,15 @@
 package ro.ainpc.ai
 
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.npc.AINPC
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldRegionInfo
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.story.StoryContextSnapshot
+import ro.ainpc.story.StoryStateViewResolver
 import java.util.Locale
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 object OpenAISemanticWorldContextBuilder {
@@ -24,18 +27,8 @@ object OpenAISemanticWorldContextBuilder {
     }
 
     fun resolveProfessionFact(plugin: AINPCPlugin, npc: AINPC, playerMessage: String): String? {
-        val normalized = playerMessage.lowercase(Locale.ROOT)
-        if (!normalized.contains("cine ") && !normalized.contains("care ")) {
-            return null
-        }
-        val context = build(plugin, npc)
-        val marker = "Raspuns factual pentru intrebari despre meserii:"
-        return context.lineSequence()
-            .map { line -> line.trim() }
-            .firstOrNull { line -> line.startsWith(marker) }
-            ?.removePrefix(marker)
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
+        if (!NpcProfessionFactResolver.isLookupQuestion(playerMessage)) return null
+        return NpcProfessionFactResolver.resolve(playerMessage, build(plugin, npc))
     }
 
     private fun buildUnsafe(plugin: AINPCPlugin, npc: AINPC): String {
@@ -63,7 +56,7 @@ object OpenAISemanticWorldContextBuilder {
             .asSequence()
             .filter { known -> known.name.isNotBlank() }
             .filter { known -> sameSemanticRegion(plugin, known, regionId, worldName) }
-            .sortedWith(compareBy<AINPC> { npcPriority(it) }.thenBy { it.name.lowercase(Locale.ROOT) })
+            .sortedWith(compareBy<AINPC> { npcPriority(it, worldAdmin) }.thenBy { it.name.lowercase(Locale.ROOT) })
             .take(MAX_NPCS)
             .toList()
 
@@ -106,12 +99,12 @@ object OpenAISemanticWorldContextBuilder {
             append(buildNpcLoreBlock(knownNpcs))
             append(buildStorySignalsBlock(storySnapshot))
 
-            val tradeNpcs = knownNpcs.filter { isTradeNpc(it) }
+            val tradeNpcs = knownNpcs.filter { isTradeNpc(it, worldAdmin) }
             if (tradeNpcs.isNotEmpty()) {
                 append("Raspuns factual pentru intrebari despre meserii: ")
                 append(tradeNpcs.joinToString("; ") { known ->
                     val occupation = known.occupation.orEmpty().ifBlank { "meserie cunoscuta" }
-                    val workPlace = known.workAnchor?.label()?.let { worldAdmin.getPlace(it) }
+                    val workPlace = resolveWorkPlace(worldAdmin, known.workAnchor)
                     if (workPlace != null) {
                         "${known.name} are meseria $occupation si lucreaza la ${workPlace.displayName()}."
                     } else {
@@ -157,25 +150,39 @@ object OpenAISemanticWorldContextBuilder {
         }
     }
 
-    private fun buildWorldHistoryBlock(region: WorldRegionInfo?, currentPlace: WorldPlaceInfo?, storySnapshot: StoryContextSnapshot): String {
+    internal fun buildWorldHistoryBlock(region: WorldRegionInfo?, currentPlace: WorldPlaceInfo?, storySnapshot: StoryContextSnapshot): String {
         val recentEvents = storySnapshot.recentStoryEvents().take(MAX_HISTORY_EVENTS)
-        val regionHasHistory = region != null
+        val effectiveRegion = StoryStateViewResolver.region(region, storySnapshot.persistentRegionState())
+        val effectivePlace = StoryStateViewResolver.place(currentPlace, storySnapshot.persistentPlaceState())
+        val regionHasHistory = effectiveRegion != null
         val placeHasHistory = currentPlace != null && (
             currentPlace.metadata()["lore"].orEmpty().isNotBlank() ||
-                currentPlace.metadata()["history"].orEmpty().isNotBlank()
+                currentPlace.metadata()["history"].orEmpty().isNotBlank() || effectivePlace != null
             )
         if (!regionHasHistory && !placeHasHistory && recentEvents.isEmpty()) {
             return ""
         }
         return buildString {
             append("WORLD_HISTORY:\n")
-            if (region != null) {
-                append("- region_story_mode=").append(region.storyMode().id)
-                    .append(", state=").append(region.storyStateKey())
-                    .append(", pool=").append(region.storyPool().take(6).joinToString(","))
+            if (effectiveRegion != null) {
+                append("- region_story_mode=").append(effectiveRegion.mode.id)
+                    .append(", state=").append(effectiveRegion.stateKey)
+                    .append(", pool=").append(effectiveRegion.pool.take(6).joinToString(","))
+                    .append(", source=").append(effectiveRegion.source)
                     .append('\n')
+                if (effectiveRegion.description.isNotBlank()) {
+                    append("- region_story_description=").append(effectiveRegion.description).append('\n')
+                }
             }
             if (currentPlace != null) {
+                if (effectivePlace != null) {
+                    append("- place_story_state=").append(effectivePlace.stateKey)
+                        .append(", source=").append(effectivePlace.source)
+                        .append('\n')
+                    if (effectivePlace.description.isNotBlank()) {
+                        append("- place_story_description=").append(effectivePlace.description).append('\n')
+                    }
+                }
                 val placeLore = currentPlace.metadata()["lore"].orEmpty()
                 val placeHistory = currentPlace.metadata()["history"].orEmpty()
                 if (placeLore.isNotBlank() || placeHistory.isNotBlank()) {
@@ -251,21 +258,24 @@ object OpenAISemanticWorldContextBuilder {
         else -> 9
     }
 
-    private fun npcPriority(npc: AINPC): Int = when {
-        isTradeNpc(npc) -> 0
+    private fun npcPriority(npc: AINPC, worldAdmin: WorldAdminApi): Int = when {
+        isTradeNpc(npc, worldAdmin) -> 0
         npc.occupation.orEmpty().isNotBlank() -> 1
         else -> 5
     }
 
-    private fun isTradeNpc(npc: AINPC): Boolean {
+    internal fun resolveWorkPlace(worldAdmin: WorldAdminApi, anchor: AINPC.OwnedLocation?): WorldPlaceInfo? {
+        if (anchor == null || anchor.worldName().isBlank()) return null
+        return worldAdmin.findPlace(
+            anchor.worldName(), floor(anchor.x()).toInt(), floor(anchor.y()).toInt(), floor(anchor.z()).toInt(),
+        )
+    }
+
+    private fun isTradeNpc(npc: AINPC, worldAdmin: WorldAdminApi): Boolean {
         if (npc.occupation.orEmpty().isBlank()) {
             return false
         }
-        val workLabel = npc.workAnchor?.label().orEmpty()
-        if (workLabel.isBlank()) {
-            return true
-        }
-        val placeType = npc.plugin?.platform?.worldAdmin?.getPlace(workLabel)?.placeType()
+        val placeType = resolveWorkPlace(worldAdmin, npc.workAnchor)?.placeType()
         return placeType == null || placeType == PlaceType.FORGE || placeType == PlaceType.SHOP ||
             placeType == PlaceType.FARM || placeType == PlaceType.MARKET || placeType == PlaceType.TAVERN ||
             placeType == PlaceType.CUSTOM

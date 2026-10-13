@@ -10,6 +10,9 @@ import ro.ainpc.api.events.npc.AINPCRoutineChangedEvent
 import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.story.PlaceStoryState
+import ro.ainpc.story.RegionStoryState
+import ro.ainpc.story.StoryStateViewResolver
 import ro.ainpc.utils.ConfigKeys
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -19,12 +22,17 @@ import java.util.concurrent.ConcurrentMap
  * Routineservice.
  */
 class RoutineService(private val plugin: AINPCPlugin) {
+    private data class CachedRegionStoryState(val value: RegionStoryState?, val expiresAtMillis: Long)
+    private data class CachedPlaceStoryState(val value: PlaceStoryState?, val expiresAtMillis: Long)
+
     val routineEngine = RoutineEngine(plugin)
     private val activityExecutor = RoutineActivityExecutor()
     private val lastRoutineSlots: ConcurrentMap<UUID, RoutineSlot> = ConcurrentHashMap()
     private val lastRoutineMoveAt: ConcurrentMap<UUID, Long> = ConcurrentHashMap()
 
     private val externalBias: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private val regionStoryStateCache = mutableMapOf<String, CachedRegionStoryState>()
+    private val placeStoryStateCache = mutableMapOf<String, CachedPlaceStoryState>()
     private var batchIndex = 0
     private var batchCount = 0
     private val batchSize: Int get() = plugin.config.getInt(ConfigKeys.ROUTINE_BATCH_SIZE, 0).coerceAtLeast(0)
@@ -62,6 +70,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
         val moveCooldownMillis = maxOf(0L, plugin.config.getLong(ConfigKeys.ROUTINE_MOVE_COOLDOWN, 300L)) * 1000L
         val teleportEnabled = plugin.config.getBoolean(ConfigKeys.ROUTINE_TELEPORT_ENABLED, true)
         val now = System.currentTimeMillis()
+        pruneStoryStateCache(now)
         val allNpcs = plugin.npcManager.getAllNPCs().toList()
         val totalNpcs = allNpcs.size
 
@@ -130,6 +139,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 continue
             }
             val previousActivity = npc.plannedRoutineActivity
+            prepareRoutineContext(npc, currentLocation, now)
             val assignment = routineEngine.assign(npc, currentWorld.time)
             evaluated++
             val npcId = npc.uuid
@@ -182,8 +192,61 @@ class RoutineService(private val plugin: AINPCPlugin) {
             return routineEngine.assign(null, 0L)
         }
         val location = npc.location
+        val now = System.currentTimeMillis()
+        pruneStoryStateCache(now)
+        prepareRoutineContext(npc, location, now)
         val worldTime = if (location != null && location.world != null) location.world.time else 0L
         return routineEngine.assign(npc, worldTime)
+    }
+
+    fun previewDay(npc: AINPC?): List<RoutineScheduleEntry> {
+        if (npc == null) return routineEngine.previewDay(null)
+        val location = npc.location
+        val now = System.currentTimeMillis()
+        pruneStoryStateCache(now)
+        prepareRoutineContext(npc, location, now)
+        return routineEngine.previewDay(npc)
+    }
+
+    private fun prepareRoutineContext(npc: AINPC, location: Location?, now: Long) {
+        npc.context.refreshEnvironmentContext(location)
+        npc.context.refreshWorldContextSnapshot(location)
+        refreshRoutineStoryContext(npc, now)
+    }
+
+    private fun refreshRoutineStoryContext(npc: AINPC, now: Long) {
+        val worldContext = npc.context.worldContextSnapshot
+        val region = worldContext.currentRegion()
+        val place = worldContext.currentPlace()
+        val persistentRegion = region?.id()?.let { cachedRegionStoryState(it, now) }
+        val persistentPlace = place?.id()?.let { cachedPlaceStoryState(it, now) }
+        val effectiveRegion = StoryStateViewResolver.region(region, persistentRegion)
+        val effectivePlace = StoryStateViewResolver.place(place, persistentPlace)
+        npc.context.effectiveRegionStoryState = effectiveRegion?.stateKey
+        npc.context.effectiveRegionStoryMode = effectiveRegion?.mode?.id
+        npc.context.effectivePlaceStoryState = effectivePlace?.stateKey
+    }
+
+    private fun cachedRegionStoryState(regionId: String, now: Long): RegionStoryState? {
+        regionStoryStateCache[regionId]?.takeIf { it.expiresAtMillis > now }?.let { return it.value }
+        val state = runCatching { plugin.storyStateService.getRegionState(regionId) }.getOrNull()
+        regionStoryStateCache[regionId] = CachedRegionStoryState(state, now + storyStateCacheTtlMillis())
+        return state
+    }
+
+    private fun cachedPlaceStoryState(placeId: String, now: Long): PlaceStoryState? {
+        placeStoryStateCache[placeId]?.takeIf { it.expiresAtMillis > now }?.let { return it.value }
+        val state = runCatching { plugin.storyStateService.getPlaceState(placeId) }.getOrNull()
+        placeStoryStateCache[placeId] = CachedPlaceStoryState(state, now + storyStateCacheTtlMillis())
+        return state
+    }
+
+    private fun storyStateCacheTtlMillis(): Long =
+        plugin.config.getLong("routine.story_state_cache_seconds", 15L).coerceAtLeast(1L) * 1000L
+
+    private fun pruneStoryStateCache(now: Long) {
+        regionStoryStateCache.entries.removeIf { it.value.expiresAtMillis <= now }
+        placeStoryStateCache.entries.removeIf { it.value.expiresAtMillis <= now }
     }
 
     private fun isBusy(state: NPCState): Boolean {

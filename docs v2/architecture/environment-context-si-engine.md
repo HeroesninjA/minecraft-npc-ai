@@ -1,7 +1,7 @@
 # EnvironmentContext si EnvironmentEngine
 
 Status: contract canonic verificat in cod.
-Actualizat: 2026-07-15.
+Actualizat: 2026-10-12.
 
 Acest subsistem descrie mediul unei lumi. Nu rezolva playerul, regiunea, place-ul sau node-ul curent.
 
@@ -24,14 +24,15 @@ El poate produce descrieri si blocuri de prompt, dar nu persista date si nu apli
 `EnvironmentEngine` tine cache-uri in memorie pe numele lumii:
 
 - `getContext(...)` construieste snapshot-ul la primul acces si apoi returneaza cache-ul;
-- `getContextForLocation(...)` ajusteaza numai temperatura dupa biome;
-- `tick()` actualizeaza timpul, vremea, sezonul si lumina pentru toate lumile;
-- `registerSpecialEvent(...)` si metodele de clear modifica numai un cache deja existent;
+- `getContextForLocation(...)` ajusteaza temperatura dupa biome si poate clasifica ploaia drept ninsoare in biom rece;
+- `tick()` actualizeaza timpul, vremea, sezonul si lumina pentru toate lumile; `SchedulerCoordinator` il porneste dupa 30 de secunde si apoi o data pe minut;
+- `registerSpecialEvent(...)` si metodele de clear modifica registrul separat de evenimente; urmatorul context cerut include lista curenta;
 - `onWorldUnload(...)` elimina intrarile lumii.
 
 ## Consumatori confirmati
 
 - `NPCContext` si promptul de dialog;
+- `EnvironmentFactResolver` pentru raspunsurile factuale despre mediul curent in dialog si fallback;
 - `StoryContextService` pentru semnale environment asociate mapping-ului;
 - `RandomWorldEventService` si `SeasonalBehaviorService` pentru sezon;
 - GUI-urile world, mapping si story;
@@ -39,8 +40,8 @@ El poate produce descrieri si blocuri de prompt, dar nu persista date si nu apli
 
 ## Limite confirmate
 
-- `EnvironmentEngine.tick()` nu are apelant in `src/main`; dupa primul acces, timpul si vremea din cache pot deveni stale;
-- `getDayNumber(...)` foloseste de asemenea un cache care nu avanseaza fara actualizare;
+- inaintea fiecarei decizii de rutina, `RoutineService` recalculeaza contextul local din snapshot-ul lumii si biomul de la locatia NPC-ului;
+- `getDayNumber(...)` foloseste un cache actualizat de `tick()`;
 - snapshot-ul initial seteaza lumina la 15, iar actualizarea ulterioara ar esantiona blocul global `(0, 64, 0)`, nu locatia consumatorului;
 - engine-ul nu detine mapping semantic si nu poate afla singur `Region`, `Place` sau `Node`;
 - evenimentele speciale si cache-ul nu sunt persistate.

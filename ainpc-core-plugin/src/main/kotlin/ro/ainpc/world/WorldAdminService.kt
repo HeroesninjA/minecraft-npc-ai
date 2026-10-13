@@ -215,6 +215,11 @@ class WorldAdminService(
             storySection.getString("state", "default") ?: "default"
         )
         storyState.setStoryPool(storySection.getStringList("pool"))
+        storySection.getConfigurationSection("descriptions")?.let { descriptionsSection ->
+            storyState.setStoryDescriptions(descriptionsSection.getKeys(false).associateWith { stateKey ->
+                descriptionsSection.getString(stateKey).orEmpty()
+            })
+        }
         return storyState
     }
 
@@ -1361,7 +1366,8 @@ class WorldAdminService(
             region.getTags(),
             storyState.mode,
             storyState.stateKey,
-            storyState.getStoryPool()
+            storyState.getStoryPool(),
+            storyState.getStoryDescriptions()
         )
     }
 
@@ -1511,6 +1517,12 @@ class WorldAdminService(
         storySection.set("mode", storyState.mode.id)
         storySection.set("state", storyState.stateKey)
         storySection.set("pool", storyState.getStoryPool())
+        if (storyState.getStoryDescriptions().isNotEmpty()) {
+            val descriptionsSection = storySection.createSection("descriptions")
+            storyState.getStoryDescriptions().toSortedMap().forEach { (stateKey, description) ->
+                descriptionsSection.set(stateKey, description)
+            }
+        }
     }
 
     private fun writePlaces(regionSection: ConfigurationSection, regionId: String) {

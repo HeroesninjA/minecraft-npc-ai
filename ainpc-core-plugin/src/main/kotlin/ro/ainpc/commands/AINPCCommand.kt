@@ -19,6 +19,9 @@ import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
 import ro.ainpc.ai.DialogManager
+import ro.ainpc.ai.orchestration.AIOrchestrationRequest
+import ro.ainpc.ai.orchestration.AIResultStatus
+import ro.ainpc.ai.orchestration.AIUseCase
 import ro.ainpc.debug.DebugDumpSupport
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.bootstrap.RuntimeMetricNames
@@ -3290,7 +3293,7 @@ $objectives      rewards:
         plugin.messageUtils.send(sender, "&e/ainpc debugdump questconfig [summary] &7- Dump quest config snapshot")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump story [summary] &7- Dump story state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump authoring &7- Dump quest authoring snapshot")
-        plugin.messageUtils.send(sender, "&e/ainpc debugdump ai &7- Show recent AI interactions")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump ai [summary] &7- Interactiuni AI sau sumar AI read-only")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump runtime &7- Show registered runtime handlers")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump mcp &7- Probe Spring AI MCP sidecar")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump features &7- Show feature flag state")
@@ -3547,6 +3550,9 @@ $objectives      rewards:
     }
 
     private fun handleDebugDumpAi(sender: CommandSender, args: Array<String>): Boolean {
+        if (args.getOrNull(2)?.equals("summary", ignoreCase = true) == true) {
+            return handleDebugDumpAiSummary(sender)
+        }
         val snapshot = plugin.openAIService.captureDebugSnapshot()
         val interactions = snapshot.recentInteractions
 
@@ -3560,6 +3566,9 @@ $objectives      rewards:
         plugin.messageUtils.send(sender, "&eBackoff: &f${if (snapshot.backoffActive) "activ (${snapshot.backoffRemainingSeconds}s)" else "inactiv"}")
         plugin.messageUtils.send(sender, "&eLast prompt: &f${snapshot.lastPromptChars} chars")
         plugin.messageUtils.send(sender, "&eLast response: &f${snapshot.lastResponseChars} chars")
+        if (snapshot.apiSuspendedReason != null) {
+            plugin.messageUtils.send(sender, "&cAPI suspendat pana la reload: &f${snapshot.apiSuspendedReason}")
+        }
         if (snapshot.lastFailureMessage.isNotBlank()) {
             plugin.messageUtils.send(sender, "&cLast error: &f${redactDiagnosticText(snapshot.lastFailureMessage)}")
         }
@@ -3595,6 +3604,41 @@ $objectives      rewards:
             }
             if (interaction.responsePreview.isNotBlank()) {
                 plugin.messageUtils.send(sender, "&8  response: &7${redactDiagnosticText(interaction.responsePreview)}")
+            }
+        }
+        return true
+    }
+
+    private fun handleDebugDumpAiSummary(sender: CommandSender): Boolean {
+        val orchestrator = plugin.aiOrchestrationService
+        if (!orchestrator.enabled()) {
+            plugin.messageUtils.send(sender, "&eSumarul AI este dezactivat. Activeaza ai.orchestration.enabled in config.yml.")
+            return true
+        }
+        val worldAdmin = plugin.platform.worldAdminService
+        val context: Map<String?, String?> = linkedMapOf(
+            "npc_count" to plugin.npcManager.getAllNPCs().size.toString(),
+            "region_count" to worldAdmin.regionCount.toString(),
+            "place_count" to worldAdmin.placeCount.toString(),
+            "world_admin_enabled" to worldAdmin.isEnabled.toString(),
+            "shop_count" to plugin.shopService.getAllShops().size.toString(),
+            "active_scenario_count" to plugin.scenarioEngine.getActiveScenarios().size.toString(),
+            "story_enabled" to plugin.config.getBoolean("features.story", false).toString(),
+            "recent_ai_interaction_count" to plugin.openAIService.captureDebugSnapshot().recentInteractions.size.toString()
+        )
+        val request = AIOrchestrationRequest(AIUseCase.ADMIN_DEBUG_SUMMARY, "server", "", "debug", context)
+        plugin.messageUtils.send(sender, "&7Generez un sumar read-only din indicatorii lumii, NPC, magazinelor si scenariilor...")
+        orchestrator.orchestrateAsync(request).whenComplete { result, error ->
+            runCatching {
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (sender is Player && !sender.isOnline) return@Runnable
+                    if (error != null || result?.status() != AIResultStatus.SUCCESS) {
+                        plugin.messageUtils.send(sender, "&eSumarul AI nu este disponibil; foloseste /ainpc debugdump pentru datele brute.")
+                    } else {
+                        plugin.messageUtils.send(sender, "&6=== AI Summary (read-only) ===")
+                        plugin.messageUtils.send(sender, "&f${result.message().replace('\n', ' ').replace('&', ' ').take(500)}")
+                    }
+                })
             }
         }
         return true

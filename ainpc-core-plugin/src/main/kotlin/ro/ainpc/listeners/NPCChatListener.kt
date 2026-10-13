@@ -464,8 +464,11 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         if (intent == QuestDecisionIntentResolver.Intent.ACCEPT
             || intent == QuestDecisionIntentResolver.Intent.DECLINE
         ) {
+            if (plugin.scenarioEngine.hasOfferedQuest(player, npc)) {
+                return npc
+            }
             val activeQuestNpc = plugin.scenarioEngine.resolveActiveQuestNpc(player, npc)
-            if (activeQuestNpc != null) {
+            if (activeQuestNpc != null && isSameNpc(activeQuestNpc, npc)) {
                 return activeQuestNpc
             }
         }
@@ -477,12 +480,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         if (!questFeatureEnabled()) {
             return false
         }
-        if (!plugin.scenarioEngine.hasOfferedQuest(player)) {
-            return false
-        }
-
-        val activeQuestNpc = plugin.scenarioEngine.resolveActiveQuestNpc(player, npc)
-        return isSameNpc(activeQuestNpc, npc)
+        return plugin.scenarioEngine.hasOfferedQuest(player, npc)
     }
 
     private fun isSameNpc(first: AINPC?, second: AINPC?): Boolean {

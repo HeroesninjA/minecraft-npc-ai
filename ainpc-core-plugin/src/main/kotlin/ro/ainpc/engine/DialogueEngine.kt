@@ -7,18 +7,25 @@ import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.DialogHistory
 import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.NpcFactResolver
+import ro.ainpc.ai.EnvironmentFactResolver
+import ro.ainpc.ai.NpcShopFactResolver
+import ro.ainpc.ai.NpcShopAssociation
+import ro.ainpc.ai.NpcWorkFactResponse
+import ro.ainpc.economy.NpcShopDefinition
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.ai.OpenAISemanticWorldContextBuilder
 import ro.ainpc.ai.PlayerRecognition
 import ro.ainpc.ai.PlayerProfileGreeting
 import ro.ainpc.ai.PlayerIdentityResponse
 import ro.ainpc.ai.PlayerConversationRecall
+import ro.ainpc.ai.PlayerConversationContinuation
+import ro.ainpc.ai.orchestration.AIOrchestrationRequest
+import ro.ainpc.ai.orchestration.AIResultStatus
+import ro.ainpc.ai.orchestration.AIUseCase
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
-import ro.ainpc.npc.NPCEmotions
 import java.util.Collections
 import java.util.EnumMap
-import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -192,6 +199,16 @@ class DialogueEngine(
             "Consider ca e o idee buna.",
             "Sunt de acord!"
         )
+        templates[DialogueIntent.QUESTION] = listOf(
+            "Nu stiu sigur raspunsul. Ce detalii mai ai?",
+            "Nu vreau sa te induc in eroare. Poti sa-mi spui mai exact ce cauti?",
+            "Nu am destule informatii despre asta. Ce anume te intereseaza?"
+        )
+        templates[DialogueIntent.CONVERSATION] = listOf(
+            "Te ascult. Spune-mi mai mult.",
+            "Inteleg ce spui. Ce s-a intamplat mai departe?",
+            "Pare important pentru tine. Cum pot sa te ajut?"
+        )
     }
 
     @JvmOverloads
@@ -200,72 +217,23 @@ class DialogueEngine(
         context: NPCContext,
         playerMessage: String,
         recognition: PlayerRecognition? = null
-    ): DialogueIntent {
-        val emotions: NPCEmotions = npc.emotions
-        val dominantEmotion = emotions.dominantEmotion
-        val relationStatus = context.relationshipStatus
+    ): DialogueIntent = DialogueIntentSelector.select(
+        playerMessage, context.relationshipStatus, !npc.occupation.isNullOrBlank(), recognition
+    )
 
-        if (isOutOfWorldQuestion(playerMessage)) {
-            return if (!npc.occupation.isNullOrEmpty()) DialogueIntent.CONFUSED_PROFESSIONAL else DialogueIntent.CONFUSED
-        }
-
-        val msg = playerMessage.lowercase()
-        if (containsAny(msg, "salut", "buna", "hei", "noroc", "servus")) {
-            return recognition?.let { selectGreetIntent(it) } ?: selectGreetIntent(relationStatus)
-        }
-        if (containsAny(msg, "pa", "la revedere", "adio", "pe curand")) return DialogueIntent.FAREWELL
-        if (containsAny(msg, "cumpara", "vinde", "pret", "comert", "marfa", "afaceri")) return DialogueIntent.TRADE
-        if (containsAny(msg, "ajutor", "ajuta", "nevoie")) return DialogueIntent.HELP
-        if (containsAny(msg, "multumesc", "mersi", "apreciez")) return DialogueIntent.THANK
-        if (containsAny(msg, "familie", "copii", "sot", "sotie", "parinti")) return DialogueIntent.FAMILY_TALK
-        if (containsAny(msg, "munca", "meserie", "job", "profesie")) return DialogueIntent.WORK_TALK
-        if (containsAny(msg, "poveste", "povesteste", "intamplat")) return DialogueIntent.STORY
-        if (containsAny(msg, "stii", "auzit", "zvon", "barfa")) return DialogueIntent.GOSSIP
-        if (containsAny(msg, "misiune", "quest", "sarcina", "ajutor")) return DialogueIntent.QUEST_OFFER
-
-        return when (dominantEmotion.lowercase()) {
-            "anger" -> DialogueIntent.ANGRY
-            "sadness" -> DialogueIntent.SAD
-            "happiness" -> DialogueIntent.HAPPY
-            "fear" -> DialogueIntent.SCARED
-            else -> DialogueIntent.GREET
-        }
-    }
-
-    private fun selectGreetIntent(relationStatus: String): DialogueIntent =
-        when (relationStatus) {
-            "CLOSE_FRIEND", "FRIEND", "FAMILY", "SPOUSE" -> DialogueIntent.GREET_FRIEND
-            "STRANGER" -> DialogueIntent.GREET_STRANGER
-            else -> DialogueIntent.GREET
-        }
-
-    private fun selectGreetIntent(recognition: PlayerRecognition): DialogueIntent =
-        when (recognition.familiarity) {
-            PlayerRecognition.Familiarity.FIRST_MEETING -> DialogueIntent.GREET_STRANGER
-            PlayerRecognition.Familiarity.KNOWN -> DialogueIntent.GREET
-            PlayerRecognition.Familiarity.FRIEND -> DialogueIntent.GREET_FRIEND
-            PlayerRecognition.Familiarity.GUARDED -> DialogueIntent.GREET_GUARDED
-        }
-
-    private fun isOutOfWorldQuestion(message: String): Boolean {
-        val msg = message.lowercase()
-        return containsAny(
-            msg,
-            "telefon", "internet", "computer", "masina", "avion", "televizor",
-            "electricitate", "bitcoin", "social media", "facebook", "instagram",
-            "email", "website", "app", "aplicatie", "program", "software"
-        )
-    }
-
-    private fun containsAny(text: String, vararg words: String): Boolean = words.any { text.contains(it) }
-
+    @JvmOverloads
     fun generateResponse(
         request: DialogManager.DialogRequest,
         recentHistory: List<DialogHistory>,
         relevantMemories: List<String>,
         relationship: NPCRelationship?,
-        dbContext: DialogManager.PromptDbContext
+        dbContext: DialogManager.PromptDbContext,
+        accessibleShops: List<NpcShopDefinition>,
+        shopAccessDenied: Boolean,
+        workFacts: NpcWorkFactResponse.Facts? = null,
+        storyFactResponse: String? = null,
     ): CompletableFuture<String> {
+        val conversationHistory = DialogHistory.recentStable(recentHistory)
         val npc = request.npc()
         val context = npc.context ?: NPCContext(npc)
         context.lastPlayerMessage = request.message()
@@ -276,50 +244,140 @@ class DialogueEngine(
         } else {
             null
         }
+        val shopFactResponse = resolveShopFactResponse(npc, request.message(), accessibleShops, shopAccessDenied)
 
         val recognition = PlayerRecognition.from(
             relationship,
-            recentHistory.size,
+            conversationHistory.size,
             dbContext.totalMemoryCount,
             dbContext.regionalReputation
         )
         val identityResponse = PlayerIdentityResponse.resolve(
-            request.message(), request.player().name, recognition, dbContext.playerProfile
+            request.message(), request.player().name, recognition, dbContext.playerProfile,
+            dbContext.playerConfirmedStatements,
         )
-        val recallResponse = PlayerConversationRecall.resolve(request.message(), recentHistory)
-        val factualResponses = listOfNotNull(factResponse ?: semanticFactResponse, identityResponse, recallResponse)
-        if (factualResponses.isNotEmpty()) return CompletableFuture.completedFuture(factualResponses.joinToString(" "))
-
-        val intent = selectIntent(npc, context, request.message(), recognition)
-        val template = selectTemplate(npc, intent)
-        val defaultResponse = processTemplate(template, npc, context, request.player().name)
-        val processed = if (intent in setOf(
-                DialogueIntent.GREET,
-                DialogueIntent.GREET_FRIEND,
-                DialogueIntent.GREET_STRANGER,
-                DialogueIntent.GREET_GUARDED,
+        val recallResponse = PlayerConversationRecall.resolve(request.message(), conversationHistory)
+        val factualResponses = listOfNotNull(factResponse ?: semanticFactResponse, storyFactResponse, shopFactResponse, identityResponse, recallResponse)
+        if (factualResponses.isNotEmpty()) {
+            return generateGroundedResponse(
+                request, conversationHistory, relevantMemories, relationship, dbContext,
+                factualResponses.joinToString(" "),
+                shopFactResponse != null || identityResponse != null || recallResponse != null,
             )
-        ) {
-            PlayerProfileGreeting.adapt(defaultResponse, dbContext.playerProfile, recognition, request.player().name)
-        } else {
-            defaultResponse
         }
 
-        if (!shouldUseContextualAI(intent, context, request, recentHistory, relevantMemories, relationship)) {
-            return CompletableFuture.completedFuture(processed)
-        }
+        val deterministicIntent = selectIntent(npc, context, request.message(), recognition)
+        val contextualAiNeeded = shouldUseContextualAI(
+            deterministicIntent, context, request, conversationHistory, relevantMemories, relationship
+        )
+        return resolveAmbiguousIntent(
+            request.message(), deterministicIntent, contextualAiNeeded, accessibleShops, workFacts
+        )
+            .thenCompose { intent ->
+                val groundedReply = when (intent) {
+                    DialogueIntent.TRADE -> NpcShopFactResolver.tradeSummary(accessibleShops, shopAccessDenied)
+                    DialogueIntent.WORK_TALK -> workFacts?.let { facts ->
+                        NpcWorkFactResponse.resolve(facts, conversationHistory.map { it.npcResponse })
+                    }
+                    else -> null
+                }
+                if (groundedReply != null) {
+                    return@thenCompose generateGroundedResponse(
+                        request, conversationHistory, relevantMemories, relationship, dbContext,
+                        groundedReply, intent == DialogueIntent.TRADE,
+                    )
+                }
+                val resolvedIntent = if (intent != deterministicIntent) deterministicIntent else intent
+                val greetingTemplates = if (resolvedIntent in setOf(
+                        DialogueIntent.GREET,
+                        DialogueIntent.GREET_FRIEND,
+                        DialogueIntent.GREET_STRANGER,
+                        DialogueIntent.GREET_GUARDED,
+                    )
+                ) {
+                    PlayerProfileGreeting.templates(dbContext.playerProfile, recognition)
+                } else {
+                    null
+                }
+                val continuationTemplates = PlayerConversationContinuation.templates(request.message(), conversationHistory)
+                val template = selectTemplate(npc, resolvedIntent, continuationTemplates ?: greetingTemplates)
+                val processed = processTemplate(template, npc, context, request.player().name)
 
-        return openAIService.generateResponse(request, recentHistory, relevantMemories, relationship, dbContext)
-            .thenApply { response -> if (response.isNullOrBlank()) processed else response }
-            .exceptionally { ex ->
-                plugin.debug("Eroare in pipeline-ul contextual de dialog: ${ex.message}")
-                processed
+                if (!contextualAiNeeded) {
+                    return@thenCompose CompletableFuture.completedFuture(processed)
+                }
+
+                openAIService.generateResponse(request, conversationHistory, relevantMemories, relationship, dbContext)
+                    .thenApply { response -> if (response.isNullOrBlank()) processed else response }
+                    .exceptionally { ex ->
+                        plugin.debug("Eroare in pipeline-ul contextual de dialog: ${ex.message}")
+                        processed
+                    }
             }
+    }
+
+    private fun generateGroundedResponse(
+        request: DialogManager.DialogRequest,
+        recentHistory: List<DialogHistory>,
+        relevantMemories: List<String>,
+        relationship: NPCRelationship?,
+        dbContext: DialogManager.PromptDbContext,
+        groundedReply: String,
+        exactRequired: Boolean,
+    ): CompletableFuture<String> {
+        if (exactRequired ||
+            !plugin.config.getBoolean("ai.dialogue.ground_facts_with_ai", true) ||
+            !openAIService.canGenerateContextualResponse
+        ) return CompletableFuture.completedFuture(groundedReply)
+
+        return openAIService.generateResponse(
+            request, recentHistory, relevantMemories, relationship, dbContext, groundedReply,
+        ).handle { response, error ->
+            if (error != null || response.isNullOrBlank()) groundedReply else response
+        }
+    }
+
+    private fun resolveAmbiguousIntent(
+        playerMessage: String,
+        deterministicIntent: DialogueIntent,
+        contextualAiNeeded: Boolean,
+        accessibleShops: List<NpcShopDefinition>,
+        workFacts: NpcWorkFactResponse.Facts?,
+    ): CompletableFuture<DialogueIntent> {
+        if (!plugin.config.getBoolean("ai.orchestration.intent_classification.enabled", false) ||
+            !DialogueAiIntentClassification.shouldClassify(deterministicIntent, playerMessage, contextualAiNeeded)
+        ) {
+            return CompletableFuture.completedFuture(deterministicIntent)
+        }
+        val orchestrator = plugin.aiOrchestrationService
+        if (!orchestrator.enabled()) return CompletableFuture.completedFuture(deterministicIntent)
+        val hasAccessibleShop = NpcShopFactResolver.hasListedGoods(accessibleShops)
+        val hasOccupation = !workFacts?.occupation.isNullOrBlank()
+        val request = AIOrchestrationRequest(
+            AIUseCase.INTENT_CLASSIFICATION, "", "", "dialogue",
+            mapOf(
+                "player_message" to playerMessage,
+                "has_accessible_shop" to hasAccessibleShop.toString(),
+                "has_occupation" to hasOccupation.toString(),
+            )
+        )
+        val classification = runCatching { orchestrator.orchestrateAsync(request) }
+            .getOrElse { return CompletableFuture.completedFuture(deterministicIntent) }
+        return classification.handle { result, error ->
+            if (error != null || result?.status() != AIResultStatus.SUCCESS) {
+                deterministicIntent
+            } else {
+                DialogueAiIntentClassification.parse(result.message(), hasAccessibleShop, hasOccupation)
+                    ?: deterministicIntent
+            }
+        }
     }
 
     fun generateResponse(npc: AINPC, context: NPCContext, playerMessage: String): CompletableFuture<String> {
         val factResponse = resolveFactResponse(npc, context, playerMessage)
         if (factResponse != null) return CompletableFuture.completedFuture(factResponse)
+        val shopFactResponse = resolveShopFactResponse(npc, playerMessage)
+        if (shopFactResponse != null) return CompletableFuture.completedFuture(shopFactResponse)
 
         val intent = selectIntent(npc, context, playerMessage)
         val template = selectTemplate(npc, intent)
@@ -331,6 +389,23 @@ class DialogueEngine(
         return CompletableFuture.completedFuture(processed)
     }
 
+    private fun resolveShopFactResponse(
+        npc: AINPC,
+        playerMessage: String,
+        accessibleShops: List<NpcShopDefinition>? = null,
+        shopAccessDenied: Boolean = false,
+    ): String? {
+        if (!NpcShopFactResolver.isLookupQuestion(playerMessage)) return null
+        val shops = accessibleShops ?: NpcShopAssociation.findShops(plugin.shopService, npc, plugin.platform.worldAdmin)
+        val workPlaceName = if (NpcShopFactResolver.requiresWorkPlace(playerMessage)) {
+            OpenAISemanticWorldContextBuilder
+                .resolveWorkPlace(plugin.platform.worldAdmin, npc.workAnchor)?.displayName()
+        } else {
+            null
+        }
+        return NpcShopFactResolver.resolve(playerMessage, shops, workPlaceName, shopAccessDenied)
+    }
+
     private fun resolveFactResponse(npc: AINPC, context: NPCContext, playerMessage: String): String? {
         val facts = NpcFactResolver.NpcFacts(
             npc.name,
@@ -338,9 +413,13 @@ class DialogueEngine(
             npc.emotions?.getShortDescription() ?: "",
             npc.currentState?.displayName ?: "",
             NpcFactResolver.describeCurrentActivity(npc.occupation, npc.currentState),
-            NpcFactResolver.describeLocation(npc, context)
+            NpcFactResolver.describeLocation(npc, context),
+            npc.plannedRoutineActivity,
+            NpcFactResolver.describePersonality(npc.personality),
         )
-        return NpcFactResolver.resolve(playerMessage, facts).orElse(null)
+        val npcFact = NpcFactResolver.resolve(playerMessage, facts).orElse(null)
+        val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext)
+        return listOfNotNull(npcFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }
     }
 
     fun clearRecentResponses() {
@@ -355,22 +434,11 @@ class DialogueEngine(
         recentResponses.remove(uuid)
     }
 
-    private fun selectTemplate(npc: AINPC, intent: DialogueIntent): String {
-        var intentTemplates = templates[intent]
+    private fun selectTemplate(npc: AINPC, intent: DialogueIntent, alternatives: List<String>? = null): String {
+        var intentTemplates = alternatives ?: templates[intent]
         if (intentTemplates.isNullOrEmpty()) intentTemplates = templates[DialogueIntent.GREET]
         val recent = recentResponses.computeIfAbsent(npc.uuid) { Collections.synchronizedList(mutableListOf()) }
-        val selected: String
-        synchronized(recent) {
-            var available = intentTemplates!!.filter { !recent.contains(it) }
-            if (available.isEmpty()) {
-                recent.clear()
-                available = intentTemplates
-            }
-            selected = available[ThreadLocalRandom.current().nextInt(available.size)]
-            recent.add(selected)
-            if (recent.size > 5) recent.removeAt(0)
-        }
-        return selected
+        return DialogueTemplateRotation.choose(intentTemplates!!, recent)
     }
 
     private fun processTemplate(template: String, npc: AINPC, context: NPCContext, playerName: String? = null): String {
@@ -402,12 +470,12 @@ class DialogueEngine(
         relationship: NPCRelationship?
     ): Boolean {
         if (!openAIService.canGenerateContextualResponse) return false
+        if (PlayerConversationContinuation.needsContext(request.message(), recentHistory.orEmpty())) return true
         if (shouldUseAI(intent, context)) return true
         if (!relevantMemories.isNullOrEmpty()) return true
         if (recentHistory != null && recentHistory.size >= 2) return true
         if (relationship != null && relationship.interactionCount >= 3) return true
-        val message = request.message()?.trim() ?: ""
-        return request.explicitConversation() && message.length > 8
+        return request.explicitConversation()
     }
 
     private fun shouldUseAI(intent: DialogueIntent, context: NPCContext): Boolean =
@@ -461,6 +529,8 @@ class DialogueEngine(
         GREET_FRIEND("Salut prieten"),
         GREET_STRANGER("Salut strain"),
         GREET_GUARDED("Salut prudent"),
+        QUESTION("Intrebare fara raspuns confirmat"),
+        CONVERSATION("Conversatie deschisa"),
         FAREWELL("La revedere"),
         TRADE("Comert"),
         WARN("Avertizare"),

@@ -5,6 +5,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.economy.NpcShopDefinition
 import ro.ainpc.economy.ShopOffer
 import ro.ainpc.economy.ShopTransactionResult
+import ro.ainpc.ai.NpcShopAssociation
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -79,7 +80,7 @@ class ShopGui : GuiScreen {
                 "?"
             }
             val occupation = npc.occupation
-            val npcShops = if (occupation != null) shopService.findShopsForRole(occupation) else emptyList()
+            val npcShops = NpcShopAssociation.findShops(shopService, npc, wa)
             val hasShop = npcShops.isNotEmpty()
             val lore = mutableListOf(
                 "&7Ocupatie: &f${occupation ?: "necunoscuta"}",
@@ -135,7 +136,7 @@ class ShopGui : GuiScreen {
         }
 
         val occupation = npc.occupation
-        val npcShops = if (occupation != null) shopService.findShopsForRole(occupation) else emptyList()
+        val npcShops = NpcShopAssociation.findShops(shopService, npc, context.plugin().platform.worldAdmin)
         if (npcShops.isEmpty()) {
             context.service().setShopSelectedNpcId(player, null)
             renderNpcList(context, player)
@@ -168,30 +169,44 @@ class ShopGui : GuiScreen {
                 }
                 val resultDesc = offer.resultItems.entries.joinToString(", ") { "${it.value} x ${it.key.name.lowercase()}" }
                 val usesDesc = if (offer.isUnlimited()) "&7Nelimitat" else "&7Max ${offer.maxUses} folosiri"
-                context.button(slot++, GuiButton.enabled(
-                    GuiItemFactory.item(
-                        offer.displayItem,
-                        "&f${offer.offerId}",
-                        listOf(
-                            "&7Platesti: &e$costDesc",
-                            "&7Primesti: &a$resultDesc",
-                            usesDesc,
-                            if (offer.isUnlimited() && offer.requirements.isEmpty()) "&8Click pentru a cumpara"
-                            else "&cOferta cu restrictii inca nesuportate"
-                        )
-                    ),
-                    GuiAction { click ->
+                val configurationIssue = offer.configurationIssue()
+                val hasAccess = shopService.canAccess(player, shop)
+                val availability = when {
+                    !hasAccess -> "&cNu ai permisiunea necesara"
+                    configurationIssue == null -> "&8Click pentru a cumpara"
+                    configurationIssue == ShopOffer.ConfigurationIssue.UNSUPPORTED_RESTRICTIONS ->
+                        "&cOferta cu restrictii inca nesuportate"
+                    else -> "&cOferta configurata incomplet"
+                }
+                val icon = GuiItemFactory.item(
+                    offer.displayItem,
+                    "&f${offer.offerId}",
+                    listOf(
+                        "&7Platesti: &e$costDesc",
+                        "&7Primesti: &a$resultDesc",
+                        usesDesc,
+                        availability
+                    )
+                )
+                val button = if (hasAccess && configurationIssue == null) {
+                    GuiButton.enabled(icon, GuiAction { click ->
                         val currentShop = shopService.getShop(shop.shopId)
                         val currentOffer = currentShop?.getOffer(offer.offerId)
-                        val result = if (currentShop != null && currentOffer != null) {
+                        val currentShops = NpcShopAssociation.findShops(
+                            shopService, npc, click.plugin().platform.worldAdmin
+                        )
+                        val result = if (currentShop == shop && currentOffer == offer && currentShop in currentShops) {
                             shopService.executePurchase(click.player(), currentShop, currentOffer)
                         } else {
                             ShopTransactionResult(false, "Oferta nu mai este disponibila")
                         }
                         click.plugin().messageUtils.send(click.player(), (if (result.success) "&a" else "&c") + result.message)
                         click.service().open(click.player(), GuiKey.SHOP)
-                    }
-                ))
+                    })
+                } else {
+                    GuiButton.disabled(icon)
+                }
+                context.button(slot++, button)
                 offerIndex++
             }
         }

@@ -122,7 +122,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
     fun preview(npc: AINPC?): RoutineAssignment = routineService.preview(npc)
 
-    fun previewDay(npc: AINPC?): List<RoutineScheduleEntry> = routineEngine.previewDay(npc)
+    fun previewDay(npc: AINPC?): List<RoutineScheduleEntry> = routineService.previewDay(npc)
 
     fun pauseRoutine(npcUuid: UUID): Boolean = npcPausedRoutines.add(npcUuid)
 

@@ -3,6 +3,7 @@ package ro.ainpc.routine
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import ro.ainpc.topology.TopologyCategory
+import java.util.Random
 
 /**
  * Routinedecisionresolver.
@@ -39,6 +40,10 @@ class RoutineDecisionResolver {
             return idle(null, null, "nu exista NPC valid")
         }
 
+        resolveWorldStateAssignment(npc, profile, defaultProfile)?.let {
+            return applyWeatherReaction(npc, profile, defaultProfile, routineTime, it)
+        }
+
         if (profile != null && profile.schedule.isNotEmpty()) {
             for (entry in profile.schedule) {
                 if (routineTime >= entry.startTick && routineTime < entry.endTick) {
@@ -55,7 +60,7 @@ class RoutineDecisionResolver {
                         RoutineSlot.IDLE -> null
                     }
                     val stateName = entry.state.ifBlank { slotState(profile, defaultProfile, slot.name, defaultStateForSlot(slot)) }
-                    return RoutineAssignment(
+                    val assignment = RoutineAssignment(
                         slot,
                         entry.activity,
                         entry.target.ifBlank { entry.label },
@@ -67,13 +72,118 @@ class RoutineDecisionResolver {
                         },
                         anchor
                     )
+                    val socializedAssignment = applyPersonalitySocialization(npc, profile, defaultProfile, routineTime, assignment)
+                    return applyWeatherReaction(npc, profile, defaultProfile, routineTime, socializedAssignment)
                 }
             }
         }
 
-        resolveFallbackAssignment(npc, profile, defaultProfile, routineTime)?.let { return it }
+        resolveFallbackAssignment(npc, profile, defaultProfile, routineTime)?.let {
+            val socializedAssignment = applyPersonalitySocialization(npc, profile, defaultProfile, routineTime, it)
+            return applyWeatherReaction(npc, profile, defaultProfile, routineTime, socializedAssignment)
+        }
 
-        return idle(profile, defaultProfile, routineText(profile, defaultProfile, "idle", "isi urmeaza rutina obisnuita"))
+        val idleAssignment = idle(profile, defaultProfile, routineText(profile, defaultProfile, "idle", "isi urmeaza rutina obisnuita"))
+        val socializedAssignment = applyPersonalitySocialization(npc, profile, defaultProfile, routineTime, idleAssignment)
+        return applyWeatherReaction(npc, profile, defaultProfile, routineTime, socializedAssignment)
+    }
+
+    private fun resolveWorldStateAssignment(
+        npc: AINPC,
+        profile: BehaviorProfile?,
+        defaultProfile: BehaviorProfile?
+    ): RoutineAssignment? {
+        val rules = profile?.worldStateRules?.takeIf { it.isNotEmpty() }
+            ?: defaultProfile?.worldStateRules
+            ?: emptyList()
+        for (rule in rules) {
+            val currentState = when (rule.scope.uppercase()) {
+                "REGION" -> npc.context.effectiveRegionStoryState
+                "PLACE" -> npc.context.effectivePlaceStoryState
+                else -> null
+            }
+            val currentMode = if (rule.scope.equals("REGION", ignoreCase = true)) {
+                npc.context.effectiveRegionStoryMode
+            } else null
+            val stateMatches = rule.storyState.isBlank() || currentState.equals(rule.storyState, ignoreCase = true)
+            val modeMatches = rule.storyMode.isBlank() || currentMode.equals(rule.storyMode, ignoreCase = true)
+            if (!stateMatches || !modeMatches) continue
+
+            val slot = rule.slot.uppercase()
+            val stateName = rule.state.ifBlank {
+                slotState(profile, defaultProfile, slot, defaultStateForSlotName(slot))
+            }
+            val activity = routineText(profile, defaultProfile, rule.activityKey, rule.activityKey)
+            return when (slot) {
+                "HOME" -> home(npc, profile, defaultProfile, activity, stateName)
+                "WORK" -> work(
+                    npc,
+                    profile,
+                    defaultProfile,
+                    zoneWorkActivity(npc, activity, profile, defaultProfile),
+                    stateName
+                )
+                "SOCIAL" -> social(npc, profile, defaultProfile, activity, stateName)
+                "IDLE" -> idle(profile, defaultProfile, activity, stateName)
+                else -> null
+            }
+        }
+        return null
+    }
+
+    private fun applyPersonalitySocialization(
+        npc: AINPC,
+        profile: BehaviorProfile?,
+        defaultProfile: BehaviorProfile?,
+        routineTime: Long,
+        assignment: RoutineAssignment
+    ): RoutineAssignment {
+        if (assignment.slot() != RoutineSlot.HOME && assignment.slot() != RoutineSlot.IDLE) return assignment
+        if (!hasAnchor(npc.socialAnchor)) return assignment
+
+        val socialStart = normalizedRoutineTime(phaseTick(profile, defaultProfile, "social_start", 8000L))
+        val socialEnd = normalizedRoutineTime(phaseTick(profile, defaultProfile, "social_end", 18000L))
+        val normalizedTime = normalizedRoutineTime(routineTime)
+        val inSocialWindow = when {
+            socialStart == socialEnd -> false
+            socialStart < socialEnd -> normalizedTime >= socialStart && normalizedTime < socialEnd
+            else -> normalizedTime >= socialStart || normalizedTime < socialEnd
+        }
+        if (!inSocialWindow) return assignment
+
+        val configuredChance = (profile?.socializeChance ?: defaultProfile?.socializeChance ?: 0.3).coerceIn(0.0, 1.0)
+        val personalityModifier = (0.5 + npc.personality.extraversion).coerceIn(0.0, 1.5)
+        val dailyChance = (configuredChance * personalityModifier).coerceIn(0.0, 1.0)
+        val dayNumber = npc.context.environmentContext.dayNumber.toLong()
+        val seed = npc.uuid.mostSignificantBits xor java.lang.Long.rotateLeft(npc.uuid.leastSignificantBits, 17) xor dayNumber
+        if (Random(seed).nextDouble() >= dailyChance) return assignment
+
+        val activity = routineText(profile, defaultProfile, "personality_social", "merge la punctul social in timpul liber")
+        return social(npc, profile, defaultProfile, activity)
+    }
+
+    private fun normalizedRoutineTime(tick: Long): Long = ((tick % 24000L) + 24000L) % 24000L
+
+    private fun applyWeatherReaction(
+        npc: AINPC,
+        profile: BehaviorProfile?,
+        defaultProfile: BehaviorProfile?,
+        routineTime: Long,
+        assignment: RoutineAssignment
+    ): RoutineAssignment {
+        val weatherReactions = profile?.weatherReactions ?: defaultProfile?.weatherReactions ?: true
+        val environment = npc.context.environmentContext
+        val nightStart = phaseTick(profile, defaultProfile, "night_start", 18000L)
+        val wakeStart = phaseTick(profile, defaultProfile, "wake_start", 2000L)
+        val isNight = routineTime >= nightStart || routineTime < wakeStart
+        if (!weatherReactions || isNight || assignment.slot() == RoutineSlot.HOME ||
+            !hasAnchor(npc.homeAnchor) || !environment.isExtreme()
+        ) {
+            return assignment
+        }
+
+        val activity = routineText(profile, defaultProfile, "weather_shelter", "se adaposteste din cauza vremii extreme")
+        return home(npc, profile, defaultProfile, activity)
     }
 
     private fun zoneWorkState(npc: AINPC): NPCState {

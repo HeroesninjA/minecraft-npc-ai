@@ -28,7 +28,8 @@ class ShopGuiDiagnosticsTest {
         val source = File("src/main/kotlin/ro/ainpc/gui/screens/ShopGui.kt").readText()
 
         assertTrue(source.contains("renderOffers"))
-        assertTrue(source.contains("shopService.findShopsForRole"))
+        assertTrue(source.contains("NpcShopAssociation.findShops"))
+        assertTrue(source.contains("shopService.canAccess(player, shop)"))
         assertTrue(source.contains("Inapoi la Lista NPC"))
         assertTrue(source.contains("Nicio Ofertă Disponibilă"))
     }

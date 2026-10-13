@@ -1,7 +1,7 @@
 # Harta claselor pentru context
 
 Status: harta derivata din cod.
-Actualizat: 2026-07-15.
+Actualizat: 2026-10-12.
 
 Codul are mai multe familii de context; ele nu formeaza un singur pipeline si nu au acelasi lifecycle.
 
@@ -24,7 +24,7 @@ Codul are mai multe familii de context; ele nu formeaza un singur pipeline si nu
 
 ## Environment
 
-`NPCContext` cere `EnvironmentEngine.getContextForLocation(...)`, care porneste de la cache-ul lumii si ajusteaza temperatura dupa biome. `EnvironmentEngine.tick()` ar actualiza cache-ul, dar nu are apelant de productie confirmat; timpul si vremea dintr-un context deja creat pot ramane vechi.
+`NPCContext` cere `EnvironmentEngine.getContextForLocation(...)`, care porneste de la cache-ul lumii si ajusteaza vremea si temperatura dupa biome. `SchedulerCoordinator` actualizeaza cache-ul prin `EnvironmentEngine.tick()` dupa 30 de secunde si apoi o data pe minut. Inaintea fiecarei decizii de rutina, `RoutineService` recalculeaza mediul local la pozitia curenta a NPC-ului; cache-ul global poate avea pana la un minut vechime.
 
 ## Utilitare izolate
 

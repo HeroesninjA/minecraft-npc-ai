@@ -1,5 +1,6 @@
 package ro.ainpc.ai
 
+import ro.ainpc.environment.EnvironmentContext
 import java.util.UUID
 
 data class PromptSnapshot(
@@ -32,7 +33,9 @@ data class PromptSnapshot(
     val regionId: String = "",
     val plannedRoutineActivity: String = "",
     val immediateGoal: String = "",
-    val playerHeldItem: String = ""
+    val playerHeldItem: String = "",
+    val personalityDescription: String = "",
+    val environmentContext: EnvironmentContext? = null,
 ) {
     fun npcUuid(): UUID = npcUuid
     fun npcName(): String = npcName
@@ -55,6 +58,8 @@ data class PromptSnapshot(
     fun currentState(): String = currentState
     fun currentActivity(): String = currentActivity
     fun locationDescription(): String = locationDescription
+    fun personalityDescription(): String = personalityDescription
+    fun environmentContext(): EnvironmentContext? = environmentContext
     fun directAddress(): Boolean = directAddress
     fun explicitConversation(): Boolean = explicitConversation
     fun triggerReason(): String = triggerReason

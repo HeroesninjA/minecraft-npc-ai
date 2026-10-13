@@ -1,0 +1,61 @@
+shops:
+  piata_satului:
+    npc_role: negustor
+    place_types: [MARKET, SHOP]
+    currency: ITEM
+    restock_policy: NEVER
+    offers:
+      paine:
+        display_item: BREAD
+        cost_items:
+          EMERALD: 1
+        result_items:
+          BREAD: 4
+  fierarie:
+    npc_role: fierar
+    place_types: [FORGE]
+    currency: ITEM
+    restock_policy: NEVER
+    offers:
+      unelte:
+        display_item: IRON_PICKAXE
+        cost_items:
+          EMERALD: 3
+        result_items:
+          IRON_PICKAXE: 1
+  ferma:
+    npc_role: fermier
+    place_types: [FARM]
+    currency: ITEM
+    restock_policy: NEVER
+    offers:
+      grau:
+        display_item: WHEAT
+        cost_items:
+          EMERALD: 1
+        result_items:
+          WHEAT: 8
+  taverna:
+    npc_role: hangiu
+    place_types: [TAVERN]
+    currency: ITEM
+    restock_policy: NEVER
+    offers:
+      tocana:
+        display_item: MUSHROOM_STEW
+        cost_items:
+          EMERALD: 1
+        result_items:
+          MUSHROOM_STEW: 1
+  atelier:
+    npc_role: mestesugar
+    place_types: [SHOP, FORGE]
+    currency: ITEM
+    restock_policy: NEVER
+    offers:
+      scanduri:
+        display_item: OAK_PLANKS
+        cost_items:
+          EMERALD: 1
+        result_items:
+          OAK_PLANKS: 16

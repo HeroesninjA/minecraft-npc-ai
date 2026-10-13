@@ -57,7 +57,7 @@ class RoutineGui : GuiScreen {
         for (index in npcs.indices) {
             val npc = npcs[index]
             val current = context.plugin().routineService.preview(npc)
-            val dayPreview = context.plugin().routineService.routineEngine.previewDay(npc)
+            val dayPreview = context.plugin().routineService.previewDay(npc)
             val binding = loadNpcWorldBinding(context, npc)
             context.button(
                 NPC_SLOTS[index],

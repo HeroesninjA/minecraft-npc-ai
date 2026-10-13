@@ -10,13 +10,15 @@ Actorii sunt definiti in scenarii si spawnati de `ScenarioEngine`. Etichetele de
 - lifecycle: `PERMANENT`, `TEMPORARY`, `EPISODIC`, `SCENE_ONLY`;
 - persistenta: `FULL`, `LIGHT`, `RUNTIME_ONLY`;
 - simulare: `FULL`, `LIGHT`, `NONE`;
-- interactiune: `FULL_AI`, `QUEST_ONLY`, `MINIMAL`, `NONE`;
+- interactiune: `FULL_AI`, `QUEST_ONLY`, `SHOP_ONLY`, `SCENE_ONLY`, `MINIMAL`;
 - spawn policy: auto, stage sau manual;
 - ownership, despawn rule, durata si tag-uri temporare.
 
 ## Comportament activ
 
 - definitia YAML este aplicata pe obiectul `AINPC`;
+- `DialogManager` consulta profilul de interactiune inainte de accesarea istoricului sau a providerului AI; `MINIMAL` si `SCENE_ONLY` blocheaza dialogul direct, iar `QUEST_ONLY` si `SHOP_ONLY` il permit numai cand conditia lor minima este disponibila;
+- refuzurile de profil au variante rotite, aplica cooldown si nu sunt persistate ca dialog sau relatie;
 - `VILLAGER/HUMANOID` folosesc Villager, `MONSTER` foloseste Zombie, iar `SPIRIT/MARKER` ArmorStand;
 - `ANIMAL/NONE` folosesc adaptorul no-op si nu ofera spawn real;
 - orice mod diferit de `RUNTIME_ONLY` apeleaza acelasi `saveNPC(...)`; `FULL` si `LIGHT` nu au politici distincte;
@@ -25,7 +27,8 @@ Actorii sunt definiti in scenarii si spawnati de `ScenarioEngine`. Etichetele de
 
 ## Gap-uri confirmate
 
-- `NpcSimulationMode` si `NpcInteractionProfile` sunt stocate in memorie, dar nu sunt consultate de simulare, rutina sau dialog;
+- `NpcSimulationMode` nu este consultat de simulare sau rutina;
+- `QUEST_ONLY` verifica o oferta asociata actorului curent prin UUID, ID DB sau nume; `SHOP_ONLY` cere un magazin configurat pentru ocupatie, tipul/ID-ul cladirii mapate la `workAnchor` daca magazinul are `place_types`/`place_ids`, permisiunea jucatorului si cel putin o oferta cu schimb valid structural; nu valideaza plata sau stocul;
 - `despawn_rule`, ownership-ul si tag-urile nu conduc cleanup-ul;
 - `TEMPORARY` nu intra in conditia de unregister folosita pentru `EPISODIC`, `SCENE_ONLY` si `RUNTIME_ONLY`;
 - unregister-ul scoate NPC-ul doar din cache; nu sterge un rand deja persistat;

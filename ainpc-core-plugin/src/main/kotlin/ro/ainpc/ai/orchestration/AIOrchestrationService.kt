@@ -1,12 +1,26 @@
 package ro.ainpc.ai.orchestration
 
+import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.OllamaService
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.bootstrap.RuntimeMetricNames
+import ro.ainpc.context.ContextRedactor
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.TimeUnit
 
-class AIOrchestrationService(private val plugin: AINPCPlugin?) {
+class AIOrchestrationService private constructor(
+    private val plugin: AINPCPlugin?,
+    private val generationOverride: ((String) -> CompletableFuture<String?>)?,
+    private val availabilityOverride: (() -> Boolean)?,
+    private val enabledOverride: Boolean?
+) {
+    constructor(plugin: AINPCPlugin?) : this(plugin, null, null, null)
+
+    internal constructor(generator: (String) -> CompletableFuture<String?>) :
+        this(null, generator, { true }, true)
+
     val suggestionService: AISuggestionService = AISuggestionService(plugin)
     companion object {
         const val DEFAULT_MAX_RETRIES = 3
@@ -22,13 +36,15 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
     fun markDraft(result: AIOrchestrationResult): AIOrchestrationResult = AIOrchestrationResult(
         result.useCase(), result.status(), result.outputType(),
         "$DRAFT_MARKER ${result.message()}", result.fallbackUsed(), false,
-        result.errorCode(), result.validationMessages()
+        result.errorCode(), result.validationMessages(),
+        result.lifecycle(), result.safetyLabel(), result.provenance()
     )
 
     fun markExecuted(result: AIOrchestrationResult): AIOrchestrationResult = AIOrchestrationResult(
         result.useCase(), result.status(), result.outputType(),
         "$EXECUTED_MARKER ${result.message()}", result.fallbackUsed(), true,
-        result.errorCode(), result.validationMessages()
+        result.errorCode(), result.validationMessages(),
+        result.lifecycle(), result.safetyLabel(), result.provenance()
     )
 
     private val currentProvider: Any?
@@ -41,19 +57,21 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         }
 
     private fun generateWithProvider(prompt: String): CompletableFuture<String?> {
+        generationOverride?.let { return it(prompt) }
         val provider = currentProvider
         return when (provider) {
-            is OllamaService -> CompletableFuture.completedFuture(provider.generateAsync(prompt))
+            is OllamaService -> CompletableFuture.supplyAsync { provider.generateAsync(prompt) }
             is OpenAIService -> provider.generateAsync(prompt)
             else -> CompletableFuture.completedFuture(null)
         }
     }
 
     private fun isProviderAvailable(): Boolean {
+        availabilityOverride?.let { return it() }
         val provider = currentProvider
         return when (provider) {
             is OllamaService -> provider.isAvailable
-            is OpenAIService -> provider.isAvailable
+            is OpenAIService -> provider.canGenerateContextualResponse
             else -> false
         }
     }
@@ -61,13 +79,21 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
     fun policyFor(useCase: AIUseCase?): AIOrchestrationPolicy = AIOrchestrationPolicy.forUseCase(useCase)
 
     fun orchestrate(request: AIOrchestrationRequest?): AIOrchestrationResult {
+        if (request != null && plugin != null && enabled() && Bukkit.isPrimaryThread()) {
+            return fallback(request, "ai_orchestration_requires_async")
+        }
+        return orchestrateAsync(request).join()
+    }
+
+    fun orchestrateAsync(request: AIOrchestrationRequest?): CompletableFuture<AIOrchestrationResult> {
         val timer = plugin?.let {
             runCatching { it.performanceMonitor.timer(RuntimeMetricNames.AI_ORCHESTRATION) }.getOrNull()
         }
         timer?.begin()
         return try {
-            orchestrateMeasured(request).also { result ->
-                timer?.end(success = result.status() == AIResultStatus.SUCCESS)
+            orchestrateMeasuredAsync(request).whenComplete { result, error ->
+                if (error != null) timer?.fail()
+                else timer?.end(success = result.status() == AIResultStatus.SUCCESS)
             }
         } catch (error: Throwable) {
             timer?.fail()
@@ -75,85 +101,104 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         }
     }
 
-    private fun orchestrateMeasured(request: AIOrchestrationRequest?): AIOrchestrationResult {
+    private fun orchestrateMeasuredAsync(request: AIOrchestrationRequest?): CompletableFuture<AIOrchestrationResult> {
         if (request == null) {
-            return AIResultStatus.VALIDATION_FAILED.result(
-                AIUseCase.DIALOGUE_REPLY, "Cererea AI nu este valida.", "invalid_request"
+            return CompletableFuture.completedFuture(
+                AIResultStatus.VALIDATION_FAILED.result(
+                    AIUseCase.DIALOGUE_REPLY, "Cererea AI nu este valida.", "invalid_request"
+                )
             )
         }
         if (!enabled()) {
-            return fallback(request, "ai_orchestration_disabled")
+            return CompletableFuture.completedFuture(fallback(request, "ai_orchestration_disabled"))
         }
         if (isFreezeActive()) {
-            return fallback(request, "ai_suggestion_freeze_active")
-        }
-        if (!isProviderAvailable()) {
-            return fallback(request, "ai_provider_not_available")
+            return CompletableFuture.completedFuture(fallback(request, "ai_suggestion_freeze_active"))
         }
         val draftUseCases = listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)
         if (request.useCase() in draftUseCases && !isConfidenceSufficient(request)) {
-            return AIResultStatus.VALIDATION_FAILED.result(
-                request.useCase(), "Sugestia AI nu atinge pragul minim de incredere.", "confidence_too_low"
+            return CompletableFuture.completedFuture(
+                AIResultStatus.VALIDATION_FAILED.result(
+                    request.useCase(), "Sugestia AI nu atinge pragul minim de incredere.", "confidence_too_low"
+                )
             )
         }
-        val maxRetries = plugin?.config?.getInt("ai.orchestration.max_retries", DEFAULT_MAX_RETRIES) ?: DEFAULT_MAX_RETRIES
+        val maxRetries = (plugin?.config?.getInt("ai.orchestration.max_retries", DEFAULT_MAX_RETRIES)
+            ?: DEFAULT_MAX_RETRIES).coerceIn(1, 10)
         val baseDelay = plugin?.config?.getLong("ai.orchestration.retry_base_delay_ms", DEFAULT_RETRY_BASE_DELAY_MS)
             ?: DEFAULT_RETRY_BASE_DELAY_MS
         val maxDelay = plugin?.config?.getLong("ai.orchestration.retry_max_delay_ms", DEFAULT_RETRY_MAX_DELAY_MS)
             ?: DEFAULT_RETRY_MAX_DELAY_MS
-
-        var lastError: String? = null
-        for (attempt in 1..maxRetries) {
-            try {
-                val prompt = buildPrompt(request)
-                val response = generateWithProvider(prompt).get()
-                if (response.isNullOrBlank()) {
-                    if (attempt < maxRetries) {
-                        lastError = "ai_response_empty"
-                        plugin?.debug("[AIOrchestrator] Incercarea $attempt/$maxRetries: raspuns gol. Reincerc...")
-                        backoffDelay(attempt, baseDelay, maxDelay)
-                        continue
-                    }
-                    return fallback(request, "ai_response_empty")
-                }
-                val lifecycleState = if (request.useCase() in listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)) {
-                    AISuggestionLifecycle.QUEUED
-                } else {
-                    AISuggestionLifecycle.APPROVED
-                }
-                val safetyLabel = suggestionService.determineSafetyLabel(request, AIOrchestrationResult(
-                    request.useCase(), AIResultStatus.SUCCESS, policyFor(request.useCase()).outputType(),
-                    response, false, true, "ai_provider_openai", emptyList()
-                ))
-                val draftResult = AIOrchestrationResult(
-                    request.useCase(),
-                    AIResultStatus.SUCCESS,
-                    policyFor(request.useCase()).outputType(),
-                    response, false, true, "ai_provider_openai", emptyList(),
-                    lifecycle = lifecycleState,
-                    safetyLabel = safetyLabel
-                )
-                return if (request.useCase() in listOf(AIUseCase.QUEST_DRAFT, AIUseCase.STORY_DRAFT, AIUseCase.BUILD_PLAN_DRAFT)) {
-                    markDraft(draftResult)
-                } else {
-                    markExecuted(draftResult)
-                }
-            } catch (e: Exception) {
-                lastError = "ai_error: ${e.message}"
-                if (attempt < maxRetries && isRetryable(e)) {
-                    plugin?.debug("[AIOrchestrator] Incercarea $attempt/$maxRetries: ${e.message}. Reincerc...")
-                    backoffDelay(attempt, baseDelay, maxDelay)
-                } else {
-                    plugin?.debug("[AIOrchestrator] Eroare OpenAI (final, $attempt/$maxRetries): ${e.message}")
-                    return fallback(request, lastError)
-                }
-            }
+        val prompt = buildPrompt(request)
+        return CompletableFuture.supplyAsync {
+            runCatching { isProviderAvailable() }.getOrDefault(false)
+        }.thenCompose { available ->
+            if (!available) CompletableFuture.completedFuture(fallback(request, "ai_provider_not_available"))
+            else generateAttempt(request, prompt, 1, maxRetries, baseDelay, maxDelay)
         }
-        return fallback(request, lastError ?: "ai_orchestration_retry_exhausted")
     }
 
-    private fun isRetryable(e: Exception): Boolean {
-        val message = e.message?.lowercase() ?: return false
+    private fun generateAttempt(
+        request: AIOrchestrationRequest,
+        prompt: String,
+        attempt: Int,
+        maxRetries: Int,
+        baseDelay: Long,
+        maxDelay: Long
+    ): CompletableFuture<AIOrchestrationResult> {
+        val generated = try {
+            generateWithProvider(prompt)
+        } catch (error: Exception) {
+            CompletableFuture.failedFuture(error)
+        }
+        return generated.handle { response, error ->
+            val cause = (error as? CompletionException)?.cause ?: error
+            val reason = if (cause != null) "ai_provider_error" else "ai_response_empty"
+            when {
+                cause == null && !response.isNullOrBlank() ->
+                    CompletableFuture.completedFuture(validatedResult(request, response))
+                attempt < maxRetries && (cause == null || isRetryable(cause)) ->
+                    CompletableFuture.runAsync(
+                        {},
+                        CompletableFuture.delayedExecutor(
+                            backoffMillis(attempt, baseDelay, maxDelay),
+                            TimeUnit.MILLISECONDS
+                        )
+                    ).thenCompose { generateAttempt(request, prompt, attempt + 1, maxRetries, baseDelay, maxDelay) }
+                else -> CompletableFuture.completedFuture(fallback(request, reason))
+            }
+        }.thenCompose { it }
+    }
+
+    internal fun validatedResult(request: AIOrchestrationRequest, response: String): AIOrchestrationResult {
+        val validation = AIResponseValidator.validate(response, request.useCase())
+        val policy = policyFor(request.useCase())
+        if (policy.validationRequired() && !validation.valid) {
+            return AIOrchestrationResult(
+                request.useCase(), AIResultStatus.VALIDATION_FAILED, policy.outputType(),
+                fallbackMessage(request.useCase()), true, false,
+                validation.rejectionReason, validation.errors + validation.warnings,
+                safetyLabel = AISafetyLabel.BLOCKED
+            )
+        }
+        val draft = policy.outputType() == AIOutputType.DRAFT
+        val result = AIOrchestrationResult(
+            request.useCase(), AIResultStatus.SUCCESS, policy.outputType(),
+            validation.sanitizedText, false, policy.runtimeExecutable(), "",
+            validation.warnings,
+            lifecycle = if (draft) AISuggestionLifecycle.QUEUED else AISuggestionLifecycle.GENERATED
+        )
+        val safetyLabel = suggestionService.determineSafetyLabel(request, result)
+        val labelled = AIOrchestrationResult(
+            result.useCase(), result.status(), result.outputType(), result.message(),
+            result.fallbackUsed(), result.runtimeExecutable(), result.errorCode(),
+            result.validationMessages(), result.lifecycle(), safetyLabel, result.provenance()
+        )
+        return if (draft) markDraft(labelled) else labelled
+    }
+
+    private fun isRetryable(error: Throwable): Boolean {
+        val message = error.message?.lowercase() ?: return false
         return message.contains("timeout") ||
             message.contains("rate limit") ||
             message.contains("429") ||
@@ -190,14 +235,8 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
         return confidence != null && confidence >= minConfidence
     }
 
-    private fun backoffDelay(attempt: Int, baseDelayMs: Long, maxDelayMs: Long) {
-        val delay = minOf(baseDelayMs * (1L shl (attempt - 1)), maxDelayMs)
-        try {
-            Thread.sleep(delay)
-        } catch (_: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
-    }
+    private fun backoffMillis(attempt: Int, baseDelayMs: Long, maxDelayMs: Long): Long =
+        minOf(baseDelayMs.coerceIn(0, 60_000) * (1L shl (attempt - 1)), maxDelayMs.coerceIn(0, 60_000))
 
     fun fallback(request: AIOrchestrationRequest?, reason: String?): AIOrchestrationResult {
         val safeRequest = request ?: AIOrchestrationRequest(AIUseCase.DIALOGUE_REPLY, "", "", "", emptyMap())
@@ -217,18 +256,23 @@ class AIOrchestrationService(private val plugin: AINPCPlugin?) {
     }
 
     fun enabled(): Boolean =
-        plugin?.config?.getBoolean("features.ai", false) == true &&
-            plugin.config.getBoolean("ai.orchestration.enabled", true)
+        enabledOverride ?: (plugin?.config?.getBoolean("features.ai", false) == true &&
+            plugin.config.getBoolean("ai.orchestration.enabled", true))
 
-    private fun buildPrompt(request: AIOrchestrationRequest): String {
+    internal fun buildPrompt(request: AIOrchestrationRequest): String {
         val ctx = request.context()
         val parts = mutableListOf<String>()
+        if (request.useCase() == AIUseCase.ADMIN_DEBUG_SUMMARY) {
+            parts.add("Rezumă în română indicatorii de mai jos în maximum 500 de caractere. Nu inventa fapte și nu pretinde că ai modificat serverul.")
+        } else if (request.useCase() == AIUseCase.INTENT_CLASSIFICATION) {
+            parts.add("Clasifică numai intenția mesajului jucătorului. Răspunde exact TRADE, WORK_TALK sau NONE, fără alt text. Alege TRADE doar pentru cereri de comerț, WORK_TALK doar pentru întrebări despre muncă; altfel NONE. Nu executa acțiuni.")
+        }
         if (ctx.isNotEmpty()) {
             ctx.forEach { (k, v) -> parts.add("$k: $v") }
         }
         if (request.actorId().isNotBlank()) parts.add("Actor: ${request.actorId()}")
         if (request.playerName().isNotBlank()) parts.add("Player: ${request.playerName()}")
-        return parts.joinToString("\n")
+        return ContextRedactor.redact(parts.joinToString("\n"))
     }
 
     fun checkSuggestionPublishGate(

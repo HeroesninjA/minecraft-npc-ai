@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import ro.ainpc.npc.AINPC
 
 class ScenarioObjectiveProgressTest {
     @Test
@@ -409,6 +410,25 @@ class ScenarioObjectiveProgressTest {
     fun matchesStoredQuestNpcReturnsFalseForEmptyQuestVariables() {
         val p = PlayerQuestProgress("t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(), emptyMap())
         assertFalse(matchesStoredQuestNpc(p, null))
+    }
+
+    @Test
+    fun storedQuestGiverFromCurrentBindingMatchesNpcAndResolvesName() {
+        val npc = AINPC(null).apply {
+            databaseId = 7
+            name = "Mara"
+        }
+        val progress = PlayerQuestProgress(
+            "t", "q", QuestStatus.ACTIVE, 0L, 0L, 0L, "", emptyMap(),
+            mapOf("quest_giver_npc_id" to "7", "quest_giver_npc_name" to "Mara"),
+        )
+
+        assertTrue(matchesStoredQuestNpc(progress, npc))
+        assertEquals("Mara", resolveQuestNpcName(progress))
+        assertFalse(matchesStoredQuestNpc(progress, AINPC(null).apply {
+            databaseId = 8
+            name = "Mara"
+        }))
     }
 
     @Test

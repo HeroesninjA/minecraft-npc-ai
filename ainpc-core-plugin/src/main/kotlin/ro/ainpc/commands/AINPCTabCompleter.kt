@@ -284,6 +284,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 "debugdump" -> {
                     if (args.size == 2) {
                         completions.addAll(filterStartsWith(DEBUG_DUMP_SCOPES, args[1]))
+                    } else if (args.size == 3 && args[1].lowercase() in setOf("ai", "openai")) {
+                        completions.addAll(filterStartsWith(listOf("summary"), args[2]))
                     } else if (args.size in 3..4 && args[1].lowercase() in DEBUG_DUMP_EXPORT_SCOPES) {
                         val current = args.last()
                         val priorArguments = args.drop(2).dropLast(1)
@@ -1086,7 +1088,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             .filter { profile -> profile != AuditProfile.STANDARD }
             .map { profile -> profile.argument }
         private const val AUDIT_JSON_OPTION = "json"
-        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "openai", "mcp", "scenario")
+        private val DEBUG_DUMP_SCOPES = listOf("all", "npc", "world", "quest", "story", "ai", "openai", "mcp", "scenario")
         private val DEBUG_DUMP_EXPORT_SCOPES = setOf("all", "npc")
         private const val DEBUG_DUMP_PRIVACY_OPTION = "privacy-safe"
         private val MIGRATION_TARGETS = listOf("households")

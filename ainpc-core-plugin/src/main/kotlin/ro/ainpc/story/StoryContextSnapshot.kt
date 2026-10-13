@@ -96,6 +96,21 @@ class StoryContextSnapshot(
                 .append("\n")
         }
 
+        StoryStateViewResolver.region(region, persistentRegionStateValue)?.let { effective ->
+            block.append("- effective_region_story: ")
+                .append(effective.id)
+                .append(", state=")
+                .append(effective.stateKey)
+                .append(", mode=")
+                .append(effective.mode.id)
+                .append(", source=")
+                .append(effective.source)
+                .append("\n")
+            if (effective.description.isNotBlank()) {
+                block.append("- effective_region_story_description: ").append(effective.description).append("\n")
+            }
+        }
+
         val place: WorldPlaceInfo? = worldContextValue.currentPlace()
         if (place != null) {
             block.append("- place_story: ")
@@ -117,6 +132,19 @@ class StoryContextSnapshot(
                 .append(", vars=")
                 .append(persistentPlaceStateValue.variables())
                 .append("\n")
+        }
+
+        StoryStateViewResolver.place(place, persistentPlaceStateValue)?.let { effective ->
+            block.append("- effective_place_story: ")
+                .append(effective.id)
+                .append(", state=")
+                .append(effective.stateKey)
+                .append(", source=")
+                .append(effective.source)
+                .append("\n")
+            if (effective.description.isNotBlank()) {
+                block.append("- effective_place_story_description: ").append(effective.description).append("\n")
+            }
         }
 
         if (recentStoryEventsValue.isNotEmpty()) {

@@ -1,5 +1,7 @@
 package ro.ainpc.economy
 
+import ro.ainpc.world.PlaceType
+
 /**
  * Shopcurrency.
  */
@@ -27,7 +29,9 @@ data class NpcShopDefinition(
     val currency: ShopCurrency,
     val offers: List<ShopOffer>,
     val restockPolicy: RestockPolicy,
-    val permission: String?
+    val permission: String?,
+    val placeTypes: Set<PlaceType> = emptySet(),
+    val placeIds: Set<String> = emptySet()
 ) {
     fun offersForRole(role: String): List<ShopOffer> {
         if (npcRole.equals(role, ignoreCase = true)) return offers

@@ -12,6 +12,7 @@ import ro.ainpc.api.events.story.StoryContextBuiltEvent
 import ro.ainpc.api.events.story.StoryContextBuiltEventPayload
 import ro.ainpc.api.events.story.StorySignalCollectedEvent
 import ro.ainpc.api.events.story.StorySignalCollectedEventPayload
+import ro.ainpc.environment.EnvironmentContext
 import ro.ainpc.npc.AINPC
 import ro.ainpc.world.WorldContextSnapshot
 import ro.ainpc.world.WorldContextSnapshotBuilder
@@ -50,6 +51,12 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         val persistentRegionState = loadPersistentRegionState(worldContext, warnings)
         val persistentPlaceState = loadPersistentPlaceState(worldContext, warnings)
         val recentStoryEvents = loadRecentStoryEvents(worldContext, warnings)
+        val environmentContext = location?.let { currentLocation ->
+            currentLocation.world?.let { world ->
+                plugin.environmentEngine.getContextForLocation(world.name, currentLocation.block.biome.key.asString())
+                    .copy(lightLevel = currentLocation.block.lightLevel.toInt().coerceIn(0, 15))
+            }
+        }
 
         if (player == null) {
             warnings.add("no player context; active quest anchors unavailable")
@@ -60,8 +67,10 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             activeQuestAnchors,
             persistentRegionState,
             persistentPlaceState,
-            recentStoryEvents
-        ) + npcStorySignalResolver.collect(npc?.profileDataJson) +
+            recentStoryEvents,
+            environmentContext
+        ) + StoryCharacteristicsSignals.personality(npc?.personality) +
+            npcStorySignalResolver.collect(npc?.profileDataJson) +
             npcBindingStorySignalResolver.collect(worldContext.npcBindings(), plugin.platform.worldAdmin)
         val snapshot = StoryContextSnapshot(
             npc?.name ?: "",
@@ -238,10 +247,13 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         activeQuestAnchors: List<StoryContextSnapshot.QuestAnchorSnapshot>?,
         persistentRegionState: RegionStoryState?,
         persistentPlaceState: PlaceStoryState?,
-        recentStoryEvents: List<StoryEvent>?
+        recentStoryEvents: List<StoryEvent>?,
+        environmentContext: EnvironmentContext?,
     ): List<String> {
         val signals = LinkedHashSet<String>()
+        val environmentSignals = StoryCharacteristicsSignals.environment(environmentContext)
         if (worldContext == null || worldContext.isEmpty()) {
+            signals.addAll(environmentSignals)
             addActiveQuestAnchorSignals(signals, activeQuestAnchors)
             addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents)
             publishStorySignalsCollected(worldContext, ArrayList(signals), mapOf("collectionMode" to "minimal"))
@@ -253,6 +265,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             addSignal(signals, "region_id", region.id())
             addSignal(signals, "region_type", region.typeId())
             addSignal(signals, "region_story_state", region.storyStateKey())
+            addSignal(signals, "effective_region_story_state", StoryStateViewResolver.region(region, persistentRegionState)?.stateKey)
             addSignal(signals, "region_story_mode", region.storyMode().id)
             if (region.storyPool().isNotEmpty()) {
                 addSignal(signals, "region_story_pool", limit(region.storyPool(), 5).joinToString(","))
@@ -266,6 +279,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         if (place != null) {
             addSignal(signals, "place_id", place.id())
             addSignal(signals, "place_type", place.placeType().id)
+            addSignal(signals, "effective_place_story_state", StoryStateViewResolver.place(place, persistentPlaceState)?.stateKey)
             addSignal(signals, "place_owner_npc_id", place.ownerNpcId())
             if (place.tags().isNotEmpty()) {
                 addSignal(signals, "place_tags", limit(place.tags(), 6).joinToString(","))
@@ -294,19 +308,7 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             addSignal(signals, key, value)
         }
 
-        if (worldContext != null && !worldContext.isEmpty()) {
-            val env = plugin.environmentEngine.getContext(
-                worldContext.currentRegion()?.worldName()
-                    ?: worldContext.currentPlace()?.worldName()
-            )
-            addSignal(signals, "environment_time", env.timeOfDay.id)
-            addSignal(signals, "environment_weather", env.weather.id)
-            addSignal(signals, "environment_season", env.season.id)
-            addSignal(signals, "environment_temperature", env.temperature.id)
-            if (env.specialEvents.isNotEmpty()) {
-                addSignal(signals, "environment_events", env.specialEvents.joinToString(","))
-            }
-        }
+        signals.addAll(environmentSignals)
 
         addActiveQuestAnchorSignals(signals, activeQuestAnchors)
         addPersistentStorySignals(signals, persistentRegionState, persistentPlaceState, recentStoryEvents)

@@ -3,6 +3,7 @@ package ro.ainpc.gui.screens
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import ro.ainpc.ai.NpcShopAssociation
 import ro.ainpc.gui.GuiAction
 import ro.ainpc.gui.GuiButton
 import ro.ainpc.gui.GuiItemFactory
@@ -142,8 +143,9 @@ class NpcInteractionGui : GuiScreen {
             val npc = nearbyNpcs[index]
             val distance = Math.sqrt(distanceSquared(location, npc.location))
             val progression = primaryProgressionForNpc(progressionSnapshot, npc)
-            val occupation = npc.occupation
-            val npcShops = if (occupation != null) context.plugin().shopService.findShopsForRole(occupation) else emptyList()
+            val npcShops = NpcShopAssociation.findShops(
+                context.plugin().shopService, npc, context.plugin().platform.worldAdmin
+            )
             val hasShop = npcShops.isNotEmpty()
             val npcName = npc.name
             context.button(
@@ -254,8 +256,9 @@ class NpcInteractionGui : GuiScreen {
             )
         )
         val nearestShopNpc = nearbyNpcs.firstOrNull { npc ->
-            val occ = npc.occupation
-            occ != null && context.plugin().shopService.findShopsForRole(occ).isNotEmpty()
+            NpcShopAssociation.findShops(
+                context.plugin().shopService, npc, context.plugin().platform.worldAdmin
+            ).isNotEmpty()
         }
         if (nearestShopNpc != null) {
             context.button(

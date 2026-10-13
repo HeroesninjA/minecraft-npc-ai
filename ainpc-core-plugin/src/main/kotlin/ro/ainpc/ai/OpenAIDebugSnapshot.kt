@@ -44,7 +44,8 @@ data class OpenAIDebugSnapshot(
     val lastFallbackAtMillis: Long,
     val lastFallbackReason: String,
     val connectionStatus: ConnectionStatus?,
-    val recentInteractions: List<OpenAIDebugInteraction>
+    val recentInteractions: List<OpenAIDebugInteraction>,
+    val apiSuspendedReason: String? = null,
 ) {
     val backoffActive: Boolean
         get() = nowMillis < offlineRetryAfterMillis

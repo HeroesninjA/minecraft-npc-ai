@@ -453,11 +453,13 @@ fun matchesStoredQuestNpc(progress: PlayerQuestProgress?, npc: AINPC?): Boolean 
     val questVariables = progress.questVariables()
     if (questVariables.isEmpty()) return false
 
-    val storedUuid = questVariables["quest_giver_uuid"]
-    if (storedUuid != null && npc.uuid != null && storedUuid.equals(npc.uuid.toString(), ignoreCase = true)) return true
+    val storedUuid = questVariables["quest_giver_uuid"]?.takeIf(String::isNotBlank)
+    if (storedUuid != null) return storedUuid.equals(npc.uuid.toString(), ignoreCase = true)
 
     val storedDatabaseId = questVariables["quest_giver_db_id"]
-    if (storedDatabaseId != null && npc.databaseId > 0 && storedDatabaseId == npc.databaseId.toString()) return true
+        ?.takeIf(String::isNotBlank)
+        ?: questVariables["quest_giver_npc_id"]?.takeIf(String::isNotBlank)
+    if (storedDatabaseId != null) return npc.databaseId > 0 && storedDatabaseId.toIntOrNull() == npc.databaseId
 
     return matchesObjectiveReference(
         questVariables["quest_giver_name"],
@@ -465,6 +467,10 @@ fun matchesStoredQuestNpc(progress: PlayerQuestProgress?, npc: AINPC?): Boolean 
         npc.displayName ?: "",
     ) || matchesObjectiveReference(
         questVariables["quest_giver_display_name"],
+        npc.name ?: "",
+        npc.displayName ?: "",
+    ) || matchesObjectiveReference(
+        questVariables["quest_giver_npc_name"],
         npc.name ?: "",
         npc.displayName ?: "",
     )

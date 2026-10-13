@@ -6,6 +6,43 @@ import org.junit.jupiter.api.Test
 
 class PlayerConversationRecallTest {
     @Test
+    fun `recall uses the latest exchange even when caller history is unordered`() {
+        val history = listOf(
+            DialogHistory("Ai vazut ploaia?", "Da.", 2L),
+            DialogHistory("Ce meserie ai?", "Sunt fierar.", 1L),
+        )
+
+        assertEquals(
+            "In ultimul schimb disponibil, am vorbit despre vreme.",
+            PlayerConversationRecall.resolve("Ce am discutat?", history)
+        )
+    }
+
+    @Test
+    fun `short follow ups preserve the last substantive topic`() {
+        val history = listOf(
+            DialogHistory("Ce meserie ai?", "Sunt fierar.", 1L),
+            DialogHistory("Continuă!", "Ce detaliu te intereseaza?", 2L),
+            DialogHistory("Spune-mi mai mult.", "Despre meserie?", 3L),
+        )
+
+        assertEquals(
+            "In ultimul schimb disponibil, am vorbit despre o meserie.",
+            PlayerConversationRecall.resolve("Ce am discutat?", history)
+        )
+    }
+
+    @Test
+    fun `greeting prefix does not become the recalled topic`() {
+        assertEquals(
+            "In ultimul schimb disponibil, am vorbit despre vreme.",
+            PlayerConversationRecall.resolve("Ce am discutat?", listOf(
+                DialogHistory("Salut, ai vazut ploaia?", "Da.", 1L)
+            ))
+        )
+    }
+
+    @Test
     fun `recalls last stable topic without repeating message content`() {
         val history = listOf(
             DialogHistory("Unde este satul?", "La nord.", 1L),

@@ -2,12 +2,14 @@ package ro.ainpc.ai
 
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
+import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
 import ro.ainpc.topology.TopologyCategory
 import java.text.Normalizer
 import java.util.EnumMap
 import java.util.Locale
 import java.util.Optional
+import kotlin.math.abs
 
 /**
  * Rezolva intrebarile factuale despre NPC fara a depinde de modelul AI.
@@ -109,6 +111,22 @@ object NpcFactResolver {
     }
 
     @JvmStatic
+    fun activityAnswer(facts: NpcFacts): String? {
+        val currentActivity = facts.currentActivity().trim()
+        val routine = safeRoutine(facts.plannedRoutineActivity())
+        if (currentActivity.isBlank()) return routine?.let { "Acum am in program: $it." }
+        if (routine != null && isConversationActivity(currentActivity)) {
+            return "Vorbesc cu tine acum; in program am: $routine."
+        }
+        return capitalizeSentence(currentActivity) + "."
+    }
+
+    @JvmStatic
+    fun routineAnswer(facts: NpcFacts): String = safeRoutine(facts.plannedRoutineActivity())
+        ?.let { "Acum am in program: $it." }
+        ?: "Nu am un program stabilit acum."
+
+    @JvmStatic
     fun describeLocation(npc: AINPC?, context: NPCContext?): String {
         if (context != null) {
             val topologyCategory = context.topologyCategory
@@ -141,8 +159,15 @@ object NpcFactResolver {
             "cum te simti", "ce stare ai", "cum iti este")
         registerMatch(matches, FactIntent.ACTIVITY, normalizedMessage,
             "ce faci", "ce faci acum", "ce lucrezi", "la ce lucrezi", "ce muncesti", "cu ce te ocupi acum")
+        registerMatch(matches, FactIntent.ROUTINE, normalizedMessage,
+            "care este programul tau", "care e programul tau", "ce ai in program",
+            "care este rutina ta", "care e rutina ta", "ce urmeaza sa faci", "ce ai de facut")
         registerMatch(matches, FactIntent.LOCATION, normalizedMessage,
             "unde esti", "unde te afli", "in ce loc esti", "unde te gasesc")
+        registerMatch(matches, FactIntent.PERSONALITY, normalizedMessage,
+            "ce fel de persoana esti", "ce fel de om esti", "cum esti ca persoana",
+            "cum e firea ta", "cum ti-ai descrie personalitatea", "ce personalitate ai",
+            "cum e caracterul tau", "cum te-ai descrie")
 
         return matches.entries
             .sortedBy { it.value }
@@ -173,9 +198,30 @@ object NpcFactResolver {
             FactIntent.NAME -> if (facts.npcName().isBlank()) null else "Sunt ${facts.npcName()}."
             FactIntent.PROFESSION -> if (facts.occupation().isBlank()) null else "Sunt ${facts.occupation()}."
             FactIntent.STATE -> buildStateAnswer(facts)
-            FactIntent.ACTIVITY -> if (facts.currentActivity().isBlank()) null else capitalizeSentence(facts.currentActivity()) + "."
+            FactIntent.ACTIVITY -> activityAnswer(facts)
+            FactIntent.ROUTINE -> routineAnswer(facts)
             FactIntent.LOCATION -> if (facts.locationDescription().isBlank()) null else "Sunt in ${facts.locationDescription()}."
+            FactIntent.PERSONALITY -> facts.personalityDescription().ifBlank { null }
         }
+    }
+
+    fun describePersonality(personality: NPCPersonality?): String {
+        if (personality == null) return ""
+        val tendencies = listOfNotNull(
+            tendency(personality.openness, "imi plac ideile noi", "prefer traditiile"),
+            tendency(personality.conscientiousness, "imi place sa planific", "prefer sa improvizez"),
+            tendency(personality.extraversion, "imi place sa socializez", "prefer linistea"),
+            tendency(personality.agreeableness, "imi place sa colaborez", "sunt precaut cu ceilalti"),
+            tendency(personality.neuroticism, "ma ingrijorez usor", "imi pastrez calmul"),
+        ).sortedByDescending { it.first }.take(2).map { it.second }
+        return if (tendencies.isEmpty()) "De obicei, ma adaptez la situatie."
+        else "De obicei, ${tendencies.joinToString(" si ")}."
+    }
+
+    private fun tendency(value: Double, high: String, low: String): Pair<Double, String>? = when {
+        value > 0.65 -> abs(value - 0.5) to high
+        value < 0.35 -> abs(value - 0.5) to low
+        else -> null
     }
 
     private fun buildStateAnswer(facts: NpcFacts): String? {
@@ -235,6 +281,26 @@ object NpcFactResolver {
         return trimmed[0].uppercaseChar() + trimmed.substring(1)
     }
 
+    internal fun safeRoutine(value: String): String? {
+        val routine = value.trim().replace(Regex("\\s+"), " ").trimEnd('.', '!', '?')
+        if (routine.isBlank() || routine.length > 120) return null
+        val normalized = normalize(routine)
+        if (normalized.startsWith("ancora ") || normalized.contains(" lipseste") ||
+            normalized.contains(" invalida") || normalized.contains(" indisponibila")) return null
+        return when (normalized) {
+            "work" -> "sa lucrez"
+            "home" -> "sa ma odihnesc acasa"
+            "social" -> "sa ma intalnesc cu ceilalti"
+            "idle" -> "o pauza"
+            else -> routine
+        }
+    }
+
+    private fun isConversationActivity(value: String): Boolean {
+        val normalized = normalize(value)
+        return normalized.startsWith("vorb") || normalized.startsWith("ascult") || normalized == "sta de vorba"
+    }
+
     private fun normalize(value: String): String {
         val normalized = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD)
         return normalized.replace(Regex("\\p{M}+"), "")
@@ -245,7 +311,9 @@ object NpcFactResolver {
         PROFESSION,
         STATE,
         ACTIVITY,
-        LOCATION
+        ROUTINE,
+        LOCATION,
+        PERSONALITY
     }
 
     data class NpcFacts(
@@ -254,7 +322,9 @@ object NpcFactResolver {
         val emotionalState: String,
         val currentState: String,
         val currentActivity: String,
-        val locationDescription: String
+        val locationDescription: String,
+        val plannedRoutineActivity: String = "",
+        val personalityDescription: String = "",
     ) {
         fun npcName(): String = npcName
         fun occupation(): String = occupation
@@ -262,5 +332,7 @@ object NpcFactResolver {
         fun currentState(): String = currentState
         fun currentActivity(): String = currentActivity
         fun locationDescription(): String = locationDescription
+        fun plannedRoutineActivity(): String = plannedRoutineActivity
+        fun personalityDescription(): String = personalityDescription
     }
 }

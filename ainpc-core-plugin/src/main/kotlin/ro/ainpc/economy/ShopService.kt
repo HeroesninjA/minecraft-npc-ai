@@ -4,6 +4,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import ro.ainpc.world.WorldPlaceInfo
 
 /**
  * Shopservice.
@@ -28,6 +29,7 @@ class ShopService internal constructor(
         private const val WEALTH_FACTOR = 0.003
     }
 
+    @Synchronized
     fun registerShop(shop: NpcShopDefinition) {
         unregisterShop(shop.shopId)
         shops[shop.shopId] = shop
@@ -35,6 +37,7 @@ class ShopService internal constructor(
         roleIndex.getOrPut(role) { mutableListOf() }.add(shop)
     }
 
+    @Synchronized
     fun unregisterShop(shopId: String) {
         val shop = shops.remove(shopId) ?: return
         val role = shop.npcRole.lowercase()
@@ -44,19 +47,37 @@ class ShopService internal constructor(
         }
     }
 
+    @Synchronized
     fun getShop(shopId: String): NpcShopDefinition? = shops[shopId]
 
+    @Synchronized
     fun findShopsForRole(role: String): List<NpcShopDefinition> {
         return roleIndex[role.lowercase()]?.toList() ?: emptyList()
     }
 
+    @Synchronized
+    fun findShopsForRoleAtPlace(role: String, place: WorldPlaceInfo?): List<NpcShopDefinition> =
+        findShopsForRole(role).filter { shop ->
+            (shop.placeTypes.isEmpty() || (place != null && place.placeType() in shop.placeTypes)) &&
+                (shop.placeIds.isEmpty() || (place != null && shop.placeIds.any { it.equals(place.id(), ignoreCase = true) }))
+        }
+
+    @Synchronized
     fun getAllShops(): Collection<NpcShopDefinition> = shops.values.toList()
 
+    @Synchronized
     fun clear() {
         shops.clear()
         roleIndex.clear()
     }
 
+    @Synchronized
+    fun replaceShops(definitions: Collection<NpcShopDefinition>) {
+        clear()
+        definitions.forEach(::registerShop)
+    }
+
+    @Synchronized
     fun shopCount(): Int = shops.size
 
     fun getDynamicPriceMultiplier(shop: NpcShopDefinition): Double {
@@ -71,6 +92,12 @@ class ShopService internal constructor(
     fun getAdjustedCost(shop: NpcShopDefinition, originalCost: Int): Int {
         return requireNotNull(adjustedAmount(shop, originalCost.toLong())) { "Cost invalid sau prea mare" }
     }
+
+    fun canAccess(shop: NpcShopDefinition, hasPermission: (String) -> Boolean): Boolean =
+        shop.permission.isNullOrBlank() || hasPermission(shop.permission)
+
+    fun canAccess(player: Player, shop: NpcShopDefinition): Boolean =
+        canAccess(shop) { permission -> player.hasPermission(permission) }
 
     fun canAfford(player: Player, shop: NpcShopDefinition, offer: ShopOffer): Boolean {
         if (!isPrimaryThread() || validateOffer(player, shop, offer) != null || itemTemplates(offer) == null) return false
@@ -143,12 +170,14 @@ class ShopService internal constructor(
     }
 
     private fun validateOffer(player: Player, shop: NpcShopDefinition, offer: ShopOffer): String? {
-        if (!shop.permission.isNullOrBlank() && !player.hasPermission(shop.permission)) return "Nu ai permisiunea necesara"
+        if (!canAccess(player, shop)) return "Nu ai permisiunea necesara"
         if (offer !in shop.offers) return "Oferta nu apartine magazinului"
-        if (!offer.isUnlimited() || offer.requirements.isNotEmpty()) return "Restrictiile acestei oferte nu sunt inca suportate"
-        if (offer.costItems.isEmpty() || offer.resultItems.isEmpty()) return "Oferta este incompleta"
-        if (offer.costItems.values.any { it <= 0 } || offer.resultItems.values.any { it <= 0 }) return "Cantitate invalida"
-        return null
+        return when (offer.configurationIssue()) {
+            ShopOffer.ConfigurationIssue.UNSUPPORTED_RESTRICTIONS -> "Restrictiile acestei oferte nu sunt inca suportate"
+            ShopOffer.ConfigurationIssue.INCOMPLETE_EXCHANGE -> "Oferta este incompleta"
+            ShopOffer.ConfigurationIssue.INVALID_AMOUNT -> "Cantitate invalida"
+            null -> null
+        }
     }
 
     private fun itemTemplates(offer: ShopOffer): Map<Material, ItemStack>? {

@@ -400,6 +400,7 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&e/ainpc audit [all|npc|world|db|spawn|quest|wand] [strict|full|offline] [json]")
     msg.send(sender, "&7  Verifica probleme ascunse in NPC-uri, mapping si baza de date")
     msg.send(sender, "&e/ainpc debugdump <all|npc|world|mapping|quest|questconfig|story|ai|runtime|mcp|features|scenario|progression> [summary|player] [privacy-safe]")
+    msg.send(sender, "&7  /ainpc debugdump ai summary foloseste AI doar pentru sumar read-only, daca orchestrarea este activa")
     msg.send(sender, "&7  Exporta fisiere pentru all/npc sau afiseaza un sumar read-only; vezi /ainpc debugdump")
     msg.send(sender, "&e/ainpc family <nume>")
     msg.send(sender, "&7  Afiseaza familia unui NPC")

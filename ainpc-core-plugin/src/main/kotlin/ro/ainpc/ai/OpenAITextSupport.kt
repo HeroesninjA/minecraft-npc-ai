@@ -5,9 +5,15 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import java.io.IOException
-import java.util.Locale
+import java.util.UUID
 
 object OpenAITextSupport {
+    private const val MAX_FALLBACK_ROTATIONS = 512
+    private val fallbackResponseIndices = object : LinkedHashMap<Pair<UUID, String>, Int>(MAX_FALLBACK_ROTATIONS, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<UUID, String>, Int>?): Boolean =
+            size > MAX_FALLBACK_ROTATIONS
+    }
+
     @JvmStatic
     fun formatLevel(value: Double): String {
         if (value > 0.8) return "foarte ridicat"
@@ -103,36 +109,36 @@ object OpenAITextSupport {
 
     @JvmStatic
     fun analyzeSentimentFast(message: String?): String {
-        val normalized = message?.lowercase()?.trim().orEmpty()
+        val normalized = DialogueMessageText.normalize(message.orEmpty())
         if (normalized.isBlank()) {
             return "neutral"
         }
 
-        if (containsAny(normalized, "te omor", "te bat", "mori", "kill", "distrug", "iti rup")) {
+        if (DialogueMessageText.matches(normalized, "te omor", "te bat", "mori", "kill", "distrug", "iti rup")) {
             return "threat"
         }
 
-        if (containsAny(normalized, "prost", "idiot", "tampit", "urat", "fraier")) {
+        if (DialogueMessageText.matches(normalized, "prost", "idiot", "tampit", "urat", "fraier")) {
             return "insult"
         }
 
-        if (containsAny(normalized, "multumesc", "mersi", "apreciez", "respect")) {
+        if (DialogueMessageText.matches(normalized, "multumesc", "mersi", "apreciez", "respect")) {
             return "compliment"
         }
 
-        if (containsAny(normalized, "salut", "buna", "hei", "servus", "noroc")) {
+        if (DialogueMessageText.isSimpleGreeting(normalized)) {
             return "greeting"
         }
 
-        if (containsAny(normalized, "bravo", "super", "grozav", "minunat", "frumos", "bun")) {
+        if (DialogueMessageText.matches(normalized, "bravo", "super", "grozav", "minunat", "frumos", "bun")) {
             return "positive"
         }
 
-        if (containsAny(normalized, "rau", "nasol", "groaznic", "suparat", "trist", "urat rau")) {
+        if (DialogueMessageText.matches(normalized, "rau", "nasol", "groaznic", "suparat", "trist", "urat rau")) {
             return "negative"
         }
 
-        if (normalized.endsWith("?") || containsAny(normalized, "ce ", "cum ", "unde ", "cand ", "de ce", "cine ")) {
+        if (DialogueMessageText.isQuestion(normalized)) {
             return "question"
         }
 
@@ -140,11 +146,19 @@ object OpenAITextSupport {
     }
 
     @JvmStatic
-    fun pickResponse(npcUuid: java.util.UUID, messageKey: String?, responses: Array<String>): String {
-        val key = messageKey ?: ""
-        val hash = 31 * npcUuid.hashCode() + key.hashCode()
-        val index = Math.floorMod(hash, responses.size)
-        return responses[index]
+    fun pickResponse(npcUuid: UUID, messageKey: String?, responses: Array<String>): String {
+        require(responses.isNotEmpty())
+        val key = npcUuid to (messageKey ?: "")
+        synchronized(fallbackResponseIndices) {
+            val previousIndex = fallbackResponseIndices[key]
+            val index = if (previousIndex == null) {
+                Math.floorMod(31 * npcUuid.hashCode() + key.second.hashCode(), responses.size)
+            } else {
+                (previousIndex + 1) % responses.size
+            }
+            fallbackResponseIndices[key] = index
+            return responses[index]
+        }
     }
 
     @JvmStatic
@@ -302,6 +316,21 @@ object OpenAITextSupport {
     }
 
     @JvmStatic
+    fun extractOpenAIErrorCode(gson: Gson, responseBody: String?): String {
+        if (responseBody.isNullOrBlank()) return ""
+        return try {
+            val error = gson.fromJson(responseBody, JsonObject::class.java)
+                ?.get("error")
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject
+            val code = safeJsonString(error?.get("code"))
+            if (code.isNotBlank()) code else safeJsonString(error?.get("type"))
+        } catch (_: com.google.gson.JsonSyntaxException) {
+            ""
+        }
+    }
+
+    @JvmStatic
     @Throws(IOException::class)
     fun extractGeneratedText(gson: Gson, responseBody: String?, expectedSpeakerName: String?): String {
         if (responseBody.isNullOrBlank()) {
@@ -378,37 +407,47 @@ object OpenAITextSupport {
         return generatedText
     }
 
-    @JvmStatic
-    fun generateFallbackResponse(snapshot: PromptSnapshot): String {
-        val normalized = snapshot.playerMessage().lowercase(Locale.ROOT).trim()
-        val occupation = if (snapshot.occupation().isNotBlank()) snapshot.occupation() else "locuitor"
-        val semanticFact = resolveSemanticFactFallback(snapshot, normalized)
-        if (semanticFact != null) {
-            return semanticFact
-        }
+    internal fun generateGroundedFallbackResponse(
+        snapshot: PromptSnapshot,
+        recentHistory: List<DialogHistory>,
+        groundedFacts: String?,
+    ): String = groundedFacts?.takeIf(String::isNotBlank) ?: generateFallbackResponse(snapshot, recentHistory)
 
+    @JvmStatic
+    @JvmOverloads
+    fun generateFallbackResponse(snapshot: PromptSnapshot, recentHistory: List<DialogHistory> = emptyList()): String {
+        val normalized = DialogueMessageText.normalize(snapshot.playerMessage())
+        val occupation = if (snapshot.occupation().isNotBlank()) snapshot.occupation() else "locuitor"
+        val environmentFact = EnvironmentFactResolver.resolve(snapshot.playerMessage(), snapshot.environmentContext())
         val factResponse = NpcFactResolver.resolve(snapshot.playerMessage(), NpcFactResolver.NpcFacts(
             snapshot.npcName(),
             snapshot.occupation(),
             snapshot.emotionShortDescription(),
             snapshot.currentState(),
             snapshot.currentActivity(),
-            snapshot.locationDescription()
+            snapshot.locationDescription(),
+            snapshot.plannedRoutineActivity,
+            snapshot.personalityDescription(),
         )).orElse(null)
+
+        if (environmentFact != null) {
+            return listOfNotNull(factResponse, environmentFact).joinToString(" ")
+        }
+        val semanticFact = resolveSemanticFactFallback(snapshot, normalized)
+        if (semanticFact != null) {
+            return semanticFact
+        }
 
         if (factResponse != null) {
             return factResponse
         }
 
-        if (containsAny(normalized, "salut", "buna", "hei", "servus", "noroc")) {
-            return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
-                "Salut. Eu sunt ${snapshot.npcName()}.",
-                "Buna. Cu ce te pot ajuta?",
-                "Salut, calatorule. Ce vrei sa afli?"
-            ))
+        val continuationTemplates = PlayerConversationContinuation.templates(snapshot.playerMessage(), recentHistory)
+        if (continuationTemplates != null) {
+            return pickResponse(snapshot.npcUuid(), normalized, continuationTemplates.toTypedArray())
         }
 
-        if (containsAny(normalized, "multumesc", "mersi", "apreciez")) {
+        if (DialogueMessageText.matches(normalized, "multumesc", "mersi", "apreciez")) {
             return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
                 "Cu placere.",
                 "N-ai pentru ce.",
@@ -416,7 +455,7 @@ object OpenAITextSupport {
             ))
         }
 
-        if (containsAny(normalized, "prost", "idiot", "tampit", "urat", "fraier")) {
+        if (DialogueMessageText.matches(normalized, "prost", "idiot", "tampit", "urat", "fraier")) {
             return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
                 "Vorbeste cu respect daca vrei raspunsuri.",
                 "Nu-mi place tonul tau.",
@@ -424,7 +463,7 @@ object OpenAITextSupport {
             ))
         }
 
-        if (containsAny(normalized, "cumpara", "vinde", "pret", "marfa", "schimb")) {
+        if (DialogueMessageText.matches(normalized, "cumpar", "cumpara", "vinde", "pret", "pretul", "preturi", "marfa", "schimb")) {
             return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
                 "Poate te pot ajuta, depinde ce cauti.",
                 "Daca e vorba de $occupation, stiu cate ceva.",
@@ -432,7 +471,15 @@ object OpenAITextSupport {
             ))
         }
 
-        if (!snapshot.directAddress() && containsAny(normalized, "hmm", "ok", "bine", "da", "nu")) {
+        if (DialogueMessageText.isSimpleGreeting(normalized)) {
+            return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
+                "Salut. Eu sunt ${snapshot.npcName()}.",
+                "Buna. Cu ce te pot ajuta?",
+                "Salut, calatorule. Ce vrei sa afli?"
+            ))
+        }
+
+        if (!snapshot.directAddress() && Regex("(?:hmm|ok|bine|da|nu)[.!?]*").matches(normalized)) {
             return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
                 "Te aud.",
                 "Daca imi vorbesti mie, spune mai clar.",
@@ -440,10 +487,10 @@ object OpenAITextSupport {
             ))
         }
 
-        if (normalized.endsWith("?") || containsAny(normalized, "ce ", "cum ", "unde ", "cand ", "de ce", "cine ")) {
+        if (DialogueMessageText.isQuestion(normalized)) {
             return pickResponse(snapshot.npcUuid(), normalized, arrayOf(
                 "Nu stiu tot, dar pot incerca sa te ajut.",
-                "Din cate stiu eu, raspunsul tine de meseria mea de $occupation.",
+                "Nu am destule informatii despre asta. Ce detalii mai ai?",
                 "Intrebare buna. Spune-mi mai exact ce te intereseaza."
             ))
         }
@@ -480,9 +527,6 @@ object OpenAITextSupport {
     }
 
     private fun resolveSemanticFactFallback(snapshot: PromptSnapshot, normalizedMessage: String): String? {
-        if (!containsAny(normalizedMessage, "cine ", "care ", "unde ", "istor", "povest", "lore", "history", "semnal", "indici")) {
-            return null
-        }
         val context = snapshot.semanticWorldContext()
         if (context.isBlank()) {
             return null
@@ -492,39 +536,27 @@ object OpenAITextSupport {
         val worldHistoryLines = extractSemanticSection(context, "WORLD_HISTORY:")
         val npcLoreLines = extractSemanticSection(context, "NPC_LORE:")
         val storySignalsLine = extractSemanticLine(context, "STORY_SIGNALS:")
-        val professionAnswer = extractSemanticLine(context, "Raspuns factual pentru intrebari despre meserii:")
+        val storyFacts = StoryFactResolver.fromSemanticLines(worldHistoryLines, worldLoreLines)
+        val professionAnswer = NpcProfessionFactResolver.resolve(normalizedMessage, context)
+        if (professionAnswer != null) return professionAnswer
 
-        val wantsHistory = containsAny(normalizedMessage, "istor", "history", "povest", "trecut", "eveniment", "intampl")
-        val wantsLore = containsAny(normalizedMessage, "lore", "povest", "poveste", "despre")
-        val wantsPlace = containsAny(normalizedMessage, "unde ", "locuri", "zona", "sat", "aici")
-        val wantsPerson = containsAny(normalizedMessage, "cine ", "care ", "meserie", "lucreaza", "lucrează")
-        val wantsSignals = containsAny(normalizedMessage, "semnal", "indici")
-        val prefersNpcLoreInHistory = containsAny(normalizedMessage, "povest", "poveste", "lore") && !containsAny(normalizedMessage, "istor")
+        val wantsLore = DialogueMessageText.matches(normalizedMessage, "lore", "poveste", "povestea", "povesti", "povesteste")
+        val wantsNpcHistory = DialogueMessageText.matches(
+            normalizedMessage, "istorie", "istoria", "istoric", "istoricul", "trecut", "trecutul"
+        )
+        val wantsPlace = normalizedMessage.trimEnd('?', '!', '.') in setOf("unde sunt", "unde suntem", "unde ne aflam") ||
+            DialogueMessageText.matches(normalizedMessage, "unde sunt acum", "unde suntem acum", "unde ne aflam acum", "ce locuri sunt aici", "ce locuri sunt in zona", "care sunt locurile din zona")
+        val wantsSignals = DialogueMessageText.matches(normalizedMessage, "semnal", "semnale", "semnalele", "indiciu", "indicii", "indiciile")
+        val wantsLocalLore = DialogueMessageText.matches(normalizedMessage, "sat", "satul", "satului", "regiune", "regiunii", "zona", "zonei", "aici", "acestui loc")
 
         return when {
             wantsSignals -> buildStorySignalsAnswer(storySignalsLine)
-                ?: buildWorldHistoryAnswer(worldHistoryLines)
-                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
-                ?: buildWorldLoreAnswer(worldLoreLines)
-            wantsPerson -> buildProfessionAnswer(professionAnswer)
-                ?: buildNpcLoreAnswer(npcLines = npcLoreLines, normalizedMessage = normalizedMessage)
-            wantsHistory -> if (prefersNpcLoreInHistory) {
-                buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
-                    ?: buildWorldHistoryAnswer(worldHistoryLines)
-            } else {
-                buildWorldHistoryAnswer(worldHistoryLines)
-                    ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
-            }
-                ?: buildWorldLoreAnswer(worldLoreLines)
+            StoryFactResolver.isLookupQuestion(normalizedMessage, storyFacts) -> StoryFactResolver.resolve(normalizedMessage, storyFacts)
+            wantsNpcHistory -> buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
             wantsLore -> buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
-                ?: buildWorldLoreAnswer(worldLoreLines)
-                ?: buildProfessionAnswer(professionAnswer)
+                ?: if (wantsLocalLore) StoryFactResolver.historyAnswer(storyFacts) ?: buildWorldLoreAnswer(worldLoreLines) else null
             wantsPlace -> buildWorldLoreAnswer(worldLoreLines)
-                ?: buildProfessionAnswer(professionAnswer)
-            else -> buildProfessionAnswer(professionAnswer)
-                ?: buildNpcLoreAnswer(npcLoreLines, normalizedMessage)
-                ?: buildWorldLoreAnswer(worldLoreLines)
-                ?: buildWorldHistoryAnswer(worldHistoryLines)
+            else -> null
         }
     }
 
@@ -556,42 +588,6 @@ object OpenAITextSupport {
             ?.removePrefix(prefix)
             ?.trim()
             ?.takeIf { it.isNotBlank() }
-    }
-
-    private fun buildProfessionAnswer(professionAnswer: String?): String? {
-        return professionAnswer?.takeIf { it.isNotBlank() }
-    }
-
-    private fun buildWorldHistoryAnswer(historyLines: List<String>): String? {
-        if (historyLines.isEmpty()) {
-            return null
-        }
-        val regionLine = historyLines.firstOrNull { it.startsWith("- region_story_mode=") }
-        val state = extractField(regionLine, "state")
-        val pool = extractTailField(regionLine, "pool")
-        val eventLines = historyLines.filter { line ->
-            line.startsWith("- ") &&
-                !line.startsWith("- region_story_mode=") &&
-                line != "- recent_events:"
-        }
-        val eventTitles = eventLines.mapNotNull { line ->
-            line.substringAfter(" - ", line.removePrefix("- ").trim()).trim()
-                .takeIf { it.isNotBlank() }
-        }.take(2)
-
-        return buildString {
-            if (state.isNotBlank()) {
-                append("Starea istorica a regiunii este ").append(state).append(".")
-            }
-            if (pool.isNotBlank()) {
-                if (isNotEmpty()) append(' ')
-                append("Teme de istorie: ").append(pool).append('.')
-            }
-            if (eventTitles.isNotEmpty()) {
-                if (isNotEmpty()) append(' ')
-                append("Eveniment recent: ").append(eventTitles.joinToString("; ")).append('.')
-            }
-        }.takeIf { it.isNotBlank() }
     }
 
     private fun buildWorldLoreAnswer(loreLines: List<String>): String? {
@@ -646,10 +642,10 @@ object OpenAITextSupport {
             return null
         }
         val selectedLine = npcLines.firstOrNull { line ->
-            val name = line.substringAfter("- ").substringBefore(",").trim().lowercase(Locale.ROOT)
-            val occupation = extractField(line, "occupation").lowercase(Locale.ROOT)
-            normalizedMessage.contains(name) || normalizedMessage.contains(occupation)
-        } ?: npcLines.first()
+            val name = line.substringAfter("- ").substringBefore(",").trim()
+            val occupation = extractField(line, "occupation")
+            DialogueMessageText.references(normalizedMessage, name) || DialogueMessageText.references(normalizedMessage, occupation)
+        } ?: return null
 
         val name = selectedLine.substringAfter("- ").substringBefore(",").trim()
         val occupation = extractField(selectedLine, "occupation")

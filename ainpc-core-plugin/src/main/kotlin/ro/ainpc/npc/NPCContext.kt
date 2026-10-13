@@ -104,6 +104,12 @@ class NPCContext(
     var currentGoal: String = ""
     var worldContextSnapshot: WorldContextSnapshot = WorldContextSnapshot.empty()
         private set
+    var effectiveRegionStoryState: String? = null
+        internal set
+    var effectiveRegionStoryMode: String? = null
+        internal set
+    var effectivePlaceStoryState: String? = null
+        internal set
     var environmentContext: EnvironmentContext = EnvironmentContext.empty()
         private set
 
@@ -128,7 +134,7 @@ class NPCContext(
         syncSimulationState(npcLocation)
         updateNearbyEntities(npcLocation)
         updateWorldContextSnapshot(npcLocation)
-        updateEnvironmentContext(npcLocation)
+        refreshEnvironmentContext(npcLocation)
         publishNpcContextUpdated("update_from_world")
     }
 
@@ -177,6 +183,17 @@ class NPCContext(
     }
 
     private fun updateWorldContextSnapshot(npcLocation: Location?) {
+        updateWorldContextSnapshot(npcLocation, true)
+    }
+
+    internal fun refreshWorldContextSnapshot(npcLocation: Location?) {
+        updateWorldContextSnapshot(npcLocation, false)
+    }
+
+    private fun updateWorldContextSnapshot(npcLocation: Location?, publishEvents: Boolean) {
+        effectiveRegionStoryState = null
+        effectiveRegionStoryMode = null
+        effectivePlaceStoryState = null
         if (npcLocation == null || npc.plugin == null || npc.plugin.platform == null) {
             worldContextSnapshot = WorldContextSnapshot.empty()
             return
@@ -186,7 +203,7 @@ class NPCContext(
             npc.plugin.platform.worldAdmin
         ).build(npcLocation, npc, nearbyNPCs)
         worldContextSnapshot = snapshot
-        if (!snapshot.isEmpty()) {
+        if (publishEvents && !snapshot.isEmpty()) {
             publishWorldContextBuilt(snapshot)
         }
     }
@@ -247,7 +264,7 @@ class NPCContext(
     /**
      * Adauga un eveniment recent
      */
-    private fun updateEnvironmentContext(npcLocation: Location?) {
+    internal fun refreshEnvironmentContext(npcLocation: Location?) {
         if (npcLocation == null || npc.plugin == null) {
             environmentContext = EnvironmentContext.empty()
             return

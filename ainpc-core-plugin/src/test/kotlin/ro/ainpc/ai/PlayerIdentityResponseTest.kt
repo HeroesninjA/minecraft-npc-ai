@@ -1,6 +1,7 @@
 package ro.ainpc.ai
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -56,5 +57,36 @@ class PlayerIdentityResponseTest {
         assertNull(PlayerIdentityResponse.resolve(
             "Unde este magazinul?", "Ana", PlayerRecognition.from(null, 0, 0), null
         ))
+    }
+
+    @Test
+    fun `personal statement is recalled only when asked`() {
+        val recognition = PlayerRecognition.from(null, 1, 1)
+        val statements = listOf("locuiesc in Valea Noua")
+
+        val recalled = PlayerIdentityResponse.resolve(
+            "Ce tii minte despre mine?", "Ana", recognition, null, statements
+        )
+        val greeting = PlayerIdentityResponse.resolve(
+            "Ma cunosti?", "Ana", recognition, null, statements
+        )
+
+        assertTrue(recalled!!.contains("Mi-ai cerut sa tin minte ca locuiesc in Valea Noua."))
+        assertEquals("Te recunosc, Ana.", greeting)
+    }
+
+    @Test
+    fun `recall lists recent statements without claiming to verify them`() {
+        val response = PlayerIdentityResponse.resolve(
+            "Ce tii minte despre mine?",
+            "Ana",
+            PlayerRecognition.from(null, 1, 4),
+            null,
+            listOf("imi place fieraria", "locuiesc in sat", "caut un cal", "port o harta"),
+        )
+
+        assertTrue(response!!.contains("Mi-ai cerut sa tin minte, printre altele:"))
+        assertTrue(response.contains("imi place fieraria; locuiesc in sat; caut un cal"))
+        assertFalse(response.contains("port o harta"))
     }
 }

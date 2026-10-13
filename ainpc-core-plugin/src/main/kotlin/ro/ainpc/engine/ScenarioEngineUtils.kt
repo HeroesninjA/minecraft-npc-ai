@@ -45,7 +45,8 @@ fun resolveQuestNpcName(progress: PlayerQuestProgress?): String {
     if (progress == null || progress.questVariables().isEmpty()) return ""
     val displayName = progress.questVariables().getOrDefault("quest_giver_display_name", "")
     if (displayName.isNotBlank()) return displayName
-    return progress.questVariables().getOrDefault("quest_giver_name", "")
+    val name = progress.questVariables().getOrDefault("quest_giver_name", "")
+    return name.ifBlank { progress.questVariables().getOrDefault("quest_giver_npc_name", "") }
 }
 
 fun describeGenericQuestTrackingHint(objective: FeaturePackLoader.QuestEntryDefinition?): String {
