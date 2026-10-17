@@ -140,8 +140,8 @@ class RoutineEngineTest {
 
     @Test
     fun stableRoutineOffsetStaggersEveningDeparture() {
-        val earlyNpc = findNpcWithOffset { it < 100L }
-        val lateNpc = findNpcWithOffset { it >= 1500L }
+        val earlyNpc = findNpcWithOffset { it < 100L }.apply { socialAnchor = null }
+        val lateNpc = findNpcWithOffset { it >= 1500L }.apply { socialAnchor = null }
         assertTrue(stableRoutineOffset(earlyNpc) < 100L)
         assertTrue(stableRoutineOffset(lateNpc) >= 1500L)
 
@@ -150,7 +150,78 @@ class RoutineEngineTest {
 
         assertEquals(RoutineSlot.WORK, earlyAssignment.slot())
         assertEquals(RoutineSlot.HOME, lateAssignment.slot())
+        assertEquals(earlyNpc.workAnchor, earlyAssignment.targetAnchor())
+        assertEquals(lateNpc.homeAnchor, lateAssignment.targetAnchor())
     }
+
+    @Test
+    fun personalitySocializationRespectsWorkAndSocialWindowBoundaries() {
+        val npc = npcWithAnchors()
+        val profile = socializationProfile(1.0)
+        val resolver = RoutineDecisionResolver()
+
+        for ((time, expectedSlot) in listOf(
+            11999L to RoutineSlot.WORK,
+            12000L to RoutineSlot.SOCIAL,
+            17999L to RoutineSlot.SOCIAL,
+            18000L to RoutineSlot.HOME,
+        )) {
+            val assignment = resolver.assign(npc, profile, profile, time)
+            assertEquals(expectedSlot, assignment.slot(), "routine time=$time")
+            val expectedAnchor = when (expectedSlot) {
+                RoutineSlot.WORK -> npc.workAnchor
+                RoutineSlot.SOCIAL -> npc.socialAnchor
+                else -> npc.homeAnchor
+            }
+            assertEquals(expectedAnchor, assignment.targetAnchor())
+        }
+        assertEquals(NPCState.SLEEPING, resolver.assign(npc, profile, profile, 18000L).targetState())
+    }
+
+    @Test
+    fun socializationRequiresBothConfiguredChanceAndSocialAnchor() {
+        val npc = npcWithAnchors()
+        val resolver = RoutineDecisionResolver()
+        val disabledProfile = socializationProfile(0.0)
+        val enabledProfile = socializationProfile(1.0)
+
+        assertEquals(RoutineSlot.HOME, resolver.assign(npc, disabledProfile, disabledProfile, 13000L).slot())
+        assertEquals(RoutineSlot.SOCIAL, resolver.assign(npc, enabledProfile, enabledProfile, 13000L).slot())
+
+        npc.socialAnchor = null
+
+        val assignment = resolver.assign(npc, enabledProfile, enabledProfile, 13000L)
+        assertEquals(RoutineSlot.HOME, assignment.slot())
+        assertEquals(npc.homeAnchor, assignment.targetAnchor())
+    }
+
+    @Test
+    fun extraversionChangesDailySocialChoiceWithoutChangingIdentityOrSchedule() {
+        val npc = npcWithAnchors().apply { uuid = UUID(0L, 0L) }
+        val profile = socializationProfile(0.8)
+        val resolver = RoutineDecisionResolver()
+
+        repeat(3) {
+            npc.personality.extraversion = 0.0
+            assertEquals(RoutineSlot.HOME, resolver.assign(npc, profile, profile, 13000L).slot())
+
+            npc.personality.extraversion = 1.0
+            assertEquals(RoutineSlot.SOCIAL, resolver.assign(npc, profile, profile, 13000L).slot())
+        }
+        assertEquals(UUID(0L, 0L), npc.uuid)
+    }
+
+    private fun socializationProfile(chance: Double): BehaviorProfile = BehaviorProfile(
+        profileId = "social-test",
+        socializeChance = chance,
+        weatherReactions = false,
+        phaseTicks = mapOf("social_start" to 12000L, "social_end" to 18000L),
+        schedule = listOf(
+            BehaviorProfile.ScheduleEntry("Work", 0L, 12000L, "WORK", state = "WORKING"),
+            BehaviorProfile.ScheduleEntry("Free time", 12000L, 18000L, "HOME", state = "RESTING"),
+            BehaviorProfile.ScheduleEntry("Night", 18000L, 24000L, "HOME", state = "SLEEPING"),
+        ),
+    )
 
     @Test
     fun occupationBiasSeparatesFarmerAndMerchantRoutines() {

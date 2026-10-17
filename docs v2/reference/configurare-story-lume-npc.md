@@ -211,6 +211,8 @@ Necesită administrator și feature-ul story activ. Folosește ID-uri existente 
 /ainpc story context NumeJucator nearest
 ```
 
+Comanda `story context` incarca starea persistenta asincron; rezultatul poate aparea dupa cateva tick-uri, fara sa blocheze threadul principal.
+
 Înlocuiește `NumeJucator` cu un jucător online. `nearest` necesită un NPC activ suficient de aproape de acel jucător. Inspecția arată separat datele mapping și datele persistente atunci când există.
 
 Listează template-urile disponibile pentru regiune:

@@ -1,6 +1,7 @@
 package ro.ainpc.engine
 
 import ro.ainpc.ai.PlayerRecognition
+import ro.ainpc.ai.DialogueFarewell
 import ro.ainpc.ai.DialogueMessageText
 import ro.ainpc.ai.DialogueMessageText.matches
 
@@ -10,6 +11,7 @@ internal object DialogueIntentSelector {
         relationshipStatus: String,
         hasOccupation: Boolean,
         recognition: PlayerRecognition?,
+        npcAliases: List<String> = emptyList(),
     ): DialogueEngine.DialogueIntent {
         val normalized = DialogueMessageText.normalize(message)
 
@@ -19,7 +21,7 @@ internal object DialogueIntentSelector {
             return if (hasOccupation) DialogueEngine.DialogueIntent.CONFUSED_PROFESSIONAL
             else DialogueEngine.DialogueIntent.CONFUSED
         }
-        if (matches(normalized, "pa", "la revedere", "adio", "pe curand")) return DialogueEngine.DialogueIntent.FAREWELL
+        if (DialogueFarewell.isFarewell(message, npcAliases)) return DialogueEngine.DialogueIntent.FAREWELL
         if (matches(normalized, "cumpar", "cumpara", "vinde", "vanzare", "pret", "pretul", "preturi", "comert", "marfa", "afaceri")) return DialogueEngine.DialogueIntent.TRADE
         if (matches(normalized, "ajutor", "ajuta", "ajuti", "nevoie")) return DialogueEngine.DialogueIntent.HELP
         if (matches(normalized, "multumesc", "mersi", "apreciez")) return DialogueEngine.DialogueIntent.THANK

@@ -40,6 +40,19 @@ internal object EnvironmentFactResolver {
             if (DialogueMessageText.matches(message, "moment al zilei", "momentul zilei", "zi sau noapte")) {
                 add("Acum este ${context.timeOfDay.displayName.lowercase()}.")
             }
+            if (DialogueMessageText.matches(
+                    message,
+                    "lumina", "luminat", "luminata", "intuneric", "intunericul",
+                )
+            ) {
+                val lightLevel = context.lightLevel.coerceIn(0, 15)
+                val lightDescription = when {
+                    lightLevel < 5 -> "slaba"
+                    lightLevel < 11 -> "moderata"
+                    else -> "puternica"
+                }
+                add("Lumina locala este $lightDescription ($lightLevel/15).")
+            }
             if ((DialogueMessageText.matches(message, "eveniment", "evenimente") &&
                     DialogueMessageText.matches(message, "acum", "activ", "active", "special", "speciale", "in prezent")) ||
                 DialogueMessageText.matches(message, "se intampla ceva special")) {

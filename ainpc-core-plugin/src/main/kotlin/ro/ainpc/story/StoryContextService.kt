@@ -24,6 +24,7 @@ import java.sql.SQLException
 import java.util.LinkedHashSet
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
 
 /**
@@ -35,6 +36,57 @@ class StoryContextService(private val plugin: AINPCPlugin) {
     private val npcBindingStorySignalResolver = NpcBindingStorySignalResolver()
 
     fun buildForNpc(npc: AINPC?, player: Player?): StoryContextSnapshot {
+        val prepared = prepareForNpc(npc, player)
+        return completeForNpc(prepared, loadPersistence(prepared), npc, player)
+    }
+
+    fun buildForNpcAsync(npc: AINPC?, player: Player?): CompletableFuture<StoryContextSnapshot> =
+        onMainThread { prepareForNpc(npc, player) }.thenCompose { prepared ->
+            plugin.databaseManager.supplyAsync { loadPersistence(prepared) }.thenCompose { persistence ->
+                onMainThread { completeForNpc(prepared, persistence, npc, player) }
+            }
+        }
+
+    fun buildForPlayerAsync(player: Player): CompletableFuture<StoryContextSnapshot> =
+        buildForNpcAsync(null, player)
+
+    private fun <Value> onMainThread(action: () -> Value): CompletableFuture<Value> {
+        val future = CompletableFuture<Value>()
+        val task = Runnable {
+            try {
+                future.complete(action())
+            } catch (failure: RuntimeException) {
+                future.completeExceptionally(failure)
+            }
+        }
+        try {
+            if (plugin.server.isPrimaryThread) task.run()
+            else plugin.server.scheduler.runTask(plugin, task)
+        } catch (failure: RuntimeException) {
+            future.completeExceptionally(failure)
+        }
+        return future
+    }
+
+    internal class PreparedStoryContext(
+        val npcName: String,
+        val npcOccupation: String,
+        val playerName: String,
+        val playerUuid: UUID?,
+        val worldContext: WorldContextSnapshot,
+        val environmentContext: EnvironmentContext?,
+        val warnings: List<String>,
+    )
+
+    internal class StoryPersistence(
+        val activeQuestAnchors: List<StoryContextSnapshot.QuestAnchorSnapshot>,
+        val regionState: RegionStoryState?,
+        val placeState: PlaceStoryState?,
+        val recentEvents: List<StoryEvent>,
+        val warnings: List<String>,
+    )
+
+    internal fun prepareForNpc(npc: AINPC?, player: Player?): PreparedStoryContext {
         val location = resolveLocation(npc, player)
         val warnings = mutableListOf<String>()
 
@@ -43,18 +95,13 @@ class StoryContextService(private val plugin: AINPCPlugin) {
         }
 
         val worldContext = buildWorldContext(location, npc, warnings)
-        val activeQuestAnchors = if (player != null) {
-            loadActiveQuestAnchors(player.uniqueId, warnings)
-        } else {
-            listOf()
-        }
-        val persistentRegionState = loadPersistentRegionState(worldContext, warnings)
-        val persistentPlaceState = loadPersistentPlaceState(worldContext, warnings)
-        val recentStoryEvents = loadRecentStoryEvents(worldContext, warnings)
         val environmentContext = location?.let { currentLocation ->
             currentLocation.world?.let { world ->
-                plugin.environmentEngine.getContextForLocation(world.name, currentLocation.block.biome.key.asString())
-                    .copy(lightLevel = currentLocation.block.lightLevel.toInt().coerceIn(0, 15))
+                plugin.environmentEngine.getContextForLocation(
+                    world.name,
+                    currentLocation.block.biome.key.asString(),
+                    currentLocation.block.lightLevel.toInt(),
+                )
             }
         }
 
@@ -62,25 +109,52 @@ class StoryContextService(private val plugin: AINPCPlugin) {
             warnings.add("no player context; active quest anchors unavailable")
         }
 
+        return PreparedStoryContext(
+            npc?.name.orEmpty(), npc?.occupation.orEmpty(), player?.name.orEmpty(), player?.uniqueId,
+            worldContext, environmentContext, warnings.toList(),
+        )
+    }
+
+    internal fun loadPersistence(prepared: PreparedStoryContext): StoryPersistence {
+        val warnings = mutableListOf<String>()
+        val activeQuestAnchors = loadActiveQuestAnchors(prepared.playerUuid, warnings)
+        val persistentRegionState = loadPersistentRegionState(prepared.worldContext, warnings)
+        val persistentPlaceState = loadPersistentPlaceState(prepared.worldContext, warnings)
+        val recentStoryEvents = loadRecentStoryEvents(prepared.worldContext, warnings)
+        return StoryPersistence(
+            activeQuestAnchors, persistentRegionState, persistentPlaceState, recentStoryEvents, warnings.toList(),
+        )
+    }
+
+    internal fun completeForNpc(
+        prepared: PreparedStoryContext,
+        persistence: StoryPersistence,
+        npc: AINPC?,
+        player: Player?,
+    ): StoryContextSnapshot {
+        val worldContext = prepared.worldContext
+        val warnings = prepared.warnings + persistence.warnings
+
         val storySignals = collectStorySignals(
             worldContext,
-            activeQuestAnchors,
-            persistentRegionState,
-            persistentPlaceState,
-            recentStoryEvents,
-            environmentContext
+            persistence.activeQuestAnchors,
+            persistence.regionState,
+            persistence.placeState,
+            persistence.recentEvents,
+            prepared.environmentContext
         ) + StoryCharacteristicsSignals.personality(npc?.personality) +
             npcStorySignalResolver.collect(npc?.profileDataJson) +
-            npcBindingStorySignalResolver.collect(worldContext.npcBindings(), plugin.platform.worldAdmin)
+            if (worldContext.npcBindings().isEmpty()) emptyList() else
+                npcBindingStorySignalResolver.collect(worldContext.npcBindings(), plugin.platform.worldAdmin)
         val snapshot = StoryContextSnapshot(
-            npc?.name ?: "",
-            npc?.occupation ?: "",
-            player?.name ?: "",
+            prepared.npcName,
+            prepared.npcOccupation,
+            prepared.playerName,
             worldContext,
-            persistentRegionState,
-            persistentPlaceState,
-            recentStoryEvents,
-            activeQuestAnchors,
+            persistence.regionState,
+            persistence.placeState,
+            persistence.recentEvents,
+            persistence.activeQuestAnchors,
             storySignals,
             warnings
         )

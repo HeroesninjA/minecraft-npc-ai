@@ -20,11 +20,26 @@ data class EnvironmentContext(
     fun isRaining(): Boolean = weather == Weather.RAIN || weather == Weather.THUNDER
     fun isExtreme(): Boolean = weather == Weather.THUNDER || temperature == Temperature.EXTREME_HEAT || temperature == Temperature.FREEZING
 
+    fun localized(biome: String?, observedLightLevel: Int?): EnvironmentContext {
+        val hasBiome = !biome.isNullOrBlank()
+        val localWeather = if (hasBiome && weather == Weather.RAIN) {
+            Weather.fromBukkit(true, false, biome.orEmpty().uppercase())
+        } else {
+            weather
+        }
+        return copy(
+            weather = localWeather,
+            temperature = if (hasBiome) Temperature.fromBiome(biome, season) else temperature,
+            lightLevel = observedLightLevel?.coerceIn(0, 15) ?: lightLevel,
+        )
+    }
+
     fun toDescription(): String = buildString {
         append("Este $timeOfDay. ")
         append("Vremea: $weather. ")
         append("Anotimp: $season. ")
         append("Temperatura: $temperature. ")
+        append("Lumina locala: ${lightLevel.coerceIn(0, 15)}/15. ")
         if (specialEvents.isNotEmpty()) {
             append("Evenimente: ${specialEvents.joinToString(", ")}. ")
         }

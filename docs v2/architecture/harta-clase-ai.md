@@ -1,20 +1,22 @@
 # Harta claselor pentru AI
 
 Status: harta derivata din cod.
-Actualizat: 2026-07-15.
+Actualizat: 2026-10-15.
 
 ## Calea activa de dialog
 
 - `DialogManager` - cooldown, istoric, memorii, relatie player-NPC si post-procesare;
 - `DialogueEngine` - raspuns factual, fapt profesional semantic, template si decizia de a cere AI contextual;
+- `DialoguePersonalityPolicy` - selectie determinista a variantelor locale generale dupa extraversia NPC-ului;
 - `OpenAIPromptSnapshotFactory` - captura contextului pe thread-ul Paper;
 - `OpenAISemanticWorldContextBuilder` - mapping, story si lore NPC;
 - `OpenAIPromptBuilder` - compunerea promptului;
-- `OpenAIService` - request asincron, diagnostic, offline backoff si fallback;
+- `OpenAIService` - selectia OpenAI/Ollama pentru dialog, request asincron, diagnostic, backoff OpenAI si fallback;
+- `OllamaService` - generare cand `ai_provider: ollama`, cu pauza scurta dupa esecuri;
 - `OpenAITextSupport` - extractie text, fallback local si clasificare locala de sentiment;
 - `DialogHistory`, `NPCRelationship`, `NPCEmotions` si `PromptSnapshot` - date de context.
 
-Providerul nu este prima si nici singura sursa de replica. `DialogueEngine` poate inchide fluxul cu un fapt sau template, iar `OpenAIService` poate intoarce fallback local fara request extern.
+Providerul nu este prima si nici singura sursa de replica. `DialogueEngine` pastreaza raspunsurile care cer exactitate si poate folosi un template la esec, iar ruta AI poate intoarce fallback factual local fara request extern.
 
 ## Mutatii dupa replica
 
@@ -23,13 +25,12 @@ Providerul nu este prima si nici singura sursa de replica. `DialogueEngine` poat
 - `RelationshipService` nu participa la aceasta cale: el detine relatiile NPC-NPC;
 - raspunsurile quest produse anterior de `ScenarioEngine` pot ocoli aceste mutatii.
 
-## Calea scaffold
+## Orchestrare AI
 
-- `AIOrchestrationService` - serviciu construit, dar fara apelant de productie;
+- `AIOrchestrationService` - poate clasifica optional intentii ambigue si ruteaza celelalte use case-uri configurate;
 - `AIOrchestrationPolicy` - politici pentru sapte use case-uri;
-- `AIResponseValidator` - validator separat, neconectat la orchestrator sau dialog;
+- `AIResponseValidator` - valideaza rezultatele orchestrarii, nu replica directa a dialogului;
 - `AISuggestionService` - lifecycle si analiza in memorie;
-- `OllamaService` - provider selectabil numai de scaffold-ul orchestration in fluxul verificat.
 
 ## Context adiacent
 
@@ -41,7 +42,7 @@ Providerul nu este prima si nici singura sursa de replica. `DialogueEngine` poat
 ## Limite confirmate
 
 - `OpenAIService.isAvailable` inseamna doar ca offline backoff-ul nu este activ;
-- flagul `features.ai` si cheia API sunt verificate in interiorul serviciului;
+- `features.ai` este verificat pentru ambele rute; cheia API se aplica numai rutei OpenAI;
 - raspunsul providerului nu trece prin `AIResponseValidator`;
 - promptul activ nu trece prin `ContextRedactor`;
 - evenimentul `DialogAIRequestBuiltEvent` nu garanteaza ca s-a facut un request extern.

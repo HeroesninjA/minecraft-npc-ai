@@ -6,6 +6,18 @@ import ro.ainpc.ai.PlayerRecognition
 
 class DialogueIntentSelectorTest {
     @Test
+    fun `farewell intent requires a complete closing utterance`() {
+        for (message in listOf("Pa!", "La revedere!", "Pe curand!", "Multumesc, pa!", "Bye!")) {
+            assertEquals(DialogueEngine.DialogueIntent.FAREWELL, DialogueIntentSelector.select(message, "STRANGER", false, null), message)
+        }
+        assertEquals(DialogueEngine.DialogueIntent.QUESTION, DialogueIntentSelector.select("Ce inseamna la revedere?", "STRANGER", false, null))
+        assertEquals(DialogueEngine.DialogueIntent.QUESTION, DialogueIntentSelector.select("Pa, unde este piata?", "STRANGER", false, null))
+        assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select("Nu spun pa.", "STRANGER", false, null))
+        assertEquals(DialogueEngine.DialogueIntent.HELP, DialogueIntentSelector.select("Pa, am nevoie de ajutor!", "STRANGER", false, null))
+        assertEquals(DialogueEngine.DialogueIntent.FAREWELL, DialogueIntentSelector.select("Maria, la revedere!", "STRANGER", false, null, listOf("Maria")))
+    }
+
+    @Test
     fun `farewell needs a complete word instead of a fragment in parere`() {
         assertEquals(
             DialogueEngine.DialogueIntent.QUESTION,

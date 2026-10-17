@@ -4,21 +4,35 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.managers.FamilyMemberRecord
 import ro.ainpc.npc.AINPC
+import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.topology.TopologyConsensus
 import java.util.UUID
 
 object OpenAIPromptSnapshotFactory {
+    internal fun loadFamilyMembers(plugin: AINPCPlugin, npc: AINPC): List<FamilyMemberSnapshot> =
+        plugin.familyManager.getFamily(npc).map { member ->
+            FamilyMemberSnapshot(
+                member.name().orEmpty(),
+                member.relationType().orEmpty(),
+                member.alive(),
+            )
+        }
+
     @JvmStatic
-    fun createPromptSnapshot(plugin: AINPCPlugin, request: DialogManager.DialogRequest): PromptSnapshot {
+    fun createPromptSnapshot(
+        plugin: AINPCPlugin,
+        request: DialogManager.DialogRequest,
+        familyMembers: List<FamilyMemberSnapshot>,
+        preloadedStory: StoryContextSnapshot? = null,
+    ): PromptSnapshot {
         val npc: AINPC = request.npc()
         val player: Player = request.player()
-        npc.context.setInteractingPlayer(player)
 
         val npcDescription = npc.generateContextDescription()
         var environmentDescription = ""
         var topologyConsensusBlock = ""
 
-        environmentDescription = npc.context.generateContextDescription()
+        environmentDescription = npc.context.generateContextDescription(player, preloadedStory)
         val topologyCategory = npc.context.topologyCategory
         if (topologyCategory != null) {
             val topologyConsensus = plugin.featurePackLoader.buildTopologyConsensus(topologyCategory)
@@ -27,18 +41,10 @@ object OpenAIPromptSnapshotFactory {
             }
         }
 
-        val familyMembers = mutableListOf<FamilyMemberSnapshot>()
-        for (member in plugin.familyManager.getFamily(npc)) {
-            familyMembers.add(
-                FamilyMemberSnapshot(
-                    member.name().orEmpty(),
-                    member.relationType().orEmpty(),
-                    member.alive()
-                )
-            )
-        }
-
-        val traitsList = npc.traits.toList()
+        val traitsList = immutableCopy(npc.traits.toList())
+        val environmentContext = npc.context.environmentContext
+            .takeIf { it.worldName.isNotBlank() }
+            ?.let { context -> context.copy(specialEvents = immutableCopy(context.specialEvents)) }
         val stateDisplayName = npc.currentState.displayName
         val heldMaterial = player.inventory.itemInMainHand.type
         return PromptSnapshot(
@@ -47,8 +53,8 @@ object OpenAIPromptSnapshotFactory {
             npcDescription,
             environmentDescription,
             topologyConsensusBlock,
-            OpenAISemanticWorldContextBuilder.build(plugin, npc),
-            familyMembers,
+            OpenAISemanticWorldContextBuilder.build(plugin, npc, preloadedStory),
+            immutableCopy(familyMembers),
             npc.isProfileCreated(),
             npc.profileSource,
             npc.profileVersion,
@@ -73,7 +79,10 @@ object OpenAIPromptSnapshotFactory {
             npc.currentGoal,
             if (heldMaterial.isAir) "" else heldMaterial.key.asString(),
             NpcFactResolver.describePersonality(npc.personality),
-            npc.context.environmentContext.takeIf { it.worldName.isNotBlank() },
+            environmentContext,
         )
     }
+
+    private fun <Value> immutableCopy(values: Collection<Value>): List<Value> =
+        java.util.Collections.unmodifiableList(ArrayList(values))
 }

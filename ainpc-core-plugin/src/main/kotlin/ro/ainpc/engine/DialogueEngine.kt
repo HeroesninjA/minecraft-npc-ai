@@ -206,6 +206,7 @@ class DialogueEngine(
         )
         templates[DialogueIntent.CONVERSATION] = listOf(
             "Te ascult. Spune-mi mai mult.",
+            "Sunt aici, te ascult.",
             "Inteleg ce spui. Ce s-a intamplat mai departe?",
             "Pare important pentru tine. Cum pot sa te ajut?"
         )
@@ -218,7 +219,8 @@ class DialogueEngine(
         playerMessage: String,
         recognition: PlayerRecognition? = null
     ): DialogueIntent = DialogueIntentSelector.select(
-        playerMessage, context.relationshipStatus, !npc.occupation.isNullOrBlank(), recognition
+        playerMessage, context.relationshipStatus, !npc.occupation.isNullOrBlank(), recognition,
+        listOfNotNull(npc.name, npc.displayName),
     )
 
     @JvmOverloads
@@ -236,7 +238,14 @@ class DialogueEngine(
         val conversationHistory = DialogHistory.recentStable(recentHistory)
         val npc = request.npc()
         val context = npc.context ?: NPCContext(npc)
-        context.lastPlayerMessage = request.message()
+        val recallResponse = PlayerConversationRecall.resolve(request.message(), conversationHistory)
+        if (recallResponse != null) return CompletableFuture.completedFuture(recallResponse)
+        val contextualRecallFallback = PlayerConversationRecall.resolveForFallback(request.message(), conversationHistory)
+        if (contextualRecallFallback != null) {
+            return generateContextualReply(
+                request, conversationHistory, relevantMemories, relationship, dbContext, contextualRecallFallback,
+            )
+        }
 
         val factResponse = resolveFactResponse(npc, context, request.message())
         val semanticFactResponse = if (factResponse == null) {
@@ -256,19 +265,18 @@ class DialogueEngine(
             request.message(), request.player().name, recognition, dbContext.playerProfile,
             dbContext.playerConfirmedStatements,
         )
-        val recallResponse = PlayerConversationRecall.resolve(request.message(), conversationHistory)
-        val factualResponses = listOfNotNull(factResponse ?: semanticFactResponse, storyFactResponse, shopFactResponse, identityResponse, recallResponse)
+        val factualResponses = listOfNotNull(factResponse ?: semanticFactResponse, storyFactResponse, shopFactResponse, identityResponse)
         if (factualResponses.isNotEmpty()) {
             return generateGroundedResponse(
                 request, conversationHistory, relevantMemories, relationship, dbContext,
                 factualResponses.joinToString(" "),
-                shopFactResponse != null || identityResponse != null || recallResponse != null,
+                shopFactResponse != null || identityResponse != null,
             )
         }
 
         val deterministicIntent = selectIntent(npc, context, request.message(), recognition)
         val contextualAiNeeded = shouldUseContextualAI(
-            deterministicIntent, context, request, conversationHistory, relevantMemories, relationship
+            deterministicIntent, request, conversationHistory, relevantMemories, relationship
         )
         return resolveAmbiguousIntent(
             request.message(), deterministicIntent, contextualAiNeeded, accessibleShops, workFacts
@@ -302,17 +310,33 @@ class DialogueEngine(
                 val continuationTemplates = PlayerConversationContinuation.templates(request.message(), conversationHistory)
                 val template = selectTemplate(npc, resolvedIntent, continuationTemplates ?: greetingTemplates)
                 val processed = processTemplate(template, npc, context, request.player().name)
+                val localFallback = PlayerConversationRecall.resolveForFallback(request.message(), conversationHistory)
+                    ?: processed
 
                 if (!contextualAiNeeded) {
-                    return@thenCompose CompletableFuture.completedFuture(processed)
+                    return@thenCompose CompletableFuture.completedFuture(localFallback)
                 }
 
-                openAIService.generateResponse(request, conversationHistory, relevantMemories, relationship, dbContext)
-                    .thenApply { response -> if (response.isNullOrBlank()) processed else response }
-                    .exceptionally { ex ->
-                        plugin.debug("Eroare in pipeline-ul contextual de dialog: ${ex.message}")
-                        processed
-                    }
+                generateContextualReply(
+                    request, conversationHistory, relevantMemories, relationship, dbContext, localFallback,
+                )
+            }
+    }
+
+    private fun generateContextualReply(
+        request: DialogManager.DialogRequest,
+        recentHistory: List<DialogHistory>,
+        relevantMemories: List<String>,
+        relationship: NPCRelationship?,
+        dbContext: DialogManager.PromptDbContext,
+        localFallback: String,
+    ): CompletableFuture<String> {
+        if (!openAIService.canGenerateContextualResponse) return CompletableFuture.completedFuture(localFallback)
+        return openAIService.generateResponse(request, recentHistory, relevantMemories, relationship, dbContext)
+            .thenApply { response -> if (response.isNullOrBlank()) localFallback else response }
+            .exceptionally { error ->
+                plugin.debug("Eroare in pipeline-ul contextual de dialog: ${error.message}")
+                localFallback
             }
     }
 
@@ -382,7 +406,7 @@ class DialogueEngine(
         val intent = selectIntent(npc, context, playerMessage)
         val template = selectTemplate(npc, intent)
         val processed = processTemplate(template, npc, context)
-        val useAI = shouldUseAI(intent, context)
+        val useAI = shouldUseAI(intent, playerMessage)
         if (useAI && openAIService.canGenerateContextualResponse) {
             return reformulateWithAI(npc, context, intent, processed, playerMessage)
         }
@@ -437,6 +461,9 @@ class DialogueEngine(
     private fun selectTemplate(npc: AINPC, intent: DialogueIntent, alternatives: List<String>? = null): String {
         var intentTemplates = alternatives ?: templates[intent]
         if (intentTemplates.isNullOrEmpty()) intentTemplates = templates[DialogueIntent.GREET]
+        if (alternatives == null) {
+            intentTemplates = DialoguePersonalityPolicy.variants(intent, npc.personality, intentTemplates!!)
+        }
         val recent = recentResponses.computeIfAbsent(npc.uuid) { Collections.synchronizedList(mutableListOf()) }
         return DialogueTemplateRotation.choose(intentTemplates!!, recent)
     }
@@ -463,7 +490,6 @@ class DialogueEngine(
 
     private fun shouldUseContextualAI(
         intent: DialogueIntent,
-        context: NPCContext,
         request: DialogManager.DialogRequest,
         recentHistory: List<DialogHistory>?,
         relevantMemories: List<String>?,
@@ -471,24 +497,21 @@ class DialogueEngine(
     ): Boolean {
         if (!openAIService.canGenerateContextualResponse) return false
         if (PlayerConversationContinuation.needsContext(request.message(), recentHistory.orEmpty())) return true
-        if (shouldUseAI(intent, context)) return true
+        if (shouldUseAI(intent, request.message())) return true
         if (!relevantMemories.isNullOrEmpty()) return true
         if (recentHistory != null && recentHistory.size >= 2) return true
         if (relationship != null && relationship.interactionCount >= 3) return true
         return request.explicitConversation()
     }
 
-    private fun shouldUseAI(intent: DialogueIntent, context: NPCContext): Boolean =
+    private fun shouldUseAI(intent: DialogueIntent, playerMessage: String): Boolean =
         when (intent) {
             DialogueIntent.STORY,
             DialogueIntent.GOSSIP,
             DialogueIntent.CONFUSED,
             DialogueIntent.CONFUSED_PROFESSIONAL,
             DialogueIntent.QUEST_OFFER -> true
-            else -> {
-                val lastMessage = context.lastPlayerMessage
-                lastMessage != null && lastMessage.length > 20
-            }
+            else -> playerMessage.length > 20
         }
 
     private fun reformulateWithAI(

@@ -2,7 +2,6 @@ package ro.ainpc.ai
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.mcp.bridge.McpDialogContextProvider
 import java.io.IOException
@@ -107,9 +106,16 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         groundedFactResponse: String? = null,
     ): CompletableFuture<String> {
         val conversationHistory = DialogHistory.recentStable(recentHistory)
+        PlayerConversationRecall.resolveReplay(request.message(), conversationHistory)?.let {
+            return CompletableFuture.completedFuture(it)
+        }
         val npcName = request.npc().name
         val playerName = request.player().name
         return capturePromptSnapshot(request).thenCompose { snapshot ->
+            val provider = selectedDialogueProvider()
+            val retryRepeatedFollowups = plugin.config.getBoolean("ai.dialogue.retry_repeated_followups", true)
+            val retryInvalidReplies = plugin.config.getBoolean("ai.dialogue.retry_invalid_replies", true)
+            val retryRepeatedQuestions = plugin.config.getBoolean("ai.dialogue.retry_repeated_questions", true)
             val fallbackReply = {
                 OpenAITextSupport.generateGroundedFallbackResponse(
                     snapshot, conversationHistory, groundedFactResponse,
@@ -122,7 +128,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 return@thenCompose CompletableFuture.completedFuture(fallback)
             }
             CompletableFuture.supplyAsync {
-                if (apiKey.isBlank()) {
+                if (provider == DialogueAiProvider.OPENAI && apiKey.isBlank()) {
                     diagInfo("Sar peste cerere OpenAI: cheia API lipseste; folosesc fallback local.")
                     recordFallback("missing_api_key")
                     val fallback = fallbackReply()
@@ -131,14 +137,14 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 }
 
                 val suspendedReason = apiSuspendedReason
-                if (suspendedReason != null) {
+                if (provider == DialogueAiProvider.OPENAI && suspendedReason != null) {
                     recordFallback("api_suspended: $suspendedReason")
                     val fallback = fallbackReply()
                     recordInteractionFallback(npcName, playerName, fallback, "api_suspended")
                     return@supplyAsync fallback
                 }
 
-                if (isInOfflineBackoffWindow()) {
+                if (provider == DialogueAiProvider.OPENAI && isInOfflineBackoffWindow()) {
                     val remainingSeconds = maxOf(0L, (offlineRetryAfterMillis - System.currentTimeMillis()) / 1000L)
                     diagInfo(
                         "Sar peste request catre OpenAI din cauza backoff-ului activ. Mai sunt " +
@@ -171,12 +177,41 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                     recordInteractionFallback(npcName, playerName, fallback, "prompt_build_error")
                     return@supplyAsync fallback
                 }
+                if (provider == DialogueAiProvider.OLLAMA) {
+                    val attempt = DialogueResponseNovelty.generate(
+                        prompt, snapshot.npcName(), snapshot.playerMessage(), conversationHistory,
+                        groundedFactResponse, retryRepeatedFollowups, retryInvalidReplies, retryRepeatedQuestions,
+                    ) { attemptPrompt -> callOllama(attemptPrompt, snapshot.npcName()) }
+                    val response = attempt.response
+                    if (response == null) {
+                        val reason = attempt.rejectionReason
+                            ?: if (attempt.retryExhausted) "repeated_followup" else "ollama_unavailable"
+                        recordFallback(reason)
+                        val fallback = fallbackReply()
+                        recordInteractionFallback(npcName, playerName, fallback, reason)
+                        return@supplyAsync fallback
+                    }
+                    recordInteractionSuccess(npcName, playerName, attempt.prompt, response)
+                    return@supplyAsync response
+                }
                 try {
                     val requestStartedAtMillis = System.currentTimeMillis()
-                    val response = callOpenAI(prompt, snapshot.npcName())
-                    recordInteractionSuccess(npcName, playerName, prompt, response)
+                    val attempt = DialogueResponseNovelty.generate(
+                        prompt, snapshot.npcName(), snapshot.playerMessage(), conversationHistory,
+                        groundedFactResponse, retryRepeatedFollowups, retryInvalidReplies, retryRepeatedQuestions,
+                    ) { attemptPrompt -> callOpenAI(attemptPrompt, snapshot.npcName()) }
+                    val response = attempt.response
                     clearOfflineState(requestStartedAtMillis)
-                    response
+                    if (response == null) {
+                        val reason = attempt.rejectionReason ?: "repeated_followup"
+                        recordFallback(reason)
+                        val fallback = fallbackReply()
+                        recordInteractionFallback(npcName, playerName, fallback, reason)
+                        fallback
+                    } else {
+                        recordInteractionSuccess(npcName, playerName, attempt.prompt, response)
+                        response
+                    }
                 } catch (e: java.io.IOException) {
                     handleGenerationFailure(e)
                     recordFallback("exception: ${OpenAITextSupport.compactExceptionMessage(e)}")
@@ -186,6 +221,15 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 }
             }
         }
+    }
+
+    private fun callOllama(prompt: String, expectedSpeakerName: String?): String? {
+        recordPrompt(prompt)
+        val response = plugin.ollamaService.generateAsync(prompt)
+            ?.let { OpenAITextSupport.cleanResponse(it, expectedSpeakerName) }
+            ?.takeIf { it.isNotBlank() }
+        if (response != null) recordResponse(response)
+        return response
     }
 
     @Throws(IOException::class)
@@ -303,7 +347,14 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         get() = apiSuspendedReason == null && !isInOfflineBackoffWindow()
 
     val canGenerateContextualResponse: Boolean
-        get() = aiFeatureEnabled() && apiKey.isNotBlank() && isAvailable
+        get() = selectedDialogueProvider().canGenerate(
+            aiFeatureEnabled(),
+            { apiKey.isNotBlank() && isAvailable },
+            { plugin.ollamaService.canAttemptGeneration },
+        )
+
+    private fun selectedDialogueProvider(): DialogueAiProvider =
+        DialogueAiProvider.fromConfig(plugin.config.getString("ai_provider", "openai"))
 
     private fun isInOfflineBackoffWindow(): Boolean {
         return System.currentTimeMillis() < offlineRetryAfterMillis
@@ -421,6 +472,11 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             recordFallback("feature_disabled")
             return CompletableFuture.completedFuture(null)
         }
+        if (selectedDialogueProvider() == DialogueAiProvider.OLLAMA) {
+            return CompletableFuture.supplyAsync {
+                callOllama(prompt, null).also { if (it == null) recordFallback("ollama_unavailable") }
+            }
+        }
         return CompletableFuture.supplyAsync {
             if (apiKey.isBlank()) {
                 diagInfo("Sar peste generateAsync: cheia API lipseste.")
@@ -515,21 +571,42 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     }
 
     private fun capturePromptSnapshot(request: DialogManager.DialogRequest): CompletableFuture<PromptSnapshot> {
-        val future = CompletableFuture<PromptSnapshot>()
-        val captureTask = Runnable {
-            try {
-                future.complete(OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request))
-            } catch (e: java.lang.RuntimeException) {
-                future.completeExceptionally(e)
+        return onMainThread {
+            plugin.storyContextService.prepareForNpc(request.npc(), request.player())
+        }.thenCompose { preparedStory ->
+            plugin.databaseManager.supplyAsync {
+                val familyMembers = OpenAIPromptSnapshotFactory.loadFamilyMembers(plugin, request.npc())
+                val storyPersistence = plugin.storyContextService.loadPersistence(preparedStory)
+                familyMembers to storyPersistence
+            }.thenCompose { (familyMembers, storyPersistence) ->
+                onMainThread {
+                    val storySnapshot = plugin.storyContextService.completeForNpc(
+                        preparedStory, storyPersistence, request.npc(), request.player(),
+                    )
+                    OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request, familyMembers, storySnapshot)
+                }
             }
         }
+    }
 
-        if (Bukkit.isPrimaryThread()) {
-            captureTask.run()
-        } else {
-            plugin.server.scheduler.runTask(plugin, captureTask)
+    private fun <Value> onMainThread(capture: () -> Value): CompletableFuture<Value> {
+        val future = CompletableFuture<Value>()
+        val captureTask = Runnable {
+            try {
+                future.complete(capture())
+            } catch (failure: RuntimeException) {
+                future.completeExceptionally(failure)
+            }
         }
-
+        try {
+            if (plugin.server.isPrimaryThread) {
+                captureTask.run()
+            } else {
+                plugin.server.scheduler.runTask(plugin, captureTask)
+            }
+        } catch (failure: RuntimeException) {
+            future.completeExceptionally(failure)
+        }
         return future
     }
 

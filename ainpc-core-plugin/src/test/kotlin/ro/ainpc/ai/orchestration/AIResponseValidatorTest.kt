@@ -81,6 +81,14 @@ class AIResponseValidatorTest {
     }
 
     @Test
+    fun dialogueEllipsisIsAllowedButExplicitTruncationIsNot() {
+        assertTrue(AIResponseValidator.validate("Mai caut indicii...", AIUseCase.DIALOGUE_REPLY).valid)
+        assertTrue(AIResponseValidator.validate("Mai caut indicii…", AIUseCase.DIALOGUE_REPLY).valid)
+        assertFalse(AIResponseValidator.validate("Mai caut indicii [truncated]...", AIUseCase.DIALOGUE_REPLY).valid)
+        assertFalse(AIResponseValidator.validate("Mai caut indicii...", AIUseCase.STORY_DRAFT).valid)
+    }
+
+    @Test
     fun lengthCheckWithinLimit() {
         assertEquals(null, AIResponseValidator.validateLength("Short text"))
     }
@@ -196,6 +204,15 @@ class AIResponseValidatorTest {
             """{"type": "json", "content": "test"}""", AIUseCase.DIALOGUE_REPLY
         )
         assertTrue(issues.any { it.contains("Tip neasteptat") })
+        assertTrue(AIResponseValidator.validateUnexpectedType(
+            """{"reply": "Buna ziua!"}""", AIUseCase.DIALOGUE_REPLY
+        ).isNotEmpty())
+        assertTrue(AIResponseValidator.validateUnexpectedType(
+            """["Buna ziua!"]""", AIUseCase.DIALOGUE_REPLY
+        ).isNotEmpty())
+        assertTrue(AIResponseValidator.validateUnexpectedType(
+            "{doar o expresie}", AIUseCase.DIALOGUE_REPLY
+        ).isEmpty())
     }
 
     @Test

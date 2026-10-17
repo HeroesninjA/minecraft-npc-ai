@@ -83,6 +83,8 @@ class StoryStructureSignalResolverTest {
             Triple(PlaceType.CAVE_ROOM, emptyList(), listOf("exploration", "danger", "recover_artifact")),
             Triple(PlaceType.CAMP, emptyList(), listOf("exploration", "route_report", "danger")),
             Triple(PlaceType.CUSTOM, listOf(" SOCIAL ", "trade", "leisure"), listOf("market_supply", "community_event")),
+            Triple(PlaceType.CUSTOM, listOf(" MERCHANT ", "leisure"), listOf("market_supply")),
+            Triple(PlaceType.CUSTOM, listOf(" MERCHANT ", "trade", "market", "leisure"), listOf("market_supply")),
         )) {
             val place = WorldPlace("place", "region", "Loc", "world", type, 0, 0, 0, 4, 4, 4)
             place.setTags(tags)

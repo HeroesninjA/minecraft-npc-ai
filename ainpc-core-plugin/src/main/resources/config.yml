@@ -48,6 +48,8 @@ ollama:
   model: "llama3"
   temperature: 0.7
   max_tokens: 150
+  # Pauza dupa raspuns gol, eroare HTTP sau eroare de conexiune.
+  offline_retry_seconds: 15
 
 # Orchestrare AI peste mecanici. Dezactivat implicit pana cand validatorii si routerele sunt mature.
 ai:
@@ -56,6 +58,13 @@ ai:
     # sunt formulate de model pe baza faptelor verificate. Fara provider ramane replica locala.
     # Comertul, identitatea jucatorului si amintirile explicite raman exacte.
     ground_facts_with_ai: true
+    # Daca AI repeta o replica recenta la o cerere precum "continua", incearca o singura data
+    # cu o instructiune de continuare; poate adauga un request si latenta.
+    retry_repeated_followups: true
+    retry_repeated_questions: true
+    # Daca providerul returneaza JSON sau marcaje invalide, incearca o singura
+    # regenerare ca replica simpla; poate adauga un request si latenta.
+    retry_invalid_replies: true
   orchestration:
     enabled: false
     intent_classification:
@@ -199,6 +208,7 @@ npc:
   message_cooldown: 2
   # Numarul maxim de amintiri obisnuite pastrate per jucator si NPC
   max_memories_per_player: 50
+  memory_prompt_max_chars: 2400
   # Declaratii pe care jucatorul cere explicit NPC-ului sa le retina in dialog direct.
   personal_memory:
     enabled: true
@@ -405,7 +415,14 @@ messages:
   npc_not_found: "&cNPC-ul nu a fost gasit!"
   too_far: "&cEsti prea departe de NPC pentru a vorbi!"
   cooldown: "&cAsteapta putin inainte sa vorbesti din nou!"
+  dialog_busy: "&7NPC-ul inca pregateste raspunsul anterior. Asteapta-l, apoi trimite din nou mesajul."
   ai_error: "&cEroare la generarea raspunsului. Incearca din nou!"
+  dialog_target_ambiguous: "&eNu este clar cui te adresezi. Apropie-te de NPC-ul dorit sau foloseste numele sau complet."
+  dialog_target_choose: "&eCui te adresezi? Scrie numarul sau numele complet, ori 'anuleaza'. Ai 60 de secunde de la prima intrebare; mesajul va fi trimis NPC-ului ales."
+  dialog_target_option: "&e%number%. &f%name% &7(coordonate: %position%)"
+  dialog_target_cancelled: "&7Mesajul neclar a fost anulat."
+  dialog_target_expired: "&eAlegerea a expirat sau conversatia s-a schimbat. Repeta mesajul pentru a alege din nou."
+  dialog_target_unavailable: "&eNPC-ul ales nu mai este in apropiere. Repeta mesajul pentru a alege din nou."
   openai_unavailable: "&cServiciul OpenAI nu este disponibil sau nu este configurat corect."
 
 # Debug

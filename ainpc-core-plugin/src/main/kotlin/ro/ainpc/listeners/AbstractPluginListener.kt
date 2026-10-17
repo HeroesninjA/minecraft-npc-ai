@@ -7,6 +7,7 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.managers.ConversationSessionManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.utils.MessageUtils
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -18,6 +19,17 @@ abstract class AbstractPluginListener(
     protected fun messages(): MessageUtils = plugin.messageUtils
 
     protected fun conversations(): ConversationSessionManager = plugin.conversationSessionManager
+
+    protected fun isConversationPartnerAvailable(player: Player, npc: AINPC): Boolean {
+        if (!player.isOnline || plugin.npcManager.getNPCByUuid(npc.uuid) !== npc || !npc.isSpawned()) return false
+        val npcWorld = npc.bukkitEntity?.world ?: return false
+        return npcWorld == player.world
+    }
+
+    protected fun canDeliverConversationResponse(player: Player, npc: AINPC, sessionId: UUID?): Boolean =
+        conversations().isCurrentSession(player, sessionId) &&
+            conversations().getConversationNpcId(player) == npc.uuid &&
+            isConversationPartnerAvailable(player, npc)
 
     protected fun beginConversationSession(player: Player, npc: AINPC): CompletableFuture<Boolean> {
         conversations().startConversation(player, npc)

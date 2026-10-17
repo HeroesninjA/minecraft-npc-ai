@@ -293,20 +293,36 @@ fun handleStoryContext(sender: CommandSender, args: Array<String>): Boolean {
         return true
     }
 
-    val snapshot: StoryContextSnapshot = if (npc != null) {
-        ainpcCommandStoryPlugin.storyContextService.buildForNpc(npc, target.player())
-    } else {
-        ainpcCommandStoryPlugin.storyContextService.buildForPlayer(target.player())
+    val plugin = ainpcCommandStoryPlugin
+    val playerName = target.player().name
+    val npcName = npc?.name ?: "<fara NPC tinta>"
+    plugin.storyContextService.buildForNpcAsync(npc, target.player()).whenComplete { snapshot, failure ->
+        val report = Runnable {
+            if (sender is Player && !sender.isOnline) return@Runnable
+            if (failure != null || snapshot == null) {
+                plugin.messageUtils.send(sender, "&cContextul story nu a putut fi construit.")
+            } else {
+                sendStoryContextSnapshot(sender, playerName, npcName, snapshot)
+            }
+        }
+        try {
+            if (plugin.server.isPrimaryThread) report.run()
+            else plugin.server.scheduler.runTask(plugin, report)
+        } catch (scheduleFailure: RuntimeException) {
+            plugin.logger.warning("Nu s-a putut programa raspunsul comenzii story context: ${scheduleFailure.javaClass.simpleName}")
+        }
     }
+    return true
+}
 
+private fun sendStoryContextSnapshot(sender: CommandSender, playerName: String, npcName: String, snapshot: StoryContextSnapshot) {
     ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Context ===")
-    ainpcCommandStoryPlugin.messageUtils.send(sender, "&eJucator: &f${target.player().name}")
-    ainpcCommandStoryPlugin.messageUtils.send(sender, "&eNPC: &f${npc?.name ?: "<fara NPC tinta>"}")
-
+    ainpcCommandStoryPlugin.messageUtils.send(sender, "&eJucator: &f$playerName")
+    ainpcCommandStoryPlugin.messageUtils.send(sender, "&eNPC: &f$npcName")
     val promptBlock = snapshot.toPromptBlock()
     if (promptBlock.isBlank()) {
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Nu exista context story relevant pentru tinta curenta.")
-        return true
+        return
     }
 
     for (line in promptBlock.split("\\R".toRegex())) {
@@ -314,7 +330,6 @@ fun handleStoryContext(sender: CommandSender, args: Array<String>): Boolean {
             ainpcCommandStoryPlugin.messageUtils.send(sender, "&7$line")
         }
     }
-    return true
 }
 
 private fun resolveStoryContextTarget(sender: CommandSender, args: Array<String>): StoryContextTarget? {

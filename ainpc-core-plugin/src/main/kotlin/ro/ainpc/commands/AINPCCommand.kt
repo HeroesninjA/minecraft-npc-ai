@@ -959,8 +959,16 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             plugin.messageUtils.send(sender, "&eActivitate sezoniera: &f${seasonalActivity.first} &7(${seasonalActivity.second.displayName})")
         }
         if (player != null) {
-            val localEnv = plugin.environmentEngine.getContextForLocation(worldName, player.location.block.biome.name())
-            plugin.messageUtils.send(sender, "&7Temperatura locala: &f${localEnv.temperature.displayName} &8(biome: ${player.location.block.biome.name()})")
+            val localEnv = plugin.environmentEngine.getContextForLocation(
+                worldName,
+                player.location.block.biome.key.asString(),
+                player.location.block.lightLevel.toInt(),
+            )
+            plugin.messageUtils.send(
+                sender,
+                "&7Conditii locale: &f${localEnv.temperature.displayName}, lumina ${localEnv.lightLevel}/15 " +
+                    "&8(biome: ${player.location.block.biome.key.asString()})",
+            )
         }
         plugin.messageUtils.send(sender, "&8${env.toDescription()}")
         return true
@@ -3339,6 +3347,7 @@ $objectives      rewards:
             val response = when (result?.status) {
                 DialogManager.DialogStatus.SUCCESS -> result.response ?: ""
                 DialogManager.DialogStatus.COOLDOWN -> "COOLDOWN"
+                DialogManager.DialogStatus.BUSY -> "BUSY"
                 DialogManager.DialogStatus.ERROR -> "ERROR"
                 null -> "NULL"
             }

@@ -26,6 +26,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
     private val playerProfiles = PlayerProfileRepository(plugin.databaseManager)
     private val dialogHistory = DialogHistoryRepository(plugin.databaseManager)
     private val interactionProfileResponses = NpcInteractionProfileResponses()
+    private val pendingRequests = DialogueRequestGate()
 
     /**
      * Proceseaza un mesaj de la jucator catre NPC
@@ -46,6 +47,27 @@ class DialogManager(private val plugin: AINPCPlugin) {
     }
 
     fun processMessage(request: DialogRequest): CompletableFuture<DialogResult> {
+        if (parsePersonalMemoryAction(request) != null) return processAcceptedMessage(request)
+        return pendingRequests.submit(request.player().uniqueId, request.npc().uuid, DialogResult::busy) {
+            processAcceptedMessage(request)
+        }
+    }
+
+    fun isProcessingMessage(request: DialogRequest): Boolean =
+        pendingRequests.isActive(request.player().uniqueId, request.npc().uuid) &&
+            parsePersonalMemoryAction(request) == null
+
+    private fun parsePersonalMemoryAction(request: DialogRequest): PlayerPersonalMemoryCommand.Action? =
+        if (request.directAddress() && request.explicitConversation()) {
+            PlayerPersonalMemoryCommand.parse(
+                request.message(),
+                plugin.config.getInt("npc.personal_memory.max_statement_chars", 160).coerceIn(40, 300),
+            )
+        } else {
+            null
+        }
+
+    private fun processAcceptedMessage(request: DialogRequest): CompletableFuture<DialogResult> {
         val npc = request.npc()
         val player = request.player()
         val message = request.message()
@@ -60,14 +82,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
         }
 
         val personalMemoryEnabled = plugin.config.getBoolean("npc.personal_memory.enabled", true)
-        val personalMemoryAction = if (request.directAddress() && request.explicitConversation()) {
-            PlayerPersonalMemoryCommand.parse(
-                message,
-                plugin.config.getInt("npc.personal_memory.max_statement_chars", 160).coerceIn(40, 300),
-            )
-        } else {
-            null
-        }
+        val personalMemoryAction = parsePersonalMemoryAction(request)
         if (personalMemoryAction == PlayerPersonalMemoryCommand.Action.Forget ||
             personalMemoryAction is PlayerPersonalMemoryCommand.Action.ForgetOne ||
             personalMemoryAction == PlayerPersonalMemoryCommand.Action.MissingForgetStatement ||
@@ -141,7 +156,8 @@ class DialogManager(private val plugin: AINPCPlugin) {
             val history = DialogHistory.recentStable(getRecentHistory(npc, playerUuid, 5))
 
             // Obtine amintiri relevante
-            val memories = plugin.memoryManager.getRelevantMemories(npc, playerUuid, message, 5)
+            val memoryQuery = PlayerConversationContinuation.memoryQuery(message, history)
+            val memories = plugin.memoryManager.getRelevantMemories(npc, playerUuid, memoryQuery, 5)
             val playerConfirmedStatements = if (personalMemoryEnabled) {
                 plugin.memoryManager.getPlayerConfirmedStatements(npc, playerUuid, 10)
             } else {
@@ -178,31 +194,32 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 loadStoryFactResponse(message, storyWorldContext),
             )
         }.thenCompose { context ->
-            publishAiRequestBuilt(npc, player, message, request, context)
-            val dialogueEngine: DialogueEngine? = plugin.dialogueEngine
-            val responseFuture: CompletableFuture<String> = if (dialogueEngine != null) {
-                dialogueEngine.generateResponse(
-                    request,
-                    context.history,
-                    context.memories,
-                    context.relationship,
-                    context.dbContext,
-                    accessibleShops,
-                    shopAccessDenied,
-                    workFacts,
-                    context.storyFactResponse,
-                )
-            } else {
-                plugin.openAIService.generateResponse(
-                    request,
-                    context.history,
-                    context.memories,
-                    context.relationship,
-                    context.dbContext
-                )
-            }
+            generateResponseOnMainThread(npc, player, message, request, context) {
+                val dialogueEngine: DialogueEngine? = plugin.dialogueEngine
+                val responseFuture: CompletableFuture<String> = if (dialogueEngine != null) {
+                    dialogueEngine.generateResponse(
+                        request,
+                        context.history,
+                        context.memories,
+                        context.relationship,
+                        context.dbContext,
+                        accessibleShops,
+                        shopAccessDenied,
+                        workFacts,
+                        context.storyFactResponse,
+                    )
+                } else {
+                    plugin.openAIService.generateResponse(
+                        request,
+                        context.history,
+                        context.memories,
+                        context.relationship,
+                        context.dbContext
+                    )
+                }
 
-            responseFuture.thenApply { response ->
+                responseFuture
+            }.thenApply { response ->
                 GeneratedDialog(response, context.relationship, context.playerStatementRevision)
             }
         }.thenCompose { generated ->
@@ -211,6 +228,14 @@ class DialogManager(private val plugin: AINPCPlugin) {
             }
 
             val sentiment = plugin.openAIService.analyzeSentimentFast(message)
+            val interactionEffect = DialogueInteractionPolicy.forMessage(
+                message,
+                sentiment,
+                request.directAddress(),
+                npc.name,
+                npc.displayName,
+                request.addressClarified,
+            )
 
             val branchDecision = BranchDecision.runtimeSelected(
                 "branch_${System.currentTimeMillis()}",
@@ -223,9 +248,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 }
                 saveDialog(npc, playerUuid, message, generated.response())
                 recordBranchDecision(npc, playerUuid, branchDecision)
-                updateRelationship(npc, playerUuid, playerName, sentiment)
-                createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment)
-                PostProcessResult(generated.response(), sentiment, generated.relationship())
+                updateRelationship(npc, playerUuid, playerName, interactionEffect)
+                createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment, interactionEffect)
+                PostProcessResult(generated.response(), interactionEffect, generated.relationship())
             }.exceptionally { ex ->
                 val root = unwrapCompletionException(ex)
                 plugin.logger.warning(
@@ -235,12 +260,12 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 if (plugin.config.getBoolean("debug.enabled", false)) {
                     root.printStackTrace()
                 }
-                PostProcessResult(generated.response(), sentiment, generated.relationship())
+                PostProcessResult(generated.response(), DialogueInteractionEffect(), generated.relationship())
             }.thenApply { postProcess ->
                 if (postProcess == null) {
                     return@thenApply DialogResult.success("Mi-am actualizat amintirile intre timp. Te rog sa repeti intrebarea.")
                 }
-                updateEmotions(npc, postProcess.relationship(), postProcess.sentiment())
+                updateEmotions(npc, postProcess.relationship(), postProcess.effect())
                 DialogResult.success(postProcess.response())
             }
         }.exceptionally { ex ->
@@ -457,32 +482,12 @@ class DialogManager(private val plugin: AINPCPlugin) {
     /**
      * Actualizeaza relatia dupa o interactiune
      */
-    private fun updateRelationship(npc: AINPC, playerUuid: UUID, playerName: String, sentiment: String) {
-        var affectionChange = 0.0
-        var trustChange = 0.0
-        var respectChange = 0.0
-
-        when (sentiment) {
-            "positive", "compliment" -> {
-                affectionChange = 0.05
-                trustChange = 0.03
-            }
-            "greeting" -> {
-                affectionChange = 0.02
-                trustChange = 0.01
-            }
-            "negative", "insult" -> {
-                affectionChange = -0.1
-                trustChange = -0.05
-                respectChange = -0.05
-            }
-            "threat" -> {
-                affectionChange = -0.15
-                trustChange = -0.2
-                respectChange = -0.1
-            }
-        }
-
+    private fun updateRelationship(
+        npc: AINPC,
+        playerUuid: UUID,
+        playerName: String,
+        effect: DialogueInteractionEffect,
+    ) {
         // Aplica modificarile in baza de date
         val sql = """
             INSERT INTO npc_relationships 
@@ -510,17 +515,17 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 stmt.setInt(1, npc.databaseId)
                 stmt.setString(2, playerUuid.toString())
                 stmt.setString(3, playerName)
-                stmt.setDouble(4, affectionChange)
-                stmt.setDouble(5, trustChange)
-                stmt.setDouble(6, respectChange)
-                stmt.setDouble(7, affectionChange)
-                stmt.setDouble(8, trustChange)
-                stmt.setDouble(9, respectChange)
-                stmt.setDouble(10, affectionChange)
-                stmt.setDouble(11, affectionChange)
-                stmt.setDouble(12, affectionChange)
-                stmt.setDouble(13, affectionChange)
-                stmt.setDouble(14, affectionChange)
+                stmt.setDouble(4, effect.affectionChange)
+                stmt.setDouble(5, effect.trustChange)
+                stmt.setDouble(6, effect.respectChange)
+                stmt.setDouble(7, effect.affectionChange)
+                stmt.setDouble(8, effect.trustChange)
+                stmt.setDouble(9, effect.respectChange)
+                stmt.setDouble(10, effect.affectionChange)
+                stmt.setDouble(11, effect.affectionChange)
+                stmt.setDouble(12, effect.affectionChange)
+                stmt.setDouble(13, effect.affectionChange)
+                stmt.setDouble(14, effect.affectionChange)
                 stmt.executeUpdate()
             }
         } catch (e: SQLException) {
@@ -536,17 +541,11 @@ class DialogManager(private val plugin: AINPCPlugin) {
         playerUuid: UUID,
         playerName: String,
         playerMessage: String,
-        sentiment: String
+        sentiment: String,
+        effect: DialogueInteractionEffect,
     ) {
-        val importance = when (sentiment) {
-            "insult", "threat" -> 4
-            "compliment" -> 3
-            "positive", "negative" -> 2
-            else -> 1
-        }
-
-        // Creeaza amintire doar pentru interactiuni importante
-        if (importance >= 2) {
+        val importance = effect.memoryImportance
+        if (importance != null) {
             val content = "Jucatorul $playerName mi-a spus: \"${truncate(playerMessage, 100)}\" (sentiment: $sentiment)"
 
             plugin.memoryManager.createMemory(
@@ -562,20 +561,10 @@ class DialogManager(private val plugin: AINPCPlugin) {
     /**
      * Actualizeaza emotiile NPC-ului bazat pe mesaj
      */
-    private fun updateEmotions(npc: AINPC, relationship: NPCRelationship?, sentiment: String) {
+    private fun updateEmotions(npc: AINPC, relationship: NPCRelationship?, effect: DialogueInteractionEffect) {
+        val interactionType = effect.emotionType ?: return
         val familiarity = relationship?.familiarity ?: 0.0
         val multiplier = 0.5 + familiarity * 0.5
-
-        // Aplica efectul emotional
-        val interactionType = when (sentiment) {
-            "positive" -> "compliment"
-            "negative" -> "insult"
-            "greeting" -> "greeting"
-            "threat" -> "threat"
-            "compliment" -> "compliment"
-            "insult" -> "insult"
-            else -> "greeting"
-        }
 
         plugin.emotionManager.applyInteractionEffect(npc, interactionType, multiplier)
     }
@@ -650,41 +639,88 @@ class DialogManager(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun publishAiRequestBuilt(npc: AINPC, player: Player, message: String, request: DialogRequest, context: DialogContext) {
-        if (!plugin.config.getBoolean("events.public_api_enabled", true)) return
-        if (!plugin.config.getBoolean("events.dialog_prompt_events_enabled", false)) return
-        val summary = "memories=" + context.memories.size + ",history=" + context.history.size
-        val event = DialogAIRequestBuiltEvent(
-            DialogAIRequestBuiltEventPayload(
-                UUID.randomUUID(),
-                System.currentTimeMillis(),
-                AINPCEventSource.NPC,
-                player.uniqueId.toString() + ":" + npc.uuid,
-                player.uniqueId,
-                player.name,
-                npc.databaseId.toString(),
-                npc.uuid,
-                npc.name,
-                message,
-                summary,
-                request.directAddress(),
-                request.explicitConversation(),
-                request.triggerReason(),
-                mapOf("source" to "DialogManager")
-            )
-        )
-        plugin.server.pluginManager.callEvent(event)
+    private fun generateResponseOnMainThread(
+        npc: AINPC,
+        player: Player,
+        message: String,
+        request: DialogRequest,
+        context: DialogContext,
+        generate: () -> CompletableFuture<String>,
+    ): CompletableFuture<String> {
+        val future = CompletableFuture<CompletableFuture<String>>()
+        val responseTask = Runnable {
+            try {
+                if (plugin.config.getBoolean("events.public_api_enabled", true) &&
+                    plugin.config.getBoolean("events.dialog_prompt_events_enabled", false)
+                ) {
+                    val summary = "memories=" + context.memories.size + ",history=" + context.history.size
+                    val event = DialogAIRequestBuiltEvent(
+                        DialogAIRequestBuiltEventPayload(
+                            UUID.randomUUID(),
+                            System.currentTimeMillis(),
+                            AINPCEventSource.NPC,
+                            player.uniqueId.toString() + ":" + npc.uuid,
+                            player.uniqueId,
+                            player.name,
+                            npc.databaseId.toString(),
+                            npc.uuid,
+                            npc.name,
+                            message,
+                            summary,
+                            request.directAddress(),
+                            request.explicitConversation(),
+                            request.triggerReason(),
+                            mapOf("source" to "DialogManager")
+                        )
+                    )
+                    plugin.server.pluginManager.callEvent(event)
+                }
+                future.complete(generate())
+            } catch (failure: RuntimeException) {
+                future.completeExceptionally(failure)
+            }
+        }
+
+        if (plugin.server.isPrimaryThread) {
+            responseTask.run()
+        } else {
+            try {
+                plugin.server.scheduler.runTask(plugin, responseTask)
+            } catch (failure: RuntimeException) {
+                future.completeExceptionally(failure)
+            }
+        }
+        return future.thenCompose { it }
     }
 
     // Context holder class
     private class DialogContext(
-        val history: List<DialogHistory>,
-        val memories: List<String>,
-        val relationship: NPCRelationship?,
-        val dbContext: PromptDbContext,
+        history: List<DialogHistory>,
+        memories: List<String>,
+        relationship: NPCRelationship?,
+        dbContext: PromptDbContext,
         val playerStatementRevision: Long,
         val storyFactResponse: String?,
-    )
+    ) {
+        val history: List<DialogHistory> = immutableCopy(history)
+        val memories: List<String> = immutableCopy(memories)
+        val relationship: NPCRelationship? = relationship?.let {
+            NPCRelationship(
+                affection = it.affection,
+                trust = it.trust,
+                respect = it.respect,
+                familiarity = it.familiarity,
+                interactionCount = it.interactionCount,
+                relationshipType = it.relationshipType,
+            )
+        }
+        val dbContext: PromptDbContext = dbContext.copy(
+            playerConfirmedStatements = immutableCopy(dbContext.playerConfirmedStatements),
+        )
+
+        private fun <Value> immutableCopy(values: Collection<Value>): List<Value> =
+            java.util.Collections.unmodifiableList(ArrayList(values))
+    }
 
     private data class GeneratedDialog(
         val response: String,
@@ -697,11 +733,11 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
     private data class PostProcessResult(
         val response: String,
-        val sentiment: String,
+        val effect: DialogueInteractionEffect,
         val relationship: NPCRelationship?
     ) {
         fun response(): String = response
-        fun sentiment(): String = sentiment
+        fun effect(): DialogueInteractionEffect = effect
         fun relationship(): NPCRelationship? = relationship
     }
 
@@ -736,6 +772,9 @@ class DialogManager(private val plugin: AINPCPlugin) {
             fun cooldown(): DialogResult = DialogResult(DialogStatus.COOLDOWN, null)
 
             @JvmStatic
+            fun busy(): DialogResult = DialogResult(DialogStatus.BUSY, null)
+
+            @JvmStatic
             fun error(): DialogResult = DialogResult(DialogStatus.ERROR, null)
         }
     }
@@ -743,7 +782,8 @@ class DialogManager(private val plugin: AINPCPlugin) {
     enum class DialogStatus {
         SUCCESS,
         COOLDOWN,
-        ERROR
+        ERROR,
+        BUSY
     }
 
     data class BranchDecision(
@@ -764,7 +804,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
         }
     }
 
-    data class DialogRequest(
+    data class DialogRequest @JvmOverloads constructor(
         val npc: AINPC,
         val player: Player,
         val message: String,
@@ -772,7 +812,8 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val explicitConversation: Boolean,
         val triggerReason: String,
         val nearbyNpcCount: Int,
-        val distanceToNpc: Double
+        val distanceToNpc: Double,
+        val addressClarified: Boolean = false,
     ) {
         fun npc(): AINPC = npc
         fun player(): Player = player

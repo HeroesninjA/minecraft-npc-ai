@@ -1,6 +1,8 @@
 package ro.ainpc.engine
 
 import ro.ainpc.ai.NpcShopFactResolver
+import ro.ainpc.ai.PlayerConversationContinuation
+import ro.ainpc.ai.PlayerConversationRecall
 import java.util.Locale
 
 internal object DialogueAiIntentClassification {
@@ -22,6 +24,7 @@ internal object DialogueAiIntentClassification {
         hasOccupation: Boolean,
         classificationEnabled: Boolean,
     ): Boolean {
+        if (referencesConversation(playerMessage)) return false
         val localIntent = DialogueIntentSelector.select(playerMessage, relationshipStatus, hasOccupation, null)
         return localIntent == DialogueEngine.DialogueIntent.WORK_TALK ||
             (hasOccupation && classificationEnabled && shouldClassify(localIntent, playerMessage, false))
@@ -33,6 +36,7 @@ internal object DialogueAiIntentClassification {
         hasOccupation: Boolean,
         classificationEnabled: Boolean,
     ): Boolean {
+        if (referencesConversation(playerMessage)) return false
         val localIntent = DialogueIntentSelector.select(playerMessage, relationshipStatus, hasOccupation, null)
         return NpcShopFactResolver.isLookupQuestion(playerMessage) ||
             localIntent == DialogueEngine.DialogueIntent.TRADE ||
@@ -45,11 +49,16 @@ internal object DialogueAiIntentClassification {
         contextualAiNeeded: Boolean,
     ): Boolean =
         !contextualAiNeeded &&
+            !referencesConversation(playerMessage) &&
             deterministicIntent in setOf(
                 DialogueEngine.DialogueIntent.QUESTION,
                 DialogueEngine.DialogueIntent.CONVERSATION,
             ) &&
             playerMessage.trim().length in 5..80
+
+    private fun referencesConversation(playerMessage: String): Boolean =
+        PlayerConversationContinuation.isFollowUp(playerMessage) || PlayerConversationRecall.isRecallQuestion(playerMessage) ||
+            PlayerConversationRecall.isReplayRequest(playerMessage) || PlayerConversationContinuation.isShortAnswer(playerMessage)
 
     fun parse(
         response: String,

@@ -124,6 +124,7 @@ This is the canonical documentation set.
 
 ## Planning
 
+- [Sistem de dialog NPC bazat pe stare persistentă](planning/sistem-dialog-npc-bazat-pe-stare.md)
 - [Simulare de conștiință pentru NPC-uri: momentul potrivit și etape](planning/simulare-constiinta-npc.md)
 - `planning/authorization-and-plugin-compatibility-hardening.md`
 - `planning/gui-ux-hardening.md`

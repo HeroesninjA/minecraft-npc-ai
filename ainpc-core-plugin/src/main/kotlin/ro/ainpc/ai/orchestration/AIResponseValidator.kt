@@ -13,9 +13,11 @@ object AIResponseValidator {
         Regex("""\{\{.*?\}\}"""),
         Regex("""<script[^>]*>.*?</script>""", RegexOption.DOT_MATCHES_ALL)
     )
-    private val TRUNCATION_PATTERNS = listOf(
+    private val ELLIPSIS_PATTERNS = listOf(
         Regex("""\.\.\.$"""),
-        Regex("""…$"""),
+        Regex("""…$""")
+    )
+    private val TRUNCATION_PATTERNS = listOf(
         Regex("""\[truncated\]""", RegexOption.IGNORE_CASE),
         Regex("""\[cut\]""", RegexOption.IGNORE_CASE),
         Regex("""\(continua.\)""", RegexOption.IGNORE_CASE)
@@ -43,7 +45,7 @@ object AIResponseValidator {
         val patternIssues = validateForbiddenPatterns(response)
         if (patternIssues.isNotEmpty()) errors.addAll(patternIssues)
 
-        val truncationCheck = validateComplete(response)
+        val truncationCheck = validateComplete(response, useCase == AIUseCase.DIALOGUE_REPLY)
         if (truncationCheck != null) errors.add(truncationCheck)
 
         if (useCase != null) {
@@ -95,8 +97,10 @@ object AIResponseValidator {
         return issues
     }
 
-    fun validateComplete(response: String): String? {
-        for (pattern in TRUNCATION_PATTERNS) {
+    fun validateComplete(response: String): String? = validateComplete(response, false)
+
+    private fun validateComplete(response: String, allowEllipsis: Boolean): String? {
+        for (pattern in if (allowEllipsis) TRUNCATION_PATTERNS else ELLIPSIS_PATTERNS + TRUNCATION_PATTERNS) {
             if (pattern.containsMatchIn(response)) {
                 return "Raspunsul AI pare trunchiat (contine marker: ${pattern.pattern.take(20)})."
             }
@@ -159,7 +163,16 @@ object AIResponseValidator {
                 }
             }
             AIUseCase.DIALOGUE_REPLY -> {
-                if (trimmed.startsWith("{") && trimmed.contains("\"type\"")) {
+                val structuredJson = if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                    try {
+                        JsonParser.parseString(trimmed)
+                    } catch (_: JsonSyntaxException) {
+                        null
+                    }
+                } else {
+                    null
+                }
+                if (structuredJson?.isJsonObject == true || structuredJson?.isJsonArray == true) {
                     issues.add("Tip neasteptat: raspunsul pentru DIALOGUE_REPLY pare JSON in loc de text simplu.")
                 }
             }

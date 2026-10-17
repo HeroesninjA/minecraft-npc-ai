@@ -11,6 +11,12 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.player.PlayerQuitEvent
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
+import ro.ainpc.ai.DialogueAddressCandidate
+import ro.ainpc.ai.DialogueAddressReply
+import ro.ainpc.ai.DialogueAddressResolver
+import ro.ainpc.ai.DialogueAddressStatus
+import ro.ainpc.ai.DialogueFarewell
+import ro.ainpc.ai.PendingDialogueAddress
 import ro.ainpc.api.events.AINPCEventSource
 import ro.ainpc.api.events.dialog.DialogIntentResolvedEvent
 import ro.ainpc.api.events.dialog.DialogIntentResolvedEventPayload
@@ -25,6 +31,7 @@ import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.commands.defaultObjectiveTarget
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
+import ro.ainpc.managers.isSameNpcRecord
 import ro.ainpc.npc.AINPC
 import java.util.UUID
 
@@ -44,13 +51,18 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
         if (plugin.guiService.hasTextInputRequest(player)) {
             event.isCancelled = true
-            runSync { handleGuiTextInput(player, message) }
+            runSync {
+                conversations().clearAddressClarification(player)
+                handleGuiTextInput(player, message)
+            }
             return
         }
 
         event.isCancelled = true
         runSync {
+            if (!player.isOnline) return@runSync
             try {
+                if (handleAddressClarification(player, message)) return@runSync
                 val target = resolveTarget(player, message)
                 if (target != null) {
                     handleResolvedMessage(player, message, target)
@@ -71,12 +83,25 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     }
 
     private fun resolveTarget(player: Player, message: String): ResolvedDialogTarget? {
+        if (discardUnavailableSession(player)) return null
         val activeNpc = conversations().getConversationPartner(player)
         if (activeNpc != null) {
-            if (conversations().isExpired(player, CONVERSATION_TIMEOUT_MILLIS)) {
+            if (conversations().isExpired(player)) {
                 publishDialogSessionEnded(player, activeNpc, "timeout")
                 conversations().clearConversation(player)
             } else {
+                val listenRadius = plugin.config.getDouble("dialog.passive_listen_radius", 8.0)
+                val nearby = plugin.npcManager.getActiveNPCsNear(player.location, listenRadius)
+                val candidates = (nearby + activeNpc).distinctBy { it.uuid }
+                val address = resolveExplicitAddress(message, candidates)
+                if (address.status == DialogueAddressStatus.AMBIGUOUS) {
+                    requestAddressClarification(player, message, candidates.filter { it.uuid in address.matchedNpcIds })
+                    return null
+                }
+                val addressedNpc = nearby.firstOrNull { it.uuid == address.npcId && it.uuid != activeNpc.uuid }
+                if (addressedNpc != null) {
+                    return buildTarget(player, addressedNpc, true, true, "named_address_switch", nearby.size)
+                }
                 return buildTarget(player, activeNpc, true, true, "active_session", 1)
             }
         }
@@ -93,10 +118,23 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             return null
         }
 
+        val address = resolveExplicitAddress(message, nearby)
+        if (address.status == DialogueAddressStatus.AMBIGUOUS) {
+            requestAddressClarification(player, message, nearby.filter { it.uuid in address.matchedNpcIds })
+            return null
+        }
+        nearby.firstOrNull { it.uuid == address.npcId }?.let {
+            return buildTarget(player, it, true, false, "name_match", nearby.size)
+        }
+
         val directMatches = nearby.filter { mentionsNpc(message, it) }
 
-        if (!directMatches.isEmpty()) {
-            return buildTarget(player, directMatches[0], true, false, "name_match", nearby.size)
+        if (directMatches.size > 1) {
+            requestAddressClarification(player, message, directMatches)
+            return null
+        }
+        if (directMatches.size == 1) {
+            return buildTarget(player, directMatches.single(), true, false, "name_match", nearby.size)
         }
 
         if (nearby.size == 1) {
@@ -110,6 +148,73 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
 
         return null
+    }
+
+    private fun resolveExplicitAddress(message: String, candidates: List<AINPC>) =
+        DialogueAddressResolver.resolveDetailed(
+            message,
+            candidates.map { DialogueAddressCandidate(it.uuid, it.name, it.displayName) },
+        )
+
+    private fun requestAddressClarification(player: Player, message: String, candidates: List<AINPC>) {
+        val pending = conversations().beginAddressClarification(
+            player, message, candidates.map { DialogueAddressCandidate(it.uuid, it.name, it.displayName) },
+        )
+        if (pending == null) {
+            messages().sendMessage(player, "dialog_target_ambiguous")
+            return
+        }
+        showAddressChoices(player, pending)
+    }
+
+    private fun showAddressChoices(player: Player, pending: PendingDialogueAddress) {
+        val radius = plugin.config.getDouble("dialog.passive_listen_radius", 8.0)
+        val nearby = plugin.npcManager.getActiveNPCsNear(player.location, radius).associateBy { it.uuid }
+        messages().sendMessage(player, "dialog_target_choose")
+        pending.candidates.forEachIndexed { index, candidate ->
+            val location = nearby[candidate.npcId]?.location
+            val position = location?.let { "${it.blockX}, ${it.blockY}, ${it.blockZ}" } ?: "-"
+            messages().sendMessage(
+                player, "dialog_target_option",
+                mapOf(
+                    "number" to (index + 1).toString(),
+                    "name" to (candidate.displayName?.takeIf(String::isNotBlank) ?: candidate.name),
+                    "position" to position,
+                ),
+            )
+        }
+    }
+
+    private fun handleAddressClarification(player: Player, input: String): Boolean {
+        if (discardUnavailableSession(player)) return true
+        return when (val reply = conversations().replyToAddressClarification(player, input)) {
+            DialogueAddressReply.None -> false
+            DialogueAddressReply.Cancelled -> {
+                messages().sendMessage(player, "dialog_target_cancelled")
+                true
+            }
+            DialogueAddressReply.Expired -> {
+                messages().sendMessage(player, "dialog_target_expired")
+                true
+            }
+            is DialogueAddressReply.Retry -> {
+                showAddressChoices(player, reply.pending)
+                true
+            }
+            is DialogueAddressReply.Selected -> {
+                val radius = plugin.config.getDouble("dialog.passive_listen_radius", 8.0)
+                val nearby = plugin.npcManager.getActiveNPCsNear(player.location, radius)
+                val selectedNpc = nearby.firstOrNull { it.uuid == reply.npcId }
+                if (selectedNpc == null) {
+                    messages().sendMessage(player, "dialog_target_unavailable")
+                } else {
+                    val target = buildTarget(player, selectedNpc, true, true, "named_address_clarified", nearby.size)
+                        .copy(addressClarified = true)
+                    handleResolvedMessage(player, reply.message, target)
+                }
+                true
+            }
+        }
     }
 
     private fun buildTarget(
@@ -127,34 +232,64 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     private fun handleResolvedMessage(player: Player, message: String, target: ResolvedDialogTarget) {
         val npc = target.npc()
-        if (npc == null || !npc.isSpawned()) {
-            conversations().clearConversation(player)
+        if (npc == null) return
+        if (!isConversationPartnerAvailable(player, npc)) {
+            endUnavailableConversation(player, npc)
             return
         }
 
-        if (isGoodbye(message)) {
-            if (target.explicitConversation()) {
+        if (DialogueFarewell.isFarewell(message, listOfNotNull(npc.name, npc.displayName))) {
+            if (target.explicitConversation() && conversations().getConversationNpcId(player) == npc.uuid) {
                 endConversation(player, npc)
+            } else if (target.directAddress()) {
+                messages().sendNPCMessage(player, npc.name, getGoodbyeMessage(npc))
             }
             return
         }
 
-        if (!target.explicitConversation()) {
-            beginConversationSession(player, npc).handle { success, ex ->
-                if (success != null && success) {
-                    runSync {
-                        publishDialogSessionStarted(
-                            player, npc,
-                            target.directAddress(), target.explicitConversation(),
-                            target.triggerReason(), target.nearbyNpcCount(), target.distanceToNpc()
-                        )
-                    }
-                } else {
-                    plugin.logger.warning("Nu am putut initializa sesiunea de conversatie pentru " + npc.name + ": " + (ex?.message ?: "eroare necunoscuta"))
-                }
+        val request = DialogManager.DialogRequest(
+            npc,
+            player,
+            message,
+            target.directAddress(),
+            target.explicitConversation(),
+            target.triggerReason(),
+            target.nearbyNpcCount(),
+            target.distanceToNpc(),
+            target.addressClarified,
+        )
+        if (dialogManager.isProcessingMessage(request)) {
+            messages().sendMessage(player, "dialog_busy")
+            return
+        }
+
+        val initialization = if (conversations().getConversationNpcId(player) != npc.uuid) {
+            if (!publishDialogSessionStarted(
+                    player, npc,
+                    target.directAddress(), target.explicitConversation(),
+                    target.triggerReason(), target.nearbyNpcCount(), target.distanceToNpc()
+                )
+            ) {
+                return
             }
+            val previousNpc = conversations().getConversationPartner(player)
+            if (previousNpc != null && previousNpc.uuid != npc.uuid) {
+                publishDialogSessionEnded(player, previousNpc, target.triggerReason())
+                conversations().clearConversation(player)
+            }
+            beginConversationSession(player, npc)
         } else {
             refreshConversationSession(player)
+            null
+        }
+        val sessionId = conversations().getConversationSessionId(player)
+        initialization?.whenComplete { _, ex ->
+            if (ex != null) {
+                runSync {
+                    if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
+                    plugin.logger.warning("Nu am putut salva memoria primei intalniri cu " + npc.name + ": " + ex.message)
+                }
+            }
         }
 
         npc.lookAt(player)
@@ -180,33 +315,26 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         messages().send(player, "&7Tu: &f$message")
         messages().send(player, "&8" + npc.name + " se gandeste...")
 
-        val request = DialogManager.DialogRequest(
-            npc,
-            player,
-            message,
-            target.directAddress(),
-            target.explicitConversation(),
-            target.triggerReason(),
-            target.nearbyNpcCount(),
-            target.distanceToNpc()
-        )
-
         dialogManager.processMessage(request).thenAccept { result ->
             runSync {
+                if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
                 if (result == null) {
                     messages().sendMessage(player, "ai_error")
                     return@runSync
                 }
 
                 publishDialogResponseGenerated(player, npc, target, result)
+                if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
                 when (result.status) {
                     DialogManager.DialogStatus.SUCCESS -> messages().sendNPCMessage(player, npc.name, result.response ?: "")
                     DialogManager.DialogStatus.COOLDOWN -> messages().sendMessage(player, "cooldown")
+                    DialogManager.DialogStatus.BUSY -> messages().sendMessage(player, "dialog_busy")
                     DialogManager.DialogStatus.ERROR -> messages().sendMessage(player, "ai_error")
                 }
             }
         }.exceptionally { ex ->
             runSync {
+                if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
                 plugin.logger.warning("Eroare la procesarea mesajului: " + ex.message)
                 messages().sendMessage(player, "ai_error")
             }
@@ -487,16 +615,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         if (first == null || second == null) {
             return false
         }
-        if (first === second) {
-            return true
-        }
-        if (first.uuid != null && second.uuid != null && first.uuid == second.uuid) {
-            return true
-        }
-        if (first.databaseId > 0 && first.databaseId == second.databaseId) {
-            return true
-        }
-        return first.name != null && first.name.equals(second.name, ignoreCase = true)
+        return isSameNpcRecord(first, second)
     }
 
     private fun questFeatureEnabled(): Boolean = plugin.config.getBoolean("features.quest", true)
@@ -529,24 +648,38 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
 
         val normalizedName = normalize(npcName)
-        return normalizedName.isNotBlank() && normalizedMessage.contains(normalizedName)
+        return normalizedName.isNotBlank() &&
+            Regex("(?<![\\p{L}\\p{N}])${Regex.escape(normalizedName)}(?![\\p{L}\\p{N}])")
+                .containsMatchIn(normalizedMessage)
     }
 
     private fun normalize(value: String): String = QuestDecisionIntentResolver.normalize(value)
 
+    private fun discardUnavailableSession(player: Player): Boolean {
+        if (conversations().getConversationNpcId(player) == null) return false
+        val npc = conversations().getConversationPartner(player)
+        if (npc != null && isConversationPartnerAvailable(player, npc)) return false
+        if (npc == null) {
+            conversations().clearConversation(player)
+        } else {
+            endUnavailableConversation(player, npc)
+        }
+        return true
+    }
+
+    private fun endUnavailableConversation(player: Player, npc: AINPC) {
+        if (conversations().getConversationNpcId(player) != npc.uuid) return
+        publishDialogSessionEnded(player, npc, "npc_unavailable")
+        conversations().clearConversation(player)
+    }
+
     private fun endConversation(player: Player, npc: AINPC) {
+        if (conversations().getConversationNpcId(player) != npc.uuid) return
         publishDialogSessionEnded(player, npc, "goodbye")
         conversations().clearConversation(player)
         messages().sendNPCMessage(player, npc.name, getGoodbyeMessage(npc))
         messages().send(player, "&7&o(Conversatia cu " + npc.name + " s-a incheiat.)")
         plugin.emotionManager.processEvent(npc, "player_leave", 1.0)
-    }
-
-    private fun isGoodbye(message: String): Boolean {
-        val lower = message.lowercase().trim()
-        return lower == "pa" || lower == "la revedere" || lower == "bye" ||
-            lower == "adio" || lower == "exit" || lower == "quit" ||
-            lower.startsWith("pa ")
     }
 
     private fun getGoodbyeMessage(npc: AINPC): String {
@@ -573,7 +706,8 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         val explicitConversation: Boolean,
         val triggerReason: String,
         val nearbyNpcCount: Int,
-        val distanceToNpc: Double
+        val distanceToNpc: Double,
+        val addressClarified: Boolean = false,
     ) {
         fun npc(): AINPC? = npc
         fun directAddress(): Boolean = directAddress
@@ -722,7 +856,6 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     companion object {
         private val PLAIN_TEXT: PlainTextComponentSerializer = PlainTextComponentSerializer.plainText()
-        private const val CONVERSATION_TIMEOUT_MILLIS = 300_000L
         private val QUEST_INTENTS = QuestDecisionIntentResolver()
     }
 }

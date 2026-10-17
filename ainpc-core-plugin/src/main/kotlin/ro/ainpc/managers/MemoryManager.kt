@@ -13,6 +13,8 @@ import java.time.LocalDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
+internal const val ACTIVE_MEMORY_SQL = "(expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)"
+
 /**
  * Memorymanager.
  */
@@ -187,11 +189,17 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         getRelevantMemories(npc, player.uniqueId, context, limit)
 
     fun getRelevantMemories(npc: AINPC, playerUuid: UUID, context: String, limit: Int): List<String> {
-        val memories = mutableListOf<String>()
+        if (limit <= 0) return emptyList()
+        val maxPromptChars = plugin.config.getInt("npc.memory_prompt_max_chars", MemoryRecallSelector.DEFAULT_MAX_PROMPT_CHARS)
+        if (maxPromptChars <= 0) return emptyList()
+
+        val candidates = mutableListOf<MemoryRecallCandidate>()
+        val candidateLimit = maxOf(limit, minOf(200, plugin.config.getInt("npc.max_memories_per_player", 50)))
         val sql = """
             SELECT content, memory_type, emotional_impact, importance, created_at
             FROM npc_memories
             WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
+                AND $ACTIVE_MEMORY_SQL
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
         """
@@ -200,7 +208,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, npc.databaseId)
                 stmt.setString(2, playerUuid.toString())
-                stmt.setInt(3, limit)
+                stmt.setInt(3, candidateLimit)
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
                         val source = when (rs.getString("memory_type")) {
@@ -208,7 +216,11 @@ class MemoryManager(private val plugin: AINPCPlugin) {
                             "first_meeting", "gift", "help", "betrayal" -> "game_event"
                             else -> "unclassified"
                         }
-                        memories.add("[source=$source] ${rs.getString("content")}")
+                        candidates.add(MemoryRecallCandidate(
+                            rs.getString("content"),
+                            source,
+                            MemoryRecallCandidate.parseRecordedOn(rs.getString("created_at")),
+                        ))
                     }
                 }
             }
@@ -216,7 +228,8 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             plugin.logger.warning("Eroare la obtinerea amintirilor: ${e.message}")
         }
 
-        return memories
+        return MemoryRecallSelector.select(context, candidates, limit, maxPromptChars)
+            .map(MemoryRecallCandidate::promptText)
     }
 
     fun getAllMemories(npc: AINPC, player: Player): List<Memory> = getAllMemories(npc, player.uniqueId)
@@ -226,7 +239,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
         val sql = """
             SELECT id, memory_type, content, emotional_impact, importance, created_at
             FROM npc_memories
-            WHERE npc_id = ? AND player_uuid = ?
+            WHERE npc_id = ? AND player_uuid = ? AND $ACTIVE_MEMORY_SQL
             ORDER BY created_at DESC
         """
 
@@ -258,7 +271,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
     fun cleanOldMemories() {
         val deleteExpired = """
             DELETE FROM npc_memories
-            WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
+            WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP
                 AND memory_type <> 'player_confirmed_statement'
         """
 
@@ -285,10 +298,12 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             WHERE id IN (
                 SELECT id FROM npc_memories
                 WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
+                    AND $ACTIVE_MEMORY_SQL
                 ORDER BY importance ASC, created_at ASC
                 LIMIT MAX(0, (
                     SELECT COUNT(*) FROM npc_memories
                     WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
+                        AND $ACTIVE_MEMORY_SQL
                 ) - ?)
             )
         """
@@ -384,7 +399,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
     fun hasMemoriesOf(npc: AINPC, player: Player): Boolean = hasMemoriesOf(npc, player.uniqueId)
 
     fun hasMemoriesOf(npc: AINPC, playerUuid: UUID): Boolean {
-        val sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ?"
+        val sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ? AND $ACTIVE_MEMORY_SQL"
         return try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, npc.databaseId)
@@ -402,7 +417,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
     fun getMemoryCount(npc: AINPC, player: Player): Int = getMemoryCount(npc, player.uniqueId)
 
     fun getMemoryCount(npc: AINPC, playerUuid: UUID): Int {
-        val sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ?"
+        val sql = "SELECT COUNT(*) FROM npc_memories WHERE npc_id = ? AND player_uuid = ? AND $ACTIVE_MEMORY_SQL"
         return try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, npc.databaseId)
@@ -424,6 +439,7 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             SELECT SUM(emotional_impact * importance) / SUM(importance) as weighted_avg
             FROM npc_memories
             WHERE npc_id = ? AND player_uuid = ? AND memory_type <> 'player_confirmed_statement'
+                AND $ACTIVE_MEMORY_SQL
         """
         return try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->

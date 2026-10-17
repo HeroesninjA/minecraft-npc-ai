@@ -1,7 +1,7 @@
 # Storage Provider Roadmap
 
 Status: propunere activa, compatibila si neimplementata complet.
-Actualizat: 2026-07-15.
+Actualizat: 2026-10-16.
 
 Roadmap pentru maturizarea persistentei. Starea implementata este detinuta de `reference/storage-runtime.md` si nu este redefinita aici.
 
@@ -10,6 +10,7 @@ Roadmap pentru maturizarea persistentei. Starea implementata este detinuta de `r
 - SQLite este backend-ul implicit si are acoperire directa in testele repository;
 - dialectul MySQL, Connector/J si Hikari exista;
 - traducerea SQL si auditul static acopera pattern-urile cunoscute;
+- inventarul `MemoryManager` contine doua expresii SQLite `datetime(...)`, pentru expirarea memoriilor obisnuite si de scenariu; curatarea si filtrarea memoriilor expirate folosesc `CURRENT_TIMESTAMP`, inclusiv limita exacta de expirare;
 - inventarul acceptat include utilizarile `INSERT OR` din relationship si economy, inclusiv persistenta ultimei plati de dobanda;
 - `player_investments` foloseste acum `INSERT` standard cu ID UUID; singurul `INSERT OR` ramas in `BankingService` este pentru ultima plata de dobanda;
 - progresul questurilor foloseste un singur upsert non-destructiv, tradus prin `DatabaseManager`; ancorele folosesc `INSERT` standard, iar testele SQLite acopera ordinea operatiilor si rollback-ul;

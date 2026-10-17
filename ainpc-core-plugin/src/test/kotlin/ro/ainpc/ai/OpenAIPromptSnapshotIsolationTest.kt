@@ -1,0 +1,310 @@
+package ro.ainpc.ai
+
+import org.bukkit.Material
+import org.bukkit.Server
+import org.bukkit.block.BlockType
+import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.PlayerInventory
+import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scheduler.BukkitScheduler
+import org.bukkit.scheduler.BukkitTask
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.ServiceRegistry
+import ro.ainpc.database.DatabaseManager
+import ro.ainpc.environment.EnvironmentContext
+import ro.ainpc.engine.FeaturePackLoader
+import ro.ainpc.managers.FamilyManager
+import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NPCContext
+import ro.ainpc.story.StoryContextService
+import java.lang.reflect.Proxy
+import java.sql.DriverManager
+import java.sql.PreparedStatement
+import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
+
+class OpenAIPromptSnapshotIsolationTest {
+    private val connection = DriverManager.getConnection("jdbc:sqlite::memory:").also { connection ->
+        connection.createStatement().use { statement ->
+            statement.execute(
+                "CREATE TABLE npc_family (npc_id INTEGER, related_name TEXT, relation_type TEXT, " +
+                    "is_alive INTEGER, related_npc_id INTEGER, backstory TEXT)",
+            )
+            statement.execute("INSERT INTO npc_family VALUES (7, 'Ana', 'sister', 1, NULL, '')")
+            statement.execute(
+                "CREATE TABLE quest_anchor_bindings (player_uuid TEXT, template_id TEXT, quest_code TEXT, " +
+                    "objective_key TEXT, objective_type TEXT, reference TEXT, anchor_type TEXT, " +
+                    "anchor_id TEXT, anchor_label TEXT, updated_at INTEGER)",
+            )
+            statement.execute("CREATE TABLE player_quests (player_uuid TEXT, template_id TEXT, status TEXT)")
+            val playerUuid = UUID.nameUUIDFromBytes("RequestPlayer".toByteArray())
+            statement.execute("INSERT INTO player_quests VALUES ('$playerUuid', 'quest', 'ACTIVE')")
+            statement.execute(
+                "INSERT INTO quest_anchor_bindings VALUES ('$playerUuid', 'quest', 'market', 'visit', " +
+                    "'LOCATION', 'market', 'PLACE', 'market_square', 'Piata', 1)",
+            )
+        }
+    }
+    private val database = object : DatabaseManager(null) {
+        @Volatile var familyQueryThread: Thread? = null
+        @Volatile var storyQueryThread: Thread? = null
+        @Volatile var storyQueryCount = 0
+        @Volatile var familyQueryRelease: CountDownLatch? = null
+
+        override fun prepareStatement(sql: String): PreparedStatement {
+            if (sql.contains("FROM npc_family")) {
+                familyQueryThread = Thread.currentThread()
+                familyQueryRelease?.await(5, TimeUnit.SECONDS)
+            }
+            if (sql.contains("FROM quest_anchor_bindings")) {
+                storyQueryThread = Thread.currentThread()
+                storyQueryCount++
+            }
+            return super.prepareStatement(sql)
+        }
+    }.also {
+        setField(DatabaseManager::class.java, it, "connection", connection)
+    }
+    private val mainThread = Thread.currentThread()
+    private val scheduled = LinkedBlockingQueue<Runnable>()
+    private var schedulerFailure: RuntimeException? = null
+    private val plugin = newPlugin()
+    private val npc = AINPC(plugin).apply {
+        databaseId = 7
+        name = "Bob"
+    }
+    private val currentPlayer = playerNamed("CurrentPlayer")
+    private val requestPlayer = playerNamed("RequestPlayer")
+
+    @AfterEach
+    fun closeDatabase() {
+        database.close()
+    }
+
+    @Test
+    fun `snapshot captures the requested player without changing the live conversation`() {
+        npc.context.setInteractingPlayer(currentPlayer)
+        npc.context.lastPlayerMessage = "Mesajul curent"
+        val interactionTime = npc.context.lastInteractionTime
+
+        val snapshot = capture()
+
+        assertEquals("RequestPlayer", snapshot.playerName)
+        assertEquals("Unde este piata?", snapshot.playerMessage)
+        assertTrue(snapshot.environmentDescription.contains("Vorbesc cu: RequestPlayer"))
+        assertFalse(snapshot.environmentDescription.contains("CurrentPlayer"))
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertEquals(interactionTime, npc.context.lastInteractionTime)
+        assertEquals("Mesajul curent", npc.context.lastPlayerMessage)
+        assertEquals("minecraft:apple", snapshot.playerHeldItem)
+    }
+
+    @Test
+    fun `snapshot keeps detached immutable traits family and environment events`() {
+        val events = mutableListOf("festival")
+        npc.traits.add("curious")
+        setField(
+            NPCContext::class.java, npc.context, "environmentContext",
+            EnvironmentContext.empty().copy(worldName = "world", specialEvents = events),
+        )
+
+        val snapshot = capture()
+
+        npc.traits.clear()
+        events.add("storm")
+        npc.name = "Changed"
+        connection.createStatement().use { it.execute("UPDATE npc_family SET related_name = 'Changed'") }
+
+        assertEquals("Bob", snapshot.npcName)
+        assertEquals(listOf("curious"), snapshot.traitIds)
+        assertEquals(listOf("Ana"), snapshot.familyMembers.map { it.name })
+        assertEquals(listOf("festival"), snapshot.environmentContext!!.specialEvents)
+        assertThrows(UnsupportedOperationException::class.java) {
+            (snapshot.traitIds as MutableList<String>).add("changed")
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (snapshot.familyMembers as MutableList<FamilyMemberSnapshot>).clear()
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (snapshot.environmentContext.specialEvents as MutableList<String>).clear()
+        }
+    }
+
+    @Test
+    fun `family query finishes on database worker before main thread snapshot capture`() {
+        val release = CountDownLatch(1)
+        database.familyQueryRelease = release
+        try {
+            val snapshotFuture = captureFromService()
+            assertFalse(snapshotFuture.isDone)
+            release.countDown()
+            val captureTask = scheduled.poll(5, TimeUnit.SECONDS)
+
+            assertNotNull(captureTask)
+            assertNotNull(database.familyQueryThread)
+            assertNotSame(mainThread, database.familyQueryThread)
+            assertNotSame(mainThread, database.storyQueryThread)
+            assertEquals(1, database.storyQueryCount)
+            assertFalse(snapshotFuture.isDone)
+            withTestItem { captureTask.run() }
+
+            val snapshot = snapshotFuture.get(5, TimeUnit.SECONDS)
+            assertEquals(listOf("Ana"), snapshot.familyMembers.map { it.name })
+            assertEquals("RequestPlayer", snapshot.playerName)
+            assertTrue(snapshot.environmentDescription.contains("market_square"))
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `scheduler rejection completes snapshot future exceptionally`() {
+        val rejection = IllegalStateException("Plugin disabled")
+        schedulerFailure = rejection
+        val release = CountDownLatch(1)
+        database.familyQueryRelease = release
+        try {
+            val future = captureFromService()
+            release.countDown()
+
+            assertSame(rejection, assertThrows(CompletionException::class.java) { future.join() }.cause)
+            assertTrue(scheduled.isEmpty())
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `scheduler rejection before world capture does not start database reads`() {
+        val rejection = IllegalStateException("Plugin disabled")
+        schedulerFailure = rejection
+
+        val future = CompletableFuture.supplyAsync { captureFromService() }.get(5, TimeUnit.SECONDS)
+
+        assertSame(rejection, assertThrows(CompletionException::class.java) { future.join() }.cause)
+        assertNull(database.familyQueryThread)
+        assertNull(database.storyQueryThread)
+    }
+
+    private fun capture(): PromptSnapshot = withTestItem {
+        OpenAIPromptSnapshotFactory.createPromptSnapshot(
+            plugin, request(), OpenAIPromptSnapshotFactory.loadFamilyMembers(plugin, npc),
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun captureFromService(): CompletableFuture<PromptSnapshot> {
+        val unsafe = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let {
+            it.isAccessible = true
+            it.get(null) as sun.misc.Unsafe
+        }
+        val service = unsafe.allocateInstance(OpenAIService::class.java) as OpenAIService
+        setField(OpenAIService::class.java, service, "plugin", plugin)
+        return OpenAIService::class.java.getDeclaredMethod("capturePromptSnapshot", DialogManager.DialogRequest::class.java)
+            .apply { isAccessible = true }
+            .invoke(service, request()) as CompletableFuture<PromptSnapshot>
+    }
+
+    private fun request() =
+        DialogManager.DialogRequest(npc, requestPlayer, "Unde este piata?", true, true, "test", 1, 0.0)
+
+    private fun <Value> withTestItem(block: () -> Value): Value {
+        val blockTypeField = Material::class.java.getDeclaredField("blockType").apply { isAccessible = true }
+        val originalBlockType = blockTypeField.get(Material.APPLE)
+        try {
+            blockTypeField.set(Material.APPLE, Supplier<BlockType?> { null })
+            return block()
+        } finally {
+            blockTypeField.set(Material.APPLE, originalBlockType)
+        }
+    }
+
+    private fun newPlugin(): AINPCPlugin {
+        val unsafe = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let {
+            it.isAccessible = true
+            it.get(null) as sun.misc.Unsafe
+        }
+        val created = unsafe.allocateInstance(AINPCPlugin::class.java) as AINPCPlugin
+        val task = Proxy.newProxyInstance(BukkitTask::class.java.classLoader, arrayOf(BukkitTask::class.java)) { _, method, _ ->
+            throw UnsupportedOperationException(method.name)
+        } as BukkitTask
+        val scheduler = Proxy.newProxyInstance(BukkitScheduler::class.java.classLoader, arrayOf(BukkitScheduler::class.java)) { _, method, args ->
+            when (method.name) {
+                "runTask" -> {
+                    schedulerFailure?.let { throw it }
+                    scheduled.add(args!![1] as Runnable)
+                    task
+                }
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as BukkitScheduler
+        val server = Proxy.newProxyInstance(Server::class.java.classLoader, arrayOf(Server::class.java)) { _, method, _ ->
+            when (method.name) {
+                "isPrimaryThread" -> Thread.currentThread() == mainThread
+                "getScheduler" -> scheduler
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as Server
+        setField(JavaPlugin::class.java, created, "newConfig", YamlConfiguration())
+        setField(JavaPlugin::class.java, created, "server", server)
+        val services = ServiceRegistry(created)
+        setField(ServiceRegistry::class.java, services, "databaseManager", database)
+        setField(ServiceRegistry::class.java, services, "familyManager", FamilyManager(created))
+        setField(ServiceRegistry::class.java, services, "featurePackLoader", FeaturePackLoader(created))
+        setField(ServiceRegistry::class.java, services, "storyContextService", StoryContextService(created))
+        setField(AINPCPlugin::class.java, created, "services", services)
+        created.config.set("events.public_api_enabled", false)
+        return created
+    }
+
+    private fun playerNamed(name: String): Player {
+        val inventory = Proxy.newProxyInstance(
+            PlayerInventory::class.java.classLoader, arrayOf(PlayerInventory::class.java),
+        ) { _, method, _ ->
+            when (method.name) {
+                "getItemInMainHand" -> TestStack()
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as PlayerInventory
+        return Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { _, method, _ ->
+            when (method.name) {
+                "getName" -> name
+                "getUniqueId" -> UUID.nameUUIDFromBytes(name.toByteArray())
+                "getLocation" -> null
+                "getInventory" -> {
+                    assertSame(mainThread, Thread.currentThread())
+                    inventory
+                }
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as Player
+    }
+
+    private class TestStack : ItemStack() {
+        override fun getType(): Material = Material.APPLE
+    }
+
+    private fun setField(owner: Class<*>, target: Any, name: String, value: Any) {
+        owner.getDeclaredField(name).apply {
+            isAccessible = true
+            set(target, value)
+        }
+    }
+}

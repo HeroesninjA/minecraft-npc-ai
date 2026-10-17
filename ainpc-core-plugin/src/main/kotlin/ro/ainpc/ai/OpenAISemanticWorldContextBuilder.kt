@@ -17,9 +17,11 @@ object OpenAISemanticWorldContextBuilder {
     private const val MAX_NPCS = 12
     private const val MAX_HISTORY_EVENTS = 5
 
-    fun build(plugin: AINPCPlugin, npc: AINPC): String {
+    fun build(plugin: AINPCPlugin, npc: AINPC): String = build(plugin, npc, null)
+
+    fun build(plugin: AINPCPlugin, npc: AINPC, preloadedStory: StoryContextSnapshot?): String {
         return try {
-            buildUnsafe(plugin, npc)
+            buildUnsafe(plugin, npc, preloadedStory)
         } catch (e: RuntimeException) {
             plugin.debug("[SemanticWorldContext] Context semantic indisponibil: ${e.javaClass.simpleName}: ${e.message}")
             ""
@@ -28,10 +30,21 @@ object OpenAISemanticWorldContextBuilder {
 
     fun resolveProfessionFact(plugin: AINPCPlugin, npc: AINPC, playerMessage: String): String? {
         if (!NpcProfessionFactResolver.isLookupQuestion(playerMessage)) return null
-        return NpcProfessionFactResolver.resolve(playerMessage, build(plugin, npc))
+        val semanticContext = try {
+            buildUnsafe(plugin, npc, null, false)
+        } catch (e: RuntimeException) {
+            plugin.debug("[SemanticWorldContext] Context semantic indisponibil: ${e.javaClass.simpleName}: ${e.message}")
+            ""
+        }
+        return NpcProfessionFactResolver.resolve(playerMessage, semanticContext)
     }
 
-    private fun buildUnsafe(plugin: AINPCPlugin, npc: AINPC): String {
+    private fun buildUnsafe(
+        plugin: AINPCPlugin,
+        npc: AINPC,
+        preloadedStory: StoryContextSnapshot?,
+        includeStory: Boolean = true,
+    ): String {
         val worldAdmin = plugin.platform.worldAdmin
         if (!worldAdmin.isEnabled) {
             return ""
@@ -43,7 +56,7 @@ object OpenAISemanticWorldContextBuilder {
         val region = worldAdmin.findRegion(worldName, x, y, z)
         val currentPlace = worldAdmin.findPlace(worldName, x, y, z)
         val regionId = region?.id()
-        val storySnapshot = plugin.storyContextService.buildForNpc(npc, null)
+        val storySnapshot = if (includeStory) preloadedStory ?: plugin.storyContextService.buildForNpc(npc, null) else null
 
         val places = if (regionId.isNullOrBlank()) {
             worldAdmin.findPlacesByWorld(worldName)
@@ -95,9 +108,9 @@ object OpenAISemanticWorldContextBuilder {
             }
 
             append(buildWorldLoreBlock(region, currentPlace, places))
-            append(buildWorldHistoryBlock(region, currentPlace, storySnapshot))
+            if (storySnapshot != null) append(buildWorldHistoryBlock(region, currentPlace, storySnapshot))
             append(buildNpcLoreBlock(knownNpcs))
-            append(buildStorySignalsBlock(storySnapshot))
+            if (storySnapshot != null) append(buildStorySignalsBlock(storySnapshot))
 
             val tradeNpcs = knownNpcs.filter { isTradeNpc(it, worldAdmin) }
             if (tradeNpcs.isNotEmpty()) {

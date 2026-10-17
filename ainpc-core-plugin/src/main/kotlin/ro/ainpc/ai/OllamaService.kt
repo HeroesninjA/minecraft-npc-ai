@@ -13,19 +13,35 @@ import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.logging.Level
 
 class OllamaService(private val plugin: AINPCPlugin) {
+    companion object {
+        internal fun generateRequestBody(model: String, prompt: String, temperature: Double, maxTokens: Int): JsonObject =
+            JsonObject().apply {
+                addProperty("model", model)
+                addProperty("prompt", prompt)
+                addProperty("stream", false)
+                add("options", JsonObject().apply {
+                    addProperty("temperature", temperature)
+                    addProperty("num_predict", maxTokens)
+                })
+            }
+    }
+
     private val client: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
         .build()
 
     private val gson = Gson()
-    private var cachedAvailable = false
-    private var lastCheck = 0L
+    private val retryGate = OllamaRetryGate()
+    @Volatile private var cachedAvailable = false
+    @Volatile private var lastCheck = 0L
     private val checkInterval = 30000L
 
     val name: String get() = "ollama"
+    val canAttemptGeneration: Boolean get() = retryGate.canAttempt()
 
     val isAvailable: Boolean
         get() {
+            if (!canAttemptGeneration) return false
             val now = System.currentTimeMillis()
             if (now - lastCheck > checkInterval) {
                 cachedAvailable = checkConnection()
@@ -46,6 +62,13 @@ class OllamaService(private val plugin: AINPCPlugin) {
     private val maxTokens: Int
         get() = plugin.config.getInt("ollama.max_tokens", 150)
 
+    private fun enterBackoff() {
+        val delayMillis = plugin.config.getLong("ollama.offline_retry_seconds", 15L).coerceIn(1L, 3600L) * 1000L
+        retryGate.recordFailure(delayMillis)
+        cachedAvailable = false
+        lastCheck = 0L
+    }
+
     private fun checkConnection(): Boolean {
         return try {
             val request = HttpRequest.newBuilder()
@@ -61,14 +84,10 @@ class OllamaService(private val plugin: AINPCPlugin) {
     }
 
     fun generateAsync(prompt: String): String? {
+        if (!canAttemptGeneration) return null
+        val requestStartedAtMillis = System.currentTimeMillis()
         return try {
-            val body = JsonObject().apply {
-                addProperty("model", model)
-                addProperty("prompt", prompt)
-                addProperty("temperature", temperature)
-                addProperty("max_tokens", maxTokens)
-                addProperty("stream", false)
-            }
+            val body = generateRequestBody(model, prompt, temperature, maxTokens)
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$baseUrl/api/generate"))
                 .timeout(Duration.ofSeconds(30))
@@ -78,15 +97,35 @@ class OllamaService(private val plugin: AINPCPlugin) {
             val response = client.send(request, HttpResponse.BodyHandlers.ofString())
             if (response.statusCode() == 200) {
                 val json = JsonParser.parseString(response.body()).asJsonObject
-                json.get("response")?.asString
+                val generatedText = json.get("response")?.asString?.takeIf(String::isNotBlank)
+                if (generatedText == null) {
+                    enterBackoff()
+                } else if (retryGate.recordSuccess(requestStartedAtMillis)) {
+                    cachedAvailable = true
+                    lastCheck = System.currentTimeMillis()
+                }
+                generatedText
             } else {
-                plugin.logger.warning("[Ollama] Eroare ${response.statusCode()}: ${response.body()}")
+                enterBackoff()
+                plugin.logger.warning("[Ollama] Eroare HTTP ${response.statusCode()} la generare")
                 null
             }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            enterBackoff()
+            plugin.logger.log(Level.WARNING, "[Ollama] Generarea a fost intrerupta", e)
+            null
         } catch (e: Exception) {
+            enterBackoff()
             plugin.logger.log(Level.WARNING, "[Ollama] Eroare la generare", e)
             null
         }
+    }
+
+    fun reloadFromConfig() {
+        retryGate.reset()
+        cachedAvailable = false
+        lastCheck = 0L
     }
 
     fun generateChat(messages: List<ChatMessage>): String? {

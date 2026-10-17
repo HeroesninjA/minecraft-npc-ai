@@ -53,7 +53,7 @@ class StorageDialectStaticAuditTest {
                     "kotlin/ro/ainpc/reputation/ReputationService.kt" to 1
                 ),
                 "SQLITE_DATETIME" to mapOf(
-                    "kotlin/ro/ainpc/managers/MemoryManager.kt" to 3
+                    "kotlin/ro/ainpc/managers/MemoryManager.kt" to 2
                 ),
                 "SQLITE_LIMIT_MAX" to mapOf(
                     "kotlin/ro/ainpc/managers/MemoryManager.kt" to 1

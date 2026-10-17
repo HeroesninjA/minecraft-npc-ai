@@ -24,7 +24,7 @@ Codul are mai multe familii de context; ele nu formeaza un singur pipeline si nu
 
 ## Environment
 
-`NPCContext` cere `EnvironmentEngine.getContextForLocation(...)`, care porneste de la cache-ul lumii si ajusteaza vremea si temperatura dupa biome. `SchedulerCoordinator` actualizeaza cache-ul prin `EnvironmentEngine.tick()` dupa 30 de secunde si apoi o data pe minut. Inaintea fiecarei decizii de rutina, `RoutineService` recalculeaza mediul local la pozitia curenta a NPC-ului; cache-ul global poate avea pana la un minut vechime.
+`NPCContext` cere `EnvironmentEngine.getContextForLocation(...)`, care porneste de la cache-ul lumii si ajusteaza vremea, temperatura si lumina observata la blocul NPC-ului. `StoryContextService` foloseste aceeasi operatie pentru locatia sa, in loc sa corecteze separat lumina. `SchedulerCoordinator` actualizeaza cache-ul prin `EnvironmentEngine.tick()` dupa 30 de secunde si apoi o data pe minut. Inaintea fiecarei decizii de rutina, `RoutineService` recalculeaza mediul local la pozitia curenta a NPC-ului; cache-ul global poate avea pana la un minut vechime.
 
 ## Utilitare izolate
 

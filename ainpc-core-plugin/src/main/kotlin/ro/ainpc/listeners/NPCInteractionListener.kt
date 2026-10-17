@@ -52,6 +52,8 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
 
         val player = event.player
 
+        if (!isConversationPartnerAvailable(player, npc)) return
+
         // Verifica distanta
         if (!npc.isInRange(player)) {
             messages().sendMessage(player, "too_far")
@@ -97,6 +99,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
      * Incepe o conversatie cu un NPC
      */
     private fun startConversation(player: Player, npc: AINPC) {
+        if (!isConversationPartnerAvailable(player, npc)) return
         if (!publishDialogSessionStarted(
             player,
             npc,
@@ -108,7 +111,9 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         )) {
             return
         }
-        beginConversationSession(player, npc)
+        val initialization = beginConversationSession(player, npc)
+        val sessionId = conversations().getConversationSessionId(player)
+        initialization
             .thenCompose { firstMeeting ->
                 if (firstMeeting) {
                     return@thenCompose CompletableFuture.completedFuture(getFirstMeetingGreeting(npc))
@@ -118,6 +123,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             }
             .thenAccept { greeting ->
                 runSync {
+                    if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
                     messages().sendNPCMessage(player, npc.name, greeting)
                     messages().send(player, "&7&o(Scrie in chat pentru a vorbi cu " + npc.name + ". Scrie 'pa' pentru a termina conversatia.)")
                     plugin.emotionManager.processEvent(npc, "player_approach", 1.0)
@@ -125,6 +131,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
             }
             .exceptionally { ex ->
                 runSync {
+                    if (!canDeliverConversationResponse(player, npc, sessionId)) return@runSync
                     plugin.logger.warning("Nu am putut initializa conversatia cu " + npc.name + ": " + ex.message)
                     messages().sendMessage(player, "ai_error")
                 }
@@ -133,8 +140,9 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
     }
 
     private fun openOrRefreshConversation(player: Player, npc: AINPC) {
+        if (!isConversationPartnerAvailable(player, npc)) return
         val currentPartner = conversations().getConversationPartner(player)
-        if (currentPartner != null && currentPartner.uuid == npc.uuid) {
+        if (currentPartner != null && currentPartner.uuid == npc.uuid && !conversations().isExpired(player)) {
             refreshConversationSession(player)
             return
         }

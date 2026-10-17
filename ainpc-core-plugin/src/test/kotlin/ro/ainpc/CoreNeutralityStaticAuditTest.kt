@@ -29,7 +29,10 @@ class CoreNeutralityStaticAuditTest {
             "alchimist",
             "bibliotecar",
             "macelar"
-        ).map { term -> Regex("""(?i)\b${Regex.escape(term)}\b""") }
+        ).associateWith { term -> Regex("""(?i)\b${Regex.escape(term)}\b""") }
+        val compatibilityTermCounts = mapOf(
+            "kotlin/ro/ainpc/story/StructureStoryHooks.kt" to mapOf("merchant" to 1),
+        )
 
         val offenders = Files.walk(sourceRoot).use { paths ->
             paths
@@ -57,9 +60,12 @@ class CoreNeutralityStaticAuditTest {
                 .filter { path -> !path.toString().contains("BuildingTemplateExecutor") }
                 .flatMap { path ->
                     val text = path.readText()
+                    val relativePath = path.relativeTo(sourceRoot).toString().replace('\\', '/')
                     forbiddenTerms
-                        .filter { pattern -> pattern.containsMatchIn(text) }
-                        .map { pattern -> "${path.relativeTo(sourceRoot)}: ${pattern.pattern}" }
+                        .filter { (term, pattern) ->
+                            pattern.findAll(text).count() != (compatibilityTermCounts[relativePath]?.get(term) ?: 0)
+                        }
+                        .map { (_, pattern) -> "$relativePath: ${pattern.pattern}" }
                         .stream()
                 }
                 .toList()

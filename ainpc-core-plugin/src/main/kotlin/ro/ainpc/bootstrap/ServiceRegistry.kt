@@ -433,6 +433,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         }
         if (::platform.isInitialized) platform.reloadFromConfig()
         openAIService.reloadFromConfig()
+        if (::ollamaService.isInitialized) ollamaService.reloadFromConfig()
         if (::aiOrchestrationService.isInitialized) {
             aiOrchestrationService.reloadFromConfig()
         } else {

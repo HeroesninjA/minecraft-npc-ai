@@ -41,18 +41,12 @@ class EnvironmentEngine(private val plugin: AINPCPlugin) {
         return withSpecialEvents(context)
     }
 
-    fun getContextForLocation(worldName: String?, biome: String?): EnvironmentContext {
-        val base = getContext(worldName)
-        if (biome.isNullOrBlank()) return base
-        val season = base.season
-        val localWeather = if (base.weather == Weather.RAIN) {
-            Weather.fromBukkit(true, false, biome.uppercase())
-        } else base.weather
-        return base.copy(
-            weather = localWeather,
-            temperature = Temperature.fromBiome(biome, season)
-        )
-    }
+    @JvmOverloads
+    fun getContextForLocation(
+        worldName: String?,
+        biome: String?,
+        observedLightLevel: Int? = null,
+    ): EnvironmentContext = getContext(worldName).localized(biome, observedLightLevel)
 
     fun registerSpecialEvent(worldName: String?, event: String) {
         specialEvents.add(worldName, event)

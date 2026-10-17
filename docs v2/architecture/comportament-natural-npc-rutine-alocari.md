@@ -1,7 +1,7 @@
 # Comportament natural NPC si rutine
 
 Status: contract verificat in cod.
-Actualizat: 2026-10-12.
+Actualizat: 2026-10-16.
 
 Rutina transforma ora lumii, profilul de comportament si ancorele NPC intr-o atribuire zilnica si, optional, intr-o deplasare.
 
@@ -53,6 +53,10 @@ world_state_rules:
 ```
 
 Pentru a folosi modul regiunii in locul cheii story, se poate configura de exemplu `story_mode: "ROTATIVE"` fara `story_state`; pentru a combina filtrele, se completeaza ambele.
+
+## Verificare automata
+
+Testele de decalare a plecarii de la munca izoleaza offsetul prin absenta ancorei sociale: cu o ancora sociala, timpul liber poate deveni legitim `SOCIAL`, nu obligatoriu `HOME`. Teste separate verifica influenta extraversiei, sansa zero, lipsa ancorei, pastrarea muncii si limitele intervalului social (inceput inclus, sfarsit exclus).
 
 ## Limite confirmate
 

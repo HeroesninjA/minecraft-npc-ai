@@ -8,6 +8,44 @@ import org.junit.jupiter.api.Test
 
 class DialogueAiIntentClassificationTest {
     @Test
+    fun relativeChoicesDoNotEnterAClassifierWithoutTheOptionsHistory() {
+        val classifier = DialogueAiIntentClassification
+        for (message in listOf("Prima opțiune", "A doua", "Ultima", "Ambele", "Niciuna")) {
+            assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.CONVERSATION, message, false), message)
+            assertFalse(classifier.shouldPrefetchDomainContext(message, "STRANGER", true, true), message)
+            assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, true), message)
+            assertFalse(classifier.shouldSnapshotWorkFacts(message, "STRANGER", true, true), message)
+        }
+        assertTrue(classifier.shouldInspectShops("Prima opțiune, ce vinzi?", "STRANGER", true, false))
+    }
+
+    @Test
+    fun shortAnswersAreNotClassifiedAsTradeOrWorkWithoutConversationHistory() {
+        val classifier = DialogueAiIntentClassification
+        for (message in listOf("Desigur", "De acord", "Da, te rog", "Nu, mulțumesc", "Mai bine nu")) {
+            assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.CONVERSATION, message, false), message)
+            assertFalse(classifier.shouldSnapshotWorkFacts(message, "STRANGER", true, true), message)
+            assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, true), message)
+        }
+        assertTrue(classifier.shouldInspectShops("Da, ce vinzi?", "STRANGER", true, false))
+        assertTrue(classifier.shouldSnapshotWorkFacts("Nu, ce meserie ai?", "STRANGER", true, false))
+    }
+
+    @Test
+    fun replayRequestsDoNotTriggerClassificationOrDomainPrefetch() {
+        val classifier = DialogueAiIntentClassification
+
+        for (message in listOf("Ce ai spus?", "Te rog, repetă exact ultimul răspuns.")) {
+            for (enabled in listOf(false, true)) {
+                assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.QUESTION, message, false))
+                assertFalse(classifier.shouldPrefetchDomainContext(message, "STRANGER", true, enabled))
+                assertFalse(classifier.shouldSnapshotWorkFacts(message, "STRANGER", true, enabled))
+                assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, enabled))
+            }
+        }
+    }
+
+    @Test
     fun optInContextPrefetchCoversAmbiguousMessagesButNotKnownIntents() {
         val classifier = DialogueAiIntentClassification
 
@@ -50,6 +88,33 @@ class DialogueAiIntentClassificationTest {
         assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.CONVERSATION, "Atelier", true))
         assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.QUESTION, "da", false))
         assertFalse(classifier.shouldClassify(DialogueEngine.DialogueIntent.QUESTION, "x".repeat(81), false))
+    }
+
+    @Test
+    fun conversationReferencesDoNotBecomeCommercialOrWorkRequestsWhenContextualAiIsUnavailable() {
+        val classifier = DialogueAiIntentClassification
+        for (message in listOf(
+            "Continuă!", "De ce?", "Nu mi-ai răspuns", "Te rog, ai repetat răspunsul.",
+            "Ce am discutat?", "Ce am discutat despre comerț?", "Ce am discutat despre meserie?",
+            "Nu mi-ai răspuns, de ce?", "Ai repetat răspunsul, explică mai clar.",
+        )) {
+            val localIntent = DialogueIntentSelector.select(message, "STRANGER", true, null)
+            assertFalse(classifier.shouldClassify(localIntent, message, false), message)
+            for (classificationEnabled in listOf(false, true)) {
+                assertFalse(classifier.shouldPrefetchDomainContext(message, "STRANGER", true, classificationEnabled), message)
+                assertFalse(classifier.shouldSnapshotWorkFacts(message, "STRANGER", true, classificationEnabled), message)
+                assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, classificationEnabled), message)
+            }
+        }
+    }
+
+    @Test
+    fun complaintWithANewDomainQuestionStillPreparesTheRequestedFacts() {
+        val classifier = DialogueAiIntentClassification
+
+        assertTrue(classifier.shouldInspectShops("Nu mi-ai raspuns, ce vinzi?", "STRANGER", true, false))
+        assertTrue(classifier.shouldSnapshotWorkFacts("Nu mi-ai raspuns, ce meserie ai?", "STRANGER", true, false))
+        assertTrue(classifier.shouldPrefetchDomainContext("Nu mi-ai raspuns, taraba?", "STRANGER", true, true))
     }
 
     @Test

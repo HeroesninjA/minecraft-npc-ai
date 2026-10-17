@@ -9,6 +9,9 @@ import java.util.UUID
 
 object OpenAITextSupport {
     private const val MAX_FALLBACK_ROTATIONS = 512
+    private const val MAX_CLEAN_RESPONSE_LENGTH = 200
+    private const val MIN_COMPLETE_SENTENCE_LENGTH = 50
+    private val sentenceEnding = Regex("[.!?](?=\\s|$)")
     private val fallbackResponseIndices = object : LinkedHashMap<Pair<UUID, String>, Int>(MAX_FALLBACK_ROTATIONS, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<UUID, String>, Int>?): Boolean =
             size > MAX_FALLBACK_ROTATIONS
@@ -197,12 +200,17 @@ object OpenAITextSupport {
         var cleaned = response.replace(Regex("^\"|\"$"), "").trim()
         cleaned = stripSpeakerPrefix(cleaned, expectedSpeakerName)
 
-        if (cleaned.length > 200) {
-            val lastPeriod = cleaned.lastIndexOf(".", 200)
-            cleaned = if (lastPeriod > 50) {
-                cleaned.substring(0, lastPeriod + 1)
+        if (cleaned.length > MAX_CLEAN_RESPONSE_LENGTH) {
+            val sentenceEnd = sentenceEnding.findAll(cleaned)
+                .lastOrNull { it.range.last >= MIN_COMPLETE_SENTENCE_LENGTH &&
+                    it.range.last < MAX_CLEAN_RESPONSE_LENGTH }?.range?.last
+            cleaned = if (sentenceEnd != null) {
+                cleaned.substring(0, sentenceEnd + 1)
             } else {
-                cleaned.substring(0, 200) + "..."
+                val prefix = cleaned.substring(0, MAX_CLEAN_RESPONSE_LENGTH)
+                val wordBoundary = prefix.indexOfLast(Char::isWhitespace)
+                prefix.substring(0, if (wordBoundary > MIN_COMPLETE_SENTENCE_LENGTH) wordBoundary else MAX_CLEAN_RESPONSE_LENGTH)
+                    .trimEnd() + "..."
             }
         }
 
@@ -416,6 +424,7 @@ object OpenAITextSupport {
     @JvmStatic
     @JvmOverloads
     fun generateFallbackResponse(snapshot: PromptSnapshot, recentHistory: List<DialogHistory> = emptyList()): String {
+        PlayerConversationRecall.resolveForFallback(snapshot.playerMessage(), recentHistory)?.let { return it }
         val normalized = DialogueMessageText.normalize(snapshot.playerMessage())
         val occupation = if (snapshot.occupation().isNotBlank()) snapshot.occupation() else "locuitor"
         val environmentFact = EnvironmentFactResolver.resolve(snapshot.playerMessage(), snapshot.environmentContext())

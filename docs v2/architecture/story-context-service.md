@@ -1,7 +1,7 @@
 # StoryContextService
 
 Status: contract canonic verificat in cod.
-Actualizat: 2026-10-12.
+Actualizat: 2026-10-16.
 
 `StoryContextService` construieste o proiectie read-only pentru NPC, player si locatie. Snapshot-ul este folosit de GUI, debug, quest views si prompturile de dialog.
 
@@ -18,6 +18,9 @@ Actualizat: 2026-10-12.
 - semnalul `environment_events` include cel mult cinci etichete distincte, scurte si fara caractere de control;
 - evenimentele speciale ale lumii sunt pastrate separat de snapshot-ul meteo, astfel pot fi inregistrate inainte de primul tick si apar in contextul NPC/story; se sterg la descarcarea lumii;
 - construirea publica un eveniment `StoryContextBuilt`.
+- pentru promptul OpenAI, `prepareForNpc` capteaza datele Bukkit pe threadul principal, `loadPersistence` citeste SQL pe executorul DB, iar `completeForNpc` colecteaza semnalele si publica evenimentele inapoi pe threadul principal; `buildForNpc` pastreaza contractul sincron existent.
+- `buildForNpcAsync` si `buildForPlayerAsync` ofera acelasi flux etapizat pentru alti consumatori. Future-ul poate esua daca programarea pe threadul principal este respinsa; apelantul nu trebuie sa blocheze threadul principal asteptand rezultatul.
+- `/ainpc story context` foloseste varianta asincrona si afiseaza rezultatul numai pe threadul principal. Randarea GUI si ceilalti consumatori ai metodelor sincrone nu sunt mutati de aceasta schimbare.
 
 ## Continutul snapshot-ului
 
@@ -29,6 +32,10 @@ Actualizat: 2026-10-12.
 - evenimente story recente;
 - ancore quest active;
 - semnale story si warnings.
+
+## Compatibilitate mapping
+
+`StructureStoryHooks` pastreaza aliasul de tag `merchant` pentru hartile existente si il traduce in semnalul `market_supply`, la fel ca `trade` si `market`, fara duplicate. Nu atribuie o profesie NPC-ului. Auditul de neutralitate inventariaza numai aceasta aparitie de compatibilitate in fisier, nu exclude intregul helper de la verificare.
 
 ## Limite de siguranta
 

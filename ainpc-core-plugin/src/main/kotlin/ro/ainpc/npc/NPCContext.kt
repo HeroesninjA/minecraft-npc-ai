@@ -271,8 +271,9 @@ class NPCContext(
         }
         environmentContext = npc.plugin.environmentEngine.getContextForLocation(
             npcLocation.world.name,
-            npcLocation.block.biome.key.asString()
-        ).copy(lightLevel = npcLocation.block.lightLevel.toInt().coerceIn(0, 15))
+            npcLocation.block.biome.key.asString(),
+            npcLocation.block.lightLevel.toInt(),
+        )
     }
 
     fun addRecentEvent(event: String) {
@@ -286,7 +287,11 @@ class NPCContext(
     /**
      * Genereaza o descriere textuala a contextului pentru AI
      */
-    fun generateContextDescription(): String {
+    @JvmOverloads
+    fun generateContextDescription(player: Player? = interactingPlayer): String =
+        generateContextDescription(player, null)
+
+    fun generateContextDescription(player: Player?, preloadedStory: StoryContextSnapshot?): String {
         val sb = StringBuilder()
         sb.append("Este ").append(getTimeDescription()).append(". ")
         sb.append("Vremea: ").append(getWeatherDescription()).append(".\n")
@@ -318,9 +323,9 @@ class NPCContext(
             sb.append(worldContextSnapshot.toPromptBlock()).append("\n")
         }
 
-        if (interactingPlayer != null && npc.plugin != null && npc.plugin.storyContextService != null) {
-            val storyContext: StoryContextSnapshot = npc.plugin.storyContextService.buildForNpc(npc, interactingPlayer)
-            if (!storyContext.isEmpty()) {
+        if (player != null) {
+            val storyContext = preloadedStory ?: npc.plugin?.storyContextService?.buildForNpc(npc, player)
+            if (storyContext != null && !storyContext.isEmpty()) {
                 sb.append(storyContext.toPromptBlock()).append("\n")
             }
         }
@@ -349,7 +354,6 @@ class NPCContext(
             sb.append("Obiectivul meu imediat este sa ").append(currentGoal).append(".\n")
         }
 
-        val player = interactingPlayer
         if (player != null) {
             sb.append("\nVorbesc cu: ").append(player.name).append("\n")
         }
