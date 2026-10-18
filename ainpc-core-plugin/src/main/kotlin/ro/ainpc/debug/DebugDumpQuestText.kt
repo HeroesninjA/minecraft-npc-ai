@@ -26,6 +26,9 @@ object DebugDumpQuestText {
     ): String {
         val sb = StringBuilder()
         sb.append("AINPC Quest Dump\n")
+        sb.append("Player UUID fragment filter requested: ")
+            .append(progression.getBoolean("player_filter_present"))
+            .append("\n")
         appendProgressionSummary(sb, progression)
         appendQuestProgressSummary(sb, questProgress)
         appendAnchorSummary(sb, anchors)

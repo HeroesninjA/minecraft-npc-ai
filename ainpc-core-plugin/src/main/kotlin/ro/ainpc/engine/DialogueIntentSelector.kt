@@ -6,6 +6,19 @@ import ro.ainpc.ai.DialogueMessageText
 import ro.ainpc.ai.DialogueMessageText.matches
 
 internal object DialogueIntentSelector {
+    private val meaningQuestion = Regex("^(?:(?:salut|buna|hei|noroc|servus),?\\s+)?(?:ce inseamna|ce vrea sa spuna)\\b")
+    private val negatedRequests = listOf(
+        Regex("\\bnu\\s+(?:(?:mai|prea)\\s+)?(?:vreau|doresc)\\s+(?:sa\\s+)?(?:cumpar|vand|vinde)\\b"),
+        Regex("\\bnu\\s+(?:am\\s+)?nevoie\\s+de\\s+ajutor\\b"),
+        Regex("\\bnu\\s+(?:vreau|doresc)\\s+ajutor\\b"),
+        Regex("\\bnu\\s+(?:cumpar|vand|vinde)\\b"),
+    )
+
+    fun hasExplicitNegatedRequestOrMeaningQuestion(message: String): Boolean {
+        val normalized = DialogueMessageText.normalize(message)
+        return meaningQuestion.containsMatchIn(normalized) || negatedRequests.any { it.containsMatchIn(normalized) }
+    }
+
     fun select(
         message: String,
         relationshipStatus: String,
@@ -14,6 +27,8 @@ internal object DialogueIntentSelector {
         npcAliases: List<String> = emptyList(),
     ): DialogueEngine.DialogueIntent {
         val normalized = DialogueMessageText.normalize(message)
+        if (meaningQuestion.containsMatchIn(normalized)) return DialogueEngine.DialogueIntent.QUESTION
+        val directRequests = negatedRequests.fold(normalized) { remaining, pattern -> pattern.replace(remaining, " ") }
 
         if (matches(normalized, "telefon", "internet", "computer", "masina", "avion", "televizor",
                 "electricitate", "bitcoin", "social media", "facebook", "instagram", "email",
@@ -22,8 +37,8 @@ internal object DialogueIntentSelector {
             else DialogueEngine.DialogueIntent.CONFUSED
         }
         if (DialogueFarewell.isFarewell(message, npcAliases)) return DialogueEngine.DialogueIntent.FAREWELL
-        if (matches(normalized, "cumpar", "cumpara", "vinde", "vanzare", "pret", "pretul", "preturi", "comert", "marfa", "afaceri")) return DialogueEngine.DialogueIntent.TRADE
-        if (matches(normalized, "ajutor", "ajuta", "ajuti", "nevoie")) return DialogueEngine.DialogueIntent.HELP
+        if (matches(directRequests, "cumpar", "cumpara", "vinde", "vanzare", "pret", "pretul", "preturi", "comert", "marfa", "afaceri")) return DialogueEngine.DialogueIntent.TRADE
+        if (matches(directRequests, "ajutor", "ajuta", "ajuti", "nevoie")) return DialogueEngine.DialogueIntent.HELP
         if (matches(normalized, "multumesc", "mersi", "apreciez")) return DialogueEngine.DialogueIntent.THANK
         if (matches(normalized, "familie", "copii", "sot", "sotie", "parinti")) return DialogueEngine.DialogueIntent.FAMILY_TALK
         if (matches(normalized, "munca", "meserie", "job", "profesie")) return DialogueEngine.DialogueIntent.WORK_TALK

@@ -1,10 +1,20 @@
 package ro.ainpc.debug
 
+import com.google.gson.JsonObject
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
 class DebugDumpQuestTextTest {
+    @Test
+    fun questSummaryMarksFilteredCountsAsPartial() {
+        val progression = JsonObject().apply { addProperty("player_filter_present", true) }
+
+        val text = DebugDumpQuestText.buildQuestText(progression, JsonObject(), JsonObject(), "")
+
+        assertTrue(text.contains("Player UUID fragment filter requested: true"))
+    }
+
     @Test
     fun buildsQuestSummaryTextFromProgressionAndAnchorExports() {
         val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpQuestText.kt").readText()

@@ -8,6 +8,19 @@ import org.junit.jupiter.api.Test
 
 class DialogueAiIntentClassificationTest {
     @Test
+    fun rejectedRequestsAndMeaningQuestionsDoNotBecomeCommercialAiIntents() {
+        val classifier = DialogueAiIntentClassification
+
+        for (message in listOf("Nu vreau să cumpăr.", "Nu am nevoie de ajutor.", "Ce inseamna sa cumpar?")) {
+            val localIntent = DialogueIntentSelector.select(message, "STRANGER", true, null)
+            assertFalse(classifier.shouldClassify(localIntent, message, false), message)
+            assertFalse(classifier.shouldPrefetchDomainContext(message, "STRANGER", true, true), message)
+            assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, true), message)
+        }
+        assertTrue(classifier.shouldInspectShops("Nu vreau sa cumpar, dar ce vinzi?", "STRANGER", true, true))
+    }
+
+    @Test
     fun relativeChoicesDoNotEnterAClassifierWithoutTheOptionsHistory() {
         val classifier = DialogueAiIntentClassification
         for (message in listOf("Prima opțiune", "A doua", "Ultima", "Ambele", "Niciuna")) {

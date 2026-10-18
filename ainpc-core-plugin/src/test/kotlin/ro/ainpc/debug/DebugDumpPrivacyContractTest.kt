@@ -20,21 +20,38 @@ class DebugDumpPrivacyContractTest {
 
     @Test
     fun parsesPrivacySafeWithOrWithoutPlayerFilter() {
-        assertEquals(DebugDumpExportOptions(), DebugDumpExportOptions.parse(emptyList()))
+        val uuidFragment = "550E8400-e29b"
+        assertEquals(DebugDumpExportOptions(), DebugDumpExportOptions.parse(emptyList(), "all"))
         assertEquals(
             DebugDumpExportOptions(privacyMode = DebugDumpPrivacyMode.PRIVACY_SAFE),
-            DebugDumpExportOptions.parse(listOf("privacy-safe")),
+            DebugDumpExportOptions.parse(listOf("privacy-safe"), "all"),
         )
         assertEquals(
-            DebugDumpExportOptions("Alice", DebugDumpPrivacyMode.PRIVACY_SAFE),
-            DebugDumpExportOptions.parse(listOf("Alice", "privacy-safe")),
+            DebugDumpExportOptions(uuidFragment, DebugDumpPrivacyMode.PRIVACY_SAFE),
+            DebugDumpExportOptions.parse(listOf(uuidFragment, "privacy-safe"), "all"),
         )
         assertEquals(
-            DebugDumpExportOptions("Alice", DebugDumpPrivacyMode.PRIVACY_SAFE),
-            DebugDumpExportOptions.parse(listOf("privacy-safe", "Alice")),
+            DebugDumpExportOptions(uuidFragment, DebugDumpPrivacyMode.PRIVACY_SAFE),
+            DebugDumpExportOptions.parse(listOf("privacy-safe", uuidFragment), "all"),
         )
         assertThrows(IllegalArgumentException::class.java) {
-            DebugDumpExportOptions.parse(listOf("Alice", "Bob"))
+            DebugDumpExportOptions.parse(listOf("550e", "e29b"), "all")
+        }
+    }
+
+    @Test
+    fun rejectsNamesAndFiltersForNpcOnlyExports() {
+        assertEquals(
+            DebugDumpExportOptions(privacyMode = DebugDumpPrivacyMode.PRIVACY_SAFE),
+            DebugDumpExportOptions.parse(listOf("privacy-safe"), "npc"),
+        )
+        listOf("Alice", "-", "", "550e8400-e29b-41d4-a716-4466554400000").forEach { invalidFilter ->
+            assertThrows(IllegalArgumentException::class.java) {
+                DebugDumpExportOptions.parse(listOf(invalidFilter), "all")
+            }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            DebugDumpExportOptions.parse(listOf("550e8400"), "npc")
         }
     }
 

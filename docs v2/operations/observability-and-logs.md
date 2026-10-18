@@ -13,7 +13,7 @@ Runtime-ul are loguri, audituri, sumaruri admin, exporturi de diagnostic, un reg
 | audit admin | `/ainpc audit <mod>` | verificari read-only in chat/consola |
 | audit machine-readable | `/ainpc audit <mod> [profil] json` si `scripts/ainpc-audit-rcon.ps1` | schema v1, constatari structurate, inventar DB, sumar spawn history paginat pentru profile complete si coduri `PASS=0`, `WARN=1`, `FAIL=2` |
 | sumar debug | `/ainpc debugdump <mod>` | inspectie punctuala in chat/consola |
-| export debug | `/ainpc debugdump all [player] [privacy-safe]` sau `npc [player] [privacy-safe]` | folder cu fisiere pentru diagnostic offline |
+| export debug | `/ainpc debugdump all [uuid-fragment] [privacy-safe]` sau `npc [privacy-safe]` | folder cu fisiere pentru diagnostic offline |
 | health runtime | `/ainpc health`, `health.json`, snapshot runtime v3 si `ainpc.debug.health` | stare machine-readable si rezumat operator al bugetelor runtime |
 | anomaly tracing | `/ainpc health` si `traces.json` din export | numai esecuri sau operatii care ating pragurile warn/fail, fara payload-uri de domeniu |
 | evenimente API recente | `recent-api-events.txt` din export | buffer in-memory cu metadata minima pentru evenimentele Bukkit publice AINPC |
@@ -42,7 +42,7 @@ Comanda confirma imediat capturarea runtime si nu asteapta I/O. Un gate permite 
 Exporterul are doua moduri:
 
 - `standard`, implicit, redacteaza secretele dar pastreaza datele operationale necesare investigatiei locale;
-- `privacy-safe` elimina valorile structurate de prompt/raspuns si redacteaza UUID-uri, campuri de player, numele filtrului si ale playerilor online, emailuri, IP-uri si cai locale.
+- `privacy-safe` elimina valorile structurate de prompt/raspuns si redacteaza UUID-uri, campuri de player, numele playerilor online, emailuri, IP-uri si cai locale. Valoarea filtrului nu este scrisa explicit in `index.txt` sau `manifest.json`.
 
 `SensitiveDataRedactor` este politica unica pentru config, log, snapshot AI/MCP si continut DB. `DebugDumpIO` o aplica dupa serializare, la limita finala a fiecarui fisier text sau JSON; testul `DebugDumpPrivacyContractTest` verifica artefactul scris si validitatea JSON.
 

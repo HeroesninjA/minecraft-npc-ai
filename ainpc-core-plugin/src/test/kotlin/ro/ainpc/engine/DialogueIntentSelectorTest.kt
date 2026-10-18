@@ -6,6 +6,40 @@ import ro.ainpc.ai.PlayerRecognition
 
 class DialogueIntentSelectorTest {
     @Test
+    fun `negated requests do not start trade or help dialogue`() {
+        for (message in listOf("Nu vreau sa cumpar.", "Nu cumpăr nimic.", "Nu doresc să vând.")) {
+            assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)
+        }
+        for (message in listOf("Nu am nevoie de ajutor.", "Nu vreau ajutor.")) {
+            assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)
+        }
+        assertEquals(
+            DialogueEngine.DialogueIntent.TRADE,
+            DialogueIntentSelector.select("Nu vreau sa cumpar, dar ce preturi ai?", "STRANGER", false, null),
+        )
+        assertEquals(
+            DialogueEngine.DialogueIntent.HELP,
+            DialogueIntentSelector.select("Nu vreau sa cumpar, dar am nevoie de ajutor.", "STRANGER", false, null),
+        )
+    }
+
+    @Test
+    fun `meaning questions do not activate mentioned domains`() {
+        assertEquals(
+            DialogueEngine.DialogueIntent.QUESTION,
+            DialogueIntentSelector.select("Ce inseamna sa cumpar?", "STRANGER", false, null),
+        )
+        assertEquals(
+            DialogueEngine.DialogueIntent.QUESTION,
+            DialogueIntentSelector.select("Ce vrea sa spuna ajutor?", "STRANGER", false, null),
+        )
+        assertEquals(
+            DialogueEngine.DialogueIntent.QUESTION,
+            DialogueIntentSelector.select("Bună, ce înseamnă marfă?", "STRANGER", false, null),
+        )
+    }
+
+    @Test
     fun `farewell intent requires a complete closing utterance`() {
         for (message in listOf("Pa!", "La revedere!", "Pe curand!", "Multumesc, pa!", "Bye!")) {
             assertEquals(DialogueEngine.DialogueIntent.FAREWELL, DialogueIntentSelector.select(message, "STRANGER", false, null), message)

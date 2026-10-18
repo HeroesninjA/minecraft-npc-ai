@@ -89,7 +89,7 @@ Opreste Paper controlat, pastreaza logul, reporneste si repeta inspectiile mappi
 
 ```text
 /ainpc audit all
-/ainpc debugdump all [player]
+/ainpc debugdump all [uuid-fragment] [privacy-safe]
 ```
 
 Revizuieste manual folderul `plugins/AINPC/debug-dumps/debug-dump-<timestamp>/`, elimina secretele si ataseaza numai artefactele necesare. Completeaza backup/restore, raportul de release si decizia `release` sau `hold`; auditul verde singur nu este suficient.
@@ -104,4 +104,3 @@ Un executor RCON care trimite comenzile nu confirma gate-urile. `scripts/validat
 - `operations/debugging-si-testare.md`
 - `operations/release-checklist.md`
 - `operations/migration-si-backup.md`
-

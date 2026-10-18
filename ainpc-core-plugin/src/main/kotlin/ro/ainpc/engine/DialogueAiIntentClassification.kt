@@ -50,6 +50,7 @@ internal object DialogueAiIntentClassification {
     ): Boolean =
         !contextualAiNeeded &&
             !referencesConversation(playerMessage) &&
+            !DialogueIntentSelector.hasExplicitNegatedRequestOrMeaningQuestion(playerMessage) &&
             deterministicIntent in setOf(
                 DialogueEngine.DialogueIntent.QUESTION,
                 DialogueEngine.DialogueIntent.CONVERSATION,

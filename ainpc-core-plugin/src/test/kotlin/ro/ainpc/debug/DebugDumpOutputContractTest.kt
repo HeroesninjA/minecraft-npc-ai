@@ -11,7 +11,7 @@ class DebugDumpOutputContractTest {
         val source = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt").readText()
 
         assertTrue(source.contains("\"all\", \"npc\" -> handleDebugDumpExport(sender, args)"))
-        assertTrue(source.contains("service.captureRuntimeSnapshot(scope, options.playerName, options.privacyMode)"))
+        assertTrue(source.contains("service.captureRuntimeSnapshot(scope, options.playerUuidFragment, options.privacyMode)"))
         assertTrue(source.contains("scheduler.runTaskAsynchronously(plugin"))
         assertTrue(source.contains("service.writeCapturedDump(capture)"))
         assertTrue(source.contains("scheduler.runTask(plugin"))
@@ -27,6 +27,15 @@ class DebugDumpOutputContractTest {
         EXPECTED_EXPORT_FILES.forEach { fileName ->
             assertTrue(source.contains("\"$fileName\""), "DebugDumpService should write $fileName")
         }
+    }
+
+    @Test
+    fun debugDumpIndexDoesNotRepeatTheUuidFilterValue() {
+        val source = File("src/main/kotlin/ro/ainpc/debug/DebugDumpService.kt").readText()
+
+        assertTrue(source.contains("Player UUID fragment filter applied: true"))
+        assertFalse(source.contains("\${capture.playerFilter}"))
+        assertFalse(source.contains("playerUuidFragment?.trim()?.takeIf"))
     }
 
     @Test

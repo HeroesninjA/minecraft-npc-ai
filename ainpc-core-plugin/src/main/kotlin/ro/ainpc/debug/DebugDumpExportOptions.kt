@@ -12,14 +12,14 @@ enum class DebugDumpPrivacyMode(val cliValue: String) {
  * Debugdumpexportoptions.
  */
 data class DebugDumpExportOptions(
-    val playerName: String? = null,
+    val playerUuidFragment: String? = null,
     val privacyMode: DebugDumpPrivacyMode = DebugDumpPrivacyMode.STANDARD,
 ) {
     companion object {
         @JvmStatic
-        fun parse(arguments: List<String>): DebugDumpExportOptions {
-            require(arguments.size <= 2) { "Exportul accepta cel mult un player si optiunea privacy-safe." }
-            var playerName: String? = null
+        fun parse(arguments: List<String>, scope: String): DebugDumpExportOptions {
+            require(arguments.size <= 2) { "Exportul accepta cel mult un fragment UUID si optiunea privacy-safe." }
+            var playerUuidFragment: String? = null
             var privacyMode = DebugDumpPrivacyMode.STANDARD
             arguments.forEach { rawArgument ->
                 val argument = rawArgument.trim()
@@ -28,11 +28,15 @@ data class DebugDumpExportOptions(
                     require(privacyMode == DebugDumpPrivacyMode.STANDARD) { "privacy-safe a fost specificat de doua ori." }
                     privacyMode = DebugDumpPrivacyMode.PRIVACY_SAFE
                 } else {
-                    require(playerName == null) { "Exportul accepta un singur filtru de player." }
-                    playerName = argument
+                    require(scope.equals("all", ignoreCase = true)) {
+                        "Filtrul UUID este disponibil doar pentru /ainpc debugdump all."
+                    }
+                    require(playerUuidFragment == null) { "Exportul accepta un singur fragment UUID." }
+                    DebugDumpPlayerUuidFilter.requireValid(argument)
+                    playerUuidFragment = argument
                 }
             }
-            return DebugDumpExportOptions(playerName, privacyMode)
+            return DebugDumpExportOptions(playerUuidFragment, privacyMode)
         }
     }
 }
