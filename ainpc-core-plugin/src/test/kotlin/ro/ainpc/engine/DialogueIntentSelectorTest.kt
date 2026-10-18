@@ -6,6 +6,21 @@ import ro.ainpc.ai.PlayerRecognition
 
 class DialogueIntentSelectorTest {
     @Test
+    fun `quoted keywords do not become direct dialogue intents`() {
+        for (message in listOf(
+            "Maria a spus \"vreau sa cumpar\".",
+            "A strigat «ajutor!»",
+            "Mi-a zis „multumesc”.",
+        )) {
+            assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)
+        }
+        assertEquals(
+            DialogueEngine.DialogueIntent.TRADE,
+            DialogueIntentSelector.select("Maria a zis \"vreau sa cumpar\", dar eu vreau sa cumpar.", "STRANGER", false, null),
+        )
+    }
+
+    @Test
     fun `negated requests do not start trade or help dialogue`() {
         for (message in listOf("Nu vreau sa cumpar.", "Nu cumpăr nimic.", "Nu doresc să vând.")) {
             assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)

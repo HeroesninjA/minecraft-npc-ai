@@ -8,6 +8,17 @@ import org.junit.jupiter.api.Test
 
 class DialogueAiIntentClassificationTest {
     @Test
+    fun quotedDomainPhrasesDoNotTriggerCommercialClassificationOrPrefetch() {
+        val message = "Maria a zis \"ce vinzi?\""
+        val localIntent = DialogueIntentSelector.select(message, "STRANGER", true, null)
+
+        assertFalse(DialogueAiIntentClassification.shouldClassify(localIntent, message, false))
+        assertFalse(DialogueAiIntentClassification.shouldInspectShops(message, "STRANGER", true, true))
+        assertFalse(DialogueAiIntentClassification.shouldPrefetchDomainContext(message, "STRANGER", true, true))
+        assertTrue(DialogueAiIntentClassification.shouldInspectShops("A zis \"ce vinzi?\", dar ce vinzi tu?", "STRANGER", true, true))
+    }
+
+    @Test
     fun rejectedRequestsAndMeaningQuestionsDoNotBecomeCommercialAiIntents() {
         val classifier = DialogueAiIntentClassification
 

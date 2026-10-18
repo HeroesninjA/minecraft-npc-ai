@@ -1,5 +1,6 @@
 package ro.ainpc.engine
 
+import ro.ainpc.ai.DialogueMessageText
 import ro.ainpc.ai.NpcShopFactResolver
 import ro.ainpc.ai.PlayerConversationContinuation
 import ro.ainpc.ai.PlayerConversationRecall
@@ -50,6 +51,7 @@ internal object DialogueAiIntentClassification {
     ): Boolean =
         !contextualAiNeeded &&
             !referencesConversation(playerMessage) &&
+            !DialogueMessageText.hasQuotedSpan(playerMessage) &&
             !DialogueIntentSelector.hasExplicitNegatedRequestOrMeaningQuestion(playerMessage) &&
             deterministicIntent in setOf(
                 DialogueEngine.DialogueIntent.QUESTION,

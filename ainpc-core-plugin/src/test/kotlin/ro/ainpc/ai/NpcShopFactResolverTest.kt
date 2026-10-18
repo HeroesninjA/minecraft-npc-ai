@@ -53,6 +53,22 @@ class NpcShopFactResolverTest {
     }
 
     @Test
+    fun `quoted catalog phrases are not direct shop requests`() {
+        for (message in listOf(
+            "Maria a zis \"ce vinzi?\"",
+            "Maria a zis «ce ai de vânzare?»",
+            "Mi-a repetat „unde este magazinul?”",
+        )) {
+            assertFalse(NpcShopFactResolver.isLookupQuestion(message), message)
+            assertFalse(NpcShopFactResolver.requiresWorkPlace(message), message)
+            assertNull(NpcShopFactResolver.resolve(message, listOf(shop), "Brutaria din sat"), message)
+        }
+        val directQuestion = "Maria a zis \"ce vinzi?\", dar ce vinzi tu?"
+        assertTrue(NpcShopFactResolver.isLookupQuestion(directQuestion))
+        assertEquals(NpcShopFactResolver.tradeSummary(listOf(shop)), NpcShopFactResolver.resolve(directQuestion, listOf(shop), null))
+    }
+
+    @Test
     fun `workplace answer requires a mapped place`() {
         assertEquals(
             "Lucrez la Brutaria din sat.",
