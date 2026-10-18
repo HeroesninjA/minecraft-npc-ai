@@ -249,7 +249,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
                 saveDialog(npc, playerUuid, message, generated.response())
                 recordBranchDecision(npc, playerUuid, branchDecision)
                 updateRelationship(npc, playerUuid, playerName, interactionEffect)
-                createMemoryIfImportant(npc, playerUuid, playerName, message, sentiment, interactionEffect)
+                createMemoryIfImportant(npc, playerUuid, playerName, message, interactionEffect.emotionType ?: sentiment, interactionEffect)
                 PostProcessResult(generated.response(), interactionEffect, generated.relationship())
             }.exceptionally { ex ->
                 val root = unwrapCompletionException(ex)

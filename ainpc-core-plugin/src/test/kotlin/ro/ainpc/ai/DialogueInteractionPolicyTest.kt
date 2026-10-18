@@ -55,6 +55,76 @@ class DialogueInteractionPolicyTest {
     }
 
     @Test
+    fun `direct social act after a reported clause uses only the direct sentiment`() {
+        val compliment = DialogueInteractionPolicy.forMessage(
+            "Maria a zis \"te omor!\", dar iti multumesc.", "threat", true, "Bob",
+        )
+        val insult = DialogueInteractionPolicy.forMessage(
+            "Am auzit ca esti prost; dar esti idiot!", "insult", true, "Bob",
+        )
+        val threat = DialogueInteractionPolicy.forMessage(
+            "Maria a zis ca esti prost. Te omor!", "insult", true, "Bob",
+        )
+
+        assertEquals("compliment", compliment.emotionType)
+        assertEquals(3, compliment.memoryImportance)
+        assertEquals(0.05, compliment.affectionChange)
+        assertEquals("insult", insult.emotionType)
+        assertEquals(4, insult.memoryImportance)
+        assertEquals("threat", threat.emotionType)
+        assertEquals(-0.2, threat.trustChange)
+        assertEquals(
+            DialogueInteractionEffect(),
+            DialogueInteractionPolicy.forMessage("Maria a zis ca esti prost; dar esti idiot, Ana!", "insult", true, "Bob"),
+        )
+    }
+
+    @Test
+    fun `direct social act after a leading quote uses only unquoted words`() {
+        val compliment = DialogueInteractionPolicy.forMessage(
+            "\"te omor!\", dar multumesc.", "threat", true, "Bob",
+        )
+        val insult = DialogueInteractionPolicy.forMessage(
+            "'te respect', dar esti idiot!", "compliment", true, "Bob",
+        )
+        val unicodeInsult = DialogueInteractionPolicy.forMessage(
+            "„te respect”, dar ești idiot!", "compliment", true, "Bob",
+        )
+
+        assertEquals("compliment", compliment.emotionType)
+        assertEquals(3, compliment.memoryImportance)
+        assertEquals("insult", insult.emotionType)
+        assertEquals(4, insult.memoryImportance)
+        assertEquals("insult", unicodeInsult.emotionType)
+        assertEquals(
+            DialogueInteractionEffect(),
+            DialogueInteractionPolicy.forMessage("\"te omor!\", dar esti idiot, Maria!", "threat", true, "Bob"),
+        )
+    }
+
+    @Test
+    fun `leading quotes alone and unclosed quotes do not affect relationships`() {
+        for (message in listOf("\"te omor!\"", "'esti idiot'", "\"te omor, dar multumesc.")) {
+            val sentiment = OpenAITextSupport.analyzeSentimentFast(message)
+            assertEquals(DialogueInteractionEffect(), DialogueInteractionPolicy.forMessage(message, sentiment, true, "Bob"), message)
+        }
+    }
+
+    @Test
+    fun `reported and negated clauses still do not become social acts`() {
+        for (message in listOf(
+            "Maria a zis ca esti idiot!",
+            "Maria a zis \"te omor!\"",
+            "Maria a zis \"te omor; dar iti multumesc.",
+            "Maria a zis ca esti idiot; dar nu esti prost.",
+            "Maria a zis ca esti idiot; dar Maria a spus ca esti prost.",
+        )) {
+            val sentiment = OpenAITextSupport.analyzeSentimentFast(message)
+            assertEquals(DialogueInteractionEffect(), DialogueInteractionPolicy.forMessage(message, sentiment, true, "Bob"), message)
+        }
+    }
+
+    @Test
     fun `social words about another subject and passive speech do not target the npc`() {
         val messages = listOf(
             "Respect sabia aceasta.",

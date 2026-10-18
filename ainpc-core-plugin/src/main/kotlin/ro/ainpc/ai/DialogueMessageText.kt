@@ -24,6 +24,8 @@ internal object DialogueMessageText {
 
     fun hasQuotedSpan(message: String): Boolean = quotedSpan.containsMatchIn(message)
 
+    fun hasLeadingQuotedSpan(message: String): Boolean = quotedSpan.find(message.trimStart())?.range?.first == 0
+
     fun unquotedText(message: String): String = normalize(quotedSpan.replace(message, " "))
 
     fun hasReportedLead(message: String): Boolean = reportedLead.containsMatchIn(unquotedText(message))
