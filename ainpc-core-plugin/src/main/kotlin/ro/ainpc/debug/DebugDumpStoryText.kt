@@ -11,10 +11,38 @@ internal data class DebugDumpStoryScenarioSnapshot(
     val currentPhase: String,
 )
 
+internal data class DebugDumpStoryReadCapture(
+    val scenarios: List<DebugDumpStoryScenarioSnapshot>,
+    val featureScenarios: DebugDumpStoryFeatureCapture,
+)
+
 /**
  * Debugdumpstorytext.
  */
 object DebugDumpStoryText {
+    internal fun captureForAsync(
+        plugin: AINPCPlugin,
+        includeActiveScenarios: Boolean = true,
+    ): DebugDumpStoryReadCapture = DebugDumpStoryReadCapture(
+        if (includeActiveScenarios) captureScenarioSnapshots(plugin) else emptyList(),
+        DebugDumpStoryFeatureCapture.from(
+            runCatching { plugin.featurePackLoader.getAllScenarios().toList() }.getOrDefault(emptyList()),
+        ),
+    )
+
+    internal fun buildFromDatabaseCapture(
+        plugin: AINPCPlugin,
+        capture: DebugDumpStoryReadCapture,
+        summaryOnly: Boolean,
+    ): String {
+        val gson = GsonBuilder().disableHtmlEscaping().create()
+        val states = DebugDumpStoryStateJson.buildStoryStatesJson(plugin)
+        val events = DebugDumpStoryEventJson.buildStoryEventsJsonFromCapture(plugin, gson, capture.featureScenarios)
+        val progressionGaps = DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJsonFromCapture(plugin, capture.featureScenarios)
+        return if (summaryOnly) buildCapturedSummaryText(capture.scenarios, states, events, progressionGaps)
+        else buildCapturedStoryText(capture.scenarios, states, events, progressionGaps)
+    }
+
     @JvmStatic
     fun buildStoryText(plugin: AINPCPlugin): String {
         val gson = GsonBuilder().disableHtmlEscaping().create()
@@ -52,13 +80,25 @@ object DebugDumpStoryText {
         progressionGaps: JsonObject,
     ): String {
         val sb = StringBuilder()
-        sb.append("AINPC Story Dump\n")
-        sb.append("Active scenarios: ").append(scenarios.size).append("\n")
+        appendStoryHeader(sb, scenarios.size)
         appendStateSummary(sb, states)
         appendEventSummary(sb, events)
         appendGapSummary(sb, progressionGaps)
         appendScenarios(sb, scenarios)
         return DebugDumpSecrets.redactText(sb.toString())
+    }
+
+    @JvmStatic
+    fun buildStoryStatePreviewText(activeScenarioCount: Int, states: JsonObject): String {
+        val sb = StringBuilder()
+        appendStoryHeader(sb, activeScenarioCount)
+        appendStateCounts(sb, states)
+        return DebugDumpSecrets.redactText(sb.toString())
+    }
+
+    private fun appendStoryHeader(sb: StringBuilder, activeScenarioCount: Int) {
+        sb.append("AINPC Story Dump\n")
+        sb.append("Active scenarios: ").append(activeScenarioCount).append("\n")
     }
 
     @JvmStatic
@@ -88,16 +128,20 @@ object DebugDumpStoryText {
     }
 
     private fun appendStateSummary(sb: StringBuilder, root: JsonObject) {
-        sb.append("Story states available: ").append(root.getBoolean("available")).append("\n")
-        sb.append("Region story states: ").append(root.getInt("region_state_count")).append("\n")
-        sb.append("Place story states: ").append(root.getInt("place_state_count")).append("\n")
-        sb.append("Invalid story JSON rows: ").append(root.getInt("invalid_json_count")).append("\n")
+        appendStateCounts(sb, root)
         appendCountMap(sb, "Regions by mode", root.getAsJsonObject("regions_by_mode"))
         appendCountMap(sb, "Regions by state", root.getAsJsonObject("regions_by_state"))
         appendCountMap(sb, "Regions by source", root.getAsJsonObject("regions_by_source"))
         appendCountMap(sb, "Places by region", root.getAsJsonObject("places_by_region"))
         appendCountMap(sb, "Places by state", root.getAsJsonObject("places_by_state"))
         appendCountMap(sb, "Places by source", root.getAsJsonObject("places_by_source"))
+    }
+
+    private fun appendStateCounts(sb: StringBuilder, root: JsonObject) {
+        sb.append("Story states available: ").append(root.getBoolean("available")).append("\n")
+        sb.append("Region story states: ").append(root.getInt("region_state_count")).append("\n")
+        sb.append("Place story states: ").append(root.getInt("place_state_count")).append("\n")
+        sb.append("Invalid story JSON rows: ").append(root.getInt("invalid_json_count")).append("\n")
     }
 
     private fun appendEventSummary(sb: StringBuilder, root: JsonObject) {

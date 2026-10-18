@@ -13,6 +13,7 @@ object DebugDumpPlayerProgressionJson {
     fun buildPlayerProgressionJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_progression")
+        DebugDumpPlayerUuidFilter.addMetadata(root, playerFilter)
         root.addProperty("storage_note", "Player progression export (level/xp/skills).")
 
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
@@ -30,14 +31,14 @@ object DebugDumpPlayerProgressionJson {
         var totalLevel = 0L
         var maxLevel = 0
         try {
-            val normalizedFilter = playerFilter?.trim()?.lowercase().orEmpty()
+            val normalizedFilter = DebugDumpPlayerUuidFilter.normalize(playerFilter)
             val sql = "SELECT player_uuid, level, xp, total_xp, skills_json, last_updated " +
                 "FROM player_progression" +
-                if (normalizedFilter.isBlank()) "" else " WHERE LOWER(player_uuid) LIKE ?" +
+                (if (normalizedFilter.isBlank()) "" else " WHERE ${DebugDumpPlayerUuidFilter.sqlCondition("player_uuid")}") +
                 " ORDER BY level DESC, total_xp DESC"
             databaseManager.prepareStatement(sql).use { stmt ->
                 if (normalizedFilter.isNotBlank()) {
-                    stmt.setString(1, "%$normalizedFilter%")
+                    stmt.setString(1, normalizedFilter)
                 }
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {

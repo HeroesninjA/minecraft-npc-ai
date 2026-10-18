@@ -3,6 +3,7 @@ package ro.ainpc.debug
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.progression.ProgressionDefinition
 import ro.ainpc.progression.StoredProgression
 import ro.ainpc.progression.StoredProgressionSummary
 import java.sql.ResultSet
@@ -13,15 +14,38 @@ import kotlin.math.max
  * Debugdumpprogressionjson.
  */
 object DebugDumpProgressionJson {
+    internal data class RuntimeCapture(
+        val progressionServiceAvailable: Boolean,
+        val definitionsAvailable: Boolean,
+        val definitions: List<ProgressionDefinition>,
+    )
+
+    internal fun captureForAsync(plugin: AINPCPlugin): RuntimeCapture {
+        val progressionService = runCatching { plugin.progressionService }.getOrNull()
+        return RuntimeCapture(
+            progressionService != null,
+            runCatching { plugin.featurePackLoader }.isSuccess,
+            progressionService?.getDefinitions()?.toList().orEmpty(),
+        )
+    }
+
     @JvmStatic
-    fun buildPlayerProgressionsJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {
+    fun buildPlayerProgressionsJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject =
+        buildPlayerProgressionsJsonFromCapture(plugin, playerFilter, captureForAsync(plugin))
+
+    internal fun buildPlayerProgressionsJsonFromCapture(
+        plugin: AINPCPlugin,
+        playerFilter: String?,
+        capture: RuntimeCapture,
+    ): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_quests")
+        DebugDumpPlayerUuidFilter.addMetadata(root, playerFilter)
         root.addProperty("compatibility_view", true)
         root.addProperty("storage_note", "Generic progression export peste tabela legacy player_quests.")
 
         val progressionService = runCatching { plugin.progressionService }.getOrNull()
-        if (progressionService == null || databaseUnavailable(plugin)) {
+        if (!capture.progressionServiceAvailable || progressionService == null || databaseUnavailable(plugin)) {
             root.addProperty("available", false)
             root.addProperty("error", "ProgressionService sau DatabaseManager indisponibil")
             root.addProperty("row_count", 0)
@@ -30,12 +54,12 @@ object DebugDumpProgressionJson {
         }
 
         root.addProperty("available", true)
-        root.addProperty("definitions_available", runCatching { plugin.featurePackLoader }.isSuccess)
+        root.addProperty("definitions_available", capture.definitionsAvailable)
 
         val rows = JsonArray()
         var summary = StoredProgressionSummary.from(emptyList())
         try {
-            val progressions = progressionService.getStoredProgressions()
+            val progressions = progressionService.getStoredProgressions(capture.definitions, playerFilter)
             summary = StoredProgressionSummary.from(progressions)
             for (progression in progressions) {
                 rows.add(playerProgressionRowJson(progression))
@@ -68,6 +92,7 @@ object DebugDumpProgressionJson {
     fun buildPlayerQuestProgressJson(plugin: AINPCPlugin, playerFilter: String? = null): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_quests")
+        DebugDumpPlayerUuidFilter.addMetadata(root, playerFilter)
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
         if (databaseManager == null) {
             root.addProperty("available", false)
@@ -84,16 +109,19 @@ object DebugDumpProgressionJson {
         var trackedCount = 0
         var currentCount = 0
         var archivedCount = 0
+        val normalizedFilter = DebugDumpPlayerUuidFilter.normalize(playerFilter)
 
         val sql = """
             SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
                    current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
             FROM player_quests
+            ${if (normalizedFilter.isBlank()) "" else "WHERE ${DebugDumpPlayerUuidFilter.sqlCondition("player_uuid")}"}
             ORDER BY player_uuid, status, updated_at DESC, template_id
         """.trimIndent()
 
         try {
             databaseManager.prepareStatement(sql).use { statement ->
+                if (normalizedFilter.isNotBlank()) statement.setString(1, normalizedFilter)
                 statement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
                         rows.add(playerQuestProgressRowJson(resultSet))
@@ -132,9 +160,13 @@ object DebugDumpProgressionJson {
     }
 
     @JvmStatic
-    fun buildQuestAnchorBindingsJson(plugin: AINPCPlugin): JsonObject {
+    fun buildQuestAnchorBindingsJson(plugin: AINPCPlugin): JsonObject = buildQuestAnchorBindingsJson(plugin, null)
+
+    @JvmStatic
+    fun buildQuestAnchorBindingsJson(plugin: AINPCPlugin, playerFilter: String?): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "quest_anchor_bindings")
+        DebugDumpPlayerUuidFilter.addMetadata(root, playerFilter)
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
         if (databaseManager == null) {
             root.addProperty("available", false)
@@ -148,6 +180,7 @@ object DebugDumpProgressionJson {
         val rows = JsonArray()
         val byTemplate = LinkedHashMap<String, Int>()
         val byAnchorType = LinkedHashMap<String, Int>()
+        val normalizedFilter = DebugDumpPlayerUuidFilter.normalize(playerFilter)
 
         val sql = """
             SELECT b.player_uuid, b.template_id, b.objective_key, b.quest_code,
@@ -157,11 +190,13 @@ object DebugDumpProgressionJson {
             FROM quest_anchor_bindings b
             LEFT JOIN player_quests p
               ON p.player_uuid = b.player_uuid AND p.template_id = b.template_id
+            ${if (normalizedFilter.isBlank()) "" else "WHERE ${DebugDumpPlayerUuidFilter.sqlCondition("b.player_uuid")}"}
             ORDER BY b.player_uuid, b.template_id, b.objective_key
         """.trimIndent()
 
         try {
             databaseManager.prepareStatement(sql).use { statement ->
+                if (normalizedFilter.isNotBlank()) statement.setString(1, normalizedFilter)
                 statement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
                         rows.add(questAnchorBindingRowJson(resultSet))

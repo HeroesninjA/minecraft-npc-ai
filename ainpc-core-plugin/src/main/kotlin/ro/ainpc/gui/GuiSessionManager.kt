@@ -28,6 +28,11 @@ class GuiSessionManager {
 
     fun find(sessionId: UUID): GuiSession? = sessionsById[sessionId]
 
+    fun isCurrent(sessionId: UUID, playerId: UUID, key: GuiKey): Boolean {
+        val session = sessionsById[sessionId] ?: return false
+        return sessionsByPlayer[playerId] == sessionId && session.getPlayerId() == playerId && session.getKey() == key
+    }
+
     fun close(sessionId: UUID) {
         val removed = sessionsById.remove(sessionId)
         if (removed != null) {

@@ -62,7 +62,10 @@ internal data class DebugDumpCapturedSnapshot(
     val server: DebugDumpServerSnapshotData,
     val runtimeArtifacts: List<DebugDumpArtifactSnapshot>,
     val mappingSnapshot: com.google.gson.JsonObject?,
-    val storyScenarios: List<DebugDumpStoryScenarioSnapshot>,
+    val storyReadCapture: DebugDumpStoryReadCapture?,
+    val questAuditCapture: DebugDumpQuestAudit.RuntimeCapture?,
+    val npcWorldBindingCapture: DebugDumpNpcWorldBindingJson.RuntimeCapture?,
+    val progressionCapture: DebugDumpProgressionJson.RuntimeCapture?,
 )
 
 internal data class DebugDumpCompletedSnapshot(

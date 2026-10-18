@@ -211,7 +211,9 @@ Necesită administrator și feature-ul story activ. Folosește ID-uri existente 
 /ainpc story context NumeJucator nearest
 ```
 
-Comanda `story context` incarca starea persistenta asincron; rezultatul poate aparea dupa cateva tick-uri, fara sa blocheze threadul principal.
+Comenzile `story region`, `story place`, `story events` si `story context` incarca starea persistenta asincron; rezultatul poate aparea dupa cateva tick-uri, fara sa blocheze threadul principal. Rezolvarea selectorilor din mapping ramane pe threadul principal.
+
+In `StoryGui`, state-ul regiunii/place-ului, evenimentele, ancorele quest, verificarea progresiei si preview-ul diagnosticului admin apar dupa incarcarea asincrona. Inchiderea sau redeschiderea panoului anuleaza aplicarea rezultatului vechi. Numarul progresiilor din card vine din randurile persistente ale jucatorului, nu din lista afisata de Quest GUI. Preview-ul admin citeste numai state-ul story; click-ul executa `/ainpc debugdump story`, care afiseaza dump-ul complet in chat dupa pregatirea asincrona. Pentru export in fisiere foloseste `/ainpc debugdump all`.
 
 Înlocuiește `NumeJucator` cu un jucător online. `nearest` necesită un NPC activ suficient de aproape de acel jucător. Inspecția arată separat datele mapping și datele persistente atunci când există.
 

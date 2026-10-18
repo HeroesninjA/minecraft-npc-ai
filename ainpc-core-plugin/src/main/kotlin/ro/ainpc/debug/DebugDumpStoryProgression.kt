@@ -1,11 +1,9 @@
 package ro.ainpc.debug
 
-import ro.ainpc.engine.FeaturePackLoader
-
 /**
  * Storyprogressionlinkindex.
  */
-class StoryProgressionLinkIndex(
+internal class StoryProgressionLinkIndex(
     private val available: Boolean,
     private val error: String?,
     private val sourceRows: Int,
@@ -20,7 +18,7 @@ class StoryProgressionLinkIndex(
 /**
  * Storyprogressionlink.
  */
-class StoryProgressionLink(
+internal class StoryProgressionLink(
     private val playerUuid: String?,
     private val templateId: String?,
     private val questCode: String?,
@@ -29,7 +27,7 @@ class StoryProgressionLink(
     private val completedAt: Long,
     private val updatedAt: Long,
     private val tracked: Boolean,
-    private val scenario: FeaturePackLoader.ScenarioDefinition?,
+    private val scenario: DebugDumpStoryFeatureScenarioSnapshot?,
 ) {
     fun playerUuid(): String = playerUuid ?: ""
     fun templateId(): String = templateId ?: ""
@@ -39,13 +37,13 @@ class StoryProgressionLink(
     fun completedAt(): Long = completedAt
     fun updatedAt(): Long = updatedAt
     fun tracked(): Boolean = tracked
-    fun scenario(): FeaturePackLoader.ScenarioDefinition? = scenario
+    fun scenario(): DebugDumpStoryFeatureScenarioSnapshot? = scenario
 }
 
 /**
  * Storyprogressionselector.
  */
-class StoryProgressionSelector(
+internal class StoryProgressionSelector(
     private val source: String?,
     private val selector: String?,
 ) {
@@ -56,7 +54,7 @@ class StoryProgressionSelector(
 /**
  * Storyprogressionmatch.
  */
-class StoryProgressionMatch(
+internal class StoryProgressionMatch(
     private val link: StoryProgressionLink,
     private val matchSource: String?,
     private val matchSelector: String?,

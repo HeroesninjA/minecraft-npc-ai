@@ -43,13 +43,13 @@ Pentru istoric spawn complet, ruleaza `/ainpc audit all full json` sau `offline`
 Numai comenzile urmatoare creeaza folder de export:
 
 ```text
-/ainpc debugdump all [player] [privacy-safe]
-/ainpc debugdump npc [player] [privacy-safe]
+/ainpc debugdump all [uuid-fragment] [privacy-safe]
+/ainpc debugdump npc [privacy-safe]
 ```
 
 Comanda captureaza mai intai starea runtime pe main thread, confirma ca exportul continua asincron si livreaza rezultatul ulterior tot pe main thread. SQL-ul ruleaza intr-o singura tranzactie pe worker, iar tail-ul, cleanup-ul si scrierea nu blocheaza tick-ul. Numai un export poate fi activ; mesajul `deja in curs` cere asteptarea rezultatului cererii precedente.
 
-Folderul rezultat este `plugins/AINPC/debug-dumps/debug-dump-<timestamp>/`; coliziunile din aceeasi secunda primesc sufix numeric. Filtrul optional de player restrange numai exporturile care il folosesc; nu trebuie interpretat ca izolarea tuturor datelor unui singur jucator. Optiunea `privacy-safe` poate fi pusa inainte sau dupa filtru si este recomandata pentru orice artefact care paraseste serverul. `index.txt` declara fazele snapshot, limitele active, cleanup-ul si artefactele trunchiate, iar `manifest.json` declara schema de confidentialitate, metadata snapshot si inventarul payload-urilor. Retentia automata elimina oldest-first numai directoarele managed si protejeaza exportul curent; inspecteaza ambele fisiere inainte sa distribui dump-ul sau sa interpretezi absenta unor randuri drept absenta starii runtime.
+Folderul rezultat este `plugins/AINPC/debug-dumps/debug-dump-<timestamp>/`; coliziunile din aceeasi secunda primesc sufix numeric. Filtrul optional din `all` cauta un fragment literal din UUID-ul stocat (nu rezolva nume de jucatori) in `player-progressions.json`, `player-quest-progress.json`, `player-progression.json` si `quest-anchor-bindings.json`; randurile sunt filtrate direct in SQL, iar sumarurile acestor fisiere reflecta doar randurile filtrate. Fiecare JSON include `player_filter_present`, iar `quest.txt` indica filtrul cerut; niciunul nu repeta valoarea fragmentului ca metadate. Scope-ul `npc` nu accepta filtru, fiindca nu contine aceste exporturi. Auditul quest, evenimentele story si alte artefacte raman globale, deci filtrul nu izoleaza toate datele unui singur jucator. Optiunea `privacy-safe` poate fi pusa inainte sau dupa filtru si este recomandata pentru orice artefact care paraseste serverul. `index.txt` indica doar aplicarea filtrului, fara valoarea introdusa, si declara fazele snapshot, limitele active, cleanup-ul si artefactele trunchiate; `manifest.json` declara schema de confidentialitate, metadata snapshot si inventarul payload-urilor. Retentia automata elimina oldest-first numai directoarele managed si protejeaza exportul curent; inspecteaza ambele fisiere inainte sa distribui dump-ul sau sa interpretezi absenta unor randuri drept absenta starii runtime.
 
 Citeste `operations/observability-and-logs.md` inainte sa distribui un dump.
 

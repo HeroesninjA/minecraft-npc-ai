@@ -3,7 +3,6 @@ package ro.ainpc.debug
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.database.DatabaseManager
 import ro.ainpc.engine.FeaturePackLoader
-import ro.ainpc.progression.ProgressionDefinition
 import java.sql.SQLException
 import java.time.LocalDateTime
 
@@ -12,12 +11,46 @@ import java.time.LocalDateTime
  */
 object DebugDumpQuestAudit {
     @JvmStatic
-    fun buildQuestAuditReportText(plugin: AINPCPlugin): String {
+    fun buildQuestAuditReportText(plugin: AINPCPlugin): String = buildQuestAuditReportText(
+        plugin,
+        captureForAsync(plugin, DebugDumpStoryFeatureCapture.from(
+            runCatching { plugin.featurePackLoader.getAllScenarios().toList() }.getOrDefault(emptyList()),
+        )),
+    )
+
+    internal data class RuntimeCapture(
+        val loadedErrors: List<String>,
+        val loadedWarnings: List<String>,
+        val rewardTypes: Map<String, Int>,
+        val storyScenarios: DebugDumpStoryFeatureCapture,
+        val anchorIds: Map<String, Set<String>>,
+    ) {
+        fun hasAnchor(anchorType: String, anchorId: String): Boolean =
+            anchorIds[anchorType.lowercase()]?.contains(anchorId) ?: true
+    }
+
+    internal fun captureForAsync(plugin: AINPCPlugin, storyScenarios: DebugDumpStoryFeatureCapture): RuntimeCapture {
         val errors = ArrayList<String>()
         val warnings = ArrayList<String>()
-
         auditLoadedQuestTemplates(plugin, errors, warnings)
-        auditQuestPersistence(plugin, errors, warnings)
+        val worldAdmin = plugin.platform.worldAdmin
+        return RuntimeCapture(
+            errors.toList(),
+            warnings.toList(),
+            summarizeQuestRewardTypes(plugin),
+            storyScenarios,
+            mapOf(
+                "region" to worldAdmin.regions.map { it.id() }.toSet(),
+                "place" to worldAdmin.places.map { it.id() }.toSet(),
+                "node" to worldAdmin.nodes.map { it.id() }.toSet(),
+            ),
+        )
+    }
+
+    internal fun buildQuestAuditReportText(plugin: AINPCPlugin, capture: RuntimeCapture): String {
+        val errors = ArrayList(capture.loadedErrors)
+        val warnings = ArrayList(capture.loadedWarnings)
+        auditQuestPersistence(plugin, capture, errors, warnings)
 
         val sb = StringBuilder()
         sb.append("AINPC Quest Audit Report\n")
@@ -30,7 +63,7 @@ object DebugDumpQuestAudit {
         for (warning in warnings) {
             sb.append("[WARN] ").append(warning).append("\n")
         }
-        val summary = summarizeQuestRewardTypes(plugin)
+        val summary = capture.rewardTypes
         if (summary.isNotEmpty()) {
             sb.append("\nReward Type Summary (across all quest templates):\n")
             for ((type, count) in summary) {
@@ -414,6 +447,7 @@ object DebugDumpQuestAudit {
 
     private fun auditQuestPersistence(
         plugin: AINPCPlugin,
+        capture: RuntimeCapture,
         errors: MutableList<String>,
         warnings: MutableList<String>,
     ) {
@@ -424,9 +458,9 @@ object DebugDumpQuestAudit {
         }
 
         auditTrackedQuestPersistence(databaseManager, errors, warnings)
-        auditQuestAnchorPersistence(databaseManager, plugin, errors, warnings)
+        auditQuestAnchorPersistence(databaseManager, capture, errors, warnings)
         auditStoredQuestJson(databaseManager, warnings)
-        auditStoryProgressionConsistency(plugin, databaseManager, warnings)
+        auditStoryProgressionConsistency(capture.storyScenarios, databaseManager, warnings)
     }
 
     private fun auditTrackedQuestPersistence(
@@ -512,7 +546,7 @@ object DebugDumpQuestAudit {
 
     private fun auditQuestAnchorPersistence(
         databaseManager: DatabaseManager,
-        plugin: AINPCPlugin,
+        capture: RuntimeCapture,
         errors: MutableList<String>,
         warnings: MutableList<String>,
     ) {
@@ -626,7 +660,6 @@ object DebugDumpQuestAudit {
             warnings.add("Nu pot valida timestamp-urile din quest_anchor_bindings: ${exception.message}")
         }
 
-        val worldAdmin = plugin.platform.worldAdmin
         val mappingAnchorSql = """
             SELECT DISTINCT anchor_type, anchor_id
             FROM quest_anchor_bindings
@@ -642,12 +675,7 @@ object DebugDumpQuestAudit {
                     while (resultSet.next()) {
                         val anchorType = resultSet.getString("anchor_type")
                         val anchorId = resultSet.getString("anchor_id")
-                        val exists = when (anchorType.lowercase()) {
-                            "region" -> worldAdmin.getRegion(anchorId) != null
-                            "place" -> worldAdmin.getPlace(anchorId) != null
-                            "node" -> worldAdmin.getNode(anchorId) != null
-                            else -> true
-                        }
+                        val exists = capture.hasAnchor(anchorType, anchorId)
                         if (!exists) {
                             orphanCount++
                             if (orphanCount <= 10) {
@@ -788,14 +816,11 @@ object DebugDumpQuestAudit {
     }
 
     private fun auditStoryProgressionConsistency(
-        plugin: AINPCPlugin,
+        scenarios: DebugDumpStoryFeatureCapture,
         databaseManager: DatabaseManager,
         warnings: MutableList<String>,
     ) {
-        val scenariosBySelector = buildProgressionScenarioLookup(plugin)
-        if (scenariosBySelector.isEmpty()) {
-            return
-        }
+        if (scenarios.isEmpty()) return
 
         try {
             val storyEventProgressionKeys = queryStoryEventProgressionKeys(databaseManager, warnings)
@@ -813,12 +838,8 @@ object DebugDumpQuestAudit {
                         val playerUuid = resultSet.getString("player_uuid")
                         val templateId = resultSet.getString("template_id")
                         val questCode = resultSet.getString("quest_code")
-                        val scenario = DebugDumpSupport.findScenarioForProgressionRow(
-                            templateId,
-                            questCode,
-                            scenariosBySelector,
-                        )
-                        if (scenario == null || !DebugDumpSupport.hasRecordStoryEventAction(scenario)) {
+                        val scenario = scenarios.find(templateId, questCode)
+                        if (scenario == null || scenario.actions.isEmpty()) {
                             continue
                         }
                         if (DebugDumpSupport.hasStoryEventProgressionKey(
@@ -887,28 +908,4 @@ object DebugDumpQuestAudit {
         return keys
     }
 
-    private fun buildProgressionScenarioLookup(
-        plugin: AINPCPlugin
-    ): Map<String, FeaturePackLoader.ScenarioDefinition> {
-        val loader = runCatching { plugin.featurePackLoader }.getOrNull() ?: return emptyMap()
-
-        val lookup = LinkedHashMap<String, FeaturePackLoader.ScenarioDefinition>()
-        for (scenario in loader.getAllScenarios()) {
-            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
-                continue
-            }
-            val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.templateId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.progressionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.definitionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.code(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.packId() + ":" + definition.definitionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(
-                lookup,
-                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
-                scenario,
-            )
-        }
-        return lookup
-    }
 }

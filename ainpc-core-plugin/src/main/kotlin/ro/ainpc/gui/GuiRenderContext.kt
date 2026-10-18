@@ -20,6 +20,7 @@ class GuiRenderContext(
     private val playerValue = player
     private val inventoryValue = inventory
     private val buttonsValue: MutableMap<Int, GuiButton> = HashMap()
+    private val changedSlotsValue: MutableSet<Int> = HashSet()
 
     fun plugin(): AINPCPlugin = pluginValue
 
@@ -35,6 +36,7 @@ class GuiRenderContext(
         }
         inventoryValue.setItem(slot, item)
         buttonsValue.remove(slot)
+        changedSlotsValue.add(slot)
     }
 
     fun button(slot: Int, button: GuiButton?) {
@@ -43,6 +45,7 @@ class GuiRenderContext(
         }
         inventoryValue.setItem(slot, button.icon())
         buttonsValue[slot] = button
+        changedSlotsValue.add(slot)
     }
 
     fun fillEmpty(item: ItemStack?) {
@@ -54,6 +57,8 @@ class GuiRenderContext(
     }
 
     fun buttons(): Map<Int, GuiButton> = java.util.Map.copyOf(buttonsValue)
+
+    fun changedSlots(): Set<Int> = java.util.Set.copyOf(changedSlotsValue)
 
     private fun isValidSlot(slot: Int): Boolean = slot >= 0 && slot < inventoryValue.size
 }

@@ -331,6 +331,26 @@ class GuiService(private val plugin: AINPCPlugin) {
         screen.render(context)
         session.setButtons(context.buttons())
         player.openInventory(inventory)
+        screen.afterOpen(context, session.getSessionId())
+    }
+
+    fun updateIfCurrent(
+        player: Player,
+        sessionId: UUID,
+        key: GuiKey,
+        update: (GuiRenderContext) -> Unit,
+    ): Boolean {
+        if (!plugin.server.isPrimaryThread || !player.isOnline || !guiEnabled || !canOpen(player, key)) return false
+        if (!sessionManager.isCurrent(sessionId, player.uniqueId, key)) return false
+        val session = sessionManager.find(sessionId) ?: return false
+        val inventory = player.openInventory.topInventory
+        val holder = inventory.holder as? AINPCGuiHolder ?: return false
+        if (holder.sessionId() != sessionId || holder.key() != key || holder.getInventory() !== inventory) return false
+
+        val context = GuiRenderContext(plugin, this, player, inventory)
+        update(context)
+        session.setButtons(session.getButtons().filterKeys { it !in context.changedSlots() } + context.buttons())
+        return true
     }
 
     fun open(player: Player?, rawKey: String?): Boolean {

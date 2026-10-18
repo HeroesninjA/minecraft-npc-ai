@@ -6,12 +6,16 @@ import java.io.File
 
 class AINPCCommandStoryDumpTest {
     @Test
-    fun debugDumpStoryUsesStoryTextFormatter() {
+    fun debugDumpStoryCapturesRuntimeBeforeDatabaseWorkAndReturnsOnMain() {
         val source = File("src/main/kotlin/ro/ainpc/commands/AINPCCommand.kt").readText()
+        val handler = source.substringAfter("private fun handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean")
+            .substringBefore("private fun handleDebugDumpAi(")
 
-        assertTrue(source.contains("DebugDumpStoryText.buildStoryText(plugin)"))
-        assertTrue(source.contains("DebugDumpStoryText.buildSummaryText(plugin)"))
-        assertTrue(source.contains("handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean"))
-        assertTrue(source.contains("\"summary\", \"summarize\""))
+        assertTrue(handler.contains("DebugDumpStoryText.captureForAsync(plugin)"))
+        assertTrue(handler.contains("databaseManager.supplyAsync"))
+        assertTrue(handler.contains("DebugDumpStoryText.buildFromDatabaseCapture(plugin, capture, summaryOnly)"))
+        assertTrue(handler.contains("plugin.server.scheduler.runTask(plugin, report)"))
+        assertTrue(handler.contains("sender.hasPermission(\"ainpc.admin\")"))
+        assertTrue(handler.contains("\"summary\", \"summarize\""))
     }
 }

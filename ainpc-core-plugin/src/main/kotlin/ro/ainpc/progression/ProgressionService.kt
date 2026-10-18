@@ -122,6 +122,16 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     fun getStoredProgressions(): List<StoredProgression> = repository.findAll()
 
     @Throws(SQLException::class)
+    fun getStoredProgressions(definitions: List<ProgressionDefinition>): List<StoredProgression> =
+        repository.findAll(definitions)
+
+    @Throws(SQLException::class)
+    fun getStoredProgressions(
+        definitions: List<ProgressionDefinition>,
+        playerUuidFragment: String?,
+    ): List<StoredProgression> = repository.findAll(definitions, playerUuidFragment)
+
+    @Throws(SQLException::class)
     fun getStoredProgressions(playerUuid: String?, filter: String?, limit: Int): List<StoredProgression> {
         return repository.find(playerUuid, filter, limit)
     }
@@ -130,6 +140,9 @@ class ProgressionService(private val plugin: AINPCPlugin) {
     fun getStoredProgressionSummary(playerUuid: String?, filter: String?): StoredProgressionSummary {
         return repository.summarize(playerUuid, filter)
     }
+
+    @Throws(SQLException::class)
+    fun getStoredProgressionCounts(playerUuid: String): StoredProgressionCounts = repository.countForPlayer(playerUuid)
 
     fun getStoredProgressionObjectives(player: Player?, selector: String?): List<QuestGuiObjective> {
         if (player == null || selector.isNullOrBlank()) return listOf()

@@ -1,10 +1,12 @@
 package ro.ainpc.gui.screens
 
+import com.google.gson.JsonObject
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.debug.DebugDumpStoryStateJson
 import ro.ainpc.debug.DebugDumpStoryText
 import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
@@ -13,8 +15,10 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiNavigation
 import ro.ainpc.gui.GuiRenderContext
 import ro.ainpc.gui.GuiScreen
+import ro.ainpc.progression.StoredProgressionCounts
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
+import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.story.StoryEvent
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
@@ -24,6 +28,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /**
  * Storygui.
@@ -36,87 +42,37 @@ class StoryGui : GuiScreen {
     override fun size(player: Player): Int = 54
 
     override fun render(context: GuiRenderContext) {
-        val snapshot = readSnapshot(context)
         val player = context.player()
-
-        context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory Snapshot", summaryLore(snapshot)))
+        context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory Snapshot", "&7Se incarca datele story..."))
 
         val env = context.plugin().environmentEngine.getContext(player.location.world.name)
         context.item(5, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
 
 
-        context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
-        context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
-        context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
-        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", progressionVerificationLore(context)))
-
-        val anchorRegionCount = if (snapshot.region != null) {
-            val regionId = snapshot.region.id()
-            runCatching {
-                context.plugin().progressionService.getAnchorBindings(player.uniqueId.toString(), null, 200)
-                    .count { it.anchorType() == "region" && it.anchorId().equals(regionId, ignoreCase = true) }
-            }.getOrDefault(0)
-        } else 0
-        val anchorPlaceCount = if (snapshot.place != null) {
-            val placeId = snapshot.place.id()
-            runCatching {
-                context.plugin().progressionService.getAnchorBindings(player.uniqueId.toString(), null, 200)
-                    .count { it.anchorType() == "place" && it.anchorId().equals(placeId, ignoreCase = true) }
-            }.getOrDefault(0)
-        } else 0
-        if (anchorRegionCount + anchorPlaceCount > 0) {
-            context.item(3, GuiItemFactory.item(
-                Material.LIME_DYE,
-                "&aQuest Mapping",
-                buildList {
-                    if (snapshot.region != null) add("&7Ancore regiune: &f$anchorRegionCount")
-                    if (snapshot.place != null) add("&7Ancore place: &f$anchorPlaceCount")
-                    add("&8Click: deschide Quest Map")
-                }
-            ))
-        }
-        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", progressionVerificationLore(context)))
+        context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", "&7Se incarca..."))
+        context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", "&7Se incarca..."))
+        context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", "&7Se incarca..."))
+        context.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", "&7Se verifica progresia..."))
         context.button(
             13,
             if (context.player().hasPermission("ainpc.admin")) {
                 GuiButton.enabled(
-                    GuiItemFactory.item(Material.PAPER, "&dStory Diagnostics", storyDiagnosticsLore(context.plugin()))
+                    GuiItemFactory.item(Material.PAPER, "&dStory Diagnostics", "&7Se incarca diagnosticul...")
                 ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story") }
             } else {
                 GuiButton.disabled(
                     GuiItemFactory.disabled(
                         Material.GRAY_DYE,
                         "&7Story Diagnostics",
-                        storyDiagnosticsLore(context.plugin())
+                        listOf("&7Permisiune necesara: ainpc.admin")
                     )
                 )
             }
         )
 
-        commandButton(
-            context,
-            14,
-            Material.FILLED_MAP,
-            "&eComanda region",
-            if (snapshot.region != null) "ainpc story region ${snapshot.region.id()}" else "",
-            listOf("&7Afiseaza state-ul persistent pentru regiunea curenta.")
-        )
-        commandButton(
-            context,
-            15,
-            Material.OAK_DOOR,
-            "&aComanda place",
-            if (snapshot.place != null) "ainpc story place ${snapshot.place.id()}" else "",
-            listOf("&7Afiseaza state-ul persistent pentru place-ul curent.")
-        )
-        commandButton(
-            context,
-            16,
-            Material.BOOK,
-            "&bComanda events",
-            storyEventsCommand(snapshot),
-            listOf("&7Listeaza ultimele story events pentru scope-ul curent.")
-        )
+        for (slot in 14..16) {
+            context.button(slot, GuiButton.disabled(GuiItemFactory.disabled(Material.GRAY_DYE, "&7Se incarca...", listOf("&7Asteapta datele story."))))
+        }
         commandButton(
             context,
             17,
@@ -131,7 +87,7 @@ class StoryGui : GuiScreen {
             Material.SPYGLASS,
             "&9Debugdump story",
             "ainpc debugdump story",
-            listOf("&7Exporta story-states.json si story-events.json.")
+            listOf("&7Afiseaza diagnosticul story complet in chat.")
         )
 
         context.button(6, GuiButton.enabled(
@@ -149,17 +105,13 @@ class StoryGui : GuiScreen {
                 "&7Leaga obiective de locatii.")
         ) { click -> click.service().open(click.player(), GuiKey.QUEST_MAP) })
 
-        var slot = 19
-        for (event in snapshot.events) {
-            context.item(slot++, GuiItemFactory.item(eventMaterial(event), "&f${GuiItemFactory.compact(eventTitle(event), 28)}", eventLore(event)))
-        }
-        while (slot <= 25) {
+        for (slot in 19..25) {
             context.item(
-                slot++,
+                slot,
                 GuiItemFactory.item(
                     Material.LIGHT_GRAY_STAINED_GLASS_PANE,
-                    "&8Fara eveniment",
-                    "&7Nu exista event pentru slotul acesta."
+                    "&8Se incarca...",
+                    "&7Asteapta evenimentele story."
                 )
             )
         }
@@ -168,15 +120,111 @@ class StoryGui : GuiScreen {
         context.fillEmpty(GuiItemFactory.filler())
     }
 
-    private fun readSnapshot(context: GuiRenderContext): StorySnapshot {
+    override fun afterOpen(context: GuiRenderContext, sessionId: UUID) {
         val player = context.player()
+        val plugin = context.plugin()
         val worldAdmin: WorldAdminApi = context.plugin().platform.worldAdmin
         val location: Location = player.location
         val worldName = location.world.name
         val region = worldAdmin.findRegion(worldName, location.blockX, location.blockY, location.blockZ)
         val place = worldAdmin.findPlace(worldName, location.blockX, location.blockY, location.blockZ)
+        val playerId = player.uniqueId.toString()
+        val future = try {
+            plugin.databaseManager.supplyAsync {
+                val snapshot = readSnapshot(plugin, region, place)
+                val anchorBindings = if (region != null || place != null) {
+                    runCatching { plugin.progressionService.getAnchorBindings(playerId, null, 200) }.getOrDefault(emptyList())
+                } else emptyList()
+                StoryLoaded(
+                    snapshot,
+                    region?.id()?.let { regionId ->
+                        anchorBindings.count { it.anchorType() == "region" && it.anchorId().equals(regionId, ignoreCase = true) }
+                    } ?: 0,
+                    place?.id()?.let { placeId ->
+                        anchorBindings.count { it.anchorType() == "place" && it.anchorId().equals(placeId, ignoreCase = true) }
+                    } ?: 0,
+                )
+            }
+        } catch (failure: RuntimeException) {
+            CompletableFuture.failedFuture(failure)
+        }
+        future.whenComplete { loaded, failure ->
+            scheduleIfCurrent(context, sessionId) { current ->
+                val result = loaded ?: StoryLoaded(
+                    StorySnapshot(region, place, null, null, emptyList(), failure?.cause?.message ?: failure?.message.orEmpty()),
+                    0,
+                    0,
+                )
+                renderLoaded(current, result)
+            }
+        }
+        loadProgressionCard(context, sessionId, playerId)
+        if (player.hasPermission("ainpc.admin")) loadDiagnosticsCard(context, sessionId)
+    }
 
-        val storyStateService = context.plugin().storyStateService
+    private fun loadDiagnosticsCard(context: GuiRenderContext, sessionId: UUID) {
+        val plugin = context.plugin()
+        val activeScenarioCount = plugin.scenarioEngine.getActiveScenarios().size
+        val future = try {
+            plugin.databaseManager.supplyAsync {
+                storyDiagnosticsLore(activeScenarioCount, DebugDumpStoryStateJson.buildStoryStatesJson(plugin))
+            }
+        } catch (failure: RuntimeException) {
+            CompletableFuture.failedFuture(failure)
+        }
+        future.whenComplete { lore, failure ->
+            scheduleIfCurrent(context, sessionId) { current ->
+                if (!current.player().hasPermission("ainpc.admin")) {
+                    current.button(13, GuiButton.disabled(GuiItemFactory.disabled(
+                        Material.GRAY_DYE, "&7Story Diagnostics", listOf("&7Permisiune necesara: ainpc.admin")
+                    )))
+                    return@scheduleIfCurrent
+                }
+                val lines = lore ?: listOf(
+                    "&cNu pot citi diagnosticul story.",
+                    "&7${GuiItemFactory.compact(failure?.cause?.message ?: failure?.message.orEmpty(), 34)}"
+                )
+                current.button(13, GuiButton.enabled(
+                    GuiItemFactory.item(Material.PAPER, "&dStory Diagnostics", lines)
+                ) { click -> click.service().runCommand(click.player(), "ainpc debugdump story") })
+            }
+        }
+    }
+
+    private fun loadProgressionCard(context: GuiRenderContext, sessionId: UUID, playerId: String) {
+        val plugin = context.plugin()
+        val storyFuture = plugin.storyContextService.buildForPlayerAsync(context.player())
+        val progressionFuture = try {
+            plugin.databaseManager.supplyAsync {
+                plugin.progressionService.getStoredProgressionCounts(playerId)
+            }
+        } catch (failure: RuntimeException) {
+            CompletableFuture.failedFuture(failure)
+        }
+        storyFuture.thenCombine(progressionFuture, ::progressionVerificationLore).whenComplete { lore, failure ->
+            scheduleIfCurrent(context, sessionId) { current ->
+                val lines = lore ?: listOf(
+                    "&cNu pot verifica progresia.",
+                    "&7${GuiItemFactory.compact(failure?.cause?.message ?: failure?.message.orEmpty(), 34)}"
+                )
+                current.item(18, GuiItemFactory.item(Material.COMPASS, "&bProgression Verification", lines))
+            }
+        }
+    }
+
+    private fun scheduleIfCurrent(context: GuiRenderContext, sessionId: UUID, update: (GuiRenderContext) -> Unit) {
+        val plugin = context.plugin()
+        val task = Runnable { context.service().updateIfCurrent(context.player(), sessionId, key(), update) }
+        try {
+            if (plugin.server.isPrimaryThread) task.run()
+            else plugin.server.scheduler.runTask(plugin, task)
+        } catch (scheduleFailure: RuntimeException) {
+            plugin.logger.warning("Nu s-a putut actualiza Story GUI: ${scheduleFailure.javaClass.simpleName}")
+        }
+    }
+
+    private fun readSnapshot(plugin: AINPCPlugin, region: WorldRegionInfo?, place: WorldPlaceInfo?): StorySnapshot {
+        val storyStateService = plugin.storyStateService
         return try {
             val regionState = if (region != null) storyStateService.getRegionState(region.id()) else null
             val placeState = if (place != null) storyStateService.getPlaceState(place.id()) else null
@@ -184,6 +232,40 @@ class StoryGui : GuiScreen {
             StorySnapshot(region, place, regionState, placeState, events, "")
         } catch (exception: SQLException) {
             StorySnapshot(region, place, null, null, emptyList(), exception.message.orEmpty())
+        }
+    }
+
+    private fun renderLoaded(context: GuiRenderContext, loaded: StoryLoaded) {
+        val snapshot = loaded.snapshot
+        context.item(4, GuiItemFactory.item(Material.AMETHYST_SHARD, "&dStory Snapshot", summaryLore(snapshot)))
+        context.item(10, GuiItemFactory.item(Material.FILLED_MAP, "&eRegion story", regionLore(snapshot.region, snapshot.regionState)))
+        context.item(11, GuiItemFactory.item(Material.OAK_DOOR, "&aPlace story", placeLore(snapshot.place, snapshot.placeState)))
+        context.item(12, GuiItemFactory.item(Material.CLOCK, "&bEvenimente recente", eventSummaryLore(snapshot)))
+        if (loaded.anchorRegionCount + loaded.anchorPlaceCount > 0) {
+            context.item(3, GuiItemFactory.item(Material.LIME_DYE, "&aQuest Mapping", buildList {
+                if (snapshot.region != null) add("&7Ancore regiune: &f${loaded.anchorRegionCount}")
+                if (snapshot.place != null) add("&7Ancore place: &f${loaded.anchorPlaceCount}")
+                add("&8Click: deschide Quest Map")
+            }))
+        }
+        commandButton(context, 14, Material.FILLED_MAP, "&eComanda region",
+            snapshot.region?.let { "ainpc story region ${it.id()}" },
+            listOf("&7Afiseaza state-ul persistent pentru regiunea curenta."))
+        commandButton(context, 15, Material.OAK_DOOR, "&aComanda place",
+            snapshot.place?.let { "ainpc story place ${it.id()}" },
+            listOf("&7Afiseaza state-ul persistent pentru place-ul curent."))
+        commandButton(context, 16, Material.BOOK, "&bComanda events", storyEventsCommand(snapshot),
+            listOf("&7Listeaza ultimele story events pentru scope-ul curent."))
+        var slot = 19
+        for (event in snapshot.events) {
+            context.item(slot++, GuiItemFactory.item(eventMaterial(event), "&f${GuiItemFactory.compact(eventTitle(event), 28)}", eventLore(event)))
+        }
+        while (slot <= 25) {
+            context.item(slot++, GuiItemFactory.item(
+                Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+                "&8Fara eveniment",
+                "&7Nu exista event pentru slotul acesta."
+            ))
         }
     }
 
@@ -200,8 +282,8 @@ class StoryGui : GuiScreen {
         return lore
     }
 
-    private fun storyDiagnosticsLore(plugin: AINPCPlugin): List<String> {
-        return DebugDumpStoryText.buildStoryText(plugin)
+    private fun storyDiagnosticsLore(activeScenarioCount: Int, states: JsonObject): List<String> {
+        return DebugDumpStoryText.buildStoryStatePreviewText(activeScenarioCount, states)
             .lineSequence()
             .filter { it.isNotBlank() }
             .take(6)
@@ -277,22 +359,18 @@ class StoryGui : GuiScreen {
         return lore
     }
 
-    private fun progressionVerificationLore(context: GuiRenderContext): List<String> {
-        val player = context.player()
-        val storyContext = context.plugin().storyContextService.buildForPlayer(player)
-        val progressionSnapshot = context.plugin().progressionService.getProgressionGuiSnapshot(
-            player,
-            "all",
-            player.hasPermission("ainpc.admin")
-        )
+    private fun progressionVerificationLore(
+        storyContext: StoryContextSnapshot,
+        progressionCounts: StoredProgressionCounts,
+    ): List<String> {
         val lore = ArrayList<String>()
         lore.add("&7Story Context read-only: &f${!storyContext.isEmpty()}")
         lore.add("&7Story Anchors: &f${storyContext.activeQuestAnchors().size}")
         lore.add("&7Story Warnings: &f${storyContext.warnings().size}")
-        lore.add("&7Progression snapshot handled: &f${progressionSnapshot.handled()}")
-        lore.add("&7Current progressions: &f${progressionSnapshot.currentEntries().size}")
-        lore.add("&7Archived progressions: &f${progressionSnapshot.archivedEntries().size}")
-        lore.add("&7Verification mode: &fread-only story + read-only progression")
+        lore.add("&7Stored progressions: &f${progressionCounts.total}")
+        lore.add("&7Current progressions: &f${progressionCounts.current}")
+        lore.add("&7Archived progressions: &f${progressionCounts.archived}")
+        lore.add("&7Verification mode: &fread-only story + persisted progression")
         lore.add("&8Nu exista cale de scriere in acest card.")
         return lore
     }
@@ -433,6 +511,12 @@ class StoryGui : GuiScreen {
         val placeState: PlaceStoryState?,
         val events: List<StoryEvent>,
         val error: String
+    )
+
+    private data class StoryLoaded(
+        val snapshot: StorySnapshot,
+        val anchorRegionCount: Int,
+        val anchorPlaceCount: Int,
     )
 
     private companion object {

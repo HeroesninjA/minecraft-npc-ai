@@ -3,7 +3,6 @@ package ro.ainpc.debug
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
-import ro.ainpc.api.WorldAdminApi
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
 import java.sql.ResultSet
@@ -13,8 +12,43 @@ import java.sql.SQLException
  * Debugdumpnpcworldbindingjson.
  */
 object DebugDumpNpcWorldBindingJson {
+    internal data class RuntimeCapture(
+        val worldAdminEnabled: Boolean,
+        val placesById: Map<String, WorldPlaceInfo>,
+        val nodesById: Map<String, WorldNodeInfo>,
+        val loadedNpcSelectors: Set<String>,
+    ) {
+        fun isLoaded(npcId: Int): Boolean = "npc_$npcId" in loadedNpcSelectors
+    }
+
+    internal fun captureForAsync(plugin: AINPCPlugin): RuntimeCapture {
+        val worldAdmin = runCatching { plugin.platform.worldAdmin }.getOrNull()
+        val enabledWorldAdmin = worldAdmin?.takeIf { it.isEnabled }
+        val placesById = enabledWorldAdmin?.places?.associateBy { it.id() }.orEmpty()
+        val nodesById = enabledWorldAdmin?.nodes?.associateBy { it.id() }.orEmpty()
+        val loadedNpcSelectors = LinkedHashSet<String>()
+        runCatching { plugin.npcManager.getAllNPCs() }.getOrDefault(emptyList()).forEach { npc ->
+            addNpcSelectors(loadedNpcSelectors, npc.databaseId, npc.name)
+        }
+        return RuntimeCapture(enabledWorldAdmin != null, placesById, nodesById, loadedNpcSelectors)
+    }
+
+    internal fun addNpcSelectors(selectors: MutableSet<String>, databaseId: Int, name: String?) {
+        if (databaseId > 0) {
+            selectors.add("npc_$databaseId")
+        }
+        val normalizedName = DebugDumpSupport.normalizeKey(name)
+        if (normalizedName.isNotBlank()) {
+            selectors.add(normalizedName)
+            selectors.add("npc_$normalizedName")
+        }
+    }
+
     @JvmStatic
-    fun buildNpcWorldBindingsJson(plugin: AINPCPlugin): JsonObject {
+    fun buildNpcWorldBindingsJson(plugin: AINPCPlugin): JsonObject =
+        buildNpcWorldBindingsJsonFromCapture(plugin, captureForAsync(plugin))
+
+    internal fun buildNpcWorldBindingsJsonFromCapture(plugin: AINPCPlugin, capture: RuntimeCapture): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "npc_world_bindings")
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
@@ -26,15 +60,11 @@ object DebugDumpNpcWorldBindingJson {
             return root
         }
 
-        val worldAdmin = runCatching { plugin.platform.worldAdmin }.getOrNull()
-        val placesById = LinkedHashMap<String, WorldPlaceInfo>()
-        val nodesById = LinkedHashMap<String, WorldNodeInfo>()
-        if (worldAdmin != null && worldAdmin.isEnabled) {
-            indexWorldAdmin(worldAdmin, placesById, nodesById)
-        }
+        val placesById = capture.placesById
+        val nodesById = capture.nodesById
 
         root.addProperty("available", true)
-        root.addProperty("world_admin_enabled", worldAdmin != null && worldAdmin.isEnabled)
+        root.addProperty("world_admin_enabled", capture.worldAdminEnabled)
         val rows = JsonArray()
         val bySource = LinkedHashMap<String, Int>()
         val byHomePlace = LinkedHashMap<String, Int>()
@@ -58,7 +88,7 @@ object DebugDumpNpcWorldBindingJson {
                 statement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
                         val npcId = resultSet.getInt("npc_id")
-                        val loadedNpc = DebugDumpAudit.findLoadedNpcBySelector(plugin, "npc_$npcId") != null
+                        val loadedNpc = capture.isLoaded(npcId)
                         rows.add(npcWorldBindingRowJson(resultSet, placesById, nodesById, loadedNpc))
 
                         DebugDumpSupport.incrementCount(bySource, resultSet.getString("source"))
@@ -94,19 +124,6 @@ object DebugDumpNpcWorldBindingJson {
         root.add("by_social_place", DebugDumpSupport.countMapJson(bySocialPlace))
         root.add("rows", rows)
         return root
-    }
-
-    private fun indexWorldAdmin(
-        worldAdmin: WorldAdminApi,
-        placesById: MutableMap<String, WorldPlaceInfo>,
-        nodesById: MutableMap<String, WorldNodeInfo>
-    ) {
-        for (place in worldAdmin.places) {
-            placesById[place.id()] = place
-        }
-        for (node in worldAdmin.nodes) {
-            nodesById[node.id()] = node
-        }
     }
 
     private fun npcWorldBindingRowJson(

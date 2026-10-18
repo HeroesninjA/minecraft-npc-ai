@@ -3213,23 +3213,23 @@ $objectives      rewards:
     }
 
     private fun handleDebugDumpExport(sender: CommandSender, args: Array<String>): Boolean {
+        val scope = args[1].lowercase()
         val options = try {
-            DebugDumpExportOptions.parse(args.drop(2))
+            DebugDumpExportOptions.parse(args.drop(2), scope)
         } catch (exception: IllegalArgumentException) {
             plugin.messageUtils.send(sender, "&c${exception.message}")
             sendDebugDumpUsage(sender)
             return true
         }
 
-        val scope = args[1].lowercase()
         if (!debugDumpExportGate.tryAcquire()) {
-            plugin.messageUtils.send(sender, "&eUn export debug dump este deja in curs. Asteapta finalizarea lui.")
+            plugin.messageUtils.send(sender, "&eUn debug dump este deja in curs. Asteapta finalizarea lui.")
             return true
         }
 
         val service = DebugDumpService(plugin)
         val capture = try {
-            service.captureRuntimeSnapshot(scope, options.playerName, options.privacyMode)
+            service.captureRuntimeSnapshot(scope, options.playerUuidFragment, options.privacyMode)
         } catch (exception: Exception) {
             debugDumpExportGate.release()
             sendDebugDumpFailure(sender, exception)
@@ -3287,8 +3287,9 @@ $objectives      rewards:
 
     private fun sendDebugDumpUsage(sender: CommandSender) {
         plugin.messageUtils.send(sender, "&6=== /ainpc debugdump ===")
-        plugin.messageUtils.send(sender, "&e/ainpc debugdump all [player] [privacy-safe] &7- Exporta diagnosticul complet")
-        plugin.messageUtils.send(sender, "&e/ainpc debugdump npc [player] [privacy-safe] &7- Exporta diagnosticul NPC")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump all [uuid-fragment] [privacy-safe] &7- Exporta diagnosticul complet")
+        plugin.messageUtils.send(sender, "&e/ainpc debugdump npc [privacy-safe] &7- Exporta diagnosticul NPC")
+        plugin.messageUtils.send(sender, "&7  uuid-fragment filtreaza doar cele patru exporturi de progres ale jucatorilor")
         plugin.messageUtils.send(sender, "&7  privacy-safe elimina prompt/response si redacteaza identificatori, IP-uri, emailuri si cai locale")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump world [summary] &7- Dump world admin state")
         plugin.messageUtils.send(sender, "&e/ainpc debugdump regions &7- List all regions")
@@ -3544,15 +3545,49 @@ $objectives      rewards:
 
     private fun handleDebugDumpStory(sender: CommandSender, args: Array<String>): Boolean {
         val summaryOnly = args.getOrNull(2)?.lowercase() in setOf("summary", "summarize")
-        val text = if (summaryOnly) {
-            DebugDumpStoryText.buildSummaryText(plugin)
-        } else {
-            DebugDumpStoryText.buildStoryText(plugin)
+        if (!debugDumpExportGate.tryAcquire()) {
+            plugin.messageUtils.send(sender, "&eUn debug dump este deja in curs. Asteapta finalizarea lui.")
+            return true
         }
-        plugin.messageUtils.send(sender, if (summaryOnly) "&6=== Story Summary ===" else "&6=== Story Dump ===")
-        for (line in text.split("\n")) {
-            if (line.isNotBlank()) {
-                plugin.messageUtils.send(sender, "&7$line")
+        val capture = try {
+            DebugDumpStoryText.captureForAsync(plugin)
+        } catch (failure: Exception) {
+            debugDumpExportGate.release()
+            sendDebugDumpFailure(sender, failure)
+            return true
+        }
+        val future = try {
+            plugin.databaseManager.supplyAsync {
+                DebugDumpStoryText.buildFromDatabaseCapture(plugin, capture, summaryOnly)
+            }
+        } catch (failure: RuntimeException) {
+            debugDumpExportGate.release()
+            sendDebugDumpFailure(sender, failure)
+            return true
+        }
+        plugin.messageUtils.send(sender, "&eDiagnosticul story se pregateste asincron.")
+        future.whenComplete { text, failure ->
+            debugDumpExportGate.release()
+            val report = Runnable {
+                if (sender is Player && !sender.isOnline) return@Runnable
+                if (!sender.hasPermission("ainpc.admin")) {
+                    plugin.messageUtils.sendMessage(sender, "no_permission")
+                    return@Runnable
+                }
+                if (failure != null || text == null) {
+                    sendDebugDumpFailure(sender, failure?.cause ?: failure ?: IllegalStateException("Text story indisponibil"))
+                    return@Runnable
+                }
+                plugin.messageUtils.send(sender, if (summaryOnly) "&6=== Story Summary ===" else "&6=== Story Dump ===")
+                for (line in text.lineSequence()) {
+                    if (line.isNotBlank()) plugin.messageUtils.send(sender, "&7$line")
+                }
+            }
+            try {
+                if (plugin.server.isPrimaryThread) report.run()
+                else plugin.server.scheduler.runTask(plugin, report)
+            } catch (scheduleFailure: RuntimeException) {
+                plugin.logger.warning("Nu am putut programa rezultatul debug dump story: ${scheduleFailure.javaClass.simpleName}")
             }
         }
         return true

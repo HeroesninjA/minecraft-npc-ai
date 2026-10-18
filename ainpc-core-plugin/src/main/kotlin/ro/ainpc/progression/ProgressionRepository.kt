@@ -6,6 +6,7 @@ import java.sql.SQLException
 import java.util.Locale
 import java.util.Objects
 
+data class StoredProgressionCounts(val total: Int, val current: Int, val archived: Int)
 
 /**
  * Progressionrepository.
@@ -21,19 +22,30 @@ class ProgressionRepository(
 
     @Throws(SQLException::class)
     fun findAll(): List<StoredProgression> {
+        if (statementProvider == null) return emptyList()
+        return findAll(definitions())
+    }
+
+    @Throws(SQLException::class)
+    fun findAll(definitions: List<ProgressionDefinition>): List<StoredProgression> = findAll(definitions, null)
+
+    @Throws(SQLException::class)
+    fun findAll(definitions: List<ProgressionDefinition>, playerUuidFragment: String?): List<StoredProgression> {
         if (statementProvider == null) {
             return listOf()
         }
 
+        val normalizedFragment = valueOrEmpty(playerUuidFragment).lowercase(Locale.ROOT)
         val sql = """
             SELECT player_uuid, template_id, quest_code, status, started_at, completed_at,
                    current_phase, current_stage_id, objective_progress, quest_variables, updated_at, tracked
             FROM player_quests
+            ${if (normalizedFragment.isBlank()) "" else "WHERE INSTR(LOWER(player_uuid), ?) > 0"}
             ORDER BY player_uuid, status, updated_at DESC, template_id
         """.trimIndent()
 
-        val definitions = definitions()
         statementProvider.prepareStatement(sql).use { statement ->
+            if (normalizedFragment.isNotBlank()) statement.setString(1, normalizedFragment)
             statement.executeQuery().use { resultSet ->
                 val rows = arrayListOf<StoredProgression>()
                 while (resultSet.next()) {
@@ -62,6 +74,28 @@ class ProgressionRepository(
     @Throws(SQLException::class)
     fun summarize(playerUuid: String?, filter: String?): StoredProgressionSummary {
         return StoredProgressionSummary.from(find(playerUuid, filter, 0))
+    }
+
+    @Throws(SQLException::class)
+    fun countForPlayer(playerUuid: String): StoredProgressionCounts {
+        val provider = statementProvider ?: return StoredProgressionCounts(0, 0, 0)
+        val sql = "SELECT status FROM player_quests WHERE player_uuid = ?"
+        provider.prepareStatement(sql).use { statement ->
+            statement.setString(1, playerUuid)
+            statement.executeQuery().use { resultSet ->
+                var total = 0
+                var current = 0
+                var archived = 0
+                while (resultSet.next()) {
+                    total++
+                    when (resultSet.getString("status")?.lowercase(Locale.ROOT)) {
+                        "active", "offered" -> current++
+                        "completed", "failed" -> archived++
+                    }
+                }
+                return StoredProgressionCounts(total, current, archived)
+            }
+        }
     }
 
     @Throws(SQLException::class)

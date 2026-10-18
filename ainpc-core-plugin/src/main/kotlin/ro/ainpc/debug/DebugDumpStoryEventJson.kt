@@ -5,7 +5,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader
-import ro.ainpc.progression.ProgressionDefinition
 import java.sql.ResultSet
 import java.sql.SQLException
 
@@ -14,7 +13,24 @@ import java.sql.SQLException
  */
 object DebugDumpStoryEventJson {
     @JvmStatic
-    fun buildStoryEventsJson(plugin: AINPCPlugin, gson: Gson): JsonObject {
+    fun buildStoryEventsJson(plugin: AINPCPlugin, gson: Gson): JsonObject = buildStoryEventsJson(
+        plugin,
+        gson,
+        runCatching { plugin.featurePackLoader.getAllScenarios().toList() }.getOrDefault(emptyList()),
+    )
+
+    @JvmStatic
+    fun buildStoryEventsJson(
+        plugin: AINPCPlugin,
+        gson: Gson,
+        scenarios: List<FeaturePackLoader.ScenarioDefinition>,
+    ): JsonObject = buildStoryEventsJsonFromCapture(plugin, gson, DebugDumpStoryFeatureCapture.from(scenarios))
+
+    internal fun buildStoryEventsJsonFromCapture(
+        plugin: AINPCPlugin,
+        gson: Gson,
+        scenarios: DebugDumpStoryFeatureCapture,
+    ): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "story_events")
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
@@ -33,7 +49,7 @@ object DebugDumpStoryEventJson {
         val byQuestTemplate = LinkedHashMap<String, Int>()
         val byQuestCode = LinkedHashMap<String, Int>()
         val byProgressionLink = LinkedHashMap<String, Int>()
-        val linkIndex = buildStoryProgressionLinkIndex(plugin)
+        val linkIndex = buildStoryProgressionLinkIndex(plugin, scenarios)
 
         val sql = """
             SELECT id, scope_type, scope_id, region_id, place_id, event_type, event_key,
@@ -117,11 +133,13 @@ object DebugDumpStoryEventJson {
         return json
     }
 
-    private fun buildStoryProgressionLinkIndex(plugin: AINPCPlugin): StoryProgressionLinkIndex {
+    private fun buildStoryProgressionLinkIndex(
+        plugin: AINPCPlugin,
+        scenarios: DebugDumpStoryFeatureCapture,
+    ): StoryProgressionLinkIndex {
         val databaseManager = runCatching { plugin.databaseManager }.getOrNull()
             ?: return StoryProgressionLinkIndex(false, "DatabaseManager indisponibil", 0, emptyMap())
 
-        val scenariosBySelector = buildProgressionScenarioLookup(plugin)
         val linksBySelector = LinkedHashMap<String, MutableList<StoryProgressionLink>>()
         var sourceRows = 0
         val sql = """
@@ -140,11 +158,7 @@ object DebugDumpStoryEventJson {
                         val playerUuid = DebugDumpSupport.valueOrEmpty(resultSet.getString("player_uuid"))
                         val templateId = DebugDumpSupport.valueOrEmpty(resultSet.getString("template_id"))
                         val questCode = DebugDumpSupport.valueOrEmpty(resultSet.getString("quest_code"))
-                        val scenario = DebugDumpSupport.findScenarioForProgressionRow(
-                            templateId,
-                            questCode,
-                            scenariosBySelector,
-                        )
+                        val scenario = scenarios.find(templateId, questCode)
                         val link = StoryProgressionLink(
                             playerUuid,
                             templateId,
@@ -304,10 +318,10 @@ object DebugDumpStoryEventJson {
             json.addProperty("scenario_pack_id", DebugDumpSupport.valueOrEmpty(scenario.packId))
             json.addProperty("scenario_id", DebugDumpSupport.valueOrEmpty(scenario.id))
             json.addProperty("scenario_name", DebugDumpSupport.valueOrEmpty(scenario.name))
-            json.addProperty("scenario_base_type", scenario.baseType.name)
+            json.addProperty("scenario_base_type", scenario.baseType)
             json.addProperty("scenario_mechanic_id", DebugDumpSupport.valueOrEmpty(scenario.progressionMechanicId))
             json.addProperty("scenario_kind", DebugDumpSupport.valueOrEmpty(scenario.questScenarioKind))
-            val action = DebugDumpSupport.findRecordStoryEventAction(scenario, eventKey)
+            val action = scenario.findRecordStoryEventAction(eventKey)
             if (action != null) {
                 json.add("story_action", storyActionJson(action, link, gson))
             }
@@ -316,7 +330,7 @@ object DebugDumpStoryEventJson {
     }
 
     private fun storyActionJson(
-        action: FeaturePackLoader.QuestEntryDefinition,
+        action: DebugDumpStoryActionSnapshot,
         link: StoryProgressionLink,
         gson: Gson,
     ): JsonObject {
@@ -325,11 +339,10 @@ object DebugDumpStoryEventJson {
         json.addProperty("entry_id", DebugDumpSupport.valueOrEmpty(action.entryId))
         json.addProperty("item_id", DebugDumpSupport.valueOrEmpty(action.itemId))
         json.addProperty("description", DebugDumpSupport.valueOrEmpty(action.description))
-        json.addProperty("scope", DebugDumpSupport.questEntryMetadata(action, "scope", "scope_type"))
+        json.addProperty("scope", action.metadataValue("scope", "scope_type"))
         json.addProperty(
             "target",
-            DebugDumpSupport.questEntryMetadata(
-                action,
+            action.metadataValue(
                 "target",
                 "scope_id",
                 "target_id",
@@ -342,11 +355,11 @@ object DebugDumpStoryEventJson {
                 "region",
             ),
         )
-        json.addProperty("event_type", DebugDumpSupport.questEntryMetadata(action, "event_type", "type_id"))
+        json.addProperty("event_type", action.metadataValue("event_type", "type_id"))
         json.addProperty(
             "event_key",
             DebugDumpSupport.firstNonBlank(
-                DebugDumpSupport.questEntryMetadata(action, "event_key", "key"),
+                action.metadataValue("event_key", "key"),
                 link.questCode(),
             ),
         )
@@ -355,31 +368,4 @@ object DebugDumpStoryEventJson {
         return json
     }
 
-    private fun buildProgressionScenarioLookup(
-        plugin: AINPCPlugin
-    ): Map<String, FeaturePackLoader.ScenarioDefinition> {
-        val loader = runCatching { plugin.featurePackLoader }.getOrNull() ?: return emptyMap()
-        val lookup = LinkedHashMap<String, FeaturePackLoader.ScenarioDefinition>()
-        for (scenario in loader.getAllScenarios()) {
-            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
-                continue
-            }
-            val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.templateId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.progressionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.definitionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.code(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(
-                lookup,
-                definition.packId() + ":" + definition.definitionId(),
-                scenario
-            )
-            DebugDumpSupport.addScenarioLookupKey(
-                lookup,
-                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
-                scenario,
-            )
-        }
-        return lookup
-    }
 }

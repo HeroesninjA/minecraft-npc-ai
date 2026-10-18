@@ -15,6 +15,7 @@ import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
 import java.sql.SQLException
+import java.util.concurrent.CompletableFuture
 
 lateinit var ainpcCommandStoryPlugin: AINPCPlugin
 
@@ -67,6 +68,7 @@ fun handleStoryRegion(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&cStoryStateService nu este initializat.")
         return true
     }
+    val storyStateService = ainpcCommandStoryPlugin.storyStateService
 
     val worldAdmin = getEnabledWorldAdmin()
     val mappedRegion = resolveSingleStoryRegion(sender, worldAdmin, args[2])
@@ -75,10 +77,11 @@ fun handleStoryRegion(sender: CommandSender, args: Array<String>): Boolean {
     }
 
     val regionId = mappedRegion?.id() ?: args[2]
-    try {
-        val state = ainpcCommandStoryPlugin.storyStateService.getRegionState(regionId)
-        val events = ainpcCommandStoryPlugin.storyStateService.listRecentEvents(regionId, "", 5)
-
+    readStoryCommandAsync(sender, "Nu am putut citi story state pentru regiune", query = {
+        val state = storyStateService.getRegionState(regionId)
+        val events = storyStateService.listRecentEvents(regionId, "", 5)
+        state to events
+    }) { (state, events) ->
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Region ===")
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&eRegion ID: &f$regionId")
         if (mappedRegion != null) {
@@ -99,9 +102,6 @@ fun handleStoryRegion(sender: CommandSender, args: Array<String>): Boolean {
         for (event in events) {
             ainpcCommandStoryPlugin.messageUtils.send(sender, "&7- ${formatStoryEvent(event)}")
         }
-    } catch (exception: SQLException) {
-        ainpcCommandStoryPlugin.logger.warning("Nu am putut citi story state pentru regiune: ${exception.message}")
-        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut citi story state: ${exception.message}")
     }
     return true
 }
@@ -115,6 +115,7 @@ fun handleStoryPlace(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&cStoryStateService nu este initializat.")
         return true
     }
+    val storyStateService = ainpcCommandStoryPlugin.storyStateService
 
     val worldAdmin = getEnabledWorldAdmin()
     val mappedPlace = resolveSingleStoryPlace(sender, worldAdmin, args[2])
@@ -124,10 +125,11 @@ fun handleStoryPlace(sender: CommandSender, args: Array<String>): Boolean {
 
     val placeId = mappedPlace?.id() ?: args[2]
     val regionId = mappedPlace?.regionId() ?: inferRegionIdFromPlaceId(placeId)
-    try {
-        val state = ainpcCommandStoryPlugin.storyStateService.getPlaceState(placeId)
-        val events = ainpcCommandStoryPlugin.storyStateService.listRecentEvents(regionId, placeId, 5)
-
+    readStoryCommandAsync(sender, "Nu am putut citi story state pentru place", query = {
+        val state = storyStateService.getPlaceState(placeId)
+        val events = storyStateService.listRecentEvents(regionId, placeId, 5)
+        state to events
+    }) { (state, events) ->
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Place ===")
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&ePlace ID: &f$placeId")
         if (mappedPlace != null) {
@@ -148,9 +150,6 @@ fun handleStoryPlace(sender: CommandSender, args: Array<String>): Boolean {
         for (event in events) {
             ainpcCommandStoryPlugin.messageUtils.send(sender, "&7- ${formatStoryEvent(event)}")
         }
-    } catch (exception: SQLException) {
-        ainpcCommandStoryPlugin.logger.warning("Nu am putut citi story state pentru place: ${exception.message}")
-        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut citi story state: ${exception.message}")
     }
     return true
 }
@@ -164,6 +163,7 @@ fun handleStoryEvents(sender: CommandSender, args: Array<String>): Boolean {
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&cStoryStateService nu este initializat.")
         return true
     }
+    val storyStateService = ainpcCommandStoryPlugin.storyStateService
 
     var limit = STORY_EVENT_DEFAULT_LIMIT
     if (args.size >= 4) {
@@ -177,8 +177,12 @@ fun handleStoryEvents(sender: CommandSender, args: Array<String>): Boolean {
 
     val target = resolveStoryEventTarget(sender, args[2]) ?: return true
 
-    try {
-        val events = ainpcCommandStoryPlugin.storyStateService.listRecentEvents(target.regionId(), target.placeId(), limit)
+    val regionId = target.regionId()
+    val placeId = target.placeId()
+    val eventLimit = limit
+    readStoryCommandAsync(sender, "Nu am putut lista story events", query = {
+        storyStateService.listRecentEvents(regionId, placeId, eventLimit)
+    }) { events ->
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&6=== Story Events ===")
         ainpcCommandStoryPlugin.messageUtils.send(sender, "&eTinta: &f${target.label()}")
         if (!target.mapped()) {
@@ -186,22 +190,51 @@ fun handleStoryEvents(sender: CommandSender, args: Array<String>): Boolean {
         }
         if (events.isEmpty()) {
             ainpcCommandStoryPlugin.messageUtils.send(sender, "&7Nu exista story_events pentru tinta curenta.")
-            return true
-        }
-        for (event in events) {
-            ainpcCommandStoryPlugin.messageUtils.send(sender, "&7- ${formatStoryEvent(event)}")
-            if (event.description().isNotBlank()) {
-                ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  ${event.description()}")
+        } else {
+            for (event in events) {
+                ainpcCommandStoryPlugin.messageUtils.send(sender, "&7- ${formatStoryEvent(event)}")
+                if (event.description().isNotBlank()) {
+                    ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  ${event.description()}")
+                }
+                if (event.payload().isNotEmpty()) {
+                    ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  payload: ${formatMap(event.payload())}")
+                }
             }
-            if (event.payload().isNotEmpty()) {
-                ainpcCommandStoryPlugin.messageUtils.send(sender, "&8  payload: ${formatMap(event.payload())}")
-            }
         }
-    } catch (exception: SQLException) {
-        ainpcCommandStoryPlugin.logger.warning("Nu am putut lista story events: ${exception.message}")
-        ainpcCommandStoryPlugin.messageUtils.send(sender, "&cNu am putut lista story events: ${exception.message}")
     }
     return true
+}
+
+private fun <Value : Any> readStoryCommandAsync(
+    sender: CommandSender,
+    failureMessage: String,
+    query: () -> Value,
+    onResult: (Value) -> Unit,
+) {
+    val plugin = ainpcCommandStoryPlugin
+    val future = try {
+        plugin.databaseManager.supplyAsync { query() }
+    } catch (failure: RuntimeException) {
+        CompletableFuture.failedFuture(failure)
+    }
+    future.whenComplete { value, failure ->
+        val report = Runnable {
+            if (sender is Player && !sender.isOnline) return@Runnable
+            if (failure != null || value == null) {
+                val cause = failure?.cause ?: failure
+                plugin.logger.warning("$failureMessage: ${cause?.message.orEmpty()}")
+                plugin.messageUtils.send(sender, "&c$failureMessage: ${cause?.message.orEmpty()}")
+            } else {
+                onResult(value)
+            }
+        }
+        try {
+            if (plugin.server.isPrimaryThread) report.run()
+            else plugin.server.scheduler.runTask(plugin, report)
+        } catch (scheduleFailure: RuntimeException) {
+            plugin.logger.warning("Nu s-a putut programa raspunsul comenzii story: ${scheduleFailure.javaClass.simpleName}")
+        }
+    }
 }
 
 fun handleStoryPending(sender: CommandSender, args: Array<String>): Boolean {

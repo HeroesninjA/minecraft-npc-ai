@@ -26,16 +26,20 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
     @Throws(IOException::class)
     fun createDump(
         scope: String?,
-        playerName: String? = null,
+        playerUuidFragment: String? = null,
         privacyMode: DebugDumpPrivacyMode = DebugDumpPrivacyMode.STANDARD,
-    ): DebugDumpResult = writeCapturedDump(captureRuntimeSnapshot(scope, playerName, privacyMode))
+    ): DebugDumpResult = writeCapturedDump(captureRuntimeSnapshot(scope, playerUuidFragment, privacyMode))
 
     internal fun captureRuntimeSnapshot(
         scope: String?,
-        playerName: String? = null,
+        playerUuidFragment: String? = null,
         privacyMode: DebugDumpPrivacyMode = DebugDumpPrivacyMode.STANDARD,
     ): DebugDumpCapturedSnapshot {
         val normalizedScope = normalizeScope(scope)
+        require(playerUuidFragment == null || normalizedScope in setOf("all", "quest")) {
+            "Filtrul UUID este disponibil doar pentru exporturile cu progresul jucatorilor."
+        }
+        playerUuidFragment?.let(DebugDumpPlayerUuidFilter::requireValid)
         val capturedAt = LocalDateTime.now()
         val dataFolder = plugin.dataFolder.toPath()
         val artifacts = DebugDumpArtifactSet()
@@ -127,20 +131,40 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             .getOrDefault("Bufferul in-memory pentru evenimente API nu este initializat.\n")
         artifacts.addText("recent-api-events.txt", recentApiEvents)
 
-        val capturesStory = normalizedScope == "all" || normalizedScope == "quest" || normalizedScope == "story"
+        val capturesStory = normalizedScope in setOf("all", "world", "quest", "story")
+        val storyReadCapture = if (capturesStory) {
+            DebugDumpStoryText.captureForAsync(plugin, normalizedScope != "world")
+        } else {
+            null
+        }
         return DebugDumpCapturedSnapshot(
             normalizedScope,
-            playerName,
+            playerUuidFragment,
             privacyMode,
             capturedAt,
             dataFolder,
             dataFolder.resolve("debug-dumps"),
             buildRetentionPolicy(),
-            buildRedactionPolicy(privacyMode, playerName),
+            buildRedactionPolicy(privacyMode),
             serverSnapshot,
             artifacts.values(),
             mappingSnapshot,
-            if (capturesStory) DebugDumpStoryText.captureScenarioSnapshots(plugin) else emptyList(),
+            storyReadCapture,
+            if (normalizedScope == "all" || normalizedScope == "quest") {
+                DebugDumpQuestAudit.captureForAsync(plugin, requireNotNull(storyReadCapture).featureScenarios)
+            } else {
+                null
+            },
+            if (normalizedScope == "all" || normalizedScope == "world") {
+                DebugDumpNpcWorldBindingJson.captureForAsync(plugin)
+            } else {
+                null
+            },
+            if (normalizedScope == "all" || normalizedScope == "quest") {
+                DebugDumpProgressionJson.captureForAsync(plugin)
+            } else {
+                null
+            },
         )
     }
 
@@ -210,18 +234,22 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
 
     private fun addDatabaseArtifacts(capture: DebugDumpCapturedSnapshot, artifacts: DebugDumpArtifactSet) {
         val needsStorySnapshot = capture.scope in setOf("all", "world", "quest", "story")
+        val storyCapture = if (needsStorySnapshot) requireNotNull(capture.storyReadCapture) else null
         val story = if (needsStorySnapshot) {
             StoryDatabaseSnapshot(
                 DebugDumpStoryStateJson.buildStoryStatesJson(plugin),
-                DebugDumpStoryEventJson.buildStoryEventsJson(plugin, gson),
-                DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJson(plugin),
+                DebugDumpStoryEventJson.buildStoryEventsJsonFromCapture(plugin, gson, requireNotNull(storyCapture).featureScenarios),
+                DebugDumpStoryProgressionGapJson.buildStoryProgressionGapJsonFromCapture(plugin, requireNotNull(storyCapture).featureScenarios),
             )
         } else {
             null
         }
 
         if (capture.scope == "all" || capture.scope == "world") {
-            val npcBindings = DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJson(plugin)
+            val npcBindings = DebugDumpNpcWorldBindingJson.buildNpcWorldBindingsJsonFromCapture(
+                plugin,
+                requireNotNull(capture.npcWorldBindingCapture),
+            )
             val mappingSnapshot = requireNotNull(capture.mappingSnapshot)
             val storySnapshot = requireNotNull(story)
             mappingSnapshot.add(
@@ -242,10 +270,14 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         }
 
         if (capture.scope == "all" || capture.scope == "quest") {
-            val playerProgressions = DebugDumpProgressionJson.buildPlayerProgressionsJson(plugin, capture.playerFilter)
+            val playerProgressions = DebugDumpProgressionJson.buildPlayerProgressionsJsonFromCapture(
+                plugin,
+                capture.playerFilter,
+                requireNotNull(capture.progressionCapture),
+            )
             val playerQuestProgress = DebugDumpProgressionJson.buildPlayerQuestProgressJson(plugin, capture.playerFilter)
-            val questAnchors = DebugDumpProgressionJson.buildQuestAnchorBindingsJson(plugin)
-            val questAudit = DebugDumpQuestAudit.buildQuestAuditReportText(plugin)
+            val questAnchors = DebugDumpProgressionJson.buildQuestAnchorBindingsJson(plugin, capture.playerFilter)
+            val questAudit = DebugDumpQuestAudit.buildQuestAuditReportText(plugin, requireNotNull(capture.questAuditCapture))
             artifacts.addText(
                 "quest.txt",
                 DebugDumpQuestText.buildQuestText(playerProgressions, playerQuestProgress, questAnchors, questAudit),
@@ -268,7 +300,7 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             artifacts.addText(
                 "story.txt",
                 DebugDumpStoryText.buildCapturedStoryText(
-                    capture.storyScenarios,
+                    requireNotNull(storyCapture).scenarios,
                     storySnapshot.states,
                     storySnapshot.events,
                     storySnapshot.progressionGaps,
@@ -293,15 +325,11 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
             DebugDumpIO.readRecentServerLog(dataFolder, RECENT_LOG_LINES, RECENT_LOG_BYTES)
         )
 
-    private fun buildRedactionPolicy(
-        privacyMode: DebugDumpPrivacyMode,
-        playerName: String?,
-    ): SensitiveDataRedactionPolicy {
+    private fun buildRedactionPolicy(privacyMode: DebugDumpPrivacyMode): SensitiveDataRedactionPolicy {
         if (privacyMode == DebugDumpPrivacyMode.STANDARD) {
             return SensitiveDataRedactionPolicy.secretsOnly()
         }
         val identifiers = buildSet {
-            playerName?.trim()?.takeIf(String::isNotEmpty)?.let(::add)
             runCatching { plugin.server.onlinePlayers.map { it.name } }
                 .getOrDefault(emptyList())
                 .forEach(::add)
@@ -363,7 +391,9 @@ class DebugDumpService(private val plugin: AINPCPlugin) {
         val index = StringBuilder()
         index.append("Debug Dump Index\n")
         index.append("Scope: ${capture.scope}\n")
-        if (capture.playerFilter != null) index.append("Player filter: ${capture.playerFilter}\n")
+        if (capture.playerFilter != null) {
+            index.append("Player UUID fragment filter applied: true (player progression artifacts only)\n")
+        }
         index.append("Privacy mode: ${capture.privacyMode.cliValue}\n")
         index.append("Confidentiality manifest: manifest.json (manual review required)\n")
         index.append("Directory: ${dumpRoot.fileName}\n")

@@ -5,7 +5,6 @@ import com.google.gson.JsonObject
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.database.DatabaseManager
-import ro.ainpc.progression.ProgressionDefinition
 import java.sql.SQLException
 import java.util.LinkedHashMap
 
@@ -14,7 +13,21 @@ import java.util.LinkedHashMap
  */
 object DebugDumpStoryProgressionGapJson {
     @JvmStatic
-    fun buildStoryProgressionGapJson(plugin: AINPCPlugin): JsonObject {
+    fun buildStoryProgressionGapJson(plugin: AINPCPlugin): JsonObject = buildStoryProgressionGapJson(
+        plugin,
+        runCatching { plugin.featurePackLoader.getAllScenarios().toList() }.getOrDefault(emptyList()),
+    )
+
+    @JvmStatic
+    fun buildStoryProgressionGapJson(
+        plugin: AINPCPlugin,
+        scenarios: List<FeaturePackLoader.ScenarioDefinition>,
+    ): JsonObject = buildStoryProgressionGapJsonFromCapture(plugin, DebugDumpStoryFeatureCapture.from(scenarios))
+
+    internal fun buildStoryProgressionGapJsonFromCapture(
+        plugin: AINPCPlugin,
+        scenarios: DebugDumpStoryFeatureCapture,
+    ): JsonObject {
         val root = JsonObject()
         root.addProperty("source_table", "player_quests")
         root.addProperty("story_source_table", "story_events")
@@ -33,7 +46,6 @@ object DebugDumpStoryProgressionGapJson {
         }
 
         root.addProperty("available", true)
-        val scenarioLookup = buildProgressionScenarioLookup(plugin)
         val storyLinkKeys = collectStoryLinkKeys(databaseManager)
         val rows = JsonArray()
         val byStatus = LinkedHashMap<String, Int>()
@@ -53,7 +65,7 @@ object DebugDumpStoryProgressionGapJson {
             databaseManager.prepareStatement(sql).use { statement ->
                 statement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
-                        val row = playerProgressionGapRowJson(resultSet, storyLinkKeys, scenarioLookup)
+                        val row = playerProgressionGapRowJson(resultSet, storyLinkKeys, scenarios)
                         if (row.getAsJsonPrimitive("story_linked").asBoolean) {
                             linkedCount++
                         } else {
@@ -89,7 +101,7 @@ object DebugDumpStoryProgressionGapJson {
     private fun playerProgressionGapRowJson(
         resultSet: java.sql.ResultSet,
         storyLinkKeys: StoryLinkKeys,
-        scenarioLookup: Map<String, FeaturePackLoader.ScenarioDefinition>
+        scenarios: DebugDumpStoryFeatureCapture
     ): JsonObject {
         val templateId = DebugDumpSupport.valueOrEmpty(resultSet.getString("template_id"))
         val questCode = DebugDumpSupport.valueOrEmpty(resultSet.getString("quest_code"))
@@ -118,12 +130,12 @@ object DebugDumpStoryProgressionGapJson {
         matchingKeys.forEach { matchArray.add(it) }
         json.add("story_link_matches", matchArray)
 
-        val scenario = DebugDumpSupport.findScenarioForProgressionRow(templateId, questCode, scenarioLookup)
+        val scenario = scenarios.find(templateId, questCode)
         if (scenario != null) {
             json.addProperty("scenario_pack_id", DebugDumpSupport.valueOrEmpty(scenario.packId))
             json.addProperty("scenario_id", DebugDumpSupport.valueOrEmpty(scenario.id))
             json.addProperty("scenario_name", DebugDumpSupport.valueOrEmpty(scenario.name))
-            json.addProperty("scenario_base_type", scenario.baseType.name)
+            json.addProperty("scenario_base_type", scenario.baseType)
             json.addProperty("scenario_mechanic_id", DebugDumpSupport.valueOrEmpty(scenario.progressionMechanicId))
             json.addProperty("scenario_kind", DebugDumpSupport.valueOrEmpty(scenario.questScenarioKind))
         }
@@ -179,34 +191,6 @@ object DebugDumpStoryProgressionGapJson {
             return
         }
         keys[key] = (keys[key] ?: 0) + 1
-    }
-
-    private fun buildProgressionScenarioLookup(
-        plugin: AINPCPlugin
-    ): Map<String, FeaturePackLoader.ScenarioDefinition> {
-        val loader = runCatching { plugin.featurePackLoader }.getOrNull() ?: return emptyMap()
-        val lookup = LinkedHashMap<String, FeaturePackLoader.ScenarioDefinition>()
-        for (scenario in loader.getAllScenarios()) {
-            if (!ProgressionDefinition.isProgressionCandidate(scenario)) {
-                continue
-            }
-            val definition = ProgressionDefinition.fromScenarioDefinition(scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.templateId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.progressionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.definitionId(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(lookup, definition.code(), scenario)
-            DebugDumpSupport.addScenarioLookupKey(
-                lookup,
-                definition.packId() + ":" + definition.definitionId(),
-                scenario
-            )
-            DebugDumpSupport.addScenarioLookupKey(
-                lookup,
-                definition.packId() + ":" + definition.mechanicId() + ":" + definition.definitionId(),
-                scenario,
-            )
-        }
-        return lookup
     }
 
     private fun progressionSelectorCandidates(playerUuid: String, templateId: String, questCode: String): List<String> {

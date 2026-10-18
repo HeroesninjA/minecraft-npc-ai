@@ -1,6 +1,7 @@
 package ro.ainpc.gui
 
 import org.bukkit.entity.Player
+import java.util.UUID
 
 /**
  * Guiscreen.
@@ -13,4 +14,6 @@ interface GuiScreen {
     fun size(player: Player): Int
 
     fun render(context: GuiRenderContext)
+
+    fun afterOpen(context: GuiRenderContext, sessionId: UUID) = Unit
 }

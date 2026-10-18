@@ -11,5 +11,7 @@ class DebugDumpServiceStoryFileTest {
 
         assertTrue(source.contains("artifacts.addText(\n                \"story.txt\""))
         assertTrue(source.contains("DebugDumpStoryText.buildCapturedStoryText("))
+        assertTrue(source.contains("DebugDumpStoryText.captureForAsync(plugin, normalizedScope != \"world\")"))
+        assertTrue(source.contains("buildStoryEventsJsonFromCapture(plugin, gson, requireNotNull(storyCapture).featureScenarios)"))
     }
 }

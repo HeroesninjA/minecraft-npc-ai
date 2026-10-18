@@ -90,6 +90,36 @@ class ProgressionRepositoryTest {
 
     @Test
     @Throws(Exception::class)
+    fun readsWithCapturedDefinitionsWithoutCallingLiveSupplier() {
+        insertProgression("player-1", "medieval:C01", "C01", "active", "", "", "{}", "{}", 100L, 0L, 150L, false)
+        val repository = ProgressionRepository(connection!!::prepareStatement) {
+            error("Definitiile live nu trebuie accesate pe worker")
+        }
+
+        val rows = repository.findAll(listOf(contractDefinition()))
+
+        assertEquals(1, rows.size)
+        assertEquals("medieval:village_contracts:C01", rows[0].progressionId())
+        assertTrue(rows[0].definitionResolved())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun filtersCapturedProgressionsInSqlWithLiteralUuidFragment() {
+        insertProgression("PLAYER_01", "medieval:C01", "C01", "active", "", "", "{}", "{}", 100L, 0L, 150L, false)
+        insertProgression("PLAYERX01", "medieval:C02", "C02", "active", "", "", "{}", "{}", 100L, 0L, 150L, false)
+        val repository = ProgressionRepository(connection!!::prepareStatement) {
+            error("Definitiile live nu trebuie accesate pe worker")
+        }
+
+        val rows = repository.findAll(listOf(contractDefinition()), " player_01 ")
+
+        assertEquals(listOf("PLAYER_01"), rows.map { it.playerUuid() })
+        assertTrue(rows[0].definitionResolved())
+    }
+
+    @Test
+    @Throws(Exception::class)
     fun usesStableFallbackMetadataWhenDefinitionIsMissing() {
         insertProgression("player-2", "unknown_pack:missing_entry", "", "completed", "", "", "{}", "{}", 100L, 120L, 130L, false)
         val repository = ProgressionRepository(connection!!::prepareStatement) { listOf() }
@@ -101,6 +131,21 @@ class ProgressionRepositoryTest {
         assertFalse(progression.definitionResolved())
         assertTrue(progression.archived())
         assertFalse(progression.current())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun countsOnlyOnePlayersProgressionsWithoutLoadingDefinitions() {
+        insertProgression("player-1", "quest-active", "", "active", "", "", "{}", "{}", 1L, 0L, 1L, false)
+        insertProgression("player-1", "quest-offered", "", "OFFERED", "", "", "{}", "{}", 1L, 0L, 1L, false)
+        insertProgression("player-1", "quest-completed", "", "completed", "", "", "{}", "{}", 1L, 2L, 2L, false)
+        insertProgression("player-1", "quest-other", "", "paused", "", "", "{}", "{}", 1L, 0L, 1L, false)
+        insertProgression("player-2", "quest-failed", "", "failed", "", "", "{}", "{}", 1L, 2L, 2L, false)
+        val repository = ProgressionRepository(connection!!::prepareStatement) { error("Definitions should not be loaded") }
+
+        assertEquals(StoredProgressionCounts(4, 2, 1), repository.countForPlayer("player-1"))
+        assertEquals(StoredProgressionCounts(1, 0, 1), repository.countForPlayer("player-2"))
+        assertEquals(StoredProgressionCounts(0, 0, 0), repository.countForPlayer("missing"))
     }
 
     @Test
