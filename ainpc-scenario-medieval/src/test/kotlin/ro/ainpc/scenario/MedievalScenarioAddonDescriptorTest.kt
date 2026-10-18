@@ -1,6 +1,7 @@
 package ro.ainpc.scenario
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.addons.AddonType
@@ -12,7 +13,7 @@ class MedievalScenarioAddonDescriptorTest {
         val descriptor = MedievalScenarioAddon("test").getDescriptor()
 
         assertEquals(AddonType.SCENARIO, descriptor.type)
-        assertTrue(descriptor.isPrimaryScenario)
+        assertFalse(descriptor.isPrimaryScenario)
         assertTrue(descriptor.capabilities.contains("scenarios"))
     }
 }

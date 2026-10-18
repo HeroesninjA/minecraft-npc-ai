@@ -40,6 +40,7 @@ class DialogueAiIntentClassificationTest {
             assertFalse(classifier.shouldInspectShops(message, "STRANGER", true, true), message)
         }
         assertTrue(classifier.shouldInspectShops("Nu vreau sa cumpar, dar ce vinzi?", "STRANGER", true, true))
+        assertTrue(classifier.shouldInspectShops("Ce inseamna sa cumpar? Dar ce vinzi?", "STRANGER", true, true))
     }
 
     @Test

@@ -53,6 +53,17 @@ class NpcShopFactResolverTest {
     }
 
     @Test
+    fun `direct shop question after meaning question still receives factual answer`() {
+        val message = "Ce inseamna ce vinzi? Dar ce vinzi tu?"
+
+        assertTrue(NpcShopFactResolver.isLookupQuestion(message))
+        assertEquals(NpcShopFactResolver.tradeSummary(listOf(shop)), NpcShopFactResolver.resolve(message, listOf(shop), null))
+        val workplaceMessage = "Buna, ce inseamna magazin? Unde este magazinul tau?"
+        assertTrue(NpcShopFactResolver.requiresWorkPlace(workplaceMessage))
+        assertEquals("Lucrez la Brutaria din sat.", NpcShopFactResolver.resolve(workplaceMessage, listOf(shop), "Brutaria din sat"))
+    }
+
+    @Test
     fun `quoted catalog phrases are not direct shop requests`() {
         for (message in listOf(
             "Maria a zis \"ce vinzi?\"",

@@ -79,6 +79,18 @@ class DialogueIntentSelectorTest {
     }
 
     @Test
+    fun `direct request after meaning question determines the intent`() {
+        assertEquals(
+            DialogueEngine.DialogueIntent.TRADE,
+            DialogueIntentSelector.select("Ce inseamna sa cumpar? Dar vreau sa cumpar.", "STRANGER", false, null),
+        )
+        assertEquals(
+            DialogueEngine.DialogueIntent.HELP,
+            DialogueIntentSelector.select("Ce inseamna ajutor? Ajuta-ma, te rog.", "STRANGER", false, null),
+        )
+    }
+
+    @Test
     fun `farewell intent requires a complete closing utterance`() {
         for (message in listOf("Pa!", "La revedere!", "Pe curand!", "Multumesc, pa!", "Bye!")) {
             assertEquals(DialogueEngine.DialogueIntent.FAREWELL, DialogueIntentSelector.select(message, "STRANGER", false, null), message)

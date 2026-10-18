@@ -41,6 +41,8 @@ Incheierea explicita foloseste `DialogueFarewell`, comun listenerului si clasifi
 
 Formele `Maria, pa!` si `La revedere, Maria!` folosesc rutarea explicita si cer clarificare daca numele este ambiguu. Un ramas-bun inchide numai sesiunea al carei NPC are UUID-ul destinatarului; emite motivul `goodbye`, elimina sesiunea si aplica efectul emotional existent `player_leave`. Mesajul de incheiere primeste replica locala, fara request AI sau salvare in istoricul dialogului. Cand este adresat explicit altui NPC apropiat, acesta raspunde local, iar sesiunea curenta ramane deschisa; nu se emite pentru el un eveniment de inchidere si nu se aplica efectul de plecare. Fara sesiune, un ramas-bun doar auzit pasiv nu incepe o conversatie noua.
 
+O intrebare despre sens nu activeaza domeniul mentionat, dar o cerere distincta dupa `dar`, `insa`, `totusi` sau sfarsitul propozitiei ramane eligibila: `Ce inseamna sa cumpar? Dar ce vinzi?` poate primi catalogul. Virgula singura nu separa o cerere noua.
+
 ### Disponibilitatea interlocutorului
 
 `AbstractPluginListener` verifica disponibilitatea inainte de procesarea chatului sau a clickului si reverifica la livrarea raspunsurilor asincrone, a saluturilor si a erorilor. Jucatorul trebuie sa fie online, NPC-ul capturat trebuie sa fie aceeasi instanta inregistrata in `NPCManager`, entitatea sa fie valida si spawnata, iar cei doi participanti sa fie in aceeasi lume. Livrarea cere suplimentar UUID-ul unei sesiuni neexpirate, asociate acelui NPC. Verificarile entitatii si lumii ruleaza pe threadul principal, nu in callbackul de lucru asincron. Nu se calculeaza distante intre lumi diferite.

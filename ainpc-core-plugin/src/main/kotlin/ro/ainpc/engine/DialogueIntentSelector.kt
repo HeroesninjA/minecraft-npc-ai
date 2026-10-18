@@ -26,7 +26,6 @@ internal object DialogueIntentSelector {
         npcAliases: List<String> = emptyList(),
     ): DialogueEngine.DialogueIntent {
         val normalized = DialogueMessageText.normalize(message)
-        if (DialogueMessageText.isMeaningQuestion(message)) return DialogueEngine.DialogueIntent.QUESTION
         val directText = DialogueMessageText.directIntentText(message)
         val directRequests = negatedRequests.fold(directText) { remaining, pattern -> pattern.replace(remaining, " ") }
 

@@ -30,7 +30,7 @@ internal object DialogueMessageText {
 
     fun directIntentText(message: String): String {
         val unquoted = unquotedText(message)
-        val lead = reportedLead.find(unquoted) ?: return unquoted
+        val lead = reportedLead.find(unquoted) ?: meaningQuestion.find(unquoted) ?: return unquoted
         val continuation = reportedContinuation.find(unquoted, lead.range.last + 1) ?: return ""
         return unquoted.substring(continuation.range.last + 1).trim()
     }

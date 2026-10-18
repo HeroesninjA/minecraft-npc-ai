@@ -7,13 +7,12 @@ internal object NpcShopFactResolver {
     fun hasListedGoods(shops: List<NpcShopDefinition>): Boolean = listedGoods(shops).isNotEmpty()
 
     fun isLookupQuestion(message: String): Boolean {
-        if (DialogueMessageText.isMeaningQuestion(message)) return false
         val normalized = DialogueMessageText.directIntentText(message)
         return isCatalogQuestion(normalized) || isLocationQuestion(normalized)
     }
 
     fun requiresWorkPlace(message: String): Boolean =
-        !DialogueMessageText.isMeaningQuestion(message) && isLocationQuestion(DialogueMessageText.directIntentText(message))
+        isLocationQuestion(DialogueMessageText.directIntentText(message))
 
     fun resolve(
         message: String,
@@ -21,7 +20,6 @@ internal object NpcShopFactResolver {
         workPlaceName: String?,
         accessDenied: Boolean = false,
     ): String? {
-        if (DialogueMessageText.isMeaningQuestion(message)) return null
         val normalized = DialogueMessageText.directIntentText(message)
         if (isCatalogQuestion(normalized)) {
             return tradeSummary(shops, accessDenied)
