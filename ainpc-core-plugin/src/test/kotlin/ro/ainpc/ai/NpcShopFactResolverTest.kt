@@ -69,6 +69,22 @@ class NpcShopFactResolverTest {
     }
 
     @Test
+    fun `reported catalog questions do not receive catalog answers`() {
+        for (message in listOf(
+            "Maria a intrebat ce vinzi?",
+            "A zis ce vinzi?",
+            "Am auzit ca ce ai de vanzare e secret.",
+            "Mi-a spus ca unde este magazinul ramane neclar.",
+        )) {
+            assertFalse(NpcShopFactResolver.isLookupQuestion(message), message)
+            assertNull(NpcShopFactResolver.resolve(message, listOf(shop), "Brutaria din sat"), message)
+        }
+        val directQuestion = "Maria a intrebat ce vinzi; dar ce vinzi tu?"
+        assertTrue(NpcShopFactResolver.isLookupQuestion(directQuestion))
+        assertEquals(NpcShopFactResolver.tradeSummary(listOf(shop)), NpcShopFactResolver.resolve(directQuestion, listOf(shop), null))
+    }
+
+    @Test
     fun `workplace answer requires a mapped place`() {
         assertEquals(
             "Lucrez la Brutaria din sat.",

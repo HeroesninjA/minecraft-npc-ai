@@ -19,6 +19,17 @@ class DialogueAiIntentClassificationTest {
     }
 
     @Test
+    fun reportedDomainPhrasesDoNotTriggerCommercialClassificationOrPrefetch() {
+        val message = "Maria a intrebat ce vinzi?"
+        val localIntent = DialogueIntentSelector.select(message, "STRANGER", true, null)
+
+        assertFalse(DialogueAiIntentClassification.shouldClassify(localIntent, message, false))
+        assertFalse(DialogueAiIntentClassification.shouldInspectShops(message, "STRANGER", true, true))
+        assertFalse(DialogueAiIntentClassification.shouldPrefetchDomainContext(message, "STRANGER", true, true))
+        assertTrue(DialogueAiIntentClassification.shouldInspectShops("Maria a intrebat ce vinzi; dar ce vinzi tu?", "STRANGER", true, true))
+    }
+
+    @Test
     fun rejectedRequestsAndMeaningQuestionsDoNotBecomeCommercialAiIntents() {
         val classifier = DialogueAiIntentClassification
 

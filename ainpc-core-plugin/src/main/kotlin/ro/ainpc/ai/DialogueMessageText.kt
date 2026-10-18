@@ -8,6 +8,11 @@ internal object DialogueMessageText {
         "^(?:(?:salut|hei|noroc|servus|buna(?: ziua| seara| dimineata)?)[,!?.]?\\s+)?(?:ce inseamna|ce vrea sa spuna)\\b"
     )
     private val quotedSpan = Regex("\"[^\"]*\"|„[^“”]*[“”]|“[^”]*”|«[^»]*»|'[^']*'")
+    private val reportedLead = Regex(
+        "^(?:am auzit(?: ca)?|(?:am|ai|a|au|mi-a|mi-ai) (?:spus|zis|intrebat)|" +
+            "[\\p{L}][\\p{L}\\p{N}_-]{0,39} (?:a|au) (?:spus|zis|intrebat))\\b"
+    )
+    private val reportedContinuation = Regex("\\b(?:dar|insa|totusi)\\b|[.;!?]")
 
     fun normalize(message: String): String = Normalizer.normalize(message, Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "")
@@ -20,6 +25,15 @@ internal object DialogueMessageText {
     fun hasQuotedSpan(message: String): Boolean = quotedSpan.containsMatchIn(message)
 
     fun unquotedText(message: String): String = normalize(quotedSpan.replace(message, " "))
+
+    fun hasReportedLead(message: String): Boolean = reportedLead.containsMatchIn(unquotedText(message))
+
+    fun directIntentText(message: String): String {
+        val unquoted = unquotedText(message)
+        val lead = reportedLead.find(unquoted) ?: return unquoted
+        val continuation = reportedContinuation.find(unquoted, lead.range.last + 1) ?: return ""
+        return unquoted.substring(continuation.range.last + 1).trim()
+    }
 
     fun matches(text: String, vararg phrases: String): Boolean = phrases.any { phrase ->
         Regex("(?<![\\p{L}\\p{N}])${Regex.escape(phrase)}(?![\\p{L}\\p{N}])").containsMatchIn(text)

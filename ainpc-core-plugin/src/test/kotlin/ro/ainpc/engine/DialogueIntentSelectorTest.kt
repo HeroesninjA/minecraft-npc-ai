@@ -21,6 +21,26 @@ class DialogueIntentSelectorTest {
     }
 
     @Test
+    fun `reported keywords do not become direct dialogue intents`() {
+        for (message in listOf(
+            "Maria a zis ca vinde sabii.",
+            "Am auzit ca Maria are nevoie de ajutor.",
+            "Mi-a spus ca misiunea s-a terminat.",
+            "Am zis ca vreau sa cumpar.",
+        )) {
+            assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)
+        }
+        assertEquals(
+            DialogueEngine.DialogueIntent.TRADE,
+            DialogueIntentSelector.select("Maria a zis ca vinde sabii; dar eu vreau sa cumpar.", "STRANGER", false, null),
+        )
+        assertEquals(
+            DialogueEngine.DialogueIntent.QUESTION,
+            DialogueIntentSelector.select("Ai spus ca vinzi sabii?", "STRANGER", false, null),
+        )
+    }
+
+    @Test
     fun `negated requests do not start trade or help dialogue`() {
         for (message in listOf("Nu vreau sa cumpar.", "Nu cumpăr nimic.", "Nu doresc să vând.")) {
             assertEquals(DialogueEngine.DialogueIntent.CONVERSATION, DialogueIntentSelector.select(message, "STRANGER", false, null), message)

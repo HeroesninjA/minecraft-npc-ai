@@ -8,12 +8,12 @@ internal object NpcShopFactResolver {
 
     fun isLookupQuestion(message: String): Boolean {
         if (DialogueMessageText.isMeaningQuestion(message)) return false
-        val normalized = DialogueMessageText.unquotedText(message)
+        val normalized = DialogueMessageText.directIntentText(message)
         return isCatalogQuestion(normalized) || isLocationQuestion(normalized)
     }
 
     fun requiresWorkPlace(message: String): Boolean =
-        !DialogueMessageText.isMeaningQuestion(message) && isLocationQuestion(DialogueMessageText.unquotedText(message))
+        !DialogueMessageText.isMeaningQuestion(message) && isLocationQuestion(DialogueMessageText.directIntentText(message))
 
     fun resolve(
         message: String,
@@ -22,7 +22,7 @@ internal object NpcShopFactResolver {
         accessDenied: Boolean = false,
     ): String? {
         if (DialogueMessageText.isMeaningQuestion(message)) return null
-        val normalized = DialogueMessageText.unquotedText(message)
+        val normalized = DialogueMessageText.directIntentText(message)
         if (isCatalogQuestion(normalized)) {
             return tradeSummary(shops, accessDenied)
         }

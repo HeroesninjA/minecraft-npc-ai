@@ -52,6 +52,7 @@ internal object DialogueAiIntentClassification {
         !contextualAiNeeded &&
             !referencesConversation(playerMessage) &&
             !DialogueMessageText.hasQuotedSpan(playerMessage) &&
+            !DialogueMessageText.hasReportedLead(playerMessage) &&
             !DialogueIntentSelector.hasExplicitNegatedRequestOrMeaningQuestion(playerMessage) &&
             deterministicIntent in setOf(
                 DialogueEngine.DialogueIntent.QUESTION,

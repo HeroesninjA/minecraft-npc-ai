@@ -27,10 +27,10 @@ internal object DialogueIntentSelector {
     ): DialogueEngine.DialogueIntent {
         val normalized = DialogueMessageText.normalize(message)
         if (DialogueMessageText.isMeaningQuestion(message)) return DialogueEngine.DialogueIntent.QUESTION
-        val unquoted = DialogueMessageText.unquotedText(message)
-        val directRequests = negatedRequests.fold(unquoted) { remaining, pattern -> pattern.replace(remaining, " ") }
+        val directText = DialogueMessageText.directIntentText(message)
+        val directRequests = negatedRequests.fold(directText) { remaining, pattern -> pattern.replace(remaining, " ") }
 
-        if (matches(unquoted, "telefon", "internet", "computer", "masina", "avion", "televizor",
+        if (matches(directText, "telefon", "internet", "computer", "masina", "avion", "televizor",
                 "electricitate", "bitcoin", "social media", "facebook", "instagram", "email",
                 "website", "app", "aplicatie", "program", "software")) {
             return if (hasOccupation) DialogueEngine.DialogueIntent.CONFUSED_PROFESSIONAL
@@ -39,12 +39,12 @@ internal object DialogueIntentSelector {
         if (DialogueFarewell.isFarewell(message, npcAliases)) return DialogueEngine.DialogueIntent.FAREWELL
         if (matches(directRequests, "cumpar", "cumpara", "vinde", "vanzare", "pret", "pretul", "preturi", "comert", "marfa", "afaceri")) return DialogueEngine.DialogueIntent.TRADE
         if (matches(directRequests, "ajutor", "ajuta", "ajuti", "nevoie")) return DialogueEngine.DialogueIntent.HELP
-        if (matches(unquoted, "multumesc", "mersi", "apreciez")) return DialogueEngine.DialogueIntent.THANK
-        if (matches(unquoted, "familie", "copii", "sot", "sotie", "parinti")) return DialogueEngine.DialogueIntent.FAMILY_TALK
-        if (matches(unquoted, "munca", "meserie", "job", "profesie")) return DialogueEngine.DialogueIntent.WORK_TALK
-        if (matches(unquoted, "poveste", "povesteste", "intamplat")) return DialogueEngine.DialogueIntent.STORY
-        if (matches(unquoted, "ai auzit", "zvon", "barfa")) return DialogueEngine.DialogueIntent.GOSSIP
-        if (matches(unquoted, "misiune", "quest", "sarcina")) return DialogueEngine.DialogueIntent.QUEST_OFFER
+        if (matches(directText, "multumesc", "mersi", "apreciez")) return DialogueEngine.DialogueIntent.THANK
+        if (matches(directText, "familie", "copii", "sot", "sotie", "parinti")) return DialogueEngine.DialogueIntent.FAMILY_TALK
+        if (matches(directText, "munca", "meserie", "job", "profesie")) return DialogueEngine.DialogueIntent.WORK_TALK
+        if (matches(directText, "poveste", "povesteste", "intamplat")) return DialogueEngine.DialogueIntent.STORY
+        if (matches(directText, "ai auzit", "zvon", "barfa")) return DialogueEngine.DialogueIntent.GOSSIP
+        if (matches(directText, "misiune", "quest", "sarcina")) return DialogueEngine.DialogueIntent.QUEST_OFFER
 
         if (DialogueMessageText.isSimpleGreeting(normalized)) {
             return when (recognition?.familiarity) {
