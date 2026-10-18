@@ -22,39 +22,53 @@ import kotlin.math.roundToInt
  * Decisionengine.
  */
 class DecisionEngine(private val plugin: AINPCPlugin) {
-    private val scoreCache: MutableMap<UUID, MutableMap<NPCAction, Int>> = ConcurrentHashMap()
-    private val lastDecisionTime: MutableMap<UUID, Long> = ConcurrentHashMap()
-    private val cacheTimestamp: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private data class CachedDecision(
+        val action: NPCAction,
+        val state: NPCState,
+        val inDanger: Boolean,
+        val timestamp: Long,
+    )
+
+    private val decisionCache: MutableMap<UUID, CachedDecision> = ConcurrentHashMap()
 
     fun decideAction(npc: AINPC, context: NPCContext): NPCAction {
         val now = System.currentTimeMillis()
-        evictIfNeeded(now)
-        val lastTime = lastDecisionTime[npc.uuid]
-        if (lastTime != null && now - lastTime < DECISION_COOLDOWN) {
-            val timestamp = cacheTimestamp[npc.uuid]
-            if (timestamp != null && now - timestamp < CACHE_TTL_MS) {
-                val cached = scoreCache[npc.uuid]
-                if (!cached.isNullOrEmpty()) {
-                    return getHighestScoringAction(cached)
-                }
-            }
-            return NPCAction.DO_NOTHING
+        val cached = decisionCache[npc.uuid]
+        val situation = actionSituation(npc, context)
+        if (cached != null && now - cached.timestamp in 0 until DECISION_COOLDOWN &&
+            cached.state == npc.currentState && cached.inDanger == context.isInDanger &&
+            ActionEligibility.permits(cached.action, situation)
+        ) {
+            return cached.action
         }
+        if (cached == null) evictIfNeeded(now)
 
-        lastDecisionTime[npc.uuid] = now
-        val scores = calculateAllScores(npc, context)
-        scoreCache[npc.uuid] = scores
-        cacheTimestamp[npc.uuid] = now
-        val bestAction = getHighestScoringAction(scores)
-        plugin.debug("NPC ${npc.name} decide: ${bestAction.displayName} (scor: ${scores[bestAction]})")
-        return bestAction
+        val scores = calculateAllScores(npc, context, situation)
+        val probabilistic = ActionProbabilitySelector.isEnabledFor(
+            npc.currentState,
+            context.isInDanger,
+            plugin.config.getBoolean("simulation.decision.probabilistic_enabled", true),
+        )
+        val previousAction = cached?.takeIf { now - it.timestamp in 0 until REPETITION_WINDOW_MS }?.action
+        val probabilities = if (probabilistic) {
+            ActionProbabilitySelector.probabilities(scores, previousAction, ActionProbabilitySettings.fromConfig(plugin.config))
+        } else null
+        val action = if (probabilities == null) getHighestScoringAction(scores)
+            else ActionProbabilitySelector.select(probabilities, ThreadLocalRandom.current().nextDouble())
+        decisionCache[npc.uuid] = CachedDecision(action, npc.currentState, context.isInDanger, now)
+        val chancePercent = ((probabilities?.get(action) ?: 1.0) * 100).roundToInt()
+        plugin.debug("NPC ${npc.name} decide: ${action.displayName} (scor: ${scores[action]}, probabilitate: $chancePercent%)")
+        return action
     }
 
     private fun evictIfNeeded(now: Long) {
-        if (scoreCache.size > MAX_CACHE_SIZE) {
+        if (decisionCache.size >= MAX_CACHE_SIZE) {
             val cutoff = now - CACHE_TTL_MS
-            val stale = scoreCache.keys.filter { (cacheTimestamp[it] ?: 0) < cutoff }
-            stale.forEach { removeNpcFromCache(it) }
+            val stale = decisionCache.entries.filter { it.value.timestamp < cutoff }
+            stale.forEach { decisionCache.remove(it.key, it.value) }
+            if (decisionCache.size >= MAX_CACHE_SIZE) {
+                decisionCache.entries.minByOrNull { it.value.timestamp }?.let { decisionCache.remove(it.key, it.value) }
+            }
         }
     }
 
@@ -84,14 +98,28 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         context.syncSimulationState(location.location)
     }
 
-    private fun calculateAllScores(npc: AINPC, context: NPCContext): MutableMap<NPCAction, Int> {
+    private fun calculateAllScores(
+        npc: AINPC,
+        context: NPCContext,
+        situation: ActionSituation = actionSituation(npc, context),
+    ): MutableMap<NPCAction, Int> {
         val scores: MutableMap<NPCAction, Int> = EnumMap(NPCAction::class.java)
-        val possibleActions = filterActionsByState(npc.currentState)
+        val possibleActions = eligibleActions(npc.currentState, context.isInDanger, situation)
         for (action in possibleActions) {
             scores[action] = calculateActionScore(npc, context, action)
         }
         return scores
     }
+
+    private fun actionSituation(npc: AINPC, context: NPCContext): ActionSituation = ActionSituation(
+        hasSocialTarget = context.interactingPlayer != null || context.interactingNPC != null ||
+            context.nearbyPlayers.isNotEmpty() || context.nearbyNPCs.isNotEmpty(),
+        hasWorkplace = context.isAtWork || npc.workAnchor != null,
+        hasSocialDestination = context.isAtSocialSpot || npc.socialAnchor != null,
+        isAtHome = context.isAtHome,
+        hungerLevel = context.hungerLevel,
+        energyLevel = context.energyLevel,
+    )
 
     private fun calculateActionScore(npc: AINPC, context: NPCContext, action: NPCAction): Int {
         var score = action.baseScore
@@ -101,7 +129,6 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         score += getContextModifier(context, action)
         score += getNeedModifier(context, action)
         score += getRoutineModifier(npc, context, action)
-        score += ThreadLocalRandom.current().nextInt(11)
         return max(0, score)
     }
 
@@ -257,26 +284,6 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun filterActionsByState(state: NPCState): List<NPCAction> {
-        val actions = mutableListOf(NPCAction.DO_NOTHING)
-        when (state) {
-            NPCState.IDLE -> actions.addAll(listOf(
-                NPCAction.WALK_RANDOM, NPCAction.OBSERVE, NPCAction.GREET,
-                NPCAction.START_WORK, NPCAction.SOCIALIZE, NPCAction.REST, NPCAction.INVESTIGATE
-            ))
-            NPCState.TALKING -> actions.addAll(listOf(
-                NPCAction.TALK, NPCAction.LISTEN, NPCAction.THANK,
-                NPCAction.TELL_STORY, NPCAction.SHARE_NEWS, NPCAction.GOSSIP,
-                NPCAction.COMPLIMENT, NPCAction.ARGUE, NPCAction.APOLOGIZE
-            ))
-            NPCState.WORKING -> actions.addAll(listOf(NPCAction.CONTINUE_WORK, NPCAction.FINISH_WORK, NPCAction.CRAFT, NPCAction.REST))
-            NPCState.COMBAT -> actions.addAll(listOf(NPCAction.ATTACK, NPCAction.DEFEND, NPCAction.FLEE, NPCAction.CALL_HELP, NPCAction.SURRENDER))
-            NPCState.FLEEING -> actions.addAll(listOf(NPCAction.FLEE, NPCAction.HIDE, NPCAction.CALL_HELP))
-            else -> actions.addAll(listOf(NPCAction.WALK_RANDOM, NPCAction.OBSERVE, NPCAction.TALK, NPCAction.REST))
-        }
-        return actions
-    }
-
     private fun getHighestScoringAction(scores: Map<NPCAction, Int>): NPCAction =
         scores.maxByOrNull { it.value }?.key ?: NPCAction.DO_NOTHING
 
@@ -302,35 +309,38 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         val comfortDecay = plugin.config.getDouble("simulation.needs.comfort_decay", 0.6) * tickFactor
         val safetyRecovery = plugin.config.getDouble("simulation.needs.safety_recovery", 1.0) * tickFactor
 
-        npc.hungerLevel = npc.hungerLevel - (hungerDecay + if (npc.currentState.isWorkState()) 0.7 else 0.0).roundToInt()
+        npc.hungerLevel = nextHungerLevel(
+            npc.hungerLevel, npc.currentState, context.isAtHome, hungerDecay, tickFactor,
+        )
 
         if (npc.currentState == NPCState.SLEEPING) {
-            npc.energyLevel = npc.energyLevel + (3.5 * tickFactor).roundToInt()
+            npc.energyLevel = (npc.energyLevel + (3.5 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else if (npc.currentState == NPCState.RESTING || context.isAtHome) {
-            npc.energyLevel = npc.energyLevel + (1.6 * tickFactor).roundToInt()
+            npc.energyLevel = (npc.energyLevel + (1.6 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else {
-            npc.energyLevel = npc.energyLevel - (energyDecay + if (context.isAtWork) 0.5 else 0.0).roundToInt()
+            npc.energyLevel = (npc.energyLevel - (energyDecay + if (context.isAtWork) 0.5 else 0.0).roundToInt())
+                .coerceIn(0, 100)
         }
 
         if (context.interactingPlayer != null || context.isFriendsNearby || npc.currentState.isSocialState()) {
-            npc.socialNeedLevel = npc.socialNeedLevel + (2.4 * tickFactor).roundToInt()
+            npc.socialNeedLevel = (npc.socialNeedLevel + (2.4 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else {
-            npc.socialNeedLevel = npc.socialNeedLevel - socialDecay.roundToInt()
+            npc.socialNeedLevel = (npc.socialNeedLevel - socialDecay.roundToInt()).coerceIn(0, 100)
         }
 
         if (context.isAtHome || context.isIndoors) {
-            npc.comfortLevel = npc.comfortLevel + (1.8 * tickFactor).roundToInt()
+            npc.comfortLevel = (npc.comfortLevel + (1.8 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else {
             val weatherPenalty = if ("RAIN" == context.weather || "THUNDER" == context.weather) 1.2 else 0.0
-            npc.comfortLevel = npc.comfortLevel - (comfortDecay + weatherPenalty).roundToInt()
+            npc.comfortLevel = (npc.comfortLevel - (comfortDecay + weatherPenalty).roundToInt()).coerceIn(0, 100)
         }
 
         if (context.isInDanger) {
-            npc.safetyLevel = npc.safetyLevel - (4.0 * tickFactor).roundToInt()
+            npc.safetyLevel = (npc.safetyLevel - (4.0 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else if (context.isAtHome) {
-            npc.safetyLevel = npc.safetyLevel + (1.8 * tickFactor).roundToInt()
+            npc.safetyLevel = (npc.safetyLevel + (1.8 * tickFactor).roundToInt()).coerceIn(0, 100)
         } else {
-            npc.safetyLevel = npc.safetyLevel + safetyRecovery.roundToInt()
+            npc.safetyLevel = (npc.safetyLevel + safetyRecovery.roundToInt()).coerceIn(0, 100)
         }
     }
 
@@ -426,21 +436,63 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     }
 
     fun removeNpcFromCache(uuid: UUID) {
-        scoreCache.remove(uuid)
-        lastDecisionTime.remove(uuid)
-        cacheTimestamp.remove(uuid)
+        decisionCache.remove(uuid)
     }
 
     fun clearCache() {
-        scoreCache.clear()
-        lastDecisionTime.clear()
-        cacheTimestamp.clear()
+        decisionCache.clear()
     }
 
     private enum class RoutineFocus { WORK, REST, SOCIAL, GUARD, OBSERVE, IDLE }
 
     companion object {
+        internal fun eligibleActions(state: NPCState, inDanger: Boolean, situation: ActionSituation): List<NPCAction> {
+            val actions = candidateActions(state, inDanger).toMutableList()
+            if (!inDanger && !state.isDangerState() && state != NPCState.TALKING) {
+                actions.add(NPCAction.EAT)
+                actions.add(NPCAction.SLEEP)
+            }
+            return actions.filter { ActionEligibility.permits(it, situation) }
+        }
+
+        internal fun nextHungerLevel(
+            current: Int,
+            state: NPCState,
+            isAtHome: Boolean,
+            hungerDecay: Double,
+            tickFactor: Double,
+        ): Int = if (state == NPCState.EATING && isAtHome) {
+            (current + (8.0 * tickFactor).roundToInt()).coerceIn(0, 100)
+        } else {
+            (current - (hungerDecay + if (state.isWorkState()) 0.7 else 0.0).roundToInt()).coerceIn(0, 100)
+        }
+
+        internal fun candidateActions(state: NPCState, inDanger: Boolean): List<NPCAction> {
+            val actions = mutableListOf(NPCAction.DO_NOTHING)
+            when (state) {
+                NPCState.IDLE -> actions.addAll(listOf(
+                    NPCAction.WALK_RANDOM, NPCAction.OBSERVE, NPCAction.GREET,
+                    NPCAction.START_WORK, NPCAction.SOCIALIZE, NPCAction.REST, NPCAction.INVESTIGATE
+                ))
+                NPCState.TALKING -> actions.addAll(listOf(
+                    NPCAction.TALK, NPCAction.LISTEN, NPCAction.THANK,
+                    NPCAction.TELL_STORY, NPCAction.SHARE_NEWS, NPCAction.GOSSIP,
+                    NPCAction.COMPLIMENT, NPCAction.ARGUE, NPCAction.APOLOGIZE
+                ))
+                NPCState.WORKING -> actions.addAll(listOf(NPCAction.CONTINUE_WORK, NPCAction.FINISH_WORK, NPCAction.CRAFT, NPCAction.REST))
+                NPCState.COMBAT -> actions.addAll(listOf(NPCAction.ATTACK, NPCAction.DEFEND, NPCAction.FLEE, NPCAction.CALL_HELP, NPCAction.SURRENDER))
+                NPCState.FLEEING -> actions.addAll(listOf(NPCAction.FLEE, NPCAction.HIDE, NPCAction.CALL_HELP))
+                else -> actions.addAll(listOf(NPCAction.WALK_RANDOM, NPCAction.OBSERVE, NPCAction.TALK, NPCAction.REST))
+            }
+            if (inDanger) {
+                if (NPCAction.FLEE !in actions) actions.add(NPCAction.FLEE)
+                if (NPCAction.CALL_HELP !in actions) actions.add(NPCAction.CALL_HELP)
+            }
+            return actions
+        }
+
         private const val DECISION_COOLDOWN: Long = 1000
+        private const val REPETITION_WINDOW_MS: Long = 90_000
         private const val CACHE_TTL_MS: Long = 300_000
         private const val MAX_CACHE_SIZE: Int = 500
     }

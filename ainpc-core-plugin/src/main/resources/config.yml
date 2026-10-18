@@ -231,6 +231,15 @@ simulation:
   enabled: false
   # La cate secunde ruleaza un tick de simulare.
   tick_seconds: 30
+  decision:
+    # Alege ponderat dintre actiunile apropiate ca scor; pericolul si combatul raman deterministe.
+    probabilistic_enabled: true
+    # Cel mult cate actiuni intra in distributie (1-8).
+    max_choices: 3
+    # Diferenta maxima fata de cel mai bun scor (0-100).
+    score_window: 15
+    # Valori mai mari apropie sansele actiunilor eligibile (0.5-50).
+    temperature: 8.0
   needs:
     # Cu cat scaderea este mai mare, cu atat NPC-urile simt mai repede nevoia respectiva.
     hunger_decay: 1.5

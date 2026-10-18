@@ -10,6 +10,7 @@ import ro.ainpc.api.events.npc.AINPCRoutineChangedEvent
 import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryStateViewResolver
@@ -69,6 +70,8 @@ class RoutineService(private val plugin: AINPCPlugin) {
         val naturalMovementSpeed = maxOf(0.1, plugin.config.getDouble(ConfigKeys.ROUTINE_NATURAL_SPEED, 1.0))
         val moveCooldownMillis = maxOf(0L, plugin.config.getLong(ConfigKeys.ROUTINE_MOVE_COOLDOWN, 300L)) * 1000L
         val teleportEnabled = plugin.config.getBoolean(ConfigKeys.ROUTINE_TELEPORT_ENABLED, true)
+        val fullSimulationEnabled = plugin.config.getBoolean("features.simulation", false) &&
+            plugin.config.getBoolean("simulation.enabled", false)
         val now = System.currentTimeMillis()
         pruneStoryStateCache(now)
         val allNpcs = plugin.npcManager.getAllNPCs().toList()
@@ -122,6 +125,19 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 }
             }
 
+            val npcFullSimulationEnabled = fullSimulationEnabled && npc.simulationMode == NpcSimulationMode.FULL
+            if (shouldDeferForSelfCare(
+                    npc.currentState,
+                    npc.hungerLevel,
+                    npc.energyLevel,
+                    npcFullSimulationEnabled,
+                    npc.homeAnchor?.isNear(npc.location, 5.5) == true,
+                )
+            ) {
+                skippedBusy++
+                continue
+            }
+
             val currentLocation = npc.location
             if (currentLocation == null || currentLocation.world == null) {
                 npc.currentGoal = "pozitia NPC nu este disponibila ori valida"
@@ -140,7 +156,16 @@ class RoutineService(private val plugin: AINPCPlugin) {
             }
             val previousActivity = npc.plannedRoutineActivity
             prepareRoutineContext(npc, currentLocation, now)
-            val assignment = routineEngine.assign(npc, currentWorld.time)
+            val selfCareAssignment = RoutineSelfCarePolicy.assignment(
+                npc.homeAnchor,
+                npc.hungerLevel,
+                npc.energyLevel,
+                npcFullSimulationEnabled,
+                npc.context.isInDanger || npc.currentState.isDangerState(),
+            )
+            val assignment = selfCareAssignment ?: routineEngine.assign(npc, currentWorld.time)
+            val assignmentArrivalRadius = if (selfCareAssignment == null) arrivalRadius
+                else RoutineSelfCarePolicy.arrivalRadius(arrivalRadius)
             evaluated++
             val npcId = npc.uuid
             val previousSlot = if (npcId != null) lastRoutineSlots.put(npcId, assignment.slot()) else null
@@ -149,11 +174,11 @@ class RoutineService(private val plugin: AINPCPlugin) {
             val slotChanged = previousSlot == null || previousSlot != assignment.slot()
             val cooldownElapsed = npcId == null || now - lastRoutineMoveAt.getOrDefault(npcId, 0L) >= moveCooldownMillis
             val outcome = activityExecutor.execute(
-                npc, assignment, arrivalRadius,
+                npc, assignment, assignmentArrivalRadius,
                 moveNaturally = { target ->
                     naturalMovementEnabled && currentWorld == target.world &&
                         currentLocation.distanceSquared(target) <= naturalMovementMaxDistance * naturalMovementMaxDistance &&
-                        tryMoveNaturally(npc, target, naturalMovementSpeed, arrivalRadius)
+                        tryMoveNaturally(npc, target, naturalMovementSpeed, assignmentArrivalRadius)
                 },
                 teleport = { target ->
                     val sameWorld = currentWorld == target.world
@@ -251,6 +276,20 @@ class RoutineService(private val plugin: AINPCPlugin) {
 
     private fun isBusy(state: NPCState): Boolean {
         return RoutineActivityExecutor.isBusy(state)
+    }
+
+    companion object {
+        internal fun shouldDeferForSelfCare(
+            state: NPCState,
+            hungerLevel: Int,
+            energyLevel: Int,
+            fullSimulationEnabled: Boolean,
+            isAtHome: Boolean,
+        ): Boolean = fullSimulationEnabled && isAtHome && when (state) {
+            NPCState.EATING -> hungerLevel < 35
+            NPCState.SLEEPING -> energyLevel < 35
+            else -> false
+        }
     }
 
     private fun tryMoveNaturally(npc: AINPC, target: Location, speed: Double, arrivalRadius: Double): Boolean {

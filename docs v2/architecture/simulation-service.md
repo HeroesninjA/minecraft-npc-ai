@@ -1,7 +1,7 @@
 # Runtime de simulare NPC
 
 Status: contract verificat in cod.
-Actualizat: 2026-07-16.
+Actualizat: 2026-10-18.
 
 Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ramane pentru compatibilitate, iar implementarea reala este distribuita intre doua fluxuri independente: simularea nevoilor si rutina cu miscare.
 
@@ -11,8 +11,8 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 
 - proceseaza numai NPC-urile spawnate;
 - actualizeaza `NPCContext` din lume si activitatea planificata;
-- ajusteaza hunger, energy, social, comfort si safety dupa timpul real scurs;
-- alege o actiune prin scor, actualizeaza fortat starea prin `changeStateFromSimulation` si apoi `currentGoal`;
+- ajusteaza hunger, energy, social, comfort si safety dupa timpul real scurs, limitand rezultatele la 0-100; masa simulata acasa poate recupera satietatea la tick-ul urmator;
+- calculeaza scoruri contextuale si alege ponderat dintre actiunile apropiate ca scor, cu alegere determinista pentru pericol, combat si conversatie; actualizeaza fortat starea prin `changeStateFromSimulation` si apoi `currentGoal`;
 - publica `AINPCAddon.onNpcStateChange` numai daca starea rezultata este diferita;
 - nu muta entitatea si nu scrie quest, story sau economie.
 
@@ -20,8 +20,8 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 
 `SchedulerCoordinator -> RoutineCoordinator.tick() -> RoutineService.runRoutineTick()`:
 
-- proceseaza numai NPC-urile spawnate si sare peste starile ocupate;
-- rezolva profilul, fereastra orara, slotul si ancora prin `RoutineEngine`;
+- proceseaza numai NPC-urile spawnate si sare peste starile ocupate; pentru NPC-uri in simulare completa, prioritizeaza intoarcerea la ancora casei cand foamea sau oboseala scade sub 35 si lasa masa sau somnul sa continue acasa pana la recuperare;
+- in afara prioritatilor de ingrijire, rezolva profilul, fereastra orara, slotul si ancora prin `RoutineEngine`;
 - actualizeaza activitatea, goal-ul si starea prin `AINPC.changeState` cu regulile de prioritate;
 - incearca intai pathfinding Paper direct spre ancora, apoi teleport configurabil;
 - emite `AINPCRoutineChangedEvent` cand activitatea se schimba.
@@ -42,8 +42,9 @@ Rutina este singurul dintre cele doua fluxuri care deplaseaza NPC-ul. Nu exista 
 
 - nu exista sumar comun pentru cele doua fluxuri;
 - simularea nu emite semnale regionale pentru quest sau story;
-- `RoutineCoordinator` contine API-uri de pause si override, dar tick-ul nu le consulta;
-- `NpcSimulationMode` nu filtreaza tick-ul de simulare;
+- navigatia spre casa pentru nevoi cere simultan simulare `FULL`, rutina activa si o ancora de casa; nu porneste in pericol, iar o pauza sau un override explicit al rutinei are prioritate;
+- `RoutineService` respecta pauzele si override-urile din `RoutineCoordinator`; override-ul se aplica doar cat timp este valid si nu poate teleporta NPC-ul;
+- `NpcSimulationMode.NONE` exclude NPC-ul, iar `LIGHT` actualizeaza doar nevoile; numai `FULL` intra in selectia actiunii;
 - householdu-rile persistente nu sunt citite de motorul de rutina.
 
 ## Surse in cod
@@ -53,10 +54,12 @@ Rutina este singurul dintre cele doua fluxuri care deplaseaza NPC-ul. Nu exista 
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DecisionEngine.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineCoordinator.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineService.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineSelfCarePolicy.kt`
 
 ## Legaturi
 
 - `reference/simulation-stack.md`
+- `architecture/probabilitati-actiuni-npc.md`
 - `architecture/comportament-natural-npc-rutine-alocari.md`
 - `planning/rutine-npc-si-timeline.md`
 - `canonical/implementat-deja.md`

@@ -236,24 +236,13 @@ class OpenAIService(private val plugin: AINPCPlugin) {
     private fun callOpenAI(prompt: String, expectedSpeakerName: String?): String {
         recordPrompt(prompt)
 
-        val requestBody = JsonObject()
-        requestBody.addProperty("model", model)
-        requestBody.addProperty("input", prompt)
-        requestBody.addProperty("temperature", temperature)
-        requestBody.addProperty("max_output_tokens", maxOutputTokens)
-        requestBody.addProperty("store", storeResponses)
-
-        val textConfig = JsonObject()
-        val format = JsonObject()
-        format.addProperty("type", "text")
-        textConfig.add("format", format)
-        requestBody.add("text", textConfig)
+        val requestBody = buildResponsesRequestBody(model, prompt, temperature, maxOutputTokens, storeResponses)
 
         if (plugin.config.getBoolean("openai.diagnostics.log_prompt_summary", true)) {
             diagInfo(
                 "Cerere Responses: model=$model" +
                     ", max_output_tokens=$maxOutputTokens" +
-                    ", temperature=$temperature" +
+                    ", temperature=${if (requestBody.has("temperature")) temperature else "omitted"}" +
                     ", prompt_chars=${prompt.length}" +
                     ", prompt_preview=\"${OpenAITextSupport.abbreviate(prompt, 180)}\""
             )
@@ -788,5 +777,27 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         }
     }
 
-    private companion object
+    internal companion object {
+        fun buildResponsesRequestBody(
+            model: String,
+            prompt: String,
+            temperature: Double,
+            maxOutputTokens: Int,
+            storeResponses: Boolean,
+        ): JsonObject = JsonObject().apply {
+            addProperty("model", model)
+            addProperty("input", prompt)
+            if (!model.startsWith("gpt-6", ignoreCase = true)) {
+                addProperty("temperature", temperature)
+            }
+            addProperty("max_output_tokens", maxOutputTokens)
+            addProperty("store", storeResponses)
+
+            val textConfig = JsonObject()
+            val format = JsonObject()
+            format.addProperty("type", "text")
+            textConfig.add("format", format)
+            add("text", textConfig)
+        }
+    }
 }
