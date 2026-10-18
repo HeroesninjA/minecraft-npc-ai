@@ -36,6 +36,23 @@ class NpcShopFactResolverTest {
     }
 
     @Test
+    fun `meaning questions mentioning catalog phrases do not receive catalog answers`() {
+        for (message in listOf(
+            "Ce înseamnă «ce vinzi»?",
+            "Bună, ce înseamnă ce ai de vânzare?",
+            "Salut! Ce înseamnă ce vinzi?",
+            "Bună ziua, ce înseamnă ce vinzi?",
+            "Ce vrea sa spuna unde este magazinul?",
+        )) {
+            assertFalse(NpcShopFactResolver.isLookupQuestion(message), message)
+            assertFalse(NpcShopFactResolver.requiresWorkPlace(message), message)
+            assertNull(NpcShopFactResolver.resolve(message, listOf(shop), "Brutaria din sat"), message)
+        }
+        assertTrue(NpcShopFactResolver.isLookupQuestion("Ce vinzi?"))
+        assertTrue(NpcShopFactResolver.isLookupQuestion("Unde este magazinul?"))
+    }
+
+    @Test
     fun `workplace answer requires a mapped place`() {
         assertEquals(
             "Lucrez la Brutaria din sat.",

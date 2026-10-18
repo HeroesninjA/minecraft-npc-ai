@@ -4,11 +4,17 @@ import java.text.Normalizer
 import java.util.Locale
 
 internal object DialogueMessageText {
+    private val meaningQuestion = Regex(
+        "^(?:(?:salut|hei|noroc|servus|buna(?: ziua| seara| dimineata)?)[,!?.]?\\s+)?(?:ce inseamna|ce vrea sa spuna)\\b"
+    )
+
     fun normalize(message: String): String = Normalizer.normalize(message, Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "")
         .lowercase(Locale.ROOT)
         .replace(Regex("\\s+"), " ")
         .trim()
+
+    fun isMeaningQuestion(message: String): Boolean = meaningQuestion.containsMatchIn(normalize(message))
 
     fun matches(text: String, vararg phrases: String): Boolean = phrases.any { phrase ->
         Regex("(?<![\\p{L}\\p{N}])${Regex.escape(phrase)}(?![\\p{L}\\p{N}])").containsMatchIn(text)

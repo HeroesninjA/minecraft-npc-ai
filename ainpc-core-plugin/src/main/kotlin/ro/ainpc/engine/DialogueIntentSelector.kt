@@ -6,7 +6,6 @@ import ro.ainpc.ai.DialogueMessageText
 import ro.ainpc.ai.DialogueMessageText.matches
 
 internal object DialogueIntentSelector {
-    private val meaningQuestion = Regex("^(?:(?:salut|buna|hei|noroc|servus),?\\s+)?(?:ce inseamna|ce vrea sa spuna)\\b")
     private val negatedRequests = listOf(
         Regex("\\bnu\\s+(?:(?:mai|prea)\\s+)?(?:vreau|doresc)\\s+(?:sa\\s+)?(?:cumpar|vand|vinde)\\b"),
         Regex("\\bnu\\s+(?:am\\s+)?nevoie\\s+de\\s+ajutor\\b"),
@@ -16,7 +15,7 @@ internal object DialogueIntentSelector {
 
     fun hasExplicitNegatedRequestOrMeaningQuestion(message: String): Boolean {
         val normalized = DialogueMessageText.normalize(message)
-        return meaningQuestion.containsMatchIn(normalized) || negatedRequests.any { it.containsMatchIn(normalized) }
+        return DialogueMessageText.isMeaningQuestion(message) || negatedRequests.any { it.containsMatchIn(normalized) }
     }
 
     fun select(
@@ -27,7 +26,7 @@ internal object DialogueIntentSelector {
         npcAliases: List<String> = emptyList(),
     ): DialogueEngine.DialogueIntent {
         val normalized = DialogueMessageText.normalize(message)
-        if (meaningQuestion.containsMatchIn(normalized)) return DialogueEngine.DialogueIntent.QUESTION
+        if (DialogueMessageText.isMeaningQuestion(message)) return DialogueEngine.DialogueIntent.QUESTION
         val directRequests = negatedRequests.fold(normalized) { remaining, pattern -> pattern.replace(remaining, " ") }
 
         if (matches(normalized, "telefon", "internet", "computer", "masina", "avion", "televizor",

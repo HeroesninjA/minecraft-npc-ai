@@ -37,6 +37,10 @@ class DialogueIntentSelectorTest {
             DialogueEngine.DialogueIntent.QUESTION,
             DialogueIntentSelector.select("Bună, ce înseamnă marfă?", "STRANGER", false, null),
         )
+        assertEquals(
+            DialogueEngine.DialogueIntent.QUESTION,
+            DialogueIntentSelector.select("Ce înseamnă «ce vinzi»?", "STRANGER", false, null),
+        )
     }
 
     @Test
