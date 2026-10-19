@@ -40,6 +40,7 @@ import ro.ainpc.debug.WorldMappingSemanticIndex
 import ro.ainpc.engine.*
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.context.SensitiveDataRedactor
+import ro.ainpc.managers.ScenarioActorQuarantineService
 import ro.ainpc.npc.AINPC
 import ro.ainpc.progression.ProgressionAnchorBinding
 import ro.ainpc.progression.ProgressionDefinition
@@ -95,6 +96,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.*
+import java.util.logging.Level
 import java.util.stream.Collectors
 
 /**
@@ -225,6 +227,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             AINPCSubcommandRoute.DUPLICATES -> handleDuplicates(sender, args)
             AINPCSubcommandRoute.REPAIR -> handleRepair(sender, args)
             AINPCSubcommandRoute.INFO -> handleInfo(sender, args)
+            AINPCSubcommandRoute.DECISION -> handleDecision(sender, args)
             AINPCSubcommandRoute.PLAYER_PROFILE -> PlayerProfileCommand.handle(plugin, sender, args)
             AINPCSubcommandRoute.GUI ->
                 ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)
@@ -399,6 +402,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             sendRepairUsage(sender); return true
         }
         val target = args[1].lowercase(Locale.ROOT)
+        if (target == "scenario-actors" || target == "scenario_actors") {
+            return handleRepairScenarioActors(sender, args)
+        }
         if (target == "duplicates" || target == "dup") {
             val mode = if (args.size >= 3) args[2].lowercase(Locale.ROOT) else "dryrun"
             val apply = mode == "apply"
@@ -716,8 +722,78 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
     private fun sendRepairUsage(sender: CommandSender) {
         plugin.messageUtils.send(
             sender,
-            "&cUtilizare: /ainpc repair duplicates|households|npc-bindings|mapping-metadata|batch <args> [dryrun|apply]"
+            "&cUtilizare: /ainpc repair duplicates|households|npc-bindings|mapping-metadata|batch <args> [dryrun|apply] sau scenario-actors [dryrun [pagina]|apply <id> <uuid>]"
         )
+    }
+
+    private fun handleRepairScenarioActors(sender: CommandSender, args: Array<String>): Boolean {
+        val mode = args.getOrNull(2)?.lowercase(Locale.ROOT) ?: "dryrun"
+        if ((mode == "dryrun" && args.size !in 2..4) || (mode == "apply" && args.size != 5) ||
+            mode != "dryrun" && mode != "apply"
+        ) {
+            plugin.messageUtils.send(sender, "&cUtilizare: /ainpc repair scenario-actors [dryrun [pagina]|apply <id> <uuid>]")
+            return true
+        }
+        val page = if (mode == "dryrun" && args.size == 4) args[3].toIntOrNull()?.takeIf { it > 0 } else 1
+        if (page == null) {
+            plugin.messageUtils.send(sender, "&cPagina trebuie sa fie un numar pozitiv.")
+            return true
+        }
+        if (mode == "apply" && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; repair scenario-actors apply este blocat.")
+            return true
+        }
+        val connection = plugin.databaseManager.getConnection() ?: run {
+            plugin.messageUtils.send(sender, "&cConexiunea DB este indisponibila.")
+            return true
+        }
+        val service = ScenarioActorQuarantineService(connection, isLoaded = { plugin.npcManager.getNPCById(it) != null })
+        return try {
+            if (mode == "dryrun") {
+                val preview = service.preview(10, (page.toLong() - 1) * 10)
+                val totalPages = maxOf(1L, (preview.total.toLong() + 9) / 10)
+                plugin.messageUtils.send(sender, "&6=== Actori de scenariu in carantina - DRYRUN ===")
+                plugin.messageUtils.send(sender,
+                    "&eRanduri: &f${preview.total} &7| pagina &f$page/$totalPages &7| tranzitorii confirmati: &f${preview.repairable} &7| necesita audit manual: &f${preview.total - preview.repairable}")
+                for (entry in preview.entries) {
+                    plugin.messageUtils.send(sender,
+                        "&7ID &f${entry.databaseId} &7UUID &f${entry.uuid} &7- ${entry.reason.label}")
+                }
+                if (page.toLong() < totalPages) {
+                    plugin.messageUtils.send(sender, "&7Pagina urmatoare: &f/ainpc repair scenario-actors dryrun ${page + 1}")
+                } else if (page.toLong() > totalPages) {
+                    plugin.messageUtils.send(sender, "&cPagina depaseste numarul disponibil de pagini.")
+                }
+                plugin.messageUtils.send(sender,
+                    "&eDupa backup, sterge un singur actor tranzitoriu confirmat: &f/ainpc repair scenario-actors apply <id> <uuid>")
+            } else {
+                val databaseId = args[3].toIntOrNull()?.takeIf { it > 0 }
+                val npcUuid = runCatching { UUID.fromString(args[4]) }.getOrNull()
+                if (databaseId == null || npcUuid == null) {
+                    plugin.messageUtils.send(sender, "&cID sau UUID invalid. Foloseste valorile exacte din dryrun.")
+                    return true
+                }
+                val result = service.deleteConfirmed(databaseId, npcUuid)
+                when (result) {
+                    ScenarioActorQuarantineService.DeleteResult.DELETED -> {
+                        plugin.messageUtils.send(sender, "&aActorul tranzitoriu $databaseId a fost sters din DB.")
+                        plugin.logger.warning("Repair scenario-actors APPLY: npc_id=$databaseId uuid=$npcUuid sters de ${sender.name}.")
+                    }
+                    ScenarioActorQuarantineService.DeleteResult.NOT_FOUND -> plugin.messageUtils.send(sender, "&cRandul scenario_actor nu exista.")
+                    ScenarioActorQuarantineService.DeleteResult.UUID_MISMATCH -> plugin.messageUtils.send(sender, "&cUUID-ul nu corespunde randului. Refa dryrun.")
+                    ScenarioActorQuarantineService.DeleteResult.NOT_REPAIRABLE -> plugin.messageUtils.send(sender,
+                        "&cStergere blocata: metadata nu confirma un actor tranzitoriu. Necesita audit manual.")
+                    ScenarioActorQuarantineService.DeleteResult.LOADED -> plugin.messageUtils.send(sender,
+                        "&cNPC-ul este incarcat in runtime; stergerea din carantina este blocata.")
+                    ScenarioActorQuarantineService.DeleteResult.CHANGED -> plugin.messageUtils.send(sender,
+                        "&cRandul s-a schimbat inainte de stergere. Refa dryrun.")
+                }
+            }
+            true
+        } catch (error: SQLException) {
+            plugin.messageUtils.send(sender, "&cEroare DB la audit/repair actor scenariu: ${error.message}")
+            true
+        }
     }
 
     private fun loadNpcWorldBindingsById(): Map<Int, NpcWorldBinding> {
@@ -3895,12 +3971,138 @@ $objectives      rewards:
             return true
         }
         if (args.size < 2) {
-            plugin.messageUtils.send(sender, "&6Utilizare: &f/ainpc scenario <list|spawn|despawn|info|advance>")
+            plugin.messageUtils.send(sender, "&6Utilizare: &f/ainpc scenario <templates|start|end|snapshot|recovery|list|spawn|despawn|info|advance>")
             return true
         }
 
         val scenarioEngine = plugin.scenarioEngine
         return when (args[1].lowercase(Locale.getDefault())) {
+            "templates" -> {
+                plugin.messageUtils.send(sender, "&6=== Template-uri de scenariu disponibile ===")
+                val templateIds = scenarioEngine.getStartableScenarioTemplateIds()
+                if (templateIds.isEmpty()) plugin.messageUtils.send(sender, "&7Nu exista template-uri disponibile.")
+                else templateIds.take(20).forEach { plugin.messageUtils.send(sender, "&7- &f$it") }
+                if (templateIds.size > 20) plugin.messageUtils.send(sender,
+                    "&7... inca ${templateIds.size - 20} template-uri; foloseste completarea /ainpc scenario start.")
+                true
+            }
+            "start" -> {
+                val force = args.size == 4 && args[3].equals("--force", ignoreCase = true)
+                if (args.size != 3 && !force) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario start <templateId> [--force]")
+                    return true
+                }
+                if (isRuntimeReadOnly(plugin)) {
+                    plugin.messageUtils.send(sender, "&cMCP read_only este activ; pornirea scenariului este blocata.")
+                    return true
+                }
+                val player = sender as? Player
+                if (player == null) {
+                    plugin.messageUtils.send(sender, "&cPornirea scenariului necesita un jucator online ca ancora.")
+                    return true
+                }
+                val readiness = scenarioEngine.manualStartReadiness(args[2], player.location)
+                if (!force && readiness != null && !readiness.meetsMinimum) {
+                    plugin.messageUtils.send(sender,
+                        "&cScenariul cere ${readiness.minimumNpcCount} NPC-uri active in raza 32; " +
+                            "sunt ${readiness.activeNpcCount}. Pentru test fara prag foloseste --force.")
+                    return true
+                }
+                val scenario = scenarioEngine.startScenario(args[2], player.location, ignoreMinimumNpcCount = force)
+                if (scenario == null) {
+                    plugin.messageUtils.send(sender,
+                        "&cPornirea a esuat: template/faza indisponibile, scenariu deja activ, prag NPC ori persistenta. " +
+                            "Verifica /ainpc scenario templates si list.")
+                    return true
+                }
+                if (force && readiness != null && !readiness.meetsMinimum) {
+                    plugin.messageUtils.send(sender, "&ePragul de NPC-uri a fost ignorat doar pentru aceasta pornire.")
+                }
+                plugin.messageUtils.send(sender,
+                    "&aScenariu pornit: &f${scenario.templateId} &7| faza &f${scenario.currentPhase} &7| actori spawnati &f${scenario.spawnedActors.size}")
+                true
+            }
+            "end" -> {
+                if (args.size != 3) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario end <templateId|displayName>")
+                    return true
+                }
+                if (isRuntimeReadOnly(plugin)) {
+                    plugin.messageUtils.send(sender, "&cMCP read_only este activ; oprirea scenariului este blocata.")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                if (entry == null) {
+                    plugin.messageUtils.send(sender, "&cNu am gasit un scenariu activ pentru &f${args[2]}&c.")
+                    return true
+                }
+                scenarioEngine.endScenario(entry.key)
+                if (scenarioEngine.getActiveScenarios().containsKey(entry.key)) {
+                    plugin.messageUtils.send(sender, "&cScenariul ramane activ: cleanup-ul actorilor a esuat. Verifica logul.")
+                } else {
+                    plugin.messageUtils.send(sender, "&aScenariul &f${entry.value.templateId} &aa fost incheiat.")
+                }
+                true
+            }
+            "snapshot" -> {
+                if (args.size != 3) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario snapshot <templateId|displayName>")
+                    return true
+                }
+                val entry = scenarioEngine.findActiveScenarioByTemplateId(args[2])
+                val snapshot = entry?.let { scenarioEngine.captureScenarioSnapshot(it.key) }
+                if (snapshot == null) {
+                    plugin.messageUtils.send(sender, "&cScenariul nu este activ sau nu are o ancora valida pentru snapshot.")
+                    return true
+                }
+                val issues = scenarioEngine.scenarioSnapshotTemplateIssues(snapshot)
+                plugin.messageUtils.send(sender,
+                    "&6Snapshot v${snapshot.version}: &f${snapshot.templateId} &7| id &f${snapshot.scenarioId} &7| faza &f${snapshot.phase}")
+                plugin.messageUtils.send(sender,
+                    "&7Ancora &f${snapshot.anchor.world} &7| actori &f${snapshot.actors.size} &7| fara rand DB &f${snapshot.actors.values.count { it.databaseId == null }} &7| probleme template &f${issues.size}")
+                issues.take(5).forEach { plugin.messageUtils.send(sender, "&e- $it") }
+                plugin.messageUtils.send(sender, "&7Snapshot runtime read-only; persistenta este activa. Verifica restaurarea prin /ainpc scenario recovery.")
+                true
+            }
+            "recovery" -> {
+                val page = if (args.size == 2) 1 else args.getOrNull(2)?.toIntOrNull()
+                if (args.size > 3 || page == null || page !in 1..100_000) {
+                    plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario recovery [pagina]")
+                    return true
+                }
+                val preview = try {
+                    scenarioEngine.previewStoredScenarioRecovery(page)
+                } catch (error: Exception) {
+                    plugin.logger.log(Level.WARNING, "Nu am putut inspecta snapshot-urile scenariilor.", error)
+                    plugin.messageUtils.send(sender, "&cNu am putut citi snapshot-urile. Verifica logul.")
+                    return true
+                }
+                plugin.messageUtils.send(sender, "&6=== Preview restaurare scenarii: pagina $page, total ${preview.total} ===")
+                if (preview.entries.isEmpty()) plugin.messageUtils.send(sender, "&7Nu exista randuri pe aceasta pagina.")
+                preview.entries.forEach { entry ->
+                    val status = when {
+                        entry.activeInRuntime -> "&aACTIV"
+                        entry.automaticRestoreEligible -> "&aAUTO"
+                        entry.issues.isEmpty() -> "&eCANDIDAT"
+                        else -> "&cBLOCAT"
+                    }
+                    plugin.messageUtils.send(sender,
+                        "&7- &f${entry.templateId} &7| id &f${entry.scenarioId} &7| faza &f${entry.phase ?: "?"} " +
+                            "&7| actori &f${entry.actorCount} &7| $status")
+                    entry.issues.take(3).forEach { issue -> plugin.messageUtils.send(sender, "&e  - $issue") }
+                    if (entry.issues.size > 3) plugin.messageUtils.send(sender,
+                        "&7  ... inca ${entry.issues.size - 3} probleme")
+                    if (entry.issues.isEmpty() && !entry.automaticRestoreEligible) {
+                        entry.automaticRestoreBlockers.take(3).forEach { blocker ->
+                            plugin.messageUtils.send(sender, "&e  - $blocker")
+                        }
+                        if (entry.automaticRestoreBlockers.size > 3) plugin.messageUtils.send(sender,
+                            "&7  ... inca ${entry.automaticRestoreBlockers.size - 3} limitari")
+                    }
+                }
+                plugin.messageUtils.send(sender, "&7Doar diagnostic; AUTO se restaureaza numai la pornire, daca toate verificarile trec.")
+                true
+            }
             "list" -> {
                 val listModes = args.drop(2).map { it.lowercase(Locale.getDefault()) }
                 val unknownModes = listModes.filterNot { it == "warnings-only" || it == "warnings-first" }
@@ -4089,7 +4291,7 @@ $objectives      rewards:
                 true
             }
             else -> {
-                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario <list|warnings|spawn|despawn|info|advance>")
+                plugin.messageUtils.send(sender, "&cUtilizare: /ainpc scenario <templates|start|end|snapshot|list|warnings|spawn|despawn|info|advance>")
                 true
             }
         }
@@ -4965,6 +5167,19 @@ $objectives      rewards:
                 return
             }
             appendDatabaseSchemaAudit(report, connection)
+            val quarantined = ScenarioActorQuarantineService(
+                connection, isLoaded = { plugin.npcManager.getNPCById(it) != null }
+            ).preview(AUDIT_PREVIEW_LIMIT - 1)
+            if (quarantined.total > 0) {
+                report.addSection("Scenario Actor Quarantine")
+                report.addWarning(
+                    "Actori scenario_actor in carantina: ${quarantined.total}; tranzitorii confirmati: ${quarantined.repairable}. " +
+                        "Preview: /ainpc repair scenario-actors dryrun."
+                )
+                for (entry in quarantined.entries) {
+                    report.addNote("Carantina npc_id=${entry.databaseId}, UUID=${entry.uuid}: ${entry.reason.label}.")
+                }
+            }
         } catch (e: Exception) {
             report.addWarning("Eroare audit DB: ${e.message}")
         }

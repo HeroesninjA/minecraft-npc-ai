@@ -240,6 +240,39 @@ simulation:
     score_window: 15
     # Valori mai mari apropie sansele actiunilor eligibile (0.5-50).
     temperature: 8.0
+    # Ponderea minima imediat dupa o actiune exploratorie (0.1-1); revine treptat la 1.
+    repeat_weight: 0.5
+    # Durata revenirii ponderii la 1, in secunde (0-3600; 0 dezactiveaza penalizarea).
+    repeat_window_seconds: 90
+    # Cate explorari recente distincte pot primi penalizare (1-8; 1 pastreaza comportamentul anterior).
+    repeat_history_size: 1
+    # Pondere relativa pentru o pauza voluntara cand exista actiuni utile (0-1; 0 dezactiveaza).
+    idle_weight: 0.0
+    # Cate decizii reale sunt pastrate pentru diagnosticul observat-versus-asteptat (1-256).
+    statistics_window: 32
+    # Multiplicatori optionali ai sanselor; cheile sunt nume NPCAction, iar absenta pastreaza 1.0.
+    action_weights: {}
+    # Suprascrieri optionale dupa ocupatie; numele ocupatiei este comparat fara diferenta de litere.
+    # action_weights_by_occupation:
+    #   farmer:
+    #     FARM: 1.8
+    #     SOCIALIZE: 0.8
+    # Suprascrieri optionale dupa momentul zilei (MORNING, AFTERNOON, EVENING, NIGHT).
+    # action_weights_by_time:
+    #   NIGHT:
+    #     SLEEP: 1.8
+    #     SOCIALIZE: 0.6
+    # Suprascrieri optionale dupa vremea capturata de context (CLEAR, RAIN, THUNDER).
+    # action_weights_by_weather:
+    #   RAIN:
+    #     HIDE: 1.5
+    #     WALK_RANDOM: 0.6
+    # Cooldown optional pe actiuni (secunde, 1-3600); actiunile active sunt omise daca exista alternative.
+    # action_cooldowns:
+    #   GREET: 30
+    #   SHARE_NEWS: 60
+    # Optional: seed stabil pentru reproducerea selectiei probabilistice; absent = aleatoriu.
+    # random_seed: 20261018
   needs:
     # Cu cat scaderea este mai mare, cu atat NPC-urile simt mai repede nevoia respectiva.
     hunger_decay: 1.5

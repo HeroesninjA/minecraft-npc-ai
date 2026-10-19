@@ -1,7 +1,7 @@
 # Runtime de simulare NPC
 
 Status: contract verificat in cod.
-Actualizat: 2026-10-18.
+Actualizat: 2026-10-19.
 
 Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ramane pentru compatibilitate, iar implementarea reala este distribuita intre doua fluxuri independente: simularea nevoilor si rutina cu miscare.
 
@@ -20,7 +20,7 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 
 `SchedulerCoordinator -> RoutineCoordinator.tick() -> RoutineService.runRoutineTick()`:
 
-- proceseaza numai NPC-urile spawnate si sare peste starile ocupate; pentru NPC-uri in simulare completa, prioritizeaza intoarcerea la ancora casei cand foamea sau oboseala scade sub 35 si lasa masa sau somnul sa continue acasa pana la recuperare;
+- proceseaza numai NPC-urile spawnate si sare peste starile ocupate; pentru NPC-uri in simulare completa, prioritizeaza intoarcerea la ancora casei cand foamea sau oboseala scade sub 35 si lasa masa sau somnul sa continue acasa pana cand nevoia ajunge la 60;
 - in afara prioritatilor de ingrijire, rezolva profilul, fereastra orara, slotul si ancora prin `RoutineEngine`;
 - actualizeaza activitatea, goal-ul si starea prin `AINPC.changeState` cu regulile de prioritate;
 - incearca intai pathfinding Paper direct spre ancora, apoi teleport configurabil;
@@ -44,7 +44,7 @@ Rutina este singurul dintre cele doua fluxuri care deplaseaza NPC-ul. Nu exista 
 - simularea nu emite semnale regionale pentru quest sau story;
 - navigatia spre casa pentru nevoi cere simultan simulare `FULL`, rutina activa si o ancora de casa; nu porneste in pericol, iar o pauza sau un override explicit al rutinei are prioritate;
 - `RoutineService` respecta pauzele si override-urile din `RoutineCoordinator`; override-ul se aplica doar cat timp este valid si nu poate teleporta NPC-ul;
-- `NpcSimulationMode.NONE` exclude NPC-ul, iar `LIGHT` actualizeaza doar nevoile; numai `FULL` intra in selectia actiunii;
+- `NpcSimulationMode.NONE` exclude NPC-ul, iar `LIGHT` actualizeaza doar nevoile; numai `FULL` intra in selectia actiunii, rutina si procesarea sociala;
 - householdu-rile persistente nu sunt citite de motorul de rutina.
 
 ## Surse in cod

@@ -11,6 +11,7 @@ import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcSimulationMode
+import ro.ainpc.npc.NpcSelfCareThresholds
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
 import ro.ainpc.story.StoryStateViewResolver
@@ -87,7 +88,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
         batchIndex = endIndex
 
         for (npc in batch) {
-            if (!npc.isSpawned()) {
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) {
                 continue
             }
             if (npc.uuid != null && plugin.routineCoordinator.isRoutinePaused(npc.uuid)) {
@@ -161,7 +162,8 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 npc.hungerLevel,
                 npc.energyLevel,
                 npcFullSimulationEnabled,
-                npc.context.isInDanger || npc.currentState.isDangerState(),
+                inDanger = npc.context.isInDanger || npc.currentState.isDangerState(),
+                state = npc.currentState,
             )
             val assignment = selfCareAssignment ?: routineEngine.assign(npc, currentWorld.time)
             val assignmentArrivalRadius = if (selfCareAssignment == null) arrivalRadius
@@ -286,8 +288,8 @@ class RoutineService(private val plugin: AINPCPlugin) {
             fullSimulationEnabled: Boolean,
             isAtHome: Boolean,
         ): Boolean = fullSimulationEnabled && isAtHome && when (state) {
-            NPCState.EATING -> hungerLevel < 35
-            NPCState.SLEEPING -> energyLevel < 35
+            NPCState.EATING -> hungerLevel < NpcSelfCareThresholds.RECOVERED
+            NPCState.SLEEPING -> energyLevel < NpcSelfCareThresholds.RECOVERED
             else -> false
         }
     }

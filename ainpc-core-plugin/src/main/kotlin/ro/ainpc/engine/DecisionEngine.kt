@@ -1,6 +1,7 @@
 @file:Suppress("SENSELESS_COMPARISON")
 package ro.ainpc.engine
 
+import org.bukkit.Bukkit
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
@@ -8,6 +9,7 @@ import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSelfCareThresholds
 import java.util.EnumMap
 import java.util.Locale
 import java.util.UUID
@@ -22,55 +24,199 @@ import kotlin.math.roundToInt
  * Decisionengine.
  */
 class DecisionEngine(private val plugin: AINPCPlugin) {
+    internal data class ActionScoreBreakdown(
+        val base: Int,
+        val traits: Int,
+        val emotions: Int,
+        val memory: Int,
+        val context: Int,
+        val needs: Int,
+        val routine: Int,
+    ) {
+        val rawTotal: Int
+            get() = base + traits + emotions + memory + context + needs + routine
+        val score: Int
+            get() = max(0, rawTotal)
+    }
+
+    internal data class ActionDecisionPreview(
+        val scores: Map<NPCAction, Int>,
+        val probabilities: Map<NPCAction, Double>,
+        val probabilistic: Boolean,
+        val cached: Boolean,
+        val blockedActions: Map<NPCAction, ActionBlockReason> = emptyMap(),
+        val excludedActions: Map<NPCAction, ActionRankingExclusion> = emptyMap(),
+        val cooldownActions: List<ActionCooldown> = emptyList(),
+        val repeatAdjustment: RepeatAdjustment? = null,
+        val repeatAdjustments: List<RepeatAdjustment> = emptyList(),
+        val scoreBreakdowns: Map<NPCAction, ActionScoreBreakdown> = emptyMap(),
+        val probabilityWeights: Map<NPCAction, Double> = emptyMap(),
+    )
+
     private data class CachedDecision(
         val action: NPCAction,
         val state: NPCState,
         val inDanger: Boolean,
         val timestamp: Long,
+        val decisionSequence: Long,
+        val recentExplorations: List<RecentExploration>,
+        val recentActionTimestamps: Map<NPCAction, Long>,
     )
 
     private val decisionCache: MutableMap<UUID, CachedDecision> = ConcurrentHashMap()
+    private val decisionStatistics: MutableMap<UUID, DecisionStatistics> = ConcurrentHashMap()
 
-    fun decideAction(npc: AINPC, context: NPCContext): NPCAction {
+    fun decideAction(npc: AINPC, context: NPCContext): NPCAction =
+        decideAction(npc, context, actionSituation(npc, context))
+
+    private fun decideAction(npc: AINPC, context: NPCContext, situation: ActionSituation): NPCAction {
         val now = System.currentTimeMillis()
         val cached = decisionCache[npc.uuid]
-        val situation = actionSituation(npc, context)
-        if (cached != null && now - cached.timestamp in 0 until DECISION_COOLDOWN &&
-            cached.state == npc.currentState && cached.inDanger == context.isInDanger &&
-            ActionEligibility.permits(cached.action, situation)
-        ) {
+        if (cached != null && isReusable(cached, npc, context, situation, now)) {
             return cached.action
         }
         if (cached == null) evictIfNeeded(now)
 
-        val scores = calculateAllScores(npc, context, situation)
+        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation)
+        val scores = scoreBreakdowns.mapValuesTo(EnumMap(NPCAction::class.java)) { it.value.score }
+        val settings = ActionProbabilitySettings.fromConfig(
+            plugin.config, npc.occupation, context.timeOfDay, context.weather,
+        )
+        val preview = previewForScores(
+            npc, context, scores, cached?.recentExplorations.orEmpty(),
+            cached?.recentActionTimestamps.orEmpty(), now, settings, scoreBreakdowns,
+        )
+        val decisionSequence = (cached?.decisionSequence ?: 0L) + 1L
+        val action = if (preview.probabilistic) {
+            val roll = settings.randomSeed?.let { seed ->
+                deterministicDecisionRoll(seed, npc.uuid, decisionSequence)
+            } ?: ThreadLocalRandom.current().nextDouble()
+            ActionProbabilitySelector.select(preview.probabilities, roll)
+        } else {
+            preview.probabilities.keys.first()
+        }
+        val recentExplorations = ActionProbabilitySelector.recentExplorationsAfter(
+            cached?.recentExplorations.orEmpty(), action, now, settings,
+        )
+        val recentActionTimestamps = ActionProbabilitySelector.recentActionTimestampsAfter(
+            cached?.recentActionTimestamps.orEmpty(), action, now, settings,
+        )
+        decisionCache[npc.uuid] = CachedDecision(
+            action, npc.currentState, context.isInDanger, now, decisionSequence,
+            recentExplorations, recentActionTimestamps,
+        )
+        decisionStatistics.computeIfAbsent(npc.uuid) { DecisionStatistics(settings.statisticsWindow) }
+            .also { it.resize(settings.statisticsWindow) }
+            .record(action, now, preview.probabilities)
+        val chancePercent = (preview.probabilities.getValue(action) * 100).roundToInt()
+        plugin.debug("NPC ${npc.name} decide: ${action.displayName} (scor: ${scores[action]}, probabilitate: $chancePercent%)")
+        return action
+    }
+
+    internal fun previewActionDecision(npc: AINPC, context: NPCContext): ActionDecisionPreview {
+        val now = System.currentTimeMillis()
+        val cached = decisionCache[npc.uuid]
+        val situation = actionSituation(npc, context)
+        if (cached != null && isReusable(cached, npc, context, situation, now)) {
+            val action = cached.action
+            val breakdown = calculateActionBreakdown(npc, context, action, situation)
+            return ActionDecisionPreview(
+                mapOf(action to breakdown.score),
+                mapOf(action to 1.0),
+                probabilistic = false,
+                cached = true,
+                scoreBreakdowns = mapOf(action to breakdown),
+            )
+        }
+        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation)
+        val scores = scoreBreakdowns.mapValuesTo(EnumMap(NPCAction::class.java)) { it.value.score }
+        val settings = ActionProbabilitySettings.fromConfig(
+            plugin.config, npc.occupation, context.timeOfDay, context.weather,
+        )
+        return previewForScores(
+            npc, context, scores, cached?.recentExplorations.orEmpty(),
+            cached?.recentActionTimestamps.orEmpty(), now, settings, scoreBreakdowns,
+            includeExplanations = true,
+        ).copy(
+            blockedActions = blockedActions(npc.currentState, context.isInDanger, situation),
+        )
+    }
+
+    private fun isReusable(
+        cached: CachedDecision, npc: AINPC, context: NPCContext, situation: ActionSituation, now: Long,
+    ): Boolean = now - cached.timestamp in 0 until DECISION_COOLDOWN &&
+        cached.state == npc.currentState && cached.inDanger == context.isInDanger &&
+        ActionEligibility.permits(cached.action, situation)
+
+    private fun previewForScores(
+        npc: AINPC, context: NPCContext, scores: Map<NPCAction, Int>,
+        recentExplorations: List<RecentExploration>, recentActionTimestamps: Map<NPCAction, Long>,
+        now: Long, settings: ActionProbabilitySettings,
+        scoreBreakdowns: Map<NPCAction, ActionScoreBreakdown> = emptyMap(),
+        includeExplanations: Boolean = false,
+    ): ActionDecisionPreview {
         val probabilistic = ActionProbabilitySelector.isEnabledFor(
             npc.currentState,
             context.isInDanger,
             plugin.config.getBoolean("simulation.decision.probabilistic_enabled", true),
         )
-        val previousAction = cached?.takeIf { now - it.timestamp in 0 until REPETITION_WINDOW_MS }?.action
         val probabilities = if (probabilistic) {
-            ActionProbabilitySelector.probabilities(scores, previousAction, ActionProbabilitySettings.fromConfig(plugin.config))
-        } else null
-        val action = if (probabilities == null) getHighestScoringAction(scores)
-            else ActionProbabilitySelector.select(probabilities, ThreadLocalRandom.current().nextDouble())
-        decisionCache[npc.uuid] = CachedDecision(action, npc.currentState, context.isInDanger, now)
-        val chancePercent = ((probabilities?.get(action) ?: 1.0) * 100).roundToInt()
-        plugin.debug("NPC ${npc.name} decide: ${action.displayName} (scor: ${scores[action]}, probabilitate: $chancePercent%)")
-        return action
+            ActionProbabilitySelector.probabilities(
+                scores,
+                settings = settings,
+                recentExplorationAges = recentExplorations.associate { it.action to (now - it.timestamp) },
+                actionCooldownAges = recentActionTimestamps.mapValues { (_, timestamp) -> now - timestamp },
+            )
+        } else {
+            mapOf(getHighestScoringAction(scores) to 1.0)
+        }
+        val cooldowns = if (probabilistic) {
+            ActionProbabilitySelector.activeCooldowns(
+                scores.keys,
+                recentActionTimestamps.mapValues { (_, timestamp) -> now - timestamp },
+                settings,
+            )
+        } else emptyList()
+        val excludedActions = if (includeExplanations) {
+            ActionProbabilitySelector.excludedByRanking(
+                scores, probabilities.keys, probabilistic, settings,
+                cooldownActions = cooldowns.map { it.action }.toSet(),
+            )
+        } else emptyMap()
+        val repeatAdjustments = if (includeExplanations && probabilistic) {
+            ActionProbabilitySelector.repeatAdjustments(probabilities, recentExplorations, now, settings)
+        } else emptyList()
+        val probabilityWeights = if (includeExplanations && probabilistic) {
+            probabilities.keys.mapNotNull { action ->
+                settings.actionWeights[action]
+                    ?.takeIf { it != 1.0 }
+                    ?.let { action to it }
+            }.toMap()
+        } else emptyMap()
+        return ActionDecisionPreview(scores, probabilities, probabilistic, cached = false,
+            excludedActions = excludedActions, cooldownActions = cooldowns,
+            repeatAdjustment = repeatAdjustments.firstOrNull(),
+            repeatAdjustments = repeatAdjustments, scoreBreakdowns = scoreBreakdowns,
+            probabilityWeights = probabilityWeights)
     }
 
     private fun evictIfNeeded(now: Long) {
         if (decisionCache.size >= MAX_CACHE_SIZE) {
             val cutoff = now - CACHE_TTL_MS
             val stale = decisionCache.entries.filter { it.value.timestamp < cutoff }
-            stale.forEach { decisionCache.remove(it.key, it.value) }
+            stale.forEach {
+                if (decisionCache.remove(it.key, it.value)) decisionStatistics.remove(it.key)
+            }
             if (decisionCache.size >= MAX_CACHE_SIZE) {
-                decisionCache.entries.minByOrNull { it.value.timestamp }?.let { decisionCache.remove(it.key, it.value) }
+                decisionCache.entries.minByOrNull { it.value.timestamp }?.let {
+                    if (decisionCache.remove(it.key, it.value)) decisionStatistics.remove(it.key)
+                }
             }
         }
     }
+
+    internal fun decisionStatistics(uuid: UUID): DecisionStatistics.Snapshot =
+        decisionStatistics[uuid]?.snapshot() ?: DecisionStatistics.Snapshot(0, emptyMap(), null)
 
     fun runLifeSimulationTick(npc: AINPC?) {
         if (npc == null) return
@@ -83,8 +229,9 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         updateNeeds(npc, context)
         context.syncSimulationState(location.location)
 
-        val action = decideAction(npc, context)
-        applySimulationOutcome(npc, context, action)
+        val situation = actionSituation(npc, context)
+        val action = decideAction(npc, context, situation)
+        applySimulationOutcome(npc, context, action, situation)
         context.syncSimulationState(location.location)
     }
 
@@ -103,34 +250,72 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         context: NPCContext,
         situation: ActionSituation = actionSituation(npc, context),
     ): MutableMap<NPCAction, Int> {
-        val scores: MutableMap<NPCAction, Int> = EnumMap(NPCAction::class.java)
+        return calculateAllScoreBreakdowns(npc, context, situation)
+            .mapValuesTo(EnumMap(NPCAction::class.java)) { it.value.score }
+    }
+
+    private fun calculateAllScoreBreakdowns(
+        npc: AINPC,
+        context: NPCContext,
+        situation: ActionSituation = actionSituation(npc, context),
+    ): MutableMap<NPCAction, ActionScoreBreakdown> {
+        val breakdowns: MutableMap<NPCAction, ActionScoreBreakdown> = EnumMap(NPCAction::class.java)
         val possibleActions = eligibleActions(npc.currentState, context.isInDanger, situation)
         for (action in possibleActions) {
-            scores[action] = calculateActionScore(npc, context, action)
+            breakdowns[action] = calculateActionBreakdown(npc, context, action, situation)
         }
-        return scores
+        return breakdowns
     }
 
-    private fun actionSituation(npc: AINPC, context: NPCContext): ActionSituation = ActionSituation(
-        hasSocialTarget = context.interactingPlayer != null || context.interactingNPC != null ||
-            context.nearbyPlayers.isNotEmpty() || context.nearbyNPCs.isNotEmpty(),
-        hasWorkplace = context.isAtWork || npc.workAnchor != null,
-        hasSocialDestination = context.isAtSocialSpot || npc.socialAnchor != null,
-        isAtHome = context.isAtHome,
-        hungerLevel = context.hungerLevel,
-        energyLevel = context.energyLevel,
+    private fun actionSituation(npc: AINPC, context: NPCContext): ActionSituation {
+        val socialTargets = nearbySocialTargets(npc, context)
+        val chunkAvailable = { worldName: String, chunkX: Int, chunkZ: Int ->
+            Bukkit.getWorld(worldName)?.isChunkLoaded(chunkX, chunkZ) == true
+        }
+        return ActionSituation(
+            hasSocialTarget = socialTargets.hasSocialTarget,
+            hasWorkplace = ActionTargetAvailability.hasUsableAnchor(npc.workAnchor, chunkAvailable),
+            hasSocialDestination = ActionTargetAvailability.hasUsableAnchor(npc.socialAnchor, chunkAvailable),
+            hasInteractingPlayer = socialTargets.hasInteractingPlayer,
+            isAtHome = context.isAtHome,
+            hungerLevel = context.hungerLevel,
+            energyLevel = context.energyLevel,
+            currentState = npc.currentState,
+        )
+    }
+
+    private fun nearbySocialTargets(npc: AINPC, context: NPCContext): SocialTargetStatus {
+        val interactingPlayer = context.interactingPlayer?.takeIf { it.isOnline }?.location
+        val otherTargets = buildList {
+            context.interactingNPC?.takeIf { it.uuid != npc.uuid && it.isSpawned() }?.location?.let { add(it) }
+            context.nearbyPlayers.filter { it.isOnline }.forEach { add(it.location) }
+            context.nearbyNPCs.filter { it.uuid != npc.uuid && it.isSpawned() }
+                .forEach { it.location?.let { location -> add(location) } }
+        }
+        val directRadius = plugin.config.getDouble("npc.interaction_distance", 5.0)
+            .takeIf { it.isFinite() && it > 0.0 } ?: 5.0
+        val passiveRadius = plugin.config.getDouble("dialog.passive_listen_radius", 8.0)
+            .takeIf { it.isFinite() && it > 0.0 } ?: 8.0
+        return SocialTargetProximity.evaluate(
+            npc.location, interactingPlayer, otherTargets, maxOf(directRadius, passiveRadius),
+        )
+    }
+
+    private fun calculateActionScore(
+        npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
+    ): Int = calculateActionBreakdown(npc, context, action, situation).score
+
+    private fun calculateActionBreakdown(
+        npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
+    ): ActionScoreBreakdown = ActionScoreBreakdown(
+        base = action.baseScore,
+        traits = getTraitModifier(npc.personality, action),
+        emotions = getEmotionModifier(npc.emotions, action),
+        memory = getMemoryModifier(npc, context, action, situation.hasInteractingPlayer),
+        context = getContextModifier(context, action, situation.hasInteractingPlayer),
+        needs = getNeedModifier(context, action),
+        routine = getRoutineModifier(npc, context, action),
     )
-
-    private fun calculateActionScore(npc: AINPC, context: NPCContext, action: NPCAction): Int {
-        var score = action.baseScore
-        score += getTraitModifier(npc.personality, action)
-        score += getEmotionModifier(npc.emotions, action)
-        score += getMemoryModifier(npc, context, action)
-        score += getContextModifier(context, action)
-        score += getNeedModifier(context, action)
-        score += getRoutineModifier(npc, context, action)
-        return max(0, score)
-    }
 
     private fun getTraitModifier(personality: NPCPersonality, action: NPCAction): Int {
         var modifier = 0
@@ -176,9 +361,11 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         return modifier
     }
 
-    private fun getMemoryModifier(npc: AINPC, context: NPCContext, action: NPCAction): Int {
+    private fun getMemoryModifier(
+        npc: AINPC, context: NPCContext, action: NPCAction, hasInteractingPlayer: Boolean,
+    ): Int {
         var modifier = 0
-        if (context.interactingPlayer == null) return modifier
+        if (!hasInteractingPlayer) return modifier
 
         val relationshipLevel = context.relationshipLevel
         val routineFocus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })
@@ -209,7 +396,9 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         return modifier
     }
 
-    private fun getContextModifier(context: NPCContext, action: NPCAction): Int {
+    private fun getContextModifier(
+        context: NPCContext, action: NPCAction, hasInteractingPlayer: Boolean,
+    ): Int {
         var modifier = 0
         if (context.isInDanger) {
             if (action == NPCAction.FLEE || action == NPCAction.CALL_HELP) modifier += 50
@@ -239,20 +428,22 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         if (context.isFamilyNearby && (action == NPCAction.SOCIALIZE || action == NPCAction.TALK)) modifier += 25
         if (context.isAtWork && action.getCategory() == NPCAction.ActionCategory.WORK) modifier += 30
         if (context.isAtHome && (action == NPCAction.REST || action == NPCAction.EAT)) modifier += 15
-        if (context.interactingPlayer != null) {
+        if (hasInteractingPlayer) {
             if (action == NPCAction.TALK || action == NPCAction.LISTEN) modifier += 40
-            if (action == NPCAction.GREET && context.lastInteractionTime < 5000) modifier += 30
+            if (action == NPCAction.GREET && SocialTargetProximity.isRecentInteraction(
+                    context.lastInteractionTime, System.currentTimeMillis(),
+                )) modifier += 30
         }
         return modifier
     }
 
     private fun getNeedModifier(context: NPCContext, action: NPCAction): Int {
         var modifier = 0
-        if (context.hungerLevel < 35) {
+        if (context.hungerLevel < NpcSelfCareThresholds.START) {
             if (action == NPCAction.EAT) modifier += 45
             if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 12
         }
-        if (context.energyLevel < 35) {
+        if (context.energyLevel < NpcSelfCareThresholds.START) {
             if (action == NPCAction.SLEEP) modifier += 50
             if (action == NPCAction.REST) modifier += 35
             if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 18
@@ -294,7 +485,7 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
             .map { it.key }
 
     fun getActionScore(npc: AINPC, context: NPCContext, action: NPCAction): Int =
-        calculateActionScore(npc, context, action)
+        calculateActionScore(npc, context, action, actionSituation(npc, context))
 
     private fun updateNeeds(npc: AINPC, context: NPCContext) {
         val now = System.currentTimeMillis()
@@ -344,13 +535,15 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun applySimulationOutcome(npc: AINPC, context: NPCContext, action: NPCAction) {
-        val targetState = mapActionToState(action, context)
+    private fun applySimulationOutcome(
+        npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
+    ) {
+        val targetState = mapActionToState(action, context, situation)
         npc.changeStateFromSimulation(targetState)
-        npc.currentGoal = resolveGoal(action, npc, context)
+        npc.currentGoal = resolveGoal(action, npc, context, situation)
     }
 
-    private fun mapActionToState(action: NPCAction, context: NPCContext): NPCState = when (action) {
+    private fun mapActionToState(action: NPCAction, context: NPCContext, situation: ActionSituation): NPCState = when (action) {
         NPCAction.START_WORK, NPCAction.CONTINUE_WORK -> if (context.isAtWork) NPCState.WORKING else NPCState.WALKING
         NPCAction.CRAFT -> if (context.isAtWork) NPCState.CRAFTING else NPCState.WALKING
         NPCAction.FARM -> if (context.isAtWork) NPCState.FARMING else NPCState.WALKING
@@ -359,7 +552,7 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         NPCAction.EAT -> if (context.isAtHome) NPCState.EATING else NPCState.WALKING
         NPCAction.SLEEP -> if (context.isAtHome) NPCState.SLEEPING else NPCState.WALKING
         NPCAction.REST -> if (context.isAtHome) NPCState.RESTING else NPCState.WALKING
-        NPCAction.SOCIALIZE -> if (context.isAtSocialSpot) NPCState.SOCIALIZING else NPCState.WALKING
+        NPCAction.SOCIALIZE -> SocialActionOutcome.state(context.isAtSocialSpot, situation.hasSocialTarget)
         NPCAction.TALK, NPCAction.LISTEN, NPCAction.GREET, NPCAction.SHARE_NEWS, NPCAction.TELL_STORY, NPCAction.GOSSIP -> NPCState.TALKING
         NPCAction.FLEE -> NPCState.FLEEING
         NPCAction.HIDE -> NPCState.HIDING
@@ -372,16 +565,18 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         else -> NPCState.IDLE
     }
 
-    private fun resolveGoal(action: NPCAction, npc: AINPC, context: NPCContext): String = when (action) {
+    private fun resolveGoal(action: NPCAction, npc: AINPC, context: NPCContext, situation: ActionSituation): String = when (action) {
         NPCAction.START_WORK, NPCAction.CONTINUE_WORK, NPCAction.CRAFT, NPCAction.FARM, NPCAction.MINE, NPCAction.FISH ->
             if (context.isAtWork) defaultGoal(context.plannedRoutineActivity, "sa isi faca treaba")
             else "ajunga la ${describeAnchor(npc.workAnchor, "locul de munca")}"
         NPCAction.EAT -> if (context.isAtHome) "isi recapete fortele la masa" else "ajunga acasa pentru a manca"
         NPCAction.SLEEP -> if (context.isAtHome) "se odihneasca in siguranta" else "se intoarca acasa pentru somn"
         NPCAction.REST -> if (context.isAtHome) "isi revina dupa efort" else "gaseasca un loc linistit de odihna"
-        NPCAction.SOCIALIZE, NPCAction.TALK, NPCAction.GREET, NPCAction.SHARE_NEWS, NPCAction.TELL_STORY, NPCAction.GOSSIP ->
-            if (context.isAtSocialSpot) "petreaca timp cu ceilalti localnici"
-            else "ajunga la ${describeAnchor(npc.socialAnchor, "locul de intalnire")}"
+        NPCAction.SOCIALIZE -> SocialActionOutcome.goal(
+            context.isAtSocialSpot, situation.hasSocialTarget, describeAnchor(npc.socialAnchor, "locul de intalnire"),
+        )
+        NPCAction.TALK, NPCAction.GREET, NPCAction.SHARE_NEWS, NPCAction.TELL_STORY, NPCAction.GOSSIP ->
+            "interactioneze cu interlocutorul"
         NPCAction.FLEE, NPCAction.HIDE -> "gaseasca adapost si sa evite pericolul"
         NPCAction.DEFEND, NPCAction.CALL_HELP, NPCAction.WARN -> "protejeze zona si sa ramana atent"
         NPCAction.OBSERVE, NPCAction.INVESTIGATE -> "inteleaga ce se petrece in jur"
@@ -437,22 +632,64 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
 
     fun removeNpcFromCache(uuid: UUID) {
         decisionCache.remove(uuid)
+        decisionStatistics.remove(uuid)
     }
 
     fun clearCache() {
         decisionCache.clear()
+        decisionStatistics.clear()
     }
 
     private enum class RoutineFocus { WORK, REST, SOCIAL, GUARD, OBSERVE, IDLE }
 
     companion object {
+        internal fun deterministicDecisionRoll(seed: Long, uuid: UUID, sequence: Long): Double {
+            var value = seed xor uuid.mostSignificantBits xor
+                java.lang.Long.rotateLeft(uuid.leastSignificantBits, 23) xor
+                sequence * SPLIT_MIX_GAMMA
+            value = (value xor (value ushr 30)) * SPLIT_MIX_MULTIPLIER_1
+            value = (value xor (value ushr 27)) * SPLIT_MIX_MULTIPLIER_2
+            value = value xor (value ushr 31)
+            return (value ushr 11).toDouble() / 9_007_199_254_740_992.0
+        }
+
         internal fun eligibleActions(state: NPCState, inDanger: Boolean, situation: ActionSituation): List<NPCAction> {
+            ongoingCareAction(state, inDanger, situation)?.let { return listOf(it) }
+            return candidateActionsWithCare(state, inDanger).filter { ActionEligibility.permits(it, situation) }
+        }
+
+        internal fun blockedActions(
+            state: NPCState, inDanger: Boolean, situation: ActionSituation,
+        ): Map<NPCAction, ActionBlockReason> {
+            if (ongoingCareAction(state, inDanger, situation) != null) return emptyMap()
+            return candidateActionsWithCare(state, inDanger).mapNotNull { action ->
+                ActionEligibility.blockReason(action, situation)?.let { action to it }
+            }.toMap(linkedMapOf())
+        }
+
+        private fun ongoingCareAction(
+            state: NPCState, inDanger: Boolean, situation: ActionSituation,
+        ): NPCAction? {
+            if (!inDanger && situation.isAtHome) {
+                val ongoingCare = when (state) {
+                    NPCState.EATING -> NPCAction.EAT
+                    NPCState.SLEEPING -> NPCAction.SLEEP
+                    else -> null
+                }
+                if (ongoingCare != null && ActionEligibility.permits(ongoingCare, situation)) {
+                    return ongoingCare
+                }
+            }
+            return null
+        }
+
+        private fun candidateActionsWithCare(state: NPCState, inDanger: Boolean): List<NPCAction> {
             val actions = candidateActions(state, inDanger).toMutableList()
             if (!inDanger && !state.isDangerState() && state != NPCState.TALKING) {
                 actions.add(NPCAction.EAT)
                 actions.add(NPCAction.SLEEP)
             }
-            return actions.filter { ActionEligibility.permits(it, situation) }
+            return actions
         }
 
         internal fun nextHungerLevel(
@@ -492,8 +729,10 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
 
         private const val DECISION_COOLDOWN: Long = 1000
-        private const val REPETITION_WINDOW_MS: Long = 90_000
         private const val CACHE_TTL_MS: Long = 300_000
         private const val MAX_CACHE_SIZE: Int = 500
+        private const val SPLIT_MIX_GAMMA: Long = -7046029254386353131L
+        private const val SPLIT_MIX_MULTIPLIER_1: Long = -4658895280553007687L
+        private const val SPLIT_MIX_MULTIPLIER_2: Long = -7723592293110705685L
     }
 }

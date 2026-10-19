@@ -11,9 +11,14 @@ import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.debug.DebugDumpAuthoringText
+import ro.ainpc.engine.ActionCooldown
+import ro.ainpc.engine.RepeatAdjustment
+import ro.ainpc.engine.DecisionEngine
+import ro.ainpc.engine.DecisionStatistics
 import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRole
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NPCAction
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
 import ro.ainpc.story.StoryContextSnapshot
@@ -22,6 +27,7 @@ import ro.ainpc.world.mapping.MappingDraft
 import ro.ainpc.world.mapping.MappingDraftKind
 import ro.ainpc.world.mapping.MappingWandMode
 import ro.ainpc.world.mapping.MappingWandService
+import java.util.Locale
 
 lateinit var ainpcCommandMiscPlugin: AINPCPlugin
 
@@ -1598,6 +1604,118 @@ fun handleInfo(sender: CommandSender, args: Array<String>): Boolean {
         }
     }
     return true
+}
+
+fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
+    val msg = ainpcCommandMiscPlugin.messageUtils
+    if (!sender.hasPermission("ainpc.admin")) {
+        msg.sendMessage(sender, "no_permission")
+        return true
+    }
+    if (args.size > 2) {
+        msg.send(sender, "&cUtilizare: /ainpc decision [numeNpc|nearest]")
+        return true
+    }
+    val npc = if (args.size < 2 || args[1].equals("nearest", ignoreCase = true)) {
+        val player = sender as? Player ?: run {
+            msg.send(sender, "&cUtilizare: /ainpc decision <numeNpc>")
+            return true
+        }
+        ainpcCommandMiscPlugin.npcManager.getNPCsNear(player.location, 10.0).firstOrNull()
+    } else {
+        ainpcCommandMiscPlugin.npcManager.getNPCByName(args[1])
+    }
+    if (npc == null) {
+        msg.sendMessage(sender, "npc_not_found")
+        return true
+    }
+
+    val preview = ainpcCommandMiscPlugin.decisionEngine.previewActionDecision(npc, npc.context)
+    msg.send(sender, "&6=== Decizie NPC: ${npc.name} ===")
+    msg.send(sender, "&eStare: &f${npc.currentState.displayName} &7| &ePericol: &f${if (npc.context.isInDanger) "da" else "nu"}")
+    val mode = when {
+        preview.cached -> "cache (cooldown)"
+        preview.probabilistic -> "probabilistic"
+        else -> "determinist"
+    }
+    msg.send(sender, "&eSelectie: &f$mode")
+    if (!ainpcCommandMiscPlugin.config.getBoolean("simulation.enabled", false)) {
+        msg.send(sender, "&7Simularea periodica este dezactivata; aceasta este doar o previzualizare.")
+    }
+    for ((action, probability) in preview.probabilities) {
+        msg.send(sender, formatDecisionAction(action, preview.scores[action] ?: 0, probability))
+        preview.scoreBreakdowns[action]?.let { msg.send(sender, formatDecisionScoreBreakdown(it)) }
+        preview.probabilityWeights[action]?.let { msg.send(sender, formatDecisionProbabilityWeight(it)) }
+    }
+    val repeatAdjustments = if (preview.repeatAdjustments.isNotEmpty()) {
+        preview.repeatAdjustments
+    } else {
+        listOfNotNull(preview.repeatAdjustment)
+    }
+    repeatAdjustments.forEach { msg.send(sender, formatDecisionRepeatAdjustment(it)) }
+    preview.cooldownActions.forEach { msg.send(sender, formatDecisionCooldown(it)) }
+    val statistics = ainpcCommandMiscPlugin.decisionEngine.decisionStatistics(npc.uuid)
+    if (statistics.total > 0) {
+        msg.send(sender, formatDecisionStatistics(statistics))
+    }
+    if (preview.excludedActions.isNotEmpty()) {
+        msg.send(sender, "&eActiuni eligibile fara sansa: &f${preview.excludedActions.size}")
+        for ((action, reason) in preview.excludedActions.entries.take(3)) {
+            msg.send(sender, "&7${action.displayName}: scor ${preview.scores[action]} - ${reason.label}")
+        }
+        if (preview.excludedActions.size > 3) {
+            msg.send(sender, "&7... si inca ${preview.excludedActions.size - 3} actiuni fara sansa.")
+        }
+    }
+    if (preview.blockedActions.isNotEmpty()) {
+        msg.send(sender, "&eActiuni blocate de preconditii: &f${preview.blockedActions.size}")
+        for ((action, reason) in preview.blockedActions.entries.take(3)) {
+            msg.send(sender, "&7${action.displayName}: ${reason.label}")
+        }
+        if (preview.blockedActions.size > 3) {
+            msg.send(sender, "&7... si inca ${preview.blockedActions.size - 3} actiuni blocate.")
+        }
+    }
+    msg.send(sender, "&7Citeste contextul si pozitiile tintelor; nu actualizeaza contextul si nu alege o actiune.")
+    return true
+}
+
+internal fun formatDecisionAction(action: NPCAction, score: Int, probability: Double): String =
+    "&e${action.displayName}: &f${String.format(Locale.ROOT, "%.1f", probability * 100)}% &7(scor $score)"
+
+internal fun formatDecisionRepeatAdjustment(adjustment: RepeatAdjustment): String =
+    "&eRepetitie: &f${adjustment.action.displayName} &7(pondere x${String.format(Locale.ROOT, "%.2f", adjustment.multiplier)}; " +
+        "${(adjustment.remainingMillis + 999L) / 1000L} s ramase)"
+
+internal fun formatDecisionCooldown(cooldown: ActionCooldown): String =
+    "&eCooldown: &f${cooldown.action.displayName} &7(${(cooldown.remainingMillis + 999L) / 1000L} s ramase)"
+
+internal fun formatDecisionScoreBreakdown(breakdown: DecisionEngine.ActionScoreBreakdown): String =
+    "&8  componente: baza ${breakdown.base}, trasaturi ${signedComponent(breakdown.traits)}, " +
+        "emotii ${signedComponent(breakdown.emotions)}, memorie ${signedComponent(breakdown.memory)}, " +
+        "context ${signedComponent(breakdown.context)}, nevoi ${signedComponent(breakdown.needs)}, " +
+        "rutina ${signedComponent(breakdown.routine)}"
+
+internal fun formatDecisionProbabilityWeight(weight: Double): String =
+    "&8  pondere configurata x${String.format(Locale.ROOT, "%.2f", weight)}"
+
+private fun signedComponent(value: Int): String = if (value >= 0) "+$value" else value.toString()
+
+internal fun formatDecisionStatistics(snapshot: DecisionStatistics.Snapshot): String {
+    val actions = snapshot.counts.entries
+        .sortedWith(compareByDescending<Map.Entry<NPCAction, Int>> { it.value }.thenBy { it.key.ordinal })
+        .joinToString(", ") { "${it.key.displayName}: ${it.value}" }
+    val expected = snapshot.expectedCounts.entries
+        .sortedWith(compareByDescending<Map.Entry<NPCAction, Double>> { it.value }.thenBy { it.key.ordinal })
+        .take(3)
+        .joinToString(", ") { "${it.key.displayName}: ${String.format(Locale.ROOT, "%.1f", it.value)}" }
+        .takeIf { it.isNotEmpty() }
+        ?.let { " &8| asteptat $it" }
+        .orEmpty()
+    val drift = snapshot.distributionDrift?.let {
+        " &8| abatere distributie ${String.format(Locale.ROOT, "%.1f", it * 100)}%"
+    }.orEmpty()
+    return "&eDecizii recente: &f${snapshot.total} &7($actions)$expected$drift"
 }
 
 fun handleDuplicates(sender: CommandSender, args: Array<String>): Boolean {

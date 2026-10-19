@@ -71,7 +71,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 }
 
                 "delete", "family", "tp" -> if (args.size == 2) completions.addAll(getNPCNames(args[1]))
-                "info" -> if (args.size == 2) {
+                "info", "decision" -> if (args.size == 2) {
                     completions.addAll(filterStartsWith(listOf("nearest"), args[1]))
                     completions.addAll(getNPCNames(args[1]))
                 }
@@ -90,7 +90,9 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                             || "npc-bindings".equals(args[1], true)
                             || "npc_bindings".equals(args[1], true)
                             || "mapping-metadata".equals(args[1], true)
-                            || "mapping_metadata".equals(args[1], true))
+                            || "mapping_metadata".equals(args[1], true)
+                            || "scenario-actors".equals(args[1], true)
+                            || "scenario_actors".equals(args[1], true))
                     ) {
                         completions.addAll(filterStartsWith(REPAIR_MODES, args[2]))
                     } else if (args.size == 3 && isRepairBatchTarget(args[1])) {
@@ -141,6 +143,11 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     } else if (args.size == 3) {
                         if ("list".equals(args[1], true)) {
                             completions.addAll(filterStartsWith(SCENARIO_LIST_MODES, args[2]))
+                        } else if ("recovery".equals(args[1], true)) {
+                            completions.addAll(filterStartsWith(listOf("<pagina>"), args[2]))
+                        } else if ("start".equals(args[1], true)) {
+                            completions.addAll(filterStartsWith(listOf("<templateId>"), args[2]))
+                            completions.addAll(filterStartsWith(plugin?.scenarioEngine?.getStartableScenarioTemplateIds() ?: emptyList(), args[2]))
                         } else if ("warnings".equals(args[1], true)) {
                             completions.addAll(filterStartsWith(listOf("<templateId|displayName>"), args[2]))
                             completions.addAll(getActiveScenarioSelectors(args[2]))
@@ -155,6 +162,8 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                                 args[3]
                             )
                         )
+                    } else if (args.size == 4 && "start".equals(args[1], true)) {
+                        completions.addAll(filterStartsWith(listOf("--force"), args[3]))
                     } else if (args.size == 4 && ("spawn".equals(args[1], true) || "despawn".equals(args[1], true))) {
                         completions.addAll(getActiveScenarioActorIds(args[2], args[3]))
                     }
@@ -1095,7 +1104,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val MIGRATION_MODES = listOf("dryrun", "apply")
         private val POPULATION_ACTIONS = listOf("plan", "list", "inspect", "select", "stats")
         private val REPAIR_TARGETS =
-            listOf("duplicates", "households", "npc-bindings", "mapping-metadata", "batch", "spawn-batch")
+            listOf("duplicates", "households", "npc-bindings", "mapping-metadata", "scenario-actors", "batch", "spawn-batch")
         private val REPAIR_MODES = listOf("dryrun", "apply")
         private val REPAIR_BATCH_MODES =
             listOf("dryrun", "apply", "inspect", "steps", "mark-steps", "sync-steps", "mark-failed")
@@ -1316,7 +1325,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         private val NODE_ACTIONS = listOf("create")
         private val SCAN_TARGETS = listOf("village")
         private val DEMO_ACTIONS = listOf("create")
-        private val SCENARIO_ACTIONS = listOf("list", "warnings", "info", "spawn", "despawn", "advance")
+        private val SCENARIO_ACTIONS = listOf("templates", "start", "end", "snapshot", "recovery", "list", "warnings", "info", "spawn", "despawn", "advance")
         private val SCENARIO_LIST_MODES = listOf("warnings-only", "warnings-first")
         private val SCENARIO_SELECTOR_HINTS = listOf("<templateId|displayName>")
         private val BIND_TARGETS = listOf("npc")
