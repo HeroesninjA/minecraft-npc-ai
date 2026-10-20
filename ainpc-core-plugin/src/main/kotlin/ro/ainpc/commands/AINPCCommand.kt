@@ -297,7 +297,9 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
 
             AINPCSubcommandRoute.DEMO -> DemoReadinessCommand.handle(plugin, sender, args)
             AINPCSubcommandRoute.WORLD ->
-                ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handleWorld(sender, executionArgs)
+                (executionArgs.getOrNull(1)?.equals("blueprint", ignoreCase = true) == true ||
+                    ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul")) &&
+                    handleWorld(sender, executionArgs)
 
             AINPCSubcommandRoute.PATCH ->
                 ensureFeatureEnabled(sender, "features.mapping", true, "Mapping-ul") && handlePatch(sender, executionArgs)
@@ -2447,6 +2449,7 @@ $objectives      rewards:
         val worldMode = args[1].lowercase(Locale.ROOT)
         return when (worldMode) {
             "create" -> handleWorldCreateAi(sender, args)
+            "blueprint" -> WorldBlueprintCommand.handle(plugin, sender, args)
             "whereami" -> handleWorldWhereAmI(sender, args, ::resolveQuestTargetPlayer)
             "places" -> handleWorldPlaces(sender, args)
             "outside" -> handleWorldOutside(sender, args)

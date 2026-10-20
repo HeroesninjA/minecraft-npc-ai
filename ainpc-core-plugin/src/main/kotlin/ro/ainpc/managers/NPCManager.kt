@@ -24,6 +24,8 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcLifecycleType
+import ro.ainpc.npc.NpcPersistenceMode
 import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.ResolvedNpcSpawnPlan
@@ -52,6 +54,10 @@ class NPCManager(
     private val npcsBySourceKey: MutableMap<String, AINPC> = ConcurrentHashMap()
     private val npcsByWorld: MutableMap<World, MutableSet<AINPC>> = ConcurrentHashMap()
     private val villagePopulationCooldowns: MutableMap<String, Long> = ConcurrentHashMap()
+    private val unloadedEntityGuard = UnloadedNpcEntityGuard(
+        isLoaded = { databaseId -> npcsById.containsKey(databaseId) },
+        prepareStatement = { sql -> plugin.databaseManager.prepareStatement(sql) },
+    )
 
     init {
         initVillagerLookupPlugin(plugin)
@@ -59,8 +65,7 @@ class NPCManager(
         initNpcManagerAnchorsPlugin(plugin)
     }
 
-    fun loadAllNPCs() {
-        val sql = """
+    private fun npcLoadSql(): String = """
             SELECT n.*,
                    COALESCE(p.openness, 0.5) AS openness,
                    COALESCE(p.conscientiousness, 0.5) AS conscientiousness,
@@ -86,11 +91,24 @@ class NPCManager(
             LEFT JOIN npc_profiles pr ON n.id = pr.npc_id
         """
 
+    fun loadAllNPCs() {
         try {
-            plugin.databaseManager.prepareStatement(sql).use { stmt ->
+            plugin.databaseManager.prepareStatement(npcLoadSql()).use { stmt ->
                 stmt.executeQuery().use { rs ->
                     var count = 0
+                    var quarantinedScenarioActorCount = 0
+                    val quarantinedScenarioActorIds = mutableListOf<Int>()
                     while (rs.next()) {
+                        if (ScenarioActorProfileData.restartDisposition(
+                                rs.getString("profile_source"), rs.getString("profile_data"), gson,
+                            ) == ScenarioActorProfileData.RestartDisposition.QUARANTINE
+                        ) {
+                            quarantinedScenarioActorCount++
+                            if (quarantinedScenarioActorIds.size < 10) {
+                                quarantinedScenarioActorIds.add(rs.getInt("id"))
+                            }
+                            continue
+                        }
                         val npc = loadNPCFromResultSet(rs)
                         loadTraits(npc)
                         registerNPC(npc)
@@ -99,11 +117,99 @@ class NPCManager(
 
                     val indexedSourceKeys = backfillPersistentSourceKeys()
                     plugin.getLogger().info("Incarcate " + count + " NPC-uri din baza de date. Source keys indexate: " + indexedSourceKeys + ".")
+                    if (quarantinedScenarioActorCount > 0) {
+                        plugin.logger.warning(
+                            "Actori de scenariu neincarcati dupa restart: $quarantinedScenarioActorCount; " +
+                                "randurile raman in DB pentru audit. Exemple ID: ${quarantinedScenarioActorIds.take(10)}."
+                        )
+                    }
                 }
             }
         } catch (e: SQLException) {
             plugin.getLogger().severe("Eroare la incarcarea NPC-urilor: " + e.message)
         }
+    }
+
+    internal fun readScenarioActorRecoveryCandidate(databaseId: Int): AINPC? {
+        if (databaseId <= 0 || npcsById.containsKey(databaseId)) return null
+        return try {
+            val npc = plugin.databaseManager.prepareStatement(npcLoadSql() + " WHERE n.id = ?").use { statement ->
+                statement.setInt(1, databaseId)
+                statement.executeQuery().use { rows ->
+                    if (!rows.next() || rows.getString("profile_source") != "scenario_actor") return null
+                    val metadata = ScenarioActorProfileData.read(rows.getString("profile_data"), gson) ?: return null
+                    if (metadata.lifecycleType == NpcLifecycleType.PERMANENT ||
+                        metadata.persistenceMode == NpcPersistenceMode.RUNTIME_ONLY || metadata.scenarioSessionId == null
+                    ) return null
+                    loadNPCFromResultSet(rows)
+                }
+            }
+            npc.bukkitEntity = plugin.server.getEntity(npc.uuid)
+            if (!isScenarioActorRecoveryReady(npc)) return null
+            val location = npc.bukkitEntity!!.location
+            npc.setLocation(location.world.name, location.x, location.y, location.z, location.yaw, location.pitch)
+            npc.spawned = true
+            loadTraits(npc)
+            npc
+        } catch (error: Exception) {
+            plugin.logger.warning("Actorul $databaseId ramane in carantina: verificarea pentru restaurare a esuat: ${error.message}")
+            null
+        }
+    }
+
+    internal fun isScenarioActorRecoveryReady(npc: AINPC): Boolean {
+        if (npc.profileSource != "scenario_actor" || npc.scenarioSessionId == null ||
+            npc.lifecycleType == NpcLifecycleType.PERMANENT || npc.persistenceMode == NpcPersistenceMode.RUNTIME_ONLY
+        ) return false
+        if (npcsById[npc.databaseId]?.let { it !== npc } == true ||
+            npcsByUuid[npc.uuid]?.let { it !== npc } == true ||
+            npcsByEntityId[npc.uuid]?.let { it !== npc } == true ||
+            npcsBySourceKey[normalizeSourceKey(npc.sourceKey)]?.let { it !== npc } == true ||
+            npcsByUuid.values.any { it !== npc && normalizeSourceKey(it.sourceKey) == normalizeSourceKey(npc.sourceKey) }
+        ) return false
+        if (plugin.server.getEntity(npc.uuid) !== npc.bukkitEntity ||
+            !ScenarioActorLiveIdentity.matches(npc, npc.bukkitEntity, plugin)
+        ) return false
+        return try {
+            plugin.databaseManager.prepareStatement("SELECT npc_id FROM npc_source_keys WHERE source_key = ?").use { statement ->
+                statement.setString(1, normalizeSourceKey(npc.sourceKey))
+                statement.executeQuery().use { rows -> rows.next() && rows.getInt("npc_id") == npc.databaseId }
+            }
+        } catch (_: SQLException) {
+            false
+        }
+    }
+
+    internal fun registerRecoveredScenarioActors(actors: Collection<AINPC>): Boolean {
+        if (actors.map { it.databaseId }.toSet().size != actors.size ||
+            actors.map { it.uuid }.toSet().size != actors.size ||
+            actors.map { normalizeSourceKey(it.sourceKey) }.toSet().size != actors.size ||
+            actors.any { !isScenarioActorRecoveryReady(it) }
+        ) return false
+        try {
+            for (npc in actors) {
+                val entity = npc.bukkitEntity ?: error("Entitate absenta la restaurarea actorului ${npc.databaseId}")
+                npcsById[npc.databaseId] = npc
+                npcsByUuid[npc.uuid] = npc
+                npcsByEntityId[entity.uniqueId] = npc
+                npcsByWorld.getOrPut(entity.world) { ConcurrentHashMap.newKeySet() }.add(npc)
+            }
+            rebuildSourceKeyIndex()
+            return true
+        } catch (error: Exception) {
+            releaseRecoveredScenarioActors(actors)
+            throw error
+        }
+    }
+
+    internal fun releaseRecoveredScenarioActors(actors: Collection<AINPC>) {
+        for (npc in actors) {
+            npcsById.remove(npc.databaseId, npc)
+            npcsByUuid.remove(npc.uuid, npc)
+            npcsByEntityId.remove(npc.uuid, npc)
+            npcsByWorld.values.forEach { it.remove(npc) }
+        }
+        rebuildSourceKeyIndex()
     }
 
     fun discoverExistingVillagers() {
@@ -143,6 +249,8 @@ class NPCManager(
             return null
         }
 
+        if (unloadedEntityGuard.inspect(readPersistentNpcId(villager)).preserveEntity) return null
+
         val existing = getNPCByEntity(villager)
         if (existing != null) {
             return attachCanonicalSourceOwner(existing, villager, "entitate deja mapata")
@@ -160,7 +268,7 @@ class NPCManager(
                 return attachCanonicalSourceOwner(persistentNpc, villager, "npc_id=" + persistentNpcId)
             }
 
-            plugin.getLogger().warning("Elimin villager AINPC fara rand DB activ: npc_id=" + persistentNpcId + " la " + formatLocation(villager.location) + ".")
+            plugin.getLogger().warning("Elimin villager AINPC fara rand DB: npc_id=" + persistentNpcId + " la " + formatLocation(villager.location) + ".")
             villager.remove()
             return null
         }
@@ -316,6 +424,9 @@ class NPCManager(
             }
 
             npc.sourceKey = readString(json, "source_key", npc.sourceKey)
+            if (npc.profileSource.equals("scenario_actor", ignoreCase = true)) {
+                ScenarioActorProfileData.read(json)?.applyTo(npc)
+            }
 
             val currentState = readString(json, "current_state", "")
             if (!currentState.isBlank()) {
@@ -512,6 +623,9 @@ class NPCManager(
 
     fun saveNPC(npc: AINPC?, syncFromEntity: Boolean): Boolean {
         if (npc == null) {
+            return false
+        }
+        if (!NpcPersistencePolicy.shouldSave(npc)) {
             return false
         }
 
@@ -764,7 +878,9 @@ class NPCManager(
 
     fun saveAllNPCs(syncFromEntity: Boolean) {
         for (npc in npcsByUuid.values) {
-            saveNPC(npc, syncFromEntity)
+            if (NpcPersistencePolicy.shouldSave(npc)) {
+                saveNPC(npc, syncFromEntity)
+            }
         }
     }
 
@@ -885,19 +1001,30 @@ class NPCManager(
                     continue
                 }
 
+                val npcId = readPersistentNpcId(villager)
+                val rowStatus = unloadedEntityGuard.inspect(npcId)
+                if (rowStatus.preserveEntity) {
+                    val detail = if (rowStatus == UnloadedNpcEntityGuard.Status.PERSISTED)
+                        "rand DB existent, neincarcat in runtime (inclusiv carantina)"
+                    else "existenta randului DB nu poate fi verificata"
+                    issues.add(ManagedVillagerAuditIssue.warning(
+                        "Villager AINPC npc_id=$npcId: $detail; entitatea este pastrata."
+                    ))
+                    continue
+                }
+
                 val sourceKey = normalizeSourceKey(readPersistentString(villager, AINPC.PDC_SOURCE_KEY))
                 if (!sourceKey.isBlank()) {
                     villagersBySourceKey.computeIfAbsent(sourceKey) { ArrayList() }.add(villager)
                 }
 
-                val npcId = readPersistentNpcId(villager)
                 if (npcId <= 0) {
                     issues.add(ManagedVillagerAuditIssue.warning("Villager AINPC fara npc_database_id la "
                         + formatLocation(villager.location) + "."))
                     continue
                 }
 
-                if (getNPCById(npcId) == null) {
+                if (rowStatus == UnloadedNpcEntityGuard.Status.MISSING) {
                     issues.add(ManagedVillagerAuditIssue.error("Villager AINPC refera npc_id inexistent: "
                         + npcId + " la " + formatLocation(villager.location) + "."))
                     continue
@@ -942,9 +1069,10 @@ class NPCManager(
         val indexedSourceKeys = HashSet<String>()
 
         val sql = """
-            SELECT source_key, npc_id
-            FROM npc_source_keys
-            ORDER BY source_key ASC
+            SELECT source_keys.source_key, source_keys.npc_id, profiles.profile_source, profiles.profile_data
+            FROM npc_source_keys source_keys
+            LEFT JOIN npc_profiles profiles ON profiles.npc_id = source_keys.npc_id
+            ORDER BY source_keys.source_key ASC
         """
         try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
@@ -960,8 +1088,16 @@ class NPCManager(
                         indexedSourceKeys.add(sourceKey)
                         val indexedNpc = getNPCById(npcId)
                         if (indexedNpc == null) {
-                            issues.add(ManagedVillagerAuditIssue.error("npc_source_keys refera NPC inexistent: source_key="
-                                + sourceKey + ", npc_id=" + npcId + "."))
+                            if (ScenarioActorProfileData.restartDisposition(
+                                    rs.getString("profile_source"), rs.getString("profile_data"), gson,
+                                ) == ScenarioActorProfileData.RestartDisposition.QUARANTINE
+                            ) {
+                                issues.add(ManagedVillagerAuditIssue.warning("npc_source_keys apartine unui actor de scenariu in carantina: source_key="
+                                    + sourceKey + ", npc_id=" + npcId + "."))
+                            } else {
+                                issues.add(ManagedVillagerAuditIssue.error("npc_source_keys refera NPC inexistent: source_key="
+                                    + sourceKey + ", npc_id=" + npcId + "."))
+                            }
                             continue
                         }
 
@@ -1386,6 +1522,10 @@ class NPCManager(
                 }
 
                 val npcId = readPersistentNpcId(villager)
+                if (unloadedEntityGuard.inspect(npcId).preserveEntity) {
+                    warnings.add("Pastrez villager npc_id=$npcId: rand DB neincarcat sau neverificabil.")
+                    continue
+                }
                 if (npcId > 0) {
                     byNpcId.computeIfAbsent(npcId) { ArrayList() }.add(villager)
                 }
@@ -1642,6 +1782,8 @@ class NPCManager(
             return npc
         }
 
+        if (unloadedEntityGuard.inspect(readPersistentNpcId(villager)).preserveEntity) return null
+
         val currentEntity = npc.bukkitEntity
         val wasSpawned = npc.spawned
         if (currentEntity is Villager
@@ -1703,6 +1845,7 @@ class NPCManager(
         val villager = findVillagerForNPC(npc, preferredChunk)
 
         if (villager != null) {
+            if (unloadedEntityGuard.inspect(readPersistentNpcId(villager)).preserveEntity) return
             npc.attachToVillager(villager)
             registerEntity(npc, villager)
         } else {

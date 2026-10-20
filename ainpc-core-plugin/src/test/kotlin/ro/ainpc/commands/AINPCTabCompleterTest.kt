@@ -127,9 +127,37 @@ class AINPCTabCompleterTest {
         assertTrue(tab(completer, "ainpc", "debugdump", "").contains("npc"))
         assertTrue(tab(completer, "ainpc", "debugdump", "all", "").contains("privacy-safe"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("list"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("start"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("end"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("snapshot"))
+        assertTrue(tab(completer, "ainpc", "scenario", "").contains("recovery"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("spawn"))
         assertTrue(tab(completer, "ainpc", "scenario", "").contains("advance"))
         assertTrue(tab(completer, "ainpc", "scenario", "spawn", "").contains("<templateId|displayName>"))
+        assertTrue(tab(completer, "ainpc", "scenario", "start", "").contains("<templateId>"))
+        assertTrue(tab(completer, "ainpc", "scenario", "start", "demo:theft", "").contains("--force"))
+        assertTrue(tab(completer, "ainpc", "scenario", "recovery", "").contains("<pagina>"))
+    }
+
+    @Test
+    fun completesWorldBlueprintDraftActions() {
+        val completer = AINPCTabCompleter(null)
+
+        assertTrue(tab(completer, "ainpc", "world", "").contains("blueprint"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("story"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("plan"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("wizard"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("review"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("confirm"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "").contains("stop"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "").contains("edit"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "edit", "")
+            .contains("architecture"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("profession-limit"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "inspect", "")
+            .contains("architecture"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "remove", "")
+            .contains("map-rule"))
     }
 
     @Test

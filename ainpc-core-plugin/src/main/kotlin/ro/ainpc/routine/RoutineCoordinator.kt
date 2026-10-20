@@ -74,7 +74,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
     private fun syncSocialGroupTiming() {
         val groups = mutableMapOf<Int, MutableList<Pair<UUID, String>>>()
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned()) continue
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
             val anchor = npc.socialAnchor ?: continue
             val loc = anchor.toLocation() ?: continue
             val chunkKey = loc.world.name.hashCode() * 31 + (loc.blockX shr 4) * 31 + (loc.blockZ shr 4)
@@ -99,7 +99,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
     private fun applySeasonalActivities() {
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned()) continue
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
             if (npc.currentState != NPCState.WORKING && npc.currentState != NPCState.FARMING &&
                 npc.currentState != NPCState.CRAFTING && npc.currentState != NPCState.IDLE) continue
             val loc = npc.location ?: continue
@@ -113,7 +113,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
     private fun payWorkingNpcs() {
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned()) continue
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
             if (npc.currentState.isWorkState() && npc.uuid != null) {
                 plugin.npcEconomyService.paySalaryForWork(npc.uuid!!, npc.databaseId)
             }
@@ -165,7 +165,7 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
         val byAnchor = mutableMapOf<String, MutableList<AINPC>>()
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned()) continue
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
             if (npc.currentState != NPCState.SOCIALIZING && npc.currentState != NPCState.IDLE) continue
             val anchor = npc.socialAnchor ?: continue
             val loc = anchor.toLocation() ?: continue
@@ -204,10 +204,15 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
     private fun linkSocialToRelationships(summary: RoutineTickSummary) {
         if (!plugin.config.getBoolean("routine.enabled", false)) return
+        val activeNpcIds = plugin.npcManager.getAllNPCs()
+            .filter { it.isSpawned() && it.simulationMode.runsAutonomousActivities() }
+            .map { it.uuid }
+            .toSet()
         val socialPartners = plugin.socialCoordinator.getSocialPartnersSummary()
         for ((npcA, partners) in socialPartners) {
+            if (npcA !in activeNpcIds) continue
             for (npcB in partners) {
-                if (npcA != npcB) {
+                if (npcA != npcB && npcB in activeNpcIds) {
                     plugin.relationshipService.recordInteraction(npcA, npcB)
                 }
             }

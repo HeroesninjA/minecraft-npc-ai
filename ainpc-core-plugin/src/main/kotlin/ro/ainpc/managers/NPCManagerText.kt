@@ -663,6 +663,7 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     profile.addProperty("spawned", npc.spawned)
     profile.add("spawn_state", buildSpawnState(npc))
     profile.addProperty("profile_summary", buildProfileSummary(npc))
+    ScenarioActorProfileData.write(profile, npc)
     if (preservedNarrative != null) {
         profile.add("narrative", preservedNarrative)
     }

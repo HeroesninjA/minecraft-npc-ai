@@ -29,6 +29,7 @@ import ro.ainpc.api.events.dialog.DialogSessionEndedEventPayload
 import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
 import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.commands.defaultObjectiveTarget
+import ro.ainpc.commands.WorldBlueprintWizard
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.managers.isSameNpcRecord
@@ -48,6 +49,14 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     fun onAsyncChat(event: AsyncChatEvent) {
         val player = event.player
         val message = PLAIN_TEXT.serialize(event.message())
+
+        if (WorldBlueprintWizard.hasSession(player.uniqueId)) {
+            event.isCancelled = true
+            runSync {
+                if (player.isOnline) WorldBlueprintWizard.consume(plugin, player, message)
+            }
+            return
+        }
 
         if (plugin.guiService.hasTextInputRequest(player)) {
             event.isCancelled = true
@@ -75,6 +84,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
+        WorldBlueprintWizard.clear(event.player.uniqueId)
         val partner = conversations().getConversationPartner(event.player)
         if (partner != null) {
             publishDialogSessionEnded(event.player, partner, "quit")

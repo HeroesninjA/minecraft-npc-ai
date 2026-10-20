@@ -289,6 +289,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
         dialogueEngine = DialogueEngine(plugin, openAIService)
         scenarioEngine = ScenarioEngine(plugin)
         scenarioEngine.loadPlayerQuests()
+        scenarioEngine.restoreSafeScenarioSnapshots()
         progressionService = ProgressionService(plugin)
         playerProgressionService = PlayerProgressionService(plugin)
         storyStateService = StoryStateService(plugin)
@@ -386,6 +387,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
             scenarioEngine.stopAllQuestTracking()
             log.info("Salvare progres quest-uri...")
             scenarioEngine.flushQuestProgress()
+            scenarioEngine.flushScenarioSnapshots()
         }
         if (::npcManager.isInitialized) {
             log.info("Salvare date NPC-uri...")

@@ -25,7 +25,9 @@ enum class NpcPersistenceMode {
 enum class NpcSimulationMode {
     FULL,
     LIGHT,
-    NONE
+    NONE;
+
+    fun runsAutonomousActivities(): Boolean = this == FULL
 }
 
 /**

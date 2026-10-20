@@ -8,6 +8,7 @@ import org.bukkit.Material
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.scheduler.BukkitTask
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.events.AINPCEventSource
 import ro.ainpc.api.events.quest.ProgressionAbandonedEvent
@@ -32,7 +33,6 @@ import ro.ainpc.api.events.quest.ProgressionLifecycleEvent
 import ro.ainpc.api.events.story.StoryActionAppliedEvent
 import ro.ainpc.api.events.story.StoryActionAppliedEventPayload
 import ro.ainpc.npc.AINPC
-import ro.ainpc.npc.NpcLifecycleType
 import ro.ainpc.npc.NpcPersistenceMode
 import ro.ainpc.npc.NpcScenarioActorDefinition
 import ro.ainpc.npc.NpcSpawnPolicy
@@ -84,6 +84,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     val variableProviderRegistry: ScenarioVariableProviderRegistry = ScenarioVariableProviderRegistry()
     val objectiveHandlerRegistry: ObjectiveHandlerRegistry = ObjectiveHandlerRegistry()
     private val scenarioTemplates = LinkedHashMap<ScenarioType, ScenarioTemplate>()
+    private val scenarioTemplatesById = LinkedHashMap<String, ScenarioTemplate>()
     private val questTemplates = LinkedHashMap<String, ScenarioTemplate>()
     private val gson = Gson()
     private val activePlayerQuests = ConcurrentHashMap<UUID, MutableMap<String, PlayerQuestProgress>>()
@@ -94,7 +95,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     var storyContextService: StoryContextService? = null
     private val trackedQuestPlayers = HashSet<UUID>()
     private val trackedQuestTemplates = ConcurrentHashMap<UUID, String>()
-    private val activeScenarios = ConcurrentHashMap<UUID, ActiveScenario>()
+    private val scenarioSessionRegistry = ScenarioSessionRegistry()
+    private val scenarioSessionSnapshotStore = ScenarioSessionSnapshotStore()
+    private val activeScenarios = scenarioSessionRegistry.activeScenarios
     private val npcConversationCooldowns = ConcurrentHashMap<UUID, Long>()
     private val trackedBlockLocations = ConcurrentHashMap<UUID, MutableSet<String>>()
     private val trackedVisitedPlaces = ConcurrentHashMap<UUID, MutableSet<String>>()
@@ -414,6 +417,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun loadScenarioTemplates() {
         templatesLoadedAt = System.currentTimeMillis()
         scenarioTemplates.clear()
+        scenarioTemplatesById.clear()
         questTemplates.clear()
 
         val theft = ScenarioTemplate(ScenarioType.THEFT)
@@ -519,6 +523,9 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         gossip.minimumNpcCount = 2
         scenarioTemplates[ScenarioType.GOSSIP_SPREAD] = gossip
 
+        scenarioTemplates.values.forEach { template ->
+            scenarioTemplatesById[template.templateId.lowercase(Locale.ROOT)] = template
+        }
         loadAddonScenarioTemplates()
     }
     private fun loadAddonScenarioTemplates() {
@@ -600,6 +607,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
                     template.addPhase(phase, phase)
                 }
 
+                scenarioTemplatesById[template.templateId.lowercase(Locale.ROOT)] = template
                 if (isProgressionRuntimeDefinition(definition, template)) {
                     questTemplates[template.templateId] = template
                 }
@@ -2830,6 +2838,13 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     fun spawnScenarioActor(scenarioId: UUID, actorId: String, location: Location): AINPC? {
         val activeScenario = activeScenarios[scenarioId] ?: return null
         val actorDefinition = activeScenario.actors[actorId] ?: return null
+        if (activeScenario.spawnedActors.containsKey(actorId)) return null
+        val durationSeconds = actorDefinition.durationSeconds
+        val expiresAt = ScenarioActorExpiration.deadline(System.currentTimeMillis(), durationSeconds)
+        if (durationSeconds != null && durationSeconds > 0 && expiresAt == null) {
+            plugin.logger.warning("Durata actorului $actorId din scenariul $scenarioId depaseste limita sigura.")
+            return null
+        }
         val npc = AINPC(plugin)
         npc.applyScenarioDefinition(actorDefinition)
         if (npc.name.isBlank()) {
@@ -2842,6 +2857,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
             npc.sourceKey
         }
         npc.profileSource = "scenario_actor"
+        npc.scenarioSessionId = scenarioId
         val worldName = location.world?.name ?: return null
         npc.setLocation(worldName, location.x, location.y, location.z, location.yaw, location.pitch)
 
@@ -2858,13 +2874,20 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         if (actorDefinition.persistenceMode != NpcPersistenceMode.RUNTIME_ONLY &&
             !plugin.npcManager.saveNPC(npc, false)
         ) {
-            npc.despawn()
+            if (npc.databaseId > 0) {
+                if (!plugin.npcManager.deleteNPC(npc)) {
+                    plugin.logger.severe("Nu am putut anula salvarea partiala a actorului $actorId din scenariul $scenarioId.")
+                }
+            } else {
+                npc.despawn()
+            }
             return null
         }
 
         plugin.npcManager.registerTransientNPC(npc)
-        activeScenario.assignActor(actorId, npc.uuid)
-        scheduleScenarioActorExpiration(scenarioId, actorId, actorDefinition)
+        activeScenario.assignActor(actorId, npc.uuid, expiresAt)
+        scheduleScenarioActorExpiration(scenarioId, actorId, npc.uuid, actorDefinition)
+        persistScenarioSnapshot(scenarioId)
         return npc
     }
 
@@ -2908,15 +2931,31 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
 
     fun despawnScenarioActor(scenarioId: UUID, actorId: String) {
         val activeScenario = activeScenarios[scenarioId] ?: return
-        val npcUuid = activeScenario.removeActor(actorId) ?: return
-        val npc = plugin.npcManager.getNPCByUuid(npcUuid) ?: return
-        if (npc.persistenceMode == NpcPersistenceMode.RUNTIME_ONLY ||
-            npc.lifecycleType == NpcLifecycleType.EPISODIC ||
-            npc.lifecycleType == NpcLifecycleType.SCENE_ONLY
-        ) {
-            plugin.npcManager.unregisterTransientNPC(npc)
+        val npcUuid = activeScenario.spawnedActors[actorId] ?: return
+        val npc = plugin.npcManager.getNPCByUuid(npcUuid)
+        if (npc == null) {
+            plugin.logger.warning("Refuz cleanup actor scenariu $actorId din $scenarioId: NPC-ul nu este incarcat.")
+            return
         }
-        npc.despawn()
+        if (npc.profileSource != "scenario_actor") {
+            plugin.logger.warning("Refuz cleanup actor scenariu $actorId: NPC-ul nu are provenienta scenario_actor.")
+            return
+        }
+        when (ScenarioActorCleanupPolicy.decide(npc.lifecycleType, npc.persistenceMode, npc.databaseId)) {
+            ScenarioActorCleanupPolicy.Action.DESPAWN -> npc.despawn()
+            ScenarioActorCleanupPolicy.Action.UNREGISTER -> {
+                plugin.npcManager.unregisterTransientNPC(npc)
+                npc.despawn()
+            }
+            ScenarioActorCleanupPolicy.Action.DELETE_PERSISTED -> {
+                if (!plugin.npcManager.deleteNPC(npc)) {
+                    plugin.logger.warning("Nu am putut sterge actorul persistent $actorId din scenariul $scenarioId.")
+                    return
+                }
+            }
+        }
+        activeScenario.removeActor(actorId)
+        persistScenarioSnapshot(scenarioId)
     }
 
     fun despawnScenarioActors(scenarioId: UUID) {
@@ -2964,14 +3003,53 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     private fun scheduleScenarioActorExpiration(
         scenarioId: UUID,
         actorId: String,
+        npcUuid: UUID,
         actorDefinition: NpcScenarioActorDefinition,
     ) {
         val durationSeconds = actorDefinition.durationSeconds ?: return
         if (durationSeconds <= 0) return
+        val expiresAt = activeScenarios[scenarioId]?.actorExpirationTimes?.get(actorId) ?: return
         val ticks = durationSeconds * 20L
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-            despawnScenarioActor(scenarioId, actorId)
+            expireScenarioActorIfCurrent(scenarioId, actorId, npcUuid, expiresAt)
         }, ticks)
+    }
+
+    private fun expireScenarioActorIfCurrent(scenarioId: UUID, actorId: String, npcUuid: UUID, expiresAt: Long) {
+        val scenario = activeScenarios[scenarioId] ?: return
+        if (scenario.isCurrentActor(actorId, npcUuid) && scenario.actorExpirationTimes[actorId] == expiresAt) {
+            despawnScenarioActor(scenarioId, actorId)
+        }
+    }
+
+    private fun scheduleRecoveredScenarioActorExpirations(
+        scenario: ActiveScenario,
+        snapshot: ScenarioSessionSnapshot,
+    ): Boolean {
+        val now = System.currentTimeMillis()
+        val plans = mutableListOf<Triple<String, ScenarioSessionSnapshot.Actor, Long>>()
+        for ((actorId, actor) in snapshot.actors) {
+            val expiresAt = actor.expiresAt ?: continue
+            val durationSeconds = scenario.actors[actorId]?.durationSeconds
+            val delayTicks = ScenarioActorExpiration.recoveryDelayTicks(
+                now, scenario.startTime, durationSeconds, expiresAt,
+            ) ?: return false
+            plans.add(Triple(actorId, actor, delayTicks))
+        }
+        val scheduled = mutableListOf<BukkitTask>()
+        return try {
+            for ((actorId, actor, delayTicks) in plans) {
+                val expiresAt = actor.expiresAt ?: continue
+                scheduled.add(Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                    expireScenarioActorIfCurrent(scenario.id, actorId, actor.uuid, expiresAt)
+                }, delayTicks))
+            }
+            true
+        } catch (error: Exception) {
+            scheduled.forEach { task -> runCatching { task.cancel() } }
+            plugin.logger.log(Level.WARNING, "Nu am putut relua timerele scenariului ${scenario.id}.", error)
+            false
+        }
     }
 
     private fun shouldSpawnScenarioActorInPhase(
@@ -2997,8 +3075,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         scenario: ActiveScenario,
         phase: String,
     ): ScenarioPhaseActorRule {
-        val template = scenarioTemplates[scenario.type] ?: return ScenarioPhaseActorRule(emptySet(), emptySet())
-        val stage = template.questStages.firstOrNull { questStage ->
+        val stage = scenario.questStages.firstOrNull { questStage ->
             questStage.id.equals(phase, ignoreCase = true)
         } ?: return ScenarioPhaseActorRule(emptySet(), emptySet())
         return ScenarioPhaseActorRule(
@@ -3011,8 +3088,7 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
         scenario: ActiveScenario,
         phase: String,
     ): Set<String> {
-        val template = scenarioTemplates[scenario.type] ?: return emptySet()
-        val stage = template.questStages.firstOrNull { questStage ->
+        val stage = scenario.questStages.firstOrNull { questStage ->
             questStage.id.equals(phase, ignoreCase = true)
         } ?: return emptySet()
         return readScenarioActorTriggerList(stage.metadata, QuestActorTriggers.ON_STAGE_COMPLETE, "stage_complete_actors", "complete_actors")
@@ -3046,14 +3122,14 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     
     fun advanceScenario(p0: UUID) {
         val scenario = activeScenarios[p0] ?: return
-        val template = scenarioTemplates[scenario.type] ?: return
-        val phases = template.phases
+        val phases = scenario.phases
         val currentIndex = phases.indexOf(scenario.currentPhase)
         if (currentIndex < phases.size - 1) {
             val previousPhase = scenario.currentPhase
             scenario.currentPhase = phases[currentIndex + 1]
             cleanupScenarioStageActors(p0, previousPhase, getScenarioStageCompleteActors(scenario, previousPhase))
             refreshScenarioActorsForPhase(p0, scenario.currentPhase)
+            persistScenarioSnapshot(p0)
             plugin.debug("Scenariu " + p0.toString().substring(0, 8)
                 + " avansat la faza: " + scenario.currentPhase)
         } else {
@@ -3078,11 +3154,211 @@ class ScenarioEngine(private val plugin: AINPCPlugin) {
     fun endScenario(p0: UUID) {
         val scenario = activeScenarios[p0] ?: return
         despawnScenarioActors(p0)
+        if (scenario.spawnedActors.isNotEmpty()) {
+            plugin.logger.warning("Scenariul $p0 ramane activ: cleanup-ul actorilor nu s-a incheiat.")
+            return
+        }
+        if (!deleteScenarioSnapshot(p0)) return
         activeScenarios.remove(p0)
         plugin.logger.info("Scenariu terminat: " + scenario.displayName
             + " (ID: " + p0.toString().substring(0, 8) + ")")
     }
     fun getActiveScenarios(): Map<UUID, ActiveScenario> = HashMap(activeScenarios)
+
+    internal fun captureScenarioSnapshot(scenarioId: UUID): ScenarioSessionSnapshot? =
+        activeScenarios[scenarioId]?.let { scenario ->
+            if (scenario.spawnedActors.values.any { plugin.npcManager.getNPCByUuid(it) == null }) return@let null
+            ScenarioSessionSnapshotCodec.capture(scenario) { uuid ->
+                plugin.npcManager.getNPCByUuid(uuid)?.databaseId
+            }
+        }
+
+    private fun persistScenarioSnapshot(scenarioId: UUID): Boolean {
+        val snapshot = captureScenarioSnapshot(scenarioId)
+        if (snapshot == null) {
+            plugin.logger.warning("Snapshot-ul scenariului $scenarioId nu a putut fi capturat.")
+            return false
+        }
+        return try {
+            plugin.databaseManager.executeTransaction { connection ->
+                scenarioSessionSnapshotStore.save(connection, snapshot)
+            }
+            true
+        } catch (error: Exception) {
+            plugin.logger.log(Level.WARNING, "Nu am putut salva snapshot-ul scenariului $scenarioId.", error)
+            false
+        }
+    }
+
+    private fun deleteScenarioSnapshot(scenarioId: UUID): Boolean = try {
+        plugin.databaseManager.executeTransaction { connection ->
+            scenarioSessionSnapshotStore.delete(connection, scenarioId)
+        }
+        true
+    } catch (error: Exception) {
+        plugin.logger.log(Level.WARNING, "Nu am putut sterge snapshot-ul scenariului $scenarioId.", error)
+        false
+    }
+
+    fun flushScenarioSnapshots() {
+        activeScenarios.keys.toList().forEach(::persistScenarioSnapshot)
+    }
+
+    fun restoreSafeScenarioSnapshots() {
+        try {
+            var storedCount = 0L
+            val stored = mutableListOf<StoredScenarioSession>()
+            plugin.databaseManager.executeTransaction { connection ->
+                storedCount = scenarioSessionSnapshotStore.count(connection)
+                if (storedCount <= 1_000) {
+                    var offset = 0
+                    while (offset < storedCount) {
+                        val page = scenarioSessionSnapshotStore.loadPage(connection, 100, offset)
+                        if (page.isEmpty()) break
+                        stored.addAll(page)
+                        offset += page.size
+                    }
+                }
+            }
+            if (storedCount > 1_000) {
+                plugin.logger.warning(
+                    "$storedCount snapshot-uri de scenariu depasesc limita de restaurare automata (1000). " +
+                        "Niciun rand nu a fost reactivat; foloseste /ainpc scenario recovery."
+                )
+                return
+            }
+            val duplicateCounts = stored.groupingBy { it.templateId.lowercase(Locale.ROOT) }.eachCount()
+            var restoredCount = 0
+            for (row in stored) {
+                val snapshot = row.snapshot ?: continue
+                val template = scenarioTemplatesById[row.templateId.lowercase(Locale.ROOT)] ?: continue
+                val preparedActors = prepareScenarioRecoveryActors(snapshot)
+                val actorLookup: (Int) -> AINPC? = { databaseId ->
+                    plugin.npcManager.getNPCById(databaseId) ?: preparedActors[databaseId]
+                }
+                val preview = ScenarioSessionRecoveryInspector.inspect(
+                    row,
+                    template,
+                    worldAvailable = { worldName -> plugin.server.getWorld(worldName) != null },
+                    npcById = actorLookup,
+                    npcByUuid = plugin.npcManager::getNPCByUuid,
+                    duplicateTemplateCount = (duplicateCounts[row.templateId.lowercase(Locale.ROOT)] ?: 0).toLong(),
+                    templateAlreadyActive = activeScenarios.values.any {
+                        it.templateId.equals(row.templateId, ignoreCase = true)
+                    },
+                    transientActorReady = plugin.npcManager::isScenarioActorRecoveryReady,
+                )
+                if (!preview.automaticRestoreEligible) continue
+                val world = plugin.server.getWorld(snapshot.anchor.world) ?: continue
+                try {
+                    val restored = ScenarioRecoveryActivation.activate(
+                        registerActors = { plugin.npcManager.registerRecoveredScenarioActors(preparedActors.values) },
+                        releaseActors = { plugin.npcManager.releaseRecoveredScenarioActors(preparedActors.values) },
+                        restoreSession = {
+                            scenarioSessionRegistry.restore(template, snapshot, world,
+                                transientActorReady = plugin.npcManager::isScenarioActorRecoveryReady,
+                                actorById = plugin.npcManager::getNPCById)
+                        },
+                        removeSession = { scenario -> activeScenarios.remove(scenario.id, scenario) },
+                        resumeTimers = { scenario -> scheduleRecoveredScenarioActorExpirations(scenario, snapshot) },
+                    )
+                    if (restored != null) restoredCount++
+                    else plugin.logger.warning("Scenariul ${snapshot.scenarioId} ramane diagnostic: reactivare sau timer esuat.")
+                } catch (error: Exception) {
+                    plugin.logger.log(Level.WARNING, "Reactivarea scenariului ${snapshot.scenarioId} a esuat.", error)
+                }
+            }
+            if (storedCount > 0) {
+                plugin.logger.info("Sesiuni de scenariu restaurate conservator: $restoredCount/$storedCount.")
+            }
+            if (storedCount > restoredCount) {
+                plugin.logger.warning(
+                    "${storedCount - restoredCount} snapshot-uri raman doar diagnostice: actori incompatibili, progresie, " +
+                        "template-uri incompatibile ori date ambigue. Nu se face respawn sau cleanup automat."
+                )
+            }
+        } catch (error: Exception) {
+            plugin.logger.log(Level.WARNING, "Nu am putut restaura snapshot-urile sigure ale scenariilor.", error)
+        }
+    }
+
+    private fun prepareScenarioRecoveryActors(snapshot: ScenarioSessionSnapshot): Map<Int, AINPC> {
+        val candidates = snapshot.actors.values.mapNotNull { actor ->
+            val databaseId = actor.databaseId ?: return@mapNotNull null
+            if (plugin.npcManager.getNPCById(databaseId) != null) return@mapNotNull null
+            plugin.npcManager.readScenarioActorRecoveryCandidate(databaseId)
+        }
+        val sourceCounts = candidates.groupingBy { it.sourceKey.trim().lowercase(Locale.ROOT) }.eachCount()
+        return candidates.filter { sourceCounts[it.sourceKey.trim().lowercase(Locale.ROOT)] == 1 }
+            .associateBy { it.databaseId }
+    }
+
+    fun previewStoredScenarioRecovery(page: Int): ScenarioRecoveryPage {
+        require(page in 1..100_000)
+        var total = 0L
+        var stored = emptyList<StoredScenarioSession>()
+        var duplicateCounts = emptyMap<String, Long>()
+        plugin.databaseManager.executeTransaction { connection ->
+            total = scenarioSessionSnapshotStore.count(connection)
+            stored = scenarioSessionSnapshotStore.loadPage(connection, 10, (page - 1) * 10)
+            duplicateCounts = stored.associate { row ->
+                row.templateId to scenarioSessionSnapshotStore.countByTemplate(connection, row.templateId)
+            }
+        }
+        val previews = stored.map { row ->
+            val preparedActors = row.snapshot?.let(::prepareScenarioRecoveryActors).orEmpty()
+            ScenarioSessionRecoveryInspector.inspect(
+                row,
+                scenarioTemplatesById[row.templateId.lowercase(Locale.ROOT)],
+                worldAvailable = { worldName -> plugin.server.getWorld(worldName) != null },
+                npcById = { databaseId -> plugin.npcManager.getNPCById(databaseId) ?: preparedActors[databaseId] },
+                npcByUuid = plugin.npcManager::getNPCByUuid,
+                duplicateTemplateCount = duplicateCounts[row.templateId] ?: 0,
+                templateAlreadyActive = activeScenarios.values.any {
+                    it.templateId.equals(row.templateId, ignoreCase = true) && it.id.toString() != row.scenarioId
+                },
+                scenarioAlreadyActive = activeScenarios.keys.any { it.toString() == row.scenarioId },
+                transientActorReady = plugin.npcManager::isScenarioActorRecoveryReady,
+            )
+        }
+        return ScenarioRecoveryPage(total, previews)
+    }
+
+    internal fun scenarioSnapshotTemplateIssues(snapshot: ScenarioSessionSnapshot): List<String> {
+        val template = scenarioTemplatesById[snapshot.templateId.lowercase(Locale.ROOT)]
+            ?: return listOf("template indisponibil")
+        return ScenarioSessionSnapshotCodec.templateIssues(snapshot, template)
+    }
+
+    fun getStartableScenarioTemplateIds(): List<String> = scenarioTemplatesById.values
+        .filter { it.phases.firstOrNull()?.isNotBlank() == true }
+        .map { it.templateId }
+        .filter { it.isNotBlank() }
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+
+    internal fun manualStartReadiness(templateId: String, anchorLocation: Location): ScenarioManualStartReadiness? {
+        if (anchorLocation.world == null) return null
+        val template = scenarioTemplatesById[templateId.trim().lowercase(Locale.ROOT)] ?: return null
+        val nearbyCount = plugin.npcManager.getActiveNPCsNear(anchorLocation, ScenarioManualStartPolicy.RADIUS).size
+        return ScenarioManualStartPolicy.inspect(template, nearbyCount)
+    }
+
+    fun startScenario(
+        templateId: String,
+        anchorLocation: Location,
+        ignoreMinimumNpcCount: Boolean = false,
+    ): ActiveScenario? {
+        if (anchorLocation.world == null) return null
+        val template = scenarioTemplatesById[templateId.trim().lowercase(Locale.ROOT)] ?: return null
+        if (!ignoreMinimumNpcCount && manualStartReadiness(templateId, anchorLocation)?.meetsMinimum != true) return null
+        val scenario = scenarioSessionRegistry.start(template, anchorLocation) ?: return null
+        if (!persistScenarioSnapshot(scenario.id)) {
+            activeScenarios.remove(scenario.id)
+            return null
+        }
+        spawnScenarioActors(scenario.id, anchorLocation, scenario.currentPhase)
+        return scenario
+    }
 
     fun findActiveScenarioByTemplateId(templateId: String): Map.Entry<UUID, ActiveScenario>? {
         val normalized = templateId.trim()

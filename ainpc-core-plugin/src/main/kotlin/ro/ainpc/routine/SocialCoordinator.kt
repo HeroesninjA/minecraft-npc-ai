@@ -19,7 +19,7 @@ class SocialCoordinator(private val plugin: AINPCPlugin) {
         socialGroups.clear()
 
         for (npc in allNpcs) {
-            if (!npc.isSpawned()) continue
+            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
             val regionId = resolveNpcRegion(npc) ?: continue
             val group = socialGroups.getOrPut(regionId) { mutableListOf() }
             group.add(npc.uuid)

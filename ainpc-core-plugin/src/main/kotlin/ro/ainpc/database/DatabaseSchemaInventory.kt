@@ -97,6 +97,7 @@ object DatabaseSchemaCatalog {
         table(DatabaseSchemaDomain.NPC, "npc_npc_relationships"),
         table(DatabaseSchemaDomain.DIALOG, "dialog_history"),
         table(DatabaseSchemaDomain.QUEST, "player_quests"),
+        table(DatabaseSchemaDomain.QUEST, "scenario_sessions"),
         table(DatabaseSchemaDomain.QUEST, "quest_anchor_bindings"),
         table(DatabaseSchemaDomain.WORLD, "npc_world_bindings"),
         table(DatabaseSchemaDomain.WORLD, "households"),

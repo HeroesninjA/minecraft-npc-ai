@@ -389,6 +389,17 @@ open class DatabaseManager(
             )
             stmt.execute(
                 """
+                CREATE TABLE IF NOT EXISTS scenario_sessions (
+                    scenario_id ${shortText()} PRIMARY KEY,
+                    template_id ${shortText(128)} NOT NULL,
+                    snapshot_version INTEGER NOT NULL,
+                    snapshot_data ${longText()} NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )
+                """
+            )
+            stmt.execute(
+                """
                 CREATE TABLE IF NOT EXISTS quest_anchor_bindings (
                     player_uuid ${shortText()} NOT NULL,
                     template_id ${shortText()} NOT NULL,

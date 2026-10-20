@@ -38,6 +38,7 @@ class AINPC(
     var interactionProfile: NpcInteractionProfile = NpcInteractionProfile.FULL_AI
     var entityArchetype: String = "villager"
     var ownerScenarioId: String? = null
+    var scenarioSessionId: UUID? = null
     var ownerQuestId: String? = null
     var spawnSource: String? = null
     var despawnRule: String? = null

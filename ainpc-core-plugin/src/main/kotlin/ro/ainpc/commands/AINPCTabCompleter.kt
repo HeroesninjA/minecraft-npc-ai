@@ -366,6 +366,24 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
         when (worldMode) {
             "whereami" -> if (args.size == 3) completions.addAll(getOnlinePlayerNames(args[2]))
             "places" -> if (args.size == 3) completions.addAll(getRegionIds(args[2]))
+            "blueprint" -> {
+                if (args.size == 3) completions.addAll(filterStartsWith(
+                    plugin?.server?.worlds?.map { it.name } ?: emptyList(), args[2]))
+                else if (args.size == 4) completions.addAll(filterStartsWith(
+                    listOf("show", "inspect", "validate", "plan", "review", "confirm", "revoke", "wizard", "story", "property", "profession-limit", "profession", "architecture", "map-rule", "remove"), args[3]))
+                else if (args.size == 5 && args[3].equals("wizard", true)) completions.addAll(filterStartsWith(
+                    listOf("stop", "edit"), args[4]))
+                else if (args.size == 6 && args[3].equals("wizard", true) && args[4].equals("edit", true)) {
+                    completions.addAll(filterStartsWith(
+                        listOf("story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[5]))
+                }
+                else if (args.size == 5 && args[3].equals("remove", true)) completions.addAll(filterStartsWith(
+                    listOf("property", "profession", "map-rule"), args[4]))
+                else if (args.size == 5 && args[3].equals("inspect", true)) completions.addAll(filterStartsWith(
+                    listOf("story", "architecture", "property", "profession", "map-rule"), args[4]))
+                else if (args.size == 5 && args[3].equals("profession-limit", true)) completions.addAll(filterStartsWith(
+                    listOf("8", "16", "32"), args[4]))
+            }
             "create" -> {
                 if (args.size == 3) completions.addAll(filterStartsWith(listOf("ai", "help"), args[2]))
                 else if (args.size == 4) completions.addAll(filterStartsWith(listOf("preview", "dryrun", "region", "place", "node"), args[3]))
@@ -1276,6 +1294,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "outside",
             "fixture",
             "create",
+            "blueprint",
             "region",
             "place",
             "node",
