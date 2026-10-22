@@ -6,6 +6,7 @@ import org.bukkit.Location
 import org.bukkit.HeightMap
 import org.bukkit.NamespacedKey
 import org.bukkit.World
+import org.bukkit.WorldCreator
 import org.bukkit.block.data.Waterlogged
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -44,6 +45,12 @@ import ro.ainpc.world.WorldBlueprintTerrainRelation
 import ro.ainpc.world.WorldBlueprintWizardFlow
 import ro.ainpc.world.WorldBlueprintWorldDirectoryInspector
 import ro.ainpc.world.WorldBlueprintWorldDirectoryStatus
+import ro.ainpc.world.WorldBlueprintWorldCreationGuard
+import ro.ainpc.world.WorldBlueprintWorldGenerationRules
+import ro.ainpc.world.WorldBlueprintWorldCreationAttempt
+import ro.ainpc.world.WorldBlueprintWorldCreationJournal
+import ro.ainpc.world.WorldBlueprintWorldCreationStatus
+import ro.ainpc.world.WorldBlueprintWorldSeedRule
 import ro.ainpc.world.WorldProfessionBlueprint
 import ro.ainpc.world.exterior.ExteriorStructureAnalyzer
 import java.io.IOException
@@ -69,23 +76,25 @@ internal object WorldBlueprintCommand {
             plugin.messageUtils.send(sender, "&cAceasta operatie necesita o lume incarcata si numele exact.")
             return true
         }
-        if (world == null) {
+        if (world == null && action !in setOf("create-world", "creation")) {
             plugin.messageUtils.send(sender, "&eLumea $worldName nu este incarcata; lucrezi doar pe draft. Comanda nu creeaza lumea.")
         }
         val wizardStop = action == "wizard" && args.size == 5 && args[4].equals("stop", ignoreCase = true)
-        if (action !in setOf("show", "validate", "inspect", "plan", "review", "suggest", "applications") && !wizardStop && isRuntimeReadOnly(plugin)) {
-            plugin.messageUtils.send(sender, "&cMCP read_only este activ; modificarea blueprint-ului este blocata.")
+        if (action !in setOf("show", "validate", "inspect", "plan", "review", "suggest", "applications", "creation") && !wizardStop && isRuntimeReadOnly(plugin)) {
+            plugin.messageUtils.send(sender, "&cMCP read_only este activ; operatia de scriere este blocata.")
             return true
         }
         val store = WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json"))
         return try {
-            val current = if (action in setOf("applications", "restore-story", "restore-story-batch")) null else store.get(worldName)
+            val current = if (action in setOf("applications", "restore-story", "restore-story-batch", "create-world", "creation")) null else store.get(worldName)
             when (action) {
                 "show" -> show(plugin, sender, current)
                 "validate" -> validate(plugin, sender, current)
                 "plan" -> plan(plugin, sender, store, current, world, args)
                 "review" -> review(plugin, sender, store, current, args)
                 "confirm" -> confirm(plugin, sender, store, worldName, args)
+                "create-world" -> createWorld(plugin, sender, store, worldName, args)
+                "creation" -> creationHistory(plugin, sender, worldName, args)
                 "apply-story" -> applyStory(plugin, sender, store, current, requireNotNull(world), args)
                 "update-story" -> updateStory(plugin, sender, store, current, requireNotNull(world), args)
                 "update-story-batch" -> updateStoryBatch(plugin, sender, store, current, requireNotNull(world), args)
@@ -107,8 +116,13 @@ internal object WorldBlueprintCommand {
                 else -> usage(plugin, sender)
             }
         } catch (error: IOException) {
-            plugin.logger.log(Level.WARNING, "Nu am putut citi/salva world blueprint pentru $worldName.", error)
-            plugin.messageUtils.send(sender, "&cBlueprint-ul nu a fost modificat: ${error.message}")
+            if (action == "creation") {
+                plugin.logger.log(Level.WARNING, "Nu am putut citi jurnalul de creare pentru $worldName.", error)
+                plugin.messageUtils.send(sender, "&cJurnalul de creare nu poate fi citit: ${error.message}")
+            } else {
+                plugin.logger.log(Level.WARNING, "Nu am putut citi/salva world blueprint pentru $worldName.", error)
+                plugin.messageUtils.send(sender, "&cBlueprint-ul nu a fost modificat: ${error.message}")
+            }
             true
         } catch (error: IllegalArgumentException) {
             val actionDescription = when (action) {
@@ -323,6 +337,17 @@ internal object WorldBlueprintCommand {
                 WorldBlueprintWorldDirectoryStatus.UNKNOWN -> plugin.messageUtils.send(sender,
                     "&eStarea directorului lumii nu poate fi determinata; verifica manual inainte de creare.")
             }
+        }
+        val worldSeed = WorldBlueprintWorldSeedRule.parse(blueprint.mapRules)
+        if (worldSeed.isValid && worldSeed.configured) {
+            plugin.messageUtils.send(sender, "&7Seed pentru crearea unei lumi noi: ${worldSeed.seed}.")
+        }
+        val worldGeneration = WorldBlueprintWorldGenerationRules.parse(blueprint.mapRules)
+        worldGeneration.worldType?.let { type ->
+            plugin.messageUtils.send(sender, "&7Tip pentru crearea unei lumi noi: ${type.name.lowercase(Locale.ROOT)}.")
+        }
+        worldGeneration.generateStructures?.let { enabled ->
+            plugin.messageUtils.send(sender, "&7Structuri vanilla pentru o lume noua: ${if (enabled) "activate" else "dezactivate"}.")
         }
         preview.completionIssues.forEach { issue -> plugin.messageUtils.send(sender, "&eDraft incomplet: $issue") }
         if (!preview.mappingAvailable) {
@@ -754,6 +779,93 @@ internal object WorldBlueprintCommand {
         if (args.size != 5) return usage(plugin, sender)
         store.confirm(worldName, args[4], sender.name)
         plugin.messageUtils.send(sender, "&aRevizia draftului a fost confirmata; nimic nu a fost aplicat in lume.")
+        return true
+    }
+
+    private fun createWorld(
+        plugin: AINPCPlugin, sender: CommandSender, store: WorldBlueprintStore,
+        worldName: String, args: Array<String>,
+    ): Boolean {
+        if (args.size != 5) return usage(plugin, sender)
+        if (!plugin.server.isPrimaryThread || plugin.server.isTickingWorlds) {
+            plugin.messageUtils.send(sender, "&cCrearea lumii necesita thread-ul principal in afara actualizarii lumilor. Incearca din nou mai tarziu.")
+            return true
+        }
+        val blueprint = store.get(worldName)
+        val fingerprint = blueprint?.let(store::fingerprint)
+        val directoryStatus = WorldBlueprintWorldDirectoryInspector.inspect(plugin.server.worldContainer.toPath(), worldName)
+        val issue = WorldBlueprintWorldCreationGuard.issue(blueprint, fingerprint, args[4],
+            plugin.server.getWorld(worldName) != null, directoryStatus)
+        if (issue != null) {
+            plugin.messageUtils.send(sender, "&cLumea nu a fost creata: $issue")
+            return true
+        }
+        val seed = WorldBlueprintWorldSeedRule.parse(requireNotNull(blueprint).mapRules).seed
+        val generation = WorldBlueprintWorldGenerationRules.parse(blueprint.mapRules)
+        val creator = WorldCreator(worldName)
+        if (seed != null) creator.seed(seed)
+        generation.worldType?.let(creator::type)
+        generation.generateStructures?.let(creator::generateStructures)
+        val journal = WorldBlueprintWorldCreationJournal(plugin.dataFolder.toPath().resolve("world-blueprint-creations.json"))
+        val attempt = try {
+            journal.begin(worldName, requireNotNull(fingerprint), sender.name)
+        } catch (error: Exception) {
+            plugin.logger.log(Level.WARNING, "Nu am putut jurnaliza inceputul crearii lumii $worldName.", error)
+            plugin.messageUtils.send(sender, "&cJurnalul nu poate fi scris; lumea nu a fost creata. Verifica jurnalul serverului.")
+            return true
+        }
+        val created = try {
+            plugin.server.createWorld(creator)
+        } catch (error: RuntimeException) {
+            plugin.logger.log(Level.WARNING, "Crearea lumii $worldName a esuat; verifica directorul pentru date partiale.", error)
+            val recorded = finishWorldCreationAttempt(plugin, journal, attempt, WorldBlueprintWorldCreationStatus.FAILED)
+            plugin.messageUtils.send(sender, "&cCrearea lumii a esuat; pot exista date partiale. Verifica jurnalul serverului si directorul lumii.")
+            if (!recorded) plugin.messageUtils.send(sender, "&eJurnalul a ramas PENDING; consulta creation si verifica manual discul.")
+            return true
+        }
+        if (created == null || created.name != worldName) {
+            plugin.logger.warning("Crearea lumii $worldName nu a returnat lumea asteptata; verifica directorul pentru date partiale.")
+            val recorded = finishWorldCreationAttempt(plugin, journal, attempt, WorldBlueprintWorldCreationStatus.FAILED)
+            plugin.messageUtils.send(sender, "&cServerul nu a returnat lumea asteptata. Verifica jurnalul si directorul; nu exista rollback automat.")
+            if (!recorded) plugin.messageUtils.send(sender, "&eJurnalul a ramas PENDING; consulta creation si verifica manual discul.")
+            return true
+        }
+        val recorded = finishWorldCreationAttempt(plugin, journal, attempt, WorldBlueprintWorldCreationStatus.CREATED)
+        plugin.logger.info("Administratorul ${sender.name} a creat lumea vanilla $worldName din draftul confirmat $fingerprint; seed ${seed ?: "implicit"}, tip ${generation.worldType ?: "implicit"}, structuri ${generation.generateStructures ?: "implicit"}.")
+        plugin.messageUtils.send(sender, "&aLumea vanilla $worldName a fost creata si incarcata (seed ${seed ?: "implicit"}). Draftul ramane separat; povestea, meseriile, arhitectura si regulile descriptive nu au fost aplicate.")
+        if (!recorded) plugin.messageUtils.send(sender, "&eRezultatul nu a putut fi jurnalizat si a ramas PENDING; verifica creation. Nu repeta crearea.")
+        return true
+    }
+
+    private fun finishWorldCreationAttempt(
+        plugin: AINPCPlugin, journal: WorldBlueprintWorldCreationJournal,
+        attempt: WorldBlueprintWorldCreationAttempt, status: WorldBlueprintWorldCreationStatus,
+    ): Boolean = try {
+        journal.finish(attempt.id, status)
+        true
+    } catch (error: Exception) {
+        plugin.logger.log(Level.SEVERE, "Nu am putut finaliza jurnalul crearii lumii ${attempt.worldName}; incercarea ${attempt.id} a ramas PENDING.", error)
+        false
+    }
+
+    private fun creationHistory(
+        plugin: AINPCPlugin, sender: CommandSender, worldName: String, args: Array<String>,
+    ): Boolean {
+        if (args.size != 4) return usage(plugin, sender)
+        val journal = WorldBlueprintWorldCreationJournal(plugin.dataFolder.toPath().resolve("world-blueprint-creations.json"))
+        val attempts = journal.latest(worldName)
+        if (attempts.isEmpty()) {
+            plugin.messageUtils.send(sender, "&7Nu exista incercari jurnalizate de creare pentru $worldName.")
+            return true
+        }
+        plugin.messageUtils.send(sender, "&6Ultimele ${attempts.size} incercari de creare pentru $worldName:")
+        attempts.forEach { attempt ->
+            plugin.messageUtils.send(sender,
+                "&7${attempt.id.toString().take(8)}: ${attempt.status}, de ${attempt.actor}, inceput ${attempt.startedAt}, final ${attempt.finishedAt ?: "necunoscut"}; revizie ${attempt.fingerprint.take(12)}...")
+        }
+        if (attempts.any { it.status == WorldBlueprintWorldCreationStatus.PENDING }) {
+            plugin.messageUtils.send(sender, "&ePENDING inseamna rezultat necunoscut: verifica lumea incarcata si directorul; jurnalul nu executa rollback.")
+        }
         return true
     }
 
@@ -1231,8 +1343,10 @@ internal object WorldBlueprintCommand {
 
     private fun usage(plugin: AINPCPlugin, sender: CommandSender): Boolean {
         plugin.messageUtils.send(sender, "&6/ainpc world blueprint list [pagina]: drafturi salvate, inclusiv pentru lumi neincarcate.")
-        plugin.messageUtils.send(sender, "&6/ainpc world blueprint <lume> <show|inspect|validate|plan|review|confirm|apply-story|apply-story-all|apply-story-batch|update-story|update-story-batch|restore-story|restore-story-batch|applications|revoke|wizard|suggest|story|property|profession-limit|profession|architecture|map-rule|remove>")
+        plugin.messageUtils.send(sender, "&6/ainpc world blueprint <lume> <show|inspect|validate|plan|review|confirm|create-world|creation|apply-story|apply-story-all|apply-story-batch|update-story|update-story-batch|restore-story|restore-story-batch|applications|revoke|wizard|suggest|story|property|profession-limit|profession|architecture|map-rule|remove>")
         plugin.messageUtils.send(sender, "&7review; confirm <amprenta SHA-256>; revoke: revizie fara aplicare runtime.")
+        plugin.messageUtils.send(sender, "&7create-world <amprenta SHA-256>: creeaza explicit o lume vanilla noua doar din draft confirmat; nu aplica povestea sau regulile descriptive ale hartii.")
+        plugin.messageUtils.send(sender, "&7creation: ultimele cinci incercari de creare jurnalizate, inclusiv PENDING dupa o intrerupere.")
         plugin.messageUtils.send(sender, "&7apply-story <regionId> <amprenta SHA-256>: aplica povestea numai daca nu exista story pentru regiune.")
         plugin.messageUtils.send(sender, "&7apply-story-all <amprenta SHA-256>: aplica atomic povestea in toate regiunile din story_region_ids.")
         plugin.messageUtils.send(sender, "&7apply-story-batch <regionId,regionId> <amprenta SHA-256>: aplica atomic numai in ID-urile selectate.")

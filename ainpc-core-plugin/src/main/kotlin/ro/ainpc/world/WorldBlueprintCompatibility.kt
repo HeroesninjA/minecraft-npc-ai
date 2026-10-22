@@ -39,6 +39,9 @@ internal enum class WorldBlueprintCompatibilityCode {
     INVALID_STRUCTURE_NON_AIR_RULE,
     INVALID_STRUCTURE_FLUID_RULE,
     INVALID_BASE_SUPPORT_RULE,
+    INVALID_WORLD_SEED_RULE,
+    INVALID_WORLD_TYPE_RULE,
+    INVALID_WORLD_STRUCTURES_RULE,
     INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,
     INVALID_ARCHITECTURE_PALETTE_RULE,
     INVALID_STRUCTURE_PALETTES_RULE,
@@ -108,6 +111,8 @@ internal object WorldBlueprintCompatibility {
         WorldBlueprintStructureNonAirRule.KEY,
         WorldBlueprintStructureFluidRule.KEY,
         WorldBlueprintBaseSupportRule.KEY,
+        WorldBlueprintWorldSeedRule.KEY,
+        WorldBlueprintWorldGenerationRules.TYPE_KEY, WorldBlueprintWorldGenerationRules.STRUCTURES_KEY,
         WorldBlueprintForbiddenStructureBlocks.KEY,
         WorldBlueprintArchitecturePalette.KEY, WorldBlueprintStructurePalettes.KEY,
         WorldBlueprintStructureStyles.KEY)
@@ -296,6 +301,22 @@ internal object WorldBlueprintCompatibility {
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_BASE_SUPPORT_RULE,
                 WorldBlueprintBaseSupportRule.KEY,
                 "${WorldBlueprintBaseSupportRule.KEY}: foloseste un numar intreg de la 0 la 5 puncte"))
+        }
+        if (!WorldBlueprintWorldSeedRule.parse(blueprint.mapRules).isValid) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_SEED_RULE,
+                WorldBlueprintWorldSeedRule.KEY,
+                "${WorldBlueprintWorldSeedRule.KEY}: foloseste un intreg zecimal pe 64 de biti, optional negativ"))
+        }
+        val worldGenerationRules = WorldBlueprintWorldGenerationRules.parse(blueprint.mapRules)
+        if (WorldBlueprintWorldGenerationRules.TYPE_KEY in worldGenerationRules.invalidKeys) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_TYPE_RULE,
+                WorldBlueprintWorldGenerationRules.TYPE_KEY,
+                "${WorldBlueprintWorldGenerationRules.TYPE_KEY}: foloseste normal, flat, large_biomes sau amplified"))
+        }
+        if (WorldBlueprintWorldGenerationRules.STRUCTURES_KEY in worldGenerationRules.invalidKeys) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_STRUCTURES_RULE,
+                WorldBlueprintWorldGenerationRules.STRUCTURES_KEY,
+                "${WorldBlueprintWorldGenerationRules.STRUCTURES_KEY}: foloseste true sau false"))
         }
         WorldBlueprintForbiddenStructureBlocks.parse(blueprint.mapRules, isKnownStructureBlock).error?.let { error ->
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,

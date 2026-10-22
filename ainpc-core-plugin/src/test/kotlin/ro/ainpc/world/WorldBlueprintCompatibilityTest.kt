@@ -498,6 +498,42 @@ class WorldBlueprintCompatibilityTest {
     }
 
     @Test
+    fun `world seed is a validated structured rule`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintWorldSeedRule.KEY to Long.MIN_VALUE.toString(),
+        )), emptyList())
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintWorldSeedRule.KEY to "9223372036854775808",
+        )), emptyList())
+
+        assertEquals(1, valid.compatibility.structuredRuleCount)
+        assertEquals(0, valid.declarativeRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_WORLD_SEED_RULE,
+            invalid.compatibility.issues.single().code)
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_WORLD_SEED_RULE,
+            WorldBlueprintCompatibility.structuredRuleSyntaxIssues(WorldBlueprintWorldSeedRule.KEY, "bad").single().code)
+    }
+
+    @Test
+    fun `world type and vanilla structures are validated structured rules`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintWorldGenerationRules.TYPE_KEY to "flat",
+            WorldBlueprintWorldGenerationRules.STRUCTURES_KEY to "false",
+        )), emptyList())
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintWorldGenerationRules.TYPE_KEY to "custom",
+            WorldBlueprintWorldGenerationRules.STRUCTURES_KEY to "no",
+        )), emptyList())
+
+        assertEquals(2, valid.compatibility.structuredRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(setOf(WorldBlueprintCompatibilityCode.INVALID_WORLD_TYPE_RULE,
+            WorldBlueprintCompatibilityCode.INVALID_WORLD_STRUCTURES_RULE),
+            invalid.compatibility.issues.map { it.code }.toSet())
+    }
+
+    @Test
     fun `forbidden structure blocks rule is validated without inspecting terrain`() {
         val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
             WorldBlueprintForbiddenStructureBlocks.KEY to "chest,stone",
