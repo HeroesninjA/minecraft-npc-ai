@@ -26,6 +26,9 @@ openai:
   temperature: 0.7
   # Numar maxim de tokeni in raspunsul vizibil.
   max_output_tokens: 150
+  # Optional pentru sugestiile Scenario Builder: cere JSON Schema strict prin Responses API.
+  # Activeaza doar cu un model/endpoint compatibil; esecul API nu revine automat la text liber.
+  structured_suggestions: false
   # Daca e false, raspunsurile nu sunt stocate de OpenAI din acest request.
   store: false
   # Pauza minima dupa erori temporare HTTP (429/5xx), timeout sau erori de conectare.
