@@ -88,6 +88,9 @@ internal class WorldBlueprintStore(private val file: Path) {
     fun get(worldName: String): WorldBlueprint? = readAll().worlds[worldName]
 
     @Synchronized
+    fun listWorlds(): List<WorldBlueprint> = readAll().worlds.toSortedMap().values.toList()
+
+    @Synchronized
     fun getSavedSuggestion(owner: UUID, worldName: String): WorldBlueprintSavedSuggestion? =
         readAll().suggestions[owner]?.takeIf { it.suggestion.worldName == worldName }
 
@@ -186,6 +189,11 @@ internal class WorldBlueprintStore(private val file: Path) {
         require(fingerprint(expected) == candidateFingerprint) { "Sugestia modifica si alte campuri ale draftului." }
         val issues = WorldBlueprintPolicy.draftIssues(candidate)
         require(issues.isEmpty()) { issues.joinToString("; ") }
+        if (suggestion.field == WorldBlueprintSuggestionField.MAP_RULE) {
+            val ruleKey = requireNotNull(suggestion.key)
+            val ruleIssues = WorldBlueprintCompatibility.structuredRuleSyntaxIssues(ruleKey, candidate.mapRules.getValue(ruleKey))
+            require(ruleIssues.isEmpty()) { ruleIssues.joinToString("; ") { it.message } }
+        }
         val provenance = suggestion.provenance
         val acceptance = WorldBlueprintSuggestionAcceptance(suggestion.field, suggestion.key,
             actualBase, candidateFingerprint, provenance, actor, System.currentTimeMillis())

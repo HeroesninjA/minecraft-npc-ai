@@ -46,4 +46,30 @@ class WorldBlueprintStructureBiomeRulesTest {
         assertFalse(rules.isValid)
         assertEquals(setOf("minecraft:plains"), rules.conflicts)
     }
+
+    @Test
+    fun `reports unknown registered biomes without discarding valid or custom ids`() {
+        val rules = WorldBlueprintStructureBiomeRules.parse(mapOf(
+            WorldBlueprintStructureBiomeRules.ALLOWED_KEY to "plains, custom:grove, minecraft:missing",
+            WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY to "minecraft:absent, desert",
+        ))
+        val known = setOf("minecraft:plains", "custom:grove", "minecraft:desert")
+
+        assertEquals(mapOf(
+            WorldBlueprintStructureBiomeRules.ALLOWED_KEY to listOf("minecraft:missing"),
+            WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY to listOf("minecraft:absent"),
+        ), rules.unknownBiomes { it in known })
+        assertTrue(rules.isValid)
+    }
+
+    @Test
+    fun `skips syntactically invalid biome lists during registry checks`() {
+        val rules = WorldBlueprintStructureBiomeRules.parse(mapOf(
+            WorldBlueprintStructureBiomeRules.ALLOWED_KEY to "plains,",
+            WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY to "minecraft:absent",
+        ))
+
+        assertEquals(mapOf(WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY to listOf("minecraft:absent")),
+            rules.unknownBiomes { false })
+    }
 }

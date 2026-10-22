@@ -15,6 +15,23 @@ class WorldBlueprintStoreTest {
     lateinit var directory: Path
 
     @Test
+    fun `lists persisted drafts by exact world name without changing the file`() {
+        val file = directory.resolve("world-blueprints.json")
+        val store = WorldBlueprintStore(file)
+        assertTrue(store.listWorlds().isEmpty())
+        assertFalse(Files.exists(file))
+
+        store.save(WorldBlueprint("zeta", story = "Poveste"))
+        store.save(WorldBlueprint("alpha", story = "Altceva"))
+        val before = Files.readString(file)
+
+        val drafts = WorldBlueprintStore(file).listWorlds()
+        assertEquals(listOf("alpha", "zeta"), drafts.map { it.worldName })
+        assertEquals("Altceva", drafts.first().story)
+        assertEquals(before, Files.readString(file))
+    }
+
+    @Test
     fun `round trips independent world drafts without applying them`() {
         val store = WorldBlueprintStore(directory.resolve("world-blueprints.json"))
         val first = WorldBlueprint(

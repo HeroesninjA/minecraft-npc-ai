@@ -88,4 +88,87 @@ class WorldBlueprintSuggestionParserTest {
         }
         assertEquals(2, base.professionTypeLimit)
     }
+
+    @Test
+    fun `validates only the suggested structured rule and keeps custom rules declarative`() {
+        val base = WorldBlueprint("world", mapRules = mapOf("required_region_types" to "unknown"))
+        val structured = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            "required_place_types", "locuri", "base-hash")
+        val custom = structured.copy(key = "drumuri")
+
+        assertTrue(WorldBlueprintSuggestionParser.prompt(structured, base).contains("house,forge"))
+        assertEquals("house,forge", WorldBlueprintSuggestionParser.parse(structured, base,
+            "{\"text\":\"house,forge\"}", provenance(structured)).candidate.mapRules["required_place_types"])
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(structured, base,
+                "{\"text\":\"house,unknown\"}", provenance(structured))
+        }
+        assertEquals("Evita lacurile", WorldBlueprintSuggestionParser.parse(custom, base,
+            "{\"text\":\"Evita lacurile\"}", provenance(custom)).candidate.mapRules["drumuri"])
+        assertEquals(mapOf("required_region_types" to "unknown"), base.mapRules)
+    }
+
+    @Test
+    fun `prompt includes only a bounded current target value`() {
+        val base = WorldBlueprint("world", story = "PRIVATE_STORY", properties = mapOf(
+            "clima" to "Rece", "secret" to "PRIVATE_PROPERTY"))
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.PROPERTY,
+            "clima", "Schimba clima", "base-hash")
+
+        val prompt = WorldBlueprintSuggestionParser.prompt(request, base)
+        assertTrue(prompt.contains("\"value\":\"Rece\""))
+        assertTrue(prompt.contains("\"truncated\":false"))
+        assertTrue(prompt.contains("Schimba clima"))
+        assertTrue(!prompt.contains("PRIVATE_STORY"))
+        assertTrue(!prompt.contains("PRIVATE_PROPERTY"))
+
+        val storyRequest = request.copy(field = WorldBlueprintSuggestionField.STORY, key = null)
+        val longStory = "A".repeat(512) + "PRIVATE_TAIL"
+        val storyPrompt = WorldBlueprintSuggestionParser.prompt(storyRequest, base.copy(story = longStory))
+        assertTrue(storyPrompt.contains("\"value\":\"${"A".repeat(512)}\""))
+        assertTrue(storyPrompt.contains("\"truncated\":true"))
+        assertTrue(!storyPrompt.contains("PRIVATE_TAIL"))
+        val unicodePrompt = WorldBlueprintSuggestionParser.prompt(storyRequest,
+            base.copy(story = "A".repeat(511) + "🏰" + "PRIVATE_TAIL"))
+        assertTrue(unicodePrompt.contains("🏰"))
+        assertTrue(!unicodePrompt.contains("PRIVATE_TAIL"))
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.prompt(request, base.copy(worldName = "nether"))
+        }
+    }
+
+    @Test
+    fun `rejects invalid numeric structured rules before preview`() {
+        listOf("max_structure_non_air_positions", "max_structure_fluid_positions").forEach { key ->
+            val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+                key, "teren", "none")
+
+            assertThrows(IllegalArgumentException::class.java) {
+                WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                    "{\"text\":\"-1\"}", provenance(request))
+            }
+        }
+    }
+
+    @Test
+    fun `rejects invalid type style mapping before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintStructureStyles.KEY, "stiluri", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"castle=Turnuri;castle=Ziduri\"}", provenance(request))
+        }
+    }
+
+    @Test
+    fun `rejects unsupported base sample limits before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintBaseSupportRule.KEY, "baza", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"6\"}", provenance(request))
+        }
+    }
 }

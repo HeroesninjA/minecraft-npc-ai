@@ -141,6 +141,7 @@ class AINPCTabCompleterTest {
 
     @Test
     fun completesWorldBlueprintDraftActions() {
+        assertTrue(tab(AINPCTabCompleter(null), "ainpc", "world", "blueprint", "").contains("list"))
         val completer = AINPCTabCompleter(null)
 
         assertTrue(tab(completer, "ainpc", "world", "").contains("blueprint"))
@@ -231,6 +232,18 @@ class AINPCTabCompleterTest {
             .contains("architecture"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "remove", "")
             .contains("map-rule"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "forb")
+            .contains("forbidden_structure_blocks"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "max_structure_")
+            .contains("max_structure_non_air_positions"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "max_structure_")
+            .contains("max_structure_fluid_positions"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "architecture_style_")
+            .contains("architecture_style_by_type"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "max_base_")
+            .contains("max_base_unsupported_samples"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "suggest", "map-rule", "forb")
+            .contains("forbidden_structure_blocks"))
     }
 
     @Test

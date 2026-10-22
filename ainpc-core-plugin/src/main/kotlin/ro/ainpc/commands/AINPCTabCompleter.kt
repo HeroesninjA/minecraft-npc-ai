@@ -10,6 +10,7 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.spawn.PopulationPlanRepository
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
+import ro.ainpc.world.WorldBlueprintCompatibility
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
@@ -368,9 +369,14 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "places" -> if (args.size == 3) completions.addAll(getRegionIds(args[2]))
             "blueprint" -> {
                 if (args.size == 3) completions.addAll(filterStartsWith(
-                    plugin?.server?.worlds?.map { it.name } ?: emptyList(), args[2]))
+                    (plugin?.server?.worlds?.map { it.name } ?: emptyList()) + "list", args[2]))
                 else if (args.size == 4) completions.addAll(filterStartsWith(
                     listOf("show", "inspect", "validate", "plan", "review", "confirm", "apply-story", "apply-story-all", "apply-story-batch", "update-story", "update-story-batch", "restore-story", "restore-story-batch", "applications", "revoke", "wizard", "suggest", "story", "property", "profession-limit", "profession", "architecture", "map-rule", "remove"), args[3]))
+                else if (args.size == 5 && args[3].equals("map-rule", true)) completions.addAll(filterStartsWith(
+                    WorldBlueprintCompatibility.structuredRuleKeys(), args[4]))
+                else if (args.size == 6 && args[3].equals("suggest", true) && args[4].equals("map-rule", true)) {
+                    completions.addAll(filterStartsWith(WorldBlueprintCompatibility.structuredRuleKeys(), args[5]))
+                }
                 else if (args.size == 5 && args[3].equals("update-story", true)) completions.addAll(getRegionIdsSafe(args[4]))
                 else if (args.size == 6 && args[3].equals("update-story", true)) completions.add("<applicationId>")
                 else if (args.size == 7 && args[3].equals("update-story", true)) completions.add("<amprenta-SHA-256>")

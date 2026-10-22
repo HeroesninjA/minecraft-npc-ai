@@ -88,11 +88,9 @@ internal object WorldBlueprintWizard {
             plugin.messageUtils.send(player, "&eWizard expirat; porneste-l din nou. Draftul a fost pastrat.")
             return
         }
-        if (!player.hasPermission("ainpc.admin") || plugin.server.getWorld(session.worldName) == null ||
-            isRuntimeReadOnly(plugin)
-        ) {
+        if (!player.hasPermission("ainpc.admin") || isRuntimeReadOnly(plugin)) {
             sessions.remove(player.uniqueId)
-            plugin.messageUtils.send(player, "&cWizard oprit: permisiunea, lumea sau dreptul de scriere nu mai este disponibil.")
+            plugin.messageUtils.send(player, "&cWizard oprit: permisiunea sau dreptul de scriere nu mai este disponibil.")
             return
         }
         sessions[player.uniqueId] = session.copy(touchedAt = System.currentTimeMillis())

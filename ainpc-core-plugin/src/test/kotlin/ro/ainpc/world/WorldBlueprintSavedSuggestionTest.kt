@@ -132,6 +132,36 @@ class WorldBlueprintSavedSuggestionTest {
     }
 
     @Test
+    fun `structured map rule suggestions are revalidated before saving and accepting`() {
+        val file = directory.resolve("world-blueprints.json")
+        val store = WorldBlueprintStore(file)
+        val base = WorldBlueprint("world")
+        store.save(base)
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            "required_place_types", "locuri", store.fingerprint(base))
+        val proposal = WorldBlueprintSuggestionParser.parse(request, base,
+            "{\"text\":\"house,forge\"}", WorldBlueprintSuggestionProvenance("openai", "test-model", 1L,
+                WorldBlueprintSuggestionParser.requestFingerprint(request.instruction)))
+        val invalid = proposal.copy(candidate = proposal.candidate.copy(
+            mapRules = mapOf("required_place_types" to "house,unknown")))
+        val before = Files.readString(file)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            store.saveSuggestion(owner, invalid, store.fingerprint(invalid.candidate))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            store.acceptSuggestion(invalid, store.fingerprint(invalid.candidate), "admin")
+        }
+        assertEquals(before, Files.readString(file))
+
+        val fingerprint = store.fingerprint(proposal.candidate)
+        store.saveSuggestion(owner, proposal, fingerprint)
+        val restarted = WorldBlueprintStore(file)
+        restarted.acceptSavedSuggestion(owner, "world", fingerprint, "admin")
+        assertEquals("house,forge", restarted.get("world")?.mapRules?.get("required_place_types"))
+    }
+
+    @Test
     fun `draft edits and approval revocation preserve saved proposals for review`() {
         val store = WorldBlueprintStore(directory.resolve("world-blueprints.json"))
         val base = completeDraft()

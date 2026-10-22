@@ -36,8 +36,15 @@ internal enum class WorldBlueprintCompatibilityCode {
     CONFLICTING_STRUCTURE_BIOME_RULES,
     INVALID_STRUCTURE_SURFACE_SPAN_RULE,
     INVALID_STRUCTURE_REGION_POSITIONS_RULE,
+    INVALID_STRUCTURE_NON_AIR_RULE,
+    INVALID_STRUCTURE_FLUID_RULE,
+    INVALID_BASE_SUPPORT_RULE,
+    INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,
     INVALID_ARCHITECTURE_PALETTE_RULE,
     INVALID_STRUCTURE_PALETTES_RULE,
+    CONFLICTING_STRUCTURE_PALETTE_RULES,
+    INVALID_STRUCTURE_STYLES_RULE,
+    CONFLICTING_STRUCTURE_STYLE_RULES,
 }
 
 internal data class WorldBlueprintCompatibilityIssue(
@@ -67,6 +74,7 @@ internal data class WorldBlueprintCompatibilityReport(
     val exteriorTemplateTypes: List<ExteriorStructureType>,
     val architecturePalette: List<String>,
     val structurePalettes: Map<ExteriorStructureType, List<String>>,
+    val structureStyles: Map<ExteriorStructureType, String>,
 )
 
 internal class WorldBlueprintProfessionCatalog(profiles: Collection<WorldBlueprintProfessionProfile>) {
@@ -97,10 +105,48 @@ internal object WorldBlueprintCompatibility {
         "required_exterior_types", "forbidden_exterior_types",
         WorldBlueprintStructureBiomeRules.ALLOWED_KEY, WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY,
         WorldBlueprintStructureSurfaceSpanRule.KEY, WorldBlueprintStructureRegionPositionsRule.KEY,
-        WorldBlueprintArchitecturePalette.KEY, WorldBlueprintStructurePalettes.KEY)
+        WorldBlueprintStructureNonAirRule.KEY,
+        WorldBlueprintStructureFluidRule.KEY,
+        WorldBlueprintBaseSupportRule.KEY,
+        WorldBlueprintForbiddenStructureBlocks.KEY,
+        WorldBlueprintArchitecturePalette.KEY, WorldBlueprintStructurePalettes.KEY,
+        WorldBlueprintStructureStyles.KEY)
     private val placeTypes = PlaceType.entries.associateBy { it.id }
     private val regionTypes = RegionType.entries.associateBy { it.id }
     private val exteriorTypes = ExteriorStructureType.entries.associateBy { it.id() }
+    private val conflictingRuleKeys = setOf("required_place_types", "forbidden_place_types",
+        "required_region_types", "forbidden_region_types", "required_exterior_types", "forbidden_exterior_types",
+        WorldBlueprintStructureBiomeRules.ALLOWED_KEY, WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY,
+        WorldBlueprintStructurePalettes.KEY, WorldBlueprintStructureStyles.KEY)
+    private val conflictingRuleCodes = setOf(WorldBlueprintCompatibilityCode.CONFLICTING_PLACE_TYPE_RULES,
+        WorldBlueprintCompatibilityCode.CONFLICTING_REGION_TYPE_RULES,
+        WorldBlueprintCompatibilityCode.CONFLICTING_EXTERIOR_TYPE_RULES,
+        WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_BIOME_RULES,
+        WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_PALETTE_RULES,
+        WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_STYLE_RULES)
+
+    fun structuredRuleKeys(): List<String> = ruleKeys.sorted()
+
+    fun structuredRuleSyntaxIssues(key: String, value: String): List<WorldBlueprintCompatibilityIssue> {
+        if (key !in ruleKeys) return emptyList()
+        return check(WorldBlueprint("validation", mapRules = mapOf(key to value)), null, null).issues
+    }
+
+    fun introducedStructuredRuleConflicts(
+        base: WorldBlueprint, candidate: WorldBlueprint,
+        isBuildableBlock: (String) -> Boolean = WorldBlueprintArchitecturePalette::isBuildableBlock,
+    ): List<WorldBlueprintCompatibilityIssue> {
+        val existing = structuredRuleConflicts(base.mapRules, isBuildableBlock).map { it.code to it.subject }.toSet()
+        return structuredRuleConflicts(candidate.mapRules, isBuildableBlock)
+            .filter { (it.code to it.subject) !in existing }
+    }
+
+    private fun structuredRuleConflicts(
+        mapRules: Map<String, String>, isBuildableBlock: (String) -> Boolean,
+    ): List<WorldBlueprintCompatibilityIssue> =
+        check(WorldBlueprint("validation", mapRules = mapRules.filterKeys { it in conflictingRuleKeys }), null, null,
+            isBuildableBlock = isBuildableBlock)
+            .issues.filter { it.code in conflictingRuleCodes }
 
     fun check(
         blueprint: WorldBlueprint,
@@ -110,6 +156,7 @@ internal object WorldBlueprintCompatibility {
         persistentStoryStates: Map<String, RegionStoryState>? = null,
         exteriorReports: Collection<ExteriorStructureReport>? = null,
         isBuildableBlock: (String) -> Boolean = WorldBlueprintArchitecturePalette::isBuildableBlock,
+        isKnownStructureBlock: (String) -> Boolean = WorldBlueprintForbiddenStructureBlocks::isValidBlock,
     ): WorldBlueprintCompatibilityReport {
         val issues = mutableListOf<WorldBlueprintCompatibilityIssue>()
         val resolved = linkedMapOf<String, String>()
@@ -235,6 +282,25 @@ internal object WorldBlueprintCompatibility {
                 WorldBlueprintStructureRegionPositionsRule.KEY,
                 "${WorldBlueprintStructureRegionPositionsRule.KEY}: foloseste un numar intreg pozitiv, cel mult 2^96 pozitii"))
         }
+        if (!WorldBlueprintStructureNonAirRule.parse(blueprint.mapRules).isValid) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_NON_AIR_RULE,
+                WorldBlueprintStructureNonAirRule.KEY,
+                "${WorldBlueprintStructureNonAirRule.KEY}: foloseste un numar intreg nenegativ, cel mult 2^96 pozitii"))
+        }
+        if (!WorldBlueprintStructureFluidRule.parse(blueprint.mapRules).isValid) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_FLUID_RULE,
+                WorldBlueprintStructureFluidRule.KEY,
+                "${WorldBlueprintStructureFluidRule.KEY}: foloseste un numar intreg nenegativ, cel mult 2^96 pozitii"))
+        }
+        if (!WorldBlueprintBaseSupportRule.parse(blueprint.mapRules).isValid) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_BASE_SUPPORT_RULE,
+                WorldBlueprintBaseSupportRule.KEY,
+                "${WorldBlueprintBaseSupportRule.KEY}: foloseste un numar intreg de la 0 la 5 puncte"))
+        }
+        WorldBlueprintForbiddenStructureBlocks.parse(blueprint.mapRules, isKnownStructureBlock).error?.let { error ->
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,
+                WorldBlueprintForbiddenStructureBlocks.KEY, error))
+        }
         val architecturePalette = WorldBlueprintArchitecturePalette.parse(
             blueprint.mapRules[WorldBlueprintArchitecturePalette.KEY], isBuildableBlock)
         architecturePalette?.error?.let { error ->
@@ -246,6 +312,19 @@ internal object WorldBlueprintCompatibility {
         structurePalettes?.error?.let { error ->
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_PALETTES_RULE,
                 WorldBlueprintStructurePalettes.KEY, error))
+        }
+        structurePalettes?.byType?.keys?.intersect(forbiddenExterior)?.sortedBy { it.id() }?.forEach { type ->
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_PALETTE_RULES,
+                type.id(), "${type.id()}: paleta arhitecturala este definita pentru un tip exterior interzis; elimina paleta sau interdictia"))
+        }
+        val structureStyles = WorldBlueprintStructureStyles.parse(blueprint.mapRules[WorldBlueprintStructureStyles.KEY])
+        structureStyles?.error?.let { error ->
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_STYLES_RULE,
+                WorldBlueprintStructureStyles.KEY, error))
+        }
+        structureStyles?.byType?.keys?.intersect(forbiddenExterior)?.sortedBy { it.id() }?.forEach { type ->
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_STYLE_RULES,
+                type.id(), "${type.id()}: stilul arhitectural este definit pentru un tip exterior interzis; elimina stilul sau interdictia"))
         }
         if (mappedRegions != null) {
             val regionsById = mappedRegions.filter { it.worldName() == blueprint.worldName }.associateBy { it.id() }
@@ -265,7 +344,7 @@ internal object WorldBlueprintCompatibility {
             blueprint.mapRules.keys.count { it in ruleKeys }, issues, mappedRegions != null,
             storyRegionLinks, persistentStoryStates != null, mappedRegions != null && exteriorReports != null,
             (requiredExterior - forbiddenExterior).sortedBy { it.id() }, architecturePalette?.blockIds.orEmpty(),
-            structurePalettes?.byType.orEmpty())
+            structurePalettes?.byType.orEmpty(), structureStyles?.byType.orEmpty())
     }
 
     fun storyRegionIds(blueprint: WorldBlueprint): List<String> =

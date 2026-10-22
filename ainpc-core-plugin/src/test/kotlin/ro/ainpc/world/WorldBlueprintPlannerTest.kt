@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class WorldBlueprintPlannerTest {
     private val blueprint = WorldBlueprint(
@@ -114,6 +115,93 @@ class WorldBlueprintPlannerTest {
         assertEquals(1, plan.professionPlans.single { it.id == "fierar" }.assignedWorkerCount)
         assertEquals(1, plan.professionPlans.single { it.id == "fermier" }.assignedWorkerCount)
         assertTrue(plan.mappingWarnings.any { it.contains("1 ID NPC") && it.contains("meserii diferite") })
+    }
+
+    @Test
+    fun `counts managed NPCs by world and profession even without mapping`() {
+        val plan = WorldBlueprintPlanner.compile(blueprint, null,
+            loadedProfessions = listOf(WorldBlueprintProfessionProfile("blacksmith", "Fierar")),
+            managedNpcs = listOf(
+                WorldBlueprintNpcSnapshot("world", "blacksmith"),
+                WorldBlueprintNpcSnapshot("world", "Fierar"),
+                WorldBlueprintNpcSnapshot("world", "blacksmith"),
+                WorldBlueprintNpcSnapshot("world", "fierar"),
+                WorldBlueprintNpcSnapshot("nether", "blacksmith"),
+                WorldBlueprintNpcSnapshot("world", "unknown"),
+            ))
+
+        assertFalse(plan.mappingAvailable)
+        assertEquals(4, plan.professionPlans.single { it.id == "fierar" }.managedNpcCount)
+        assertEquals(0, plan.professionPlans.single { it.id == "fermier" }.managedNpcCount)
+        assertEquals(-1, plan.professionPlans.single { it.id == "fierar" }.managedNpcDelta)
+        assertEquals(0, plan.professionPlans.single { it.id == "fermier" }.managedNpcDelta)
+        assertTrue(plan.mappingWarnings.any { it.contains("fierar:") && it.contains("(4)") && it.contains("limita draftului 3") })
+        assertTrue(plan.mappingWarnings.any { it.contains("fara corespondent in draft: 1") })
+    }
+
+    @Test
+    fun `unknown managed population remains unknown rather than zero`() {
+        val plan = WorldBlueprintPlanner.compile(blueprint, null)
+
+        assertEquals(null, plan.professionPlans.single { it.id == "fierar" }.managedNpcCount)
+        assertEquals(null, plan.professionPlans.single { it.id == "fierar" }.managedNpcDelta)
+    }
+
+    @Test
+    fun `managed population below the draft limit has advisory headroom`() {
+        val plan = WorldBlueprintPlanner.compile(blueprint, null, managedNpcs = listOf(
+            WorldBlueprintNpcSnapshot("world", "fierar")))
+
+        assertEquals(2, plan.professionPlans.single { it.id == "fierar" }.managedNpcDelta)
+    }
+
+    @Test
+    fun `managed NPCs without occupation are reported instead of silently omitted`() {
+        val plan = WorldBlueprintPlanner.compile(blueprint, null, managedNpcs = listOf(
+            WorldBlueprintNpcSnapshot("world", null),
+            WorldBlueprintNpcSnapshot("world", "   "),
+            WorldBlueprintNpcSnapshot("nether", null),
+        ))
+
+        assertEquals(0, plan.professionPlans.single { it.id == "fierar" }.managedNpcCount)
+        assertTrue(plan.mappingWarnings.any { it.contains("fara ocupatie in lumea draftului: 2") })
+    }
+
+    @Test
+    fun `ambiguous managed occupations are excluded from profession counts`() {
+        val draft = blueprint.copy(professions = mapOf(
+            "fierar-elite" to WorldProfessionBlueprint(2, "Fierar de elita"),
+            "fierar_elite" to WorldProfessionBlueprint(2, "Fierar de elita"),
+        ))
+        val plan = WorldBlueprintPlanner.compile(draft, null,
+            managedNpcs = listOf(WorldBlueprintNpcSnapshot("world", "fierar elite")))
+
+        assertTrue(plan.professionPlans.all { it.managedNpcCount == 0 })
+        assertTrue(plan.mappingWarnings.any { it.contains("ocupatii ambigue") && it.contains(": 1") })
+    }
+
+    @Test
+    fun `reconciles only canonical mapped worker identities against managed NPC cache`() {
+        val workerUuid = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        val plan = WorldBlueprintPlanner.compile(blueprint, listOf(
+            workplace("forge", "world", "fierar", "8",
+                "npc_1,2,npc_3,npc_4,npc_5,npc_99,$workerUuid,alice"),
+        ), managedNpcs = listOf(
+            WorldBlueprintNpcSnapshot("world", "fierar", databaseId = 1),
+            WorldBlueprintNpcSnapshot("nether", "fierar", databaseId = 2),
+            WorldBlueprintNpcSnapshot("world", "fermier", databaseId = 3),
+            WorldBlueprintNpcSnapshot("world", "fierar", databaseId = 4),
+            WorldBlueprintNpcSnapshot("world", "fierar", databaseId = 4),
+            WorldBlueprintNpcSnapshot("world", null, databaseId = 5),
+            WorldBlueprintNpcSnapshot("world", "fierar", uuid = workerUuid),
+        ))
+
+        assertTrue(plan.mappingWarnings.any { it.contains("ID-uri work in format liber") && it.endsWith(": 1") })
+        assertTrue(plan.mappingWarnings.any { it.contains("absente din cache") && it.contains(": 1;") })
+        assertTrue(plan.mappingWarnings.any { it.contains("identitate ambigua in cache: 1") })
+        assertTrue(plan.mappingWarnings.any { it.contains("NPC gestionat in alta lume: 1") })
+        assertTrue(plan.mappingWarnings.any { it.contains("ocupatie diferita de meseria locului: 1") })
+        assertTrue(plan.mappingWarnings.any { it.contains("ocupatie NPC necunoscuta: 1") })
     }
 
     @Test

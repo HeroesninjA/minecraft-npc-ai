@@ -59,6 +59,37 @@ class WorldBlueprintStructurePalettesTest {
     }
 
     @Test
+    fun `palette for forbidden exterior type is a compatibility conflict`() {
+        val draft = WorldBlueprint("world", mapRules = mapOf(
+            "forbidden_exterior_types" to "watchtower,castle",
+            WorldBlueprintStructurePalettes.KEY to "castle=stone_bricks;watchtower=oak_planks"))
+        val report = WorldBlueprintCompatibility.check(draft, null, null, isBuildableBlock = isBuildableBlock)
+
+        assertEquals(listOf("castle", "watchtower"), report.issues.map { it.subject })
+        assertTrue(report.issues.all { it.code == WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_PALETTE_RULES })
+        assertEquals(2, report.structurePalettes.size)
+
+        val invalidPalette = WorldBlueprintCompatibility.check(draft.copy(mapRules = draft.mapRules +
+            (WorldBlueprintStructurePalettes.KEY to "castle=stick")), null, null, isBuildableBlock = isBuildableBlock)
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_PALETTES_RULE,
+            invalidPalette.issues.single().code)
+    }
+
+    @Test
+    fun `AI preview reports a newly forbidden palette but not an existing conflict`() {
+        val base = WorldBlueprint("world", mapRules = mapOf(
+            WorldBlueprintStructurePalettes.KEY to "castle=stone_bricks"))
+        val candidate = base.copy(mapRules = base.mapRules + ("forbidden_exterior_types" to "castle"))
+
+        assertEquals(listOf(WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_PALETTE_RULES to "castle"),
+            WorldBlueprintCompatibility.introducedStructuredRuleConflicts(base, candidate, isBuildableBlock)
+                .map { it.code to it.subject })
+        assertTrue(WorldBlueprintCompatibility.introducedStructuredRuleConflicts(candidate,
+            candidate.copy(mapRules = candidate.mapRules + ("drumuri" to "Ocoleste padurea")),
+            isBuildableBlock).isEmpty())
+    }
+
+    @Test
     fun `structure preview prefers type palette and falls back to global palette`() {
         val draft = WorldBlueprint("world", mapRules = mapOf(
             "required_exterior_types" to "castle,watchtower",

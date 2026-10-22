@@ -134,6 +134,30 @@ class WorldBlueprintCompatibilityTest {
     }
 
     @Test
+    fun `suggestion preview reports only newly introduced structured conflicts`() {
+        val existing = base.copy(mapRules = mapOf(
+            "required_place_types" to "forge",
+            "forbidden_place_types" to "forge",
+            "required_region_types" to "settlement",
+            "allowed_structure_biomes" to "minecraft:plains",
+            "architecture_block_palette" to "invalid_existing_palette",
+        ))
+        val candidate = existing.copy(mapRules = existing.mapRules + mapOf(
+            "forbidden_region_types" to "settlement",
+            "forbidden_structure_biomes" to "minecraft:plains",
+        ))
+
+        val introduced = WorldBlueprintCompatibility.introducedStructuredRuleConflicts(existing, candidate)
+
+        assertEquals(setOf(
+            WorldBlueprintCompatibilityCode.CONFLICTING_REGION_TYPE_RULES to "settlement",
+            WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_BIOME_RULES to "minecraft:plains",
+        ), introduced.map { it.code to it.subject }.toSet())
+        assertTrue(WorldBlueprintCompatibility.introducedStructuredRuleConflicts(existing,
+            existing.copy(mapRules = existing.mapRules + ("drumuri" to "Evita lacurile"))).isEmpty())
+    }
+
+    @Test
     fun `invalid structured rules are rejected as a whole instead of becoming custom places`() {
         listOf("forge,unknown", "forge,", "forge house", "castel", "").forEach { value ->
             val draft = base.copy(mapRules = mapOf("required_place_types" to value))
@@ -422,6 +446,70 @@ class WorldBlueprintCompatibilityTest {
         assertEquals(0, valid.declarativeRuleCount)
         assertTrue(valid.compatibility.issues.isEmpty())
         assertEquals(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_REGION_POSITIONS_RULE,
+            invalid.compatibility.issues.single().code)
+    }
+
+    @Test
+    fun `structure non air rule is recognized before bounds are chosen`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintStructureNonAirRule.KEY to "0",
+        )), emptyList())
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintStructureNonAirRule.KEY to "unknown",
+        )), emptyList())
+
+        assertEquals(1, valid.compatibility.structuredRuleCount)
+        assertEquals(0, valid.declarativeRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_NON_AIR_RULE,
+            invalid.compatibility.issues.single().code)
+    }
+
+    @Test
+    fun `structure fluid rule is recognized before bounds are chosen`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintStructureFluidRule.KEY to "0",
+        )), emptyList())
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintStructureFluidRule.KEY to "unknown",
+        )), emptyList())
+
+        assertEquals(1, valid.compatibility.structuredRuleCount)
+        assertEquals(0, valid.declarativeRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_FLUID_RULE,
+            invalid.compatibility.issues.single().code)
+    }
+
+    @Test
+    fun `base support rule is recognized before bounds are chosen`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintBaseSupportRule.KEY to "0",
+        )), emptyList())
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintBaseSupportRule.KEY to "6",
+        )), emptyList())
+
+        assertEquals(1, valid.compatibility.structuredRuleCount)
+        assertEquals(0, valid.declarativeRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_BASE_SUPPORT_RULE,
+            invalid.compatibility.issues.single().code)
+    }
+
+    @Test
+    fun `forbidden structure blocks rule is validated without inspecting terrain`() {
+        val valid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintForbiddenStructureBlocks.KEY to "chest,stone",
+        )), emptyList(), isKnownStructureBlock = { it == "CHEST" || it == "STONE" })
+        val invalid = WorldBlueprintPlanner.compile(base.copy(mapRules = mapOf(
+            WorldBlueprintForbiddenStructureBlocks.KEY to "stone,not_a_block",
+        )), emptyList(), isKnownStructureBlock = { it == "CHEST" || it == "STONE" })
+
+        assertEquals(1, valid.compatibility.structuredRuleCount)
+        assertEquals(0, valid.declarativeRuleCount)
+        assertTrue(valid.compatibility.issues.isEmpty())
+        assertEquals(WorldBlueprintCompatibilityCode.INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,
             invalid.compatibility.issues.single().code)
     }
 

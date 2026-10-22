@@ -19,6 +19,11 @@ internal data class WorldBlueprintStructureBiomeRules(
         return outsideAllowed to forbiddenObserved
     }
 
+    fun unknownBiomes(isKnownBiome: (String) -> Boolean): Map<String, List<String>> = buildMap {
+        allowed?.filterNot(isKnownBiome)?.sorted()?.takeIf { it.isNotEmpty() }?.let { put(ALLOWED_KEY, it) }
+        forbidden?.filterNot(isKnownBiome)?.sorted()?.takeIf { it.isNotEmpty() }?.let { put(FORBIDDEN_KEY, it) }
+    }
+
     companion object {
         const val ALLOWED_KEY = "allowed_structure_biomes"
         const val FORBIDDEN_KEY = "forbidden_structure_biomes"

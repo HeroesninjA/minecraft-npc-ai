@@ -58,6 +58,9 @@ internal data class WorldBlueprintStructurePreview(
     val architecturePalette: List<String>,
     val architecturePaletteIssue: String?,
     val architecturePaletteSource: String?,
+    val architectureStyle: String,
+    val architectureStyleSource: String,
+    val architectureStyleIssue: String?,
     val storyRegionReferenced: Boolean,
     val storyRegionRuleIssue: String?,
 )
@@ -99,9 +102,10 @@ internal object WorldBlueprintStructurePlanner {
         mappedNodes: Collection<WorldNodeInfo>?,
         bounds: WorldBlueprintRegionBounds? = null,
         isBuildableBlock: (String) -> Boolean = WorldBlueprintArchitecturePalette::isBuildableBlock,
+        isKnownStructureBlock: (String) -> Boolean = WorldBlueprintForbiddenStructureBlocks::isValidBlock,
     ): WorldBlueprintStructurePreview {
         val compatibility = WorldBlueprintCompatibility.check(blueprint, null, null,
-            isBuildableBlock = isBuildableBlock)
+            isBuildableBlock = isBuildableBlock, isKnownStructureBlock = isKnownStructureBlock)
         require(compatibility.issues.none { it.code == WorldBlueprintCompatibilityCode.INVALID_EXTERIOR_TYPE_RULE }) {
             "Corecteaza listele required_exterior_types/forbidden_exterior_types inainte de planificare."
         }
@@ -137,10 +141,14 @@ internal object WorldBlueprintStructurePlanner {
         } else null
         val typePalette = compatibility.structurePalettes[type]
         val effectivePalette = typePalette ?: compatibility.architecturePalette
+        val typeStyle = compatibility.structureStyles[type]
         val paletteIssues = compatibility.issues.filter { it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_PALETTE_RULE ||
             it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_PALETTES_RULE }
         val storyRegionRuleIssue = compatibility.issues.firstOrNull {
             it.code == WorldBlueprintCompatibilityCode.INVALID_STORY_REGION_RULE
+        }?.message
+        val styleIssue = compatibility.issues.firstOrNull {
+            it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_STYLES_RULE
         }?.message
         return WorldBlueprintStructurePreview(blueprint.worldName, structure,
             mappedRegions != null && mappedPlaces != null && mappedNodes != null, collisions,
@@ -150,7 +158,9 @@ internal object WorldBlueprintStructurePlanner {
                 typePalette != null -> "${WorldBlueprintStructurePalettes.KEY}:${type.id()}"
                 effectivePalette.isNotEmpty() -> WorldBlueprintArchitecturePalette.KEY
                 else -> null
-            }, storyRegionRuleIssue == null && regionId in WorldBlueprintCompatibility.storyRegionIds(blueprint),
+            }, typeStyle ?: blueprint.architecture,
+            if (typeStyle != null) "${WorldBlueprintStructureStyles.KEY}:${type.id()}" else "architecture",
+            styleIssue, storyRegionRuleIssue == null && regionId in WorldBlueprintCompatibility.storyRegionIds(blueprint),
             storyRegionRuleIssue)
     }
 

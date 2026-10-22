@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.platform.features.RuntimeFeatureKey
 import ro.ainpc.world.WorldBlueprint
+import ro.ainpc.world.WorldBlueprintCompatibility
 import ro.ainpc.world.WorldBlueprintPolicy
 import ro.ainpc.world.WorldBlueprintStore
 import ro.ainpc.world.WorldBlueprintSuggestion
@@ -90,19 +91,20 @@ internal object WorldBlueprintSuggestionCommand {
         val request = WorldBlueprintSuggestionRequest(
             worldName, field, key, instruction, current?.let(store::fingerprint) ?: "none",
         )
+        val base = current ?: WorldBlueprint(worldName)
         val provenance = WorldBlueprintSuggestionProvenance(
             provider, model.take(80), now, WorldBlueprintSuggestionParser.requestFingerprint(instruction),
         )
         val token = UUID.randomUUID()
         pending[player.uniqueId] = Pending(token, worldName, now)
         previews.remove(player.uniqueId)
-        plugin.messageUtils.send(player, "&7Trimit descrierea la $provider/$model pentru o sugestie de ${field.id}; nimic nu va fi salvat automat.")
+        plugin.messageUtils.send(player, "&7Trimit descrierea si valoarea curenta a campului la $provider/$model pentru o sugestie de ${field.id}; nimic nu va fi salvat automat.")
         try {
-            plugin.openAIService.generateAsync(WorldBlueprintSuggestionParser.prompt(request)).whenComplete { response, error ->
+            plugin.openAIService.generateAsync(WorldBlueprintSuggestionParser.prompt(request, base)).whenComplete { response, error ->
                 if (!plugin.isEnabled) return@whenComplete
                 runCatching {
                     plugin.server.scheduler.runTask(plugin, Runnable {
-                        finish(plugin, player, request, current ?: WorldBlueprint(worldName), provenance, token, response, error)
+                        finish(plugin, player, request, base, provenance, token, response, error)
                     })
                 }
             }
@@ -121,9 +123,20 @@ internal object WorldBlueprintSuggestionCommand {
         val active = pending[player.uniqueId]?.takeIf { it.token == token } ?: return
         pending.remove(player.uniqueId)
         if (active.discarded) return
-        if (!player.isOnline || !player.hasPermission("ainpc.admin") || plugin.server.getWorld(request.worldName) == null) return
+        if (!player.isOnline || !player.hasPermission("ainpc.admin")) return
         if (error != null || response.isNullOrBlank()) {
             plugin.messageUtils.send(player, "&cFurnizorul AI nu a returnat o sugestie; draftul nu a fost modificat.")
+            return
+        }
+        val store = WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json"))
+        val actual = try {
+            store.get(request.worldName)?.let(store::fingerprint) ?: "none"
+        } catch (_: IOException) {
+            plugin.messageUtils.send(player, "&cNu pot verifica revizia draftului; sugestia AI a fost ignorata.")
+            return
+        }
+        if (actual != request.baseFingerprint) {
+            plugin.messageUtils.send(player, "&eDraftul s-a schimbat cat timp AI genera raspunsul; cere o sugestie noua.")
             return
         }
         val suggestion = try {
@@ -134,8 +147,7 @@ internal object WorldBlueprintSuggestionCommand {
         }
         previews[player.uniqueId] = suggestion
         plugin.messageUtils.send(player, "&aSugestie validata pentru ${request.field.id}; doar preview, nesalvata.")
-        show(plugin, player, request.worldName, null,
-            WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json")))
+        show(plugin, player, request.worldName, null, store)
     }
 
     private fun show(
@@ -173,20 +185,35 @@ internal object WorldBlueprintSuggestionCommand {
         plugin.messageUtils.send(player, "&7$retention")
         plugin.messageUtils.send(player, "&7Sursa: ${suggestion.provenance.provider}/${suggestion.provenance.model}; cerere ${suggestion.provenance.instructionFingerprint.take(12)}; timp ${suggestion.provenance.requestedAt}")
         value.chunked(180).forEach { part -> player.sendMessage(Component.text(part)) }
-        val actual = try {
-            (current ?: store.get(worldName))?.let(store::fingerprint) ?: "none"
+        val activeDraft = try {
+            current ?: store.get(worldName)
         } catch (_: IOException) {
             plugin.messageUtils.send(player, "&eNu pot verifica revizia draftului; citirea fisierului a esuat.")
             return true
         }
-        if (actual != suggestion.baseFingerprint) {
+        val actual = activeDraft?.let(store::fingerprint) ?: "none"
+        val currentRevision = actual == suggestion.baseFingerprint
+        if (!currentRevision) {
             plugin.messageUtils.send(player, "&eDraftul s-a schimbat intre timp; sugestia se bazeaza pe o revizie veche.")
+        } else if (suggestion.field == WorldBlueprintSuggestionField.MAP_RULE) {
+            val conflicts = WorldBlueprintCompatibility.introducedStructuredRuleConflicts(
+                activeDraft ?: WorldBlueprint(worldName), suggestion.candidate)
+            if (conflicts.isNotEmpty()) {
+                val label = if (conflicts.size == 1) "conflict" else "conflicte"
+                plugin.messageUtils.send(player, "&eSugestia introduce ${conflicts.size} $label intre reguli; verifica plan inainte de acceptare.")
+                conflicts.take(3).forEach { conflict -> plugin.messageUtils.send(player, "&e- ${conflict.message}") }
+                if (conflicts.size > 3) plugin.messageUtils.send(player, "&eAlte ${conflicts.size - 3} conflicte sunt omise din preview.")
+            }
         }
         val fingerprint = store.fingerprint(suggestion.candidate)
         plugin.messageUtils.send(player, "&7Amprenta candidatului: &f$fingerprint")
-        plugin.messageUtils.send(player, "&7Acceptare explicita: /ainpc world blueprint $worldName suggest accept $fingerprint")
-        if (saved == null) {
-            plugin.messageUtils.send(player, "&7Salvare (inlocuieste propunerea ta salvata): /ainpc world blueprint $worldName suggest save $fingerprint")
+        if (currentRevision) {
+            plugin.messageUtils.send(player, "&7Acceptare explicita: /ainpc world blueprint $worldName suggest accept $fingerprint")
+            if (saved == null) {
+                plugin.messageUtils.send(player, "&7Salvare (inlocuieste propunerea ta salvata): /ainpc world blueprint $worldName suggest save $fingerprint")
+            }
+        } else {
+            plugin.messageUtils.send(player, "&eAceasta revizie nu mai poate fi salvata sau acceptata; cere o sugestie noua.")
         }
         plugin.messageUtils.send(player, "&7Preview-ul nu se aplica automat in draft sau in lume.")
         return true
