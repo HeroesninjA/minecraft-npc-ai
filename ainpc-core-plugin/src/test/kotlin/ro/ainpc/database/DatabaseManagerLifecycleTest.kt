@@ -63,6 +63,62 @@ class DatabaseManagerLifecycleTest {
     }
 
     @Test
+    fun initializationAddsBlueprintStoryJournalToAnExistingSchema() {
+        val connection = openSqlite()
+        connection.createStatement().use { statement ->
+            statement.execute("CREATE TABLE schema_version (version_key TEXT PRIMARY KEY, version INTEGER)")
+            statement.execute("INSERT INTO schema_version VALUES ('current', 1)")
+        }
+        val manager = manager { connection }
+
+        assertTrue(manager.initialize())
+        manager.prepareStatement("SELECT COUNT(*) FROM blueprint_story_applications").use { statement ->
+            statement.executeQuery().use { result ->
+                assertTrue(result.next())
+                assertEquals(0, result.getInt(1))
+            }
+        }
+        manager.prepareStatement("SELECT COUNT(*) FROM blueprint_story_revisions").use { statement ->
+            statement.executeQuery().use { result ->
+                assertTrue(result.next())
+                assertEquals(0, result.getInt(1))
+            }
+        }
+    }
+
+    @Test
+    fun initializationAddsOperationMetadataToAnExistingBlueprintJournal() {
+        val connection = openSqlite()
+        connection.createStatement().use { statement ->
+            statement.execute("""
+                CREATE TABLE blueprint_story_applications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id TEXT NOT NULL,
+                    world_name TEXT NOT NULL, region_id TEXT NOT NULL,
+                    blueprint_fingerprint TEXT NOT NULL, state_fingerprint TEXT NOT NULL,
+                    applied_at INTEGER NOT NULL, applied_by TEXT NOT NULL
+                )
+            """.trimIndent())
+            statement.execute("""
+                INSERT INTO blueprint_story_applications (
+                    batch_id, world_name, region_id, blueprint_fingerprint,
+                    state_fingerprint, applied_at, applied_by
+                ) VALUES ('old-batch', 'world', 'keep', 'old-fingerprint', 'old-state', 1, 'admin')
+            """.trimIndent())
+        }
+        val manager = manager { connection }
+
+        assertTrue(manager.initialize())
+        manager.prepareStatement("SELECT operation_id, operation_size FROM blueprint_story_applications").use { statement ->
+            statement.executeQuery().use { result ->
+                assertTrue(result.next())
+                assertEquals("", result.getString("operation_id"))
+                assertEquals(0, result.getInt("operation_size"))
+                assertFalse(result.next())
+            }
+        }
+    }
+
+    @Test
     fun concurrentInitializationOpensOnlyOneConnection() {
         var opened = 0
         val manager = manager { opened++; openSqlite() }

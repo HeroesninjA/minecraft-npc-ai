@@ -370,13 +370,59 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                 if (args.size == 3) completions.addAll(filterStartsWith(
                     plugin?.server?.worlds?.map { it.name } ?: emptyList(), args[2]))
                 else if (args.size == 4) completions.addAll(filterStartsWith(
-                    listOf("show", "inspect", "validate", "plan", "review", "confirm", "revoke", "wizard", "story", "property", "profession-limit", "profession", "architecture", "map-rule", "remove"), args[3]))
+                    listOf("show", "inspect", "validate", "plan", "review", "confirm", "apply-story", "apply-story-all", "apply-story-batch", "update-story", "update-story-batch", "restore-story", "restore-story-batch", "applications", "revoke", "wizard", "suggest", "story", "property", "profession-limit", "profession", "architecture", "map-rule", "remove"), args[3]))
+                else if (args.size == 5 && args[3].equals("update-story", true)) completions.addAll(getRegionIdsSafe(args[4]))
+                else if (args.size == 6 && args[3].equals("update-story", true)) completions.add("<applicationId>")
+                else if (args.size == 7 && args[3].equals("update-story", true)) completions.add("<amprenta-SHA-256>")
+                else if (args.size == 5 && args[3].equals("update-story-batch", true)) completions.add("<regionId:applicationId,...>")
+                else if (args.size == 6 && args[3].equals("update-story-batch", true)) completions.add("<amprenta-SHA-256>")
+                else if (args.size == 5 && args[3].equals("restore-story", true)) completions.addAll(getRegionIdsSafe(args[4]))
+                else if (args.size == 6 && args[3].equals("restore-story", true)) completions.add("<applicationId-curent>")
+                else if (args.size == 7 && args[3].equals("restore-story", true)) completions.add("<applicationId-anterior>")
+                else if (args.size == 5 && args[3].equals("restore-story-batch", true)) completions.add("<regionId:applicationId-curent:applicationId-anterior,...>")
+                else if (args.size == 5 && args[3].equals("apply-story", true)) completions.addAll(getRegionIdsSafe(args[4]))
+                else if (args.size == 5 && args[3].equals("apply-story-all", true)) completions.add("<amprenta-SHA-256>")
+                else if (args.size == 5 && args[3].equals("apply-story-batch", true)) completions.add("<regionId,regionId>")
+                else if (args.size == 6 && args[3].equals("apply-story-batch", true)) completions.add("<amprenta-SHA-256>")
+                else if (args.size == 5 && args[3].equals("applications", true)) completions.addAll(
+                    getRegionIdsSafe(args[4]) + filterStartsWith(listOf("verify", "verify-batch", "audit-batch", "audit-operation", "history", "archive"), args[4]))
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("verify", true)) completions.addAll(getRegionIdsSafe(args[5]))
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("verify-batch", true)) completions.add("<regionId,regionId>")
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("audit-batch", true)) completions.add("<applicationId>")
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("audit-operation", true)) completions.add("<applicationId>")
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("history", true)) completions.add("<applicationId>")
+                else if (args.size == 6 && args[3].equals("applications", true) &&
+                    args[4].equals("archive", true)) completions.add("<applicationId>")
+                else if (args.size == 6 && args[3].equals("apply-story", true)) completions.add("<amprenta-SHA-256>")
+                else if (args.size == 5 && args[3].equals("plan", true)) completions.addAll(filterStartsWith(
+                    listOf("structure"), args[4]))
+                else if (args.size == 6 && args[3].equals("plan", true) && args[4].equals("structure", true)) {
+                    completions.addAll(filterStartsWith(OUTSIDE_TYPES, args[5]))
+                }
+                else if (args.size == 7 && args[3].equals("plan", true) && args[4].equals("structure", true)) {
+                    completions.add("<baseId>")
+                }
+                else if (args.size == 8 && args[3].equals("plan", true) && args[4].equals("structure", true)) {
+                    completions.addAll(filterStartsWith(listOf("bounds"), args[7]))
+                }
+                else if (args.size in 9..14 && args[3].equals("plan", true) &&
+                    args[4].equals("structure", true) && args[7].equals("bounds", true)) {
+                    val coordinate = listOf("minX", "minY", "minZ", "maxX", "maxY", "maxZ")[args.size - 9]
+                    completions.add("<$coordinate>")
+                }
                 else if (args.size == 5 && args[3].equals("wizard", true)) completions.addAll(filterStartsWith(
                     listOf("stop", "edit"), args[4]))
                 else if (args.size == 6 && args[3].equals("wizard", true) && args[4].equals("edit", true)) {
                     completions.addAll(filterStartsWith(
                         listOf("story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[5]))
                 }
+                else if (args.size == 5 && args[3].equals("suggest", true)) completions.addAll(filterStartsWith(
+                    listOf("show", "save", "saved", "accept", "discard", "story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[4]))
                 else if (args.size == 5 && args[3].equals("remove", true)) completions.addAll(filterStartsWith(
                     listOf("property", "profession", "map-rule"), args[4]))
                 else if (args.size == 5 && args[3].equals("inspect", true)) completions.addAll(filterStartsWith(

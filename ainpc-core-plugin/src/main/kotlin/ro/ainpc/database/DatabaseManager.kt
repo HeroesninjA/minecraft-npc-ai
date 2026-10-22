@@ -592,6 +592,51 @@ open class DatabaseManager(
             )
             stmt.execute(
                 """
+                CREATE TABLE IF NOT EXISTS blueprint_story_applications (
+                    id ${autoIncrementPrimaryKey()},
+                    batch_id ${shortText(64)} NOT NULL,
+                    world_name ${shortText(255)} NOT NULL,
+                    region_id ${shortText(255)} NOT NULL,
+                    blueprint_fingerprint ${shortText(64)} NOT NULL,
+                    state_fingerprint ${shortText(64)} NOT NULL,
+                    applied_at BIGINT NOT NULL,
+                    applied_by TEXT NOT NULL,
+                    operation_id ${shortText(64)} NOT NULL DEFAULT '',
+                    operation_size INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            ensureColumnExists("blueprint_story_applications", "operation_id",
+                "${shortText(64)} NOT NULL DEFAULT ''")
+            ensureColumnExists("blueprint_story_applications", "operation_size",
+                "INTEGER NOT NULL DEFAULT 0")
+            executeSchemaSql(stmt,
+                "CREATE INDEX IF NOT EXISTS idx_blueprint_story_applications_world " +
+                    "ON blueprint_story_applications(world_name, applied_at)")
+            executeSchemaSql(stmt,
+                "CREATE INDEX IF NOT EXISTS idx_blueprint_story_applications_region " +
+                    "ON blueprint_story_applications(region_id, applied_at)")
+            executeSchemaSql(stmt,
+                "CREATE INDEX IF NOT EXISTS idx_blueprint_story_applications_batch " +
+                    "ON blueprint_story_applications(world_name, batch_id)")
+            executeSchemaSql(stmt,
+                "CREATE INDEX IF NOT EXISTS idx_blueprint_story_applications_operation " +
+                    "ON blueprint_story_applications(world_name, operation_id)")
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS blueprint_story_revisions (
+                    batch_id ${shortText(64)} PRIMARY KEY,
+                    world_name ${shortText(255)} NOT NULL,
+                    region_id ${shortText(255)} NOT NULL,
+                    previous_application_id BIGINT NOT NULL,
+                    previous_state TEXT NOT NULL,
+                    updated_at BIGINT NOT NULL,
+                    updated_by TEXT NOT NULL
+                )
+                """
+            )
+            stmt.execute(
+                """
                 CREATE TABLE IF NOT EXISTS place_story_state (
                     place_id TEXT PRIMARY KEY,
                     region_id TEXT NOT NULL DEFAULT '',

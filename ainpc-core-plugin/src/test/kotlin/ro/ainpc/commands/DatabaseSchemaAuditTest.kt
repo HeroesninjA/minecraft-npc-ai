@@ -49,8 +49,8 @@ class DatabaseSchemaAuditTest {
                 .single { domain -> domain.get("name").asString == "economy" }
 
             assertEquals("jdbc_metadata", schema.get("source").asString)
-            assertEquals(31, schema.get("expected_tables").asInt)
-            assertEquals(30, schema.get("mapped_tables").asInt)
+            assertEquals(33, schema.get("expected_tables").asInt)
+            assertEquals(32, schema.get("mapped_tables").asInt)
             assertFalse(schema.get("coverage_complete").asBoolean)
             assertEquals("economy_balances", schema.getAsJsonArray("missing_tables")[0].asString)
             assertEquals("extension_table", schema.getAsJsonArray("unmapped_tables")[0].asString)

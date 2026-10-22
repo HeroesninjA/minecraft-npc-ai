@@ -30,6 +30,7 @@ import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
 import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.commands.defaultObjectiveTarget
 import ro.ainpc.commands.WorldBlueprintWizard
+import ro.ainpc.commands.WorldBlueprintSuggestionCommand
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.managers.isSameNpcRecord
@@ -85,6 +86,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
         WorldBlueprintWizard.clear(event.player.uniqueId)
+        WorldBlueprintSuggestionCommand.clear(event.player.uniqueId)
         val partner = conversations().getConversationPartner(event.player)
         if (partner != null) {
             publishDialogSessionEnded(event.player, partner, "quit")

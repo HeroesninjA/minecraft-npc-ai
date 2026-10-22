@@ -105,6 +105,8 @@ object DatabaseSchemaCatalog {
         table(DatabaseSchemaDomain.SPAWN, "spawn_batches"),
         table(DatabaseSchemaDomain.SPAWN, "spawn_batch_steps"),
         table(DatabaseSchemaDomain.STORY, "region_story_state"),
+        table(DatabaseSchemaDomain.STORY, "blueprint_story_applications"),
+        table(DatabaseSchemaDomain.STORY, "blueprint_story_revisions"),
         table(DatabaseSchemaDomain.STORY, "place_story_state"),
         table(DatabaseSchemaDomain.STORY, "story_events"),
         table(DatabaseSchemaDomain.STORY, "story_pending_events"),

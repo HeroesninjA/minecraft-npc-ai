@@ -191,7 +191,7 @@ fun sendWorldUsage(sender: CommandSender) {
     val msg = ainpcCommandDisplayPlugin.messageUtils
     msg.send(sender, "&cUtilizare:")
     msg.send(sender, "&e/ainpc world whereami [jucator]")
-    msg.send(sender, "&e/ainpc world blueprint <lume> <show|inspect|validate|plan|review|confirm|revoke|wizard|story|property|profession-limit|profession|architecture|map-rule|remove>")
+    msg.send(sender, "&e/ainpc world blueprint <lume> <show|inspect|validate|plan|review|confirm|apply-story|apply-story-all|apply-story-batch|update-story|update-story-batch|restore-story|restore-story-batch|applications|revoke|wizard|suggest|story|property|profession-limit|profession|architecture|map-rule|remove>")
     msg.send(sender, "&e/ainpc world places [regionId]")
     msg.send(sender, "&e/ainpc world region info <regionId>")
     msg.send(sender, "&e/ainpc world region create <id> <type> <x1> <y1> <z1> <x2> <y2> <z2>")
