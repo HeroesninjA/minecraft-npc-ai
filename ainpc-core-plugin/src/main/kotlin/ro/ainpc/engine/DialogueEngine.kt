@@ -7,6 +7,7 @@ import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.DialogHistory
 import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.NpcFactResolver
+import ro.ainpc.ai.NpcCognitiveResponse
 import ro.ainpc.ai.EnvironmentFactResolver
 import ro.ainpc.ai.NpcShopFactResolver
 import ro.ainpc.ai.NpcShopAssociation
@@ -24,6 +25,7 @@ import ro.ainpc.ai.orchestration.AIResultStatus
 import ro.ainpc.ai.orchestration.AIUseCase
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
+import ro.ainpc.npc.NpcCognitiveState
 import java.util.Collections
 import java.util.EnumMap
 import java.util.UUID
@@ -442,8 +444,9 @@ class DialogueEngine(
             NpcFactResolver.describePersonality(npc.personality),
         )
         val npcFact = NpcFactResolver.resolve(playerMessage, facts).orElse(null)
+        val cognitiveFact = NpcCognitiveResponse.resolve(playerMessage, NpcCognitiveState.capture(npc, context))
         val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext)
-        return listOfNotNull(npcFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }
+        return listOfNotNull(npcFact, cognitiveFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }
     }
 
     fun clearRecentResponses() {

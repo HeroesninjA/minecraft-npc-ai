@@ -1,9 +1,11 @@
 # Dialog si conversatii
 
 Status: contract canonic verificat in cod pentru formularea si post-procesarea replicii NPC.
-Actualizat: 2026-10-15.
+Actualizat: 2026-10-24.
 
 Calea activa este `DialogManager -> DialogueEngine -> OpenAIService`, care trimite promptul catre OpenAI sau Ollama potrivit `ai_provider`. Cu provider disponibil, conversatiile explicite si raspunsurile factuale eligibile folosesc AI; raspunsurile locale sunt disponibile la configuratie dezactivata sau esec.
+
+`NpcCognitiveResponse` foloseste `NpcCognitiveState` pentru intrebari precum `la ce te gandesti?`, `de ce ai nevoie?` si `ce vrei sa faci?`. Raspunsul este construit din nevoile, pericolul, starea, obiectivul si rutina curente, inclusiv cand providerul AI lipseste. Acest model furnizeaza si contributia nevoilor la scorurile din `DecisionEngine`. Autoevaluarea este inclusa in descrierea NPC capturata pentru prompt si ramane detasata de schimbarile ulterioare. Ea exprima prioritati si intentii, fara sa confirme actiuni sau experiente care nu au avut loc.
 
 Inainte de aceasta cale, `DialogManager` aplica `NpcInteractionProfile`. `FULL_AI` intra normal in dialog; `MINIMAL` refuza conversatia libera; `SCENE_ONLY` refuza dialogul direct din chat; `QUEST_ONLY` intra numai cand jucatorul are o oferta de quest asociata NPC-ului curent; `SHOP_ONLY` intra numai daca exista un magazin configurat pentru ocupatia NPC-ului, accesibil jucatorului, cu cel putin o oferta acceptata de verificarile de configuratie ale comertului. Refuzurile folosesc trei variante naturale rotite separat pentru perechea NPC-jucator si profil, apoi aplica acelasi cooldown ca dialogul obisnuit. Refuzul pentru lipsa permisiunii mentioneaza accesul, nu lipsa marfii. Cache-ul de rotatie pastreaza maximum 512 perechi si nu este memorie narativa: refuzurile nu sunt salvate in `dialog_history`, nu modifica relatia si se reseteaza la recrearea `DialogManager`.
 

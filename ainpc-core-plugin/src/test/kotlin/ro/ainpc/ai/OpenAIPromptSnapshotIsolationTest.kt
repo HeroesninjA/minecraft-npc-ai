@@ -117,6 +117,21 @@ class OpenAIPromptSnapshotIsolationTest {
     }
 
     @Test
+    fun `cognitive description stays detached when needs and danger change after capture`() {
+        npc.hungerLevel = 10
+
+        val snapshot = capture()
+
+        npc.hungerLevel = 90
+        npc.context.isInDanger = true
+
+        assertTrue(snapshot.npcDescription.contains("Atentie curenta:"))
+        assertTrue(snapshot.npcDescription.contains("foame"))
+        assertTrue(snapshot.npcDescription.contains("satietate 10/100"))
+        assertFalse(snapshot.npcDescription.contains("satietate 90/100"))
+    }
+
+    @Test
     fun `snapshot keeps detached immutable traits family and environment events`() {
         val events = mutableListOf("festival")
         npc.traits.add("curious")

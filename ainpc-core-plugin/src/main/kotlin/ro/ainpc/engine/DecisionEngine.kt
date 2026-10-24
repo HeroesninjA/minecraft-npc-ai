@@ -9,7 +9,7 @@ import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
-import ro.ainpc.npc.NpcSelfCareThresholds
+import ro.ainpc.npc.NpcCognitiveState
 import java.util.EnumMap
 import java.util.Locale
 import java.util.UUID
@@ -437,31 +437,13 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         return modifier
     }
 
-    private fun getNeedModifier(context: NPCContext, action: NPCAction): Int {
-        var modifier = 0
-        if (context.hungerLevel < NpcSelfCareThresholds.START) {
-            if (action == NPCAction.EAT) modifier += 45
-            if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 12
-        }
-        if (context.energyLevel < NpcSelfCareThresholds.START) {
-            if (action == NPCAction.SLEEP) modifier += 50
-            if (action == NPCAction.REST) modifier += 35
-            if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 18
-            if (action == NPCAction.INVESTIGATE) modifier -= 10
-        }
-        if (context.socialNeedLevel < 40) {
-            if (action == NPCAction.SOCIALIZE || action == NPCAction.GREET || action == NPCAction.TALK) modifier += 28
-        }
-        if (context.comfortLevel < 40) {
-            if (action == NPCAction.REST || action == NPCAction.SLEEP) modifier += 22
-            if (action == NPCAction.HIDE) modifier += 14
-        }
-        if (context.safetyLevel < 40) {
-            if (action == NPCAction.FLEE || action == NPCAction.HIDE || action == NPCAction.CALL_HELP) modifier += 30
-            if (action.isAggressive()) modifier -= 10
-        }
-        return modifier
-    }
+    private fun getNeedModifier(context: NPCContext, action: NPCAction): Int = NpcCognitiveState(
+        hungerLevel = context.hungerLevel,
+        energyLevel = context.energyLevel,
+        socialNeedLevel = context.socialNeedLevel,
+        comfortLevel = context.comfortLevel,
+        safetyLevel = context.safetyLevel,
+    ).needModifier(action)
 
     private fun getRoutineModifier(npc: AINPC, context: NPCContext, action: NPCAction): Int {
         val focus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })

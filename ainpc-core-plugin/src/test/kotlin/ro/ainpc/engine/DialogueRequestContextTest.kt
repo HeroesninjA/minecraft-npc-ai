@@ -34,6 +34,37 @@ class DialogueRequestContextTest {
     private val requestPlayer = playerNamed("RequestPlayer")
 
     @Test
+    fun `local dialogue describes authoritative needs without running a decision`() {
+        npc.hungerLevel = 10
+        val state = npc.currentState
+
+        val response = engine.generateResponse(npc, npc.context, "La ce te gandesti?").join()
+
+        assertTrue(response.contains("foame"))
+        assertEquals(10, npc.hungerLevel)
+        assertEquals(state, npc.currentState)
+        assertEquals("", npc.currentGoal)
+    }
+
+    @Test
+    fun `request dialogue answers need questions without an AI provider or player API access`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        npc.hungerLevel = 10
+        npc.context.setInteractingPlayer(currentPlayer)
+        val interactionTime = npc.context.lastInteractionTime
+
+        val response = engine.generateResponse(
+            request("De ce ai nevoie?"), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(response.contains("foame"))
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertEquals(interactionTime, npc.context.lastInteractionTime)
+        assertEquals(10, npc.hungerLevel)
+    }
+
+    @Test
     fun `delayed replay does not overwrite the newest shared message or participant`() {
         npc.context.setInteractingPlayer(currentPlayer)
         npc.context.lastPlayerMessage = "Mesaj mai nou al altui jucator"

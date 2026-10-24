@@ -1,7 +1,7 @@
 # Runtime de simulare NPC
 
 Status: contract verificat in cod.
-Actualizat: 2026-10-19.
+Actualizat: 2026-10-24.
 
 Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ramane pentru compatibilitate, iar implementarea reala este distribuita intre doua fluxuri independente: simularea nevoilor si rutina cu miscare.
 
@@ -15,6 +15,14 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 - calculeaza scoruri contextuale si alege ponderat dintre actiunile apropiate ca scor, cu alegere determinista pentru pericol, combat si conversatie; actualizeaza fortat starea prin `changeStateFromSimulation` si apoi `currentGoal`;
 - publica `AINPCAddon.onNpcStateChange` numai daca starea rezultata este diferita;
 - nu muta entitatea si nu scrie quest, story sau economie.
+
+## Autoevaluare comuna pentru decizie si dialog
+
+`NpcCognitiveState` este un instantaneu imuabil al nevoilor, starii, pericolului, interlocutorului, obiectivului si rutinei. `DecisionEngine` foloseste `needModifier` din acest model pentru contributia nevoilor la scorurile actiunilor; coeficientii si pragurile existente sunt pastrate.
+
+Modelul identifica o prioritate de atentie si formuleaza o descriere a nevoilor si intentiei curente. Pericolul imediat are prioritate. Foamea si oboseala respecta pragurile de inceput si recuperare ale ingrijirii. Intentia ramane separata de actiunea executata: descrierea nu confirma consumul de obiecte, deplasarea sau reusita unui obiectiv.
+
+`AINPC.generateContextDescription()` include aceasta autoevaluare in textul copiat de `OpenAIPromptSnapshotFactory`, iar `NpcCognitiveResponse` raspunde local la intrebari despre ganduri, nevoi si intentii prin `DialogueEngine`. Captura citeste numai campuri deja disponibile; nu executa actiuni si nu acceseaza lumea prin API Bukkit. Modelul nu adauga persistenta sau invatare episodica.
 
 ## Fluxul de rutina
 

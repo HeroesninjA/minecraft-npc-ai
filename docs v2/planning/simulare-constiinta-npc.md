@@ -2,7 +2,13 @@
 
 Data: 2026-10-07
 
-Statut: recomandare de planificare, nu funcționalitate implementată sau validată în runtime.
+Statut: planificare pentru circuitul cognitiv complet; un prim nucleu de autoevaluare este implementat în cod, fără validare în serverul Minecraft.
+
+## Primul nucleu implementat — 2026-10-24
+
+`NpcCognitiveState` oferă o reprezentare comună, imuabilă, a nevoilor, atenției și intenției curente. Contribuția nevoilor la alegerea acțiunilor din `DecisionEngine` și răspunsurile despre propria stare din `DialogueEngine` folosesc același model. NPC-ul poate răspunde local la „La ce te gândești?”, „De ce ai nevoie?” și „Ce vrei să faci?”, iar autoevaluarea intră și în contextul capturat pentru providerul AI.
+
+Acest pas urmărește starea proprie și separă intenția de rezultat. Circuitul de învățare din experiențe, evaluarea consecințelor și adaptarea unei decizii ulterioare rămân etape de implementat și verificat. Contractul curent este descris în [runtime-ul de simulare](../architecture/simulation-service.md).
 
 ## Concluzie
 
