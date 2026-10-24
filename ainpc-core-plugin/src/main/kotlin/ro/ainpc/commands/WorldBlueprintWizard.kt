@@ -5,6 +5,7 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.world.WorldBlueprint
 import ro.ainpc.world.WorldBlueprintStore
 import ro.ainpc.world.WorldBlueprintPolicy
+import ro.ainpc.world.WorldBlueprintRevisionConflictException
 import ro.ainpc.world.WorldBlueprintWizardFlow
 import ro.ainpc.world.WorldBlueprintWizardStep
 import java.io.IOException
@@ -22,6 +23,7 @@ internal object WorldBlueprintWizard {
         val step: WorldBlueprintWizardStep,
         val touchedAt: Long,
         val editOnly: Boolean,
+        val fingerprint: String?,
     )
 
     fun hasSession(playerId: UUID): Boolean = sessions.containsKey(playerId)
@@ -33,7 +35,7 @@ internal object WorldBlueprintWizard {
             plugin.messageUtils.send(player, "&aDraftul este complet. Foloseste show, inspect, validate, plan si review pentru revizie.")
             return
         }
-        begin(plugin, player, worldName, blueprint ?: WorldBlueprint(worldName), step, false)
+        begin(plugin, player, worldName, blueprint, step, false)
     }
 
     fun startEdit(
@@ -45,7 +47,7 @@ internal object WorldBlueprintWizard {
 
     private fun begin(
         plugin: AINPCPlugin, player: Player, worldName: String,
-        blueprint: WorldBlueprint, step: WorldBlueprintWizardStep, editOnly: Boolean,
+        blueprint: WorldBlueprint?, step: WorldBlueprintWizardStep, editOnly: Boolean,
     ) {
         if (plugin.guiService.hasTextInputRequest(player)) {
             plugin.messageUtils.send(player, "&cInchide mai intai introducerea de text din GUI.")
@@ -57,11 +59,12 @@ internal object WorldBlueprintWizard {
             plugin.messageUtils.send(player, "&cPrea multe wizard-uri active; incearca mai tarziu.")
             return
         }
-        sessions[player.uniqueId] = Session(worldName, step, now, editOnly)
+        val store = WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json"))
+        sessions[player.uniqueId] = Session(worldName, step, now, editOnly, blueprint?.let(store::fingerprint))
         val mode = if (editOnly) "Editare ghidata" else "Wizard"
         plugin.messageUtils.send(player, "&6$mode pentru ${worldName}. Raspunsurile din chat sunt private; scrie anuleaza pentru iesire.")
         if (editOnly) {
-            plugin.messageUtils.send(player, "&7Valoare curenta: ${WorldBlueprintWizardFlow.currentSummary(blueprint, step)}")
+            plugin.messageUtils.send(player, "&7Valoare curenta: ${WorldBlueprintWizardFlow.currentSummary(requireNotNull(blueprint), step)}")
             plugin.messageUtils.send(player, "&7Pentru textul complet foloseste inspect; o editare schimba amprenta din review.")
         }
         plugin.messageUtils.send(player, "&e${WorldBlueprintWizardFlow.prompt(step)}")
@@ -96,9 +99,8 @@ internal object WorldBlueprintWizard {
         sessions[player.uniqueId] = session.copy(touchedAt = System.currentTimeMillis())
         try {
             val store = WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json"))
-            val current = store.get(session.worldName) ?: WorldBlueprint(session.worldName)
-            val update = WorldBlueprintWizardFlow.advance(current, session.step, message)
-            if (update.blueprint != current) store.save(update.blueprint)
+            val progress = store.advanceWizard(session.worldName, session.step, message, session.fingerprint)
+            val update = progress.update
             if (session.editOnly && update.nextStep != session.step) {
                 sessions.remove(player.uniqueId)
                 plugin.messageUtils.send(player, "&aEditarea categoriei s-a incheiat. Verifica /ainpc world blueprint ${session.worldName} review.")
@@ -114,10 +116,15 @@ internal object WorldBlueprintWizard {
                 plugin.messageUtils.send(player, "&7/ainpc world blueprint ${session.worldName} plan")
                 plugin.messageUtils.send(player, "&7/ainpc world blueprint ${session.worldName} review")
             } else {
-                sessions[player.uniqueId] = session.copy(step = nextStep, touchedAt = System.currentTimeMillis())
-                val status = if (update.blueprint == current) "Pas urmator." else "Raspuns salvat in draft."
+                sessions[player.uniqueId] = session.copy(step = nextStep, touchedAt = System.currentTimeMillis(),
+                    fingerprint = progress.fingerprint)
+                val status = if (progress.fingerprint == session.fingerprint) "Pas urmator." else "Raspuns salvat in draft."
                 plugin.messageUtils.send(player, "&a$status &e${WorldBlueprintWizardFlow.prompt(nextStep)}")
             }
+        } catch (error: WorldBlueprintRevisionConflictException) {
+            sessions.remove(player.uniqueId)
+            plugin.messageUtils.send(player, "&eWizard oprit: ${error.message} Raspunsul nu a fost aplicat.")
+            plugin.messageUtils.send(player, "&7Revizuieste /ainpc world blueprint ${session.worldName} suggest gui si porneste din nou editarea.")
         } catch (error: IllegalArgumentException) {
             plugin.messageUtils.send(player, "&c${error.message} &e${WorldBlueprintWizardFlow.prompt(session.step)}")
         } catch (error: IOException) {

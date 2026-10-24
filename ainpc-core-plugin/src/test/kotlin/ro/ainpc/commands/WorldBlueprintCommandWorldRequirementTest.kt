@@ -27,5 +27,11 @@ class WorldBlueprintCommandWorldRequirementTest {
         }
         assertTrue(WorldBlueprintCommand.requiresLoadedWorld("plan",
             arrayOf("world", "blueprint", "planned_world", "plan", "STRUCTURE", "castle", "keep")))
+        assertTrue(WorldBlueprintCommand.requiresLoadedWorld("plan", arrayOf("world", "blueprint", "planned_world",
+            "plan", "structure", "castle", "keep", "bounds", "0", "64", "0", "4", "68", "4",
+            "export", "a".repeat(64))))
+        assertTrue(WorldBlueprintCommand.requiresLoadedWorld("plan", arrayOf("world", "blueprint", "planned_world",
+            "plan", "structure", "castle", "keep", "bounds", "0", "64", "0", "4", "68", "4",
+            "VERIFY", "a".repeat(64))))
     }
 }

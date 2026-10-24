@@ -340,7 +340,8 @@ object OpenAITextSupport {
 
     @JvmStatic
     @Throws(IOException::class)
-    fun extractGeneratedText(gson: Gson, responseBody: String?, expectedSpeakerName: String?): String {
+    fun extractGeneratedText(gson: Gson, responseBody: String?, expectedSpeakerName: String?,
+                             preserveStructuredJson: Boolean = false): String {
         if (responseBody.isNullOrBlank()) {
             throw IOException("OpenAI a returnat un raspuns gol.")
         }
@@ -355,10 +356,14 @@ object OpenAITextSupport {
         if (errorElement != null && !errorElement.isJsonNull) {
             throw IOException("OpenAI a raportat eroare: " + extractOpenAIErrorMessage(gson, responseBody))
         }
+        if (preserveStructuredJson && safeJsonString(jsonResponse.get("status")) != "completed") {
+            throw IOException("OpenAI nu a finalizat raspunsul JSON structurat.")
+        }
 
         val outputTextElement = jsonResponse.get("output_text")
         if (outputTextElement != null && outputTextElement.isJsonPrimitive) {
-            val directText = cleanResponse(outputTextElement.asString, expectedSpeakerName)
+            val directText = if (preserveStructuredJson) outputTextElement.asString.trim()
+                else cleanResponse(outputTextElement.asString, expectedSpeakerName)
             if (directText.isNotBlank()) {
                 return directText
             }
@@ -407,7 +412,8 @@ object OpenAITextSupport {
             }
         }
 
-        val generatedText = cleanResponse(combined.toString(), expectedSpeakerName)
+        val generatedText = if (preserveStructuredJson) combined.toString().trim()
+            else cleanResponse(combined.toString(), expectedSpeakerName)
         if (generatedText.isBlank()) {
             throw IOException("OpenAI nu a returnat text util in campul output.")
         }

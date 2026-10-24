@@ -2,6 +2,7 @@ package ro.ainpc.commands
 
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -29,6 +30,25 @@ class AINPCTabCompleterTest {
 
     private fun tab(completer: AINPCTabCompleter, command: String, vararg args: String): List<String> {
         return completer.onTabComplete(sender, TestCommand(command), command, args.toList().toTypedArray())
+    }
+
+    @Test
+    fun completesOfflineBlueprintNamesOnlyForAdminsWithoutDuplicates() {
+        val admin = Proxy.newProxyInstance(CommandSender::class.java.classLoader,
+            arrayOf(CommandSender::class.java)) { _, method, _ ->
+            method.name == "hasPermission"
+        } as CommandSender
+        val completer = AINPCTabCompleter(null) { listOf("offline_world", "offline_world", "other") }
+        val args = arrayOf("world", "blueprint", "off")
+
+        val adminSuggestions = completer.onTabComplete(admin, TestCommand("ainpc"), "ainpc", args)
+        val publicSuggestions = completer.onTabComplete(sender, TestCommand("ainpc"), "ainpc", args)
+
+        assertTrue(adminSuggestions == listOf("offline_world"))
+        assertFalse(publicSuggestions.contains("offline_world"))
+        val failedSuggestions = AINPCTabCompleter(null) { error("Cannot read drafts") }
+            .onTabComplete(admin, TestCommand("ainpc"), "ainpc", arrayOf("world", "blueprint", ""))
+        assertTrue(failedSuggestions.contains("list"))
     }
 
     @Test
@@ -155,6 +175,22 @@ class AINPCTabCompleterTest {
             .contains("bounds"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure", "castle", "citadel", "bounds", "")
             .contains("<minX>"))
+        assertEquals(listOf("export"), tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure",
+            "castle", "citadel", "bounds", "0", "64", "0", "5", "70", "5", "ex"))
+        assertEquals(listOf("verify"), tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure",
+            "castle", "citadel", "bounds", "0", "64", "0", "5", "70", "5", "ve"))
+        assertEquals(listOf("export", "verify"), tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure",
+            "castle", "citadel", "bounds", "0", "64", "0", "5", "70", "5", ""))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "PLAN", "STRUCTURE",
+            "castle", "citadel", "BOUNDS", "0", "64", "0", "5", "70", "5", "EXPORT", "")
+            .contains("<amprenta-SHA-256>"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "PLAN", "STRUCTURE",
+            "castle", "citadel", "BOUNDS", "0", "64", "0", "5", "70", "5", "VERIFY", "")
+            .contains("<amprenta-SHA-256>"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure",
+            "castle", "citadel", "invalid", "0", "64", "0", "5", "70", "5", "").isEmpty())
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "plan", "structure",
+            "castle", "citadel", "bounds", "0", "64", "0", "5", "70", "5", "invalid", "").isEmpty())
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("wizard"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("review"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "").contains("confirm"))
@@ -237,6 +273,8 @@ class AINPCTabCompleterTest {
               .contains("profession"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "suggest", "")
               .contains("accept"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "suggest", "")
+              .contains("gui"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "").contains("stop"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "").contains("edit"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "wizard", "edit", "")
@@ -254,8 +292,16 @@ class AINPCTabCompleterTest {
             .contains("max_structure_fluid_positions"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "architecture_style_")
             .contains("architecture_style_by_type"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "architecture_material_")
+            .contains("architecture_material_roles"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "architecture_entr")
+            .contains("architecture_entrance"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "architecture_clear_")
+            .contains("architecture_clear_interior"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "max_base_")
             .contains("max_base_unsupported_samples"))
+        assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "max_base_")
+            .contains("max_base_unsupported_positions"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "world_seed")
             .contains("world_seed"))
         assertTrue(tab(completer, "ainpc", "world", "blueprint", "world", "map-rule", "world_")

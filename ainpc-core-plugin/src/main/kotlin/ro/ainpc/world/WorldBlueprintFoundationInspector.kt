@@ -20,14 +20,31 @@ internal data class WorldBlueprintFoundationPreview(
 }
 
 internal object WorldBlueprintFoundationInspector {
+    fun inspectExactIfSmall(
+        bounds: WorldBlueprintRegionBounds,
+        minBuildY: Int,
+        blockAt: (Int, Int, Int) -> WorldBlueprintFoundationBlock?,
+    ): WorldBlueprintFoundationPreview? {
+        if (bounds.minY <= minBuildY) return null
+        val positions = WorldBlueprintSamplePoints.exactHorizontalIfSmall(bounds) ?: return null
+        return inspectAt(bounds.minY - 1, positions, blockAt)
+    }
+
     fun inspect(
         bounds: WorldBlueprintRegionBounds,
         minBuildY: Int,
         blockAt: (Int, Int, Int) -> WorldBlueprintFoundationBlock?,
     ): WorldBlueprintFoundationPreview? {
         if (bounds.minY <= minBuildY) return null
-        val foundationY = bounds.minY - 1
-        val samples = WorldBlueprintSamplePoints.horizontal(bounds).map { (blockX, blockZ) ->
+        return inspectAt(bounds.minY - 1, WorldBlueprintSamplePoints.horizontal(bounds), blockAt)
+    }
+
+    private fun inspectAt(
+        foundationY: Int,
+        positions: List<Pair<Int, Int>>,
+        blockAt: (Int, Int, Int) -> WorldBlueprintFoundationBlock?,
+    ): WorldBlueprintFoundationPreview {
+        val samples = positions.map { (blockX, blockZ) ->
             blockAt(blockX, foundationY, blockZ)
         }
         return WorldBlueprintFoundationPreview(samples.size,

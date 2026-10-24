@@ -1,5 +1,6 @@
 package ro.ainpc.world
 
+import org.bukkit.World
 import org.bukkit.WorldType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -14,9 +15,25 @@ class WorldBlueprintWorldGenerationRulesTest {
 
         assertFalse(rules.typeConfigured)
         assertNull(rules.worldType)
+        assertFalse(rules.environmentConfigured)
+        assertNull(rules.environment)
         assertFalse(rules.structuresConfigured)
         assertNull(rules.generateStructures)
         assertTrue(rules.invalidKeys.isEmpty())
+    }
+
+    @Test
+    fun `parses supported vanilla environments without custom dimensions`() {
+        val environments = mapOf("normal" to World.Environment.NORMAL, "nether" to World.Environment.NETHER,
+            "the_end" to World.Environment.THE_END)
+        environments.forEach { (raw, expected) ->
+            val rules = WorldBlueprintWorldGenerationRules.parse(mapOf(
+                WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY to " ${raw.uppercase()} ",
+            ))
+            assertTrue(rules.environmentConfigured)
+            assertEquals(expected, rules.environment)
+            assertTrue(rules.invalidKeys.isEmpty())
+        }
     }
 
     @Test
@@ -40,10 +57,24 @@ class WorldBlueprintWorldGenerationRulesTest {
     fun `rejects unknown world type and ambiguous structure toggle`() {
         val rules = WorldBlueprintWorldGenerationRules.parse(mapOf(
             WorldBlueprintWorldGenerationRules.TYPE_KEY to "custom_generator",
+            WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY to "custom",
             WorldBlueprintWorldGenerationRules.STRUCTURES_KEY to "yes",
         ))
 
         assertEquals(listOf(WorldBlueprintWorldGenerationRules.TYPE_KEY,
+            WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY,
             WorldBlueprintWorldGenerationRules.STRUCTURES_KEY), rules.invalidKeys)
+    }
+
+    @Test
+    fun `rejects overworld type when creating a nether or end world`() {
+        for (environment in listOf("nether", "the_end")) {
+            val rules = WorldBlueprintWorldGenerationRules.parse(mapOf(
+                WorldBlueprintWorldGenerationRules.TYPE_KEY to "flat",
+                WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY to environment,
+            ))
+            assertTrue(rules.incompatibleType)
+            assertEquals(listOf(WorldBlueprintWorldGenerationRules.TYPE_KEY), rules.invalidKeys)
+        }
     }
 }

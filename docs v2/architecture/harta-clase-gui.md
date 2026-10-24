@@ -16,6 +16,7 @@ Aceasta pagina descrie ownership-ul claselor GUI. Contractul de comportament ram
 ## Infrastructura
 
 - `GuiService` detine registry-ul, deschiderea, selectiile per player, confirmarea, inputul text si dispatch-ul comenzilor;
+- confirmarile si anularile consuma atomic numai cererea curenta a jucatorului; un click vechi ori repetat nu executa o cerere inlocuita sau deja consumata;
 - `GuiScreen` este contractul `key/title/size/render`;
 - `GuiRenderContext` scrie iteme si butoane numai in sloturi valide;
 - `GuiButton` separa iconul, actiunea si starea enabled;
@@ -30,6 +31,7 @@ Aceasta pagina descrie ownership-ul claselor GUI. Contractul de comportament ram
 - `AINPCGuiHolder` identifica inventarul prin UUID si `GuiKey`;
 - `GuiInventoryListener` anuleaza click/drag, ruteaza click-ul si curata sesiunea la close;
 - `GuiService.handleClick` verifica ownership-ul sesiunii si reaplica `canOpen` pentru cheia activa;
+- `GuiService.runNextTickIfCurrent` amana tranzitiile de inventar si comenzile din ecranele care il folosesc pana la tick-ul urmator, reverificand sesiunea si permisiunea;
 - `PlayerQuitEvent` curata intreaga stare tranzitorie prin `GuiService.clearPlayerState`;
 - `NPCChatListener` consuma `TextInputRequest`, valideaza inputul si redeschide ecranul.
 
@@ -46,7 +48,7 @@ Hub-urile nu definesc persistenta si nu sunt o autoritate universala de permisiu
 
 - progresie: `QuestLogGui`, `QuestDetailGui`, `QuestOfferGui`, `QuestOfferNpcGui`;
 - quest authoring: `QuestAuthoringGui`, `QuestCreatorGui`, `QuestCreatorDefinitionsGui`, `QuestCreatorTestGui`, `QuestCreateGui`, `QuestEditGui`, `QuickQuestGui`, `QuestMapGui`;
-- world: `WorldHubGui`, `WorldRegionGui`, `WorldPlaceGui`, `AdminMappingGui`, `MappingCreatorGui` si cele trei formulare de creare;
+- world: `WorldHubGui`, `WorldRegionGui`, `WorldPlaceGui`, `WorldBlueprintListGui`, `WorldBlueprintReviewGui`, `AdminMappingGui`, `MappingCreatorGui` si cele trei formulare de creare;
 - NPC: `NpcInteractionGui`, `NpcManagerGui`, `NpcMemoryGui`, `RoutineGui`, `RelationshipGui`, `ShopGui`;
 - story si status: `StoryGui`, `StoryAuthoringGui`, `StatsGui`;
 - operare: `AdminQuestGui`, `AdminMcpGui`, `AuditGui`, `DebugGui`;

@@ -4,6 +4,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.commands.WorldBlueprintWizard
 import ro.ainpc.debug.DebugDumpMappingText
 import ro.ainpc.gui.EnvironmentUi
 import ro.ainpc.gui.GuiButton
@@ -93,6 +94,31 @@ class WorldHubGui : GuiScreen {
 
         val env = context.plugin().environmentEngine.getContext(worldName)
         context.item(7, GuiItemFactory.item(EnvironmentUi.icon(env), EnvironmentUi.title(env), EnvironmentUi.lore(env)))
+        if (adminView) {
+            context.button(8, GuiButton.enabled(GuiItemFactory.item(Material.WRITABLE_BOOK,
+                "&6Scenario Builder", listOf(
+                    "&7Click stanga: draftul lumii curente.",
+                    "&7Click dreapta: alege o lume existenta sau noua.",
+                    "&7Shift-click: lista lumilor si drafturilor.",
+                    "&7Selectarea nu creeaza lumea.",
+                )), action = { click -> click.service().runNextTickIfCurrent(click) {
+                val selectedPlayer = click.player()
+                if (!selectedPlayer.hasPermission("ainpc.admin")) return@runNextTickIfCurrent
+                if (click.clickType().isShiftClick) {
+                    click.service().openBlueprintList(selectedPlayer)
+                } else if (click.clickType().isRightClick) {
+                    if (WorldBlueprintWizard.hasSession(selectedPlayer.uniqueId)) {
+                        click.plugin().messageUtils.send(selectedPlayer, "&eOpreste mai intai wizard-ul activ.")
+                    } else {
+                        click.service().openTextInput(selectedPlayer, "Lume Scenario Builder",
+                            "blueprint_select_world", GuiKey.WORLD,
+                            promptLines = listOf("&7Scrie numele exact al unei lumi existente sau noi."))
+                    }
+                } else {
+                    click.service().openBlueprintReview(selectedPlayer, selectedPlayer.world.name)
+                }
+            } }))
+        }
 
         if (region != null || place != null) {
             val storyEventsRegion = if (region != null) runCatching {

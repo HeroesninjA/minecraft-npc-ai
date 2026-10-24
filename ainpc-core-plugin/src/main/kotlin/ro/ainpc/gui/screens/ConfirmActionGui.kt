@@ -35,7 +35,9 @@ class ConfirmActionGui : GuiScreen {
                 18,
                 GuiButton.enabled(
                     GuiItemFactory.item(Material.ARROW, "&eInapoi", "&7Revine la hub."),
-                    GuiAction { click -> click.service().open(click.player(), GuiKey.MAIN) }
+                    GuiAction { click -> click.service().runNextTickIfCurrent(click) {
+                        click.service().open(click.player(), GuiKey.MAIN)
+                    } }
                 )
             )
             context.fillEmpty(GuiItemFactory.filler())
@@ -50,14 +52,18 @@ class ConfirmActionGui : GuiScreen {
             11,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.LIME_CONCRETE, "&aConfirma", "&7Executa actiunea."),
-                GuiAction { click -> click.service().runConfirmedCommand(click.player(), request) }
+                GuiAction { click -> click.service().runNextTickIfCurrent(click) {
+                    click.service().runConfirmedCommand(click.player(), request)
+                } }
             )
         )
         context.button(
             15,
             GuiButton.enabled(
                 GuiItemFactory.item(Material.RED_CONCRETE, "&cAnuleaza", "&7Revine fara modificari."),
-                GuiAction { click -> click.service().returnFromConfirm(click.player(), request) }
+                GuiAction { click -> click.service().runNextTickIfCurrent(click) {
+                    click.service().returnFromConfirm(click.player(), request)
+                } }
             )
         )
         context.fillEmpty(GuiItemFactory.filler())

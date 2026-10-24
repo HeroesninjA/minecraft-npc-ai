@@ -39,11 +39,17 @@ internal enum class WorldBlueprintCompatibilityCode {
     INVALID_STRUCTURE_NON_AIR_RULE,
     INVALID_STRUCTURE_FLUID_RULE,
     INVALID_BASE_SUPPORT_RULE,
+    INVALID_BASE_UNSUPPORTED_POSITIONS_RULE,
     INVALID_WORLD_SEED_RULE,
     INVALID_WORLD_TYPE_RULE,
+    INVALID_WORLD_ENVIRONMENT_RULE,
     INVALID_WORLD_STRUCTURES_RULE,
     INVALID_FORBIDDEN_STRUCTURE_BLOCKS_RULE,
     INVALID_ARCHITECTURE_PALETTE_RULE,
+    INVALID_ARCHITECTURE_TEMPLATE_RULE,
+    INVALID_ARCHITECTURE_MATERIAL_ROLES_RULE,
+    INVALID_ARCHITECTURE_ENTRANCE_RULE,
+    INVALID_ARCHITECTURE_INTERIOR_CLEARANCE_RULE,
     INVALID_STRUCTURE_PALETTES_RULE,
     CONFLICTING_STRUCTURE_PALETTE_RULES,
     INVALID_STRUCTURE_STYLES_RULE,
@@ -111,10 +117,16 @@ internal object WorldBlueprintCompatibility {
         WorldBlueprintStructureNonAirRule.KEY,
         WorldBlueprintStructureFluidRule.KEY,
         WorldBlueprintBaseSupportRule.KEY,
+        WorldBlueprintBaseUnsupportedPositionsRule.KEY,
         WorldBlueprintWorldSeedRule.KEY,
-        WorldBlueprintWorldGenerationRules.TYPE_KEY, WorldBlueprintWorldGenerationRules.STRUCTURES_KEY,
+        WorldBlueprintWorldGenerationRules.TYPE_KEY, WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY,
+        WorldBlueprintWorldGenerationRules.STRUCTURES_KEY,
         WorldBlueprintForbiddenStructureBlocks.KEY,
         WorldBlueprintArchitecturePalette.KEY, WorldBlueprintStructurePalettes.KEY,
+        WorldBlueprintArchitectureTemplate.KEY,
+        WorldBlueprintArchitectureMaterials.KEY,
+        WorldBlueprintArchitectureEntrance.KEY,
+        WorldBlueprintArchitectureInteriorClearance.KEY,
         WorldBlueprintStructureStyles.KEY)
     private val placeTypes = PlaceType.entries.associateBy { it.id }
     private val regionTypes = RegionType.entries.associateBy { it.id }
@@ -302,6 +314,12 @@ internal object WorldBlueprintCompatibility {
                 WorldBlueprintBaseSupportRule.KEY,
                 "${WorldBlueprintBaseSupportRule.KEY}: foloseste un numar intreg de la 0 la 5 puncte"))
         }
+        if (!WorldBlueprintBaseUnsupportedPositionsRule.parse(blueprint.mapRules).isValid) {
+            issues.add(WorldBlueprintCompatibilityIssue(
+                WorldBlueprintCompatibilityCode.INVALID_BASE_UNSUPPORTED_POSITIONS_RULE,
+                WorldBlueprintBaseUnsupportedPositionsRule.KEY,
+                "${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: foloseste un intreg nenegativ de cel mult 2^64 coloane"))
+        }
         if (!WorldBlueprintWorldSeedRule.parse(blueprint.mapRules).isValid) {
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_SEED_RULE,
                 WorldBlueprintWorldSeedRule.KEY,
@@ -311,7 +329,14 @@ internal object WorldBlueprintCompatibility {
         if (WorldBlueprintWorldGenerationRules.TYPE_KEY in worldGenerationRules.invalidKeys) {
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_TYPE_RULE,
                 WorldBlueprintWorldGenerationRules.TYPE_KEY,
-                "${WorldBlueprintWorldGenerationRules.TYPE_KEY}: foloseste normal, flat, large_biomes sau amplified"))
+                if (worldGenerationRules.incompatibleType)
+                    "${WorldBlueprintWorldGenerationRules.TYPE_KEY}: este acceptat numai cu world_environment normal sau absent"
+                else "${WorldBlueprintWorldGenerationRules.TYPE_KEY}: foloseste normal, flat, large_biomes sau amplified"))
+        }
+        if (WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY in worldGenerationRules.invalidKeys) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_ENVIRONMENT_RULE,
+                WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY,
+                "${WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY}: foloseste normal, nether sau the_end"))
         }
         if (WorldBlueprintWorldGenerationRules.STRUCTURES_KEY in worldGenerationRules.invalidKeys) {
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_WORLD_STRUCTURES_RULE,
@@ -324,6 +349,25 @@ internal object WorldBlueprintCompatibility {
         }
         val architecturePalette = WorldBlueprintArchitecturePalette.parse(
             blueprint.mapRules[WorldBlueprintArchitecturePalette.KEY], isBuildableBlock)
+        if (!WorldBlueprintArchitectureTemplate.isValid(blueprint.mapRules[WorldBlueprintArchitectureTemplate.KEY])) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_TEMPLATE_RULE,
+                WorldBlueprintArchitectureTemplate.KEY, "${WorldBlueprintArchitectureTemplate.KEY}: foloseste cuboid_shell, gable_shell sau gable_shell_x"))
+        }
+        WorldBlueprintArchitectureMaterials.parse(blueprint.mapRules[WorldBlueprintArchitectureMaterials.KEY],
+            isBuildableBlock)?.error?.let { error ->
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_MATERIAL_ROLES_RULE,
+                WorldBlueprintArchitectureMaterials.KEY, error))
+        }
+        if (WorldBlueprintArchitectureEntrance.parse(blueprint.mapRules[WorldBlueprintArchitectureEntrance.KEY]) == null) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_ENTRANCE_RULE,
+                WorldBlueprintArchitectureEntrance.KEY,
+                "${WorldBlueprintArchitectureEntrance.KEY}: foloseste none, north, south, east sau west"))
+        }
+        if (WorldBlueprintArchitectureInteriorClearance.parse(blueprint.mapRules[WorldBlueprintArchitectureInteriorClearance.KEY]) == null) {
+            issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_INTERIOR_CLEARANCE_RULE,
+                WorldBlueprintArchitectureInteriorClearance.KEY,
+                "${WorldBlueprintArchitectureInteriorClearance.KEY}: foloseste true sau false"))
+        }
         architecturePalette?.error?.let { error ->
             issues.add(WorldBlueprintCompatibilityIssue(WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_PALETTE_RULE,
                 WorldBlueprintArchitecturePalette.KEY, error))

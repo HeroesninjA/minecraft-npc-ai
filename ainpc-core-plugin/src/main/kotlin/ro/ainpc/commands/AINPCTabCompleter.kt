@@ -11,6 +11,7 @@ import ro.ainpc.spawn.PopulationPlanRepository
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.RegionType
 import ro.ainpc.world.WorldBlueprintCompatibility
+import ro.ainpc.world.WorldBlueprintStore
 import ro.ainpc.world.WorldNodeType
 import ro.ainpc.world.WorldPlaceInfo
 import ro.ainpc.world.WorldRegionInfo
@@ -22,7 +23,10 @@ import java.util.stream.Collectors
 /**
  * Ainpctabcompleter.
  */
-class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
+class AINPCTabCompleter(
+    private val plugin: AINPCPlugin?,
+    private val blueprintDraftNames: (() -> List<String>)? = null,
+) : TabCompleter {
     override fun onTabComplete(
         sender: CommandSender,
         command: Command,
@@ -368,8 +372,19 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
             "whereami" -> if (args.size == 3) completions.addAll(getOnlinePlayerNames(args[2]))
             "places" -> if (args.size == 3) completions.addAll(getRegionIds(args[2]))
             "blueprint" -> {
-                if (args.size == 3) completions.addAll(filterStartsWith(
-                    (plugin?.server?.worlds?.map { it.name } ?: emptyList()) + "list", args[2]))
+                if (args.size == 3) {
+                    val loadedWorlds = plugin?.server?.worlds?.map { it.name }.orEmpty()
+                    val savedDrafts = if (sender.hasPermission("ainpc.admin")) {
+                        runCatching {
+                            blueprintDraftNames?.invoke()
+                                ?: plugin?.let { current ->
+                                    WorldBlueprintStore(current.dataFolder.toPath().resolve("world-blueprints.json"))
+                                        .listWorlds().map { it.worldName }
+                                }.orEmpty()
+                        }.getOrDefault(emptyList())
+                    } else emptyList()
+                    completions.addAll(filterStartsWith((loadedWorlds + savedDrafts + "list").distinct().sorted(), args[2]))
+                }
                 else if (args.size == 4) completions.addAll(filterStartsWith(
                     listOf("show", "inspect", "validate", "plan", "review", "confirm", "create-world", "creation", "apply-story", "apply-story-all", "apply-story-batch", "update-story", "update-story-batch", "restore-story", "restore-story-batch", "applications", "revoke", "wizard", "suggest", "story", "property", "profession-limit", "profession", "architecture", "map-rule", "remove"), args[3]))
                 else if (args.size == 5 && args[3].equals("create-world", true)) completions.add("<amprenta-SHA-256>")
@@ -432,6 +447,15 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                     val coordinate = listOf("minX", "minY", "minZ", "maxX", "maxY", "maxZ")[args.size - 9]
                     completions.add("<$coordinate>")
                 }
+                else if (args.size == 15 && args[3].equals("plan", true) &&
+                    args[4].equals("structure", true) && args[7].equals("bounds", true)) {
+                    completions.addAll(filterStartsWith(listOf("export", "verify"), args[14]))
+                }
+                else if (args.size == 16 && args[3].equals("plan", true) &&
+                    args[4].equals("structure", true) && args[7].equals("bounds", true) &&
+                    (args[14].equals("export", true) || args[14].equals("verify", true))) {
+                    completions.add("<amprenta-SHA-256>")
+                }
                 else if (args.size == 5 && args[3].equals("wizard", true)) completions.addAll(filterStartsWith(
                     listOf("stop", "edit"), args[4]))
                 else if (args.size == 6 && args[3].equals("wizard", true) && args[4].equals("edit", true)) {
@@ -439,7 +463,7 @@ class AINPCTabCompleter(private val plugin: AINPCPlugin?) : TabCompleter {
                         listOf("story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[5]))
                 }
                 else if (args.size == 5 && args[3].equals("suggest", true)) completions.addAll(filterStartsWith(
-                    listOf("show", "save", "saved", "accept", "discard", "story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[4]))
+                    listOf("show", "save", "saved", "gui", "accept", "discard", "story", "property", "profession-limit", "profession", "architecture", "map-rule"), args[4]))
                 else if (args.size == 5 && args[3].equals("remove", true)) completions.addAll(filterStartsWith(
                     listOf("property", "profession", "map-rule"), args[4]))
                 else if (args.size == 5 && args[3].equals("inspect", true)) completions.addAll(filterStartsWith(

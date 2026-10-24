@@ -223,20 +223,20 @@ class OpenAIService(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun callOllama(prompt: String, expectedSpeakerName: String?): String? {
+    private fun callOllama(prompt: String, expectedSpeakerName: String?, responseFormat: JsonObject? = null): String? {
         recordPrompt(prompt)
-        val response = plugin.ollamaService.generateAsync(prompt)
-            ?.let { OpenAITextSupport.cleanResponse(it, expectedSpeakerName) }
+        val response = plugin.ollamaService.generateAsync(prompt, responseFormat?.getAsJsonObject("schema"))
+            ?.let { if (responseFormat == null) OpenAITextSupport.cleanResponse(it, expectedSpeakerName) else it.trim() }
             ?.takeIf { it.isNotBlank() }
         if (response != null) recordResponse(response)
         return response
     }
 
     @Throws(IOException::class)
-    private fun callOpenAI(prompt: String, expectedSpeakerName: String?): String {
+    private fun callOpenAI(prompt: String, expectedSpeakerName: String?, responseFormat: JsonObject? = null): String {
         recordPrompt(prompt)
 
-        val requestBody = buildResponsesRequestBody(model, prompt, temperature, maxOutputTokens, storeResponses)
+        val requestBody = buildResponsesRequestBody(model, prompt, temperature, maxOutputTokens, storeResponses, responseFormat)
 
         if (plugin.config.getBoolean("openai.diagnostics.log_prompt_summary", true)) {
             diagInfo(
@@ -280,7 +280,8 @@ class OpenAIService(private val plugin: AINPCPlugin) {
                 )
             }
 
-            val generatedText = OpenAITextSupport.extractGeneratedText(gson, responseBody, expectedSpeakerName)
+            val generatedText = OpenAITextSupport.extractGeneratedText(gson, responseBody, expectedSpeakerName,
+                preserveStructuredJson = responseFormat != null)
             recordResponse(generatedText)
             diagInfo(
                 "Responses reusit: url=$baseUrl" +
@@ -456,14 +457,14 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             .coerceAtLeast(1L)
             .coerceAtMost(Long.MAX_VALUE / 1000L) * 1000L
 
-    fun generateAsync(prompt: String): CompletableFuture<String?> {
+    fun generateAsync(prompt: String, responseFormat: JsonObject? = null): CompletableFuture<String?> {
         if (!aiFeatureEnabled()) {
             recordFallback("feature_disabled")
             return CompletableFuture.completedFuture(null)
         }
         if (selectedDialogueProvider() == DialogueAiProvider.OLLAMA) {
             return CompletableFuture.supplyAsync {
-                callOllama(prompt, null).also { if (it == null) recordFallback("ollama_unavailable") }
+                callOllama(prompt, null, responseFormat).also { if (it == null) recordFallback("ollama_unavailable") }
             }
         }
         return CompletableFuture.supplyAsync {
@@ -485,7 +486,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
 
             try {
                 val requestStartedAtMillis = System.currentTimeMillis()
-                val response = callOpenAI(prompt, null)
+                val response = callOpenAI(prompt, null, responseFormat)
                 clearOfflineState(requestStartedAtMillis)
                 response
             } catch (e: java.io.IOException) {
@@ -784,6 +785,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             temperature: Double,
             maxOutputTokens: Int,
             storeResponses: Boolean,
+            responseFormat: JsonObject? = null,
         ): JsonObject = JsonObject().apply {
             addProperty("model", model)
             addProperty("input", prompt)
@@ -794,8 +796,7 @@ class OpenAIService(private val plugin: AINPCPlugin) {
             addProperty("store", storeResponses)
 
             val textConfig = JsonObject()
-            val format = JsonObject()
-            format.addProperty("type", "text")
+            val format = responseFormat?.deepCopy() ?: JsonObject().apply { addProperty("type", "text") }
             textConfig.add("format", format)
             add("text", textConfig)
         }

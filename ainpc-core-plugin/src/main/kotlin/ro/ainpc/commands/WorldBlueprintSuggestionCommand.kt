@@ -39,6 +39,10 @@ internal object WorldBlueprintSuggestionCommand {
         return when (action) {
             "show" -> if (args.size == 5) show(plugin, player, worldName, current, store) else usage(plugin, sender)
             "saved" -> if (args.size == 5) show(plugin, player, worldName, current, store, true) else usage(plugin, sender)
+            "gui" -> if (args.size == 5) {
+                plugin.guiService.openBlueprintReview(player, worldName)
+                true
+            } else usage(plugin, sender)
             "save" -> if (args.size == 6) save(plugin, player, worldName, store, args[5]) else usage(plugin, sender)
             "discard" -> if (args.size == 5) discard(plugin, player, worldName, store) else usage(plugin, sender)
             "accept" -> if (args.size == 6) accept(plugin, player, worldName, store, args[5]) else usage(plugin, sender)
@@ -98,9 +102,15 @@ internal object WorldBlueprintSuggestionCommand {
         val token = UUID.randomUUID()
         pending[player.uniqueId] = Pending(token, worldName, now)
         previews.remove(player.uniqueId)
-        plugin.messageUtils.send(player, "&7Trimit descrierea si valoarea curenta a campului la $provider/$model pentru o sugestie de ${field.id}; nimic nu va fi salvat automat.")
+        val structured = when (provider) {
+            "openai" -> plugin.config.getBoolean("openai.structured_suggestions", false)
+            else -> plugin.config.getBoolean("ollama.structured_suggestions", false)
+        }
+        val responseFormat = if (structured)
+            WorldBlueprintSuggestionParser.responseFormat(field) else null
+        plugin.messageUtils.send(player, "&7Trimit descrierea si valoarea curenta a campului la $provider/$model pentru o sugestie de ${field.id}${if (responseFormat != null) " cu schema JSON nativa" else ""}; nimic nu va fi salvat automat.")
         try {
-            plugin.openAIService.generateAsync(WorldBlueprintSuggestionParser.prompt(request, base)).whenComplete { response, error ->
+            plugin.openAIService.generateAsync(WorldBlueprintSuggestionParser.prompt(request, base), responseFormat).whenComplete { response, error ->
                 if (!plugin.isEnabled) return@whenComplete
                 runCatching {
                     plugin.server.scheduler.runTask(plugin, Runnable {
@@ -228,6 +238,9 @@ internal object WorldBlueprintSuggestionCommand {
         return suggestion
     }
 
+    internal fun previewForReview(playerId: UUID, worldName: String): WorldBlueprintSuggestion? =
+        livePreview(playerId, worldName)
+
     private fun save(
         plugin: AINPCPlugin, player: Player, worldName: String,
         store: WorldBlueprintStore, expectedFingerprint: String,
@@ -285,7 +298,7 @@ internal object WorldBlueprintSuggestionCommand {
 
     private fun usage(plugin: AINPCPlugin, sender: CommandSender): Boolean {
         plugin.messageUtils.send(sender, "&6/ainpc world blueprint <lume> suggest <story|architecture|profession-limit|property|profession|map-rule> [cheie] <descriere>")
-        plugin.messageUtils.send(sender, "&7suggest show | suggest saved | suggest save <amprenta> | suggest accept <amprenta> | suggest discard")
+        plugin.messageUtils.send(sender, "&7suggest show | suggest saved | suggest gui | suggest save <amprenta> | suggest accept <amprenta> | suggest discard")
         return true
     }
 }

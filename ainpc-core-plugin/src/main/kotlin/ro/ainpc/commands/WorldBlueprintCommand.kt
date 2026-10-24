@@ -8,6 +8,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.WorldCreator
 import org.bukkit.block.data.Waterlogged
+import org.bukkit.block.TileState
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
@@ -17,8 +18,16 @@ import ro.ainpc.story.BlueprintStoryApplicationVerification
 import ro.ainpc.story.BlueprintStoryApplicationVerificationStatus
 import ro.ainpc.world.WorldBlueprint
 import ro.ainpc.world.WorldBlueprintBaseSupportRule
+import ro.ainpc.world.WorldBlueprintArchitectureTemplate
+import ro.ainpc.world.WorldBlueprintArchitectureExport
+import ro.ainpc.world.WorldBlueprintArchitectureBlockPurpose
+import ro.ainpc.world.WorldBlueprintArchitectureEntrance
+import ro.ainpc.world.WorldBlueprintArchitectureTargetInspector
+import ro.ainpc.world.WorldBlueprintArchitectureObservedBlock
+import ro.ainpc.world.WorldBlueprintBaseUnsupportedPositionsRule
 import ro.ainpc.world.WorldBlueprintBiomeInspector
 import ro.ainpc.world.WorldBlueprintBlockOccupancyInspector
+import ro.ainpc.world.WorldBlueprintChunkCoverageInspector
 import ro.ainpc.world.WorldBlueprintObservedBlock
 import ro.ainpc.world.WorldBlueprintCompatibility
 import ro.ainpc.world.WorldBlueprintForbiddenStructureBlocks
@@ -26,12 +35,14 @@ import ro.ainpc.world.WorldBlueprintFoundationBlock
 import ro.ainpc.world.WorldBlueprintFoundationInspector
 import ro.ainpc.world.WorldBlueprintPolicy
 import ro.ainpc.world.WorldBlueprintPlacementInspector
-import ro.ainpc.world.WorldBlueprintRegionBounds
 import ro.ainpc.world.WorldBlueprintPlanner
 import ro.ainpc.world.WorldBlueprintProfessionProfile
 import ro.ainpc.world.WorldBlueprintNpcSnapshot
 import ro.ainpc.world.WorldBlueprintStore
 import ro.ainpc.world.WorldBlueprintStructurePlanner
+import ro.ainpc.world.WorldBlueprintStructurePreflightInspector
+import ro.ainpc.world.WorldBlueprintStructureConfigurationPreflightInspector
+import ro.ainpc.world.WorldBlueprintStructureRulePreflightInspector
 import ro.ainpc.world.WorldBlueprintStructureBiomeRules
 import ro.ainpc.world.WorldBlueprintStructureRegionPositionsRule
 import ro.ainpc.world.WorldBlueprintStructureNonAirRule
@@ -49,6 +60,10 @@ import ro.ainpc.world.WorldBlueprintWorldCreationGuard
 import ro.ainpc.world.WorldBlueprintWorldGenerationRules
 import ro.ainpc.world.WorldBlueprintWorldCreationAttempt
 import ro.ainpc.world.WorldBlueprintWorldCreationJournal
+import ro.ainpc.world.WorldBlueprintWorldCreationObservation
+import ro.ainpc.world.WorldBlueprintWorldCreationOptions
+import ro.ainpc.world.WorldBlueprintWorldCreationRuntimeCheck
+import ro.ainpc.world.WorldBlueprintWorldCreationRuntimeSnapshot
 import ro.ainpc.world.WorldBlueprintWorldCreationStatus
 import ro.ainpc.world.WorldBlueprintWorldSeedRule
 import ro.ainpc.world.WorldProfessionBlueprint
@@ -56,6 +71,7 @@ import ro.ainpc.world.exterior.ExteriorStructureAnalyzer
 import java.io.IOException
 import java.sql.SQLException
 import java.util.Locale
+import java.util.UUID
 import java.util.logging.Level
 
 internal object WorldBlueprintCommand {
@@ -72,6 +88,10 @@ internal object WorldBlueprintCommand {
         val world = plugin.server.getWorld(args[2])
         val worldName = world?.name ?: args[2]
         val action = args[3].lowercase(Locale.ROOT)
+        val structureExport = action == "plan" && args.getOrNull(4)?.equals("structure", true) == true &&
+            args.getOrNull(14)?.equals("export", true) == true
+        val structureVerification = action == "plan" && args.getOrNull(4)?.equals("structure", true) == true &&
+            args.getOrNull(14)?.equals("verify", true) == true
         if (world == null && requiresLoadedWorld(action, args)) {
             plugin.messageUtils.send(sender, "&cAceasta operatie necesita o lume incarcata si numele exact.")
             return true
@@ -80,7 +100,7 @@ internal object WorldBlueprintCommand {
             plugin.messageUtils.send(sender, "&eLumea $worldName nu este incarcata; lucrezi doar pe draft. Comanda nu creeaza lumea.")
         }
         val wizardStop = action == "wizard" && args.size == 5 && args[4].equals("stop", ignoreCase = true)
-        if (action !in setOf("show", "validate", "inspect", "plan", "review", "suggest", "applications", "creation") && !wizardStop && isRuntimeReadOnly(plugin)) {
+        if ((action !in setOf("show", "validate", "inspect", "plan", "review", "suggest", "applications", "creation") || structureExport) && !wizardStop && isRuntimeReadOnly(plugin)) {
             plugin.messageUtils.send(sender, "&cMCP read_only este activ; operatia de scriere este blocata.")
             return true
         }
@@ -116,7 +136,13 @@ internal object WorldBlueprintCommand {
                 else -> usage(plugin, sender)
             }
         } catch (error: IOException) {
-            if (action == "creation") {
+            if (structureExport) {
+                plugin.logger.log(Level.WARNING, "Nu am putut exporta planul arhitectural pentru $worldName.", error)
+                plugin.messageUtils.send(sender, "&cPlanul nu a fost exportat: ${error.message}")
+            } else if (structureVerification) {
+                plugin.logger.log(Level.WARNING, "Nu am putut verifica exportul arhitectural pentru $worldName.", error)
+                plugin.messageUtils.send(sender, "&cExportul nu a putut fi verificat: ${error.message}")
+            } else if (action == "creation") {
                 plugin.logger.log(Level.WARNING, "Nu am putut citi jurnalul de creare pentru $worldName.", error)
                 plugin.messageUtils.send(sender, "&cJurnalul de creare nu poate fi citit: ${error.message}")
             } else {
@@ -126,6 +152,11 @@ internal object WorldBlueprintCommand {
             true
         } catch (error: IllegalArgumentException) {
             val actionDescription = when (action) {
+                "plan" -> when {
+                    structureExport -> "Planul nu a fost exportat"
+                    structureVerification -> "Exportul nu a putut fi verificat"
+                    else -> "Blueprint-ul nu a fost modificat"
+                }
                 "update-story", "update-story-batch" -> "Povestea nu a fost actualizata"
                 "restore-story", "restore-story-batch" -> "Povestea nu a fost restaurata"
                 "apply-story", "apply-story-all", "apply-story-batch" -> "Povestea nu a fost aplicata"
@@ -266,18 +297,10 @@ internal object WorldBlueprintCommand {
             return true
         }
         if (args.size != 4) {
-            if (args.size == 7 && args[4].equals("structure", true)) {
-                return planStructure(plugin, sender, blueprint, requireNotNull(world) {
-                    "Planificarea structurii necesita o lume incarcata."
-                }, args[5], args[6])
-            }
-            if (args.size == 14 && args[4].equals("structure", true) && args[7].equals("bounds", true)) {
-                return planStructure(plugin, sender, blueprint, requireNotNull(world) {
-                    "Planificarea structurii necesita o lume incarcata."
-                }, args[5], args[6],
-                    WorldBlueprintRegionBounds.parse(args.drop(8)))
-            }
-            return usage(plugin, sender)
+            val request = WorldBlueprintStructurePlanRequest.parse(args) ?: return usage(plugin, sender)
+            return planStructure(plugin, sender, store, blueprint, requireNotNull(world) {
+                "Planificarea structurii necesita o lume incarcata."
+            }, request)
         }
         val worldAdmin = plugin.platform.worldAdminService
         val mappingEnabled = plugin.platform.runtimeFeatures().enabled(RuntimeFeatureKey.MAPPING)
@@ -345,6 +368,9 @@ internal object WorldBlueprintCommand {
         val worldGeneration = WorldBlueprintWorldGenerationRules.parse(blueprint.mapRules)
         worldGeneration.worldType?.let { type ->
             plugin.messageUtils.send(sender, "&7Tip pentru crearea unei lumi noi: ${type.name.lowercase(Locale.ROOT)}.")
+        }
+        worldGeneration.environment?.let { environment ->
+            plugin.messageUtils.send(sender, "&7Dimensiune pentru o lume noua: ${environment.name.lowercase(Locale.ROOT)}.")
         }
         worldGeneration.generateStructures?.let { enabled ->
             plugin.messageUtils.send(sender, "&7Structuri vanilla pentru o lume noua: ${if (enabled) "activate" else "dezactivate"}.")
@@ -440,17 +466,22 @@ internal object WorldBlueprintCommand {
     }
 
     private fun planStructure(
-        plugin: AINPCPlugin, sender: CommandSender, blueprint: WorldBlueprint, world: World,
-        typeId: String, baseId: String,
-        bounds: WorldBlueprintRegionBounds? = null,
+        plugin: AINPCPlugin, sender: CommandSender, store: WorldBlueprintStore,
+        blueprint: WorldBlueprint, world: World, request: WorldBlueprintStructurePlanRequest,
     ): Boolean {
+        val bounds = request.bounds
         val mappingEnabled = plugin.platform.runtimeFeatures().enabled(RuntimeFeatureKey.MAPPING)
         val mapping = plugin.platform.worldAdminService.takeIf { mappingEnabled && it.isEnabled }
-        val preview = WorldBlueprintStructurePlanner.compile(blueprint, typeId, baseId,
+        val preview = WorldBlueprintStructurePlanner.compile(blueprint, request.typeId, request.baseId,
             mapping?.regions, mapping?.places, mapping?.nodes, bounds)
         val structure = preview.structure
+        val blueprintFingerprint = store.fingerprint(blueprint)
+        val export = preview.architecturePlan?.let { plan ->
+            WorldBlueprintArchitectureExport.create(world.name, world.uid, blueprintFingerprint,
+                structure.typeId(), structure.regionId(), requireNotNull(bounds), plan)
+        }
         plugin.messageUtils.send(sender, "&6=== Plan structura: ${structure.typeId()} in ${preview.worldName} ===")
-        showUnknownStructureBiomes(plugin, sender, blueprint)
+        val unknownBiomeIdsByRule = showUnknownStructureBiomes(plugin, sender, blueprint)
         plugin.messageUtils.send(sender, "&7ID de baza: ${structure.regionId()}; tip regional sugerat: ${structure.regionTypeHint()}")
         plugin.messageUtils.send(sender, "&7Tag-uri sugerate: ${structure.tags().joinToString()}")
         preview.storyRegionRuleIssue?.let { issue -> plugin.messageUtils.send(sender, "&e$issue") }
@@ -469,6 +500,25 @@ internal object WorldBlueprintCommand {
         preview.architecturePalette.chunked(8).forEach { blocks ->
             plugin.messageUtils.send(sender,
                 "&7Paleta propusa (${preview.architecturePaletteSource}): ${blocks.joinToString()}")
+        }
+        preview.architecturePlanIssue?.let { plugin.messageUtils.send(sender, "&e$it") }
+        export?.let { plugin.messageUtils.send(sender, "&7Amprenta planului pentru export/verify: &f${it.fingerprint}") }
+        preview.architecturePlan?.let { plan ->
+            val materials = plan.blocks.groupingBy { it.blockId }.eachCount().toSortedMap()
+            plugin.messageUtils.send(sender,
+                "&7Sablon ${plan.templateId}: ${plan.blocks.size} pozitii; materiale: ${materials.entries.joinToString { "${it.key} (${it.value})" }}; preview fara aplicare in lume.")
+            plugin.messageUtils.send(sender,
+                "&7Roluri: floor=${plan.materials.floor}; wall=${plan.materials.wall}; roof=${plan.materials.roof}.")
+            if (plan.entrance != WorldBlueprintArchitectureEntrance.NONE) plugin.messageUtils.send(sender,
+                "&7Intrare: ${plan.entrance.id}; deschidere de 1x2 blocuri.")
+            if (plan.clearInterior) plugin.messageUtils.send(sender,
+                "&7Interior: ${plan.blocks.count { it.purpose == WorldBlueprintArchitectureBlockPurpose.INTERIOR_CLEARANCE }} pozitii de aer planificate pentru eliberare.")
+            plan.blocks.take(3).forEach { block ->
+                plugin.messageUtils.send(sender, "&7- ${block.x} ${block.y} ${block.z}: ${block.blockId}")
+            }
+        }
+        if (WorldBlueprintArchitectureTemplate.KEY in blueprint.mapRules && bounds == null && preview.architecturePlanIssue == null) {
+            plugin.messageUtils.send(sender, "&7Sablonul arhitectural necesita plan structure ... bounds pentru compilarea pozitiilor.")
         }
         plugin.messageUtils.send(sender, "&7Locuri propuse, inclusiv recomandari:")
         structure.plannedPlaces().forEach { plugin.messageUtils.send(sender, "&f- $it") }
@@ -505,18 +555,63 @@ internal object WorldBlueprintCommand {
             } else {
                 plugin.messageUtils.send(sender, "&eVolumul depaseste world border-ul curent.")
             }
-            val terrain = WorldBlueprintTerrainInspector.inspect(selected) { blockX, blockZ ->
+            val chunks = WorldBlueprintChunkCoverageInspector.inspect(selected, world::isChunkLoaded)
+            if (chunks.complete) {
+                plugin.messageUtils.send(sender,
+                    "&${if (chunks.allLoaded) "a" else "e"}Chunk-uri incarcate pentru volum: ${chunks.loadedChunks}/${chunks.totalChunks}; fara incarcare fortata.")
+            } else {
+                plugin.messageUtils.send(sender,
+                    "&7Volumul acopera ${chunks.totalChunks} chunk-uri; verificarea completa este omisa peste 256 chunk-uri.")
+            }
+            val architectureTargets = preview.architecturePlan?.let { plan ->
+                WorldBlueprintArchitectureTargetInspector.inspect(plan, world.minHeight, world.maxHeight) { blockX, blockY, blockZ ->
+                    if (!world.isChunkLoaded(blockX shr 4, blockZ shr 4)) null else {
+                        val block = world.getBlockAt(blockX, blockY, blockZ)
+                        val material = block.type
+                        WorldBlueprintArchitectureObservedBlock(!material.isAir, material.key.asString(),
+                            !material.isAir && block.getState(false) is TileState)
+                    }
+                }
+            }
+            architectureTargets?.let { targets ->
+                plugin.messageUtils.send(sender,
+                    "&7Tinte sablon (${targets.totalCount}): aer ${targets.airCount}, acelasi material ${targets.matchingMaterialCount}, alte blocuri non-aer ${targets.differentMaterialCount}, neobservabile ${targets.unavailableCount}, in afara inaltimii ${targets.outsideBuildHeightCount}.")
+                if (targets.matchingMaterialCount > 0) plugin.messageUtils.send(sender,
+                    "&7Acelasi material compara doar tipul blocului; proprietatile block data nu sunt verificate.")
+                targets.clearances.forEach { (purpose, clearance) ->
+                    plugin.messageUtils.send(sender,
+                        "&7${purpose.label} (${clearance.totalCount} pozitii de eliberat): deja aer ${clearance.airCount}, ocupate ${clearance.blockedCount}, neobservabile ${clearance.unavailableCount}.")
+                }
+                val ranked = targets.replacementMaterialCounts.entries.sortedWith(
+                    compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                if (ranked.isNotEmpty()) {
+                    val remaining = if (ranked.size > 8) "; ${ranked.size - 8} alte tipuri" else ""
+                    plugin.messageUtils.send(sender,
+                        "&eMateriale non-aer de inlocuit in plan: ${ranked.take(8).joinToString { "${it.key} (${it.value})" }}$remaining; snapshot consultativ.")
+                }
+                if (targets.persistentStateCount > 0) {
+                    val persistent = targets.persistentStateMaterialCounts.entries.sortedWith(
+                        compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                    val remaining = if (persistent.size > 8) "; ${persistent.size - 8} alte tipuri" else ""
+                    plugin.messageUtils.send(sender,
+                        "&eBlocuri cu date persistente in plan: ${targets.persistentStateCount}; ${persistent.take(8).joinToString { "${it.key} (${it.value})" }}$remaining.")
+                }
+            }
+            val surfaceAt: (Int, Int) -> Int? = { blockX, blockZ ->
                 if (world.isChunkLoaded(blockX shr 4, blockZ shr 4)) {
                     world.getHighestBlockYAt(blockX, blockZ, HeightMap.WORLD_SURFACE)
                 } else null
             }
+            val terrain = WorldBlueprintTerrainInspector.inspectExactIfSmall(selected, surfaceAt)
+                ?: WorldBlueprintTerrainInspector.inspect(selected, surfaceAt)
+            val terrainScope = if (terrain.coversEntireFootprint) "coloane din amprenta" else "puncte esantionate"
             if (terrain.observedCount == 0) {
                 plugin.messageUtils.send(sender,
-                    "&7Relief: niciunul din ${terrain.sampleCount} puncte nu este in chunk-uri incarcate; inaltimea suprafetei este necunoscuta.")
+                    "&7Relief: niciuna din ${terrain.sampleCount} $terrainScope nu este in chunk-uri incarcate; inaltimea suprafetei este necunoscuta.")
             } else {
                 val unknownCount = terrain.sampleCount - terrain.observedCount
                 plugin.messageUtils.send(sender,
-                    "&7Suprafata WORLD_SURFACE: Y ${terrain.minSurfaceY}..${terrain.maxSurfaceY} in ${terrain.observedCount}/${terrain.sampleCount} puncte; $unknownCount puncte necunoscute (chunk-uri neincarcate).")
+                    "&7Suprafata WORLD_SURFACE: Y ${terrain.minSurfaceY}..${terrain.maxSurfaceY} in ${terrain.observedCount}/${terrain.sampleCount} $terrainScope; $unknownCount necunoscute (chunk-uri neincarcate).")
                 when (terrain.relationTo(selected)) {
                     WorldBlueprintTerrainRelation.ABOVE_OBSERVED_SURFACES -> plugin.messageUtils.send(sender,
                         "&eVolumul este deasupra tuturor suprafetelor observate; ar putea necesita suport.")
@@ -533,25 +628,27 @@ internal object WorldBlueprintCommand {
                     true -> plugin.messageUtils.send(sender,
                         "&eVariatia observata a suprafetei este ${terrain.observedSpan} blocuri, peste pragul de ${surfaceRule.maximum} din ${WorldBlueprintStructureSurfaceSpanRule.KEY}.")
                     false -> plugin.messageUtils.send(sender,
-                        "&aVariatia observata a suprafetei este ${terrain.observedSpan} blocuri, in pragul de ${surfaceRule.maximum}; restul volumului ramane neverificat.")
+                        "&aVariatia observata a suprafetei este ${terrain.observedSpan} blocuri, in pragul de ${surfaceRule.maximum}; ${if (terrain.coversEntireFootprint && terrain.observedCount == terrain.sampleCount) "toata amprenta a fost citita la acest moment, nu si volumul" else "restul amprentei sau volumului ramane neverificat"}.")
                     null -> plugin.messageUtils.send(sender,
                         if (surfaceRule.isValid) "&7Regula ${WorldBlueprintStructureSurfaceSpanRule.KEY} necesita cel putin doua puncte cu suprafata observata."
                         else "&eRegula ${WorldBlueprintStructureSurfaceSpanRule.KEY} este invalida; foloseste un intreg nenegativ.")
                 }
             }
-            val foundation = if (placement.withinBuildHeight) {
-                WorldBlueprintFoundationInspector.inspect(selected, world.minHeight) { blockX, blockY, blockZ ->
-                    if (!world.isChunkLoaded(blockX shr 4, blockZ shr 4)) null else {
-                        val block = world.getBlockAt(blockX, blockY, blockZ)
-                        when {
-                            block.type.isAir -> WorldBlueprintFoundationBlock.AIR
-                            block.isLiquid -> WorldBlueprintFoundationBlock.LIQUID
-                            block.isSolid -> WorldBlueprintFoundationBlock.SOLID
-                            else -> WorldBlueprintFoundationBlock.OTHER_NON_SOLID
-                        }
+            val foundationBlockAt: (Int, Int, Int) -> WorldBlueprintFoundationBlock? = { blockX, blockY, blockZ ->
+                if (!world.isChunkLoaded(blockX shr 4, blockZ shr 4)) null else {
+                    val block = world.getBlockAt(blockX, blockY, blockZ)
+                    when {
+                        block.type.isAir -> WorldBlueprintFoundationBlock.AIR
+                        block.isLiquid -> WorldBlueprintFoundationBlock.LIQUID
+                        block.isSolid -> WorldBlueprintFoundationBlock.SOLID
+                        else -> WorldBlueprintFoundationBlock.OTHER_NON_SOLID
                     }
                 }
-            } else null
+            }
+            val foundation = if (placement.withinBuildHeight)
+                WorldBlueprintFoundationInspector.inspect(selected, world.minHeight, foundationBlockAt) else null
+            val exactFoundation = if (placement.withinBuildHeight)
+                WorldBlueprintFoundationInspector.inspectExactIfSmall(selected, world.minHeight, foundationBlockAt) else null
             when {
                 !placement.withinBuildHeight -> plugin.messageUtils.send(sender,
                     "&7Suport sub baza: volumul depaseste inaltimea construibila; verificarea a fost omisa.")
@@ -561,6 +658,10 @@ internal object WorldBlueprintCommand {
                     "&7Suport sub baza: 0/${foundation.sampleCount} puncte observate; chunk-urile esantionate nu sunt incarcate.")
                 else -> plugin.messageUtils.send(sender,
                     "&${if (foundation.airCount + foundation.liquidCount + foundation.otherNonSolidCount > 0) "e" else "7"}Suport sub baza la Y ${selected.minY - 1}: solide ${foundation.solidCount}, aer ${foundation.airCount}, lichide ${foundation.liquidCount}, alte nesolide ${foundation.otherNonSolidCount}, necunoscute ${foundation.unknownCount} din ${foundation.sampleCount} puncte. Nu garanteaza sustinerea structurii.")
+            }
+            exactFoundation?.let { fullBase ->
+                plugin.messageUtils.send(sender,
+                    "&${if (fullBase.unsupportedCount > 0 || fullBase.unknownCount > 0) "e" else "7"}Scanare baza mica la Y ${selected.minY - 1}: solide ${fullBase.solidCount}, aer ${fullBase.airCount}, lichide ${fullBase.liquidCount}, alte nesolide ${fullBase.otherNonSolidCount}, necunoscute ${fullBase.unknownCount} din ${fullBase.sampleCount} coloane; doar snapshot-ul nivelului de sub baza.")
             }
             val baseSupportRule = WorldBlueprintBaseSupportRule.parse(blueprint.mapRules)
             if (baseSupportRule.configured) {
@@ -576,6 +677,27 @@ internal object WorldBlueprintCommand {
                         "&aPunctele esantionate sub baza respecta pragul ${baseSupportRule.maximum}; restul bazei nu este verificat.")
                     else -> plugin.messageUtils.send(sender,
                         "&7Sunt ${foundation.unsupportedCount} puncte nesolide observate sub baza, dar ${foundation.unknownCount} puncte esantionate sunt necunoscute fata de pragul ${baseSupportRule.maximum}.")
+                }
+            }
+            val basePositionsRule = WorldBlueprintBaseUnsupportedPositionsRule.parse(blueprint.mapRules)
+            if (basePositionsRule.configured) {
+                val baseObservation = exactFoundation ?: foundation
+                when (basePositionsRule.exceeds(selected, baseObservation)) {
+                    true -> {
+                        val unsupported = requireNotNull(baseObservation).unsupportedCount
+                        plugin.messageUtils.send(sender,
+                            "&e${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: cel putin $unsupported coloane nesolide observate depasesc pragul ${basePositionsRule.maximum}.")
+                    }
+                    false -> plugin.messageUtils.send(sender,
+                        "&a${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: chiar si toate coloanele necunoscute respecta pragul ${basePositionsRule.maximum} in snapshot; nu autorizeaza construirea.")
+                    null -> plugin.messageUtils.send(sender, when {
+                        !basePositionsRule.isValid ->
+                            "&e${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: foloseste un intreg nenegativ de cel mult 2^64."
+                        baseObservation == null ->
+                            "&7${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: nu exista un sondaj valid sub baza."
+                        else ->
+                            "&7${WorldBlueprintBaseUnsupportedPositionsRule.KEY}: ${baseObservation.unsupportedCount} coloane nesolide observate; restul bazei este necunoscut fata de pragul ${basePositionsRule.maximum}."
+                    })
                 }
             }
             val occupancy = if (placement.withinBuildHeight) {
@@ -677,16 +799,25 @@ internal object WorldBlueprintCommand {
                     world.getBiome(blockX, blockY, blockZ).key.asString()
                 } else null
             }
+            val biomeScope = when {
+                biomes?.coversEntireVolume == true -> "pozitii din volum"
+                biomes?.coversEntireFootprint == true -> "coloane ale amprentei"
+                else -> "pozitii esantionate"
+            }
+            val biomeLocation = if (biomes?.coversEntireVolume == true) "Biomi in volum" else "Biomi la Y ${biomes?.sampleY}"
             when {
                 biomes == null -> plugin.messageUtils.send(sender,
                     "&7Biomi: volumul depaseste inaltimea lumii; esantionarea a fost omisa.")
                 biomes.observedCount == 0 -> plugin.messageUtils.send(sender,
-                    "&7Biomi la Y ${biomes.sampleY}: niciunul din ${biomes.sampleCount} puncte nu este in chunk-uri incarcate.")
+                    "&7$biomeLocation: niciuna din ${biomes.sampleCount} $biomeScope nu este in chunk-uri incarcate.")
                 else -> {
-                    val summary = biomes.biomeCounts.entries.joinToString { (biome, count) -> "$biome ($count)" }
+                    val ranked = biomes.biomeCounts.entries.sortedWith(
+                        compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                    val summary = ranked.take(8).joinToString { (biome, count) -> "$biome ($count)" }
+                    val remaining = if (ranked.size > 8) "; ${ranked.size - 8} alte tipuri" else ""
                     val unknownCount = biomes.sampleCount - biomes.observedCount
                     plugin.messageUtils.send(sender,
-                        "&7Biomi la Y ${biomes.sampleY}: $summary; ${biomes.observedCount}/${biomes.sampleCount} puncte observate, $unknownCount necunoscute.")
+                        "&7$biomeLocation: $summary$remaining; ${biomes.observedCount}/${biomes.sampleCount} $biomeScope observate, $unknownCount necunoscute.")
                 }
             }
             val biomeRules = WorldBlueprintStructureBiomeRules.parse(blueprint.mapRules)
@@ -700,16 +831,25 @@ internal object WorldBlueprintCommand {
             } else if (biomeRules.isConfigured && biomes != null && biomes.observedCount > 0) {
                 val (outsideAllowed, forbiddenObserved) = biomeRules.violations(biomes.biomeCounts.keys)
                 if (outsideAllowed.isNotEmpty()) {
+                    val sorted = outsideAllowed.sorted()
                     plugin.messageUtils.send(sender,
-                        "&eBiomi observati in afara ${WorldBlueprintStructureBiomeRules.ALLOWED_KEY}: ${outsideAllowed.sorted().joinToString()}.")
+                        "&eBiomi observati in afara ${WorldBlueprintStructureBiomeRules.ALLOWED_KEY}: ${sorted.take(8).joinToString()}${if (sorted.size > 8) "; si inca ${sorted.size - 8}" else ""}.")
                 }
                 if (forbiddenObserved.isNotEmpty()) {
+                    val sorted = forbiddenObserved.sorted()
                     plugin.messageUtils.send(sender,
-                        "&eBiomi observati in ${WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY}: ${forbiddenObserved.sorted().joinToString()}.")
+                        "&eBiomi observati in ${WorldBlueprintStructureBiomeRules.FORBIDDEN_KEY}: ${sorted.take(8).joinToString()}${if (sorted.size > 8) "; si inca ${sorted.size - 8}" else ""}.")
                 }
                 if (outsideAllowed.isEmpty() && forbiddenObserved.isEmpty()) {
+                    val scope = when {
+                        biomes.coversEntireVolume && biomes.observedCount == biomes.sampleCount ->
+                            "intregul volum a fost citit la acest moment; datele se pot schimba"
+                        biomes.coversEntireFootprint && biomes.observedCount == biomes.sampleCount ->
+                            "alte niveluri Y din volum raman neverificate"
+                        else -> "restul volumului ramane neverificat"
+                    }
                     plugin.messageUtils.send(sender,
-                        "&aBiomii observati nu incalca regulile structurii; restul volumului ramane neverificat.")
+                        "&aBiomii observati nu incalca regulile structurii; $scope.")
                 }
             } else if (biomeRules.isConfigured) {
                 plugin.messageUtils.send(sender, "&7Regulile de biom nu pot fi comparate: nu exista esantioane observate valide.")
@@ -725,6 +865,14 @@ internal object WorldBlueprintCommand {
                     plugin.messageUtils.send(sender, "&e... si inca ${overlaps.size - 10} regiuni.")
                 }
             }
+            val preflight = WorldBlueprintStructurePreflightInspector.inspect(
+                preview.mappingAvailable, preview.collisions.size, overlaps, placement, chunks,
+                WorldBlueprintStructureRulePreflightInspector.inspect(blueprint.mapRules,
+                    selected, terrain, foundation, occupancy, biomes, exactFoundation),
+                WorldBlueprintStructureConfigurationPreflightInspector.inspect(preview, unknownBiomeIdsByRule),
+                architectureTargets)
+            plugin.messageUtils.send(sender,
+                "&ePreflight consultativ: ${preflight.conflicts.size} tipuri de conflict, ${preflight.unknowns.size} verificari necunoscute; nu autorizeaza construirea.")
         }
         if (!preview.mappingAvailable) {
             plugin.messageUtils.send(sender, "&eMapping indisponibil sau incomplet; disponibilitatea ID-ului de baza este necunoscuta.")
@@ -740,6 +888,25 @@ internal object WorldBlueprintCommand {
         structure.warnings().forEach { plugin.messageUtils.send(sender, "&7$it") }
         val remaining = if (bounds == null) "Pozitiile si limitele se aleg separat" else "Pozitiile locurilor si nodurilor se aleg separat"
         plugin.messageUtils.send(sender, "&7$remaining; ID-urile propuse nu sunt rezervate.")
+        (request.exportFingerprint ?: request.verifyFingerprint)?.let { expected ->
+            require(export != null) { "Exportul sau verificarea necesita un sablon arhitectural compilat cu bounds; corecteaza problemele din preview." }
+            val current = store.get(blueprint.worldName)
+            require(current != null && store.fingerprint(current) == blueprintFingerprint) {
+                "Draftul s-a schimbat; revizuieste din nou planul si foloseste noua amprenta."
+            }
+            val directory = plugin.dataFolder.toPath().resolve("architecture-plans")
+            if (request.exportFingerprint != null) {
+                require(!isRuntimeReadOnly(plugin)) { "MCP read_only este activ; exportul este blocat." }
+                val result = export.write(directory, expected)
+                val status = if (result.created) "Export creat" else "Export identic deja prezent"
+                plugin.messageUtils.send(sender, "&a$status: architecture-plans/${result.path.fileName}")
+                if (result.created) plugin.logger.info("Administratorul ${sender.name} a exportat planul ${export.fingerprint} pentru ${world.name}, revizie $blueprintFingerprint.")
+            } else {
+                val path = export.verify(directory, expected)
+                plugin.messageUtils.send(sender, "&aExport verificat: architecture-plans/${path.fileName}; identic cu reteta curenta.")
+                plugin.messageUtils.send(sender, "&7Verificarea nu aproba terenul si nu executa planul; niciun fisier nu a fost modificat.")
+            }
+        }
         return true
     }
 
@@ -786,7 +953,17 @@ internal object WorldBlueprintCommand {
         plugin: AINPCPlugin, sender: CommandSender, store: WorldBlueprintStore,
         worldName: String, args: Array<String>,
     ): Boolean {
-        if (args.size != 5) return usage(plugin, sender)
+        if (args.size != 5 && !(args.size == 7 && args[5].equals("retry", ignoreCase = true))) {
+            return usage(plugin, sender)
+        }
+        val retryOf = if (args.size == 7) {
+            val parsed = runCatching { UUID.fromString(args[6]) }.getOrNull()
+            if (parsed == null || !parsed.toString().equals(args[6], ignoreCase = true)) {
+                plugin.messageUtils.send(sender, "&cRetry necesita UUID-ul complet al incercarii PENDING din creation verify.")
+                return true
+            }
+            parsed
+        } else null
         if (!plugin.server.isPrimaryThread || plugin.server.isTickingWorlds) {
             plugin.messageUtils.send(sender, "&cCrearea lumii necesita thread-ul principal in afara actualizarii lumilor. Incearca din nou mai tarziu.")
             return true
@@ -805,10 +982,16 @@ internal object WorldBlueprintCommand {
         val creator = WorldCreator(worldName)
         if (seed != null) creator.seed(seed)
         generation.worldType?.let(creator::type)
+        generation.environment?.let(creator::environment)
         generation.generateStructures?.let(creator::generateStructures)
+        val requestedOptions = WorldBlueprintWorldCreationOptions(seed, generation.worldType,
+            generation.environment, generation.generateStructures)
         val journal = WorldBlueprintWorldCreationJournal(plugin.dataFolder.toPath().resolve("world-blueprint-creations.json"))
         val attempt = try {
-            journal.begin(worldName, requireNotNull(fingerprint), sender.name)
+            journal.begin(worldName, requireNotNull(fingerprint), sender.name, requestedOptions, retryOf)
+        } catch (error: IllegalArgumentException) {
+            plugin.messageUtils.send(sender, "&cLumea nu a fost creata: ${error.message}")
+            return true
         } catch (error: Exception) {
             plugin.logger.log(Level.WARNING, "Nu am putut jurnaliza inceputul crearii lumii $worldName.", error)
             plugin.messageUtils.send(sender, "&cJurnalul nu poate fi scris; lumea nu a fost creata. Verifica jurnalul serverului.")
@@ -831,8 +1014,34 @@ internal object WorldBlueprintCommand {
             return true
         }
         val recorded = finishWorldCreationAttempt(plugin, journal, attempt, WorldBlueprintWorldCreationStatus.CREATED)
-        plugin.logger.info("Administratorul ${sender.name} a creat lumea vanilla $worldName din draftul confirmat $fingerprint; seed ${seed ?: "implicit"}, tip ${generation.worldType ?: "implicit"}, structuri ${generation.generateStructures ?: "implicit"}.")
+        plugin.logger.info("Administratorul ${sender.name} a creat lumea vanilla $worldName din draftul confirmat $fingerprint; seed ${seed ?: "implicit"}, tip ${generation.worldType ?: "implicit"}, dimensiune ${generation.environment ?: "implicit"}, structuri ${generation.generateStructures ?: "implicit"}.")
         plugin.messageUtils.send(sender, "&aLumea vanilla $worldName a fost creata si incarcata (seed ${seed ?: "implicit"}). Draftul ramane separat; povestea, meseriile, arhitectura si regulile descriptive nu au fost aplicate.")
+        val observedOptions = runCatching {
+            WorldBlueprintWorldCreationRuntimeSnapshot(
+                created.seed, created.environment, created.canGenerateStructures())
+        }.getOrElse { error ->
+            plugin.logger.log(Level.WARNING, "Nu am putut verifica optiunile lumii nou create $worldName.", error)
+            plugin.messageUtils.send(sender, "&eOptiunile lumii create nu pot fi verificate acum; ruleaza creation verify.")
+            null
+        }
+        if (observedOptions != null) {
+            val checks = WorldBlueprintWorldCreationRuntimeCheck.compare(requestedOptions, observedOptions)
+            val mismatches = checks.filterNot { it.matches }
+            when {
+                mismatches.isNotEmpty() -> {
+                    mismatches.forEach { check ->
+                        plugin.messageUtils.send(sender,
+                            "&c${check.rule}: cerut ${check.requested}, observat ${check.observed}; verifica lumea creata.")
+                    }
+                    plugin.messageUtils.send(sender, "&eLumea exista, dar unele optiuni observabile difera; consulta creation verify.")
+                }
+                checks.isNotEmpty() -> plugin.messageUtils.send(sender,
+                    "&aOptiunile explicite verificabile coincid cu lumea incarcata; aceasta este doar o observatie curenta.")
+            }
+            if (requestedOptions.worldType != null) {
+                plugin.messageUtils.send(sender, "&7world_type nu poate fi verificat fiabil din lumea incarcata.")
+            }
+        }
         if (!recorded) plugin.messageUtils.send(sender, "&eRezultatul nu a putut fi jurnalizat si a ramas PENDING; verifica creation. Nu repeta crearea.")
         return true
     }
@@ -851,22 +1060,119 @@ internal object WorldBlueprintCommand {
     private fun creationHistory(
         plugin: AINPCPlugin, sender: CommandSender, worldName: String, args: Array<String>,
     ): Boolean {
-        if (args.size != 4) return usage(plugin, sender)
+        if (args.size in 5..6 && args[4].equals("verify", ignoreCase = true)) {
+            val attemptId = if (args.size == 6) {
+                val parsed = runCatching { UUID.fromString(args[5]) }.getOrNull()
+                if (parsed == null || !parsed.toString().equals(args[5], ignoreCase = true)) {
+                    plugin.messageUtils.send(sender, "&cVerificarea necesita UUID-ul complet al incercarii din creation page.")
+                    return true
+                }
+                parsed
+            } else null
+            return verifyCreation(plugin, sender, worldName, attemptId)
+        }
+        val pageNumber = when {
+            args.size == 4 -> 1
+            args.size == 6 && args[4].equals("page", ignoreCase = true) -> args[5].toIntOrNull()
+            else -> return usage(plugin, sender)
+        }
+        if (pageNumber == null || pageNumber !in 1..205) {
+            plugin.messageUtils.send(sender, "&cPagina trebuie sa fie un numar de la 1 la 205.")
+            return true
+        }
         val journal = WorldBlueprintWorldCreationJournal(plugin.dataFolder.toPath().resolve("world-blueprint-creations.json"))
-        val attempts = journal.latest(worldName)
-        if (attempts.isEmpty()) {
+        val history = journal.page(worldName, pageNumber)
+        if (history.total == 0) {
             plugin.messageUtils.send(sender, "&7Nu exista incercari jurnalizate de creare pentru $worldName.")
             return true
         }
-        plugin.messageUtils.send(sender, "&6Ultimele ${attempts.size} incercari de creare pentru $worldName:")
-        attempts.forEach { attempt ->
-            plugin.messageUtils.send(sender,
-                "&7${attempt.id.toString().take(8)}: ${attempt.status}, de ${attempt.actor}, inceput ${attempt.startedAt}, final ${attempt.finishedAt ?: "necunoscut"}; revizie ${attempt.fingerprint.take(12)}...")
+        if (pageNumber > history.pageCount) {
+            plugin.messageUtils.send(sender, "&cPagina $pageNumber nu exista; pentru $worldName sunt ${history.pageCount} pagini.")
+            return true
         }
-        if (attempts.any { it.status == WorldBlueprintWorldCreationStatus.PENDING }) {
-            plugin.messageUtils.send(sender, "&ePENDING inseamna rezultat necunoscut: verifica lumea incarcata si directorul; jurnalul nu executa rollback.")
+        plugin.messageUtils.send(sender,
+            "&6Incercari de creare pentru $worldName: pagina $pageNumber/${history.pageCount}, total ${history.total}.")
+        history.attempts.forEach { attempt ->
+            plugin.messageUtils.send(sender,
+                "&7${attempt.id}: ${attempt.status}, de ${attempt.actor}, inceput ${attempt.startedAt}, final ${attempt.finishedAt ?: "necunoscut"}; revizie ${attempt.fingerprint.take(12)}...")
+            plugin.messageUtils.send(sender, "&7${formatWorldCreationOptions(attempt.options)}")
+            if (attempt.status == WorldBlueprintWorldCreationStatus.PENDING) {
+                plugin.messageUtils.send(sender, "&eID complet PENDING: ${attempt.id}.")
+            }
+            attempt.retryOf?.let { plugin.messageUtils.send(sender, "&7Retry explicit dupa incercarea $it.") }
+        }
+        if (history.attempts.any { it.status == WorldBlueprintWorldCreationStatus.PENDING }) {
+            plugin.messageUtils.send(sender, "&ePENDING inseamna rezultat necunoscut: verifica lumea si directorul; retry accepta doar ultima incercare PENDING, fara rollback.")
+        }
+        if (pageNumber < history.pageCount) {
+            plugin.messageUtils.send(sender, "&7Pagina urmatoare: /ainpc world blueprint $worldName creation page ${pageNumber + 1}")
         }
         return true
+    }
+
+    private fun verifyCreation(plugin: AINPCPlugin, sender: CommandSender, worldName: String, attemptId: UUID?): Boolean {
+        val journal = WorldBlueprintWorldCreationJournal(plugin.dataFolder.toPath().resolve("world-blueprint-creations.json"))
+        val attempt = if (attemptId == null) journal.latest(worldName, 1).firstOrNull()
+            else journal.find(worldName, attemptId)
+        if (attemptId != null && attempt == null) {
+            plugin.messageUtils.send(sender, "&cIncercarea $attemptId nu exista in jurnal pentru $worldName.")
+            return true
+        }
+        val world = plugin.server.getWorld(worldName)
+        val loaded = world != null
+        val directory = WorldBlueprintWorldDirectoryInspector.inspect(plugin.server.worldContainer.toPath(), worldName)
+        val observation = WorldBlueprintWorldCreationObservation.from(loaded, directory)
+        plugin.messageUtils.send(sender, "&6Verificare read-only a crearii pentru $worldName${if (attemptId == null) " (ultima incercare)" else " (incercarea $attemptId)"}:")
+        if (attempt == null) {
+            plugin.messageUtils.send(sender, "&7Jurnal: nu exista incercari pentru acest nume.")
+        } else {
+            plugin.messageUtils.send(sender,
+                "&7Jurnal: ${attempt.id} ${attempt.status}, administrator ${attempt.actor}, revizie ${attempt.fingerprint.take(12)}...")
+            plugin.messageUtils.send(sender, "&7${formatWorldCreationOptions(attempt.options)}")
+            if (attempt.status == WorldBlueprintWorldCreationStatus.PENDING) {
+                plugin.messageUtils.send(sender, "&eID complet PENDING: ${attempt.id}.")
+                if (attemptId != null) {
+                    plugin.messageUtils.send(sender, "&7Un retry poate indica doar ultima incercare PENDING a acestei lumi, nu orice intrare istorica.")
+                }
+            }
+            attempt.retryOf?.let { plugin.messageUtils.send(sender, "&7Retry explicit dupa incercarea $it.") }
+        }
+        plugin.messageUtils.send(sender,
+            "&7Acum: lume ${if (loaded) "incarcata" else "neincarcata"}; intrare pe disc $directory.")
+        if (world != null && attempt?.options != null) {
+            val current = WorldBlueprintWorldCreationRuntimeSnapshot(
+                world.seed, world.environment, world.canGenerateStructures())
+            val checks = WorldBlueprintWorldCreationRuntimeCheck.compare(attempt.options, current)
+            if (checks.isEmpty()) {
+                plugin.messageUtils.send(sender, "&7Nu exista optiuni explicite verificabile prin API pentru aceasta incercare.")
+            } else {
+                checks.forEach { check ->
+                    plugin.messageUtils.send(sender,
+                        "${if (check.matches) "&a" else "&c"}${check.rule}: cerut ${check.requested}, observat ${check.observed} " +
+                            if (check.matches) "(coincide)." else "(difera).")
+                }
+            }
+            if (attempt.options.worldType != null) {
+                plugin.messageUtils.send(sender, "&7world_type nu poate fi verificat fiabil din lumea incarcata.")
+            }
+            plugin.messageUtils.send(sender, "&7Coincidenta valorilor curente nu dovedeste ca aceasta incercare a creat lumea.")
+        }
+        val guidance = when (observation) {
+            WorldBlueprintWorldCreationObservation.LOADED -> "&eLumea este incarcata acum; jurnalul nu dovedeste care incercare a creat-o."
+            WorldBlueprintWorldCreationObservation.DIRECTORY_PRESENT -> "&eExista un director; nu este verificat daca lumea este completa sau utilizabila."
+            WorldBlueprintWorldCreationObservation.OTHER_ENTRY -> "&eExista un fisier sau link cu acest nume; verifica manual inainte de orice noua incercare."
+            WorldBlueprintWorldCreationObservation.ENTRY_ABSENT -> "&eNu exista intrare pe disc acum; aceasta nu stabileste rezultatul istoric."
+            WorldBlueprintWorldCreationObservation.UNKNOWN -> "&eStarea discului nu poate fi stabilita sigur; verifica manual."
+        }
+        plugin.messageUtils.send(sender, guidance)
+        plugin.messageUtils.send(sender, "&7Verificarea este o fotografie de moment; nu modifica jurnalul si nu executa rollback.")
+        return true
+    }
+
+    private fun formatWorldCreationOptions(options: WorldBlueprintWorldCreationOptions?): String {
+        if (options == null) return "Optiuni necunoscute (inregistrare v1)."
+        return "Optiuni explicite: seed ${options.seed ?: "implicit"}, tip ${options.worldType?.name?.lowercase(Locale.ROOT) ?: "implicit"}, " +
+            "dimensiune ${options.environment?.name?.lowercase(Locale.ROOT) ?: "implicit"}, structuri ${options.generateStructures ?: "implicit"}."
     }
 
     private fun updateStory(
@@ -1321,9 +1627,11 @@ internal object WorldBlueprintCommand {
         return true
     }
 
-    private fun showUnknownStructureBiomes(plugin: AINPCPlugin, sender: CommandSender, blueprint: WorldBlueprint) {
+    private fun showUnknownStructureBiomes(
+        plugin: AINPCPlugin, sender: CommandSender, blueprint: WorldBlueprint,
+    ): Map<String, List<String>>? {
         val rules = WorldBlueprintStructureBiomeRules.parse(blueprint.mapRules)
-        if (rules.allowed == null && rules.forbidden == null) return
+        if (rules.allowed == null && rules.forbidden == null) return emptyMap()
         val unknown = try {
             val registry = RegistryAccess.registryAccess().getRegistry(RegistryKey.BIOME)
             rules.unknownBiomes { biomeId ->
@@ -1332,21 +1640,22 @@ internal object WorldBlueprintCommand {
         } catch (error: RuntimeException) {
             plugin.logger.log(Level.WARNING, "Nu am putut verifica registrul de biomi pentru world blueprint.", error)
             plugin.messageUtils.send(sender, "&7Registrul de biomi este indisponibil; existenta ID-urilor din reguli ramane necunoscuta.")
-            return
+            return null
         }
         unknown.forEach { (key, biomes) ->
             val more = if (biomes.size > 8) "; inca ${biomes.size - 8} nelistati" else ""
             plugin.messageUtils.send(sender,
                 "&e$key: ${biomes.size} ID-uri de biom nu exista in registrul curent: ${biomes.take(8).joinToString()}$more.")
         }
+        return unknown
     }
 
     private fun usage(plugin: AINPCPlugin, sender: CommandSender): Boolean {
         plugin.messageUtils.send(sender, "&6/ainpc world blueprint list [pagina]: drafturi salvate, inclusiv pentru lumi neincarcate.")
         plugin.messageUtils.send(sender, "&6/ainpc world blueprint <lume> <show|inspect|validate|plan|review|confirm|create-world|creation|apply-story|apply-story-all|apply-story-batch|update-story|update-story-batch|restore-story|restore-story-batch|applications|revoke|wizard|suggest|story|property|profession-limit|profession|architecture|map-rule|remove>")
         plugin.messageUtils.send(sender, "&7review; confirm <amprenta SHA-256>; revoke: revizie fara aplicare runtime.")
-        plugin.messageUtils.send(sender, "&7create-world <amprenta SHA-256>: creeaza explicit o lume vanilla noua doar din draft confirmat; nu aplica povestea sau regulile descriptive ale hartii.")
-        plugin.messageUtils.send(sender, "&7creation: ultimele cinci incercari de creare jurnalizate, inclusiv PENDING dupa o intrerupere.")
+        plugin.messageUtils.send(sender, "&7create-world <amprenta SHA-256> [retry <UUID-PENDING>]: creeaza explicit o lume vanilla; retry cere recunoasterea ultimei incercari PENDING.")
+        plugin.messageUtils.send(sender, "&7creation [page <1..205>|verify [UUID]]: istoric paginat sau verificare read-only a unei incercari.")
         plugin.messageUtils.send(sender, "&7apply-story <regionId> <amprenta SHA-256>: aplica povestea numai daca nu exista story pentru regiune.")
         plugin.messageUtils.send(sender, "&7apply-story-all <amprenta SHA-256>: aplica atomic povestea in toate regiunile din story_region_ids.")
         plugin.messageUtils.send(sender, "&7apply-story-batch <regionId,regionId> <amprenta SHA-256>: aplica atomic numai in ID-urile selectate.")
@@ -1355,7 +1664,7 @@ internal object WorldBlueprintCommand {
         plugin.messageUtils.send(sender, "&7restore-story <regionId> <applicationId-curent> <applicationId-anterior>: restaureaza explicit starea arhivata.")
         plugin.messageUtils.send(sender, "&7restore-story-batch <regionId:applicationId-curent:applicationId-anterior,...>: restaureaza atomic 1..64 regiuni.")
         plugin.messageUtils.send(sender, "&7applications [regionId|verify <regionId>|verify-batch <regionId,regionId>|audit-batch <applicationId>|audit-operation <applicationId>|history <applicationId>|archive <applicationId>]: jurnal si audit read-only.")
-        plugin.messageUtils.send(sender, "&7plan [structure <tip> <baseId> [bounds minX minY minZ maxX maxY maxZ]]: preview de mapping.")
+        plugin.messageUtils.send(sender, "&7plan [structure <tip> <baseId> [bounds minX minY minZ maxX maxY maxZ [export|verify <amprenta-plan>]]]: preview, export sau verificare JSON.")
         plugin.messageUtils.send(sender, "&7wizard [stop|edit <story|property|profession-limit|profession|architecture|map-rule>]: ghid privat in chat.")
         plugin.messageUtils.send(sender, "&7story <text>; property <cheie> <text>; profession-limit <1..64>")
         plugin.messageUtils.send(sender, "&7profession <id> <maxNpc 0..512> <descriere>; architecture <text>; map-rule <cheie> <text>")

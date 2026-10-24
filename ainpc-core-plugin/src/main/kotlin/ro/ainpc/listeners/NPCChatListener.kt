@@ -31,10 +31,17 @@ import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.commands.defaultObjectiveTarget
 import ro.ainpc.commands.WorldBlueprintWizard
 import ro.ainpc.commands.WorldBlueprintSuggestionCommand
+import ro.ainpc.commands.isRuntimeReadOnly
 import ro.ainpc.engine.QuestDecisionIntentResolver
 import ro.ainpc.engine.ScenarioEngine
 import ro.ainpc.managers.isSameNpcRecord
 import ro.ainpc.npc.AINPC
+import ro.ainpc.world.WorldBlueprintRevisionConflictException
+import ro.ainpc.world.WorldBlueprint
+import ro.ainpc.world.WorldBlueprintPolicy
+import ro.ainpc.world.WorldBlueprintStore
+import ro.ainpc.world.WorldBlueprintWizardStep
+import java.io.IOException
 import java.util.UUID
 
 /**
@@ -392,6 +399,39 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         normalized: String
     ): Boolean {
         return when (request.formKey()) {
+            "blueprint_select_world" -> {
+                if (normalized.equals("cancel", ignoreCase = true) ||
+                    normalized.equals("anuleaza", ignoreCase = true) ||
+                    normalized.equals("clear", ignoreCase = true)
+                ) {
+                    plugin.guiService.open(player, request.returnKey())
+                } else if (!player.hasPermission("ainpc.admin")) {
+                    messages().send(player, "&cNu ai permisiunea de a deschide Scenario Builder.")
+                    plugin.guiService.open(player, request.returnKey())
+                } else {
+                    val issues = WorldBlueprintPolicy.draftIssues(WorldBlueprint(normalized))
+                    if (issues.isNotEmpty()) {
+                        messages().send(player, "&cNumele lumii este invalid.")
+                        requeueTextInput(player, request)
+                    } else {
+                        plugin.guiService.openBlueprintReview(player, normalized)
+                    }
+                }
+                true
+            }
+            "blueprint_edit_story", "blueprint_edit_property", "blueprint_edit_profession_limit",
+            "blueprint_edit_profession", "blueprint_edit_architecture", "blueprint_edit_map_rule" -> {
+                val step = when (request.formKey()) {
+                    "blueprint_edit_story" -> WorldBlueprintWizardStep.STORY
+                    "blueprint_edit_property" -> WorldBlueprintWizardStep.PROPERTY
+                    "blueprint_edit_profession_limit" -> WorldBlueprintWizardStep.PROFESSION_LIMIT
+                    "blueprint_edit_profession" -> WorldBlueprintWizardStep.PROFESSION
+                    "blueprint_edit_architecture" -> WorldBlueprintWizardStep.ARCHITECTURE
+                    else -> WorldBlueprintWizardStep.MAP_RULE
+                }
+                handleBlueprintGuiEdit(player, request, step, normalized)
+                true
+            }
             "creator_defs_filter" -> {
                 val filter = if (normalized.equals("clear", ignoreCase = true)) null else normalized
                 plugin.guiService.setCreatorFormValue(player, request.formKey(), filter)
@@ -483,6 +523,54 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
         }
     }
 
+    private fun handleBlueprintGuiEdit(
+        player: Player, request: ro.ainpc.gui.GuiService.TextInputRequest,
+        step: WorldBlueprintWizardStep, input: String,
+    ) {
+        if (input.equals("cancel", ignoreCase = true) || input.equals("anuleaza", ignoreCase = true)) {
+            messages().send(player, "&7Editarea draftului a fost anulata.")
+            reopenAfterTextInput(player, request)
+            return
+        }
+        if (input.equals("clear", ignoreCase = true)) {
+            messages().send(player, "&eScrie o valoare noua; clear nu sterge acest camp.")
+            requeueTextInput(player, request)
+            return
+        }
+        val worldName = request.returnSelector()
+        val revision = request.expectedRevision
+        if (worldName.isNullOrBlank() || revision == null ||
+            plugin.guiService.getBlueprintReviewWorld(player) != worldName
+        ) {
+            messages().send(player, "&eSelectia draftului s-a schimbat; deschide din nou editarea.")
+            reopenAfterTextInput(player, request)
+            return
+        }
+        if (!player.hasPermission("ainpc.admin") || isRuntimeReadOnly(plugin)) {
+            messages().send(player, "&cEditarea draftului nu mai este permisa.")
+            reopenAfterTextInput(player, request)
+            return
+        }
+        try {
+            val store = WorldBlueprintStore(plugin.dataFolder.toPath().resolve("world-blueprints.json"))
+            val progress = store.advanceWizard(worldName, step, input, revision)
+            val status = if (progress.fingerprint == revision) "Valoarea este neschimbata."
+                else "Valoarea a fost salvata in draft."
+            messages().send(player, "&a$status Revizuieste draftul inainte de confirmare.")
+            reopenAfterTextInput(player, request)
+        } catch (error: WorldBlueprintRevisionConflictException) {
+            messages().send(player, "&eDraftul s-a schimbat intre timp; raspunsul nu a fost aplicat.")
+            reopenAfterTextInput(player, request)
+        } catch (error: IllegalArgumentException) {
+            messages().send(player, "&c${error.message}")
+            requeueTextInput(player, request)
+        } catch (error: IOException) {
+            plugin.logger.warning("Nu am putut salva editarea GUI a draftului pentru $worldName: ${error.message}")
+            messages().send(player, "&cDraftul nu a fost modificat; verifica fisierul world-blueprints.json.")
+            reopenAfterTextInput(player, request)
+        }
+    }
+
     private fun shouldResetObjectiveTarget(previousType: String, previousTarget: String): Boolean {
         if (previousTarget.isBlank()) return true
         val previousDefaults = objectiveTargetOptions(previousType)
@@ -547,7 +635,8 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             request.formKey(),
             request.returnKey(),
             request.returnSelector(),
-            request.promptLines()
+            request.promptLines(),
+            request.expectedRevision
         )
     }
 

@@ -45,6 +45,8 @@ enum class GuiKey(
     CONFIRM("confirm", "Confirmare"),
     RELATIONSHIP("relationship", "Relatii NPC"),
     STORY_AUTHORING("story_authoring", "Authoring Story"),
+    BLUEPRINT_LIST("blueprint_list", "Lumi Blueprint"),
+    BLUEPRINT_REVIEW("blueprint_review", "Revizie Blueprint"),
     NPC_MEMORY("npc_memory", "Memorii NPC"),
     QUEST_OFFER_NPC("quest_offer_npc", "Oferte Quest NPC");
 

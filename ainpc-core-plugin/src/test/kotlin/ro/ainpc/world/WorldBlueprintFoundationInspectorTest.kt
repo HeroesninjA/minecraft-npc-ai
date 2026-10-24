@@ -60,4 +60,58 @@ class WorldBlueprintFoundationInspectorTest {
         assertEquals(1, preview.solidCount)
         assertEquals(0, preview.unknownCount)
     }
+
+    @Test
+    fun `small footprint reads every base column without treating unloaded columns as air`() {
+        val bounds = WorldBlueprintRegionBounds(0, 64, 0, 2, 70, 1)
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val preview = WorldBlueprintFoundationInspector.inspectExactIfSmall(bounds, -64) { blockX, blockY, blockZ ->
+            assertEquals(63, blockY)
+            visited += blockX to blockZ
+            when (blockX to blockZ) {
+                0 to 0 -> WorldBlueprintFoundationBlock.AIR
+                1 to 0 -> WorldBlueprintFoundationBlock.LIQUID
+                2 to 0 -> WorldBlueprintFoundationBlock.OTHER_NON_SOLID
+                2 to 1 -> null
+                else -> WorldBlueprintFoundationBlock.SOLID
+            }
+        }!!
+
+        assertEquals(6, visited.size)
+        assertEquals(6, preview.sampleCount)
+        assertEquals(2, preview.solidCount)
+        assertEquals(1, preview.airCount)
+        assertEquals(1, preview.liquidCount)
+        assertEquals(1, preview.otherNonSolidCount)
+        assertEquals(1, preview.unknownCount)
+    }
+
+    @Test
+    fun `large footprint and world minimum skip exact base scan without reads`() {
+        var reads = 0
+        val readBlock: (Int, Int, Int) -> WorldBlueprintFoundationBlock? = { _, _, _ ->
+            reads++
+            WorldBlueprintFoundationBlock.SOLID
+        }
+
+        assertNull(WorldBlueprintFoundationInspector.inspectExactIfSmall(
+            WorldBlueprintRegionBounds(0, 64, 0, 16, 64, 16), -64, readBlock))
+        assertNull(WorldBlueprintFoundationInspector.inspectExactIfSmall(
+            WorldBlueprintRegionBounds(0, -64, 0, 1, -64, 1), -64, readBlock))
+        assertEquals(0, reads)
+    }
+
+    @Test
+    fun `maximum small footprint reads exactly 256 columns`() {
+        val preview = WorldBlueprintFoundationInspector.inspectExactIfSmall(
+            WorldBlueprintRegionBounds(Int.MAX_VALUE - 15, Int.MIN_VALUE + 1, 0, Int.MAX_VALUE,
+                Int.MIN_VALUE + 1, 15), Int.MIN_VALUE) { _, blockY, _ ->
+            assertEquals(Int.MIN_VALUE, blockY)
+            WorldBlueprintFoundationBlock.SOLID
+        }!!
+
+        assertEquals(256, preview.sampleCount)
+        assertEquals(256, preview.solidCount)
+        assertEquals(0, preview.unknownCount)
+    }
 }

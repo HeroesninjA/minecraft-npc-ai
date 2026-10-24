@@ -59,4 +59,10 @@ class GuiKeyRegistrationTest {
         assertEquals(GuiKey.QUEST_MAP, GuiKey.fromId("quest_map")!!)
         assertEquals(GuiKey.QUEST_MAP, GuiKey.fromId("quest_mapping")!!)
     }
+
+    @Test
+    fun blueprintReviewResolvesFromId() {
+        assertEquals(GuiKey.BLUEPRINT_LIST, GuiKey.fromId("blueprint_list"))
+        assertEquals(GuiKey.BLUEPRINT_REVIEW, GuiKey.fromId("blueprint_review"))
+    }
 }

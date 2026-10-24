@@ -51,6 +51,9 @@ ollama:
   model: "llama3"
   temperature: 0.7
   max_tokens: 150
+  # Optional pentru sugestiile Scenario Builder pe Ollama local; trimite JSON Schema prin /api/generate format.
+  # Activeaza doar pentru modele/endpoint-uri compatibile; validarea locala ramane obligatorie.
+  structured_suggestions: false
   # Pauza dupa raspuns gol, eroare HTTP sau eroare de conexiune.
   offline_retry_seconds: 15
 

@@ -14,16 +14,25 @@ import java.util.logging.Level
 
 class OllamaService(private val plugin: AINPCPlugin) {
     companion object {
-        internal fun generateRequestBody(model: String, prompt: String, temperature: Double, maxTokens: Int): JsonObject =
+        internal fun generateRequestBody(model: String, prompt: String, temperature: Double, maxTokens: Int,
+                                         schema: JsonObject? = null): JsonObject =
             JsonObject().apply {
                 addProperty("model", model)
                 addProperty("prompt", prompt)
                 addProperty("stream", false)
+                if (schema != null) add("format", schema.deepCopy())
                 add("options", JsonObject().apply {
                     addProperty("temperature", temperature)
                     addProperty("num_predict", maxTokens)
                 })
             }
+
+        internal fun extractGeneratedResponse(responseBody: String, structured: Boolean): String? {
+            val json = JsonParser.parseString(responseBody).asJsonObject
+            if (structured && (json.get("done")?.takeUnless { it.isJsonNull }?.asBoolean != true ||
+                    json.get("done_reason")?.takeUnless { it.isJsonNull }?.asString == "length")) return null
+            return json.get("response")?.asString?.takeIf(String::isNotBlank)
+        }
     }
 
     private val client: HttpClient = HttpClient.newBuilder()
@@ -83,11 +92,11 @@ class OllamaService(private val plugin: AINPCPlugin) {
         }
     }
 
-    fun generateAsync(prompt: String): String? {
+    fun generateAsync(prompt: String, schema: JsonObject? = null): String? {
         if (!canAttemptGeneration) return null
         val requestStartedAtMillis = System.currentTimeMillis()
         return try {
-            val body = generateRequestBody(model, prompt, temperature, maxTokens)
+            val body = generateRequestBody(model, prompt, temperature, maxTokens, schema)
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$baseUrl/api/generate"))
                 .timeout(Duration.ofSeconds(30))
@@ -96,8 +105,7 @@ class OllamaService(private val plugin: AINPCPlugin) {
                 .build()
             val response = client.send(request, HttpResponse.BodyHandlers.ofString())
             if (response.statusCode() == 200) {
-                val json = JsonParser.parseString(response.body()).asJsonObject
-                val generatedText = json.get("response")?.asString?.takeIf(String::isNotBlank)
+                val generatedText = extractGeneratedResponse(response.body(), schema != null)
                 if (generatedText == null) {
                     enterBackoff()
                 } else if (retryGate.recordSuccess(requestStartedAtMillis)) {

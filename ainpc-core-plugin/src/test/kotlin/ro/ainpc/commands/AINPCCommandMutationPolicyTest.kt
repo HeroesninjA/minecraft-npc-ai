@@ -72,6 +72,8 @@ class AINPCCommandMutationPolicyTest {
         val cases = listOf(
             command(AINPCSubcommandRoute.WORLD, "world", "places"),
             command(AINPCSubcommandRoute.WORLD, "world", "outside", "report", "village"),
+            command(AINPCSubcommandRoute.WORLD, "world", "blueprint", "world", "plan", "structure", "castle", "keep",
+                "bounds", "0", "64", "0", "4", "68", "4", "verify", "a".repeat(64)),
             command(AINPCSubcommandRoute.WORLD, "world", "fixture", "plan"),
             command(AINPCSubcommandRoute.WORLD, "world", "fixture", "validate"),
             command(AINPCSubcommandRoute.WORLD, "world", "fixture", "context"),

@@ -61,13 +61,23 @@ class WorldBlueprintWorldCreationGuardTest {
     }
 
     @Test
-    fun `rejects invalid world type or structure flag before creation`() {
+    fun `rejects invalid world generation rules before creation`() {
         val invalid = confirmed.copy(mapRules = confirmed.mapRules + mapOf(
             WorldBlueprintWorldGenerationRules.TYPE_KEY to "custom",
+            WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY to "custom",
             WorldBlueprintWorldGenerationRules.STRUCTURES_KEY to "yes",
         ))
-        assertEquals("Reguli de generare invalide: world_type, world_generate_structures; consulta plan.",
+        assertEquals("Reguli de generare invalide: world_type, world_environment, world_generate_structures; consulta plan.",
             issue(blueprint = invalid))
+    }
+
+    @Test
+    fun `rejects world type combined with non normal environment`() {
+        val invalid = confirmed.copy(mapRules = confirmed.mapRules + mapOf(
+            WorldBlueprintWorldGenerationRules.TYPE_KEY to "flat",
+            WorldBlueprintWorldGenerationRules.ENVIRONMENT_KEY to "nether",
+        ))
+        assertEquals("Reguli de generare invalide: world_type; consulta plan.", issue(blueprint = invalid))
     }
 
     @Test

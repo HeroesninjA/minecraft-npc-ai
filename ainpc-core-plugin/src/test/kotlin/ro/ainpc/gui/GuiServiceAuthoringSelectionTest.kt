@@ -94,6 +94,43 @@ class GuiServiceAuthoringSelectionTest {
     }
 
     @Test
+    fun blueprintInputKeepsSelectedWorldAndRevisionPerPlayer() {
+        val service = GuiService(newPluginInstance())
+        val first = newPlayer(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        val second = newPlayer(UUID.fromString("00000000-0000-0000-0000-000000000002"))
+
+        runCatching { service.openTextInput(first, "Poveste", "blueprint_edit_story", GuiKey.BLUEPRINT_REVIEW,
+            returnSelector = "world", expectedRevision = "revision-a") }
+        runCatching { service.openTextInput(second, "Arhitectura", "blueprint_edit_architecture", GuiKey.BLUEPRINT_REVIEW,
+            returnSelector = "nether", expectedRevision = "revision-b") }
+
+        val firstRequest = service.consumeTextInputRequest(first)
+        val secondRequest = service.consumeTextInputRequest(second)
+        assertEquals("world", firstRequest?.returnSelector())
+        assertEquals("revision-a", firstRequest?.expectedRevision)
+        assertEquals("nether", secondRequest?.returnSelector())
+        assertEquals("revision-b", secondRequest?.expectedRevision)
+        assertEquals(false, service.hasTextInputRequest(first))
+        assertEquals(false, service.hasTextInputRequest(second))
+    }
+
+    @Test
+    fun blueprintListPageRequiresAdminAndResetsWithPlayerState() {
+        val service = GuiService(newPluginInstance())
+        val player = newPlayer(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        val admin = newPlayer(UUID.fromString("00000000-0000-0000-0000-000000000002"), setOf("ainpc.admin"))
+
+        assertEquals(false, service.canOpen(player, GuiKey.BLUEPRINT_LIST))
+        assertEquals(true, service.canOpen(admin, GuiKey.BLUEPRINT_LIST))
+        runCatching { service.openBlueprintList(admin, 2) }
+        assertEquals(2, service.getBlueprintListPage(admin))
+        assertEquals(0, service.getBlueprintListPage(player))
+
+        service.clearPlayerState(admin.uniqueId)
+        assertEquals(0, service.getBlueprintListPage(admin))
+    }
+
+    @Test
     fun clearPlayerStateRemovesAllPerPlayerMaps() {
         val service = GuiService(newPluginInstance())
         val player = newPlayer(UUID.fromString("00000000-0000-0000-0000-000000000001"))

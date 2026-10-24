@@ -30,6 +30,8 @@ import ro.ainpc.gui.screens.AdminMappingGui
 import ro.ainpc.gui.screens.AdminQuestGui
 import ro.ainpc.gui.screens.AdminHubGui
 import ro.ainpc.gui.screens.AdminMcpGui
+import ro.ainpc.gui.screens.WorldBlueprintReviewGui
+import ro.ainpc.gui.screens.WorldBlueprintListGui
 import ro.ainpc.gui.screens.CreatorHubGui
 import ro.ainpc.gui.screens.PlayerHubGui
 import ro.ainpc.gui.screens.QuestCreatorGui
@@ -54,6 +56,26 @@ import java.util.concurrent.ConcurrentMap
 /**
  * Guiservice.
  */
+internal object GuiConfirmationPolicy {
+    fun autoConfirm(skipConfirmations: Boolean, forceConfirmation: Boolean): Boolean =
+        skipConfirmations && !forceConfirmation
+
+    fun consume(
+        requests: ConcurrentMap<UUID, GuiService.ConfirmRequest>,
+        playerId: UUID,
+        request: GuiService.ConfirmRequest,
+    ): Boolean {
+        var consumed = false
+        requests.computeIfPresent(playerId) { _, current ->
+            if (current === request) {
+                consumed = true
+                null
+            } else current
+        }
+        return consumed
+    }
+}
+
 class GuiService(private val plugin: AINPCPlugin) {
     private val skipConfirmations: Boolean
         get() = plugin.config.getBoolean("gui.skip_confirmations", false)
@@ -84,6 +106,22 @@ class GuiService(private val plugin: AINPCPlugin) {
     private val textInputRequests: ConcurrentMap<UUID, TextInputRequest> = ConcurrentHashMap()
     private val shopSelectedNpcIds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
     private val lastGuiKeys: ConcurrentMap<UUID, GuiKey> = ConcurrentHashMap()
+    private val blueprintReviewWorlds: ConcurrentMap<UUID, String> = ConcurrentHashMap()
+    private val blueprintListPages: ConcurrentMap<UUID, Int> = ConcurrentHashMap()
+
+    fun getBlueprintReviewWorld(player: Player): String? = blueprintReviewWorlds[player.uniqueId]
+
+    fun getBlueprintListPage(player: Player): Int = blueprintListPages.getOrDefault(player.uniqueId, 0)
+
+    fun openBlueprintList(player: Player, page: Int = 0) {
+        blueprintListPages[player.uniqueId] = maxOf(0, page)
+        open(player, GuiKey.BLUEPRINT_LIST)
+    }
+
+    fun openBlueprintReview(player: Player, worldName: String) {
+        blueprintReviewWorlds[player.uniqueId] = worldName
+        open(player, GuiKey.BLUEPRINT_REVIEW)
+    }
 
     fun getShopSelectedNpcId(player: Player): String? = shopSelectedNpcIds[player.uniqueId]
 
@@ -179,7 +217,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         formKey: String,
         returnKey: GuiKey?,
         returnSelector: String? = null,
-        promptLines: List<String> = listOf()
+        promptLines: List<String> = listOf(),
+        expectedRevision: String? = null,
     ) {
         if (player == null || formKey.isBlank()) return
         val request = TextInputRequest(
@@ -187,7 +226,8 @@ class GuiService(private val plugin: AINPCPlugin) {
             formKey = formKey,
             returnKey = returnKey ?: GuiKey.MAIN,
             returnSelector = returnSelector,
-            promptLines = promptLines
+            promptLines = promptLines,
+            expectedRevision = expectedRevision
         )
         request.recordCreation()
         textInputRequests[player.uniqueId] = request
@@ -196,7 +236,10 @@ class GuiService(private val plugin: AINPCPlugin) {
         for (line in promptLines) {
             plugin.messageUtils.send(player, line)
         }
-        plugin.messageUtils.send(player, "&7Scrie in chat. Scrie &fclear&7 ca sa cureti, &fcancel&7 ca sa anulezi. Expira in ${request.timeoutTicks * 50}ms.")
+        val instructions = if (formKey.startsWith("blueprint_edit_"))
+            "&7Scrie in chat sau &fcancel&7 ca sa anulezi. Expira in ${request.timeoutTicks * 50}ms."
+        else "&7Scrie in chat. Scrie &fclear&7 ca sa cureti, &fcancel&7 ca sa anulezi. Expira in ${request.timeoutTicks * 50}ms."
+        plugin.messageUtils.send(player, instructions)
     }
 
     fun hasTextInputRequest(player: Player?): Boolean {
@@ -299,6 +342,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         register(MappingCreatePlaceGui())
         register(MappingCreateNodeGui())
         register(ShopGui())
+        register(WorldBlueprintReviewGui())
+        register(WorldBlueprintListGui())
     }
 
     fun sessions(): GuiSessionManager = sessionManager
@@ -533,6 +578,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         textInputRequests.remove(playerId)
         shopSelectedNpcIds.remove(playerId)
         lastGuiKeys.remove(playerId)
+        blueprintReviewWorlds.remove(playerId)
+        blueprintListPages.remove(playerId)
     }
 
     fun getQuestMapGlobalMode(player: Player?): Boolean {
@@ -674,7 +721,8 @@ class GuiService(private val plugin: AINPCPlugin) {
         command: String?,
         returnKey: GuiKey?,
         returnSelector: String?,
-        warningLines: List<String>?
+        warningLines: List<String>?,
+        forceConfirmation: Boolean = false,
     ) {
         if (player == null || command.isNullOrBlank()) {
             return
@@ -684,7 +732,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             return
         }
 
-        if (skipConfirmations) {
+        if (GuiConfirmationPolicy.autoConfirm(skipConfirmations, forceConfirmation)) {
             if (warningLines.isNullOrEmpty()) {
                 plugin.messageUtils.send(player, "&7[Auto-confirm] &f$title")
             } else {
@@ -716,7 +764,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         if (player == null || request == null) {
             return
         }
-        confirmRequests.remove(player.uniqueId)
+        if (!GuiConfirmationPolicy.consume(confirmRequests, player.uniqueId, request)) return
         if (request.returnKey() == GuiKey.QUEST_DETAIL && request.returnSelector().isNotBlank()) {
             openQuestDetail(player, request.returnSelector(), getQuestDetailFilter(player))
             return
@@ -728,8 +776,21 @@ class GuiService(private val plugin: AINPCPlugin) {
         if (player == null || request == null) {
             return
         }
-        confirmRequests.remove(player.uniqueId)
+        if (!GuiConfirmationPolicy.consume(confirmRequests, player.uniqueId, request)) return
         runCommand(player, AINPCCommandMutationPolicy.confirmedCommand(request.command()))
+    }
+
+    fun runNextTickIfCurrent(click: GuiClickContext, action: () -> Unit) {
+        val player = click.player()
+        val session = click.session()
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            if (plugin.isEnabled && player.isOnline && guiEnabled &&
+                sessionManager.isCurrent(session.getSessionId(), player.uniqueId, session.getKey()) &&
+                canOpen(player, session.getKey())
+            ) {
+                action()
+            }
+        })
     }
 
     fun handleClick(
@@ -819,6 +880,7 @@ class GuiService(private val plugin: AINPCPlugin) {
             GuiKey.ROUTINE -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_ROUTINE, ro.ainpc.api.PermissionNode.GUI_MANAGER)
             GuiKey.RELATIONSHIP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_RELATIONSHIP, ro.ainpc.api.PermissionNode.GUI_MANAGER)
             GuiKey.STORY_AUTHORING -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_STORY, ro.ainpc.api.PermissionNode.CREATOR)
+            GuiKey.BLUEPRINT_LIST, GuiKey.BLUEPRINT_REVIEW -> player.hasPermission("ainpc.admin")
             GuiKey.NPC_MEMORY -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_NPC, ro.ainpc.api.PermissionNode.INFO)
             GuiKey.SHOP -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_SHOP)
             GuiKey.MANAGER -> hasAny(player, ro.ainpc.api.PermissionNode.ADMIN, ro.ainpc.api.PermissionNode.GUI_MANAGER)
@@ -871,6 +933,7 @@ class GuiService(private val plugin: AINPCPlugin) {
         returnKey: GuiKey,
         returnSelector: String?,
         promptLines: List<String>,
+        val expectedRevision: String? = null,
         val timeoutTicks: Int = 600
     ) {
         private val _title: String? = title

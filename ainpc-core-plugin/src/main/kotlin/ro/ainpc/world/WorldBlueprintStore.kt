@@ -78,6 +78,13 @@ internal object WorldBlueprintPolicy {
         value.isNotBlank() && value.length <= limit && value.none { it.isISOControl() }
 }
 
+internal class WorldBlueprintRevisionConflictException : IllegalArgumentException("Draftul s-a schimbat de la ultima revizie.")
+
+internal data class WorldBlueprintWizardProgress(
+    val update: WorldBlueprintWizardUpdate,
+    val fingerprint: String?,
+)
+
 internal class WorldBlueprintStore(private val file: Path) {
     private data class State(
         val worlds: Map<String, WorldBlueprint> = emptyMap(),
@@ -115,15 +122,36 @@ internal class WorldBlueprintStore(private val file: Path) {
     fun save(blueprint: WorldBlueprint) {
         val issues = WorldBlueprintPolicy.draftIssues(blueprint)
         require(issues.isEmpty()) { issues.joinToString("; ") }
+        saveValidated(readAll(), blueprint)
+    }
+
+    @Synchronized
+    fun advanceWizard(
+        worldName: String, step: WorldBlueprintWizardStep, input: String, expectedFingerprint: String?,
+    ): WorldBlueprintWizardProgress {
         val state = readAll()
+        val persisted = state.worlds[worldName]
+        val actualFingerprint = persisted?.let(::fingerprint)
+        if (actualFingerprint != expectedFingerprint) throw WorldBlueprintRevisionConflictException()
+        val current = persisted ?: WorldBlueprint(worldName)
+        val update = WorldBlueprintWizardFlow.advance(current, step, input)
+        val changed = update.blueprint != current
+        val persistedUpdate = if (changed) update.copy(blueprint = saveValidated(state, update.blueprint)) else update
+        return WorldBlueprintWizardProgress(persistedUpdate,
+            if (changed) fingerprint(persistedUpdate.blueprint) else actualFingerprint)
+    }
+
+    private fun saveValidated(state: State, blueprint: WorldBlueprint): WorldBlueprint {
         val all = state.worlds.toMutableMap()
         require(blueprint.worldName in all || all.size < 64) { "limita de 64 de lumi a fost atinsa" }
         val previous = all[blueprint.worldName]
         val fingerprint = fingerprint(blueprint)
         val retainedApproval = previous?.approval?.takeIf { it.fingerprint == fingerprint }
-        all[blueprint.worldName] = blueprint.copy(approval = retainedApproval,
+        val saved = blueprint.copy(approval = retainedApproval,
             suggestionHistory = previous?.suggestionHistory ?: emptyList())
+        all[blueprint.worldName] = saved
         writeAll(state.copy(worlds = all))
+        return saved
     }
 
     @Synchronized

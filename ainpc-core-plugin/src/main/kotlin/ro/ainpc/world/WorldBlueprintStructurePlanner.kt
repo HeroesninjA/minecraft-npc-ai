@@ -63,6 +63,8 @@ internal data class WorldBlueprintStructurePreview(
     val architectureStyleIssue: String?,
     val storyRegionReferenced: Boolean,
     val storyRegionRuleIssue: String?,
+    val architecturePlan: WorldBlueprintArchitecturePlan? = null,
+    val architecturePlanIssue: String? = null,
 )
 
 internal data class WorldBlueprintPlacementAssessment(
@@ -143,13 +145,38 @@ internal object WorldBlueprintStructurePlanner {
         val effectivePalette = typePalette ?: compatibility.architecturePalette
         val typeStyle = compatibility.structureStyles[type]
         val paletteIssues = compatibility.issues.filter { it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_PALETTE_RULE ||
-            it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_PALETTES_RULE }
+            it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_PALETTES_RULE ||
+            it.code == WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_PALETTE_RULES }
         val storyRegionRuleIssue = compatibility.issues.firstOrNull {
             it.code == WorldBlueprintCompatibilityCode.INVALID_STORY_REGION_RULE
         }?.message
-        val styleIssue = compatibility.issues.firstOrNull {
-            it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_STYLES_RULE
-        }?.message
+        val styleIssues = compatibility.issues.filter {
+            it.code == WorldBlueprintCompatibilityCode.INVALID_STRUCTURE_STYLES_RULE ||
+                it.code == WorldBlueprintCompatibilityCode.CONFLICTING_STRUCTURE_STYLE_RULES
+        }
+        var architecturePlanIssue = compatibility.issues.filter {
+            it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_TEMPLATE_RULE ||
+                it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_MATERIAL_ROLES_RULE ||
+                it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_ENTRANCE_RULE ||
+                it.code == WorldBlueprintCompatibilityCode.INVALID_ARCHITECTURE_INTERIOR_CLEARANCE_RULE
+        }.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.message }
+        val architecturePlan = if (WorldBlueprintArchitectureTemplate.KEY in blueprint.mapRules &&
+            architecturePlanIssue == null && bounds != null) {
+            try {
+                require(paletteIssues.isEmpty()) { "Corecteaza problemele paletei inainte de compilarea sablonului." }
+                val materialRoles = WorldBlueprintArchitectureMaterials.parse(
+                    blueprint.mapRules[WorldBlueprintArchitectureMaterials.KEY], isBuildableBlock)?.roles
+                val entrance = requireNotNull(WorldBlueprintArchitectureEntrance.parse(
+                    blueprint.mapRules[WorldBlueprintArchitectureEntrance.KEY]))
+                val clearInterior = requireNotNull(WorldBlueprintArchitectureInteriorClearance.parse(
+                    blueprint.mapRules[WorldBlueprintArchitectureInteriorClearance.KEY]))
+                WorldBlueprintArchitectureTemplate.plan(bounds, effectivePalette, materialRoles, entrance, clearInterior,
+                    requireNotNull(blueprint.mapRules[WorldBlueprintArchitectureTemplate.KEY]))
+            } catch (error: IllegalArgumentException) {
+                architecturePlanIssue = error.message
+                null
+            }
+        } else null
         return WorldBlueprintStructurePreview(blueprint.worldName, structure,
             mappedRegions != null && mappedPlaces != null && mappedNodes != null, collisions,
             bounds, overlappingRegionIds, effectivePalette,
@@ -160,8 +187,9 @@ internal object WorldBlueprintStructurePlanner {
                 else -> null
             }, typeStyle ?: blueprint.architecture,
             if (typeStyle != null) "${WorldBlueprintStructureStyles.KEY}:${type.id()}" else "architecture",
-            styleIssue, storyRegionRuleIssue == null && regionId in WorldBlueprintCompatibility.storyRegionIds(blueprint),
-            storyRegionRuleIssue)
+            styleIssues.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.message },
+            storyRegionRuleIssue == null && regionId in WorldBlueprintCompatibility.storyRegionIds(blueprint),
+            storyRegionRuleIssue, architecturePlan, architecturePlanIssue)
     }
 
     private fun overlaps(minimum: Int, maximum: Int, otherMinimum: Int, otherMaximum: Int): Boolean =

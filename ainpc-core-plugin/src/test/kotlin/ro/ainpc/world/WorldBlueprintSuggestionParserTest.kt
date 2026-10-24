@@ -11,6 +11,26 @@ class WorldBlueprintSuggestionParserTest {
         "openai", "test-model", 100L, WorldBlueprintSuggestionParser.requestFingerprint(request.instruction))
 
     @Test
+    fun `strict response format matches each locally validated suggestion shape`() {
+        WorldBlueprintSuggestionField.entries.forEach { field ->
+            val format = WorldBlueprintSuggestionParser.responseFormat(field)
+            val schema = format.getAsJsonObject("schema")
+            val expected = when (field) {
+                WorldBlueprintSuggestionField.PROFESSION_LIMIT -> mapOf("limit" to "integer")
+                WorldBlueprintSuggestionField.PROFESSION -> mapOf("max_npcs" to "integer", "description" to "string")
+                else -> mapOf("text" to "string")
+            }
+            assertEquals("json_schema", format.get("type").asString)
+            assertTrue(format.get("strict").asBoolean)
+            assertEquals("object", schema.get("type").asString)
+            assertEquals(false, schema.get("additionalProperties").asBoolean)
+            assertEquals(expected.keys, schema.getAsJsonArray("required").map { it.asString }.toSet())
+            assertEquals(expected, schema.getAsJsonObject("properties").entrySet()
+                .associate { it.key to it.value.asJsonObject.get("type").asString })
+        }
+    }
+
+    @Test
     fun `parses a single advisory field without changing the base draft`() {
         val base = WorldBlueprint("world", story = "Poveste veche", properties = mapOf("clima" to "Rece"),
             approval = WorldBlueprintApproval("old", "admin", 1L))
@@ -169,6 +189,50 @@ class WorldBlueprintSuggestionParserTest {
         assertThrows(IllegalArgumentException::class.java) {
             WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
                 "{\"text\":\"6\"}", provenance(request))
+        }
+    }
+
+    @Test
+    fun `rejects unsupported full base limits before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintBaseUnsupportedPositionsRule.KEY, "baza", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"18446744073709551617\"}", provenance(request))
+        }
+    }
+
+    @Test
+    fun `rejects incomplete architecture material roles before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintArchitectureMaterials.KEY, "materiale", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"floor=stone\"}", provenance(request))
+        }
+    }
+
+    @Test
+    fun `rejects unsupported architecture entrance direction before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintArchitectureEntrance.KEY, "intrare", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"up\"}", provenance(request))
+        }
+    }
+
+    @Test
+    fun `rejects ambiguous interior clearance flag before AI preview`() {
+        val request = WorldBlueprintSuggestionRequest("world", WorldBlueprintSuggestionField.MAP_RULE,
+            WorldBlueprintArchitectureInteriorClearance.KEY, "interior", "none")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorldBlueprintSuggestionParser.parse(request, WorldBlueprint("world"),
+                "{\"text\":\"yes\"}", provenance(request))
         }
     }
 }

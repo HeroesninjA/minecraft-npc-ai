@@ -12,6 +12,7 @@ internal data class WorldBlueprintTerrainPreview(
     val observedCount: Int,
     val minSurfaceY: Int?,
     val maxSurfaceY: Int?,
+    val coversEntireFootprint: Boolean = false,
 ) {
     val observedSpan: Long?
         get() = if (observedCount < 2 || minSurfaceY == null || maxSurfaceY == null) null
@@ -26,6 +27,17 @@ internal data class WorldBlueprintTerrainPreview(
 }
 
 internal object WorldBlueprintSamplePoints {
+    fun exactHorizontalIfSmall(bounds: WorldBlueprintRegionBounds): List<Pair<Int, Int>>? {
+        val maximumColumns = 256L
+        if (bounds.width > maximumColumns || bounds.depth > maximumColumns ||
+            bounds.width * bounds.depth > maximumColumns) return null
+        return buildList {
+            for (blockX in bounds.minX..bounds.maxX) {
+                for (blockZ in bounds.minZ..bounds.maxZ) add(blockX to blockZ)
+            }
+        }
+    }
+
     fun horizontal(bounds: WorldBlueprintRegionBounds): List<Pair<Int, Int>> {
         val centerX = midpoint(bounds.minX, bounds.maxX)
         val centerZ = midpoint(bounds.minZ, bounds.maxZ)
@@ -42,6 +54,23 @@ internal object WorldBlueprintSamplePoints {
 }
 
 internal object WorldBlueprintTerrainInspector {
+    fun inspectExactIfSmall(
+        bounds: WorldBlueprintRegionBounds, surfaceAt: (Int, Int) -> Int?,
+    ): WorldBlueprintTerrainPreview? {
+        val points = WorldBlueprintSamplePoints.exactHorizontalIfSmall(bounds) ?: return null
+        var observed = 0
+        var minimum: Int? = null
+        var maximum: Int? = null
+        for ((blockX, blockZ) in points) {
+            val height = surfaceAt(blockX, blockZ) ?: continue
+            observed++
+            minimum = minOf(minimum ?: height, height)
+            maximum = maxOf(maximum ?: height, height)
+        }
+        return WorldBlueprintTerrainPreview(points.size, observed,
+            minimum, maximum, coversEntireFootprint = true)
+    }
+
     fun inspect(bounds: WorldBlueprintRegionBounds, surfaceAt: (Int, Int) -> Int?): WorldBlueprintTerrainPreview {
         val points = WorldBlueprintSamplePoints.horizontal(bounds)
         val heights = points.mapNotNull { (blockX, blockZ) -> surfaceAt(blockX, blockZ) }

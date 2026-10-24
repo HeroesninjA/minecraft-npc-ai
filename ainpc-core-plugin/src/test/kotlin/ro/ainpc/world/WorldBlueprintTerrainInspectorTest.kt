@@ -23,6 +23,60 @@ class WorldBlueprintTerrainInspectorTest {
     }
 
     @Test
+    fun `reads every column of a small footprint without duplicate queries`() {
+        val bounds = WorldBlueprintRegionBounds(-1, 60, 0, 1, 80, 1)
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val preview = WorldBlueprintTerrainInspector.inspectExactIfSmall(bounds) { blockX, blockZ ->
+            assertTrue(visited.add(blockX to blockZ))
+            blockX * 10 + blockZ + 64
+        }!!
+
+        assertEquals(6, preview.sampleCount)
+        assertEquals(6, preview.observedCount)
+        assertEquals(54, preview.minSurfaceY)
+        assertEquals(75, preview.maxSurfaceY)
+        assertTrue(preview.coversEntireFootprint)
+    }
+
+    @Test
+    fun `unloaded columns remain unknown even during complete footprint scan`() {
+        val preview = WorldBlueprintTerrainInspector.inspectExactIfSmall(
+            WorldBlueprintRegionBounds(0, 60, 0, 1, 80, 1)) { blockX, _ ->
+            if (blockX == 0) 64 else null
+        }!!
+
+        assertEquals(4, preview.sampleCount)
+        assertEquals(2, preview.observedCount)
+        assertEquals(0L, preview.observedSpan)
+        assertTrue(preview.coversEntireFootprint)
+    }
+
+    @Test
+    fun `large footprint never invokes exact surface lookup`() {
+        val justOver = WorldBlueprintRegionBounds(0, 60, 0, 16, 80, 15)
+        val extreme = WorldBlueprintRegionBounds(Int.MIN_VALUE, 60, Int.MIN_VALUE,
+            Int.MAX_VALUE, 80, Int.MAX_VALUE)
+        val noLookup: (Int, Int) -> Int? = { _, _ -> error("Exact scan must be bounded") }
+
+        assertEquals(null, WorldBlueprintTerrainInspector.inspectExactIfSmall(justOver, noLookup))
+        assertEquals(null, WorldBlueprintTerrainInspector.inspectExactIfSmall(extreme, noLookup))
+    }
+
+    @Test
+    fun `exact scan includes the full 256 column limit`() {
+        var readCount = 0
+        val preview = WorldBlueprintTerrainInspector.inspectExactIfSmall(
+            WorldBlueprintRegionBounds(0, 60, 0, 15, 80, 15)) { _, _ ->
+            readCount++
+            64
+        }!!
+
+        assertEquals(256, readCount)
+        assertEquals(256, preview.observedCount)
+        assertTrue(preview.coversEntireFootprint)
+    }
+
+    @Test
     fun `unknown columns stay unknown and duplicate points are not queried twice`() {
         val bounds = WorldBlueprintRegionBounds(-1, 0, -1, 0, 100, 0)
         val points = mutableSetOf<Pair<Int, Int>>()
