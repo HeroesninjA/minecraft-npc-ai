@@ -17,6 +17,8 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 - publica `AINPCAddon.onNpcStateChange` numai daca starea rezultata este diferita;
 - nu muta entitatea si nu scrie quest, story sau economie.
 
+Managerul verifica disponibilitatea reala prin `AINPC.isSpawned()`, nu doar flagul memorat `spawned`. Intrarea in motor si revenirea din actualizarea perceptiei sunt protejate de verificarea entitatii si a reviziei ciclului de viata, atat pentru `FULL`, cat si pentru `LIGHT`. Daca entitatea dispare sau un callback invalideaza revizia in timpul actualizarii contextului, tick-ul se opreste inainte de schimbarea nevoilor si de selectie. Coordonatele persistente ale unui NPC indisponibil nu devin dovada ca acesta continua sa actioneze.
+
 ## Autoevaluare comuna pentru decizie si dialog
 
 `NpcCognitiveState` este un instantaneu imuabil al nevoilor, starii, pericolului, interlocutorului, obiectivului si rutinei. `DecisionEngine` foloseste `needModifier` din acest model pentru contributia nevoilor la scorurile actiunilor; coeficientii si pragurile existente sunt pastrate.
@@ -37,7 +39,7 @@ Explicatia expira dupa cinci minute, ignora timestamp-uri viitoare si nu este pe
 
 ## Progresul obiectivelor de ingrijire
 
-`NpcSelfCareGoal` urmareste un singur obiectiv temporar de hrana (`EAT`) sau odihna (`SLEEP`), pornit numai dupa aplicarea unei alegeri compatibile in simularea `FULL`, cat timp nevoia este sub pragul de recuperare 60. Previziunile si intrebarile nu pornesc sau avanseaza obiectivul. Monitorizarea nu adauga un planificator general, pathfinding, miscari sau influente asupra scorurilor.
+`NpcSelfCareGoal` urmareste un singur obiectiv temporar de hrana (`EAT`) sau odihna (`SLEEP`), pornit numai dupa aplicarea unei alegeri compatibile in simularea `FULL`, cat timp nevoia este sub pragul de recuperare 60. Si `RoutineActivityExecutor` poate porni obiectivul dupa deplasarea acceptata sau sosirea verificata la ancora casei pentru masa ori somn, cu starea compatibila si revizia neschimbata. O destinatie invalida, deplasarea refuzata, o simpla previzualizare sau o intrebare nu confirma un asemenea angajament. Monitorizarea nu adauga un planificator general, pathfinding, miscari sau influente asupra scorurilor.
 
 Etapele disting intentia de intoarcere acasa, prezenta observata acasa pentru refacere, lipsa unei case confirmate, incheierea si intreruperea. Intoarcerea aleasa nu confirma plecarea, existenta unei rute sau sosirea. Sosirea singura nu confirma refacerea: aceasta este observata strict in jurul actualizarii reale a nevoilor. Monitorizarea functioneaza si cu `simulation.decision.experience_enabled=false`, separat de invatare.
 
@@ -46,6 +48,24 @@ Obiectivul se incheie numai dupa o actualizare observata cu nevoia de cel putin 
 Observarea cere un interval pozitiv de cel mult 120 de secunde, timestamp-uri valide, aceeasi casa si un context sigur. Conversatia, combatul, o activitate incompatibila, schimbarea casei sau pericolul intrerup obiectivul activ fara sa il declare reusit. Spawn-ul, reatasarea, despawn-ul, indisponibilitatea, teleportul, restaurarea starii si schimbarea modului il sterg; verificarea reviziei previne recrearea lui dintr-un callback invalidat. Lipsa unei locatii si actualizarea de baza `LIGHT` il sterg de asemenea.
 
 Este pastrat numai ultimul obiectiv, fara persistenta, cu snapshot imuabil de cel mult cinci minute de la ultima actualizare valida; citirea nu reinnoieste termenul. `NpcCognitiveState`, raspunsurile locale despre progres si textul `Progresul ingrijirii` capturat pentru AI folosesc aceleasi date, fara acces Bukkit asincron.
+
+## Continuitate optionala si lipsa progresului
+
+`simulation.decision.goal_continuity_enabled`, implicit `false`, permite pastrarea revenirii acasa deja angajate pentru ingrijire. Necesita un NPC `FULL`, simularea si rutina pornite prin ambele perechi de flaguri globale/locale, aceeasi casa valida, nevoie inca nesatisfacuta, stare `WALKING`, siguranta si lipsa unui interlocutor activ. Pauzele si override-urile rutinei au prioritate. Cand conditiile sunt valabile, `WALK_TO_TARGET` este singurul candidat de continuitate; nu sunt modificate scorurile, iar `EAT`/`SLEEP` raman indisponibile departe de casa.
+
+Aplicarea continua obiectivul original de hrana ori odihna fara sa confirme sosirea sau sa retrimita pathfinding. Miscarea ramane exclusiv in rutina. La sosire, ingrijirea obisnuita de acasa isi pastreaza regulile. Explicatia ultimei alegeri retine separat ca revenirea pentru obiectivul in curs a fost pastrata. Schimbarea eligibilitatii continuitatii invalideaza imediat reutilizarea deciziei din cache, inclusiv la oprirea feature-ului.
+
+`withoutProgressMillis` cumuleaza numai timpul nou acoperit de actualizari valide ale nevoilor, dupa angajarea obiectivului. Sosirea confirmata sau un castig observat in timpul ingrijirii reseteaza acest contor. Timpul anterior angajarii, citirile, selectiile, reaplicarea aceleiasi intentii si observatiile duplicate nu adauga progres si nu reseteaza bugetul. Dupa trei minute cumulate fara sosire ori refacere confirmata, prioritatea revenirii este eliberata pentru urmatoarea alegere normala. Monitorul poate descrie lipsa progresului, dar nu afirma ca ruta este blocata sau ca ii cunoaste cauza.
+
+Aceasta nu este o lista permanenta de destinatii interzise: dupa intrerupere, o noua deplasare efectiv acceptata poate porni alt obiectiv. Nu exista replanificare generala, navigatie suplimentara, modificari de inventar sau confirmari de ajutor. Activarea continuitatii nu porneste singura taskurile periodice si ramane experimentala pana la verificarea in serverul Minecraft.
+
+## Diagnostic cognitiv read-only
+
+`/ainpc decision [numeNpc|nearest]`, cu `ainpc.admin`, include acum atentia, nevoile numerice autoritative, intentia curenta, ultima decizie aplicata si progresul obiectivului de ingrijire. Daca exista o observatie recenta, afiseaza actiunea si etapa, nevoia initiala si ultima valoare observata, timpul cumulat fara progres confirmat si vechimea inregistrarii. Intentia, alegerea aplicata si rezultatul observat au etichete separate; candidatii previzualizati nu devin istoric de actiuni.
+
+`NpcSelfCareContinuity` explica primul impediment din evaluarea folosita chiar de selector: modul nepotrivit, feature oprit, simulare sau rutina oprita, lipsa obiectivului recent, etapa incompatibila, lipsa progresului, casa neconfirmata ori schimbata, prezenta acasa, nesiguranta, interlocutor, stare incompatibila, nevoie invalida ori satisfacuta, pauza sau override. `READY` inseamna eligibilitate pentru continuarea revenirii, nu sosire garantata. Raportul nu enumera simultan toate impedimentele.
+
+`DecisionEngine.cognitiveDiagnostic` captureaza un model imuabil, cu acelasi timestamp pentru experienta, decizia istorica si progres. Nu actualizeaza lumea sau contextul, nu alege o actiune, nu scrie in cache/statistici si nu reinnoieste observatiile. Citirea la un timestamp care ar expira o inregistrare nu o sterge din starea live. Textul narativ este limitat la 320 de caractere pe camp si redus la o singura linie; lipsa dovezilor este declarata explicit. Procedura de verificare este in [runbook-ul de testare](../operations/debugging-si-testare.md#smoke-test-cognitiv).
 
 ## Experienta actiunilor de ingrijire
 
@@ -135,6 +155,12 @@ Rutina este singurul dintre cele doua fluxuri care deplaseaza NPC-ul. Nu exista 
 - `RoutineService` respecta pauzele si override-urile din `RoutineCoordinator`; override-ul se aplica doar cat timp este valid si nu poate teleporta NPC-ul;
 - `NpcSimulationMode.NONE` exclude NPC-ul, iar `LIGHT` actualizeaza doar nevoile; numai `FULL` intra in selectia actiunii, rutina si procesarea sociala;
 - householdu-rile persistente nu sunt citite de motorul de rutina.
+
+## Validarea buclei publice
+
+`CognitiveLifeSimulationTickTest` parcurge `NPCManager.runLifeSimulationTick()` si motoarele reale, fara apelarea prin reflectie a pasilor privati de actualizare, selectie sau aplicare. Acopera revenirea angajata prin executorul rutinei, sosirea, recuperarea, incheierea, experienta si descrierea locala a rezultatului; include somnul, pericolul, modurile `NONE`/`LIGHT`, entitatea disparuta si invalidarea in timpul perceptiei.
+
+Fixture-ul controleaza perceptia si pozitia, apoi foloseste sincronizarea si regulile reale de simulare. Constructorul public `DecisionEngine(AINPCPlugin)` pastreaza actualizarea Paper obisnuita; o intrare interna permite izolarea perceptiei in test fara a instala registre Paper globale. Constructia publica ramane disponibila si pentru Java. Nu este un test al fizicii, pathfinding-ului sau scanarii efective Bukkit si nu inlocuieste verificarea in serverul Minecraft.
 
 ## Surse in cod
 

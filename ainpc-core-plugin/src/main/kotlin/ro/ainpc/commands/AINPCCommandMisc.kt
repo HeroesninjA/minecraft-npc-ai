@@ -1633,6 +1633,8 @@ fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
     val preview = ainpcCommandMiscPlugin.decisionEngine.previewActionDecision(npc, npc.context)
     msg.send(sender, "&6=== Decizie NPC: ${npc.name} ===")
     msg.send(sender, "&eStare: &f${npc.currentState.displayName} &7| &ePericol: &f${if (npc.context.isInDanger) "da" else "nu"}")
+    formatDecisionCognition(ainpcCommandMiscPlugin.decisionEngine.cognitiveDiagnostic(npc))
+        .forEach { msg.send(sender, it) }
     val mode = when {
         preview.cached -> "cache (cooldown)"
         preview.probabilistic -> "probabilistic"
@@ -1679,6 +1681,26 @@ fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
     msg.send(sender, "&7Citeste contextul si pozitiile tintelor; nu actualizeaza contextul si nu alege o actiune.")
     return true
 }
+
+internal fun formatDecisionCognition(diagnostic: DecisionEngine.CognitiveDiagnostic): List<String> = buildList {
+    val state = diagnostic.state
+    add("&eAtentie: &f${decisionDiagnosticText(state.thoughtDescription(), "neconfirmata")}")
+    add("&eNevoi (0-100): &fsatietate ${state.hungerLevel}, energie ${state.energyLevel}, " +
+        "social ${state.socialNeedLevel}, confort ${state.comfortLevel}, siguranta ${state.safetyLevel}")
+    add("&eIntentie curenta: &f${decisionDiagnosticText(state.intentionDescription(), "neconfirmata")}")
+    add("&eUltima decizie aplicata: &f${decisionDiagnosticText(state.decisionDescription, "fara inregistrare recenta")}")
+    val progress = state.selfCareProgress
+    add("&eProgres ingrijire: &f${decisionDiagnosticText(progress?.description().orEmpty(), "fara obiectiv recent")}")
+    if (progress != null) {
+        val ageSeconds = (diagnostic.capturedAt - progress.updatedAt).coerceAtLeast(0L) / 1_000L
+        add("&7Observatie: ${progress.action.name} / ${progress.stage.name}; nevoie ${progress.initialNeed} -> " +
+            "${progress.observedNeed}; fara progres confirmat ${progress.withoutProgressMillis / 1_000L} s; vechime $ageSeconds s")
+    }
+    add("&eContinuitate ingrijire: &f${diagnostic.continuity.label}")
+}
+
+private fun decisionDiagnosticText(value: String, fallback: String): String =
+    value.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').trim().ifBlank { fallback }.take(320)
 
 internal fun formatDecisionAction(action: NPCAction, score: Int, probability: Double): String =
     "&e${action.displayName}: &f${String.format(Locale.ROOT, "%.1f", probability * 100)}% &7(scor $score)"

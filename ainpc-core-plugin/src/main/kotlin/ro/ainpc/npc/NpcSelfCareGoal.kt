@@ -107,12 +107,27 @@ class NpcSelfCareGoal {
     }
 
     @Synchronized
-    fun canContinueReturn(state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long): Boolean {
-        val goal = snapshot(now) ?: return false
-        return goal.stage == Stage.RETURNING_HOME && !goal.lacksProgress() &&
-            homeKey.isNotBlank() && homeKey == goal.homeKey && !isAtHome && isSafe(state) &&
-            !state.hasInteractingPlayer && state.currentState == NPCState.WALKING &&
-            level(goal.action, state) in 0 until NpcSelfCareThresholds.RECOVERED
+    fun canContinueReturn(state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long): Boolean =
+        returnStatus(state, homeKey, isAtHome, now) == NpcSelfCareContinuity.READY
+
+    @Synchronized
+    internal fun returnStatus(
+        state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long,
+    ): NpcSelfCareContinuity {
+        val goal = snapshot(now) ?: return NpcSelfCareContinuity.NO_RECENT_GOAL
+        return when {
+            goal.stage != Stage.RETURNING_HOME -> NpcSelfCareContinuity.NOT_RETURNING
+            goal.lacksProgress() -> NpcSelfCareContinuity.NO_PROGRESS
+            homeKey.isBlank() -> NpcSelfCareContinuity.HOME_UNCONFIRMED
+            homeKey != goal.homeKey -> NpcSelfCareContinuity.HOME_CHANGED
+            isAtHome -> NpcSelfCareContinuity.AT_HOME
+            !isSafe(state) -> NpcSelfCareContinuity.UNSAFE
+            state.hasInteractingPlayer -> NpcSelfCareContinuity.INTERLOCUTOR
+            state.currentState != NPCState.WALKING -> NpcSelfCareContinuity.STATE_MISMATCH
+            level(goal.action, state) !in 0..100 -> NpcSelfCareContinuity.INVALID_NEED
+            level(goal.action, state) >= NpcSelfCareThresholds.RECOVERED -> NpcSelfCareContinuity.NEED_SATISFIED
+            else -> NpcSelfCareContinuity.READY
+        }
     }
 
     @Synchronized

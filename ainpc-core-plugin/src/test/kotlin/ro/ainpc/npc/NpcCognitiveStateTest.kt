@@ -9,6 +9,29 @@ import java.lang.reflect.Proxy
 
 class NpcCognitiveStateTest {
     @Test
+    fun `one explicit clock consistently expires decision and goal evidence without clearing it`() {
+        val now = 1_000_000L
+        val npc = AINPC(null)
+        val decision = NpcDecisionExplanation(NPCAction.EAT, now, false)
+        npc.rememberDecision(decision)
+        npc.selfCareGoal.applied(NPCAction.EAT,
+            NpcCognitiveState(hungerLevel = 20, currentState = NPCState.WALKING), "world:home", false, now)
+        val original = npc.selfCareGoal.snapshot(now)
+
+        val future = NpcCognitiveState.capture(npc, npc.context, now - 1L)
+        assertEquals("", future.decisionDescription)
+        assertEquals(null, future.selfCareProgress)
+        val fresh = NpcCognitiveState.capture(npc, npc.context, now)
+        assertEquals(decision.description(now), fresh.decisionDescription)
+        assertEquals(original, fresh.selfCareProgress)
+        val expired = NpcCognitiveState.capture(npc, npc.context, now + 300_000L)
+        assertEquals("", expired.decisionDescription)
+        assertEquals(null, expired.selfCareProgress)
+        assertEquals(original, npc.selfCareGoal.snapshot(now))
+        assertEquals(decision, npc.lastDecision)
+    }
+
+    @Test
     fun `danger and emergency states override conversations needs and stale goals`() {
         val state = NpcCognitiveState(
             hungerLevel = 0,

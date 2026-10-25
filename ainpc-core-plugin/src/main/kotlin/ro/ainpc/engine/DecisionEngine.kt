@@ -14,6 +14,7 @@ import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcDecisionExplanation
 import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcSelfCareContinuity
 import ro.ainpc.npc.NpcSimulationMode
 import java.util.EnumMap
 import java.util.Locale
@@ -28,7 +29,14 @@ import kotlin.math.roundToInt
 /**
  * Decisionengine.
  */
-class DecisionEngine(private val plugin: AINPCPlugin) {
+class DecisionEngine internal constructor(
+    private val plugin: AINPCPlugin,
+    private val refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
+) {
+    constructor(plugin: AINPCPlugin) : this(plugin, { context, world, location ->
+        context.updateFromWorld(world, location)
+    })
+
     internal data class ActionScoreBreakdown(
         val base: Int,
         val traits: Int,
@@ -58,6 +66,12 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         val repeatAdjustments: List<RepeatAdjustment> = emptyList(),
         val scoreBreakdowns: Map<NPCAction, ActionScoreBreakdown> = emptyMap(),
         val probabilityWeights: Map<NPCAction, Double> = emptyMap(),
+    )
+
+    internal data class CognitiveDiagnostic(
+        val capturedAt: Long,
+        val state: NpcCognitiveState,
+        val continuity: NpcSelfCareContinuity,
     )
 
     private data class CachedDecision(
@@ -253,7 +267,8 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         decisionStatistics[uuid]?.snapshot() ?: DecisionStatistics.Snapshot(0, emptyMap(), null)
 
     fun runLifeSimulationTick(npc: AINPC?) {
-        if (npc == null) return
+        if (npc == null || !npc.isSpawned()) return
+        val revision = npc.decisionRevision
         val location = LocationWrapper.fromNpc(npc) ?: run {
             npc.actionExperience.cancelPending()
             npc.selfCareGoal.clear()
@@ -261,7 +276,8 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         }
 
         val context = npc.context
-        context.updateFromWorld(location.world, location.location)
+        refreshWorldContext(context, location.world, location.location)
+        if (!npc.isSpawned() || npc.decisionRevision != revision) return
         val scheduledActivity = resolveScheduledActivity(npc, context)
         npc.plannedRoutineActivity = scheduledActivity
         updateNeedsWithExperience(npc, context)
@@ -281,13 +297,15 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     }
 
     fun updateBasicNeeds(npc: AINPC?) {
-        if (npc == null) return
+        if (npc == null || !npc.isSpawned()) return
+        val revision = npc.decisionRevision
         npc.actionExperience.cancelPending()
         npc.selfCareGoal.clear()
         val location = LocationWrapper.fromNpc(npc) ?: return
 
         val context = npc.context
-        context.updateFromWorld(location.world, location.location)
+        refreshWorldContext(context, location.world, location.location)
+        if (!npc.isSpawned() || npc.decisionRevision != revision) return
         updateNeeds(npc, context)
         context.syncSimulationState(location.location)
     }
@@ -334,17 +352,37 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     }
 
     private fun canContinueSelfCare(npc: AINPC, context: NPCContext): Boolean =
-        npc.simulationMode == NpcSimulationMode.FULL &&
-            plugin.config.getBoolean("simulation.decision.goal_continuity_enabled", false) &&
-            plugin.config.getBoolean("features.simulation", false) &&
-            plugin.config.getBoolean("simulation.enabled", false) &&
-            plugin.config.getBoolean("features.routine", false) &&
-            plugin.config.getBoolean("routine.enabled", false) &&
-            npc.selfCareGoal.canContinueReturn(
-                NpcCognitiveState.capture(npc, context), experienceContextKey(npc), context.isAtHome,
-                System.currentTimeMillis(),
-            ) && !plugin.routineCoordinator.isRoutinePaused(npc.uuid) &&
-            plugin.routineCoordinator.getOverride(npc.uuid) == null
+        selfCareContinuity(npc, context, System.currentTimeMillis()) == NpcSelfCareContinuity.READY
+
+    internal fun cognitiveDiagnostic(
+        npc: AINPC, context: NPCContext = npc.context, now: Long = System.currentTimeMillis(),
+    ): CognitiveDiagnostic {
+        val state = NpcCognitiveState.capture(npc, context, now)
+        return CognitiveDiagnostic(now, state, selfCareContinuity(npc, context, now, state))
+    }
+
+    private fun selfCareContinuity(
+        npc: AINPC, context: NPCContext, now: Long, captured: NpcCognitiveState? = null,
+    ): NpcSelfCareContinuity {
+        if (npc.simulationMode != NpcSimulationMode.FULL) return NpcSelfCareContinuity.MODE_NOT_FULL
+        if (!plugin.config.getBoolean("simulation.decision.goal_continuity_enabled", false)) {
+            return NpcSelfCareContinuity.FEATURE_DISABLED
+        }
+        if (!plugin.config.getBoolean("features.simulation", false) ||
+            !plugin.config.getBoolean("simulation.enabled", false)
+        ) return NpcSelfCareContinuity.SIMULATION_DISABLED
+        if (!plugin.config.getBoolean("features.routine", false) ||
+            !plugin.config.getBoolean("routine.enabled", false)
+        ) return NpcSelfCareContinuity.ROUTINE_DISABLED
+        if (context.interactingNPC != null) return NpcSelfCareContinuity.INTERLOCUTOR
+        val status = npc.selfCareGoal.returnStatus(
+            captured ?: NpcCognitiveState.capture(npc, context, now), experienceContextKey(npc), context.isAtHome, now,
+        )
+        if (status != NpcSelfCareContinuity.READY) return status
+        if (plugin.routineCoordinator.isRoutinePaused(npc.uuid)) return NpcSelfCareContinuity.ROUTINE_PAUSED
+        if (plugin.routineCoordinator.getOverride(npc.uuid) != null) return NpcSelfCareContinuity.ROUTINE_OVERRIDE
+        return NpcSelfCareContinuity.READY
+    }
 
     private fun nearbySocialTargets(npc: AINPC, context: NPCContext): SocialTargetStatus {
         val interactingPlayer = context.interactingPlayer?.takeIf { it.isOnline }?.location

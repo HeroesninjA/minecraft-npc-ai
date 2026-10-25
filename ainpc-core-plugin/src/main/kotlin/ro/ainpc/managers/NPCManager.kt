@@ -1141,7 +1141,7 @@ class NPCManager(
 
     fun runLifeSimulationTick() {
         for (npc in npcsByUuid.values) {
-            if (!npc.spawned) {
+            if (!npc.isSpawned()) {
                 continue
             }
             if (npc.simulationMode == NpcSimulationMode.NONE) {

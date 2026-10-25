@@ -3,6 +3,10 @@ package ro.ainpc.routine
 import org.bukkit.Location
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcSimulationMode
 
 internal class RoutineActivityExecutor(
     private val resolveLocation: (AINPC.OwnedLocation) -> Location? = { it.toLocation() },
@@ -20,6 +24,7 @@ internal class RoutineActivityExecutor(
         teleport: (Location) -> Boolean,
     ): Outcome {
         if (isBusy(npc.currentState)) return Outcome.BUSY
+        val revision = npc.decisionRevision
         val anchor = assignment.targetAnchor()
         if (anchor == null) {
             val idleSlot = assignment.slot() == RoutineSlot.IDLE
@@ -53,19 +58,39 @@ internal class RoutineActivityExecutor(
         }
         if (hasArrived(location, destination, arrivalRadius)) {
             applyState(npc, assignment.targetState() ?: NPCState.IDLE, assignment.goal() ?: "")
-            return Outcome.ARRIVED
+            return complete(npc, assignment, Outcome.ARRIVED, revision)
         }
         if (moveNaturally(destination)) {
             applyState(npc, NPCState.WALKING, "deplasare spre ${anchor.label()}; sosire inca neconfirmata")
-            return Outcome.MOVING
+            return complete(npc, assignment, Outcome.MOVING, revision)
         }
         val teleported = teleport(destination)
         if (teleported && hasArrived(currentLocation(npc), destination, arrivalRadius)) {
             applyState(npc, assignment.targetState() ?: NPCState.IDLE, assignment.goal() ?: "")
-            return Outcome.TELEPORTED
+            return complete(npc, assignment, Outcome.TELEPORTED, revision)
         }
         applyState(npc, NPCState.IDLE, if (teleported) "teleport acceptat; sosire neconfirmata" else "deplasare indisponibila; sosire neconfirmata")
         return Outcome.WAITING
+    }
+
+    private fun complete(npc: AINPC, assignment: RoutineAssignment, outcome: Outcome, revision: Long): Outcome {
+        if (npc.decisionRevision != revision) return outcome
+        val action = when (assignment.targetState()) {
+            NPCState.EATING -> NPCAction.EAT
+            NPCState.SLEEPING -> NPCAction.SLEEP
+            else -> null
+        }
+        val atHome = outcome != Outcome.MOVING
+        val expectedState = if (atHome) assignment.targetState() else NPCState.WALKING
+        if (npc.simulationMode == NpcSimulationMode.FULL && assignment.slot() == RoutineSlot.HOME &&
+            assignment.targetAnchor() == npc.homeAnchor && action != null && npc.currentState == expectedState
+        ) {
+            npc.selfCareGoal.applied(
+                action, NpcCognitiveState.capture(npc, npc.context), NpcSelfCareGoal.homeKey(npc), atHome,
+                System.currentTimeMillis(),
+            )
+        } else npc.selfCareGoal.interrupt(System.currentTimeMillis())
+        return outcome
     }
 
     fun executeOverride(

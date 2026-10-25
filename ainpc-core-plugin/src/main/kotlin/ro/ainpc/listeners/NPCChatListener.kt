@@ -55,6 +55,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onAsyncChat(event: AsyncChatEvent) {
+        val acceptsFoodReply = !event.isCancelled
         val player = event.player
         val message = PLAIN_TEXT.serialize(event.message())
 
@@ -80,6 +81,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             if (!player.isOnline) return@runSync
             try {
                 if (handleAddressClarification(player, message)) return@runSync
+                if (acceptsFoodReply && handleFoodRequestReply(player, message)) return@runSync
                 val target = resolveTarget(player, message)
                 if (target != null) {
                     handleResolvedMessage(player, message, target)
@@ -92,6 +94,7 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
+        plugin.decisionEngine.forgetFoodRequestPlayer(event.player.uniqueId)
         WorldBlueprintWizard.clear(event.player.uniqueId)
         WorldBlueprintSuggestionCommand.clear(event.player.uniqueId)
         val partner = conversations().getConversationPartner(event.player)
@@ -99,6 +102,17 @@ class NPCChatListener(plugin: AINPCPlugin) : AbstractPluginListener(plugin) {
             publishDialogSessionEnded(event.player, partner, "quit")
         }
         conversations().clearConversation(event.player)
+    }
+
+    private fun handleFoodRequestReply(player: Player, message: String): Boolean {
+        if (conversations().isInConversation(player) || plugin.guiService.hasTextInputRequest(player) ||
+            WorldBlueprintWizard.hasSession(player.uniqueId)
+        ) return false
+        return plugin.decisionEngine.handleFoodRequestReply(player, message) { npc ->
+            publishDialogMessageReceived(
+                player, npc, message, buildTarget(player, npc, true, false, "food_request_reply", 1),
+            )
+        }
     }
 
     private fun resolveTarget(player: Player, message: String): ResolvedDialogTarget? {

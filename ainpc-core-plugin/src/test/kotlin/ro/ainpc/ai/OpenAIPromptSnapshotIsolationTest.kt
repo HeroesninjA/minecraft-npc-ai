@@ -210,6 +210,26 @@ class OpenAIPromptSnapshotIsolationTest {
     }
 
     @Test
+    fun `missing return progress remains frozen after confirmed arrival resets the live monitor`() {
+        val started = System.currentTimeMillis() - 180_000L
+        val walking = NpcCognitiveState(hungerLevel = 20, currentState = NPCState.WALKING)
+        npc.selfCareGoal.applied(NPCAction.EAT, walking, "world:home", false, started)
+        repeat(6) { index ->
+            val previous = started + index * 30_000L
+            npc.selfCareGoal.observe(walking, walking, "world:home", false, previous, previous + 30_000L)
+        }
+        val snapshot = capture()
+        npc.selfCareGoal.applied(NPCAction.EAT, walking.copy(currentState = NPCState.EATING),
+            "world:home", true, System.currentTimeMillis())
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+
+        assertTrue(prompt.contains("cauza nu este stabilita"))
+        assertTrue(prompt.contains("Lipsa progresului confirmat nu dovedeste o ruta blocata"))
+        assertFalse(npc.selfCareGoal.snapshot(System.currentTimeMillis())!!.lacksProgress())
+        assertFalse(snapshot.npcDescription.contains("Sunt acasa pentru obiectivul"))
+    }
+
+    @Test
     fun `cognitive description stays detached when needs and danger change after capture`() {
         npc.hungerLevel = 10
 

@@ -13,6 +13,37 @@ class NpcSelfCareGoalTest {
     private val walking = NpcCognitiveState(hungerLevel = 20, currentState = NPCState.WALKING)
 
     @Test
+    fun `return diagnostics explain the same eligibility without mutating the objective`() {
+        assertEquals(NpcSelfCareContinuity.NO_RECENT_GOAL, goal.returnStatus(walking, home, false, now))
+        goal.applied(NPCAction.EAT, walking, home, false, now)
+        val original = goal.snapshot(now)
+        val cases = listOf(
+            walking to NpcSelfCareContinuity.READY,
+            walking.copy(isInDanger = true) to NpcSelfCareContinuity.UNSAFE,
+            walking.copy(safetyLevel = 20) to NpcSelfCareContinuity.UNSAFE,
+            walking.copy(hasInteractingPlayer = true) to NpcSelfCareContinuity.INTERLOCUTOR,
+            walking.copy(currentState = NPCState.IDLE) to NpcSelfCareContinuity.STATE_MISMATCH,
+            walking.copy(hungerLevel = -1) to NpcSelfCareContinuity.INVALID_NEED,
+            walking.copy(hungerLevel = 101) to NpcSelfCareContinuity.INVALID_NEED,
+            walking.copy(hungerLevel = 60) to NpcSelfCareContinuity.NEED_SATISFIED,
+        )
+        for ((state, status) in cases) {
+            assertEquals(status, goal.returnStatus(state, home, false, now))
+            assertEquals(status == NpcSelfCareContinuity.READY, goal.canContinueReturn(state, home, false, now))
+            assertEquals(original, goal.snapshot(now))
+        }
+        assertEquals(NpcSelfCareContinuity.HOME_UNCONFIRMED, goal.returnStatus(walking, "", false, now))
+        assertEquals(NpcSelfCareContinuity.HOME_CHANGED, goal.returnStatus(walking, "other", false, now))
+        assertEquals(NpcSelfCareContinuity.AT_HOME, goal.returnStatus(walking, home, true, now))
+        assertEquals(NpcSelfCareContinuity.NO_RECENT_GOAL, goal.returnStatus(walking, home, false, now - 1L))
+        assertEquals(NpcSelfCareContinuity.NO_RECENT_GOAL, goal.returnStatus(walking, home, false, now + 300_000L))
+        assertEquals(original, goal.snapshot(now))
+
+        goal.interrupt(now + 1L)
+        assertEquals(NpcSelfCareContinuity.NOT_RETURNING, goal.returnStatus(walking, home, false, now + 1L))
+    }
+
+    @Test
     fun `applied care tracks returning arrival and observed recovery without declaring early success`() {
         goal.applied(NPCAction.EAT, walking, home, false, now)
         assertEquals(NpcSelfCareGoal.Stage.RETURNING_HOME, goal.snapshot(now)!!.stage)
@@ -108,5 +139,79 @@ class NpcSelfCareGoalTest {
         assertNull(goal.snapshot(now))
         goal.applied(NPCAction.REST, walking, home, false, now)
         assertNull(goal.snapshot(now))
+    }
+
+    @Test
+    fun `reapplying a return cannot hide three observed minutes without arrival or recovery`() {
+        goal.applied(NPCAction.EAT, walking, home, false, now)
+        repeat(6) { index ->
+            val previousTick = now + index * 30_000L
+            goal.observe(walking, walking, home, false, previousTick, previousTick + 30_000L)
+            goal.applied(NPCAction.EAT, walking, home, false, previousTick + 30_000L)
+        }
+
+        val progress = goal.snapshot(now + 180_000L)!!
+        assertEquals(180_000L, progress.withoutProgressMillis)
+        assertTrue(progress.lacksProgress())
+        assertFalse(goal.canContinueReturn(walking, home, false, now + 180_000L))
+        assertEquals(NpcSelfCareContinuity.NO_PROGRESS, goal.returnStatus(walking, home, false, now + 180_000L))
+        assertTrue(progress.description().contains("cauza nu este stabilita"))
+        assertEquals(NpcSelfCareGoal.Stage.RETURNING_HOME, progress.stage)
+        assertFalse(progress.observedRecovery)
+
+        val eating = walking.copy(currentState = NPCState.EATING)
+        goal.applied(NPCAction.EAT, eating, home, true, now + 180_001L)
+        assertFalse(goal.snapshot(now + 180_001L)!!.lacksProgress())
+        goal.observe(eating, eating.copy(hungerLevel = 28), home, true, now + 180_000L, now + 210_000L)
+        assertTrue(goal.snapshot(now + 210_000L)!!.observedRecovery)
+    }
+
+    @Test
+    fun `only valid new observation time counts and reading or selecting never creates progress`() {
+        goal.applied(NPCAction.EAT, walking, home, false, now)
+        goal.observe(walking, walking, home, false, now - 60_000L, now + 30_000L)
+        val observed = goal.snapshot(now + 30_000L)!!
+        assertEquals(30_000L, observed.withoutProgressMillis)
+        goal.observe(walking, walking, home, false, now, now + 30_000L)
+        assertEquals(observed, goal.snapshot(now + 30_000L))
+
+        repeat(10) {
+            assertTrue(goal.canContinueReturn(walking, home, false, now + 90_000L))
+        }
+        assertEquals(observed, goal.snapshot(now + 90_000L))
+        goal.continueReturn(walking, home, now + 90_000L)
+        assertEquals(30_000L, goal.snapshot(now + 90_000L)!!.withoutProgressMillis)
+    }
+
+    @Test
+    fun `return continuity cannot bypass changed needs home safety interaction or freshness`() {
+        goal.applied(NPCAction.EAT, walking, home, false, now)
+        assertTrue(goal.canContinueReturn(walking, home, false, now))
+        for (state in listOf(
+            walking.copy(hungerLevel = 60), walking.copy(hungerLevel = -1),
+            walking.copy(isInDanger = true), walking.copy(safetyLevel = 20),
+            walking.copy(hasInteractingPlayer = true), walking.copy(currentState = NPCState.TALKING),
+        )) {
+            assertFalse(goal.canContinueReturn(state, home, false, now))
+        }
+        assertFalse(goal.canContinueReturn(walking, "other", false, now))
+        assertFalse(goal.canContinueReturn(walking, "", false, now))
+        assertFalse(goal.canContinueReturn(walking, home, true, now))
+        assertFalse(goal.canContinueReturn(walking, home, false, now - 1L))
+        assertFalse(goal.canContinueReturn(walking, home, false, now + 300_000L))
+
+        goal.continueReturn(walking.copy(isInDanger = true), home, now + 1L)
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, goal.snapshot(now + 1L)!!.stage)
+    }
+
+    @Test
+    fun `confirmed recovery resets missing progress time without promising movement`() {
+        val eating = walking.copy(currentState = NPCState.EATING)
+        goal.applied(NPCAction.EAT, eating, home, true, now)
+        goal.observe(eating, eating, home, true, now, now + 120_000L)
+        assertEquals(120_000L, goal.snapshot(now + 120_000L)!!.withoutProgressMillis)
+        goal.observe(eating, eating.copy(hungerLevel = 28), home, true, now + 120_000L, now + 150_000L)
+        assertEquals(0L, goal.snapshot(now + 150_000L)!!.withoutProgressMillis)
+        assertFalse(goal.canContinueReturn(eating, home, true, now + 150_000L))
     }
 }

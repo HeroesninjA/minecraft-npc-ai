@@ -13,6 +13,21 @@ class NpcCognitiveResponseTest {
     private val hungry = NpcCognitiveState(hungerLevel = 10)
 
     @Test
+    fun `missing progress is communicated from captured evidence without naming a blocked path`() {
+        val progress = NpcSelfCareGoal.Snapshot(
+            NPCAction.EAT, NpcSelfCareGoal.Stage.RETURNING_HOME, 10, 10, "world:home", false,
+            1_000L, withoutProgressMillis = 180_000L,
+        )
+        val state = hungry.copy(selfCareProgress = progress)
+        val response = NpcCognitiveResponse.resolve("Cum merge obiectivul de hrana?", state)!!
+
+        assertEquals(progress.description(), response)
+        assertTrue(response.contains("cauza nu este stabilita"))
+        assertTrue(!response.contains("ruta blocata"))
+        assertEquals(progress, state.selfCareProgress)
+    }
+
+    @Test
     fun `Romanian thought questions use current needs despite diacritics and punctuation`() {
         for (message in listOf("La ce te gândești?", "CE AI ÎN MINTE?", "Ce gânduri ai acum?")) {
             assertTrue(NpcCognitiveResponse.resolve(message, hungry)!!.contains("foame"))

@@ -1,7 +1,7 @@
 # Debugging si testare
 
 Status: runbook operational canonic.
-Actualizat: 2026-07-18.
+Actualizat: 2026-10-25.
 
 Acest document detine fluxul de triage. Starea implementata apartine codului si testelor, iar imbunatatirile neimplementate raman in `planning/diagnostic-si-observabilitate-roadmap.md`.
 
@@ -52,6 +52,56 @@ Comanda captureaza mai intai starea runtime pe main thread, confirma ca exportul
 Folderul rezultat este `plugins/AINPC/debug-dumps/debug-dump-<timestamp>/`; coliziunile din aceeasi secunda primesc sufix numeric. Filtrul optional din `all` cauta un fragment literal din UUID-ul stocat (nu rezolva nume de jucatori) in `player-progressions.json`, `player-quest-progress.json`, `player-progression.json` si `quest-anchor-bindings.json`; randurile sunt filtrate direct in SQL, iar sumarurile acestor fisiere reflecta doar randurile filtrate. Fiecare JSON include `player_filter_present`, iar `quest.txt` indica filtrul cerut; niciunul nu repeta valoarea fragmentului ca metadate. Scope-ul `npc` nu accepta filtru, fiindca nu contine aceste exporturi. Auditul quest, evenimentele story si alte artefacte raman globale, deci filtrul nu izoleaza toate datele unui singur jucator. Optiunea `privacy-safe` poate fi pusa inainte sau dupa filtru si este recomandata pentru orice artefact care paraseste serverul. `index.txt` indica doar aplicarea filtrului, fara valoarea introdusa, si declara fazele snapshot, limitele active, cleanup-ul si artefactele trunchiate; `manifest.json` declara schema de confidentialitate, metadata snapshot si inventarul payload-urilor. Retentia automata elimina oldest-first numai directoarele managed si protejeaza exportul curent; inspecteaza ambele fisiere inainte sa distribui dump-ul sau sa interpretezi absenta unor randuri drept absenta starii runtime.
 
 Citeste `operations/observability-and-logs.md` inainte sa distribui un dump.
+
+## Smoke test cognitiv
+
+Observarea nu necesita activarea continuitatii. Foloseste un NPC existent si `ainpc.admin`:
+
+```text
+/ainpc decision <numeNpc>
+/ainpc decision nearest
+```
+
+Consola trebuie sa indice numele; `nearest` necesita un jucator si cauta in raza de 10 blocuri. Nu porni o conversatie pentru a inspecta ingrijirea in curs: conversatia poate intrerupe legitim obiectivul. Comanda de diagnostic nu face aceasta tranzitie.
+
+1. Verifica separat `Atentie`, `Nevoi (0-100)`, `Intentie curenta`, `Ultima decizie aplicata` si `Progres ingrijire`. Absenta unei inregistrari recente nu este o eroare si nu trebuie inlocuita printr-o reusita inventata. Distributia candidatilor este o previzualizare, nu dovada executiei.
+2. Repeta comanda fara o actualizare reala a simularii intre citiri. Nevoile, progresul si numarul deciziilor reale nu trebuie sa avanseze din cauza comenzii; vechimea observatiei poate creste normal. Un tick periodic intre citiri poate schimba legitim datele.
+3. Verifica `Continuitate ingrijire`. Pentru un NPC `FULL`, configuratia livrata trebuie raportata ca feature oprit. Raportul explica primul impediment in ordinea verificarilor, nu toate cauzele simultan. O stare deja modificata sau un obiectiv intrerupt poate fi impedimentul raportat in locul unei alte conditii. Satietatea si energia mari inseamna nevoi mai bine acoperite, nu foame sau oboseala mai mari.
+
+Pentru scenariul activ, foloseste numai un server de test pregatit, un NPC `FULL` cu nevoie sub 35 si o casa valida in lumea curenta. Pastreaza configuratia initiala si activeaza explicit:
+
+```yaml
+features:
+  simulation: true
+  routine: true
+simulation:
+  enabled: true
+  decision:
+    goal_continuity_enabled: true
+routine:
+  enabled: true
+```
+
+Acesta este un fragment de configuratie, nu un fisier complet; pastreaza celelalte setari si foloseste fluxul de reload/restart al mediului de test. Nu modifica DB-ul sau terenul de productie pentru a forta scenariul.
+
+4. Lasa rutina sa accepte deplasarea spre casa. Diagnosticul poate arata `RETURNING_HOME` si continuitatea eligibila, dar nu trebuie sa afirme sosirea. O alegere aplicata de continuare trebuie sa mentioneze pastrarea revenirii; selectia singura nu muta entitatea.
+5. Dupa sosirea confirmata, urmareste `RECOVERING`, apoi imbunatatirea nevoii la actualizari reale si `SATISFIED` la pragul 60. Sosirea singura nu incheie obiectivul. Un rezultat produs printr-o schimbare externa nu trebuie atribuit automat planului.
+6. Daca se cumuleaza trei minute de observatii valide fara sosire ori refacere, asteapta eliberarea prioritatii si mentionarea cauzei necunoscute, nu declararea unei rute imposibile. Reaplicarea aceleiasi intentii nu trebuie sa reseteze contorul. Intervalele invalide sau prea lungi pot invalida observatia, conform contractului de simulare.
+7. Verifica separat o conversatie, un pericol, o pauza de rutina si un override: continuitatea nu trebuie sa le suprascrie. Oprirea feature-ului trebuie sa elimine imediat eligibilitatea si reutilizarea alegerii de continuitate din cache; citirea diagnosticului nu sterge cache-ul. La final, restaureaza configuratia initiala a serverului de test.
+
+Inregistreaza versiunea, flagurile, intervalele taskurilor si diagnosticul dinainte/dupa fiecare eveniment. Scenariul ramane de verificat pe server; testele unitare si de integrare nu reprezinta un smoke test Minecraft executat.
+
+### Integrarea pe tick-ul public
+
+Regresia locala pentru bucla cognitiva ruleaza fara server:
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.engine.CognitiveLifeSimulationTickTest"
+```
+
+Testul foloseste intrarea publica a managerului, actualizarea reala a nevoilor, alegerea, aplicarea, memoria si raspunsul local. Perceptia, entitatea si pozitia sunt controlate in fixture; nu se instaleaza o implementare globala de registre Paper si nu se afirma executia fizicii ori a navigatiei reale. Invocarile sunt accelerate, cu un interval pozitiv intre ele si cu limitarile de timp existente ale simularii.
+
+Doua regresii protejeaza explicit pierderea entitatii: flagul `spawned` ramas vechi nu permite continuarea pe coordonatele stocate, iar invalidarea in timpul actualizarii contextului opreste tick-ul inainte de nevoi si decizii. Aceeasi protectie este verificata pentru `LIGHT` si pentru apelurile directe ale motoarelor. O disparitie nu trebuie sa produca succes, experienta sau decizie aplicata noua.
 
 ## Teste locale
 

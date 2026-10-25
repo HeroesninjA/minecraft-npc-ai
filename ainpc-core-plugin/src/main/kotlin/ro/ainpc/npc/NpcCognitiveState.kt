@@ -122,7 +122,10 @@ data class NpcCognitiveState(
     }
 
     companion object {
-        fun capture(npc: AINPC, context: NPCContext = npc.context): NpcCognitiveState = NpcCognitiveState(
+        fun capture(npc: AINPC, context: NPCContext = npc.context): NpcCognitiveState =
+            capture(npc, context, System.currentTimeMillis())
+
+        internal fun capture(npc: AINPC, context: NPCContext, now: Long): NpcCognitiveState = NpcCognitiveState(
             hungerLevel = npc.hungerLevel,
             energyLevel = npc.energyLevel,
             socialNeedLevel = npc.socialNeedLevel,
@@ -133,9 +136,9 @@ data class NpcCognitiveState(
             hasInteractingPlayer = context.interactingPlayer != null || context.interactingNPC != null,
             currentGoal = npc.currentGoal,
             plannedRoutineActivity = npc.plannedRoutineActivity,
-            experienceDescription = npc.actionExperience.latestDescription(System.currentTimeMillis()),
-            decisionDescription = npc.lastDecision?.description(System.currentTimeMillis()).orEmpty(),
-            selfCareProgress = npc.selfCareGoal.snapshot(System.currentTimeMillis()),
+            experienceDescription = npc.actionExperience.latestDescription(now),
+            decisionDescription = npc.lastDecision?.description(now).orEmpty(),
+            selfCareProgress = npc.selfCareGoal.snapshot(now),
         )
     }
 }

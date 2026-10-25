@@ -131,4 +131,19 @@ class ActionEligibilityTest {
         assertEquals(100, DecisionEngine.nextHungerLevel(99, NPCState.EATING, true, 1.5, 1.0))
         assertEquals(0, DecisionEngine.nextHungerLevel(0, NPCState.IDLE, false, 1.5, 1.0))
     }
+
+    @Test
+    fun `return priority cannot override danger conversation or actual care at home`() {
+        val returning = ActionSituation(false, false, false, returningForCare = true,
+            currentState = NPCState.WALKING, hungerLevel = 20)
+        assertEquals(listOf(NPCAction.WALK_TO_TARGET),
+            DecisionEngine.eligibleActions(NPCState.WALKING, false, returning))
+        assertTrue(DecisionEngine.blockedActions(NPCState.WALKING, false, returning).isEmpty())
+        assertFalse(NPCAction.WALK_TO_TARGET in DecisionEngine.eligibleActions(NPCState.WALKING, true, returning))
+        assertFalse(NPCAction.WALK_TO_TARGET in DecisionEngine.eligibleActions(NPCState.TALKING, false, returning))
+        assertFalse(NPCAction.WALK_TO_TARGET in DecisionEngine.eligibleActions(NPCState.WALKING, false,
+            returning.copy(hasInteractingPlayer = true)))
+        assertEquals(listOf(NPCAction.EAT), DecisionEngine.eligibleActions(NPCState.EATING, false,
+            returning.copy(isAtHome = true, currentState = NPCState.EATING)))
+    }
 }

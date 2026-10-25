@@ -47,6 +47,20 @@ Cererea autonoma are acum o fereastra de raspuns de 45 de secunde pentru destina
 
 Monitorizarea este temporara si limitata la aceste doua nevoi. Functioneaza separat de invatare, fara sa adauge navigatie, adaptarea scorurilor sau planificare generala. Testele acopera progresul prin actualizarea reala a nevoilor, intreruperile si invalidarea din callback; verificarea sosirii si a comportamentului complet in serverul Minecraft ramane necesara. Contractul este in [runtime-ul de simulare](../architecture/simulation-service.md).
 
+## Continuitate limitata a obiectivului - 2026-10-25
+
+Obiectivul de ingrijire poate porni acum si din deplasarea acceptata ori sosirea verificata de executorul rutinei, nu doar din masa sau somnul aplicat de simulare. Cu `simulation.decision.goal_continuity_enabled=true` si ambele sisteme active, urmatoarea selectie pastreaza temporar revenirea deja angajata, in loc sa aleaga o activitate exploratorie incompatibila. Pericolul, conversatia, pauzele si override-urile nu sunt suprascrise. Feature-ul este implicit oprit.
+
+Trei minute cumulate de observatii valide fara sosire sau refacere elibereaza aceasta prioritate. Reaplicarea aceleiasi intentii nu ascunde lipsa progresului. Autoevaluarea modifica astfel o alegere verificabila, fara sa declare o ruta imposibila sau sa inventeze cauza stagnarii. Miscarea ramane cea a rutinei existente; nu este un planificator general. Testele compara selectia cu si fara continuitate in aceleasi conditii si verifica intreruperile, cache-ul si snapshot-ul de comunicare. Verificarea runtime in Minecraft ramane necesara.
+
+## Observabilitatea circuitului cognitiv - 2026-10-25
+
+`/ainpc decision` expune read-only atentia, nevoile, intentia, ultima alegere aplicata, progresul observat si motivul eligibilitatii sau opririi continuitatii. Evaluarea este comuna diagnosticului si selectorului; simpla inspectie nu executa actiuni, nu creeaza memorie si nu prelungeste dovezile temporare. Acest pas permite verificarea circuitului existent inainte de extinderea comportamentului. [Runbook-ul](../operations/debugging-si-testare.md#smoke-test-cognitiv) separa observarea de scenariile care necesita activarea explicita a simularii si rutinei pe un server de test. Testele automate nu inlocuiesc aceasta verificare in Minecraft.
+
+## Validare pe tick-ul public - 2026-10-25
+
+Bucla publica are acum scenarii automate pentru manager, perceptie controlata, nevoi, decizie, aplicare, experienta si comunicarea rezultatului. Au fost reproduse si corectate doua cazuri in care disparitia entitatii permitea continuarea pe coordonatele memorate ori dupa invalidarea din actualizarea contextului. Tick-urile `FULL` si `LIGHT` se opresc inainte sa produca nevoi sau alegeri pentru o entitate indisponibila. Aceste teste nu valideaza fizica ori perceptia Paper; [smoke test-ul Minecraft](../operations/debugging-si-testare.md#smoke-test-cognitiv) ramane necesar.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.

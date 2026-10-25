@@ -10,10 +10,50 @@ import ro.ainpc.engine.RepeatAdjustment
 import ro.ainpc.engine.DecisionEngine
 import ro.ainpc.engine.DecisionStatistics
 import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcSelfCareContinuity
 import java.lang.reflect.Proxy
 import java.util.Locale
 
 class AINPCDecisionCommandTest {
+    @Test
+    fun cognitiveDiagnosticSeparatesCurrentIntentHistoricalChoiceAndObservedProgress() {
+        val now = 1_000_000L
+        val progress = NpcSelfCareGoal.Snapshot(NPCAction.EAT, NpcSelfCareGoal.Stage.RETURNING_HOME,
+            20, 18, "world:home", false, now - 2_000L, withoutProgressMillis = 90_000L)
+        val state = NpcCognitiveState(hungerLevel = 18, energyLevel = 40, currentState = NPCState.WALKING,
+            currentGoal = "revina acasa", selfCareProgress = progress)
+        val diagnostic = DecisionEngine.CognitiveDiagnostic(now, state, NpcSelfCareContinuity.READY)
+        val lines = formatDecisionCognition(diagnostic)
+
+        assertEquals(7, lines.size)
+        assertTrue(lines.any { it.contains("satietate 18, energie 40") })
+        assertTrue(lines.any { it.contains("Intentie curenta:") && it.contains("revina acasa") })
+        assertTrue(lines.any { it.contains("Ultima decizie aplicata:") && it.contains("fara inregistrare recenta") })
+        assertTrue(lines.any { it.contains("sosirea nu este inca confirmata") })
+        assertTrue(lines.any { it.contains("EAT / RETURNING_HOME; nevoie 20 -> 18") })
+        assertTrue(lines.any { it.contains("fara progres confirmat 90 s; vechime 2 s") })
+        assertTrue(lines.last().contains("eligibila"))
+        assertEquals(lines, formatDecisionCognition(diagnostic))
+    }
+
+    @Test
+    fun cognitiveDiagnosticBoundsTextAndDeclaresAbsentEvidenceWithoutInventingAction() {
+        val state = NpcCognitiveState(currentGoal = "sa revin\n\racasa\t".repeat(100),
+            decisionDescription = " ", selfCareProgress = null)
+        val lines = formatDecisionCognition(
+            DecisionEngine.CognitiveDiagnostic(1_000L, state, NpcSelfCareContinuity.FEATURE_DISABLED),
+        )
+
+        assertEquals(6, lines.size)
+        assertTrue(lines.all { it.length <= 380 && '\n' !in it && '\r' !in it && '\t' !in it })
+        assertTrue(lines.any { it.contains("Progres ingrijire:") && it.contains("fara obiectiv recent") })
+        assertTrue(lines.none { it.contains("Observatie:") })
+        assertTrue(lines.last().contains("goal_continuity_enabled"))
+    }
+
     private class TestCommand(name: String) : Command(name) {
         override fun execute(sender: CommandSender, commandLabel: String, args: Array<out String>): Boolean = true
     }

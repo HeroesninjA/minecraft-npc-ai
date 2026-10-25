@@ -1,7 +1,7 @@
 # Probabilitati pentru actiunile NPC
 
 Status: implementare initiala pentru selectia de stare si obiectiv din simularea de viata.
-Actualizat: 2026-10-24.
+Actualizat: 2026-10-25.
 
 ## Analiza
 
@@ -24,6 +24,7 @@ Pentru scorurile 50, 48 si 47, probabilitatile sunt aproximativ 40,5%, 31,6% si 
 
 ## Configurare
 
+- `simulation.decision.goal_continuity_enabled`: implicit `false`. Cu simularea si rutina active, un obiectiv sigur de ingrijire pornit dintr-o deplasare acceptata poate pastra temporar `WALK_TO_TARGET` ca unic candidat de revenire. Lipsa progresului observat elibereaza prioritatea dupa trei minute cumulate; pericolul, interlocutorul, pauzele si override-urile au prioritate. Nu schimba scorurile si nu executa miscare. Contractul este in [runtime-ul de simulare](simulation-service.md).
 - `simulation.decision.max_choices`: implicit 3, permis 1-8. Limiteaza numarul alternativelor, inclusiv `DO_NOTHING` cand `idle_weight` este pozitiv.
 - `simulation.decision.score_window`: implicit 15, permis 0-100. Zero permite doar actiuni la egalitate cu cel mai bun scor.
 - `simulation.decision.temperature`: implicit 8, permis 0,5-50. O valoare mai mare face optiunile incluse mai apropiate ca sansa; una mai mica favorizeaza scorul maxim.
@@ -42,6 +43,8 @@ Pentru scorurile 50, 48 si 47, probabilitatile sunt aproximativ 40,5%, 31,6% si 
 Valorile negative ori zero acolo unde nu sunt permise revin la implicit; valorile peste maxim sunt limitate, iar numerele nefinite revin la implicit. Optiunile afecteaza doar selectia probabilistica, nu scorurile, prioritatea pericolului sau executarea actiunilor. Noile valori sunt citite din config la urmatoarea decizie dupa reincarcarea configuratiei.
 
 ## Diagnostic in joc
+
+Pe langa distributia candidatelor, comanda afiseaza acum autoevaluarea, nevoile numerice, intentia, ultima decizie efectiv aplicata si progresul ingrijirii, cu vechimea si timpul cumulat fara progres confirmat. Motivul de continuitate provine din aceeasi evaluare folosita la alegere si reprezinta primul impediment gasit, nu toate conditiile simultan. `eligibila` nu confirma sosirea. Aceste date sunt capturate read-only si nu creeaza decizii sau observatii; detaliile sunt in [runtime-ul de simulare](simulation-service.md#diagnostic-cognitiv-read-only).
 
 Experienta sociala are o contributie separata, `ajutor`: 5-8 puncte pentru `GREET`, `TALK` sau `THANK` cand NPC-ului ii este foame, contextul este sigur si interlocutorul curent verificat are acelasi UUID ca un ajutor alimentar confirmat recent. Declaratiile si reputatia nu produc acest bonus. Se aplica numai actiunilor deja eligibile si respecta `simulation.decision.experience_enabled`.
 
