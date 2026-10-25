@@ -24,6 +24,12 @@ dependencies {
     testImplementation "io.papermc.paper:paper-api:${paperVersion}"
 }
 
+tasks.named('test') {
+    inputs.file(rootProject.file('scripts/smoke-paper-addon-lifecycle.ps1'))
+            .withPropertyName('paperAddonLifecycleScript')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 tasks.named('jar', Jar) {
     duplicatesStrategy = DuplicatesStrategy.WARN
     dependsOn configurations.runtimeClasspath

@@ -47,10 +47,22 @@ Mediul trebuie sa aiba un JDK compatibil si `JAVA_HOME` valid. Nu documenta un b
 Gate-ul automat canonic este:
 
 ```powershell
-.\scripts\smoke-paper-addon-lifecycle.ps1 -PaperJar "C:\cale\paper.jar"
+.\scripts\smoke-paper-addon-lifecycle.ps1 -PaperJar "C:\cale\paper.jar" -AcceptEula
 ```
 
 `-PaperJar` poate fi omis daca `PAPER_JAR` este setat sau exista un `paper-data/data/paper-*.jar`. Java este rezolvat din `-JavaExecutable`, `JAVA_HOME` sau `PATH`. Scriptul construieste implicit JAR-urile; `-SkipBuild` este permis numai cand artefactele curente exista deja.
+
+Pornirea necesita acum `-AcceptEula`, furnizat numai dupa acceptarea EULA de catre operator; lipsa lui opreste fluxul inainte de build, copiere sau pornire Java. Nu este acceptata automat de o comanda de pregatire. Verifica separat [cerintele Java ale versiunii Paper tinta](https://docs.papermc.io/paper/getting-started/#requirements).
+
+Pentru pregatire fara pornire:
+
+```powershell
+.\scripts\smoke-paper-addon-lifecycle.ps1 -PaperJar "C:\cale\paper.jar" -SkipBuild -PrepareOnly
+```
+
+Modul creeaza numai un director nou in `.ai/tmp/paper-addon-lifecycle-*`, copiaza core-ul in `plugins`, scrie `eula=false` si configureaza bind pe `127.0.0.1`, port automat si RCON oprit. Nu copiaza lumi sau DB-uri existente, nu lanseaza procesul Paper si nu executa fazele runtime. Fara `-SkipBuild`, pregatirea poate rula build-ul Gradle folosind Java. `-PrepareOnly` pastreaza limitele de pornire si EULA chiar daca este combinat cu `-AcceptEula`. Directorul pregatit este pastrat fara a necesita `-KeepServer`.
+
+Raportul implicit de pregatire este separat: `.ai/release-reports/paper-addon-lifecycle-preparation.json`. Succesul pregatirii are exit code 0, `status=prepared_not_run`, `preparation_ok=true`, `ok=false`, `smoke_attempted=false` si `phases=[]`; o eroare de pregatire are exit code nenul. Hash-urile identifica fisierele alese, nu compatibilitatea sau executarea lor. Raportul smoke anterior nu este suprascris implicit. Pregatirea nu implementeaza reluarea celor trei faze in directorul pastrat: o invocare runtime ulterioara creeaza alt director izolat si verifica din nou intrarile.
 
 Runnerul creeaza un server temporar izolat si executa fara RCON trei faze:
 

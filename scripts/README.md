@@ -34,6 +34,16 @@ docker compose down
 
 Categoriile sunt `all`, `gui`, `quest`, `progression`, `story`, `mapping`, `npc`, `command`, `debug`, `spawn`, `listener`, `economy`, `ai`, `routine`, `topology`, `utils` si `database`.
 
+## Pregatire Paper fara pornire
+
+```powershell
+./scripts/smoke-paper-addon-lifecycle.ps1 -PaperJar "C:\cale\paper.jar" -SkipBuild -PrepareOnly
+```
+
+`-SkipBuild` cere JAR-uri deja construite. Pregatirea pastreaza un director nou in `.ai/tmp/`, cu core-ul, `eula=false`, bind local `127.0.0.1` si RCON oprit; nu porneste Paper, nu modifica lumi existente si nu executa smoke-ul. Raportul separat `paper-addon-lifecycle-preparation.json` are `status=prepared_not_run` si `ok=false` chiar daca pregatirea are exit code 0. Nu inlocuieste dovada unui runtime reusit sau verificarea compatibilitatii JAR-ului Paper ales.
+
+Pornirea reala prin acest runner cere explicit `-AcceptEula`, numai dupa acceptarea EULA de catre operator, si creeaza un alt director izolat. Contractul complet este in `docs v2/reference/kotlin-paper-packaging-si-smoke.md`.
+
 ## Audit RCON automatizabil
 
 ```powershell
@@ -56,6 +66,7 @@ Wrapperul valideaza un singur document `ainpc-audit-report` schema v1 si reconci
 | `deploy-demo.ps1` | copiaza core-ul si addonul pe un server existent | stop/restart sigur ori rollback complet |
 | `smoke-paper-mapping.ps1` | smoke specializat mapping | toate domeniile demo |
 | `smoke-paper-quests.ps1` | smoke specializat quest/RCON | interactiunea completa a playerului |
+| `smoke-paper-addon-lifecycle.ps1` | pregatire fara pornire sau smoke izolat in trei faze, cu acceptare EULA explicita pentru runtime | un `-PrepareOnly` nu dovedeste startup, compatibilitate ori joc functional |
 | `ainpc-audit-rcon.ps1` | audit JSON RCON cu contract semantic si exit code real | autenticitatea ori corectitudinea datelor runtime |
 | `smoke-demo-complet.ps1` | executor legacy de comenzi/preparare | PASS semantic; marcheaza comenzile `EXECUTED_UNVERIFIED` |
 | `test-demo.ps1` | checklist interactiv/preview | verificare automata |

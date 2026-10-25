@@ -1,5 +1,7 @@
 package ro.ainpc.engine
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.GameMode
@@ -20,6 +22,7 @@ import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -31,10 +34,13 @@ import ro.ainpc.gui.GuiService
 import ro.ainpc.listeners.NPCChatListener
 import ro.ainpc.listeners.NpcFoodInteraction
 import ro.ainpc.managers.ConversationSessionManager
+import ro.ainpc.managers.NPCManager
+import ro.ainpc.managers.buildProfileData
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcInteractionProfile
 import ro.ainpc.npc.NpcFoodAid
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.npc.NpcSocialExperience
 import java.lang.reflect.Proxy
@@ -562,6 +568,122 @@ class NpcFoodRequestServiceTest {
         assertTrue(fixture.service.tryRequest(fixture.npc, fixture.now + 900_001L))
     }
 
+    @Test
+    fun `actual food delivery survives profile hydration and requests only its exact helper`() {
+        val fixture = Fixture(seedHelper = false)
+        assertFalse(fixture.request())
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now - 1L)!!.status)
+        val receipts = fixture.npc.socialExperience.snapshot()
+        val profile = buildProfileData(fixture.npc, Gson())
+        val namesake = fixture.newPlayer(UUID(0L, 2L), fixture.helper.name, 1.0)
+
+        val restored = fixture.restoreProfile(profile)
+        restored.context.nearbyPlayers.add(namesake.player)
+
+        assertNotEquals(fixture.npc.runtimeIdentity, restored.runtimeIdentity)
+        assertEquals(fixture.npc.uuid, restored.uuid)
+        assertEquals(receipts, restored.socialExperience.snapshot())
+        assertEquals(32, restored.hungerLevel)
+        assertEquals(2, fixture.helper.heldFood!!.amount)
+        assertTrue(fixture.service.tryRequest(restored, fixture.now))
+        assertEquals(listOf(fixture.helper.id), fixture.sent.map { it.playerUuid })
+        assertEquals(receipts, fixture.npc.socialExperience.snapshot())
+        assertEquals(receipts, restored.socialExperience.snapshot())
+        assertTrue(restored.actionExperience.snapshot().isEmpty())
+        assertNull(fixture.sessions.getConversationSessionId(fixture.helper.player))
+    }
+
+    @Test
+    fun `profile hydration is idempotent and never turns an undelivered promise into another receipt`() {
+        val fixture = Fixture(seedHelper = false)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now - 1L)!!.status)
+        assertTrue(fixture.request())
+        assertTrue(fixture.service.tryReply(fixture.helper.player, "Iti aduc mancare", fixture.now + 1L))
+        val receipts = fixture.npc.socialExperience.snapshot()
+        var profile = buildProfileData(fixture.npc, Gson())
+
+        repeat(3) {
+            val restored = fixture.restoreProfile(profile)
+
+            assertEquals(receipts, restored.socialExperience.snapshot())
+            assertEquals(32, restored.hungerLevel)
+            assertNull(restored.foodRequestPreferences.activeReply(fixture.helper.id, fixture.now + 2L))
+            assertEquals(NpcFoodRequestPreferences.Reply.PROMISE,
+                fixture.npc.foodRequestPreferences.activeReply(fixture.helper.id, fixture.now + 2L))
+            assertTrue(restored.actionExperience.snapshot().isEmpty())
+            assertEquals(2, fixture.helper.heldFood!!.amount)
+            assertEquals(2, fixture.sent.size)
+            profile = buildProfileData(restored, Gson())
+        }
+        assertEquals(receipts, fixture.npc.socialExperience.snapshot())
+    }
+
+    @Test
+    fun `restored missing malformed expired and future evidence cannot enable a food request`() {
+        val source = Fixture(seedHelper = false)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(source.npc, source.helper.player, source.now - 1L)!!.status)
+        val serialized = buildProfileData(source.npc, Gson())
+        val cases: Map<String, (JsonObject) -> Unit> = linkedMapOf(
+            "missing" to { simulation -> simulation.remove("social_experience") },
+            "unsupported version" to { simulation ->
+                simulation.getAsJsonObject("social_experience").addProperty("version", 2)
+            },
+            "malformed amount" to { simulation ->
+                simulation.getAsJsonObject("social_experience").getAsJsonArray("receipts")[0]
+                    .asJsonObject.addProperty("amount", 2)
+            },
+            "expired" to { simulation ->
+                simulation.getAsJsonObject("social_experience").getAsJsonArray("receipts")[0]
+                    .asJsonObject.addProperty("recorded_at", source.now - WEEK - 1L)
+            },
+            "future" to { simulation ->
+                simulation.getAsJsonObject("social_experience").getAsJsonArray("receipts")[0]
+                    .asJsonObject.addProperty("recorded_at", source.now + 1L)
+            },
+        )
+        for ((reason, mutate) in cases) {
+            val fixture = Fixture(seedHelper = false)
+            val profile = Gson().fromJson(serialized, JsonObject::class.java)
+            mutate(profile.getAsJsonObject("simulation"))
+            val restored = fixture.restoreProfile(Gson().toJson(profile))
+            val receipts = restored.socialExperience.snapshot()
+
+            assertEquals(32, restored.hungerLevel, reason)
+            assertFalse(fixture.service.tryRequest(restored, fixture.now), reason)
+            assertTrue(fixture.sent.isEmpty(), reason)
+            assertEquals(receipts, restored.socialExperience.snapshot(), reason)
+            assertEquals(3, fixture.helper.heldFood!!.amount, reason)
+            assertTrue(restored.actionExperience.snapshot().isEmpty(), reason)
+        }
+        assertEquals(2, source.helper.heldFood!!.amount)
+        assertEquals(1, source.npc.socialExperience.snapshot().size)
+    }
+
+    @Test
+    fun `rehydration rejects an old pending reply and retains the existing service cooldown`() {
+        val fixture = Fixture(seedHelper = false)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now - 1L)!!.status)
+        assertTrue(fixture.request())
+        val restored = fixture.restoreProfile(buildProfileData(fixture.npc, Gson()))
+
+        assertFalse(fixture.service.tryReply(fixture.helper.player, "Iti aduc mancare", fixture.now + 1L))
+        assertNull(restored.foodRequestPreferences.activeReply(fixture.helper.id, fixture.now + 1L))
+        assertNull(fixture.npc.foodRequestPreferences.activeReply(fixture.helper.id, fixture.now + 1L))
+        assertFalse(fixture.service.tryRequest(restored, fixture.now + 299_999L))
+        assertTrue(fixture.service.tryRequest(restored, fixture.now + 300_000L))
+        assertTrue(fixture.service.tryReply(fixture.helper.player, "Iti aduc mancare", fixture.now + 300_001L))
+        assertEquals(NpcFoodRequestPreferences.Reply.PROMISE,
+            restored.foodRequestPreferences.activeReply(fixture.helper.id, fixture.now + 300_001L))
+        assertEquals(3, fixture.sent.size)
+        assertEquals(fixture.npc.socialExperience.snapshot(), restored.socialExperience.snapshot())
+        assertEquals(1, restored.socialExperience.snapshot().size)
+        assertEquals(2, fixture.helper.heldFood!!.amount)
+    }
+
     private class Fixture(val now: Long = 1_000_000_000L, seedHelper: Boolean = true) {
         val world = world("village")
         val config = YamlConfiguration().apply {
@@ -599,6 +721,20 @@ class NpcFoodRequestServiceTest {
         }
 
         fun request(): Boolean = service.tryRequest(npc, now)
+
+        fun restoreProfile(profile: String): AINPC {
+            val restored = newNpc(npc.uuid).apply { profileDataJson = profile }
+            val unsafe = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let { field ->
+                field.isAccessible = true
+                field.get(null) as sun.misc.Unsafe
+            }
+            val manager = unsafe.allocateInstance(NPCManager::class.java) as NPCManager
+            NPCManager::class.java.getDeclaredField("plugin").apply { isAccessible = true }.set(manager, plugin())
+            NPCManager::class.java.getDeclaredField("gson").apply { isAccessible = true }.set(manager, Gson())
+            NPCManager::class.java.getDeclaredMethod("hydrateProfileRuntimeData", AINPC::class.java)
+                .apply { isAccessible = true }.invoke(manager, restored)
+            return restored
+        }
 
         fun needs(): List<Int> = listOf(
             npc.hungerLevel, npc.energyLevel, npc.socialNeedLevel, npc.comfortLevel, npc.safetyLevel,

@@ -36,4 +36,18 @@ class PaperAddonLifecycleSmokeContractTest {
         assertFalse(source.contains("ainpc-api\\build\\libs"))
         assertFalse(source.contains("C:\\\\Program Files\\\\Java\\\\jdk-"))
     }
+
+    @Test
+    fun preparationAndRuntimeHaveDistinctEvidenceAndExplicitSafetyGates() {
+        val build = File("build.gradle").readText()
+        assertTrue(build.contains("inputs.file(rootProject.file('scripts/smoke-paper-addon-lifecycle.ps1'))"))
+        assertTrue(build.contains("withPropertyName('paperAddonLifecycleScript')"))
+        assertTrue(source.contains("[switch]\$PrepareOnly"))
+        assertTrue(source.contains("[switch]\$AcceptEula"))
+        assertTrue(source.contains("paper-addon-lifecycle-preparation.json"))
+        assertTrue(source.contains("paper-addon-lifecycle-smoke.json"))
+        assertTrue(source.contains("prepared_not_run"))
+        assertTrue(source.contains("server-ip=127.0.0.1"))
+        assertTrue(source.contains("if (-not \$PrepareOnly -and -not \$AcceptEula)"))
+    }
 }

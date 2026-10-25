@@ -93,6 +93,10 @@ Revizuirea ulterioara a extensiilor `PermissionNode` si `WorldRegionInfo` duce l
 
 Diagnosticul administrativ `decision` separa acum confirmarile alimentare pastrate de nevoile curente si de invatarea autonoma. Ultima confirmare are ID, timestamp, UUID-ul ajutorului si efectul istoric; pauza `PROMISE` sau `DECLINE` apartine numai administratorului care citeste ca jucator. Consola nu presupune identitatea altuia. Citirea nu consuma alimente, nu creeaza dovezi, nu prelungeste ori elimina pauze si nu executa decizii. [Pasii de observare](../operations/debugging-si-testare.md#livrari-si-pauze-observabile) pregatesc verificarea circuitului in joc; nu inlocuiesc smoke-ul Minecraft.
 
+## Memoria alimentara verificata prin rehidratarea profilului - 2026-10-25
+
+Patru regresii suplimentare leaga transferul alimentar controlat, profilul JSON, rehidratarea reala din manager si initiativa ulterioara catre UUID-ul exact. Repetarea rehidratarii nu repeta efectul alimentului si nu crediteaza o promisiune nelivrata. Sunt verificate dovezile absente/invalide/expirate/viitoare si separarea instantei runtime de identitatea persistenta, fara ocolirea cooldown-ului serviciului ramas activ. Nu se modifica runtime-ul sau formatul memoriei. [Metoda si limitele](../operations/debugging-si-testare.md#memoria-alimentara-dupa-rehidratare) disting aceste teste de un restart complet si de verificarea in Minecraft.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.

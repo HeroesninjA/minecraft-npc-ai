@@ -3,7 +3,7 @@ param(
     [string]$ProjectRoot = "",
     [string]$PaperJar = $env:PAPER_JAR,
     [string]$JavaExecutable = "",
-    [string]$OutputFile = ".ai\release-reports\paper-addon-lifecycle-smoke.json",
+    [string]$OutputFile = "",
     [ValidateRange(30, 600)]
     [int]$StartupTimeoutSeconds = 180,
     [ValidateRange(10, 180)]
@@ -11,6 +11,8 @@ param(
     [ValidateRange(512, 4096)]
     [int]$MaxMemoryMb = 1024,
     [switch]$SkipBuild,
+    [switch]$PrepareOnly,
+    [switch]$AcceptEula,
     [switch]$KeepServer
 )
 
@@ -350,6 +352,13 @@ $root = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
     $ProjectRoot
 }
 $root = (Resolve-Path -LiteralPath $root).Path
+if ([string]::IsNullOrWhiteSpace($OutputFile)) {
+    $OutputFile = if ($PrepareOnly) {
+        ".ai\release-reports\paper-addon-lifecycle-preparation.json"
+    } else {
+        ".ai\release-reports\paper-addon-lifecycle-smoke.json"
+    }
+}
 $outputPath = if ([IO.Path]::IsPathRooted($OutputFile)) {
     [IO.Path]::GetFullPath($OutputFile)
 } else {
@@ -360,7 +369,7 @@ New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 $outputBase = Join-Path $outputDirectory ([IO.Path]::GetFileNameWithoutExtension($outputPath))
 $temporaryRoot = Join-Path $root ".ai\tmp"
 New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null
-$serverDirectory = Join-Path $temporaryRoot ("paper-addon-lifecycle-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmssfff"), $PID)
+$serverDirectory = Join-Path $temporaryRoot ("paper-addon-lifecycle-{0}-{1}-{2}" -f (Get-Date -Format "yyyyMMddHHmmssfff"), $PID, [Guid]::NewGuid().ToString("N"))
 $serverDirectory = [IO.Path]::GetFullPath($serverDirectory)
 $phases = [System.Collections.Generic.List[object]]::new()
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -370,8 +379,13 @@ $paperJarPath = $null
 $coreJarPath = $null
 $addonJarPath = $null
 $projectVersion = $null
+$prepared = $false
+$smokeAttempted = $false
 
 try {
+    if (-not $PrepareOnly -and -not $AcceptEula) {
+        throw "Pornirea Paper necesita acceptarea explicita a EULA prin -AcceptEula. Foloseste -PrepareOnly pentru pregatire fara pornire sau acceptare."
+    }
     $javaPath = Resolve-JavaCommand -RequestedCommand $JavaExecutable
     $paperJarPath = Resolve-PaperJar -RequestedJar $PaperJar -RootPath $root
     $projectVersion = Get-ProjectVersion -RootPath $root
@@ -389,11 +403,16 @@ try {
         -RootPath $root `
         -Label "Addon JAR"
 
+    if (Test-Path -LiteralPath $serverDirectory) {
+        throw "Refuz reutilizarea unui director de server existent: $serverDirectory"
+    }
     $pluginsDirectory = Join-Path $serverDirectory "plugins"
     New-Item -ItemType Directory -Path $pluginsDirectory -Force | Out-Null
     Copy-Item -LiteralPath $coreJarPath -Destination $pluginsDirectory -Force
-    Set-Content -LiteralPath (Join-Path $serverDirectory "eula.txt") -Value "eula=true" -Encoding Ascii
+    $eulaValue = if ($PrepareOnly) { "eula=false" } else { "eula=true" }
+    Set-Content -LiteralPath (Join-Path $serverDirectory "eula.txt") -Value $eulaValue -Encoding Ascii
     @(
+        "server-ip=127.0.0.1",
         "online-mode=false",
         "server-port=0",
         "enable-rcon=false",
@@ -405,6 +424,10 @@ try {
         "spawn-protection=0",
         "max-players=1"
     ) | Set-Content -LiteralPath (Join-Path $serverDirectory "server.properties") -Encoding Ascii
+    $prepared = $true
+    if ($PrepareOnly) {
+        return
+    }
 
     $managedPackDirectory = Join-Path $serverDirectory "plugins\AINPCPlugin\packs\addons\ainpc-scenario-medieval"
     $addonConfigDirectory = Join-Path $serverDirectory "plugins\AINPCPlugin\addons\ainpc-scenario-medieval"
@@ -427,6 +450,7 @@ try {
         'AINPCPlugin'
     )
 
+    $smokeAttempted = $true
     $coreOnly = Invoke-PaperPhase `
         -Name "core-only" `
         -ServerDirectory $serverDirectory `
@@ -541,50 +565,57 @@ try {
     }
 } catch {
     $errors.Add($_.Exception.Message)
-}
-
-$preserveServer = $KeepServer -or $errors.Count -gt 0
-if (-not $preserveServer) {
-    try {
-        Remove-SafeSmokeDirectory -DirectoryPath $serverDirectory -TemporaryRoot $temporaryRoot
-    } catch {
-        $errors.Add("cleanup director temporar esuat: $($_.Exception.Message)")
-        $preserveServer = $true
+} finally {
+    if (-not $PrepareOnly -and $errors.Count -eq 0 -and $phases.Count -ne 3) {
+        $errors.Add("Smoke incomplet: cele trei faze runtime nu au fost incheiate.")
     }
-}
+    $preserveServer = $PrepareOnly -or $KeepServer -or $errors.Count -gt 0
+    if (-not $preserveServer) {
+        try {
+            Remove-SafeSmokeDirectory -DirectoryPath $serverDirectory -TemporaryRoot $temporaryRoot
+        } catch {
+            $errors.Add("cleanup director temporar esuat: $($_.Exception.Message)")
+            $preserveServer = $true
+        }
+    }
 
-$report = [ordered]@{
-    schema_version = 1
-    smoke = "paper-addon-lifecycle"
-    started_at = $startedAt.ToUniversalTime().ToString("o")
-    finished_at = (Get-Date).ToUniversalTime().ToString("o")
-    ok = $errors.Count -eq 0
-    project_version = $projectVersion
-    java_executable = $javaPath
-    paper_jar = $paperJarPath
-    paper_jar_sha256 = if ($null -ne $paperJarPath) { (Get-FileHash -LiteralPath $paperJarPath -Algorithm SHA256).Hash } else { $null }
-    core_jar = $coreJarPath
-    core_jar_sha256 = if ($null -ne $coreJarPath) { (Get-FileHash -LiteralPath $coreJarPath -Algorithm SHA256).Hash } else { $null }
-    addon_jar = $addonJarPath
-    addon_jar_sha256 = if ($null -ne $addonJarPath) { (Get-FileHash -LiteralPath $addonJarPath -Algorithm SHA256).Hash } else { $null }
-    server_directory = $serverDirectory
-    server_directory_preserved = $preserveServer
-    phases = @($phases)
-    errors = @($errors)
-}
+    $report = [ordered]@{
+        schema_version = 1
+        smoke = "paper-addon-lifecycle"
+        mode = if ($PrepareOnly) { "prepare" } else { "smoke" }
+        status = if ($errors.Count -gt 0) { "failed" } elseif ($PrepareOnly) { "prepared_not_run" } else { "passed" }
+        started_at = $startedAt.ToUniversalTime().ToString("o")
+        finished_at = (Get-Date).ToUniversalTime().ToString("o")
+        ok = -not $PrepareOnly -and $errors.Count -eq 0 -and $phases.Count -eq 3
+        preparation_ok = $prepared
+        smoke_attempted = $smokeAttempted
+        project_version = $projectVersion
+        java_executable = $javaPath
+        paper_jar = $paperJarPath
+        paper_jar_sha256 = if ($null -ne $paperJarPath) { (Get-FileHash -LiteralPath $paperJarPath -Algorithm SHA256).Hash } else { $null }
+        core_jar = $coreJarPath
+        core_jar_sha256 = if ($null -ne $coreJarPath) { (Get-FileHash -LiteralPath $coreJarPath -Algorithm SHA256).Hash } else { $null }
+        addon_jar = $addonJarPath
+        addon_jar_sha256 = if ($null -ne $addonJarPath) { (Get-FileHash -LiteralPath $addonJarPath -Algorithm SHA256).Hash } else { $null }
+        server_directory = $serverDirectory
+        server_directory_preserved = $preserveServer -and (Test-Path -LiteralPath $serverDirectory -PathType Container)
+        phases = @($phases)
+        errors = @($errors)
+    }
 
-[IO.File]::WriteAllText(
-    $outputPath,
-    ($report | ConvertTo-Json -Depth 8),
-    [Text.UTF8Encoding]::new($false)
-)
+    [IO.File]::WriteAllText(
+        $outputPath,
+        ($report | ConvertTo-Json -Depth 8),
+        [Text.UTF8Encoding]::new($false)
+    )
 
-Write-Host "Paper addon lifecycle report: $outputPath"
-Write-Host "Paper addon lifecycle ok: $($report.ok)"
-if ($preserveServer) {
-    Write-Host "Paper server evidence preserved: $serverDirectory"
-}
-if (-not $report.ok) {
-    $errors | ForEach-Object { Write-Error $_ }
-    exit 1
+    Write-Host "Paper addon lifecycle report: $outputPath"
+    Write-Host "Paper addon lifecycle status: $($report.status)"
+    if ($report.server_directory_preserved) {
+        Write-Host "Paper server evidence preserved: $serverDirectory"
+    }
+    if ($errors.Count -gt 0) {
+        $errors | ForEach-Object { Write-Error $_ }
+        exit 1
+    }
 }

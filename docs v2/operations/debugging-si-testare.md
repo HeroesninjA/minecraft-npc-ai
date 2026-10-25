@@ -53,6 +53,20 @@ Folderul rezultat este `plugins/AINPC/debug-dumps/debug-dump-<timestamp>/`; coli
 
 Citeste `operations/observability-and-logs.md` inainte sa distribui un dump.
 
+## Pregatire izolata fara pornire
+
+Cand tinta de test nu este inca confirmata, poti pregati fisierele fara a porni Paper sau a accepta EULA:
+
+```powershell
+./scripts/smoke-paper-addon-lifecycle.ps1 -PaperJar "C:\cale\paper.jar" -SkipBuild -PrepareOnly
+```
+
+Runnerul pastreaza un director nou in `.ai/tmp/`, cu core-ul copiat, `eula=false`, bind `127.0.0.1`, port automat si RCON oprit. Nu foloseste lumile sau DB-urile unui server existent. `-SkipBuild` presupune artefacte deja construite; fara el poate rula build-ul Gradle, dar nu lanseaza serverul in modul de pregatire.
+
+Raportul `paper-addon-lifecycle-preparation.json` este separat de cel runtime: exit code 0 confirma numai pregatirea, cu `status=prepared_not_run`, `preparation_ok=true`, `ok=false`, `smoke_attempted=false` si zero faze. Compatibilitatea dintre JAR-ul Paper, Java si plugin nu este certificata prin copiere sau hash. Pornirea reala prin runner necesita ulterior `-AcceptEula`, numai dupa acceptarea de catre operator, si creeaza un alt director izolat; pregatirea nu accepta EULA nici daca ambele switch-uri sunt date. [Contractul complet](../reference/kotlin-paper-packaging-si-smoke.md#smoke-paper) separa aceste doua actiuni.
+
+Checkpoint local 2026-10-25: pregatirea a fost executata cu `-SkipBuild`, fara pornire, cu `eula=false`, zero faze, fara lume sau loguri generate si cu hash-ul core copiat identic artefactului selectat. Candidatul Paper local declara in `version.json` versiunea 26.1.2 si Java 25; compatibilitatea cu pluginul compilat pe API 1.21.11 ramane neverificata. Cele sase teste noi verifica scriptul cu runtime neexecutabil in fixture, pastrarea dovezilor anterioare si refuzul pornirii fara acceptare explicita. Scriptul este acum declarat input Gradle pentru a nu reutiliza teste invechite dupa editarea lui. Verificarea completa core/API/addon are 3.173 de teste, fara esecuri sau erori si cu doua omise; ABI-ul si freeze-ul static trec. Raportul `.ai/release-reports/paper-sandbox-preflight-2026-10-25T13-36-56Z.json` separa acest rezultat de un smoke runtime si pastreaza calea sandbox-ului.
+
 ## Smoke test cognitiv
 
 Observarea nu necesita activarea continuitatii. Foloseste un NPC existent si `ainpc.admin`:
@@ -103,6 +117,25 @@ Aceeasi comanda `decision` arata acum `Ajutor alimentar confirmat`, ultima confi
 `AINPCDecisionCommandTest` verifica formatul limitat, separarea datelor istorice si cazul timestamp-ului viitor. `AINPCDecisionDiagnosticCommandTest` exercita comanda reala cu expeditori controlati, identitati distincte, livrarea prin `NpcFoodAid`, expirarea si snapshot-urile inghetate. Inventarul acestui test este controlat in fixture; nu reprezinta dovada unui click, a fizicii sau a unui server Paper pornit.
 
 Checkpoint local 2026-10-25 pentru acest diagnostic: sapte teste noi; verificarile complete core/API/addon medieval trec 3.163 de teste, cu zero esecuri sau erori si doua omise. Cele trei JAR-uri sunt construite; ABI-ul API 1.1.0 ramane neschimbat, iar freeze-ul static trece fara avertismente. Raportul `.ai/release-reports/cognitive-food-diagnostic-preflight-2026-10-25T12-55-44Z.json` pastreaza rezultatele si hash-urile artefactelor, cu smoke-ul Minecraft explicit neexecutat. Nu sunt modificate implicit flagurile de simulare si nu este instalat niciun plugin.
+
+### Memoria alimentara dupa rehidratare
+
+`NpcFoodRequestServiceTest` leaga acum o livrare prin `NpcFoodInteraction`, serializarea profilului cu `buildProfileData`, rehidratarea folosita de `NPCManager` si o cerere autonoma ulterioara. Confirmarea initiala nu este inserata manual. Inventarul, entitatile si expeditorii raman controlati in fixture.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.engine.NpcFoodRequestServiceTest" --console=plain
+```
+
+Cele patru scenarii suplimentare verifica:
+
+- confirmarea si satietatea 32 rezultate dintr-un singur mar pornind de la 20 sunt pastrate, iar cererea merge la UUID-ul ajutorului, nu la un omonim mai apropiat;
+- trei cicluri de reconstruire/rehidratare nu consuma alte obiecte, nu cresc din nou satietatea si nu transforma promisiunea nelivrata intr-o confirmare; pauza vechii instante nu este indeplinita de citirea profilului;
+- lipsa dovezii, schema nesuportata, o cantitate invalida, expirarea si timestamp-ul viitor nu activeaza o cerere dupa rehidratare;
+- raspunsul unei cereri apartinand vechii instante este respins; in acelasi proces, serviciul existent pastreaza cooldown-ul de cinci minute si accepta raspunsul numai dupa o cerere noua valida.
+
+Preferintele, cererile in asteptare si throttling-ul raman numai runtime, conform contractului existent; aceste teste nu adauga persistenta lor. Rehidratarea este invocata prin metoda de productie pe un manager controlat, nu prin inlocuirea manuala a memoriei. Nu se executa SQL, restart Paper, navigatie sau click Minecraft real. Pentru validarea dupa restart, pastreaza separat dovezile din server si confirma politica starii runtime; nu extinde garantia acestor teste la intregul restart.
+
+Checkpoint local 2026-10-25: cele 29 de teste din `NpcFoodRequestServiceTest` trec; verificarea completa core/API/addon medieval are 3.167 de teste, fara esecuri sau erori si cu doua omise. Construirea JAR-urilor si freeze-ul static trec, cu ABI 1.1.0 neschimbat si fara actualizarea baseline-ului. Raportul `.ai/release-reports/cognitive-food-hydration-preflight-2026-10-25T13-12-19Z.json` pastreaza rezultatele, hash-urile si limitarile, fara sa declare un smoke Minecraft executat.
 
 ### Integrarea pe tick-ul public
 

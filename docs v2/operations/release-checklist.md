@@ -41,7 +41,7 @@ Scriptul `scripts/deploy-ainpc-vps.sh` este blocat pentru release pana cand cred
 
 ## 4. Smoke Paper
 
-- [ ] `scripts/smoke-paper-addon-lifecycle.ps1` trece pe JAR-ul Paper tinta;
+- [ ] `scripts/smoke-paper-addon-lifecycle.ps1` trece pe JAR-ul Paper tinta, cu `-AcceptEula` numai dupa acceptarea de catre operator; `-PrepareOnly` nu inchide acest gate;
 - [ ] startup-ul nu are erori critice sau retry-uri SQL repetate;
 - [ ] core-ul se inregistreaza si addonul se incarca dupa el;
 - [ ] oprirea controlata elimina pack-urile gestionate, iar restartul fara JAR-ul addonului nu le recreeaza;
