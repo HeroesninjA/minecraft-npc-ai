@@ -2,6 +2,7 @@ package ro.ainpc.engine
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.GameMode
@@ -44,6 +45,7 @@ import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.npc.NpcSocialExperience
 import java.lang.reflect.Proxy
+import java.math.BigDecimal
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -684,6 +686,42 @@ class NpcFoodRequestServiceTest {
         assertEquals(2, fixture.helper.heldFood!!.amount)
     }
 
+    @Test
+    fun `invalid restored satiety cannot manufacture a food request or discard confirmed help`() {
+        val source = Fixture(seedHelper = false)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(source.npc, source.helper.player, source.now - 1L)!!.status)
+        val receipts = source.npc.socialExperience.snapshot()
+        val serialized = buildProfileData(source.npc, Gson())
+        val invalidValues = listOf(
+            JsonPrimitive(BigDecimal("4294967316")),
+            JsonPrimitive(BigDecimal("20.5")),
+            JsonPrimitive("20"),
+            JsonPrimitive(false),
+        )
+        for (value in invalidValues) {
+            val fixture = Fixture(seedHelper = false)
+            val profile = Gson().fromJson(serialized, JsonObject::class.java)
+            profile.getAsJsonObject("simulation").add("hunger_level", value)
+
+            val restored = fixture.restoreProfile(Gson().toJson(profile), initialHunger = 82)
+
+            assertEquals(82, restored.hungerLevel, value.toString())
+            assertEquals(receipts, restored.socialExperience.snapshot(), value.toString())
+            assertFalse(fixture.service.tryRequest(restored, fixture.now), value.toString())
+            assertTrue(fixture.sent.isEmpty())
+            assertEquals(3, fixture.helper.heldFood!!.amount)
+        }
+        val control = Fixture(seedHelper = false)
+        val validProfile = Gson().fromJson(serialized, JsonObject::class.java)
+        validProfile.getAsJsonObject("simulation").addProperty("hunger_level", 20)
+        val restored = control.restoreProfile(Gson().toJson(validProfile), initialHunger = 82)
+        assertEquals(20, restored.hungerLevel)
+        assertTrue(control.service.tryRequest(restored, control.now))
+        assertEquals(listOf(control.helper.id), control.sent.map { it.playerUuid })
+        assertEquals(2, source.helper.heldFood!!.amount)
+    }
+
     private class Fixture(val now: Long = 1_000_000_000L, seedHelper: Boolean = true) {
         val world = world("village")
         val config = YamlConfiguration().apply {
@@ -722,8 +760,12 @@ class NpcFoodRequestServiceTest {
 
         fun request(): Boolean = service.tryRequest(npc, now)
 
-        fun restoreProfile(profile: String): AINPC {
-            val restored = newNpc(npc.uuid).apply { profileDataJson = profile }
+        fun restoreProfile(profile: String, initialHunger: Int = 20): AINPC {
+            val restored = newNpc(npc.uuid).apply {
+                hungerLevel = initialHunger
+                context.hungerLevel = initialHunger
+                profileDataJson = profile
+            }
             val unsafe = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let { field ->
                 field.isAccessible = true
                 field.get(null) as sun.misc.Unsafe

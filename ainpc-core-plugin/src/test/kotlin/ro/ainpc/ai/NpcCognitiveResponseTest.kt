@@ -15,6 +15,23 @@ class NpcCognitiveResponseTest {
     private val hungry = NpcCognitiveState(hungerLevel = 10)
 
     @Test
+    fun `stored care progress is historical even when the current intention has changed`() {
+        val progress = NpcSelfCareGoal.Snapshot(
+            NPCAction.EAT, NpcSelfCareGoal.Stage.RECOVERING, 10, 18, "world:home", true, 1_000L,
+        )
+        val state = hungry.copy(currentState = NPCState.WORKING, currentGoal = "sa lucrez la atelier",
+            selfCareProgress = progress)
+
+        val response = NpcCognitiveResponse.resolve("Cum merge obiectivul de hrana?", state)!!
+
+        assertTrue(response.contains("La ultima observatie, eram acasa"), response)
+        assertFalse(response.contains("Sunt acasa"))
+        assertFalse(response.contains("este incheiat"))
+        assertEquals(progress, state.selfCareProgress)
+        assertTrue(NpcCognitiveResponse.resolve("Ce vrei sa faci?", state)!!.contains("sa lucrez la atelier"))
+    }
+
+    @Test
     fun `missing progress is communicated from captured evidence without naming a blocked path`() {
         val progress = NpcSelfCareGoal.Snapshot(
             NPCAction.EAT, NpcSelfCareGoal.Stage.RETURNING_HOME, 10, 10, "world:home", false,
