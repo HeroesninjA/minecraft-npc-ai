@@ -34,7 +34,13 @@ import kotlin.math.roundToInt
 class DecisionEngine internal constructor(
     private val plugin: AINPCPlugin,
     private val refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
+    private val needsClock: () -> Long,
 ) {
+    internal constructor(
+        plugin: AINPCPlugin,
+        refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
+    ) : this(plugin, refreshWorldContext, System::currentTimeMillis)
+
     constructor(plugin: AINPCPlugin) : this(plugin, { context, world, location ->
         context.updateFromWorld(world, location)
     })
@@ -623,10 +629,10 @@ class DecisionEngine internal constructor(
     private fun experienceContextKey(npc: AINPC): String = NpcSelfCareGoal.homeKey(npc)
 
     private fun updateNeeds(npc: AINPC, context: NPCContext) {
-        val now = System.currentTimeMillis()
+        val now = needsClock()
         val previousTick = npc.lastSimulationTickAt
         npc.lastSimulationTickAt = now
-        if (previousTick <= 0L) return
+        if (previousTick <= 0L || now <= previousTick) return
 
         val tickFactor = max(0.5, min(4.0, (now - previousTick) / 30000.0))
         val hungerDecay = plugin.config.getDouble("simulation.needs.hunger_decay", 1.5) * tickFactor
