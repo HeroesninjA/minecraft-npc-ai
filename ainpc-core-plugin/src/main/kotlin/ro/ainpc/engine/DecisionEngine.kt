@@ -293,7 +293,8 @@ class DecisionEngine internal constructor(
         val situation = actionSituation(npc, context)
         val action = decideAction(npc, context, situation)
         applySimulationOutcome(npc, context, action, situation)
-        context.syncSimulationState(location.location)
+        if (!npc.isSpawned()) return
+        context.syncSimulationState(npc.bukkitEntity?.location)
     }
 
     fun updateBasicNeeds(npc: AINPC?) {
@@ -663,7 +664,11 @@ class DecisionEngine internal constructor(
             it.action == action && it.explanationRevision == npc.decisionRevision
         }
         val targetState = mapActionToState(action, context, situation)
+        val expectedStateRevision = npc.stateRevision + if (npc.currentState == targetState) 0L else 1L
         npc.changeStateFromSimulation(targetState)
+        if (npc.decisionRevision != revision || npc.stateRevision != expectedStateRevision ||
+            npc.currentState != targetState
+        ) return
         npc.currentGoal = resolveGoal(action, npc, context, situation)
         if (npc.simulationMode == NpcSimulationMode.FULL && npc.currentState == targetState &&
             npc.decisionRevision == revision
