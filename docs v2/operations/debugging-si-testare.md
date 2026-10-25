@@ -137,6 +137,58 @@ Preferintele, cererile in asteptare si throttling-ul raman numai runtime, confor
 
 Checkpoint local 2026-10-25: cele 29 de teste din `NpcFoodRequestServiceTest` trec; verificarea completa core/API/addon medieval are 3.167 de teste, fara esecuri sau erori si cu doua omise. Construirea JAR-urilor si freeze-ul static trec, cu ABI 1.1.0 neschimbat si fara actualizarea baseline-ului. Raportul `.ai/release-reports/cognitive-food-hydration-preflight-2026-10-25T13-12-19Z.json` pastreaza rezultatele, hash-urile si limitarile, fara sa declare un smoke Minecraft executat.
 
+### Nevoi invalide in profil
+
+Regresiile pentru rehidratare au reprodus trei probleme ale citirii generice anterioare: nivelul negativ era acceptat, un boolean putea opri restaurarea celorlalte campuri, iar numarul `4294967316` devenea sațietate 20 prin conversie cu overflow. Un NPC cu valoare anterioara 82 putea astfel parea infometat fara o observatie reala.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.managers.NpcSimulationNeedsHydrationTest" --tests "ro.ainpc.engine.NpcFoodRequestServiceTest" --console=plain
+```
+
+Cele cinci teste suplimentare verifica toate cele cinci nevoi, intervalul inclusiv 0-100, fractiile, numerele prea mari, tipurile gresite, campurile absente si compatibilitatea numerelor exact integrale in forma zecimala sau exponentiala. Valoarea invalida pastreaza numai nivelul anterior al acelui camp, fara clamp la extreme si fara pierderea celorlalte date valide. Un test porneste de la ajutor alimentar efectiv consumat in inventarul controlat, trece prin JSON si metoda de productie de rehidratare, apoi verifica lipsa unei cereri false si pastrarea confirmarii. Controlul cu sațietate numeric valida 20 produce in continuare cererea catre UUID-ul corect.
+
+Testele nu modifica schema profilului, nu rescriu DB-uri existente si nu certifica un restart sau o interactiune Minecraft. Pentru un profil editat manual, foloseste numere JSON valide, nu stringuri numerice; nu forta extremele nevoilor pentru a ascunde date invalide. [Contractul restaurarii](../architecture/simulation-service.md#restaurarea-nevoilor-din-profil) descrie politica exacta de fallback.
+
+Checkpoint local 2026-10-25: cele trei regresii initiale sunt reproduse inainte de corectie; dupa corectie trec cele 76 de teste focalizate si verificarea completa core/API/addon, cu 3.178 de teste, fara esecuri sau erori si doua omise. JAR-urile sunt construite; ABI-ul 1.1.0 ramane neschimbat, iar freeze-ul static trece fara avertismente. Raportul `.ai/release-reports/cognitive-needs-validation-preflight-2026-10-25T14-35-42Z.json` pastreaza dovezile red/green si hash-ul noului core. Serverul nu este pornit, iar sandbox-ul pregatit anterior ramane neschimbat, cu artefactul sau istoric; noul build nu este instalat automat acolo.
+
+### Timp si intentii invalide in profil
+
+Sase regresii suplimentare verifica timestamp-ul si textele din `simulation` prin rehidratarea reala a managerului. Inainte de corectie, patru teste esueaza: `last_simulation_tick_at=-1` inlocuieste un timp anterior valid, un boolean intrerupe restaurarea memoriei si ancorelor, `current_goal=true` devine intentia textuala `true`, iar `18446744073709551617` se ingusteaza la 1. Ultimul caz produce la prima actualizare reala a nevoilor scaderea satietatii 31 -> 25, desi profilul nu furnizeaza un timp valid.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.managers.NpcSimulationNeedsHydrationTest" --tests "ro.ainpc.managers.NPCManagerTextTest" --tests "ro.ainpc.engine.DecisionExperienceIntegrationTest" --tests "ro.ainpc.engine.CognitiveLifeSimulationTickTest" --tests "ro.ainpc.engine.NpcFoodRequestServiceTest" --console=plain
+```
+
+Dupa corectie trec toate cele 101 teste focalizate. Datele invalide pastreaza fiecare valoare anterioara, iar memoria alimentara si ancora valida supravietuiesc. Un control pozitiv cu timestamp numeric 1 continua sa actualizeze nevoile prin acelasi motor; numerelor intregi mari, timestamp-urilor viitoare reprezentabile si textelor valide nu li se schimba semantica. [Contractul restaurarii](../architecture/simulation-service.md#restaurarea-timpului-si-intentiilor) explica de ce validarea reprezentarii nu confirma timpul real sau executia unei intentii. Testele nu pornesc Minecraft, nu rescriu baze de date si nu valideaza un restart complet.
+
+Checkpoint local 2026-10-25: verificarea completa core/API/addon si construirea JAR-urilor reusesc, cu 3.184 de teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou; task-urile test API/addon neschimbate isi reutilizeaza rezultatele valide up-to-date. Freeze-ul static trece fara avertismente, iar ABI-ul 1.1.0 ramane neschimbat. Raportul `.ai/release-reports/cognitive-profile-runtime-preflight-2026-10-25T15-16-14Z.json` pastreaza cele patru dovezi red, rezultatele green si hash-urile artefactelor. Nu se porneste serverul si nu se actualizeaza sandbox-ul pregatit anterior.
+
+### Ceas egal sau regresiv in simulare
+
+Opt teste noi acopera timpul neinitializat, egal sau regresiv, un timestamp viitor foarte mare, reluarea dupa rebazare si pastrarea factorilor pentru intervale pozitive. Sase esueaza inainte de garda de interval: trei actualizari fara timp scurs reduc satietatea 41 -> 38; o masa in aceeasi milisecunda o creste 41 -> 45; un profil valid cu timp `Long.MAX_VALUE` o reduce 31 -> 30 la primul update. Intrarea publica a managerului reproduce scaderea 20 -> 19 pentru `FULL`; dupa corectie acelasi test verifica si `LIGHT`.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.engine.DecisionSimulationClockTest" --tests "ro.ainpc.engine.CognitiveLifeSimulationTickTest" --tests "ro.ainpc.managers.NpcSimulationNeedsHydrationTest" --tests "ro.ainpc.engine.DecisionExperienceIntegrationTest" --tests "ro.ainpc.engine.SelfCareGoalIntegrationTest" --tests "ro.ainpc.engine.SelfCareContinuityIntegrationTest" --tests "ro.ainpc.engine.NpcFoodRequestServiceTest" --console=plain
+```
+
+Ceasul controlat afecteaza numai actualizarea nevoilor; constructorii existenti pastreaza ceasul sistemului. Regresiile verifica refuzul atribuirii de experienta pe interval invalid, pastrarea istoricului, lipsa reactivarii atribuirii vechi la revenirea timpului si invatarea dupa o noua aplicare valida. Controlul de profil foloseste scrierea JSON si rehidratarea reala, iar controlul managerului foloseste perceptia si entitatea controlate din fixture. [Politica intervalelor](../architecture/simulation-service.md#intervale-de-simulare-fara-timp-scurs) nu reprezinta validarea unui restart sau a fizicii Minecraft.
+
+Checkpoint local 2026-10-25: trec cele 84 de teste focalizate si verificarea completa core/API/addon, cu 3.192 de teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou; API/addon neschimbate reutilizeaza rezultatele valide up-to-date. JAR-urile sunt construite, constructorii existenti sunt prezenti in bytecode, iar freeze-ul static trece fara avertismente si fara schimbarea ABI-ului 1.1.0. Raportul `.ai/release-reports/cognitive-clock-rebase-preflight-2026-10-25T15-36-01Z.json` pastreaza cele sase esecuri initiale, controalele pozitive, hash-urile si limitele. Serverul nu este pornit, iar sandbox-ul pregatit anterior nu este modificat.
+
+### Progres memorat versus situatie curenta
+
+Cinci regresii noi reproduc formularea nejustificata la prezent a unui snapshot activ. Dupa un tick public care aplica masa acasa, fixture-ul observa pozitia atelierului fara o noua actualizare a obiectivului, dar raspunsul local anterior continua sa spuna `Sunt acasa`. Dupa atribuirea unei case valide, o observatie anterioara `BLOCKED` continua sa spuna `imi lipseste o casa confirmata`. Alte controale verifica modelul comun, diagnosticul si raspunsul local cu o intentie curenta diferita.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.npc.NpcSelfCareGoalTest" --tests "ro.ainpc.ai.NpcCognitiveResponseTest" --tests "ro.ainpc.engine.CognitiveLifeSimulationTickTest" --tests "ro.ainpc.engine.SelfCareGoalIntegrationTest" --tests "ro.ainpc.commands.AINPCDecisionCommandTest" --tests "ro.ainpc.commands.AINPCDecisionDiagnosticCommandTest" --tests "ro.ainpc.ai.OpenAIPromptSnapshotIsolationTest" --console=plain
+```
+
+Corectia modifica numai formularea explicatiilor din `NpcSelfCareGoal.Snapshot.description`: etapele active si contorul fara progres se refera la ultima observatie, nu la o perceptie noua. Starea, timestamp-ul, vechimea, pragurile, deciziile si invatarea nu se schimba. Testul prin manager verifica si lipsa scanarilor, miscarilor, actualizarilor de nevoi, selectiilor sau memoriilor suplimentare la intrebare. Testele existente pastreaza distinctia dintre intentie, sosire, refacere si succes, precum si izolarea promptului dupa stergerea obiectivului live. [Contractul monitorului](../architecture/simulation-service.md#progresul-obiectivelor-de-ingrijire) ramane o inregistrare limitata, nu un senzor de locatie in timp real.
+
+Pozitia este modificata in fixture pentru a reprezenta o schimbare externa intre observatii; nu se invoca `AINPC.teleport`, care sterge deja monitorul live. Contextul furnizat catre AI este verificat, nu raspunsul unui provider real. Nu se porneste Minecraft si nu se confirma navigatie sau perceptie fizica reala.
+
+Checkpoint local 2026-10-25: toate cele cinci regresii esueaza inainte de corectia formularii, apoi trec cele 83 de teste focalizate. Verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.197 de teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou; task-urile API/addon neschimbate reutilizeaza rezultatele valide up-to-date. Freeze-ul static trece fara avertismente si pastreaza ABI-ul 1.1.0. Raportul `.ai/release-reports/cognitive-progress-history-preflight-2026-10-25T16-02-07Z.json` pastreaza dovezile red/green, hash-urile si limitele. Nu se porneste serverul, nu se solicita un provider AI real si nu se modifica sandbox-ul pregatit anterior.
+
 ### Integrarea pe tick-ul public
 
 Regresia locala pentru bucla cognitiva ruleaza fara server:
