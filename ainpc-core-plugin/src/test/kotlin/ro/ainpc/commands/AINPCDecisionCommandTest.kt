@@ -23,6 +23,25 @@ import java.util.UUID
 
 class AINPCDecisionCommandTest {
     @Test
+    fun recordedCareDiagnosticsDoNotDescribeTheOldHomeAsCurrentPresence() {
+        val now = 1_000_000L
+        val progress = NpcSelfCareGoal.Snapshot(NPCAction.EAT, NpcSelfCareGoal.Stage.RECOVERING,
+            20, 28, "world:home", true, now - 2_000L)
+        val state = NpcCognitiveState(currentState = NPCState.WORKING, currentGoal = "sa lucrez la atelier",
+            selfCareProgress = progress)
+        val diagnostic = DecisionEngine.CognitiveDiagnostic(now, state, NpcSelfCareContinuity.NOT_RETURNING)
+
+        val lines = formatDecisionCognition(diagnostic)
+
+        assertTrue(lines.any { it.contains("Progres ingrijire:") && it.contains("La ultima observatie, eram acasa") })
+        assertFalse(lines.any { it.contains("Sunt acasa pentru obiectivul") })
+        assertTrue(lines.any { it.contains("Intentie curenta:") && it.contains("sa lucrez la atelier") })
+        assertTrue(lines.any { it.contains("EAT / RECOVERING; nevoie 20 -> 28") && it.contains("vechime 2 s") })
+        assertEquals(progress, diagnostic.state.selfCareProgress)
+        assertEquals(lines, formatDecisionCognition(diagnostic))
+    }
+
+    @Test
     fun cognitiveDiagnosticSeparatesCurrentIntentHistoricalChoiceAndObservedProgress() {
         val now = 1_000_000L
         val progress = NpcSelfCareGoal.Snapshot(NPCAction.EAT, NpcSelfCareGoal.Stage.RETURNING_HOME,
@@ -36,7 +55,7 @@ class AINPCDecisionCommandTest {
         assertTrue(lines.any { it.contains("satietate 18, energie 40") })
         assertTrue(lines.any { it.contains("Intentie curenta:") && it.contains("revina acasa") })
         assertTrue(lines.any { it.contains("Ultima decizie aplicata:") && it.contains("fara inregistrare recenta") })
-        assertTrue(lines.any { it.contains("sosirea nu este inca confirmata") })
+        assertTrue(lines.any { it.contains("sosirea nu era inca confirmata") })
         assertTrue(lines.any { it.contains("EAT / RETURNING_HOME; nevoie 20 -> 18") })
         assertTrue(lines.any { it.contains("fara progres confirmat 90 s; vechime 2 s") })
         assertTrue(lines.last().contains("eligibila"))
