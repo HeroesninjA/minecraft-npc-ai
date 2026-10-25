@@ -28,6 +28,39 @@ class NpcFoodRequestPreferencesTest {
     }
 
     @Test
+    fun `delivery resolves only the matching active promise and frees its bounded slot`() {
+        val preferences = NpcFoodRequestPreferences(maxEntries = 2)
+        val other = UUID.randomUUID()
+        val newcomer = UUID.randomUUID()
+        assertTrue(preferences.defer(player, NpcFoodRequestPreferences.Reply.PROMISE, now))
+        assertTrue(preferences.defer(other, NpcFoodRequestPreferences.Reply.DECLINE, now))
+        assertFalse(preferences.canAsk(newcomer, now))
+        assertFalse(preferences.confirmDelivery(newcomer, now))
+        assertFalse(preferences.confirmDelivery(player, 0L))
+        assertFalse(preferences.confirmDelivery(player, now - 1L))
+        assertTrue(preferences.isDeferred(player, now))
+        assertTrue(preferences.confirmDelivery(player, now))
+        assertFalse(preferences.isDeferred(player, now))
+        assertTrue(preferences.canAsk(newcomer, now))
+        assertTrue(preferences.isDeferred(other, now))
+        assertFalse(preferences.confirmDelivery(other, now))
+        assertFalse(preferences.confirmDelivery(player, now + 1L))
+    }
+
+    @Test
+    fun `expired promises and receipts preceding a newer promise do not resolve it`() {
+        val preferences = NpcFoodRequestPreferences()
+        assertTrue(preferences.defer(player, NpcFoodRequestPreferences.Reply.PROMISE, now))
+        assertFalse(preferences.confirmDelivery(player, now + 600_000L))
+        assertTrue(preferences.canAsk(player, now + 600_000L))
+        assertTrue(preferences.defer(player, NpcFoodRequestPreferences.Reply.PROMISE, now + 600_001L))
+        assertFalse(preferences.confirmDelivery(player, now + 600_000L))
+        assertTrue(preferences.isDeferred(player, now + 600_001L))
+        assertTrue(preferences.confirmDelivery(player, now + 600_001L))
+        assertFalse(preferences.isDeferred(player, now + 600_001L))
+    }
+
+    @Test
     fun `bounded preference storage retains active pauses and releases expired ones`() {
         val preferences = NpcFoodRequestPreferences(maxEntries = 1)
         val other = UUID.randomUUID()
