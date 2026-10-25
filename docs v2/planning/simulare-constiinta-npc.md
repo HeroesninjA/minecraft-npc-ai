@@ -81,6 +81,10 @@ O livrare alimentara reusita incheie acum asteptarea unei promisiuni active numa
 
 Dialogul despre nevoi distinge acum refuzul de promisiunea acceptata, fara sa confunde timpul acordat unui jucator cu ajutor deja primit. Motivul apartine numai destinatarului exact si este capturat impreuna cu indicatorul pauzei in textul imuabil pentru AI; snapshot-urile vechi nu sunt rescrise dupa livrare sau expirare. Citirea nu prelungeste asteptarea, nu produce experienta si nu schimba conversatia comuna. Compatibilitatea semnaturilor existente este pastrata. [Runbook-ul](../operations/debugging-si-testare.md#explicarea-asteptarii-in-dialog) separa testarea locala de verificarea raspunsului efectiv in Minecraft.
 
+## Verificare integrala inainte de runtime - 2026-10-25
+
+Checkpoint-ul complet core/API trece 3.132 de teste, cu zero esecuri si doua omise, iar artefactul core este construit si inspectat. Nu extinde garantia testelor la comportamentul fizic sau raspunsul unui provider AI. Poarta ABI identifica separat doua clase deja modificate fata de baseline; metadatele de versionare nu sunt actualizate automat, iar release-ul ramane oprit. [Raportarea si comenzile](../operations/debugging-si-testare.md#verificare-integrala-si-artefact) separa explicit testele verzi de gate-ul nereusit si de smoke-ul Minecraft inca neexecutat.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.

@@ -129,6 +129,21 @@ Dupa un refuz sau o promisiune acceptata, intreaba NPC-ul `De ce ai nevoie?` cat
 
 Dupa livrare ori expirare, o intrebare noua foloseste starea curenta; citirile nu prelungesc pauza si nu executa simularea. `DialogueRequestContextTest`, `NpcCognitiveResponseTest` si `NpcFoodRequestPreferencesTest` verifica acest contract, limitarile pentru pericol sau nevoie deja satisfacuta si compatibilitatea metodei publice Java. `OpenAIPromptSnapshotIsolationTest` verifica motivul si indicatorul pentru destinatarul exact, pastrarea snapshot-ului vechi dupa livrare sau expirare si capturarea corecta a unui refuz ulterior. Aceste verificari inspecteaza datele si promptul construit; nu afirma ca un provider AI a generat corect un raspuns in joc.
 
+## Verificare integrala si artefact
+
+Inaintea smoke-ului in joc, separa testele complete de poarta ABI si de construirea artefactului:
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test :ainpc-api:test :ainpc-core-plugin:jar --console=plain
+./gradlew.bat :ainpc-api:verifyApiAbi --console=plain
+```
+
+`JAVA_HOME` trebuie sa indice un JDK complet, inclusiv `bin/javap.exe` pentru verificarea ABI. Un runtime JetBrains minimal poate executa testele, dar sa nu ofere acest utilitar. Nu modifica baseline-ul pentru a ascunde lipsa uneltei sau diferentele API. `:ainpc-api:check` depinde si de poarta ABI; un esec acolo nu trebuie confundat cu esecul testelor si poate opri alte taskuri inaintea executiei lor.
+
+Checkpoint local 2026-10-25: core-ul are 3.060 de teste in 448 de suite, fara esecuri si cu doua omise; API-ul are 72 de teste in 26 de suite, fara esecuri sau omisiuni. API-ul a fost si recompilat/retestat fortat. JAR-ul core a fost construit separat, cu descriptorul expandat, API si runtime necesar, clase proprii verificate pentru Java 21, fara clase Paper/Spring incluse accidental, clase duplicate ori semnaturi invalide. `simulation.enabled` si `goal_continuity_enabled` raman `false` in configuratia impachetata.
+
+Verificarea ABI ramane blocata de diferentele deja comise pentru `PermissionNode` si `WorldRegionInfo`: constanta `PROFILE`, respectiv descrierile story si constructorul suplimentar, cu constructorul anterior pastrat. Baseline-ul si `apiVersion=1.0.0` necesita revizuire/versionare deliberata; acest checkpoint nu le modifica si nu declara release-ul aprobat. Raportul local `.ai/release-reports/cognitive-preflight-2026-10-25T12-06-59Z.json` pastreaza hash-urile, rezultatele complete si limitarile. Nu a fost pornit un server, copiat pluginul sau modificata o lume. JAR-ul Paper local etichetat `26.1.2` nu a fost validat ca tinta pentru dependinta de compilare `1.21.11`.
+
 ## Teste locale
 
 Foloseste un JDK compatibil configurat prin `JAVA_HOME` sau `PATH`; scripturile nu trebuie sa presupuna o cale locala fixa.
