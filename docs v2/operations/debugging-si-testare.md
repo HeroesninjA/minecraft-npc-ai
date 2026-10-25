@@ -91,6 +91,19 @@ Acesta este un fragment de configuratie, nu un fisier complet; pastreaza celelal
 
 Inregistreaza versiunea, flagurile, intervalele taskurilor si diagnosticul dinainte/dupa fiecare eveniment. Scenariul ramane de verificat pe server; testele unitare si de integrare nu reprezinta un smoke test Minecraft executat.
 
+### Livrari si pauze observabile
+
+Aceeasi comanda `decision` arata acum `Ajutor alimentar confirmat`, ultima confirmare pastrata si `Pauza cereri hrana`. Este tot un diagnostic administrativ, fara executarea simularii sau a unui transfer. Istoricul alimentar este distinct de decizia aplicata si de progresul ingrijirii autonome.
+
+- Inainte si dupa `Shift + click dreapta`, compara inventarul real, ID-ul confirmarii, `recordedAt` in milisecunde epoch, UUID-ul celui care a ajutat si efectul consemnat asupra satietatii. Valorile din confirmare sunt istorice, nu inlocuiesc nevoia curenta afisata separat. Un timestamp in viitor este semnalat explicit, nu prezentat ca livrare noua.
+- Numarul reprezinta numai confirmarile pastrate, cel mult 32; la capacitate, o livrare noua poate schimba ultima confirmare fara sa creasca numarul. Numele jucatorului nu este inclus in acest sumar. UUID-urile raman identificatori sensibili pentru distribuirea logurilor.
+- Un administrator care executa comanda ca jucator vede numai pauza propriei identitati, prin [UUID-ul persistent Paper](https://jd.papermc.io/paper/1.21.11/org/bukkit/entity/Entity.html#getUniqueId()). `PROMISE` inseamna timp acordat livrarii, nu aliment primit; `DECLINE` inseamna refuz respectat. Alt UUID, chiar cu acelasi nume, nu mosteneste pauza. Consola declara pauza neinspectata, nu absenta ei.
+- Absenta unei pauze nu certifica eligibilitatea unei cereri noi: limitele de timp, nevoia, vizibilitatea si celelalte conditii raman separate. Citirea nu reinnoieste si nu sterge pauzele expirate. Dupa livrarea promisa reusita, numai o captura noua reflecta confirmarea si incheierea asteptarii; captura anterioara ramane neschimbata.
+
+`AINPCDecisionCommandTest` verifica formatul limitat, separarea datelor istorice si cazul timestamp-ului viitor. `AINPCDecisionDiagnosticCommandTest` exercita comanda reala cu expeditori controlati, identitati distincte, livrarea prin `NpcFoodAid`, expirarea si snapshot-urile inghetate. Inventarul acestui test este controlat in fixture; nu reprezinta dovada unui click, a fizicii sau a unui server Paper pornit.
+
+Checkpoint local 2026-10-25 pentru acest diagnostic: sapte teste noi; verificarile complete core/API/addon medieval trec 3.163 de teste, cu zero esecuri sau erori si doua omise. Cele trei JAR-uri sunt construite; ABI-ul API 1.1.0 ramane neschimbat, iar freeze-ul static trece fara avertismente. Raportul `.ai/release-reports/cognitive-food-diagnostic-preflight-2026-10-25T12-55-44Z.json` pastreaza rezultatele si hash-urile artefactelor, cu smoke-ul Minecraft explicit neexecutat. Nu sunt modificate implicit flagurile de simulare si nu este instalat niciun plugin.
+
 ### Integrarea pe tick-ul public
 
 Regresia locala pentru bucla cognitiva ruleaza fara server:
@@ -142,7 +155,20 @@ Inaintea smoke-ului in joc, separa testele complete de poarta ABI si de construi
 
 Checkpoint local 2026-10-25: core-ul are 3.060 de teste in 448 de suite, fara esecuri si cu doua omise; API-ul are 72 de teste in 26 de suite, fara esecuri sau omisiuni. API-ul a fost si recompilat/retestat fortat. JAR-ul core a fost construit separat, cu descriptorul expandat, API si runtime necesar, clase proprii verificate pentru Java 21, fara clase Paper/Spring incluse accidental, clase duplicate ori semnaturi invalide. `simulation.enabled` si `goal_continuity_enabled` raman `false` in configuratia impachetata.
 
-Verificarea ABI ramane blocata de diferentele deja comise pentru `PermissionNode` si `WorldRegionInfo`: constanta `PROFILE`, respectiv descrierile story si constructorul suplimentar, cu constructorul anterior pastrat. Baseline-ul si `apiVersion=1.0.0` necesita revizuire/versionare deliberata; acest checkpoint nu le modifica si nu declara release-ul aprobat. Raportul local `.ai/release-reports/cognitive-preflight-2026-10-25T12-06-59Z.json` pastreaza hash-urile, rezultatele complete si limitarile. Nu a fost pornit un server, copiat pluginul sau modificata o lume. JAR-ul Paper local etichetat `26.1.2` nu a fost validat ca tinta pentru dependinta de compilare `1.21.11`.
+La acest checkpoint initial, verificarea ABI era blocata de diferentele deja comise pentru `PermissionNode` si `WorldRegionInfo`: constanta `PROFILE`, respectiv descrierile story si constructorul suplimentar, cu constructorul anterior pastrat. Baseline-ul si `apiVersion=1.0.0` necesitau revizuire/versionare deliberata; checkpoint-ul nu le modifica si nu declara release-ul aprobat. Raportul local `.ai/release-reports/cognitive-preflight-2026-10-25T12-06-59Z.json` pastreaza hash-urile, rezultatele complete si limitarile. Nu a fost pornit un server, copiat pluginul sau modificata o lume. JAR-ul Paper local etichetat `26.1.2` nu a fost validat ca tinta pentru dependinta de compilare `1.21.11`.
+
+### Revizuire ABI si verificare addon - 2026-10-25
+
+Checkpoint-ul ulterior clasifica explicit cele doua extensii ca API minor 1.1.0, pastreaza constructorul anterior si actualizeaza deliberat baseline-ul prin task-ul dedicat. [Decizia de versionare](../reference/api-versioning-and-abi.md#revizuire-api-110---2026-10-25) descrie contractele pastrate si limitele compatibilitatii enumurilor. `projectVersion` ramane 1.0.0; nu sunt schimbate actiunile NPC-urilor sau configuratia simulatoarelor.
+
+```powershell
+./gradlew.bat :ainpc-api:check :ainpc-core-plugin:check :ainpc-scenario-medieval:check :ainpc-api:jar :ainpc-core-plugin:jar :ainpc-scenario-medieval:jar --console=plain
+./scripts/release-api-addon-freeze.ps1 -ProjectRoot . -ReleaseId "<release-id>" -FailOnWarnings
+```
+
+Rezultat: 3.156 de teste in 481 de suite, fara esecuri sau erori si cu aceleasi doua teste core omise. API-ul include acum sapte teste suplimentare de consum Java/Kotlin; addonul medieval contribuie cu 17 teste. Toate cele trei task-uri `check`, construirea celor trei JAR-uri si freeze-ul static trec. Verificarea ABI ulterioara nu actualizeaza baseline-ul si raporteaza zero diferente.
+
+Raportul local `.ai/release-reports/cognitive-api-1.1.0-2026-10-25T12-20-32Z-api-addon-freeze.json` are zero avertismente si pastreaza hash-urile API/addon si semnatura ABI; raportul preflight separat pastreaza si artefactul core si rezultatele testelor. Acest freeze inspecteaza surse si JAR-uri, nu porneste Paper si nu valideaza lifecycle-ul efectiv. Smoke-ul Minecraft, alegerea tintei compatibile si aprobarea release-ului raman separate; raportul initial nereusit nu este suprascris.
 
 ## Teste locale
 

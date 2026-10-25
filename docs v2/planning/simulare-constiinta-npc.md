@@ -83,7 +83,15 @@ Dialogul despre nevoi distinge acum refuzul de promisiunea acceptata, fara sa co
 
 ## Verificare integrala inainte de runtime - 2026-10-25
 
-Checkpoint-ul complet core/API trece 3.132 de teste, cu zero esecuri si doua omise, iar artefactul core este construit si inspectat. Nu extinde garantia testelor la comportamentul fizic sau raspunsul unui provider AI. Poarta ABI identifica separat doua clase deja modificate fata de baseline; metadatele de versionare nu sunt actualizate automat, iar release-ul ramane oprit. [Raportarea si comenzile](../operations/debugging-si-testare.md#verificare-integrala-si-artefact) separa explicit testele verzi de gate-ul nereusit si de smoke-ul Minecraft inca neexecutat.
+Checkpoint-ul initial complet core/API trece 3.132 de teste, cu zero esecuri si doua omise, iar artefactul core este construit si inspectat. Nu extinde garantia testelor la comportamentul fizic sau raspunsul unui provider AI. Poarta ABI identifica separat doua clase deja modificate fata de baseline; la acest checkpoint metadatele de versionare nu sunt actualizate automat, iar release-ul ramane oprit. [Raportarea si comenzile](../operations/debugging-si-testare.md#verificare-integrala-si-artefact) separa explicit testele verzi de gate-ul nereusit si de smoke-ul Minecraft inca neexecutat.
+
+## Deblocarea controlata a portii ABI - 2026-10-25
+
+Revizuirea ulterioara a extensiilor `PermissionNode` si `WorldRegionInfo` duce la API 1.1.0 si baseline regenerat intentionat, cu constructorul anterior pastrat si teste de consum Java/Kotlin suplimentare. Verificarile complete core/API/addon medieval trec 3.156 de teste, cu zero esecuri si doua omise; ABI-ul si freeze-ul static trec fara avertismente. Versiunea distributiei ramane 1.0.0. [Checkpoint-ul operational](../operations/debugging-si-testare.md#revizuire-abi-si-verificare-addon---2026-10-25) pastreaza distinct dovezile noi de raportul initial. Nu a fost pornit un server sau instalat un plugin: validarea circuitului cognitiv in Minecraft ramane pasul urmator, nu o garantie dedusa din testele locale.
+
+## Dovezi alimentare vizibile fara modificarea simularii - 2026-10-25
+
+Diagnosticul administrativ `decision` separa acum confirmarile alimentare pastrate de nevoile curente si de invatarea autonoma. Ultima confirmare are ID, timestamp, UUID-ul ajutorului si efectul istoric; pauza `PROMISE` sau `DECLINE` apartine numai administratorului care citeste ca jucator. Consola nu presupune identitatea altuia. Citirea nu consuma alimente, nu creeaza dovezi, nu prelungeste ori elimina pauze si nu executa decizii. [Pasii de observare](../operations/debugging-si-testare.md#livrari-si-pauze-observabile) pregatesc verificarea circuitului in joc; nu inlocuiesc smoke-ul Minecraft.
 
 ## Concluzie
 

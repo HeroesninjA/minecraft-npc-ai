@@ -4,9 +4,11 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.command.CommandSender
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -18,8 +20,11 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcFoodAid
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.utils.MessageUtils
 import java.lang.reflect.Proxy
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class AINPCDecisionDiagnosticCommandTest {
@@ -44,20 +49,7 @@ class AINPCDecisionDiagnosticCommandTest {
     }
     private val messages = mutableListOf<String>()
     private var admin = true
-    private val sender = Proxy.newProxyInstance(CommandSender::class.java.classLoader,
-        arrayOf(CommandSender::class.java)) { _, method, arguments ->
-        when (method.name) {
-            "hasPermission" -> {
-                assertEquals("ainpc.admin", arguments!![0])
-                admin
-            }
-            "sendMessage" -> {
-                messages += LegacyComponentSerializer.legacyAmpersand().serialize(arguments!![0] as Component)
-                null
-            }
-            else -> error("Unexpected command sender access: ${method.name}")
-        }
-    } as CommandSender
+    private val sender = createSender()
 
     init {
         setField(JavaPlugin::class.java, plugin, "newConfig", YamlConfiguration())
@@ -115,6 +107,128 @@ class AINPCDecisionDiagnosticCommandTest {
         assertTrue(messages.single().contains("Utilizare:"))
         assertEquals(0, engine.decisionStatistics(npc.uuid).total)
     }
+
+    @Test
+    fun `named command reads a confirmed transfer without consuming again or changing evidence`() {
+        val helperUuid = UUID.randomUUID()
+        val now = System.currentTimeMillis()
+        var inventoryAmount = 3
+        val result = NpcFoodAid.offer(npc, helperUuid, "Alex", "minecraft:bread", now,
+            consumeOne = { inventoryAmount--; true }, rollback = { inventoryAmount++ })
+        assertEquals(NpcFoodAid.Status.ACCEPTED, result.status)
+        val receipts = npc.socialExperience.snapshot()
+        val state = NpcCognitiveState.capture(npc)
+        val stateRevision = npc.stateRevision
+        val decisionRevision = npc.decisionRevision
+
+        repeat(2) { assertTrue(handleDecision(sender, arrayOf("decision", "Bob"))) }
+
+        assertTrue(messages.any { it.contains("1 inregistrari pastrate") })
+        assertTrue(messages.any { it.contains("id=${result.receipt!!.id}; recordedAt=$now") })
+        assertTrue(messages.any { it.contains("minecraft:bread x1; satietate 20 -> 40") &&
+            it.contains("UUID=$helperUuid") })
+        assertTrue(messages.any { it.contains("Pauza cereri hrana:") && it.contains("neinspectata") })
+        assertEquals(2, inventoryAmount)
+        assertEquals(receipts, npc.socialExperience.snapshot())
+        assertEquals(state, NpcCognitiveState.capture(npc))
+        assertEquals(stateRevision, npc.stateRevision)
+        assertEquals(decisionRevision, npc.decisionRevision)
+        assertEquals(123L, npc.lastSimulationTickAt)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `player command shows only its own pause even for players with the same name`() {
+        val helperUuid = UUID.randomUUID()
+        val otherUuid = UUID.randomUUID()
+        val now = System.currentTimeMillis()
+        assertTrue(npc.foodRequestPreferences.defer(helperUuid, NpcFoodRequestPreferences.Reply.PROMISE, now))
+        val helper = createSender(helperUuid)
+        val other = createSender(otherUuid)
+
+        repeat(2) { assertTrue(handleDecision(helper, arrayOf("decision", "Bob"))) }
+
+        assertTrue(messages.any { it.contains("Pauza cereri hrana (UUID=$helperUuid)") && it.contains("PROMISE") })
+        assertEquals(NpcFoodRequestPreferences.Reply.PROMISE, npc.foodRequestPreferences.activeReply(helperUuid, now))
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+        messages.clear()
+        assertTrue(handleDecision(other, arrayOf("decision", "Bob")))
+        assertTrue(messages.any { it.contains("UUID=$otherUuid") && it.contains("fara refuz sau promisiune activa") })
+        assertFalse(messages.any { it.contains("PROMISE") || it.contains(helperUuid.toString()) })
+        assertTrue(npc.foodRequestPreferences.defer(helperUuid, NpcFoodRequestPreferences.Reply.DECLINE, now))
+        messages.clear()
+        assertTrue(handleDecision(helper, arrayOf("decision", "Bob")))
+        assertTrue(messages.any { it.contains("DECLINE - refuz respectat") })
+        assertFalse(messages.any { it.contains("PROMISE") })
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `food diagnostic snapshot stays frozen after the promised delivery`() {
+        val helperUuid = UUID.randomUUID()
+        val now = 1_000_000L
+        assertTrue(npc.foodRequestPreferences.defer(helperUuid, NpcFoodRequestPreferences.Reply.PROMISE, now))
+        val before = engine.cognitiveDiagnostic(npc, now = now, viewerUuid = helperUuid)
+        val beforeLines = formatDecisionCognition(before)
+        val result = NpcFoodAid.offer(npc, helperUuid, "Alex", "minecraft:bread", now + 1L,
+            consumeOne = { true }, rollback = { error("Unexpected rollback") })
+        assertEquals(NpcFoodAid.Status.ACCEPTED, result.status)
+
+        val after = engine.cognitiveDiagnostic(npc, now = now + 1L, viewerUuid = helperUuid)
+
+        assertEquals(now, before.capturedAt)
+        assertEquals(0, before.foodAid.retainedReceipts)
+        assertNull(before.foodAid.lastReceipt)
+        assertEquals(NpcFoodRequestPreferences.Reply.PROMISE, before.foodAid.activeReply)
+        assertEquals(20, before.state.hungerLevel)
+        assertEquals(beforeLines, formatDecisionCognition(before))
+        assertEquals(1, after.foodAid.retainedReceipts)
+        assertEquals(result.receipt, after.foodAid.lastReceipt)
+        assertNull(after.foodAid.activeReply)
+        assertEquals(40, after.state.hungerLevel)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `diagnostic expiry reads do not prune or renew pauses and never create receipts`() {
+        val helperUuid = UUID.randomUUID()
+        val now = 1_000_000L
+        val before = NpcCognitiveState.capture(npc)
+        for (reply in NpcFoodRequestPreferences.Reply.entries) {
+            assertTrue(npc.foodRequestPreferences.defer(helperUuid, reply, now))
+            val deadline = now + reply.delayMillis
+            assertEquals(reply, engine.cognitiveDiagnostic(npc, now = deadline - 1L,
+                viewerUuid = helperUuid).foodAid.activeReply)
+            assertNull(engine.cognitiveDiagnostic(npc, now = deadline, viewerUuid = helperUuid).foodAid.activeReply)
+            assertNull(engine.cognitiveDiagnostic(npc, now = deadline + 1L, viewerUuid = helperUuid).foodAid.activeReply)
+            assertEquals(reply, npc.foodRequestPreferences.activeReply(helperUuid, now + 1L))
+            assertEquals(reply, engine.cognitiveDiagnostic(npc, now = now - 1L,
+                viewerUuid = helperUuid).foodAid.activeReply)
+        }
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    private fun createSender(viewerUuid: UUID? = null): CommandSender = Proxy.newProxyInstance(
+        CommandSender::class.java.classLoader,
+        arrayOf(if (viewerUuid == null) CommandSender::class.java else Player::class.java),
+    ) { _, method, arguments ->
+        when (method.name) {
+            "hasPermission" -> {
+                assertEquals("ainpc.admin", arguments!![0])
+                admin
+            }
+            "sendMessage" -> {
+                messages += LegacyComponentSerializer.legacyAmpersand().serialize(arguments!![0] as Component)
+                null
+            }
+            "getUniqueId" -> viewerUuid
+            "getName" -> "Alex"
+            else -> error("Unexpected command sender access: ${method.name}")
+        }
+    } as CommandSender
 
     private fun setField(owner: Class<*>, target: Any, name: String, value: Any) {
         owner.getDeclaredField(name).apply { isAccessible = true }.set(target, value)

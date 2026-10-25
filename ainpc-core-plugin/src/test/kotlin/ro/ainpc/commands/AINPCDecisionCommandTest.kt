@@ -3,6 +3,7 @@ package ro.ainpc.commands
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.engine.ActionCooldown
@@ -12,10 +13,13 @@ import ro.ainpc.engine.DecisionStatistics
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSelfCareContinuity
+import ro.ainpc.npc.NpcSocialExperience
 import java.lang.reflect.Proxy
 import java.util.Locale
+import java.util.UUID
 
 class AINPCDecisionCommandTest {
     @Test
@@ -28,7 +32,7 @@ class AINPCDecisionCommandTest {
         val diagnostic = DecisionEngine.CognitiveDiagnostic(now, state, NpcSelfCareContinuity.READY)
         val lines = formatDecisionCognition(diagnostic)
 
-        assertEquals(7, lines.size)
+        assertEquals(9, lines.size)
         assertTrue(lines.any { it.contains("satietate 18, energie 40") })
         assertTrue(lines.any { it.contains("Intentie curenta:") && it.contains("revina acasa") })
         assertTrue(lines.any { it.contains("Ultima decizie aplicata:") && it.contains("fara inregistrare recenta") })
@@ -47,11 +51,68 @@ class AINPCDecisionCommandTest {
             DecisionEngine.CognitiveDiagnostic(1_000L, state, NpcSelfCareContinuity.FEATURE_DISABLED),
         )
 
-        assertEquals(6, lines.size)
+        assertEquals(8, lines.size)
         assertTrue(lines.all { it.length <= 380 && '\n' !in it && '\r' !in it && '\t' !in it })
         assertTrue(lines.any { it.contains("Progres ingrijire:") && it.contains("fara obiectiv recent") })
+        assertTrue(lines.any { it.contains("Ajutor alimentar confirmat:") && it.contains("0 inregistrari pastrate") })
+        assertTrue(lines.any { it.contains("Pauza cereri hrana:") && it.contains("neinspectata") })
         assertTrue(lines.none { it.contains("Observatie:") })
         assertTrue(lines.last().contains("goal_continuity_enabled"))
+    }
+
+    @Test
+    fun foodDiagnosticSeparatesStoredReceiptFromCurrentNeedWithoutExposingHelperNames() {
+        val helperUuid = UUID.randomUUID()
+        val receipt = NpcSocialExperience.Receipt(UUID.randomUUID(), helperUuid, "&cprivate\n".repeat(100),
+            "minecraft:bread", 1, 20, 40, 900_000L)
+        val diagnostic = DecisionEngine.CognitiveDiagnostic(1_000_000L, NpcCognitiveState(hungerLevel = 10),
+            NpcSelfCareContinuity.FEATURE_DISABLED, DecisionEngine.FoodAidDiagnostic(32, receipt))
+
+        val lines = formatDecisionCognition(diagnostic)
+
+        assertTrue(lines.any { it.contains("satietate 10,") })
+        assertTrue(lines.any { it.contains("32 inregistrari pastrate") })
+        assertTrue(lines.any { it.contains("id=${receipt.id}; recordedAt=900000 ms epoch") })
+        assertTrue(lines.any { it.contains("Efect consemnat: minecraft:bread x1; satietate 20 -> 40;") &&
+            it.contains("UUID=$helperUuid") })
+        assertFalse(lines.any { it.contains("private") })
+        assertTrue(lines.all { it.length <= 380 && '\n' !in it && '\r' !in it && '\t' !in it })
+    }
+
+    @Test
+    fun foodDiagnosticDistinguishesPersonalPromiseRefusalAndConsoleWithoutInventingAReceipt() {
+        val viewerUuid = UUID.randomUUID()
+        val diagnostic = DecisionEngine.CognitiveDiagnostic(1_000_000L, NpcCognitiveState(),
+            NpcSelfCareContinuity.FEATURE_DISABLED, DecisionEngine.FoodAidDiagnostic(viewerUuid = viewerUuid,
+                activeReply = NpcFoodRequestPreferences.Reply.PROMISE))
+
+        val promise = formatDecisionFoodAid(diagnostic)
+        val refusal = formatDecisionFoodAid(diagnostic.copy(foodAid = diagnostic.foodAid.copy(
+            activeReply = NpcFoodRequestPreferences.Reply.DECLINE)))
+        val console = formatDecisionFoodAid(diagnostic.copy(foodAid = diagnostic.foodAid.copy(viewerUuid = null)))
+
+        assertTrue(promise.any { it.contains("UUID=$viewerUuid") && it.contains("PROMISE") &&
+            it.contains("nu este aliment primit") })
+        assertTrue(refusal.any { it.contains("DECLINE - refuz respectat") })
+        assertTrue(console.any { it.contains("neinspectata") })
+        assertFalse(console.any { it.contains("PROMISE") || it.contains("DECLINE") || it.contains(viewerUuid.toString()) })
+        assertTrue(listOf(promise, refusal, console).all { lines ->
+            lines.size == 2 && lines.first().contains("0 inregistrari pastrate")
+        })
+    }
+
+    @Test
+    fun futureDatedStoredReceiptIsExplicitlyFlaggedInsteadOfPresentedAsANewDelivery() {
+        val receipt = NpcSocialExperience.Receipt(UUID.randomUUID(), UUID.randomUUID(), "Alex",
+            "minecraft:apple", 1, 20, 32, Long.MAX_VALUE)
+        val diagnostic = DecisionEngine.CognitiveDiagnostic(1_000_000L, NpcCognitiveState(),
+            NpcSelfCareContinuity.FEATURE_DISABLED, DecisionEngine.FoodAidDiagnostic(1, receipt))
+
+        val lines = formatDecisionFoodAid(diagnostic)
+
+        assertTrue(lines.any { it.contains("Timestamp in viitor") && it.contains("nu confirma o livrare noua") })
+        assertTrue(lines.any { it.contains("recordedAt=${Long.MAX_VALUE} ms epoch") })
+        assertTrue(lines.all { it.length <= 380 })
     }
 
     private class TestCommand(name: String) : Command(name) {

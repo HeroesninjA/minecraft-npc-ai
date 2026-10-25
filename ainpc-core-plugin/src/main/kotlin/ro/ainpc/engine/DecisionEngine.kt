@@ -13,9 +13,11 @@ import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcDecisionExplanation
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSelfCareContinuity
 import ro.ainpc.npc.NpcSimulationMode
+import ro.ainpc.npc.NpcSocialExperience
 import java.util.EnumMap
 import java.util.Locale
 import java.util.UUID
@@ -72,6 +74,14 @@ class DecisionEngine internal constructor(
         val capturedAt: Long,
         val state: NpcCognitiveState,
         val continuity: NpcSelfCareContinuity,
+        val foodAid: FoodAidDiagnostic = FoodAidDiagnostic(),
+    )
+
+    internal data class FoodAidDiagnostic(
+        val retainedReceipts: Int = 0,
+        val lastReceipt: NpcSocialExperience.Receipt? = null,
+        val viewerUuid: UUID? = null,
+        val activeReply: NpcFoodRequestPreferences.Reply? = null,
     )
 
     private data class CachedDecision(
@@ -357,9 +367,13 @@ class DecisionEngine internal constructor(
 
     internal fun cognitiveDiagnostic(
         npc: AINPC, context: NPCContext = npc.context, now: Long = System.currentTimeMillis(),
+        viewerUuid: UUID? = null,
     ): CognitiveDiagnostic {
         val state = NpcCognitiveState.capture(npc, context, now)
-        return CognitiveDiagnostic(now, state, selfCareContinuity(npc, context, now, state))
+        val receipts = npc.socialExperience.snapshot()
+        val foodAid = FoodAidDiagnostic(receipts.size, receipts.lastOrNull(), viewerUuid,
+            viewerUuid?.let { npc.foodRequestPreferences.activeReply(it, now) })
+        return CognitiveDiagnostic(now, state, selfCareContinuity(npc, context, now, state), foodAid)
     }
 
     private fun selfCareContinuity(

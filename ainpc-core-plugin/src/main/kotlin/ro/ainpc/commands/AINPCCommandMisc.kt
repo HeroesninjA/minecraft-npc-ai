@@ -19,6 +19,7 @@ import ro.ainpc.gui.GuiKey
 import ro.ainpc.gui.GuiRole
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.routine.RoutineAssignment
 import ro.ainpc.routine.RoutineTickSummary
 import ro.ainpc.story.StoryContextSnapshot
@@ -1633,7 +1634,8 @@ fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
     val preview = ainpcCommandMiscPlugin.decisionEngine.previewActionDecision(npc, npc.context)
     msg.send(sender, "&6=== Decizie NPC: ${npc.name} ===")
     msg.send(sender, "&eStare: &f${npc.currentState.displayName} &7| &ePericol: &f${if (npc.context.isInDanger) "da" else "nu"}")
-    formatDecisionCognition(ainpcCommandMiscPlugin.decisionEngine.cognitiveDiagnostic(npc))
+    formatDecisionCognition(ainpcCommandMiscPlugin.decisionEngine.cognitiveDiagnostic(npc,
+        viewerUuid = (sender as? Player)?.uniqueId))
         .forEach { msg.send(sender, it) }
     val mode = when {
         preview.cached -> "cache (cooldown)"
@@ -1696,7 +1698,32 @@ internal fun formatDecisionCognition(diagnostic: DecisionEngine.CognitiveDiagnos
         add("&7Observatie: ${progress.action.name} / ${progress.stage.name}; nevoie ${progress.initialNeed} -> " +
             "${progress.observedNeed}; fara progres confirmat ${progress.withoutProgressMillis / 1_000L} s; vechime $ageSeconds s")
     }
+    addAll(formatDecisionFoodAid(diagnostic))
     add("&eContinuitate ingrijire: &f${diagnostic.continuity.label}")
+}
+
+internal fun formatDecisionFoodAid(diagnostic: DecisionEngine.CognitiveDiagnostic): List<String> = buildList {
+    val foodAid = diagnostic.foodAid
+    add("&eAjutor alimentar confirmat: &f${foodAid.retainedReceipts} inregistrari pastrate")
+    foodAid.lastReceipt?.let { receipt ->
+        add("&7Ultima confirmare pastrata: id=${receipt.id}; recordedAt=${receipt.recordedAt} ms epoch")
+        add("&7Efect consemnat: ${receipt.itemKey} x${receipt.amount}; satietate " +
+            "${receipt.beforeHunger} -> ${receipt.afterHunger}; ajutor UUID=${receipt.helperUuid}")
+        if (receipt.recordedAt > diagnostic.capturedAt) {
+            add("&7Timestamp in viitor; nu confirma o livrare noua la momentul citirii.")
+        }
+    }
+    val pause = if (foodAid.viewerUuid == null) {
+        "neinspectata: expeditorul nu este jucator"
+    } else {
+        when (foodAid.activeReply) {
+            NpcFoodRequestPreferences.Reply.DECLINE -> "DECLINE - refuz respectat"
+            NpcFoodRequestPreferences.Reply.PROMISE -> "PROMISE - timp pentru livrare; nu este aliment primit"
+            null -> "fara refuz sau promisiune activa"
+        }
+    }
+    val viewer = foodAid.viewerUuid?.let { " (UUID=$it)" }.orEmpty()
+    add("&ePauza cereri hrana$viewer: &f$pause")
 }
 
 private fun decisionDiagnosticText(value: String, fallback: String): String =

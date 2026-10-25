@@ -1,7 +1,7 @@
 # Versionare API si ABI
 
 Status: politica publica si gate operational canonic.
-Actualizat: 2026-07-18.
+Actualizat: 2026-10-25.
 
 `ainpc-api` are versiune proprie, baseline JVM determinist si verificare obligatorie la build/release. Codul si baseline-ul comis raman autoritatea pentru ABI-ul public curent.
 
@@ -43,6 +43,17 @@ Verificarea exacta detecteaza atat schimbari incompatibile, cat si extensii comp
 6. pastreaza in dovada de release versiunea API, hash-ul ABI si raportul freeze.
 
 Actualizarea baseline-ului refuza regresia de versiune si refuza un ABI nou cu acelasi `apiVersion`. Exceptia este schimbarea identificatorului generatorului, folosita numai pentru refresh de tooling si revizuita ca atare.
+
+## Revizuire API 1.1.0 - 2026-10-25
+
+`apiVersion=1.1.0` clasifica drept extensii minor doua schimbari publice deja existente in surse, fara modificarea `projectVersion=1.0.0` sau a implementarii cognitive:
+
+- `PermissionNode.PROFILE` adauga permisiunea `ainpc.profile`, cu nivel `PLAY` si valoare implicita `true`; constantele si metodele anterioare sunt pastrate;
+- `WorldRegionInfo` adauga constructorul cu `storyDescriptions` si metoda `storyDescriptions()`, pastrand descriptorul constructorului anterior cu 14 argumente si valorile implicite pentru argumentele nullable;
+- testele Java verifica apelurile constructorilor, accesul la membri si cautarea permisiunilor; testele Kotlin verifica apelurile cu argumente numite, inclusiv constructorul anterior;
+- baseline-ul regenerat intentionat pastreaza generatorul `javap-protected-descriptors-v2` si cele 166 de clase; numai cele doua clase de mai sus au semnaturi schimbate fata de baseline-ul 1.0.0.
+
+Hash-ul ABI 1.1.0 este `E4944F1E9440FFDB285D49A935A42C0E2AACC510FA1A8F9AD3EA6A0925AACD39`. Adaugarea constantei enum nu garanteaza stabilitatea ordinalelor sau a logicii exhaustive scrise de consumatori; foloseste identificatorul permisiunii, nu pozitia sa in enum, si trateaza explicit valorile noi. Clasificarea si testele de consum nu inlocuiesc verificarea addonurilor si smoke-ul Paper.
 
 ## Limite
 
