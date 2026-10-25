@@ -609,6 +609,57 @@ class CognitiveLifeSimulationTickTest {
         assertEquals(RoutineActivityExecutor.Outcome.MOVING, outcome)
     }
 
+    @Test
+    fun `future simulation time cannot change needs through full or light manager ticks`() {
+        for (mode in listOf(NpcSimulationMode.FULL, NpcSimulationMode.LIGHT)) {
+            npc.simulationMode = mode
+            npc.lastSimulationTickAt = Long.MAX_VALUE
+            val before = listOf(npc.hungerLevel, npc.energyLevel, npc.socialNeedLevel, npc.comfortLevel, npc.safetyLevel)
+
+            tick()
+
+            assertEquals(before,
+                listOf(npc.hungerLevel, npc.energyLevel, npc.socialNeedLevel, npc.comfortLevel, npc.safetyLevel), mode.name)
+            assertTrue(npc.lastSimulationTickAt in 1 until Long.MAX_VALUE)
+            assertTrue(npc.actionExperience.snapshot().isEmpty())
+        }
+    }
+
+    @Test
+    fun `care dialogue remembers the observed home without claiming it is the current work location`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        tick()
+        assertEquals(NpcSelfCareGoal.Stage.RECOVERING, progress()!!.stage)
+        val recorded = progress()
+
+        location = Location(world, 100.0, 64.0, 0.0)
+        npc.context.syncSimulationState(location)
+        assertFalse(npc.context.isAtHome)
+        assertTrue(npc.context.isAtWork)
+        val before = engine.cognitiveDiagnostic(npc).state
+        val observations = npc.actionExperience.snapshot()
+        val scans = nearbyScans
+        val moves = acceptedMoves
+        val lastTick = npc.lastSimulationTickAt
+        val revision = npc.decisionRevision
+        val samples = engine.decisionStatistics(npc.uuid).total
+
+        val response = dialogue.generateResponse(npc, npc.context, "Cum merge obiectivul de hrana?").join()
+        val providerContext = npc.generateContextDescription()
+
+        assertTrue(response.contains("La ultima observatie, eram acasa"), response)
+        assertFalse(response.contains("Sunt acasa"))
+        assertTrue(providerContext.contains("Progresul ingrijirii: $response"))
+        assertEquals(recorded, progress())
+        assertEquals(before, engine.cognitiveDiagnostic(npc).state)
+        assertEquals(observations, npc.actionExperience.snapshot())
+        assertEquals(scans, nearbyScans)
+        assertEquals(moves, acceptedMoves)
+        assertEquals(lastTick, npc.lastSimulationTickAt)
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(samples, engine.decisionStatistics(npc.uuid).total)
+    }
+
     private fun tick() {
         Thread.sleep(2L)
         serverTick++
