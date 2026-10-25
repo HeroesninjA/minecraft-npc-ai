@@ -73,6 +73,10 @@ Proiectia de la finalul tick-ului nu mai restaureaza pozitia capturata inaintea 
 
 Doua scenarii automate urmaresc acum masa aplicata, refacerea observata, memoria si o alegere ulterioara efectiv aplicata prin manager. In conditii echivalente si cu aceeasi aleatorietate, eliminarea memoriei conduce la somn, iar prezenta observatiei conduce la masa. Comparatia este repetata dupa serializarea JSON, cu controale pentru oprirea invatarii si schimbarea casei. Testele demonstreaza posibilitatea unei adaptari limitate, nu o schimbare garantata la fiecare alegere, persistenta completa intr-un restart sau experienta subiectiva. [Metoda](../operations/debugging-si-testare.md#comparatie-cauzala-a-alegerii) separa explicit aceasta verificare locala de efectele fizice in Minecraft.
 
+## Indeplinirea verificabila a promisiunii - 2026-10-25
+
+O livrare alimentara reusita incheie acum asteptarea unei promisiuni active numai pentru jucatorul care a promis, dupa consumul unitatii si inregistrarea dovezii. Declaratia, istoricul recitit, un omonim sau un transfer esuat nu primesc acest credit. Refuzul explicit si limitele cererilor autonome raman respectate. Scenariile automate leaga inventarul controlat, memoria sociala, initiativa, raspunsul si livrarea, fara sa confunde indeplinirea promisiunii cu satisfacerea completa a nevoii ori invatarea generala din conversatie. [Verificarea in Minecraft](../operations/debugging-si-testare.md#promisiunea-indeplinita-prin-ajutor) ramane necesara.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.
