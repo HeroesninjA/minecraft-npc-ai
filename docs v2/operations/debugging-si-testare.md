@@ -189,6 +189,18 @@ Pozitia este modificata in fixture pentru a reprezenta o schimbare externa intre
 
 Checkpoint local 2026-10-25: toate cele cinci regresii esueaza inainte de corectia formularii, apoi trec cele 83 de teste focalizate. Verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.197 de teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou; task-urile API/addon neschimbate reutilizeaza rezultatele valide up-to-date. Freeze-ul static trece fara avertismente si pastreaza ABI-ul 1.1.0. Raportul `.ai/release-reports/cognitive-progress-history-preflight-2026-10-25T16-02-07Z.json` pastreaza dovezile red/green, hash-urile si limitele. Nu se porneste serverul, nu se solicita un provider AI real si nu se modifica sandbox-ul pregatit anterior.
 
+### Reaplicari intre observatiile progresului
+
+Regresia porneste un obiectiv la `t0`, reaplica aceeasi ingrijire la secunda 29 si observa intervalul complet la secunda 30, de sase ori. Contorizarea anterioara retinea numai 6 secunde din cele 180 observate, deoarece `updatedAt` era folosit si drept reper al observarii. Cele patru teste noi esueaza inainte de corectie; integrarea confirma ca prioritatea revenirii ramanea `READY` in loc de `NO_PROGRESS`.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.npc.NpcSelfCareGoalTest" --tests "ro.ainpc.engine.SelfCareContinuityIntegrationTest" --console=plain
+```
+
+Un reper privat separat pastreaza intervalul masurat intre reaplicari. Testele acopera hrana si somnul, revenirea si ingrijirea acasa, continuarea intentiei, casa schimbata, sosirea la mijlocul intervalului, recuperarea si stergerea obiectivului. Selectia reala invalideaza prioritatea din cache dupa trei minute observate; nu apar miscari, schimbari de nevoi sau experiente suplimentare. Timpul este controlat direct in fixture, fara asteptari reale sau pornirea unui server. Cele 91 de teste focalizate pentru monitor, continuitate, tick cognitiv, ceas, executor si diagnostic trec cu zero esecuri sau erori.
+
+Checkpoint local 2026-10-25: verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.201 teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou, iar testele API/addon neschimbate reutilizeaza rezultatele up-to-date. Freeze-ul static `.ai/release-reports/cognitive-progress-accounting-20261025-api-addon-freeze.json` trece fara avertismente, cu ABI 1.1.0 neschimbat. Aceste dovezi nu confirma navigatia fizica in Minecraft.
+
 ### Integrarea pe tick-ul public
 
 Regresia locala pentru bucla cognitiva ruleaza fara server:
