@@ -103,6 +103,18 @@ Testul foloseste intrarea publica a managerului, actualizarea reala a nevoilor, 
 
 Doua regresii protejeaza explicit pierderea entitatii: flagul `spawned` ramas vechi nu permite continuarea pe coordonatele stocate, iar invalidarea in timpul actualizarii contextului opreste tick-ul inainte de nevoi si decizii. Aceeasi protectie este verificata pentru `LIGHT` si pentru apelurile directe ale motoarelor. O disparitie nu trebuie sa produca succes, experienta sau decizie aplicata noua.
 
+Patru scenarii acopera si callback-ul aplicarii: schimbarea modului cu revenire la `FULL` nu rearmeaza invatarea anulata, conversatia isi pastreaza intentia, revenirea la aceeasi stare dupa o intrerupere nu certifica alegerea veche, iar un tick nou executat reentrant isi pastreaza explicatia, obiectivul si perioada proprie de invatare. Regresiile urmaresc tick-urile urmatoare: experienta apare numai dupa o noua aplicare valida si observarea ulterioara, nu din simpla refacere a nevoii dupa intrerupere.
+
+Alte patru scenarii verifica proiectia contextului dupa aplicare: teleport urmat de tick reentrant, conversatie cu schimbarea pozitiei fara invalidarea ciclului de viata, pierderea entitatii dupa stergerea indiciilor de locatie si aplicarea normala cu sau fara tranzitie de stare. Textul contextului trebuie sa descrie atelierul observat, nu casa dinaintea interactiunii, si sa pastreze intentia curenta. Numarul scanarilor confirma ca repararea proiectiei nu executa inca o perceptie a lumii. Teleportul si pozitia sunt controlate in fixture; nu reprezinta validare fizica in Minecraft.
+
+### Comparatie cauzala a alegerii
+
+Doua scenarii din `CognitiveLifeSimulationTickTest` verifica adaptarea prin managerul public. Mai intai, masa este aleasa si aplicata, apoi o actualizare reala observa cresterea satietatii si produce memoria. Pentru alegerea ulterioara, ambele ramuri pornesc de la aceleasi nevoi, pozitie, stare, personalitate, ora si configuratie: satietate 33, energie 20, acasa, stare `IDLE`. Configuratia ponderarii ramane cea implicita; fixture-ul activeaza alegerea probabilistica.
+
+Cache-ul si istoricul selectiilor sunt golite in ambele ramuri. Timestamp-ul ultimei actualizari este zero pentru a nu modifica nevoile inghetate la primul tick al comparatiei. Testul cauta un seed pentru care memoria schimba rezultatul, apoi foloseste acelasi UUID, seed si numar de selectie in ambele executii publice: fara observatie se aplica `SLEEP`, cu observatia se aplica `EAT`. Aceasta izoleaza influenta memoriei; nu afirma ca toate seed-urile sau toate situatiile produc alegeri diferite.
+
+Al doilea scenariu repeta comparatia dupa scrierea si recitirea textului JSON cu `NpcActionExperienceCodec`; nu simuleaza un restart complet sau accesul bazei de date. Ambele scenarii verifica raspunsul local `Ce ai invatat?` fara mutatii, lipsa unei observatii noi la simpla reaplicare a intentiei, noua observatie abia la actualizarea urmatoare, oprirea influentei prin `experience_enabled=false` si neutilizarea experientei vechii case la o casa noua. Istoricul ramane pastrat in aceste controale. Perceptia si entitatea sunt controlate; validarea fizica in Minecraft ramane separata.
+
 ## Teste locale
 
 Foloseste un JDK compatibil configurat prin `JAVA_HOME` sau `PATH`; scripturile nu trebuie sa presupuna o cale locala fixa.
