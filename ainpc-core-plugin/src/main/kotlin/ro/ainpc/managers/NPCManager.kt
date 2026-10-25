@@ -450,6 +450,8 @@ class NPCManager(
                 npc.currentGoal = readString(simulation, "current_goal", npc.currentGoal)
                 npc.plannedRoutineActivity = readString(simulation, "planned_routine_activity", npc.plannedRoutineActivity)
                 npc.lastSimulationTickAt = readLong(simulation, "last_simulation_tick_at", npc.lastSimulationTickAt)
+                npc.actionExperience.restore(NpcActionExperienceCodec.read(simulation.get("action_experience")))
+                npc.socialExperience.restore(NpcSocialExperienceCodec.read(simulation.get("social_experience")))
             }
 
             val ownedLocations = if (json.has("owned_locations") && json.get("owned_locations").isJsonObject)

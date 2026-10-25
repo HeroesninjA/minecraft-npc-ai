@@ -5,6 +5,18 @@ import org.junit.jupiter.api.Test
 
 class PlayerRecognitionTest {
     @Test
+    fun `confirmed food help establishes acquaintance without inventing conversations or friendship`() {
+        val recognition = PlayerRecognition.from(null, 0, 0, confirmedFoodHelp = true)
+
+        assertEquals(PlayerRecognition.Familiarity.KNOWN, recognition.familiarity)
+        assertEquals(0, recognition.interactionCount)
+        val guarded = PlayerRecognition.from(
+            NPCRelationship(trust = -0.5), 0, 0, confirmedFoodHelp = true,
+        )
+        assertEquals(PlayerRecognition.Familiarity.GUARDED, guarded.familiarity)
+    }
+
+    @Test
     fun `regional reputation alone does not imply a personal meeting`() {
         val recognition = PlayerRecognition.from(null, 0, 0, 25)
 

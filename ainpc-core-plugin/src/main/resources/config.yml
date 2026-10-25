@@ -233,6 +233,8 @@ npc:
 
 # Simulare de viata
 simulation:
+  food_help_enabled: true
+  food_requests_enabled: true
   # Daca este activ, NPC-urile isi actualizeaza rutina si nevoile de baza periodic.
   enabled: false
   # La cate secunde ruleaza un tick de simulare.
@@ -240,6 +242,8 @@ simulation:
   decision:
     # Alege ponderat dintre actiunile apropiate ca scor; pericolul si combatul raman deterministe.
     probabilistic_enabled: true
+    experience_enabled: true
+    goal_continuity_enabled: false
     # Cel mult cate actiuni intra in distributie (1-8).
     max_choices: 3
     # Diferenta maxima fata de cel mai bun scor (0-100).

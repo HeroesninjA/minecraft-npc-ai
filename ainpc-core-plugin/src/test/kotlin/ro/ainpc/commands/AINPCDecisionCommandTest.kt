@@ -57,7 +57,7 @@ class AINPCDecisionCommandTest {
                 formatDecisionCooldown(ActionCooldown(NPCAction.GREET, 30_000L)),
             )
             assertEquals(
-                "&8  componente: baza 20, trasaturi +3, emotii -2, memorie +0, context +7, nevoi -4, rutina +5",
+                "&8  componente: baza 20, trasaturi +3, emotii -2, memorie +0, context +7, nevoi -4, rutina +5, experienta +0, ajutor +0",
                 formatDecisionScoreBreakdown(DecisionEngine.ActionScoreBreakdown(20, 3, -2, 0, 7, -4, 5)),
             )
             assertEquals(
@@ -89,5 +89,23 @@ class AINPCDecisionCommandTest {
         } finally {
             Locale.setDefault(previous)
         }
+    }
+
+    @Test
+    fun separatesLearnedExperienceFromRelationshipMemory() {
+        val breakdown = DecisionEngine.ActionScoreBreakdown(20, 3, -2, 4, 7, -4, 5, experience = -3)
+
+        assertEquals(30, breakdown.rawTotal)
+        assertTrue(formatDecisionScoreBreakdown(breakdown).contains("memorie +4"))
+        assertTrue(formatDecisionScoreBreakdown(breakdown).contains("experienta -3"))
+    }
+
+    @Test
+    fun includesConfirmedHelpSeparatelyFromPersonalRelationships() {
+        val breakdown = DecisionEngine.ActionScoreBreakdown(20, 0, 0, 7, 0, 0, 0, socialExperience = 5)
+
+        assertEquals(32, breakdown.rawTotal)
+        assertTrue(formatDecisionScoreBreakdown(breakdown).contains("memorie +7"))
+        assertTrue(formatDecisionScoreBreakdown(breakdown).contains("ajutor +5"))
     }
 }

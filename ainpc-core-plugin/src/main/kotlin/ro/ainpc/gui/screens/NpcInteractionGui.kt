@@ -49,7 +49,9 @@ class NpcInteractionGui : GuiScreen {
                     "&7Click pe card: info NPC.",
                     "&7Right click pe card: status progresie.",
                     "&7Shift click pe card: detalii progresie.",
-                    "&7Pentru Dialog Direct: Click Dreapta pe NPC In Lume."
+                    "&7Pentru Dialog Direct: Click Dreapta pe NPC In Lume.",
+                    "&7Hrana: Shift + click dreapta cu paine sau mar.",
+                    "&8Oferi un singur aliment din mana."
                 )
             )
         )

@@ -39,7 +39,8 @@ object OpenAIPromptBuilder {
             relationship,
             conversationHistory.size,
             dbContext?.totalMemoryCount() ?: relevantMemories?.size ?: 0,
-            dbContext?.regionalReputation
+            dbContext?.regionalReputation,
+            confirmedFoodHelp = snapshot.helperExperienceDescription.isNotBlank(),
         )
 
         prompt.append("Esti un NPC intr-un joc Minecraft. Raspunzi DOAR in limba romana.\n")
@@ -54,6 +55,11 @@ object OpenAIPromptBuilder {
         prompt.append("Cand jucatorul intreaba cine esti, ce meserie ai, ce faci, cum te simti sau unde esti, foloseste exact campurile relevante din NPC_DATA.\n")
         prompt.append("Distinge activitatea curenta de rutina planificata si de obiectivul imediat; nu pretinde ca un plan este deja realizat.\n")
         prompt.append("Pentru ganduri, nevoi si intentii, foloseste autoevaluarea curenta din DESPRE TINE. Ea descrie prioritati simulate, nu actiuni reusite, amintiri sau dovezi de constiinta.\n")
+        prompt.append("Pentru ce ai invatat, foloseste numai Experienta recenta din DESPRE TINE; ea descrie un rezultat observat al mesei sau somnului acasa, fara sa dovedeasca ajutorul unui jucator sau consumul unor obiecte din inventar.\n")
+        prompt.append("Pentru explicatia unei alegeri, foloseste numai Ultima decizie explicata din DESPRE TINE. Ea descrie o alegere anterioara si factorii favorabili de atunci, nu garanteaza rezultatul ori activitatea curenta. Daca lipseste, spune ca nu ai o decizie recenta confirmata. Nu atribui interlocutorului actual ajutorul unui interlocutor anterior si pastreaza mentiunea ca alegerea putea varia atunci cand exista.\n")
+        prompt.append("Pentru progresul obiectivului de hrana sau odihna, foloseste numai Progresul ingrijirii din DESPRE TINE. Distinge intoarcerea planificata, sosirea observata, refacerea si incheierea ori intreruperea obiectivului. Lipsa progresului confirmat nu dovedeste o ruta blocata sau cauza ei. Respecta incertitudinea cauzei rezultatului; progresul nu confirma consum de inventar sau ajutorul jucatorului curent. Daca lipseste, nu inventa un obiectiv sau o reusita.\n")
+        prompt.append("Ajutorul cu hrana al jucatorului curent este confirmat numai de npc_confirmed_food_help. Nu il deduce din declaratii, reputatie, prietenie sau un obiect tinut in mana si nu il atribui altui jucator.\n")
+        prompt.append("Daca npc_food_request_deferred este da, respecta refuzul ori timpul cerut de jucator: nu solicita din nou mancare. O promisiune de ajutor nu confirma ca ai primit mancare.\n")
         prompt.append("Daca jucatorul cere mai multe fapte in acelasi mesaj, raspunde la toate in ordinea in care au fost cerute.\n")
         prompt.append("Nu inventa detalii care lipsesc din NPC_DATA sau din context.\n\n")
         prompt.append("Despre jucator, separa ce ai trait impreuna de ce observi acum; nu transforma un obiect tinut in mana intr-o meserie sau personalitate.\n")
@@ -71,6 +77,8 @@ object OpenAIPromptBuilder {
         prompt.append("npc_personality: ").append(OpenAITextSupport.valueOrUnknown(snapshot.personalityDescription())).append("\n")
         prompt.append("npc_planned_routine: ").append(OpenAITextSupport.valueOrUnknown(NpcFactResolver.safeRoutine(snapshot.plannedRoutineActivity))).append("\n")
         prompt.append("npc_immediate_goal: ").append(OpenAITextSupport.valueOrUnknown(snapshot.immediateGoal)).append("\n")
+        prompt.append("npc_confirmed_food_help: ").append(OpenAITextSupport.valueOrUnknown(snapshot.helperExperienceDescription)).append("\n")
+        prompt.append("npc_food_request_deferred: ").append(if (snapshot.foodRequestDeferred) "da" else "nu").append("\n")
         prompt.append("npc_location: ").append(OpenAITextSupport.valueOrUnknown(snapshot.locationDescription())).append("\n")
         prompt.append("fact_name_answer: ").append("Sunt ").append(snapshot.npcName()).append(".\n")
         prompt.append("fact_profession_answer: ").append(
@@ -94,7 +102,9 @@ object OpenAIPromptBuilder {
         prompt.append("profil_versiune: ").append(snapshot.profileVersion()).append("\n")
         prompt.append("profil_rezumat: ").append(OpenAITextSupport.valueOrUnknown(snapshot.profileSummary())).append("\n")
         prompt.append("profil_traits: ").append(OpenAITextSupport.joinTraits(snapshot.traitIds())).append("\n")
-        prompt.append("profil_json_db: ").append(OpenAITextSupport.abbreviate(snapshot.profileDataJson(), 1200)).append("\n\n")
+        prompt.append("profil_json_db: ").append(OpenAITextSupport.abbreviate(
+            OpenAITextSupport.profileForPrompt(snapshot.profileDataJson()), 1200,
+        )).append("\n\n")
 
         prompt.append("=== DESPRE TINE ===\n")
         prompt.append(snapshot.npcDescription()).append("\n")

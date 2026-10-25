@@ -706,6 +706,8 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     simulation.addProperty("current_goal", npc.currentGoal)
     simulation.addProperty("planned_routine_activity", npc.plannedRoutineActivity)
     simulation.addProperty("last_simulation_tick_at", npc.lastSimulationTickAt)
+    simulation.add("action_experience", NpcActionExperienceCodec.write(npc.actionExperience))
+    simulation.add("social_experience", NpcSocialExperienceCodec.write(npc.socialExperience))
     profile.add("simulation", simulation)
 
     val ownedLocations = JsonObject()

@@ -19,10 +19,11 @@ data class PlayerRecognition(
             relationship: NPCRelationship?,
             priorDialogCount: Int,
             memoryCount: Int,
-            regionalReputation: Int? = null
+            regionalReputation: Int? = null,
+            confirmedFoodHelp: Boolean = false,
         ): PlayerRecognition {
             val relationshipType = relationship?.relationshipType?.trim()?.lowercase(Locale.ROOT).orEmpty()
-            val knownPersonally = relationship != null || priorDialogCount > 0 || memoryCount > 0
+            val knownPersonally = relationship != null || priorDialogCount > 0 || memoryCount > 0 || confirmedFoodHelp
             val familiarity = when {
                 !knownPersonally -> Familiarity.FIRST_MEETING
                 relationshipType in setOf("enemy", "rival") || (relationship?.trust ?: 0.0) <= -0.4 -> Familiarity.GUARDED

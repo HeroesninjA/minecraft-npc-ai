@@ -1,14 +1,51 @@
 # Simulare de conștiință pentru NPC-uri: momentul potrivit și etape
 
 Data: 2026-10-07
+Actualizat: 2026-10-25.
 
-Statut: planificare pentru circuitul cognitiv complet; un prim nucleu de autoevaluare este implementat în cod, fără validare în serverul Minecraft.
+Statut: planificare pentru circuitul cognitiv complet; autoevaluarea, experiența limitată de îngrijire, monitorizarea obiectivelor de îngrijire și cererile autonome către ajutori confirmați sunt implementate în cod, fără validare în serverul Minecraft.
 
 ## Primul nucleu implementat — 2026-10-24
 
 `NpcCognitiveState` oferă o reprezentare comună, imuabilă, a nevoilor, atenției și intenției curente. Contribuția nevoilor la alegerea acțiunilor din `DecisionEngine` și răspunsurile despre propria stare din `DialogueEngine` folosesc același model. NPC-ul poate răspunde local la „La ce te gândești?”, „De ce ai nevoie?” și „Ce vrei să faci?”, iar autoevaluarea intră și în contextul capturat pentru providerul AI.
 
-Acest pas urmărește starea proprie și separă intenția de rezultat. Circuitul de învățare din experiențe, evaluarea consecințelor și adaptarea unei decizii ulterioare rămân etape de implementat și verificat. Contractul curent este descris în [runtime-ul de simulare](../architecture/simulation-service.md).
+Acest pas urmărește starea proprie și separă intenția de rezultat. Contractul curent este descris în [runtime-ul de simulare](../architecture/simulation-service.md).
+
+## Circuit de experiență implementat — 2026-10-24
+
+Masa și somnul acasă au acum un circuit limitat: acțiune aplicată → schimbare observată la următorul tick → memorie persistentă → ajustarea unei alegeri ulterioare în condiții echivalente. `NpcActionExperience` reține cel mult 32 de observații și limitează influența lor asupra scorului. Testele compară aceeași situație și același număr de selecție cu și fără experiență, pentru a separa efectul memoriei de variația aleatorie.
+
+NPC-ul poate explica local ce a observat prin „Ce ai învățat?”. Învățarea din rezultatele propriilor acțiuni rămâne limitată la îngrijire; deplasările și învățarea generală din conversații nu sunt acoperite. Verificarea în serverul Minecraft rămâne necesară înainte de a considera validat comportamentul în joc.
+
+## Ajutor alimentar și experiență socială — 2026-10-24
+
+`Shift + click dreapta` cu un aliment acceptat în mâna principală poate transfera un obiect către un NPC înfometat. Numai consumul reușit și creșterea efectivă a sațietății produc o confirmare persistentă, legată de UUID-ul exact al celui care a ajutat. Un eșec de inventar este restaurat, fără amintire de ajutor.
+
+La o nevoie ulterioară, experiența poate favoriza acțiuni conversaționale față de aceeași persoană și poate schimba răspunsul la „De ce ai nevoie?” într-o nouă cerere de hrană. Declarațiile din chat, reputația și simpla ținere a mâncării nu produc această dovadă. Confirmările pot susține și inițiativa autonomă limitată descrisă mai jos.
+
+## Cereri autonome către ajutori confirmați — 2026-10-25
+
+`NpcFoodRequestService` poate trimite o cerere privată celui mai apropiat ajutor confirmat eligibil din contextul actualizat. Inițiativa cere un `Villager` viu și spawnat, simulare `FULL`, profil `FULL_AI`, foame dominantă cu sațietate 0-34, siguranță de cel puțin 40 și stare `IDLE`, `WALKING`, `WAITING`, `RESTING` sau `CURIOUS`. Ajutorul trebuie dovedit pentru UUID-ul exact al destinatarului printr-o confirmare de cel mult șapte zile, care nu este datată în viitor.
+
+Jucătorul este verificat online, conectat, viu, valid, în aceeași lume și în raza `min(npc.interaction_distance, 6)`. Sunt necesare vizibilitatea NPC-ului pentru jucător și linia de vedere a NPC-ului către acesta; invizibilitatea, `vanished` activ și modul spectator îl exclud. Un interlocutor prezent în context sau o sesiune activă a NPC-ului blochează inițiativa. Conversația activă a jucătorului, un input text GUI sau blueprint wizard îl exclud temporar.
+
+Mesajul cere hrană și explică oferirea ei prin `Shift + click dreapta`, fără AI, fără a deschide o sesiune și fără modificări automate de stare, obiectiv, memorie sau inventar. NPC-ul continuă alegerea acțiunii obișnuite. `NpcFoodRequestThrottle` permite un mesaj la cinci minute per NPC și unul pe minut per jucător între toate NPC-urile; limitele se marchează numai după trimitere reușită. Starea păstrează numai UUID-uri și timestamp-uri, are expirare lazy și maximum 4096 de intrări per map, nu evacuează cooldown-uri valide și nu permite ocolirea lor prin întoarcerea ceasului. Este numai runtime și nu se resetează la invalidarea cache-ului de decizii.
+
+`simulation.food_requests_enabled` și `simulation.food_help_enabled` sunt citite la fiecare încercare și sunt implicit `true`. Inițiativa periodică necesită și `features.simulation=true` împreună cu `simulation.enabled=true`; `simulation.enabled` rămâne implicit `false`. Contractul exact este în [runtime-ul de simulare](../architecture/simulation-service.md).
+
+## Explicatia alegerii implementata - 2026-10-25
+
+NPC-ul poate raspunde la `De ce ai ales asta?` sau `Ce ai decis?` folosind ultima alegere aplicata, cu factorii favorabili capturati atunci. Explicatia recunoaste variatia unei selectii ponderate si ramane distincta de intentia curenta si de reusita observata. Este temporara, expira dupa cinci minute si este invalidata de schimbarile de ciclu de viata. Intrebarile si previzualizarile nu creeaza decizii. Detaliile sunt in [runtime-ul de simulare](../architecture/simulation-service.md); validarea in Minecraft ramane de realizat.
+
+## Raspunsul la initiativa alimentara - 2026-10-25
+
+Cererea autonoma are acum o fereastra de raspuns de 45 de secunde pentru destinatarul exact. Un refuz direct amana solicitarile acelui NPC cu 15 minute, iar o promisiune cu 10 minute. NPC-ul respecta pauza si in dialogul despre nevoi; promisiunea nu este considerata ajutor primit. Conversatiile active, formularele si evenimentele anulabile isi pastreaza prioritatea. Preferintele sunt temporare, fara penalizari de relatie ori modificari de inventar. Detaliile si limitele sunt in [runtime-ul de simulare](../architecture/simulation-service.md).
+
+## Progresul observat al ingrijirii - 2026-10-25
+
+`NpcSelfCareGoal` urmareste acum obiectivul de hrana sau odihna pornit de o alegere aplicata: intoarcere intentionata acasa, prezenta confirmata acasa, refacere observata, incheiere ori intrerupere. Lipsa unei case confirmate este raportata separat. Intrebarile despre progres folosesc aceleasi date ca snapshot-ul pentru AI, fara sa execute actiuni. O nevoie refacuta printr-o schimbare externa poate incheia obiectivul, dar nu produce o explicatie cauzala inventata.
+
+Monitorizarea este temporara si limitata la aceste doua nevoi. Functioneaza separat de invatare, fara sa adauge navigatie, adaptarea scorurilor sau planificare generala. Testele acopera progresul prin actualizarea reala a nevoilor, intreruperile si invalidarea din callback; verificarea sosirii si a comportamentului complet in serverul Minecraft ramane necesara. Contractul este in [runtime-ul de simulare](../architecture/simulation-service.md).
 
 ## Concluzie
 
@@ -20,13 +57,13 @@ Prin acest termen înțelegem simularea unor funcții cognitive: urmărirea stă
 
 Prioritatea este un mediu coerent, nu unul foarte complex. NPC-ul trebuie să poată observa o situație, să acționeze și să perceapă rezultatul acțiunii. Un scenariu restrâns este suficient pentru un prim prototip.
 
-Exemplu propus: NPC-ului îi este foame → caută hrană → un jucător îl ajută → reține experiența → într-o situație ulterioară comparabilă, preferă să ceară ajutor acelui jucător.
+Scenariu de verificare în joc: NPC-ului îi este foame → un jucător îi oferă efectiv un aliment → reține confirmarea → la o foame ulterioară dominantă, cere din nou ajutor aceleiași persoane dacă este aproape, vizibilă și disponibilă.
 
-Exemplul este un obiectiv de verificare, nu o descriere a unui comportament confirmat în proiect.
+Pașii sunt implementați în limitele de mai sus; scenariul complet rămâne de verificat în serverul Minecraft.
 
 ## Puncte de plecare în proiect
 
-Contextul proiectului identifică `MemoryManager` și `EnvironmentEngine` drept componente relevante pentru memorie și percepția mediului. Existența lor nu confirmă integrarea într-un circuit cognitiv complet. Înainte de implementare trebuie verificate conexiunile reale dintre observații, decizii, execuția acțiunilor și actualizarea memoriei.
+`NpcCognitiveState`, `NpcActionExperience`, `NpcSocialExperience` și `NpcFoodRequestService` leagă deja starea proprie, rezultatele măsurate, ajutorul confirmat și comunicarea în scenariile descrise. `MemoryManager` și `EnvironmentEngine` rămân relevante pentru extinderi, dar nu conferă automat învățare generală din dialog sau un circuit cognitiv complet.
 
 Documentație conexă:
 
@@ -36,7 +73,7 @@ Documentație conexă:
 
 ## Etape recomandate
 
-1. **Circuit comportamental minim:** percepție → nevoie → decizie → acțiune → rezultat → memorie. Alege un singur scenariu și verifică efectul experienței asupra unei decizii ulterioare.
+1. **Validarea circuitului implementat:** percepție → nevoie → decizie → acțiune → rezultat → memorie. Verifică în server îngrijirea și ajutorul alimentar, inclusiv efectul experienței asupra unei decizii sau cereri ulterioare.
 2. **Autoevaluare limitată:** urmărește ce încerca NPC-ul, dacă a reușit și ce trebuie schimbat. Autoevaluarea trebuie să influențeze o alegere observabilă.
 3. **Extindere graduală:** adaugă obiective concurente, relații și reflecție asupra experiențelor după ce circuitul simplu funcționează.
 

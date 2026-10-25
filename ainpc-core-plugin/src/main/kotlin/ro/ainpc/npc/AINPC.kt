@@ -28,6 +28,7 @@ class AINPC(
 ) {
     var databaseId = 0
     var uuid: UUID = UUID.randomUUID()
+    internal val runtimeIdentity: UUID = UUID.randomUUID()
     var name: String = ""
     var displayName: String? = null
     var entityKind: NpcEntityKind = NpcEntityKind.VILLAGER
@@ -35,6 +36,13 @@ class AINPC(
     var lifecycleType: NpcLifecycleType = NpcLifecycleType.PERMANENT
     var persistenceMode: NpcPersistenceMode = NpcPersistenceMode.FULL
     var simulationMode: NpcSimulationMode = NpcSimulationMode.FULL
+        set(value) {
+            if (field != value) {
+                actionExperience.cancelPending()
+                clearDecision()
+            }
+            field = value
+        }
     var interactionProfile: NpcInteractionProfile = NpcInteractionProfile.FULL_AI
     var entityArchetype: String = "villager"
     var ownerScenarioId: String? = null
@@ -74,6 +82,17 @@ class AINPC(
     var currentGoal = ""
     var plannedRoutineActivity = ""
     var lastSimulationTickAt = 0L
+    val actionExperience = NpcActionExperience()
+    val socialExperience = NpcSocialExperience()
+    val foodRequestPreferences = NpcFoodRequestPreferences()
+    val selfCareGoal = NpcSelfCareGoal()
+    @Volatile
+    internal var lastDecision: NpcDecisionExplanation? = null
+        private set
+    internal var decisionRevision = 0L
+        private set
+    internal var stateRevision = 0L
+        private set
     var homeAnchor: OwnedLocation? = null
     var workAnchor: OwnedLocation? = null
     var socialAnchor: OwnedLocation? = null
@@ -88,6 +107,8 @@ class AINPC(
     var spawned = false
 
     fun spawn(): Boolean {
+        actionExperience.cancelPending()
+        clearDecision()
         val worldId = worldName
         val world = if (worldId.isNullOrBlank()) null else Bukkit.getWorld(worldId)
         if (world == null) {
@@ -108,6 +129,8 @@ class AINPC(
 
     fun attachToEntity(entity: Entity?) {
         if (entity == null) return
+        actionExperience.cancelPending()
+        clearDecision()
         bukkitEntity = entity
         spawned = entity.isValid
         uuid = entity.uniqueId
@@ -201,6 +224,8 @@ class AINPC(
     private fun configBoolean(path: String, fallback: Boolean): Boolean = plugin?.config?.getBoolean(path, fallback) ?: fallback
 
     fun despawn() {
+        actionExperience.cancelPending()
+        clearDecision()
         if (bukkitEntity != null && bukkitEntity!!.isValid) {
             bukkitEntity!!.remove()
         }
@@ -210,12 +235,16 @@ class AINPC(
     }
 
     fun markEntityUnavailable() {
+        actionExperience.cancelPending()
+        clearDecision()
         if (bukkitEntity != null && bukkitEntity!!.isValid) syncLocation(bukkitEntity!!.location)
         bukkitEntity = null
         spawned = false
     }
 
     fun teleport(location: Location) {
+        actionExperience.cancelPending()
+        clearDecision()
         syncLocation(location)
         if (spawned && bukkitEntity != null) bukkitEntity!!.teleport(location)
     }
@@ -301,6 +330,9 @@ class AINPC(
         transitionState(newState, enforcePriority = false)
 
     internal fun restorePersistedState(newState: NPCState) {
+        actionExperience.cancelPending()
+        clearDecision()
+        if (currentState != newState) stateRevision++
         currentState = newState
     }
 
@@ -313,7 +345,10 @@ class AINPC(
             return false
         }
         val oldState = currentState
+        actionExperience.cancelPending()
+        stateRevision++
         currentState = newState
+        selfCareGoal.onStateChanged(newState, System.currentTimeMillis())
         plugin?.debug("NPC $name stare: $oldState -> $newState")
         publishStateChange(oldState, newState)
         return true
@@ -332,6 +367,16 @@ class AINPC(
 
     fun updateContext() {
         if (isSpawned()) context.updateFromWorld(bukkitEntity!!.world, bukkitEntity!!.location)
+    }
+
+    internal fun rememberDecision(explanation: NpcDecisionExplanation?) {
+        lastDecision = explanation
+    }
+
+    private fun clearDecision() {
+        lastDecision = null
+        selfCareGoal.clear()
+        decisionRevision++
     }
 
     fun addTrait(traitId: String) {
@@ -366,6 +411,9 @@ class AINPC(
         sb.append("Atentie curenta: ").append(cognition.thoughtDescription()).append("\n")
         sb.append("Nevoi resimtite: ").append(cognition.needsDescription()).append("\n")
         sb.append("Intentie curenta: ").append(cognition.intentionDescription()).append("\n")
+        sb.append("Experienta recenta: ").append(cognition.experienceDescription).append("\n")
+        sb.append("Ultima decizie explicata: ").append(cognition.decisionDescription).append("\n")
+        sb.append("Progresul ingrijirii: ").append(cognition.selfCareProgress?.description().orEmpty()).append("\n")
         appendOwnedLocation(sb, "Casa", homeAnchor)
         appendOwnedLocation(sb, "Loc de munca", workAnchor)
         appendOwnedLocation(sb, "Loc social", socialAnchor)

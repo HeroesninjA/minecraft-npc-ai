@@ -2,7 +2,9 @@
 package ro.ainpc.engine
 
 import org.bukkit.Bukkit
+import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.commands.WorldBlueprintWizard
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCContext
@@ -10,6 +12,9 @@ import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcDecisionExplanation
+import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcSimulationMode
 import java.util.EnumMap
 import java.util.Locale
 import java.util.UUID
@@ -32,9 +37,11 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         val context: Int,
         val needs: Int,
         val routine: Int,
+        val experience: Int = 0,
+        val socialExperience: Int = 0,
     ) {
         val rawTotal: Int
-            get() = base + traits + emotions + memory + context + needs + routine
+            get() = base + traits + emotions + memory + context + needs + routine + experience + socialExperience
         val score: Int
             get() = max(0, rawTotal)
     }
@@ -61,10 +68,30 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         val decisionSequence: Long,
         val recentExplorations: List<RecentExploration>,
         val recentActionTimestamps: Map<NPCAction, Long>,
+        val explanation: NpcDecisionExplanation,
+        val explanationRevision: Long,
+        val returningForCare: Boolean,
     )
 
     private val decisionCache: MutableMap<UUID, CachedDecision> = ConcurrentHashMap()
     private val decisionStatistics: MutableMap<UUID, DecisionStatistics> = ConcurrentHashMap()
+    private val foodRequests = NpcFoodRequestService(
+        config = { plugin.config },
+        isNpcInConversation = { plugin.conversationSessionManager.hasActiveConversation(it) },
+        isPlayerBusy = {
+            plugin.conversationSessionManager.isInConversation(it) ||
+                plugin.guiService.hasTextInputRequest(it) || WorldBlueprintWizard.hasSession(it.uniqueId)
+        },
+        send = { player, npc, message -> plugin.messageUtils.sendNPCMessage(player, npc.name, message) },
+        findNpc = { plugin.npcManager.getNPCByUuid(it) },
+    )
+
+    internal fun handleFoodRequestReply(player: Player, message: String, beforeAccept: (AINPC) -> Boolean): Boolean =
+        foodRequests.tryReply(player, message, beforeAccept = beforeAccept)
+
+    internal fun forgetFoodRequestPlayer(playerUuid: UUID) {
+        foodRequests.forgetPlayer(playerUuid)
+    }
 
     fun decideAction(npc: AINPC, context: NPCContext): NPCAction =
         decideAction(npc, context, actionSituation(npc, context))
@@ -104,6 +131,11 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         decisionCache[npc.uuid] = CachedDecision(
             action, npc.currentState, context.isInDanger, now, decisionSequence,
             recentExplorations, recentActionTimestamps,
+            decisionExplanation(
+                action, now, preview.probabilistic && preview.probabilities.size > 1, scoreBreakdowns[action],
+            ).copy(continuingSelfCare = situation.returningForCare && action == NPCAction.WALK_TO_TARGET),
+            npc.decisionRevision,
+            situation.returningForCare,
         )
         decisionStatistics.computeIfAbsent(npc.uuid) { DecisionStatistics(settings.statisticsWindow) }
             .also { it.resize(settings.statisticsWindow) }
@@ -145,6 +177,8 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     private fun isReusable(
         cached: CachedDecision, npc: AINPC, context: NPCContext, situation: ActionSituation, now: Long,
     ): Boolean = now - cached.timestamp in 0 until DECISION_COOLDOWN &&
+        cached.explanationRevision == npc.decisionRevision &&
+        cached.returningForCare == situation.returningForCare &&
         cached.state == npc.currentState && cached.inDanger == context.isInDanger &&
         ActionEligibility.permits(cached.action, situation)
 
@@ -220,14 +254,25 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
 
     fun runLifeSimulationTick(npc: AINPC?) {
         if (npc == null) return
-        val location = LocationWrapper.fromNpc(npc) ?: return
+        val location = LocationWrapper.fromNpc(npc) ?: run {
+            npc.actionExperience.cancelPending()
+            npc.selfCareGoal.clear()
+            return
+        }
 
         val context = npc.context
         context.updateFromWorld(location.world, location.location)
         val scheduledActivity = resolveScheduledActivity(npc, context)
         npc.plannedRoutineActivity = scheduledActivity
-        updateNeeds(npc, context)
+        updateNeedsWithExperience(npc, context)
         context.syncSimulationState(location.location)
+        try {
+            if (foodRequests.tryRequest(npc)) {
+                plugin.debug("NPC ${npc.name} cere mancare unui jucator care l-a ajutat anterior.")
+            }
+        } catch (exception: RuntimeException) {
+            plugin.debug("Cerere de mancare omisa pentru ${npc.name}: ${exception.javaClass.simpleName}")
+        }
 
         val situation = actionSituation(npc, context)
         val action = decideAction(npc, context, situation)
@@ -237,6 +282,8 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
 
     fun updateBasicNeeds(npc: AINPC?) {
         if (npc == null) return
+        npc.actionExperience.cancelPending()
+        npc.selfCareGoal.clear()
         val location = LocationWrapper.fromNpc(npc) ?: return
 
         val context = npc.context
@@ -281,8 +328,23 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
             hungerLevel = context.hungerLevel,
             energyLevel = context.energyLevel,
             currentState = npc.currentState,
+            interactingPlayerUuid = context.interactingPlayer?.takeIf { socialTargets.hasInteractingPlayer }?.uniqueId,
+            returningForCare = canContinueSelfCare(npc, context),
         )
     }
+
+    private fun canContinueSelfCare(npc: AINPC, context: NPCContext): Boolean =
+        npc.simulationMode == NpcSimulationMode.FULL &&
+            plugin.config.getBoolean("simulation.decision.goal_continuity_enabled", false) &&
+            plugin.config.getBoolean("features.simulation", false) &&
+            plugin.config.getBoolean("simulation.enabled", false) &&
+            plugin.config.getBoolean("features.routine", false) &&
+            plugin.config.getBoolean("routine.enabled", false) &&
+            npc.selfCareGoal.canContinueReturn(
+                NpcCognitiveState.capture(npc, context), experienceContextKey(npc), context.isAtHome,
+                System.currentTimeMillis(),
+            ) && !plugin.routineCoordinator.isRoutinePaused(npc.uuid) &&
+            plugin.routineCoordinator.getOverride(npc.uuid) == null
 
     private fun nearbySocialTargets(npc: AINPC, context: NPCContext): SocialTargetStatus {
         val interactingPlayer = context.interactingPlayer?.takeIf { it.isOnline }?.location
@@ -315,6 +377,17 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         context = getContextModifier(context, action, situation.hasInteractingPlayer),
         needs = getNeedModifier(context, action),
         routine = getRoutineModifier(npc, context, action),
+        experience = if (experienceEnabled(npc)) npc.actionExperience.scoreModifier(
+            action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
+            context.isAtHome, System.currentTimeMillis(),
+        ) else 0,
+        socialExperience = if (experienceEnabled(npc) && situation.hasInteractingPlayer) {
+            situation.interactingPlayerUuid?.let { playerUuid ->
+                npc.socialExperience.scoreModifier(
+                    playerUuid, action, NpcCognitiveState.capture(npc, context), System.currentTimeMillis(),
+                )
+            } ?: 0
+        } else 0,
     )
 
     private fun getTraitModifier(personality: NPCPersonality, action: NPCAction): Int {
@@ -469,6 +542,33 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     fun getActionScore(npc: AINPC, context: NPCContext, action: NPCAction): Int =
         calculateActionScore(npc, context, action, actionSituation(npc, context))
 
+    private fun updateNeedsWithExperience(npc: AINPC, context: NPCContext) {
+        val before = NpcCognitiveState.capture(npc, context)
+        val previousTickAt = npc.lastSimulationTickAt
+        updateNeeds(npc, context)
+        val after = NpcCognitiveState.capture(npc, context)
+        val homeKey = experienceContextKey(npc)
+        if (npc.simulationMode == NpcSimulationMode.FULL) {
+            npc.selfCareGoal.observe(before, after, homeKey, context.isAtHome, previousTickAt, npc.lastSimulationTickAt)
+        } else {
+            npc.selfCareGoal.clear()
+        }
+        if (experienceEnabled(npc)) {
+            npc.actionExperience.observe(
+                before, after, homeKey,
+                context.isAtHome, npc.stateRevision, previousTickAt, npc.lastSimulationTickAt,
+            )
+        } else {
+            npc.actionExperience.cancelPending()
+        }
+    }
+
+    private fun experienceEnabled(npc: AINPC): Boolean =
+        npc.simulationMode == NpcSimulationMode.FULL &&
+            plugin.config.getBoolean("simulation.decision.experience_enabled", true)
+
+    private fun experienceContextKey(npc: AINPC): String = NpcSelfCareGoal.homeKey(npc)
+
     private fun updateNeeds(npc: AINPC, context: NPCContext) {
         val now = System.currentTimeMillis()
         val previousTick = npc.lastSimulationTickAt
@@ -520,9 +620,41 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     private fun applySimulationOutcome(
         npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
     ) {
+        val revision = npc.decisionRevision
+        val decision = decisionCache[npc.uuid]?.takeIf {
+            it.action == action && it.explanationRevision == npc.decisionRevision
+        }
         val targetState = mapActionToState(action, context, situation)
         npc.changeStateFromSimulation(targetState)
         npc.currentGoal = resolveGoal(action, npc, context, situation)
+        if (npc.simulationMode == NpcSimulationMode.FULL && npc.currentState == targetState &&
+            npc.decisionRevision == revision
+        ) {
+            if (action == NPCAction.WALK_TO_TARGET && situation.returningForCare) {
+                npc.selfCareGoal.continueReturn(
+                    NpcCognitiveState.capture(npc, context), experienceContextKey(npc), System.currentTimeMillis(),
+                )
+            } else {
+                npc.selfCareGoal.applied(
+                    action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
+                    context.isAtHome, System.currentTimeMillis(),
+                )
+            }
+        } else {
+            npc.selfCareGoal.clear()
+        }
+        npc.rememberDecision(decision?.explanation?.takeIf {
+            npc.simulationMode == NpcSimulationMode.FULL && npc.currentState == targetState &&
+                decision.explanationRevision == npc.decisionRevision
+        })
+        if (experienceEnabled(npc)) {
+            npc.actionExperience.begin(
+                action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
+                context.isAtHome, npc.stateRevision, npc.lastSimulationTickAt,
+            )
+        } else {
+            npc.actionExperience.cancelPending()
+        }
     }
 
     private fun mapActionToState(action: NPCAction, context: NPCContext, situation: ActionSituation): NPCState = when (action) {
@@ -563,6 +695,8 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         NPCAction.DEFEND, NPCAction.CALL_HELP, NPCAction.WARN -> "protejeze zona si sa ramana atent"
         NPCAction.OBSERVE, NPCAction.INVESTIGATE -> "inteleaga ce se petrece in jur"
         NPCAction.WALK_RANDOM -> defaultGoal(context.plannedRoutineActivity, "mai vada ce se intampla prin sat")
+        NPCAction.WALK_TO_TARGET -> if (situation.returningForCare) "revina acasa pentru ingrijire"
+            else defaultGoal(context.plannedRoutineActivity, "ajunga la destinatie")
         else -> defaultGoal(context.plannedRoutineActivity, "isi urmeze rutina")
     }
 
@@ -625,6 +759,23 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
     private enum class RoutineFocus { WORK, REST, SOCIAL, GUARD, OBSERVE, IDLE }
 
     companion object {
+        internal fun decisionExplanation(
+            action: NPCAction, now: Long, variedChoice: Boolean, breakdown: ActionScoreBreakdown?,
+        ): NpcDecisionExplanation {
+            if (breakdown == null) return NpcDecisionExplanation(action, now, variedChoice)
+            val factors = listOf(
+                NpcDecisionExplanation.Factor.NEEDS to breakdown.needs,
+                NpcDecisionExplanation.Factor.CONTEXT to breakdown.context,
+                NpcDecisionExplanation.Factor.ROUTINE to breakdown.routine,
+                NpcDecisionExplanation.Factor.TRAITS to breakdown.traits,
+                NpcDecisionExplanation.Factor.EMOTIONS to breakdown.emotions,
+                NpcDecisionExplanation.Factor.MEMORY to breakdown.memory,
+                NpcDecisionExplanation.Factor.EXPERIENCE to breakdown.experience,
+                NpcDecisionExplanation.Factor.SOCIAL_HELP to breakdown.socialExperience,
+            ).filter { it.second > 0 }.sortedByDescending { it.second }.map { it.first }
+            return NpcDecisionExplanation(action, now, variedChoice, factors.getOrNull(0), factors.getOrNull(1))
+        }
+
         internal fun deterministicDecisionRoll(seed: Long, uuid: UUID, sequence: Long): Double {
             var value = seed xor uuid.mostSignificantBits xor
                 java.lang.Long.rotateLeft(uuid.leastSignificantBits, 23) xor
@@ -652,6 +803,9 @@ class DecisionEngine(private val plugin: AINPCPlugin) {
         private fun ongoingCareAction(
             state: NPCState, inDanger: Boolean, situation: ActionSituation,
         ): NPCAction? {
+            if (situation.returningForCare && !inDanger && !situation.isAtHome &&
+                !situation.hasInteractingPlayer && state == NPCState.WALKING
+            ) return NPCAction.WALK_TO_TARGET
             if (!inDanger && situation.isAtHome) {
                 val ongoingCare = when (state) {
                     NPCState.EATING -> NPCAction.EAT

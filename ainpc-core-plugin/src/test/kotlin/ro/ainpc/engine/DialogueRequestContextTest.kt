@@ -14,7 +14,15 @@ import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.NPCRelationship
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NpcActionExperience
+import ro.ainpc.npc.NpcDecisionExplanation
+import ro.ainpc.npc.NpcFoodRequestPreferences
+import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSocialExperience
 import java.lang.reflect.Proxy
+import java.util.UUID
 
 class DialogueRequestContextTest {
     private val unsafe = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let {
@@ -34,6 +42,122 @@ class DialogueRequestContextTest {
     private val requestPlayer = playerNamed("RequestPlayer")
 
     @Test
+    fun `a deferred helper still hears the real need without another food request`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        npc.hungerLevel = 10
+        npc.socialExperience.record(NpcSocialExperience.Receipt(
+            UUID.randomUUID(), requestPlayer.uniqueId, "RequestPlayer", "minecraft:bread", 1,
+            10, 30, System.currentTimeMillis() - 1_000L,
+        ))
+        npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.DECLINE, System.currentTimeMillis())
+
+        val response = engine.generateResponse(
+            request("De ce ai nevoie?"), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(response.contains("foame"))
+        assertFalse(response.contains("ma poti ajuta din nou"))
+        assertEquals(1, npc.socialExperience.snapshot().size)
+        assertTrue(npc.foodRequestPreferences.isDeferred(requestPlayer.uniqueId, System.currentTimeMillis()))
+    }
+
+    @Test
+    fun `only the actual helper is asked for food again despite another shared participant`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        npc.hungerLevel = 10
+        npc.socialExperience.record(NpcSocialExperience.Receipt(
+            UUID.randomUUID(), requestPlayer.uniqueId, "RequestPlayer", "minecraft:bread", 1,
+            10, 30, System.currentTimeMillis() - 1_000L,
+        ))
+        npc.context.setInteractingPlayer(currentPlayer)
+        val helper = request("De ce ai nevoie?")
+        val helperResponse = engine.generateResponse(
+            helper, emptyList(), emptyList(), null, DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+        val strangerResponse = engine.generateResponse(
+            helper.copy(player = currentPlayer), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(helperResponse.contains("ma poti ajuta din nou"))
+        assertFalse(strangerResponse.contains("ma poti ajuta din nou"))
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertEquals(1, npc.socialExperience.snapshot().size)
+    }
+
+    @Test
+    fun `saying food was given creates no confirmed help memory`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+
+        val response = engine.generateResponse(
+            request("Ti-am dat mancare."), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(response.contains("Nu am o amintire confirmata"))
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `dialogue describes recorded recovery without creating an experience from the question`() {
+        val observation = NpcActionExperience.Observation(
+            NPCAction.EAT, "world:home", 8, 8.0, System.currentTimeMillis() - 1_000L,
+        )
+        npc.actionExperience.restore(listOf(observation))
+
+        val response = engine.generateResponse(npc, npc.context, "Ce ai invatat?").join()
+
+        assertEquals("In timpul mesei de acasa, m-am simtit mai satul.", response)
+        assertEquals(listOf(observation), npc.actionExperience.snapshot())
+    }
+
+    @Test
+    fun `request dialogue explains the recorded past decision without inventing a new choice or help`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        val decision = NpcDecisionExplanation(
+            NPCAction.GREET, System.currentTimeMillis() - 1_000L, true,
+            NpcDecisionExplanation.Factor.SOCIAL_HELP,
+        )
+        npc.rememberDecision(decision)
+        npc.context.setInteractingPlayer(currentPlayer)
+        val state = npc.currentState
+        val interactionTime = npc.context.lastInteractionTime
+
+        val response = engine.generateResponse(
+            request("De ce ai ales asta?"), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(response.contains("La ultima decizie"))
+        assertTrue(response.contains("interlocutorul de atunci"))
+        assertTrue(response.contains("alegerea putea varia"))
+        assertFalse(response.contains("mi-ai oferit"))
+        assertSame(decision, npc.lastDecision)
+        assertEquals(state, npc.currentState)
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertEquals(interactionTime, npc.context.lastInteractionTime)
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `dialogue reads care progress without advancing or completing the objective`() {
+        npc.hungerLevel = 20
+        npc.changeStateFromSimulation(NPCState.EATING)
+        npc.selfCareGoal.applied(
+            NPCAction.EAT, NpcCognitiveState.capture(npc), "world:home", true, System.currentTimeMillis(),
+        )
+        val progress = npc.selfCareGoal.snapshot(System.currentTimeMillis())!!
+
+        val response = engine.generateResponse(npc, npc.context, "Cum merge obiectivul de hrana?").join()
+
+        assertEquals(progress.description(), response)
+        assertEquals(progress, npc.selfCareGoal.snapshot(System.currentTimeMillis()))
+        assertEquals(20, npc.hungerLevel)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
     fun `local dialogue describes authoritative needs without running a decision`() {
         npc.hungerLevel = 10
         val state = npc.currentState
@@ -47,7 +171,7 @@ class DialogueRequestContextTest {
     }
 
     @Test
-    fun `request dialogue answers need questions without an AI provider or player API access`() {
+    fun `request dialogue answers need questions locally without changing the current participant`() {
         plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
         npc.hungerLevel = 10
         npc.context.setInteractingPlayer(currentPlayer)
@@ -134,6 +258,7 @@ class DialogueRequestContextTest {
         Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { _, method, _ ->
             when (method.name) {
                 "getName" -> name
+                "getUniqueId" -> UUID.nameUUIDFromBytes(name.toByteArray())
                 else -> throw UnsupportedOperationException(method.name)
             }
         } as Player

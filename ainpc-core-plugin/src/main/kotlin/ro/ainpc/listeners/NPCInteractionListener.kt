@@ -5,6 +5,7 @@ import org.bukkit.entity.Villager
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.player.PlayerInteractEntityEvent
+import org.bukkit.inventory.EquipmentSlot
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.NPCRelationship
@@ -15,6 +16,7 @@ import ro.ainpc.api.events.dialog.DialogSessionStartedEvent
 import ro.ainpc.api.events.dialog.DialogSessionStartedEventPayload
 import ro.ainpc.engine.*
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NpcFoodAid
 import java.util.concurrent.CompletableFuture
 import java.util.UUID
 
@@ -32,6 +34,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
      */
     @EventHandler(priority = EventPriority.HIGH)
     fun onPlayerInteractEntity(event: PlayerInteractEntityEvent) {
+        if (event.isCancelled) return
         val entity = event.rightClicked
 
         // Verifica daca e un Villager (baza pentru NPC-uri)
@@ -49,6 +52,7 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
 
         // Anuleaza interactiunea default
         event.isCancelled = true
+        if (event.hand != EquipmentSlot.HAND) return
 
         val player = event.player
 
@@ -63,6 +67,20 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         // Face NPC-ul sa se uite la jucator
         npc.lookAt(player)
         npc.updateContext()
+        if (plugin.config.getBoolean("simulation.food_help_enabled", true)) {
+            val foodHelp = NpcFoodInteraction.offer(npc, player, System.currentTimeMillis(), event.hand)
+            if (foodHelp != null) {
+                val reply = when (foodHelp.status) {
+                    NpcFoodAid.Status.ACCEPTED -> "Multumesc pentru mancare! Mi-a prins bine."
+                    NpcFoodAid.Status.NOT_HUNGRY -> "Multumesc, dar nu imi este foame acum."
+                    NpcFoodAid.Status.UNAVAILABLE -> "Nu pot primi mancare acum."
+                    NpcFoodAid.Status.UNSUPPORTED -> "Nu pot manca asta."
+                    NpcFoodAid.Status.TRANSFER_FAILED -> "Nu am reusit sa primesc mancarea. Incearca din nou."
+                }
+                messages().sendNPCMessage(player, npc.name, reply)
+                return
+            }
+        }
         npc.context.setInteractingPlayer(player)
         publishNpcInteracted(player, npc, npc.location?.distance(player.location) ?: 0.0)
         if (questFeatureEnabled()) {
@@ -113,8 +131,12 @@ class NPCInteractionListener(plugin: AINPCPlugin) : AbstractPluginListener(plugi
         }
         val initialization = beginConversationSession(player, npc)
         val sessionId = conversations().getConversationSessionId(player)
+        val confirmedHelp = npc.socialExperience.descriptionFor(player.uniqueId, System.currentTimeMillis())
         initialization
             .thenCompose { firstMeeting ->
+                if (confirmedHelp.isNotBlank()) {
+                    return@thenCompose CompletableFuture.completedFuture("Te tin minte. $confirmedHelp")
+                }
                 if (firstMeeting) {
                     return@thenCompose CompletableFuture.completedFuture(getFirstMeetingGreeting(npc))
                 }

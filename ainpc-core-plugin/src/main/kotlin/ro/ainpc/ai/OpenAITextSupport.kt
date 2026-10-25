@@ -11,6 +11,7 @@ object OpenAITextSupport {
     private const val MAX_FALLBACK_ROTATIONS = 512
     private const val MAX_CLEAN_RESPONSE_LENGTH = 200
     private const val MIN_COMPLETE_SENTENCE_LENGTH = 50
+    private val promptProfileGson = Gson()
     private val sentenceEnding = Regex("[.!?](?=\\s|$)")
     private val fallbackResponseIndices = object : LinkedHashMap<Pair<UUID, String>, Int>(MAX_FALLBACK_ROTATIONS, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<UUID, String>, Int>?): Boolean =
@@ -52,6 +53,18 @@ object OpenAITextSupport {
     @JvmStatic
     fun valueOrUnknown(value: String?): String {
         return if (value.isNullOrBlank()) "necunoscut" else value
+    }
+
+    internal fun profileForPrompt(profileData: String): String = try {
+        val profile = promptProfileGson.fromJson(profileData, JsonObject::class.java)
+        if (profile == null) {
+            "{}"
+        } else {
+            profile.get("simulation")?.takeIf { it.isJsonObject }?.asJsonObject?.remove("social_experience")
+            promptProfileGson.toJson(profile)
+        }
+    } catch (_: RuntimeException) {
+        "{}"
     }
 
     @JvmStatic

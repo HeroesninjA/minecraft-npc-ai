@@ -27,6 +27,28 @@ class ConversationSessionManagerTest {
     )
 
     @Test
+    fun `npc stays busy until every live participant leaves or expires`() {
+        val otherPlayer = newPlayer()
+        manager.startConversation(player, bob)
+        nowMillis += 1_000L
+        manager.startConversation(otherPlayer, bob)
+        assertTrue(manager.hasActiveConversation(bob.uuid))
+        assertFalse(manager.hasActiveConversation(maria.uuid))
+
+        manager.clearConversation(player)
+        assertTrue(manager.hasActiveConversation(bob.uuid))
+        nowMillis += ConversationSessionManager.IDLE_TIMEOUT_MILLIS
+        assertFalse(manager.hasActiveConversation(bob.uuid))
+        assertEquals(bob.uuid, manager.getConversationNpcId(otherPlayer))
+
+        manager.startConversation(otherPlayer, maria)
+        assertFalse(manager.hasActiveConversation(bob.uuid))
+        assertTrue(manager.hasActiveConversation(maria.uuid))
+        manager.clearConversation(otherPlayer)
+        assertFalse(manager.hasActiveConversation(maria.uuid))
+    }
+
+    @Test
     fun `returning to a previous npc invalidates both earlier sessions`() {
         manager.startConversation(player, bob)
         val firstBobSession = manager.getConversationSessionId(player)

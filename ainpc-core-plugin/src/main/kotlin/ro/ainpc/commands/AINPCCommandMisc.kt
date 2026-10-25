@@ -1694,7 +1694,8 @@ internal fun formatDecisionScoreBreakdown(breakdown: DecisionEngine.ActionScoreB
     "&8  componente: baza ${breakdown.base}, trasaturi ${signedComponent(breakdown.traits)}, " +
         "emotii ${signedComponent(breakdown.emotions)}, memorie ${signedComponent(breakdown.memory)}, " +
         "context ${signedComponent(breakdown.context)}, nevoi ${signedComponent(breakdown.needs)}, " +
-        "rutina ${signedComponent(breakdown.routine)}"
+        "rutina ${signedComponent(breakdown.routine)}, experienta ${signedComponent(breakdown.experience)}, " +
+        "ajutor ${signedComponent(breakdown.socialExperience)}"
 
 internal fun formatDecisionProbabilityWeight(weight: Double): String =
     "&8  pondere configurata x${String.format(Locale.ROOT, "%.2f", weight)}"

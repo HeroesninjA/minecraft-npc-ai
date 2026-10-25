@@ -3,6 +3,7 @@ package ro.ainpc.engine
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcSelfCareThresholds
+import java.util.UUID
 
 internal data class ActionSituation(
     val hasSocialTarget: Boolean,
@@ -13,6 +14,8 @@ internal data class ActionSituation(
     val hungerLevel: Int = 100,
     val energyLevel: Int = 100,
     val currentState: NPCState = NPCState.IDLE,
+    val interactingPlayerUuid: UUID? = null,
+    val returningForCare: Boolean = false,
 )
 
 internal enum class ActionBlockReason(val label: String) {

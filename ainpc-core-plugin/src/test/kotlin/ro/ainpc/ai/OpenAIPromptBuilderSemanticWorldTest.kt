@@ -10,6 +10,20 @@ import java.util.UUID
 
 class OpenAIPromptBuilderSemanticWorldTest {
     @Test
+    fun `prompt includes only dedicated current-player food help and strips raw receipts`() {
+        val snapshot = semanticSnapshot().copy(
+            helperExperienceDescription = "Mi-ai oferit mancare cand imi era foame.",
+            profileDataJson = """{"simulation":{"social_experience":{"receipts":[{"helper_name":"OtherHelper"}]}}}""",
+        )
+
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+
+        assertTrue(prompt.contains("npc_confirmed_food_help: Mi-ai oferit mancare cand imi era foame."))
+        assertFalse(prompt.contains("OtherHelper"))
+        assertFalse(prompt.contains("social_experience"))
+    }
+
+    @Test
     fun `memory recording date is presented without claiming when the event happened`() {
         val memory = "[source=conversation_quote] [recorded_on=2026-10-15] Jucatorul a spus ca a pierdut sabia ieri."
         val prompt = OpenAIPromptBuilder.buildPrompt(

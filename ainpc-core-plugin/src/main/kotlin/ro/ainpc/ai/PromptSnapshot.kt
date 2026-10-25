@@ -36,6 +36,8 @@ data class PromptSnapshot(
     val playerHeldItem: String = "",
     val personalityDescription: String = "",
     val environmentContext: EnvironmentContext? = null,
+    val helperExperienceDescription: String = "",
+    val foodRequestDeferred: Boolean = false,
 ) {
     fun npcUuid(): UUID = npcUuid
     fun npcName(): String = npcName

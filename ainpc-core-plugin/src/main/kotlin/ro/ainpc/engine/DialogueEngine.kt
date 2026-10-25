@@ -249,7 +249,7 @@ class DialogueEngine(
             )
         }
 
-        val factResponse = resolveFactResponse(npc, context, request.message())
+        val factResponse = resolveFactResponse(npc, context, request.message(), request.player().uniqueId)
         val semanticFactResponse = if (factResponse == null) {
             OpenAISemanticWorldContextBuilder.resolveProfessionFact(plugin, npc, request.message())
         } else {
@@ -261,7 +261,8 @@ class DialogueEngine(
             relationship,
             conversationHistory.size,
             dbContext.totalMemoryCount,
-            dbContext.regionalReputation
+            dbContext.regionalReputation,
+            confirmedFoodHelp = npc.socialExperience.latestFor(request.player().uniqueId, System.currentTimeMillis()) != null,
         )
         val identityResponse = PlayerIdentityResponse.resolve(
             request.message(), request.player().name, recognition, dbContext.playerProfile,
@@ -432,7 +433,9 @@ class DialogueEngine(
         return NpcShopFactResolver.resolve(playerMessage, shops, workPlaceName, shopAccessDenied)
     }
 
-    private fun resolveFactResponse(npc: AINPC, context: NPCContext, playerMessage: String): String? {
+    private fun resolveFactResponse(
+        npc: AINPC, context: NPCContext, playerMessage: String, playerUuid: UUID? = null,
+    ): String? {
         val facts = NpcFactResolver.NpcFacts(
             npc.name,
             npc.occupation ?: "",
@@ -444,7 +447,15 @@ class DialogueEngine(
             NpcFactResolver.describePersonality(npc.personality),
         )
         val npcFact = NpcFactResolver.resolve(playerMessage, facts).orElse(null)
-        val cognitiveFact = NpcCognitiveResponse.resolve(playerMessage, NpcCognitiveState.capture(npc, context))
+        val helperExperience = playerUuid?.let {
+            npc.socialExperience.descriptionFor(it, System.currentTimeMillis())
+        }.orEmpty()
+        val cognitiveFact = NpcCognitiveResponse.resolve(
+            playerMessage, NpcCognitiveState.capture(npc, context), helperExperience,
+            allowFoodRequest = playerUuid?.let {
+                !npc.foodRequestPreferences.isDeferred(it, System.currentTimeMillis())
+            } ?: false,
+        )
         val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext)
         return listOfNotNull(npcFact, cognitiveFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }
     }

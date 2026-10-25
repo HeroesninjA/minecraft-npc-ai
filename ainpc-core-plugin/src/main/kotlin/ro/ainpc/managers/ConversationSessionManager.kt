@@ -39,6 +39,11 @@ class ConversationSessionManager @JvmOverloads constructor(
     fun isInConversation(player: Player): Boolean =
         sessions[player.uniqueId]?.isExpired(nowMillis(), IDLE_TIMEOUT_MILLIS) == false
 
+    fun hasActiveConversation(npcUuid: UUID): Boolean {
+        val now = nowMillis()
+        return sessions.values.any { it.npcUuid == npcUuid && !it.isExpired(now, IDLE_TIMEOUT_MILLIS) }
+    }
+
     @JvmOverloads
     fun isExpired(player: Player, timeoutMillis: Long = IDLE_TIMEOUT_MILLIS): Boolean {
         val session = sessions[player.uniqueId]

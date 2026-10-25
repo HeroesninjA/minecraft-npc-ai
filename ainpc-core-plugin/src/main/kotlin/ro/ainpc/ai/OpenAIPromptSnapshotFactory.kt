@@ -59,7 +59,7 @@ object OpenAIPromptSnapshotFactory {
             npc.profileSource,
             npc.profileVersion,
             npc.profileSummary,
-            npc.profileDataJson,
+            OpenAITextSupport.profileForPrompt(npc.profileDataJson),
             traitsList,
             player.name,
             request.message(),
@@ -80,6 +80,8 @@ object OpenAIPromptSnapshotFactory {
             if (heldMaterial.isAir) "" else heldMaterial.key.asString(),
             NpcFactResolver.describePersonality(npc.personality),
             environmentContext,
+            npc.socialExperience.descriptionFor(player.uniqueId, System.currentTimeMillis()),
+            npc.foodRequestPreferences.isDeferred(player.uniqueId, System.currentTimeMillis()),
         )
     }
 

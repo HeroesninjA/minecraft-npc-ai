@@ -1,11 +1,37 @@
 # Dialog si conversatii
 
 Status: contract canonic verificat in cod pentru formularea si post-procesarea replicii NPC.
-Actualizat: 2026-10-24.
+Actualizat: 2026-10-25.
+
+Ajutorul alimentar confirmat prin transferul fizic `Shift + click dreapta` este separat de observatiile ingrijirii autonome si de memoria narativa. `NpcSocialExperience` foloseste UUID-ul exact al jucatorului, iar `DialogueEngine` citeste confirmarea pentru jucatorul cererii, nu pentru participantul global din `NPCContext`. La o noua nevoie de hrana, NPC-ul poate cere din nou ajutor aceleiasi persoane. O afirmatie precum `ti-am dat mancare` nu creeaza confirmare; fara dovezi, raspunsul local spune ca lipseste o amintire confirmata.
+
+`PromptSnapshot.helperExperienceDescription` captureaza numai ajutorul jucatorului cererii si ramane detasat de schimbarile ulterioare. Promptul il expune ca `npc_confirmed_food_help`. `simulation.social_experience` este eliminat din copia profilului JSON destinata AI, pentru ca datele brute ale altor jucatori sa nu fie confundate cu aceasta confirmare. Profilul persistent nu este modificat de filtrarea pentru prompt.
+
+O confirmare recenta stabileste si recunoasterea personala `KNOWN`, fara sa inventeze conversatii sau prietenie si fara sa stearga o relatie tensionata. La deschiderea ulterioara a conversatiei, salutul poate aminti ajutorul real in loc sa afirme ca NPC-ul nu a mai intalnit jucatorul.
+
+Intrebari precum `De ce ai ales asta?`, `De ce faci asta?`, `Cum ai luat decizia?` si `Ce ai decis?` folosesc ultima decizie aplicata din simulare. `NpcDecisionExplanation` retine factorii favorabili de atunci si precizeaza cand alegerea putea varia intre mai multe optiuni. Explicatia este istorica si partiala; nu confirma reusita actiunii si nu atribuie jucatorului curent ajutorul altui interlocutor. Este capturata separat ca `Ultima decizie explicata` in descrierea pentru AI. Fara o inregistrare valida din ultimele cinci minute, NPC-ul spune ca nu are o decizie recenta de explicat. Intrebarea nu executa o noua decizie. Contractul si invalidarile sunt descrise in [runtime-ul de simulare](simulation-service.md).
+
+Separat de raspunsurile din conversatie, `NpcFoodRequestService` poate initia un mesaj privat catre cel mai apropiat ajutor confirmat eligibil. Ruleaza in tick-ul de simulare pentru un `Villager` viu si spawnat, `FULL`/`FULL_AI`, cu foame dominanta, satietate 0-34, siguranta de cel putin 40 si stare `IDLE`, `WALKING`, `WAITING`, `RESTING` sau `CURIOUS`. Confirmarea trebuie sa apartina UUID-ului exact al destinatarului, sa aiba cel mult sapte zile si sa nu fie in viitor. Destinatarul este verificat online, conectat, viu, valid, in aceeasi lume si in raza `min(npc.interaction_distance, 6)`, cu vizibilitate asupra NPC-ului si linie de vedere de la NPC. Invizibilitatea, metadatumul `vanished` activ si modul spectator il exclud.
+
+Un interlocutor prezent in context sau o sesiune activa a NPC-ului opreste initiativa. Conversatia activa a jucatorului, un input text GUI ori blueprint wizard il fac indisponibil pentru cerere. Mesajul aminteste numai ajutorul confirmat si solicita hrana; nu afirma ca jucatorul are acum mancare. Este trimis direct, fara AI, fara pornirea unei sesiuni si fara schimbarea starii, obiectivului, istoricului sau memoriei. Nu consuma inventar si nu creeaza o noua dovada de ajutor. Simularea continua cu alegerea actiunii obisnuite.
+
+Limitele sunt cinci minute per NPC si un minut per jucator, comune cererilor tuturor NPC-urilor, marcate numai dupa trimitere reusita. `NpcFoodRequestThrottle` retine maximum 4096 de UUID-uri si timestamp-uri per map, expira intrarile lazy si nu evacueaza cooldown-uri valide la capacitate. Timestamp-urile viitoare raman blocate la intoarcerea ceasului. Limitele sunt numai runtime, nu sunt memorie narativa si nu se reseteaza la invalidarea cache-ului de decizii.
+
+`simulation.food_requests_enabled` si `simulation.food_help_enabled`, ambele implicit `true`, sunt citite la fiecare incercare. Taskul care permite initiativa cere simultan `features.simulation=true` si `simulation.enabled=true`; `simulation.enabled` este livrat `false`. Detaliile fluxului sunt in [runtime-ul de simulare](simulation-service.md).
+
+Un ajutor care tocmai a primit o cerere autonoma poate raspunde in 45 de secunde cu `Nu pot acum` / `Nu am mancare` sau `Iti aduc mancare` / `Vin cu mancare`, eventual precedate de numele exact al NPC-ului si virgula. Refuzul amana noile cereri catre acea persoana cu 15 minute, iar promisiunea cu 10 minute. Raspunsul este local, fara pornirea unei conversatii sau creditarea ajutorului. Citatele, relatarile, intrebarile, promisiunile negate si alte formulari nu activeaza acest mecanism. Conversatiile active si inputurile GUI/wizard au prioritate; raspunsul scurt functioneaza si cu ascultarea pasiva oprita. Evenimentul anulabil de mesaj primit poate opri acceptarea, iar disponibilitatea este verificata din nou dupa callback. Contractul complet este in [runtime-ul de simulare](simulation-service.md).
+
+Pauza suprima si o noua solicitare de hrana din raspunsul local la `De ce ai nevoie?`, pastrand descrierea nevoii reale. `PromptSnapshot.foodRequestDeferred` captureaza pauza numai pentru UUID-ul jucatorului cererii; promptul o expune ca `npc_food_request_deferred` si cere respectarea ei. Promisiunea nu adauga o confirmare in `NpcSocialExperience`. Aceste preferinte sunt temporare si nu sunt persistate.
 
 Calea activa este `DialogManager -> DialogueEngine -> OpenAIService`, care trimite promptul catre OpenAI sau Ollama potrivit `ai_provider`. Cu provider disponibil, conversatiile explicite si raspunsurile factuale eligibile folosesc AI; raspunsurile locale sunt disponibile la configuratie dezactivata sau esec.
 
 `NpcCognitiveResponse` foloseste `NpcCognitiveState` pentru intrebari precum `la ce te gandesti?`, `de ce ai nevoie?` si `ce vrei sa faci?`. Raspunsul este construit din nevoile, pericolul, starea, obiectivul si rutina curente, inclusiv cand providerul AI lipseste. Acest model furnizeaza si contributia nevoilor la scorurile din `DecisionEngine`. Autoevaluarea este inclusa in descrierea NPC capturata pentru prompt si ramane detasata de schimbarile ulterioare. Ea exprima prioritati si intentii, fara sa confirme actiuni sau experiente care nu au avut loc.
+
+La `ce ai invatat?`, NPC-ul poate descrie ultima observatie recenta din `NpcActionExperience`: efectul asupra satietatii sau energiei in timpul unei mese ori al somnului acasa. Fara observatii valide recunoaste lipsa unei concluzii. Intrebarile despre ce a invatat despre jucator sau dintr-o poveste raman in dialogul contextual; acest istoric nu reprezinta memoria conversatiilor. Raspunsul si descrierea pentru AI folosesc o copie detasata si nu creeaza experienta prin simpla intrebare.
+
+`Cum merge ingrijirea ta?`, `Cum merge obiectivul de hrana?`, `Cum merge obiectivul de odihna?` si `Ai reusit sa te refaci?` primesc local progresul ultimului obiectiv de ingrijire urmarit. Sunt acceptate si `Ai reusit sa iti potolesti foamea?` sau `Ai reusit sa te odihnesti?`. Intrebarea specifica nu primeste progresul celeilalte nevoi. Formularea distinge intoarcerea intentionata de sosirea observata, refacerea de incheiere si intreruperea de reusita; lipsa unei inregistrari recente este declarata explicit. Citatele, relatarile si intrebarile despre obiectivele altora ori questuri nu activeaza aceste formulari restranse.
+
+Textul `Progresul ingrijirii` este copiat in snapshot-ul pentru AI si nu se modifica odata cu obiectivul live. Incheierea unei nevoi nu dovedeste automat cauza schimbarii, consumul unui aliment sau ajutorul interlocutorului. Intrebarea nu executa actiuni, nu reinnoieste timestamp-uri si nu produce experienta. Contractul etapelor si limitarile monitorizarii sunt in [runtime-ul de simulare](simulation-service.md).
 
 Inainte de aceasta cale, `DialogManager` aplica `NpcInteractionProfile`. `FULL_AI` intra normal in dialog; `MINIMAL` refuza conversatia libera; `SCENE_ONLY` refuza dialogul direct din chat; `QUEST_ONLY` intra numai cand jucatorul are o oferta de quest asociata NPC-ului curent; `SHOP_ONLY` intra numai daca exista un magazin configurat pentru ocupatia NPC-ului, accesibil jucatorului, cu cel putin o oferta acceptata de verificarile de configuratie ale comertului. Refuzurile folosesc trei variante naturale rotite separat pentru perechea NPC-jucator si profil, apoi aplica acelasi cooldown ca dialogul obisnuit. Refuzul pentru lipsa permisiunii mentioneaza accesul, nu lipsa marfii. Cache-ul de rotatie pastreaza maximum 512 perechi si nu este memorie narativa: refuzurile nu sunt salvate in `dialog_history`, nu modifica relatia si se reseteaza la recrearea `DialogManager`.
 
@@ -257,6 +283,8 @@ Multiplicatorul emotional foloseste relatia citita inaintea actualizarii curente
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/DialogueAddressResolver.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/ConversationSessionManager.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DialogueEngine.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/NpcFoodRequestService.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/NpcFoodRequestThrottle.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIService.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIPromptSnapshotFactory.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/MemoryManager.kt`

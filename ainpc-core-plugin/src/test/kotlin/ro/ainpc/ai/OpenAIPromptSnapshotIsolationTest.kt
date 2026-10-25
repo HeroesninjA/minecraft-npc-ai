@@ -28,6 +28,13 @@ import ro.ainpc.engine.FeaturePackLoader
 import ro.ainpc.managers.FamilyManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
+import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NpcActionExperience
+import ro.ainpc.npc.NpcDecisionExplanation
+import ro.ainpc.npc.NpcFoodRequestPreferences
+import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSocialExperience
 import ro.ainpc.story.StoryContextService
 import java.lang.reflect.Proxy
 import java.sql.DriverManager
@@ -99,6 +106,24 @@ class OpenAIPromptSnapshotIsolationTest {
     }
 
     @Test
+    fun `food deferral is frozen for the exact request player and prompts retain it after expiry`() {
+        val now = System.currentTimeMillis()
+        npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.PROMISE, now)
+        val deferred = capture()
+        val stranger = withTestItem {
+            OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request().copy(player = currentPlayer), emptyList())
+        }
+        assertTrue(npc.foodRequestPreferences.canAsk(requestPlayer.uniqueId, now + 600_000L))
+
+        assertTrue(deferred.foodRequestDeferred)
+        assertFalse(stranger.foodRequestDeferred)
+        val prompt = OpenAIPromptBuilder.buildPrompt(deferred, emptyList(), emptyList(), null, null)
+        assertTrue(prompt.contains("npc_food_request_deferred: da"))
+        assertEquals("", deferred.helperExperienceDescription)
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+    }
+
+    @Test
     fun `snapshot captures the requested player without changing the live conversation`() {
         npc.context.setInteractingPlayer(currentPlayer)
         npc.context.lastPlayerMessage = "Mesajul curent"
@@ -114,6 +139,74 @@ class OpenAIPromptSnapshotIsolationTest {
         assertEquals(interactionTime, npc.context.lastInteractionTime)
         assertEquals("Mesajul curent", npc.context.lastPlayerMessage)
         assertEquals("minecraft:apple", snapshot.playerHeldItem)
+    }
+
+    @Test
+    fun `food help is captured for the requested UUID and detached from shared conversation and profile receipts`() {
+        npc.context.setInteractingPlayer(currentPlayer)
+        npc.socialExperience.record(NpcSocialExperience.Receipt(
+            UUID.randomUUID(), requestPlayer.uniqueId, "RequestPlayer", "minecraft:bread", 1,
+            10, 30, System.currentTimeMillis() - 1_000L,
+        ))
+        npc.profileDataJson = ro.ainpc.managers.buildProfileData(npc, com.google.gson.Gson())
+
+        val helperSnapshot = capture()
+        val otherSnapshot = withTestItem {
+            OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request().copy(player = currentPlayer), emptyList())
+        }
+        npc.socialExperience.restore(emptyList())
+
+        assertEquals("", otherSnapshot.helperExperienceDescription)
+        assertFalse(helperSnapshot.profileDataJson.contains("social_experience"))
+        assertFalse(otherSnapshot.profileDataJson.contains("social_experience"))
+        assertFalse(helperSnapshot.npcDescription.contains("RequestPlayer"))
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertTrue(helperSnapshot.helperExperienceDescription.contains("Mi-ai oferit mancare"))
+    }
+
+    @Test
+    fun `prompt keeps the applied decision captured before newer choices and needs replace it`() {
+        npc.rememberDecision(NpcDecisionExplanation(
+            NPCAction.EAT, System.currentTimeMillis() - 1_000L, true,
+            NpcDecisionExplanation.Factor.NEEDS,
+        ))
+        val snapshot = capture()
+        npc.rememberDecision(NpcDecisionExplanation(NPCAction.SLEEP, System.currentTimeMillis(), false))
+        npc.hungerLevel = 90
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+
+        assertTrue(prompt.contains("Ultima decizie explicata: La ultima decizie, am ales sa ma ocup de hrana."))
+        assertTrue(prompt.contains("alegerea putea varia"))
+        assertFalse(snapshot.npcDescription.contains("sa ma odihnesc"))
+        assertTrue(npc.generateContextDescription().contains("La ultima decizie, am ales sa ma odihnesc."))
+    }
+
+    @Test
+    fun `recorded experience description remains detached after memory is cleared`() {
+        npc.actionExperience.restore(listOf(NpcActionExperience.Observation(
+            NPCAction.EAT, "world:home", 8, 8.0, System.currentTimeMillis() - 1_000L,
+        )))
+
+        val snapshot = capture()
+        npc.actionExperience.restore(emptyList())
+
+        assertTrue(snapshot.npcDescription.contains("In timpul mesei de acasa, m-am simtit mai satul."))
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `prompt freezes care progress before the live objective is cleared`() {
+        npc.selfCareGoal.applied(
+            NPCAction.EAT, NpcCognitiveState(hungerLevel = 20, currentState = NPCState.EATING),
+            "world:home", true, System.currentTimeMillis(),
+        )
+        val snapshot = capture()
+        npc.selfCareGoal.clear()
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+
+        assertTrue(prompt.contains("Progresul ingrijirii: Sunt acasa pentru obiectivul de hrana."))
+        assertTrue(snapshot.npcDescription.contains("Inca nu am confirmat refacerea nevoii"))
+        assertNull(npc.selfCareGoal.snapshot(System.currentTimeMillis()))
     }
 
     @Test

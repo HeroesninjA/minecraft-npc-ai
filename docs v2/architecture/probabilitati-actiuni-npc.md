@@ -1,7 +1,7 @@
 # Probabilitati pentru actiunile NPC
 
 Status: implementare initiala pentru selectia de stare si obiectiv din simularea de viata.
-Actualizat: 2026-10-19.
+Actualizat: 2026-10-24.
 
 ## Analiza
 
@@ -43,6 +43,8 @@ Valorile negative ori zero acolo unde nu sunt permise revin la implicit; valoril
 
 ## Diagnostic in joc
 
+Experienta sociala are o contributie separata, `ajutor`: 5-8 puncte pentru `GREET`, `TALK` sau `THANK` cand NPC-ului ii este foame, contextul este sigur si interlocutorul curent verificat are acelasi UUID ca un ajutor alimentar confirmat recent. Declaratiile si reputatia nu produc acest bonus. Se aplica numai actiunilor deja eligibile si respecta `simulation.decision.experience_enabled`.
+
 Administratorii pot folosi `/ainpc decision [numeNpc|nearest]` pentru a vedea scorul si sansa fiecarei actiuni candidate. `nearest` foloseste primul NPC din raza de 10 blocuri; consola trebuie sa indice un nume. Comanda necesita `ainpc.admin` si foloseste contextul deja memorat plus pozitiile curente ale tintelor: nu actualizeaza contextul lumii, nu consuma un numar aleator, nu executa o actiune si nu scrie in cache-ul deciziilor. Daca decizia curenta este in cooldown, afiseaza actiunea reutilizata cu 100%; in starile deterministe sau in pericol afiseaza castigatorul cu 100%. Daca simularea periodica este dezactivata, rezultatul ramane o previzualizare, nu o promisiune ca NPC-ul va actiona. Contextul se poate schimba intre comanda si urmatorul tick, deci procentele nu sunt garantii pentru o decizie viitoare.
 
 Cand se calculeaza o noua decizie, diagnosticul afiseaza si numarul actiunilor eliminate de preconditii, cu primele trei motive: lipsa interlocutorului, a locului de munca/social, a prezentei acasa sau nevoia deja satisfacuta. Acestea nu sunt actiuni cu probabilitate zero din cauza scorului; sunt eliminate inainte de calculul probabilitatilor. In cooldown ori cat timp masa/somnul trebuie continuate, alternativele nu sunt reevaluate si lista motivelor ramane goala.
@@ -51,7 +53,7 @@ Separat, comanda arata pana la trei actiuni eligibile care au ramas fara sansa i
 
 Daca penalizarea pentru explorare modifica efectiv distributia (actiunea recenta concureaza cu cel putin o alternativa), diagnosticul arata actiunea, multiplicatorul curent si secundele ramase. Nu afiseaza un multiplicator pentru o singura actiune cu sansa 100%, dupa expirarea ferestrei, in modul determinist sau cat timp este reutilizata decizia din cooldown. Cand `idle_weight` este pozitiv, `DO_NOTHING` apare ca alternativa calculata, nu ca eroare sau fallback.
 
-Pentru fiecare candidat din previzualizare, diagnosticul afiseaza si componentele scorului: baza actiunii, trasaturi, emotii, memorie, context, nevoi si rutina. Componentele sunt explicative si insumeaza scorul brut inainte de limitarea la zero; nu modifica selectia si nu sunt persistate.
+Pentru fiecare candidat din previzualizare, diagnosticul afiseaza si componentele scorului: baza actiunii, trasaturi, emotii, memoria relatiilor, context, nevoi, rutina si experienta actiunilor. Contributia experientei vine din rezultatele observate ale mesei sau somnului la aceeasi casa, este limitata la ±12 puncte si cere nevoia activa intr-un context sigur. `simulation.decision.experience_enabled`, implicit `true`, permite dezactivarea invatarii si a acestei contributii. Regulile sunt descrise in [runtime-ul de simulare](simulation-service.md). Componentele afisate insumeaza scorul brut inainte de limitarea la zero; afisarea nu modifica selectia si nu creeaza observatii.
 
 Daca este configurat un multiplicator in `action_weights`, `action_weights_by_occupation`, `action_weights_by_time` sau `action_weights_by_weather`, diagnosticul afiseaza separat ponderea efectiva pentru candidatul respectiv. Aceasta nu este un bonus de scor si nu apare pentru actiunile cu multiplicator implicit 1,0; afisarea explica doar de ce doua actiuni cu scoruri apropiate pot avea sanse diferite.
 
