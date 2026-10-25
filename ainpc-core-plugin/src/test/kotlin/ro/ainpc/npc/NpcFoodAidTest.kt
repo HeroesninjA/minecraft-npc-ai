@@ -1,6 +1,7 @@
 package ro.ainpc.npc
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -189,6 +190,26 @@ class NpcFoodAidTest {
         assertEquals(NpcFoodAid.Status.TRANSFER_FAILED, replay.status)
         assertEquals(listOf(first.receipt), npc.socialExperience.snapshot())
         assertEquals(20, npc.hungerLevel)
+    }
+
+    @Test
+    fun `recalled and replayed help cannot fulfil a newer promise`() {
+        val npc = hungryNpc()
+        val first = offer(npc)
+        val evidence = npc.socialExperience.snapshot()
+        npc.hungerLevel = 20
+        npc.context.hungerLevel = 20
+        assertTrue(npc.foodRequestPreferences.defer(helper, NpcFoodRequestPreferences.Reply.PROMISE, now + 1L))
+        npc.socialExperience.restore(evidence)
+        assertTrue(npc.foodRequestPreferences.isDeferred(helper, now + 1L))
+
+        val replay = offer(npc, consumeOne = { error("duplicate transfer") })
+        assertEquals(NpcFoodAid.Status.TRANSFER_FAILED, replay.status)
+        assertEquals(listOf(first.receipt), npc.socialExperience.snapshot())
+        assertTrue(npc.foodRequestPreferences.isDeferred(helper, now + 1L))
+        assertEquals(NpcFoodAid.Status.ACCEPTED, offer(npc, timestamp = now + 2L).status)
+        assertFalse(npc.foodRequestPreferences.isDeferred(helper, now + 2L))
+        assertEquals(2, npc.socialExperience.snapshot().size)
     }
 
     private fun hungryNpc(): AINPC = AINPC(null).apply {
