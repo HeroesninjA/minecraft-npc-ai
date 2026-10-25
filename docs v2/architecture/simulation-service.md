@@ -130,6 +130,8 @@ In aceasta fereastra, replici directe precum `Nu pot acum` sau `Nu am mancare` a
 
 `NpcFoodRequestPreferences` retine pauza numai pentru perechea NPC-jucator, cu maximum 32 de intrari per NPC si expirare fara reinnoire prin citire. Pauzele active nu sunt eliminate pentru a face loc altora; capacitatea plina blocheaza cereri noi pana la expirare. O eroare de trimitere a confirmarii verbale pastreaza refuzul deja acceptat. Nici refuzul, nici promisiunea nu modifica nevoile, reputatia, relatia, inventarul sau confirmarile de ajutor. O promisiune ramane o declaratie, iar ajutorul este confirmat doar prin transferul fizic reusit.
 
+Dupa consumul reusit al unui aliment si inregistrarea confirmarii, `NpcFoodAid` incheie anticipat numai pauza unei promisiuni active a aceluiasi UUID, daca livrarea nu precede promisiunea. Refuzul explicit isi pastreaza pauza, chiar daca jucatorul ofera ulterior voluntar hrana. Un omonim, o confirmare veche recitita, un transfer repetat ori esuat nu indeplinesc promisiunea. Este confirmata livrarea alimentului, nu satisfacerea completa a nevoii, o recompensa sau o invatare autonoma. Cooldown-urile cererilor autonome raman neschimbate: indeplinirea promisiunii nu produce singura alt mesaj si nu permite solicitari repetate imediat.
+
 Pauza este respectata si de cererea locala inclusa in `De ce ai nevoie?`. Snapshot-ul pentru AI captureaza numai indicatorul `foodRequestDeferred` al jucatorului cererii, expus ca `npc_food_request_deferred`; instructiunea cere respectarea pauzei fara a transforma promisiunea in dovada de ajutor. Cererile in asteptare si preferintele sunt exclusiv runtime, nu sunt salvate in profil si se pierd la restart.
 
 ## Fluxul de rutina
