@@ -8,10 +8,12 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.ai.NpcCognitiveResponse
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSimulationMode
 
@@ -101,6 +103,29 @@ class SelfCareGoalIntegrationTest {
         onStateChange = { npc.markEntityUnavailable() }
         apply(NPCAction.EAT)
         assertNull(progress())
+    }
+
+    @Test
+    fun `assigning a home does not turn an older missing home observation into a current claim`() {
+        npc.homeAnchor = null
+        apply(NPCAction.EAT)
+        val recorded = requireNotNull(progress())
+        assertEquals(NpcSelfCareGoal.Stage.BLOCKED, recorded.stage)
+        val newHome = AINPC.OwnedLocation("home", "Casa nou confirmata", "world", 0.0, 64.0, 0.0)
+        npc.homeAnchor = newHome
+        val before = NpcCognitiveState.capture(npc)
+
+        val response = NpcCognitiveResponse.resolve("Cum merge ingrijirea ta?", before)!!
+        val providerContext = npc.generateContextDescription()
+
+        assertTrue(response.contains("La ultima observatie, imi lipsea o casa confirmata"), response)
+        assertFalse(response.contains("imi lipseste o casa"))
+        assertTrue(providerContext.contains("Progresul ingrijirii: $response"))
+        assertTrue(providerContext.contains("Casa nou confirmata"))
+        assertEquals(recorded, progress())
+        assertEquals(newHome, npc.homeAnchor)
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
     }
 
     private fun progress(): NpcSelfCareGoal.Snapshot? = npc.selfCareGoal.snapshot(System.currentTimeMillis())

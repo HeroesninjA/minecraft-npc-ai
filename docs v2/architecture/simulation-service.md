@@ -23,6 +23,32 @@ Aplicarea verifica separat revenirea din callback-ul schimbarii de stare: revizi
 
 Dupa aplicare, sincronizarea contextului verifica din nou disponibilitatea entitatii si foloseste pozitia ei curenta, nu captura de la intrarea in tick. Astfel, o mutare din callback sau un tick reentrant nu este urmata de restaurarea vechilor indicii `isAtHome`/`isAtWork`. Intentia este proiectata din starea autoritativa curenta; disparitia entitatii opreste sincronizarea fara a reintroduce dovezi de locatie deja sterse. Aceasta proiectie nu rescaneaza imprejurimile, nu actualizeaza perceptia completa a lumii si nu reaplica actiunea.
 
+## Restaurarea nevoilor din profil
+
+La rehidratarea `simulation` din profil, `hunger_level`, `energy_level`, `social_need_level`, `comfort_level` si `safety_level` accepta numai valori JSON numerice, exact integrale, intre 0 si 100 inclusiv. Formele numerice echivalente, precum `20.0` sau `2e1`, raman acceptate; schema si scrierea profilului nu se modifica.
+
+`readSimulationNeed` pastreaza separat valoarea anterioara a fiecarui camp daca acesta lipseste ori contine null, string, boolean, obiect, array, fractie sau numar in afara intervalului. Nu rotunjeste, nu trunchiaza, nu transforma un numar prea mare prin overflow si nu il limiteaza artificial la 0 sau 100. O valoare invalida nu opreste restaurarea celorlalte nevoi, a memoriei confirmate, a obiectivului sau a ancorelor valide. Cititorii generici ai celorlalte campuri nu sunt schimbati prin aceasta corectie.
+
+Aceasta validare previne nevoi inventate din date invalide, dar nu demonstreaza ca o valoare numeric valida corespunde lumii reale. Perceptia, executia actiunilor si creditul pentru ajutor raman verificate separat; simpla incarcare a profilului nu consuma obiecte si nu produce o noua confirmare.
+
+## Restaurarea timpului si intentiilor
+
+`last_simulation_tick_at` accepta numai un numar JSON exact integral din intervalul 0..Long.MAX_VALUE. `readSimulationTimestamp` pastreaza valoarea anterioara pentru camp absent, tip gresit, fractie, valoare negativa sau overflow; nu accepta stringuri numerice. Zero ramane marcajul de initializare: prima actualizare observa timpul curent fara sa modifice nevoile pe baza unui interval inventat. Formele zecimale/exponentiale exact integrale si valorile mari reprezentabile se pastreaza fara pierdere de precizie.
+
+`current_goal` si `planned_routine_activity` accepta numai stringuri JSON prin `readSimulationText`. Un numar sau boolean nu devine text de intentie; un camp invalid pastreaza numai textul anterior al acelui camp. Stringurile valide, inclusiv cel gol si spatiile, nu sunt normalizate prin aceasta corectie. Restaurarea memoriei si a ancorelor continua chiar daca timpul sau intentia este invalida.
+
+Schema, scrierea profilului si cititorii generici raman neschimbati. Un timestamp exact dar viitor ramane reprezentabil si este pastrat la rehidratare; verificarea tipului nu dovedeste ca timpul este o observatie reala. La consumarea lui se aplica protectia de interval descrisa mai jos. Textele restaurate nu certifica aplicarea unei actiuni sau executia unei rutine.
+
+## Intervale de simulare fara timp scurs
+
+Actualizarea nevoilor captureaza o singura valoare de ceas si o salveaza in `lastSimulationTickAt`. Daca timestamp-ul anterior este neinitializat sau noul timp este egal ori mai mic, cele cinci nevoi raman neschimbate. Limita minima de factor 0.5 se aplica numai dupa confirmarea unui interval strict pozitiv, nu unui apel duplicat in aceeasi milisecunda sau unui ceas regresiv. Protectia este comuna fluxurilor `FULL` si `LIGHT`.
+
+Un timp viitor restaurat, inclusiv `Long.MAX_VALUE`, nu blocheaza permanent simularea: prima actualizare rebazeaza ceasul fara consum sau refacere de nevoi, iar urmatorul interval pozitiv foloseste normal noua baza. Factorii 0.5..4.0 si coeficientii intervalelor pozitive raman neschimbati; nu se introduce un ceas monotonic sau o politica noua pentru toate cooldown-urile.
+
+La observarea ingrijirii, intervalul egal sau regresiv nu confirma progres, masa ori somn. Garzile existente anuleaza atribuirea in asteptare si obiectivul activ neconfirmat, fara a sterge experientele istorice. O noua aplicare valida, urmata de un interval pozitiv si o imbunatatire observata, poate invata din nou. Selectia obisnuita dintr-un tick `FULL` poate aplica in continuare o intentie noua; lipsa actualizarii nevoilor nu inseamna oprirea intregului tick.
+
+Un furnizor intern `needsClock` permite regresii deterministe fara asteptari reale pentru aceasta etapa. Constructorii existenti raman disponibili si folosesc `System.currentTimeMillis`; diagnosticele, prospetimea memoriei si celelalte ceasuri nu sunt inlocuite prin acest punct de testare.
+
 ## Autoevaluare comuna pentru decizie si dialog
 
 `NpcCognitiveState` este un instantaneu imuabil al nevoilor, starii, pericolului, interlocutorului, obiectivului si rutinei. `DecisionEngine` foloseste `needModifier` din acest model pentru contributia nevoilor la scorurile actiunilor; coeficientii si pragurile existente sunt pastrate.
@@ -52,6 +78,8 @@ Obiectivul se incheie numai dupa o actualizare observata cu nevoia de cel putin 
 Observarea cere un interval pozitiv de cel mult 120 de secunde, timestamp-uri valide, aceeasi casa si un context sigur. Conversatia, combatul, o activitate incompatibila, schimbarea casei sau pericolul intrerup obiectivul activ fara sa il declare reusit. Spawn-ul, reatasarea, despawn-ul, indisponibilitatea, teleportul, restaurarea starii si schimbarea modului il sterg; verificarea reviziei previne recrearea lui dintr-un callback invalidat. Lipsa unei locatii si actualizarea de baza `LIGHT` il sterg de asemenea.
 
 Este pastrat numai ultimul obiectiv, fara persistenta, cu snapshot imuabil de cel mult cinci minute de la ultima actualizare valida; citirea nu reinnoieste termenul. `NpcCognitiveState`, raspunsurile locale despre progres si textul `Progresul ingrijirii` capturat pentru AI folosesc aceleasi date, fara acces Bukkit asincron.
+
+Explicatiile etapelor active sunt ancorate explicit la ultima observatie, nu prezentate ca perceptie curenta. `RECOVERING` spune ca NPC-ul era acasa atunci, `BLOCKED` ca ii lipsea o casa confirmata atunci, iar `RETURNING_HOME` ca sosirea nu era inca confirmata. La fel, lipsa progresului descrie intervalul inregistrat pana la acea observatie. O schimbare ulterioara de pozitie, intentie sau ancora nu transforma automat inregistrarea in adevar prezent. Raspunsul local, contextul capturat pentru AI si diagnosticul folosesc aceeasi formulare istorica; citirea nu rescaneaza lumea si nu corecteaza ori reinnoieste obiectivul. Etapele de succes si intrerupere isi pastreaza explicatiile istorice si aceleasi reguli.
 
 ## Continuitate optionala si lipsa progresului
 

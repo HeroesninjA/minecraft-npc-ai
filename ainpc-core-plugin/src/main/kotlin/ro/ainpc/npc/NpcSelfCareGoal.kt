@@ -23,14 +23,14 @@ class NpcSelfCareGoal {
             val objective = if (action == NPCAction.EAT) "hrana" else "odihna"
             val progress = when (stage) {
                 Stage.RETURNING_HOME ->
-                    "Pentru obiectivul de $objective, am ales sa revin acasa; sosirea nu este inca confirmata."
-                Stage.RECOVERING -> "Sunt acasa pentru obiectivul de $objective. " +
+                    "La ultima observatie, pentru obiectivul de $objective, alesesem sa revin acasa; sosirea nu era inca confirmata."
+                Stage.RECOVERING -> "La ultima observatie, eram acasa pentru obiectivul de $objective. " +
                     if (observedRecovery) {
-                        "Am observat o imbunatatire in timpul ingrijirii, dar obiectivul nu este inca incheiat."
+                        "Am observat o imbunatatire in timpul ingrijirii; atunci, obiectivul nu era inca incheiat."
                     } else {
-                        "Inca nu am confirmat refacerea nevoii."
+                        "La acel moment, inca nu confirmasem refacerea nevoii."
                     }
-                Stage.BLOCKED -> "Pentru obiectivul de $objective, imi lipseste o casa confirmata."
+                Stage.BLOCKED -> "La ultima observatie, imi lipsea o casa confirmata pentru obiectivul de $objective."
                 Stage.SATISFIED -> "Ultimul obiectiv de $objective este incheiat: am observat refacerea nevoii. " +
                     if (observedRecovery) {
                         "Ultima imbunatatire a fost observata in timpul ingrijirii de acasa."
@@ -41,7 +41,7 @@ class NpcSelfCareGoal {
                     "Ultimul obiectiv de $objective a fost intrerupt; nu am confirmat incheierea lui."
             }
             return if (lacksProgress()) {
-                "$progress Nu am confirmat sosirea sau refacerea in ultimele minute; cauza nu este stabilita."
+                "$progress Pana la acea observatie, nu confirmasem sosirea sau refacerea in ultimele minute; cauza nu este stabilita."
             } else progress
         }
     }

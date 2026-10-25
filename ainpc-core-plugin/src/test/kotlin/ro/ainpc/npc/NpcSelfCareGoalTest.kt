@@ -13,6 +13,29 @@ class NpcSelfCareGoalTest {
     private val walking = NpcCognitiveState(hungerLevel = 20, currentState = NPCState.WALKING)
 
     @Test
+    fun `active snapshots anchor their explanation to the last observation without renewing it`() {
+        for (action in listOf(NPCAction.EAT, NPCAction.SLEEP)) {
+            val careState = if (action == NPCAction.EAT) NPCState.EATING else NPCState.SLEEPING
+            val state = walking.copy(energyLevel = 20)
+            val cases = listOf(Triple(state, "", false), Triple(state, home, false),
+                Triple(state.copy(currentState = careState), home, true))
+            for ((observedState, homeKey, isAtHome) in cases) {
+                goal.applied(action, observedState, homeKey, isAtHome, now)
+                val recorded = requireNotNull(goal.snapshot(now))
+
+                val explanation = recorded.description()
+
+                assertTrue(explanation.contains("La ultima observatie"), explanation)
+                assertFalse(explanation.contains("Sunt acasa"))
+                assertFalse(explanation.contains("imi lipseste o casa"))
+                assertEquals(recorded, goal.snapshot(now + 120_000L))
+                assertEquals(now, recorded.updatedAt)
+                assertFalse(recorded.observedRecovery)
+            }
+        }
+    }
+
+    @Test
     fun `return diagnostics explain the same eligibility without mutating the objective`() {
         assertEquals(NpcSelfCareContinuity.NO_RECENT_GOAL, goal.returnStatus(walking, home, false, now))
         goal.applied(NPCAction.EAT, walking, home, false, now)
@@ -47,7 +70,7 @@ class NpcSelfCareGoalTest {
     fun `applied care tracks returning arrival and observed recovery without declaring early success`() {
         goal.applied(NPCAction.EAT, walking, home, false, now)
         assertEquals(NpcSelfCareGoal.Stage.RETURNING_HOME, goal.snapshot(now)!!.stage)
-        assertTrue(goal.snapshot(now)!!.description().contains("sosirea nu este inca confirmata"))
+        assertTrue(goal.snapshot(now)!!.description().contains("sosirea nu era inca confirmata"))
         val eating = walking.copy(currentState = NPCState.EATING)
         goal.onStateChanged(NPCState.EATING, now + 1L)
         goal.applied(NPCAction.EAT, eating, home, true, now + 1L)
@@ -61,7 +84,7 @@ class NpcSelfCareGoalTest {
         assertEquals(28, progress.observedNeed)
         assertTrue(progress.observedRecovery)
         assertEquals(NpcSelfCareGoal.Stage.RECOVERING, progress.stage)
-        assertTrue(progress.description().contains("nu este inca incheiat"))
+        assertTrue(progress.description().contains("nu era inca incheiat"))
     }
 
     @Test
@@ -97,7 +120,7 @@ class NpcSelfCareGoalTest {
     fun `missing home is blocked and a changed home cannot inherit old progress`() {
         goal.applied(NPCAction.EAT, walking, "", false, now)
         assertEquals(NpcSelfCareGoal.Stage.BLOCKED, goal.snapshot(now)!!.stage)
-        assertTrue(goal.snapshot(now)!!.description().contains("lipseste o casa confirmata"))
+        assertTrue(goal.snapshot(now)!!.description().contains("lipsea o casa confirmata"))
         goal.applied(NPCAction.EAT, walking, home, false, now + 1L)
         assertEquals(NpcSelfCareGoal.Stage.RETURNING_HOME, goal.snapshot(now + 1L)!!.stage)
         goal.observe(walking, walking.copy(hungerLevel = 70), "other:home", false, now, now + 30_000L)

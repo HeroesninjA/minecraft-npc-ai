@@ -233,8 +233,8 @@ class OpenAIPromptSnapshotIsolationTest {
         npc.selfCareGoal.clear()
         val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
 
-        assertTrue(prompt.contains("Progresul ingrijirii: Sunt acasa pentru obiectivul de hrana."))
-        assertTrue(snapshot.npcDescription.contains("Inca nu am confirmat refacerea nevoii"))
+        assertTrue(prompt.contains("Progresul ingrijirii: La ultima observatie, eram acasa pentru obiectivul de hrana."))
+        assertTrue(snapshot.npcDescription.contains("inca nu confirmasem refacerea nevoii"))
         assertNull(npc.selfCareGoal.snapshot(System.currentTimeMillis()))
     }
 
@@ -255,7 +255,7 @@ class OpenAIPromptSnapshotIsolationTest {
         assertTrue(prompt.contains("cauza nu este stabilita"))
         assertTrue(prompt.contains("Lipsa progresului confirmat nu dovedeste o ruta blocata"))
         assertFalse(npc.selfCareGoal.snapshot(System.currentTimeMillis())!!.lacksProgress())
-        assertFalse(snapshot.npcDescription.contains("Sunt acasa pentru obiectivul"))
+        assertFalse(snapshot.npcDescription.contains("eram acasa pentru obiectivul"))
     }
 
     @Test

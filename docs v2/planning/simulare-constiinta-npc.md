@@ -97,6 +97,22 @@ Diagnosticul administrativ `decision` separa acum confirmarile alimentare pastra
 
 Patru regresii suplimentare leaga transferul alimentar controlat, profilul JSON, rehidratarea reala din manager si initiativa ulterioara catre UUID-ul exact. Repetarea rehidratarii nu repeta efectul alimentului si nu crediteaza o promisiune nelivrata. Sunt verificate dovezile absente/invalide/expirate/viitoare si separarea instantei runtime de identitatea persistenta, fara ocolirea cooldown-ului serviciului ramas activ. Nu se modifica runtime-ul sau formatul memoriei. [Metoda si limitele](../operations/debugging-si-testare.md#memoria-alimentara-dupa-rehidratare) disting aceste teste de un restart complet si de verificarea in Minecraft.
 
+## Restaurarea nevoilor fara observatii inventate - 2026-10-25
+
+Citirea celor cinci nevoi persistente este acum exacta si limitata la intervalul 0-100. Datele invalide nu devin nevoi reale prin overflow, trunchiere ori conversie de tip si nu intrerup restaurarea celorlalte campuri valide. Regresiile includ rehidratarea de productie si initiativa alimentara, cu un control pozitiv pentru foame valida si fara credit nou pentru o livrare recitita. Nu se extinde simularea si nu se modifica formatul memoriei. [Verificarea locala](../operations/debugging-si-testare.md#nevoi-invalide-in-profil) nu inlocuieste observarea circuitului in Minecraft.
+
+## Timp si intentii restaurate fara conversii inventate - 2026-10-25
+
+Aceeasi frontiera de profil protejeaza acum si timpul ultimei simulari, obiectivul si rutina planificata. Timpul trebuie sa fie numeric, exact integral si nenegativ; intentiile trebuie sa fie stringuri, nu numere sau booleeni convertiti in text. Campurile invalide nu intrerup restaurarea memoriei si ancorelor. O regresie leaga overflow-ul de modificarea falsa a nevoilor la prima actualizare, cu un control pozitiv pentru un timp valid. Nu se adauga actiuni, reflectie LLM sau pretentii de constiinta subiectiva. [Dovezile si limitele](../operations/debugging-si-testare.md#timp-si-intentii-invalide-in-profil) raman distincte de verificarea in Minecraft.
+
+## Intervale de simulare fara progres inventat - 2026-10-25
+
+Actualizarea nevoilor nu mai aplica factorul minim unui interval egal sau regresiv. Ceasul este rebazat fara consum ori recuperare, inclusiv dupa restaurarea unui timp viitor reprezentabil; un interval pozitiv ulterior reia simularea normal. Observarea ingrijirii nu atribuie progres pe un astfel de interval, pastreaza istoricul si necesita o noua aplicare valida pentru invatare. Opt regresii suplimentare leaga ceasul controlat, rehidratarea si intrarea publica `FULL`/`LIGHT`, fara a opri selectia normala sau a introduce un ceas global nou. [Verificarea si limitele](../operations/debugging-si-testare.md#ceas-egal-sau-regresiv-in-simulare) raman separate de gameplay.
+
+## Explicarea istorica a progresului - 2026-10-25
+
+Progresul de ingrijire este descris explicit ca ultima observatie, nu ca o verificare a situatiei prezente. O inregistrare de refacere acasa sau de lipsa a unei case ramane istorica dupa schimbarea pozitiei, intentiei sau ancorei. Aceeasi formulare este folosita in raspunsul local, contextul pentru AI si diagnosticul administrativ. Cinci regresii suplimentare verifica aceasta separare fara scanari ale lumii sau modificarea obiectivului la simpla intrebare. Nu se schimba alegerea actiunilor, succesul sau memoria. [Verificarea si limitele](../operations/debugging-si-testare.md#progres-memorat-versus-situatie-curenta) nu certifica un provider AI sau gameplay real.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.

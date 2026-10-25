@@ -26,6 +26,7 @@ import ro.ainpc.world.NpcWorldBinding
 import ro.ainpc.world.PlaceType
 import ro.ainpc.world.WorldNodeInfo
 import ro.ainpc.world.WorldPlaceInfo
+import java.math.BigDecimal
 import java.util.Collections
 import java.util.Locale
 import java.util.Random
@@ -46,6 +47,31 @@ fun valueOrFallback(value: String?, fallback: String): String {
 fun readInt(json: JsonObject?, key: String, fallback: Int): Int {
     val element = json?.get(key)
     return if (element != null && element.isJsonPrimitive) element.asInt else fallback
+}
+
+internal fun readSimulationNeed(json: JsonObject, key: String, fallback: Int): Int {
+    val value = json.get(key)
+    if (value == null || !value.isJsonPrimitive || !value.asJsonPrimitive.isNumber) return fallback
+    return try {
+        BigDecimal(value.asString).intValueExact().takeIf { it in 0..100 } ?: fallback
+    } catch (_: RuntimeException) {
+        fallback
+    }
+}
+
+internal fun readSimulationTimestamp(json: JsonObject, key: String, fallback: Long): Long {
+    val value = json.get(key)
+    if (value == null || !value.isJsonPrimitive || !value.asJsonPrimitive.isNumber) return fallback
+    return try {
+        BigDecimal(value.asString).longValueExact().takeIf { it >= 0L } ?: fallback
+    } catch (_: RuntimeException) {
+        fallback
+    }
+}
+
+internal fun readSimulationText(json: JsonObject, key: String, fallback: String): String {
+    val value = json.get(key)
+    return if (value != null && value.isJsonPrimitive && value.asJsonPrimitive.isString) value.asString else fallback
 }
 
 fun readLong(json: JsonObject?, key: String, fallback: Long): Long {

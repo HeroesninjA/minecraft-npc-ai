@@ -442,14 +442,14 @@ class NPCManager(
             else
                 null
             if (simulation != null) {
-                npc.hungerLevel = readInt(simulation, "hunger_level", npc.hungerLevel)
-                npc.energyLevel = readInt(simulation, "energy_level", npc.energyLevel)
-                npc.socialNeedLevel = readInt(simulation, "social_need_level", npc.socialNeedLevel)
-                npc.comfortLevel = readInt(simulation, "comfort_level", npc.comfortLevel)
-                npc.safetyLevel = readInt(simulation, "safety_level", npc.safetyLevel)
-                npc.currentGoal = readString(simulation, "current_goal", npc.currentGoal)
-                npc.plannedRoutineActivity = readString(simulation, "planned_routine_activity", npc.plannedRoutineActivity)
-                npc.lastSimulationTickAt = readLong(simulation, "last_simulation_tick_at", npc.lastSimulationTickAt)
+                npc.hungerLevel = readSimulationNeed(simulation, "hunger_level", npc.hungerLevel)
+                npc.energyLevel = readSimulationNeed(simulation, "energy_level", npc.energyLevel)
+                npc.socialNeedLevel = readSimulationNeed(simulation, "social_need_level", npc.socialNeedLevel)
+                npc.comfortLevel = readSimulationNeed(simulation, "comfort_level", npc.comfortLevel)
+                npc.safetyLevel = readSimulationNeed(simulation, "safety_level", npc.safetyLevel)
+                npc.currentGoal = readSimulationText(simulation, "current_goal", npc.currentGoal)
+                npc.plannedRoutineActivity = readSimulationText(simulation, "planned_routine_activity", npc.plannedRoutineActivity)
+                npc.lastSimulationTickAt = readSimulationTimestamp(simulation, "last_simulation_tick_at", npc.lastSimulationTickAt)
                 npc.actionExperience.restore(NpcActionExperienceCodec.read(simulation.get("action_experience")))
                 npc.socialExperience.restore(NpcSocialExperienceCodec.read(simulation.get("social_experience")))
             }
