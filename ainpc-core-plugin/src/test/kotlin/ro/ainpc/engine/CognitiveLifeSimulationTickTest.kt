@@ -1,5 +1,7 @@
 package ro.ainpc.engine
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Server
@@ -18,10 +20,12 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.bootstrap.ServiceRegistry
 import ro.ainpc.managers.NPCManager
+import ro.ainpc.managers.NpcActionExperienceCodec
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcActionExperience
 import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.routine.RoutineActivityExecutor
@@ -59,6 +63,7 @@ class CognitiveLifeSimulationTickTest {
     private var nearbyScans = 0
     private var acceptedMoves = 0
     private var afterNearbyScan: () -> Unit = {}
+    private var afterStateChange: () -> Unit = {}
     private var hostileCount = 0
     private val world = Proxy.newProxyInstance(World::class.java.classLoader, arrayOf(World::class.java)) {
         proxy, method, arguments ->
@@ -73,7 +78,7 @@ class CognitiveLifeSimulationTickTest {
         }
     } as World
     private var location = Location(world, 0.0, 64.0, 0.0)
-    private val npc = AINPC(null).apply {
+    private val npc = AINPC(null) { _, _, _ -> afterStateChange() }.apply {
         name = "Bob"
         worldName = "world"
         homeAnchor = AINPC.OwnedLocation("home", "Casa", "world", 20.0, 64.0, 0.0)
@@ -314,6 +319,288 @@ class CognitiveLifeSimulationTickTest {
         assertEquals(0, engine.decisionStatistics(npc.uuid).total)
     }
 
+    @Test
+    fun `mode round trip during application cannot restart a cancelled learning period`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        afterStateChange = {
+            afterStateChange = {}
+            npc.simulationMode = NpcSimulationMode.LIGHT
+            npc.simulationMode = NpcSimulationMode.FULL
+        }
+        tick()
+
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        tick()
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(NPCAction.EAT, npc.lastDecision!!.action)
+        tick()
+        assertTrue(npc.actionExperience.snapshot().isNotEmpty())
+    }
+
+    @Test
+    fun `conversation callback keeps its own intent instead of the interrupted meal intent`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        val conversationGoal = "Vorbeste cu vizitatorul"
+        afterStateChange = {
+            afterStateChange = {}
+            npc.changeStateFromSimulation(NPCState.TALKING)
+            npc.currentGoal = conversationGoal
+        }
+        tick()
+
+        assertEquals(NPCState.TALKING, npc.currentState)
+        assertEquals(conversationGoal, npc.currentGoal)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `state round trip during application cannot certify the interrupted choice or recovery`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        afterStateChange = {
+            afterStateChange = {}
+            npc.changeStateFromSimulation(NPCState.TALKING)
+            npc.changeStateFromSimulation(NPCState.EATING)
+        }
+        tick()
+
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        tick()
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(NPCAction.EAT, npc.lastDecision!!.action)
+        tick()
+        assertTrue(npc.actionExperience.snapshot().isNotEmpty())
+    }
+
+    @Test
+    fun `superseded application preserves a newer tick decision goal and learning period`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        var resumedDecision = npc.lastDecision
+        var resumedGoal = progress()
+        val resumedIntent = "Continua ingrijirea dupa interactiune"
+        afterStateChange = {
+            afterStateChange = {}
+            npc.simulationMode = NpcSimulationMode.LIGHT
+            npc.simulationMode = NpcSimulationMode.FULL
+            tick()
+            resumedDecision = npc.lastDecision
+            resumedGoal = progress()
+            npc.currentGoal = resumedIntent
+        }
+        tick()
+
+        assertTrue(resumedDecision != null)
+        assertTrue(resumedGoal != null)
+        assertEquals(resumedDecision, npc.lastDecision)
+        assertEquals(resumedGoal, progress())
+        assertEquals(resumedIntent, npc.currentGoal)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        tick()
+        assertTrue(npc.actionExperience.snapshot().isNotEmpty())
+    }
+
+    @Test
+    fun `interrupted application preserves the newer tick location context after teleport`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        var resumedGoal = ""
+        afterStateChange = {
+            afterStateChange = {}
+            npc.teleport(Location(world, 100.0, 64.0, 0.0))
+            tick()
+            assertFalse(npc.context.isAtHome)
+            assertTrue(npc.context.isAtWork)
+            resumedGoal = npc.context.currentGoal
+        }
+        tick()
+
+        assertTrue(npc.isSpawned())
+        assertEquals(100.0, npc.x)
+        assertFalse(npc.context.isAtHome)
+        assertTrue(npc.context.isAtWork)
+        assertEquals(resumedGoal, npc.context.currentGoal)
+        assertEquals(npc.currentGoal, npc.context.currentGoal)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(2, nearbyScans)
+        val description = npc.context.generateContextDescription()
+        assertTrue(description.contains("Sunt la munca."))
+        assertFalse(description.contains("Sunt acasa."))
+    }
+
+    @Test
+    fun `conversation interruption synchronizes its new location and intent without a lifecycle change`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        val previousRevision = npc.decisionRevision
+        afterStateChange = {
+            afterStateChange = {}
+            npc.changeStateFromSimulation(NPCState.TALKING)
+            npc.currentGoal = "Vorbeste la atelier"
+            location = Location(world, 100.0, 64.0, 0.0)
+        }
+        tick()
+
+        assertEquals(previousRevision, npc.decisionRevision)
+        assertEquals(NPCState.TALKING, npc.currentState)
+        assertFalse(npc.context.isAtHome)
+        assertTrue(npc.context.isAtWork)
+        assertEquals(npc.currentGoal, npc.context.currentGoal)
+        assertNull(npc.lastDecision)
+        val description = npc.context.generateContextDescription()
+        assertTrue(description.contains("Sunt la munca."))
+        assertTrue(description.contains("Vorbeste la atelier"))
+        assertFalse(description.contains("Sunt acasa."))
+    }
+
+    @Test
+    fun `entity loss during application cannot restore previously cleared location evidence`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        afterStateChange = {
+            afterStateChange = {}
+            npc.markEntityUnavailable()
+            npc.context.syncSimulationState(null)
+        }
+        tick()
+
+        assertFalse(npc.isSpawned())
+        assertFalse(npc.context.isAtHome)
+        assertFalse(npc.context.isAtWork)
+        assertFalse(npc.context.isAtSocialSpot)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertFalse(npc.context.generateContextDescription().contains("Sunt acasa."))
+    }
+
+    @Test
+    fun `successful application synchronizes its new intent after both transition and no op`() {
+        location = Location(world, 20.0, 64.0, 0.0)
+        npc.currentGoal = "Intentia precedenta"
+        tick()
+
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertEquals(npc.currentGoal, npc.context.currentGoal)
+        assertFalse(npc.context.currentGoal == "Intentia precedenta")
+        val stateRevision = npc.stateRevision
+        tick()
+
+        assertEquals(stateRevision, npc.stateRevision)
+        assertEquals(npc.currentGoal, npc.context.currentGoal)
+        assertTrue(npc.context.isAtHome)
+    }
+
+    @Test
+    fun `observed meal recovery changes a later public choice at the same seeded roll`() {
+        assertObservedRecoveryChangesChoice(serializeMemory = false)
+    }
+
+    @Test
+    fun `serialized observed recovery retains its influence on a later public choice`() {
+        assertObservedRecoveryChangesChoice(serializeMemory = true)
+    }
+
+    private fun assertObservedRecoveryChangesChoice(serializeMemory: Boolean) {
+        location = Location(world, 20.0, 64.0, 0.0)
+        tick()
+        assertEquals(NPCAction.EAT, npc.lastDecision!!.action)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        tick()
+        val observations = npc.actionExperience.snapshot()
+        assertEquals(1, observations.size)
+        assertTrue(observations.single().needDelta > 0)
+        val remembered = if (serializeMemory) {
+            val gson = Gson()
+            val serialized = gson.toJson(NpcActionExperienceCodec.write(npc.actionExperience))
+            NpcActionExperienceCodec.read(gson.fromJson(serialized, JsonObject::class.java))
+        } else observations
+        assertEquals(observations, remembered)
+
+        plugin.config.set("simulation.decision.probabilistic_enabled", true)
+        prepareLearningComparison(emptyList())
+        val baseline = engine.previewActionDecision(npc, npc.context)
+        val historicalDecision = npc.lastDecision
+        npc.actionExperience.restore(remembered)
+        val learned = engine.previewActionDecision(npc, npc.context)
+        assertTrue(baseline.probabilistic)
+        assertFalse(baseline.cached)
+        assertTrue(learned.probabilities.getValue(NPCAction.EAT) > baseline.probabilities.getValue(NPCAction.EAT))
+        assertEquals(baseline.scoreBreakdowns, learned.scoreBreakdowns.mapValues { (_, breakdown) ->
+            breakdown.copy(experience = 0)
+        })
+        assertEquals(historicalDecision, npc.lastDecision)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertEquals(remembered, npc.actionExperience.snapshot())
+
+        val seed = (0L..100_000L).first { candidate ->
+            val roll = DecisionEngine.deterministicDecisionRoll(candidate, npc.uuid, 1L)
+            ActionProbabilitySelector.select(learned.probabilities, roll) == NPCAction.EAT &&
+                ActionProbabilitySelector.select(baseline.probabilities, roll) == NPCAction.SLEEP
+        }
+        plugin.config.set("simulation.decision.random_seed", seed)
+        prepareLearningComparison(emptyList())
+        tick()
+        assertEquals(NPCAction.SLEEP, npc.lastDecision!!.action)
+        assertEquals(NPCState.SLEEPING, npc.currentState)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+
+        prepareLearningComparison(remembered)
+        tick()
+        assertEquals(NPCAction.EAT, npc.lastDecision!!.action)
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+        assertEquals(remembered, npc.actionExperience.snapshot())
+        assertFalse(progress()!!.observedRecovery)
+        val appliedDecision = npc.lastDecision
+        val response = dialogue.generateResponse(npc, npc.context, "Ce ai invatat?").join()
+        assertEquals(npc.actionExperience.latestDescription(System.currentTimeMillis()), response)
+        assertEquals(appliedDecision, npc.lastDecision)
+        assertEquals(remembered, npc.actionExperience.snapshot())
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+        tick()
+        assertEquals(remembered.size + 1, npc.actionExperience.snapshot().size)
+        assertEquals(NPCAction.EAT, npc.actionExperience.snapshot().last().action)
+        assertTrue(npc.actionExperience.snapshot().last().needDelta > 0)
+
+        prepareLearningComparison(remembered)
+        plugin.config.set("simulation.decision.experience_enabled", false)
+        tick()
+        assertEquals(NPCAction.SLEEP, npc.lastDecision!!.action)
+        assertEquals(remembered, npc.actionExperience.snapshot())
+        tick()
+        assertEquals(remembered, npc.actionExperience.snapshot())
+
+        plugin.config.set("simulation.decision.experience_enabled", true)
+        npc.homeAnchor = AINPC.OwnedLocation("home", "Casa noua", "world", 40.0, 64.0, 0.0)
+        location = Location(world, 40.0, 64.0, 0.0)
+        prepareLearningComparison(remembered)
+        val differentHome = engine.previewActionDecision(npc, npc.context)
+        assertEquals(baseline.scoreBreakdowns, differentHome.scoreBreakdowns)
+        assertEquals(baseline.probabilities, differentHome.probabilities)
+        tick()
+        assertEquals(NPCAction.SLEEP, npc.lastDecision!!.action)
+        assertEquals(remembered, npc.actionExperience.snapshot())
+    }
+
+    private fun prepareLearningComparison(observations: List<NpcActionExperience.Observation>) {
+        npc.changeStateFromSimulation(NPCState.IDLE)
+        npc.selfCareGoal.clear()
+        npc.hungerLevel = 33
+        npc.energyLevel = 20
+        npc.socialNeedLevel = 72
+        npc.comfortLevel = 70
+        npc.safetyLevel = 84
+        npc.currentGoal = ""
+        npc.lastSimulationTickAt = 0L
+        npc.actionExperience.restore(observations)
+        npc.context.syncSimulationState(location)
+        engine.removeNpcFromCache(npc.uuid)
+    }
+
     private fun startReturn() {
         val assignment = requireNotNull(RoutineSelfCarePolicy.assignment(npc.homeAnchor, npc.hungerLevel,
             npc.energyLevel, true))
@@ -331,11 +618,15 @@ class CognitiveLifeSimulationTickTest {
     private fun progress(): NpcSelfCareGoal.Snapshot? = npc.selfCareGoal.snapshot(System.currentTimeMillis())
 
     private fun entity(uuid: UUID, position: () -> Location, valid: () -> Boolean): Entity =
-        Proxy.newProxyInstance(Entity::class.java.classLoader, arrayOf(Entity::class.java)) { _, method, _ ->
+        Proxy.newProxyInstance(Entity::class.java.classLoader, arrayOf(Entity::class.java)) { _, method, arguments ->
             when (method.name) {
                 "getUniqueId" -> uuid
                 "getLocation" -> position().clone()
                 "isValid" -> valid()
+                "teleport" -> {
+                    location = (arguments!![0] as Location).clone()
+                    true
+                }
                 else -> error("Unexpected entity access: ${method.name}")
             }
         } as Entity
