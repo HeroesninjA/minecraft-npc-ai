@@ -19,6 +19,10 @@ Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ram
 
 Managerul verifica disponibilitatea reala prin `AINPC.isSpawned()`, nu doar flagul memorat `spawned`. Intrarea in motor si revenirea din actualizarea perceptiei sunt protejate de verificarea entitatii si a reviziei ciclului de viata, atat pentru `FULL`, cat si pentru `LIGHT`. Daca entitatea dispare sau un callback invalideaza revizia in timpul actualizarii contextului, tick-ul se opreste inainte de schimbarea nevoilor si de selectie. Coordonatele persistente ale unui NPC indisponibil nu devin dovada ca acesta continua sa actioneze.
 
+Aplicarea verifica separat revenirea din callback-ul schimbarii de stare: revizia ciclului de viata trebuie pastrata, starea trebuie sa fie cea ceruta, iar revizia starii sa reflecte numai tranzitia asteptata. O trecere `FULL -> LIGHT -> FULL` sau `EATING -> TALKING -> EATING` invalideaza aplicarea veche chiar daca valoarea finala pare compatibila. Aceasta nu mai scrie intentia, explicatia, obiectivul de ingrijire sau perioada de invatare; nici nu sterge dovezile unei alegeri noi aplicate reentrant din callback. Nu se anuleaza retroactiv schimbarile de stare ori de nevoi deja efectuate.
+
+Dupa aplicare, sincronizarea contextului verifica din nou disponibilitatea entitatii si foloseste pozitia ei curenta, nu captura de la intrarea in tick. Astfel, o mutare din callback sau un tick reentrant nu este urmata de restaurarea vechilor indicii `isAtHome`/`isAtWork`. Intentia este proiectata din starea autoritativa curenta; disparitia entitatii opreste sincronizarea fara a reintroduce dovezi de locatie deja sterse. Aceasta proiectie nu rescaneaza imprejurimile, nu actualizeaza perceptia completa a lumii si nu reaplica actiunea.
+
 ## Autoevaluare comuna pentru decizie si dialog
 
 `NpcCognitiveState` este un instantaneu imuabil al nevoilor, starii, pericolului, interlocutorului, obiectivului si rutinei. `DecisionEngine` foloseste `needModifier` din acest model pentru contributia nevoilor la scorurile actiunilor; coeficientii si pragurile existente sunt pastrate.
@@ -73,11 +77,15 @@ Aceasta nu este o lista permanenta de destinatii interzise: dupa intrerupere, o 
 
 O perioada este acceptata o singura data daca actiunea si starea corespund, nevoia initiala nu a fost schimbata din exterior, casa/lumea si revizia starii au ramas aceleasi, contextul este sigur, iar intervalul este pozitiv si nu depaseste 120 de secunde. Intreruperile de stare, despawn-ul, reatasarea, teleportul si schimbarea modului de simulare anuleaza perioada in asteptare. Actualizarea `LIGHT` si dezactivarea invatarii o anuleaza de asemenea. Perioadele in asteptare nu sunt persistate.
 
+O intrerupere din callback-ul aplicarii nu poate rearma perioada anulata. Chiar daca masa simulata continua ulterior, invatarea necesita mai intai o noua alegere aplicata valid si abia apoi o actualizare observata a nevoilor.
+
 Efectul somnului scade recuperarea ambientala acordata oricarui NPC aflat acasa. `REST` nu primeste experienta, deoarece acea recuperare nu permite distingerea odihnei de simpla prezenta acasa. Efectele sunt normalizate la intervalul simularii. Sunt retinute cel mult 32 de observatii, cu snapshot sincronizat pentru autosave; numai cele din ultimele sapte zile si care nu sunt datate in viitor influenteaza scorurile.
 
 Experienta ajusteaza cu cel mult 12 puncte in plus sau in minus scorul aceleiasi actiuni, la aceeasi casa, cand nevoia este din nou activa si contextul este sigur. Nu modifica eligibilitatea actiunilor sau prioritatea pericolului. Contributia este separata de memoria relatiilor in diagnosticul `/ainpc decision`. `simulation.decision.experience_enabled`, implicit `true`, controleaza invatarea si aplicarea bonusului, fara stergerea observatiilor deja pastrate.
 
 Istoricul este salvat in `npc_profiles.profile_data`, sub `simulation.action_experience`, cu schema versionata; profilele vechi raman compatibile. `Ce ai invatat?` poate primi un raspuns local despre ultima schimbare observata, iar aceeasi descriere intra detasata in contextul AI. Acest circuit masoara efecte ale simularii nevoilor: nu confirma consumul de obiecte, ajutorul unui anumit jucator sau invatarea generala din povesti si conversatii.
+
+Testele prin tick-ul public verifica si influenta asupra unei alegeri aplicate ulterioare, nu doar diferenta de scor: o observatie reala despre masa poate schimba alegerea dintre somn si masa in conditii echivalente, cu acelasi seed si acelasi numar de selectie. Comparatia este repetata dupa serializarea JSON a memoriei. Oprirea invatarii si schimbarea casei elimina influenta, fara sa stearga istoricul. Acesta este un scenariu controlat care demonstreaza posibilitatea adaptarii, nu o garantie ca orice observatie schimba urmatoarea actiune; metoda si limitarile sunt in [runbook](../operations/debugging-si-testare.md#comparatie-cauzala-a-alegerii).
 
 ## Ajutor alimentar si experienta sociala
 
