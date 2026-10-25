@@ -61,6 +61,18 @@ Trei minute cumulate de observatii valide fara sosire sau refacere elibereaza ac
 
 Bucla publica are acum scenarii automate pentru manager, perceptie controlata, nevoi, decizie, aplicare, experienta si comunicarea rezultatului. Au fost reproduse si corectate doua cazuri in care disparitia entitatii permitea continuarea pe coordonatele memorate ori dupa invalidarea din actualizarea contextului. Tick-urile `FULL` si `LIGHT` se opresc inainte sa produca nevoi sau alegeri pentru o entitate indisponibila. Aceste teste nu valideaza fizica ori perceptia Paper; [smoke test-ul Minecraft](../operations/debugging-si-testare.md#smoke-test-cognitiv) ramane necesar.
 
+## Aplicare intrerupta fara invatare falsa - 2026-10-25
+
+Callback-urile schimbarii de stare nu mai pot transforma o alegere invalidata intr-o noua perioada de invatare si nici permite aplicarii vechi sa suprascrie intentia ori dovezile mai noi. Verificarea urmareste atat revizia ciclului de viata, cat si tranzitia exacta de stare, inclusiv revenirile la aceeasi valoare. Patru regresii prin tick-ul public separa refacerea efectiva a nevoii de creditul cauzal acordat unei alegeri valide; comportamentul fizic in Minecraft ramane de verificat separat.
+
+## Context coerent dupa interactiuni - 2026-10-25
+
+Proiectia de la finalul tick-ului nu mai restaureaza pozitia capturata inaintea callback-ului. Verifica disponibilitatea entitatii si citeste pozitia actuala, pastrand intentia autoritativa si observatia mai noua a unui tick reentrant. Trei regresii reproduse priveau teleportul, mutarea in timpul conversatiei si pierderea entitatii; un al patrulea scenariu protejeaza aplicarea normala. Textul pentru comunicare nu mai afirma prezenta acasa cand observatia controlata confirma atelierul. Nu se adauga scanari ale lumii, apeluri AI sau confirmari de navigatie reala.
+
+## Adaptarea verificata prin bucla publica - 2026-10-25
+
+Doua scenarii automate urmaresc acum masa aplicata, refacerea observata, memoria si o alegere ulterioara efectiv aplicata prin manager. In conditii echivalente si cu aceeasi aleatorietate, eliminarea memoriei conduce la somn, iar prezenta observatiei conduce la masa. Comparatia este repetata dupa serializarea JSON, cu controale pentru oprirea invatarii si schimbarea casei. Testele demonstreaza posibilitatea unei adaptari limitate, nu o schimbare garantata la fiecare alegere, persistenta completa intr-un restart sau experienta subiectiva. [Metoda](../operations/debugging-si-testare.md#comparatie-cauzala-a-alegerii) separa explicit aceasta verificare locala de efectele fizice in Minecraft.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.
