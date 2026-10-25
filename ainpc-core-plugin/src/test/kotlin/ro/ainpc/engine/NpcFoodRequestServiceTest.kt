@@ -4,12 +4,15 @@ import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.PlayerInventory
 import org.bukkit.metadata.MetadataValue
 import org.bukkit.plugin.PluginManager
 import org.bukkit.plugin.java.JavaPlugin
@@ -26,6 +29,7 @@ import ro.ainpc.api.events.dialog.DialogMessageReceivedEvent
 import ro.ainpc.bootstrap.ServiceRegistry
 import ro.ainpc.gui.GuiService
 import ro.ainpc.listeners.NPCChatListener
+import ro.ainpc.listeners.NpcFoodInteraction
 import ro.ainpc.managers.ConversationSessionManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
@@ -479,7 +483,86 @@ class NpcFoodRequestServiceTest {
         assertEquals(20, second.hungerLevel)
     }
 
-    private class Fixture(val now: Long = 1_000_000_000L) {
+    @Test
+    fun `actual inventory delivery fulfils a promise without bypassing request cooldowns`() {
+        val fixture = Fixture(seedHelper = false)
+        assertFalse(fixture.request())
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now - 1L)!!.status)
+        assertEquals(2, fixture.helper.heldFood!!.amount)
+        assertEquals(32, fixture.npc.hungerLevel)
+        assertEquals(1, fixture.npc.socialExperience.snapshot().size)
+        assertTrue(fixture.request())
+        val needs = fixture.needs()
+        val evidence = fixture.npc.socialExperience.snapshot()
+        assertTrue(fixture.service.tryReply(fixture.helper.player, "Iti aduc mancare", fixture.now + 1L))
+        assertTrue(fixture.npc.foodRequestPreferences.isDeferred(fixture.helper.id, fixture.now + 1L))
+        assertEquals(needs, fixture.needs())
+        assertEquals(evidence, fixture.npc.socialExperience.snapshot())
+
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now + 2L)!!.status)
+        assertEquals(1, fixture.helper.heldFood!!.amount)
+        assertEquals(44, fixture.npc.hungerLevel)
+        assertEquals(44, fixture.npc.context.hungerLevel)
+        assertEquals(2, fixture.npc.socialExperience.snapshot().size)
+        assertFalse(fixture.npc.foodRequestPreferences.isDeferred(fixture.helper.id, fixture.now + 2L))
+        assertEquals(2, fixture.sent.size)
+        assertFalse(fixture.service.tryReply(fixture.helper.player, "Nu pot acum", fixture.now + 3L))
+        fixture.npc.hungerLevel = 20
+        fixture.npc.context.hungerLevel = 20
+        assertFalse(fixture.service.tryRequest(fixture.npc, fixture.now + 299_999L))
+        assertTrue(fixture.service.tryRequest(fixture.npc, fixture.now + 300_000L))
+        assertEquals(3, fixture.sent.size)
+        assertEquals(fixture.helper.id, fixture.sent.last().playerUuid)
+        assertTrue(fixture.npc.actionExperience.snapshot().isEmpty())
+        assertNull(fixture.sessions.getConversationSessionId(fixture.helper.player))
+    }
+
+    @Test
+    fun `namesake delivery and a rolled back inventory write cannot fulfil another helper promise`() {
+        val fixture = Fixture(seedHelper = false)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now - 1L)!!.status)
+        assertTrue(fixture.request())
+        assertTrue(fixture.service.tryReply(fixture.helper.player, "Iti aduc mancare", fixture.now + 1L))
+        val namesake = fixture.newPlayer(UUID(0L, 2L), fixture.helper.name, 1.0)
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, namesake.player, fixture.now + 2L)!!.status)
+        assertTrue(fixture.npc.foodRequestPreferences.isDeferred(fixture.helper.id, fixture.now + 2L))
+        assertEquals(namesake.id, fixture.npc.socialExperience.snapshot().last().helperUuid)
+
+        fixture.npc.hungerLevel = 20
+        fixture.npc.context.hungerLevel = 20
+        fixture.helper.failInventoryWrite = true
+        val evidence = fixture.npc.socialExperience.snapshot()
+        assertEquals(NpcFoodAid.Status.TRANSFER_FAILED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now + 3L)!!.status)
+        assertEquals(2, fixture.helper.heldFood!!.amount)
+        assertEquals(20, fixture.npc.hungerLevel)
+        assertEquals(20, fixture.npc.context.hungerLevel)
+        assertEquals(evidence, fixture.npc.socialExperience.snapshot())
+        assertTrue(fixture.npc.foodRequestPreferences.isDeferred(fixture.helper.id, fixture.now + 3L))
+        assertFalse(fixture.service.tryRequest(fixture.npc, fixture.now + 300_000L))
+        assertEquals(2, fixture.sent.size)
+    }
+
+    @Test
+    fun `voluntary physical help does not cancel an explicitly declined request pause`() {
+        val fixture = Fixture()
+        assertTrue(fixture.request())
+        assertTrue(fixture.service.tryReply(fixture.helper.player, "Nu pot acum", fixture.now + 1L))
+        assertEquals(NpcFoodAid.Status.ACCEPTED,
+            NpcFoodInteraction.offer(fixture.npc, fixture.helper.player, fixture.now + 2L)!!.status)
+        assertTrue(fixture.npc.foodRequestPreferences.isDeferred(fixture.helper.id, fixture.now + 2L))
+        assertEquals(2, fixture.helper.heldFood!!.amount)
+        fixture.npc.hungerLevel = 20
+        fixture.npc.context.hungerLevel = 20
+        assertFalse(fixture.service.tryRequest(fixture.npc, fixture.now + 300_000L))
+        assertTrue(fixture.service.tryRequest(fixture.npc, fixture.now + 900_001L))
+    }
+
+    private class Fixture(val now: Long = 1_000_000_000L, seedHelper: Boolean = true) {
         val world = world("village")
         val config = YamlConfiguration().apply {
             set("simulation.food_requests_enabled", true)
@@ -512,7 +595,7 @@ class NpcFoodRequestServiceTest {
         )
 
         init {
-            remember(helper)
+            if (seedHelper) remember(helper)
         }
 
         fun request(): Boolean = service.tryRequest(npc, now)
@@ -673,6 +756,30 @@ class NpcFoodRequestServiceTest {
         var invisible = false
         var vanished = false
         var canSeeNpc = true
+        var heldFood: ItemStack? = TestStack(Material.APPLE, 3)
+        var failInventoryWrite = false
+        private val inventory = Proxy.newProxyInstance(
+            PlayerInventory::class.java.classLoader, arrayOf(PlayerInventory::class.java),
+        ) { _, method, args ->
+            when (method.name) {
+                "getHeldItemSlot" -> 0
+                "getItemInMainHand" -> heldFood ?: TestStack(Material.AIR, 0)
+                "getItem" -> {
+                    assertEquals(0, args!![0])
+                    heldFood
+                }
+                "setItem" -> {
+                    assertEquals(0, args!![0])
+                    heldFood = args[1] as ItemStack?
+                    if (failInventoryWrite) {
+                        failInventoryWrite = false
+                        throw IllegalStateException("partial inventory failure")
+                    }
+                    null
+                }
+                else -> throw UnsupportedOperationException("PlayerInventory.${method.name}")
+            }
+        } as PlayerInventory
         val player = Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { proxy, method, args ->
             when (method.name) {
                 "getUniqueId" -> id
@@ -685,6 +792,8 @@ class NpcFoodRequestServiceTest {
                 "isDead" -> dead
                 "getGameMode" -> gameMode
                 "isInvisible" -> invisible
+                "isSneaking" -> true
+                "getInventory" -> inventory
                 "getMetadata" -> {
                     assertEquals("vanished", args?.firstOrNull())
                     if (vanished) listOf(vanishedMetadata()) else emptyList<MetadataValue>()
@@ -704,6 +813,14 @@ class NpcFoodRequestServiceTest {
                     else -> throw UnsupportedOperationException("MetadataValue.${method.name}")
                 }
             } as MetadataValue
+    }
+
+    private class TestStack(private val material: Material, private var count: Int) : ItemStack() {
+        override fun getType(): Material = material
+        override fun getAmount(): Int = count
+        override fun setAmount(amount: Int) { count = amount }
+        override fun isSimilar(stack: ItemStack?): Boolean = stack is TestStack && material == stack.material
+        public override fun clone(): ItemStack = TestStack(material, count)
     }
 
     private data class Sent(val playerUuid: UUID, val npcUuid: UUID, val text: String, val thread: Thread)
