@@ -115,6 +115,14 @@ Cache-ul si istoricul selectiilor sunt golite in ambele ramuri. Timestamp-ul ult
 
 Al doilea scenariu repeta comparatia dupa scrierea si recitirea textului JSON cu `NpcActionExperienceCodec`; nu simuleaza un restart complet sau accesul bazei de date. Ambele scenarii verifica raspunsul local `Ce ai invatat?` fara mutatii, lipsa unei observatii noi la simpla reaplicare a intentiei, noua observatie abia la actualizarea urmatoare, oprirea influentei prin `experience_enabled=false` si neutilizarea experientei vechii case la o casa noua. Istoricul ramane pastrat in aceste controale. Perceptia si entitatea sunt controlate; validarea fizica in Minecraft ramane separata.
 
+### Promisiunea indeplinita prin ajutor
+
+`NpcFoodRequestServiceTest` verifica si circuitul fara confirmari inserate manual: inventar controlat → aliment consumat prin `NpcFoodInteraction` → confirmare exacta de ajutor → cerere privata → `Iti aduc mancare` → o noua livrare reusita. Promisiunea singura nu schimba inventarul, nevoile sau dovezile. Livrarea incheie numai asteptarea promisiunii destinatarului exact; omonimul si rollback-ul nu o incheie, iar refuzul explicit ramane respectat. Testele de preferinte si ajutor acopera suplimentar expirarea, ceasul anterior promisiunii, replay-ul si eliberarea capacitatii limitate.
+
+Pentru verificarea in joc, foloseste serverul de test si conditiile existente pentru cereri: NPC `FULL`, ajutor anterior confirmat, nevoie dominanta, apropiere, vizibilitate si disponibilitate. Raspunde unei cereri reale cu promisiunea, apoi ofera un aliment prin `Shift + click dreapta`. Verifica transferul unei singure unitati si noua confirmare, fara sa presupui ca satietatea a ajuns la pragul de recuperare. La o foame ulterioara, cererea autonoma poate reveni numai dupa limitele normale de cinci minute per NPC si un minut per jucator; livrarea nu le reseteaza. Un refuz urmat de ajutor voluntar nu scurteaza pauza de 15 minute.
+
+Fixture-ul automat controleaza slotul si cantitatea, dar nu executa inventarul unui server Minecraft, fizica sau intregul listener Bukkit. Aceasta verificare nu inlocuieste smoke test-ul in joc.
+
 ## Teste locale
 
 Foloseste un JDK compatibil configurat prin `JAVA_HOME` sau `PATH`; scripturile nu trebuie sa presupuna o cale locala fixa.
