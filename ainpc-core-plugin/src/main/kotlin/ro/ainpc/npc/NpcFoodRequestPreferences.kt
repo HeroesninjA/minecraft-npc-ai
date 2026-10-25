@@ -8,8 +8,8 @@ class NpcFoodRequestPreferences(private val maxEntries: Int = 32) {
         PROMISE(10 * 60 * 1_000L, "Bine, iti las timp sa aduci mancarea."),
     }
 
-    private data class Pause(val recordedAt: Long, val duration: Long) {
-        fun isActive(now: Long): Boolean = now < recordedAt || now - recordedAt < duration
+    private data class Pause(val recordedAt: Long, val reply: Reply) {
+        fun isActive(now: Long): Boolean = now < recordedAt || now - recordedAt < reply.delayMillis
     }
 
     private val pauses = mutableMapOf<UUID, Pause>()
@@ -33,7 +33,15 @@ class NpcFoodRequestPreferences(private val maxEntries: Int = 32) {
         if (now <= 0L) return false
         prune(now)
         if (playerUuid !in pauses && pauses.size >= maxEntries) return false
-        pauses[playerUuid] = Pause(now, reply.delayMillis)
+        pauses[playerUuid] = Pause(now, reply)
+        return true
+    }
+
+    @Synchronized
+    internal fun confirmDelivery(playerUuid: UUID, receivedAt: Long): Boolean {
+        val pause = pauses[playerUuid] ?: return false
+        if (pause.reply != Reply.PROMISE || receivedAt < pause.recordedAt || !pause.isActive(receivedAt)) return false
+        pauses.remove(playerUuid)
         return true
     }
 
