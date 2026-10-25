@@ -50,6 +50,7 @@ internal object NpcFoodAid {
             npc.hungerLevel = afterHunger
             npc.context.hungerLevel = afterHunger
             if (!npc.socialExperience.record(receipt)) throw IllegalStateException("Food aid receipt was not recorded")
+            npc.foodRequestPreferences.confirmDelivery(receipt.helperUuid, receipt.recordedAt)
             Result(Status.ACCEPTED, receipt)
         } catch (failure: Exception) {
             npc.hungerLevel = beforeHunger
