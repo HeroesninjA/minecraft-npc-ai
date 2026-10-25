@@ -1,6 +1,7 @@
 package ro.ainpc.ai
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -8,6 +9,7 @@ import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcFoodRequestPreferences
 
 class NpcCognitiveResponseTest {
     private val hungry = NpcCognitiveState(hungerLevel = 10)
@@ -99,6 +101,43 @@ class NpcCognitiveResponseTest {
             assertTrue(!NpcCognitiveResponse.resolve("De ce ai nevoie?", state, confirmed)!!.contains("ma poti ajuta din nou"))
         }
         assertTrue(!NpcCognitiveResponse.resolve("De ce ai nevoie?", hungry)!!.contains("ma poti ajuta din nou"))
+    }
+
+    @Test
+    fun `typed pauses explain waiting without a new request or invented help`() {
+        for (reply in NpcFoodRequestPreferences.Reply.entries) {
+            val response = NpcCognitiveResponse.resolve("De ce ai nevoie?", hungry, "", true, reply)!!
+            assertEquals(hungry.needsDescription() + " " + reply.waitingDescription, response)
+            assertFalse(response.contains("ma poti ajuta din nou"))
+            assertTrue(NpcCognitiveResponse.resolve("Ce ai invatat?", hungry, "", false, reply)!!.contains("Nu am inca"))
+            assertTrue(NpcCognitiveResponse.resolve("Te-am ajutat cu mancare?", hungry, "", false, reply)!!
+                .contains("Nu am o amintire confirmata"))
+        }
+        assertEquals(hungry.needsDescription(), NpcCognitiveResponse.resolve(
+            "De ce ai nevoie?", hungry, "Mi-ai oferit mancare.", allowFoodRequest = false,
+        ))
+    }
+
+    @Test
+    fun `waiting explanations stay scoped to safe food needs and the actual question`() {
+        val reply = NpcFoodRequestPreferences.Reply.PROMISE
+        for (state in listOf(
+            hungry.copy(hungerLevel = 35), hungry.copy(hungerLevel = -1), hungry.copy(isInDanger = true),
+            hungry.copy(safetyLevel = 34), hungry.copy(currentState = NPCState.COMBAT),
+            hungry.copy(currentState = NPCState.SLEEPING),
+        )) {
+            assertEquals(state.needsDescription(), NpcCognitiveResponse.resolve("De ce ai nevoie?", state, "", false, reply))
+        }
+        assertEquals(hungry.intentionDescription(), NpcCognitiveResponse.resolve("Ce vrei sa faci?", hungry, "", false, reply))
+        assertNull(NpcCognitiveResponse.resolve("De ce ai nevoie de mine?", hungry, "", false, reply))
+    }
+
+    @Test
+    fun `the public four argument response method remains available to Java callers`() {
+        val method = NpcCognitiveResponse::class.java.getMethod(
+            "resolve", String::class.java, NpcCognitiveState::class.java, String::class.java, java.lang.Boolean.TYPE,
+        )
+        assertEquals(hungry.needsDescription(), method.invoke(NpcCognitiveResponse, "De ce ai nevoie?", hungry, "", false))
     }
 
     @Test

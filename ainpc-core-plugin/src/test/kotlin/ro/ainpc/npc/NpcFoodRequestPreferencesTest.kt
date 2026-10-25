@@ -1,6 +1,8 @@
 package ro.ainpc.npc
 
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -58,6 +60,21 @@ class NpcFoodRequestPreferencesTest {
         assertTrue(preferences.isDeferred(player, now + 600_001L))
         assertTrue(preferences.confirmDelivery(player, now + 600_001L))
         assertFalse(preferences.isDeferred(player, now + 600_001L))
+    }
+
+    @Test
+    fun `reading the active reply preserves its kind without expiry deletion or renewal`() {
+        val preferences = NpcFoodRequestPreferences()
+        assertTrue(preferences.defer(player, NpcFoodRequestPreferences.Reply.PROMISE, now))
+        val captured = preferences.activeReply(player, now)
+        assertEquals(NpcFoodRequestPreferences.Reply.PROMISE, captured)
+        assertNull(preferences.activeReply(UUID.randomUUID(), now))
+        assertEquals(captured, preferences.activeReply(player, now - 1L))
+        assertNull(preferences.activeReply(player, now + 600_000L))
+        assertEquals(captured, preferences.activeReply(player, now + 599_999L))
+        assertTrue(preferences.confirmDelivery(player, now + 1L))
+        assertNull(preferences.activeReply(player, now + 1L))
+        assertEquals(NpcFoodRequestPreferences.Reply.PROMISE, captured)
     }
 
     @Test

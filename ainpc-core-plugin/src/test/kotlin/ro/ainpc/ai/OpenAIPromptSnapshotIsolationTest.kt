@@ -32,6 +32,7 @@ import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NpcActionExperience
 import ro.ainpc.npc.NpcDecisionExplanation
 import ro.ainpc.npc.NpcFoodRequestPreferences
+import ro.ainpc.npc.NpcFoodAid
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcSocialExperience
@@ -119,8 +120,36 @@ class OpenAIPromptSnapshotIsolationTest {
         assertFalse(stranger.foodRequestDeferred)
         val prompt = OpenAIPromptBuilder.buildPrompt(deferred, emptyList(), emptyList(), null, null)
         assertTrue(prompt.contains("npc_food_request_deferred: da"))
+        assertTrue(prompt.contains("Iti las timp sa aduci mancarea promisa"))
+        assertFalse(stranger.environmentDescription.contains("Pauza cererilor de hrana:"))
         assertEquals("", deferred.helperExperienceDescription)
         assertTrue(npc.socialExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `pause explanation is frozen while a fresh snapshot follows confirmed delivery`() {
+        npc.hungerLevel = 10
+        npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.PROMISE, System.currentTimeMillis())
+        val waiting = capture()
+        assertEquals(NpcFoodAid.Status.ACCEPTED, NpcFoodAid.offer(
+            npc, requestPlayer.uniqueId, "RequestPlayer", "minecraft:apple", System.currentTimeMillis(),
+            consumeOne = { true }, rollback = { error("unexpected rollback") },
+        ).status)
+        val delivered = capture()
+
+        assertTrue(waiting.foodRequestDeferred)
+        assertTrue(waiting.environmentDescription.contains("Iti las timp sa aduci mancarea promisa"))
+        assertEquals("", waiting.helperExperienceDescription)
+        assertFalse(delivered.foodRequestDeferred)
+        assertFalse(delivered.environmentDescription.contains("Pauza cererilor de hrana:"))
+        assertTrue(delivered.helperExperienceDescription.contains("Mi-ai oferit"))
+        assertEquals(1, npc.socialExperience.snapshot().size)
+        npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.DECLINE, System.currentTimeMillis())
+        val declined = capture()
+        assertTrue(declined.foodRequestDeferred)
+        assertTrue(declined.environmentDescription.contains("ai spus ca nu poti ajuta acum"))
+        assertFalse(declined.environmentDescription.contains("mancarea promisa"))
+        assertFalse(waiting.environmentDescription.contains("ai spus ca nu poti ajuta acum"))
     }
 
     @Test

@@ -3,9 +3,11 @@ package ro.ainpc.npc
 import java.util.UUID
 
 class NpcFoodRequestPreferences(private val maxEntries: Int = 32) {
-    enum class Reply(val delayMillis: Long, val acknowledgement: String) {
-        DECLINE(15 * 60 * 1_000L, "Inteleg. Nu iti voi mai cere mancare o vreme."),
-        PROMISE(10 * 60 * 1_000L, "Bine, iti las timp sa aduci mancarea."),
+    enum class Reply(val delayMillis: Long, val acknowledgement: String, val waitingDescription: String) {
+        DECLINE(15 * 60 * 1_000L, "Inteleg. Nu iti voi mai cere mancare o vreme.",
+            "Nu insist cu mancarea, fiindca ai spus ca nu poti ajuta acum."),
+        PROMISE(10 * 60 * 1_000L, "Bine, iti las timp sa aduci mancarea.",
+            "Iti las timp sa aduci mancarea promisa; nu o consider deja primita."),
     }
 
     private data class Pause(val recordedAt: Long, val reply: Reply) {
@@ -20,6 +22,10 @@ class NpcFoodRequestPreferences(private val maxEntries: Int = 32) {
 
     @Synchronized
     fun isDeferred(playerUuid: UUID, now: Long): Boolean = pauses[playerUuid]?.isActive(now) == true
+
+    @Synchronized
+    internal fun activeReply(playerUuid: UUID, now: Long): Reply? =
+        pauses[playerUuid]?.takeIf { it.isActive(now) }?.reply
 
     @Synchronized
     fun canAsk(playerUuid: UUID, now: Long): Boolean {

@@ -18,6 +18,7 @@ import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NpcActionExperience
 import ro.ainpc.npc.NpcDecisionExplanation
 import ro.ainpc.npc.NpcFoodRequestPreferences
+import ro.ainpc.npc.NpcFoodAid
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcSocialExperience
@@ -58,8 +59,50 @@ class DialogueRequestContextTest {
 
         assertTrue(response.contains("foame"))
         assertFalse(response.contains("ma poti ajuta din nou"))
+        assertTrue(response.contains("ai spus ca nu poti ajuta acum"))
         assertEquals(1, npc.socialExperience.snapshot().size)
         assertTrue(npc.foodRequestPreferences.isDeferred(requestPlayer.uniqueId, System.currentTimeMillis()))
+    }
+
+    @Test
+    fun `promise waiting belongs to the request player and ends only after confirmed delivery`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        npc.hungerLevel = 10
+        npc.context.setInteractingPlayer(currentPlayer)
+        val interactionTime = npc.context.lastInteractionTime
+        val simulationTime = npc.lastSimulationTickAt
+        npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.PROMISE, System.currentTimeMillis())
+        val waiting = engine.generateResponse(
+            request("De ce ai nevoie?"), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+        val stranger = engine.generateResponse(
+            request("De ce ai nevoie?").copy(player = currentPlayer), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+
+        assertTrue(waiting.contains("Iti las timp sa aduci mancarea promisa"))
+        assertFalse(waiting.contains("ma poti ajuta din nou"))
+        assertFalse(stranger.contains("mancarea promisa"))
+        assertTrue(npc.socialExperience.snapshot().isEmpty())
+        assertSame(currentPlayer, npc.context.interactingPlayer)
+        assertEquals(interactionTime, npc.context.lastInteractionTime)
+        assertEquals(simulationTime, npc.lastSimulationTickAt)
+
+        assertEquals(NpcFoodAid.Status.ACCEPTED, NpcFoodAid.offer(
+            npc, requestPlayer.uniqueId, "RequestPlayer", "minecraft:apple", System.currentTimeMillis(),
+            consumeOne = { true }, rollback = { error("unexpected rollback") },
+        ).status)
+        val delivered = engine.generateResponse(
+            request("De ce ai nevoie?"), emptyList(), emptyList(), null,
+            DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+        ).join()
+        assertFalse(delivered.contains("mancarea promisa"))
+        assertTrue(delivered.contains("ma poti ajuta din nou"))
+        assertEquals(1, npc.socialExperience.snapshot().size)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(simulationTime, npc.lastSimulationTickAt)
+        assertSame(currentPlayer, npc.context.interactingPlayer)
     }
 
     @Test

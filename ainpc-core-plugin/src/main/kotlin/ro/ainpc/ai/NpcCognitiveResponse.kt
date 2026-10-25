@@ -3,6 +3,7 @@ package ro.ainpc.ai
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcSelfCareThresholds
 import ro.ainpc.npc.NPCAction
+import ro.ainpc.npc.NpcFoodRequestPreferences
 import java.text.Normalizer
 import java.util.Locale
 
@@ -27,6 +28,11 @@ object NpcCognitiveResponse {
 
     fun resolve(
         message: String?, state: NpcCognitiveState, helperExperience: String = "", allowFoodRequest: Boolean = true,
+    ): String? = resolve(message, state, helperExperience, allowFoodRequest, null)
+
+    internal fun resolve(
+        message: String?, state: NpcCognitiveState, helperExperience: String, allowFoodRequest: Boolean,
+        foodRequestReply: NpcFoodRequestPreferences.Reply?,
     ): String? {
         if (message.isNullOrBlank()) return null
         val directQuestionText = normalizeQuestion(DialogueMessageText.directIntentText(message))
@@ -39,11 +45,15 @@ object NpcCognitiveResponse {
             listOf("de ce ai nevoie", "ce nevoi ai", "ai nevoie de ceva", "iti e foame", "ti e foame",
                 "iti este foame", "esti obosit") to buildString {
                     append(state.needsDescription())
-                    if (allowFoodRequest && state.hungerLevel in 0 until NpcSelfCareThresholds.START &&
-                        helperExperience.isNotBlank() && !state.isInDanger && state.safetyLevel in 35..100 &&
+                    if (state.hungerLevel in 0 until NpcSelfCareThresholds.START &&
+                        !state.isInDanger && state.safetyLevel in 35..100 &&
                         state.currentState.allowsPlayerInteraction()
                     ) {
-                        append(" M-ai ajutat cu mancare inainte; ma poti ajuta din nou?")
+                        if (foodRequestReply != null) {
+                            append(" ").append(foodRequestReply.waitingDescription)
+                        } else if (allowFoodRequest && helperExperience.isNotBlank()) {
+                            append(" M-ai ajutat cu mancare inainte; ma poti ajuta din nou?")
+                        }
                     }
                 },
             listOf("ce vrei sa faci", "ce iti doresti", "care e scopul tau", "care este scopul tau",

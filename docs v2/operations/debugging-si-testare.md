@@ -123,6 +123,12 @@ Pentru verificarea in joc, foloseste serverul de test si conditiile existente pe
 
 Fixture-ul automat controleaza slotul si cantitatea, dar nu executa inventarul unui server Minecraft, fizica sau intregul listener Bukkit. Aceasta verificare nu inlocuieste smoke test-ul in joc.
 
+### Explicarea asteptarii in dialog
+
+Dupa un refuz sau o promisiune acceptata, intreaba NPC-ul `De ce ai nevoie?` cat timp nevoia alimentara este activa si contextul sigur. Raspunsul trebuie sa pastreze nevoia reala, fara alta cerere de hrana, si sa explice numai motivul corespunzator jucatorului care intreaba: respectarea refuzului sau timpul acordat livrarii promise. Alt jucator nu primeste motivul acestei pauze. Declaratia nu trebuie prezentata ca aliment deja primit.
+
+Dupa livrare ori expirare, o intrebare noua foloseste starea curenta; citirile nu prelungesc pauza si nu executa simularea. `DialogueRequestContextTest`, `NpcCognitiveResponseTest` si `NpcFoodRequestPreferencesTest` verifica acest contract, limitarile pentru pericol sau nevoie deja satisfacuta si compatibilitatea metodei publice Java. `OpenAIPromptSnapshotIsolationTest` verifica motivul si indicatorul pentru destinatarul exact, pastrarea snapshot-ului vechi dupa livrare sau expirare si capturarea corecta a unui refuz ulterior. Aceste verificari inspecteaza datele si promptul construit; nu afirma ca un provider AI a generat corect un raspuns in joc.
+
 ## Teste locale
 
 Foloseste un JDK compatibil configurat prin `JAVA_HOME` sau `PATH`; scripturile nu trebuie sa presupuna o cale locala fixa.

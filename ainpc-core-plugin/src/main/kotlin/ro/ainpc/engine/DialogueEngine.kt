@@ -447,14 +447,15 @@ class DialogueEngine(
             NpcFactResolver.describePersonality(npc.personality),
         )
         val npcFact = NpcFactResolver.resolve(playerMessage, facts).orElse(null)
+        val now = System.currentTimeMillis()
+        val foodRequestReply = playerUuid?.let { npc.foodRequestPreferences.activeReply(it, now) }
         val helperExperience = playerUuid?.let {
-            npc.socialExperience.descriptionFor(it, System.currentTimeMillis())
+            npc.socialExperience.descriptionFor(it, now)
         }.orEmpty()
         val cognitiveFact = NpcCognitiveResponse.resolve(
             playerMessage, NpcCognitiveState.capture(npc, context), helperExperience,
-            allowFoodRequest = playerUuid?.let {
-                !npc.foodRequestPreferences.isDeferred(it, System.currentTimeMillis())
-            } ?: false,
+            allowFoodRequest = playerUuid != null && foodRequestReply == null,
+            foodRequestReply = foodRequestReply,
         )
         val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext)
         return listOfNotNull(npcFact, cognitiveFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }

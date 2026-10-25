@@ -47,6 +47,11 @@ object OpenAIPromptSnapshotFactory {
             ?.let { context -> context.copy(specialEvents = immutableCopy(context.specialEvents)) }
         val stateDisplayName = npc.currentState.displayName
         val heldMaterial = player.inventory.itemInMainHand.type
+        val evidenceCapturedAt = System.currentTimeMillis()
+        val foodRequestReply = npc.foodRequestPreferences.activeReply(player.uniqueId, evidenceCapturedAt)
+        if (foodRequestReply != null) {
+            environmentDescription += "\nPauza cererilor de hrana: ${foodRequestReply.waitingDescription}\n"
+        }
         return PromptSnapshot(
             npc.uuid,
             npc.name,
@@ -80,8 +85,8 @@ object OpenAIPromptSnapshotFactory {
             if (heldMaterial.isAir) "" else heldMaterial.key.asString(),
             NpcFactResolver.describePersonality(npc.personality),
             environmentContext,
-            npc.socialExperience.descriptionFor(player.uniqueId, System.currentTimeMillis()),
-            npc.foodRequestPreferences.isDeferred(player.uniqueId, System.currentTimeMillis()),
+            npc.socialExperience.descriptionFor(player.uniqueId, evidenceCapturedAt),
+            foodRequestReply != null,
         )
     }
 

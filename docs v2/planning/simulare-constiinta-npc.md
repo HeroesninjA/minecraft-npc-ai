@@ -77,6 +77,10 @@ Doua scenarii automate urmaresc acum masa aplicata, refacerea observata, memoria
 
 O livrare alimentara reusita incheie acum asteptarea unei promisiuni active numai pentru jucatorul care a promis, dupa consumul unitatii si inregistrarea dovezii. Declaratia, istoricul recitit, un omonim sau un transfer esuat nu primesc acest credit. Refuzul explicit si limitele cererilor autonome raman respectate. Scenariile automate leaga inventarul controlat, memoria sociala, initiativa, raspunsul si livrarea, fara sa confunde indeplinirea promisiunii cu satisfacerea completa a nevoii ori invatarea generala din conversatie. [Verificarea in Minecraft](../operations/debugging-si-testare.md#promisiunea-indeplinita-prin-ajutor) ramane necesara.
 
+## Motivul asteptarii comunicat corect - 2026-10-25
+
+Dialogul despre nevoi distinge acum refuzul de promisiunea acceptata, fara sa confunde timpul acordat unui jucator cu ajutor deja primit. Motivul apartine numai destinatarului exact si este capturat impreuna cu indicatorul pauzei in textul imuabil pentru AI; snapshot-urile vechi nu sunt rescrise dupa livrare sau expirare. Citirea nu prelungeste asteptarea, nu produce experienta si nu schimba conversatia comuna. Compatibilitatea semnaturilor existente este pastrata. [Runbook-ul](../operations/debugging-si-testare.md#explicarea-asteptarii-in-dialog) separa testarea locala de verificarea raspunsului efectiv in Minecraft.
+
 ## Concluzie
 
 O variantă simplă poate fi abordată gradual. Un sistem amplu de „conștiință simulată” ar fi prematur înainte de validarea circuitului dintre percepție, acțiuni, consecințe și memorie.

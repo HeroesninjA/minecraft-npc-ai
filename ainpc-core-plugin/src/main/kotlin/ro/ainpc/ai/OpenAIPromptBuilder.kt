@@ -60,6 +60,7 @@ object OpenAIPromptBuilder {
         prompt.append("Pentru progresul obiectivului de hrana sau odihna, foloseste numai Progresul ingrijirii din DESPRE TINE. Distinge intoarcerea planificata, sosirea observata, refacerea si incheierea ori intreruperea obiectivului. Lipsa progresului confirmat nu dovedeste o ruta blocata sau cauza ei. Respecta incertitudinea cauzei rezultatului; progresul nu confirma consum de inventar sau ajutorul jucatorului curent. Daca lipseste, nu inventa un obiectiv sau o reusita.\n")
         prompt.append("Ajutorul cu hrana al jucatorului curent este confirmat numai de npc_confirmed_food_help. Nu il deduce din declaratii, reputatie, prietenie sau un obiect tinut in mana si nu il atribui altui jucator.\n")
         prompt.append("Daca npc_food_request_deferred este da, respecta refuzul ori timpul cerut de jucator: nu solicita din nou mancare. O promisiune de ajutor nu confirma ca ai primit mancare.\n")
+        prompt.append("Foloseste numai motivul pauzei capturat in context; nu deduce un refuz dintr-o promisiune si nu inventa motivul cand lipseste.\n")
         prompt.append("Daca jucatorul cere mai multe fapte in acelasi mesaj, raspunde la toate in ordinea in care au fost cerute.\n")
         prompt.append("Nu inventa detalii care lipsesc din NPC_DATA sau din context.\n\n")
         prompt.append("Despre jucator, separa ce ai trait impreuna de ce observi acum; nu transforma un obiect tinut in mana intr-o meserie sau personalitate.\n")
