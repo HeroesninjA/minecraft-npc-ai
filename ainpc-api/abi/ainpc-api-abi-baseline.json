@@ -1,11 +1,11 @@
 ﻿{
     "schema":  "ainpc.api-abi-baseline.v1",
-    "api_version":  "1.0.0",
+    "api_version":  "1.1.0",
     "java_release":  "21",
     "generator":  "javap-protected-descriptors-v2",
     "javap_version":  "25.0.2",
     "class_count":  166,
-    "signature_sha256":  "3386BB5483CB3C186D83422F98E038828139456F3C4EA7723F4B0B5883FBBC67",
+    "signature_sha256":  "E4944F1E9440FFDB285D49A935A42C0E2AACC510FA1A8F9AD3EA6A0925AACD39",
     "classes":  [
                     {
                         "name":  "ro.ainpc.addons.AddonConflict",
@@ -614,8 +614,8 @@
                     },
                     {
                         "name":  "ro.ainpc.api.PermissionNode",
-                        "sha256":  "DC8DB216C4D5B5C9D89B96FEDCA09C04AB769EB732898035891DB0E301DDC964",
-                        "line_count":  62
+                        "sha256":  "1E9897CD5941E115412EBF8DF9BF40134172A59F056EBA44B9E01409925AC6AD",
+                        "line_count":  64
                     },
                     {
                         "name":  "ro.ainpc.api.PermissionNode$Companion",
@@ -834,8 +834,8 @@
                     },
                     {
                         "name":  "ro.ainpc.world.WorldRegionInfo",
-                        "sha256":  "4F3973D0737EE68D3E8BA8115923AC38484FF7F25422A9C4911060A1EDEA4EE3",
-                        "line_count":  36
+                        "sha256":  "26E0F84CAAEFB2D29E8E36A7E1ED77AB55B3C06663E594310B55F76C9A38F109",
+                        "line_count":  40
                     }
                 ]
 }
