@@ -4,6 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
+import com.google.gson.Strictness
+import ro.ainpc.context.SensitiveDataRedactor
 import java.io.IOException
 import java.util.UUID
 
@@ -209,6 +212,13 @@ object OpenAITextSupport {
     }
 
     @JvmStatic
+    fun redactDiagnosticText(text: String?, apiKey: String? = null): String {
+        val secret = apiKey?.trim().orEmpty()
+        val masked = if (secret.isEmpty()) text.orEmpty() else text.orEmpty().replace(secret, "<redacted>", ignoreCase = true)
+        return SensitiveDataRedactor.redact(masked)
+    }
+
+    @JvmStatic
     fun cleanResponse(response: String, expectedSpeakerName: String?): String {
         var cleaned = response.replace(Regex("^\"|\"$"), "").trim()
         cleaned = stripSpeakerPrefix(cleaned, expectedSpeakerName)
@@ -301,19 +311,22 @@ object OpenAITextSupport {
     }
 
     @JvmStatic
-    fun extractOpenAIErrorMessage(gson: Gson, responseBody: String?): String {
+    @JvmOverloads
+    fun extractOpenAIErrorMessage(gson: Gson, responseBody: String?, apiKey: String? = null): String {
         if (responseBody.isNullOrBlank()) {
             return ""
         }
 
+        fun fallbackExcerpt(): String = abbreviate(redactDiagnosticText(responseBody, apiKey), 200)
+
         return try {
             val json = gson.fromJson(responseBody, JsonObject::class.java)
             if (json == null) {
-                abbreviate(responseBody, 200)
+                fallbackExcerpt()
             } else {
                 val errorElement = json.get("error")
                 if (errorElement == null || !errorElement.isJsonObject) {
-                    abbreviate(responseBody, 200)
+                    fallbackExcerpt()
                 } else {
                     val error = errorElement.asJsonObject
                     val code = safeJsonString(error.get("code"))
@@ -328,11 +341,11 @@ object OpenAITextSupport {
                     if (message.isNotBlank()) {
                         parts.add(message)
                     }
-                    if (parts.isEmpty()) abbreviate(responseBody, 200) else parts.joinToString(": ")
+                    if (parts.isEmpty()) fallbackExcerpt() else redactDiagnosticText(parts.joinToString(": "), apiKey)
                 }
             }
         } catch (_: com.google.gson.JsonSyntaxException) {
-            abbreviate(responseBody, 200)
+            fallbackExcerpt()
         }
     }
 
@@ -354,66 +367,92 @@ object OpenAITextSupport {
     @JvmStatic
     @Throws(IOException::class)
     fun extractGeneratedText(gson: Gson, responseBody: String?, expectedSpeakerName: String?,
-                             preserveStructuredJson: Boolean = false): String {
+                             preserveStructuredJson: Boolean = false): String =
+        extractGeneratedText(gson, responseBody, expectedSpeakerName, preserveStructuredJson, null)
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun extractGeneratedText(
+        gson: Gson, responseBody: String?, expectedSpeakerName: String?, preserveStructuredJson: Boolean, apiKey: String?,
+    ): String {
         if (responseBody.isNullOrBlank()) {
             throw IOException("OpenAI a returnat un raspuns gol.")
         }
 
         val jsonResponse = try {
-            gson.fromJson(responseBody, JsonObject::class.java)
-        } catch (e: com.google.gson.JsonSyntaxException) {
-            throw IOException("OpenAI a returnat JSON invalid: " + compactExceptionMessage(e), e)
+            gson.newBuilder().setStrictness(Strictness.STRICT).create()
+                .fromJson(responseBody, JsonObject::class.java)
+        } catch (_: JsonParseException) {
+            throw IOException("OpenAI a returnat JSON invalid.")
         } ?: throw IOException("OpenAI a returnat un JSON gol.")
 
         val errorElement = jsonResponse.get("error")
         if (errorElement != null && !errorElement.isJsonNull) {
-            throw IOException("OpenAI a raportat eroare: " + extractOpenAIErrorMessage(gson, responseBody))
+            throw IOException("OpenAI a raportat eroare: " + extractOpenAIErrorMessage(gson, responseBody, apiKey))
         }
-        if (preserveStructuredJson && safeJsonString(jsonResponse.get("status")) != "completed") {
-            throw IOException("OpenAI nu a finalizat raspunsul JSON structurat.")
-        }
-
-        val outputTextElement = jsonResponse.get("output_text")
-        if (outputTextElement != null && outputTextElement.isJsonPrimitive) {
-            val directText = if (preserveStructuredJson) outputTextElement.asString.trim()
-                else cleanResponse(outputTextElement.asString, expectedSpeakerName)
-            if (directText.isNotBlank()) {
-                return directText
-            }
+        val responseStatus = jsonResponse.get("status")
+        val responseCompleted = hasJsonStringValue(responseStatus, "completed")
+        if ((preserveStructuredJson || responseStatus != null) && !responseCompleted) {
+            throw IOException("OpenAI nu a finalizat raspunsul${if (preserveStructuredJson) " JSON structurat" else ""}.")
         }
 
         val combined = StringBuilder()
+        var hasExplicitMessagePhase = false
         val outputElement = jsonResponse.get("output")
-        if (outputElement != null && outputElement.isJsonArray) {
+        if (outputElement != null) {
+            if (!outputElement.isJsonArray) {
+                throw IOException("OpenAI a returnat un camp output cu structura invalida.")
+            }
             val outputs: JsonArray = outputElement.asJsonArray
             for (itemElement in outputs) {
                 if (!itemElement.isJsonObject) {
-                    continue
+                    throw IOException("OpenAI a returnat un item output care nu este obiect.")
                 }
 
                 val item = itemElement.asJsonObject
-                if (!"message".equals(safeJsonString(item.get("type")), ignoreCase = true)) {
+                if (!"message".equals(responseItemType(item.get("type")), ignoreCase = true)) {
                     continue
                 }
 
+                val messageStatus = item.get("status")
+                if (messageStatus != null && !hasJsonStringValue(messageStatus, "completed")) {
+                    throw IOException("OpenAI nu a finalizat un mesaj din raspuns.")
+                }
+                val messageRole = item.get("role")
+                if (messageRole != null && !hasJsonStringValue(messageRole, "assistant")) {
+                    throw IOException("OpenAI a returnat un mesaj cu rol invalid.")
+                }
+
+                val messagePhase = item.get("phase")
+                if (messagePhase != null && !messagePhase.isJsonNull) {
+                    if (!hasJsonStringValue(messagePhase, "commentary") && !hasJsonStringValue(messagePhase, "final_answer")) {
+                        throw IOException("OpenAI a returnat un mesaj cu faza invalida.")
+                    }
+                    hasExplicitMessagePhase = true
+                }
+                val isCommentary = hasJsonStringValue(messagePhase, "commentary")
+
                 val contentElement = item.get("content")
                 if (contentElement == null || !contentElement.isJsonArray) {
-                    continue
+                    throw IOException("OpenAI a returnat un mesaj cu structura content invalida.")
                 }
 
                 for (contentItemElement in contentElement.asJsonArray) {
                     if (!contentItemElement.isJsonObject) {
-                        continue
+                        throw IOException("OpenAI a returnat un item content care nu este obiect.")
                     }
 
                     val contentItem = contentItemElement.asJsonObject
-                    val type = safeJsonString(contentItem.get("type"))
+                    val type = responseItemType(contentItem.get("type"))
+                    if ("refusal".equals(type, ignoreCase = true)) {
+                        throw IOException("OpenAI a refuzat generarea raspunsului.")
+                    }
                     if (!"output_text".equals(type, ignoreCase = true) && !"text".equals(type, ignoreCase = true)) {
                         continue
                     }
 
-                    val text = safeJsonString(contentItem.get("text")).trim()
-                    if (text.isBlank()) {
+                    val text = generatedJsonText(contentItem.get("text")).trim()
+                    if (text.isBlank() || isCommentary) {
                         continue
                     }
 
@@ -425,6 +464,14 @@ object OpenAITextSupport {
             }
         }
 
+        val outputText = generatedJsonText(jsonResponse.get("output_text"))
+        if (!hasExplicitMessagePhase) {
+            val directText = if (preserveStructuredJson) outputText.trim() else cleanResponse(outputText, expectedSpeakerName)
+            if (directText.isNotBlank()) {
+                return directText
+            }
+        }
+
         val generatedText = if (preserveStructuredJson) combined.toString().trim()
             else cleanResponse(combined.toString(), expectedSpeakerName)
         if (generatedText.isBlank()) {
@@ -432,6 +479,24 @@ object OpenAITextSupport {
         }
 
         return generatedText
+    }
+
+    private fun hasJsonStringValue(element: JsonElement?, expected: String): Boolean =
+        element != null && element.isJsonPrimitive && element.asJsonPrimitive.isString && element.asString == expected
+
+    private fun responseItemType(element: JsonElement?): String {
+        if (element == null || !element.isJsonPrimitive || !element.asJsonPrimitive.isString || element.asString.isBlank()) {
+            throw IOException("OpenAI a returnat un item fara tip string valid.")
+        }
+        return element.asString
+    }
+
+    private fun generatedJsonText(element: JsonElement?): String {
+        if (element == null || element.isJsonNull) return ""
+        if (!element.isJsonPrimitive || !element.asJsonPrimitive.isString) {
+            throw IOException("OpenAI a returnat un camp text cu tip invalid.")
+        }
+        return element.asString
     }
 
     internal fun generateGroundedFallbackResponse(

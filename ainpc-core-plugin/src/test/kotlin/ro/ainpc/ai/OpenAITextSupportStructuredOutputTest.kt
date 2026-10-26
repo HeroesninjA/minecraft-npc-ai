@@ -2,6 +2,7 @@ package ro.ainpc.ai
 
 import com.google.gson.Gson
 import com.google.gson.JsonArray
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,6 +41,61 @@ class OpenAITextSupportStructuredOutputTest {
         }.toString()
 
         assertEquals(structuredText, OpenAITextSupport.extractGeneratedText(gson, response, null, true))
+    }
+
+    @Test
+    fun `plain dialogue rejects unfinished responses even when they contain usable text`() {
+        for (status in listOf("incomplete", "failed", "cancelled", "queued", "in_progress")) {
+            for (nested in listOf(false, true)) {
+                val response = JsonObject().apply {
+                    addProperty("status", status)
+                    if (nested) {
+                        add("output", JsonArray().apply {
+                            add(JsonObject().apply {
+                                addProperty("type", "message")
+                                add("content", JsonArray().apply {
+                                    add(JsonObject().apply {
+                                        addProperty("type", "output_text")
+                                        addProperty("text", "Am gasit un raspuns partial.")
+                                    })
+                                })
+                            })
+                        })
+                    } else addProperty("output_text", "Am gasit un raspuns partial.")
+                }
+
+                val failure = assertThrows(IOException::class.java, {
+                    OpenAITextSupport.extractGeneratedText(gson, response.toString(), null)
+                }, "$status nested=$nested")
+                assertTrue(!OpenAITextSupport.shouldEnterOfflineBackoff(failure))
+            }
+        }
+    }
+
+    @Test
+    fun `plain dialogue rejects an explicitly malformed status without returning partial text`() {
+        for (status in listOf(JsonNull.INSTANCE, gson.toJsonTree(true), gson.toJsonTree(123), JsonObject())) {
+            val response = JsonObject().apply {
+                add("status", status)
+                addProperty("output_text", "Raspuns neverificat.")
+            }
+
+            assertThrows(IOException::class.java) {
+                OpenAITextSupport.extractGeneratedText(gson, response.toString(), null)
+            }
+        }
+    }
+
+    @Test
+    fun `completed dialogue and legacy text without status retain speaker cleanup`() {
+        for (completed in listOf(false, true)) {
+            val response = JsonObject().apply {
+                if (completed) addProperty("status", "completed")
+                addProperty("output_text", "Bob: Buna ziua!")
+            }
+
+            assertEquals("Buna ziua!", OpenAITextSupport.extractGeneratedText(gson, response.toString(), "Bob"))
+        }
     }
 
     @Test

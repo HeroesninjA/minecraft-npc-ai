@@ -213,6 +213,49 @@ class NpcCognitiveResponseTest {
     }
 
     @Test
+    fun `quoted cognitive questions do not request food or disclose unrelated cognitive facts`() {
+        val state = hungry.copy(currentGoal = "sa ajung acasa", experienceDescription = "Am observat refacerea.")
+        for (question in listOf(
+            "La ce te gandesti?", "Ce ganduri ai?", "Ce ai in minte?", "De ce ai nevoie?", "Ce nevoi ai?",
+            "Ai nevoie de ceva?", "Ti-e foame?", "Esti obosit?", "Ce vrei sa faci?", "Care este scopul tau?",
+            "Ce ai invatat?", "Ce ti-a fost de folos?", "Ti-am dat mancare?",
+        )) {
+            for (message in listOf("\"$question\"", "Explica expresia „$question”.", "Ce inseamna '$question'?")) {
+                assertNull(NpcCognitiveResponse.resolve(message, state, "Mi-ai oferit mancare."), message)
+            }
+        }
+    }
+
+    @Test
+    fun `reported cognitive questions stay in contextual dialogue`() {
+        for (question in listOf(
+            "la ce te gandesti", "ce nevoi ai", "de ce ai nevoie", "ce vrei sa faci", "ce ai invatat",
+            "ce ti-a fost de folos", "ti-am dat mancare",
+        )) {
+            for (message in listOf("Maria a zis $question?", "Am auzit ca $question?", "Ce inseamna $question?")) {
+                assertNull(NpcCognitiveResponse.resolve(message, hungry, "Mi-ai oferit mancare."), message)
+            }
+        }
+    }
+
+    @Test
+    fun `direct continuations retain question order while quoted and reported needs are excluded`() {
+        val state = hungry.copy(currentGoal = "sa ajung acasa", experienceDescription = "Am observat refacerea.")
+        assertEquals(state.intentionDescription(), NpcCognitiveResponse.resolve(
+            "Maria a zis „ce nevoi ai?”; dar ce vrei sa faci?", state,
+        ))
+        assertEquals(state.needsDescription(), NpcCognitiveResponse.resolve(
+            "Maria a zis „ce ai invatat?”; dar de ce ai nevoie?", state,
+        ))
+        assertEquals(state.experienceDescription, NpcCognitiveResponse.resolve(
+            "Ce inseamna „la ce te gandesti?”; dar ce ai invatat?", state,
+        ))
+        assertEquals(state.needsDescription() + " " + state.thoughtDescription(), NpcCognitiveResponse.resolve(
+            "Maria a zis de ce ai nevoie; dar ce nevoi ai si la ce te gandesti?", state,
+        ))
+    }
+
+    @Test
     fun `other people and words sharing a prefix do not trigger introspection`() {
         for (message in listOf("La ce mă gândesc?", "Ce are în minte Radu?", "Ești obositor.", "Salut", "")) {
             assertNull(NpcCognitiveResponse.resolve(message, hungry), message)

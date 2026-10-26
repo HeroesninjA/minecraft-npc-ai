@@ -35,11 +35,7 @@ object NpcCognitiveResponse {
         foodRequestReply: NpcFoodRequestPreferences.Reply?,
     ): String? {
         if (message.isNullOrBlank()) return null
-        val directQuestionText = normalizeQuestion(DialogueMessageText.directIntentText(message))
-        val focusedQuestions = listOf(decisionQuestion, progressQuestion, foodProgressQuestion, restProgressQuestion)
-        val normalized = if (focusedQuestions.any { it.containsMatchIn(directQuestionText) }) {
-            directQuestionText
-        } else normalizeQuestion(message)
+        val normalized = normalizeQuestion(DialogueMessageText.directIntentText(message))
         val answers = listOf(
             listOf("la ce te gandesti", "ce ganduri ai", "ce ai in minte") to state.thoughtDescription(),
             listOf("de ce ai nevoie", "ce nevoi ai", "ai nevoie de ceva", "iti e foame", "ti e foame",
@@ -78,9 +74,7 @@ object NpcCognitiveResponse {
                     else -> null
                 }
                 if (focusedQuestion != null) {
-                    if (focusedQuestion.containsMatchIn(directQuestionText)) {
-                        focusedQuestion.find(normalized)?.range?.first ?: -1
-                    } else -1
+                    focusedQuestion.find(normalized)?.range?.first ?: -1
                 } else if (pattern == "de ce ai nevoie") {
                     needsQuestion.find(normalized)?.range?.first ?: -1
                 } else if (pattern.startsWith("ce ai invatat")) {

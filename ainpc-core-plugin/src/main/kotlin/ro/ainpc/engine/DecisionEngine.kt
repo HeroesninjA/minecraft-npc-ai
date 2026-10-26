@@ -94,6 +94,7 @@ class DecisionEngine internal constructor(
         val action: NPCAction,
         val state: NPCState,
         val inDanger: Boolean,
+        val safetyLevel: Int,
         val timestamp: Long,
         val decisionSequence: Long,
         val recentExplorations: List<RecentExploration>,
@@ -159,7 +160,7 @@ class DecisionEngine internal constructor(
             cached?.recentActionTimestamps.orEmpty(), action, now, settings,
         )
         decisionCache[npc.uuid] = CachedDecision(
-            action, npc.currentState, context.isInDanger, now, decisionSequence,
+            action, npc.currentState, context.isInDanger, context.safetyLevel, now, decisionSequence,
             recentExplorations, recentActionTimestamps,
             decisionExplanation(
                 action, now, preview.probabilistic && preview.probabilities.size > 1, scoreBreakdowns[action],
@@ -210,6 +211,7 @@ class DecisionEngine internal constructor(
         cached.explanationRevision == npc.decisionRevision &&
         cached.returningForCare == situation.returningForCare &&
         cached.state == npc.currentState && cached.inDanger == context.isInDanger &&
+        cached.safetyLevel == context.safetyLevel &&
         ActionEligibility.permits(cached.action, situation)
 
     private fun previewForScores(

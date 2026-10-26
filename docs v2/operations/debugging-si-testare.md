@@ -1,7 +1,7 @@
 # Debugging si testare
 
 Status: runbook operational canonic.
-Actualizat: 2026-10-25.
+Actualizat: 2026-10-26.
 
 Acest document detine fluxul de triage. Starea implementata apartine codului si testelor, iar imbunatatirile neimplementate raman in `planning/diagnostic-si-observabilitate-roadmap.md`.
 
@@ -66,6 +66,8 @@ Runnerul pastreaza un director nou in `.ai/tmp/`, cu core-ul copiat, `eula=false
 Raportul `paper-addon-lifecycle-preparation.json` este separat de cel runtime: exit code 0 confirma numai pregatirea, cu `status=prepared_not_run`, `preparation_ok=true`, `ok=false`, `smoke_attempted=false` si zero faze. Compatibilitatea dintre JAR-ul Paper, Java si plugin nu este certificata prin copiere sau hash. Pornirea reala prin runner necesita ulterior `-AcceptEula`, numai dupa acceptarea de catre operator, si creeaza un alt director izolat; pregatirea nu accepta EULA nici daca ambele switch-uri sunt date. [Contractul complet](../reference/kotlin-paper-packaging-si-smoke.md#smoke-paper) separa aceste doua actiuni.
 
 Checkpoint local 2026-10-25: pregatirea a fost executata cu `-SkipBuild`, fara pornire, cu `eula=false`, zero faze, fara lume sau loguri generate si cu hash-ul core copiat identic artefactului selectat. Candidatul Paper local declara in `version.json` versiunea 26.1.2 si Java 25; compatibilitatea cu pluginul compilat pe API 1.21.11 ramane neverificata. Cele sase teste noi verifica scriptul cu runtime neexecutabil in fixture, pastrarea dovezilor anterioare si refuzul pornirii fara acceptare explicita. Scriptul este acum declarat input Gradle pentru a nu reutiliza teste invechite dupa editarea lui. Verificarea completa core/API/addon are 3.173 de teste, fara esecuri sau erori si cu doua omise; ABI-ul si freeze-ul static trec. Raportul `.ai/release-reports/paper-sandbox-preflight-2026-10-25T13-36-56Z.json` separa acest rezultat de un smoke runtime si pastreaza calea sandbox-ului.
+
+Checkpoint local 2026-10-26: tinta pentru urmatoarea verificare este acum Paper 1.21.11 build 132, canal `STABLE`, obtinut prin [serviciul oficial de descarcare](https://docs.papermc.io/misc/downloads-service/). SHA-256 corespunde metadatelor oficiale, iar `version.json` declara Minecraft 1.21.11 si Java 21; versiunea corespunde dependintei de compilare a proiectului. `-PrepareOnly -SkipBuild` a creat un director nou cu artefactul core curent, verificat prin hash, `eula=false`, bind local, RCON oprit si zero faze, fara lume sau loguri. Raportul `.ai/release-reports/paper-target-1.21.11-132-preflight-20261026.json` contine provenienta, dovezile si comanda propusa pentru dupa acceptarea EULA. Compatibilitatea efectiva si scenariul cognitiv raman neverificate; nu a fost executat Paper. Pregatirea anterioara cu tinta 26.1.2 ramane o dovada istorica separata.
 
 ## Smoke test cognitiv
 
@@ -200,6 +202,28 @@ Regresia porneste un obiectiv la `t0`, reaplica aceeasi ingrijire la secunda 29 
 Un reper privat separat pastreaza intervalul masurat intre reaplicari. Testele acopera hrana si somnul, revenirea si ingrijirea acasa, continuarea intentiei, casa schimbata, sosirea la mijlocul intervalului, recuperarea si stergerea obiectivului. Selectia reala invalideaza prioritatea din cache dupa trei minute observate; nu apar miscari, schimbari de nevoi sau experiente suplimentare. Timpul este controlat direct in fixture, fara asteptari reale sau pornirea unui server. Cele 91 de teste focalizate pentru monitor, continuitate, tick cognitiv, ceas, executor si diagnostic trec cu zero esecuri sau erori.
 
 Checkpoint local 2026-10-25: verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.201 teste, zero esecuri sau erori si doua omise. Core-ul ruleaza din nou, iar testele API/addon neschimbate reutilizeaza rezultatele up-to-date. Freeze-ul static `.ai/release-reports/cognitive-progress-accounting-20261025-api-addon-freeze.json` trece fara avertismente, cu ABI 1.1.0 neschimbat. Aceste dovezi nu confirma navigatia fizica in Minecraft.
+
+### Intrebari cognitive citate sau relatate
+
+Resolverul cognitiv aplica acum `DialogueMessageText.directIntentText` tuturor familiilor de intrebari, inclusiv nevoi si invatare. Regresia publica foloseste `Maria a zis „ce nevoi ai?”; dar ce vrei sa faci?` pentru un NPC flamand cu ajutor alimentar confirmat: raspunsul anterior adauga `ma poti ajuta din nou?` desi intrebarea directa privea numai intentia.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.ai.NpcCognitiveResponseTest" --tests "ro.ainpc.engine.DialogueRequestContextTest" --console=plain
+```
+
+Cele patru regresii noi esueaza inainte de corectie. Ele acopera citate cu ghilimele drepte, romanesti sau apostrofuri, relatari si intrebari despre sens, apoi controleaza continuarile directe si ordinea raspunsurilor. Testul prin `DialogueEngine.generateResponse` verifica si pastrarea participantului curent, nevoilor, memoriei alimentare si ceasului simularii. Sunt verificate numai tiparele limitate ale extractorului existent, fara apelarea unui provider AI real sau pornirea Minecraft.
+
+Checkpoint local 2026-10-26: cele 101 teste focalizate trec cu zero esecuri sau erori. Verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.206 teste, zero esecuri sau erori si doua omise; core-ul ruleaza din nou, iar API/addon reutilizeaza rezultatele up-to-date. Freeze-ul static `.ai/release-reports/cognitive-direct-question-20261026-api-addon-freeze.json` trece fara avertismente, cu ABI-ul API 1.1.0 neschimbat.
+
+### Schimbarea sigurantei intre decizii
+
+Regresia din `DecisionExplanationIntegrationTest` selecteaza o actiune, verifica reutilizarea normala a cache-ului, apoi reduce siguranta de la 100 la 20 inaintea expirarii de o secunda. Previzualizarea nu mai raporteaza alegerea veche drept unica optiune din cache, iar selectia urmatoare inregistreaza un calcul nou. Previzualizarea singura nu mareste statisticile si nu creeaza o decizie aplicata.
+
+Checkpoint local 2026-10-25: regresia esueaza inainte de corectie si trece dupa. Cele 44 de teste focalizate pentru decizie, experienta, continuitate si tick cognitiv trec. Verificarea completa core/API/addon si construirea JAR-urilor reusesc cu 3.202 teste, zero esecuri sau erori si doua omise. Freeze-ul static `.ai/release-reports/cognitive-safety-cache-20261025-api-addon-freeze.json` are zero avertismente si pastreaza ABI-ul API 1.1.0.
+
+```powershell
+./gradlew.bat :ainpc-core-plugin:test --tests "ro.ainpc.engine.DecisionExplanationIntegrationTest" --console=plain
+```
 
 ### Integrarea pe tick-ul public
 

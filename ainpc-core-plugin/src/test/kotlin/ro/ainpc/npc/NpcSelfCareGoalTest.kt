@@ -190,6 +190,85 @@ class NpcSelfCareGoalTest {
     }
 
     @Test
+    fun `care reapplications between observations cannot postpone the lack of progress limit`() {
+        for (action in listOf(NPCAction.EAT, NPCAction.SLEEP)) {
+            for (isAtHome in listOf(false, true)) {
+                goal.clear()
+                val state = walking.copy(
+                    energyLevel = 20,
+                    currentState = when {
+                        !isAtHome -> NPCState.WALKING
+                        action == NPCAction.EAT -> NPCState.EATING
+                        else -> NPCState.SLEEPING
+                    },
+                )
+                goal.applied(action, state, home, isAtHome, now)
+                repeat(6) { index ->
+                    val previousTick = now + index * 30_000L
+                    goal.applied(action, state, home, isAtHome, previousTick + 29_000L)
+                    goal.observe(state, state, home, isAtHome, previousTick, previousTick + 30_000L)
+                }
+
+                val progress = requireNotNull(goal.snapshot(now + 180_000L))
+                assertEquals(180_000L, progress.withoutProgressMillis, "$action atHome=$isAtHome")
+                assertTrue(progress.lacksProgress())
+                assertFalse(progress.observedRecovery)
+                assertEquals(now + 180_000L, progress.updatedAt)
+                assertEquals(20, progress.initialNeed)
+                assertEquals(20, progress.observedNeed)
+            }
+        }
+    }
+
+    @Test
+    fun `continued return applications preserve the time between progress observations`() {
+        goal.applied(NPCAction.EAT, walking, home, false, now)
+        repeat(6) { index ->
+            val previousTick = now + index * 30_000L
+            goal.continueReturn(walking, home, previousTick + 29_000L)
+            goal.observe(walking, walking, home, false, previousTick, previousTick + 30_000L)
+        }
+
+        val progress = requireNotNull(goal.snapshot(now + 180_000L))
+        assertEquals(180_000L, progress.withoutProgressMillis)
+        assertEquals(NpcSelfCareGoal.Stage.RETURNING_HOME, progress.stage)
+        assertEquals(NpcSelfCareContinuity.NO_PROGRESS, goal.returnStatus(walking, home, false, now + 180_000L))
+        assertFalse(goal.canContinueReturn(walking, home, false, now + 180_000L))
+    }
+
+    @Test
+    fun `new goals and arrival start a new progress window within an observation interval`() {
+        goal.applied(NPCAction.EAT, walking, home, false, now + 10_000L)
+        goal.observe(walking, walking, home, false, now, now + 30_000L)
+        assertEquals(20_000L, goal.snapshot(now + 30_000L)!!.withoutProgressMillis)
+
+        val newHome = "world:10,64,0"
+        goal.applied(NPCAction.EAT, walking, newHome, false, now + 40_000L)
+        goal.observe(walking, walking, newHome, false, now + 30_000L, now + 60_000L)
+        assertEquals(20_000L, goal.snapshot(now + 60_000L)!!.withoutProgressMillis)
+
+        val eating = walking.copy(currentState = NPCState.EATING)
+        goal.applied(NPCAction.EAT, eating, newHome, true, now + 70_000L)
+        assertEquals(0L, goal.snapshot(now + 70_000L)!!.withoutProgressMillis)
+        goal.applied(NPCAction.EAT, eating, newHome, true, now + 89_000L)
+        goal.observe(eating, eating, newHome, true, now + 60_000L, now + 90_000L)
+        assertEquals(20_000L, goal.snapshot(now + 90_000L)!!.withoutProgressMillis)
+
+        val recovered = eating.copy(hungerLevel = 28)
+        goal.observe(eating, recovered, newHome, true, now + 90_000L, now + 120_000L)
+        assertEquals(0L, goal.snapshot(now + 120_000L)!!.withoutProgressMillis)
+        goal.applied(NPCAction.EAT, recovered, newHome, true, now + 149_000L)
+        goal.observe(recovered, recovered, newHome, true, now + 120_000L, now + 150_000L)
+        assertEquals(30_000L, goal.snapshot(now + 150_000L)!!.withoutProgressMillis)
+        assertTrue(goal.snapshot(now + 150_000L)!!.observedRecovery)
+
+        goal.clear()
+        goal.applied(NPCAction.EAT, walking, home, false, now + 160_000L)
+        goal.observe(walking, walking, home, false, now + 150_000L, now + 180_000L)
+        assertEquals(20_000L, goal.snapshot(now + 180_000L)!!.withoutProgressMillis)
+    }
+
+    @Test
     fun `only valid new observation time counts and reading or selecting never creates progress`() {
         goal.applied(NPCAction.EAT, walking, home, false, now)
         goal.observe(walking, walking, home, false, now - 60_000L, now + 30_000L)

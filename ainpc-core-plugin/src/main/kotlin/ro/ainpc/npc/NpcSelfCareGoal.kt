@@ -47,6 +47,7 @@ class NpcSelfCareGoal {
     }
 
     private var current: Snapshot? = null
+    private var progressObservedAt: Long = 0L
 
     @Synchronized
     fun applied(action: NPCAction, state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long) {
@@ -62,10 +63,12 @@ class NpcSelfCareGoal {
         val previous = snapshot(now)?.takeIf {
             it.stage.isActive() && it.action == action && it.homeKey == homeKey
         }
+        val arrived = isAtHome && previous?.stage == Stage.RETURNING_HOME
+        if (previous == null || arrived) progressObservedAt = now
         current = Snapshot(
             action, phase(homeKey, isAtHome), previous?.initialNeed ?: level, level, homeKey,
             previous?.observedRecovery ?: false, now,
-            if (isAtHome && previous?.stage == Stage.RETURNING_HOME) 0L else previous?.withoutProgressMillis ?: 0L,
+            if (arrived) 0L else previous?.withoutProgressMillis ?: 0L,
         )
     }
 
@@ -95,7 +98,7 @@ class NpcSelfCareGoal {
             before.currentState == careState(goal.action) && afterLevel > beforeLevel
         val satisfied = afterLevel >= NpcSelfCareThresholds.RECOVERED
         val arrived = isAtHome && goal.stage == Stage.RETURNING_HOME
-        val observedMillis = (observedAt - maxOf(previousTickAt, goal.updatedAt)).coerceAtLeast(0L)
+        val observedMillis = (observedAt - maxOf(previousTickAt, progressObservedAt)).coerceAtLeast(0L)
         current = goal.copy(
             stage = if (satisfied) Stage.SATISFIED else phase(homeKey, isAtHome),
             observedNeed = afterLevel,
@@ -104,6 +107,7 @@ class NpcSelfCareGoal {
             withoutProgressMillis = if (recoveredDuringCare || arrived) 0L
                 else minOf(PROGRESS_LIMIT, goal.withoutProgressMillis + observedMillis),
         )
+        progressObservedAt = observedAt
     }
 
     @Synchronized
@@ -154,6 +158,7 @@ class NpcSelfCareGoal {
     @Synchronized
     fun clear() {
         current = null
+        progressObservedAt = 0L
     }
 
     @Synchronized

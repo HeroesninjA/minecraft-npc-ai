@@ -76,6 +76,24 @@ class DecisionExplanationIntegrationTest {
     }
 
     @Test
+    fun `falling safety requires a new decision before the cache timeout`() {
+        choose()
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+        assertTrue(engine.previewActionDecision(npc, npc.context).cached)
+
+        npc.safetyLevel = 20
+        npc.context.safetyLevel = 20
+
+        val preview = engine.previewActionDecision(npc, npc.context)
+        assertFalse(preview.cached)
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+
+        choose()
+        assertEquals(2, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
     fun `later previews and cache cleanup preserve the applied history without renewing it`() {
         val action = choose()
         apply(action)

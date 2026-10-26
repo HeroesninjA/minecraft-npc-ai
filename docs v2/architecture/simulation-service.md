@@ -1,7 +1,7 @@
 # Runtime de simulare NPC
 
 Status: contract verificat in cod.
-Actualizat: 2026-10-25.
+Actualizat: 2026-10-26.
 
 Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ramane pentru compatibilitate, iar implementarea reala este distribuita intre doua fluxuri independente: simularea nevoilor si rutina cu miscare.
 
@@ -53,9 +53,13 @@ Un furnizor intern `needsClock` permite regresii deterministe fara asteptari rea
 
 `NpcCognitiveState` este un instantaneu imuabil al nevoilor, starii, pericolului, interlocutorului, obiectivului si rutinei. `DecisionEngine` foloseste `needModifier` din acest model pentru contributia nevoilor la scorurile actiunilor; coeficientii si pragurile existente sunt pastrate.
 
+Cache-ul unei alegeri de cel mult o secunda verifica si nivelul de siguranta folosit la selectie. Daca acesta se schimba, urmatoarea selectie si previzualizare recalculeaza scorurile chiar daca starea NPC si indicatorul de pericol raman aceleasi. Simpla previzualizare nu creeaza o decizie sau o explicatie istorica.
+
 Modelul identifica o prioritate de atentie si formuleaza o descriere a nevoilor si intentiei curente. Pericolul imediat are prioritate. Foamea si oboseala respecta pragurile de inceput si recuperare ale ingrijirii. Intentia ramane separata de actiunea executata: descrierea nu confirma consumul de obiecte, deplasarea sau reusita unui obiectiv.
 
 `AINPC.generateContextDescription()` include aceasta autoevaluare in textul copiat de `OpenAIPromptSnapshotFactory`, iar `NpcCognitiveResponse` raspunde local la intrebari despre ganduri, nevoi si intentii prin `DialogueEngine`. Captura citeste numai campuri deja disponibile; nu executa actiuni si nu acceseaza lumea prin API Bukkit.
+
+Toate tiparele cognitive folosesc acum textul direct extras de `DialogueMessageText.directIntentText`, inclusiv intrebarile despre nevoi, invatare si ajutor alimentar. Citatele si introducerile de relatare ori explicare recunoscute de acest extractor nu devin cereri adresate NPC-ului. Intr-un mesaj precum `Maria a zis „ce nevoi ai?”; dar ce vrei sa faci?`, resolverul cognitiv raspunde numai despre intentie; nu adauga o noua cerere de hrana din citat. O continuare directa ramane eligibila, cu ordinea raspunsurilor si dovezile capturate pastrate.
 
 ## Explicatia ultimei decizii
 
@@ -88,6 +92,8 @@ Explicatiile etapelor active sunt ancorate explicit la ultima observatie, nu pre
 Aplicarea continua obiectivul original de hrana ori odihna fara sa confirme sosirea sau sa retrimita pathfinding. Miscarea ramane exclusiv in rutina. La sosire, ingrijirea obisnuita de acasa isi pastreaza regulile. Explicatia ultimei alegeri retine separat ca revenirea pentru obiectivul in curs a fost pastrata. Schimbarea eligibilitatii continuitatii invalideaza imediat reutilizarea deciziei din cache, inclusiv la oprirea feature-ului.
 
 `withoutProgressMillis` cumuleaza numai timpul nou acoperit de actualizari valide ale nevoilor, dupa angajarea obiectivului. Sosirea confirmata sau un castig observat in timpul ingrijirii reseteaza acest contor. Timpul anterior angajarii, citirile, selectiile, reaplicarea aceleiasi intentii si observatiile duplicate nu adauga progres si nu reseteaza bugetul. Dupa trei minute cumulate fara sosire ori refacere confirmata, prioritatea revenirii este eliberata pentru urmatoarea alegere normala. Monitorul poate descrie lipsa progresului, dar nu afirma ca ruta este blocata sau ca ii cunoaste cauza.
+
+Contorizarea foloseste un reper privat al ultimei observatii, separat de `Snapshot.updatedAt`. Reaplicarile aceleiasi ingrijiri intre doua tick-uri pot actualiza snapshot-ul, dar nu scurteaza intervalul observat fara progres. Un obiectiv nou sau sosirea confirmata porneste un reper nou; o observatie valida avanseaza reperul. Se numara numai intersectia cu intervalul tick-ului curent, fara timpul dinaintea obiectivului, dinaintea sosirii ori din intervale neobservate.
 
 Aceasta nu este o lista permanenta de destinatii interzise: dupa intrerupere, o noua deplasare efectiv acceptata poate porni alt obiectiv. Nu exista replanificare generala, navigatie suplimentara, modificari de inventar sau confirmari de ajutor. Activarea continuitatii nu porneste singura taskurile periodice si ramane experimentala pana la verificarea in serverul Minecraft.
 

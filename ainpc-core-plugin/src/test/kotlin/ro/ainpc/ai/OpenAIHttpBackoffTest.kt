@@ -11,6 +11,39 @@ import java.time.format.DateTimeFormatter
 
 class OpenAIHttpBackoffTest {
     @Test
+    fun `configured minimum above the exponential cap is preserved`() {
+        val delay = OpenAIHttpBackoff.delayMillis(503, "server_is_overloaded", null, 0L, 600_000L, 20)
+
+        assertTrue(delay != null && delay in 600_100L..600_500L)
+    }
+
+    @Test
+    fun `large failure counts and minimum delays do not overflow`() {
+        val delay = OpenAIHttpBackoff.delayMillis(503, "server_is_overloaded", null, 0L, 15_000L, Int.MAX_VALUE)
+
+        assertTrue(delay != null && delay in 300_100L..300_500L)
+        assertEquals(Long.MAX_VALUE, OpenAIHttpBackoff.networkDelayMillis(Long.MAX_VALUE, Int.MAX_VALUE))
+        assertEquals(Long.MAX_VALUE, OpenAIHttpBackoff.saturatingAdd(123L, Long.MAX_VALUE))
+    }
+
+    @Test
+    fun `invalid retry hint uses the escalated fallback rather than resetting its delay`() {
+        for (header in listOf("invalid", "-1", "+1", "0.5", "1e3")) {
+            val delay = OpenAIHttpBackoff.delayMillis(429, "slow_down", header, 0L, 15_000L, 3)
+
+            assertTrue(delay != null && delay in 60_100L..60_500L, header)
+        }
+    }
+
+    @Test
+    fun `oversized numeric retry after saturates rather than allowing an early retry`() {
+        for (header in listOf(Long.MAX_VALUE.toString(), "999999999999999999999999999999")) {
+            assertEquals(Long.MAX_VALUE, OpenAIHttpBackoff.parseRetryAfterMillis(header, 0L), header)
+            assertEquals(Long.MAX_VALUE, OpenAIHttpBackoff.delayMillis(429, "slow_down", header, 0L, 15_000L), header)
+        }
+    }
+
+    @Test
     fun `temporary rate limits honor retry after`() {
         val delay = OpenAIHttpBackoff.delayMillis(429, "slow_down", "56", 0L, 15_000L)
 

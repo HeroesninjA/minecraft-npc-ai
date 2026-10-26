@@ -12,6 +12,7 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.DialogHistory
 import ro.ainpc.ai.DialogManager
 import ro.ainpc.ai.NPCRelationship
+import ro.ainpc.ai.OpenAIBackoffState
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
@@ -36,6 +37,7 @@ class DialogueRequestContextTest {
     private val aiService = (unsafe.allocateInstance(OpenAIService::class.java) as OpenAIService).also {
         setField(OpenAIService::class.java, it, "plugin", plugin)
         setField(OpenAIService::class.java, it, "apiKey", "unused-test-key")
+        setField(OpenAIService::class.java, it, "backoffState", OpenAIBackoffState())
     }
     private val engine = DialogueEngine(plugin, aiService)
     private val npc = AINPC(null)
@@ -127,6 +129,40 @@ class DialogueRequestContextTest {
         assertFalse(strangerResponse.contains("ma poti ajuta din nou"))
         assertSame(currentPlayer, npc.context.interactingPlayer)
         assertEquals(1, npc.socialExperience.snapshot().size)
+    }
+
+    @Test
+    fun `a quoted need cannot add a food request to the answer about current intentions`() {
+        plugin.config.set("ai.dialogue.ground_facts_with_ai", false)
+        npc.hungerLevel = 10
+        npc.currentGoal = "sa ajung acasa"
+        npc.context.setInteractingPlayer(currentPlayer)
+        npc.socialExperience.record(NpcSocialExperience.Receipt(
+            UUID.randomUUID(), requestPlayer.uniqueId, "RequestPlayer", "minecraft:bread", 1,
+            10, 30, System.currentTimeMillis() - 1_000L,
+        ))
+        val before = NpcCognitiveState.capture(npc)
+        val receipts = npc.socialExperience.snapshot()
+        val interactionTime = npc.context.lastInteractionTime
+        val simulationTime = npc.lastSimulationTickAt
+
+        for (message in listOf(
+            "Maria a zis „ce nevoi ai?”; dar ce vrei sa faci?",
+            "Maria a zis de ce ai nevoie; dar ce vrei sa faci?",
+        )) {
+            val response = engine.generateResponse(
+                request(message), emptyList(), emptyList(), null,
+                DialogManager.PromptDbContext(0, 0.0), emptyList(), false,
+            ).join()
+
+            assertEquals(before.intentionDescription(), response, message)
+            assertFalse(response.contains("ma poti ajuta din nou"))
+            assertEquals(before, NpcCognitiveState.capture(npc))
+            assertEquals(receipts, npc.socialExperience.snapshot())
+            assertEquals(interactionTime, npc.context.lastInteractionTime)
+            assertEquals(simulationTime, npc.lastSimulationTickAt)
+            assertSame(currentPlayer, npc.context.interactingPlayer)
+        }
     }
 
     @Test

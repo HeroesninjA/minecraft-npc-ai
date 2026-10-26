@@ -434,7 +434,6 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
             )
         }
         if (::platform.isInitialized) platform.reloadFromConfig()
-        openAIService.reloadFromConfig()
         if (::ollamaService.isInitialized) ollamaService.reloadFromConfig()
         if (::aiOrchestrationService.isInitialized) {
             aiOrchestrationService.reloadFromConfig()
@@ -442,7 +441,7 @@ class ServiceRegistry(private val plugin: AINPCPlugin) {
             aiOrchestrationService = AIOrchestrationService(plugin)
         }
         mcpRuntimeClient = McpRuntimeClientFactory.create(plugin)
-        openAIService = OpenAIService(plugin)
+        openAIService = openAIService.reloadedFromConfig()
         openAIService.runDiagnosticsAsync("reload")
         if (::memoryManager.isInitialized) {
             dialogueEngine = DialogueEngine(plugin, openAIService)

@@ -230,6 +230,31 @@ class SelfCareContinuityIntegrationTest {
     }
 
     @Test
+    fun `interleaved care applications release cached return priority after three observed minutes`() {
+        startReturn()
+        assertEquals(NPCAction.WALK_TO_TARGET, choose())
+        val started = System.currentTimeMillis() - 180_000L
+        val state = NpcCognitiveState.capture(npc, npc.context)
+        val home = NpcSelfCareGoal.homeKey(npc)
+        npc.selfCareGoal.clear()
+        npc.selfCareGoal.applied(NPCAction.EAT, state, home, false, started)
+        repeat(6) { index ->
+            val previous = started + index * 30_000L
+            npc.selfCareGoal.applied(NPCAction.EAT, state, home, false, previous + 29_000L)
+            npc.selfCareGoal.observe(state, state, home, false, previous, previous + 30_000L)
+        }
+
+        assertEquals(NpcSelfCareContinuity.NO_PROGRESS, engine.cognitiveDiagnostic(npc).continuity)
+        assertFalse(continuable())
+        assertNotEquals(NPCAction.WALK_TO_TARGET, choose())
+        assertEquals(1, movementCalls)
+        assertEquals(20, npc.hungerLevel)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertFalse(progress()!!.observedRecovery)
+        assertTrue(progress()!!.description().contains("cauza nu este stabilita"))
+    }
+
+    @Test
     fun `rejected navigation and invalidating callbacks cannot start a committed objective`() {
         acceptsMovement = false
         assertEquals(RoutineActivityExecutor.Outcome.WAITING, executeCare())

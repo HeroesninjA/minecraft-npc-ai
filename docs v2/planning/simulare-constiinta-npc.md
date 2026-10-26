@@ -1,7 +1,7 @@
 # Simulare de conștiință pentru NPC-uri: momentul potrivit și etape
 
 Data: 2026-10-07
-Actualizat: 2026-10-25.
+Actualizat: 2026-10-26.
 
 Statut: planificare pentru circuitul cognitiv complet; autoevaluarea, experiența limitată de îngrijire, monitorizarea obiectivelor de îngrijire și cererile autonome către ajutori confirmați sunt implementate în cod, fără validare în serverul Minecraft.
 
@@ -112,6 +112,22 @@ Actualizarea nevoilor nu mai aplica factorul minim unui interval egal sau regres
 ## Explicarea istorica a progresului - 2026-10-25
 
 Progresul de ingrijire este descris explicit ca ultima observatie, nu ca o verificare a situatiei prezente. O inregistrare de refacere acasa sau de lipsa a unei case ramane istorica dupa schimbarea pozitiei, intentiei sau ancorei. Aceeasi formulare este folosita in raspunsul local, contextul pentru AI si diagnosticul administrativ. Cinci regresii suplimentare verifica aceasta separare fara scanari ale lumii sau modificarea obiectivului la simpla intrebare. Nu se schimba alegerea actiunilor, succesul sau memoria. [Verificarea si limitele](../operations/debugging-si-testare.md#progres-memorat-versus-situatie-curenta) nu certifica un provider AI sau gameplay real.
+
+## Reaplicarea intentiei pastreaza timpul observat - 2026-10-25
+
+Reevaluarea rutinei sau continuarea revenirii intre doua tick-uri nu mai ascunde timpul fara progres. Contorul foloseste ultimul reper al observarii, separat de actualizarea intentiei, astfel incat trei minute observate fara sosire ori refacere elibereaza prioritatea revenirii. Obiectivele noi, sosirea si recuperarea isi pastreaza resetarile, iar intervalele neobservate nu sunt numarate. Regresiile verifica si invalidarea alegerii din cache, fara invatare, modificari de nevoi sau miscari suplimentare. [Procedura de verificare](../operations/debugging-si-testare.md#reaplicari-intre-observatiile-progresului) ramane locala, fara certificarea navigatiei Minecraft.
+
+## Siguranta declanseaza reevaluarea imediata - 2026-10-25
+
+O schimbare a nivelului de siguranta invalideaza acum alegerea memorata pentru intervalul scurt de cache, chiar daca indicatorul explicit de pericol si starea NPC nu s-au schimbat. Previzualizarea calculeaza din nou scorurile fara sa creeze istoric, iar selectia urmatoare foloseste noul nivel. Verificarea separa nivelul numeric de pericolul explicit si pastreaza explicatia istorica doar pentru actiuni aplicate.
+
+## Intrebari cognitive recunoscute in textul direct - 2026-10-26
+
+Intrebarile despre ganduri, nevoi, intentii, invatare si ajutor alimentar folosesc aceeasi extragere a textului direct ca intrebarile despre decizie si progres. Un citat ori o relatare recunoscuta nu mai declanseaza o nevoie comunicata sau o cerere locala de hrana. Continuarile directe raman functionale. Patru regresii includ ruta publica de dialog cu un ajutor alimentar confirmat, fara modificarea nevoilor sau memoriei la simpla intrebare. [Verificarea locala](../operations/debugging-si-testare.md#intrebari-cognitive-citate-sau-relatate) nu demonstreaza intelegerea generala a limbajului.
+
+## Tinta pregatita pentru verificarea runtime - 2026-10-26
+
+Mediul izolat este pregatit acum cu Paper 1.21.11 build 132 si core-ul curent, cu versiunea si hash-urile verificate. Pregatirea pastreaza `eula=false` si nu executa serverul. Dupa acceptarea explicita a EULA de catre operator, urmatorul pas este verificarea lifecycle-ului pluginurilor pe aceasta tinta; abia apoi poate fi verificat scenariul cognitiv cu un jucator. [Checkpoint-ul operational](../operations/debugging-si-testare.md#pregatire-izolata-fara-pornire) pastreaza distinct aceste dovezi.
 
 ## Concluzie
 
