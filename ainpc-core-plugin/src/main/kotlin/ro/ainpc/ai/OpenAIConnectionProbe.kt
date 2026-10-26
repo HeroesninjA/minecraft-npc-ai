@@ -1,9 +1,6 @@
 package ro.ainpc.ai
 
 import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParseException
-import com.google.gson.Strictness
 import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder
@@ -108,9 +105,8 @@ object OpenAIConnectionProbe {
 
     private fun extractModelId(gson: Gson, responseBody: String): String? {
         val json = try {
-            gson.newBuilder().setStrictness(Strictness.STRICT).create()
-                .fromJson(responseBody, JsonObject::class.java)
-        } catch (_: JsonParseException) {
+            OpenAIJsonEnvelope.parseObject(gson, responseBody)
+        } catch (_: IOException) {
             return null
         } ?: return null
 

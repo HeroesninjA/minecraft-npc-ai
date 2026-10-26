@@ -4,13 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.google.gson.JsonParseException
-import com.google.gson.Strictness
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonToken
 import ro.ainpc.context.SensitiveDataRedactor
 import java.io.IOException
-import java.io.StringReader
 import java.util.UUID
 
 object OpenAITextSupport {
@@ -313,6 +308,9 @@ object OpenAITextSupport {
         }
     }
 
+    private fun errorFieldString(element: JsonElement?): String? =
+        element?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+
     @JvmStatic
     @JvmOverloads
     fun extractOpenAIErrorMessage(gson: Gson, responseBody: String?, apiKey: String? = null): String {
@@ -323,7 +321,7 @@ object OpenAITextSupport {
         fun fallbackExcerpt(): String = abbreviate(redactDiagnosticText(responseBody, apiKey), 200)
 
         return try {
-            val json = gson.fromJson(responseBody, JsonObject::class.java)
+            val json = OpenAIJsonEnvelope.parseObject(gson, responseBody)
             if (json == null) {
                 fallbackExcerpt()
             } else {
@@ -332,9 +330,9 @@ object OpenAITextSupport {
                     fallbackExcerpt()
                 } else {
                     val error = errorElement.asJsonObject
-                    val code = safeJsonString(error.get("code"))
-                    val type = safeJsonString(error.get("type"))
-                    val message = safeJsonString(error.get("message"))
+                    val code = errorFieldString(error.get("code")).orEmpty()
+                    val type = errorFieldString(error.get("type")).orEmpty()
+                    val message = errorFieldString(error.get("message")).orEmpty()
                     val parts = ArrayList<String>()
                     if (code.isNotBlank()) {
                         parts.add(code)
@@ -347,7 +345,7 @@ object OpenAITextSupport {
                     if (parts.isEmpty()) fallbackExcerpt() else redactDiagnosticText(parts.joinToString(": "), apiKey)
                 }
             }
-        } catch (_: com.google.gson.JsonSyntaxException) {
+        } catch (_: IOException) {
             fallbackExcerpt()
         }
     }
@@ -356,13 +354,15 @@ object OpenAITextSupport {
     fun extractOpenAIErrorCode(gson: Gson, responseBody: String?): String {
         if (responseBody.isNullOrBlank()) return ""
         return try {
-            val error = gson.fromJson(responseBody, JsonObject::class.java)
+            val error = OpenAIJsonEnvelope.parseObject(gson, responseBody)
                 ?.get("error")
                 ?.takeIf { it.isJsonObject }
                 ?.asJsonObject
-            val code = safeJsonString(error?.get("code"))
-            if (code.isNotBlank()) code else safeJsonString(error?.get("type"))
-        } catch (_: com.google.gson.JsonSyntaxException) {
+            val codeElement = error?.get("code")
+            val code = errorFieldString(codeElement)
+            if (codeElement != null && !codeElement.isJsonNull && code == null) return ""
+            if (!code.isNullOrBlank()) code else errorFieldString(error?.get("type")).orEmpty()
+        } catch (_: IOException) {
             ""
         }
     }
@@ -382,15 +382,8 @@ object OpenAITextSupport {
             throw IOException("OpenAI a returnat un raspuns gol.")
         }
 
-        val jsonResponse = try {
-            validateUniqueResponseMembers(responseBody)
-            gson.newBuilder().setStrictness(Strictness.STRICT).create()
-                .fromJson(responseBody, JsonObject::class.java)
-        } catch (_: JsonParseException) {
-            throw IOException("OpenAI a returnat JSON invalid.")
-        } catch (_: IOException) {
-            throw IOException("OpenAI a returnat JSON invalid.")
-        } ?: throw IOException("OpenAI a returnat un JSON gol.")
+        val jsonResponse = OpenAIJsonEnvelope.parseObject(gson, responseBody)
+            ?: throw IOException("OpenAI a returnat un JSON gol.")
 
         val errorElement = jsonResponse.get("error")
         if (errorElement != null && !errorElement.isJsonNull) {
@@ -485,34 +478,6 @@ object OpenAITextSupport {
         }
 
         return generatedText
-    }
-
-    private fun validateUniqueResponseMembers(responseBody: String) {
-        JsonReader(StringReader(responseBody)).use { reader ->
-            reader.strictness = Strictness.STRICT
-            val objectMembers = ArrayDeque<MutableSet<String>>()
-            while (true) {
-                when (reader.peek()) {
-                    JsonToken.BEGIN_OBJECT -> {
-                        reader.beginObject()
-                        objectMembers.addLast(HashSet())
-                    }
-                    JsonToken.END_OBJECT -> {
-                        reader.endObject()
-                        objectMembers.removeLast()
-                    }
-                    JsonToken.BEGIN_ARRAY -> reader.beginArray()
-                    JsonToken.END_ARRAY -> reader.endArray()
-                    JsonToken.NAME -> {
-                        if (!objectMembers.last().add(reader.nextName())) {
-                            throw IOException("OpenAI a returnat JSON invalid.")
-                        }
-                    }
-                    JsonToken.END_DOCUMENT -> return
-                    else -> reader.skipValue()
-                }
-            }
-        }
     }
 
     private fun hasJsonStringValue(element: JsonElement?, expected: String): Boolean =
