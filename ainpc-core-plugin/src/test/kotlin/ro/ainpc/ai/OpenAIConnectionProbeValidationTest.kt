@@ -1,6 +1,9 @@
 package ro.ainpc.ai
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.Strictness
 import com.sun.net.httpserver.HttpServer
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
@@ -135,6 +138,134 @@ class OpenAIConnectionProbeValidationTest {
             assertFalse(service.checkConnection().get(4L, TimeUnit.SECONDS))
             assertTrue(service.isAvailable)
             assertFalse(service.captureDebugSnapshot().backoffActive)
+        }
+    }
+
+    @Test
+    fun `duplicate model identities cannot confirm the last value even when values agree`() {
+        assertInvalidBodies(
+            """{"id":null,"id":"local-test-model"}""",
+            """{"id":123,"id":"local-test-model"}""",
+            """{"id":"other-model","id":"local-test-model"}""",
+            """{"id":"local-test-model","id":"local-test-model"}""",
+        )
+    }
+
+    @Test
+    fun `duplicate object markers cannot replace invalid types with model`() {
+        assertInvalidBodies(
+            """{"id":"local-test-model","object":"list","object":"model"}""",
+            """{"id":"local-test-model","object":null,"object":"model"}""",
+            """{"id":"local-test-model","object":"model","object":"model"}""",
+        )
+    }
+
+    @Test
+    fun `duplicate error fields cannot clear an error or exploit an earlier null`() {
+        assertInvalidBodies(
+            """{"id":"local-test-model","error":{"message":"PRIVATE_ERROR $testKey"},"error":null}""",
+            """{"id":"local-test-model","error":false,"error":null}""",
+            """{"id":"local-test-model","error":null,"error":null}""",
+        )
+    }
+
+    @Test
+    fun `escaped member names cannot bypass model duplicate detection`() {
+        assertInvalidBodies(
+            """{"id":null,"\u0069d":"local-test-model"}""",
+            """{"id":"local-test-model","object":"list","obj\u0065ct":"model"}""",
+            """{"id":"local-test-model","error":true,"\u0065rror":null}""",
+        )
+    }
+
+    @Test
+    fun `duplicate unknown model metadata is rejected inside nested objects and arrays`() {
+        assertInvalidBodies(
+            """{"id":"local-test-model","metadata":{"note":null,"note":true}}""",
+            """{"id":"local-test-model","metadata":[{"inner":[{"note":1,"note":2}]}]}""",
+            """{"id":"local-test-model","future":[],"future":[]}""",
+        )
+    }
+
+    @Test
+    fun `duplicate member diagnostics do not disclose private names values or parser paths`() {
+        val encodedName = Gson().toJson("PRIVATE_DUPLICATE_NAME $testKey\nfield")
+        val body = """{"id":"local-test-model","metadata":{$encodedName:"PRIVATE_DUPLICATE_VALUE",$encodedName:null}}"""
+        withServer(AtomicReference(body)) { baseUrl ->
+            val status = probe(baseUrl)
+
+            assertInvalidStatus(status, baseUrl)
+            assertSame(status, OpenAIConnectionProbe.getLastProbeResult())
+            for (marker in listOf(testKey, "PRIVATE_DUPLICATE_NAME", "PRIVATE_DUPLICATE_VALUE", "JsonSyntaxException", "MalformedJsonException")) {
+                assertFalse(status.summary().contains(marker), marker)
+            }
+        }
+    }
+
+    @Test
+    fun `duplicate metadata replaces a green probe cache and a later valid probe can recover`() {
+        val body = AtomicReference("""{"id":"canonical-model","object":"model"}""")
+        withServer(body) { baseUrl ->
+            assertTrue(probe(baseUrl).isModelAvailable())
+            body.set("""{"id":"canonical-model","id":"canonical-model"}""")
+
+            val rejected = probe(baseUrl)
+
+            assertInvalidStatus(rejected, baseUrl)
+            assertSame(rejected, OpenAIConnectionProbe.getLastProbeResult())
+            body.set("""{"id":"recovered-model"}""")
+
+            val recovered = probe(baseUrl)
+
+            assertTrue(recovered.isReachable())
+            assertTrue(recovered.isModelAvailable())
+            assertEquals(listOf("recovered-model"), recovered.availableModels)
+            assertTrue(recovered.errors.isEmpty())
+            assertSame(recovered, OpenAIConnectionProbe.getLastProbeResult())
+        }
+    }
+
+    @Test
+    fun `asynchronous checks reject duplicates without changing generation availability or backoff`() {
+        val body = """{"id":"local-test-model","error":{"message":"PRIVATE_DUPLICATE_VALUE"},"error":null}"""
+        withServer(AtomicReference(body)) { baseUrl ->
+            val service = service(baseUrl)
+
+            val status = service.diagnoseConnection(false).get(4L, TimeUnit.SECONDS)
+
+            assertInvalidStatus(status, baseUrl)
+            assertFalse(service.checkConnection().get(4L, TimeUnit.SECONDS))
+            assertTrue(service.isAvailable)
+            val snapshot = service.captureDebugSnapshot()
+            assertFalse(snapshot.backoffActive)
+            assertFalse((status.summary() + snapshot.toString()).contains("PRIVATE_DUPLICATE_VALUE"))
+        }
+    }
+
+    @Test
+    fun `separate objects case sensitive names and duplicate looking string values remain valid`() {
+        val quotedData = Gson().toJson("""{"id":null,"id":1}""")
+        val body = """{"id":"canonical-model","ID":null,"object":"model","metadata":{"id":null,"ID":1,"note":{"id":2},"items":[{"note":null},{"note":true}],"\u00e9":1,"e\u0301":2,"raw":$quotedData}}"""
+        withServer(AtomicReference(body)) { baseUrl ->
+            val status = probe(baseUrl)
+
+            assertTrue(status.isReachable())
+            assertTrue(status.isModelAvailable())
+            assertEquals(listOf("canonical-model"), status.availableModels)
+            assertTrue(status.errors.isEmpty())
+        }
+    }
+
+    @Test
+    fun `probe duplicate validation does not change a supplied lenient Gson`() {
+        val parser = GsonBuilder().setStrictness(Strictness.LENIENT).create()
+        val body = """{"id":null,"id":"canonical-model"}"""
+        withServer(AtomicReference(body)) { baseUrl ->
+            val status = OpenAIConnectionProbe.probeConnection("local-test-model", baseUrl, testKey, httpClient, parser, 2)
+
+            assertInvalidStatus(status, baseUrl)
+            assertEquals("canonical-model", parser.fromJson(body, JsonObject::class.java).get("id").asString)
+            assertEquals("value", parser.fromJson("{note:'value'}", JsonObject::class.java).get("note").asString)
         }
     }
 
