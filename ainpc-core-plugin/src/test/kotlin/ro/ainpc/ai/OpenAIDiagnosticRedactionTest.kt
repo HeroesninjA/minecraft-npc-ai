@@ -394,6 +394,139 @@ class OpenAIDiagnosticRedactionTest {
         }
     }
 
+    @Test
+    fun `ambiguous quota errors preserve temporary HTTP rate limiting and Retry After`() {
+        val body = """{"error":{"code":"slow_down","code":"insufficient_quota","message":"Credential $testKey"}}"""
+        withServer(429, body, mapOf("Retry-After" to "600")) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+            val beforeRequest = System.currentTimeMillis()
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertFalse(fixture.service.isAvailable)
+            assertNull(snapshot.apiSuspendedReason)
+            assertTrue(snapshot.backoffActive)
+            assertTrue(snapshot.offlineRetryAfterMillis >= beforeRequest + 600_000L)
+            assertTrue(snapshot.lastFailureMessage.contains("HTTP 429"))
+            assertNull(fixture.service.generateAsync("Mai incearca.").get(10L, TimeUnit.SECONDS))
+            assertEquals(listOf("Bearer $testKey"), authorizations.toList())
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `an array quota label cannot suspend the API instead of applying Retry After`() {
+        val body = """{"error":{"code":["insufficient_quota"],"message":"Credential $testKey"}}"""
+        withServer(429, body, mapOf("Retry-After" to "600")) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+            val beforeRequest = System.currentTimeMillis()
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertFalse(fixture.service.isAvailable)
+            assertNull(snapshot.apiSuspendedReason)
+            assertTrue(snapshot.backoffActive)
+            assertTrue(snapshot.offlineRetryAfterMillis >= beforeRequest + 600_000L)
+            assertNull(fixture.service.generateAsync("Mai incearca.").get(10L, TimeUnit.SECONDS))
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `malformed error fields cannot erase HTTP authentication suspension`() {
+        val body = """{"error":{"code":{},"message":{"credential":"$testKey"}}}"""
+        withServer(401, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertFalse(fixture.service.isAvailable)
+            assertEquals("HTTP 401", snapshot.apiSuspendedReason)
+            assertFalse(snapshot.backoffActive)
+            assertTrue(snapshot.lastFailureMessage.contains("HTTP 401"))
+            assertNull(fixture.service.generateAsync("Mai incearca.").get(10L, TimeUnit.SECONDS))
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `malformed message containers cannot erase HTTP permission suspension`() {
+        val body = """{"error":{"code":"permission_denied","message":{"credential":"$testKey"}}}"""
+        withServer(403, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertFalse(fixture.service.isAvailable)
+            assertEquals("HTTP 403 (permission_denied)", snapshot.apiSuspendedReason)
+            assertFalse(snapshot.backoffActive)
+            assertTrue(snapshot.lastFailureMessage.contains("HTTP 403"))
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `an ambiguous model error cannot trigger administrative suspension from its last code`() {
+        val body = """{"error":{"code":"route_not_found","code":"model_not_found","message":"Credential $testKey"}}"""
+        withServer(404, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertTrue(fixture.service.isAvailable)
+            assertNull(snapshot.apiSuspendedReason)
+            assertFalse(snapshot.backoffActive)
+            assertTrue(snapshot.lastFailureMessage.contains("HTTP 404"))
+            assertNull(fixture.service.generateAsync("Mai incearca.").get(10L, TimeUnit.SECONDS))
+            assertEquals(2, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `valid quota errors still suspend instead of treating Retry After as a recovery`() {
+        withServer(429, errorBody("Credential $testKey", "insufficient_quota"), mapOf("Retry-After" to "600")) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertFalse(fixture.service.isAvailable)
+            assertEquals("HTTP 429 (insufficient_quota)", snapshot.apiSuspendedReason)
+            assertFalse(snapshot.backoffActive)
+            assertNull(fixture.service.generateAsync("Mai incearca.").get(10L, TimeUnit.SECONDS))
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `model probe error diagnostics retain HTTP status with malformed error fields`() {
+        val body = """{"error":{"code":{},"message":{"credential":"$testKey"}}}"""
+        withServer(404, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            val status = fixture.service.diagnoseConnection(false).get(10L, TimeUnit.SECONDS)
+
+            assertTrue(status.isReachable())
+            assertFalse(status.isModelAvailable())
+            assertTrue(status.availableModels.isEmpty())
+            assertFalse(status.summary().contains(testKey))
+            assertTrue(fixture.service.isAvailable)
+            assertFalse(fixture.service.captureDebugSnapshot().backoffActive)
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
     private fun assertNoCredentialFragments(fixture: Fixture) {
         assertSafe(fixture)
         val diagnostic = fixture.service.captureDebugSnapshot().toString() + fixture.messages.joinToString()
@@ -415,13 +548,19 @@ class OpenAIDiagnosticRedactionTest {
 
     private fun errorBody(message: String, code: String): String = Gson().toJson(mapOf("error" to mapOf("message" to message, "code" to code)))
 
-    private fun <Result> withServer(statusCode: Int, body: String, action: (String, ConcurrentLinkedQueue<String>) -> Result): Result {
+    private fun <Result> withServer(
+        statusCode: Int,
+        body: String,
+        headers: Map<String, String> = emptyMap(),
+        action: (String, ConcurrentLinkedQueue<String>) -> Result,
+    ): Result {
         val authorizations = ConcurrentLinkedQueue<String>()
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
             authorizations.add(exchange.requestHeaders.getFirst("Authorization").orEmpty())
             exchange.requestBody.use { it.readAllBytes() }
             val bytes = body.toByteArray(Charsets.UTF_8)
+            headers.forEach { (name, value) -> exchange.responseHeaders.add(name, value) }
             exchange.sendResponseHeaders(statusCode, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
         }
