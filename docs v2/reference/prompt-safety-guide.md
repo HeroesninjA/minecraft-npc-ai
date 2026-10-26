@@ -38,6 +38,8 @@ Datele citate raman in `input`, inclusiv la retry; `instructions` contine numai 
 
 Protectia vizeaza textul conversational, nu rescrie numele/metadatele, profilul, memoriile, story-ul ori contextul MCP ca JSON si nu conecteaza `ContextRedactor`. Citatele nu confirma adevarul afirmatiilor si nu autorizeaza actiuni de joc. Testele verifica structura fizica, decodarea JSON, conservarea datelor si separarea cererii, fara evaluare pe un provider real.
 
+Declaratiile retinute explicit sunt si ele citate ca stringuri JSON, dupa selectia, normalizarea si verificarea integritatii descrise in sectiunea dedicata. Atribuirea `Mi-ai spus ca:` ramane a aplicatiei; textul citat nu devine fapt verificat sau regula noua.
+
 ## Erori temporare si cooldown OpenAI
 
 `OpenAIService` nu retrimite imediat o cerere esuata. Erorile temporare HTTP (408, 409, 429 si 5xx) si timeout-urile/erorile de conectare activeaza fallback-ul local si un cooldown comun dialogului si apelurilor OpenAI generice. Esecurile repetate dubleaza baza din `openai.offline_retry_seconds`, pana la 300 de secunde; o baza configurata mai mare ramane respectata. La baza se adauga jitter de 100-500 ms.
@@ -177,6 +179,16 @@ Politica este comuna promptului OpenAI si Ollama, iar continutul/marcajul raman 
 Builderul verifica independent orice lista primita, inclusiv de la apelanti care nu folosesc selectorul. Intrarea supradimensionata nu mai este abreviata la 500; este sarita, celelalte intrari sunt pastrate, iar sectiunea primeste un singur marcaj `[Amintiri omise: ...]`. Omisiunea nu confirma absenta unor amintiri sau evenimente. Marcajul apare numai cand builderul primeste efectiv intrari prea lungi, nu pentru orice candidat exclus anterior prin relevanta, numar sau buget.
 
 Formatul metadatelor si regulile de provenienta raman cele existente: citatele confirma ce a spus jucatorul, nu adevarul afirmatiei, iar numarul inregistrarilor nu dovedeste evenimente independente. Politica nu valideaza provenienta ori adevarul textului, nu citeaza memoriile ca JSON si nu este un filtru anti-injection sau de secrete. Afecteaza contextul recuperat si randarea comuna OpenAI/Ollama, nu stocarea memoriilor, regulile `instructions` sau `generateAsync`. Testele verifica limitele, bugetul comun, inlocuirea candidatilor prea lungi, metadatele dupa grupare, Unicode si conservarea celorlalte surse, fara provider real.
+
+### Declaratii explicite complete si citate
+
+Pentru `playerConfirmedStatements`, builderul pastreaza limita de 400 de unitati UTF-16 pe declaratie, dupa inlocuirea CR/LF cu spatii si eliminarea marginilor. Declaratia care incape, inclusiv exact la limita, este serializata integral ca string JSON sub atribuirea `Mi-ai spus ca:`. Escape-urile pot mari reprezentarea peste 400; limita nu este aplicata textului JSON serializat si nu reprezinta un buget de tokeni. Ghilimelele, backslash-urile si controalele din text nu devin delimitatori sau etichete ale aplicatiei.
+
+O declaratie prea lunga este omisa integral, nu abreviata cu pierderea unei negatii sau conditii tarzii. Pentru una sau mai multe astfel de intrari selectate se adauga un singur marcaj `[Declaratii omise: ...]`, care nu confirma absenta declaratiilor sau adevarul afirmatiilor. Intrarea goala dupa normalizare este ignorata, fara atribuire goala ori marcaj de depasire.
+
+Selectia ramane in ordinea primita si aplica mai intai `maxPromptStatements`, limitat la 0-10. Omiterea unei declaratii prea lungi sau goale nu promoveaza una mai veche din afara selectiei; intrarile neselectate nu genereaza avertisment. Lista sursa, stocarea, corectarea, uitarea si raspunsurile locale despre identitatea jucatorului nu sunt rescrise. Parserul comenzilor personale pastreaza plafonul configurabil de 40-300 de caractere (implicit 160); limita defensiva din builder protejeaza separat date vechi sau furnizate direct.
+
+Declaratiile raman afirmatii atribuite jucatorului, nu evenimente dovedite, iar regulile stabile explica formatul JSON. Textul si marcajul raman in `input`; randarea comuna OpenAI/Ollama nu modifica modelul sau comportamentul generic `generateAsync`. Politica nu verifica provenienta ori adevarul declaratiilor, nu filtreaza secrete si nu garanteaza rezistenta modelului la prompt injection. Testele locale verifica limita exacta, omisiunea completa, Unicode, escaparea, selectia, conservarea datelor si separarea cererii, fara provider real.
 
 ## Secrete in diagnosticele OpenAI
 
