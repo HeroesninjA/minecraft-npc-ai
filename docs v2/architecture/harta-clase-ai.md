@@ -18,7 +18,7 @@ Actualizat: 2026-10-26.
 - `OpenAIHttpBackoff` - clasificarea erorilor temporare, pauza exponentiala plafonata cu jitter si respectarea termenului minim `Retry-After`;
 - `OpenAIBackoffState` - gate sincronizat cu verificarea admisiei fiecarei incercari Responses, partajat intre clientii recreati la reload pentru aceeasi cheie efectiva si acelasi endpoint;
 - `OllamaService` - generare cand `ai_provider: ollama`, cu pauza scurta dupa esecuri;
-- `OpenAITextSupport` - parsarea stricta a envelope-ului JSON, validarea structurii output/content, tipurilor de itemi, statusului Responses si al mesajelor, rolurilor, fazelor, refuzurilor si textului, extractie fara commentary, redactare de secrete inaintea extraselor de diagnostic, fallback local si clasificare locala de sentiment;
+- `OpenAITextSupport` - parsarea stricta a envelope-ului JSON cu respingerea cheilor duplicate, validarea structurii output/content, tipurilor de itemi, statusului Responses si al mesajelor, rolurilor, fazelor, refuzurilor si textului, extractie fara commentary, redactare de secrete inaintea extraselor de diagnostic, fallback local si clasificare locala de sentiment;
 - `DialogueResponseNovelty` - validarea replicii prin `AIResponseValidator` si retry limitat pentru repetitie sau format invalid, nu pentru exceptii de parser;
 - `DialogHistory`, `NPCRelationship`, `NPCEmotions` si `PromptSnapshot` - date de context.
 

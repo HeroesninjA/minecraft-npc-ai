@@ -357,6 +357,43 @@ class OpenAIDiagnosticRedactionTest {
         }
     }
 
+    @Test
+    fun `duplicate response fields trigger generic fallback without exposing data or entering backoff`() {
+        val body = """{"status":"incomplete","status":"completed","output_text":"PRIVATE_DUPLICATE_TEXT $testKey"}"""
+        withServer(200, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertTrue(fixture.service.isAvailable)
+            assertFalse(snapshot.backoffActive)
+            assertTrue(snapshot.lastFailureMessage.contains("JSON invalid"))
+            assertFalse((snapshot.toString() + fixture.messages.joinToString()).contains("PRIVATE_DUPLICATE_TEXT"))
+            assertEquals(listOf("Bearer $testKey"), authorizations.toList())
+            assertSafe(fixture)
+        }
+    }
+
+    @Test
+    fun `duplicate private metadata names are absent from failure diagnostics and logs`() {
+        val encodedName = Gson().toJson("PRIVATE_DUPLICATE_NAME $testKey")
+        val body = """{"status":"completed","output_text":"Salut!","metadata":{$encodedName:null,$encodedName:true}}"""
+        withServer(200, body) { baseUrl, authorizations ->
+            val fixture = fixture(baseUrl)
+
+            assertNull(fixture.service.generateAsync("Salut!").get(10L, TimeUnit.SECONDS))
+
+            val snapshot = fixture.service.captureDebugSnapshot()
+            assertTrue(fixture.service.isAvailable)
+            assertFalse(snapshot.backoffActive)
+            assertTrue(snapshot.lastFailureMessage.contains("JSON invalid"))
+            assertFalse((snapshot.toString() + fixture.messages.joinToString()).contains("PRIVATE_DUPLICATE_NAME"))
+            assertEquals(1, authorizations.size)
+            assertSafe(fixture)
+        }
+    }
+
     private fun assertNoCredentialFragments(fixture: Fixture) {
         assertSafe(fixture)
         val diagnostic = fixture.service.captureDebugSnapshot().toString() + fixture.messages.joinToString()
