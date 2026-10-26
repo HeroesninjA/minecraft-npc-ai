@@ -56,7 +56,9 @@ internal object MemoryRecallSelector {
         var remainingChars = maxPromptChars
         for (candidate in ranked) {
             if (candidate.content.isBlank()) continue
-            val entryLength = candidate.promptText().length + 3
+            val promptEntry = MemoryPromptPolicy.normalizeEntry(candidate.promptText())
+            if (promptEntry.length > MemoryPromptPolicy.MAX_ENTRY_CHARS) continue
+            val entryLength = promptEntry.length + 3
             if (entryLength > remainingChars) continue
 
             selected.add(candidate)

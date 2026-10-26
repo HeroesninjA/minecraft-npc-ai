@@ -146,4 +146,44 @@ class MemoryRecallSelectorTest {
         )
         assertEquals(listOf(fallback), MemoryRecallSelector.select("sabie", candidates, 1, rendered.length - 1))
     }
+
+    @Test
+    fun `per entry limit skips a memory that fits the total budget and fills from a later candidate`() {
+        val oversized = MemoryRecallCandidate("Sabia " + "x".repeat(500), "game_event")
+        val fallback = MemoryRecallCandidate("Sabia nu a fost gasita.", "game_event")
+
+        assertEquals(listOf(fallback), MemoryRecallSelector.select("sabie", listOf(oversized, fallback), 1, 2400))
+        assertEquals("Sabia " + "x".repeat(500), oversized.content)
+    }
+
+    @Test
+    fun `per entry boundary includes source date and grouped count metadata`() {
+        val metadata = "[source=conversation_quote] [recorded_on=2026-10-15] [record_count=2] "
+        val exact = MemoryRecallCandidate("x".repeat(500 - metadata.length), "conversation_quote", LocalDate.of(2026, 10, 15), 2)
+        val fallback = MemoryRecallCandidate("Am mers in sat.", "game_event")
+        assertEquals(500, exact.promptText().length)
+
+        assertEquals(listOf(exact), MemoryRecallSelector.select("...", listOf(exact, fallback), 1))
+        assertEquals(listOf(fallback), MemoryRecallSelector.select("...", listOf(exact.copy(content = exact.content + "x"), fallback), 1))
+    }
+
+    @Test
+    fun `selection budgets the same normalized entry that the prompt will render`() {
+        val candidate = MemoryRecallCandidate("Sabia era veche.\n" + " \r\n".repeat(300), "game_event")
+        val rendered = "- [source=game_event] Sabia era veche.\n"
+
+        assertEquals(listOf(candidate), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length))
+        assertEquals(emptyList<MemoryRecallCandidate>(), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length - 1))
+    }
+
+    @Test
+    fun `duplicate grouping cannot push an entry past the renderer limit`() {
+        val metadata = "[source=game_event] "
+        val repeated = MemoryRecallCandidate("x".repeat(500 - metadata.length), "game_event")
+        val fallback = MemoryRecallCandidate("Am mers in sat.", "game_event")
+        assertEquals(500, repeated.promptText().length)
+
+        assertEquals(listOf(fallback), MemoryRecallSelector.select("...", listOf(repeated, repeated.copy(), fallback), 1))
+        assertEquals(1, repeated.recordCount)
+    }
 }
