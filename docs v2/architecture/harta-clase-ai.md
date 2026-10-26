@@ -13,12 +13,13 @@ Actualizat: 2026-10-26.
 - `OpenAIPromptBuilder` - compunerea promptului, citarea JSON a textelor conversationale si declaratiilor explicite, limite independente pentru contextul optional, redarea integrala sau omisiunea explicita a profilului JSON, faptelor verificate si declaratiilor prea lungi si preambulul stabil separat pentru `instructions` in dialogul OpenAI;
 - `OpenAIService` - selectia OpenAI/Ollama pentru dialog, preflight local al configuratiei de transport, request asincron, diagnostic, backoff OpenAI si fallback;
 - `MemoryRecallSelector` / `MemoryPromptPolicy` - selectia memoriilor cu o limita comuna de 500 de unitati UTF-16 pe intrare completa, aceeasi normalizare si bugetare ca in builder, fara trunchierea metadatelor sau continutului;
-- `OpenAIConnectionProbe` - proba HTTP cu timeout, validare JSON/identitate de model si status de conexiune cu secrete mascate in datele de diagnostic/cache;
+- `OpenAIConnectionProbe` - proba HTTP cu timeout, validare JSON/identitate de model fara chei duplicate si status de conexiune cu secrete mascate in datele de diagnostic/cache;
+- `OpenAIJsonEnvelope` - parser intern comun pentru Responses, corpurile 2xx ale probei si extractia erorilor HTTP, cu sintaxa stricta, nume unice per obiect si erori generice fara payload sau cauze brute;
 - `OpenAIHttpTransport` - termen per cerere si corp de cel mult 2 MiB, cu anularea schimbului HTTP la expirare/intrerupere sau a subscriptiei la depasirea dimensiunii;
 - `OpenAIHttpBackoff` - clasificarea erorilor temporare, pauza exponentiala plafonata cu jitter si respectarea termenului minim `Retry-After`;
 - `OpenAIBackoffState` - gate sincronizat cu verificarea admisiei fiecarei incercari Responses, partajat intre clientii recreati la reload pentru aceeasi cheie efectiva si acelasi endpoint;
 - `OllamaService` - generare cand `ai_provider: ollama`, cu pauza scurta dupa esecuri;
-- `OpenAITextSupport` - parsarea stricta a envelope-ului JSON cu respingerea cheilor duplicate, validarea structurii output/content, tipurilor de itemi, statusului Responses si al mesajelor, rolurilor, fazelor, refuzurilor si textului, extractie fara commentary, redactare de secrete inaintea extraselor de diagnostic, fallback local si clasificare locala de sentiment;
+- `OpenAITextSupport` - parsarea stricta a envelope-ului JSON cu respingerea cheilor duplicate, validarea structurii output/content, tipurilor de itemi, statusului Responses si al mesajelor, rolurilor, fazelor, refuzurilor si textului, extractie fara commentary, coduri de eroare numai din stringuri valide, redactare de secrete inaintea extraselor de diagnostic, fallback local si clasificare locala de sentiment;
 - `DialogueResponseNovelty` - validarea replicii prin `AIResponseValidator` si retry limitat pentru repetitie sau format invalid, nu pentru exceptii de parser;
 - `DialogHistory`, `NPCRelationship`, `NPCEmotions` si `PromptSnapshot` - date de context.
 
