@@ -20,7 +20,11 @@ class NpcSelfCareGoal {
         fun lacksProgress(): Boolean = stage.isActive() && withoutProgressMillis >= PROGRESS_LIMIT
 
         fun description(): String {
-            val objective = if (action == NPCAction.EAT) "hrana" else "odihna"
+            val objective = when (action) {
+                NPCAction.EAT -> "hrana"
+                NPCAction.REST -> "odihna fara somn"
+                else -> "odihna"
+            }
             val progress = when (stage) {
                 Stage.RETURNING_HOME ->
                     "La ultima observatie, pentru obiectivul de $objective, alesesem sa revin acasa; sosirea nu era inca confirmata."
@@ -51,10 +55,18 @@ class NpcSelfCareGoal {
 
     @Synchronized
     fun applied(action: NPCAction, state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long) {
+        applied(action, state, homeKey, isAtHome, now, allowRest = false)
+    }
+
+    @Synchronized
+    internal fun applied(
+        action: NPCAction, state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long, allowRest: Boolean,
+    ) {
         if (now <= 0L) return
         val careState = careState(action)
         val level = level(action, state)
-        if (careState == null || level !in 0 until NpcSelfCareThresholds.RECOVERED || !isSafe(state) ||
+        if ((action == NPCAction.REST && (!allowRest || !isAtHome || homeKey.isBlank() || state.hasInteractingPlayer)) ||
+            careState == null || level !in 0 until NpcSelfCareThresholds.RECOVERED || !isSafe(state) ||
             state.currentState != if (isAtHome) careState else NPCState.WALKING
         ) {
             interrupt(now)
@@ -86,7 +98,8 @@ class NpcSelfCareGoal {
         }
         val beforeLevel = level(goal.action, before)
         val afterLevel = level(goal.action, after)
-        if (!isSafe(before) || !isSafe(after) || homeKey != goal.homeKey ||
+        if ((goal.action == NPCAction.REST && (before.hasInteractingPlayer || after.hasInteractingPlayer)) ||
+            !isSafe(before) || !isSafe(after) || homeKey != goal.homeKey ||
             beforeLevel !in 0..100 || afterLevel !in 0..100 ||
             before.currentState !in setOf(NPCState.WALKING, careState(goal.action)) ||
             after.currentState != before.currentState
@@ -108,6 +121,14 @@ class NpcSelfCareGoal {
                 else minOf(PROGRESS_LIMIT, goal.withoutProgressMillis + observedMillis),
         )
         progressObservedAt = observedAt
+    }
+
+    @Synchronized
+    internal fun canKeepRecovery(state: NpcCognitiveState, homeKey: String, isAtHome: Boolean, now: Long): Boolean {
+        val goal = snapshot(now) ?: return false
+        return goal.stage == Stage.RECOVERING && !goal.lacksProgress() && isAtHome &&
+            homeKey.isNotBlank() && homeKey == goal.homeKey && isSafe(state) && !state.hasInteractingPlayer &&
+            state.currentState == careState(goal.action) && level(goal.action, state) in 0 until NpcSelfCareThresholds.RECOVERED
     }
 
     @Synchronized
@@ -176,13 +197,14 @@ class NpcSelfCareGoal {
 
     private fun level(action: NPCAction, state: NpcCognitiveState): Int = when (action) {
         NPCAction.EAT -> state.hungerLevel
-        NPCAction.SLEEP -> state.energyLevel
+        NPCAction.SLEEP, NPCAction.REST -> state.energyLevel
         else -> -1
     }
 
     private fun careState(action: NPCAction): NPCState? = when (action) {
         NPCAction.EAT -> NPCState.EATING
         NPCAction.SLEEP -> NPCState.SLEEPING
+        NPCAction.REST -> NPCState.RESTING
         else -> null
     }
 

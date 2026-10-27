@@ -98,6 +98,10 @@ object OpenAIPromptBuilder {
         appendNpcDataField(prompt, "npc_confirmed_food_help", OpenAITextSupport.valueOrUnknown(snapshot.helperExperienceDescription))
         appendNpcDataField(prompt, "npc_food_request_deferred", if (snapshot.foodRequestDeferred) "da" else "nu")
         appendNpcDataField(prompt, "npc_location", OpenAITextSupport.valueOrUnknown(snapshot.locationDescription()))
+        snapshot.agentSnapshot?.perception?.observation?.takeIf { it.reused }?.let { observation ->
+            appendNpcDataField(prompt, "environment_observation_status",
+                "reutilizata; varsta la ultima evaluare ${observation.reusedForTicks} tick-uri; nu confirma mediul actual")
+        }
         appendNpcDataField(prompt, "fact_name_answer", "Sunt " + snapshot.npcName() + ".")
         appendNpcDataField(
             prompt, "fact_profession_answer",

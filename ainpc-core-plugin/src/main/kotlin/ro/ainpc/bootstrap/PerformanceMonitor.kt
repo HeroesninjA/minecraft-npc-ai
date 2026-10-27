@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object RuntimeMetricNames {
     const val ROUTINE_TICK = "tick.routine"
+    const val CARE_PLANNER = "tick.care_planner"
     const val DATABASE_OPERATION = "database.operation"
     const val COMMAND_DISPATCH = "command.dispatch"
     const val AI_ORCHESTRATION = "ai.orchestration"

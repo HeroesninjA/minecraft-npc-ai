@@ -510,7 +510,8 @@ object OpenAITextSupport {
         PlayerConversationRecall.resolveForFallback(snapshot.playerMessage(), recentHistory)?.let { return it }
         val normalized = DialogueMessageText.normalize(snapshot.playerMessage())
         val occupation = if (snapshot.occupation().isNotBlank()) snapshot.occupation() else "locuitor"
-        val environmentFact = EnvironmentFactResolver.resolve(snapshot.playerMessage(), snapshot.environmentContext())
+        val environmentFact = EnvironmentFactResolver.resolve(snapshot.playerMessage(), snapshot.environmentContext(),
+            snapshot.agentSnapshot?.perception?.observation)
         val factResponse = NpcFactResolver.resolve(snapshot.playerMessage(), NpcFactResolver.NpcFacts(
             snapshot.npcName(),
             snapshot.occupation(),

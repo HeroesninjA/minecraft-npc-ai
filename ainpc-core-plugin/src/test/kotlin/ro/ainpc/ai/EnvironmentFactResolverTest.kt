@@ -4,8 +4,21 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import ro.ainpc.environment.EnvironmentContext
+import ro.ainpc.npc.NpcPerceptionObservation
 
 class EnvironmentFactResolverTest {
+    @Test
+    fun `reused observations cannot establish current weather light or events`() {
+        val observation = NpcPerceptionObservation(1_000L, 80, true)
+        for (message in listOf("Cum e vremea?", "Cata lumina este?", "Ce evenimente active sunt?")) {
+            assertEquals("Nu pot confirma mediul actual fara o observatie noua.",
+                EnvironmentFactResolver.resolve(message, environment, observation))
+        }
+        assertNull(EnvironmentFactResolver.resolve("Cum te cheama?", environment, observation))
+        assertEquals("Acum ploua.", EnvironmentFactResolver.resolve("Cum e vremea?", environment,
+            NpcPerceptionObservation(1_000L)))
+    }
+
     private val environment = EnvironmentContext.empty("sat").copy(
         timeOfDay = EnvironmentContext.TimeOfDay.EVENING,
         weather = EnvironmentContext.Weather.RAIN,

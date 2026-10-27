@@ -29,6 +29,21 @@ class NpcCarePlannerTest {
     }
 
     @Test
+    fun `stalled rest goal cannot be recast as a fresh sleep or rest proposal`() {
+        npc.hungerLevel = 100
+        npc.energyLevel = 50
+        npc.restorePersistedState(NPCState.RESTING)
+        val captured = input()
+        val progress = NpcSelfCareGoal.Snapshot(NPCAction.REST, NpcSelfCareGoal.Stage.RECOVERING,
+            20, 50, requireNotNull(captured.home).key(), false, now, withoutProgressMillis = 180_000L)
+        val plan = NpcCarePlanner.plan(captured.copy(agent = captured.agent.copy(cognition =
+            captured.agent.cognition.copy(selfCareProgress = progress))))
+
+        assertEquals(NpcCarePlanPreview.Status.NO_PROGRESS, plan.status)
+        assertTrue(plan.alternatives.isEmpty())
+    }
+
+    @Test
     fun `hungry NPC proposes return care and observation without applying anything`() {
         val before = input()
         val plan = NpcCarePlanner.plan(before)

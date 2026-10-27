@@ -7,9 +7,47 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcCognitiveState
+import ro.ainpc.npc.NpcSelfCareGoal
+import ro.ainpc.npc.NpcSimulationMode
 
 class RoutineSelfCarePolicyTest {
+    @Test
+    fun `only a planned rest defers routine at home while full simulation can advance it`() {
+        assertFalse(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, 40, true, true))
+        assertTrue(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, 59, true, true, plannedRest = true))
+        assertFalse(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, 60, true, true, plannedRest = true))
+        assertFalse(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, -1, true, true, plannedRest = true))
+        assertFalse(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, 40, false, true, plannedRest = true))
+        assertFalse(RoutineService.shouldDeferForSelfCare(NPCState.RESTING, 100, 40, true, false, plannedRest = true))
+    }
+
+    @Test
+    fun `rest priority requires the same safe recent home goal and a full NPC`() {
+        val now = 1_000_000L
+        val npc = AINPC(null).apply {
+            worldName = "world"
+            simulationMode = NpcSimulationMode.FULL
+            energyLevel = 40
+            homeAnchor = AINPC.OwnedLocation("home", "acasa", "world", 1.0, 64.0, 3.0)
+            restorePersistedState(NPCState.RESTING)
+        }
+        assertFalse(RoutineService.hasActiveRestGoal(npc, now))
+        npc.selfCareGoal.applied(NPCAction.REST, NpcCognitiveState.capture(npc, npc.context, now),
+            NpcSelfCareGoal.homeKey(npc), true, now, allowRest = true)
+        assertTrue(RoutineService.hasActiveRestGoal(npc, now))
+        assertFalse(RoutineService.hasActiveRestGoal(npc, now + 300_000L))
+        npc.context.isInDanger = true
+        assertFalse(RoutineService.hasActiveRestGoal(npc, now))
+        npc.context.isInDanger = false
+        npc.homeAnchor = null
+        assertFalse(RoutineService.hasActiveRestGoal(npc, now))
+        npc.simulationMode = NpcSimulationMode.LIGHT
+        assertFalse(RoutineService.hasActiveRestGoal(npc, now))
+    }
+
     @Test
     fun `routine waits while simulated meal or sleep is still needed at home`() {
         assertTrue(RoutineService.shouldDeferForSelfCare(NPCState.EATING, 20, 80, true, true))

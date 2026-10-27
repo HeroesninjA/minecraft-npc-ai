@@ -4,6 +4,7 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.AINPCPlugin
@@ -33,6 +34,23 @@ class DecisionExperienceIntegrationTest {
         context.hungerLevel = 20
         context.isAtHome = true
         lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+    }
+
+    @Test
+    fun `legacy rest does not start new planner goals or rest learning even when execution is enabled`() {
+        for (enabled in listOf(false, true)) {
+            plugin.config.set("simulation.decision.care_planner_execution_enabled", enabled)
+            npc.energyLevel = 20
+            npc.lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+            DecisionEngine::class.java.getDeclaredMethod(
+                "applySimulationOutcome", AINPC::class.java, NPCContext::class.java,
+                NPCAction::class.java, ActionSituation::class.java,
+            ).apply { isAccessible = true }.invoke(engine, npc, npc.context, NPCAction.REST, situation())
+            updateNeeds()
+            assertEquals(NPCState.RESTING, npc.currentState)
+            assertNull(npc.selfCareGoal.snapshot(System.currentTimeMillis()))
+            assertTrue(npc.actionExperience.snapshot().isEmpty())
+        }
     }
 
     @Test

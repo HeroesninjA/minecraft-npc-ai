@@ -54,7 +54,7 @@ open class DatabaseManager(
     private val cacheTtlMillis: Long = 5000L
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
     }
 
     fun initialize(): Boolean {
@@ -227,6 +227,7 @@ open class DatabaseManager(
                     profile_version INTEGER NOT NULL DEFAULT 1,
                     profile_summary TEXT,
                     profile_data TEXT NOT NULL DEFAULT '{}',
+                    write_revision BIGINT NOT NULL DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (npc_id) REFERENCES npcs(id) ON DELETE CASCADE
@@ -784,6 +785,7 @@ open class DatabaseManager(
                 """
             )
             ensureColumnExists("npc_economy", "last_salary_at", "BIGINT NOT NULL DEFAULT 0")
+            ensureColumnExists("npc_profiles", "write_revision", "BIGINT NOT NULL DEFAULT 0")
             stmt.execute(
                 """
                 CREATE TABLE IF NOT EXISTS economy_balances (
@@ -919,6 +921,15 @@ open class DatabaseManager(
     @Throws(SQLException::class)
     private fun requireConnection(): Connection = getConnection()
         ?: throw SQLException("Conexiunea la baza de date este indisponibila.", connectionFailure)
+
+    internal fun isAutoCommitEnabled(): Boolean {
+        statementLock.lock()
+        return try {
+            requireConnection().autoCommit
+        } finally {
+            statementLock.unlock()
+        }
+    }
 
     @Throws(SQLException::class)
     open fun executeTransaction(block: (Connection) -> Unit) {
@@ -1437,6 +1448,7 @@ open class DatabaseManager(
                     ")"
             )
         }
+        ensureColumnExists("schema_version", "updated_at", "BIGINT NOT NULL DEFAULT 0")
     }
 
     @Throws(SQLException::class)
@@ -1476,6 +1488,7 @@ open class DatabaseManager(
 
     @Throws(SQLException::class)
     private fun applyMigration(fromVersion: Int) {
+        if (fromVersion == 1) ensureColumnExists("npc_profiles", "write_revision", "BIGINT NOT NULL DEFAULT 0")
     }
 
     private data class CacheEntry<T>(val value: T, val createdAt: Long)

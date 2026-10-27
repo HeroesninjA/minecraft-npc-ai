@@ -6,10 +6,29 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 import java.lang.reflect.Proxy
 
 class AINPCTabCompleterTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["ainpc", "npc"])
+    fun completesNeedsRecoveryAndItsRequiredConfirmationOnlyForAdmins(command: String) {
+        val admin = Proxy.newProxyInstance(CommandSender::class.java.classLoader, arrayOf(CommandSender::class.java)) {
+            _, method, _ -> method.name == "hasPermission"
+        } as CommandSender
+        val completer = AINPCTabCompleter(null)
+        assertEquals(listOf("restore-needs"), completer.onTabComplete(admin, TestCommand(command), command,
+            arrayOf("profile-reconcile", "Bob", "restore")))
+        assertEquals(listOf("--confirm"), completer.onTabComplete(admin, TestCommand(command), command,
+            arrayOf("profile-reconcile", "Bob", "restore-needs", "--")))
+        assertTrue(completer.onTabComplete(sender, TestCommand(command), command,
+            arrayOf("profile-reconcile", "Bob", "restore-needs", "--")).isEmpty())
+        assertTrue(completer.onTabComplete(admin, TestCommand(command), command,
+            arrayOf("profile-reconcile", "Bob", "apply", "--")).isEmpty())
+    }
+
     private val sender: CommandSender = Proxy.newProxyInstance(
         CommandSender::class.java.classLoader,
         arrayOf(CommandSender::class.java)

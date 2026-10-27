@@ -1,7 +1,7 @@
 # Storage runtime
 
 Status: referinta canonica pentru persistenta implementata.
-Actualizat: 2026-07-18.
+Actualizat: 2026-10-27.
 
 Acest document descrie comportamentul verificat in cod. Lucrul neimplementat ramane in `planning/storage-provider-roadmap.md`.
 
@@ -42,7 +42,7 @@ Testele de dialect reduc riscul sintaxei incompatibile, dar nu inlocuiesc un tes
 - compatibilitatea existenta adauga explicit coloanele cunoscute din `player_quests`, `spawn_batch_steps.household_id` si `npc_economy.last_salary_at`; ultima este `BIGINT NOT NULL DEFAULT 0` si pastreaza conturile existente;
 - `DatabaseDialectSql` traduce pattern-urile SQLite inventariate pentru dialectul MySQL;
 - `/ainpc audit db` descopera tabelele reale prin metadata JDBC si compara cele 29 de tabele active cu `DatabaseSchemaCatalog`, mapat pe domeniile `npc`, `dialog`, `quest`, `world`, `spawn`, `story`, `progression`, `economy` si `system`; `bank_interest_payments` pastreaza ultima plata de dobanda dupa restart;
-- nu exista un registru de versiuni de schema, Flyway/Liquibase, downgrade sau migrare automata SQLite -> MySQL;
+- registrul `schema_version` este la versiunea `2`; migrarea `1 -> 2` adauga `npc_profiles.write_revision`, iar bazele fara registru sunt compatibilizate inaintea marcarii versiunii curente; nu exista Flyway/Liquibase, downgrade automat sau migrare SQLite -> MySQL;
 - `/ainpc migration households` este un backfill de date de business pentru households, nu o migrare de schema sau de backend.
 
 ## Tranzactii si executie
@@ -84,7 +84,7 @@ Testele de dialect reduc riscul sintaxei incompatibile, dar nu inlocuiesc un tes
 
 Contractul este intentionat mai restrictiv decat JDBC general: nu se transfera statement-uri gestionate intre fire si nu se asteapta task-uri DB de pe alte fire din callback-ul care detine lock-ul. Accesul direct prin `Connection`, `ResultSet` sau `unwrap` nu este incapsulat de aceasta protectie. Callback-urile nu trebuie sa faca manual commit/rollback ori schimbari `autoCommit`; verificarea identitatii nu poate anula un commit facut direct de apelant.
 
-`DatabaseManagerTransactionTest` are 42 de cazuri pe SQLite in fisiere temporare, cu verificarea datelor dintr-o a doua conexiune, fault injection JDBC, conexiuni inlocuite/pierdute, verificarea lock-ului si refuzul operatiilor pe statement de pe alt fir, operatii concurente si integrare cu `EconomyService`. Nu valideaza MySQL real. Un esec de retea in timpul commit-ului poate avea rezultat ambiguu; inchiderea unei conexiuni cu tranzactie activa dupa rollback esuat este dependenta de driver. Nu se afirma recuperare automata sau garantie exactly-once in aceste situatii.
+`DatabaseManagerTransactionTest` are 43 de cazuri pe SQLite in fisiere temporare, cu verificarea datelor dintr-o a doua conexiune, fault injection JDBC, conexiuni inlocuite/pierdute, verificarea lock-ului si refuzul operatiilor pe statement de pe alt fir, inspectia gestionata a autocommit-ului, operatii concurente si integrare cu `EconomyService`. Nu valideaza MySQL real. Un esec de retea in timpul commit-ului poate avea rezultat ambiguu; inchiderea unei conexiuni cu tranzactie activa dupa rollback esuat este dependenta de driver. Nu se afirma recuperare automata sau garantie exactly-once in aceste situatii.
 
 ### Initializare, pool si shutdown
 
@@ -95,7 +95,49 @@ Contractul este intentionat mai restrictiv decat JDBC general: nu se transfera s
 - la timeout/intrerupere se foloseste `shutdownNow`; task-urile returnate din coada sunt anulate explicit prin future-urile lor. Task-urile deja pornite primesc doar intreruperea best-effort prevazuta de [ExecutorService](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/concurrent/ExecutorService.html), nu o garantie ca efectele lor au fost anulate;
 - o intrerupere a firului care inchide DB nu sare cleanup-ul si flagul este restaurat la iesire. `close` apelat de pe executorul DB sau dintr-o operatie care detine lock-ul arunca `IllegalStateException` inainte de oprirea executorului, evitand asteptarea propriei operatii.
 
-`DatabaseManagerLifecycleTest` are 24 de cazuri cu SQLite real si HikariCP 5.1.0 pe SQLite, inclusiv fault injection, initializare concurenta, reconectare, schema refuzata, drain cu scrieri persistate, timeout simulat si intrerupere reala. Aceste teste nu valideaza driverul MySQL. Nu exista termen limita global garantat pentru shutdown: achizitia lock-ului si apelurile driverului pot ramane blocate daca o operatie ignora intreruperea sau un statement nu este inchis. Intreruperea nu inlocuieste o reconciliere a commit-urilor ambigue.
+`DatabaseManagerLifecycleTest` are 27 de cazuri cu SQLite real si HikariCP 5.1.0 pe SQLite, inclusiv fault injection, initializare concurenta, reconectare, schema refuzata, migrare v0/v1 cu profil pastrat, DDL v2 proaspat, drain cu scrieri persistate, timeout simulat si intrerupere reala. Aceste teste nu valideaza driverul MySQL. Nu exista termen limita global garantat pentru shutdown: achizitia lock-ului si apelurile driverului pot ramane blocate daca o operatie ignora intreruperea sau un statement nu este inchis. Intreruperea nu inlocuieste o reconciliere a commit-urilor ambigue.
+
+## Confirmarea profilului pentru rezervarea progresului
+
+`NPCManager.saveProfile` reutilizeaza [`NpcProfileWriter`](../../ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NpcProfileWriter.kt) pentru salvarea conditionata de revizie in `npc_profiles`, nu un UPSERT neconditionat. Payload-ul include o singura captura a identitatii, nevoilor, timpului, checkpoint-ului si absentei; rezervarea ramane exclusiv runtime. Schema v2 si protocolul CAS sunt descrise in sectiunea urmatoare; nu exista task nou la unload.
+
+Toate scrierile de profil folosesc `executeTransaction` pentru revizia CAS. Cu flagurile `simulation.progress.enabled` si `simulation.handoff.enabled` active si o rezervare valida, salvarea poate suplimentar confirma checkpoint-ul numai dupa commit si verificarea sursei/tokenului. `isAutoCommitEnabled` inspecteaza conexiunea sub lock-ul DB. O tranzactie exterioara deja activa este refuzata **fara scriere**, pentru a nu publica o baza locala neconfirmata; nu se creeaza tranzactii imbricate.
+
+Fiecare cerere admisa invalideaza confirmarea precedenta inainte de SQL si primeste un token runtime. Cererile deja vechi in propriul obiect sunt refuzate inainte de SQL. Confirmarile/cache-urile finalizate tarziu nu pot trece peste un token nou sau invalidarea actorului. Erorile SQL/commit/cleanup si rezultatele ambigue raman neconfirmate. Nu se tine monitorul NPC in timpul I/O. `false` semnaleaza si refuzul unei revizii, identitati ori tranzactii exterioare; `true` nu confera autoritate abstracta.
+
+Aceasta confirma salvarea profilului, nu toate tabelele `npcs`, transferul de inventar/bani sau proprietatea abstracta. CAS-ul persistent de mai jos protejeaza acum continutul fata de writerii participanti cu baza veche, inclusiv alte obiecte/conexiuni. Confirmarile si tokenurile runtime nu se restaureaza din JSON. Reconcilierea lumii/resurselor si transferul autoritatii raman necesare inaintea executiei abstracte.
+
+SQLite ramane WAL cu `synchronous=NORMAL`, fara garantie power-loss, conform [documentatiei SQLite](https://www.sqlite.org/pragma.html#pragma_synchronous). Nu se modifica PRAGMA-urile sau backup-urile. Testele folosesc fisiere temporare, conexiuni independente si fault injection; nu valideaza MySQL real sau restart Paper. [Contractul simularii](../architecture/simulation-service.md#confirmarea-sql-a-profilului-rezervat---continuare-ag3) delimiteaza dovada runtime.
+
+## Revizii persistente ale profilului
+
+Schema `2` adauga `npc_profiles.write_revision BIGINT NOT NULL DEFAULT 0`, independent de `profile_version` si progresul nevoilor. DDL-ul proaspat, migrarea v1 si compatibilizarea bazelor fara registru pastreaza JSON-ul existent si baza initiala `0`. Tabela de versiune compatibilizeaza si `updated_at` daca lipseste. Migrarea este idempotenta; nu exista tabel nou sau migrare de backend.
+
+Loaderul citeste profilul si revizia in aceeasi interogare. Un ticket capturat cu baza `r` poate modifica randul numai prin `UPDATE ... WHERE npc_id = ? AND write_revision = r`, atribuind `r + 1` calculat sigur in Kotlin. La `r = 0`, numai un rand absent poate fi inserat. Primul commit valid castiga; nu se face rebase/retry orb al unei capturi respinse. Un profil sters cu baza pozitiva nu este recreat automat. `Long.MAX_VALUE` opreste scrierile, iar reviziile DB invalide nu sunt convertite la zero.
+
+`NpcProfileRevision` blocheaza cererile concurente in timpul publicarii unui commit si respinge ticket-urile vechi. Conflictele fata de alt writer devin `CONFLICT`, fara adoptarea automata a reviziei castigatoare. Dupa erori, o inspectie care confirma baza neschimbata permite o captura noua; altfel starea ramane `UNCERTAIN`. Reconcilierea trebuie sa verifice datele si revizia impreuna. Nu rezolvati conflictele prin resetarea manuala a contorului sau importul unui camp din JSON. Diagnosticul `/ainpc decision` este read-only.
+
+Protectia se aplica salvarilor de profil chiar cu AI oprit, ca un writer legacy fara flaguri sa nu poata ocoli fence-ul. Nu include SQL direct care ignora revizia, alte tabele, o garantie de lease distribuit sau ordonare dupa timpul ultimei capturi. Operatiile unei incercari sunt limitate, fara coada noua sau bucla de retry. Testele includ doi writeri simultani cu conexiuni SQLite independente; nu sunt teste multi-JVM sau MySQL de productie.
+
+### Reconciliere limitata a profilului
+
+Administratorul poate rula `/ainpc profile-reconcile <numeNpc>` pentru preview, apoi explicit `/ainpc profile-reconcile <numeNpc> apply`. Actorul trebuie sa fie canonic, persistat, detasat si blocat `CONFLICT/UNCERTAIN`. Apply participa la politica MCP read-only, verificata si dupa inspectia asincrona. Comanda nu detaseaza entitati pentru a obtine eligibilitate si nu ofera `force` sau un parametru numeric de revizie.
+
+O singura citire SQL verifica UUID-ul din `npcs`, identitatea JSON, profilul complet, metadatele si revizia; nu se executa scrieri sau migrari. Comparatia ignora numai timestamp-ul generat `spawn_state.updated_at` si diferentele de reprezentare JSON echivalente. Date divergente sunt refuzate de `apply`; randul lipsa, revizia invalida/mai veche/epuizata sau actorul schimbat sunt refuzate in toate modurile. `apply` adopta baza verificata numai dupa revalidare pe threadul principal si revoca lucrul runtime vechi. Preview nu deblocheaza profilul si nu consuma progres temporal.
+
+Pentru diferente **numai la nevoi/checkpoint**, preview poate indica eligibilitatea lui `/ainpc profile-reconcile <numeNpc> restore-needs --confirm`. Este o operatie distincta, confirmata, care inlocuieste impreuna cele cinci nevoi, cursorul si checkpoint-ul local cu datele SQL validate si adopta revizia strict mai noua. Necesita unload observat in runtime, checkpoint local si SQL suspendate/coerente, nevoi valide, fara regres de timp/secventa si fara timp SQL ulterior unload-ului. Datele restaurate din JSON nu devin dovezi noi de unload. Niciun alt camp sau metadata SQL nu poate diferi; nu se face import tolerant ori clamp.
+
+Aplicarea revoca lucrul vechi si restaureaza progresul cu generatie noua, fara catch-up, autoritate abstracta sau modificarea lumii/SQL. Nu activeaza flaguri si nu reconciliaza inventare/bani/efecte in curs. O schimbare SQL dupa inspectie ramane posibila si este detectata prin CAS la salvarea urmatoare. Nu folositi comanda ca dovada de lease, transfer durabil sau recuperare generala a unui castigator divergent. Detalii: [profil identic](../architecture/simulation-service.md#reconciliere-explicita-a-profilurilor-identice), [contractul recuperarii nevoilor](../architecture/simulation-service.md#recuperare-explicita-a-nevoilor-divergente).
+
+### Backup si aplicare
+
+Inainte de prima pornire cu schema v2: opriti Paper, inchideti conexiunile si efectuati un backup verificat al datelor/configuratiei/pluginului. Pentru SQLite se poate folosi procedura existenta, cu calea serverului inlocuita explicit:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-backup-restore-check.ps1 -ServerDir "<director-server-oprit>" -IncludeWorlds
+```
+
+Scriptul nu coordoneaza un backup SQLite live. Pentru MySQL/MariaDB este necesar separat backup-ul backend-ului si un restore drill. Testati intai pornirea si migrarea pe o copie, apoi verificati `schema_version = 2`, coloana noua si pastrarea profilurilor. Nu exista downgrade automat: revenirea presupune oprire si restaurarea backup-ului coerent impreuna cu versiunea veche a pluginului, nu stergerea coloanei sau resetarea versiunii pe date live. In aceasta implementare nu s-a pornit Paper, nu s-a migrat o baza reala si nu s-a executat backup/deploy pe serverul utilizatorului.
 
 ## Tranzactii de magazin
 
@@ -139,6 +181,12 @@ La platile in monede, aplicarea inventarului ruleaza in tranzactia SQL; erorile 
 - loaderul de template-uri nu a devenit atomic prin aceasta remediere: este eliminata stergerea progresului din cleanup, nu indisponibilitatea temporara a unui pack invalid.
 
 `QuestProgressCleanupServiceTest` verifica serviciul real in memorie. Doua cazuri suplimentare din `QuestProgressPersistenceIntegrationTest` verifica pastrarea progresului, arhivei, ancorelor si tracking-ului SQL dupa cleanup, flush si reincarcare. Testarea pe un server Paper cu reconnect/reload ramane necesara.
+
+## Perceptie tranzitorie si provenienta
+
+Cadenta optionala `simulation.lod.perception.enabled` nu modifica schema `2`, JSON-ul profilului sau politica SQL de reconciliere. Istoricul per actor retine numai in runtime sursa observatiei, configurarea, pozitia si tick-ul serverului; referintele/tokenurile sunt marcate tranzitorii. Nu se restaureaza dupa restart sau dintr-un profil, iar schimbarile de ciclu de viata le invalideaza.
+
+Snapshot-ul comun poate expune metadata imuabila `NpcPerceptionObservation`, fara referinte Bukkit sau tokenuri: momentul observatiei originale si varsta la ultima evaluare. Ea nu este un checkpoint de timp/resurse, o confirmare noua de observatie sau un lease. Dialogul si diagnosticul nu transforma reutilizarea in cunostinte proaspete. Nu exista scrieri DB, worker ori task periodic nou pentru cache. Detalii si limite: [cadenta perceptiei](../architecture/simulation-service.md#cadenta-perceptiei-pentru-npc-uri-indepartate).
 
 ## Verificari existente
 

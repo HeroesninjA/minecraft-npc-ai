@@ -27,6 +27,7 @@ class NpcPerceptionSnapshot private constructor(
     val lastSignificantEvent: String?,
     val regionId: String,
     val environmentContext: EnvironmentContext,
+    val observation: NpcPerceptionObservation?,
 ) {
     companion object {
         fun capture(context: NPCContext): NpcPerceptionSnapshot = NpcPerceptionSnapshot(
@@ -54,6 +55,7 @@ class NpcPerceptionSnapshot private constructor(
             environmentContext = context.environmentContext.let { environment ->
                 environment.copy(specialEvents = Collections.unmodifiableList(ArrayList(environment.specialEvents)))
             },
+            observation = context.perceptionObservation,
         )
     }
 }

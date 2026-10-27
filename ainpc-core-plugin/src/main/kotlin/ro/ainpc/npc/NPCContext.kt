@@ -79,6 +79,26 @@ class NPCContext(
     var isFriendsNearby: Boolean = false
 
     private var lastNearbyUpdateTick: Int = -1
+    @Transient
+    internal var perceptionObservation: NpcPerceptionObservation? = null
+        private set
+    @Transient
+    internal var perceptionObservationToken: Any = Any()
+        private set
+
+    internal fun recordPerceptionObservation() {
+        perceptionObservation = NpcPerceptionObservation(System.currentTimeMillis())
+        perceptionObservationToken = Any()
+    }
+
+    internal fun reusePerceptionObservation(ageTicks: Int) {
+        perceptionObservation = perceptionObservation?.copy(reusedForTicks = ageTicks, reused = true)
+    }
+
+    internal fun invalidatePerceptionObservation() {
+        perceptionObservation = null
+        perceptionObservationToken = Any()
+    }
 
     // Evenimente recente
     var recentEvents: MutableList<String> = mutableListOf()
@@ -135,6 +155,7 @@ class NPCContext(
         updateNearbyEntities(npcLocation)
         updateWorldContextSnapshot(npcLocation)
         refreshEnvironmentContext(npcLocation)
+        recordPerceptionObservation()
         publishNpcContextUpdated("update_from_world")
     }
 
@@ -303,6 +324,10 @@ class NPCContext(
         perception: NpcPerceptionSnapshot,
     ): String {
         val sb = StringBuilder()
+        if (perception.observation?.reused == true) {
+            sb.append("La ultima evaluare, observatiile mediului au fost reutilizate cu varsta ")
+                .append(perception.observation.reusedForTicks).append(" tick-uri; nu sunt o scanare noua.\n")
+        }
         sb.append("Este ").append(getTimeDescription(perception)).append(". ")
         sb.append("Vremea: ").append(getWeatherDescription(perception)).append(".\n")
 
@@ -326,7 +351,8 @@ class NPCContext(
             ).append(".\n")
         }
         if (env.specialEvents.isNotEmpty()) {
-            sb.append("Evenimente active: ").append(env.specialEvents.joinToString(", ")).append(".\n")
+            sb.append(if (perception.observation?.reused == true) "Evenimente la ultima observatie: " else "Evenimente active: ")
+                .append(env.specialEvents.joinToString(", ")).append(".\n")
         }
 
         if (!worldContextSnapshot.isEmpty()) {
@@ -341,7 +367,8 @@ class NPCContext(
         }
 
         if (perception.nearbyPlayerCount > 0) {
-            sb.append("Vad ").append(perception.nearbyPlayerCount).append(" persoane in apropiere.\n")
+            sb.append(if (perception.observation?.reused == true) "La ultima observatie vedeam " else "Vad ")
+                .append(perception.nearbyPlayerCount).append(" persoane in apropiere.\n")
         }
         if (perception.nearbyHostileMobs > 0) {
             sb.append("ATENTIE: Sunt ").append(perception.nearbyHostileMobs).append(" creaturi periculoase aproape!\n")

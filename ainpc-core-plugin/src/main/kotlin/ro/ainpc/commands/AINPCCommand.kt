@@ -228,6 +228,7 @@ class AINPCCommand(private val plugin: AINPCPlugin) : CommandExecutor {
             AINPCSubcommandRoute.REPAIR -> handleRepair(sender, args)
             AINPCSubcommandRoute.INFO -> handleInfo(sender, args)
             AINPCSubcommandRoute.DECISION -> handleDecision(sender, args)
+            AINPCSubcommandRoute.PROFILE_RECONCILE -> handleProfileReconcile(plugin, sender, args)
             AINPCSubcommandRoute.PLAYER_PROFILE -> PlayerProfileCommand.handle(plugin, sender, args)
             AINPCSubcommandRoute.GUI ->
                 ensureFeatureEnabled(sender, "features.gui", true, "GUI-ul") && handleGui(sender, args)

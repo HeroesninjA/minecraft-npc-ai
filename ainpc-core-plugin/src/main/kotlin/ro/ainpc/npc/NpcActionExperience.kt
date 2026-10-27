@@ -33,7 +33,21 @@ class NpcActionExperience {
         stateRevision: Long,
         simulationTickAt: Long,
     ) {
+        begin(action, state, contextKey, isAtHome, stateRevision, simulationTickAt, allowRest = false)
+    }
+
+    @Synchronized
+    internal fun begin(
+        action: NPCAction,
+        state: NpcCognitiveState,
+        contextKey: String,
+        isAtHome: Boolean,
+        stateRevision: Long,
+        simulationTickAt: Long,
+        allowRest: Boolean,
+    ) {
         pending = null
+        if (action == NPCAction.REST && !allowRest) return
         val expectedState = expectedState(action) ?: return
         val needLevel = needLevel(action, state) ?: return
         if (!isAtHome || !safeForCare(state) || !validContextKey(contextKey) ||
@@ -70,7 +84,7 @@ class NpcActionExperience {
 
         val tickFactor = (elapsed / 30_000.0).coerceIn(0.5, 4.0)
         val needDelta = afterNeed - beforeNeed
-        val ambientRecovery = if (applied.action == NPCAction.SLEEP) {
+        val ambientRecovery = if (applied.action == NPCAction.SLEEP || applied.action == NPCAction.REST) {
             min(100 - beforeNeed, (1.6 * tickFactor).roundToInt())
         } else {
             0
@@ -127,6 +141,12 @@ class NpcActionExperience {
                 latest.needDelta < 0 -> "In timpul mesei de acasa, foamea mea a crescut."
                 else -> "In timpul mesei de acasa, nu am simtit ca foamea s-a redus."
             }
+        } else if (latest.action == NPCAction.REST) {
+            when {
+                latest.needDelta > 0 -> "In timpul odihnei de acasa, m-am simtit mai odihnit."
+                latest.needDelta < 0 -> "In timpul odihnei de acasa, m-am simtit mai obosit."
+                else -> "In timpul odihnei de acasa, nu am simtit ca mi-am refacut energia."
+            }
         } else {
             when {
                 latest.needDelta > 0 -> "In timpul somnului de acasa, m-am simtit mai odihnit."
@@ -139,12 +159,13 @@ class NpcActionExperience {
     private fun expectedState(action: NPCAction): NPCState? = when (action) {
         NPCAction.EAT -> NPCState.EATING
         NPCAction.SLEEP -> NPCState.SLEEPING
+        NPCAction.REST -> NPCState.RESTING
         else -> null
     }
 
     private fun needLevel(action: NPCAction, state: NpcCognitiveState): Int? = when (action) {
         NPCAction.EAT -> state.hungerLevel
-        NPCAction.SLEEP -> state.energyLevel
+        NPCAction.SLEEP, NPCAction.REST -> state.energyLevel
         else -> null
     }
 

@@ -82,6 +82,17 @@ class DatabaseManagerTransactionTest {
     }
 
     @Test
+    fun managedAutoCommitInspectionSupportsExistingTransactionsAndRejectsClosedManagers() {
+        assertTrue(databaseManager.isAutoCommitEnabled())
+        databaseManager.executeTransaction {
+            assertFalse(databaseManager.isAutoCommitEnabled())
+        }
+        assertTrue(databaseManager.isAutoCommitEnabled())
+        databaseManager.close()
+        assertThrows(SQLException::class.java) { databaseManager.isAutoCommitEnabled() }
+    }
+
+    @Test
     fun runtimeExceptionRollsBackAndPreservesOriginalFailure() {
         val original = IllegalStateException("simulated callback failure")
 

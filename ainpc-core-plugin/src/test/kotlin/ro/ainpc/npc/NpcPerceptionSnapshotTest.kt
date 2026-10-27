@@ -7,10 +7,46 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.environment.EnvironmentContext
+import ro.ainpc.ai.NpcFactResolver
 import ro.ainpc.topology.TopologyCategory
 import java.lang.reflect.Proxy
 
 class NpcPerceptionSnapshotTest {
+    @Test
+    fun `snapshots freeze original observation provenance and cached descriptions do not claim a new scan`() {
+        val npc = AINPC(null)
+        val context = npc.context
+        context.nearbyPlayers.add(Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) {
+            _, method, _ -> error("Unexpected player access: ${method.name}")
+        } as Player)
+        context.recordPerceptionObservation()
+        val observed = context.perceptionObservation!!
+        context.reusePerceptionObservation(40)
+        val snapshot = NpcAgentSnapshot.capture(npc)
+        context.recordPerceptionObservation()
+
+        assertTrue(snapshot.perception.observation!!.reused)
+        assertEquals(40, snapshot.perception.observation.reusedForTicks)
+        assertEquals(observed.observedAtMillis, snapshot.perception.observation.observedAtMillis)
+        assertFalse(context.perceptionObservation!!.reused)
+        val description = context.generateContextDescription(null, null, snapshot.cognition, snapshot.perception)
+        assertTrue(description.contains("40 tick-uri; nu sunt o scanare noua"))
+        assertTrue(description.contains("La ultima observatie vedeam 1 persoane"))
+        assertFalse(description.contains("Vad 1 persoane"))
+        assertEquals("", NpcFactResolver.describeCapturedLocation(snapshot.perception))
+        context.reusePerceptionObservation(5)
+        assertEquals("", NpcFactResolver.describeLocation(npc, context))
+    }
+
+    @Test
+    fun `lifecycle changes revoke observation provenance without world queries`() {
+        val npc = AINPC(null)
+        npc.context.recordPerceptionObservation()
+        npc.context.reusePerceptionObservation(10)
+        npc.markEntityUnavailable()
+        assertEquals(null, NpcPerceptionSnapshot.capture(npc.context).observation)
+    }
+
     @Test
     fun `capture detaches cached perception and environment events without reading entity or world APIs`() {
         val npc = AINPC(null).apply { worldName = "world" }

@@ -291,6 +291,8 @@ fun sendHelp(sender: CommandSender) {
     msg.send(sender, "&7  Afiseaza informatii despre un NPC")
     msg.send(sender, "&e/ainpc decision [numeNpc|nearest]")
     msg.send(sender, "&7  Previzualizeaza scorurile si sansele actiunilor fara sa schimbe decizia")
+    msg.send(sender, "&e/ainpc profile-reconcile <numeNpc> [preview|apply|restore-needs --confirm]")
+    msg.send(sender, "&7  Verifica async profilul; apply cere date identice, restore-needs numai nevoi/checkpoint eligibil dupa unload observat")
     msg.send(sender, "&e/ainpc profile [show|rol|stil|trasatura|reset]")
     msg.send(sender, "&7  Alege cum te prezinti NPC-urilor; profilul declarat nu confirma relatii sau meserii")
     msg.send(sender, "&e/ainpc gui [player|admin|creator|quest|story|world|stats|interact|routine|shop|manager|audit|debug] [questFilter]")

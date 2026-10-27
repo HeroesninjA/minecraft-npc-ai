@@ -7,6 +7,7 @@ import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.entity.Entity
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.configuration.file.YamlConfiguration
 import org.junit.jupiter.api.AfterEach
@@ -14,11 +15,16 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.ai.OpenAIService
 import ro.ainpc.bootstrap.ServiceRegistry
+import ro.ainpc.bootstrap.PerformanceMonitor
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.managers.NpcActionExperienceCodec
 import ro.ainpc.npc.AINPC
@@ -31,6 +37,8 @@ import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.routine.RoutineActivityExecutor
 import ro.ainpc.routine.RoutineCoordinator
 import ro.ainpc.routine.RoutineSelfCarePolicy
+import ro.ainpc.routine.RoutineService
+import ro.ainpc.routine.SocialCoordinator
 import java.lang.reflect.Proxy
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -43,7 +51,9 @@ class CognitiveLifeSimulationTickTest {
         field.get(null) as sun.misc.Unsafe
     }
     private val plugin = unsafe.allocateInstance(AINPCPlugin::class.java) as AINPCPlugin
-    private val engine = DecisionEngine(plugin) { context, observedWorld, position ->
+    private val performance = PerformanceMonitor()
+    private var planningClock: () -> Long = { 0L }
+    private val engine = DecisionEngine(plugin, { context, observedWorld, position ->
         nearbyScans++
         setField(NPCContext::class.java, context, "worldTime", observedWorld.time)
         setField(NPCContext::class.java, context, "timeOfDay", "AFTERNOON")
@@ -53,25 +63,34 @@ class CognitiveLifeSimulationTickTest {
         setField(NPCContext::class.java, context, "nearbyHostileMobs", hostileCount)
         context.syncSimulationState(position)
         afterNearbyScan()
-    }
+    }, System::currentTimeMillis, { planningClock() })
     private val manager = unsafe.allocateInstance(NPCManager::class.java) as NPCManager
     private val aiService = unsafe.allocateInstance(OpenAIService::class.java) as OpenAIService
     private val dialogue = DialogueEngine(plugin, aiService)
     private var entityValid = true
     private var serverTick = 0
     private var worldLookups = 0
+    private var playerSnapshots = 0
+    private val onlinePlayers = mutableListOf<Player>()
     private var nearbyScans = 0
     private var acceptedMoves = 0
     private var afterNearbyScan: () -> Unit = {}
+    private var afterNeedsRateRead: () -> Unit = {}
     private var afterStateChange: () -> Unit = {}
     private var hostileCount = 0
+    private var primaryThread = true
+    private var homeChunkLoaded = true
+    private var afterHomeChunkCheck: () -> Unit = {}
     private val world = Proxy.newProxyInstance(World::class.java.classLoader, arrayOf(World::class.java)) {
         proxy, method, arguments ->
         when (method.name) {
             "getName" -> "world"
             "getTime" -> 6_000L
             "hasStorm", "isThundering" -> false
-            "isChunkLoaded" -> true
+            "isChunkLoaded" -> if (arguments!![0] == 1 && arguments[1] == 0) {
+                afterHomeChunkCheck()
+                homeChunkLoaded
+            } else true
             "equals" -> proxy === arguments?.get(0)
             "hashCode" -> System.identityHashCode(proxy)
             else -> error("Unexpected world access: ${method.name}")
@@ -98,12 +117,23 @@ class CognitiveLifeSimulationTickTest {
                 if (arguments!![0] == "world") world else null
             }
             "getCurrentTick" -> serverTick
+            "isPrimaryThread" -> primaryThread
+            "getOnlinePlayers" -> {
+                playerSnapshots++
+                onlinePlayers
+            }
             else -> error("Unexpected server access: ${method.name}")
         }
     } as Server
+    private val actors = ConcurrentHashMap(mapOf(npc.uuid to npc))
 
     init {
-        setField(JavaPlugin::class.java, plugin, "newConfig", YamlConfiguration().apply {
+        setField(JavaPlugin::class.java, plugin, "newConfig", object : YamlConfiguration() {
+            override fun getDouble(path: String, def: Double): Double {
+                if (path == "simulation.needs.hunger_decay") afterNeedsRateRead()
+                return super.getDouble(path, def)
+            }
+        }.apply {
             for (flag in listOf("features.simulation", "simulation.enabled", "features.routine", "routine.enabled",
                 "simulation.decision.goal_continuity_enabled")) set(flag, true)
             set("simulation.decision.probabilistic_enabled", false)
@@ -111,11 +141,12 @@ class CognitiveLifeSimulationTickTest {
         })
         val services = ServiceRegistry(plugin)
         setField(ServiceRegistry::class.java, services, "decisionEngine", engine)
+        setField(ServiceRegistry::class.java, services, "performanceMonitor", performance)
         setField(ServiceRegistry::class.java, services, "featurePackLoader", FeaturePackLoader(plugin))
         setField(ServiceRegistry::class.java, services, "routineCoordinator", RoutineCoordinator(plugin))
         setField(AINPCPlugin::class.java, plugin, "services", services)
         setField(NPCManager::class.java, manager, "plugin", plugin)
-        setField(NPCManager::class.java, manager, "npcsByUuid", ConcurrentHashMap(mapOf(npc.uuid to npc)))
+        setField(NPCManager::class.java, manager, "npcsByUuid", actors)
     }
 
     @BeforeEach
@@ -126,6 +157,1061 @@ class CognitiveLifeSimulationTickTest {
     @AfterEach
     fun restoreServer() {
         serverField.set(null, previousServer)
+    }
+
+    @Test
+    fun `perception LOD reuses a bounded observation while needs continue without actions or learned success`() {
+        enablePerceptionLod()
+        tick()
+        val observation = npc.context.perceptionObservation!!
+        val timestamp = npc.lastSimulationTickAt
+        tick()
+        tick()
+
+        assertEquals(1, nearbyScans)
+        assertTrue(npc.context.perceptionObservation!!.reused)
+        assertEquals(2, npc.context.perceptionObservation!!.reusedForTicks)
+        assertEquals(observation.observedAtMillis, npc.context.perceptionObservation!!.observedAtMillis)
+        assertTrue(npc.lastSimulationTickAt > timestamp)
+        assertNull(npc.lastDecision)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertEquals(0, acceptedMoves)
+        assertEquals(NpcSimulationMode.FULL, npc.simulationMode)
+    }
+
+    @Test
+    fun `perception expiry refreshes and discovers new danger before choosing a full action`() {
+        enablePerceptionLod()
+        tick()
+        hostileCount = 1
+        tick()
+        assertEquals(1, nearbyScans)
+        assertFalse(npc.context.isInDanger)
+        assertNull(npc.lastDecision)
+
+        serverTick += 98
+        tick()
+        assertEquals(2, nearbyScans)
+        assertTrue(npc.context.isInDanger)
+        assertTrue(npc.currentState.isDangerState())
+        assertTrue(npc.lastDecision != null)
+        assertFalse(npc.context.perceptionObservation!!.reused)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["nearby", "danger", "hurt", "travel", "scenario", "authored_light", "perception_off", "lod_off"])
+    fun `important authored or disabled modes bypass cached perception`(change: String) {
+        enablePerceptionLod()
+        tick()
+        when (change) {
+            "nearby" -> onlinePlayers.add(playerAt { location })
+            "danger" -> { hostileCount = 1; npc.context.isInDanger = true }
+            "hurt" -> npc.context.isHurt = true
+            "travel" -> npc.changeStateFromSimulation(NPCState.WALKING)
+            "scenario" -> npc.ownerScenarioId = "story"
+            "authored_light" -> npc.simulationMode = NpcSimulationMode.LIGHT
+            "perception_off" -> plugin.config.set("simulation.lod.perception.enabled", false)
+            "lod_off" -> plugin.config.set("simulation.lod.enabled", false)
+        }
+        tick()
+        assertEquals(2, nearbyScans)
+    }
+
+    @Test
+    fun `perception reuse is bounded by original position rather than accumulating small movements`() {
+        enablePerceptionLod()
+        tick()
+        location.x = 1.5
+        tick()
+        assertEquals(1, nearbyScans)
+        location.x = 3.0
+        tick()
+        assertEquals(2, nearbyScans)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["context", "entity", "observation", "lifecycle", "configuration"])
+    fun `changed perception sources always force an actual refresh`(change: String) {
+        enablePerceptionLod()
+        tick()
+        when (change) {
+            "context" -> npc.context = NPCContext(npc)
+            "entity" -> npc.bukkitEntity = entity(npc.uuid, { location }, { true })
+            "observation" -> npc.context.recordPerceptionObservation()
+            "lifecycle" -> npc.restorePersistedState(NPCState.IDLE)
+            "configuration" -> plugin.config.set("simulation.lod.perception.max_reuse_distance", 1.0)
+        }
+        tick()
+        assertEquals(2, nearbyScans)
+        assertFalse(npc.context.perceptionObservation!!.reused)
+    }
+
+    @Test
+    fun `an actor detached during perception never publishes a reusable source`() {
+        enablePerceptionLod()
+        afterNearbyScan = { npc.markEntityUnavailable() }
+        tick()
+        assertNull(npc.perceptionRefreshHistory)
+        assertNull(npc.context.perceptionObservation)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `a context belonging to another actor cannot supply cached or fresh perception`() {
+        enablePerceptionLod()
+        npc.context = NPCContext(AINPC(null))
+        val timestamp = npc.lastSimulationTickAt
+        tick()
+        assertEquals(0, nearbyScans)
+        assertEquals(timestamp, npc.lastSimulationTickAt)
+        assertNull(npc.perceptionRefreshHistory)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `failed perception refresh is retried rather than accepting a partially updated cache`() {
+        enablePerceptionLod()
+        afterNearbyScan = { throw IllegalStateException("Incomplete perception") }
+        assertThrows(IllegalStateException::class.java) { tick() }
+        assertNull(npc.perceptionRefreshHistory)
+        afterNearbyScan = {}
+        tick()
+        assertEquals(2, nearbyScans)
+        assertFalse(npc.context.perceptionObservation!!.reused)
+    }
+
+    private fun enablePerceptionLod() {
+        plugin.config.set("simulation.lod.enabled", true)
+        plugin.config.set("simulation.lod.perception.enabled", true)
+        plugin.config.set("simulation.lod.perception.light_refresh_ticks", 100)
+        npc.hungerLevel = 80
+    }
+
+    @Test
+    fun `direct dialogue does not present a reused environment as freshly observed`() {
+        enablePerceptionLod()
+        tick()
+        tick()
+        setField(NPCContext::class.java, npc.context, "environmentContext",
+            ro.ainpc.environment.EnvironmentContext.empty("world").copy(
+                weather = ro.ainpc.environment.EnvironmentContext.Weather.RAIN))
+
+        val response = dialogue.generateResponse(npc, npc.context, "Cum e vremea?").join()
+
+        assertTrue(response.contains("Nu pot confirma mediul actual fara o observatie noua"))
+        assertFalse(response.contains("Acum ploua"))
+        assertEquals(1, nearbyScans)
+    }
+
+    @Test
+    fun `tracked physical reattachment to a new entity UUID retains its logical watermark`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.progress.enabled", true)
+        tick()
+        val before = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+        val checkpoint = npc.simulationProgress.snapshot()!!
+        val replacementUuid = UUID.randomUUID()
+
+        npc.attachToEntity(entity(replacementUuid, { location }, { true }))
+
+        assertEquals(replacementUuid, npc.uuid)
+        assertEquals(replacementUuid, npc.simulationProgress.snapshot()!!.npcUuid)
+        assertEquals(checkpoint.sequence, npc.simulationProgress.snapshot()!!.sequence)
+        assertEquals(NpcSimulationProgress.Owner.SUSPENDED, npc.simulationProgress.snapshot()!!.owner)
+        tick()
+        assertEquals(before, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        assertEquals(checkpoint.sequence + 1L, npc.simulationProgress.snapshot()!!.sequence)
+    }
+
+    @Test
+    fun `turning off progress during calculation discards its lease without falling through to an older plan`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.progress.enabled", true)
+        tick()
+        val checkpoint = npc.simulationProgress.snapshot()
+        val before = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+        val timestamp = npc.lastSimulationTickAt
+        val decision = npc.lastDecision
+        afterNeedsRateRead = {
+            afterNeedsRateRead = {}
+            plugin.config.set("simulation.progress.enabled", false)
+        }
+
+        tick()
+
+        assertEquals(checkpoint, npc.simulationProgress.snapshot())
+        assertEquals(before, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        assertEquals(timestamp, npc.lastSimulationTickAt)
+        assertEquals(decision, npc.lastDecision)
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+    }
+
+    @Test
+    fun `public tracked life ticks rebase an unavailable actor on reattachment without offline recovery`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.progress.enabled", true)
+        tick()
+        assertEquals(1L, npc.simulationProgress.snapshot()!!.sequence)
+        val actorEntity = npc.bukkitEntity!!
+        npc.markEntityUnavailable()
+        val before = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+        val paused = npc.simulationProgress.snapshot()
+
+        tick()
+
+        assertEquals(paused, npc.simulationProgress.snapshot())
+        assertEquals(before, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        npc.attachToEntity(actorEntity)
+        npc.lastSimulationTickAt -= 900_000L
+        tick()
+        assertEquals(before, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        assertFalse(progress()!!.observedRecovery)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        tick()
+        assertTrue(npc.hungerLevel > before.hunger)
+        assertTrue(progress()!!.observedRecovery)
+        assertEquals(3L, npc.simulationProgress.snapshot()!!.sequence)
+    }
+
+    @Test
+    fun `tracked public reentrancy consumes only the newer checkpoint and planner application`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.progress.enabled", true)
+        tick()
+        var nestedTimestamp = 0L
+        var nestedLevels: NpcNeedsLevels? = null
+        afterNeedsRateRead = {
+            afterNeedsRateRead = {}
+            tick()
+            nestedTimestamp = npc.lastSimulationTickAt
+            nestedLevels = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+        }
+
+        tick()
+
+        assertTrue(nestedTimestamp > 0L)
+        assertEquals(nestedTimestamp, npc.lastSimulationTickAt)
+        assertEquals(nestedLevels, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, npc.actionExperience.snapshot().size)
+    }
+
+    @Test
+    fun `reentrant needs update commits once and the old full tick cannot overwrite its evidence`() {
+        prepareAtHomeCarePlan()
+        tick()
+        var nestedNeeds: NpcNeedsLevels? = null
+        var nestedGoal: NpcSelfCareGoal.Snapshot? = null
+        var nestedDecision: ro.ainpc.npc.NpcDecisionExplanation? = null
+        var nestedTimestamp = 0L
+        afterNeedsRateRead = {
+            afterNeedsRateRead = {}
+            tick()
+            nestedNeeds = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+            nestedGoal = progress()
+            nestedDecision = npc.lastDecision
+            nestedTimestamp = npc.lastSimulationTickAt
+        }
+
+        tick()
+
+        assertTrue(nestedNeeds != null)
+        assertEquals(nestedNeeds, NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+        assertEquals(nestedGoal, progress())
+        assertEquals(nestedDecision, npc.lastDecision)
+        assertEquals(nestedTimestamp, npc.lastSimulationTickAt)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, npc.actionExperience.snapshot().size)
+        assertEquals(3, nearbyScans)
+    }
+
+    @Test
+    fun `direct needs mutation during calculation stops full authored light and LOD light ticks`() {
+        for ((mode, lod) in listOf(NpcSimulationMode.FULL to false,
+            NpcSimulationMode.LIGHT to false, NpcSimulationMode.FULL to true)) {
+            prepareAtHomeCarePlan()
+            npc.simulationMode = mode
+            plugin.config.set("simulation.lod.enabled", lod)
+            npc.lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+            val previousTick = npc.lastSimulationTickAt
+            val before = NpcNeedsInput.capture(npc, npc.context, 0L).levels
+            afterNeedsRateRead = {
+                afterNeedsRateRead = {}
+                npc.hungerLevel = 97
+            }
+
+            tick()
+
+            assertEquals(before.copy(hunger = 97), NpcNeedsInput.capture(npc, npc.context, 0L).levels)
+            assertEquals(previousTick, npc.lastSimulationTickAt)
+            assertNull(npc.lastDecision)
+            assertNull(progress())
+            assertEquals(0, engine.carePlanningReport()!!.attempts)
+        }
+    }
+
+    @Test
+    fun `null or unspawned direct tick remains a no op before LOD reads Paper`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        primaryThread = false
+        engine.runLifeSimulationTick(null)
+        npc.spawned = false
+
+        engine.runLifeSimulationTick(npc)
+
+        assertEquals(0, playerSnapshots)
+        assertEquals(0, nearbyScans)
+        assertNull(engine.carePlanningReport())
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `far LOD preserves authored full mode and needs without creating anchors plans or decisions`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.lod.enabled", true)
+        npc.homeAnchor = null
+        npc.workAnchor = null
+        npc.socialAnchor = null
+        npc.lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+        val hunger = npc.hungerLevel
+
+        tick()
+
+        assertEquals(NpcSimulationMode.FULL, npc.simulationMode)
+        assertTrue(npc.hungerLevel < hunger)
+        assertNull(npc.homeAnchor)
+        assertNull(npc.workAnchor)
+        assertNull(npc.socialAnchor)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, nearbyScans)
+        assertEquals(1, playerSnapshots)
+    }
+
+    @Test
+    fun `near LOD captures online players once for the whole manager batch`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.lod.enabled", true)
+        addHomeActor("Ana")
+        addHomeActor("Dan")
+        onlinePlayers.add(playerAt { location.clone() })
+
+        tick()
+
+        assertEquals(1, playerSnapshots)
+        assertEquals(3, engine.carePlanningReport()!!.attempts)
+        assertTrue(actors.values.all { it.lastDecision?.fromCarePlan == true })
+        assertTrue(actors.values.all { it.simulationMode == NpcSimulationMode.FULL })
+        assertTrue(actors.values.all { it.context.nearbyPlayers.isEmpty() })
+    }
+
+    @Test
+    fun `new danger found during far perception promotes the same tick without a second needs scan`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        hostileCount = 1
+        npc.lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+
+        tick()
+
+        assertTrue(npc.currentState.isDangerState())
+        assertTrue(npc.context.isInDanger)
+        assertTrue(npc.lastDecision != null)
+        assertEquals(1, nearbyScans)
+        assertEquals(1, playerSnapshots)
+    }
+
+    @Test
+    fun `already applied care remains full after the last player leaves without inventing new recovery`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.lod.enabled", true)
+        npc.hungerLevel = 100
+        npc.energyLevel = 40
+        npc.restorePersistedState(NPCState.RESTING)
+        onlinePlayers.add(playerAt { location.clone() })
+        tick()
+        assertEquals(NPCAction.REST, progress()!!.action)
+        assertFalse(progress()!!.observedRecovery)
+        onlinePlayers.clear()
+
+        tick()
+
+        assertEquals(NPCState.RESTING, npc.currentState)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertTrue(progress()!!.observedRecovery)
+        assertEquals(NPCAction.REST, progress()!!.action)
+        assertEquals(2, nearbyScans)
+        assertEquals(2, playerSnapshots)
+    }
+
+    @Test
+    fun `direct public life tick also applies far LOD without charging the care planner`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.lod.enabled", true)
+
+        engine.runLifeSimulationTick(npc)
+
+        assertNull(npc.lastDecision)
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, nearbyScans)
+        assertEquals(1, playerSnapshots)
+    }
+
+    @Test
+    fun `far autonomous routine and social ticks do not move scan topology or create social groups`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        addHomeActor("Ana")
+        val servicesField = AINPCPlugin::class.java.getDeclaredField("services").apply { isAccessible = true }
+        val services = servicesField.get(plugin) as ServiceRegistry
+        setField(ServiceRegistry::class.java, services, "npcManager", manager)
+        val intent = npc.currentGoal
+        val routine = RoutineService(plugin)
+        val social = SocialCoordinator(plugin)
+
+        val summary = routine.runRoutineTick()
+        social.tick()
+
+        assertEquals(0, summary.evaluatedNpcs())
+        assertEquals(0, summary.movedNpcs())
+        assertEquals(intent, npc.currentGoal)
+        assertEquals(NPCState.IDLE, npc.currentState)
+        assertEquals(0, social.getVillageCount())
+        assertTrue(social.getSocialPartnersSummary().isEmpty())
+        assertEquals(0, nearbyScans)
+        assertEquals(0, worldLookups)
+        assertEquals(0, acceptedMoves)
+        assertEquals(2, playerSnapshots)
+    }
+
+    @Test
+    fun `routine coordinator shares one LOD snapshot across routine social and seasonal processing`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        val servicesField = AINPCPlugin::class.java.getDeclaredField("services").apply { isAccessible = true }
+        val services = servicesField.get(plugin) as ServiceRegistry
+        setField(ServiceRegistry::class.java, services, "npcManager", manager)
+        setField(ServiceRegistry::class.java, services, "routineService", RoutineService(plugin))
+        setField(ServiceRegistry::class.java, services, "socialCoordinator", SocialCoordinator(plugin))
+
+        val summary = plugin.routineCoordinator.tick()
+
+        assertEquals(0, summary.evaluatedNpcs())
+        assertEquals(0, summary.movedNpcs())
+        assertTrue(plugin.routineCoordinator.getActiveGatherings().isEmpty())
+        assertEquals(0, plugin.socialCoordinator.getVillageCount())
+        assertEquals(1, playerSnapshots)
+        assertEquals(0, nearbyScans)
+        assertEquals(0, worldLookups)
+        assertEquals(NPCState.IDLE, npc.currentState)
+    }
+
+    @Test
+    fun `an explicit routine override keeps priority over far LOD`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        val servicesField = AINPCPlugin::class.java.getDeclaredField("services").apply { isAccessible = true }
+        val services = servicesField.get(plugin) as ServiceRegistry
+        setField(ServiceRegistry::class.java, services, "npcManager", manager)
+        plugin.routineCoordinator.overrideRoutine(npc.uuid, RoutineCoordinator.RoutineOverride())
+
+        val summary = RoutineService(plugin).runRoutineTick()
+
+        assertEquals(1, summary.evaluatedNpcs())
+        assertEquals(1, summary.skippedMissingTarget())
+        assertEquals(0, summary.movedNpcs())
+        assertTrue(plugin.routineCoordinator.getOverride(npc.uuid) != null)
+        assertEquals(NpcSimulationMode.FULL, npc.simulationMode)
+    }
+
+    @Test
+    fun `planner failure is measured and the next cycle can execute without a leaked budget scope`() {
+        prepareAtHomeCarePlan()
+        afterHomeChunkCheck = {
+            afterHomeChunkCheck = {}
+            error("Expected planner failure")
+        }
+
+        assertThrows(IllegalStateException::class.java) { tick() }
+
+        val failed = requireNotNull(engine.carePlanningReport())
+        assertFalse(failed.completed)
+        assertEquals(1, failed.attempts)
+        assertEquals(1, failed.failures)
+        assertTrue(failed.outcomes.isEmpty())
+        assertEquals(1, performance.snapshot().metrics.single().windowFailures)
+        assertNull(npc.lastDecision)
+        tick()
+        assertTrue(engine.carePlanningReport()!!.completed)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(2L, performance.snapshot().metrics.single().totalCount)
+    }
+
+    @Test
+    fun `removed rotation cursor resets safely for the remaining population`() {
+        prepareAtHomeCarePlan()
+        addHomeActor("Ana")
+        addHomeActor("Dan")
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 1)
+        tick()
+        val previous = actors.values.single { it.lastDecision?.fromCarePlan == true }
+        val remaining = actors.values.first { it.uuid != previous.uuid }
+        actors.clear()
+        actors[remaining.uuid] = remaining
+
+        tick()
+
+        assertTrue(remaining.lastDecision!!.fromCarePlan)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertEquals(0, engine.carePlanningReport()!!.deferredByCount)
+    }
+
+    @Test
+    fun `direct public life tick also honors a standalone count budget`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 0)
+
+        engine.runLifeSimulationTick(npc)
+
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, engine.carePlanningReport()!!.deferredByCount)
+        assertFalse(npc.lastDecision!!.fromCarePlan)
+        assertTrue(performance.snapshot().metrics.isEmpty())
+    }
+
+    @Test
+    fun `shared count budget rotates attempts across a stable population without skipping needs updates`() {
+        prepareAtHomeCarePlan()
+        addHomeActor("Ana")
+        addHomeActor("Dan")
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 1)
+        val order = actors.values.toList()
+
+        for (expected in order) {
+            val before = actors.mapValues { it.value.lastDecision }
+            tick()
+            val applied = actors.values.filter { it.lastDecision?.fromCarePlan == true && it.lastDecision !== before[it.uuid] }
+            assertEquals(listOf(expected.uuid), applied.map { it.uuid })
+            val report = requireNotNull(engine.carePlanningReport())
+            assertEquals(1, report.attempts)
+            assertEquals(2, report.deferredByCount)
+            assertEquals(1, report.outcomes[NpcCarePlanExecutor.Outcome.APPLIED])
+            assertTrue(actors.values.all { it.lastSimulationTickAt > 0L })
+        }
+        val metrics = performance.snapshot().metrics
+        assertEquals(listOf(RuntimeMetricNames.CARE_PLANNER), metrics.map { it.name })
+        assertEquals(3L, metrics.single().totalCount)
+    }
+
+    @Test
+    fun `shared time admission stops additional planners after an already running operation overshoots`() {
+        prepareAtHomeCarePlan()
+        addHomeActor("Ana")
+        addHomeActor("Dan")
+        var nanos = 0L
+        planningClock = { nanos }
+        afterHomeChunkCheck = { nanos = 3_000_000L }
+
+        tick()
+
+        val report = requireNotNull(engine.carePlanningReport())
+        assertEquals(1, report.attempts)
+        assertEquals(2, report.deferredByTime)
+        assertEquals(3_000_000L, report.elapsedNanos)
+        assertEquals(1, actors.values.count { it.lastDecision?.fromCarePlan == true })
+        assertTrue(actors.values.all { it.lastSimulationTickAt > 0L })
+    }
+
+    @Test
+    fun `budget denial preserves an existing rest without renewing its explanation or inventing learning periods`() {
+        prepareAtHomeCarePlan()
+        npc.hungerLevel = 100
+        npc.energyLevel = 20
+        npc.restorePersistedState(NPCState.RESTING)
+        tick()
+        val decision = npc.lastDecision
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 0)
+
+        tick()
+        val observations = npc.actionExperience.snapshot()
+        tick()
+
+        assertEquals(NPCState.RESTING, npc.currentState)
+        assertTrue(npc.energyLevel > 20)
+        assertTrue(npc.lastDecision === decision)
+        assertEquals(NpcSelfCareGoal.Stage.RECOVERING, progress()!!.stage)
+        assertEquals(observations, npc.actionExperience.snapshot())
+        assertEquals(1, observations.size)
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, engine.carePlanningReport()!!.deferredByCount)
+        assertEquals(1L, performance.snapshot().metrics.single().totalCount)
+        hostileCount = 1
+        tick()
+        assertFalse(npc.lastDecision!!.fromCarePlan)
+        assertTrue(npc.currentState.isDangerState())
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, progress()!!.stage)
+    }
+
+    @Test
+    fun `shadow preview cannot consume budget advance rotation or mutate the completed report`() {
+        prepareAtHomeCarePlan()
+        tick()
+        val report = engine.carePlanningReport()
+        val metrics = performance.snapshot().metrics
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+
+        repeat(2) { engine.previewActionDecision(npc, npc.context) }
+
+        assertTrue(report === engine.carePlanningReport())
+        assertEquals(metrics.map { it.totalCount }, performance.snapshot().metrics.map { it.totalCount })
+    }
+
+    @Test
+    fun `reentrant manager ticks share credits and preserve the newer fallback instead of reopening a budget`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 1)
+        var newerDecision = npc.lastDecision
+        afterStateChange = {
+            afterStateChange = {}
+            tick()
+            newerDecision = npc.lastDecision
+            npc.currentGoal = "intentia tickului reentrant"
+        }
+
+        tick()
+
+        assertTrue(newerDecision != null)
+        assertFalse(newerDecision!!.fromCarePlan)
+        assertEquals(newerDecision, npc.lastDecision)
+        assertEquals("intentia tickului reentrant", npc.currentGoal)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertEquals(1, engine.carePlanningReport()!!.deferredByCount)
+        assertEquals(1, engine.carePlanningReport()!!.outcomes[NpcCarePlanExecutor.Outcome.INTERRUPTED])
+    }
+
+    @Test
+    fun `failed batch is finalized and releases its scope for the next normal manager tick`() {
+        prepareAtHomeCarePlan()
+        assertThrows(IllegalStateException::class.java) {
+            engine.runLifeSimulationBatch(listOf(npc)) { error("Expected batch failure") }
+        }
+        assertFalse(engine.carePlanningReport()!!.completed)
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+
+        tick()
+
+        assertTrue(engine.carePlanningReport()!!.completed)
+        assertEquals(1, engine.carePlanningReport()!!.attempts)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+    }
+
+    @Test
+    fun `light none and unavailable actors do not consume planning credits`() {
+        prepareAtHomeCarePlan()
+        npc.simulationMode = NpcSimulationMode.LIGHT
+        addHomeActor("None").simulationMode = NpcSimulationMode.NONE
+        addHomeActor("Unavailable").spawned = false
+
+        tick()
+
+        assertEquals(0, engine.carePlanningReport()!!.attempts)
+        assertTrue(performance.snapshot().metrics.isEmpty())
+        assertTrue(npc.lastSimulationTickAt > 0L)
+        assertNull(npc.lastDecision)
+    }
+
+    private fun addHomeActor(actorName: String): AINPC = AINPC(null) { _, _, _ -> }.apply {
+        name = actorName
+        worldName = "world"
+        homeAnchor = npc.homeAnchor
+        workAnchor = npc.workAnchor
+        socialAnchor = npc.socialAnchor
+        hungerLevel = 20
+        energyLevel = 80
+        lastSimulationTickAt = 0L
+        bukkitEntity = entity(uuid, { Location(world, 20.0, 64.0, 0.0) }, { true })
+        spawned = true
+        actors[uuid] = this
+    }
+
+    @Test
+    fun `planned rest completes from observed energy and persists as rest rather than sleep`() {
+        prepareAtHomeCarePlan()
+        npc.hungerLevel = 100
+        npc.energyLevel = 20
+        npc.restorePersistedState(NPCState.RESTING)
+
+        tick()
+
+        assertEquals(NPCState.RESTING, npc.currentState)
+        assertEquals(20, npc.energyLevel)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(NPCAction.REST, npc.lastDecision!!.action)
+        assertEquals(NPCAction.REST, progress()!!.action)
+        assertFalse(progress()!!.observedRecovery)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        tick()
+        val observed = npc.actionExperience.snapshot().single()
+        assertEquals(NPCAction.REST, observed.action)
+        assertTrue(observed.needDelta > 0)
+        assertEquals(0.0, observed.effect)
+        assertTrue(progress()!!.observedRecovery)
+        val serialized = NpcActionExperienceCodec.write(npc.actionExperience)
+        val restored = NpcActionExperience().apply { restore(NpcActionExperienceCodec.read(serialized)) }
+        assertEquals(npc.actionExperience.snapshot(), restored.snapshot())
+        assertTrue(restored.latestDescription(System.currentTimeMillis()).contains("odihnei"))
+        assertFalse(restored.latestDescription(System.currentTimeMillis()).contains("somnului"))
+
+        repeat(50) { if (npc.energyLevel < 60) tick() }
+
+        assertEquals(NpcSelfCareGoal.Stage.SATISFIED, progress()!!.stage)
+        assertEquals(NPCAction.REST, progress()!!.action)
+        assertTrue(npc.actionExperience.snapshot().all { it.action == NPCAction.REST && it.effect == 0.0 })
+        val response = dialogue.generateResponse(npc, npc.context, "Ce ai invatat?").join()
+        assertTrue(response.contains("odihnei"), response)
+        assertFalse(response.contains("somnului"))
+        assertEquals(0, acceptedMoves)
+    }
+
+    @Test
+    fun `routine tick preserves an active planned rest without introducing another movement`() {
+        prepareAtHomeCarePlan()
+        npc.hungerLevel = 100
+        npc.energyLevel = 40
+        npc.restorePersistedState(NPCState.RESTING)
+        tick()
+        val decision = npc.lastDecision
+        val goal = progress()
+        val intent = npc.currentGoal
+        val servicesField = AINPCPlugin::class.java.getDeclaredField("services").apply { isAccessible = true }
+        val services = servicesField.get(plugin) as ServiceRegistry
+        setField(ServiceRegistry::class.java, services, "npcManager", manager)
+        val routine = RoutineService(plugin)
+
+        val summary = routine.runRoutineTick()
+
+        assertEquals(1, summary.skippedBusy())
+        assertEquals(0, summary.evaluatedNpcs())
+        assertEquals(0, summary.movedNpcs())
+        assertEquals(NPCState.RESTING, npc.currentState)
+        assertEquals(intent, npc.currentGoal)
+        assertEquals(decision, npc.lastDecision)
+        assertEquals(goal, progress())
+        assertEquals(0, acceptedMoves)
+    }
+
+    @Test
+    fun `opt in care plan starts a meal without claiming success before observed recovery`() {
+        prepareAtHomeCarePlan()
+        val before = npc.hungerLevel
+
+        tick()
+
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(NPCAction.EAT, npc.lastDecision!!.action)
+        assertEquals(before, npc.hungerLevel)
+        assertEquals(NpcSelfCareGoal.Stage.RECOVERING, progress()!!.stage)
+        assertFalse(progress()!!.observedRecovery)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertEquals(0, acceptedMoves)
+        val explanation = dialogue.generateResponse(npc, npc.context, "De ce ai ales asta?").join()
+        assertTrue(explanation.contains("planul local de ingrijire"), explanation)
+        assertFalse(progress()!!.observedRecovery)
+
+        tick()
+
+        assertTrue(npc.hungerLevel > before)
+        assertTrue(progress()!!.observedRecovery)
+        assertTrue(npc.actionExperience.snapshot().single().needDelta > 0)
+        repeat(30) { if (npc.hungerLevel < 60) tick() }
+        assertEquals(NpcSelfCareGoal.Stage.SATISFIED, progress()!!.stage)
+        val reply = dialogue.generateResponse(npc, npc.context, "Cum merge obiectivul de hrana?").join()
+        assertTrue(reply.contains("este incheiat"), reply)
+    }
+
+    @Test
+    fun `sleep plan completes from measured energy updates using the existing care observer`() {
+        prepareAtHomeCarePlan()
+        npc.hungerLevel = 100
+        npc.energyLevel = 20
+
+        tick()
+
+        assertEquals(NPCState.SLEEPING, npc.currentState)
+        assertEquals(20, npc.energyLevel)
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(NPCAction.SLEEP, npc.lastDecision!!.action)
+        assertFalse(progress()!!.observedRecovery)
+        repeat(30) { if (npc.energyLevel < 60) tick() }
+        assertEquals(NpcSelfCareGoal.Stage.SATISFIED, progress()!!.stage)
+        assertTrue(npc.actionExperience.snapshot().all { it.action == NPCAction.SLEEP && it.needDelta > 0 })
+    }
+
+    @Test
+    fun `shadow flag alone leaves life ticks on the original utility path`() {
+        prepareAtHomeCarePlan()
+        plugin.config.set("simulation.decision.care_planner_execution_enabled", false)
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+
+        tick()
+
+        assertFalse(npc.lastDecision!!.fromCarePlan)
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `outside home execution leaves travel to the routine without starting another movement`() {
+        prepareAtHomeCarePlan()
+        location = Location(world, 0.0, 64.0, 0.0)
+        npc.lastSimulationTickAt = System.currentTimeMillis() - 30_000L
+        plugin.config.set("simulation.decision.goal_continuity_enabled", true)
+        startReturn()
+
+        tick()
+
+        assertEquals(NPCState.WALKING, npc.currentState)
+        assertFalse(npc.lastDecision!!.fromCarePlan)
+        assertTrue(npc.lastDecision!!.continuingSelfCare)
+        assertEquals(1, acceptedMoves)
+        location = Location(world, 20.0, 64.0, 0.0)
+        tick()
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertEquals(1, acceptedMoves)
+    }
+
+    @Test
+    fun `paused or overridden routine and disabled runtime policies do not acquire a care plan`() {
+        val flags = listOf("features.simulation", "simulation.enabled", "features.routine", "routine.enabled")
+        for (flag in flags) {
+            prepareAtHomeCarePlan()
+            plugin.config.set(flag, false)
+            tick()
+            assertFalse(npc.lastDecision?.fromCarePlan == true, flag)
+            plugin.config.set(flag, true)
+        }
+        prepareAtHomeCarePlan()
+        plugin.routineCoordinator.pauseRoutine(npc.uuid)
+        tick()
+        assertFalse(npc.lastDecision?.fromCarePlan == true)
+        plugin.routineCoordinator.resumeRoutine(npc.uuid)
+        prepareAtHomeCarePlan()
+        plugin.routineCoordinator.overrideRoutine(npc.uuid, RoutineCoordinator.RoutineOverride())
+        tick()
+        assertFalse(npc.lastDecision?.fromCarePlan == true)
+    }
+
+    @Test
+    fun `unloaded home chunk and non primary execution are rejected by the new executor`() {
+        prepareAtHomeCarePlan()
+        homeChunkLoaded = false
+        tick()
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertEquals(NPCState.IDLE, npc.currentState)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        homeChunkLoaded = true
+        prepareAtHomeCarePlan()
+        primaryThread = false
+        tick()
+        assertFalse(npc.lastDecision?.fromCarePlan == true)
+    }
+
+    @Test
+    fun `direct goal and need mutation during the world check stops the tick without a stale fallback`() {
+        prepareAtHomeCarePlan()
+        val revision = npc.decisionRevision
+        afterHomeChunkCheck = {
+            afterHomeChunkCheck = {}
+            npc.hungerLevel = 80
+            npc.currentGoal = "intentia mai noua"
+        }
+
+        tick()
+
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(NPCState.IDLE, npc.currentState)
+        assertEquals(80, npc.hungerLevel)
+        assertEquals("intentia mai noua", npc.currentGoal)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `direct callback changes cannot be overwritten or certified as applied care`() {
+        prepareAtHomeCarePlan()
+        afterStateChange = {
+            afterStateChange = {}
+            npc.hungerLevel = 80
+            npc.currentGoal = "alta intentie dupa eveniment"
+        }
+
+        tick()
+
+        assertEquals(80, npc.hungerLevel)
+        assertEquals("alta intentie dupa eveniment", npc.currentGoal)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `physical departure during the application callback cannot certify care from cached home context`() {
+        prepareAtHomeCarePlan()
+        afterStateChange = {
+            afterStateChange = {}
+            location = Location(world, 100.0, 64.0, 0.0)
+        }
+
+        tick()
+
+        assertFalse(npc.context.isAtHome)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `policy disabled by an application event is not overwritten by planned evidence`() {
+        prepareAtHomeCarePlan()
+        afterStateChange = {
+            afterStateChange = {}
+            plugin.config.set("simulation.decision.care_planner_execution_enabled", false)
+            npc.currentGoal = "planul a fost oprit"
+        }
+
+        tick()
+
+        assertEquals("planul a fost oprit", npc.currentGoal)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `a state round trip during the post transition world check is not normalized away`() {
+        prepareAtHomeCarePlan()
+        var checks = 0
+        afterHomeChunkCheck = {
+            checks++
+            if (checks == 2) {
+                npc.changeStateFromSimulation(NPCState.TALKING)
+                npc.changeStateFromSimulation(NPCState.EATING)
+            }
+        }
+
+        tick()
+
+        assertEquals(2, checks)
+        assertEquals(NPCState.EATING, npc.currentState)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `a newer reentrant tick retains its own applied care evidence and intent`() {
+        prepareAtHomeCarePlan()
+        var newerDecision = npc.lastDecision
+        var newerProgress = progress()
+        afterStateChange = {
+            afterStateChange = {}
+            tick()
+            newerDecision = npc.lastDecision
+            newerProgress = progress()
+            npc.currentGoal = "intentia tickului mai nou"
+        }
+
+        tick()
+
+        assertTrue(newerDecision?.fromCarePlan == true)
+        assertTrue(newerProgress != null)
+        assertEquals(newerDecision, npc.lastDecision)
+        assertEquals(newerProgress, progress())
+        assertEquals("intentia tickului mai nou", npc.currentGoal)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `mode round trip during planned application cannot resurrect evidence`() {
+        prepareAtHomeCarePlan()
+        afterStateChange = {
+            afterStateChange = {}
+            npc.simulationMode = NpcSimulationMode.LIGHT
+            npc.simulationMode = NpcSimulationMode.FULL
+        }
+
+        tick()
+
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `conversation during planned application keeps its own state and intent`() {
+        prepareAtHomeCarePlan()
+        afterStateChange = {
+            afterStateChange = {}
+            npc.changeStateFromSimulation(NPCState.TALKING)
+            npc.currentGoal = "vorbeste cu vizitatorul"
+        }
+
+        tick()
+
+        assertEquals(NPCState.TALKING, npc.currentState)
+        assertEquals("vorbeste cu vizitatorul", npc.currentGoal)
+        assertNull(npc.lastDecision)
+        assertNull(progress())
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `hostile observation stops the applied plan without claiming completion`() {
+        prepareAtHomeCarePlan()
+        tick()
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        hostileCount = 1
+
+        tick()
+
+        assertFalse(npc.lastDecision!!.fromCarePlan)
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, progress()!!.stage)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `plan application replaces utility cooldown without counting as a utility sample`() {
+        prepareAtHomeCarePlan()
+        npc.context.syncSimulationState(location)
+        engine.decideAction(npc, npc.context)
+        assertTrue(engine.previewActionDecision(npc, npc.context).cached)
+        val samples = engine.decisionStatistics(npc.uuid).total
+
+        tick()
+
+        assertTrue(npc.lastDecision!!.fromCarePlan)
+        assertEquals(samples, engine.decisionStatistics(npc.uuid).total)
+        assertFalse(engine.previewActionDecision(npc, npc.context).cached)
+    }
+
+    private fun prepareAtHomeCarePlan() {
+        plugin.config.set("simulation.decision.care_planner_execution_enabled", true)
+        plugin.config.set("simulation.decision.goal_continuity_enabled", false)
+        npc.restorePersistedState(NPCState.IDLE)
+        npc.selfCareGoal.clear()
+        npc.currentGoal = ""
+        npc.hungerLevel = 20
+        npc.energyLevel = 80
+        npc.lastSimulationTickAt = 0L
+        location = Location(world, 20.0, 64.0, 0.0)
+        engine.removeNpcFromCache(npc.uuid)
     }
 
     @Test
@@ -668,12 +1754,25 @@ class CognitiveLifeSimulationTickTest {
 
     private fun progress(): NpcSelfCareGoal.Snapshot? = npc.selfCareGoal.snapshot(System.currentTimeMillis())
 
+    private fun playerAt(position: () -> Location): Player =
+        Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { _, method, _ ->
+            when (method.name) {
+                "getLocation" -> position().clone()
+                else -> error("Unexpected player access: ${method.name}")
+            }
+        } as Player
+
     private fun entity(uuid: UUID, position: () -> Location, valid: () -> Boolean): Entity =
         Proxy.newProxyInstance(Entity::class.java.classLoader, arrayOf(Entity::class.java)) { _, method, arguments ->
             when (method.name) {
                 "getUniqueId" -> uuid
                 "getLocation" -> position().clone()
                 "isValid" -> valid()
+                "customName", "setCustomNameVisible" -> null
+                "getPersistentDataContainer" -> Proxy.newProxyInstance(
+                    org.bukkit.persistence.PersistentDataContainer::class.java.classLoader,
+                    arrayOf(org.bukkit.persistence.PersistentDataContainer::class.java),
+                ) { _, method, _ -> error("Unexpected persistent data access: ${method.name}") }
                 "teleport" -> {
                     location = (arguments!![0] as Location).clone()
                     true

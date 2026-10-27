@@ -23,7 +23,7 @@ data class NpcCognitiveState(
             }
 
             val hungerThreshold = careThreshold(currentState == NPCState.EATING)
-            val energyThreshold = careThreshold(currentState == NPCState.SLEEPING)
+            val energyThreshold = careThreshold(currentState == NPCState.SLEEPING || restingForCare)
             val hungerDeficit = relativeDeficit(hungerLevel, hungerThreshold)
             val energyDeficit = relativeDeficit(energyLevel, energyThreshold)
             if (hungerDeficit > 0.0 || energyDeficit > 0.0) {
@@ -44,6 +44,11 @@ data class NpcCognitiveState(
     private val needsImmediateSafety: Boolean
         get() = isInDanger || currentState in setOf(NPCState.COMBAT, NPCState.FLEEING, NPCState.PANICKING)
 
+    private val restingForCare: Boolean
+        get() = currentState == NPCState.RESTING && selfCareProgress?.let {
+            it.action == NPCAction.REST && it.stage == NpcSelfCareGoal.Stage.RECOVERING && !it.lacksProgress()
+        } == true
+
     fun thoughtDescription(): String = when (focus) {
         Focus.SAFETY -> "Ma gandesc sa raman in siguranta si sa evit pericolul."
         Focus.CONVERSATION -> "Sunt atent la discutia curenta si la ce mi se spune."
@@ -61,7 +66,7 @@ data class NpcCognitiveState(
         if (NpcSelfCareThresholds.needsCare(hungerLevel, currentState == NPCState.EATING)) {
             add("Mi-e foame si am nevoie de mancare.")
         }
-        if (NpcSelfCareThresholds.needsCare(energyLevel, currentState == NPCState.SLEEPING)) {
+        if (NpcSelfCareThresholds.needsCare(energyLevel, currentState == NPCState.SLEEPING || restingForCare)) {
             add("Am nevoie de odihna.")
         }
         if (comfortLevel < 40) add("Am nevoie de confort.")

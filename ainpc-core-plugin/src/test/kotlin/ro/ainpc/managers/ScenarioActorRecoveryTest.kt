@@ -105,6 +105,16 @@ class ScenarioActorRecoveryTest {
     }
 
     @Test
+    fun `recovery restores the SQL revision from the row rather than trusting profile JSON`() {
+        insertActor(42)
+        connection.createStatement().use { it.executeUpdate("UPDATE npc_profiles SET write_revision = 17 WHERE npc_id = 42") }
+        val candidate = requireNotNull(manager.readScenarioActorRecoveryCandidate(42))
+        assertEquals(NpcProfileRevision.Snapshot(17L, NpcProfileRevision.Status.READY), candidate.profileRevision.snapshot())
+        assertEquals(17L, captureProfileWrite(candidate, Gson()).ticket!!.revision)
+        assertNull(candidate.simulationProgress.handoff())
+    }
+
+    @Test
     fun `registration and rollback affect caches only and keep the original entity alive`() {
         val original = insertActor(42)
         val candidate = manager.readScenarioActorRecoveryCandidate(42)!!
@@ -262,7 +272,7 @@ class ScenarioActorRecoveryTest {
                 x REAL DEFAULT 0, y REAL DEFAULT 64, z REAL DEFAULT 0, yaw REAL DEFAULT 0, pitch REAL DEFAULT 0,
                 skin_texture TEXT, skin_signature TEXT, backstory TEXT, occupation TEXT, age INTEGER DEFAULT 30, gender TEXT DEFAULT 'male'
             )""")
-            statement.execute("CREATE TABLE npc_profiles (npc_id INTEGER PRIMARY KEY, profile_source TEXT, profile_version INTEGER, profile_summary TEXT, profile_data TEXT)")
+            statement.execute("CREATE TABLE npc_profiles (npc_id INTEGER PRIMARY KEY, profile_source TEXT, profile_version INTEGER, profile_summary TEXT, profile_data TEXT, write_revision BIGINT NOT NULL DEFAULT 0)")
             statement.execute("CREATE TABLE npc_source_keys (source_key TEXT PRIMARY KEY, npc_id INTEGER)")
             statement.execute("CREATE TABLE npc_traits (npc_id INTEGER, trait_id TEXT)")
             statement.execute("CREATE TABLE npc_personality (npc_id INTEGER, openness REAL, conscientiousness REAL, extraversion REAL, agreeableness REAL, neuroticism REAL)")

@@ -17,8 +17,14 @@ import org.bukkit.block.data.BlockData
 import org.bukkit.block.data.type.Bed
 import org.bukkit.entity.Villager
 import ro.ainpc.api.WorldAdminApi
+import ro.ainpc.engine.NpcNeedsLevels
+import ro.ainpc.engine.NpcSimulationProgress
+import ro.ainpc.engine.NpcSimulationHandoff
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NpcAbsenceRecord
 import ro.ainpc.npc.NPCPersonality
+import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSimulationMode
 import ro.ainpc.spawn.NpcSpawnPlan
 import ro.ainpc.spawn.SpawnSemanticRules
 import ro.ainpc.utils.NPCNameGenerator
@@ -30,6 +36,7 @@ import java.math.BigDecimal
 import java.util.Collections
 import java.util.Locale
 import java.util.Random
+import java.util.UUID
 import java.util.function.Predicate
 import kotlin.math.floor
 import kotlin.math.max
@@ -624,11 +631,13 @@ fun getVillagerDisplayName(villager: Villager): String? {
     return PLAIN_TEXT.serialize(customName).trim()
 }
 
-fun buildSpawnState(npc: AINPC): JsonObject {
+fun buildSpawnState(npc: AINPC): JsonObject = buildSpawnState(npc, captureSimulationProfile(npc))
+
+private fun buildSpawnState(npc: AINPC, snapshot: SimulationProfileSnapshot): JsonObject {
     val state = JsonObject()
-    state.addProperty("spawned", npc.spawned)
-    state.addProperty("entity_uuid", npc.uuid.toString())
-    state.addProperty("database_id", npc.databaseId)
+    state.addProperty("spawned", snapshot.spawned)
+    state.addProperty("entity_uuid", snapshot.uuid.toString())
+    state.addProperty("database_id", snapshot.databaseId)
     state.addProperty("source_key", npc.sourceKey)
     state.addProperty("world", npc.worldName)
     state.addProperty("x", npc.x)
@@ -638,7 +647,9 @@ fun buildSpawnState(npc: AINPC): JsonObject {
     state.addProperty("pitch", npc.pitch)
     state.addProperty("chunk_x", floorToBlock(npc.x) shr 4)
     state.addProperty("chunk_z", floorToBlock(npc.z) shr 4)
-    state.addProperty("restorable", !npc.worldName.isNullOrBlank())
+    state.addProperty("restorable", !npc.worldName.isNullOrBlank() &&
+        (snapshot.absence?.let { it.npcUuid == snapshot.uuid && it.permitsAutomaticRestore() } ?: true))
+    snapshot.absence?.let { state.add("absence", NpcAbsenceCodec.write(it)) }
     state.addProperty("updated_at", System.currentTimeMillis())
     return state
 }
@@ -663,17 +674,52 @@ fun mergeSpawnPlanNarrativeProfileData(existingProfileData: String?, plan: NpcSp
     return gson.toJson(profile)
 }
 
-fun buildProfileData(npc: AINPC, gson: Gson): String {
+private data class SimulationProfileSnapshot(
+    val uuid: UUID,
+    val needs: NpcNeedsLevels,
+    val lastTickAt: Long,
+    val progress: NpcSimulationProgress.Snapshot?,
+    val absence: NpcAbsenceRecord?,
+    val spawned: Boolean,
+    val databaseId: Int,
+    val state: NPCState,
+    val simulationMode: NpcSimulationMode,
+    val profileSource: String,
+    val profileVersion: Int,
+    val handoff: NpcSimulationProgress.Handoff?,
+    val writeTicket: NpcProfileRevision.Ticket?,
+)
+
+private fun captureSimulationProfile(npc: AINPC): SimulationProfileSnapshot = synchronized(npc.simulationProgress) {
+    SimulationProfileSnapshot(npc.uuid, NpcNeedsLevels(npc.hungerLevel, npc.energyLevel, npc.socialNeedLevel,
+        npc.comfortLevel, npc.safetyLevel), npc.lastSimulationTickAt, npc.simulationProgress.snapshot(),
+        npc.absenceRecord, npc.spawned, npc.databaseId, npc.currentState, npc.simulationMode,
+        npc.profileSource, npc.profileVersion,
+        npc.simulationProgress.handoff()?.takeIf { NpcSimulationHandoff.isCurrent(npc, it) },
+        npc.profileRevision.capture(npc.databaseId))
+}
+
+fun buildProfileData(npc: AINPC, gson: Gson): String =
+    buildProfileData(npc, gson, captureSimulationProfile(npc), buildProfileSummary(npc))
+
+internal fun captureProfileWrite(npc: AINPC, gson: Gson): NpcProfileWrite {
+    val snapshot = captureSimulationProfile(npc)
+    val summary = buildProfileSummary(npc)
+    return NpcProfileWrite(snapshot.databaseId, snapshot.uuid, snapshot.profileSource, snapshot.profileVersion,
+        summary, buildProfileData(npc, gson, snapshot, summary), snapshot.handoff, snapshot.writeTicket)
+}
+
+private fun buildProfileData(npc: AINPC, gson: Gson, simulationSnapshot: SimulationProfileSnapshot, summary: String): String {
     val preservedNarrative = parseProfileData(npc.profileDataJson, gson)
         .get("narrative")
         ?.takeIf { it.isJsonObject }
     val profile = JsonObject()
-    profile.addProperty("npc_id", npc.databaseId)
-    profile.addProperty("uuid", npc.uuid.toString())
+    profile.addProperty("npc_id", simulationSnapshot.databaseId)
+    profile.addProperty("uuid", simulationSnapshot.uuid.toString())
     profile.addProperty("name", npc.name)
     profile.addProperty("display_name", npc.displayName)
-    profile.addProperty("profile_source", npc.profileSource)
-    profile.addProperty("profile_version", npc.profileVersion)
+    profile.addProperty("profile_source", simulationSnapshot.profileSource)
+    profile.addProperty("profile_version", simulationSnapshot.profileVersion)
     profile.addProperty("source_key", npc.sourceKey)
     profile.addProperty("world", npc.worldName)
     profile.addProperty("x", npc.x)
@@ -685,11 +731,12 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     profile.addProperty("backstory", npc.backstory)
     profile.addProperty("age", npc.age)
     profile.addProperty("gender", npc.gender)
-    profile.addProperty("current_state", npc.currentState.name)
-    profile.addProperty("spawned", npc.spawned)
-    profile.add("spawn_state", buildSpawnState(npc))
-    profile.addProperty("profile_summary", buildProfileSummary(npc))
+    profile.addProperty("current_state", simulationSnapshot.state.name)
+    profile.addProperty("spawned", simulationSnapshot.spawned)
+    profile.add("spawn_state", buildSpawnState(npc, simulationSnapshot))
+    profile.addProperty("profile_summary", summary)
     ScenarioActorProfileData.write(profile, npc)
+    profile.getAsJsonObject("scenario_actor")?.addProperty("simulation_mode", simulationSnapshot.simulationMode.name)
     if (preservedNarrative != null) {
         profile.add("narrative", preservedNarrative)
     }
@@ -724,14 +771,16 @@ fun buildProfileData(npc: AINPC, gson: Gson): String {
     profile.add("emotions", emotions)
 
     val simulation = JsonObject()
-    simulation.addProperty("hunger_level", npc.hungerLevel)
-    simulation.addProperty("energy_level", npc.energyLevel)
-    simulation.addProperty("social_need_level", npc.socialNeedLevel)
-    simulation.addProperty("comfort_level", npc.comfortLevel)
-    simulation.addProperty("safety_level", npc.safetyLevel)
+    val needs = simulationSnapshot.needs
+    simulation.addProperty("hunger_level", needs.hunger)
+    simulation.addProperty("energy_level", needs.energy)
+    simulation.addProperty("social_need_level", needs.social)
+    simulation.addProperty("comfort_level", needs.comfort)
+    simulation.addProperty("safety_level", needs.safety)
     simulation.addProperty("current_goal", npc.currentGoal)
     simulation.addProperty("planned_routine_activity", npc.plannedRoutineActivity)
-    simulation.addProperty("last_simulation_tick_at", npc.lastSimulationTickAt)
+    simulation.addProperty("last_simulation_tick_at", simulationSnapshot.lastTickAt)
+    simulationSnapshot.progress?.let { simulation.add("progress", NpcSimulationProgressCodec.write(it)) }
     simulation.add("action_experience", NpcActionExperienceCodec.write(npc.actionExperience))
     simulation.add("social_experience", NpcSocialExperienceCodec.write(npc.socialExperience))
     profile.add("simulation", simulation)

@@ -76,6 +76,15 @@ class AINPCTabCompleter(
                 }
 
                 "delete", "family", "tp" -> if (args.size == 2) completions.addAll(getNPCNames(args[1]))
+                "profile-reconcile" -> if (sender.hasPermission("ainpc.admin")) {
+                    when (args.size) {
+                        2 -> completions.addAll(getNPCNames(args[1]))
+                        3 -> completions.addAll(filterStartsWith(listOf("preview", "apply", "restore-needs"), args[2]))
+                        4 -> if (args[2].equals("restore-needs", ignoreCase = true)) {
+                            completions.addAll(filterStartsWith(listOf("--confirm"), args[3]))
+                        }
+                    }
+                }
                 "info", "decision" -> if (args.size == 2) {
                     completions.addAll(filterStartsWith(listOf("nearest"), args[1]))
                     completions.addAll(getNPCNames(args[1]))

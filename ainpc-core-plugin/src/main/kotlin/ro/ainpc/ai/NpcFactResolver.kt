@@ -129,10 +129,10 @@ object NpcFactResolver {
 
     @JvmStatic
     fun describeLocation(npc: AINPC?, context: NPCContext?): String =
-        describeLocationValues(npc?.worldName, context?.topologyCategory)
+        if (context?.perceptionObservation?.reused == true) "" else describeLocationValues(npc?.worldName, context?.topologyCategory)
 
     internal fun describeCapturedLocation(perception: NpcPerceptionSnapshot): String =
-        describeLocationValues(perception.worldName, perception.topologyCategory)
+        if (perception.observation?.reused == true) "" else describeLocationValues(perception.worldName, perception.topologyCategory)
 
     private fun describeLocationValues(worldName: String?, topologyCategory: TopologyCategory?): String {
         if (topologyCategory != null && topologyCategory != TopologyCategory.UNKNOWN) {

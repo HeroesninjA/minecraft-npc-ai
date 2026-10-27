@@ -242,6 +242,25 @@ class OpenAIPromptSnapshotIsolationTest {
     }
 
     @Test
+    fun `prompt and fallback preserve reused perception even after live context refresh`() {
+        setField(NPCContext::class.java, npc.context, "environmentContext", EnvironmentContext.empty("world").copy(
+            weather = EnvironmentContext.Weather.RAIN))
+        npc.context.recordPerceptionObservation()
+        npc.context.reusePerceptionObservation(40)
+        val snapshot = capture().copy(playerMessage = "Cum e vremea?")
+        npc.context.recordPerceptionObservation()
+
+        assertTrue(snapshot.agentSnapshot!!.perception.observation!!.reused)
+        assertTrue(snapshot.environmentDescription.contains("nu sunt o scanare noua"))
+        val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
+        assertTrue(prompt.contains("environment_observation_status:"))
+        assertTrue(prompt.contains("nu confirma mediul actual"))
+        assertEquals("", snapshot.locationDescription)
+        assertEquals("Nu pot confirma mediul actual fara o observatie noua.", OpenAITextSupport.generateFallbackResponse(snapshot))
+        assertEquals("Acum ploua.", OpenAITextSupport.generateFallbackResponse(capture().copy(playerMessage = "Cum e vremea?")))
+    }
+
+    @Test
     fun `snapshot captures the requested player without changing the live conversation`() {
         npc.context.setInteractingPlayer(currentPlayer)
         npc.context.lastPlayerMessage = "Mesajul curent"

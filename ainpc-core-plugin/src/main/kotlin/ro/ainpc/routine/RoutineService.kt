@@ -9,8 +9,11 @@ import ro.ainpc.api.events.AINPCEventSource
 import ro.ainpc.api.events.npc.AINPCRoutineChangedEvent
 import ro.ainpc.api.events.npc.AINPCRoutineChangedEventPayload
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSimulationMode
+import ro.ainpc.npc.NpcSimulationLodPass
 import ro.ainpc.npc.NpcSelfCareThresholds
 import ro.ainpc.story.PlaceStoryState
 import ro.ainpc.story.RegionStoryState
@@ -52,6 +55,13 @@ class RoutineService(private val plugin: AINPCPlugin) {
     fun getBatchProgress(): Pair<Int, Int> = batchIndex to batchCount
 
     fun runRoutineTick(): RoutineTickSummary {
+        if (!plugin.config.getBoolean(ConfigKeys.ROUTINE_ENABLED, false)) {
+            return RoutineTickSummary.disabled(plugin.npcManager.getNPCCount())
+        }
+        return runRoutineTick(NpcSimulationLodPass.capture(plugin.config))
+    }
+
+    internal fun runRoutineTick(lod: NpcSimulationLodPass): RoutineTickSummary {
         val total = plugin.npcManager.getNPCCount()
         if (!plugin.config.getBoolean(ConfigKeys.ROUTINE_ENABLED, false)) {
             return RoutineTickSummary.disabled(total)
@@ -73,6 +83,8 @@ class RoutineService(private val plugin: AINPCPlugin) {
         val teleportEnabled = plugin.config.getBoolean(ConfigKeys.ROUTINE_TELEPORT_ENABLED, true)
         val fullSimulationEnabled = plugin.config.getBoolean("features.simulation", false) &&
             plugin.config.getBoolean("simulation.enabled", false)
+        val plannedRestEnabled = plugin.config.getBoolean("simulation.decision.care_planner_execution_enabled", false) &&
+            plugin.config.getBoolean("features.routine", false)
         val now = System.currentTimeMillis()
         pruneStoryStateCache(now)
         val allNpcs = plugin.npcManager.getAllNPCs().toList()
@@ -126,6 +138,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
                 }
             }
 
+            if (!lod.modeFor(npc).runsAutonomousActivities()) continue
             val npcFullSimulationEnabled = fullSimulationEnabled && npc.simulationMode == NpcSimulationMode.FULL
             if (shouldDeferForSelfCare(
                     npc.currentState,
@@ -133,6 +146,7 @@ class RoutineService(private val plugin: AINPCPlugin) {
                     npc.energyLevel,
                     npcFullSimulationEnabled,
                     npc.homeAnchor?.isNear(npc.location, 5.5) == true,
+                    plannedRest = plannedRestEnabled && hasActiveRestGoal(npc, now),
                 )
             ) {
                 skippedBusy++
@@ -287,10 +301,23 @@ class RoutineService(private val plugin: AINPCPlugin) {
             energyLevel: Int,
             fullSimulationEnabled: Boolean,
             isAtHome: Boolean,
+            plannedRest: Boolean = false,
         ): Boolean = fullSimulationEnabled && isAtHome && when (state) {
             NPCState.EATING -> hungerLevel < NpcSelfCareThresholds.RECOVERED
             NPCState.SLEEPING -> energyLevel < NpcSelfCareThresholds.RECOVERED
+            NPCState.RESTING -> plannedRest && energyLevel in 0 until NpcSelfCareThresholds.RECOVERED
             else -> false
+        }
+
+        internal fun hasActiveRestGoal(npc: AINPC, now: Long): Boolean {
+            if (npc.simulationMode != NpcSimulationMode.FULL || npc.currentState != NPCState.RESTING ||
+                npc.context.isInDanger || npc.safetyLevel !in 35..100 ||
+                npc.context.interactingPlayer != null || npc.context.interactingNPC != null
+            ) return false
+            val goal = npc.selfCareGoal.snapshot(now) ?: return false
+            val homeKey = NpcSelfCareGoal.homeKey(npc)
+            return homeKey.isNotBlank() && goal.homeKey == homeKey && goal.action == NPCAction.REST &&
+                goal.stage == NpcSelfCareGoal.Stage.RECOVERING && !goal.lacksProgress()
         }
     }
 

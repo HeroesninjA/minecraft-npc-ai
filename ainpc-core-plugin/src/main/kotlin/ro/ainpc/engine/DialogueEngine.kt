@@ -457,7 +457,7 @@ class DialogueEngine(
             allowFoodRequest = playerUuid != null && foodRequestReply == null,
             foodRequestReply = foodRequestReply,
         )
-        val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext)
+        val environmentFact = EnvironmentFactResolver.resolve(playerMessage, context.environmentContext, context.perceptionObservation)
         return listOfNotNull(npcFact, cognitiveFact, environmentFact).joinToString(" ").takeIf { it.isNotBlank() }
     }
 

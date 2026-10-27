@@ -14,6 +14,55 @@ class NpcActionExperienceTest {
     private val sleeping = NpcCognitiveState(energyLevel = 20, currentState = NPCState.SLEEPING)
 
     @Test
+    fun `planned rest records observed energy without inventing a benefit beyond ambient home recovery`() {
+        val resting = sleeping.copy(currentState = NPCState.RESTING)
+        val experience = NpcActionExperience()
+        experience.begin(NPCAction.REST, resting, contextKey, true, 2L, tickAt, allowRest = true)
+
+        val result = observe(experience, before = resting, after = resting.copy(energyLevel = 22))
+
+        assertEquals(NpcActionExperience.Observation(NPCAction.REST, contextKey, 2, 0.0, observedAt), result)
+        assertEquals(0, score(experience, action = NPCAction.REST, state = resting))
+        assertTrue(experience.latestDescription(observedAt).contains("odihnei de acasa"))
+        assertTrue(!experience.latestDescription(observedAt).contains("somnului"))
+        assertNull(observe(experience, before = resting, after = resting.copy(energyLevel = 22)))
+    }
+
+    @Test
+    fun `rest and sleep retain separate evidence scores and descriptions after restoration`() {
+        val resting = sleeping.copy(currentState = NPCState.RESTING)
+        val rest = NpcActionExperience().apply {
+            begin(NPCAction.REST, resting, contextKey, true, 2L, tickAt, allowRest = true)
+        }
+        val sleep = begun(NPCAction.SLEEP, sleeping)
+        val restResult = requireNotNull(observe(rest, before = resting, after = resting))
+        val sleepResult = requireNotNull(observe(sleep, before = sleeping, after = sleeping.copy(energyLevel = 24)))
+        val restored = NpcActionExperience().apply { restore(listOf(restResult, sleepResult)) }
+
+        assertEquals(-1, score(restored, action = NPCAction.REST, state = resting))
+        assertEquals(1, score(restored, action = NPCAction.SLEEP, state = sleeping))
+        restored.restore(listOf(restResult))
+        assertTrue(restored.latestDescription(observedAt).contains("odihnei"))
+        restored.restore(listOf(sleepResult))
+        assertTrue(restored.latestDescription(observedAt).contains("somnului"))
+    }
+
+    @Test
+    fun `planned rest requires its own safe state and rejects interrupted observations`() {
+        val resting = sleeping.copy(currentState = NPCState.RESTING)
+        val experience = NpcActionExperience()
+        experience.begin(NPCAction.REST, sleeping, contextKey, true, 2L, tickAt, allowRest = true)
+        assertNull(observe(experience, before = resting, after = resting.copy(energyLevel = 22)))
+        experience.begin(NPCAction.REST, resting, contextKey, false, 2L, tickAt, allowRest = true)
+        assertNull(observe(experience, before = resting, after = resting.copy(energyLevel = 22)))
+        experience.begin(NPCAction.REST, resting, contextKey, true, 2L, tickAt, allowRest = true)
+        assertNull(observe(experience, before = resting, after = resting.copy(hasInteractingPlayer = true)))
+        experience.begin(NPCAction.REST, resting, contextKey, true, 2L, tickAt, allowRest = true)
+        assertNull(observe(experience, before = resting, after = sleeping.copy(energyLevel = 24)))
+        assertTrue(experience.snapshot().isEmpty())
+    }
+
+    @Test
     fun `an applied eating period records its satiety result and biases later eligible choices`() {
         val experience = begun()
 
@@ -205,7 +254,7 @@ class NpcActionExperienceTest {
     fun `restore rejects unsupported malformed and unbounded records and cancels pending observations`() {
         val valid = observation()
         val invalid = listOf(
-            valid.copy(action = NPCAction.REST),
+            valid.copy(action = NPCAction.DO_NOTHING),
             valid.copy(action = NPCAction.START_WORK),
             valid.copy(contextKey = ""),
             valid.copy(contextKey = " "),

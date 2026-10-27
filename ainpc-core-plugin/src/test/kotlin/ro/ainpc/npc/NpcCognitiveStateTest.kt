@@ -9,6 +9,23 @@ import java.lang.reflect.Proxy
 
 class NpcCognitiveStateTest {
     @Test
+    fun `only a live planned rest objective keeps energy focus until the recovery threshold`() {
+        val progress = NpcSelfCareGoal.Snapshot(NPCAction.REST, NpcSelfCareGoal.Stage.RECOVERING,
+            20, 50, "world:home", true, 1_000L)
+        val resting = NpcCognitiveState(energyLevel = 50, currentState = NPCState.RESTING)
+        assertEquals(NpcCognitiveState.Focus.IDLE, resting.focus)
+        assertFalse(resting.needsDescription().contains("Am nevoie de odihna"))
+        val planned = resting.copy(selfCareProgress = progress)
+        assertEquals(NpcCognitiveState.Focus.ENERGY, planned.focus)
+        assertTrue(planned.needsDescription().contains("Am nevoie de odihna"))
+        assertEquals(NpcCognitiveState.Focus.IDLE, planned.copy(energyLevel = 60).focus)
+        assertEquals(NpcCognitiveState.Focus.IDLE, planned.copy(selfCareProgress = progress.copy(
+            stage = NpcSelfCareGoal.Stage.INTERRUPTED)).focus)
+        assertEquals(NpcCognitiveState.Focus.IDLE, planned.copy(selfCareProgress = progress.copy(
+            withoutProgressMillis = 180_000L)).focus)
+    }
+
+    @Test
     fun `one explicit clock consistently expires decision and goal evidence without clearing it`() {
         val now = 1_000_000L
         val npc = AINPC(null)

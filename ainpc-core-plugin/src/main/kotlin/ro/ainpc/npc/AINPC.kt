@@ -44,6 +44,10 @@ class AINPC(
             field = value
         }
     var interactionProfile: NpcInteractionProfile = NpcInteractionProfile.FULL_AI
+    @Transient
+    internal var simulationLodHistory: NpcSimulationLodHistory? = null
+    @Transient
+    internal var perceptionRefreshHistory: NpcPerceptionRefreshHistory? = null
     var entityArchetype: String = "villager"
     var ownerScenarioId: String? = null
     var scenarioSessionId: UUID? = null
@@ -82,6 +86,14 @@ class AINPC(
     var currentGoal = ""
     var plannedRoutineActivity = ""
     var lastSimulationTickAt = 0L
+    @Transient
+    internal val simulationProgress = ro.ainpc.engine.NpcSimulationProgress()
+    @Transient
+    internal val profileRevision = ro.ainpc.managers.NpcProfileRevision()
+    @Transient
+    @Volatile
+    internal var absenceRecord: NpcAbsenceRecord? = null
+        private set
     val actionExperience = NpcActionExperience()
     val socialExperience = NpcSocialExperience()
     val foodRequestPreferences = NpcFoodRequestPreferences()
@@ -131,9 +143,17 @@ class AINPC(
         if (entity == null) return
         actionExperience.cancelPending()
         clearDecision()
-        bukkitEntity = entity
-        spawned = entity.isValid
-        uuid = entity.uniqueId
+        val valid = entity.isValid
+        val entityUuid = entity.uniqueId
+        synchronized(simulationProgress) {
+            val previousUuid = uuid
+            uuid = entityUuid
+            if (uuid != previousUuid) simulationProgress.rebind(previousUuid, uuid)
+            bukkitEntity = entity
+            spawned = valid
+            absenceRecord = if (spawned) null else NpcAbsenceRecord(uuid,
+                NpcAbsenceRecord.Reason.UNAVAILABLE, System.currentTimeMillis())
+        }
         syncLocation(entity.location)
         entity.customName(coloredDisplayNameComponent)
         entity.isCustomNameVisible = true
@@ -224,23 +244,43 @@ class AINPC(
     private fun configBoolean(path: String, fallback: Boolean): Boolean = plugin?.config?.getBoolean(path, fallback) ?: fallback
 
     fun despawn() {
-        actionExperience.cancelPending()
-        clearDecision()
-        if (bukkitEntity != null && bukkitEntity!!.isValid) {
-            bukkitEntity!!.remove()
-        }
-        bukkitEntity = null
-        spawned = false
+        val entity = bukkitEntity
+        val removable = entity?.isValid == true
+        markEntityUnavailable(NpcAbsenceRecord.Reason.EXPLICIT_DESPAWN)
+        if (removable) entity!!.remove()
         plugin?.debug("NPC '$name' despawnat.")
     }
 
     fun markEntityUnavailable() {
-        actionExperience.cancelPending()
-        clearDecision()
-        if (bukkitEntity != null && bukkitEntity!!.isValid) syncLocation(bukkitEntity!!.location)
-        bukkitEntity = null
-        spawned = false
+        markEntityUnavailable(NpcAbsenceRecord.Reason.UNAVAILABLE)
     }
+
+    internal fun markEntityUnavailable(reason: NpcAbsenceRecord.Reason, position: Location? = null) {
+        val entity = bukkitEntity
+        val lastPosition = position ?: entity?.takeIf { it.isValid }?.location
+        if (lastPosition != null) syncLocation(lastPosition)
+        actionExperience.cancelPending()
+        synchronized(simulationProgress) {
+            clearDecision()
+            val previous = absenceRecord?.takeIf { it.npcUuid == uuid }
+            absenceRecord = if (reason == NpcAbsenceRecord.Reason.UNAVAILABLE && entity == null && previous != null) {
+                previous
+            } else NpcAbsenceRecord(uuid, reason, System.currentTimeMillis())
+            bukkitEntity = null
+            spawned = false
+        }
+    }
+
+    internal fun restoreAbsence(record: NpcAbsenceRecord): Boolean = synchronized(simulationProgress) {
+        if (record.npcUuid != uuid || spawned || bukkitEntity != null) return false
+        clearDecision()
+        absenceRecord = record.copy(origin = NpcAbsenceRecord.Origin.RESTORED)
+        true
+    }
+
+    internal fun permitsAutomaticRestore(): Boolean = absenceRecord?.let {
+        it.npcUuid == uuid && it.permitsAutomaticRestore()
+    } ?: true
 
     fun teleport(location: Location) {
         actionExperience.cancelPending()
@@ -336,6 +376,11 @@ class AINPC(
         currentState = newState
     }
 
+    internal fun invalidateReconciledProfileWork() {
+        actionExperience.cancelPending()
+        clearDecision()
+    }
+
     private fun transitionState(newState: NPCState, enforcePriority: Boolean): Boolean {
         if (currentState == newState) {
             return true
@@ -376,6 +421,10 @@ class AINPC(
     private fun clearDecision() {
         lastDecision = null
         selfCareGoal.clear()
+        simulationLodHistory = null
+        perceptionRefreshHistory = null
+        context.invalidatePerceptionObservation()
+        simulationProgress.suspend()
         decisionRevision++
     }
 

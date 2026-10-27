@@ -24,6 +24,7 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcAbsenceRecord
 import ro.ainpc.npc.NpcLifecycleType
 import ro.ainpc.npc.NpcPersistenceMode
 import ro.ainpc.npc.NpcSimulationMode
@@ -48,6 +49,7 @@ class NPCManager(
 ) {
     val populationService = ro.ainpc.spawn.NpcPopulationService(plugin, this)
     private val gson: Gson = Gson()
+    internal val profileReconciler = NpcProfileReconciler()
     private val npcsByUuid: MutableMap<UUID, AINPC> = ConcurrentHashMap()
     private val npcsById: MutableMap<Int, AINPC> = ConcurrentHashMap()
     private val npcsByEntityId: MutableMap<UUID, AINPC> = ConcurrentHashMap()
@@ -84,7 +86,8 @@ class NPCManager(
                    COALESCE(pr.profile_source, 'manual') AS profile_source,
                    COALESCE(pr.profile_version, 1) AS profile_version,
                    COALESCE(pr.profile_summary, '') AS profile_summary,
-                   COALESCE(pr.profile_data, '{}') AS profile_data
+                   COALESCE(pr.profile_data, '{}') AS profile_data,
+                   COALESCE(pr.write_revision, 0) AS profile_write_revision
             FROM npcs n
             LEFT JOIN npc_personality p ON n.id = p.npc_id
             LEFT JOIN npc_emotions e ON n.id = e.npc_id
@@ -385,6 +388,7 @@ class NPCManager(
         npc.profileSummary = rs.getString("profile_summary")
         npc.profileDataJson = rs.getString("profile_data")
         npc.profileCreated = rs.getObject("profile_npc_id") != null
+        npc.profileRevision.restoreFromDatabase(npc.databaseId, rs.getString("profile_write_revision"))
 
         val personality = NPCPersonality(
             rs.getDouble("openness"),
@@ -450,6 +454,9 @@ class NPCManager(
                 npc.currentGoal = readSimulationText(simulation, "current_goal", npc.currentGoal)
                 npc.plannedRoutineActivity = readSimulationText(simulation, "planned_routine_activity", npc.plannedRoutineActivity)
                 npc.lastSimulationTickAt = readSimulationTimestamp(simulation, "last_simulation_tick_at", npc.lastSimulationTickAt)
+                NpcSimulationProgressCodec.read(simulation.get("progress"), npc.uuid)?.let {
+                    npc.simulationProgress.restore(it, npc.uuid)
+                }
                 npc.actionExperience.restore(NpcActionExperienceCodec.read(simulation.get("action_experience")))
                 npc.socialExperience.restore(NpcSocialExperienceCodec.read(simulation.get("social_experience")))
             }
@@ -463,6 +470,8 @@ class NPCManager(
                 npc.workAnchor = readOwnedLocation(ownedLocations, "work")
                 npc.socialAnchor = readOwnedLocation(ownedLocations, "social")
             }
+            val spawnState = json.get("spawn_state")?.takeIf { it.isJsonObject }?.asJsonObject
+            NpcAbsenceCodec.read(spawnState?.get("absence"), npc.uuid)?.let { npc.restoreAbsence(it) }
         } catch (e: RuntimeException) {
             plugin.debug("Nu am putut hidrata profilul runtime pentru NPC-ul " + npc.name + ": " + e.message)
         }
@@ -706,33 +715,11 @@ class NPCManager(
     }
 
     private fun saveProfile(npc: AINPC): Boolean {
-        val summary = buildProfileSummary(npc)
-        val profileData = buildProfileData(npc, gson)
-        val sql = """
-            INSERT INTO npc_profiles (npc_id, profile_source, profile_version, profile_summary, profile_data, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(npc_id) DO UPDATE SET
-                profile_source = excluded.profile_source,
-                profile_version = excluded.profile_version,
-                profile_summary = excluded.profile_summary,
-                profile_data = excluded.profile_data,
-                updated_at = CURRENT_TIMESTAMP
-        """
-
+        val write = captureProfileWrite(npc, gson)
         try {
-            plugin.databaseManager.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, npc.databaseId)
-                stmt.setString(2, npc.profileSource)
-                stmt.setInt(3, npc.profileVersion)
-                stmt.setString(4, summary)
-                stmt.setString(5, profileData)
-                stmt.executeUpdate()
-
-                npc.profileSummary = summary
-                npc.profileDataJson = profileData
-                npc.profileCreated = true
-                return true
-            }
+            return NpcProfileWriter.save(plugin.databaseManager, npc, write,
+                plugin.config.getBoolean("simulation.handoff.enabled", false) &&
+                    plugin.config.getBoolean("simulation.progress.enabled", false))
         } catch (e: SQLException) {
             plugin.getLogger().severe("Eroare la salvarea profilului NPC: " + e.message)
             return false
@@ -1140,19 +1127,24 @@ class NPCManager(
     }
 
     fun runLifeSimulationTick() {
-        for (npc in npcsByUuid.values) {
+        val lod = ro.ainpc.npc.NpcSimulationLodPass.capture(plugin.config)
+        plugin.decisionEngine.runLifeSimulationBatch(npcsByUuid.values) { npc ->
             if (!npc.isSpawned()) {
-                continue
+                return@runLifeSimulationBatch
             }
             if (npc.simulationMode == NpcSimulationMode.NONE) {
-                continue
+                return@runLifeSimulationBatch
             }
-            ensureSimulationAnchors(npc)
-            if (npc.simulationMode == NpcSimulationMode.LIGHT) {
-                plugin.decisionEngine.updateBasicNeeds(npc)
-                continue
-            }
-            plugin.decisionEngine.runLifeSimulationTick(npc)
+            val mode = lod.modeFor(npc)
+            if (mode == NpcSimulationMode.NONE) return@runLifeSimulationBatch
+            if (mode == NpcSimulationMode.LIGHT) {
+                if (!lod.enabled) {
+                    ensureSimulationAnchors(npc)
+                    plugin.decisionEngine.updateBasicNeeds(npc)
+                    return@runLifeSimulationBatch
+                }
+            } else ensureSimulationAnchors(npc)
+            plugin.decisionEngine.runLifeSimulationTick(npc, lod)
         }
     }
 
@@ -1740,18 +1732,33 @@ class NPCManager(
     }
 
     fun handleEntityDeath(entity: Entity) {
-        val npc = getNPCByEntity(entity)
-        if (npc == null) {
-            return
-        }
-
+        val npc = currentNpcForLifecycle(entity) ?: return
         val location = entity.location
-        publishNpcDeath(npc, location)
-
-        npcsByEntityId.remove(entity.uniqueId)
-        npc.markEntityUnavailable()
-        persistNpcRuntimeStateAsync(npc, "entity death")
+        npcsByEntityId.remove(entity.uniqueId, npc)
+        npc.markEntityUnavailable(NpcAbsenceRecord.Reason.DEAD, location)
+        try {
+            publishNpcDeath(npc, location)
+        } finally {
+            persistNpcRuntimeStateAsync(npc, "entity death")
+        }
         plugin.debug("NPC '" + npc.name + "' a ramas fara entitate activa dupa moarte.")
+    }
+
+    internal fun handleEntityUnload(entity: Entity) {
+        val npc = currentNpcForLifecycle(entity) ?: return
+        val location = entity.location
+        npcsByEntityId.remove(entity.uniqueId, npc)
+        npc.markEntityUnavailable(NpcAbsenceRecord.Reason.UNLOADED, location)
+        if (plugin.config.getBoolean("simulation.handoff.enabled", false) &&
+            plugin.config.getBoolean("simulation.progress.enabled", false)) {
+            ro.ainpc.engine.NpcSimulationHandoff.reserve(npc)
+        }
+    }
+
+    private fun currentNpcForLifecycle(entity: Entity): AINPC? {
+        val uuid = entity.uniqueId
+        val npc = npcsByEntityId[uuid] ?: npcsByUuid[uuid] ?: return null
+        return npc.takeIf { it.uuid == uuid && it.bukkitEntity === entity }
     }
 
     private fun persistNpcRuntimeStateAsync(npc: AINPC, reason: String) {
@@ -1826,6 +1833,7 @@ class NPCManager(
     }
 
     private fun attachLoadedNPC(npc: AINPC, preferredChunk: Chunk?) {
+        if (!npc.permitsAutomaticRestore()) return
         val sourceOwner = findCanonicalSourceKeyOwner(npc)
         if (sourceOwner != null && !isSameNpcRecord(sourceOwner, npc)) {
             if (!sourceOwner.spawned && isChunkLoaded(sourceOwner)) {

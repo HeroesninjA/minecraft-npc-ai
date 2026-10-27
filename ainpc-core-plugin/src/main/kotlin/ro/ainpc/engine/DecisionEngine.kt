@@ -3,7 +3,9 @@ package ro.ainpc.engine
 
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.bukkit.util.NumberConversions
 import ro.ainpc.AINPCPlugin
+import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.commands.WorldBlueprintWizard
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
@@ -18,6 +20,11 @@ import ro.ainpc.npc.NpcFoodRequestPreferences
 import ro.ainpc.npc.NpcSelfCareGoal
 import ro.ainpc.npc.NpcSelfCareContinuity
 import ro.ainpc.npc.NpcSimulationMode
+import ro.ainpc.npc.NpcSimulationLodPass
+import ro.ainpc.npc.NpcLodPosition
+import ro.ainpc.npc.NpcPerceptionSource
+import ro.ainpc.npc.NpcPerceptionRefreshHistory
+import ro.ainpc.npc.NpcPerceptionRefreshSettings
 import ro.ainpc.npc.NpcSocialExperience
 import java.util.EnumMap
 import java.util.Locale
@@ -26,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -36,7 +42,14 @@ class DecisionEngine internal constructor(
     private val plugin: AINPCPlugin,
     private val refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
     private val needsClock: () -> Long,
+    private val planningNanoClock: () -> Long,
 ) {
+    internal constructor(
+        plugin: AINPCPlugin,
+        refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
+        needsClock: () -> Long,
+    ) : this(plugin, refreshWorldContext, needsClock, System::nanoTime)
+
     internal constructor(
         plugin: AINPCPlugin,
         refreshWorldContext: (NPCContext, org.bukkit.World, org.bukkit.Location) -> Unit,
@@ -296,8 +309,49 @@ class DecisionEngine internal constructor(
     internal fun decisionStatistics(uuid: UUID): DecisionStatistics.Snapshot =
         decisionStatistics[uuid]?.snapshot() ?: DecisionStatistics.Snapshot(0, emptyMap(), null)
 
+    private var activeCarePlanningBatch: NpcCarePlanningBatch? = null
+    private var lastCarePlanningActor: UUID? = null
+    @Volatile private var lastCarePlanningReport: NpcCarePlanningReport? = null
+
+    internal fun carePlanningReport(): NpcCarePlanningReport? = lastCarePlanningReport
+
+    internal fun runLifeSimulationBatch(npcs: Collection<AINPC>, process: (AINPC) -> Unit) {
+        if (activeCarePlanningBatch != null ||
+            !plugin.config.getBoolean("simulation.decision.care_planner_execution_enabled", false)
+        ) {
+            npcs.forEach(process)
+            return
+        }
+        val actors = npcs.toList()
+        val previousIndex = actors.indexOfFirst { it.uuid == lastCarePlanningActor }
+        val startIndex = if (actors.isEmpty()) 0 else (previousIndex + 1) % actors.size
+        val batch = NpcCarePlanningBatch(NpcCarePlanningLimits.fromConfig(plugin.config), planningNanoClock)
+        activeCarePlanningBatch = batch
+        var completed = false
+        try {
+            for (offset in actors.indices) process(actors[(startIndex + offset) % actors.size])
+            completed = true
+        } finally {
+            activeCarePlanningBatch = null
+            batch.lastActorUuid?.let { lastCarePlanningActor = it }
+            lastCarePlanningReport = batch.report(completed, System.currentTimeMillis())
+        }
+    }
+
     fun runLifeSimulationTick(npc: AINPC?) {
         if (npc == null || !npc.isSpawned()) return
+        runLifeSimulationTick(npc, NpcSimulationLodPass.capture(plugin.config))
+    }
+
+    internal fun runLifeSimulationTick(npc: AINPC?, lod: NpcSimulationLodPass) {
+        if (npc == null || !npc.isSpawned()) return
+        if (lod.enabled && npc.simulationMode == NpcSimulationMode.NONE) return
+        if (activeCarePlanningBatch == null &&
+            plugin.config.getBoolean("simulation.decision.care_planner_execution_enabled", false)
+        ) {
+            runLifeSimulationBatch(listOf(npc)) { runLifeSimulationTick(it, lod) }
+            return
+        }
         val revision = npc.decisionRevision
         val location = LocationWrapper.fromNpc(npc) ?: run {
             npc.actionExperience.cancelPending()
@@ -306,11 +360,17 @@ class DecisionEngine internal constructor(
         }
 
         val context = npc.context
-        refreshWorldContext(context, location.world, location.location)
-        if (!npc.isSpawned() || npc.decisionRevision != revision) return
+        if (!refreshSimulationPerception(npc, context, location, lod, revision)) return
+        if (lod.enabled && lod.modeFor(npc) == NpcSimulationMode.LIGHT) {
+            npc.actionExperience.cancelPending()
+            npc.selfCareGoal.clear()
+            if (updateNeeds(npc, context) == null) return
+            context.syncSimulationState(location.location)
+            return
+        }
         val scheduledActivity = resolveScheduledActivity(npc, context)
         npc.plannedRoutineActivity = scheduledActivity
-        updateNeedsWithExperience(npc, context)
+        if (!updateNeedsWithExperience(npc, context)) return
         context.syncSimulationState(location.location)
         try {
             if (foodRequests.tryRequest(npc)) {
@@ -320,11 +380,135 @@ class DecisionEngine internal constructor(
             plugin.debug("Cerere de mancare omisa pentru ${npc.name}: ${exception.javaClass.simpleName}")
         }
 
+        if (tryExecuteCarePlanAtHome(npc, context)) {
+            if (npc.isSpawned()) context.syncSimulationState(npc.bukkitEntity?.location)
+            return
+        }
         val situation = actionSituation(npc, context)
         val action = decideAction(npc, context, situation)
         applySimulationOutcome(npc, context, action, situation)
         if (!npc.isSpawned()) return
         context.syncSimulationState(npc.bukkitEntity?.location)
+    }
+
+    private fun refreshSimulationPerception(
+        npc: AINPC, context: NPCContext, location: LocationWrapper, lod: NpcSimulationLodPass, revision: Long,
+    ): Boolean {
+        if (context.npc !== npc) return false
+        val settings = if (lod.enabled && plugin.config.getBoolean("simulation.lod.perception.enabled", false)) {
+            NpcPerceptionRefreshSettings.fromConfig(plugin.config)
+        } else null
+        val entity = npc.bukkitEntity
+        if (settings == null || !settings.enabled) {
+            npc.perceptionRefreshHistory = null
+            refreshWorldContext(context, location.world, location.location)
+            return npc.isSpawned() && npc.decisionRevision == revision && npc.context === context && npc.bukkitEntity === entity
+        }
+        check(Bukkit.isPrimaryThread()) { "Perception LOD requires the Paper main thread" }
+        val serverTick = Bukkit.getCurrentTick()
+        val position = NpcLodPosition.fromLocation(location.location)
+        val source = NpcPerceptionSource.capture(npc, context, position)
+        val age = if (lod.modeFor(npc) == NpcSimulationMode.LIGHT && npc.simulationMode == NpcSimulationMode.FULL) {
+            npc.perceptionRefreshHistory?.reuseAge(settings, source, serverTick)
+        } else null
+        if (age != null) {
+            context.syncSimulationState(location.location)
+            if (npc.isSpawned() && npc.decisionRevision == revision && npc.context === context && npc.bukkitEntity === entity &&
+                lod.modeFor(npc) == NpcSimulationMode.LIGHT) {
+                context.reusePerceptionObservation(age)
+                return true
+            }
+        }
+        npc.perceptionRefreshHistory = null
+        val observationToken = context.perceptionObservationToken
+        refreshWorldContext(context, location.world, location.location)
+        if (!npc.isSpawned() || npc.decisionRevision != revision || npc.context !== context || npc.bukkitEntity !== entity) return false
+        if (context.perceptionObservationToken === observationToken) context.recordPerceptionObservation()
+        val refreshedSource = NpcPerceptionSource.capture(npc, context, position)
+        npc.perceptionRefreshHistory = refreshedSource?.let { NpcPerceptionRefreshHistory(settings, it, serverTick) }
+        return true
+    }
+
+    private fun carePlanExecutionAllowed(npc: AINPC): Boolean =
+        plugin.config.getBoolean("simulation.decision.care_planner_execution_enabled", false) &&
+            plugin.config.getBoolean("features.simulation", false) &&
+            plugin.config.getBoolean("simulation.enabled", false) &&
+            plugin.config.getBoolean("features.routine", false) &&
+            plugin.config.getBoolean("routine.enabled", false) &&
+            npc.simulationMode == NpcSimulationMode.FULL && npc.isSpawned() && Bukkit.isPrimaryThread() &&
+            !plugin.routineCoordinator.isRoutinePaused(npc.uuid) && plugin.routineCoordinator.getOverride(npc.uuid) == null
+
+    private fun tryExecuteCarePlanAtHome(npc: AINPC, context: NPCContext): Boolean {
+        if (!carePlanExecutionAllowed(npc) || !context.isAtHome) return false
+        val batch = activeCarePlanningBatch ?: return false
+        val outcome = batch.execute(npc.uuid) {
+            val timer = plugin.performanceMonitor.timer(RuntimeMetricNames.CARE_PLANNER)
+            timer.begin()
+            var success = false
+            try {
+                val result = executeCarePlanAtHome(npc, context)
+                success = true
+                result
+            } finally {
+                timer.end(success, 1)
+            }
+        }
+        if (outcome != null) return outcome.endsTick
+        val now = System.currentTimeMillis()
+        if (npc.selfCareGoal.snapshot(now)?.stage != NpcSelfCareGoal.Stage.RECOVERING) return false
+        return npc.selfCareGoal.canKeepRecovery(
+            NpcCognitiveState.capture(npc, context, now), experienceContextKey(npc), context.isAtHome, now,
+        )
+    }
+
+    private fun executeCarePlanAtHome(npc: AINPC, context: NPCContext): NpcCarePlanExecutor.Outcome {
+        val input = NpcCarePlanningInput.capture(npc, NpcAgentSnapshot.capture(npc, context))
+        val plan = NpcCarePlanner.plan(input)
+        return NpcCarePlanExecutor.executeAtHome(
+            plan,
+            currentInput = { NpcCarePlanningInput.capture(npc, NpcAgentSnapshot.capture(npc, context)) },
+            policyAllows = { carePlanExecutionAllowed(npc) },
+            homeAvailable = { careHomeAvailable(npc, input) },
+            apply = { action ->
+                decisionCache.remove(npc.uuid)
+                applySimulationOutcome(npc, context, action, ActionSituation(
+                    false, false, false, isAtHome = true,
+                    hungerLevel = input.agent.cognition.hungerLevel, energyLevel = input.agent.cognition.energyLevel,
+                    currentState = input.agent.cognition.currentState,
+                ), plan)
+            },
+        )
+    }
+
+    private fun careHomeAvailable(npc: AINPC, input: NpcCarePlanningInput): Boolean {
+        val home = input.home ?: return false
+        val position = npc.bukkitEntity?.location ?: return false
+        val world = position.world ?: return false
+        if (!npc.isSpawned() || !home.isConfirmedIn(npc.worldName) || world.name != home.worldName ||
+            !position.x.isFinite() || !position.y.isFinite() || !position.z.isFinite()
+        ) return false
+        if (!world.isChunkLoaded(NumberConversions.floor(home.x) shr 4, NumberConversions.floor(home.z) shr 4)) {
+            return false
+        }
+        val deltaX = position.x - home.x
+        val deltaY = position.y - home.y
+        val deltaZ = position.z - home.z
+        return deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ <= 5.5 * 5.5
+    }
+
+    private fun carePlanSurvivesTransition(
+        npc: AINPC, context: NPCContext, plan: NpcCarePlanPreview, expectedState: NPCState, expectedStateRevision: Long,
+    ): Boolean {
+        val available = careHomeAvailable(npc, plan.input)
+        val current = NpcCarePlanningInput.capture(npc, NpcAgentSnapshot.capture(npc, context))
+        if (current.agent.stateRevision != expectedStateRevision || current.agent.cognition.currentState != expectedState) {
+            return false
+        }
+        val normalized = current.copy(agent = current.agent.copy(
+            stateRevision = plan.input.agent.stateRevision,
+            cognition = current.agent.cognition.copy(currentState = plan.input.agent.cognition.currentState),
+        ))
+        return available && carePlanExecutionAllowed(npc) && plan.invalidationReason(normalized) == null
     }
 
     fun updateBasicNeeds(npc: AINPC?) {
@@ -337,7 +521,7 @@ class DecisionEngine internal constructor(
         val context = npc.context
         refreshWorldContext(context, location.world, location.location)
         if (!npc.isSpawned() || npc.decisionRevision != revision) return
-        updateNeeds(npc, context)
+        if (updateNeeds(npc, context) == null) return
         context.syncSimulationState(location.location)
     }
 
@@ -620,25 +804,26 @@ class DecisionEngine internal constructor(
     fun getActionScore(npc: AINPC, context: NPCContext, action: NPCAction): Int =
         calculateActionScore(npc, context, action, actionSituation(npc, context))
 
-    private fun updateNeedsWithExperience(npc: AINPC, context: NPCContext) {
+    private fun updateNeedsWithExperience(npc: AINPC, context: NPCContext): Boolean {
         val before = NpcCognitiveState.capture(npc, context)
-        val previousTickAt = npc.lastSimulationTickAt
-        updateNeeds(npc, context)
+        val interval = updateNeeds(npc, context) ?: return false
         val after = NpcCognitiveState.capture(npc, context)
         val homeKey = experienceContextKey(npc)
         if (npc.simulationMode == NpcSimulationMode.FULL) {
-            npc.selfCareGoal.observe(before, after, homeKey, context.isAtHome, previousTickAt, npc.lastSimulationTickAt)
+            npc.selfCareGoal.observe(before, after, homeKey, context.isAtHome,
+                interval.previousAtMillis, interval.observedAtMillis)
         } else {
             npc.selfCareGoal.clear()
         }
         if (experienceEnabled(npc)) {
             npc.actionExperience.observe(
                 before, after, homeKey,
-                context.isAtHome, npc.stateRevision, previousTickAt, npc.lastSimulationTickAt,
+                context.isAtHome, npc.stateRevision, interval.previousAtMillis, interval.observedAtMillis,
             )
         } else {
             npc.actionExperience.cancelPending()
         }
+        return true
     }
 
     private fun experienceEnabled(npc: AINPC): Boolean =
@@ -647,57 +832,34 @@ class DecisionEngine internal constructor(
 
     private fun experienceContextKey(npc: AINPC): String = NpcSelfCareGoal.homeKey(npc)
 
-    private fun updateNeeds(npc: AINPC, context: NPCContext) {
+    private fun updateNeeds(npc: AINPC, context: NPCContext): NpcSimulationInterval? {
         val now = needsClock()
-        val previousTick = npc.lastSimulationTickAt
-        npc.lastSimulationTickAt = now
-        if (previousTick <= 0L || now <= previousTick) return
-
-        val tickFactor = max(0.5, min(4.0, (now - previousTick) / 30000.0))
-        val hungerDecay = plugin.config.getDouble("simulation.needs.hunger_decay", 1.5) * tickFactor
-        val energyDecay = plugin.config.getDouble("simulation.needs.energy_decay", 1.2) * tickFactor
-        val socialDecay = plugin.config.getDouble("simulation.needs.social_decay", 0.8) * tickFactor
-        val comfortDecay = plugin.config.getDouble("simulation.needs.comfort_decay", 0.6) * tickFactor
-        val safetyRecovery = plugin.config.getDouble("simulation.needs.safety_recovery", 1.0) * tickFactor
-
-        npc.hungerLevel = nextHungerLevel(
-            npc.hungerLevel, npc.currentState, context.isAtHome, hungerDecay, tickFactor,
-        )
-
-        if (npc.currentState == NPCState.SLEEPING) {
-            npc.energyLevel = (npc.energyLevel + (3.5 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else if (npc.currentState == NPCState.RESTING || context.isAtHome) {
-            npc.energyLevel = (npc.energyLevel + (1.6 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else {
-            npc.energyLevel = (npc.energyLevel - (energyDecay + if (context.isAtWork) 0.5 else 0.0).roundToInt())
-                .coerceIn(0, 100)
-        }
-
-        if (context.interactingPlayer != null || context.isFriendsNearby || npc.currentState.isSocialState()) {
-            npc.socialNeedLevel = (npc.socialNeedLevel + (2.4 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else {
-            npc.socialNeedLevel = (npc.socialNeedLevel - socialDecay.roundToInt()).coerceIn(0, 100)
-        }
-
-        if (context.isAtHome || context.isIndoors) {
-            npc.comfortLevel = (npc.comfortLevel + (1.8 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else {
-            val weatherPenalty = if ("RAIN" == context.weather || "THUNDER" == context.weather) 1.2 else 0.0
-            npc.comfortLevel = (npc.comfortLevel - (comfortDecay + weatherPenalty).roundToInt()).coerceIn(0, 100)
-        }
-
-        if (context.isInDanger) {
-            npc.safetyLevel = (npc.safetyLevel - (4.0 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else if (context.isAtHome) {
-            npc.safetyLevel = (npc.safetyLevel + (1.8 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else {
-            npc.safetyLevel = (npc.safetyLevel + safetyRecovery.roundToInt()).coerceIn(0, 100)
-        }
+        val progressLease = if (plugin.config.getBoolean("simulation.progress.enabled", false)) {
+            npc.simulationProgress.preparePhysical(npc.uuid, npc.lastSimulationTickAt, now) ?: return null
+        } else null
+        val input = NpcNeedsInput.capture(npc, context, now, progressLease)
+        val rates = if (input.interval.advances) NpcNeedsRates(
+            plugin.config.getDouble("simulation.needs.hunger_decay", 1.5),
+            plugin.config.getDouble("simulation.needs.energy_decay", 1.2),
+            plugin.config.getDouble("simulation.needs.social_decay", 0.8),
+            plugin.config.getDouble("simulation.needs.comfort_decay", 0.6),
+            plugin.config.getDouble("simulation.needs.safety_recovery", 1.0),
+        ) else NpcNeedsRates()
+        val transition = NpcNeedsTransition.calculate(input, rates)
+        if (progressLease != null && !plugin.config.getBoolean("simulation.progress.enabled", false)) return null
+        if (input.spawned && !npc.isSpawned()) return null
+        return input.interval.takeIf { transition.applyTo(npc, context) }
     }
 
     private fun applySimulationOutcome(
         npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
     ) {
+        applySimulationOutcome(npc, context, action, situation, null)
+    }
+
+    private fun applySimulationOutcome(
+        npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation, carePlan: NpcCarePlanPreview?,
+    ): Boolean {
         val revision = npc.decisionRevision
         val decision = decisionCache[npc.uuid]?.takeIf {
             it.action == action && it.explanationRevision == npc.decisionRevision
@@ -707,7 +869,10 @@ class DecisionEngine internal constructor(
         npc.changeStateFromSimulation(targetState)
         if (npc.decisionRevision != revision || npc.stateRevision != expectedStateRevision ||
             npc.currentState != targetState
-        ) return
+        ) return false
+        if (carePlan != null && !carePlanSurvivesTransition(npc, context, carePlan, targetState, expectedStateRevision)) {
+            return false
+        }
         npc.currentGoal = resolveGoal(action, npc, context, situation)
         if (npc.simulationMode == NpcSimulationMode.FULL && npc.currentState == targetState &&
             npc.decisionRevision == revision
@@ -720,23 +885,29 @@ class DecisionEngine internal constructor(
                 npc.selfCareGoal.applied(
                     action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
                     context.isAtHome, System.currentTimeMillis(),
+                    allowRest = carePlan != null,
                 )
             }
         } else {
             npc.selfCareGoal.clear()
         }
-        npc.rememberDecision(decision?.explanation?.takeIf {
+        val explanation = if (carePlan != null) {
+            NpcDecisionExplanation(action, System.currentTimeMillis(), false, fromCarePlan = true)
+        } else decision?.explanation
+        npc.rememberDecision(explanation?.takeIf {
             npc.simulationMode == NpcSimulationMode.FULL && npc.currentState == targetState &&
-                decision.explanationRevision == npc.decisionRevision
+                (if (carePlan != null) revision else decision?.explanationRevision) == npc.decisionRevision
         })
         if (experienceEnabled(npc)) {
             npc.actionExperience.begin(
                 action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
                 context.isAtHome, npc.stateRevision, npc.lastSimulationTickAt,
+                allowRest = carePlan != null,
             )
         } else {
             npc.actionExperience.cancelPending()
         }
+        return true
     }
 
     private fun mapActionToState(action: NPCAction, context: NPCContext, situation: ActionSituation): NPCState = when (action) {
@@ -916,11 +1087,7 @@ class DecisionEngine internal constructor(
             isAtHome: Boolean,
             hungerDecay: Double,
             tickFactor: Double,
-        ): Int = if (state == NPCState.EATING && isAtHome) {
-            (current + (8.0 * tickFactor).roundToInt()).coerceIn(0, 100)
-        } else {
-            (current - (hungerDecay + if (state.isWorkState()) 0.7 else 0.0).roundToInt()).coerceIn(0, 100)
-        }
+        ): Int = NpcNeedsModel.nextHungerLevel(current, state, isAtHome, hungerDecay, tickFactor)
 
         internal fun candidateActions(state: NPCState, inDanger: Boolean): List<NPCAction> {
             val actions = mutableListOf(NPCAction.DO_NOTHING)

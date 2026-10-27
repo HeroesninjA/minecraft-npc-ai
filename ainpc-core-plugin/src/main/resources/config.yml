@@ -239,12 +239,27 @@ simulation:
   enabled: false
   # La cate secunde ruleaza un tick de simulare.
   tick_seconds: 30
+  progress:
+    enabled: false
+  handoff:
+    enabled: false
+  lod:
+    enabled: false
+    full_radius: 48.0
+    light_radius: 64.0
+    perception:
+      enabled: false
+      light_refresh_ticks: 1200
+      max_reuse_distance: 2.0
   decision:
     # Alege ponderat dintre actiunile apropiate ca scor; pericolul si combatul raman deterministe.
     probabilistic_enabled: true
     experience_enabled: true
     goal_continuity_enabled: false
     care_planner_shadow_enabled: false
+    care_planner_execution_enabled: false
+    care_planner_max_per_cycle: 32
+    care_planner_budget_ms: 2.0
     # Cel mult cate actiuni intra in distributie (1-8).
     max_choices: 3
     # Diferenta maxima fata de cel mai bun scor (0-100).

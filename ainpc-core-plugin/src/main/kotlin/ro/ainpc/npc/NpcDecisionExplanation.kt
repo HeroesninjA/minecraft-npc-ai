@@ -7,11 +7,15 @@ data class NpcDecisionExplanation(
     val primaryFactor: Factor? = null,
     val secondaryFactor: Factor? = null,
     val continuingSelfCare: Boolean = false,
+    val fromCarePlan: Boolean = false,
 ) {
     fun description(now: Long): String {
         if (selectedAt <= 0L || now < selectedAt || now - selectedAt >= MAX_AGE) return ""
         return buildString {
             append("La ultima decizie, am ales ").append(actionIntention()).append(".")
+            if (fromCarePlan) {
+                append(" Alegerea a venit din planul local de ingrijire; refacerea nu este confirmata de aceasta alegere.")
+            }
             if (continuingSelfCare) {
                 append(" Am pastrat intoarcerea acasa pentru obiectivul de ingrijire in curs.")
             }

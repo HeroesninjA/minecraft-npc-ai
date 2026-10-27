@@ -3,6 +3,7 @@ package ro.ainpc.routine
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSimulationLodPass
 import ro.ainpc.topology.TopologyCategory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -15,11 +16,15 @@ class SocialCoordinator(private val plugin: AINPCPlugin) {
     private val npcSocialPartners: MutableMap<UUID, MutableList<UUID>> = ConcurrentHashMap()
 
     fun tick() {
+        tick(NpcSimulationLodPass.capture(plugin.config))
+    }
+
+    internal fun tick(lod: NpcSimulationLodPass) {
         val allNpcs = plugin.npcManager.getAllNPCs()
         socialGroups.clear()
 
         for (npc in allNpcs) {
-            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
+            if (!npc.isSpawned() || !lod.modeFor(npc).runsAutonomousActivities()) continue
             val regionId = resolveNpcRegion(npc) ?: continue
             val group = socialGroups.getOrPut(regionId) { mutableListOf() }
             group.add(npc.uuid)

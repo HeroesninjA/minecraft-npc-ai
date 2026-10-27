@@ -1,9 +1,10 @@
 package ro.ainpc.ai
 
 import ro.ainpc.environment.EnvironmentContext
+import ro.ainpc.npc.NpcPerceptionObservation
 
 internal object EnvironmentFactResolver {
-    fun resolve(playerMessage: String?, context: EnvironmentContext?): String? {
+    fun resolve(playerMessage: String?, context: EnvironmentContext?, observation: NpcPerceptionObservation? = null): String? {
         if (playerMessage.isNullOrBlank() || context == null || context.worldName.isBlank()) return null
         val message = DialogueMessageText.normalize(playerMessage)
         if (!DialogueMessageText.isQuestion(message)) return null
@@ -63,6 +64,8 @@ internal object EnvironmentFactResolver {
                     else "Evenimente active acum: ${events.joinToString(", ")}.")
             }
         }
-        return answers.takeIf { it.isNotEmpty() }?.joinToString(" ")
+        if (answers.isEmpty()) return null
+        if (observation?.reused == true) return "Nu pot confirma mediul actual fara o observatie noua."
+        return answers.joinToString(" ")
     }
 }

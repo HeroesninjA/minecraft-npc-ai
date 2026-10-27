@@ -7,6 +7,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.VillagerCareerChangeEvent
 import org.bukkit.event.world.ChunkLoadEvent
+import org.bukkit.event.world.EntitiesUnloadEvent
 import ro.ainpc.AINPCPlugin
 
 /**
@@ -48,9 +49,13 @@ class VillagerLifecycleListener(plugin: AINPCPlugin) : AbstractPluginListener(pl
         runLater({ plugin.npcManager.refreshVillagerProfile(villager) }, 1L)
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onVillagerDeath(event: EntityDeathEvent) {
-        val villager = event.entity as? Villager ?: return
-        plugin.npcManager.handleEntityDeath(villager)
+        if (!event.isCancelled) plugin.npcManager.handleEntityDeath(event.entity)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    fun onEntitiesUnload(event: EntitiesUnloadEvent) {
+        for (entity in event.entities) plugin.npcManager.handleEntityUnload(entity)
     }
 }

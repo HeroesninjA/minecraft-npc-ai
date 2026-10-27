@@ -4,6 +4,7 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.AINPCPlugin
@@ -14,6 +15,7 @@ import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcActionExperience
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcSelfCareGoal
+import java.lang.reflect.InvocationTargetException
 
 class DecisionSimulationClockTest {
     private val plugin = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").let { field ->
@@ -26,7 +28,144 @@ class DecisionSimulationClockTest {
         }
     }
     private var now = 1_700_000_100_000L
-    private val engine = DecisionEngine(plugin, { _, _, _ -> error("Unexpected world scan") }, { now })
+    private var clockReads = 0
+    private val engine = DecisionEngine(plugin, { _, _, _ -> error("Unexpected world scan") }, { clockReads++; now })
+
+    @Test
+    fun `tracked progress establishes one baseline then advances and ignores a repeated timestamp`() {
+        plugin.config.set("simulation.progress.enabled", true)
+        val npc = npc(now - 90_000L)
+        val before = needs(npc)
+
+        update(npc)
+
+        assertEquals(before, needs(npc))
+        assertEquals(now, npc.lastSimulationTickAt)
+        val baseline = npc.simulationProgress.snapshot()!!
+        assertEquals(1L, baseline.sequence)
+        now += 30_000L
+        update(npc)
+        assertEquals(listOf(39, 42, 46, 48, 54), needs(npc))
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        val applied = needs(npc)
+        val checkpoint = npc.simulationProgress.snapshot()
+        update(npc)
+        assertEquals(applied, needs(npc))
+        assertEquals(checkpoint, npc.simulationProgress.snapshot())
+    }
+
+    @Test
+    fun `tracked failure consumes neither the lease checkpoint nor needs time`() {
+        plugin.config.set("simulation.progress.enabled", true)
+        val npc = npc(0L)
+        update(npc)
+        val before = needs(npc)
+        val checkpoint = npc.simulationProgress.snapshot()
+        val timestamp = npc.lastSimulationTickAt
+        now += 30_000L
+        plugin.config.set("simulation.needs.social_decay", Double.NaN)
+
+        assertThrows(InvocationTargetException::class.java) { update(npc) }
+
+        assertEquals(before, needs(npc))
+        assertEquals(timestamp, npc.lastSimulationTickAt)
+        assertEquals(checkpoint, npc.simulationProgress.snapshot())
+        plugin.config.set("simulation.needs.social_decay", 0.8)
+        update(npc)
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        assertEquals(now, npc.lastSimulationTickAt)
+    }
+
+    @Test
+    fun `tracked lifecycle resume does not convert the detached gap into physical recovery or experience`() {
+        plugin.config.set("simulation.progress.enabled", true)
+        val npc = npc(0L, NPCState.EATING)
+        update(npc)
+        armCare(npc, NPCAction.EAT)
+        npc.markEntityUnavailable()
+        val before = needs(npc)
+        now += 900_000L
+
+        update(npc, withExperience = true)
+
+        assertEquals(before, needs(npc))
+        assertEquals(now, npc.lastSimulationTickAt)
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertNull(npc.selfCareGoal.snapshot(now))
+        now += 30_000L
+        update(npc)
+        assertEquals(49, npc.hungerLevel)
+    }
+
+    @Test
+    fun `reenabling tracking after legacy updates creates a baseline without erasing its history`() {
+        plugin.config.set("simulation.progress.enabled", true)
+        val npc = npc(0L)
+        update(npc)
+        val checkpoint = npc.simulationProgress.snapshot()
+        plugin.config.set("simulation.progress.enabled", false)
+        now += 30_000L
+        update(npc)
+        val afterLegacy = needs(npc)
+        assertEquals(checkpoint, npc.simulationProgress.snapshot())
+        plugin.config.set("simulation.progress.enabled", true)
+        now += 30_000L
+
+        update(npc)
+
+        assertEquals(afterLegacy, needs(npc))
+        assertEquals(2L, npc.simulationProgress.snapshot()!!.sequence)
+        assertEquals(now, npc.lastSimulationTickAt)
+    }
+
+    @Test
+    fun `needs and observers share one clock sample for each update`() {
+        for (withExperience in listOf(false, true)) {
+            val npc = npc(now - 30_000L)
+            val beforeReads = clockReads
+            update(npc, withExperience)
+            assertEquals(beforeReads + 1, clockReads)
+            assertEquals(now, npc.lastSimulationTickAt)
+        }
+    }
+
+    @Test
+    fun `capped needs recovery does not turn a long real gap into an eligible observation`() {
+        val npc = npc(now - 150_000L, NPCState.EATING)
+        armCare(npc, NPCAction.EAT)
+
+        update(npc, withExperience = true)
+
+        assertEquals(73, npc.hungerLevel)
+        assertEquals(now, npc.lastSimulationTickAt)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        assertNull(npc.selfCareGoal.snapshot(now))
+    }
+
+    @Test
+    fun `a failed needs calculation consumes neither time nor partial recovery and a retry observes once`() {
+        val npc = npc(now - 30_000L, NPCState.EATING)
+        armCare(npc, NPCAction.EAT)
+        val before = needs(npc)
+        val previousTick = npc.lastSimulationTickAt
+        val goal = npc.selfCareGoal.snapshot(previousTick)
+        plugin.config.set("simulation.needs.social_decay", Double.NaN)
+
+        val failure = assertThrows(InvocationTargetException::class.java) { update(npc, withExperience = true) }
+
+        assertTrue(failure.cause is IllegalArgumentException)
+        assertEquals(before, needs(npc))
+        assertEquals(previousTick, npc.lastSimulationTickAt)
+        assertEquals(goal, npc.selfCareGoal.snapshot(previousTick))
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+        plugin.config.set("simulation.needs.social_decay", 0.8)
+        update(npc, withExperience = true)
+        assertEquals(now, npc.lastSimulationTickAt)
+        assertEquals(49, npc.hungerLevel)
+        assertEquals(1, npc.actionExperience.snapshot().size)
+        assertTrue(npc.selfCareGoal.snapshot(now)!!.observedRecovery)
+    }
 
     @Test
     fun `uninitialized clocks establish a baseline without updating needs`() {

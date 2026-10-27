@@ -13,6 +13,78 @@ class NpcSelfCareGoalTest {
     private val walking = NpcCognitiveState(hungerLevel = 20, currentState = NPCState.WALKING)
 
     @Test
+    fun `budget continuation is read only and requires safe active recovery at the same home`() {
+        for ((action, currentState) in listOf(NPCAction.EAT to NPCState.EATING,
+            NPCAction.SLEEP to NPCState.SLEEPING, NPCAction.REST to NPCState.RESTING)) {
+            goal.clear()
+            val state = NpcCognitiveState(hungerLevel = 20, energyLevel = 20, currentState = currentState)
+            goal.applied(action, state, home, true, now, allowRest = true)
+            val recorded = goal.snapshot(now)
+            assertTrue(goal.canKeepRecovery(state, home, true, now))
+            assertFalse(goal.canKeepRecovery(state, "other:home", true, now))
+            assertFalse(goal.canKeepRecovery(state, home, false, now))
+            assertFalse(goal.canKeepRecovery(state.copy(isInDanger = true), home, true, now))
+            assertFalse(goal.canKeepRecovery(state.copy(hasInteractingPlayer = true), home, true, now))
+            assertFalse(goal.canKeepRecovery(state.copy(currentState = NPCState.WALKING), home, true, now))
+            assertFalse(goal.canKeepRecovery(state.copy(hungerLevel = 60, energyLevel = 60), home, true, now))
+            assertFalse(goal.canKeepRecovery(state, home, true, now + 300_000L))
+            assertEquals(recorded, goal.snapshot(now))
+        }
+    }
+
+    @Test
+    fun `only explicitly allowed rest can start an objective and completion needs a later observation`() {
+        val resting = NpcCognitiveState(energyLevel = 20, currentState = NPCState.RESTING)
+        goal.applied(NPCAction.REST, resting, home, true, now)
+        assertNull(goal.snapshot(now))
+        goal.applied(NPCAction.REST, resting, home, true, now, allowRest = true)
+        val started = requireNotNull(goal.snapshot(now))
+        assertEquals(NPCAction.REST, started.action)
+        assertEquals(NpcSelfCareGoal.Stage.RECOVERING, started.stage)
+        assertFalse(started.observedRecovery)
+        assertTrue(started.description().contains("odihna fara somn"))
+
+        goal.observe(resting, resting.copy(energyLevel = 22), home, true, now, now + 30_000L)
+        assertTrue(goal.snapshot(now + 30_000L)!!.observedRecovery)
+        assertEquals(NpcSelfCareGoal.Stage.RECOVERING, goal.snapshot(now + 30_000L)!!.stage)
+        goal.observe(resting.copy(energyLevel = 22), resting.copy(energyLevel = 60), home, true,
+            now + 30_000L, now + 60_000L)
+        assertEquals(NpcSelfCareGoal.Stage.SATISFIED, goal.snapshot(now + 60_000L)!!.stage)
+    }
+
+    @Test
+    fun `planned rest cannot start outside a known home or with an interlocutor`() {
+        val resting = NpcCognitiveState(energyLevel = 20, currentState = NPCState.RESTING)
+        goal.applied(NPCAction.REST, resting, home, false, now, allowRest = true)
+        assertNull(goal.snapshot(now))
+        goal.applied(NPCAction.REST, resting, "", true, now, allowRest = true)
+        assertNull(goal.snapshot(now))
+        goal.applied(NPCAction.REST, resting.copy(hasInteractingPlayer = true), home, true, now, allowRest = true)
+        assertNull(goal.snapshot(now))
+    }
+
+    @Test
+    fun `rest interrupted by sleep or conversation never attributes those gains to resting`() {
+        val resting = NpcCognitiveState(energyLevel = 20, currentState = NPCState.RESTING)
+        goal.applied(NPCAction.REST, resting, home, true, now, allowRest = true)
+        goal.onStateChanged(NPCState.SLEEPING, now + 1L)
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, goal.snapshot(now + 1L)!!.stage)
+        goal.applied(NPCAction.REST, resting, home, true, now + 2L, allowRest = true)
+        goal.observe(resting, resting.copy(energyLevel = 22, hasInteractingPlayer = true), home, true,
+            now + 2L, now + 30_002L)
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, goal.snapshot(now + 30_002L)!!.stage)
+        assertFalse(goal.snapshot(now + 30_002L)!!.observedRecovery)
+    }
+
+    @Test
+    fun `legacy rest application interrupts rather than extending a planned rest objective`() {
+        val resting = NpcCognitiveState(energyLevel = 20, currentState = NPCState.RESTING)
+        goal.applied(NPCAction.REST, resting, home, true, now, allowRest = true)
+        goal.applied(NPCAction.REST, resting, home, true, now + 1L)
+        assertEquals(NpcSelfCareGoal.Stage.INTERRUPTED, goal.snapshot(now + 1L)!!.stage)
+    }
+
+    @Test
     fun `active snapshots anchor their explanation to the last observation without renewing it`() {
         for (action in listOf(NPCAction.EAT, NPCAction.SLEEP)) {
             val careState = if (action == NPCAction.EAT) NPCState.EATING else NPCState.SLEEPING

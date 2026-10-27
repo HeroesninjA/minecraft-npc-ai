@@ -5,6 +5,7 @@ import ro.ainpc.AINPCPlugin
 import ro.ainpc.bootstrap.RuntimeMetricNames
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcSimulationLodPass
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -49,18 +50,19 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         val timer = plugin.performanceMonitor.timer(RuntimeMetricNames.ROUTINE_TICK)
         timer.begin()
         try {
+            val lod = NpcSimulationLodPass.capture(plugin.config)
             if (plugin.config.getBoolean("routine.sync_social_movement", true)) {
-                syncSocialGroupTiming()
+                syncSocialGroupTiming(lod)
             }
-            val summary = routineService.runRoutineTick()
-            socialCoordinator.tick()
-            linkSocialToRelationships(summary)
-            detectSocialGatherings()
+            val summary = routineService.runRoutineTick(lod)
+            socialCoordinator.tick(lod)
+            linkSocialToRelationships(summary, lod)
+            detectSocialGatherings(lod)
             if (plugin.config.getBoolean("economy.npc_salaries_enabled", false)) {
                 payWorkingNpcs()
             }
             if (plugin.config.getBoolean("seasonal.behavior_enabled", true)) {
-                applySeasonalActivities()
+                applySeasonalActivities(lod)
             }
             return summary
         } catch (error: Throwable) {
@@ -71,10 +73,10 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         }
     }
 
-    private fun syncSocialGroupTiming() {
+    private fun syncSocialGroupTiming(lod: NpcSimulationLodPass) {
         val groups = mutableMapOf<Int, MutableList<Pair<UUID, String>>>()
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
+            if (!npc.isSpawned() || !lod.modeFor(npc).runsAutonomousActivities()) continue
             val anchor = npc.socialAnchor ?: continue
             val loc = anchor.toLocation() ?: continue
             val chunkKey = loc.world.name.hashCode() * 31 + (loc.blockX shr 4) * 31 + (loc.blockZ shr 4)
@@ -97,9 +99,9 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         routineService.routineEngine.timeResolver.setGroupSyncOverride(groupSyncOverrides)
     }
 
-    private fun applySeasonalActivities() {
+    private fun applySeasonalActivities(lod: NpcSimulationLodPass) {
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
+            if (!npc.isSpawned() || !lod.modeFor(npc).runsAutonomousActivities()) continue
             if (npc.currentState != NPCState.WORKING && npc.currentState != NPCState.FARMING &&
                 npc.currentState != NPCState.CRAFTING && npc.currentState != NPCState.IDLE) continue
             val loc = npc.location ?: continue
@@ -158,14 +160,14 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
 
     fun getActiveGatherings(): List<SocialGathering> = activeGatherings.toList()
 
-    private fun detectSocialGatherings() {
+    private fun detectSocialGatherings(lod: NpcSimulationLodPass) {
         val now = System.currentTimeMillis()
         if (now - lastGatheringCheck < gatheringCooldown) return
         lastGatheringCheck = now
 
         val byAnchor = mutableMapOf<String, MutableList<AINPC>>()
         for (npc in plugin.npcManager.getAllNPCs()) {
-            if (!npc.isSpawned() || !npc.simulationMode.runsAutonomousActivities()) continue
+            if (!npc.isSpawned() || !lod.modeFor(npc).runsAutonomousActivities()) continue
             if (npc.currentState != NPCState.SOCIALIZING && npc.currentState != NPCState.IDLE) continue
             val anchor = npc.socialAnchor ?: continue
             val loc = anchor.toLocation() ?: continue
@@ -202,10 +204,10 @@ class RoutineCoordinator(private val plugin: AINPCPlugin) {
         activeGatherings.addAll(newGatherings.take(20))
     }
 
-    private fun linkSocialToRelationships(summary: RoutineTickSummary) {
+    private fun linkSocialToRelationships(summary: RoutineTickSummary, lod: NpcSimulationLodPass) {
         if (!plugin.config.getBoolean("routine.enabled", false)) return
         val activeNpcIds = plugin.npcManager.getAllNPCs()
-            .filter { it.isSpawned() && it.simulationMode.runsAutonomousActivities() }
+            .filter { it.isSpawned() && lod.modeFor(it).runsAutonomousActivities() }
             .map { it.uuid }
             .toSet()
         val socialPartners = plugin.socialCoordinator.getSocialPartnersSummary()

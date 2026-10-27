@@ -12,15 +12,21 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.bootstrap.ServiceRegistry
 import ro.ainpc.engine.DecisionEngine
+import ro.ainpc.engine.NpcNeedsInput
+import ro.ainpc.engine.NpcNeedsRates
+import ro.ainpc.engine.NpcNeedsTransition
+import ro.ainpc.engine.NpcSimulationHandoff
 import ro.ainpc.managers.NPCManager
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCAction
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcAbsenceRecord
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcFoodAid
 import ro.ainpc.npc.NpcFoodRequestPreferences
@@ -68,6 +74,80 @@ class AINPCDecisionDiagnosticCommandTest {
     @AfterEach
     fun restoreCommandPlugin() {
         commandPluginField.set(null, previousPlugin)
+    }
+
+    @Test
+    fun `real decision command reads observed absence without mutation or identity leakage`() {
+        npc.markEntityUnavailable(NpcAbsenceRecord.Reason.DEAD)
+        val record = npc.absenceRecord
+        val before = NpcCognitiveState.capture(npc)
+        val revision = npc.decisionRevision
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Absenta: DEAD; observata;") && it.contains("restaurare automata blocata") })
+        assertTrue(messages.any { it.contains("nu autorizatie de simulare abstracta") })
+        assertFalse(messages.any { it.contains(npc.uuid.toString()) })
+        assertSame(record, npc.absenceRecord)
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(123L, npc.lastSimulationTickAt)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.simulationProgress.snapshot())
+    }
+
+    @Test
+    fun `absence diagnostic distinguishes restored data from a fresh lifecycle observation`() {
+        assertTrue(formatDecisionAbsence(null).isEmpty())
+        assertTrue(npc.restoreAbsence(NpcAbsenceRecord(npc.uuid, NpcAbsenceRecord.Reason.UNLOADED, 30_000L)))
+        val record = npc.absenceRecord
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Absenta: UNLOADED; restaurata din profil;") && it.contains("restaurare automata permisa") })
+        assertSame(record, npc.absenceRecord)
+        assertFalse(npc.spawned)
+        assertNull(npc.bukkitEntity)
+    }
+
+    @Test
+    fun `real decision command reads active and historical checkpoints without consuming a lease`() {
+        val lease = requireNotNull(npc.simulationProgress.preparePhysical(npc.uuid, npc.lastSimulationTickAt, 30_000L))
+        assertTrue(npc.simulationProgress.commit(lease))
+        val snapshot = npc.simulationProgress.snapshot()
+        val before = NpcCognitiveState.capture(npc)
+        val timestamp = npc.lastSimulationTickAt
+        plugin.config.set("simulation.progress.enabled", true)
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+        plugin.config.set("simulation.progress.enabled", false)
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Progres temporal: activ") && it.contains("revizie 1") })
+        assertTrue(messages.any { it.contains("Progres temporal: istoric (oprit)") })
+        assertEquals(snapshot, npc.simulationProgress.snapshot())
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertEquals(timestamp, npc.lastSimulationTickAt)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `named decision command reads the last batch without creating work or rewriting its limits`() {
+        plugin.config.set("simulation.decision.care_planner_execution_enabled", true)
+        engine.runLifeSimulationBatch(emptyList()) { error("Empty population cannot run work") }
+        val report = engine.carePlanningReport()
+        val before = NpcCognitiveState.capture(npc)
+        plugin.config.set("simulation.decision.care_planner_max_per_cycle", 1)
+        plugin.config.set("simulation.decision.care_planner_execution_enabled", false)
+
+        repeat(2) { assertTrue(handleDecision(sender, arrayOf("decision", "Bob"))) }
+
+        assertTrue(messages.any { it.contains("Buget planner [ultimul ciclu finalizat]") && it.contains("0/32 incercari") })
+        assertTrue(report === engine.carePlanningReport())
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
     }
 
     @Test
@@ -133,6 +213,7 @@ class AINPCDecisionDiagnosticCommandTest {
         assertTrue(messages.any { it.contains("EAT / RETURNING_HOME") })
         assertTrue(messages.any { it.contains("Continuitate ingrijire:") && it.contains("goal_continuity_enabled") })
         assertFalse(messages.any { it.contains("Plan ingrijire [SHADOW") })
+        assertFalse(messages.any { it.contains("Buget planner") })
         assertEquals(before, NpcCognitiveState.capture(npc))
         assertEquals(goal, npc.selfCareGoal.snapshot(System.currentTimeMillis()))
         assertEquals(stateRevision, npc.stateRevision)
@@ -260,6 +341,97 @@ class AINPCDecisionDiagnosticCommandTest {
         }
         assertEquals(before, NpcCognitiveState.capture(npc))
         assertTrue(npc.socialExperience.snapshot().isEmpty())
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `real decision command reads a valid or stale reservation without acquiring or releasing authority`() {
+        assertTrue(formatDecisionSimulationHandoff(null).isEmpty())
+        val lease = requireNotNull(npc.simulationProgress.preparePhysical(npc.uuid, npc.lastSimulationTickAt, 30_000L))
+        assertTrue(NpcNeedsTransition.calculate(NpcNeedsInput.capture(npc, npc.context, 30_000L, lease),
+            NpcNeedsRates()).applyTo(npc, npc.context))
+        npc.markEntityUnavailable(NpcAbsenceRecord.Reason.UNLOADED)
+        val handoff = requireNotNull(NpcSimulationHandoff.reserve(npc))
+        val progress = npc.simulationProgress.snapshot()
+        val before = NpcCognitiveState.capture(npc)
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Transfer progres: rezervare valida;") })
+        assertTrue(messages.any { it.contains("REBASE_WITHOUT_CATCH_UP") && it.contains("executia abstracta nu este implementata") })
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        npc.hungerLevel++
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+        assertTrue(messages.any { it.contains("Transfer progres: rezervare invalida; necesita reconciliere") })
+        assertFalse(messages.any { it.contains(npc.uuid.toString()) || it.contains(npc.runtimeIdentity.toString()) })
+        assertSame(progress, npc.simulationProgress.snapshot())
+        assertSame(handoff, npc.simulationProgress.handoff())
+        assertEquals(30_000L, npc.lastSimulationTickAt)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `decision diagnostic reads profile confirmation without consuming or renewing the receipt`() {
+        npc.databaseId = 7
+        val lease = requireNotNull(npc.simulationProgress.preparePhysical(npc.uuid, npc.lastSimulationTickAt, 30_000L))
+        assertTrue(NpcNeedsTransition.calculate(NpcNeedsInput.capture(npc, npc.context, 30_000L, lease),
+            NpcNeedsRates()).applyTo(npc, npc.context))
+        npc.markEntityUnavailable(NpcAbsenceRecord.Reason.UNLOADED)
+        val handoff = requireNotNull(NpcSimulationHandoff.reserve(npc))
+        val token = npc.simulationProgress.beginProfileWrite()
+        assertTrue(NpcSimulationHandoff.confirmProfileWrite(npc, handoff, token, 7))
+        val before = NpcCognitiveState.capture(npc)
+        val checkpoint = npc.simulationProgress.snapshot()
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Checkpoint profil: confirmat prin commit SQL") &&
+            it.contains("nu confirma transferul resurselor") })
+        assertTrue(npc.simulationProgress.isHandoffPersisted(handoff))
+        assertTrue(npc.simulationProgress.isLatestProfileWrite(token))
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertSame(checkpoint, npc.simulationProgress.snapshot())
+        npc.simulationProgress.beginProfileWrite()
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+        assertTrue(messages.any { it.contains("Checkpoint profil: neconfirmat; necesita salvare") })
+        assertFalse(NpcSimulationHandoff.diagnostic(npc)!!.profilePersisted)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+    }
+
+    @Test
+    fun `decision command reports revision conflicts without advancing or reconciling them`() {
+        assertTrue(npc.profileRevision.restoreFromDatabase(7, "17"))
+        val ticket = requireNotNull(npc.profileRevision.capture(7))
+        assertTrue(npc.profileRevision.begin(ticket))
+        npc.profileRevision.conflict(ticket)
+        val before = npc.profileRevision.snapshot()
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Revizie profil SQL: baza cunoscuta 17; CONFLICT") &&
+            it.contains("necesita reconciliere DB") })
+        assertEquals(before, npc.profileRevision.snapshot())
+        assertNull(npc.profileRevision.capture(7))
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertEquals(123L, npc.lastSimulationTickAt)
+    }
+
+    @Test
+    fun `perception diagnostic reports retained observation age without refreshing or reinterpreting it`() {
+        plugin.config.set("simulation.lod.enabled", true)
+        plugin.config.set("simulation.lod.perception.enabled", true)
+        npc.context.recordPerceptionObservation()
+        npc.context.reusePerceptionObservation(40)
+        val observation = npc.context.perceptionObservation
+        val revision = npc.decisionRevision
+
+        assertTrue(handleDecision(sender, arrayOf("decision", "Bob")))
+
+        assertTrue(messages.any { it.contains("Perceptie LOD: reutilizata") && it.contains("40 tick-uri") })
+        assertTrue(messages.any { it.contains("nu reprezinta o scanare noua") })
+        assertSame(observation, npc.context.perceptionObservation)
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(123L, npc.lastSimulationTickAt)
         assertEquals(0, engine.decisionStatistics(npc.uuid).total)
     }
 

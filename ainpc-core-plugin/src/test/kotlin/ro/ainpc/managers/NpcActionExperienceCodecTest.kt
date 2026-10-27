@@ -21,6 +21,7 @@ class NpcActionExperienceCodecTest {
     fun `round trip preserves action context effect and exact long timestamps`() {
         val observations = listOf(
             observed,
+            observed.copy(action = NPCAction.REST, contextKey = "rest:home", effect = 0.0),
             observed.copy(action = NPCAction.SLEEP, contextKey = "tired:home", observedAt = 9_007_199_254_740_993L),
         )
         val memory = NpcActionExperience().apply { restore(observations) }
@@ -63,7 +64,7 @@ class NpcActionExperienceCodecTest {
             observationJson().apply { remove("action") },
             observationJson().apply { addProperty("action", true) },
             observationJson().apply { addProperty("action", "UNKNOWN_ACTION") },
-            observationJson().apply { addProperty("action", NPCAction.REST.name) },
+            observationJson().apply { addProperty("action", NPCAction.DO_NOTHING.name) },
             observationJson().apply { addProperty("context_key", 42) },
             observationJson().apply { addProperty("context_key", " ") },
             observationJson().apply { addProperty("context_key", "x".repeat(257)) },

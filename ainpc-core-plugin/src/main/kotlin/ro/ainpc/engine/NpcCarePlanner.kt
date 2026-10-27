@@ -118,7 +118,8 @@ internal object NpcCarePlanner {
         }
         val progress = state.selfCareProgress
         if (progress != null && progress.lacksProgress() && progress.homeKey == input.home.key() &&
-            progress.action == if (goal == NpcCareGoal.SATIETY) NPCAction.EAT else NPCAction.SLEEP
+            (if (goal == NpcCareGoal.SATIETY) progress.action == NPCAction.EAT
+                else progress.action == NPCAction.SLEEP || progress.action == NPCAction.REST)
         ) return NpcCarePlanPreview(input, NpcCarePlanPreview.Status.NO_PROGRESS, goal)
 
         val actions = if (goal == NpcCareGoal.SATIETY) listOf(NPCAction.EAT) else listOf(NPCAction.SLEEP, NPCAction.REST)
@@ -147,7 +148,9 @@ internal object NpcCarePlanner {
             if (progress.action == NPCAction.EAT && state.hungerLevel < NpcSelfCareThresholds.RECOVERED) {
                 return NpcCareGoal.SATIETY
             }
-            if (progress.action == NPCAction.SLEEP && state.energyLevel < NpcSelfCareThresholds.RECOVERED) {
+            if ((progress.action == NPCAction.SLEEP || progress.action == NPCAction.REST) &&
+                state.energyLevel < NpcSelfCareThresholds.RECOVERED
+            ) {
                 return NpcCareGoal.ENERGY
             }
         }

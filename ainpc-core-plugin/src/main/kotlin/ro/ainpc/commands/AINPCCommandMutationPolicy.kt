@@ -14,6 +14,11 @@ internal object AINPCCommandMutationPolicy {
 
     fun mutation(route: AINPCSubcommandRoute, args: Array<String>): AINPCCommandMutation? = when (route) {
         AINPCSubcommandRoute.WORLD -> worldMutation(args)
+        AINPCSubcommandRoute.PROFILE_RECONCILE -> when (token(args, 2)) {
+            "apply" -> AINPCCommandMutation("ainpc profile-reconcile apply", requiresConfirmation = false, worldSaveReminder = false)
+            "restore-needs" -> AINPCCommandMutation("ainpc profile-reconcile restore-needs", worldSaveReminder = false)
+            else -> null
+        }
         AINPCSubcommandRoute.PATCH ->
             if (token(args, 1) == "apply") AINPCCommandMutation("ainpc patch apply") else null
         AINPCSubcommandRoute.MAP ->

@@ -1638,6 +1638,16 @@ fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
         viewerUuid = (sender as? Player)?.uniqueId))
         .forEach { msg.send(sender, it) }
     formatDecisionCarePlan(preview).forEach { msg.send(sender, it) }
+    formatDecisionCareBudget(ainpcCommandMiscPlugin.decisionEngine.carePlanningReport()).forEach { msg.send(sender, it) }
+    formatDecisionSimulationProgress(npc.simulationProgress.snapshot(),
+        ainpcCommandMiscPlugin.config.getBoolean("simulation.progress.enabled", false)).forEach { msg.send(sender, it) }
+    formatDecisionAbsence(npc.absenceRecord).forEach { msg.send(sender, it) }
+    formatDecisionProfileRevision(npc.profileRevision.snapshot()).forEach { msg.send(sender, it) }
+    formatDecisionPerception(npc.context.perceptionObservation,
+        ainpcCommandMiscPlugin.config.getBoolean("simulation.lod.enabled", false) &&
+            ainpcCommandMiscPlugin.config.getBoolean("simulation.lod.perception.enabled", false))
+        .forEach { msg.send(sender, it) }
+    formatDecisionSimulationHandoff(ro.ainpc.engine.NpcSimulationHandoff.diagnostic(npc)).forEach { msg.send(sender, it) }
     val mode = when {
         preview.cached -> "cache (cooldown)"
         preview.probabilistic -> "probabilistic"

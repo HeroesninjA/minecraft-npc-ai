@@ -35,6 +35,21 @@ class DecisionExplanationIntegrationTest {
     }
 
     @Test
+    fun `execution flag never grants the diagnostic preview permission to apply a plan`() {
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+        plugin.config.set("simulation.decision.care_planner_execution_enabled", true)
+        val before = ro.ainpc.npc.NpcCognitiveState.capture(npc)
+        val revision = npc.stateRevision
+
+        repeat(2) { engine.previewActionDecision(npc, npc.context) }
+
+        assertEquals(before, ro.ainpc.npc.NpcCognitiveState.capture(npc))
+        assertEquals(revision, npc.stateRevision)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
     fun `shadow planner is opt in and cannot change utility results or applied evidence`() {
         val disabled = engine.previewActionDecision(npc, npc.context)
         assertNull(disabled.carePlan)

@@ -62,6 +62,51 @@ class DatabaseManagerLifecycleTest {
         assertSame(original, manager.getConnection())
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1])
+    fun profileRevisionMigrationPreservesExistingPayloadsAndInitializesRevisionZero(storedVersion: Int) {
+        val connection = openSqlite()
+        connection.createStatement().use { statement ->
+            statement.execute("CREATE TABLE npc_profiles (npc_id INTEGER PRIMARY KEY, profile_data TEXT NOT NULL)")
+            statement.execute("INSERT INTO npc_profiles VALUES (7, '{\"legacy\":true}')")
+            if (storedVersion > 0) {
+                statement.execute("CREATE TABLE schema_version (version_key TEXT PRIMARY KEY, version INTEGER)")
+                statement.execute("INSERT INTO schema_version VALUES ('current', $storedVersion)")
+            }
+        }
+        val manager = manager { connection }
+        assertTrue(manager.initialize())
+        manager.prepareStatement("SELECT profile_data, write_revision FROM npc_profiles WHERE npc_id = 7").use { statement ->
+            statement.executeQuery().use { result ->
+                assertTrue(result.next())
+                assertEquals("{\"legacy\":true}", result.getString(1))
+                assertEquals(0L, result.getLong(2))
+            }
+        }
+        manager.prepareStatement("SELECT version FROM schema_version WHERE version_key = 'current'").use { statement ->
+            statement.executeQuery().use { result ->
+                assertTrue(result.next())
+                assertEquals(2, result.getInt(1))
+            }
+        }
+        assertTrue(manager.initialize())
+    }
+
+    @Test
+    fun freshSchemaExposesTheRevisionFenceWithoutChangingTheProfileFormatVersion() {
+        val manager = manager { openSqlite() }
+        assertTrue(manager.initialize())
+        manager.prepareStatement("PRAGMA table_info(npc_profiles)").use { statement ->
+            statement.executeQuery().use { result ->
+                val columns = mutableMapOf<String, String>()
+                while (result.next()) columns[result.getString("name")] = result.getString("dflt_value")
+                assertEquals("0", columns["write_revision"])
+                assertEquals("1", columns["profile_version"])
+            }
+        }
+        assertEquals(2, DatabaseManager.CURRENT_SCHEMA_VERSION)
+    }
+
     @Test
     fun initializationAddsBlueprintStoryJournalToAnExistingSchema() {
         val connection = openSqlite()

@@ -14,6 +14,21 @@ class NpcDecisionExplanationTest {
     )
 
     @Test
+    fun `applied care plan is distinguished from utility and cannot assert recovery`() {
+        val explanation = NpcDecisionExplanation(NPCAction.EAT, now, false, fromCarePlan = true)
+        val description = explanation.description(now)
+
+        assertTrue(description.contains("planul local de ingrijire"))
+        assertTrue(description.contains("refacerea nu este confirmata"))
+        assertFalse(description.contains("factorii favorabili"))
+        assertFalse(description.contains("alegerea putea varia"))
+        assertFalse(description.contains("am mancat"))
+        val npc = AINPC(null)
+        npc.rememberDecision(explanation)
+        assertEquals(description, NpcCognitiveState.capture(npc, npc.context, now).decisionDescription)
+    }
+
+    @Test
     fun `description reports past intent and positive influences without asserting a completed result`() {
         val description = decision.description(now)
 
