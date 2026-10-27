@@ -48,7 +48,7 @@ class OpenAIPromptBuilderSemanticWorldTest {
 
         val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
 
-        assertTrue(prompt.contains("npc_confirmed_food_help: Mi-ai oferit mancare cand imi era foame."))
+        assertTrue(prompt.contains("npc_confirmed_food_help: \"Mi-ai oferit mancare cand imi era foame.\""))
         assertFalse(prompt.contains("OtherHelper"))
         assertFalse(prompt.contains("social_experience"))
     }
@@ -60,7 +60,7 @@ class OpenAIPromptBuilderSemanticWorldTest {
             semanticSnapshot().copy(playerMessage = "Ce stii despre sabie?"), emptyList(), listOf(memory), null, null,
         )
 
-        assertTrue(prompt.contains("- $memory"))
+        assertTrue(prompt.contains("- \"$memory\"\n"))
         assertTrue(prompt.contains("[recorded_on=...] arata ziua in care amintirea a fost salvata"))
         assertTrue(prompt.contains("nu deduce data evenimentului din acest camp"))
     }
@@ -72,7 +72,7 @@ class OpenAIPromptBuilderSemanticWorldTest {
             semanticSnapshot().copy(playerMessage = "Ce stii despre sabie?"), emptyList(), listOf(memory), null, null,
         )
 
-        assertTrue(prompt.contains("- $memory\n"))
+        assertTrue(prompt.contains("- \"$memory\"\n"))
         assertTrue(prompt.contains("din setul limitat recuperat"))
         assertTrue(prompt.contains("nu dovedeste N evenimente distincte sau confirmari independente"))
         assertTrue(prompt.contains("Repetarea unei declaratii nu o transforma in fapt verificat"))
@@ -268,8 +268,8 @@ class OpenAIPromptBuilderSemanticWorldTest {
 
         assertEquals(description, OpenAITextSupport.generateFallbackResponse(snapshot))
         val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
-        assertTrue(prompt.contains("npc_personality: $description"))
-        assertTrue(prompt.contains("fact_personality_answer: $description"))
+        assertTrue(prompt.contains("npc_personality: \"$description\""))
+        assertTrue(prompt.contains("fact_personality_answer: \"$description\""))
     }
 
     @Test
@@ -611,11 +611,11 @@ class OpenAIPromptBuilderSemanticWorldTest {
 
         val prompt = OpenAIPromptBuilder.buildPrompt(snapshot, emptyList(), emptyList(), null, null)
 
-        assertTrue(prompt.contains("npc_current_activity: vorbeste cu jucatorul"))
-        assertTrue(prompt.contains("npc_planned_routine: merge la fierarie"))
-        assertTrue(prompt.contains("npc_immediate_goal: termina reparatia"))
-        assertTrue(prompt.contains("fact_activity_answer: Vorbesc cu tine acum; in program am: merge la fierarie."))
-        assertTrue(prompt.contains("fact_routine_answer: Acum am in program: merge la fierarie."))
+        assertTrue(prompt.contains("npc_current_activity: \"vorbeste cu jucatorul\""))
+        assertTrue(prompt.contains("npc_planned_routine: \"merge la fierarie\""))
+        assertTrue(prompt.contains("npc_immediate_goal: \"termina reparatia\""))
+        assertTrue(prompt.contains("fact_activity_answer: \"Vorbesc cu tine acum; in program am: merge la fierarie.\""))
+        assertTrue(prompt.contains("fact_routine_answer: \"Acum am in program: merge la fierarie.\""))
         assertTrue(prompt.contains("nu pretinde ca un plan este deja realizat"))
     }
 
@@ -641,8 +641,8 @@ class OpenAIPromptBuilderSemanticWorldTest {
             emptyList(), emptyList(), null, null,
         )
 
-        assertTrue(prompt.contains("npc_planned_routine: necunoscut"))
-        assertTrue(prompt.contains("fact_routine_answer: Nu am un program stabilit acum."))
+        assertTrue(prompt.contains("npc_planned_routine: \"necunoscut\""))
+        assertTrue(prompt.contains("fact_routine_answer: \"Nu am un program stabilit acum.\""))
         assertFalse(prompt.contains("ancora WORK lipseste"))
     }
 

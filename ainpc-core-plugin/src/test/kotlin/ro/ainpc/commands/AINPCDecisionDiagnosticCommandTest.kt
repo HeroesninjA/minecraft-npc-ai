@@ -2,6 +2,8 @@ package ro.ainpc.commands
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+import org.bukkit.Bukkit
+import org.bukkit.Server
 import org.bukkit.command.CommandSender
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
@@ -69,6 +71,55 @@ class AINPCDecisionDiagnosticCommandTest {
     }
 
     @Test
+    fun `ready shadow command lists hypothetical steps without starting travel or care`() {
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+        npc.worldName = "world"
+        npc.homeAnchor = AINPC.OwnedLocation("home", "acasa", "world", 1.0, 64.0, 3.0)
+        val before = NpcCognitiveState.capture(npc)
+        val goal = npc.selfCareGoal.snapshot(System.currentTimeMillis())
+        val revision = npc.decisionRevision
+
+        val serverField = Bukkit::class.java.getDeclaredField("server").apply { isAccessible = true }
+        val previousServer = serverField.get(null)
+        val server = Proxy.newProxyInstance(Server::class.java.classLoader, arrayOf(Server::class.java)) {
+            _, method, _ -> if (method.name == "getWorld") null else error("Unexpected server API: ${method.name}")
+        } as Server
+        serverField.set(null, server)
+        try {
+            repeat(2) { assertTrue(handleDecision(sender, arrayOf("decision", "Bob"))) }
+        } finally {
+            serverField.set(null, previousServer)
+        }
+
+        assertTrue(messages.any { it.contains("preferata: EAT") })
+        assertTrue(messages.any { it.contains("RETURN_HOME -> EAT_AT_HOME -> OBSERVE_RECOVERY") })
+        assertTrue(messages.any { it.contains("ruta, resursele si succesul raman neverificate") })
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertEquals(goal, npc.selfCareGoal.snapshot(System.currentTimeMillis()))
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(123L, npc.lastSimulationTickAt)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `shadow flag exposes a non executing proposal without altering the command decision state`() {
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+        val before = NpcCognitiveState.capture(npc)
+        val revision = npc.decisionRevision
+
+        repeat(2) { assertTrue(handleDecision(sender, arrayOf("decision", "Bob"))) }
+
+        assertTrue(messages.any { it.contains("Plan ingrijire [SHADOW, fara executie]") })
+        assertTrue(messages.any { it.contains("casa nu este confirmata") })
+        assertFalse(messages.any { it.contains("Pasi propusi:") })
+        assertEquals(before, NpcCognitiveState.capture(npc))
+        assertEquals(revision, npc.decisionRevision)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
     fun `actual named decision command includes read only cognitive diagnostics without a server`() {
         val before = NpcCognitiveState.capture(npc)
         val goal = npc.selfCareGoal.snapshot(System.currentTimeMillis())
@@ -81,6 +132,7 @@ class AINPCDecisionDiagnosticCommandTest {
         assertTrue(messages.any { it.contains("Ultima decizie aplicata:") && it.contains("fara inregistrare recenta") })
         assertTrue(messages.any { it.contains("EAT / RETURNING_HOME") })
         assertTrue(messages.any { it.contains("Continuitate ingrijire:") && it.contains("goal_continuity_enabled") })
+        assertFalse(messages.any { it.contains("Plan ingrijire [SHADOW") })
         assertEquals(before, NpcCognitiveState.capture(npc))
         assertEquals(goal, npc.selfCareGoal.snapshot(System.currentTimeMillis()))
         assertEquals(stateRevision, npc.stateRevision)

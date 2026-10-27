@@ -244,6 +244,7 @@ simulation:
     probabilistic_enabled: true
     experience_enabled: true
     goal_continuity_enabled: false
+    care_planner_shadow_enabled: false
     # Cel mult cate actiuni intra in distributie (1-8).
     max_choices: 3
     # Diferenta maxima fata de cel mai bun scor (0-100).

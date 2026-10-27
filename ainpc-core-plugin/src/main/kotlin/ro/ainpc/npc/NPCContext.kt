@@ -291,19 +291,29 @@ class NPCContext(
     fun generateContextDescription(player: Player? = interactingPlayer): String =
         generateContextDescription(player, null)
 
-    fun generateContextDescription(player: Player?, preloadedStory: StoryContextSnapshot?): String {
-        val sb = StringBuilder()
-        sb.append("Este ").append(getTimeDescription()).append(". ")
-        sb.append("Vremea: ").append(getWeatherDescription()).append(".\n")
+    fun generateContextDescription(player: Player?, preloadedStory: StoryContextSnapshot?): String =
+        generateContextDescription(player, preloadedStory, NpcCognitiveState.capture(npc, this))
 
-        if (isIndoors) {
-            sb.append("Sunt in interior, intr-un mediu de tip ").append(getTopologyDescription()).append(".\n")
+    internal fun generateContextDescription(
+        player: Player?, preloadedStory: StoryContextSnapshot?, cognition: NpcCognitiveState,
+    ): String = generateContextDescription(player, preloadedStory, cognition, NpcPerceptionSnapshot.capture(this))
+
+    internal fun generateContextDescription(
+        player: Player?, preloadedStory: StoryContextSnapshot?, cognition: NpcCognitiveState,
+        perception: NpcPerceptionSnapshot,
+    ): String {
+        val sb = StringBuilder()
+        sb.append("Este ").append(getTimeDescription(perception)).append(". ")
+        sb.append("Vremea: ").append(getWeatherDescription(perception)).append(".\n")
+
+        if (perception.isIndoors) {
+            sb.append("Sunt in interior, intr-un mediu de tip ").append(getTopologyDescription(perception)).append(".\n")
         } else {
-            sb.append("Sunt afara, intr-o zona de tip ").append(getTopologyDescription())
-                .append(" (").append(getBiomeDescription()).append(").\n")
+            sb.append("Sunt afara, intr-o zona de tip ").append(getTopologyDescription(perception))
+                .append(" (").append(getBiomeDescription(perception)).append(").\n")
         }
 
-        val env = environmentContext
+        val env = perception.environmentContext
         if (env.worldName.isNotBlank()) {
             sb.append("Anotimp: ").append(env.season.displayName).append(". ")
             sb.append("Temperatura: ").append(env.temperature.displayName).append(".\n")
@@ -330,42 +340,42 @@ class NPCContext(
             }
         }
 
-        if (nearbyPlayers.isNotEmpty()) {
-            sb.append("Vad ").append(nearbyPlayers.size).append(" persoane in apropiere.\n")
+        if (perception.nearbyPlayerCount > 0) {
+            sb.append("Vad ").append(perception.nearbyPlayerCount).append(" persoane in apropiere.\n")
         }
-        if (nearbyHostileMobs > 0) {
-            sb.append("ATENTIE: Sunt ").append(nearbyHostileMobs).append(" creaturi periculoase aproape!\n")
+        if (perception.nearbyHostileMobs > 0) {
+            sb.append("ATENTIE: Sunt ").append(perception.nearbyHostileMobs).append(" creaturi periculoase aproape!\n")
         }
-        if (healthPercent < 50) sb.append("Ma simt slabita/slabit (sanatate scazuta).\n")
-        if (hungerLevel < 30) sb.append("Mi-e foame.\n")
-        if (energyLevel < 35) sb.append("Sunt obosit(a) si am nevoie de odihna.\n")
-        if (comfortLevel < 35) sb.append("Nu ma simt prea confortabil in locul acesta.\n")
-        if (safetyLevel < 35) sb.append("Ma simt nesigur(a) si prudenta mea este ridicata.\n")
+        if (perception.healthPercent < 50) sb.append("Ma simt slabita/slabit (sanatate scazuta).\n")
+        if (cognition.hungerLevel < 30) sb.append("Mi-e foame.\n")
+        if (cognition.energyLevel < 35) sb.append("Sunt obosit(a) si am nevoie de odihna.\n")
+        if (cognition.comfortLevel < 35) sb.append("Nu ma simt prea confortabil in locul acesta.\n")
+        if (cognition.safetyLevel < 35) sb.append("Ma simt nesigur(a) si prudenta mea este ridicata.\n")
 
-        if (isFamilyNearby) sb.append("Familia mea e aproape.\n")
-        if (isAtWork) sb.append("Sunt la munca.\n")
-        else if (isAtHome) sb.append("Sunt acasa.\n")
-        else if (isAtSocialSpot) sb.append("Ma aflu intr-un loc social cunoscut.\n")
+        if (perception.isFamilyNearby) sb.append("Familia mea e aproape.\n")
+        if (perception.isAtWork) sb.append("Sunt la munca.\n")
+        else if (perception.isAtHome) sb.append("Sunt acasa.\n")
+        else if (perception.isAtSocialSpot) sb.append("Ma aflu intr-un loc social cunoscut.\n")
 
-        if (plannedRoutineActivity.isNotBlank()) {
-            sb.append("Conform rutinei mele, acum ar trebui sa: ").append(plannedRoutineActivity).append(".\n")
+        if (cognition.plannedRoutineActivity.isNotBlank()) {
+            sb.append("Conform rutinei mele, acum ar trebui sa: ").append(cognition.plannedRoutineActivity).append(".\n")
         }
-        if (currentGoal.isNotBlank()) {
-            sb.append("Obiectivul meu imediat este sa ").append(currentGoal).append(".\n")
+        if (cognition.currentGoal.isNotBlank()) {
+            sb.append("Obiectivul meu imediat este sa ").append(cognition.currentGoal).append(".\n")
         }
 
         if (player != null) {
             sb.append("\nVorbesc cu: ").append(player.name).append("\n")
         }
 
-        if (lastSignificantEvent != null) {
-            sb.append("Recent: ").append(lastSignificantEvent).append("\n")
+        if (perception.lastSignificantEvent != null) {
+            sb.append("Recent: ").append(perception.lastSignificantEvent).append("\n")
         }
         return sb.toString()
     }
 
-    private fun getTimeDescription(): String {
-        return when (timeOfDay) {
+    private fun getTimeDescription(perception: NpcPerceptionSnapshot): String {
+        return when (perception.timeOfDay) {
             "MORNING" -> "dimineata"
             "AFTERNOON" -> "dupa-amiaza"
             "EVENING" -> "seara"
@@ -374,8 +384,9 @@ class NPCContext(
         }
     }
 
-    private fun getWeatherDescription(): String {
-        val localWeather = if (environmentContext.worldName.isNotBlank()) environmentContext.weather.name else weather
+    private fun getWeatherDescription(perception: NpcPerceptionSnapshot): String {
+        val environment = perception.environmentContext
+        val localWeather = if (environment.worldName.isNotBlank()) environment.weather.name else perception.weather
         return when (localWeather) {
             "RAIN" -> "ploua"
             "THUNDER" -> "furtuna cu tunete"
@@ -384,9 +395,9 @@ class NPCContext(
         }
     }
 
-    private fun getBiomeDescription(): String {
-        val currentBiome = biome ?: return "loc necunoscut"
-        return when (topologyCategory) {
+    private fun getBiomeDescription(perception: NpcPerceptionSnapshot): String {
+        val currentBiome = perception.biome ?: return "loc necunoscut"
+        return when (perception.topologyCategory) {
             TopologyCategory.INTERIOR -> "spatiu interior"
             TopologyCategory.PLAINS -> "camp deschis"
             TopologyCategory.FOREST -> "padure"
@@ -407,8 +418,8 @@ class NPCContext(
         }
     }
 
-    private fun getTopologyDescription(): String {
-        val category = topologyCategory
+    private fun getTopologyDescription(perception: NpcPerceptionSnapshot): String {
+        val category = perception.topologyCategory
         if (category == null || category == TopologyCategory.UNKNOWN) {
             return "topologie necunoscuta"
         }

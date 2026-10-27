@@ -124,6 +124,8 @@ This is the canonical documentation set.
 
 ## Planning
 
+- [Cerințe pentru Codex: sistem AI avansat pentru NPC-uri PaperMC](planning/cerinte-codex-sistem-ai-avansat-npc-papermc.md)
+- [Arhitectură agentică: AI Local, Regional și Global](planning/arhitectura-agentica-local-regional-global.md)
 - [Sistem de dialog NPC bazat pe stare persistentă](planning/sistem-dialog-npc-bazat-pe-stare.md)
 - [Simulare de conștiință pentru NPC-uri: momentul potrivit și etape](planning/simulare-constiinta-npc.md)
 - `planning/authorization-and-plugin-compatibility-hardening.md`

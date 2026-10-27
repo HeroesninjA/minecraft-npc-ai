@@ -1,5 +1,6 @@
 package ro.ainpc.managers
 
+import com.google.gson.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -56,20 +57,21 @@ class MemoryRecallSelectorTest {
         val relevant = MemoryRecallCandidate("Sabia era veche.", "game_event")
         val remaining = MemoryRecallCandidate("Am mers in sat.", "game_event")
 
-        val selected = MemoryRecallSelector.select("sabie", listOf(oversized, unrelated, relevant, remaining), 2, 78)
+        val rendered = "- \"[source=game_event] Sabia era veche.\"\n- \"[source=game_event] Am oferit paine.\"\n"
+        val selected = MemoryRecallSelector.select("sabie", listOf(oversized, unrelated, relevant, remaining), 2, rendered.length)
 
         assertEquals(listOf(relevant, unrelated), selected)
         assertEquals(listOf(relevant), MemoryRecallSelector.select("sabie", listOf(oversized, relevant), 1))
         assertEquals(
-            "- [source=game_event] Sabia era veche.\n- [source=game_event] Am oferit paine.\n",
-            selected.joinToString("") { "- ${it.promptText()}\n" },
+            rendered,
+            selected.joinToString("") { "- ${JsonPrimitive(it.promptText())}\n" },
         )
     }
 
     @Test
     fun `budget includes source date and list formatting at the exact boundary`() {
         val candidate = MemoryRecallCandidate("Sabia era veche.", "game_event", LocalDate.of(2026, 10, 15))
-        val rendered = "- [source=game_event] [recorded_on=2026-10-15] Sabia era veche.\n"
+        val rendered = "- \"[source=game_event] [recorded_on=2026-10-15] Sabia era veche.\"\n"
 
         assertEquals(listOf(candidate), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length))
         assertEquals(emptyList<MemoryRecallCandidate>(), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length - 1))
@@ -80,8 +82,9 @@ class MemoryRecallSelectorTest {
         val blank = MemoryRecallCandidate(" \n ", "game_event")
         val first = MemoryRecallCandidate("Am oferit paine.", "game_event")
         val second = MemoryRecallCandidate("Am mers in sat.", "game_event")
+        val budget = JsonPrimitive(first.promptText()).toString().length + 3
 
-        assertEquals(listOf(first), MemoryRecallSelector.select("...", listOf(blank, first, second), 5, 40))
+        assertEquals(listOf(first), MemoryRecallSelector.select("...", listOf(blank, first, second), 5, budget))
     }
 
     @Test
@@ -137,12 +140,12 @@ class MemoryRecallSelectorTest {
     fun `record count metadata consumes budget before selecting a grouped memory`() {
         val repeated = MemoryRecallCandidate("Sabia era veche.", "conversation_quote", LocalDate.of(2026, 10, 15))
         val fallback = MemoryRecallCandidate("Am mers in sat.", "game_event")
-        val rendered = "- [source=conversation_quote] [recorded_on=2026-10-15] [record_count=2] Sabia era veche.\n"
+        val rendered = "- \"[source=conversation_quote] [recorded_on=2026-10-15] [record_count=2] Sabia era veche.\"\n"
         val candidates = listOf(repeated, repeated.copy(), fallback)
 
         assertEquals(
             rendered,
-            MemoryRecallSelector.select("sabie", candidates, 1, rendered.length).joinToString("") { "- ${it.promptText()}\n" },
+            MemoryRecallSelector.select("sabie", candidates, 1, rendered.length).joinToString("") { "- ${JsonPrimitive(it.promptText())}\n" },
         )
         assertEquals(listOf(fallback), MemoryRecallSelector.select("sabie", candidates, 1, rendered.length - 1))
     }
@@ -170,7 +173,7 @@ class MemoryRecallSelectorTest {
     @Test
     fun `selection budgets the same normalized entry that the prompt will render`() {
         val candidate = MemoryRecallCandidate("Sabia era veche.\n" + " \r\n".repeat(300), "game_event")
-        val rendered = "- [source=game_event] Sabia era veche.\n"
+        val rendered = "- \"[source=game_event] Sabia era veche.\"\n"
 
         assertEquals(listOf(candidate), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length))
         assertEquals(emptyList<MemoryRecallCandidate>(), MemoryRecallSelector.select("sabie", listOf(candidate), 1, rendered.length - 1))
@@ -185,5 +188,50 @@ class MemoryRecallSelectorTest {
 
         assertEquals(listOf(fallback), MemoryRecallSelector.select("...", listOf(repeated, repeated.copy(), fallback), 1))
         assertEquals(1, repeated.recordCount)
+    }
+
+    @Test
+    fun `serialized entry budget includes JSON quotes and all escape expansion`() {
+        val candidate = MemoryRecallCandidate("Sabia \"veche\" \\atelier\t\u0000\u2028\u2029\r\nnu a fost gasita.", "conversation_quote")
+        val normalized = candidate.promptText().replace('\n', ' ').replace('\r', ' ').trim()
+        val renderedLength = JsonPrimitive(normalized).toString().length + 3
+
+        assertEquals(emptyList<MemoryRecallCandidate>(), MemoryRecallSelector.select("sabie", listOf(candidate), 1, renderedLength - 1))
+        assertEquals(listOf(candidate), MemoryRecallSelector.select("sabie", listOf(candidate), 1, renderedLength))
+        assertEquals("Sabia \"veche\" \\atelier\t\u0000\u2028\u2029\r\nnu a fost gasita.", candidate.content)
+    }
+
+    @Test
+    fun `cumulative budget counts complete quoted records rather than unquoted text`() {
+        val first = MemoryRecallCandidate("Sabia \"veche\".", "game_event")
+        val second = MemoryRecallCandidate("Am oferit paine.", "game_event")
+        val candidates = listOf(first, second)
+        val renderedLength = candidates.sumOf { JsonPrimitive(it.promptText()).toString().length + 3 }
+
+        assertEquals(candidates, MemoryRecallSelector.select("...", candidates, 2, renderedLength))
+        assertEquals(listOf(first), MemoryRecallSelector.select("...", candidates, 2, renderedLength - 1))
+    }
+
+    @Test
+    fun `a memory whose escaped form exceeds the budget leaves room for later candidates`() {
+        val expanded = MemoryRecallCandidate("Sabia " + "\t".repeat(120) + " nu a fost gasita.", "game_event")
+        val fallback = MemoryRecallCandidate("Sabia nu a fost gasita.", "game_event")
+        val rawBudget = expanded.promptText().length + 3
+
+        assertEquals(listOf(fallback), MemoryRecallSelector.select("sabie", listOf(expanded, fallback), 1, rawBudget))
+        assertEquals(1, expanded.recordCount)
+    }
+
+    @Test
+    fun `grouped metadata is included before computing quoted record cost`() {
+        val repeated = MemoryRecallCandidate("Sabia \"veche\" nu a fost gasita.", "conversation_quote", LocalDate.of(2026, 10, 15))
+        val grouped = repeated.copy(recordCount = 2)
+        val fallback = MemoryRecallCandidate("Am mers in sat.", "game_event")
+        val renderedLength = JsonPrimitive(grouped.promptText()).toString().length + 3
+        val candidates = listOf(repeated, repeated.copy(), fallback)
+
+        assertEquals(listOf(grouped), MemoryRecallSelector.select("sabie", candidates, 1, renderedLength))
+        assertEquals(listOf(fallback), MemoryRecallSelector.select("sabie", candidates, 1, renderedLength - 1))
+        assertEquals(listOf(1, 1, 1), candidates.map { it.recordCount })
     }
 }

@@ -1,7 +1,7 @@
 # Prompt Safety Guide
 
 Status: politica operationala; protectiile nu sunt toate conectate automat.
-Actualizat: 2026-10-26.
+Actualizat: 2026-10-27.
 
 ## Reguli obligatorii
 
@@ -28,6 +28,16 @@ Actualizat: 2026-10-26.
 
 Separarea campurilor API respecta [contractul OpenAI pentru instructiuni](https://developers.openai.com/api/docs/guides/text#message-roles-and-instruction-following), dar nu garanteaza rezistenta completa la prompt injection sau corectitudinea raspunsului unui model. Promptul complet pentru Ollama si inspectia locala pastreaza aceleasi reguli si date. Apelurile generice si sugestiile structurate nu primesc automat rolul de dialog NPC.
 
+## Valori NPC_DATA citate
+
+Cele 18 campuri din `NPC_DATA` isi pastreaza cheile, ordinea si semnificatia. Fiecare valoare, inclusiv raspunsurile derivate `fact_*_answer`, este acum un string JSON complet citat dupa eticheta fixa a aplicatiei, de exemplu `npc_name: "Ion"`. Blocul ramane o lista de campuri textuale, nu este transformat intr-un obiect JSON complet si nu introduce un nou contract API structurat.
+
+Ghilimelele, backslash-urile, controalele JSON si U+2028/U+2029 din valori sunt escapate. Un nume, o locatie sau o activitate pe mai multe linii nu mai adauga fizic campuri ori sectiuni in interiorul acestui bloc. Regula stabila din `instructions` explica faptul ca textul citat nu schimba cheile sau regulile; valorile dinamice raman in `input`. Promptul complet Ollama foloseste aceeasi reprezentare.
+
+Citarea este aplicata dupa `valueOrUnknown`, `safeRoutine` si formatarea factuala existente, fara rescrierea lor. `necunoscut`, raspunsurile pentru detalii absente si valorile `da`/`nu` pentru amanarea cererii de hrana raman aceleasi stringuri, nu devin booleeni JSON. Nu se adauga un plafon de lungime sau trunchiere a identitatii; escape-urile pot mari reprezentarea. Snapshot-ul, datele persistente, rezolvarea factuala locala si fallback-urile textuale nu sunt convertite la acest format.
+
+Protectia este limitata la valorile din `NPC_DATA`: nu citeaza automat etichetele vorbitorilor, marcajul final al NPC-ului, descrierea `DESPRE TINE`, profilul, familia, story-ul sau contextul MCP. Nu valideaza adevarul ori provenienta datelor si nu redacteaza secrete; nu garanteaza rezistenta modelului la prompt injection. Modelul, apelurile generice `generateAsync` si politica de retry raman neschimbate. Testele verifica toate cheile, escaparea, campurile false, valorile complete, fallback-urile si separarea cererii, fara provider real.
+
 ## Date conversationale citate
 
 `OpenAIPromptBuilder` serializeaza textul mesajului curent, replicile din istoricul recent si reperele pentru continuare, reparare sau raspuns scurt ca stringuri JSON complete. Etichetele vorbitorilor si ale sectiunilor raman ale aplicatiei; ghilimelele, backslash-urile, CR/LF si controalele din text sunt escapate. Un mesaj pe mai multe linii nu mai poate introduce fizic un nou titlu de sectiune ori o replica sub eticheta altui vorbitor. Promptul cere explicit ca aceste citate sa fie tratate drept dialog, nu roluri sau reguli noi.
@@ -36,7 +46,7 @@ Se pastreaza selectia si ordinea istoricului stabil, normalizarea si limitele ex
 
 Datele citate raman in `input`, inclusiv la retry; `instructions` contine numai regulile stabile. Aceeasi reprezentare ajunge in promptul complet Ollama, fara introducerea unor mesaje API cu rol privilegiat. Apelurile generice `generateAsync`, replicile livrate jucatorului si fallback-urile textuale nu sunt convertite automat la acest format. Separarea este o intarire locala a [limitelor dintre instructiuni si context](https://developers.openai.com/api/docs/guides/prompt-engineering), nu o garantie impotriva prompt injection sau a unei interpretari gresite de catre model.
 
-Protectia vizeaza textul conversational, nu rescrie numele/metadatele, profilul, memoriile, story-ul ori contextul MCP ca JSON si nu conecteaza `ContextRedactor`. Citatele nu confirma adevarul afirmatiilor si nu autorizeaza actiuni de joc. Testele verifica structura fizica, decodarea JSON, conservarea datelor si separarea cererii, fara evaluare pe un provider real.
+Citarea dialogului nu rescrie etichetele/metadatele vorbitorilor, profilul, story-ul ori contextul MCP ca JSON si nu conecteaza `ContextRedactor`. Valorile `NPC_DATA` si memoriile au propriile politici de redare JSON, descrise in sectiunile dedicate. Citarea, in sine, nu confirma adevarul afirmatiilor si nu autorizeaza actiuni de joc. Testele verifica structura fizica, decodarea JSON, conservarea datelor si separarea cererii, fara evaluare pe un provider real.
 
 Declaratiile retinute explicit sunt si ele citate ca stringuri JSON, dupa selectia, normalizarea si verificarea integritatii descrise in sectiunea dedicata. Atribuirea `Mi-ai spus ca:` ramane a aplicatiei; textul citat nu devine fapt verificat sau regula noua.
 
@@ -186,13 +196,15 @@ Politica este comuna promptului OpenAI si Ollama, iar continutul/marcajul raman 
 
 ### Memorii complete la selectie si randare
 
-`MemoryPromptPolicy` defineste aceeasi normalizare si limita de 500 de unitati UTF-16 pentru selector si builder. CR/LF devin spatii, iar marginile sunt eliminate, ca in randarea anterioara; nu se taie continutul. Limita pe intrare include textul si metadatele `source`, `recorded_on` si `record_count`, dar nu prefixul de lista sau newline-ul final. O intrare exact la limita ramane completa, iar una mai mare este omisa integral, fara pierderea unei negatii ori conditii tarzii.
+`MemoryPromptPolicy` defineste aceeasi normalizare si limita de 500 de unitati UTF-16 pentru selector si builder, aplicata continutului normalizat inaintea citarii JSON. CR/LF devin spatii, iar marginile sunt eliminate, ca in randarea anterioara; nu se taie continutul. Limita pe intrare include textul si metadatele `source`, `recorded_on` si `record_count`, dar nu ghilimelele sau escape-urile serializarii, prefixul de lista ori newline-ul final. O intrare exact la limita ramane completa chiar daca reprezentarea citata este mai lunga; una cu continut normalizat mai mare este omisa integral, fara pierderea unei negatii ori conditii tarzii.
 
-`MemoryRecallSelector` aplica limita dupa gruparea duplicatelor si adaugarea contorului. Un candidat prea lung nu ocupa un slot; selectia continua cu urmatorii candidati disponibili in ordinea de relevanta existenta. Bugetul cumulat `npc.memory_prompt_max_chars` (implicit 2400) este calculat din aceleasi intrari normalizate pe care le va reda promptul, plus `- ` si newline pentru fiecare. Nu include titlul si explicatiile sectiunii si nu reprezinta bugetul total al promptului. Sursa, data, continutul, ordinea la egalitate si obiectele candidate nu sunt rescrise.
+`MemoryPromptPolicy.renderEntry` serializeaza intrarea normalizata ca un singur string JSON complet, cu metadatele si textul in acelasi sir. Ghilimelele, backslash-urile, controalele JSON si separatorii U+2028/U+2029 sunt escapate, nu devin delimitatori ai stringului. Regula stabila din prompt explica formatul citat; continutul recuperat ramane date in `input`, inclusiv la retry. Aceeasi reprezentare este folosita in promptul complet Ollama.
 
-Builderul verifica independent orice lista primita, inclusiv de la apelanti care nu folosesc selectorul. Intrarea supradimensionata nu mai este abreviata la 500; este sarita, celelalte intrari sunt pastrate, iar sectiunea primeste un singur marcaj `[Amintiri omise: ...]`. Omisiunea nu confirma absenta unor amintiri sau evenimente. Marcajul apare numai cand builderul primeste efectiv intrari prea lungi, nu pentru orice candidat exclus anterior prin relevanta, numar sau buget.
+`MemoryRecallSelector` aplica limita de continut dupa gruparea duplicatelor si adaugarea contorului. Bugetul cumulat `npc.memory_prompt_max_chars` (implicit 2400) numara acum reprezentarea JSON serializata exact ca in builder, inclusiv ghilimelele si toate escape-urile, plus `- ` si newline pentru fiecare intrare. Un candidat care nu incape nu ocupa un slot; selectia continua cu urmatorii candidati deja disponibili in ordinea de relevanta existenta, fara o noua interogare. Nu se scurteaza stringul JSON pentru a incapea. Bugetul nu include titlul si explicatiile sectiunii si nu este un plafon de tokeni sau octeti pentru intregul prompt.
 
-Formatul metadatelor si regulile de provenienta raman cele existente: citatele confirma ce a spus jucatorul, nu adevarul afirmatiei, iar numarul inregistrarilor nu dovedeste evenimente independente. Politica nu valideaza provenienta ori adevarul textului, nu citeaza memoriile ca JSON si nu este un filtru anti-injection sau de secrete. Afecteaza contextul recuperat si randarea comuna OpenAI/Ollama, nu stocarea memoriilor, regulile `instructions` sau `generateAsync`. Testele verifica limitele, bugetul comun, inlocuirea candidatilor prea lungi, metadatele dupa grupare, Unicode si conservarea celorlalte surse, fara provider real.
+Builderul verifica independent limita de continut pe intrare pentru orice lista primita, inclusiv de la apelanti care nu folosesc selectorul; nu adauga un plafon cumulat pentru aceste liste directe. Intrarea supradimensionata nu este abreviata la 500; este sarita, celelalte intrari sunt citate integral, iar sectiunea primeste un singur marcaj `[Amintiri omise: ...]`. Omisiunea nu confirma absenta unor amintiri sau evenimente. Marcajul apare numai cand builderul primeste efectiv intrari prea lungi, nu pentru orice candidat exclus anterior prin relevanta, numar sau buget.
+
+Metadatele raman lizibile in valoarea decodata, iar regulile de provenienta sunt cele existente: `conversation_quote` confirma ce a spus jucatorul, nu adevarul afirmatiei, iar numarul inregistrarilor nu dovedeste evenimente independente. Citarea nu verifica sursa sau adevarul textului, nu creeaza metadate tipizate si nu este redactare de secrete ori o garantie anti-injection. Sursa, data, continutul, ordinea la egalitate, obiectele candidate, stocarea si forma bruta `MemoryRecallCandidate.promptText()` nu sunt rescrise. `generateAsync`, modelul si raspunsurile locale isi pastreaza comportamentul. Testele verifica decodarea JSON, controalele, limita exacta, bugetul dupa escapare si grupare, completarea sloturilor si separarea `instructions`/`input`, fara provider real.
 
 ### Declaratii explicite complete si citate
 

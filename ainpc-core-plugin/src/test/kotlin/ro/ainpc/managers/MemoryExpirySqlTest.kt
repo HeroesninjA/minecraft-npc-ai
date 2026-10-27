@@ -1,5 +1,6 @@
 package ro.ainpc.managers
 
+import com.google.gson.JsonPrimitive
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -100,9 +101,10 @@ class MemoryExpirySqlTest {
                 assertTrue(recalled.single().startsWith("[source=game_event] [recorded_on="))
                 assertTrue(recalled.single().endsWith("[record_count=2] active"))
 
-                plugin.config.set("npc.memory_prompt_max_chars", recalled.single().length + 3)
+                val renderedLength = JsonPrimitive(recalled.single()).toString().length + 3
+                plugin.config.set("npc.memory_prompt_max_chars", renderedLength)
                 assertEquals(recalled, manager.getRelevantMemories(npc, playerId, "active", 5))
-                plugin.config.set("npc.memory_prompt_max_chars", recalled.single().length + 2)
+                plugin.config.set("npc.memory_prompt_max_chars", renderedLength - 1)
                 assertEquals(emptyList<String>(), manager.getRelevantMemories(npc, playerId, "active", 5))
 
                 assertTrue(manager.hasMemoriesOf(npc, playerId))

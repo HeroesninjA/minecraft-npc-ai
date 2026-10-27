@@ -1,7 +1,7 @@
 # Harta claselor pentru AI
 
 Status: harta derivata din cod.
-Actualizat: 2026-10-26.
+Actualizat: 2026-10-27.
 
 ## Calea activa de dialog
 
@@ -10,9 +10,9 @@ Actualizat: 2026-10-26.
 - `DialoguePersonalityPolicy` - selectie determinista a variantelor locale generale dupa extraversia NPC-ului;
 - `OpenAIPromptSnapshotFactory` - captura contextului pe thread-ul Paper;
 - `OpenAISemanticWorldContextBuilder` - mapping, story si lore NPC;
-- `OpenAIPromptBuilder` - compunerea promptului, citarea JSON a textelor conversationale si declaratiilor explicite, limite independente pentru contextul optional, redarea integrala sau omisiunea explicita a profilului JSON, faptelor verificate si declaratiilor prea lungi si preambulul stabil separat pentru `instructions` in dialogul OpenAI;
+- `OpenAIPromptBuilder` - compunerea promptului, citarea JSON a valorilor `NPC_DATA`, textelor conversationale, declaratiilor explicite si memoriilor, limite independente pentru contextul optional, redarea integrala sau omisiunea explicita a profilului JSON, faptelor verificate si declaratiilor prea lungi si preambulul stabil separat pentru `instructions` in dialogul OpenAI;
 - `OpenAIService` - selectia OpenAI/Ollama pentru dialog, preflight local al configuratiei de transport, request asincron, diagnostic, backoff OpenAI si fallback;
-- `MemoryRecallSelector` / `MemoryPromptPolicy` - selectia memoriilor cu o limita comuna de 500 de unitati UTF-16 pe intrare completa, aceeasi normalizare si bugetare ca in builder, fara trunchierea metadatelor sau continutului;
+- `MemoryRecallSelector` / `MemoryPromptPolicy` - selectia memoriilor cu o limita comuna de 500 de unitati UTF-16 pe continut normalizat complet, citare JSON comuna cu builderul si buget cumulat calculat dupa escapare, fara trunchierea metadatelor sau continutului;
 - `OpenAIConnectionProbe` - proba HTTP cu timeout, validare JSON/identitate de model fara chei duplicate si status de conexiune cu secrete mascate in datele de diagnostic/cache;
 - `OpenAIJsonEnvelope` - parser intern comun pentru Responses, corpurile 2xx ale probei si extractia erorilor HTTP, cu sintaxa stricta, nume unice per obiect si erori generice fara payload sau cauze brute;
 - `OpenAIHttpTransport` - termen per cerere si corp de cel mult 2 MiB, cu anularea schimbului HTTP la expirare/intrerupere sau a subscriptiei la depasirea dimensiunii;

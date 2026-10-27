@@ -1,7 +1,7 @@
 # Runtime de simulare NPC
 
 Status: contract verificat in cod.
-Actualizat: 2026-10-26.
+Actualizat: 2026-10-27.
 
 Nu exista o clasa de productie numita `SimulationService`. Numele fisierului ramane pentru compatibilitate, iar implementarea reala este distribuita intre doua fluxuri independente: simularea nevoilor si rutina cu miscare.
 
@@ -60,6 +60,45 @@ Modelul identifica o prioritate de atentie si formuleaza o descriere a nevoilor 
 `AINPC.generateContextDescription()` include aceasta autoevaluare in textul copiat de `OpenAIPromptSnapshotFactory`, iar `NpcCognitiveResponse` raspunde local la intrebari despre ganduri, nevoi si intentii prin `DialogueEngine`. Captura citeste numai campuri deja disponibile; nu executa actiuni si nu acceseaza lumea prin API Bukkit.
 
 Toate tiparele cognitive folosesc acum textul direct extras de `DialogueMessageText.directIntentText`, inclusiv intrebarile despre nevoi, invatare si ajutor alimentar. Citatele si introducerile de relatare ori explicare recunoscute de acest extractor nu devin cereri adresate NPC-ului. Intr-un mesaj precum `Maria a zis „ce nevoi ai?”; dar ce vrei sa faci?`, resolverul cognitiv raspunde numai despre intentie; nu adauga o noua cerere de hrana din citat. O continuare directa ramane eligibila, cu ordinea raspunsurilor si dovezile capturate pastrate.
+
+## Snapshot comun al agentului - primul increment AG1
+
+`NpcAgentSnapshot` adauga un invelis imuabil, cu schema `2`, peste `NpcCognitiveState` si `NpcPerceptionSnapshot`: UUID persistent, identitatea instantei runtime, reviziile de decizie si tranzitie, momentul capturii, cognitia si perceptia. Schema initiala `1` acoperea numai cognitia. Captura reutilizeaza datele existente, fara acces nou la Bukkit, SQL, provider AI sau persistenta. Identitatea runtime distinge doua instante care au acelasi UUID persistent.
+
+`DecisionEngine` reutilizeaza o singura captura cognitiva pentru scorurile unui set de actiuni. Eligibilitatea pentru masa/somn, contributiile nevoilor si rutinei si indiciul contextual de foame folosesc valorile autoritative din NPC, chiar daca o copie din `NPCContext` nu a fost sincronizata. Experienta de ingrijire, experienta sociala si verificarea recenta a interactiunii folosesc acelasi moment de captura. Previzualizarea expune snapshotul folosit, fara a aplica o alegere sau a rescrie contextul.
+
+`OpenAIPromptSnapshotFactory` ataseaza aceeasi forma de snapshot in `PromptSnapshot.agentSnapshot`. Descrierea NPC, nevoile si intentia din descrierea contextului, starea/activitatea si campurile obiectiv/rutina ale promptului sunt proiectate din aceeasi cognitie capturata. O schimbare ulterioara a NPC nu rescrie acele valori. Metodele publice existente de descriere raman disponibile; constructorii Kotlin existenti ai `PromptSnapshot` pot omite noul camp optional.
+
+`NpcPerceptionSnapshot` copiaza din `NPCContext` valorile deja disponibile: lumea raportata, timpul, vremea, biomul/topologia, starea fizica si pozitionarea semantica, contoarele de vecinatate, regiunea si contextul de mediu. Copia evenimentelor de mediu este defensiva si nemodificabila. Lista de jucatori este folosita numai pentru numar; snapshotul nu pastreaza entitati si nu le citeste API-urile. Nu se fac scanari sau incarcare de chunk-uri pentru aceasta proiectie.
+
+Scorarea contextuala si eligibilitatea pentru ingrijire folosesc perceptia capturata. Fabrica promptului foloseste aceeasi perceptie pentru descrierea mediului, topologie, locatia descriptiva, regiune si contextul de mediu. Schimbarea contextului sursa dupa captura nu muta acele proiectii la alta locatie sau alta stare de sanatate.
+
+Aceasta este o proiectie a cache-ului de perceptie, nu o observatie noua a lumii. `capturedAtMillis` indica momentul copierii, fara sa dovedeasca prospetimea tuturor observatiilor. Blocurile world/story si unele date sociale raman surse separate; captura nu transforma contextul administrativ global in cunoastere individuala a NPC-ului. Adaptorul memoriei selectate si limitele sale sunt descrise in [contractul dialogului](dialog-si-conversatii.md#memorie-contextuala-tipizata---continuare-ag1).
+
+Snapshotul nu contine referinte la entitati, lume sau colectii runtime mutable. Nu reprezinta insa o tranzactie atomica intre profil, istoric, memorii, story si toate faptele lumii. Reviziile existente nu cresc la fiecare modificare directa a unei nevoi sau a textului obiectivului; ele nu inlocuiesc reverificarea preconditiilor unui viitor plan. Schema snapshotului nu este o versiune noua de DB sau de API pentru addonuri.
+
+AG1 nu introduce actiuni autonome noi, AI LOD sau coordonare regionala/globala si nu activeaza flagurile simularii. Previzualizarea plannerului limitat AG2 este separata, conform sectiunii urmatoare. Pasii ulteriori sunt in [arhitectura agentica](../planning/arhitectura-agentica-local-regional-global.md).
+
+## Planner local de ingrijire - previzualizare AG2
+
+`simulation.decision.care_planner_shadow_enabled`, implicit `false`, adauga un diagnostic la `/ainpc decision [numeNpc|nearest]`, cu permisiunea existenta `ainpc.admin`. Nu porneste simularea sau rutina. Plannerul ruleaza numai la aceasta previzualizare, nu periodic si nu la fiecare tick Minecraft. Dezactivarea flagului elimina calculul si liniile suplimentare.
+
+[`NpcCarePlanner`](../../ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/NpcCarePlanner.kt) este o descompunere determinista limitata, de tip HTN, nu un motor GOAP general. Primeste acelasi `NpcAgentSnapshot` folosit de previzualizarea Utility AI, plus o copie valorica a casei cunoscute si a modului de simulare. Captura nu rezolva `Location`, nu retine entitati si nu verifica sau incarca chunk-uri. Plannerul nu consulta Bukkit, DB sau LLM si nu creeaza taskuri.
+
+Un singur obiectiv local este propus: satietate sau energie pana la pragul observat `60/100`. Alegerea foloseste focusul cognitiv existent si pragurile `35/60`; un obiectiv activ pentru aceeasi casa poate continua peste pragul de initiere. Un obiectiv cu trei minute cumulate fara progres nu primeste o noua propunere identica. Siguranta, interlocutorii si starile incompatibile au prioritate. Modul diferit de `FULL`, valorile invalide ori o casa lipsa/nefinita/din alta lume blocheaza propunerea.
+
+| Obiectiv | Alternative modelate | Pasi propusi |
+|---|---|---|
+| Satietate | `EAT` | Revenire acasa daca este necesara → masa → observarea refacerii |
+| Energie | `SLEEP`, `REST` | Revenire acasa daca este necesara → somn/odihna → observarea refacerii |
+
+Exista cel mult doua alternative cu maximum trei pasi fiecare, fara cautare recursiva, retry sau cozi. Costul ordinal prefera continuarea somnului/odihnei deja incepute, altfel somnul in fata odihnei. Nu este o estimare de durata, distanta sau performanta. Modelul de nevoi existent permite recuperarea energiei prin somn sau odihna; pentru masa nu sunt inventate stocuri, rezervari sau tranzactii. Acestea sunt propuneri in modelul abstract existent, nu dovezi de hrana consumata ori refacere produsa.
+
+`NpcCarePlanPreview` separa statusul, obiectivul si alternativele nemodificabile. Comanda afiseaza explicit `SHADOW, fara executie`, pasii, alternativa preferata si probabilitatea Utility curenta a fiecarei actiuni de ingrijire. Aceasta probabilitate poate fi zero departe de casa; nu se compara `RETURN_HOME` cu o actiune Utility ca si cum ar avea aceeasi semantica. Cache-ul selectiei ramane intact, iar propunerea este recalculata din captura curenta chiar intr-o previzualizare cu selectie in cooldown.
+
+`invalidationReason` compara o noua captura cu intrarea propunerii: UUID si identitate runtime, ambele revizii, fereastra strict mai mica de cinci secunde, mod, lume, coordonatele casei, cognitie si prezenta semantica acasa. Timestamp-urile invalide sau intoarcerea ceasului invalideaza propunerea; citirile nu reinnoiesc termenul. Sunt detectate inclusiv modificarile directe de nevoi, obiectiv, rutina si interlocutor care nu cresc reviziile. Verificarea este conservatoare si se testeaza separat; nu este o autorizatie de executie si nu demonstreaza prospetimea perceptiei, accesibilitatea rutei sau disponibilitatea resurselor.
+
+Limita acestui increment: nu exista executor de plan, rezervare, observator nou de rezultate, replanificare automata sau istoric de planuri. Nu se modifica scoruri/probabilitati, stare, nevoi, obiectivul existent, dovezi, statistici sau navigatie. Nu se injecteaza propunerea in memoria/dialogul NPC-ului ca intentie asumata. AG2 ramane partial pana la masuratori Paper si executie controlata cu reverificarea preconditiilor si rezultate observate.
 
 ## Explicatia ultimei decizii
 
@@ -213,6 +252,9 @@ Fixture-ul controleaza perceptia si pozitia, apoi foloseste sincronizarea si reg
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/bootstrap/SchedulerCoordinator.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/managers/NPCManager.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/DecisionEngine.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NpcAgentSnapshot.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/npc/NpcPerceptionSnapshot.kt`
+- `ainpc-core-plugin/src/main/kotlin/ro/ainpc/ai/OpenAIPromptSnapshotFactory.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/NpcFoodRequestService.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/engine/NpcFoodRequestThrottle.kt`
 - `ainpc-core-plugin/src/main/kotlin/ro/ainpc/routine/RoutineCoordinator.kt`

@@ -188,13 +188,22 @@ class MemoryManager(private val plugin: AINPCPlugin) {
     fun getRelevantMemories(npc: AINPC, player: Player, context: String, limit: Int): List<String> =
         getRelevantMemories(npc, player.uniqueId, context, limit)
 
-    fun getRelevantMemories(npc: AINPC, playerUuid: UUID, context: String, limit: Int): List<String> {
-        if (limit <= 0) return emptyList()
-        val maxPromptChars = plugin.config.getInt("npc.memory_prompt_max_chars", MemoryRecallSelector.DEFAULT_MAX_PROMPT_CHARS)
-        if (maxPromptChars <= 0) return emptyList()
+    fun getRelevantMemories(npc: AINPC, playerUuid: UUID, context: String, limit: Int): List<String> =
+        recall(prepareRecall(npc, playerUuid, context, limit)).promptEntries()
 
-        val candidates = mutableListOf<MemoryRecallCandidate>()
+    internal fun prepareRecall(npc: AINPC, playerUuid: UUID, context: String, limit: Int): NpcMemoryQuery {
+        val maxPromptChars = plugin.config.getInt("npc.memory_prompt_max_chars", MemoryRecallSelector.DEFAULT_MAX_PROMPT_CHARS)
         val candidateLimit = maxOf(limit, minOf(200, plugin.config.getInt("npc.max_memories_per_player", 50)))
+        return NpcMemoryQuery(
+            npc.uuid, npc.runtimeIdentity, npc.databaseId, playerUuid, context, limit, candidateLimit, maxPromptChars,
+        )
+    }
+
+    internal fun recall(request: NpcMemoryQuery): NpcMemorySnapshot {
+        if (request.limit <= 0 || request.maxPromptChars <= 0) {
+            return NpcMemorySnapshot(request, NpcMemorySnapshot.Status.DISABLED, emptyList())
+        }
+        val candidates = mutableListOf<MemoryRecallCandidate>()
         val sql = """
             SELECT content, memory_type, emotional_impact, importance, created_at
             FROM npc_memories
@@ -206,9 +215,9 @@ class MemoryManager(private val plugin: AINPCPlugin) {
 
         try {
             plugin.databaseManager.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, npc.databaseId)
-                stmt.setString(2, playerUuid.toString())
-                stmt.setInt(3, candidateLimit)
+                stmt.setInt(1, request.npcDatabaseId)
+                stmt.setString(2, request.playerUuid.toString())
+                stmt.setInt(3, request.candidateLimit)
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
                         val source = when (rs.getString("memory_type")) {
@@ -226,10 +235,11 @@ class MemoryManager(private val plugin: AINPCPlugin) {
             }
         } catch (e: SQLException) {
             plugin.logger.warning("Eroare la obtinerea amintirilor: ${e.message}")
+            return NpcMemorySnapshot(request, NpcMemorySnapshot.Status.UNAVAILABLE, emptyList())
         }
 
-        return MemoryRecallSelector.select(context, candidates, limit, maxPromptChars)
-            .map(MemoryRecallCandidate::promptText)
+        val selected = MemoryRecallSelector.select(request.context, candidates, request.limit, request.maxPromptChars)
+        return NpcMemorySnapshot(request, NpcMemorySnapshot.Status.READY, selected)
     }
 
     fun getAllMemories(npc: AINPC, player: Player): List<Memory> = getAllMemories(npc, player.uniqueId)

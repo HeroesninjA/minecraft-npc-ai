@@ -1,5 +1,6 @@
 package ro.ainpc.ai
 
+import com.google.gson.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -19,7 +20,7 @@ class OpenAIMemoryPromptLimitTest {
         val prompt = prompt(listOf(memory, valid))
 
         assertFalse(prompt.contains("OVERSIZED_MEMORY_MARKER"))
-        assertTrue(prompt.contains("- $valid\n"))
+        assertTrue(prompt.contains("- ${JsonPrimitive(valid)}\n"))
         assertTrue(prompt.contains(omissionNotice))
         assertTrue(prompt.contains("omisiunea nu confirma absenta"))
         assertTrue(memory.endsWith("nu confirma consumul obiectului."))
@@ -31,7 +32,7 @@ class OpenAIMemoryPromptLimitTest {
         val entry = prefix + "x".repeat(500 - prefix.length)
         val prompt = prompt(listOf(entry))
 
-        assertTrue(prompt.contains("- $entry\n"))
+        assertTrue(prompt.contains("- ${JsonPrimitive(entry)}\n"))
         assertFalse(prompt.contains(omissionNotice))
     }
 
@@ -40,7 +41,7 @@ class OpenAIMemoryPromptLimitTest {
         val entry = "  [source=game_event] Sabia\r\nera veche.\n " + " \r\n".repeat(300)
         val prompt = prompt(listOf(entry))
 
-        assertTrue(prompt.contains("- [source=game_event] Sabia  era veche.\n"))
+        assertTrue(prompt.contains("- \"[source=game_event] Sabia  era veche.\"\n"))
         assertFalse(prompt.contains(omissionNotice))
         assertTrue(entry.length > 500)
     }
@@ -70,7 +71,7 @@ class OpenAIMemoryPromptLimitTest {
 
         assertEquals(replacements.take(5), selected)
         assertFalse(prompt.contains("OVERSIZED_MEMORY_MARKER"))
-        for (memory in selected) assertTrue(prompt.contains("- ${memory.promptText()}\n"))
+        for (memory in selected) assertTrue(prompt.contains("- ${JsonPrimitive(memory.promptText())}\n"))
         assertFalse(prompt.contains(omissionNotice))
     }
 
@@ -106,7 +107,7 @@ class OpenAIMemoryPromptLimitTest {
         )
         val prompt = prompt(entries)
 
-        for (entry in entries) assertTrue(prompt.contains("- $entry\n"))
+        for (entry in entries) assertTrue(prompt.contains("- ${JsonPrimitive(entry)}\n"))
         assertTrue(prompt.contains("nu dovedeste N evenimente distincte"))
         assertFalse(prompt.contains(omissionNotice))
     }

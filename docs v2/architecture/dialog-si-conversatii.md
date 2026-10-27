@@ -1,7 +1,7 @@
 # Dialog si conversatii
 
 Status: contract canonic verificat in cod pentru formularea si post-procesarea replicii NPC.
-Actualizat: 2026-10-25.
+Actualizat: 2026-10-27.
 
 Ajutorul alimentar confirmat prin transferul fizic `Shift + click dreapta` este separat de observatiile ingrijirii autonome si de memoria narativa. `NpcSocialExperience` foloseste UUID-ul exact al jucatorului, iar `DialogueEngine` citeste confirmarea pentru jucatorul cererii, nu pentru participantul global din `NPCContext`. La o noua nevoie de hrana, NPC-ul poate cere din nou ajutor aceleiasi persoane. O afirmatie precum `ti-am dat mancare` nu creeaza confirmare; fara dovezi, raspunsul local spune ca lipseste o amintire confirmata.
 
@@ -129,6 +129,20 @@ Inaintea selectiei, inregistrarile recuperate cu text identic, aceeasi eticheta 
 `DialogHistory.recentStable(...)` pregateste o copie a istoricului pentru recunoastere, alegerea raspunsului, prompt si fallback: pastreaza numai schimburile stabile (`SELECTED` sau `EXECUTED`) cu ambele replici neblank, le ordoneaza cronologic si retine cel mult cinci. Pentru timestampuri egale pastreaza ordinea furnizata de citirea SQL. Schimburile esuate, respinse, doar propuse sau incomplete nu stabilesc singure o relatie cunoscuta si nu sunt prezentate AI-ului ca discutii anterioare. Memoriile si relatia persistata raman surse separate de recunoastere.
 
 `DialogHistoryRepository` citeste strict perechea ID NPC-UUID jucator. Randurile persistate sunt citite ca `EXECUTED`; statusurile de ramura suplimentare se aplica listelor `DialogHistory` furnizate in memorie. Limitele de citire egale cu zero sau negative (`limit <= 0`) intorc o lista goala.
+
+## Memorie contextuala tipizata - continuare AG1
+
+`MemoryManager.prepareRecall` captureaza intr-un `NpcMemoryQuery` imuabil UUID-ul NPC, identitatea runtime, cheia DB, UUID-ul interlocutorului, interogarea si bugetele de selectie. `recall` executa citirea folosind aceste valori, fara sa reciteasca identitatea din obiectul NPC mutabil. Astfel, o schimbare a cheii sursa in timpul pregatirii statement-ului nu redirectioneaza citirea spre alt actor.
+
+`NpcMemorySnapshot` pastreaza identitatea cererii, interogarea, momentul rezultatului si dovezile selectate ca `MemoryRecallCandidate`: continut, clasificarea sursei, data cunoscuta si numarul de inregistrari grupate. Lista de dovezi si proiectia sa textuala sunt nemodificabile. Clasificarea `game_event`, `conversation_quote` sau `unclassified` reutilizeaza regulile existente; nu introduce o noua verificare a adevarului unui text.
+
+Rezultatele disting `READY`, `DISABLED` si `UNAVAILABLE`. `READY` poate avea o selectie goala; limitele de candidati, bugetul si filtrarea inseamna ca aceasta nu demonstreaza absenta tuturor amintirilor. `DISABLED` evita accesul DB cand limita sau bugetul nu permite selectie. O eroare SQL produce `UNAVAILABLE`, fara dovezi partiale prezentate ca selectie valida. Expirarea, gruparea si limitele de randare raman cele existente; declaratiile personale sunt citite separat.
+
+`DialogManager` pregateste cererea inaintea taskului DB, adapteaza interogarea la istoricul conversational si executa citirea pe executorul DB existent. Rezultatul tipizat este pastrat in campul optional `PromptDbContext.recalledMemories`; lista textuala derivata continua prin motorul de dialog si provider fara schimbarea regulilor de citare sau a bugetelor promptului. API-urile existente `getRelevantMemories` raman proiectii text compatibile. Ele sunt in continuare sincrone si nu trebuie apelate din tick pentru a face I/O.
+
+Snapshotul descrie citirea realizata, nu ingheata DB si nu inlocuieste verificarea sesiunii ori reviziilor. Istoricul, relatia, profilul, declaratiile si starea lumii nu devin o tranzactie atomica prin acest adaptor. Nu sunt introduse tabele, embeddings runtime, executori sau politici de invatare noi.
+
+Regresiile folosesc SQLite real pentru izolarea identitatii, citirea pe worker cu politica pregatita anterior, provenienta, expirarea si distinctia dintre lipsa rezultatelor si esecul citirii. Testele de perceptie verifica separat proiectiile de mediu/locatie din [snapshotul agentului](simulation-service.md#snapshot-comun-al-agentului---primul-increment-ag1).
 
 ## Alegerea raspunsului
 

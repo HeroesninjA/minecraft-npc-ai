@@ -8,6 +8,7 @@ import ro.ainpc.api.events.dialog.DialogAIRequestBuiltEventPayload
 import ro.ainpc.engine.DialogueEngine
 import ro.ainpc.engine.DialogueAiIntentClassification
 import ro.ainpc.managers.MemoryManager
+import ro.ainpc.managers.NpcMemorySnapshot
 import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NpcInteractionProfile
 import ro.ainpc.world.WorldContextSnapshot
@@ -150,6 +151,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
             return processPersonalMemoryAction(npc, playerUuid, playerName, personalMemoryAction)
         }
 
+        val recallRequest = plugin.memoryManager.prepareRecall(npc, playerUuid, message, 5)
         return plugin.databaseManager.supplyAsync {
             val playerStatementRevision = plugin.memoryManager.playerStatementRevision(npc, playerUuid)
             // Obtine istoricul conversatiei
@@ -157,7 +159,8 @@ class DialogManager(private val plugin: AINPCPlugin) {
 
             // Obtine amintiri relevante
             val memoryQuery = PlayerConversationContinuation.memoryQuery(message, history)
-            val memories = plugin.memoryManager.getRelevantMemories(npc, playerUuid, memoryQuery, 5)
+            val recalledMemories = plugin.memoryManager.recall(recallRequest.copy(context = memoryQuery))
+            val memories = recalledMemories.promptEntries()
             val playerConfirmedStatements = if (personalMemoryEnabled) {
                 plugin.memoryManager.getPlayerConfirmedStatements(npc, playerUuid, 10)
             } else {
@@ -189,6 +192,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
                     playerProfile,
                     playerConfirmedStatements,
                     plugin.config.getInt("npc.personal_memory.max_prompt_statements", 3).coerceIn(0, 10),
+                    recalledMemories,
                 ),
                 playerStatementRevision,
                 loadStoryFactResponse(message, storyWorldContext),
@@ -748,6 +752,7 @@ class DialogManager(private val plugin: AINPCPlugin) {
         val playerProfile: PlayerProfile? = null,
         val playerConfirmedStatements: List<String> = emptyList(),
         val maxPromptStatements: Int = 3,
+        val recalledMemories: NpcMemorySnapshot? = null,
     ) {
         fun totalMemoryCount(): Int = totalMemoryCount
         fun weightedMemoryImpact(): Double = weightedMemoryImpact

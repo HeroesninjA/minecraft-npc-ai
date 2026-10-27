@@ -389,7 +389,9 @@ class AINPC(
 
     fun hasTrait(traitId: String): Boolean = traits.contains(traitId)
 
-    fun generateContextDescription(): String {
+    fun generateContextDescription(): String = generateContextDescription(NpcCognitiveState.capture(this))
+
+    internal fun generateContextDescription(cognition: NpcCognitiveState): String {
         val sb = StringBuilder()
         sb.append("Nume: ").append(name).append("\n")
         sb.append("Varsta: ").append(age).append(" ani\n")
@@ -398,16 +400,15 @@ class AINPC(
         if (!backstory.isNullOrEmpty()) sb.append("Poveste: ").append(backstory).append("\n")
         sb.append("\nPersonalitate:\n").append(personality.getDescription()).append("\n")
         sb.append("\nStare emotionala curenta:\n").append(emotions.getDescription()).append("\n")
-        sb.append("\nStare curenta: ").append(currentState.displayName).append("\n")
-        if (plannedRoutineActivity.isNotBlank()) sb.append("Rutina actuala: ").append(plannedRoutineActivity).append("\n")
-        if (currentGoal.isNotBlank()) sb.append("Obiectiv imediat: ").append(currentGoal).append("\n")
-        sb.append("Nevoi: satietate ").append(hungerLevel)
-            .append("/100, energie ").append(energyLevel)
-            .append("/100, social ").append(socialNeedLevel)
-            .append("/100, confort ").append(comfortLevel)
-            .append("/100, siguranta ").append(safetyLevel)
+        sb.append("\nStare curenta: ").append(cognition.currentState.displayName).append("\n")
+        if (cognition.plannedRoutineActivity.isNotBlank()) sb.append("Rutina actuala: ").append(cognition.plannedRoutineActivity).append("\n")
+        if (cognition.currentGoal.isNotBlank()) sb.append("Obiectiv imediat: ").append(cognition.currentGoal).append("\n")
+        sb.append("Nevoi: satietate ").append(cognition.hungerLevel)
+            .append("/100, energie ").append(cognition.energyLevel)
+            .append("/100, social ").append(cognition.socialNeedLevel)
+            .append("/100, confort ").append(cognition.comfortLevel)
+            .append("/100, siguranta ").append(cognition.safetyLevel)
             .append("/100\n")
-        val cognition = NpcCognitiveState.capture(this)
         sb.append("Atentie curenta: ").append(cognition.thoughtDescription()).append("\n")
         sb.append("Nevoi resimtite: ").append(cognition.needsDescription()).append("\n")
         sb.append("Intentie curenta: ").append(cognition.intentionDescription()).append("\n")

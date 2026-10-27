@@ -37,6 +37,8 @@ import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NPCState
 import ro.ainpc.npc.NpcSocialExperience
 import ro.ainpc.story.StoryContextService
+import ro.ainpc.story.StoryContextSnapshot
+import ro.ainpc.topology.TopologyCategory
 import java.lang.reflect.Proxy
 import java.sql.DriverManager
 import java.sql.PreparedStatement
@@ -107,6 +109,93 @@ class OpenAIPromptSnapshotIsolationTest {
     }
 
     @Test
+    fun `prompt carries one agent snapshot and uses authoritative needs despite stale context values`() {
+        npc.hungerLevel = 10
+        npc.currentGoal = "sa ajung acasa"
+        npc.plannedRoutineActivity = "home"
+        npc.context.hungerLevel = 100
+        npc.context.currentGoal = "obiectiv vechi"
+
+        val snapshot = capture()
+        val agent = requireNotNull(snapshot.agentSnapshot)
+        npc.hungerLevel = 90
+        npc.currentGoal = "sa lucrez"
+
+        assertEquals(npc.uuid, agent.npcUuid)
+        assertEquals(npc.runtimeIdentity, agent.runtimeIdentity)
+        assertEquals(10, agent.cognition.hungerLevel)
+        assertEquals(agent.cognition.currentGoal, snapshot.immediateGoal)
+        assertEquals(agent.cognition.plannedRoutineActivity, snapshot.plannedRoutineActivity)
+        assertTrue(snapshot.npcDescription.contains("Nevoi: satietate 10/100"))
+        assertTrue(snapshot.environmentDescription.contains("Mi-e foame."))
+        assertFalse(snapshot.environmentDescription.contains("obiectiv vechi"))
+        assertEquals(100, npc.context.hungerLevel)
+    }
+
+    @Test
+    fun `prompt state and intention stay on the captured revision when a later input read changes the NPC`() {
+        npc.currentGoal = "sa ajung acasa"
+        npc.plannedRoutineActivity = "home"
+        val mutatingPlayer = Proxy.newProxyInstance(
+            Player::class.java.classLoader, arrayOf(Player::class.java),
+        ) { _, method, arguments ->
+            if (method.name == "getInventory") {
+                npc.currentGoal = "sa lucrez"
+                npc.plannedRoutineActivity = "work"
+                npc.restorePersistedState(NPCState.WORKING)
+            }
+            method.invoke(requestPlayer, *(arguments ?: emptyArray()))
+        } as Player
+        val request = DialogManager.DialogRequest(npc, mutatingPlayer, "Ce faci?", true, true, "test", 1, 0.0)
+
+        val snapshot = withTestItem {
+            OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request, emptyList())
+        }
+        val agent = requireNotNull(snapshot.agentSnapshot)
+
+        assertEquals(NPCState.WORKING, npc.currentState)
+        assertEquals(NPCState.IDLE, agent.cognition.currentState)
+        assertEquals(agent.cognition.currentState.displayName, snapshot.currentState)
+        assertEquals(NpcFactResolver.describeCurrentActivity(npc.occupation, NPCState.IDLE), snapshot.currentActivity)
+        assertEquals("sa ajung acasa", snapshot.immediateGoal)
+        assertEquals("home", snapshot.plannedRoutineActivity)
+        assertTrue(snapshot.npcDescription.contains("Obiectiv imediat: sa ajung acasa"))
+        assertTrue(agent.stateRevision < npc.stateRevision)
+    }
+
+    @Test
+    fun `prompt location and environment retain captured perception when inventory access changes the source`() {
+        npc.worldName = "world"
+        npc.context.isAtHome = true
+        setField(NPCContext::class.java, npc.context, "topologyCategory", TopologyCategory.PLAINS)
+        val mutatingPlayer = Proxy.newProxyInstance(
+            Player::class.java.classLoader, arrayOf(Player::class.java),
+        ) { _, method, arguments ->
+            if (method.name == "getInventory") {
+                npc.worldName = "another-world"
+                npc.context.isAtHome = false
+                npc.context.isAtWork = true
+                setField(NPCContext::class.java, npc.context, "topologyCategory", TopologyCategory.FOREST)
+            }
+            method.invoke(requestPlayer, *(arguments ?: emptyArray()))
+        } as Player
+        val request = DialogManager.DialogRequest(npc, mutatingPlayer, "Unde esti?", true, true, "test", 1, 0.0)
+
+        val snapshot = withTestItem {
+            OpenAIPromptSnapshotFactory.createPromptSnapshot(plugin, request, emptyList(), StoryContextSnapshot.empty())
+        }
+        val perception = requireNotNull(snapshot.agentSnapshot).perception
+
+        assertEquals("another-world", npc.worldName)
+        assertEquals("world", perception.worldName)
+        assertEquals(TopologyCategory.PLAINS, perception.topologyCategory)
+        assertEquals(NpcFactResolver.describeCapturedLocation(perception), snapshot.locationDescription)
+        assertTrue(snapshot.environmentDescription.contains("Sunt acasa."))
+        assertFalse(snapshot.environmentDescription.contains("Sunt la munca."))
+        assertFalse(snapshot.locationDescription.contains("padure"))
+    }
+
+    @Test
     fun `food deferral is frozen for the exact request player and prompts retain it after expiry`() {
         val now = System.currentTimeMillis()
         npc.foodRequestPreferences.defer(requestPlayer.uniqueId, NpcFoodRequestPreferences.Reply.PROMISE, now)
@@ -119,7 +208,7 @@ class OpenAIPromptSnapshotIsolationTest {
         assertTrue(deferred.foodRequestDeferred)
         assertFalse(stranger.foodRequestDeferred)
         val prompt = OpenAIPromptBuilder.buildPrompt(deferred, emptyList(), emptyList(), null, null)
-        assertTrue(prompt.contains("npc_food_request_deferred: da"))
+        assertTrue(prompt.contains("npc_food_request_deferred: \"da\""))
         assertTrue(prompt.contains("Iti las timp sa aduci mancarea promisa"))
         assertFalse(stranger.environmentDescription.contains("Pauza cererilor de hrana:"))
         assertEquals("", deferred.helperExperienceDescription)

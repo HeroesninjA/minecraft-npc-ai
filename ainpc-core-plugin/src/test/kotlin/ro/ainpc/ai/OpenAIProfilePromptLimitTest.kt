@@ -23,7 +23,7 @@ class OpenAIProfilePromptLimitTest {
         assertTrue(prompt.contains("[Profil JSON omis:"))
         assertFalse(prompt.contains("PROFILE_PAYLOAD_"))
         assertEquals(profile, snapshot.profileDataJson)
-        for (required in listOf("profil_rezumat: PROFILE_SUMMARY", "npc_name: Ion", "NPC_DESCRIPTION", "Steve: \"CURRENT_MESSAGE\"")) {
+        for (required in listOf("profil_rezumat: PROFILE_SUMMARY", "npc_name: \"Ion\"", "NPC_DESCRIPTION", "Steve: \"CURRENT_MESSAGE\"")) {
             assertTrue(prompt.contains(required), required)
         }
         assertTrue(prompt.endsWith("Ion: "))

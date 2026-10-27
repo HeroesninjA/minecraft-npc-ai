@@ -50,7 +50,7 @@ class OpenAIPromptContextLimitsTest {
         assertEquals(5, prompt.lineSequence().count { it == omissionNotice })
         assertTrue(prompt.length < 33000, "Prompt length: ${prompt.length}")
         for (required in listOf(
-            "npc_name: Ion", "npc_profession: paznic", "RECENT_PLAYER", "RECENT_NPC", "MEMORY_MARKER",
+            "npc_name: \"Ion\"", "npc_profession: \"paznic\"", "RECENT_PLAYER", "RECENT_NPC", "MEMORY_MARKER",
             "GROUNDED_FACT_MARKER", "NPC_DESCRIPTION_MARKER", "Steve: \"${snapshot.playerMessage}\"\n\n",
         )) {
             assertTrue(prompt.contains(required), required.take(100))

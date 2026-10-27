@@ -27,6 +27,8 @@ class ConfigDefaultsTest {
         assertTrue(config.getBoolean("features.ai"), "AI API feature must be enabled for runtime API access")
         assertTrue(config.getBoolean("features.generation"), "world/NPC generation must be enabled for demo")
         assertFalse(config.getBoolean("simulation.enabled"))
+        assertTrue(config.isSet("simulation.decision.care_planner_shadow_enabled"))
+        assertFalse(config.getBoolean("simulation.decision.care_planner_shadow_enabled"))
         assertTrue(config.getBoolean("simulation.decision.probabilistic_enabled"))
         assertEquals(3, config.getInt("simulation.decision.max_choices"))
         assertEquals(15, config.getInt("simulation.decision.score_window"))

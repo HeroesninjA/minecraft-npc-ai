@@ -1637,6 +1637,7 @@ fun handleDecision(sender: CommandSender, args: Array<String>): Boolean {
     formatDecisionCognition(ainpcCommandMiscPlugin.decisionEngine.cognitiveDiagnostic(npc,
         viewerUuid = (sender as? Player)?.uniqueId))
         .forEach { msg.send(sender, it) }
+    formatDecisionCarePlan(preview).forEach { msg.send(sender, it) }
     val mode = when {
         preview.cached -> "cache (cooldown)"
         preview.probabilistic -> "probabilistic"

@@ -11,6 +11,7 @@ import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCEmotions
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcAgentSnapshot
 import ro.ainpc.npc.NpcCognitiveState
 import ro.ainpc.npc.NpcDecisionExplanation
 import ro.ainpc.npc.NpcFoodRequestPreferences
@@ -74,6 +75,8 @@ class DecisionEngine internal constructor(
         val repeatAdjustments: List<RepeatAdjustment> = emptyList(),
         val scoreBreakdowns: Map<NPCAction, ActionScoreBreakdown> = emptyMap(),
         val probabilityWeights: Map<NPCAction, Double> = emptyMap(),
+        val agentSnapshot: NpcAgentSnapshot? = null,
+        val carePlan: NpcCarePlanPreview? = null,
     )
 
     internal data class CognitiveDiagnostic(
@@ -135,7 +138,8 @@ class DecisionEngine internal constructor(
         }
         if (cached == null) evictIfNeeded(now)
 
-        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation)
+        val agentSnapshot = NpcAgentSnapshot.capture(npc, context, now)
+        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation, agentSnapshot)
         val scores = scoreBreakdowns.mapValuesTo(EnumMap(NPCAction::class.java)) { it.value.score }
         val settings = ActionProbabilitySettings.fromConfig(
             plugin.config, npc.occupation, context.timeOfDay, context.weather,
@@ -178,20 +182,26 @@ class DecisionEngine internal constructor(
 
     internal fun previewActionDecision(npc: AINPC, context: NPCContext): ActionDecisionPreview {
         val now = System.currentTimeMillis()
+        val agentSnapshot = NpcAgentSnapshot.capture(npc, context, now)
+        val carePlan = if (plugin.config.getBoolean("simulation.decision.care_planner_shadow_enabled", false)) {
+            NpcCarePlanner.plan(NpcCarePlanningInput.capture(npc, agentSnapshot))
+        } else null
         val cached = decisionCache[npc.uuid]
-        val situation = actionSituation(npc, context)
+        val situation = actionSituation(npc, context, agentSnapshot)
         if (cached != null && isReusable(cached, npc, context, situation, now)) {
             val action = cached.action
-            val breakdown = calculateActionBreakdown(npc, context, action, situation)
+            val breakdown = calculateActionBreakdown(npc, context, action, situation, agentSnapshot)
             return ActionDecisionPreview(
                 mapOf(action to breakdown.score),
                 mapOf(action to 1.0),
                 probabilistic = false,
                 cached = true,
                 scoreBreakdowns = mapOf(action to breakdown),
+                agentSnapshot = agentSnapshot,
+                carePlan = carePlan,
             )
         }
-        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation)
+        val scoreBreakdowns = calculateAllScoreBreakdowns(npc, context, situation, agentSnapshot)
         val scores = scoreBreakdowns.mapValuesTo(EnumMap(NPCAction::class.java)) { it.value.score }
         val settings = ActionProbabilitySettings.fromConfig(
             plugin.config, npc.occupation, context.timeOfDay, context.weather,
@@ -201,7 +211,9 @@ class DecisionEngine internal constructor(
             cached?.recentActionTimestamps.orEmpty(), now, settings, scoreBreakdowns,
             includeExplanations = true,
         ).copy(
-            blockedActions = blockedActions(npc.currentState, context.isInDanger, situation),
+            blockedActions = blockedActions(agentSnapshot.cognition.currentState, agentSnapshot.cognition.isInDanger, situation),
+            agentSnapshot = agentSnapshot,
+            carePlan = carePlan,
         )
     }
 
@@ -342,16 +354,20 @@ class DecisionEngine internal constructor(
         npc: AINPC,
         context: NPCContext,
         situation: ActionSituation = actionSituation(npc, context),
+        agentSnapshot: NpcAgentSnapshot = NpcAgentSnapshot.capture(npc, context),
     ): MutableMap<NPCAction, ActionScoreBreakdown> {
         val breakdowns: MutableMap<NPCAction, ActionScoreBreakdown> = EnumMap(NPCAction::class.java)
-        val possibleActions = eligibleActions(npc.currentState, context.isInDanger, situation)
+        val possibleActions = eligibleActions(agentSnapshot.cognition.currentState, agentSnapshot.cognition.isInDanger, situation)
         for (action in possibleActions) {
-            breakdowns[action] = calculateActionBreakdown(npc, context, action, situation)
+            breakdowns[action] = calculateActionBreakdown(npc, context, action, situation, agentSnapshot)
         }
         return breakdowns
     }
 
-    private fun actionSituation(npc: AINPC, context: NPCContext): ActionSituation {
+    private fun actionSituation(
+        npc: AINPC, context: NPCContext, agentSnapshot: NpcAgentSnapshot = NpcAgentSnapshot.capture(npc, context),
+    ): ActionSituation {
+        val cognition = agentSnapshot.cognition
         val socialTargets = nearbySocialTargets(npc, context)
         val chunkAvailable = { worldName: String, chunkX: Int, chunkZ: Int ->
             Bukkit.getWorld(worldName)?.isChunkLoaded(chunkX, chunkZ) == true
@@ -361,10 +377,10 @@ class DecisionEngine internal constructor(
             hasWorkplace = ActionTargetAvailability.hasUsableAnchor(npc.workAnchor, chunkAvailable),
             hasSocialDestination = ActionTargetAvailability.hasUsableAnchor(npc.socialAnchor, chunkAvailable),
             hasInteractingPlayer = socialTargets.hasInteractingPlayer,
-            isAtHome = context.isAtHome,
-            hungerLevel = context.hungerLevel,
-            energyLevel = context.energyLevel,
-            currentState = npc.currentState,
+            isAtHome = agentSnapshot.perception.isAtHome,
+            hungerLevel = cognition.hungerLevel,
+            energyLevel = cognition.energyLevel,
+            currentState = cognition.currentState,
             interactingPlayerUuid = context.interactingPlayer?.takeIf { socialTargets.hasInteractingPlayer }?.uniqueId,
             returningForCare = canContinueSelfCare(npc, context),
         )
@@ -430,22 +446,29 @@ class DecisionEngine internal constructor(
 
     private fun calculateActionBreakdown(
         npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
+    ): ActionScoreBreakdown = calculateActionBreakdown(
+        npc, context, action, situation, NpcAgentSnapshot.capture(npc, context),
+    )
+
+    private fun calculateActionBreakdown(
+        npc: AINPC, context: NPCContext, action: NPCAction, situation: ActionSituation,
+        agentSnapshot: NpcAgentSnapshot,
     ): ActionScoreBreakdown = ActionScoreBreakdown(
         base = action.baseScore,
         traits = getTraitModifier(npc.personality, action),
         emotions = getEmotionModifier(npc.emotions, action),
-        memory = getMemoryModifier(npc, context, action, situation.hasInteractingPlayer),
-        context = getContextModifier(context, action, situation.hasInteractingPlayer),
-        needs = getNeedModifier(context, action),
-        routine = getRoutineModifier(npc, context, action),
+        memory = getMemoryModifier(agentSnapshot.cognition, context, action, situation.hasInteractingPlayer),
+        context = getContextModifier(action, situation.hasInteractingPlayer, agentSnapshot),
+        needs = agentSnapshot.cognition.needModifier(action),
+        routine = getRoutineModifier(agentSnapshot.cognition, action),
         experience = if (experienceEnabled(npc)) npc.actionExperience.scoreModifier(
-            action, NpcCognitiveState.capture(npc, context), experienceContextKey(npc),
-            context.isAtHome, System.currentTimeMillis(),
+            action, agentSnapshot.cognition, experienceContextKey(npc),
+            agentSnapshot.perception.isAtHome, agentSnapshot.capturedAtMillis,
         ) else 0,
         socialExperience = if (experienceEnabled(npc) && situation.hasInteractingPlayer) {
             situation.interactingPlayerUuid?.let { playerUuid ->
                 npc.socialExperience.scoreModifier(
-                    playerUuid, action, NpcCognitiveState.capture(npc, context), System.currentTimeMillis(),
+                    playerUuid, action, agentSnapshot.cognition, agentSnapshot.capturedAtMillis,
                 )
             } ?: 0
         } else 0,
@@ -496,13 +519,13 @@ class DecisionEngine internal constructor(
     }
 
     private fun getMemoryModifier(
-        npc: AINPC, context: NPCContext, action: NPCAction, hasInteractingPlayer: Boolean,
+        cognition: NpcCognitiveState, context: NPCContext, action: NPCAction, hasInteractingPlayer: Boolean,
     ): Int {
         var modifier = 0
         if (!hasInteractingPlayer) return modifier
 
         val relationshipLevel = context.relationshipLevel
-        val routineFocus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })
+        val routineFocus = inferRoutineFocus(cognition.plannedRoutineActivity)
         if (action.isFriendly()) modifier += relationshipLevel / 5
         if (action.isAggressive()) {
             modifier += if (relationshipLevel < -25) abs(relationshipLevel) / 3 else -relationshipLevel / 3
@@ -531,56 +554,50 @@ class DecisionEngine internal constructor(
     }
 
     private fun getContextModifier(
-        context: NPCContext, action: NPCAction, hasInteractingPlayer: Boolean,
+        action: NPCAction, hasInteractingPlayer: Boolean,
+        agentSnapshot: NpcAgentSnapshot,
     ): Int {
+        val perception = agentSnapshot.perception
         var modifier = 0
-        if (context.isInDanger) {
+        if (agentSnapshot.cognition.isInDanger) {
             if (action == NPCAction.FLEE || action == NPCAction.CALL_HELP) modifier += 50
             if (action == NPCAction.DEFEND || action == NPCAction.ATTACK) modifier += 30
             if (action.getCategory() == NPCAction.ActionCategory.SOCIAL) modifier -= 30
             if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 40
         }
-        if ("NIGHT" == context.timeOfDay) {
+        if ("NIGHT" == perception.timeOfDay) {
             if (action == NPCAction.SLEEP || action == NPCAction.REST) modifier += 35
             if (action.isWorkState()) modifier -= 20
         }
-        if ("MORNING" == context.timeOfDay) {
+        if ("MORNING" == perception.timeOfDay) {
             if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier += 20
             if (action == NPCAction.GREET) modifier += 15
         }
-        if ("RAIN" == context.weather || "THUNDER" == context.weather) {
-            if (!context.isIndoors) {
+        if ("RAIN" == perception.weather || "THUNDER" == perception.weather) {
+            if (!perception.isIndoors) {
                 if (action == NPCAction.HIDE) modifier += 25
                 if (action.getCategory() == NPCAction.ActionCategory.WORK) modifier -= 15
             }
         }
-        if (context.hungerLevel < 30 && action == NPCAction.EAT) modifier += 40
-        if (context.healthPercent < 50) {
+        if (agentSnapshot.cognition.hungerLevel < 30 && action == NPCAction.EAT) modifier += 40
+        if (perception.healthPercent < 50) {
             if (action == NPCAction.REST || action == NPCAction.HEAL) modifier += 30
             if (action == NPCAction.FLEE) modifier += 20
         }
-        if (context.isFamilyNearby && (action == NPCAction.SOCIALIZE || action == NPCAction.TALK)) modifier += 25
-        if (context.isAtWork && action.getCategory() == NPCAction.ActionCategory.WORK) modifier += 30
-        if (context.isAtHome && (action == NPCAction.REST || action == NPCAction.EAT)) modifier += 15
+        if (perception.isFamilyNearby && (action == NPCAction.SOCIALIZE || action == NPCAction.TALK)) modifier += 25
+        if (perception.isAtWork && action.getCategory() == NPCAction.ActionCategory.WORK) modifier += 30
+        if (perception.isAtHome && (action == NPCAction.REST || action == NPCAction.EAT)) modifier += 15
         if (hasInteractingPlayer) {
             if (action == NPCAction.TALK || action == NPCAction.LISTEN) modifier += 40
             if (action == NPCAction.GREET && SocialTargetProximity.isRecentInteraction(
-                    context.lastInteractionTime, System.currentTimeMillis(),
+                    perception.lastInteractionTime, agentSnapshot.capturedAtMillis,
                 )) modifier += 30
         }
         return modifier
     }
 
-    private fun getNeedModifier(context: NPCContext, action: NPCAction): Int = NpcCognitiveState(
-        hungerLevel = context.hungerLevel,
-        energyLevel = context.energyLevel,
-        socialNeedLevel = context.socialNeedLevel,
-        comfortLevel = context.comfortLevel,
-        safetyLevel = context.safetyLevel,
-    ).needModifier(action)
-
-    private fun getRoutineModifier(npc: AINPC, context: NPCContext, action: NPCAction): Int {
-        val focus = inferRoutineFocus(context.plannedRoutineActivity.ifBlank { npc.plannedRoutineActivity })
+    private fun getRoutineModifier(cognition: NpcCognitiveState, action: NPCAction): Int {
+        val focus = inferRoutineFocus(cognition.plannedRoutineActivity)
         return when (focus) {
             RoutineFocus.WORK -> if (action.getCategory() == NPCAction.ActionCategory.WORK) 26 else 0
             RoutineFocus.REST -> if (action == NPCAction.SLEEP || action == NPCAction.REST || action == NPCAction.EAT) 28 else 0

@@ -4,6 +4,7 @@ import org.bukkit.entity.Player
 import ro.ainpc.AINPCPlugin
 import ro.ainpc.managers.FamilyMemberRecord
 import ro.ainpc.npc.AINPC
+import ro.ainpc.npc.NpcAgentSnapshot
 import ro.ainpc.story.StoryContextSnapshot
 import ro.ainpc.topology.TopologyConsensus
 import java.util.UUID
@@ -28,12 +29,15 @@ object OpenAIPromptSnapshotFactory {
         val npc: AINPC = request.npc()
         val player: Player = request.player()
 
-        val npcDescription = npc.generateContextDescription()
+        val agentSnapshot = NpcAgentSnapshot.capture(npc)
+        val cognition = agentSnapshot.cognition
+        val perception = agentSnapshot.perception
+        val npcDescription = npc.generateContextDescription(cognition)
         var environmentDescription = ""
         var topologyConsensusBlock = ""
 
-        environmentDescription = npc.context.generateContextDescription(player, preloadedStory)
-        val topologyCategory = npc.context.topologyCategory
+        environmentDescription = npc.context.generateContextDescription(player, preloadedStory, cognition, perception)
+        val topologyCategory = perception.topologyCategory
         if (topologyCategory != null) {
             val topologyConsensus = plugin.featurePackLoader.buildTopologyConsensus(topologyCategory)
             if (topologyConsensus != null) {
@@ -42,18 +46,17 @@ object OpenAIPromptSnapshotFactory {
         }
 
         val traitsList = immutableCopy(npc.traits.toList())
-        val environmentContext = npc.context.environmentContext
+        val environmentContext = perception.environmentContext
             .takeIf { it.worldName.isNotBlank() }
-            ?.let { context -> context.copy(specialEvents = immutableCopy(context.specialEvents)) }
-        val stateDisplayName = npc.currentState.displayName
+        val stateDisplayName = cognition.currentState.displayName
         val heldMaterial = player.inventory.itemInMainHand.type
-        val evidenceCapturedAt = System.currentTimeMillis()
+        val evidenceCapturedAt = agentSnapshot.capturedAtMillis
         val foodRequestReply = npc.foodRequestPreferences.activeReply(player.uniqueId, evidenceCapturedAt)
         if (foodRequestReply != null) {
             environmentDescription += "\nPauza cererilor de hrana: ${foodRequestReply.waitingDescription}\n"
         }
         return PromptSnapshot(
-            npc.uuid,
+            agentSnapshot.npcUuid,
             npc.name,
             npcDescription,
             environmentDescription,
@@ -72,21 +75,22 @@ object OpenAIPromptSnapshotFactory {
             npc.emotions.getShortDescription(),
             npc.emotions.dominantEmotion,
             stateDisplayName,
-            NpcFactResolver.describeCurrentActivity(npc.occupation, npc.currentState),
-            NpcFactResolver.describeLocation(npc, npc.context),
+            NpcFactResolver.describeCurrentActivity(npc.occupation, cognition.currentState),
+            NpcFactResolver.describeCapturedLocation(perception),
             request.directAddress(),
             request.explicitConversation(),
             request.triggerReason(),
             request.nearbyNpcCount(),
             request.distanceToNpc(),
-            npc.context.worldContextSnapshot.currentRegion()?.id().orEmpty(),
-            npc.plannedRoutineActivity,
-            npc.currentGoal,
+            perception.regionId,
+            cognition.plannedRoutineActivity,
+            cognition.currentGoal,
             if (heldMaterial.isAir) "" else heldMaterial.key.asString(),
             NpcFactResolver.describePersonality(npc.personality),
             environmentContext,
             npc.socialExperience.descriptionFor(player.uniqueId, evidenceCapturedAt),
             foodRequestReply != null,
+            agentSnapshot,
         )
     }
 

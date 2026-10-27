@@ -1,6 +1,7 @@
 package ro.ainpc.ai
 
 import ro.ainpc.environment.EnvironmentContext
+import ro.ainpc.npc.NpcAgentSnapshot
 import java.util.UUID
 
 data class PromptSnapshot(
@@ -38,6 +39,7 @@ data class PromptSnapshot(
     val environmentContext: EnvironmentContext? = null,
     val helperExperienceDescription: String = "",
     val foodRequestDeferred: Boolean = false,
+    val agentSnapshot: NpcAgentSnapshot? = null,
 ) {
     fun npcUuid(): UUID = npcUuid
     fun npcName(): String = npcName

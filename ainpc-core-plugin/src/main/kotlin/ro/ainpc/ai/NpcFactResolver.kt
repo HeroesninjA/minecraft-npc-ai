@@ -4,6 +4,7 @@ import ro.ainpc.npc.AINPC
 import ro.ainpc.npc.NPCContext
 import ro.ainpc.npc.NPCPersonality
 import ro.ainpc.npc.NPCState
+import ro.ainpc.npc.NpcPerceptionSnapshot
 import ro.ainpc.topology.TopologyCategory
 import java.text.Normalizer
 import java.util.EnumMap
@@ -127,20 +128,23 @@ object NpcFactResolver {
         ?: "Nu am un program stabilit acum."
 
     @JvmStatic
-    fun describeLocation(npc: AINPC?, context: NPCContext?): String {
-        if (context != null) {
-            val topologyCategory = context.topologyCategory
-            if (topologyCategory != null && topologyCategory != TopologyCategory.UNKNOWN) {
-                val topology = topologyCategory.displayName.lowercase(Locale.ROOT)
-                if (topologyCategory == TopologyCategory.INTERIOR) {
-                    return "interior"
-                }
-                return "zona de $topology"
+    fun describeLocation(npc: AINPC?, context: NPCContext?): String =
+        describeLocationValues(npc?.worldName, context?.topologyCategory)
+
+    internal fun describeCapturedLocation(perception: NpcPerceptionSnapshot): String =
+        describeLocationValues(perception.worldName, perception.topologyCategory)
+
+    private fun describeLocationValues(worldName: String?, topologyCategory: TopologyCategory?): String {
+        if (topologyCategory != null && topologyCategory != TopologyCategory.UNKNOWN) {
+            val topology = topologyCategory.displayName.lowercase(Locale.ROOT)
+            if (topologyCategory == TopologyCategory.INTERIOR) {
+                return "interior"
             }
+            return "zona de $topology"
         }
 
-        if (npc != null && !npc.worldName.isNullOrBlank()) {
-            return npc.worldName ?: "necunoscut"
+        if (!worldName.isNullOrBlank()) {
+            return worldName
         }
 
         return ""

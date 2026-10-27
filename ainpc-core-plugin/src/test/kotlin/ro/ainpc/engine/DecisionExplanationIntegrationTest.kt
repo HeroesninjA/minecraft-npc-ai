@@ -35,6 +35,116 @@ class DecisionExplanationIntegrationTest {
     }
 
     @Test
+    fun `shadow planner is opt in and cannot change utility results or applied evidence`() {
+        val disabled = engine.previewActionDecision(npc, npc.context)
+        assertNull(disabled.carePlan)
+        val stateRevision = npc.stateRevision
+        val decisionRevision = npc.decisionRevision
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+
+        val enabled = engine.previewActionDecision(npc, npc.context)
+        val plan = requireNotNull(enabled.carePlan)
+
+        assertSame(enabled.agentSnapshot, plan.input.agent)
+        assertEquals(NpcCarePlanPreview.Status.HOME_UNCONFIRMED, plan.status)
+        assertEquals(disabled.scores, enabled.scores)
+        assertEquals(disabled.probabilities, enabled.probabilities)
+        assertEquals(disabled.blockedActions, enabled.blockedActions)
+        assertEquals(disabled.scoreBreakdowns, enabled.scoreBreakdowns)
+        assertEquals(stateRevision, npc.stateRevision)
+        assertEquals(decisionRevision, npc.decisionRevision)
+        assertNull(npc.lastDecision)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertTrue(npc.actionExperience.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `cached preview still attaches a fresh shadow proposal without recording a selection`() {
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", true)
+        choose()
+
+        val preview = engine.previewActionDecision(npc, npc.context)
+
+        assertTrue(preview.cached)
+        assertSame(preview.agentSnapshot, requireNotNull(preview.carePlan).input.agent)
+        assertEquals(1, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+        plugin.config.set("simulation.decision.care_planner_shadow_enabled", false)
+        assertNull(engine.previewActionDecision(npc, npc.context).carePlan)
+    }
+
+    @Test
+    fun `authoritative needs drive eligibility and scores even when context needs are stale`() {
+        val originalScore = engine.getActionScore(npc, npc.context, NPCAction.EAT)
+        npc.context.hungerLevel = 100
+        npc.context.energyLevel = 0
+
+        val preview = engine.previewActionDecision(npc, npc.context)
+
+        assertTrue(NPCAction.EAT in preview.scores)
+        assertFalse(NPCAction.SLEEP in preview.scores)
+        assertEquals(45, preview.scoreBreakdowns.getValue(NPCAction.EAT).needs)
+        assertEquals(originalScore, engine.getActionScore(npc, npc.context, NPCAction.EAT))
+        assertEquals(100, npc.context.hungerLevel)
+        assertEquals(0, npc.context.energyLevel)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `routine scoring follows the captured NPC routine instead of an obsolete context copy`() {
+        npc.plannedRoutineActivity = "doarme"
+        npc.context.plannedRoutineActivity = "doarme"
+        val originalScore = engine.getActionScore(npc, npc.context, NPCAction.EAT)
+        npc.context.plannedRoutineActivity = "lucreaza"
+
+        assertEquals(originalScore, engine.getActionScore(npc, npc.context, NPCAction.EAT))
+        assertEquals("lucreaza", npc.context.plannedRoutineActivity)
+    }
+
+    @Test
+    fun `decision preview exposes the detached snapshot used by every need score`() {
+        val preview = engine.previewActionDecision(npc, npc.context)
+        val snapshot = requireNotNull(preview.agentSnapshot)
+
+        assertEquals(npc.uuid, snapshot.npcUuid)
+        assertEquals(npc.decisionRevision, snapshot.decisionRevision)
+        preview.scoreBreakdowns.forEach { (action, breakdown) ->
+            assertEquals(snapshot.cognition.needModifier(action), breakdown.needs, action.name)
+        }
+        npc.hungerLevel = 90
+        npc.currentGoal = "sa merg la atelier"
+
+        assertEquals(10, snapshot.cognition.hungerLevel)
+        assertEquals("", snapshot.cognition.currentGoal)
+        assertEquals(0, engine.decisionStatistics(npc.uuid).total)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
+    fun `context scores and diagnostics retain the same captured perception`() {
+        NPCContext::class.java.getDeclaredField("timeOfDay").apply {
+            isAccessible = true
+            set(npc.context, "NIGHT")
+        }
+        npc.context.healthPercent = 25.0
+        val preview = engine.previewActionDecision(npc, npc.context)
+        val snapshot = requireNotNull(preview.agentSnapshot)
+        npc.context.healthPercent = 100.0
+        npc.context.isAtHome = false
+        NPCContext::class.java.getDeclaredField("timeOfDay").apply {
+            isAccessible = true
+            set(npc.context, "MORNING")
+        }
+
+        assertEquals("NIGHT", snapshot.perception.timeOfDay)
+        assertEquals(25.0, snapshot.perception.healthPercent)
+        assertTrue(snapshot.perception.isAtHome)
+        assertEquals(80, preview.scoreBreakdowns.getValue(NPCAction.REST).context)
+        assertEquals(0, engine.previewActionDecision(npc, npc.context).scoreBreakdowns.getValue(NPCAction.REST).context)
+        assertNull(npc.lastDecision)
+    }
+
+    @Test
     fun `only an applied selection records the original factors despite later changes to needs`() {
         engine.previewActionDecision(npc, npc.context)
         assertNull(npc.lastDecision)
